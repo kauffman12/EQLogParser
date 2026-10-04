@@ -1,4 +1,5 @@
 using log4net;
+using Syncfusion.Licensing;
 using Syncfusion.Windows.Tools.Controls;
 using System;
 using System.Collections.Generic;
@@ -11,6 +12,15 @@ namespace EQLogParser
   internal static class SyncFusionUtil
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
+
+    // The one home for the Syncfusion license key. The app (App..ctor) and the test host (Wpf.Test's
+    // [AssemblyInitialize]) both call LoadLicense instead of touching SyncfusionLicenseProvider directly, so
+    // however this constant is managed (committed or local-only) applies to both identically. An empty key is the
+    // vendor's own no-op (RegisterLicense returns on IsNullOrEmpty), so a fresh clone runs keyless everywhere -
+    // and Wpf.Test keeps its IsLicenseExceptionShown guard for exactly that state.
+    private const string LicenseKey = "";
+
+    internal static void LoadLicense() => SyncfusionLicenseProvider.RegisterLicense(LicenseKey);
 
     internal static void AddDocument(DockingManager dockSite, Type type, string name, string title, bool show = false)
     {

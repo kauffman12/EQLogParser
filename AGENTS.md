@@ -65,8 +65,10 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   at (Normal), never lower** — pumping at SystemIdle also runs the pane's first arrange, whose pass starts an
   indeterminate ProgressBar's infinite animation on a windowless thread and hung both band-showing tests for the
   full 60 s budget while the band-collapsed twin sailed through. The host carries a third, process-shaped law (measured
-  2026-11; mechanism in docs/DesignNotes.md → "A test host is unlicensed"): the tests register no Syncfusion license key
-  (the app's `RegisterLicense("")` is a literal no-op), and on a machine whose keyless validation produces a message, the
+  2026-11; mechanism in docs/DesignNotes.md → "A test host is unlicensed"): neither app nor tests touch
+  `SyncfusionLicenseProvider.RegisterLicense` directly — both call `SyncFusionUtil.LoadLicense()`, one key constant that is
+  empty in the repo (a vendor no-op; whoever holds a real key manages it there) — and on a machine whose validation still
+  produces a message, the
   **first** `SfDataGrid` construction in a process enters Syncfusion's unlicensed notice — `LicenseMessage.DisplayMessage`,
   which does a SYNCHRONOUS `Application.Current.Dispatcher.Invoke` that a non-pumping test thread can never complete, so the
   body wedges inside `SfDataGrid.ctor` for the full 60 s budget (at the sixth construction a process counter past five

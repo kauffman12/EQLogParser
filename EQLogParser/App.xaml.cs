@@ -6,7 +6,6 @@ using log4net.Core;
 using log4net.Layout;
 using log4net.Repository.Hierarchy;
 using Microsoft.Extensions.Caching.Memory;
-using Syncfusion.Licensing;
 using System;
 using System.IO;
 using System.Reflection;
@@ -59,8 +58,8 @@ namespace EQLogParser
 
     public App()
     {
-      // 33.x
-      SyncfusionLicenseProvider.RegisterLicense("");
+      // 33.x - key lives in one place; the test host calls the same method.
+      SyncFusionUtil.LoadLicense();
     }
 
     protected override async void OnStartup(StartupEventArgs e)

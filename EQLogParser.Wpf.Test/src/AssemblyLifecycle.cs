@@ -17,19 +17,22 @@ namespace EQLogParser
     {
       ClassificationRules.FailFastStages = true;
 
-      // A headless test host must not inherit Syncfusion's unlicensed popup. Whatever key the app registers never runs
-      // here (MSTest does not construct App), so this process is always keyless, and on a machine whose keyless validation
-      // produces a message the FIRST SfDataGrid construction in the process
-      // (SfDataGrid.ctor -> LicenseHelper.ValidateLicense, decompiled from Syncfusion.Shared.WPF 34.2.8) builds the
-      // "Syncfusion(R) License" message and calls LicenseMessage.DisplayMessage, which does a SYNCHRONOUS
-      // Application.Current.Dispatcher.Invoke. The test-host's Application is created by EnsureAppResources on a
-      // disposable STA thread that dies without pumping, so that Invoke never returns: the body wedges inside
-      // SfDataGrid.ctor for the full 60 s Sta budget, and at the sixth construction (a process counter past five)
-      // the over-limit shouldQuit branch re-enters the same display (measured: exactly those two shapes hung).
-      // The flag's own meaning is "the host showed/handles the message itself"; set BEFORE any control constructs
-      // and every later GetLicenseType reads null
-      // instead of a message, so nothing ever displays. (Registering a key here would also silence it, but a test must not
-      // depend on a live license string, and this flag is what an app that shows its own notice sets.)
+      // Same registration as the app, from the same one line: with a real key in SyncFusionUtil.LicenseKey the test
+      // process runs licensed exactly like the app; with the committed empty key it is a vendor no-op and the guard
+      // below is what protects a keyless machine.
+      SyncFusionUtil.LoadLicense();
+
+      // Guard for every unlicensed state - the committed empty key, or a real key that fails to validate on this
+      // machine (machine-side validation can flip with no code change; that is how the hang appeared overnight). On
+      // such a run the FIRST SfDataGrid construction in the process (SfDataGrid.ctor -> LicenseHelper.ValidateLicense,
+      // decompiled from Syncfusion.Shared.WPF 34.2.8) builds the "Syncfusion(R) License" message and calls
+      // LicenseMessage.DisplayMessage, which does a SYNCHRONOUS Application.Current.Dispatcher.Invoke. The test-host's
+      // Application is created by EnsureAppResources on a disposable STA thread that dies without pumping, so that
+      // Invoke never returns: the body wedges inside SfDataGrid.ctor for the full 60 s Sta budget, and at the sixth
+      // construction (a process counter past five) the over-limit shouldQuit branch re-enters the same display
+      // (measured: exactly those two shapes hung). The flag's own meaning is "the host showed/handles the message
+      // itself"; set BEFORE any control constructs and every later GetLicenseType reads null instead of a message, so
+      // nothing ever displays. A valid key makes this line redundant but harmless - it never expires, so it stays.
       SyncfusionLicenseProvider.IsLicenseExceptionShown = true;
     }
   }

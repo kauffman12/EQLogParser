@@ -4952,11 +4952,11 @@ interrupt probe in `Sta.Run` named the spot: both were inside `new FightTable()`
 
 The mechanism, decompiled from `Syncfusion.Shared.WPF` + `Syncfusion.Licensing` 34.2.8:
 
-- **The host carries no key.** `App..ctor` registers `RegisterLicense("")` in the repo, and the vendor's own method is a
-  literal no-op on empty input (`IsNullOrEmpty` → `ret`). More importantly for this story: **a test process never sees a key
-  from `App..ctor` even when one is there** — MSTest does not construct that class, and the test host's bare `Application`
-  (`EnsureAppResources`) registers nothing. So the tests are always keyless, and what validation concludes is decided by
-  whatever the machine holds (a registry/app-data key, the clock). On this box that conclusion moved from "silent" to
+- **The host carries no key.** License registration now lives in exactly one place — `SyncFusionUtil.LoadLicense()` over a
+  single key constant — called by `App..ctor` *and* by Wpf.Test's `[AssemblyInitialize]`, so however that constant is
+  managed it applies to both identically. In the repo it is empty, and the vendor's own method is a literal no-op on empty
+  input (`IsNullOrEmpty` → `ret`). With it empty the tests are keyless, and what validation concludes is decided by whatever
+  the machine holds (a registry/app-data key, the clock). On this box that conclusion moved from "silent" to
   "message" between two runs a day apart — the first run constructed the same grid in 25 ms.
 - **With a message, the first construction displays; the sixth re-enters.** `GetLicenseType` on the first call builds the
   "Syncfusion® License" text and sets `IsLicenseExceptionShown = true`; `ValidateLicense` then calls
@@ -4975,18 +4975,20 @@ The mechanism, decompiled from `Syncfusion.Shared.WPF` + `Syncfusion.Licensing` 
   which is why the hang appeared overnight with no code change.
 - **The app is not affected while its key validates**: the main thread pumps, so the synchronous Invoke returns, and a
   validating key makes `GetLicenseType` read null in the first place. If the *built app* starts showing a "Syncfusion®
-  License" modal at launch, that is a stale or expired key on that machine — update `App..ctor`'s registration. That is
+  License" modal at launch, that is a stale or expired key on that machine — update `SyncFusionUtil.LicenseKey`. That is
   production state; do not paper over it here.
 
-The fix is one line in `EQLogParser.Wpf.Test/src/AssemblyLifecycle.cs`: `[AssemblyInitialize]` sets
-`SyncfusionLicenseProvider.IsLicenseExceptionShown = true`. The flag's own meaning (it is `EditorBrowsable(Never)`) is "the
-host handles the notice itself" — exactly what a test host owes. It must be set **before any construction in the process**:
-with it true from process start, `GetLicenseType` never builds the message text, and every later read returns null, so both
-the first-construction display and the `shouldQuit` re-entry die on an empty string. Set after the fact, the text already
-exists and the `shouldQuit` branch would still display.
+The fix has two lines in `EQLogParser.Wpf.Test/src/AssemblyLifecycle.cs`, in order: `SyncFusionUtil.LoadLicense()` (the app's
+own registration, from the same one line — with a real key in the constant the test process runs licensed exactly like the
+app), then `SyncfusionLicenseProvider.IsLicenseExceptionShown = true`. The flag is the guard for every unlicensed state the
+registration did not fix: the committed empty key, or a real key that fails to validate on this machine (machine-side
+validation can flip with no code change). Its own meaning (it is `EditorBrowsable(Never)`) is "the host handles the notice
+itself" — exactly what a test host owes. It must be set **before any construction in the process**: with it true from process
+start, `GetLicenseType` never builds the message text, and every later read returns null, so both the first-construction
+display and the `shouldQuit` re-entry die on an empty string. Set after the fact, the text already exists and the
+`shouldQuit` branch would still display. A valid key makes the flag redundant but harmless — it never expires, so it stays.
 
-The refused alternatives: registering a real key in the tests would make the suite depend on a live license string (and
-expire again someday); keeping `EnsureAppResources`' Application alive with a pumping thread would make the queued
+The refused alternative: keeping `EnsureAppResources`' Application alive with a pumping thread would make the queued
 `ShowDialog` *actually run* — a modal window inside a test body is the next hang with a worse stack. Nothing here is pinned
 by a unit test (vendor internals); the pin is that Wpf.Test builds themed Syncfusion panes on Windows and passes, and a
 regression reads as a body wedged in `SfDataGrid.ctor` with `LicenseHelper` under it — where `Sta.Run`'s probe now says so
