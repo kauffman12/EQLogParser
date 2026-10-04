@@ -55,7 +55,10 @@ public sealed class FightTableLoadBandTest
       _ = Application.Current ?? new Application();
       var res = Application.Current!.Resources;
       res["CustomCheckBoxTemplate"] ??= new ControlTemplate(typeof(CheckBox));
-      res["TemplateToolTip"] ??= new ControlTemplate(typeof(Control));
+      // TemplateToolTip must be a DATA template: GridColumnBase.ToolTipTemplate is typed DataTemplate and
+      // App.xaml's real one is a DataTemplate. Handing it a ControlTemplate parses fine here and detonates
+      // the pane's InitializeComponent with "'ControlTemplate' is not a valid value for property 'ToolTipTemplate'".
+      res["TemplateToolTip"] ??= new DataTemplate();
       res["EQIconStyle"] ??= new Style(typeof(System.Windows.Controls.Image));
     });
   }

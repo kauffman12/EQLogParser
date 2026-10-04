@@ -355,8 +355,16 @@ namespace EQLogParser.Wpf.Test
       DigestPattern.Matches(text).Select(match => match.Value.ToLowerInvariant())
         .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
+    /*
+     * Every caller here reads a file that is TRACKED in git (docs/TtsPacks.md, source files). A missing
+     * one is a working-tree state, not a code bug - most likely the file was deleted locally while
+     * docs/* looked ignored, since TtsPacks.md predates its .gitignore exception. Say so, because
+     * "FileNotFoundException: ...TtsPacks.md" reads like a test defect and sends people hunting code.
+     */
     private static string ReadRequired(string path) =>
-      File.Exists(path) ? File.ReadAllText(path) : throw new FileNotFoundException(path);
+      File.Exists(path)
+        ? File.ReadAllText(path)
+        : throw new FileNotFoundException($"required tracked file is missing from this working tree: {path} (restore it, e.g. git restore \"{Path.GetFileName(path)}\")", path);
 
     /* Test binaries live several directories below the checkout; walk up until the solution file says otherwise. */
     private static string? FindRepositoryRoot()

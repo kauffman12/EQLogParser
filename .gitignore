@@ -9,14 +9,16 @@ tmp/
 local/
 # sample EQ logs used as local perf/verification inputs (never commit)
 /eqlog_*.txt
-# docs: exactly three documents are maintained in git — DesignNotes.md, CodingStandards.md,
-# ReleaseChecklist.md. Everything else under docs/ is a local working document for discussions
+# docs: the maintained documents are DesignNotes.md, CodingStandards.md,
+# ReleaseChecklist.md and TtsPacks.md (tracked since the speech-pack work; it needs the same
+# un-ignore as the others or tooling treats it as disposable). Everything else under docs/ is a local working document for discussions
 # (combat-mirror-design.md, legacy-replacement-map.md, TtsPacks.md, counter-variable-issue.md, …)
 # and stays out of the repo; durable decisions belong in DesignNotes.md.
 docs/*
 !docs/DesignNotes.md
 !docs/CodingStandards.md
 !docs/ReleaseChecklist.md
+!docs/TtsPacks.md
 # pi-subagents session artifacts
 .pi-subagents/
 nag/
