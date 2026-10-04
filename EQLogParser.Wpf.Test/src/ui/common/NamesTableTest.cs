@@ -171,6 +171,9 @@ public class NamesTableTest
                {
                  "R5-companion", "R5-owner:Beorun", "R17-selffeed", "R6-npcdb", "R14-shape", "R7-graph:9", "Prior:R6-npcdb",
                  "R21-spelleffect", "R21-spellcast", "R9-charm", "Manual",
+                 // What the app remembers rather than what the capture showed. Neither may name a file, and neither may
+                 // say "RegistrySeed" — the internal name of the seam is not an answer about a name.
+                 "RegistrySeed", "RegistrySeed:Strangle",
                })
       {
         var provenance = NamesTable.RowFrom(new ClassificationReport.Row { Name = "Ziggy", Kind = kind, Reason = source }).Provenance;

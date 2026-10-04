@@ -46,6 +46,14 @@ public class IdentityVocabularyTest
     "R20-petspell",
     "R21-spellshape", "R21-spellcast", "R21-spelleffect",
 
+    /*
+     * Not a rule, and it cannot come out of a fixture: PipelineHarness clears PlayerRegistry, so nothing in any test
+     * seeds from it. That blind spot is how "RegistrySeed" was printable as a verdict word — the corpus guard below walks
+     * real rows from a COLD registry and never sees it. It belongs in this list so the vocabulary tests hold it: a row
+     * that came from this app's own saved memory reads "Legacy".
+     */
+    "RegistrySeed",
+
     // The two spellings the FILES carry, so they must map even though no rule writes them: what
     // IdentityOverrideStore.LoadAll reports as a row's source ("Override"), and AddRow's word for an override read out of
     // the file before any timeline existed — this window opened before the first derive pass ("Manual").
@@ -137,6 +145,25 @@ public class IdentityVocabularyTest
     var raidos = report.Find("Raidos");
     Assert.IsNotNull(raidos, "the fixture's raid-join name is missing");
     Assert.AreEqual("Joined Raid", IdentityVocabulary.WhyWord(raidos!.Reason));
+  }
+
+  /*
+   * What this application remembers about a name, as opposed to what the capture showed: the two codes no rule writes,
+   * which is also why the corpus guard cannot see them (tests run with a cleared registry). The column says "Legacy";
+   * the tooltip says WHICH store, in words — never a filename and never the internal name of the seed.
+   */
+  [TestMethod]
+  public void WhatTheAppRemembersReadsLegacyAndNamesItsStore()
+  {
+    Assert.AreEqual("Legacy", IdentityVocabulary.WhyWord("RegistrySeed"));
+    Assert.AreEqual("On the roster this app saved", IdentityVocabulary.ProofText("RegistrySeed", IdentityKind.Player));
+
+    // A mapped summon names its person — that pair is the whole reason the row exists.
+    Assert.AreEqual("In the Pet Map as Sancus's", IdentityVocabulary.ProofText("RegistrySeed:Sancus", IdentityKind.Pet));
+
+    // Your own character reads alike whichever of the two codes carried it, and hovers as a sentence.
+    Assert.AreEqual(IdentityVocabulary.WhyWord("R0-local"), IdentityVocabulary.WhyWord("You"));
+    Assert.AreEqual("Your own character", IdentityVocabulary.ProofText("You", IdentityKind.Player));
   }
 
   [TestMethod]

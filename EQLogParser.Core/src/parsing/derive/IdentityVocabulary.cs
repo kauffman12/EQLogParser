@@ -166,6 +166,15 @@ internal static class IdentityVocabulary
       "R21-spellshape" => "No Caster in Line",
       "R21-spellcast" => "Casting Message",
       "R21-spelleffect" => "The Name of a Spell",
+
+      /*
+       * The two codes no rule writes; both mean "this application remembered it". Neither names a file, and the phrases
+       * are honest about scope: players.txt and petmapping.txt are the ONLY two stores this app persists, so "the roster
+       * this app saved" covers saved names and "the Pet Map" covers a mapped summon (whose person arrives in the detail).
+       * Verified pets and mercenaries are learned while a log is open and never reach disk at all.
+       */
+      "RegistrySeed" => detail is null ? "On the roster this app saved" : $"In the Pet Map as {detail}'s",
+      "You" => "Your own character",
       _ => code.Length > 0 ? code : kind == IdentityKind.Unknown ? "Nothing identified it" : TypeWord(kind),
     };
 
@@ -259,6 +268,15 @@ internal static class IdentityVocabulary
     ["R21-spellshape"] = "A Spell",
     ["R21-spellcast"] = "A Spell",
     ["R21-spelleffect"] = "A Spell",
+
+    /*
+     * Not a rule: this application's own memory, written before the capture said anything. A cold registry cannot
+     * produce it in a test, which is exactly how this code reached the screen as its own name — so it is listed here and
+     * in the test's word list next to the rules. "Legacy" is the operator's word for it; what sits underneath are the
+     * roster this app saves and the pet map, and the tooltip says which one (a name that only LOOKS like one of ours
+     * because an old session said so is the case where the difference matters).
+     */
+    ["RegistrySeed"] = "Legacy",
 
     // Two spellings the files themselves carry, kept mapped because they are already on disk:
     //   "Override" — what IdentityOverrideStore.LoadAll hands back as a row's source.
