@@ -231,7 +231,22 @@ Settings and setup windows (`FctSettingsWindow`, `DamageMeterSettingsWindow`) fo
 - Prefer `switch` expressions over `switch` statements
 - Use `OfType<T>()` for filtering collections instead of `ForEach(x as Type)`
 
+### Build Warnings
+- **The solution builds with zero warnings, and stays there.** Verify before committing:
+  `dotnet build EQLogParser.sln -p:EnableWindowsTargeting=true --nologo 2>&1 | grep -cE ": (warning|error) [A-Z]+[0-9]+"` prints **0**.
+  Match diagnostics, not the words: MSBuild's own summary ends with `0 Warning(s)` / `0 Error(s)`, so a grep for "warning" is never silent and teaches nobody to read the number.
+- **Fix the cause; never suppress.** No `#pragma warning disable` and no `<NoWarn>` in any project today — a suppressed warning is a rule somebody read as a fact later. If a warning is genuinely wrong for this codebase, the fix lands in a project property with a comment saying why, not in a pragma at the call site.
+- A new warning is fixed in the commit that introduced it, not queued: warnings arrive in fleets (one annotating file produced nine identical ones), so the count only stays readable if each one dies immediately.
+
 ### Nullable Reference Types
+- **`#nullable enable annotations` opens any file that writes `string?` / `T?`.** The app and `EQLogParser.Core` build with
+  `<Nullable>disable</Nullable>`; both test assemblies build with `enable`. In a disable-context file, every annotation is
+  CS8632 — the pragma is what makes an optional parameter mean something instead of being noise next to the signature. House
+  placement: after the usings, before the namespace, with the standing comment ("annotations only, no null-flow analysis"), as in
+  `IdentityPriorStore.cs`, `ClassificationReport.cs` and `FightSummarySource.cs`.
+- **`enable annotations`, not plain `enable`.** Flow analysis across code written before nullable existed is a project-sized
+  change nobody has scheduled; switching it on per-file would report on history rather than on the code in front of you. Saying
+  "this argument may be null" is the point; a warnings-flip of the whole tree is not.
 - **Never use `null!` (null-forgiving operator)** — it suppresses compiler null-safety checks and hides potential bugs
 - Make properties/fields `string?` when they can legitimately be null rather than using `null!` to silence warnings
 - Use `?? defaultValue` or null-conditional operators (`?.`, `?[`) instead of `!`

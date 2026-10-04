@@ -1,3 +1,10 @@
+/*
+ * Annotations only, no null-flow analysis: the project builds with Nullable=disable, and this API speaks in optional
+ * strings/kinds because a code legitimately has no cell word, no proof and no detail beside it. Stating that is not the
+ * same as switching on warnings across code written before nullable existed.
+ */
+#nullable enable annotations
+
 namespace EQLogParser;
 
 /*

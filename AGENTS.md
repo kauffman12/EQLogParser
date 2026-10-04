@@ -13,6 +13,7 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
 ## Build Environment (Linux, this machine)
 - .NET 10 SDK (10.0.4xx) lives in `~/.dotnet`; prepend it on every shell: `export PATH="$HOME/.dotnet:$PATH"`. The system's dotnet 8 will not satisfy `global.json` (`"10.0"`, `rollForward: latestPatch`).
 - Full solution on Linux: `dotnet build EQLogParser.sln -p:EnableWindowsTargeting=true` (flag lets the WPF projects cross-compile; no source changes needed).
+- **Zero warnings is the bar, and it is counted, not hoped for**: `dotnet build EQLogParser.sln -p:EnableWindowsTargeting=true --nologo 2>&1 | grep -cE ": (warning|error) [A-Z]+[0-9]+"` prints **0** before a commit (match diagnostics, not words — MSBuild's summary always contains `0 Warning(s)`). Nine CS8632s shipped once because a file in Core (project `Nullable=disable`) wrote `string?` without opening `#nullable enable annotations`; the whole fleet is one pragma, and it is why each new warning dies in its own commit (docs/CodingStandards.md → "Build Warnings", "Nullable Reference Types"). Nothing in this repo suppresses a warning (`#pragma warning disable`, `<NoWarn>`) — fixing the cause is the rule.
 - Tests: `dotnet test EQLogParser.Test/EQLogParser.Test.csproj` is the non-WPF suite (**1,545 passed / 8 env-gated skips**, plain `net10.0`). `EQLogParser.Wpf.Test` targets `net10.0-windows` and only
   runs on Windows (153 tests); both assemblies together measure **1,698 passed / 8 skipped** there (2026-11). A Windows run that *loses* `Sta.Run` bodies rather than failing them is the failure mode to watch.
 - **Real-log corpus layout (local/, gitignored)**: `local/logs/live/` holds live-format captures; `local/logs/emu/` holds EMU-server captures (THJ/TSS/Heroes Forge shapes) that need the app's `EnableEmuParsing` behaviour. The env-gated real-log tests run them via **`EQLP_EMU=1`**, which sets `AppSettings.IsEmuParsingEnabled` for the duration of a `PipelineHarness` run (restored after — the flag is process-global and live-format logs misparse with it on). Without it an EMU capture parses with DamageLineParser's live grammar and silently loses the `(Owner: X)` / `scores a critical hit! (N)` shapes, so a parity run over `emu/` without the flag measures nothing. Timestamps are the same `[DDD MMM dd HH:mm:ss yyyy]` shape in both directories.
@@ -675,6 +676,8 @@ npcs.txt; it is the *only* evidence for **6** names (Incogitable) and **4** (Kiz
 
 ## Post-Implementation Checklist
 After completing work, verify:
+- **Zero build warnings**: the solution-wide count command above prints `0`, and nothing was suppressed to get there (per
+  CodingStandards.md → "Build Warnings"); a file that annotates with `string?`/`T?` opens with `#nullable enable annotations`
 - **Method visibility ordering**: public → internal → private (per CodingStandards.md)
 - **Pattern matching**: use `is not T` / `is T var` instead of `as T` + null check (per CodingStandards.md)
 - **Unused usings**: no leftover or unnecessary `using` statements
