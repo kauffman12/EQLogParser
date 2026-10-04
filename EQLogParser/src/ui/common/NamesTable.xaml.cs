@@ -21,9 +21,11 @@ using EQLogParser;
 namespace EQLogParser
 {
   /*
-   * The Player/NPC Identity window (menu name; class still NamesTable): every name in the capture, what it was called, and WHY. It replaces the three hand-maintained
-   * panes (Verified Players / Verified Pets / Pet Owners), which could show what somebody typed but never what the
-   * classifier concluded - so a wrong verdict had no surface to be noticed on, only a meter that looked odd.
+   * The Player/NPC Identity window (menu name; class still NamesTable): every name in the capture, what it was called, and WHY. It replaces the two hand-maintained verdict
+   * panes (Verified Players / Verified Pets), which could show what somebody typed but never what the classifier
+   * concluded - so a wrong verdict had no surface to be noticed on, only a meter that looked odd. Pet Owners keeps
+   * its own window: it curates the persistent owner pairs (petmapping.txt) across logs, which is a different job
+   * from reporting what one capture's evidence says.
    *
    * Two things this deliberately is not:
    *

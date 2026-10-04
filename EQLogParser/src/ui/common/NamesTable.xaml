@@ -37,7 +37,7 @@
       <Button x:Name="namesRefreshButton" DockPanel.Dock="Right" Content="Re-scan" Padding="8,2"
               Click="RefreshClick" ToolTip="Rebuild the census from the captured facts"/>
       <TextBlock x:Name="namesStatusText" VerticalAlignment="Center" FontSize="{DynamicResource EQContentSize}"
-                 Text="Who is every name in this log? Player, pet or NPC - open a combat log to identify them. This window replaces the old Verified Players and Pet Owners windows."/>
+                 Text="Who is every name in this log? Player, pet or NPC - open a combat log to identify them. This window replaces the old Verified Players and Verified Pets windows."/>
     </DockPanel>
 
     <syncfusion:SfDataGrid x:Name="namesGrid" Grid.Row="1"

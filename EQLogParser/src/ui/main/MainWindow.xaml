@@ -270,14 +270,16 @@
               </MenuItem.Icon>
             </MenuItem>
             <Separator />
-            <!-- One window for everything the old three panes held, plus what they could never show: what the rules
+            <!-- One window for everything the two verdict panes held, plus what they could never show: what the rules
                  concluded and which line said so. The panes themselves stay in the layout (an operator's saved
                  EQLogParserLayout.xml still names them) but their menu entries are gone - two surfaces for the same
-                 names is how a stale list stays trusted. The label says what it REPLACES, because that is where
+                 names is how a stale list stays trusted. Pet Owners KEEPS its own window: it maintains the persistent
+                 owner pairs (petmapping.txt), which is something the user curates across logs, not a verdict about
+                 one capture - not legacy, a different job. The label says what it REPLACES, because that is where
                  ten years of users reach for: no jargon, the old window names spelled out. -->
             <MenuItem x:Name="namesWindowMenuItem" Header="Player/NPC _Identity" Click="MenuItemNamesClick"
-                      ToolTip="Shows who every name in the log is - player, pet or NPC - and replaces the old Verified Players, Verified Pets and Pet Owners windows" />
-            <MenuItem x:Name="petMappingWindowMenuItem" Header="Pet _Owners (legacy)" Click="MenuItemWindowClick">
+                      ToolTip="Shows who every name in the log is - player, pet or NPC - and replaces the old Verified Players and Verified Pets windows" />
+            <MenuItem x:Name="petMappingWindowMenuItem" Header="Pet _Owners" Click="MenuItemWindowClick">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="petMappingIcon" Tag="petMappingWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
