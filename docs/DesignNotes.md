@@ -3910,7 +3910,7 @@ with derived-vs-legacy parity tests, not as a convenience.
 Four properties make it safe, all pinned (`IdentityPriorStoreTest`, 9 tests):
 
 - **Only what a later log might not answer again is recorded** (`IdentityPriorStore.WorthRemembering`), with the rule
-  code stored beside it. The gate is an **allowlist of event-shaped rules** — `R1-`, `R2-`, `R3-`, `R4-`, `R5-called`,
+  code stored beside it. The gate is an **allowlist of event-shaped rules** — `R1-`, `R2-`, `R3-`, `R4-`, `R5-companion`,
   `R7-`, `R9-`, `R13-`, `R15-`, `R17-`, `R18-` — because the question is not "did a line say this" but "would next
   season's log be able to say it again". What stays out and why: `R6-npcdb` (npcs.txt ships with the program, so it
   answers for that name in every capture that mentions it — remembering it buys a row and no knowledge, and keeps
@@ -5362,3 +5362,89 @@ starts from here, not from a re-discovery:
 is gone with the engine: deaths reach every consumer (death viewer, records
 store, the mirror's `HandleDeath` → fact death queues) through `EventsNewDeath`,
 and nothing needs a deferred "remove active fight" flush anymore.
+
+
+## The companion line names the summoner (2026-11)
+
+### What the rule believed, and what the captures say
+
+`X is called to it owner.` was R5's second shape: `MiscLineParser` stripped the suffix, called the remainder a
+**pet**, and `ClassificationRules` stamped it **Pet at Certain** (`R5-called`) with an open-ended `Friendly` interval. Certain beat
+everything except an operator's own verdict, so on every capture that printed one of these lines a name got a Type nobody could argue with —
+which is the bug the user reported as *"the called to its owner looks like it's working backwards: it has Player names set to Pet"*.
+
+The grammar does read like a pet ("…is called to **its owner**"), and that is what fooled the first reading. The captures answer it. In
+`eqlog_Kizant_xegony-09-20-25.txt`:
+
+```
+[Sun Sep 14 18:33:28 2025] Hazysongs begins casting Summon Familiar: Scalewrought Flyer.
+[Sun Sep 14 18:33:28 2025] Romance begins casting Summon Companion II.
+[Sun Sep 14 18:33:28 2025] Romance is called to it owner.
+```
+
+Same name, same second, and the line follows **the caster's own summon cast**. Counted rather than reasoned about — every occurrence, checked
+against the three preceding lines for that same name beginning a `Summon …` cast:
+
+| Capture | `called to it owner.` lines | directly preceded by that name's own summon cast |
+|---|---:|---:|
+| `eqlog_Kizant_xegony-09-20-25.txt` | 33 | **33** |
+| `eqlog_Kizant_xegony-01-06-24.txt` (first 400 MB) | 15 | **15** |
+
+And every subject on the list behaves like a raid member, not like a summon. Spell-cast lines carrying each subject's name, same captures:
+
+| Capture | subjects of the line (cast lines each) |
+|---|---|
+| `09-20-25` | Romance 13,958 · Ammeren 2,979 · Piemastaj 1,501 · Strangle 1,088 |
+| `9-18-22` | Romance 11,040 · Beorun 7,215 · Sancus 3,434 · Puzzling 2,833 · Coas 2,454 · Reddhuman 1,645 · Strangle 1,598 |
+| `01-06-24` | Romance 8,240 · Segejin 6,280 · Paka 576 · Alundys 0 (a guildmate: `Your guildmate Alundys has completed …`) |
+| `Incogitable` | Hazyfyre 717 · Inconsistent 510 · Sancusx 347 · Conadern 80 · Ensorcella 73 · Frobu 109 · Salendir 15 · Finland 4 · Portugal 5 · Strangle 2 |
+
+Other lines from `Romance`, the name this arrived on: `Romance joined the raid.`, `Nymera healed Romance for 0 (26881) hit points by Symbol of
+Helmsbane`, `Romance begins casting Illusion: Guktan.` — a summon does not cast Illusion: Guktan, and nothing in these captures ever used this
+line's subject as the actor of a summon-arrival at all. `Beorun` is the same story from the other direction: AGENTS already recorded that
+`Stormclaw` says *"My leader is Beorun"*, i.e. Beorun owns pets, and the same name was being stamped Pet Certain by this rule. The old note
+about "`Sancus`: in players.txt … and stamped Pet Certain by `Sancus is called to it owner.`" was logged as an unfixable registry collision; it
+was this bug, seen from the wrong side.
+
+### What the reversal changed
+
+`MiscLineParser.EventsCalledToOwner` → **`EventsCompanionCalled`** (its parameter is now `owner`, and the const is `CompanionCalledSuffix`);
+`EvidenceFact.EvCalledToOwner` → **`EvCompanionCalled`** (same slot 10 — nothing serialises these bytes); `CombatCapture.OnCompanionCalled`;
+and the claim becomes **Player at Strong** under a new code, **`R5-companion`**, added to `playerBehavior` like R17's drink and R19's eye.
+
+Strong rather than Certain for the same reason those two are: only a player character summons a companion, but this is still *behaviour*, and a
+`Targeted (NPC)` frame on the same name must remain able to win. The `Friendly` interval is **gone** — a summoner's side needs no interval, and
+that open-ended Friendly stamp was half of what made the backwards reading survive review (`FightProjection.SideAt` saw a pet allegiance where
+there was only a raid member).
+
+Why the code is renamed rather than repurposed: an identity verdict is stored as *code + kind*, and `Pet|R5-called` means something this build
+never concludes. Keeping the string would let one stale line be mistaken for a live one, so `IdentityPriorStore.Init` refuses `R5-called` rows
+**by name**, before the allowlist even runs, and `Save()` rewrites the ledger without them — with its own phrase in the census line, because
+"rows refused as restatements" would have blamed the operator's hand-edits for our old bug.
+
+### The pane: files, pencils and column order
+
+Three UI complaints came in on the same report, and two of them were about the same thing — a hover that talked about the program instead of
+about the name.
+
+* **No hover names a file.** `ProvenanceFor` used to append the roster's opinion (`players.txt says Player`, or `in players.txt`), which read as
+  a second verdict issued by something the operator cannot open from this window; on a row whose Type came from a rule it looked like a
+  contradiction nobody had explained. Removed. What it was pointing at is still counted, in the one place the claim is about: the caption's
+  tooltip prints `N contradict the roster` from `ClassificationReport.Disagreements`, driven by `Row.IsDisagreement`, which stays. Two proof
+  clauses that quoted filenames follow the same rule — `R6-npcdb` says **"On the NPC List"** and `R21-spelleffect` says **"The Name of a Spell"**.
+  `NoRowTooltipNamesAFile` sweeps every kind × reason this pane can show for `.txt`, "players", "npcs", "priors" and "overrides".
+* **A missing pencil keeps its space.** Type offers no pencil on a spell effect or a summon whose own spelling fixes its answer
+  (`IdentityVocabulary.CanOverrule`), and Class offers one only once a row reads Player. Those cells used `BooleanToVisibilityConverter`, whose
+  `Collapsed` hands the icon's width straight back — so the exceptions in both columns started ~20 px left of everyone else, i.e. *what a row
+  allows* was being drawn as *where its text begins*. New `PlaceholderVisibilityConverter` answers `Hidden` (the box stays measured, the layout
+  keeps the hole) and both pencils use it: `ARowWithoutAPencilStillPaysForOne` pins Visible/Hidden so nobody "simplifies" it back.
+* **Columns are Name, Type, Class, Why.** The two cells you edit now sit together right after the name and the read-only WHY sentence goes last.
+  `ApplyColumnWidths` maps by `MappingName`, so widths followed without touching; `TheColumnsGoNameTypeClassWhy` reads `namesGrid.Columns`
+  inside `Sta.Run` (the grid's columns belong to the thread that built them) with `EQIconStyle`/`EQTitleStyle` stubbed the way
+  `FightTableStartupTest` stubs them.
+
+Tests touched: `IdentityRulesTest` (Frobum → Player/`R5-companion`, and the comment now says why the two R5 shapes point at different names),
+`SpellEffectIdentityTest` (the same name must keep its kind under R21), `IdentityVocabularyTest` (closed code list, the two word changes),
+`FightProjectionTest.StaticFriendlyStamp_DoesNotFlipSides` (its hand-written Pet+Friendly stamp now carries `R18-healedpet`, a code that really
+does write that shape), `IdentityPriorStoreTest` (vocabulary, plus the new bug-era refusal), and `NamesTableTest` in the Windows assembly —
+which builds here but has to be **run on Windows** like every other test that constructs a pane.

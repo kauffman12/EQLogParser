@@ -601,9 +601,28 @@ npcs.txt; it is the *only* evidence for **6** names (Incogitable) and **4** (Kiz
   (20 of the 25 registry pets in the 2026 capture read `R15-healed`; petmapping.txt holds 96 owner pairs while the log's own possessive lines
   prove 18) — `Player` is written as "raid-side, never verified", and owner attribution needs the registry. Tests are cold by construction:
   `PipelineHarness` calls `PlayerRegistry.Instance.Clear()` and only `MainWindow` ever calls its `Init()`, so `RegistrySeed` contributes nothing
-  in any measurement here; one unfixable-by-registry case is a pet *named like a raider* (`Sancus`: in players.txt, owns `Sancus`s pet`, and
-  stamped Pet Certain by "Sancus is called to it owner.") because identity is keyed on the name, not the owner. Numbers and the reading
-  procedure: docs/combat-mirror-design.md → "Fourth audit".
+  in any measurement here. Two names wearing two jobs is not a collision in this table, because identity is keyed on the NAME: `Sancus` is a
+  raider (in players.txt, and the subject of "Sancus is called to it owner.", which names the SUMMONER — next bullet), while `Sancus`s pet`
+  is its own row that R5-owner claims as Pet. Numbers and the reading procedure: docs/combat-mirror-design.md → "Fourth audit".
+- **"X is called to it owner." names the SUMMONER, never the summon.** The sentence argues the other way, and this rule read it the wrong way
+  for its whole life: `R5-called` stamped Pet Certain and put raid members on the sheet as pets (Beorun, Romance, Sancus, Segejin).
+  Measured instead: **33 of 33** occurrences in `eqlog_Kizant_xegony-09-20-25.txt` and **15 of 15** in `-01-06-24` sit within three lines of
+  that same name's own ``X begins casting Summon …`` (`Romance begins casting Summon Companion II.` → `Romance is called to it owner.`), and
+  every subject across six captures casts player spells (Romance **13,958** cast lines, Beorun 7,215, Sancus 3,434) and never swings — a pet-subject
+  form was never observed once. So the case is `EvCompanionCalled` → **Player at Strong** (like R17's drink and R19's eye: a behaviour yields to a
+  `Targeted (NPC)` frame) under code **`R5-companion`**, with **no Friendly interval** (a summoner's side needs none; the interval this rule used to
+  write is what made the old reading look plausible in `SideAt`). Two follow-throughs. (1) The ledger refuses `R5-called` rows **by name** at load and
+  rewrites them out: a remembered `Pet` for a real person holds them off the board for the whole 90-day window, and no live evidence should have to
+  outvote it (`ABugEraCompanionClaimIsRefusedAtLoadAndRewrittenOut`). (2) Ownership does NOT come from this line — it names one participant, so the
+  pair still arrives from the possessive words and petmapping.txt. Numbers: docs/DesignNotes.md → "The companion line names the summoner".
+- **Three shapes of the Names and Identities pane, all pinned in `NamesTableTest`.** (1) Column order is **Name, Type, Class, Why** — the two cells
+  that answer to a click sit together and the read-only explanation goes last. (2) A row that offers **no** pencil still **reserves its width**:
+  `PlaceholderVisibilityConverter` answers `Hidden`, never `Collapsed`, because Collapsed hands the icon's ~20 px back and the words in that column stop
+  starting at the same pixel — a difference in what a row *allows* (spell effects and self-naming summons get no Type pencil; only a Player row gets a
+  Class one) was being rendered as a ragged left edge (`ARowWithoutAPencilStillPaysForOne`). (3) **No hover names a file.** The roster flag
+  ("players.txt says Player", "in players.txt") is gone from `ProvenanceFor`: it read as a second verdict from a source the operator cannot open, and worst
+  on rows the rules had merely classified. Disagreements still count where they are about — one number on the caption's tooltip (`Row.IsDisagreement` →
+  `ClassificationReport.Disagreements`) — and the two proof clauses that quoted filenames say what those files are (`On the NPC List`, `The Name of a Spell`).
 - **An eye is not a combatant; hitting your own eye says the striker is a player.** `Eye of <name>` is the magian
   summon (`Eye of Zamul`, ranks named after people: `Eye of Zomm`) and it never acts — **0** hostile lines in eight
   captures, all **348** damage lines against one worth exactly **1 point**, **346 / 348** of them struck by the raider
