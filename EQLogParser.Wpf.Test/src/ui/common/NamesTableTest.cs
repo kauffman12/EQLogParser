@@ -3,19 +3,21 @@ using EQLogParser;
 namespace EQLogParser.Wpf.Test;
 
 /*
- * The Names window's one piece of logic: turning a census row into what an operator reads. Nothing here needs WPF -
- * no element is constructed, so no Sta.Run - because the interesting part is which sentences the WHY cell's tooltip
- * composes and what word each kind prints as, not how SfDataGrid paints them.
+ * The Names window's one piece of logic: turning a census row into what an operator reads. Nothing here needs WPF - no
+ * element is constructed, so no Sta.Run - because the interesting part is which short line the WHY tooltip composes and
+ * which rows get an edit icon, not how SfDataGrid paints them.
  *
- * The grid shows four columns (Name, Type, Why, Class). Two things the old layout carried are deliberately absent and
- * so are not asserted here: Damage/Healing (an identity list should not rank names by output) and Owner (the Pet Owners
+ * The grid shows four columns (Name, Type, Why, Class). Two things an older layout carried are deliberately absent and so
+ * are not asserted here: Damage/Healing (an identity list should not rank names by output) and Owner (the Pet Owners
  * window lists the same PlayerRegistry pairs).
  *
- * Why this matters more than a typical formatting test: each tooltip sentence tells a person whether to ACT. A verdict
- * resting on their own click needs no correction; one resting on an older log might; "roster says player, rules say NPC"
- * is the row where somebody's meter is wrong right now; and since Notes stopped being a column, the tooltip is the ONLY
- * place "your verdict" / "no claim (you took it back)" survive — a sentence dropped by accident is a row that looks
- * fine and isn't.
+ * The WORDS themselves - "Chosen" for R10-manual, "Healed" for R15-healed, the dropdown's five entries - are asserted in
+ * IdentityVocabularyTest (EQLogParser.Test), including the corpus check that no rule code reaches the screen. What is
+ * pinned here is the part only this file owns: which LINES a row's tooltip gets, since each one tells a person whether to
+ * ACT. A verdict resting on their own click needs no correction; one resting on an older log might; "players.txt says
+ * player" is the row where somebody's meter is wrong right now; and "Claim taken back" must not read like "You chose" -
+ * the tooltip is the only place any of those four survive, so a line dropped by accident is a row that looks fine and
+ * isn't.
  */
 [TestClass]
 public class NamesTableTest
@@ -68,9 +70,13 @@ public class NamesTableTest
     var row = NamesTable.RowFrom(CensusWithoutACapture().Find("Nicky")!);
 
     Assert.AreEqual("NPC", row.Type);
-    Assert.AreEqual("Manual", row.Why, "a verdict the operator wrote says so in the Why column itself");
-    StringAssert.Contains(row.Provenance, "your verdict");
-    StringAssert.Contains(row.Provenance, "not in this log", "a hand-written row should say it has no facts behind it");
+    Assert.AreEqual("Chosen", row.Why, "a verdict the operator wrote says so in the Why column itself, in two words");
+    StringAssert.Contains(row.Provenance, "You chose NPC");
+    StringAssert.Contains(row.Provenance, "Not in this log", "a hand-written row should say it has no facts behind it");
+
+    // The dropdown preselects from Kind and refuses to write what the row already says; without this, a click that
+    // changes nothing would spend a derive pass and rewrite mirror-overrides.txt.
+    Assert.AreEqual(IdentityKind.Npc, row.Kind);
   }
 
   [TestMethod]
@@ -80,8 +86,8 @@ public class NamesTableTest
 
     var row = NamesTable.RowFrom(CensusWithoutACapture().Find("Ghosty")!);
 
-    StringAssert.Contains(row.Provenance, "no claim");
-    Assert.IsFalse(row.Provenance.Contains("your verdict"),
+    StringAssert.Contains(row.Provenance, "Claim taken back");
+    Assert.IsFalse(row.Provenance.Contains("You chose"),
                    "a name the operator refused reads like a name they classified - the two need different actions");
   }
 
@@ -97,14 +103,15 @@ public class NamesTableTest
     var row = NamesTable.RowFrom(CensusWithoutACapture(ledger).Find("Rememb")!);
 
     Assert.AreEqual("NPC", row.Type);
-    StringAssert.Contains(row.Why, "Prior:R7-graph", "the reason column must not claim this capture produced it");
-    StringAssert.Contains(row.Provenance, "x2");
-    Assert.IsFalse(row.Provenance.Contains("cast that proved it"),
+    Assert.AreEqual("Our side (earlier)", row.Why,
+                    "the cell must not claim this capture produced it - and must not print the rule code either");
+    StringAssert.Contains(row.Provenance, "Earlier logs x2");
+    Assert.IsFalse(row.Provenance.Contains("Cast:"),
                    "a borrowed verdict has no cast behind it in THIS log; naming one would credit this capture with proving it");
   }
 
   [TestMethod]
-  public void TheOneSentenceThatMeansSomebodysMeterIsWrong()
+  public void TheOneLineThatMeansSomebodysMeterIsWrong()
   {
     // Verified raider, overridden to NPC: exactly the state in which a player's damage leaves the board.
     PlayerRegistry.Instance.AddVerifiedPlayer("Berta", 1_700_000_000);
@@ -114,27 +121,13 @@ public class NamesTableTest
     var row = NamesTable.RowFrom(census.Find("Berta")!);
 
     Assert.IsTrue(census.Disagreements >= 1);
-    StringAssert.Contains(row.Provenance, "roster says player, rules say NPC");
+    StringAssert.Contains(row.Provenance, "players.txt says player");
   }
 
   /*
-   * The column header says Type, so the value has to read like a type: "Npc" is the enum's identifier, not something an
-   * operator wrote or should have to decode. Unknown covers "no rule placed this name" and must not print as a blank.
-   */
-  [TestMethod]
-  public void TheTypeColumnPrintsWordsNotEnumIdentifiers()
-  {
-    Assert.AreEqual("Player", NamesTable.TypeWord(IdentityKind.Player));
-    Assert.AreEqual("Pet", NamesTable.TypeWord(IdentityKind.Pet));
-    Assert.AreEqual("Merc", NamesTable.TypeWord(IdentityKind.Merc));
-    Assert.AreEqual("NPC", NamesTable.TypeWord(IdentityKind.Npc));
-    Assert.AreEqual("Unknown", NamesTable.TypeWord(IdentityKind.Unknown));
-  }
-
-  /*
-   * The one thing worth adding to this window: when a verdict came from a CAST, the tooltip says which one (the census
-   * puts it on Row.ReasonDetail; see CensusCastProofTest for how it is chosen). A column would have been empty for most
-   * rows, so it is a hover - and rows that are not spell-based get no cast sentence at all.
+   * The one thing worth adding to this window: when a verdict came from a CAST, the tooltip names it (the census puts it
+   * on Row.ReasonDetail; see CensusCastProofTest for how it is chosen). A column would have been empty for most rows, so
+   * it stays a hover - and a row that is not spell-based gets no cast line at all.
    */
   [TestMethod]
   public void ASpellVerdictNamesTheCastInTheTooltip()
@@ -149,8 +142,8 @@ public class NamesTableTest
     });
 
     Assert.AreEqual("Player", bard.Type);
-    Assert.AreEqual("R4-spell", bard.Why);
-    StringAssert.Contains(bard.Provenance, "Boastful Bellow XLVII");
+    Assert.AreEqual("Spell", bard.Why);
+    StringAssert.Contains(bard.Provenance, "Cast: Boastful Bellow XLVII");
 
     var mob = NamesTable.RowFrom(new ClassificationReport.Row
     {
@@ -161,8 +154,67 @@ public class NamesTableTest
     });
 
     Assert.AreEqual("NPC", mob.Type);
-    Assert.IsFalse(mob.Provenance.Contains("cast that proved it"),
-                   "only a spell-based verdict has a cast; inventing the sentence would put a lie in the tooltip");
+    Assert.IsFalse(mob.Provenance.Contains("Cast:"),
+                   "only a spell-based verdict has a cast; inventing the line would put a lie in the tooltip");
+  }
+
+  /*
+   * "Healed" is decided by BREADTH, so the number that justifies it is a headcount (docs/combat-mirror-design.md →
+   * "Fourth audit": pets draw 19-52 distinct casters, every genuine hostile measured tops out at 10). CensusHealProofTest
+   * pins that the count is the rule's own crowd; what is pinned here is that the cell says the evidence in two words and
+   * the tooltip says how much - and that no other verdict borrows the line.
+   */
+  [TestMethod]
+  public void AHealedVerdictSaysHowManyDidIt()
+  {
+    var healed = NamesTable.RowFrom(new ClassificationReport.Row
+    {
+      Name = "Mercless",
+      Kind = IdentityKind.Player,
+      Reason = "R15-healed",
+      HealedByCasters = 20,
+      HasFacts = true,
+    });
+
+    Assert.AreEqual("Healed", healed.Why);
+    StringAssert.Contains(healed.Provenance, "Healed by 20 raiders");
+
+    // A mob the raid keeps getting hit by AoE heals has no crowd to report - 0 means "never asked", not "nobody".
+    var npc = NamesTable.RowFrom(new ClassificationReport.Row
+    {
+      Name = "A bone walker",
+      Kind = IdentityKind.Npc,
+      Reason = "R6-npcdb",
+      HealedByCasters = 0,
+      HasFacts = true,
+    });
+
+    Assert.AreEqual("NPC list", npc.Why);
+    Assert.IsFalse(npc.Provenance.Contains("Healed by"),
+                   "the crowd line belongs to a heal-based verdict only; printing it elsewhere rewrites this row's provenance");
+  }
+
+  /*
+   * The class pencil appears on a Player row and nowhere else, because the verb behind it is not a display choice:
+   * PlayerRegistry.SetDefaultPlayerClass claims the name as a verified player AND writes it into players.txt. On an NPC
+   * row that is the exact pollution this window exists to catch; on a Pet or Merc row it has no meaning (mercenaries are
+   * not persisted, and a pet's class belongs to nobody's roster). An unplaced name gets no icon either - declaring itself
+   * through the Type dropdown first is the step that decides whether the class verb applies.
+   */
+  [TestMethod]
+  public void OnlyAPlayerRowOffersAClass()
+  {
+    foreach (var kind in new[] { IdentityKind.Player })
+    {
+      Assert.IsTrue(NamesTable.RowFrom(new ClassificationReport.Row { Name = "Ziggy", Kind = kind }).ClassEditable,
+                    $"a {kind} row is where writing players.txt applies");
+    }
+
+    foreach (var kind in new[] { IdentityKind.Npc, IdentityKind.Pet, IdentityKind.Merc, IdentityKind.Unknown })
+    {
+      Assert.IsFalse(NamesTable.RowFrom(new ClassificationReport.Row { Name = "Ziggy", Kind = kind }).ClassEditable,
+                    $"an icon on a {kind} row would write a roster entry for a name this window has no business claiming");
+    }
   }
 
   [TestMethod]

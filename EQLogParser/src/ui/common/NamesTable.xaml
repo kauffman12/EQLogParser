@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:fa="http://schemas.fontawesome.com/icons/"
              xmlns:local="clr-namespace:EQLogParser"
              xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
              mc:Ignorable="d"
@@ -40,9 +41,22 @@
          holds is on hover - Apply puts the counts in the caption's tooltip, which is also why they are still computed. -->
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
       <Label x:Name="namesCaption" Content="Names" Style="{StaticResource EQTitleStyle}"
-             ToolTip="Every name this capture mentions, and the rule that placed it. This window replaces the old Verified Players and Verified Pets windows."/>
+             ToolTip="Every name this capture mentions, what it was called and what kind of evidence said so. Click a row's pencil to overrule it. This window replaces the old Verified Players and Verified Pets windows."/>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
+      <!--
+        The two verbs that act on more than the row you clicked, and so have no cell to live in. They are the survivors
+        of the right-click menu this pane used to carry: every identity verdict (Player / Pet / Merc / NPC, or clear)
+        now comes from the pencil in a Type cell, but these two are not verdicts about what a name IS - one takes back
+        the claim AND stops the learning paths (players.txt `!Name`), the other forgets what this server's earlier logs
+        concluded. Icons with tooltips, in the order you would reach for them, left of the button.
+      -->
+      <fa:ImageAwesome x:Name="rejectIcon" Icon="Solid_Times" Style="{StaticResource EQIconStyle}" Cursor="Hand"
+                       Margin="8,1,8,2" VerticalAlignment="Center" MouseLeftButtonUp="RejectClick"
+                       ToolTip="Not a player: take back the claim on the selected names and stop learning them again. The row stays listed"/>
+      <fa:ImageAwesome x:Name="clearPriorIcon" Icon="Solid_Undo" Style="{StaticResource EQIconStyle}" Cursor="Hand"
+                       Margin="0,1,8,2" VerticalAlignment="Center" MouseLeftButtonUp="ClearPriorClick"
+                       ToolTip="Forget what this server's older logs decided about the selected names. Verdicts, players.txt and pet mappings are untouched"/>
       <!-- One button, because this census is built on demand: nothing about it updates by itself. -->
       <Button x:Name="namesRefreshButton" Content="Refresh" Margin="0,0,8,1" Height="{DynamicResource EQButtonHeight}" Padding="16,0,16,0"
               Click="RefreshClick" ToolTip="Rebuild this list from the captured facts"/>
@@ -68,22 +82,17 @@
              point of a 4,000 row table. -->
         <syncfusion:SortColumnDescription ColumnName="Name" SortDirection="Ascending"/>
       </syncfusion:SfDataGrid.SortColumnDescriptions>
-      <syncfusion:SfDataGrid.ContextMenu>
-        <ContextMenu>
-          <MenuItem Header="This is an NPC" Click="SetNpcClick"/>
-          <MenuItem Header="This is a Pet" Click="SetPetClick"/>
-          <MenuItem Header="This is a Mercenary" Click="SetMercClick"/>
-          <Separator/>
-          <MenuItem Header="Not a player (take back the claim)" Click="RejectClick"
-                    ToolTip="No identity claim at all: the name stays listed, and neither this log nor an older one will answer for it"/>
-          <MenuItem Header="Forget what older logs decided" Click="ClearPriorClick"
-                    ToolTip="Removes this server's remembered verdict. Operator verdicts, roster membership and pet mappings are untouched"/>
-        </ContextMenu>
-      </syncfusion:SfDataGrid.ContextMenu>
+      <!--
+        No context menu. Every verdict a right-click used to offer is now the pencil in the Type cell (the same verb,
+        the same file), so the menu was a second door to the same room - and a hidden one, since nothing on the row
+        hinted at it. What could not live in a cell went to the two icons in the title band.
+      -->
       <!--
         Widths are pixels, not grid stars: SfDataGrid's Width is a double, so "1.6*" throws while the column is being
         created and takes the whole window (and the app, which docks it at startup) down with a XamlParseException that
-        points at a line of markup and never says what it disliked.
+        points at a line of markup and never says what it disliked. The numbers below are only the FIRST paint: the pane
+        sizes these from the same theme-scaled variables every other table reads (ApplyColumnWidths, re-run when the
+        theme changes), because ThemeConfig cannot answer anything until after this markup has been loaded.
 
         Four columns, and the ones this window used to carry are gone on purpose. Damage/Healing belong on a damage
         board, not on an identity list; Owner is the Pet Owners window's own table (both read PlayerRegistry, so this
@@ -91,12 +100,32 @@
         now the WHY cell's tooltip — see ProvenanceFor.
       -->
       <syncfusion:SfDataGrid.Columns>
-        <syncfusion:GridTextColumn HeaderText="Name" MappingName="Name" Width="190"/>
-        <syncfusion:GridTextColumn HeaderText="Type" MappingName="Type" Width="90"/>
-        <!-- The whole point of the window: which rule read what. The tooltip is the rest of the answer - the spell a
-             spell-based verdict rests on, and the few facts about a row that no column can say (that the operator wrote
-             it, took it back, or that this log never mentions the name). -->
-        <syncfusion:GridTemplateColumn HeaderText="Why" MappingName="Why" Width="320">
+        <syncfusion:GridTextColumn HeaderText="Name" MappingName="Name" Width="150"/>
+
+        <!--
+          Type: the verdict word and the pencil that overrules it, in the shape the Pet Owners mapping grid already uses
+          (MainWindow's ownerEditPopup) - click the icon, the combo opens over the cell, picking writes. One dropdown
+          instead of five menu items means the whole vocabulary (including "clear my claim") is visible at once instead of
+          having to be remembered.
+        -->
+        <syncfusion:GridTemplateColumn HeaderText="Type" MappingName="Type" Width="90">
+          <syncfusion:GridTemplateColumn.CellTemplate>
+            <DataTemplate>
+              <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                <fa:ImageAwesome Margin="8,1,4,0" Style="{StaticResource EQIconStyle}" Icon="Regular_Edit" Cursor="Hand"
+                                 MouseLeftButtonUp="TypeEditMouseLeftButtonUp" ToolTip="Choose what this name is"/>
+                <TextBlock VerticalAlignment="Center" Text="{Binding Type}"/>
+              </StackPanel>
+            </DataTemplate>
+          </syncfusion:GridTemplateColumn.CellTemplate>
+        </syncfusion:GridTemplateColumn>
+        <!--
+          The whole point of the window: which rule read what, in TWO WORDS ("Who", "Chat", "Spell", "Healed", "Owner",
+          "NPC list" - see WhyWord), with the details demoted to the tooltip. It used to print the rule code
+          ("R15-healed") at three times this width, which pushed the pane past the width of its own dock to read a
+          string nobody could decode without the source open.
+        -->
+        <syncfusion:GridTemplateColumn HeaderText="Why" MappingName="Why" Width="150">
           <syncfusion:GridTemplateColumn.CellTemplate>
             <DataTemplate>
               <TextBlock Text="{Binding Why}" FontSize="{DynamicResource EQContentSize}" VerticalAlignment="Center"
@@ -104,8 +133,50 @@
             </DataTemplate>
           </syncfusion:GridTemplateColumn.CellTemplate>
         </syncfusion:GridTemplateColumn>
-        <syncfusion:GridTextColumn HeaderText="Class" MappingName="PlayerClass" Width="100"/>
+        <!--
+          Class, with the same pencil as Type - but only on a row where choosing a class MEANS something. Setting one
+          writes players.txt (SetDefaultPlayerClass verifies the name as a player), so an NPC row gets no icon: typing a
+          mob into the roster is exactly the pollution this window exists to catch. Nor does a Pet or Merc row get one -
+          nothing persists mercenaries, and a pet's class belongs to nobody's roster. A name the rules have not placed
+          declares itself with Type first; the pencil arrives as soon as the row reads Player (NameRow.ClassEditable).
+        -->
+        <syncfusion:GridTemplateColumn HeaderText="Class" MappingName="PlayerClass" Width="100">
+          <syncfusion:GridTemplateColumn.CellTemplate>
+            <DataTemplate>
+              <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                <fa:ImageAwesome Margin="8,1,4,0" Style="{StaticResource EQIconStyle}" Icon="Regular_Edit" Cursor="Hand"
+                                 Visibility="{Binding ClassEditable, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                 MouseLeftButtonUp="ClassEditMouseLeftButtonUp" ToolTip="Choose this player's class"/>
+                <TextBlock VerticalAlignment="Center" Text="{Binding PlayerClass}"/>
+              </StackPanel>
+            </DataTemplate>
+          </syncfusion:GridTemplateColumn.CellTemplate>
+        </syncfusion:GridTemplateColumn>
       </syncfusion:SfDataGrid.Columns>
     </syncfusion:SfDataGrid>
+
+    <!--
+      The two dropdowns, declared once and re-pointed at whichever cell was clicked (UiElementUtil.OpenCellPopup sizes
+      them to the cell and opens the list). Same markup shape as MainWindow's ownerEditPopup/classEditPopup pair - the
+      Pet Owners edit - and the class list is MainActions.ClassList, the same source those popups and the menus read.
+      The type list is wired in code-behind (IdentityVocabulary.TypeOptions) because its entries are internal records; the
+      word shows via DisplayMemberPath and the verdict travels as SelectedValue.
+    -->
+    <Popup x:Name="typeEditPopup" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade" Placement="Mouse">
+      <!-- Wired in the constructor rather than x:Static: the entries are IdentityVocabulary.TypeOption records, and that
+           table is internal (the words are shared with Core's rules and asserted by tests that run anywhere). -->
+      <ComboBox x:Name="typeEditComboBox"
+                HorizontalContentAlignment="Stretch"
+                DisplayMemberPath="Word" SelectedValuePath="Kind"
+                SelectionChanged="TypeSelectionChanged"
+                Style="{DynamicResource EQComboBoxStyle}" />
+    </Popup>
+    <Popup x:Name="classEditPopup" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade" Placement="Mouse">
+      <ComboBox x:Name="classEditComboBox"
+                HorizontalContentAlignment="Stretch"
+                ItemsSource="{x:Static local:MainActions.ClassList}"
+                SelectionChanged="ClassSelectionChanged"
+                Style="{DynamicResource EQComboBoxStyle}" />
+    </Popup>
   </Grid>
 </UserControl>

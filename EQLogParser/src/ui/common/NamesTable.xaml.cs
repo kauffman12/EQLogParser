@@ -1,3 +1,4 @@
+using FontAwesome5;
 using log4net;
 using System;
 using System.Collections.Generic;
@@ -8,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 
 using EQLogParser;
 
@@ -36,12 +38,24 @@ namespace EQLogParser
    *   - Not a second source of truth. Every verb here writes through ClassificationCommands into the same per-server
    *     files the old panes used (verdicts, roster, rejections) plus the sighting ledger. Nothing is stored here, so
    *     closing the window loses nothing and a file edited by hand still wins on the next open.
+   *
+   * HOW A NAME IS CORRECTED: the pencil in its own cell. Type opens the whole verdict list (Player / Pet / Mercenary /
+   * NPC / Clear claim) and Class opens the class list, both through UiElementUtil.OpenCellPopup - the click-the-icon-then-
+   * pick popup MainWindow's Pet Owners edit and DamageSummary's Group cell already call, so this pane joins them instead
+   * of hand-rolling a Popup (placement, sizing, focus-back and the close hook are in that helper). There is no context
+   * menu on this grid at all: right-drag and right-click
+   * are how a person grabs a block of rows out of a long table, and a menu drawn over that gesture hid the one verb
+   * almost nobody knew existed ("clear my claim" lived only in the fight grids). The two title-bar icons keep taking the
+   * selection, because an icon with no row of its own has nothing else to act on.
    */
   public partial class NamesTable
   {
     /*
-     * One grid row, four columns wide: who, what the classifier called it, which rule said so, and their class. Two
-     * things it no longer carries.
+     * One grid row, four columns wide: who, what the classifier called it, what kind of evidence said so, and their
+     * class. Two of those cells carry a pencil (Type and Class) while nothing in the grid is typed into — a row is read,
+     * and edited by picking from a list whose entries are verdicts rather than free text.
+     *
+     * Two things it no longer carries:
      *
      *   - Damage/Healing: this is an identity list, and the numbers invited reading a name's importance off its output
      *     instead of off the damage board (the census still totals them internally — that is its row order).
@@ -58,7 +72,20 @@ namespace EQLogParser
       public string Why { get; init; } = string.Empty;
       public string? PlayerClass { get; init; }
 
-      /// <summary>The WHY cell's tooltip: the cast a spell verdict rests on, plus whatever else qualifies this row.</summary>
+      /// <summary>The verdict itself, not its word: the Type dropdown preselects it and refuses to write what the row
+      /// already says (a click that changes nothing must not spend a derive pass or rewrite the overrides file).</summary>
+      public IdentityKind Kind { get; init; }
+
+      /*
+       * Whether this row gets a class pencil. Setting a class is not a display choice: PlayerRegistry.SetDefaultPlayerClass
+       * writes the name into players.txt as a verified player, so the icon appears exactly where that claim is already
+       * true. An NPC row gets no icon (typing a mob into the roster is the pollution this window exists to catch), and
+       * neither does a Pet or a Merc — nothing persists mercenaries, and a pet's class belongs to nobody's roster.
+       * A name the rules have not placed declares itself through Type first; the pencil follows.
+       */
+      public bool ClassEditable => Kind == IdentityKind.Player;
+
+      /// <summary>The WHY cell's tooltip: the details behind the two words, one short line each.</summary>
       public string Provenance { get; init; } = string.Empty;
     }
 
@@ -66,6 +93,13 @@ namespace EQLogParser
 
     private readonly ObservableCollection<NameRow> _rows = [];
     private int _refreshInFlight;
+
+    // Which row's dropdown is open. One at a time by construction (StaysOpen=False), cleared when the popup closes.
+    private NameRow? _typeEditRow;
+    private NameRow? _classEditRow;
+
+    // Applied once, then only on a theme change: re-sizing on every Loaded would fight an operator who dragged a column.
+    private bool _widthsApplied;
 
     // Spent by the first show that had a session to census. After that only an explicit ask rebuilds the list — see the
     // class comment and FillOnFirstShow.
@@ -75,6 +109,20 @@ namespace EQLogParser
     {
       InitializeComponent();
       namesGrid.ItemsSource = _rows;
+      typeEditComboBox.ItemsSource = IdentityVocabulary.TypeOptions;
+
+      /*
+       * ThemeConfig cannot answer a single size before MainWindow finishes its own init, which happens AFTER this markup
+       * has been parsed — so the widths written in the XAML are only the first paint, and the real ones are applied on
+       * the first layout pass (and from then on by the theme change handler, like every other grid here).
+       */
+      Loaded += static (s, e) =>
+      {
+        if (s is not NamesTable table || table._widthsApplied) return;
+        table._widthsApplied = true;
+        table.ApplyColumnWidths();
+      };
+      ThemeConfig.EventsThemeChanged += EventsThemeChanged;
 
       /*
        * ONCE, on the first time the pane is really visible. This used to refresh on EVERY visibility change, which for
@@ -127,47 +175,76 @@ namespace EQLogParser
     internal static NameRow RowFrom(ClassificationReport.Row row) => new()
     {
       Name = row.Name,
-      Type = TypeWord(row.Kind),
-      Why = row.Reason,
+      Type = IdentityVocabulary.TypeWord(row.Kind),
+      Why = IdentityVocabulary.WhyWord(row.Reason),
       PlayerClass = row.Class,
+      Kind = row.Kind,
       Provenance = ProvenanceFor(row),
     };
 
-    /// <summary>The enum's own word would print "Npc"; a column called Type should not.</summary>
-    internal static string TypeWord(IdentityKind kind) => kind switch
-    {
-      IdentityKind.Player => "Player",
-      IdentityKind.Pet => "Pet",
-      IdentityKind.Merc => "Merc",
-      IdentityKind.Npc => "NPC",
-      _ => "Unknown",
-    };
+    /*
+     * TYPE and WHY are words, not codes, and the mapping lives in Core (IdentityVocabulary) beside the rules that write
+     * them — so its coverage is asserted by tests that run anywhere, including a pass over the rules fixture that fails
+     * if any verdict reaches the screen still wearing its code. This pane assembles the cells around that table.
+     */
 
     /*
-     * The WHY cell's tooltip: everything that qualifies a verdict but has no column, one sentence per line.
+     * The WHY cell's tooltip: the detail behind those two words, one SHORT line each — a name, a count, a state. It is
+     * not prose any more for the same reason the column is not: hovering should answer in a blink ("Boastful Bellow
+     * XLVII", "Healed by 20 raiders", "You chose NPC"), and a sentence per line made the whole pane feel like a report.
      *
-     * It used to be a Notes column, and it was deleted as a column on the grounds that most rows had nothing to say —
-     * but two of its sentences have nowhere else to live, and losing them is worse than demoting them: "your verdict"
-     * and "no claim (you took it back)" are the difference between a row you can ignore and one you wrote yourself,
-     * and neither Type nor Why can say that. The spell behind an R4/R20 verdict rides here too (ReasonDetail), which is
-     * exactly the kind of detail worth a hover and not worth a column.
-     *
-     * The wording is pinned by NamesTableTest because each sentence tells a person whether to ACT: one resting on
-     * their own click needs no correction, one resting on an older log might, and "roster says player, rules say NPC"
-     * is the row where somebody's meter is wrong right now.
+     * What each line still has to be able to say, though, is unchanged and pinned by NamesTableTest: whether the row
+     * rests on the operator's own click (needs no correction), on an older log (might), or on players.txt while the
+     * rules say NPC (somebody's meter is wrong right now). Those are the three answers a person acts on, and the tooltip
+     * is the only place any of them appear.
      */
     internal static string ProvenanceFor(ClassificationReport.Row row)
     {
       var lines = new List<string>();
-      if (row.ReasonDetail is not null) lines.Add($"cast that proved it: {row.ReasonDetail}");
-      if (row.IsOperatorVerdict) lines.Add("your verdict");
-      if (row.IsRejected) lines.Add("no claim (you took it back)");
-      if (row.IsPrior) lines.Add($"older logs on this server, x{row.PriorSightings}");
-      if (row.IsDisagreement) lines.Add("roster says player, rules say NPC");
-      else if (row.LegacySaysPlayer && row.Kind != IdentityKind.Player) lines.Add("in players.txt");
-      if (!row.HasFacts) lines.Add("not in this log");
+      if (row.ReasonDetail is not null) lines.Add($"Cast: {row.ReasonDetail}");
+      if (row.HealedByCasters > 0) lines.Add($"Healed by {row.HealedByCasters:N0} raiders");
+      if (row.IsOperatorVerdict) lines.Add($"You chose {IdentityVocabulary.TypeWord(row.Kind)}");
+      if (row.IsRejected) lines.Add("Claim taken back");
+      if (row.IsPrior) lines.Add($"Earlier logs x{row.PriorSightings:N0}");
+      if (row.IsDisagreement) lines.Add("players.txt says player");
+      else if (row.LegacySaysPlayer && row.Kind != IdentityKind.Player) lines.Add("In players.txt");
+      if (!row.HasFacts) lines.Add("Not in this log");
       return string.Join("\n", lines);
     }
+
+    /*
+     * Column widths from the same theme-scaled variables every other table sizes itself with — CurrentNameWidth for
+     * names, and medium/shortest sums for the rest — so a font or theme change moves this grid with the others instead
+     * of leaving four columns clipped at their startup pixel counts.
+     *
+     * This grid is deliberately NOT routed through DataGridUtil.RefreshTableColumns: its Type and Class cells each carry
+     * an edit icon (a word plus a pencil, which no other table's content is), so those two need an allowance that table
+     * has no category for — and adding "Type" or "PlayerClass" to its mapping list would resize every OTHER grid that
+     * happens to map a column by those words. AllowResizingColumns stays on, so anybody who wants more room takes it;
+     * these are the widths that fit the longest word each column can print.
+     */
+    private void ApplyColumnWidths()
+    {
+      if (namesGrid?.Columns is null) return;
+
+      // The pencil is EQIconStyle — a square of the current font size — plus the 8+8 margins every icon in these panes carries.
+      var iconAllowance = ThemeConfig.CurrentFontSize + 16;
+
+      foreach (var column in namesGrid.Columns)
+      {
+        var width = column.MappingName switch
+        {
+          "Name" => ThemeConfig.CurrentNameWidth,
+          "Type" => ThemeConfig.CurrentShortWidth + iconAllowance,
+          "Why" => ThemeConfig.CurrentMediumWidth + ThemeConfig.CurrentShortestWidth,
+          "PlayerClass" => ThemeConfig.CurrentMediumWidth + ThemeConfig.CurrentShortestWidth,
+          _ => 0.0,
+        };
+        if (width > 0) column.Width = width;
+      }
+    }
+
+    private void EventsThemeChanged(string _) => ApplyColumnWidths();
 
     private void Apply(ClassificationReport? census)
     {
@@ -207,34 +284,107 @@ namespace EQLogParser
         if (item is NameRow row && !string.IsNullOrEmpty(row.Name)) yield return row.Name;
     }
 
-    // Every verb writes through ClassificationCommands and then re-scans: the files are the truth, and the list has to
-    // show what a save actually produced - including a name that moves kind because the rules now have an owner for it.
-    private void SetVerdict(IdentityKind kind)
+    /*
+     * The Type dropdown: click the pencil in a row, the list opens over the cell, and picking an entry writes that one
+     * name. A cell edit edits its cell — batching stays where it always was (the two icons in the title bar act on the
+     * selection, and the fight grids' right-click menu still takes a multi-select), because a pencil drawn on ONE row
+     * promises that row and nothing else.
+     */
+    private void TypeEditMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
-      var names = SelectedNames().ToList();
-      if (names.Count == 0) return;
-      foreach (var name in names)
-        ClassificationCommands.SetVerdict(IdentityOverrideStore.Instance, PlayerRegistry.Instance, name, kind);
+      if (sender is not ImageAwesome icon || icon.DataContext is not NameRow row) return;
+      if (UiElementUtil.FindGridCell(icon) is not { } cell) return;
+
+      _typeEditRow = row;
+
+      // Preselect what the row already says, so the list opens on the current verdict — and so the guard in
+      // TypeSelectionChanged can tell "the click that opened this" from "a different answer", which is the difference
+      // between refreshing a window and rewriting mirror-overrides.txt for nothing. An unplaced name selects nothing:
+      // "Clear claim" is an action, not what the row currently is.
+      typeEditComboBox.SelectedValue = row.Kind == IdentityKind.Unknown ? null : row.Kind;
+
+      UiElementUtil.OpenCellPopup(typeEditPopup, typeEditComboBox, cell, () =>
+      {
+        _typeEditRow = null;
+        typeEditComboBox.SelectedItem = null;
+      });
+    }
+
+    private void TypeSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+      if (sender is not ComboBox combo || combo.SelectedItem is not IdentityVocabulary.TypeOption option) return;
+
+      var row = _typeEditRow;
+      if (row is null || option.Kind == row.Kind) return;
+
+      if (option.Kind == IdentityKind.Unknown) ClassificationCommands.ClearVerdict(IdentityOverrideStore.Instance, row.Name);
+      else ClassificationCommands.SetVerdict(IdentityOverrideStore.Instance, PlayerRegistry.Instance, row.Name, option.Kind);
+
+      Reconcile();
+      typeEditPopup.IsOpen = false;
+    }
+
+    private void ClassEditMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+      if (sender is not ImageAwesome icon || icon.DataContext is not NameRow row || !row.ClassEditable) return;
+      if (UiElementUtil.FindGridCell(icon) is not { } cell) return;
+
+      _classEditRow = row;
+      classEditComboBox.SelectedItem = (object?)row.PlayerClass ?? "";   // ClassList's first entry is the blank
+
+      UiElementUtil.OpenCellPopup(classEditPopup, classEditComboBox, cell, () =>
+      {
+        _classEditRow = null;
+        classEditComboBox.SelectedItem = null;
+      });
+    }
+
+    private void ClassSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+      if (sender is not ComboBox combo || combo.SelectedValue is not string className) return;
+
+      var row = _classEditRow;
+      if (row is null || row.PlayerClass == className) return;
+
+      // SetDefaultPlayerClass validates the word itself (CombatRecordLookup.IsValidClassName), so the blank entry that
+      // MainActions.ClassList leads with — the old window's way of showing "no class" — writes nothing at all rather
+      // than a roster row with an empty class.
+      if (string.IsNullOrEmpty(className)) return;
+
+      PlayerRegistry.Instance.SetDefaultPlayerClass(row.Name, className);
+      Reconcile();
+      classEditPopup.IsOpen = false;
+    }
+
+    /*
+     * After any write: re-scan this window AND ask for a pass. The census builds its own timeline (so it is correct on
+     * its own), but the fight list, the overlay and every board read the LAST derive's snapshot — which is why this pane
+     * used to be the one place an override showed up: FightTable's "Set as …" menu calls RederiveAsync beside its write
+     * and this window called nothing, so a verdict made here left the rest of the application classifying by the old
+     * answer until the derive cadence happened to run (and on a log that stopped growing, never at all).
+     */
+    private void Reconcile()
+    {
+      DeriveEngine.Active?.RederiveAsync();
       Refresh();
     }
 
-    private void SetNpcClick(object sender, RoutedEventArgs e) => SetVerdict(IdentityKind.Npc);
-    private void SetPetClick(object sender, RoutedEventArgs e) => SetVerdict(IdentityKind.Pet);
-    private void SetMercClick(object sender, RoutedEventArgs e) => SetVerdict(IdentityKind.Merc);
-
+    // The two band icons. They take the SELECTION (a title-bar icon has no row of its own), and their tooltips say so.
     private void RejectClick(object sender, RoutedEventArgs e)
     {
       var names = SelectedNames().ToList();
       if (names.Count == 0) return;
       foreach (var name in names)
         ClassificationCommands.Reject(IdentityOverrideStore.Instance, PlayerRegistry.Instance, name);
-      Refresh();
+      Reconcile();
     }
 
     private void ClearPriorClick(object sender, RoutedEventArgs e)
     {
-      foreach (var name in SelectedNames()) IdentityPriorStore.Instance.Remove(name);
-      Refresh();
+      var names = SelectedNames().ToList();
+      if (names.Count == 0) return;
+      foreach (var name in names) IdentityPriorStore.Instance.Remove(name);
+      Reconcile();
     }
 
     private void RefreshClick(object sender, RoutedEventArgs e) => Refresh();
