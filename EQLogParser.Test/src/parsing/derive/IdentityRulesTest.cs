@@ -29,9 +29,13 @@ public class IdentityRulesTest
         AssertIdentity(timeline, "Verifyguy", IdentityKind.Player, "R1-target");
         AssertIdentity(timeline, "Grisel Noshikun", IdentityKind.Npc, "R1-target");
 
-        // R3 presence (raid join, raid leader) and speech (group tell, raid tell)
-        AssertIdentity(timeline, "Raidos", IdentityKind.Player, "R3-presence");
-        AssertIdentity(timeline, "Chiefoc", IdentityKind.Player, "R3-presence");
+        /*
+         * R3 presence and speech. Presence is FIVE sources now, one per kind of sighting (joined raid, left raid,
+         * joined group, left group, leader) — they used to share "R3-presence", which is why the Names window could only
+         * say "Raid" about all of them and an operator asked what that meant.
+         */
+        AssertIdentity(timeline, "Raidos", IdentityKind.Player, "R3-joinraid");
+        AssertIdentity(timeline, "Chiefoc", IdentityKind.Player, "R3-leader");
         AssertIdentity(timeline, "Chatterbox", IdentityKind.Player, "R3-chat");
         AssertIdentity(timeline, "Raiderone", IdentityKind.Player, "R3-chat");
 
@@ -267,6 +271,12 @@ public class IdentityRulesTest
         }
     }
 
+    /*
+     * Provenance assertions are exact, INCLUDING the tail a rule carries: a spell verdict names its cast inside the source
+     * ("R4-spell") because that is the detail which makes the verdict checkable — and it is the same
+     * string this server remembers about the name, so an older log's answer can still say what it read
+     * (IdentityVocabulary.ProofText turns it back into "Cast Boastful Bellow XLVII in previous log").
+     */
     private static void AssertIdentity(EntityTimeline timeline, string name, IdentityKind expected, string expectedSource)
     {
         var kind = timeline.IdentityWithSource(name, out var source);

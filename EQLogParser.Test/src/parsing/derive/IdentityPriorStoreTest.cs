@@ -316,7 +316,8 @@ public class IdentityPriorStoreTest
   {
     foreach (var remembered in new[]
              {
-               "R1-target", "R1-conflict", "R2-who", "R3-chat", "R3-merc", "R3-presence", "R4-spell",
+               "R1-target", "R1-conflict", "R2-who", "R3-chat", "R3-merc", "R4-spell",
+               "R3-joinraid", "R3-leaveraid", "R3-joingroup", "R3-leftgroup", "R3-leader",
                "R5-called", "R7-graph", "R7-side", "R9-charm", "R13-merc", "R15-healed", "R17-selffeed", "R18-healedpet",
                "R19-eyeowner",
              })
@@ -324,7 +325,7 @@ public class IdentityPriorStoreTest
 
     foreach (var noise in new[]
              {
-               "R6-npcdb", "R14-shape", "R16-comma", "R0-local", "R5-owner:Sancus", "R10-manual", "Manual",
+               "R6-npcdb", "R14-shape", "R16-comma", "R21-spelleffect", "R0-local", "R5-owner:Sancus", "R10-manual", "Manual",
                "RegistrySeed", "You", "Prior:R7-graph", "", null,
              })
       Assert.IsFalse(IdentityPriorStore.WorthRemembering(noise), $"{noise} was remembered as if a line had said it");

@@ -131,6 +131,14 @@ namespace EQLogParser
        * something, while an Unknown guild alt who sat the fight out is just an alt.
        */
       public bool IsUnresolved => Kind == IdentityKind.Unknown && !IsRejected && Class is null;
+
+      /*
+       * Whether an operator may still change this row's Type — false where the answer is forced by the name itself, so the
+       * window shows no pencil instead of offering three wrong answers next to the one right one (a summon whose spelling
+       * carries its owner, or a spell effect that is not a fighter). See IdentityVocabulary.CanOverrule for the two cases
+       * and for why an operator's own verdict always keeps its icon: taking a claim back has to stay possible.
+       */
+      public bool Overrulable => IdentityVocabulary.CanOverrule(Name, Reason);
     }
 
     /// <summary>Rows in display order: raid-side kinds first, then busiest, then by name.</summary>

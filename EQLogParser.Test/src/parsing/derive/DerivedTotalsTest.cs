@@ -66,8 +66,8 @@ public class DerivedTotalsTest
             ("Skeleton", "Bithika", 90, 42, LabelTypes.Melee));       // tanking side of the Skeleton row
 
         var timeline = new EntityTimeline();
-        timeline.SetIdentity("Illuminai", IdentityKind.Player, RuleStrength.Strong, "R3-presence");
-        timeline.SetIdentity("Bithika", IdentityKind.Player, RuleStrength.Strong, "R3-presence");
+        timeline.SetIdentity("Illuminai", IdentityKind.Player, RuleStrength.Strong, "R3-joinraid");
+        timeline.SetIdentity("Bithika", IdentityKind.Player, RuleStrength.Strong, "R3-joinraid");
         return Derive(facts, timeline);
     }
 
@@ -135,8 +135,8 @@ public class DerivedTotalsTest
 
         var facts = BuildFacts([.. legs]);
         var timeline = new EntityTimeline();
-        timeline.SetIdentity("Illuminai", IdentityKind.Player, RuleStrength.Strong, "R3-presence");
-        timeline.SetIdentity("Bithika", IdentityKind.Player, RuleStrength.Strong, "R3-presence");
+        timeline.SetIdentity("Illuminai", IdentityKind.Player, RuleStrength.Strong, "R3-joinraid");
+        timeline.SetIdentity("Bithika", IdentityKind.Player, RuleStrength.Strong, "R3-joinraid");
         var (rows, index, table) = Derive(facts, timeline);
 
         var expected = legs.Sum(leg => leg.Dmg);

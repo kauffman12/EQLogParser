@@ -191,6 +191,12 @@ namespace EQLogParser
       RunStage("R5 ownership", outcome, () => ApplyOwnershipFlags(facts, timeline, state));
       RunStage("R6 npcs.txt", outcome, () => ApplyNpcDatabase(facts, timeline));
 
+      /*
+       * R21 before the shape rules and before the graph, because a spell is not a combatant and the graph would
+       * otherwise read its damage as a fighter's (docs/combat-mirror-design.md).
+       */
+      RunStage("R21 spell effects", outcome, () => ApplySpellEffects(facts, timeline));
+
       // Name shape before the graph, because the graph reads it: an article-shaped defender is no longer an
       // unknown edge, so attackers that were starved by "a skeleton" being unclassified get their evidence.
       RunStage("R14 name shape", outcome, () => ApplyNameShape(facts, timeline));
@@ -413,13 +419,36 @@ namespace EQLogParser
             targetNpc.Add(name);
             break;
 
+          /*
+           * One claim per KIND of presence sighting, not one for all five. They used to share a code ("R3-presence") and
+           * therefore one word in the Names window — "Raid" — which an operator read as "what does Raid mean?": joining a
+           * raid, leaving it, joining a group and being flagged leader are four different sightings about the same name,
+           * and the difference is exactly what a person checking a verdict wants. The evidence kinds already distinguished
+           * them; only the source string was flattening them.
+           */
           case EvidenceFact.EvJoinedRaid:
+            playerBehavior.Add(name);
+            Claim(timeline, state, name, IdentityKind.Player, RuleStrength.Strong, "R3-joinraid", double.NegativeInfinity);
+            break;
+
           case EvidenceFact.EvLeftRaid:
+            playerBehavior.Add(name);
+            Claim(timeline, state, name, IdentityKind.Player, RuleStrength.Strong, "R3-leaveraid", double.NegativeInfinity);
+            break;
+
           case EvidenceFact.EvJoinedGroup:
+            playerBehavior.Add(name);
+            Claim(timeline, state, name, IdentityKind.Player, RuleStrength.Strong, "R3-joingroup", double.NegativeInfinity);
+            break;
+
           case EvidenceFact.EvLeftGroup:
+            playerBehavior.Add(name);
+            Claim(timeline, state, name, IdentityKind.Player, RuleStrength.Strong, "R3-leftgroup", double.NegativeInfinity);
+            break;
+
           case EvidenceFact.EvRaidLeader:
             playerBehavior.Add(name);
-            Claim(timeline, state,name, IdentityKind.Player, RuleStrength.Strong, "R3-presence", double.NegativeInfinity);
+            Claim(timeline, state, name, IdentityKind.Player, RuleStrength.Strong, "R3-leader", double.NegativeInfinity);
             break;
 
           case EvidenceFact.EvMercJoinedGroup:
@@ -483,14 +512,14 @@ namespace EQLogParser
             var castSpell = facts.AuxOf(e.AuxIdx);
             if (IsClassSafeCast(castSpell))
             {
-              Claim(timeline, state,name, IdentityKind.Player, RuleStrength.Certain, "R4-spell", double.NegativeInfinity);
+              Claim(timeline, state, name, IdentityKind.Player, RuleStrength.Certain, "R4-spell", double.NegativeInfinity);
             }
             else if (IsPetCastSpell(castSpell))
             {
               // Strong, not Certain: the spell proves the caster is somebody's pet, but says nothing
               // about WHOSE - a verified owner claim (R5, Certain) still outranks this, and a name
               // that is also a verified player keeps Player.
-              Claim(timeline, state,name, IdentityKind.Pet, RuleStrength.Strong, "R20-petspell", double.NegativeInfinity);
+              Claim(timeline, state, name, IdentityKind.Pet, RuleStrength.Strong, "R20-petspell", double.NegativeInfinity);
             }
             break;
         }
@@ -955,6 +984,83 @@ namespace EQLogParser
         timeline.SetIdentity(name, IdentityKind.Npc, strength, "R6-npcdb", double.NegativeInfinity);
       }
     }
+
+    /*
+     * R21: a name the spell database answers for is a spell effect, not a creature, and must never end up in the
+     * identity list as a PERSON.
+     *
+     * The lines that produce such names are the ones where the client puts the SPELL in the attacker field: "X has taken
+     * 335500 damage from Sonic Bang by ." (no caster named) and "You have taken N damage from Curse XVII Rk. III.". On a
+     * single night's capture these are common — 706 of them in eqlog_Kizant_xegony-09-03-26.txt, names like Sonic Bang,
+     * Ball of Fire, Fire Trap, Burning Glob Burst. Half of them hit the raid, which R7 reads as hostility and answers
+     * correctly with NPC. The other half hit MOBS — the raid's own spells whose caster the line did not name — and there
+     * the graph said the only thing it can say about an attacker of mobs: Player. That is how "Curse XVII Rk. III" arrived
+     * in the Names window as a player, with "Our side" as its proof (reported by the operator 2026-11).
+     *
+     * Why before the graph: R7 only classifies names that are still Unknown, so claiming these first keeps them out of
+     * the vote entirely rather than asking the vote to distrust one kind of edge. Strength is Strong, not Certain: a
+     * target frame or an owner-call line about a creature whose name happens to match a spell outranks a dictionary hit,
+     * and R14/R16 already refuse spell-named names for the same reason ("a spell is not a combatant").
+     *
+     * What this does NOT do is take the damage away. The facts stay in the table exactly where legacy put them, so the
+     * meter keeps the numbers; what changes is that the row they belong to says "A Spell" instead of pretending to be a
+     * fighter. Refusing such facts at the door would move raid damage-taken totals and belongs with that conversation.
+     */
+    private static void ApplySpellEffects(IFactTable facts, EntityTimeline timeline)
+    {
+      /*
+       * Two kinds of proof, in the order a person would trust them: what the LINE said, then what the SPELL LIST says.
+       *
+       * The flag is the line's own shape — "X has taken N damage from Sonic Bang by ." — and it is the stronger of the two
+       * because it does not depend on this build shipping this expansion's data. "Sonic Bang" is not in the shipped
+       * spells.txt at all, so a name-only rule would leave that attacker to the graph, which reads a spell beating a mob as
+       * a player. The database lookup catches the rest: ranks and formulations arrive as their own rows (data/spells.txt
+       * carries "Curse XVII" at 72133 and "Curse XVII Rk. II" at 72134), so no name surgery is needed here.
+       */
+      foreach (var f in facts.Facts)
+      {
+        if (!f.AttackerIsSpell) continue;
+        ClaimSpellEffect(facts.NameOf(f.AtkIdx), timeline);
+      }
+
+      foreach (var name in facts.InternedNames)
+      {
+        if (!SpellNamed(name)) continue;
+        ClaimSpellEffect(name, timeline);
+      }
+    }
+
+    private static void ClaimSpellEffect(string? name, EntityTimeline timeline)
+    {
+      if (string.IsNullOrEmpty(name)) return;
+
+      /*
+       * The one spell shape that gets NO verdict is the self-target feedback line ("You have taken 16690 damage from
+       * Cloudburst Strike Feedback XII."). Calling that an enemy is as wrong as calling it a player: the damage is the
+       * local player's own spell bouncing back and there is no entity behind the name at all. R7 already refuses those
+       * edges for the same reason; this keeps the name out of the identity list too (IdentityRulesTest pins it).
+       */
+      if (IsSelfTargetDamageSpell(name)) return;
+
+      // Better provenance wins: something that called this creature, targeted it as an NPC, or heard it speak in a raid
+      // channel knows more than a name comparison does, and an operator's verdict outranks everything here anyway.
+      timeline.IdentityAt(name, double.PositiveInfinity, out var held, out _);
+      if (held >= RuleStrength.Strong) return;
+
+      timeline.SetIdentity(name, IdentityKind.Npc, RuleStrength.Strong, "R21-spelleffect", double.NegativeInfinity);
+    }
+
+    /*
+     * Whether a name is one of the game's damaging spells, exactly as the client wrote it.
+     *
+     * One lookup, no rank-stripping: spells.txt carries each rank and each formulation as its OWN row — "Curse XVII" is
+     * 72133 and "Curse XVII Rk. II" is 72134 — so "Fire Trap Rk. II" answers on its own name and there is no unranked
+     * spelling to fall back to. (A stripping fallback was written here first, on the assumption the database keyed on bare
+     * names; reading the data file says otherwise, and dead tolerance in an identity rule is just another path nobody
+     * tests.) Non-spell names cost one dictionary miss.
+     */
+    internal static bool SpellNamed(string? name)
+      => !string.IsNullOrEmpty(name) && EQDataStore.Instance.GetDamagingSpellByName(name) is not null;
 
     // R7: fight-graph inference for names nothing else could classify (melee mains with no joins,
     // chat or spire casts; named custom pets like `Useless` that never show an owner line).

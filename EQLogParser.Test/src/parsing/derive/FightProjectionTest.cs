@@ -146,7 +146,7 @@ public class FightProjectionTest
             ("Illuminai", "Raidman", 88, 250, LabelTypes.Melee));  // after it: plain friendly fire, dropped
         var timeline = new EntityTimeline();
         timeline.SetIdentity("Illuminai", IdentityKind.Player, RuleStrength.Medium, "R4-spell");
-        timeline.SetIdentity("Raidman", IdentityKind.Player, RuleStrength.Certain, "R3-presence");
+        timeline.SetIdentity("Raidman", IdentityKind.Player, RuleStrength.Certain, "R3-joinraid");
         timeline.AddAffiliation(AffiliationKind.Friendly, "Illuminai", T0 + 100, T0 + 200, RuleStrength.Certain, "R9-charm");
 
         var rows = FightProjection.Build(facts, timeline);

@@ -3,19 +3,35 @@ namespace EQLogParser;
 /*
  * The words this application says out loud about identity, kept apart from the codes that produce them.
  *
- * Internally an identity is an `IdentityKind` plus a source string ("R15-healed", "Prior:R6-npcdb"). Those strings are
- * right where they belong — in a log line, in the ledger, in a diff of someone's overrides file — and wrong everywhere
- * a person reads them. The Names window spent years showing "R10-manual" in a column and needed a source lookup to know
- * what its own list meant, which is how a vocabulary test earns its keep: this table is closed, and its size is asserted
- * (`EveryRuleWordHasAWordWorthPrinting`).
+ * Internally an identity is an `IdentityKind` plus a source string ("R15-healed", "R4-spell:Curse XVII", "Prior:R2-who").
+ * Those strings are right where they belong — in a log line, in the ledger, in a diff of someone's overrides file — and
+ * wrong everywhere a person reads them. Two tables live here:
  *
- * Two rules about the mapping itself:
+ *   WHY  (the cell)  — one to three words naming the KIND of proof: "Who", "Chat", "Cast", "Owner in Name", "Joined Raid".
+ *   PROOF(the tooltip) — the same idea with its one detail: "From /who", "Cast Spire of Arcanum", "Healed by 20 raiders".
+ *
+ * Both are as short as they are because this is a 4,000-row list: a sentence per row made the pane read like a report and
+ * the WHY column, at 256 fixed pixels, was the widest thing on screen (docs/DesignNotes.md).
+ *
+ * Four rules about the mapping itself:
+ *
  *   - AN UNKNOWN CODE ECHOES ITSELF. A rule added without a word here shows up as its own name — legible, and obvious
- *     enough to get a word written. Guessing ("R21-whatever" → "Evidence") would file a new kind of proof under an old
- *     meaning, and a wrong provenance is worse than jargon: the operator acts on it.
- *   - THE EARLIER-LOG MARK SURVIVES, because "this capture proved it" versus "an older log on this server said so" are
- *     different actions (the second may need re-checking, the first does not). The ledger stores the rule its verdict
- *     came from, so even a borrowed answer can say what kind of proof it was.
+ *     enough to get a word written. Guessing ("R24-whatever" → "Evidence") would file a new kind of proof under an old
+ *     meaning, and a wrong provenance is worse than jargon: the operator acts on it. `IdentityVocabularyTest` checks the
+ *     list in both directions and re-runs the rules fixture so no verdict reaches the screen wearing its code.
+ *
+ *   - A PRIOR IS NOT A DIFFERENT WORD, IT IS THE SAME PROOF ON OLDER EVIDENCE. The column used to print "Healed (earlier)",
+ *     which cost width to say what the tooltip already said, and "Our side (earlier)" was two mysteries stacked. So the
+ *     cell stays bare and the tooltip ends in "in previous log" — "From Chat in previous log", "Cast Curse XVII in
+ *     previous log". The ledger stores the rule (and its detail: the cast, the owner) with the verdict, which is what
+ *     lets a borrowed answer name the proof it borrowed.
+ *
+ *   - THE TOOLTIP IS NEVER BLANK. A name nothing placed gets "Not placed" / "Nothing identified it"; anything unmapped
+ *     repeats its own cell word rather than showing an empty hover (docs: an empty tooltip reads as a broken pane).
+ *
+ *   - SOME ROWS CANNOT BE OVERRULED, AND SAY SO BY HAVING NO EDIT ICON. `CanOverrule` is where that is decided — a name
+ *     whose own spelling proves it ("Tuona`s ward") or that is not a fighter at all (a spell effect) has exactly one
+ *     right answer, and a pencil offering four wrong ones is worse than no pencil.
  */
 internal static class IdentityVocabulary
 {
@@ -24,13 +40,12 @@ internal static class IdentityVocabulary
 
   /*
    * Everything a Type cell offers, in one list — the whole identity vocabulary at a glance, which is what the old
-   * right-click menu could not do (five items had to be remembered, and "take my claim back" was not even among them:
-   * that verb existed only in the fight grids' menu).
+   * right-click menu could not do (five items had to be remembered, and "take my claim back" was not even among them).
    *
    * "Clear claim" carries IdentityKind.Unknown because that is exactly what ClassificationCommands.ClearVerdict means —
-   * remove the operator's row and let this capture's own rules show through again. Each word appears EXACTLY ONCE: the
-   * retired menu listed NPC twice ("Select an enemy to Set as NPC." was one of two handlers doing the same thing), and a
-   * dropdown with two entries for one answer is a bug a person notices only after clicking.
+   * remove the operator's row (and this server's memory of the name) and let this capture's own rules show through. Each
+   * word appears EXACTLY ONCE: the retired menu listed NPC twice, and a dropdown with two entries for one answer is a bug
+   * a person notices only after clicking.
    */
   internal static readonly TypeOption[] TypeOptions =
   [
@@ -51,36 +66,126 @@ internal static class IdentityVocabulary
     _ => "Unknown",
   };
 
-  /*
-   * The WHY cell: two words naming the KIND of evidence. "R15-healed" and "R3-presence" made somebody open the source to
-   * read their own list; "Healed" and "Raid" do not. The cell also stops costing more room than it says: 256 fixed pixels
-   * for `R15-healed`, where two words and a theme-scaled width need about half (docs/DesignNotes.md).
-   */
-  internal static string WhyWord(string? source)
-  {
-    if (string.IsNullOrEmpty(source)) return string.Empty;
+  /// <summary>The word a row with no verdict at all prints, so the column is never empty and the hover has something to repeat.</summary>
+  internal const string NotPlaced = "Not placed";
 
-    var earlier = false;
-    if (source.StartsWith(PriorPrefix, StringComparison.Ordinal))
-    {
-      earlier = true;
-      source = source[PriorPrefix.Length..];
-    }
-
-    // R5's owner suffix ("R5-owner:Sancus") comes off: the column describes the evidence, and the owner lives in the
-    // Pet Owners window. Any other colon-split (none today) reads the same way rather than printing a path.
-    var colon = source.IndexOf(':');
-    if (colon > 0) source = source[..colon];
-
-    var word = WhyWords.TryGetValue(source, out var known) ? known : source;
-    return earlier ? $"{word} (earlier)" : word;
-  }
-
+  /// <summary>Stripped from a source that arrived as "Prior:&lt;rule&gt;" — an older log on this server said it.</summary>
   internal const string PriorPrefix = "Prior:";
 
+  /// <summary>The reason tail: "R4-spell:Curse XVII" → "Curse XVII", "R5-owner:Sancus" → "Sancus", else null.</summary>
+  internal static string? DetailOf(string? source)
+  {
+    if (string.IsNullOrEmpty(source)) return null;
+    var s = source.StartsWith(PriorPrefix, StringComparison.Ordinal) ? source[PriorPrefix.Length..] : source;
+    var colon = s.IndexOf(':');
+    return colon > 0 && colon + 1 < s.Length ? s[(colon + 1)..] : null;
+  }
+
+  /// <summary>The code with its prefix and tail removed, and any prior marker taken off ("Prior:R4-spell:X" → "R4-spell").</summary>
+  internal static string CodeOf(string? source)
+  {
+    if (string.IsNullOrEmpty(source)) return string.Empty;
+    var s = source.StartsWith(PriorPrefix, StringComparison.Ordinal) ? source[PriorPrefix.Length..] : source;
+    var colon = s.IndexOf(':');
+    return colon > 0 ? s[..colon] : s;
+  }
+
+  /// <summary>True when this verdict came from an earlier log on this server rather than from the open capture.</summary>
+  internal static bool IsPrior(string? source) =>
+    !string.IsNullOrEmpty(source) && source.StartsWith(PriorPrefix, StringComparison.Ordinal);
+
   /*
-   * Every source string ClassificationRules (and the override store) can put on a row. The list is asserted against the
-   * rules by IdentityVocabularyTest, which is where a new rule learns it also needs a word here.
+   * The WHY cell: a few words naming the KIND of proof. Never "(earlier)" — that half of the message belongs to the
+   * tooltip, and paying column width for it made every row wider to say something only a hover needs (asked for directly:
+   * "i dont want to see (earlier) in the why column").
+   */
+  internal static string WhyWord(string? source, IdentityKind kind = IdentityKind.Unknown)
+  {
+    var code = CodeOf(source);
+    if (code.Length == 0) return kind == IdentityKind.Unknown ? NotPlaced : TypeWord(kind);
+    return WhyWords.TryGetValue(code, out var known) ? known : code;
+  }
+
+  /*
+   * The WHY tooltip: the proof in ONE line, with the detail that makes it checkable — the cast, the crowd, whose name.
+   * " in previous log" is appended when the answer was borrowed from an older capture, which is the one thing a person
+   * needs to weigh it, and the phrase is spelled out instead of abbreviated because the hover has room and the reader
+   * should not have to learn a notation.
+   *
+   * `healedByCasters` comes from Row (it is a count the census had to walk the heal stream for); the tail comes from the
+   * source itself, which is why R4 keeps the cast in the code it asserts and the ledger persists that string verbatim.
+   */
+  internal static string ProofText(string? source, IdentityKind kind, int healedByCasters = 0)
+  {
+    var code = CodeOf(source);
+    var detail = DetailOf(source);
+    var text = code switch
+    {
+      "R0-local" => "Your own name",
+      "R1-target" => "From /target",
+      "R1-conflict" => "Targeted as both NPC and player",
+      "R2-who" => "From /who",
+      "R3-chat" => "From Chat",
+      "R3-joinraid" => "Joined Raid",
+      "R3-leaveraid" => "Left Raid",
+      "R3-joingroup" => "Joined Group",
+      "R3-leftgroup" => "Left Group",
+      "R3-leader" => "Led the Raid",
+      "R3-merc" => "From /target as Mercenary",
+      "R4-spell" => detail is null ? "Cast a Class Spell" : $"Cast {detail}",
+      "R5-called" => detail is null ? "Called to its Owner" : $"Called by {detail}",
+      "R5-owner" => "Owner in Name",
+      "R6-npcdb" => "In npcs.txt",
+      "R7-graph" => "It Fights Mobs",
+      "R7-side" => "It Attacks Raid",
+      "R9-charm" => "Charm Window",
+      "R10-manual" or "Manual" or "Override" => $"You chose {TypeWord(kind)}",
+      "R13-merc" => "From /target as Mercenary",
+      "R14-shape" => "Mob Name Shape",
+      "R15-healed" => healedByCasters > 0 ? $"Healed by {healedByCasters:N0} raiders" : "Healed by the Raid",
+      "R16-comma" => "Titled Name",
+      "R17-selffeed" => "Drank or Ate",
+      "R18-healedpet" => "Healed by our Pets' Owner",
+      "R19-eyeowner" => "Hit the Eye named after them",
+      "R20-petspell" => detail is null ? "Pet Spell" : $"Cast {detail} (pet)",
+      "R21-spelleffect" => "A Spell, not a Fighter",
+      _ => code.Length > 0 ? code : kind == IdentityKind.Unknown ? "Nothing identified it" : TypeWord(kind),
+    };
+
+    return IsPrior(source) ? $"{text} in previous log" : text;
+  }
+
+  /*
+   * Whether a Type pencil belongs on this row. Two kinds of name have exactly one right answer, and offering the other
+   * three invites an operator to break something they cannot undo by clicking:
+   *
+   *   - A POSSESSIVE SUMMON (`Tuona`s ward`). The ownership word IS the evidence — R5 reads it off the name and asserts
+   *     Pet at Certain — so the dropdown's Pet/NPC/Player choices are all wrong and "Clear claim" only puts the row back
+   *     to Unknown for one derive.
+   *   - A SPELL EFFECT (a name that is a damaging spell, or that only ever appears as a spell attacker). It is not a
+   *     creature; typing it as a Player would put it on the roster.
+   *
+   * An operator verdict always counts as overrulable — taking a claim back is the whole point of the row's Clear entry.
+   */
+  internal static bool CanOverrule(string? name, string? source)
+  {
+    var code = CodeOf(source);
+
+    // An operator's own claim always keeps its pencil: taking it back has to remain possible even on a name whose
+    // spelling says otherwise, or a wrong click would be permanent.
+    if (code is "R10-manual" or "Manual" or "Override") return true;
+    if (code == "R21-spelleffect") return false;
+    if (string.IsNullOrEmpty(name)) return true;
+
+    // One recognizer for "is this a spell", shared with R21 (ClassificationRules.SpellNamed): a rule and the words shown
+    // for its verdict must never disagree about what counts as a spell, or the pane hides a pencil on rows the rules are
+    // still willing to call people.
+    return ClassificationRules.OwnerInName(name) is null && !ClassificationRules.SpellNamed(name);
+  }
+
+  /*
+   * Every source string ClassificationRules (and the override store) can put on a row. IdentityVocabularyTest asserts
+   * this list in both directions against the rules fixture, which is where a new rule learns it needs a word here.
    */
   internal static readonly Dictionary<string, string> WhyWords = new(StringComparer.Ordinal)
   {
@@ -89,30 +194,52 @@ internal static class IdentityVocabulary
     ["R1-conflict"] = "Conflict",
     ["R2-who"] = "Who",
     ["R3-chat"] = "Chat",
-    ["R3-presence"] = "Raid",
-    ["R3-merc"] = "Raid",
+
+    /*
+     * R3's presence evidence, split by WHICH line said it. It used to be one code ("R3-presence") and one word ("Raid"),
+     * which the operator read as "Raid — what does that mean?": a join, a leave, a group join and a raid-leader flag are
+     * four different sightings, and only one of them means "this person is in my raid right now" (asked for directly:
+     * "if it's from join or leave messages say Joined Raid. Left Raid").
+     */
+    ["R3-joinraid"] = "Joined Raid",
+    ["R3-leaveraid"] = "Left Raid",
+    ["R3-joingroup"] = "Joined Group",
+    ["R3-leftgroup"] = "Left Group",
+    ["R3-leader"] = "Raid Leader",
+    ["R3-merc"] = "Mercenary",
+
+    // The tail of R4-spell is the cast that earned it, so the tooltip can name it ("Cast Curse XVII") — including from
+    // the ledger, which stores this string verbatim and therefore keeps the detail across logs.
     ["R4-spell"] = "Spell",
     ["R5-called"] = "Called",
-    ["R5-owner"] = "Owner",
-    ["R6-npcdb"] = "NPC list",
-    ["R7-graph"] = "Our side",
-    ["R7-side"] = "Their side",
-    ["R9-charm"] = "Charm",
+
+    // The proof is the name's own spelling: `Tuona`s ward` carries its owner in it. "Owner" alone asked a question
+    // ("what do you mean owner?") that this answer settles without a second column.
+    ["R5-owner"] = "Owner in Name",
+    ["R6-npcdb"] = "NPC List",
+
+    // The attack graph says which side a name fights on, so the words say exactly that rather than "Our side", which
+    // could be read as an assertion about loyalty instead of a count of who got hit.
+    ["R7-graph"] = "Fights Mobs",
+    ["R7-side"] = "Attacks Raid",
+    ["R9-charm"] = "Charmed",
     ["R10-manual"] = "Chosen",
-    ["R13-merc"] = "Target",
-    ["R14-article"] = "Name shape",
-    ["R14-shape"] = "Name shape",
+    ["R13-merc"] = "Mercenary",
+    ["R14-shape"] = "Mob Name",
     ["R15-healed"] = "Healed",
-    ["R16-comma"] = "Name title",
-    ["R17-selffeed"] = "Drink",
-    ["R18-healedpet"] = "Healed pet",
-    ["R19-eyeowner"] = "Eye",
-    ["R20-petspell"] = "Pet spell",
+    ["R16-comma"] = "Titled Name",
+    ["R17-selffeed"] = "Drinking",
+    ["R18-healedpet"] = "Our Pet",
+    ["R19-eyeowner"] = "Own Eye",
+    ["R20-petspell"] = "Pet Spell",
+
+    // A name that only ever appears as the attacker on a spell line ("Curse XVII Rk. III by ."). It is not a creature
+    // and must never read as a person — see ClassificationRules.ApplySpellEffects.
+    ["R21-spelleffect"] = "A Spell",
 
     // Two spellings the files themselves carry, kept mapped because they are already on disk:
     //   "Override" — what IdentityOverrideStore.LoadAll hands back as a row's source.
-    //   "Manual"   — AddRow's word for a verdict read out of the overrides file when no timeline exists yet (this
-    //                window opened before the first derive pass). Same fact as R10-manual, one spelling short of it.
+    //   "Manual"   — AddRow's word for a verdict read out of the overrides file when no timeline exists yet.
     ["Override"] = "Chosen",
     ["Manual"] = "Chosen",
   };

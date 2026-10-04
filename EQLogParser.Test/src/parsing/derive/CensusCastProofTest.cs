@@ -133,7 +133,7 @@ public class CensusCastProofTest
     // Placed by a raid-join line: no cast anywhere behind it, so the tooltip has nothing to say.
     var joined = report.Find("Raidos");
     Assert.IsNotNull(joined);
-    Assert.AreEqual("R3-presence", joined!.Reason);
+    Assert.AreEqual("R3-joinraid", joined!.Reason);
     Assert.IsNull(joined.ReasonDetail, "only spell-based verdicts carry a cast; naming one here would invent it");
 
     // Placed by the NPC database (article-shaped name, no lines): same answer.

@@ -3,10 +3,19 @@ using EQLogParser;
 namespace EQLogParser;
 
 /*
- * The vocabulary a person reads, as opposed to the codes the rules write. The Names window used to print "R10-manual"
- * and "Prior:R7-graph" in a column called Why; that column is now two words ("Chosen", "Our side (earlier)"), so the
- * mapping has to be bounded as carefully as the rules themselves — which means asserting what it covers, like every
- * other closed vocabulary here (a new rule arrives with a word, not with a code that reaches the screen).
+ * The vocabulary a person reads, as opposed to the codes the rules write. The Names window used to print "R10-manual" and
+ * "Prior:R7-graph" in a column called Why; that column is now two or three words ("Chosen", "Owner in Name", "Joined Raid")
+ * and its tooltip is the proof in one line, so the mapping has to be bounded as carefully as the rules themselves — which
+ * means asserting what it covers, like every other closed vocabulary here. A new rule arrives with a word AND with an entry
+ * in RuleWords below; either half missing fails here.
+ *
+ * Three contracts beyond coverage, all from the operator's complaints (docs/DesignNotes.md → "A name is not its glyph"):
+ *
+ *   - The cell never carries "(earlier)". A borrowed verdict prints the same word as a local one and the tooltip says
+ *     "in previous log" — the column is for identifying the proof, the hover is for weighing it.
+ *   - Nothing renders blank. A name no rule placed says "Not placed" and hovers as "Nothing identified it".
+ *   - The tooltip names EVIDENCE, not sentences: a cast, a count, a source line — which is why R4 keeps the rank inside its
+ *     source string and ProofText reads it back out.
  */
 [TestClass]
 public class IdentityVocabularyTest
@@ -18,16 +27,23 @@ public class IdentityVocabularyTest
   public void Cleanup() => PlayerRegistry.Instance.Clear();
 
   /*
-   * Every source string ClassificationRules and the override store can put on a row. A new rule adds its word to
-   * IdentityVocabulary AND to this list: forgetting the table leaves the column printing a raw code, and forgetting this
-   * list leaves a stale entry nobody produces any more — both fail here, in both directions.
+   * Every source string ClassificationRules and the override store can put on a row, asserted in both directions against
+   * IdentityVocabulary.WhyWords: a rule that forgets the table prints a raw code, and an entry no rule produces any more is
+   * dead weight that hides the fact that a word went unused.
    */
   private static readonly string[] RuleWords =
   [
-    "R0-local", "R1-target", "R1-conflict", "R2-who", "R3-chat", "R3-presence", "R3-merc", "R4-spell",
-    "R5-called", "R5-owner", "R6-npcdb", "R7-graph", "R7-side", "R9-charm", "R10-manual",
-    "R13-merc", "R14-article", "R14-shape", "R15-healed", "R16-comma", "R17-selffeed",
-    "R18-healedpet", "R19-eyeowner", "R20-petspell",
+    "R0-local", "R1-target", "R1-conflict", "R2-who", "R3-chat",
+
+    /*
+     * R3's five presence sightings, split in this round precisely so the column can say WHICH one it read — "Joined Raid"
+     * and "Left Raid" are different facts about a name, and one word covering both is what an operator asked about.
+     */
+    "R3-joinraid", "R3-leaveraid", "R3-joingroup", "R3-leftgroup", "R3-leader", "R3-merc",
+
+    "R4-spell", "R5-called", "R5-owner", "R6-npcdb", "R7-graph", "R7-side", "R9-charm", "R10-manual",
+    "R13-merc", "R14-shape", "R15-healed", "R16-comma", "R17-selffeed", "R18-healedpet", "R19-eyeowner",
+    "R20-petspell", "R21-spelleffect",
 
     // The two spellings the FILES carry, so they must map even though no rule writes them: what
     // IdentityOverrideStore.LoadAll reports as a row's source ("Override"), and AddRow's word for an override read out of
@@ -44,21 +60,35 @@ public class IdentityVocabularyTest
       Assert.AreNotEqual(string.Empty, word, $"{code} prints nothing");
       Assert.AreNotEqual(code, word, $"{code} has no word of its own and reached the screen as its own code");
       Assert.IsFalse(LooksLikeACode(word), $"{code} mapped to something that is still a rule code: {word}");
+      Assert.IsTrue(word.Length <= 14, $"{code} maps to a phrase too wide for the cell: {word}");
     }
 
     // The other direction: nothing in the table that no rule can produce.
     foreach (var key in IdentityVocabulary.WhyWords.Keys)
-    {
-      CollectionAssert.Contains(RuleWords, key,
-          $"the WHY table holds \"{key}\", which no rule writes - a stale word hides that the code is gone");
-    }
+      CollectionAssert.Contains(RuleWords, key, $"{key} is mapped but no rule writes it");
+
+    Assert.AreEqual(RuleWords.Length, IdentityVocabulary.WhyWords.Count,
+        "the vocabulary and the rules disagree about how many verdict words exist");
+
+    /*
+     * Two codes may share a word, but only where they are genuinely the SAME answer written down twice: "Chosen" is one
+     * operator verdict that three files spell differently, and "Mercenary" is the same /target finding that two rules can
+     * reach. A third such group means one cell now stands for two kinds of proof — which is the failure this guards.
+     */
+    string[] shared = ["Override", "Manual", "R10-manual", "R3-merc", "R13-merc"];
+    foreach (var group in IdentityVocabulary.WhyWords.GroupBy(kvp => kvp.Value).Where(g => g.Count() > 1))
+      Assert.IsTrue(group.All(kvp => shared.Contains(kvp.Key)),
+                    $"the word \"{group.Key}\" stands for more than one rule: {string.Join(", ", group.Select(kvp => kvp.Key))}");
+
+    // No value carries a prior marker any more: "(earlier)" belongs to the tooltip.
+    CollectionAssert.AllItemsAreNotNull(IdentityVocabulary.WhyWords.Values.ToArray());
+    Assert.IsFalse(IdentityVocabulary.WhyWords.Values.Any(v => v.Contains("earlier", StringComparison.OrdinalIgnoreCase)),
+                   "a WHY cell that says \"earlier\" pays column width for a fact only a hover needs");
   }
 
   /*
-   * THE REAL CORPUS CHECK. Over the rules fixture — which exercises target frames, join lines, chat, spell families,
-   * ownership, name shapes and the NPC database in one file — no row may reach the screen still wearing its code. This
-   * is the assertion that catches a rule nobody thought to write a word for, because it asks the rules what they
-   * actually produce rather than asking a list what somebody remembered.
+   * The fixture walks the REAL rules, so this is the assertion that a new rule cannot ship without a word: every verdict
+   * the pipeline can put on a row must come out as vocabulary, never as its own code.
    */
   [TestMethod]
   public void NoRuleCodeReachesTheScreenOnTheFixture()
@@ -74,60 +104,161 @@ public class IdentityVocabularyTest
 
     Assert.IsTrue(report.TotalNames > 10, "the fixture produced too few rows to prove anything");
 
+    var wearingItsCode = new List<string>();
     foreach (var row in report.Rows)
     {
-      if (string.IsNullOrEmpty(row.Reason)) continue;   // no evidence at all: no text is the honest answer
-
-      var why = IdentityVocabulary.WhyWord(row.Reason);
-      Assert.AreNotEqual(row.Reason, why, $"{row.Name}: \"{row.Reason}\" reached the WHY column untranslated");
-      Assert.IsFalse(LooksLikeACode(why), $"{row.Name}: WHY reads \"{why}\", which is still a rule code");
+      if (string.IsNullOrEmpty(row.Reason)) continue;
+      var word = IdentityVocabulary.WhyWord(row.Reason, row.Kind);
+      if (word == IdentityVocabulary.CodeOf(row.Reason) || LooksLikeACode(word))
+        wearingItsCode.Add($"{row.Name}: {row.Reason} -> {word}");
     }
+
+    Assert.AreEqual(0, wearingItsCode.Count,
+        "verdicts reached the screen as their own code:\n" + string.Join("\n", wearingItsCode));
+
+    // The tooltip has to be a sentence fragment about evidence, and never empty — the operator asked for one short line.
+    foreach (var row in report.Rows)
+    {
+      var proof = IdentityVocabulary.ProofText(row.Reason, row.Kind, row.HealedByCasters);
+      Assert.IsFalse(string.IsNullOrWhiteSpace(proof), $"{row.Name} would hover as nothing");
+      Assert.IsFalse(proof.Contains("\n"), $"{row.Name}'s proof is more than one line: {proof}");
+      Assert.IsFalse(LooksLikeACode(proof), $"{row.Name}'s proof still names a rule code: {proof}");
+    }
+
+    // And the presence split reached the fixture: this capture's join line reads as a join, not as the old blanket word.
+    var raidos = report.Find("Raidos");
+    Assert.IsNotNull(raidos, "the fixture's raid-join name is missing");
+    Assert.AreEqual("Joined Raid", IdentityVocabulary.WhyWord(raidos!.Reason));
   }
 
-  /*
-   * A code nobody wrote a word for echoes ITSELF. The alternative — a fallback like "Evidence" — would file a new kind of
-   * proof under an old meaning, and provenance is the one thing this window exists to be honest about.
-   */
   [TestMethod]
   public void AnUnknownCodeEchoesItselfRatherThanBeingGuessedAt()
   {
-    Assert.AreEqual("R21-somethingelse", IdentityVocabulary.WhyWord("R21-somethingelse"));
+    Assert.AreEqual("R24-somethingelse", IdentityVocabulary.WhyWord("R24-somethingelse"));
 
     // Ordinal, so near-misses are not folded in: "R15 healed" is not R15-healed and must not read as "Healed".
     Assert.AreEqual("R15 healed", IdentityVocabulary.WhyWord("R15 healed"));
     Assert.AreEqual("r15-healed", IdentityVocabulary.WhyWord("r15-healed"));
-  }
 
-  [TestMethod]
-  public void NoEvidenceAtAllPrintsNoText()
-  {
-    Assert.AreEqual(string.Empty, IdentityVocabulary.WhyWord(null));
-    Assert.AreEqual(string.Empty, IdentityVocabulary.WhyWord(string.Empty));
+    // Same for the tooltip: a code with no words says the code, because inventing a proof would be worse.
+    Assert.AreEqual("R24-somethingelse", IdentityVocabulary.ProofText("R24-somethingelse", IdentityKind.Player));
   }
 
   /*
-   * A borrowed verdict keeps BOTH facts: what kind of proof the older log had, and that it was an older log. The ledger
-   * stores the rule its answer came from, so "Our side (earlier)" is not invented — and "(earlier)" is the half that
-   * tells the operator this capture never proved it, which is the difference between leaving a row alone and re-checking.
+   * Nothing renders blank. The column used to print an empty cell for an unplaced name and the hover showed nothing at all,
+   * which reads as a rendering bug; the request was explicit — never an empty tooltip, "at least repeat the value from the
+   * column". A name no rule placed now answers in both places.
    */
   [TestMethod]
-  public void AnEarlierVerdictSaysWhatItWasAndThatItWasEarlier()
+  public void NoEvidenceAtAllStillSaysSomething()
   {
-    Assert.AreEqual("Our side (earlier)", IdentityVocabulary.WhyWord("Prior:R7-graph"));
-    Assert.AreEqual("NPC list (earlier)", IdentityVocabulary.WhyWord("Prior:R6-npcdb"));
-    Assert.AreEqual("Chosen (earlier)", IdentityVocabulary.WhyWord("Prior:Override"));
+    Assert.AreEqual(IdentityVocabulary.NotPlaced, IdentityVocabulary.WhyWord(null, IdentityKind.Unknown));
+    Assert.AreEqual(IdentityVocabulary.NotPlaced, IdentityVocabulary.WhyWord(string.Empty, IdentityKind.Unknown));
+    Assert.AreEqual("Nothing identified it", IdentityVocabulary.ProofText(null, IdentityKind.Unknown));
+
+    // A kind with no reason at all (a hand-written row before any timeline existed) repeats its type rather than printing
+    // the word for an unplaced name.
+    Assert.AreEqual("Pet", IdentityVocabulary.WhyWord(null, IdentityKind.Pet));
   }
 
   /*
-   * R5's owner suffix comes off in the cell. "Owner" is the evidence; WHO owns it lives in the Pet Owners window, and the
-   * whole reason this column shrank is that it printed names nobody came here to read (the pane used to need a second
-   * dock's width for four columns).
+   * A borrowed verdict keeps both facts, in the two places that can carry them: the cell prints the SAME word as a local
+   * verdict (so the column stays narrow and means one thing), and the tooltip adds "in previous log" (so the reader knows
+   * this capture never proved it — the difference between leaving a row alone and re-checking it).
+   */
+  [TestMethod]
+  public void AnEarlierVerdictSaysSoInTheTooltipAndNotInTheCell()
+  {
+    Assert.AreEqual("Fights Mobs", IdentityVocabulary.WhyWord("Prior:R7-graph"));
+    Assert.AreEqual("NPC List", IdentityVocabulary.WhyWord("Prior:R6-npcdb"));
+    Assert.AreEqual("Chosen", IdentityVocabulary.WhyWord("Prior:Override"));
+
+    Assert.AreEqual("It Fights Mobs in previous log", IdentityVocabulary.ProofText("Prior:R7-graph", IdentityKind.Player));
+    Assert.AreEqual("In npcs.txt in previous log", IdentityVocabulary.ProofText("Prior:R6-npcdb", IdentityKind.Npc));
+
+    // The tail survives the prefix, which is what lets an older log's spell verdict still name its cast.
+    Assert.AreEqual("R4-spell", IdentityVocabulary.CodeOf("Prior:R4-spell:Boastful Bellow XLVII"));
+    Assert.AreEqual("Boastful Bellow XLVII", IdentityVocabulary.DetailOf("Prior:R4-spell:Boastful Bellow XLVII"));
+    Assert.AreEqual("Cast Boastful Bellow XLVII in previous log",
+                    IdentityVocabulary.ProofText("Prior:R4-spell:Boastful Bellow XLVII", IdentityKind.Player));
+  }
+
+  /*
+   * R5's owner evidence names the KIND of proof, not the owner: "Owner in Name" says the word `Tuona`s ward` carries its
+   * own answer. WHO owns it belongs to the Pet Owners window, and printing it here was one of the reasons the old column
+   * needed a second dock's width.
    */
   [TestMethod]
   public void TheOwnerSuffixComesOffTheCell()
   {
-    Assert.AreEqual("Owner", IdentityVocabulary.WhyWord("R5-owner:Sancus"));
-    Assert.AreEqual("Owner (earlier)", IdentityVocabulary.WhyWord("Prior:R5-owner:Sancus"));
+    Assert.AreEqual("Owner in Name", IdentityVocabulary.WhyWord("R5-owner:Sancus"));
+    Assert.AreEqual("Owner in Name in previous log", IdentityVocabulary.ProofText("Prior:R5-owner:Sancus", IdentityKind.Pet));
+
+    // A called pet names who called it, because that line IS the sighting.
+    Assert.AreEqual("Called", IdentityVocabulary.WhyWord("R5-called"));
+    Assert.AreEqual("Called by Sancus", IdentityVocabulary.ProofText("R5-called:Sancus", IdentityKind.Pet));
+  }
+
+  /*
+   * The proof line, one case per shape the census can build. These are the strings the operator reads on hover, so they are
+   * pinned word for word — including the crowd count (which is what actually answered "why is that mob one of ours?") and
+   * the cast rank (which is what answers "why is THIS name a player?").
+   */
+  [TestMethod]
+  public void TheProofLineNamesTheEvidence()
+  {
+    Assert.AreEqual("From /who", IdentityVocabulary.ProofText("R2-who", IdentityKind.Player));
+    Assert.AreEqual("From Chat", IdentityVocabulary.ProofText("R3-chat", IdentityKind.Player));
+    Assert.AreEqual("Joined Raid", IdentityVocabulary.ProofText("R3-joinraid", IdentityKind.Player));
+    Assert.AreEqual("Left Raid", IdentityVocabulary.ProofText("R3-leaveraid", IdentityKind.Player));
+    Assert.AreEqual("Led the Raid", IdentityVocabulary.ProofText("R3-leader", IdentityKind.Player));
+    Assert.AreEqual("Cast Spire of Arcanum", IdentityVocabulary.ProofText("R4-spell:Spire of Arcanum", IdentityKind.Player));
+    Assert.AreEqual("Cast Hobble of Spirits Snare VI (pet)",
+                    IdentityVocabulary.ProofText("R20-petspell:Hobble of Spirits Snare VI", IdentityKind.Pet));
+    Assert.AreEqual("Healed by 20 raiders", IdentityVocabulary.ProofText("R15-healed", IdentityKind.Player, 20));
+    Assert.AreEqual("Healed by the Raid", IdentityVocabulary.ProofText("R15-healed", IdentityKind.Player),
+                    "a heal-based verdict with no walk over the heal stream still has to say what kind of proof it was");
+    Assert.AreEqual("You chose NPC", IdentityVocabulary.ProofText("R10-manual", IdentityKind.Npc));
+    Assert.AreEqual("A Spell, not a Fighter", IdentityVocabulary.ProofText("R21-spelleffect", IdentityKind.Npc));
+  }
+
+  /*
+   * Two kinds of name have exactly one right Type, and a pencil next to them offers three wrong answers. Everything else —
+   * including a verdict the operator wrote themselves — keeps it.
+   */
+  [TestMethod]
+  public void ANameThatDecidesItsOwnTypeGetsNoPencil()
+  {
+    Assert.IsFalse(IdentityVocabulary.CanOverrule("Tuona`s ward", "R5-owner:Tuona"),
+                   "the ownership word in the name IS the evidence; the dropdown could only be wrong");
+    Assert.IsFalse(IdentityVocabulary.CanOverrule("Sancus`s pet", null),
+                   "no verdict yet is not a reason to offer one that contradicts the name");
+    Assert.IsFalse(IdentityVocabulary.CanOverrule("Sonic Bang", "R21-spelleffect"),
+                   "a spell effect typed as a Player would put it on the roster");
+
+    Assert.IsTrue(IdentityVocabulary.CanOverrule("Vendorsmith", "R7-graph"));
+    Assert.IsTrue(IdentityVocabulary.CanOverrule("Tuona`s ward", "R10-manual"),
+                  "an operator's own claim must always be takeable back, whatever the name says");
+    Assert.IsTrue(IdentityVocabulary.CanOverrule("Some Hunter", "R15-healed"));
+  }
+
+  /*
+   * A spell name is a spell, rank and formulation included — because spells.txt carries every one of them as its OWN row
+   * ("Curse XVII" at 72133, "Curse XVII Rk. II" at 72134), so the name a post-RoF log prints answers on its own and there is
+   * no bare-name fallback to test. A mob and a player must both come back false: this predicate decides who gets a pencil in
+   * the Names window, and a false positive there silences a real raid member.
+   */
+  [TestMethod]
+  public void SpellNamesAnswerOnTheNameTheLogPrints()
+  {
+    Assert.IsTrue(ClassificationRules.SpellNamed("Curse XVII"));
+    Assert.IsTrue(ClassificationRules.SpellNamed("Curse XVII Rk. II"), "formulations are their own rows in the data");
+    Assert.IsTrue(ClassificationRules.SpellNamed("Fire Trap"));
+
+    Assert.IsFalse(ClassificationRules.SpellNamed("Tuona"));
+    Assert.IsFalse(ClassificationRules.SpellNamed("A bixie commander"));
+    Assert.IsFalse(ClassificationRules.SpellNamed(null));
+    Assert.IsFalse(ClassificationRules.SpellNamed(string.Empty));
   }
 
   // The TYPE cell reads like a type, never like an enum identifier; "Unknown" covers "no rule placed this name".
@@ -143,9 +274,8 @@ public class IdentityVocabularyTest
   }
 
   /*
-   * The Type dropdown, as data: the whole identity vocabulary in one list (which is what a menu of items you had to
-   * remember could not be), each answer ONCE — the retired right-click menu listed NPC twice, two handlers doing the same
-   * thing behind two menu lines.
+   * The Type dropdown, as data: the whole identity vocabulary in one list — which is exactly what the retired right-click
+   * menu was not, since its items had to be remembered and one of them ("clear my claim") almost nobody knew existed.
    */
   [TestMethod]
   public void TheTypeDropdownOffersEachAnswerExactlyOnce()
@@ -161,12 +291,9 @@ public class IdentityVocabularyTest
   }
 
   /*
-   * "Clear claim" is not a type — it is the absence of the operator's claim, and IdentityKind.Unknown is exactly what
-   * ClassificationCommands.ClearVerdict writes (remove the row, let this capture's own rules show through again). Keeping
-   * it in the same enum-typed list is what stops the pane from needing a second verb for one file.
-   *
-   * The one deliberate mismatch: the dropdown says "Mercenary", the cell says "Merc". A pick-list has room for the word a
-   * player uses; a four-column grid does not.
+   * "Clear claim" carries IdentityKind.Unknown on purpose: ClassificationCommands.ClearVerdict removes the row and lets the
+   * capture's own rules speak, which is what "no verdict" means. It is NOT a sixth type — the cell for an unplaced name says
+   * "Unknown" and stays grey — and Unknown appears in the list exactly once, as that action.
    */
   [TestMethod]
   public void ClearingAClaimIsTheUnknownKindRatherThanASixthType()
