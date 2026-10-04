@@ -1,5 +1,4 @@
 using EQLogParser;
-using EQLogParser;
 
 namespace EQLogParser.Wpf.Test;
 

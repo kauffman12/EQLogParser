@@ -4987,3 +4987,41 @@ Incogitable at its new path reproduces the recorded numbers byte-exact (578,233,
 healers, zero heal diffs), and its fight rows now count 4,471 = legacy's 4,471 exactly, where the first recorded run
 said 4,312 — the row-per-life split work closing that gap. The emu tanking line (Roper: legacy 35.5 M all-comers vs
 21.4 M people, derived 21.4 M) is the same "legacy's board counts NPCs" census as live logs.
+
+## The legacy engine is deleted: final parity numbers, kept on paper (2026-10)
+
+`FightManager`, `DamageOverlayStatsBuilder`, the legacy `FightTable` pane, the
+parser's `FM` feed and the whole parity scaffolding (`FightParityDiff`,
+`LegacyFightReplay`, `FightManagerTest`, `FightParityDiffTest`,
+`RealLogBoardsTest`, `OutcomeParityTest`) are gone. The derived engine is the
+only engine: fight list, meter, exports, summaries. These are the last figures
+the scaffolding produced, transcribed from the census runs and the AGENTS laws
+before the files were removed — if a future change resurrects a comparison, it
+starts from here, not from a re-discovery:
+
+- **Damage boards** (Incogitable, 344 MB): derived +0.54 % of raid total over
+  legacy; 422 → 437 rows; 48 legacy-only names vs 63 derived-only `X +Pets`;
+  22 of 374 shared people move on Total. The gap is ownership learning: legacy
+  folds by `record.AttackerOwner`, which needs its registry to have *learned*
+  the pair, while the derived side reads the line's own possessive word.
+- **Healing boards**: exact — 403,742 heals across 373 healers, zero mismatched
+  person-column pairs. Asserted strictly up to the end.
+- **Tanking** (people only): legacy 1.863 B / 211 rows vs derived 1.865 B /
+  212 rows, 210 shared people; legacy's raw 7.11 B contained 4.82 B of NPC
+  names and 428 M of pets, which the derived board refuses by routing decision
+  (`FactTarget`, `IsRaidVictimAt` exclusion). Damage-taken-by-people agreed
+  within ±0.6 % on all eight local captures (2022→2026); tanking people-rows
+  equal on seven of eight.
+- **Outcome counts** (damage-taken verbs): field-matched 691/691 (2024 capture)
+  and 4,473/4,473 (Incogitable), legacy vs derived, asserted with absolute
+  counts first so a zeroed capture could not pass as agreement.
+- **mini-fight.txt**: derived reads +19.5 % over legacy by design — two pets
+  whose owner the legacy registry never learned are invisible there and folded
+  under their raiders here. That gap stayed open deliberately to the end.
+- Fight-row counts on Kizant: legacy 262; derived 289 → 270 after the
+  death-older-than-a-row guard removed 19 fabricated rows.
+
+`DamageLineParser` keeps its `ResetProcessState` but the slain queue it cleared
+is gone with the engine: deaths reach every consumer (death viewer, records
+store, the mirror's `HandleDeath` → fact death queues) through `EventsNewDeath`,
+and nothing needs a deferred "remove active fight" flush anymore.

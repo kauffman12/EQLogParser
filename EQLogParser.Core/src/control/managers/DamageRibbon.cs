@@ -16,7 +16,7 @@ namespace EQLogParser
    *    Generic pets ("Sancus`s pet", no personal name) are ignored on purpose — nobody is mourning those;
    *  - successful taunts ("Kizant taunts a skeleton"); failures are silence.
    *
-   * Singleton with settable Instance like FightManager/FctManager, so tests can own a fresh ribbon without the
+   * Singleton with settable Instance like FctManager, so tests can own a fresh ribbon without the
    * parsers' static events. Formatting is static and pure; who counts as a player is a seam (IsPlayerName) so the
    * rules stay testable without PlayerRegistry's runtime state.
    */

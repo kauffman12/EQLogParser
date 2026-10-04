@@ -58,10 +58,10 @@ namespace EQLogParser
    *   never mapped still lands under its owner here, and so does a mob somebody charmed, which is a difference
    *   in what the two boards count, not an error in either. Pet roll-up ("X +Pets") works through the same
    *   field, so every charm of the same mob name across a night folds into one pet entry under its charmer.
-   *   PlayerDamageTotals/PlayerTankTotals stay empty — only DamageOverlayStatsBuilder reads them, and the
-   *   overlay is still fed straight from FightManager, never from a selection. Filling them here would mean
+   *   PlayerDamageTotals/PlayerTankTotals stay empty — nothing reads them since the legacy overlay engine
+   *   (which accumulated its own totals outside any selection) was deleted. Filling them here would mean
    *   running DamageValidator a second time (the damage builder filters with the same call) and two copies of
-   *   that six-setting filter drifting apart; they arrive with the overlay's own change of source.
+   *   that six-setting filter drifting apart; they arrive when a consumer worth the duplicate pass exists.
    *   SubType is filled in when the fact has none (RecordFrom's helper): the summary's melee counters look the
    *   subtype up in a ConcurrentDictionary, which throws on a null key — so a null there does not degrade the
    *   board, it empties it, with the exception swallowed inside DamageStatsBuilder's own catch.

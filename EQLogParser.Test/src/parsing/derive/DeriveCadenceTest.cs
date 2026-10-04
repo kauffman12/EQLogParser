@@ -52,7 +52,7 @@ public class DeriveCadenceTest
         var cheap = DeriveCadence.LiveIntervalSeconds(1.0);
         var ruinous = DeriveCadence.LiveIntervalSeconds(1_000d);
 
-        Assert.IsTrue(ruinous < FightManager.FightTimeout - 10,
+        Assert.IsTrue(ruinous < FightProjection.EngagementGapS - 10,
             "a snapshot older than the meter's own expiry makes its board blank itself");
         Assert.IsTrue(cheap < ruinous,
             "a more expensive pass waits proportionally longer — that is the whole mechanism");

@@ -1,33 +1,20 @@
 using System.Collections.Concurrent;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 
 using EQLogParser;
 
 namespace EQLogParser;
 
-// Headless runner for the current (per-line) pipeline: feeds a log file through LogProcessor
-// exactly as LogReader does, with no WPF in sight. Mirrors LogReader.HandleLine item shaping —
-// only lines past the 28-char header with a parseable date are enqueued, Ts is the dotnet-epoch
-// second for the line, IsMonitor is false. Collects fights via FightManager events.
+// Headless runner for the (per-line) pipeline with the CombatCapture tap: feeds a log file through
+// LogProcessor exactly as LogReader does, with no WPF in sight. Mirrors LogReader.HandleLine item
+// shaping — only lines past the 28-char header with a parseable date are enqueued, Ts is the
+// dotnet-epoch second for the line, IsMonitor is false. The result is the capture's fact tables
+// plus a RegistrySeed'd timeline; the fight rows themselves are whatever the caller derives from
+// them (FightProjection.Build is the call the app's DeriveEngine makes).
 internal static class PipelineHarness
 {
-    private static readonly JsonSerializerOptions JsonOpts = new()
-    {
-        WriteIndented = true,
-        Converters = { new JsonStringEnumConverter() }
-    };
-
     private static EQDataStore? _dataStore;
 
-    internal sealed record RunResult(IReadOnlyList<Fight> Fights);
-
-    // Phase 1: the same run with the CombatCapture tap active and the derivation executed.
-    // Fights are creation-ordered (EventsNewFight only) — the natural pairing for the derived list.
     internal sealed record DeriveRunResult(
-        IReadOnlyList<Fight> Fights,
-        IReadOnlyList<Fight> NonTankingFights,
-        IReadOnlyList<DerivedFight> DerivedFights,
         DamageFactTable Facts,
         EntityTimeline Timeline,
 
@@ -70,24 +57,18 @@ internal static class PipelineHarness
         }
     }
 
-    public static RunResult RunFile(string path)
-    {
-        var (fights, _, _, _, _, _) = RunCore(path, withDerivation: false);
-        return new RunResult(fights);
-    }
-
     public static DeriveRunResult RunFileDerived(string path)
     {
-        var (fights, nonTanking, derived, facts, heals, timeline) = RunCore(path, withDerivation: true);
-        return new DeriveRunResult(fights, nonTanking, derived, facts, timeline, heals);
+        var (facts, heals, timeline) = RunCore(path);
+        return new DeriveRunResult(facts, timeline, heals);
     }
 
     // onEvent observes every processed damage record from the test thread (same instant the
-    // pipeline sees it) — debugging hook for live-state inspection of the current pipeline.
+    // pipeline sees it) — debugging hook for live-state inspection of the pipeline.
     public static DeriveRunResult RunFileDerived(string path, Action<DamageProcessedEvent> onEvent)
     {
-        var (fights, nonTanking, derived, facts, heals, timeline) = RunCore(path, withDerivation: true, onEvent);
-        return new DeriveRunResult(fights, nonTanking, derived, facts, timeline, heals);
+        var (facts, heals, timeline) = RunCore(path, onEvent);
+        return new DeriveRunResult(facts, timeline, heals);
     }
 
     // CWD so EQDataStore's data/ lookup resolves (the test csproj copies the repo data/ into bin).
@@ -133,7 +114,7 @@ internal static class PipelineHarness
     };
 #pragma warning restore CS8603 // Possible null reference return.
 
-    private static (List<Fight>, List<Fight>, List<DerivedFight>, DamageFactTable, HealFactTable, EntityTimeline) RunCore(string path, bool withDerivation, Action<DamageProcessedEvent>? onEvent = null)
+    private static (DamageFactTable, HealFactTable, EntityTimeline) RunCore(string path, Action<DamageProcessedEvent>? onEvent = null)
     {
         EnsureDataStore();
 
@@ -162,9 +143,6 @@ internal static class PipelineHarness
         // does not Save() anything.
         PlayerRegistry.Instance.Clear();
 
-        // Pin the managers for the duration of this run and restore whatever preceded it: parser
-        // statics (DamageLineParser.FightManager) and the default singleton are process-global and
-        // other test classes set/leak them.
         Action<DamageProcessedEvent>? observer = null;
         if (onEvent is not null)
         {
@@ -172,48 +150,11 @@ internal static class PipelineHarness
             DamageLineParser.EventsDamageProcessed += observer;
         }
 
-        var priorInstance = FightManager.Instance;
-        var priorParserFm = DamageLineParser.FightManager;
-        var fm = new FightManager();
-        FightManager.Instance = fm;
-        DamageLineParser.FightManager = fm;
-
-        var fights = new List<Fight>();
-        var nonTanking = new List<Fight>();
-        void Collect(Fight f)
-        {
-            lock (fights)
-            {
-                fights.Add(f);
-            }
-        }
-
-        void CollectNonTanking(Fight f)
-        {
-            lock (nonTanking)
-            {
-                nonTanking.Add(f);
-            }
-        }
-
-        // EventsNewFight fires once per creation (TryAdd) — creation order, the pairing key for
-        // the derived list. The old RunResult also included the non-tanking events (duplicates),
-        // which the comparison must not do.
-        fm.EventsNewFight += Collect;
-        fm.EventsNewNonTankingFight += CollectNonTanking;
-
-        DamageFactTable? facts = null;
-        HealFactTable? heals = null;
-        EntityTimeline? timeline = null;
-        CombatCapture? capture = null;
-        if (withDerivation)
-        {
-            facts = new DamageFactTable(100_000);
-            heals = new HealFactTable(facts);
-            timeline = new EntityTimeline();
-            capture = new CombatCapture(facts, heals);
-            capture.Start();
-        }
+        var facts = new DamageFactTable(100_000);
+        var heals = new HealFactTable(facts);
+        var timeline = new EntityTimeline();
+        var capture = new CombatCapture(facts, heals);
+        capture.Start();
 
         using var items = new BlockingCollection<LogReaderItem>(new ConcurrentQueue<LogReaderItem>(), 100_000);
         using var processor = new LogProcessor(path, capture is not null ? new CaptureSinks(capture) : new NoOpSinks(), new NoOpSinks());
@@ -261,53 +202,20 @@ internal static class PipelineHarness
             }
         }
 
-        // A slain line only flushes when a later-timestamped record calls CheckSlainQueue — in the
-        // app that's just the next line of an ongoing log. End-of-file logs never get it, so we
-        // simulate exactly one second of follow-up here.
-        if (!double.IsNaN(lastTs))
-        {
-            DamageLineParser.CheckSlainQueue(lastTs + 1);
-        }
+        capture.Stop();
 
-        capture?.Stop();
-
-        List<DerivedFight> derived = [];
-        if (withDerivation && facts is not null && timeline is not null)
-        {
-            // Identity evidence for the Phase 2 rules (and report context): the registry's own
-            // knowledge with evidence times. The replay itself reads the per-fact registry
-            // verdicts captured by the capture — that is what IsPetOrPlayerOrMerc answered at
-            // each line.
-            SeedIdentity(timeline, facts, firstTs, lastTs);
-            derived = LegacyFightReplay.Derive(facts);
-        }
+        // Identity evidence for the rules (and report context): the registry's own knowledge with
+        // evidence times, applied to the timeline the caller receives. Tests that want classified
+        // verdicts still call ClassificationRules.Apply themselves over this seed.
+        SeedIdentity(timeline, facts, firstTs, lastTs);
 
         if (observer is not null) DamageLineParser.EventsDamageProcessed -= observer;
         DamageLineParser.ResetProcessState();
-        DamageLineParser.FightManager = priorParserFm;
-        FightManager.Instance = priorInstance;
         AppSettings.IsEmuParsingEnabled = priorEmu;
 
         processor.Dispose();
 
-        List<Fight> snapshot;
-        List<Fight> nonTankingSnapshot;
-        lock (fights)
-        {
-            snapshot = [.. fights];
-            nonTankingSnapshot = [.. nonTanking];
-        }
-
-        /*
-         * Empty tables rather than nulls for a run without the capture: callers never branch on the mode. The
-         * one table both streams share is decided here so a fallback heal table can never intern names into a
-         * different damage table than the one handed back — two index spaces wearing the same numbers is
-         * exactly the bug the shared-name design exists to prevent.
-         */
-        facts ??= new DamageFactTable(1);
-        heals ??= new HealFactTable(facts);
-
-        return (snapshot, nonTankingSnapshot, derived, facts, heals, timeline ?? new EntityTimeline());
+        return (facts, heals, timeline);
     }
 
     // Registry end-state + evidence times as manual identity assignments. Strengths stay below the
@@ -316,23 +224,4 @@ internal static class PipelineHarness
     private static void SeedIdentity(EntityTimeline timeline, IFactTable facts, double logStartS, double logEndS)
         => RegistrySeed.Apply(timeline, facts, logStartS, logEndS);
 
-    // Phase 0 milestone: dump current-pipeline fight state as JSON for eyeballing and, in Phase 1,
-    // as the "current" side of the comparison report.
-    public static string ToJson(RunResult result)
-    {
-        var snapshot = result.Fights.Select(f => new
-        {
-            f.Name,
-            f.Dead,
-            f.DamageTotal,
-            f.DamageHits,
-            f.TankTotal,
-            f.TankHits,
-            f.BeginDamageTime,
-            f.LastDamageTime,
-            Players = f.PlayerDamageTotals.ToDictionary(kv => kv.Key, kv => new { kv.Value.Damage, kv.Value.PetOwner })
-        });
-
-        return JsonSerializer.Serialize(snapshot, JsonOpts);
-    }
 }

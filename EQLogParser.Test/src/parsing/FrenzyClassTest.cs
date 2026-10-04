@@ -15,7 +15,6 @@ namespace EQLogParser
   [TestClass]
   public sealed class FrenzyClassTest
   {
-    private Mock<IFightManager>? _mockFightManager;
     private Func<string, bool>? _originalIsValidClass;
 
     [TestInitialize]
@@ -31,13 +30,6 @@ namespace EQLogParser
       _originalIsValidClass = CombatRecordLookup.IsValidClassName;
       CombatRecordLookup.IsValidClassName = name => EQDataStore.Instance.IsValidClassName(name);
       PlayerRegistry.Instance.Clear();
-
-      _mockFightManager = new Mock<IFightManager>();
-      _mockFightManager.Setup(m => m.RemoveActiveFight(It.IsAny<string>()));
-#pragma warning disable CS8603 // Possible null reference return.
-      _mockFightManager.Setup(m => m.GetFight(It.IsAny<string>())).Returns((string name) => null);
-#pragma warning restore CS8603 // Possible null reference return.
-      DamageLineParser.FightManager = _mockFightManager.Object;
     }
 
     [TestCleanup]
@@ -45,9 +37,6 @@ namespace EQLogParser
     {
       PlayerRegistry.Instance.Clear();
       CombatRecordLookup.IsValidClassName = _originalIsValidClass ?? (_ => false);
-
-      // restore default resolution (EQLogParser.FightManager.Instance) for later test classes
-      DamageLineParser.FightManager = null;
     }
 
     private static DamageRecord? Process(string action, double beginTime)

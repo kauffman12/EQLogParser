@@ -410,7 +410,7 @@ namespace EQLogParser
         open.TryGetValue(key, out var row);
 
         // A slain line ends the engagement only once a STRICTLY LATER timestamp arrives - the
-        // same boundary legacy draws: CheckSlainQueue flushes on currentTime > _slainTime, so
+        // same boundary the legacy engine's deferred slain flush drew (currentTime > _slainTime), so
         // same-second damage (the killing blow and "was slain" share a second-resolution stamp,
         // e.g. Waxwork Lancer @ 18:36:52) still lands in the old fight. "dt <= t" split that
         // combat mid-second: the first same-second fact consumed the death, closed the row at

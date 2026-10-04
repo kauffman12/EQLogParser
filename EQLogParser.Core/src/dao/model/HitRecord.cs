@@ -90,8 +90,8 @@ internal class HealRecord : HitRecord
 }
 
 /*
- * One damage event. Equal by value so the manager hands the same instance to every repeat of it;
- * see FightManager.GetCachedDamageRecord.
+ * One damage event. Equal by value so the parser's RepeatStore hands the same instance to every
+ * repeat of it; numbers in docs/DesignNotes.md → What a loaded raid costs in memory.
  */
 internal class DamageRecord : HitRecord
 {

@@ -42,9 +42,10 @@ internal static class DerivedTotals
    */
   /*
    * The optional window is the meter's reset. Zeroing a damage meter does not choose a different set of fights, it
-   * asks the same fights about a slice of their seconds, and legacy models that by accumulating its own totals since
-   * the reset (DamageOverlayStatsBuilder: per-player sums with an activity TimeRange, zeroed on reset, expired after
-   * `mode` seconds — or FightTimeout when mode is 0, i.e. "on kill"). Here the slice is an argument to the one
+   * asks the same fights about a slice of their seconds, and the deleted legacy engine modeled that by accumulating
+   * its own totals since the reset (per-player sums with an activity TimeRange, zeroed on reset, expired after
+   * `mode` seconds — or the 30 s gap when mode is 0, i.e. "on kill"; the same quiet dial still decides via
+   * LiveFights.TimeoutFor). Here the slice is an argument to the one
    * calculation instead: same rows, facts whose seconds lie in [fromT, toT], and therefore damage, hit counts and
    * activity segments that all belong to the window together. A surface's zero point, its timeout and its blank-board
    * rule stay where legacy put them — in the overlay — because they are a display policy; what arrives here is the

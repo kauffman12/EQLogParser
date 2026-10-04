@@ -26,7 +26,7 @@ namespace EQLogParser
      */
     internal long MaxQueueAgeMs = 500;
 
-    // singleton with set for unit test, like FightManager
+    // singleton with set for unit test
     internal static FctManager Instance { get; set; } = new();
 
     /*

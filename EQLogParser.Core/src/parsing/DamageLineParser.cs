@@ -12,13 +12,8 @@ namespace EQLogParser
     public static event Action<DeathEvent> EventsNewDeath;
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly Dictionary<string, string> SpellTypeCache = [];
-    private static readonly List<string> SlainQueue = [];
-    private static double _slainTime = double.NaN;
     private static string _previousAction;
     private static DelayRecord _delayCritRecord;
-    internal static IFightManager FightManager;
-
-    private static IFightManager FM => FightManager ?? EQLogParser.FightManager.Instance;
 
     private static readonly List<string> ChestTypes =
     [
@@ -42,49 +37,15 @@ namespace EQLogParser
 
     private static OldCritData _lastCrit;
 
-    // Headless/test observability: current slain-queue state.
-    internal static (int Count, double SlainTime) SlainState
-    {
-      get
-      {
-        lock (SlainQueue)
-        {
-          return (SlainQueue.Count, _slainTime);
-        }
-      }
-    }
-
-    // Resets the process-global parser state (slain queue, timing dials). For headless/test use:
-    // a fresh LogProcessor run must not inherit slain timestamps or crit carryover from an
-    // earlier run in the same process. The app never calls this.
+    // Resets the process-global parser state (crit carryover dials). For headless/test use: a fresh
+    // LogProcessor run must not inherit crit carryover from an earlier run in the same process. The app
+    // never calls this. (The slain queue this once cleared belonged to the legacy fight engine: deaths now
+    // reach every consumer as EventsNewDeath facts, which is also what the projection's death queues eat.)
     internal static void ResetProcessState()
     {
-      lock (SlainQueue)
-      {
-        SlainQueue.Clear();
-        _slainTime = double.NaN;
-      }
       _previousAction = null;
       _delayCritRecord = null;
       _lastCrit = null;
-    }
-
-    public static void CheckSlainQueue(double currentTime)
-    {
-      lock (SlainQueue)
-      {
-        // handle Slain queue
-        if (!double.IsNaN(_slainTime) && (currentTime > _slainTime))
-        {
-          foreach (var slain in CollectionsMarshal.AsSpan(SlainQueue))
-          {
-            FM.RemoveActiveFight(slain);
-          }
-
-          SlainQueue.Clear();
-          _slainTime = double.NaN;
-        }
-      }
     }
 
     public static bool Process(LineData lineData)
@@ -1023,8 +984,6 @@ namespace EQLogParser
 
           if (!double.IsNaN(lineData.BeginTime))
           {
-            CheckSlainQueue(lineData.BeginTime);
-
             // hoisted so the event object is not built per record when nothing is listening (FCT off)
             var damageHandler = EventsDamageProcessed;
             if (damageHandler is not null)
@@ -1084,18 +1043,8 @@ namespace EQLogParser
         var currentTime = lineData.BeginTime;
         if (!double.IsNaN(currentTime))
         {
-          CheckSlainQueue(currentTime);
-
-          lock (SlainQueue)
-          {
-            // we also use upper case now
-            slain = TextUtils.CapitalizeFirst(slain);
-            if (!SlainQueue.Contains(slain) && FM.GetFight(slain) is not null)
-            {
-              SlainQueue.Add(slain);
-              _slainTime = currentTime;
-            }
-          }
+          // we also use upper case now
+          slain = TextUtils.CapitalizeFirst(slain);
 
           var death = new DeathRecord { Killed = StringCache.GetOrAdd(slain), Killer = StringCache.GetOrAdd(killer), Message = StringCache.GetOrAdd(lineData.Action) };
           if (_previousAction is not null)
@@ -1239,7 +1188,7 @@ namespace EQLogParser
       }
 
       /*
-       * A summoned eye is not a combatant, so no record reaches FightManager, the store, the FCT feed or the engine.
+       * A summoned eye is not a combatant, so no record reaches the store, the FCT feed or the engine.
        * The shape and the three eyes that DO count (a boss's eye, a scrystone) live in one place now -
        * ClassificationRules.EyeSummonOwnerInName - because R19 has to spell an owner exactly the way this gate
        * refuses the fight, and two copies of a name cut are how a rule claims a raider the meter refuses.

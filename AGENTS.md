@@ -64,7 +64,7 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   sender-null guard). So every such handler opens with the pane-readiness sentinel — `dataGrid?.View != null` (legacy) / `mirrorGrid?.View is null`
   return (derived list) — never `senderField is null`. View materializes when the constructor assigns ItemsSource, so it swallows every
   synthetic firing and passes every real one, including the constructor's own dial sync; a test where a post-load toggle must still reach
-  its column belongs with any handler like this (`MirrorFightTableStartupTest`). Reasoning: docs/DesignNotes.md → "Handlers that XAML fires early".
+  its column belongs with any handler like this (`FightTableStartupTest`). Reasoning: docs/DesignNotes.md → "Handlers that XAML fires early".
 - **Namespaces**: the WPF app AND `EQLogParser.Core` each compile every source into the flat `namespace EQLogParser`, whatever folder it
   lives in — folders state what something is (parsing, util, perf), not its namespace. The one historical exception,
   `EQLogParser.Mirror`, was dissolved with the engine's renaming; declaring a per-folder namespace in either project breaks tests'
@@ -87,9 +87,10 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   corpse belongs in the fight list only because facts put it there (raid members hitting it keeps it; defender names keep the suffix), and a
   corpse DoT that hits us is an ordinary hostile under its stripped name — `EQLogParser.Test/src/parsing/derive/RaisedCorpseTest.cs` pins all
   four cases. Reasoning: docs/combat-mirror-design.md → "Corpses need no rule".
-- **Compare boards, not just rows, before replacing a grid**: `RealLogBoardsTest` (gated on
-  `EQLP_DERIVE_BOARDS=<log>`, with `EQLP_DERIVE_DIAG=name,name` for "folded under another key or lost?") runs the real
-  builders twice over one capture and censuses every column per raider, because a grid is per person — two tables can
+- **Compare boards, not just rows, before replacing a grid** (method preserved; the census was retired with the
+  legacy engine in 2026-10 - its final numbers are in docs/DesignNotes.md → "The legacy engine is deleted").
+  `RealLogBoardsTest` was gated on `EQLP_DERIVE_BOARDS=<log>` (with `EQLP_DERIVE_DIAG=name,name` for "folded under
+  another key or lost?") and ran the real builders twice over one capture, censusing every column per raider, because a grid is per person — two tables can
   agree on a fight's total while disagreeing about who did it, and a fight-row check cannot see that. Measured on
   Incogitable (344 MB): **healing is exact** (403,742 heals, 373 healers, zero mismatched person-column pairs) so that
   board is asserted strictly; **damage is renamed more than lost** (+0.54 % raid, 422 → 437 rows, 48 legacy-only names
@@ -115,7 +116,7 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   proposed a rule from it; `IsRaidVictimAt` quoted its numbers from it), and the proposal died once the rules ran: with a
   classified timeline, "a mob keeps hitting it" identifies **zero** roster players and its top names are mobs the NPC
   database does not know (`Herald of the Outer Brood`, `War Trainer Prime`), so no such rule exists. Build the timeline
-  the way `RealLogBoardsTest.Classified` does — fresh `EntityTimeline`, `RegistrySeed.Apply`,
+  the way the retired board census did it — fresh `EntityTimeline`, `RegistrySeed.Apply`,
   `ClassificationRules.Apply(facts, timeline, heals)` — for anything that reads identity, pets, charm or ownership.
 - **The tank board is damage our people received, decided by three fact targets, not two directions**:
   `FightProjection.FactTarget` is `AtOwner` (aimed at the row's anchor — the raid's output), `RaidSide` (landed on one
@@ -144,8 +145,11 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   was noise. Mob → unplaced is now `RaidSide` on the mob's row; only a defender that reads `Npc` is noise. The test asserts
   **which side** of the row the fact lands on (`AMobBeatingAnUnplacedName_CountsAsDamageTaken_OnTheMobsRow`) because "a row
   exists" and "the total is non-zero" both pass when it goes to nobody.
-- **Record sharing starts on the third sighting**: `FightManager._damageCache` and `HealingLineParser._healCache` are `RepeatStore<T>`, whose first
-  sighting of a value deliberately takes no entry (84% of distinct records are never restated). The heal store and its `RepeatFilter` are **static**
+- **Record sharing starts on the third sighting**: `HealingLineParser._healCache` is a `RepeatStore<T>` whose first
+  sighting of a value deliberately takes no entry (84% of distinct records are never restated). The damage line had the
+  same store until the legacy engine was deleted; it must NOT move back onto the parser seam while
+  `HandleDamageProcessed` rewrites `record.Attacker` after its own cache lookup - a shared damage instance would move
+  every earlier sharer's live key (that rewrite is why heals tolerate sharing and damage did not). The heal store and its `RepeatFilter` are **static**
   process state, so a test asserting that two parsed heals share an instance has to call `HealingLineParser.ClearCaches()` in setup — otherwise it
   passes only from whichever position in the run order it happens to occupy (`LineParsersTest` is where that was found). Sharing is never a correctness
   mechanism: records are equal by value, and the filter is allowed to be wrong only toward "seen". Numbers and reasoning:
@@ -216,8 +220,8 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   became the raid's pet. Numbers (rows closed `Charmed`: **3 / 9 / 12** on three captures, taken out of the
   `Gap` counts that used to hide them; charmed-owned rows **0→6** and **0→5** once the exemption landed) and reasoning:
   docs/combat-mirror-design.md → "What a window does to the list and the board"; pinned by `CharmRowProjectionTest`.
-- **A row is one life, and the split gap is legacy's expiry (30 s)**: `FightProjection.EngagementGapS = FightManager.FightTimeout`,
-  one number for both lists — not legacy's pair (60 s until boss-directed damage lands), because a row that has not hurt anybody for
+- **A row is one life, and the split gap is legacy's expiry (30 s)**: `FightProjection.EngagementGapS` is **30 seconds**,
+  kept as one number for both lists — not legacy's pair (60 s until boss-directed damage lands), because a row that has not hurt anybody for
   half a minute is over either way, and a threshold keyed on which side the first hit went makes boundaries a function of damage
   direction. It was **300** until one pull was read off `eqlog_Kizant_xegony.txt`: `Waxwork Abolishion` fades at 18:34:53 after 46 s and
   respawns 135 s later, and the wide gap made both lives ONE row ("5 minutes", one entry short of the encounter) while also welding the
@@ -264,16 +268,18 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   ~7-12 % of the ingest gate. The unmeasured term is `DerivedFightRows.Build`,
   which every lane pays over every row the capture ever made: its bound lives in `EQLogParser.Wpf.Test/src/control/util/DerivedSnapshotCostTest.cs`
   (Windows-only). Widen the cheap lane by row count before touching either floor. Numbers: docs/DesignNotes.md -> "How long a meter update takes".
-  **The surface around it must never read as broken**: with `EnableCombatMirror` set, `MainWindow` docks the window at startup (a checked menu item
-  means the window is there - "No log open" until one opens; docking only in the open-log path left a restarted app "checked but invisible",
-  which shipped reading as "it stopped working after I restart"), and toggling ON over a live parse **starts a session immediately** (it used to
-  re-dock the window with no session, so uncheck/re-check did nothing until the next log open - the exact experiment the user reaches for). During a bulk load the derived list is legitimately empty (both derive lanes park), so `MirrorFightTable`
+  **The surface around it must never read as broken**: the fight list docks at startup whatever `dockSite.xml` says
+  (the `EnableCombatMirror` dial is deleted - a settings.txt still carrying the word simply stops being read; an
+  experimental-era layout that had hidden "the old one" must not produce a restarted app with NO fight list, which
+  shipped once as "it stopped working after I restart"), and opening a log **starts a session immediately** (docking
+  only in the open-log path once left the window present but sessionless - the exact uncheck/re-check experiment the
+  user reaches for). During a bulk load the derived list is legitimately empty (both derive lanes park), so `FightTable`
   shows a loading band over the table whose **one phrase is "Building derived fight list..." from EOF to the first snapshot** - `ReportCaptureProgress`
   still rides the reader pump, but a sub-100 tick says NOTHING in this window: the application-wide status line counts that same pump's percent and
   seconds already, and a second copy in the dock was removed as duplication. The session's first snapshot takes the band down for good - legacy filled rows
   per parsed line, the projection cannot (a cheap lane during bulk steals the ingest gate, reverted on measurement). The header status line never shows a
   "Derived HH:mm:ss - N fights, M facts, X ms" stats line either (it never fit the dock beside three columns): only an override verdict claims that space,
-  and placeholders ("Capturing...", "No log open", stale failure text) clear when rows land (`MirrorFightTableLoadBandTest`). A
+  and placeholders ("Capturing...", "No log open", stale failure text) clear when rows land (`FightTableLoadBandTest`). A
   mid-log attach is forward-only by construction: no backfill exists (facts before the tap were never captured), and the chat sink was fixed when
   the file opened (`LogProcessor` holds it), so drink evidence and chat identity join at the next open while facts and heals flow from now.
   One line per session in eqlogparser.log - `capture: started (file)` at open, `derive: first pass - N facts, M rows`
@@ -282,7 +288,7 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   derived engine first, which left it painting derived figures while `FightManager` still decided whether you ever saw them (open on launch,
   close-for-real-when-hidden, open-yourself-on-a-pull). Those now go through **`MirrorMeter`** — the only reader of
   `OverlayDamageFromMirror`, so "which engine is the meter reading" has one address and no legacy fallback anywhere on the path ("no session"
-  answers *false*, it does not consult FightManager) — over **`LiveFights`** (Core: a row is live when it is not `Dead` and its last activity in
+  answers *false* - there is no second engine left on this path to consult) — over **`LiveFights`** (Core: a row is live when it is not `Dead` and its last activity in
   **either** direction window sits inside the gap). Three rules that must not be "simplified": (1) **now = the capture's newest event, never
   wall time**, because a log file is never rotated — measured spans between first and last damage fact inside one file: **329 h**
   (`eqlog_Kizant_xegony.txt`), **616 days** (Incogitable) — so a wall-clock rule is a rule about when the raid logged out, and it cannot see the
@@ -338,9 +344,9 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   `CarriedPassMatchesAFullReplayOnRealLog` runs it over the gated capture. Numbers and reasoning: docs/DesignNotes.md → "A derive pass that starts where the last one stopped".
 - **A fight's duration counts seconds inclusively**: `DerivedFight.DurationSeconds` is `Math.Max(1, LastTime - BeginTime + 1)` because
   that +1 is what the product already calls a duration — `TimeSegment.Total` (`end - begin + 1`) is the DPS denominator of every board number, and
-  `FightManager`'s tooltip (`Time Alive: Ns`) uses it, so an exclusive span made the grid print `00:00` for a mob hit once inside one second while its
+  `FightManager`'s tooltip (`Time Alive: Ns`) used it, so an exclusive span made the grid print `00:00` for a mob hit once inside one second while its
   own summary said "Time Alive: 1s" and divided by it. Keep the arithmetic on the row, not in the formatter. Two exemptions: the
-  `Inactivity > mm:ss` divider is a gap nobody fought in (stays exclusive), and `FightSummarySource`'s tooltip keeps FightManager's own expression
+  `Inactivity > mm:ss` divider is a gap nobody fought in (stays exclusive), and `FightSummarySource`'s tooltip keeps the legacy tooltip's own expression
   because that summary's bounds can be window-clipped. Pinned by `DerivedFightTest`, which cross-checks the row against `TimeSegment.Total` so the two
   cannot drift apart quietly.
 - **A death closes only a row that was alive when it happened**: the slain queue is keyed by NAME while one name carries many mobs
@@ -407,28 +413,28 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   unable to drift from the row it belongs to. A derived row then carries both sides on one `Fight`:
   `DamageBlocks` / `DamageSegments` and `TankingBlocks` / `TankSegments` (+ `Begin/LastTankingTime`, `TankHits`,
   `TankTotal`), because the two boards key a row differently: raid-on-mob facts are away-facing, a player being
-  beaten on is toward-facing. `PlayerDamageTotals`/`PlayerTankTotals` stay empty — only
-  `DamageOverlayStatsBuilder` reads those, and it is not fed from this path yet. Three laws, all pinned by
+  beaten on is toward-facing. `PlayerDamageTotals`/`PlayerTankTotals` stay empty — nothing has read them since the legacy overlay engine was
+  deleted, and filling them would mean running the six-setting `DamageValidator` filter a second time. Three laws, all pinned by
   `FightSummarySourceTest`. (1) **A row with no incoming damage still gets an empty tanking section** so the board
   lists every row it lists; the group id comes from `Sectionizer` and rides the row, so one walk stamps both sides
   of a mixed selection. (2) **An outcome taken with no number is still an outcome**: `TankHits` counts
-  unconditionally, like `FightManager`'s — assert the hit COUNT for zero-total shapes, never `> 0` on the total,
+  unconditionally, like the legacy tank branch's — assert the hit COUNT for zero-total shapes, never `> 0` on the total,
   because zero passes every magnitude test (that is how half of R9's friendly-fire exemption nearly shipped).
   (3) **Every fact of a row lands on exactly one of its two boards**, and a tank block's `Attacker` is always the
   row's own name — that is why `+Pets` folds a pet's output on either board.
 - **Two numbers here are traps, both measured on `data/derive/tank-fight.txt`.** (a) `FightProjection` sums BOTH
   directions into `DerivedFight.DamageTotal` and splits them into `DamageToOwner` / `DamageByOwner`; it never fills
-  `TankTotal`/`TankHits`/`TankRollup` on the *derived* row (those belong to `FightDeriver`, whose legacy-keyed list
-  is retired from display and lives on only in the parity tests). So "materialized tank total == row `TankTotal`"
+  `TankTotal`/`TankHits`/`TankRollup` on the *derived* row (those belonged to the legacy engine's row building; nothing
+  writes them here at all). So "materialized tank total == row `TankTotal`"
   compares a real number against a zero nothing writes, and passes on any log that happens to contain no damage
   taken — hold materialized totals against `FightFactIndex.TankingOrdinalsFor` instead. That is exactly how the
   real-log test stayed green before the tanking side existed. (b) Legacy does not hand a mob's victim her own row:
-  `FightManager.Get` keys on `defender ? record.Defender : record.Attacker`, so on this fixture legacy produces one
+  the legacy `FightManager.Get` keyed on `defender ? record.Defender : record.Attacker`, so on this fixture legacy produced one
   row, "an ice giant priest", whose `TankTotal` (834 = the mob's own three swings) is damage dealt, not taken, and
   `PlayerTankTotals` stays empty for Rune. Which is why `TankingStatsBuilder` groups by `record.Defender`
   (`StatsUtil.CreatePlayerStats(individualStats, record.Defender)`) rather than reading either rollup, and why the
-  derived-vs-legacy check is per raider over each engine's own block input — both read Rune 322 / Kilsa 512, with
-  the row-level difference asserted rather than smoothed over. Related: `FightManager` answers a spell line naming a
+  retired parity check was per raider over each engine's own block input (both read Rune 322 / Kilsa 512); today
+  `FightSummarySourceTest` pins those absolute figures and the row-level split on the derived side alone. Related: the legacy parser answered a spell line naming a
   defender by re-deciding it (`record.AttackerIsSpell && defender` → `!IsPetOrPlayerOrMerc(record.Defender)`,
   line ~255), which is the one non-melee shape that reaches the tanking side at all. **A swing that makes no number
   is already in the capture** — do not go build one. The `X tries to <verb> Y, but …` family (`blocks!`, `dodges!`,
@@ -436,11 +442,12 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   total 0 and its own label, so it rides the same `EventsDamageProcessed` seam as damage and lands in `DamageFact`
   with the verb kept as subtype; `StatsUtil.UpdateDamageStats` then fills `MeleeAttempts`/`Misses`/`Blocks`/`Dodges`/
   `Parries`/`RiposteHits`/`Absorbs`/`Invulnerable` from that label on either engine, and the mask-dwellers (`Crit`,
-  `Flurry`, `Rampage`, `Strikethrough`) follow because `DamageFact.ModifiersMask` came along. `OutcomeParityTest`
-  pins both boards per raider, legacy vs derived, **with the absolute counts asserted first** — an equality alone
+  `Flurry`, `Rampage`, `Strikethrough`) follow because `DamageFact.ModifiersMask` came along. The retired
+  `OutcomeParityTest` pinned both boards per raider, legacy vs derived (691/691 and 4,473/4,473 field matches),
+  **with the absolute counts asserted first** - a lesson that outlives it: an equality alone
   would also pass on a capture bug that zeroed both sides. Two traps. (a) A row's `# Hits` is *not* its attempt count:
   damage-side `DamageHits` filters on `LabelTypes.IsHit`, which counts `Block` as a hit type and excludes the other
-  five outcomes, while `FightManager`'s tank branch counts unconditionally (5 vs 7 on that fixture). (b) A column whose
+  five outcomes, while the legacy tank branch counted unconditionally (5 vs 7 on that fixture). (b) A column whose
   word the log never writes reads 0 on both engines — Kicker/Fumble/Vex are absent from the 2024 capture (Flurry 94,453,
   Riposte 13,709, Rampage 1,151), and that is the capture being faithful, not a gap to fill.
 - **Identity rules read a closed vocabulary and never reason from their own guesses**: the four rules added after reading six

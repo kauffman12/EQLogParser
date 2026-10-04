@@ -1007,9 +1007,10 @@ namespace EQLogParser
       }
       else
       {
-        // close and clear old data
+        // Close only. The legacy call that also cleared the engine's per-fight overlay set is gone with
+        // the engine: a derived board holds nothing between ticks, and the seconds a reopened board adds
+        // up from are deliberately NOT reset by closing the window (only the clear button moves them).
         CloseDamageOverlay(false);
-        FightManager.Instance.ResetOverlayFights();
       }
 
       enableDamageOverlay.Header = enabled ? "Disable _Meter" : "Enable _Meter";

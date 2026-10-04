@@ -57,18 +57,6 @@ public class RealLogBenchTest
         DamageLineParser.ResetProcessState();
         PlayerRegistry.Instance.Clear();
 
-        var priorInstance = FightManager.Instance;
-        var priorParserFm = DamageLineParser.FightManager;
-        var fm = new FightManager();
-        FightManager.Instance = fm;
-        DamageLineParser.FightManager = fm;
-
-        // Legacy count inside the same run: "derived == current" here is what FightParityDiffTest
-        // asserts end-to-end; seeing both numbers side by side says whether a difference is parser
-        // variance across processes or a deriver gap (learned the hard way on the 09-17 capture).
-        var legacyFights = 0;
-        fm.EventsNewFight += _ => Interlocked.Increment(ref legacyFights);
-
         var facts = new DamageFactTable(100_000);
         var capture = new CombatCapture(facts);
         if (!tapOff) capture.Start();
@@ -125,8 +113,6 @@ public class RealLogBenchTest
             }
             ingestSw.Stop();
 
-            if (!double.IsNaN(lastTs)) DamageLineParser.CheckSlainQueue(lastTs + 1);
-
             var captured = (long)facts.FactCount + facts.DeathCount + facts.TauntCount
                          + facts.IdentityEventCount + facts.EvidenceCount;
 
@@ -164,20 +150,18 @@ public class RealLogBenchTest
             PrintProjectionReport(facts, timeline);
 
             var deriveSw = Stopwatch.StartNew();
-            var derived = LegacyFightReplay.Derive(facts);
+            var rows2 = FightProjection.Build(facts, timeline);
             deriveSw.Stop();
 
             totalSw.Stop();
             Console.WriteLine($"[bench] seed={seedSw.ElapsedMilliseconds:N0} ms  classify={classSw.ElapsedMilliseconds:N0} ms  " +
-                              $"derive={deriveSw.ElapsedMilliseconds:N0} ms  fights={derived.Count:N0}  legacy-fights={legacyFights:N0}");
+                              $"project={deriveSw.ElapsedMilliseconds:N0} ms  rows={rows2.Count:N0}");
             Console.WriteLine($"[bench] heap after classify+derive={(GC.GetTotalMemory(forceFullCollection: true) / (1024 * 1024)):N0} MB");
             Console.WriteLine($"[bench] TOTAL wall={totalSw.ElapsedMilliseconds:N0} ms");
         }
         finally
         {
             capture.Stop();
-            FightManager.Instance = priorInstance;
-            DamageLineParser.FightManager = priorParserFm;
             Console.Out.Flush();
         }
     }

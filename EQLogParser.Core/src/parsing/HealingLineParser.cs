@@ -22,7 +22,7 @@ namespace EQLogParser
      * sharing it with the FCT feed and the store both, which heals tolerate because nothing writes to a heal
      * after it is handed out — unlike damage, where HandleDamageProcessed rewrites record.Attacker some hundred
      * lines after its own cache lookup, changing every earlier event that shared the instance and moving a live
-     * key. First sightings take no entry, as in FightManager._damageCache; numbers in
+     * key. First sightings take no entry, as in the damage line's own RepeatStore cache; numbers in
      * docs/DesignNotes.md → What a loaded raid costs in memory. */
     private static readonly RepeatStore<HealRecord> _healCache = new(ExpectedHealOffers);
 

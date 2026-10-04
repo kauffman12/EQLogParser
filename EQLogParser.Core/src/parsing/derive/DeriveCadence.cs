@@ -19,7 +19,7 @@ namespace EQLogParser
    *
    * The throttle on the second question is derived from the cost of the last pass rather than fixed, because a pass
    * costs what the capture costs: 4x the measured duration, clamped. And the ceiling is not arbitrary — it has to stay
-   * inside `FightManager.FightTimeout` (30 s), which is the quiet rule the damage meter applies to its own board. A
+   * inside `FightProjection.EngagementGapS` (30 s), which is the quiet rule the damage meter applies to its own board. A
    * snapshot older than that reads as "the raid stopped", so a cadence slower than the meter's expiry would have the
    * board blank itself every time it merely needed a refresh.
    *
@@ -33,7 +33,7 @@ namespace EQLogParser
     public const double FloorSeconds = 3d;
 
     // Never wait longer than this for a fresh pass while data is dirty, or the surfaces downstream start treating a
-    // stale snapshot as an idle raid (FightManager.FightTimeout is 30 s; this stays under it with room for two ticks).
+    // stale snapshot as an idle raid (FightProjection.EngagementGapS is 30 s; this stays under it with room for two ticks).
     public const double CeilingSeconds = 15d;
 
     // A pass costs roughly what the last one cost, so leave that much room per unit of work before asking again.

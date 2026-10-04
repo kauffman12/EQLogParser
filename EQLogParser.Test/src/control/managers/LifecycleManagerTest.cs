@@ -39,25 +39,5 @@ namespace EQLogParser
       }
     }
 
-    [TestMethod]
-    public void ABareStoreResetRaisesNothing()
-    {
-      var fired = 0;
-      Action<bool> handler = _ => fired++;
-
-      // A store wiping itself is not an app-level event: the fan-out raises once for the whole clear, so a second
-      // raise from inside a store would double-blank every view - and today it must not exist at all, because this
-      // call site disappears when the legacy pipeline does.
-      CombatEvents.ActiveDataCleared += handler;
-      try
-      {
-        new FightManager().Clear();
-        Assert.AreEqual(0, fired, "the signal moved off the store onto the paths");
-      }
-      finally
-      {
-        CombatEvents.ActiveDataCleared -= handler;
-      }
-    }
   }
 }

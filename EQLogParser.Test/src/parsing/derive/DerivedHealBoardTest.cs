@@ -56,6 +56,17 @@ public class DerivedHealBoardTest
         return range;
     }
 
+    // The Fight rows handed to the board as Npcs are materialized derived rows — the same objects a click
+    // sends through MainWindow's door, so this seam is tested against what production actually passes.
+    private static IReadOnlyList<Fight> Rows(PipelineHarness.DeriveRunResult run)
+    {
+        ClassificationRules.Apply(run.Facts, run.Timeline);
+        var index = new FightFactIndex();
+        var rows = FightProjection.Build(run.Facts, run.Timeline, index.OnFact);
+        Sectionizer.StampGroupIds(rows);
+        return FightSummarySource.Build(rows, index, run.Facts).Fights;
+    }
+
     // One builder run, and only that builder's answer — GetLastStats is per-builder, so the two boards cannot be
     // read from one shared field.
     private static CombinedStats? BuildHeals(IReadOnlyList<Fight> rows, TimeRange range, List<(double, HealRecord)>? heals)
@@ -119,8 +130,9 @@ public class DerivedHealBoardTest
         var run = PipelineHarness.RunFileDerived(path);
         var range = Window(run.Facts.Facts.Length > 0 ? run.Facts.Facts[^1].TimeS : 0);
 
-        var legacy = BuildHeals(run.Fights, range, null);
-        var derived = BuildHeals(run.Fights, range, HealSummarySource.Materialize(run.HealFacts, range));
+        var rows = Rows(run);
+        var legacy = BuildHeals(rows, range, null);
+        var derived = BuildHeals(rows, range, HealSummarySource.Materialize(run.HealFacts, range));
 
         Assert.IsNotNull(legacy);
         Assert.IsNotNull(derived);
@@ -175,10 +187,10 @@ public class DerivedHealBoardTest
         var run = PipelineHarness.RunFileDerived(path);
         var range = Window(run.Facts.Facts.Length > 0 ? run.Facts.Facts[^1].TimeS : 0);
 
-        Assert.AreEqual(3401L, BuildHeals(run.Fights, range, null)?.RaidStats.Total,
+        Assert.AreEqual(3401L, BuildHeals(Rows(run), range, null)?.RaidStats.Total,
             "null keeps the record store, which this fixture fills");
 
-        var cleared = BuildHeals(run.Fights, range, []);
+        var cleared = BuildHeals(Rows(run), range, []);
         Assert.IsNotNull(cleared);
         Assert.AreEqual(0L, cleared.RaidStats.Total, "an empty list is an empty board, not last click's numbers");
         Assert.AreEqual(0, cleared.StatsList.Count);

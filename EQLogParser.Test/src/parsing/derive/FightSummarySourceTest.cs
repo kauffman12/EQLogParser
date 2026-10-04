@@ -408,21 +408,15 @@ public class FightSummarySourceTest
     }
 
     /*
-     * The cross-engine check for damage taken, over a real-shaped log rather than synthetic facts.
-     *
-     * The comparison is per RAIDER over each engine's own block input, and the reason why is worth writing down:
-     * a mob hitting Rune does not open a row named Rune in legacy either. FightManager.Get keys a row with
-     * `defender ? record.Defender : record.Attacker`, and the combo flag for a monster swinging at a raider comes
-     * out false, so the row is the MONSTER's — on this fixture legacy makes exactly one row, "an ice giant priest",
-     * and its own
-     * TankTotal (834) is what that mob dealt, not what anybody took. `Fight.TankTotal`/`PlayerTankTotals` only
-     * fill in for a defender when the row's name IS the defender, which is why the legacy tank board never reads
-     * them: TankingStatsBuilder groups records by record.Defender and re-sums. So that is the comparison here —
-     * legacy's records grouped by defender against the derived blocks, raider by raider — plus a pinned assertion
-     * of the row-level difference, so if anyone ever "fixes" one side to look like the other this test notices.
+     * Damage taken is credited per RAIDER, and the row keeps both directions. The fixture's own truth, in
+     * numbers rather than engine terms: 234 + 88 onto Rune (the miss line writes no record), 512 onto Kilsa,
+     * and the priest took 300 + 210. A mob hitting Rune does not open a row named Rune: rows are keyed on the
+     * encounter's mob, so her 322 lives inside the PRIEST's row as damage-by-owner, and TankingStatsBuilder
+     * re-sums it by record.Defender. The pinned negatives are as load-bearing as the totals — if a future
+     * change ever grows a raider row for a mob's victim, or loses one direction of the split, this notices.
      */
     [TestMethod]
-    public void DamageTakenMatchesTheLegacyBoardForEveryRaider()
+    public void DamageTakenIsPerRaiderAndTheRowKeepsBothDirections()
     {
         var path = Path.Combine(AppContext.BaseDirectory, "mini-data", "derive", "tank-fight.txt");
         Assert.IsTrue(File.Exists(path), $"missing fixture: {path}");
@@ -440,28 +434,14 @@ public class FightSummarySourceTest
         Assert.IsTrue(rows.All(static r => r.Name != "Rune"),
             "a raider who only got hit must not become a fight row; her damage belongs to the encounter");
 
-        // The fixture's own truth, in numbers rather than engine terms: 234 + 88 onto Rune (the miss line writes
-        // no record in either engine), 512 onto Kilsa, and the priest took 300 + 210.
         var fromBlocks = input.Fights.SelectMany(static f => f.TankingBlocks)
           .SelectMany(static b => b.Actions).Cast<DamageRecord>()
           .GroupBy(static r => r.Defender)
-          .ToDictionary(static g => g.Key, static g => g.Sum(static r => (long)r.Total));
+          .ToDictionary(static g => g.Key, static g => (long)g.Sum(static r => r.Total));
 
-        var fromLegacy = run.Fights.SelectMany(f => TankRecords(f))
-          .GroupBy(static r => r.Defender)
-          .ToDictionary(static g => g.Key, static g => g.Sum(static r => (long)r.Total));
-
-        Assert.AreEqual(fromLegacy["Rune"], fromBlocks["Rune"], "Rune's damage taken disagrees between the two engines");
-        Assert.AreEqual(fromLegacy["Kilsa"], fromBlocks["Kilsa"], "Kilsa's damage taken disagrees between the two engines");
-        Assert.AreEqual(fromLegacy.Values.Sum(static v => v), fromBlocks.Values.Sum(), "the raid-wide total disagrees");
-        Assert.AreEqual(322L, fromBlocks["Rune"]);
-        Assert.AreEqual(512L, fromBlocks["Kilsa"]);
-
-        // The row-level difference, pinned rather than smoothed over.
-        Assert.AreEqual(0L, run.Fights.Where(f => f.Name == "Rune").Sum(f => f.TankTotal),
-            "legacy has no raider row for a mob's victim; if it ever grows one, re-read this test");
-        Assert.AreEqual(834L, run.Fights.Sum(static f => f.TankTotal),
-            "and legacy's only row counts the mob's own swings as its 'tank' total");
+        Assert.AreEqual(322L, fromBlocks["Rune"], "Rune's damage taken");
+        Assert.AreEqual(512L, fromBlocks["Kilsa"], "Kilsa's damage taken");
+        Assert.AreEqual(834L, fromBlocks.Values.Sum(), "the raid-wide damage taken");
 
         var priest = Row(rows, "An ice giant priest");
         Assert.AreEqual(510L, priest.DamageToOwner, "the same row still carries what the raid did to it");
@@ -670,7 +650,7 @@ public class FightSummarySourceTest
              * The tanking half of the same row. Held against the FACTS rather than against DerivedFight.TankTotal:
              * FightProjection sums both directions into DamageTotal and splits them into DamageToOwner /
              * DamageByOwner, and it does not fill TankTotal/TankHits/TankRollup at all (those belong to the older
-             * LegacyFightReplay pass, which the app never runs) — so comparing a materialized tank total to the row's
+             * row (they belonged to the retired legacy engine) - so comparing a materialized tank total to the row's
              * TankTotal would compare a real number to a zero that nothing writes, and pass on any log with no
              * damage taken in it. Which is exactly how this test stayed green before the tanking side existed.
              */
@@ -685,131 +665,6 @@ public class FightSummarySourceTest
         }
     }
 
-    /*
-     * The claim the engine exists to test, at the level of a board: same log, same fight, two engines. The
-     * legacy list's Fight objects and the derived rows each feed DamageStatsBuilder separately and the two boards
-     * are compared. Measured on this fixture (mini-fight.txt), with all six modifier filters on:
-     *
-     *   raid total          legacy 604,857   derived 722,926   (+19.5 %)
-     *   Rune / Ammeren / Triumph / Soell / Puksu / Kuma    identical to the point, on both boards
-     *   Sancus +Pets 114,811 and Jazrakhan +Pets 3,258     derived only
-     *
-     * The whole difference is two pets. PlayerRegistry never learned them from this log ("Sancus`s pet" answers
-     * IsPetOrPlayerOrMerc false, IsPossiblePlayerName false, GetPlayerFromPet null at the end of the run), so
-     * FightManager's IsValidAttack refused every one of their records and their damage reached NO fight at all —
-     * not the boss's row, not a pet row. The line itself says whose pet it is, which is the evidence R5 stores on
-     * the fact and ClassificationRules.OwnerInName cuts out of the name; the derived record carries it in
-     * AttackerOwner, so the builder folds both pets under their owners. Same log, same fight, one number, and the
-     * gap is a rule difference rather than arithmetic — which is precisely the thing worth being able to see.
-     *
-     * All six filters are switched on because a materialized record carries no modifier bits: with any of them off
-     * the two sides differ for a second, unrelated and documented reason (FightSummarySource), and this test would
-     * be measuring that gap instead of this one.
-     */
-    [TestMethod]
-    public void TheMiniFightSummarizesToTheSameNumbersFromEitherList()
-    {
-        Assert.IsTrue(File.Exists(MiniFightPath), $"missing fixture: {MiniFightPath}");
-        PipelineHarness.EnsureDataStore();
-
-        var run = PipelineHarness.RunFileDerived(MiniFightPath);
-
-        ClassificationRules.Apply(run.Facts, run.Timeline);
-        var index = new FightFactIndex();
-        var derived = FightProjection.Build(run.Facts, run.Timeline, index.OnFact);
-        Sectionizer.StampGroupIds(derived);
-
-        // Pair by name — that the names and boundaries agree at all is FightParityDiffTest's claim; here it
-        // only lets each side hand the builder its own Fight objects.
-        var rows = derived.Where(row => index.HasDamage(row) && run.Fights.Any(f => f.Name == row.Name)).ToList();
-        Assert.IsTrue(rows.Count > 0, "no fight of this fixture appears on both sides");
-
-        var names = rows.Select(r => r.Name).ToHashSet();
-        var legacy = run.Fights.Where(f => names.Contains(f.Name)).ToList();
-
-        var fromDerived = FightSummarySource.Build(rows, index, run.Facts);
-        var fromManager = new TimeRange();
-        foreach (var fight in legacy) fromManager.Add(new TimeSegment(fight.BeginTime, fight.LastTime));
-
-        var prior = (Assassinate: AppSettings.IsAssassinateDamageEnabled, Bane: AppSettings.IsBaneDamageEnabled,
-          DamageShield: AppSettings.IsDamageShieldDamageEnabled, FinishingBlow: AppSettings.IsFinishingBlowDamageEnabled,
-          Headshot: AppSettings.IsHeadshotDamageEnabled, SlayUndead: AppSettings.IsSlayUndeadDamageEnabled);
-
-        CombinedStats totals, managerStats;
-        try
-        {
-            AppSettings.IsAssassinateDamageEnabled = AppSettings.IsBaneDamageEnabled = AppSettings.IsDamageShieldDamageEnabled
-              = AppSettings.IsFinishingBlowDamageEnabled = AppSettings.IsHeadshotDamageEnabled = AppSettings.IsSlayUndeadDamageEnabled = true;
-
-            totals = Board(fromDerived.Fights, fromDerived.AllRanges);
-            managerStats = Board(legacy, fromManager);
-        }
-        finally
-        {
-            AppSettings.IsAssassinateDamageEnabled = prior.Assassinate;
-            AppSettings.IsBaneDamageEnabled = prior.Bane;
-            AppSettings.IsDamageShieldDamageEnabled = prior.DamageShield;
-            AppSettings.IsFinishingBlowDamageEnabled = prior.FinishingBlow;
-            AppSettings.IsHeadshotDamageEnabled = prior.Headshot;
-            AppSettings.IsSlayUndeadDamageEnabled = prior.SlayUndead;
-        }
-
-        // (1) Every raider the legacy board names must read the same on the derived board. Not one point of
-        // what the old engine managed to place may move.
-        foreach (var entry in managerStats.StatsList)
-        {
-            var other = totals.StatsList.FirstOrDefault(s => s.Name == entry.Name);
-            Assert.IsNotNull(other, $"{entry.Name}: on the legacy board only");
-            Assert.AreEqual(entry.Total, other.Total, $"{entry.Name}: per-raider total differs between the two lists");
-        }
-
-        // (2) The derived board may add only line-owned pets, folded under their owners.
-        var extra = totals.StatsList.Where(s => !managerStats.StatsList.Any(m => m.Name == s.Name)).ToList();
-        Assert.IsTrue(extra.Count > 0, "this fixture is supposed to show the difference the engine exists for");
-        foreach (var entry in extra)
-        {
-            Assert.IsTrue(entry.Name.EndsWith(" +Pets", StringComparison.Ordinal),
-                $"{entry.Name}: the derived board added a raider that is not a line-owned pet");
-        }
-
-        // (3) The delta IS those pets, computed from the facts rather than from either board.
-        var petDamage = rows.Sum(row => index.DamageOrdinalsFor(row)
-            .Where(o => run.Facts.Facts[o].OwnerInLine && LabelTypes.IsHit(run.Facts.Facts[o].TypeId))
-            .Sum(o => (long)run.Facts.Facts[o].Total));
-
-        Assert.AreEqual(petDamage, totals.RaidStats.Total - managerStats.RaidStats.Total,
-            "the two boards differ by something other than the pets legacy's registry never mapped");
-        Assert.AreEqual(extra.Sum(s => (long)s.Total), petDamage, "the pet rows and the fact table disagree");
-    }
-
-    // One board, built the way MainWindow builds it: options in, completion event out.
-    private static CombinedStats Board(IReadOnlyList<Fight> fights, TimeRange allRanges)
-    {
-        StatsGenerationEvent? done = null;
-        void OnStatus(StatsGenerationEvent e)
-        {
-            if (e.State is "COMPLETED" or "NONPC" or "NODATA") done = e;
-        }
-
-        DamageStatsBuilder.Instance.EventsGenerationStatus += OnStatus;
-        try
-        {
-            GenerateStatsOptions options = new();
-            options.Npcs.AddRange(fights);
-            options.AllRanges = allRanges;
-            options.MinSeconds = 0;
-
-            DamageStatsBuilder.Instance.BuildTotalStats(options);
-        }
-        finally
-        {
-            DamageStatsBuilder.Instance.EventsGenerationStatus -= OnStatus;
-        }
-
-        Assert.IsNotNull(done, "the builder never reported back");
-        Assert.AreEqual("COMPLETED", done.State, "the builder refused the selection");
-        return done.CombinedStats;
-    }
 
     // ---- grouping: the number a stats run reads as GroupId ----
 

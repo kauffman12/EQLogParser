@@ -252,17 +252,6 @@ namespace EQLogParser
 
     #endregion
 
-    #region DamageOverlayStatsBuilder
-
-    [TestMethod]
-    public void Build_WithoutOverlayData_ReturnsNull()
-    {
-      // no overlay feed is wired in the test process — pin the empty-state contract
-      var result = new DamageOverlayStatsBuilder().Build(reset: true, mode: 0, maxRows: 10, selectedClass: null);
-      Assert.IsNull(result);
-    }
-
-    #endregion
 
     #region StatsFormatter
 

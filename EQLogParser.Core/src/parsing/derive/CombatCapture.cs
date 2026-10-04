@@ -5,9 +5,10 @@ namespace EQLogParser
   // only), plus the raw action line carried on the event, from which ownership evidence is
   // extracted registry-free. No parser logic changes; no classification happens here.
   //
-  // Beyond damage/death, two pipeline inputs that can change fight state are captured in
-  // consumer order: registry verifications (EventsNewVerifiedPet makes FightManager drop the
-  // matching active fight) and taunts (a taunt opens a fight if none is active).
+  // Beyond damage/death, two pipeline inputs that could change fight state are captured in
+  // consumer order: registry verifications and taunts. The legacy engine dropped an active fight on a
+  // verification and opened one on a taunt; the fact queues keep the same arrival order so any fold
+  // sees exactly what the parse saw.
   //
   // Thread model: parser events are raised by the LogProcessor consumer task on a single thread,
   // so appends need no locking (same contract as DamageFactTable).
