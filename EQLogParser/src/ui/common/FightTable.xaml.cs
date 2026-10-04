@@ -46,13 +46,6 @@ namespace EQLogParser
     private List<int> _announcedIds = [];
 
     /*
-     * The names the last right-click wrote, kept until the derive they asked for finishes so the panel can say
-     * what actually became of them. Setting a name to Pet or Player takes its row OFF the list by design (only
-     * hostile-side names key an encounter), which otherwise reads as "my click deleted the fight".
-     */
-    private List<string> _pendingOverride;
-
-    /*
      * Loading-band state (see loadOverlay in the XAML). `_loadBandSettled` is this session's "a snapshot has
      * landed" flag: the band goes down for good at the first Derived - a quiet stretch mid-file can legitimately
      * complete a derive under 100 %, and real rows beat a bar - and it comes back only with the next session.
@@ -112,9 +105,11 @@ namespace EQLogParser
       // hides mob-only rows in the legacy table keeps that filter on arrival.
       fightShowTanking.IsChecked = _currentShowTanking = ConfigUtil.IfSet("NpcShowTanking", true);
 
-      // The time column takes the theme's date-time width like every other table that stamps a line, rather
-      // than a hand-picked number that stops fitting when the font scale changes.
-      beginColumn.Width = ThemeConfig.CurrentDateTimeWidth;
+      // The time column's width is applied at Loaded, not here - see OnGridLoaded: ThemeConfig does not exist
+      // yet at constructor time, and a zero-width fixed column "exists" without ever showing in the grid.
+      fightGrid.Loaded += OnGridLoaded;
+      ThemeConfig.EventsThemeChanged += EventsThemeChanged;
+
       ApplyFilter();
 
       // Legacy's search debounce, same interval: a name typed at fight speed arrives in a few hundred ms.
@@ -143,6 +138,18 @@ namespace EQLogParser
       _paneReady = true;
     }
 
+    /*
+     * The time column's width comes from ThemeConfig, and MainWindow initializes that only AFTER this pane's
+     * constructor has returned (InitializeComponent → SetMainWindow → ThemeConfig.Init). Reading the static in
+     * the ctor hands back 0.0, and a zero-width fixed column "exists" but shows nothing in the grid - which is
+     * how the pane shipped without its Initial Hit Time while its HP sibling, Auto-sized by its own sizer,
+     * looked fine. Loaded fires strictly later than the theme init; theme or font changes re-apply like every
+     * other themed grid in the app.
+     */
+    private void OnGridLoaded(object sender, RoutedEventArgs e) => beginColumn.Width = ThemeConfig.CurrentDateTimeWidth;
+
+    private void EventsThemeChanged(string _) => beginColumn.Width = ThemeConfig.CurrentDateTimeWidth;
+
     private void OnActiveChanged()
     {
       Dispatcher.InvokeAsync(() =>
@@ -154,7 +161,6 @@ namespace EQLogParser
           _selectionTimer.Stop();
           _announcedIds = [];
           _rows.Clear();
-          fightStatus.Text = "No log open";
           SetLoadBand(null);
         }
         else
@@ -162,7 +168,6 @@ namespace EQLogParser
           // A new session is a new load: the band may show again, and its counters start from nothing.
           _loadBandSettled = false;
           _capturedFacts = 0;
-          fightStatus.Text = "Capturing...";
         }
       });
     }
@@ -216,58 +221,7 @@ namespace EQLogParser
           RestoreSelection(keep);
           AnnounceSelection();
         }
-
-        // The header says nothing more about this pass. "Derived HH:mm:ss - N fights, M facts, X ms" never fit
-        // the dock beside three columns, and the rows themselves are the message; what still earns the space is the
-        // override verdict (the user asked a question seconds before) and clearing a placeholder or stale failure
-        // line that has served its turn. Selection messages come from AnnounceSelection and must survive.
-        var outcome = OverrideOutcome().TrimStart(' ', '-');
-        if (outcome.Length > 0)
-          fightStatus.Text = outcome;
-        else if (fightStatus.Text == "No log open"
-              || fightStatus.Text.StartsWith("Capturing", StringComparison.Ordinal)
-              || fightStatus.Text.StartsWith("Derive failed", StringComparison.Ordinal))
-          fightStatus.Text = string.Empty;
       });
-    }
-
-    private void OnDeriveFailed(string message)
-    {
-      // Both halves on the dispatcher: this handler runs on the derive thread, and OverrideOutcome reads the
-      // pending names from the UI thread - a cross-thread clear would only cost a sentence, but it is not that.
-      Dispatcher.InvokeAsync(() =>
-      {
-        _pendingOverride = null;
-        // The session retries a failed pass itself (backoff ladder, DeriveEngine); the line says so rather
-        // than leaving the reader looking for a button that no longer exists.
-        fightStatus.Text = $"Derive failed (retrying automatically): {message}";
-      });
-    }
-
-    /*
-     * What became of the names the user just ruled on, phrased by what the list actually does now. Nothing here
-     * guesses: a name still has a row if a row carrying its name came out of this pass, and "left the list" is
-     * the honest wording for a name that is raid-side now (its damage still counts, inside whatever it hit).
-     */
-    private string OverrideOutcome()
-    {
-      if (_pendingOverride is not { Count: > 0 } names) return string.Empty;
-      _pendingOverride = null;
-
-      var listed = 0;
-      foreach (var row in _rows)
-      {
-        if (row.Fight is not { } fight) continue;
-        for (var i = 0; i < names.Count; i++)
-          if (string.Equals(fight.Name, names[i], StringComparison.OrdinalIgnoreCase)) listed++;
-      }
-
-      var gone = names.Count - listed;
-      if (gone == 0)
-        return $" - override applied, all {names.Count} name{(names.Count == 1 ? "" : "s")} still listed";
-
-      return $" - override applied: {gone} name{(gone == 1 ? "" : "s")} left the list"
-             + (listed > 0 ? $", {listed} still on it" : string.Empty);
     }
 
     /*
@@ -332,7 +286,6 @@ namespace EQLogParser
       if (session is not null)
       {
         session.Derived += OnDerived;
-        session.DeriveFailed += OnDeriveFailed;
         session.Capturing += OnCapturing;
       }
     }
@@ -342,7 +295,6 @@ namespace EQLogParser
       if (_session is not null)
       {
         _session.Derived -= OnDerived;
-        _session.DeriveFailed -= OnDeriveFailed;
         _session.Capturing -= OnCapturing;
       }
       _session = null;
@@ -398,10 +350,6 @@ namespace EQLogParser
 
       _announcedIds = ids;
       DerivedSelectionChanged?.Invoke(selected);
-
-      fightStatus.Text = selected.Count == 0
-        ? "Selection cleared"
-        : $"Damage summary from derived facts: {selected.Count} fight{(selected.Count == 1 ? "" : "s")}";
     }
 
     private static bool SameIds(List<int> a, List<int> b)
@@ -495,13 +443,7 @@ namespace EQLogParser
       foreach (var fight in GetSelectedFights()) names.Add(fight.Name);
       if (names.Count == 0) return;
 
-      // Remembered so the derive that follows can say what became of these names (see OverrideOutcome).
-      _pendingOverride = names;
       IdentityOverrideStore.Instance.Apply(names, kind);
-
-      fightStatus.Text = kind is { } k
-        ? $"Override: {names.Count} name{(names.Count == 1 ? "" : "s")} set to {k} - re-deriving"
-        : $"Override cleared for {names.Count} name{(names.Count == 1 ? "" : "s")} - re-deriving";
       _session?.RederiveAsync();
     }
 

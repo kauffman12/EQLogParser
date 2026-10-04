@@ -117,9 +117,10 @@ The derived list wears legacy's face: **Initial Hit Time | HP | Name**, inactivi
 tooltips, selection restored across every re-derive by name+begin (`FightKey`, since projection renumbers). What it no
 longer says, on purpose (2026-10, from live feedback): no reading-progress duplication inside the dock — the
 application-wide status line owns percent-and-seconds; the band's one phrase is "Building derived fight list…" (EOF →
-first snapshot, default color, indeterminate); no `Derived HH:mm:ss - N fights, M facts, X ms` stats line in a header
-narrower than its text. The header's remaining honest jobs: which session, an override verdict, a selection meaning, a
-failure being retried. The meter opens at launch only if the capture's LAST moments hold a fight; its X closes the
+first snapshot, default color, indeterminate). The top-right status line of that header is gone entirely (2026-10,
+on request - "no status messages in the top right"): no derive stats line, no override verdict, no placeholder, no
+failure text; a selection speaks through the boards it feeds and a failed pass only through eqlogparser.log. The meter
+opens at launch only if the capture's LAST moments hold a fight; its X closes the
 window but disables nothing — next damage brings the board back onto the same seconds (the start second is static for
 exactly this).
 
@@ -5016,7 +5017,8 @@ changes the timeline's content digest, and the carry gate re-folds rather than m
 completed pass; a transient fault (locked file, AV scan) vanishes inside a second, deterministic poison becomes a slow
 repeating stack in eqlogparser.log, which *is* the diagnosis. (3) `IdentityPriorStore.Record` — a write for the NEXT
 log's benefit — cannot fail a pass at all: wrapped, logged, boards untouched. The Re-derive button and its handler are
-deleted; the fight table's failure status says "Derive failed (retrying automatically)". Tests: the guard laws (streak
+deleted, and the pane shows no failure state at all (its top-right status section was removed on request) - the journal
+line above is the only trace of a failing pass. Tests: the guard laws (streak
 arithmetic, retire-self-only, reset-on-new-session, never-silent) and the ladder's shape.
 
 ## The EMU corpus joins the parity battery (2026-10)

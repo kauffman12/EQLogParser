@@ -16,9 +16,10 @@ namespace EQLogParser.Wpf.Test;
  * the first snapshot has not, "Building derived fight list..." over an indeterminate bar. The first snapshot takes
  * it down for the session and it stays down (real rows beat a bar).
  *
- * The header status line gets the companion law: a completed derive says NOTHING there - the "Derived HH:mm:ss -
- * N fights, M facts, X ms" line never fit the dock beside three columns. Only an override verdict claims the
- * space, and placeholders ("Capturing...", "No log open", stale failure lines) clear when rows land.
+ * The pane carries no status text at all: the top-right message section was removed on request, so a derive,
+ * a selection or a failed pass has nothing to say there - DeriveEngine journals failures to eqlogparser.log
+ * (repeating stack plus retry interval) and the boards answer a selection. What remains is only what a band can
+ * own: the wait between EOF and the first snapshot.
  *
  * Same construction contract as FightTableStartupTest - STA thread because WPF will not build a
  * FrameworkElement on MTA, stubbed app-level StaticResources because the test host never loads App.xaml.
@@ -116,14 +117,9 @@ public sealed class FightTableLoadBandTest
       Flush();
       Assert.AreEqual(Visibility.Visible, table.loadOverlay.Visibility);
 
-      // The placeholder the panel shows before any data; rows landing must retire it, not leave it hanging.
-      table.fightStatus.Text = "Capturing...";
-
       table.OnDerived(new DerivedSnapshot { DerivedAt = DateTime.Now, FightCount = 2, FactCount = 4_000 });
       Flush();
       Assert.AreEqual(Visibility.Collapsed, table.loadOverlay.Visibility, "rows beat the bar");
-      Assert.IsFalse(table.fightStatus.Text.Contains("Derived"), "a completed derive writes no stats line in the header");
-      Assert.AreEqual(string.Empty, table.fightStatus.Text, "the capturing placeholder retires with the first rows");
 
       // A late pump tick - a tail running past 100 - must not resurrect the band for this session.
       table.ReportCaptureProgress(100);

@@ -63,7 +63,6 @@
       <CheckBox x:Name="fightShowTanking" Margin="8,0,0,2" Template="{StaticResource CustomCheckBoxTemplate}" Checked="ShowTankingChanged" Unchecked="ShowTankingChanged"
                 IsChecked="True" Content="Tanking" ToolTip="Include Fights with only Tanking data"/>
     </StackPanel>
-    <TextBlock x:Name="fightStatus" Grid.Row="0" Margin="0,2,8,2" HorizontalAlignment="Right" VerticalAlignment="Center" Text="No log open" />
     <syncfusion:SfDataGrid x:Name="fightGrid"
                            AllowResizingColumns="True"
                            AllowSorting="True"
