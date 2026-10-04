@@ -553,7 +553,7 @@ namespace EQLogParser
     // rows says the same thing. DamageToOwner is the raid's output ON this row, so zero means the line exists
     // only because the anchor was hitting us. A person-row reads above zero whenever her person was struck,
     // so nobody vanishes under the dial. Split out because it is the whole decision - and testable.
-    internal static bool ShownWhenTankingHidden(DerivedFight? fight) => fight is null || fight.DamageToOwner > 0;
+    internal static bool ShownWhenTankingHidden(DerivedFight fight) => fight is null || fight.DamageToOwner > 0;
 
     // The search's own state, walking the VISIBLE view (not _rows) both directions from the last hit - the same
     // fields and arithmetic FightTable.SearchForNpc uses; ported, not re-invented.

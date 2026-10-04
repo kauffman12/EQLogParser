@@ -21,7 +21,6 @@ namespace EQLogParser
     private const long TopTimeout = TimeSpan.TicksPerSecond * 2;
     private static readonly object StatsLock = new();
     private static readonly ILog Log = LogManager.GetLogger(typeof(DamageOverlayWindow));
-    private static DamageOverlayStatsBuilder _statsBuilder = new();
     private static DamageOverlayStats _stats;
     private readonly DispatcherTimer _updateTimer;
     private readonly bool _preview;
@@ -33,10 +32,9 @@ namespace EQLogParser
     private int _savedDamageMode;
 
     /*
-     * Which engine this window paints comes from ONE dial (`EnableCombatMirror`, read live through MirrorMeter), the same
-     * word the fight list docks on - so a mid-run toggle of that icon moves the list and this window together, and an open
-     * overlay can never sit on the other engine. Off by default: the legacy tally below stays the shipped path until the
-     * derived one has been watched on live pulls, and when the legacy path goes the dial itself goes with it.
+     * The numbers come from the capture: one calculation over the mirrored facts inside a window (DerivedTotals).
+     * The old running-total tally this replaced is deleted along with the engine that fed it, so no dial selects
+     * between engines any more - and none of the open/close rules can disagree about which one is on.
      *
      * What moves over is only WHERE the numbers come from: one calculation over the mirrored facts inside a window
      * (DerivedTotals), instead of the overlay's own running totals. The meter's policy stays here, because it always was
@@ -49,7 +47,7 @@ namespace EQLogParser
 
     /*
      * The first second this board adds up, STATIC on purpose. Legacy got "the meter closed with the X and came back where it
-     * left off" for free: its running totals lived in `_stats`/`_statsBuilder` (also static) and in FightManager's fights,
+     * left off" for free: its running totals lived in `_stats` (also static) and in the old engine's fights,
      * so a reopened window kept painting an accumulation it had not thrown away. A derived board holds nothing between ticks —
      * it is recomputed from the facts inside these seconds — so if this start lived on the window instance it would be reborn
      * at "now" and every second already spent on the pull would disappear from the numbers. Closing a window is not a reset;
@@ -97,7 +95,6 @@ namespace EQLogParser
       if (reset)
       {
         _stats = null;
-        _statsBuilder = new();
       }
 
       // dimensions
@@ -221,22 +218,19 @@ namespace EQLogParser
          * fire (up to a few seconds, longer if a bulk load is still running and quiescence has not arrived). One extra
          * pass on an open click is nothing; an empty board that looks broken is not nothing.
          */
-        if (MirrorMeter.Enabled)
-        {
-          DeriveEngine.Active?.RederiveAsync();
+        DeriveEngine.Active?.RederiveAsync();
 
-          /*
-           * Paint when the pump publishes, not on the next poll. The 1 s tick above is a repaint interval that happens to
-           * share its number with the capture's cadence, and stacking it on a pass costs up to a second of visible delay for
-           * no reason: `Derived` says exactly when the board changed. The poll stays as the path back for a window that was
-           * hidden through a derive, and for the legacy meter, which has nothing to announce.
-           *
-           * A session belongs to one log-open, so it is listened to through ActiveChanged rather than grabbed once: the
-           * overlay can be opened before a session exists, and survives one being swapped under it.
-           */
-          DeriveEngine.ActiveChanged += FollowActiveSession;
-          FollowActiveSession();
-        }
+        /*
+         * Paint when the pump publishes, not on the next poll. The 1 s tick above is a repaint interval that happens to
+         * share its number with the capture's cadence, and stacking it on a pass costs up to a second of visible delay for
+         * no reason: `Derived` says exactly when the board changed. The poll stays as the path back for a window that was
+         * hidden through a derive.
+         *
+         * A session belongs to one log-open, so it is listened to through ActiveChanged rather than grabbed once: the
+         * overlay can be opened before a session exists, and survives one being swapped under it.
+         */
+        DeriveEngine.ActiveChanged += FollowActiveSession;
+        FollowActiveSession();
       }
     }
 
@@ -509,7 +503,7 @@ namespace EQLogParser
           lock (StatsLock)
           {
             damageOverlayStats = _stats;
-            var update = MirrorMeter.Enabled ? BuildMirrorUpdate() : _statsBuilder.Build(_stats == null, _currentDamageMode, maxRows, _currentSelectedClass);
+            var update = BuildMirrorUpdate();
 
             if (update == null)
             {
@@ -621,14 +615,12 @@ namespace EQLogParser
         Visibility = Visibility.Collapsed;
 
         /*
-         * Hiding a meter with nothing behind it closes it for real. The two engines are asked the same question in their own
-         * terms: legacy kept a set of overlay fights, the engine asks whether any row is still going inside the window that
-         * zeroes this board (LiveFights). One consequence of the second phrasing is worth knowing: on a derived meter a
-         * window hidden between pulls closes instead of waiting out the log, and comes back on the next pull through
-         * DeriveEngine.NewFightObserved rather than lingering invisibly until the app restarts.
+         * Hiding a meter with nothing behind it closes it for real: LiveFights answers whether any row is still going
+         * inside the window that zeroes this board. One consequence of that phrasing is worth knowing: a window hidden
+         * between pulls closes instead of waiting out the log, and comes back on the next pull through
+         * DeriveEngine.LiveDamageObserved rather than lingering invisibly until the app restarts.
          */
-        var stillSomethingToShow = MirrorMeter.Enabled ? MirrorMeter.HasLiveFight(_currentDamageMode)
-                                                : FightManager.Instance.HasOverlayFights();
+        var stillSomethingToShow = MirrorMeter.HasLiveFight(_currentDamageMode);
         if (!stillSomethingToShow)
         {
           MainActions.CloseDamageOverlay(false);
@@ -1081,20 +1073,10 @@ namespace EQLogParser
         _stats = null;
 
         /*
-         * Each engine resets the way IT keeps a board. The legacy tally needs its builder and FightManager's overlay-fight
-         * set thrown away, because those hold the running totals; a derived board holds nothing, so its reset is moving the
-         * window's start to the next tick. Touching legacy state on the derived path would be harmless and misleading — and
-         * the day the legacy builder goes, "harmless" becomes a NullReference in the reset button.
+         * The board holds nothing between ticks - it is recomputed from the facts inside its seconds - so a reset is
+         * moving the window's start to the next tick and nothing else.
          */
-        if (MirrorMeter.Enabled)
-        {
-          _mirrorWindowT = -1;
-        }
-        else
-        {
-          _statsBuilder = new();
-          FightManager.Instance.ResetOverlayFights();
-        }
+        _mirrorWindowT = -1;
       }
     }
 

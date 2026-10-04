@@ -153,23 +153,16 @@ namespace EQLogParser
       AppSettings.IsEmuParsingEnabled = ConfigUtil.IfSet("EnableEmuParsing");
       emuParsingIcon.Visibility = AppSettings.IsEmuParsingEnabled ? Visibility.Visible : Visibility.Hidden;
 
-      // The derivation (experimental derived fight list) — the tap attaches when a log opens
-      AppSettings.IsCombatMirrorEnabled = ConfigUtil.IfSet("EnableCombatMirror");
-      combatMirrorIcon.Visibility = AppSettings.IsCombatMirrorEnabled ? Visibility.Visible : Visibility.Hidden;
-
       /*
-       * The checked item means the window is there: dock it at startup, not only on log open. Left to the
-       * open-log path alone, a restart lands "checked but invisible" - the feature reads as broken until
-       * somebody guesses that opening a log again would bring it back. It reads "No log open" until then.
+       * The derived list IS the fight list: dock it at startup like the old one always did. (The
+       * EnableCombatMirror dial that gated this is deleted with the engine it hedged between; a settings.txt
+       * still carrying the word simply stops being read.)
        */
-      if (AppSettings.IsCombatMirrorEnabled)
-        DockingManager.SetState(mirrorFightWindow, DockState.Dock);
+      DockingManager.SetState(mirrorFightWindow, DockState.Dock);
 
       /*
-       * Selecting rows in the derived list rebuilds the DAMAGE summary from the engine's own facts. One
-       * board on purpose (see MirrorFightTable.DerivedSelectionChanged): the experiment is to click the same
-       * fight in both lists and read two engines' answers, and that only means something while exactly one
-       * of the two lists owns the numbers at a time.
+       * Selecting rows in the fight list rebuilds the DAMAGE summary from the engine's own facts. One board
+       * on purpose (see MirrorFightTable.DerivedSelectionChanged).
        */
       if (mirrorFightWindow?.Content is MirrorFightTable fightTable) fightTable.DerivedSelectionChanged += DerivedSelectionChanged;
 
@@ -441,13 +434,12 @@ namespace EQLogParser
       else if (ConfigUtil.IfSet("IsDamageOverlayEnabled"))
       {
         /*
-         * "Was anything happening?" asked of whichever engine is feeding the meter. On a derived meter this is LiveFights over
-         * the capture's rows rather than FightManager's overlay-fight set, so the window opens when the capture's last moments
-         * hold a fight instead of when the log ever contained one — and if nothing was live, NewFightObserved opens it on the
-         * next pull instead. No session running answers false: a capture that is not running has no facts, and this path does
-         * not fall back to a second engine to have something to say.
+         * "Was anything happening?" asked of LiveFights over the capture's rows, not an overlay-fight set: the window
+         * opens when the capture's last moments hold a fight instead of when the log ever contained one — and if
+         * nothing was live, NewFightObserved opens it on the next pull instead. No session running answers false: a
+         * capture that is not running has no facts, and this path does not fall back to have something to say.
          */
-        if (MirrorMeter.Enabled ? MirrorMeter.HasLiveFight() : FightManager.Instance.HasOverlayFights())
+        if (MirrorMeter.HasLiveFight())
         {
           _damageOverlay?.Close();
           _damageOverlay = new DamageOverlayWindow(false, reset);
@@ -680,7 +672,6 @@ namespace EQLogParser
           Log.Warn("Resume");
           _saveTimer?.Start();
           await TriggerManager.Instance.StartAsync();
-          if (!MirrorMeter.Enabled) FightManager.Instance.ResetOverlayFights(true);
           OpenDamageOverlayIfEnabled(true, false);
           SubscribeOverlayFights();
           break;
@@ -688,32 +679,27 @@ namespace EQLogParser
     }
 
     /*
-     * The auto-open rule, attached to whichever engine reports fights. Both engines raise on a worker thread (the parse
-     * thread for FightManager, the derive thread for the engine), so the window is still created through the dispatcher and
-     * re-checked there — the meter opens once, at most, however many passes announce the same pull.
+     * The auto-open rule. It raises on a worker thread (the derive thread), so the window is still created through the
+     * dispatcher and re-checked there — the meter opens once, at most, however many passes announce the same pull.
      *
      * This is also what gives the meter's X its meaning: closing the window does not disable anything, so damage brings the
      * board back (and back to the same numbers — a closed window does not reset the meter's start). "Disable Meter" is how you
-     * keep it shut. Legacy announced on every damage line of a fight, which is why its X behaved that way; the engine raises
-     * at derive rate instead, and AutoOpenMeter's already-open check swallows all but the first.
+     * keep it shut. The old engine announced on every damage line of a fight, which is why its X behaved that way; the derive
+     * raises at cadence instead, and AutoOpenMeter's already-open check swallows all but the first.
      */
     private void SubscribeOverlayFights()
     {
-      if (MirrorMeter.Enabled) DeriveEngine.LiveDamageObserved += OnLiveDamage;
-      else FightManager.Instance.EventsNewOverlayFight += EventsNewOverlayFight;
+      DeriveEngine.LiveDamageObserved += OnLiveDamage;
     }
 
-    // Removes BOTH, unconditionally: `-=` on a handler that was never attached is a no-op, while the old
-    // Enabled-keyed branch read the dial AFTER the toggle had already flipped it - so an off flip removed the
-    // legacy handler and left the static derived one attached, which is exactly the pin-on-process-lifetime leak the
-    // comment below the Subscribe pair warns about. Subscribe stays the conditional pair: exactly one engine reports.
+    // Removes unconditionally: `-=` on a handler that was never attached is a no-op. The pair used to be
+    // dial-keyed, and the dial got read AFTER a toggle had flipped it - so an off flip left the OTHER engine's
+    // handler pinned to a static event for the life of the process. One publisher remains; the lesson that
+    // removal should never need a condition stands with the pair.
     private void UnsubscribeOverlayFights()
     {
       DeriveEngine.LiveDamageObserved -= OnLiveDamage;
-      FightManager.Instance.EventsNewOverlayFight -= EventsNewOverlayFight;
     }
-
-    private void EventsNewOverlayFight(Fight e) => AutoOpenMeter();
 
     // Damage arrived, and which row carries it is not the meter's business: it opens and reads whatever the snapshot says.
     private void OnLiveDamage() => AutoOpenMeter();
@@ -749,44 +735,6 @@ namespace EQLogParser
     private void ToggleEmuParsingClick(object sender, RoutedEventArgs e)
     {
       AppSettings.IsEmuParsingEnabled = MainActions.ToggleSetting("EnableEmuParsing", emuParsingIcon);
-    }
-
-    private void ToggleCombatMirrorClick(object sender, RoutedEventArgs e)
-    {
-      AppSettings.IsCombatMirrorEnabled = MainActions.ToggleSetting("EnableCombatMirror", combatMirrorIcon);
-
-      if (!AppSettings.IsCombatMirrorEnabled)
-      {
-        // The tap only sees lines from the moment it subscribes - stop cleanly rather than
-        // keep a half-log session; the next log open starts fresh. The overlay fights subscription is re-homed for
-        // whichever engine is on now (its derived board time is static, and legacy auto-open would otherwise stay dead
-        // until the next log open or power cycle).
-        UnsubscribeOverlayFights();
-        SubscribeOverlayFights();
-        _engine?.Dispose();
-        _engine = null;
-      }
-      else if (_engine is null && _eqLogReader is not null)
-      {
-        /*
-         * Re-enabling on a live parse: start the session NOW rather than waiting for the next open - uncheck/check
-         * is how this feature gets exercised, and docking an empty window that stays "no log" is what made the
-         * toggle read as broken. No backfill exists (facts before the tap were never captured), so the list fills
-         * forward from this line; the chat sink was fixed when the file opened, so drink evidence and chat identity
-         * join at the next open while facts and heals flow from now.
-         */
-        _engine = new DeriveEngine();
-        _engine.Start();
-        Log.Info($"capture: attached mid-log ({Path.GetFileName(AppSettings.CurrentLogFile ?? string.Empty)})");
-
-        // The auto-open announcement lives on a static event; this process may have subscribed for the OTHER engine
-        // (or not at all, if no log had finished loading before the tap). Re-home it for whichever is on now - the
-        // pair rather than a flag, so no bookkeeping can drift from the subscription itself.
-        UnsubscribeOverlayFights();
-        SubscribeOverlayFights();
-      }
-
-      DockingManager.SetState(mirrorFightWindow, AppSettings.IsCombatMirrorEnabled ? DockState.Dock : DockState.Hidden);
     }
 
     private void ToggleMapSendToEqClick(object sender, RoutedEventArgs e)
@@ -1325,7 +1273,6 @@ namespace EQLogParser
             {
               closeLogFile.IsEnabled = true;
               saveLogFile.IsEnabled = true;
-              if (!MirrorMeter.Enabled) FightManager.Instance.ResetOverlayFights(true);
               OpenDamageOverlayIfEnabled(true, false);
               SubscribeOverlayFights();
             }, DispatcherPriority.DataBind);
@@ -1444,7 +1391,7 @@ namespace EQLogParser
               DockingManager.SetState(npcWindow, DockState.Dock);
             }
 
-            if (AppSettings.IsCombatMirrorEnabled && DockingManager.GetState(mirrorFightWindow) == DockState.Hidden)
+            if (DockingManager.GetState(mirrorFightWindow) == DockState.Hidden)
             {
               DockingManager.SetState(mirrorFightWindow, DockState.Dock);
             }
@@ -1483,15 +1430,12 @@ namespace EQLogParser
             _engine?.Dispose();
             _engine = null;
             IChatSink chatSink = new ChatDbSink();
-            if (AppSettings.IsCombatMirrorEnabled)
-            {
-              _engine = new DeriveEngine();
-              _engine.Start();
-              chatSink = new CompositeChatSink(chatSink, _engine.ChatSink);
-              // One line per open: if the derived list ever silently fails to fill, this is the line that is
-              // missing from the log (session created) or that arrives without rows following it (derive stuck).
-              Log.Info($"capture: started ({Path.GetFileName(theFile)})");
-            }
+            _engine = new DeriveEngine();
+            _engine.Start();
+            chatSink = new CompositeChatSink(chatSink, _engine.ChatSink);
+            // One line per open: if the derived list ever silently fails to fill, this is the line that is
+            // missing from the log (session created) or that arrives without rows following it (derive stuck).
+            Log.Info($"capture: started ({Path.GetFileName(theFile)})");
 
             _eqLogReader = new LogReader(new LogProcessor(theFile, chatSink, new TriggerHookAdapter()), theFile, lastMins);
             _ = _eqLogReader.StartAsync();
