@@ -282,13 +282,14 @@ public class ClassificationReportTest
       Assert.AreEqual("Cleric", learnedRow.Class, "the spell-learned class must be the one displayed");
 
       // And the roster default still answers for a name that never cast a class-bearing spell.
-      string secondName = null;
+      string? secondName = null;
       foreach (var f in Capture().Facts.Facts)
       {
         var name = Capture().Facts.InternedNames[f.AtkIdx];
         if (!name.Equals(raider, StringComparison.OrdinalIgnoreCase)) { secondName = name; break; }
       }
-      PlayerRegistry.Instance.SetDefaultPlayerClass(secondName, "Warrior");
+      Assert.IsNotNull(secondName, "the capture needs an attacker besides the raider for the default-class case");
+      PlayerRegistry.Instance.SetDefaultPlayerClass(secondName!, "Warrior");
 
       var defaultRow = Census().Rows.Single(r => r.Name.Equals(secondName, StringComparison.OrdinalIgnoreCase));
       Assert.AreEqual("Warrior", defaultRow.Class);
