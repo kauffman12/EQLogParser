@@ -4976,6 +4976,11 @@ load path with no `PresentationSource` behind it, which is the same class of win
 `SetThemeFontSizes`/`SetThemeResources`, which dereference `_mainWindow.npcWindow` and `main.statusText`. The event plumbing is therefore
 documented rather than measured — the arithmetic the hooks hand over is what is asserted.
 
+**Windows run afterwards: green, 1,698 passed / 8 gated skips across both assemblies** (1,545 cross-platform + 153 in `Wpf.Test`). That counts for two things beyond the new class passing. First, 6440d845's
+premise survives a host that can actually build the pane, and nothing wedges — the two failures that had hidden inside `SfDataGrid.ctor` stay dead even though this class adds a FightTable (hence an
+SfDataGrid) per test, well past the vendor's five-construction counter; if `IsLicenseExceptionShown` ever stops defusing `shouldQuit`, these bodies are the next to hang. Second, the probe never fired,
+which is what a clean run looks like for it: `Sta`'s live-thread list is exercised only by a real wedge, so that filter stays measured-by-construction until the next Windows hang.
+
 ## A test host is unlicensed, and Syncfusion says so at construction (2026-11)
 
 Two Windows runs in a row: the second one lost two `Sta.Run` bodies — `TheFirstSnapshotTakesTheBandDownForGood` and

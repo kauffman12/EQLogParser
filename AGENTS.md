@@ -13,7 +13,8 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
 ## Build Environment (Linux, this machine)
 - .NET 10 SDK (10.0.4xx) lives in `~/.dotnet`; prepend it on every shell: `export PATH="$HOME/.dotnet:$PATH"`. The system's dotnet 8 will not satisfy `global.json` (`"10.0"`, `rollForward: latestPatch`).
 - Full solution on Linux: `dotnet build EQLogParser.sln -p:EnableWindowsTargeting=true` (flag lets the WPF projects cross-compile; no source changes needed).
-- Tests: `dotnet test EQLogParser.Test/EQLogParser.Test.csproj` is the non-WPF suite (~1,120 tests, plain `net10.0`). `EQLogParser.Wpf.Test` targets `net10.0-windows` and only runs on Windows.
+- Tests: `dotnet test EQLogParser.Test/EQLogParser.Test.csproj` is the non-WPF suite (**1,545 passed / 8 env-gated skips**, plain `net10.0`). `EQLogParser.Wpf.Test` targets `net10.0-windows` and only
+  runs on Windows (153 tests); both assemblies together measure **1,698 passed / 8 skipped** there (2026-11). A Windows run that *loses* `Sta.Run` bodies rather than failing them is the failure mode to watch.
 - **Real-log corpus layout (local/, gitignored)**: `local/logs/live/` holds live-format captures; `local/logs/emu/` holds EMU-server captures (THJ/TSS/Heroes Forge shapes) that need the app's `EnableEmuParsing` behaviour. The env-gated real-log tests run them via **`EQLP_EMU=1`**, which sets `AppSettings.IsEmuParsingEnabled` for the duration of a `PipelineHarness` run (restored after — the flag is process-global and live-format logs misparse with it on). Without it an EMU capture parses with DamageLineParser's live grammar and silently loses the `(Owner: X)` / `scores a critical hit! (N)` shapes, so a parity run over `emu/` without the flag measures nothing. Timestamps are the same `[DDD MMM dd HH:mm:ss yyyy]` shape in both directories.
 
 ## Testing Guidelines
