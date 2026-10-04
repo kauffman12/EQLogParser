@@ -52,9 +52,10 @@ namespace EQLogParser
   public partial class NamesTable
   {
     /*
-     * One grid row, four columns wide: who, what the classifier called it, what kind of evidence said so, and their
-     * class. Two of those cells carry a pencil (Type and Class) while nothing in the grid is typed into — a row is read,
-     * and edited by picking from a list whose entries are verdicts rather than free text.
+     * One grid row, four columns wide in one order: who, what the classifier called it, their class, and what kind of
+     * evidence said so. Two of those cells carry a pencil (Type and Class) while nothing in the grid is typed into — a row
+     * is read, and edited by picking from a list whose entries are verdicts rather than free text. A cell with no pencil
+     * still reserves its width (PlaceholderVisibilityConverter), so the two columns do not go ragged where the exceptions are.
      *
      * Two things it no longer carries:
      *
@@ -272,10 +273,12 @@ namespace EQLogParser
      * printing "(earlier)" and leaving the detail out — which is the half that made the old tooltip useless: the cell said
      * one word, the hover said which rule number, and neither said what the rule had read.
      *
-     * One flag may ride behind it, and only the one that changes what a person does next: the roster swearing this name is a
-     * player while these rules put it on the enemy side (somebody's meter is wrong right now). Everything else the census knows
-     * stays in the log. "Not in this log" is gone — it read as an error on a row whose Type already says Unknown — and a hover is
-     * never empty: an unplaced name answers "Nothing identified it".
+     * Nothing rides behind it any more. It used to append the roster's opinion ("players.txt says Player", or just "in
+     * players.txt"), which read as a second verdict from a source the operator cannot see — and on a row this window had
+     * already decided, naming a FILE answered "which file said so" rather than the one question a hover is for. The
+     * disagreement it was pointing at is not hidden: it counts in the caption's tooltip (`N contradict the roster`) and
+     * `Row.IsDisagreement` still decides that number. "Not in this log" is gone on the same grounds — it read as an error
+     * on a row whose Type already says Unknown. A hover is never empty: an unplaced name answers "Nothing identified it".
      */
     internal static string ProvenanceFor(ClassificationReport.Row row)
     {
@@ -295,11 +298,7 @@ namespace EQLogParser
       // The sighting count rides on the proof clause too: "From Chat in previous log x7".
       if (row.IsPrior && row.PriorSightings > 1) proof = $"{proof} x{row.PriorSightings:N0}";
 
-      var roster = row.IsDisagreement ? "players.txt says Player"
-                 : row.LegacySaysPlayer && row.Kind != IdentityKind.Player ? "in players.txt"
-                 : null;
-
-      return roster is null ? proof : $"{proof} · {roster}";
+      return proof;
     }
 
     /*

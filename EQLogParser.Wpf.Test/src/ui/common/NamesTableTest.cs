@@ -1,3 +1,6 @@
+using System.Globalization;
+using System.Windows;
+using System.Windows.Controls;
 using EQLogParser;
 
 namespace EQLogParser.Wpf.Test;
@@ -7,17 +10,22 @@ namespace EQLogParser.Wpf.Test;
  * element is constructed, so no Sta.Run - because the interesting part is which short line the WHY tooltip composes and
  * which rows get an edit icon, not how SfDataGrid paints them.
  *
- * The grid shows four columns (Name, Type, Why, Class). Two things an older layout carried are deliberately absent and so
- * are not asserted here: Damage/Healing (an identity list should not rank names by output) and Owner (the Pet Owners
- * window lists the same PlayerRegistry pairs).
+ * The grid shows four columns in one order — Name, Type, Class, Why: the two you can edit sit together after the name and
+ * the read-only explanation goes last. Two things an older layout carried are deliberately absent and so are not asserted
+ * here: Damage/Healing (an identity list should not rank names by output) and Owner (the Pet Owners window lists the same
+ * PlayerRegistry pairs).
  *
  * The WORDS themselves - "Chosen" for R10-manual, "Healed" for R15-healed, the dropdown's five entries - are asserted in
  * IdentityVocabularyTest (EQLogParser.Test), including the corpus check that no rule code reaches the screen. What is
  * pinned here is the part only this file owns: which LINES a row's tooltip gets, since each one tells a person whether to
- * ACT. A verdict resting on their own click needs no correction; one resting on an older log might; "players.txt says
- * player" is the row where somebody's meter is wrong right now; and "Claim taken back" must not read like "You chose" -
- * the tooltip is the only place any of those four survive, so a line dropped by accident is a row that looks fine and
- * isn't.
+ * ACT. A verdict resting on their own click needs no correction; one resting on an older log might; "Claim taken back" must
+ * not read like "You chose"; and NOTHING names a file any more — players.txt used to ride behind the proof as a second
+ * verdict from a source the operator cannot open from here, which read as a contradiction nobody had explained on rows the
+ * rules had merely classified. The pane's own shape is pinned too: the column order, and the fact that a row which offers
+ * no pencil still reserves its width (PlaceholderVisibilityConverter), so the words in the column line up.
+ *
+ * Most of this needs no WPF — RowFrom is a plain mapping — so only the column-order test constructs the pane, through
+ * Sta.Run like every other UIElement here.
  */
 [TestClass]
 public class NamesTableTest
@@ -128,24 +136,97 @@ public class NamesTableTest
                    "a borrowed verdict has no cast behind it in THIS log; naming one would credit this capture with proving it");
   }
 
+  /*
+   * A verified raider overridden to NPC is exactly the state in which a player's damage leaves the board, and the census
+   * still counts it — that count is what the caption's tooltip prints ("N contradict the roster"), where it belongs: it is
+   * one number about the whole capture, not a flag welded onto every affected row. On the row itself the hover now answers
+   * only the question asked, which for this name is "you said so".
+   */
   [TestMethod]
-  public void TheOneLineThatMeansSomebodysMeterIsWrong()
+  public void AContradictedRosterCountsInTheCensusAndStaysOffTheRow()
   {
-    // Verified raider, overridden to NPC: exactly the state in which a player's damage leaves the board.
     PlayerRegistry.Instance.AddVerifiedPlayer("Berta", 1_700_000_000);
     ClassificationCommands.SetVerdict(IdentityOverrideStore.Instance, PlayerRegistry.Instance, "Berta", IdentityKind.Npc);
 
     var census = CensusWithoutACapture();
     var row = NamesTable.RowFrom(census.Find("Berta")!);
 
-    Assert.IsTrue(census.Disagreements >= 1);
-    StringAssert.Contains(row.Provenance, "players.txt says Player");
-
-    // The roster flag rides on the SAME line as the proof (middot, the house separator in caption tooltips): the proof is what
-    // somebody asks about, this is the reason to go fix something - one hover, one breath.
-    Assert.IsFalse(row.Provenance.Contains("\n"), $"the disagreement flag must not take a line of its own: {row.Provenance}");
-    StringAssert.Contains(row.Provenance, " · ");
+    Assert.IsTrue(census.Disagreements >= 1, "the disagreement stopped counting in the census");
+    Assert.AreEqual("You chose NPC", row.Provenance,
+                    $"the hover states the operator's own claim and appends nothing: {row.Provenance}");
   }
+
+  /*
+   * No hover in this pane names a file. Four of them sit behind these rows (players.txt, npcs.txt, identity-priors.txt,
+   * mirror-overrides.txt), and naming one answers "which file said so" rather than the question a tooltip is for; worst of
+   * all was the roster flag on a row whose Type came from a rule, where "in players.txt" looked like an unresolved
+   * contradiction. The two proof clauses that used to quote filenames say what the file IS instead — "On the NPC List",
+   * "The Name of a Spell".
+   */
+  [TestMethod]
+  public void NoRowTooltipNamesAFile()
+  {
+    foreach (var kind in new[] { IdentityKind.Unknown, IdentityKind.Player, IdentityKind.Pet, IdentityKind.Merc, IdentityKind.Npc })
+      foreach (var source in new[]
+               {
+                 "R5-companion", "R5-owner:Beorun", "R17-selffeed", "R6-npcdb", "R14-shape", "R7-graph:9", "Prior:R6-npcdb",
+                 "R21-spelleffect", "R21-spellcast", "R9-charm", "Manual",
+               })
+      {
+        var provenance = NamesTable.RowFrom(new ClassificationReport.Row { Name = "Ziggy", Kind = kind, Reason = source }).Provenance;
+
+        foreach (var file in new[] { ".txt", "players", "npcs", "priors", "overrides" })
+          Assert.IsFalse(provenance.Contains(file, StringComparison.OrdinalIgnoreCase),
+                         $"{kind}/{source} puts '{file}' in the hover: {provenance}");
+      }
+  }
+
+  /*
+   * A row that offers no pencil still reserves its width. Hidden keeps the element's box; Collapsed — what
+   * BooleanToVisibilityConverter answers — hands it back, and the words in a column stop lining up: the exceptions (spell
+   * effects and self-naming summons on Type, everything not yet a Player on Class) punched a ragged left edge through the
+   * middle of both columns, so a difference in what a row ALLOWS was rendered as a difference in where its text begins.
+   */
+  [TestMethod]
+  public void ARowWithoutAPencilStillPaysForOne()
+  {
+    var converter = new PlaceholderVisibilityConverter();
+    var culture = CultureInfo.CurrentCulture;
+
+    Assert.AreEqual(Visibility.Visible, converter.Convert(true, typeof(Visibility), null, culture));
+    Assert.AreEqual(Visibility.Hidden, converter.Convert(false, typeof(Visibility), null, culture),
+                    "a missing pencil collapsed and took the column's alignment with it");
+  }
+
+  /*
+   * Name, Type, Class, Why. The order is the interaction: Name identifies, the next two are the cells that answer with a
+   * click, and WHY is the read-only sentence that explains them — which used to sit between the two things you edit.
+   * Read inside Sta.Run like every DependencyObject (the grid's Columns belong to the thread that built them).
+   */
+  [TestMethod]
+  public void TheColumnsGoNameTypeClassWhy()
+  {
+    EnsurePaneResources();
+
+    var order = new List<string>();
+    Sta.Run(() =>
+    {
+      foreach (var column in new NamesTable().namesGrid.Columns) order.Add(column.MappingName ?? string.Empty);
+    });
+
+    CollectionAssert.AreEqual(new[] { "Name", "Type", "PlayerClass", "Why" }, order,
+                              $"column order changed: {string.Join(", ", order)}");
+  }
+
+  // The two app-level StaticResource keys this pane's markup needs, stubbed for a headless test host — same shape as
+  // FightTableStartupTest's. A Style whose TargetType is the element or a base of it; anything else throws on parse.
+  private static void EnsurePaneResources() => Sta.Run(() =>
+  {
+    _ = Application.Current ?? new Application();
+    var res = Application.Current!.Resources;
+    res["EQIconStyle"] ??= new Style(typeof(Image));
+    res["EQTitleStyle"] ??= new Style(typeof(ContentControl));
+  });
 
   /*
    * The one thing worth adding to this window: when a verdict came from a CAST, the tooltip names it (the census puts it

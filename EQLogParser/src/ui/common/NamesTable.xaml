@@ -18,6 +18,10 @@
     </Grid.RowDefinitions>
 
     <Grid.Resources>
+      <!-- Hidden rather than Collapsed: a row that offers no pencil still reserves its width, so the words in the Type
+           and Class columns line up whether or not this row can be overruled. See PlaceholderVisibilityConverter. -->
+      <local:PlaceholderVisibilityConverter x:Key="PlaceholderVisibilityConverter" />
+
       <!-- The same row-number template every other row-headered table in the app declares (implicit style, plain
            index text at EQContentSize): numbering tracks the live row position. Without it this grid was the only
            one showing Syncfusion's default row header. -->
@@ -90,6 +94,9 @@
         sizes these from the same theme-scaled variables every other table reads (ApplyColumnWidths, re-run when the
         theme changes), because ThemeConfig cannot answer anything until after this markup has been loaded.
 
+        Four columns in a fixed order — Name, Type, Class, Why: the two you can edit sit together right after the name,
+        and WHY is the read-only explanation, so it goes last instead of between the things you click.
+
         Four columns, and the ones this window used to carry are gone on purpose. Damage/Healing belong on a damage
         board, not on an identity list; Owner is the Pet Owners window's own table (both read PlayerRegistry, so this
         was a second copy of the same pairs); Notes held sentences that were mostly empty and, where they were not, are
@@ -112,11 +119,36 @@
                   No pencil where the answer is forced: a summon whose own spelling carries its owner (`Tuona`s ward`) and
                   a spell effect ("A Spell") each have exactly one right Type, and offering three wrong ones beside it is an
                   invitation to break a row nobody can put back. NameRow.Overrulable decides; see CanOverrule.
+
+                  The space is taken either way: PlaceholderVisibilityConverter answers HIDDEN, not Collapsed, so a row with no pencil still reserves
+                  the icon's width and every word in this column starts at the same pixel (ARowWithoutAPencilStillPaysForOne).
                 -->
                 <fa:ImageAwesome Margin="8,1,4,0" Style="{StaticResource EQIconStyle}" Icon="Regular_Edit" Cursor="Hand"
-                                 Visibility="{Binding Overrulable, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                 Visibility="{Binding Overrulable, Converter={StaticResource PlaceholderVisibilityConverter}}"
                                  MouseLeftButtonUp="TypeEditMouseLeftButtonUp" ToolTip="Choose what this name is"/>
                 <TextBlock VerticalAlignment="Center" Text="{Binding Type}"/>
+              </StackPanel>
+            </DataTemplate>
+          </syncfusion:GridTemplateColumn.CellTemplate>
+        </syncfusion:GridTemplateColumn>
+        <!--
+          Class, with the same pencil as Type - but only on a row where choosing a class MEANS something. Setting one
+          writes players.txt (SetDefaultPlayerClass verifies the name as a player), so an NPC row gets no icon: typing a
+          mob into the roster is exactly the pollution this window exists to catch. Nor does a Pet or Merc row get one -
+          nothing persists mercenaries, and a pet's class belongs to nobody's roster. A name the rules have not placed
+          declares itself with Type first; the pencil arrives as soon as the row reads Player (NameRow.ClassEditable).
+
+          It sits BEFORE Why: the columns you can edit stay together right after the Name, and the read-only sentence that explains a verdict goes
+          last rather than between two things you click.
+        -->
+        <syncfusion:GridTemplateColumn HeaderText="Class" MappingName="PlayerClass" Width="100">
+          <syncfusion:GridTemplateColumn.CellTemplate>
+            <DataTemplate>
+              <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                <fa:ImageAwesome Margin="8,1,4,0" Style="{StaticResource EQIconStyle}" Icon="Regular_Edit" Cursor="Hand"
+                                 Visibility="{Binding ClassEditable, Converter={StaticResource PlaceholderVisibilityConverter}}"
+                                 MouseLeftButtonUp="ClassEditMouseLeftButtonUp" ToolTip="Choose this player's class"/>
+                <TextBlock VerticalAlignment="Center" Text="{Binding PlayerClass}"/>
               </StackPanel>
             </DataTemplate>
           </syncfusion:GridTemplateColumn.CellTemplate>
@@ -133,25 +165,6 @@
             <DataTemplate>
               <TextBlock Text="{Binding Why}" FontSize="{DynamicResource EQContentSize}" VerticalAlignment="Center"
                          ToolTip="{Binding Provenance}"/>
-            </DataTemplate>
-          </syncfusion:GridTemplateColumn.CellTemplate>
-        </syncfusion:GridTemplateColumn>
-        <!--
-          Class, with the same pencil as Type - but only on a row where choosing a class MEANS something. Setting one
-          writes players.txt (SetDefaultPlayerClass verifies the name as a player), so an NPC row gets no icon: typing a
-          mob into the roster is exactly the pollution this window exists to catch. Nor does a Pet or Merc row get one -
-          nothing persists mercenaries, and a pet's class belongs to nobody's roster. A name the rules have not placed
-          declares itself with Type first; the pencil arrives as soon as the row reads Player (NameRow.ClassEditable).
-        -->
-        <syncfusion:GridTemplateColumn HeaderText="Class" MappingName="PlayerClass" Width="100">
-          <syncfusion:GridTemplateColumn.CellTemplate>
-            <DataTemplate>
-              <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                <fa:ImageAwesome Margin="8,1,4,0" Style="{StaticResource EQIconStyle}" Icon="Regular_Edit" Cursor="Hand"
-                                 Visibility="{Binding ClassEditable, Converter={StaticResource BooleanToVisibilityConverter}}"
-                                 MouseLeftButtonUp="ClassEditMouseLeftButtonUp" ToolTip="Choose this player's class"/>
-                <TextBlock VerticalAlignment="Center" Text="{Binding PlayerClass}"/>
-              </StackPanel>
             </DataTemplate>
           </syncfusion:GridTemplateColumn.CellTemplate>
         </syncfusion:GridTemplateColumn>
