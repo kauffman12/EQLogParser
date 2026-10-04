@@ -63,6 +63,45 @@ internal static class IdentityVocabulary
     new("Clear claim", IdentityKind.Unknown),
   ];
 
+  /*
+   * What THIS row's Type dropdown offers: the part of the vocabulary a name can actually be.
+   *
+   * Two trims, each one something the capture's own grammar decides and an opinion cannot:
+   *
+   *   - **Mercenary is not a verdict you can put on a name.** A mercenary is what /target reported (R3-merc/R13-merc);
+   *     typing "Mercenary" onto a raider moves her number off the player column and onto a column nothing else fills,
+   *     and no file backs the claim afterwards. A row that already reads Mercenary keeps the entry — the popup opens on
+   *     the current answer — and taking that verdict back is "Clear claim", which is where it always lived.
+   *   - **An eye is not a fighter of any kind.** `Eye of Zamul` never acts (ClassificationRules.EyeSummonOwnerInName;
+   *     docs/combat-mirror-design.md → "An eye is not a combatant"), so it cannot be a person, a mercenary, or somebody's
+   *     summon — and minting a Pet row for it would sit beside that player's real pets and split one person's output.
+   *     NPC is the only kind it can be.
+   *
+   * The current answer is always in the list: the popup preselects it, and a value missing from its own dropdown reads as
+   * a blank cell. An operator's OWN claim keeps every entry — a wrong click has to stay correctable by another click.
+   * Where the name itself settles the answer (`Sancus`s pet`, a spell) CanOverrule already hides the pencil; the list is
+   * trimmed by that same call rather than by a second opinion, because two rules deciding one menu is how a pane ends up
+   * offering what its own write path then refuses.
+   */
+  internal static IReadOnlyList<TypeOption> TypeOptionsFor(string? name, IdentityKind kind, string? source)
+  {
+    var code = CodeOf(source);
+    if (code is "R10-manual" or "Manual" or "Override") return TypeOptions;
+
+    var eye = !string.IsNullOrEmpty(name) && ClassificationRules.EyeSummonOwnerInName(name!) is not null;
+    var decided = !CanOverrule(name, source);
+
+    var list = new List<TypeOption>(TypeOptions.Length);
+    foreach (var option in TypeOptions)
+    {
+      if (option.Kind == kind || option.Kind == IdentityKind.Unknown) { list.Add(option); continue; }
+      if (eye && option.Kind != IdentityKind.Npc) continue;   // an eye has exactly one kind it can be: NPC
+      if (decided || option.Kind == IdentityKind.Merc) continue;
+      list.Add(option);
+    }
+    return list;
+  }
+
   /// <summary>The TYPE cell: the header says Type, so a value has to read like a type and never like an enum identifier.</summary>
   internal static string TypeWord(IdentityKind kind) => kind switch
   {

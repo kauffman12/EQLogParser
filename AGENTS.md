@@ -331,7 +331,13 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   `FollowSession`/`UnfollowSession` around ONE `Derived` handler (rebuild on show, then one pass per derive floored at **2 s** — `AutoRefreshFloorMs`; a live raid hands
   out passes ~2/s and the census walks every name plus the heal stream), `ActiveChanged` keeps it attached to the live engine only, the button is deleted rather than kept,
   and with no session the grid is **emptied** (`ClearRows`) instead of holding last night's names. Anything asserting this must keep the floor (a test that pumps every pass
-  measures nothing) and the unsubscribe (a hidden pane costing census time is the bug this replaced). Four columns sorted by name (Name | Type | Why | Class): Damage/Healing left because an identity list must not rank
+  measures nothing) and the unsubscribe (a hidden pane costing census time is the bug this replaced). **Following the derive is not the same as moving the list**:
+  `MergeRows` replaces a row's CELLS at its own index (collection indexer, not Clear+Add), drops names the census lost and appends newcomers at the **bottom**, while
+  `_rankOnApply` — set on show and on every capture change — is the only path that re-ranks, so ranking arrives when somebody navigates to the tab rather than twice a
+  second under their cursor (Clear+Add cost both the order and the selection, and rows are ranked by evidence, which moves). Because rows are replaced rather than
+  mutated, **the selection and an open popup are handed back by NAME** (`FindRow`): the instance is gone even though the line never moved, and a Type cell that opens with
+  a blank preselect reads as a classifier bug instead of a refresh bug. Pinned by `ARefreshKeepsEveryRowWhereTheReaderLeftIt`,
+  `ANameTheCensusDropsLeavesTheList`, `OpeningTheTabAgainReRanksTheList` (Windows-only assembly, but no WPF is constructed). Four columns sorted by name (Name | Type | Why | Class): Damage/Healing left because an identity list must not rank
   names by output (`ClassificationReport` still totals them — that is its own row order), and Owner left because `PlayerRegistry` answers it and the Pet Owners
   window lists the same pairs. Two things moved to the **Why cell's tooltip** instead of being deleted: the cast a spell verdict rests on
   (`ClassificationReport.Row.ReasonDetail` — taken per **gate**, not per caster, because "Hobble of Spirits VI" is a prefix of the pet's "Hobble of Spirits Snare
@@ -347,10 +353,17 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   `Cast:`/`Earlier logs:` labels, no "Not in this log" — that read as an error on an ordinary hand-written verdict) and it is **never blank**: an unplaced name answers
   *"Nothing identified it yet — click the pencil to say what it is"*, because the empty cell is the row somebody hovers. `NameRow.Provenance` asserts no newline for every
   state and never carries a newline (asserted again on the refusal row and the disagreement row, the two most likely to grow a second one; a refusal's own sentence
-  **supersedes** the proof clause, and the roster flag rides behind the house middot — `From Chat · players.txt says Player`). **An unmapped code echoes itself rather than being guessed at** — a fallback like
+  **supersedes** the proof clause). **No hover names a file** — the roster's opinion used to ride behind the proof (`From Chat · players.txt says Player`) and read as a second
+  verdict from a source this window cannot open; what it pointed at is counted instead, in the one place the claim is about: the caption's tooltip prints `N contradict the
+  roster` from `Row.IsDisagreement`. **An unmapped code echoes itself rather than being guessed at** — a fallback like
   "Evidence" would file a new kind of proof under an old meaning, and provenance is the one thing this pane must be honest about. `IdentityVocabularyTest` checks
   the explicit list in both directions (missing word *and* stale word) **and** runs the rules fixture asserting no row reaches the screen wearing its code; that
-  corpus check immediately caught a code nobody had written a word for (`R3-chat`). Same discipline as the FCT and `HitLabel` vocabularies: a new rule arrives with
+  corpus check immediately caught a code nobody had written a word for (`R3-chat`). **A code whose only producer is state a test clears cannot be caught by that corpus run**:
+  `RegistrySeed` (identity coming from this application's own memory rather than from this capture) reached the screen as its own name because `PipelineHarness` calls
+  `PlayerRegistry.Instance.Clear()`, so no fixture can ever produce one — it is therefore listed in `RuleWords` explicitly, reads **Legacy**, and hovers which store it came
+  from (`On the roster this app saved`, or `In the Pet Map as Sancus's`). Say the word "Legacy", never a filename and never the seam's name. This matters because exactly two
+  stores persist — players.txt (verified players plus the `!rejects`) and petmapping.txt — while `_verifiedPets` and `_mercs` are cleared by `Init()` and filled only while a
+  log is open, so the seed's verified-pet and mercenary branches are this-session memory and must never be described as saved state. Same discipline as the FCT and `HitLabel` vocabularies: a new rule arrives with
   a word here, and `HealedByCasters` (the number behind *Healed*) is gated exactly like R15 — distinct raid-side Strong casters, self-heals skipped, **0 means "not
   asked" rather than "nobody healed them"** (`CensusHealProofTest`).
 - **A spell effect is not a fighter (R21), and it takes THREE proofs to say so**: when the client writes `Goratoar has taken 18724 damage from Slicing Energy by .` there is no
@@ -385,13 +398,21 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   block of rows out of a long table, and this pane's menu carried its one most-important verb (*clear my claim*) invisibly while offering two identical NPC lines.
   Type and Class each carry a pencil that opens a `ComboBox` in a popup over the clicked cell (`UiElementUtil.OpenCellPopup`, the same helper MainWindow's Pet Owners edit and DamageSummary's Group cell call - joined, not re-written, because its
   cell placement, sizing, focus-back and close hook are the parts the operator meant by "i put a lot of work into getting that working well"). Four laws: the option list shows
-  the **whole** vocabulary at once (`IdentityVocabulary.TypeOptions`: Player / Pet / Mercenary / NPC / Clear claim — each answer exactly once, "Clear claim" carrying
+  **its own row's** vocabulary, not the whole one (`NameRow.TypeChoices` ← `IdentityVocabulary.TypeOptionsFor`; the five answers exist in `IdentityVocabulary.TypeOptions`, each written exactly once, "Clear claim" carrying
   `IdentityKind.Unknown` because that is what `ClassificationCommands.ClearVerdict` writes); the combo **preselects the row's current verdict** so the handler can
   refuse a click that changes nothing (a no-op must not spend a derive pass or rewrite mirror-overrides.txt); a cell edit edits its cell — batching stays with the two
   title-bar icons and the fight grids' menu; and **the class pencil appears only on a `Player` row** (`NameRow.ClassEditable`) because `SetDefaultPlayerClass` verifies
   the name AND writes players.txt — an icon on an NPC row is exactly the pollution this window exists to catch, and Pet/Merc rows have nothing to persist. Any write
+  **Three kinds are trimmed by the same recognizers that hide a pencil** — one recognizer decides the menu AND the write guard (`TypeSelectionChanged` re-checks
+  `row.TypeChoices.Contains(option)`), because two rules judging one dropdown is how a pane offers what its own write path then refuses: **Mercenary is not a verdict an
+  operator can put on a name** (it is what `/target` reported — R3-merc/R13-merc — and typing it onto a raider moves her damage onto a column nothing else fills, so the
+  entry survives only on a row that already reads Mercenary); **an eye is NPC or nothing** (`Eye of <name>` never acts — docs/combat-mirror-design.md → "An eye is not a
+  combatant" — and a Pet row for it would sit beside its owner's real pets and split one person's output); and **`Clear claim` is never trimmed** (take-back must stay
+  reachable). The row's own answer is always in the list because the popup preselects it: a value missing from its own dropdown reads as a blank cell. An operator's own
+  claim (`R10-manual`/`Manual`/`Override`) keeps every entry — a wrong click has to stay correctable by another click.
   Two more from the same list: **some rows get no pencil at all** (`Overrulable` → `CanOverrule`) — a summon whose spelling carries its master and an R21 spell effect each have one
-  right answer, and offering four wrong ones invites typing "Player" over `Sonic Bang`; an operator's own verdict always keeps its icon so a wrong click is never permanent. And
+  right answer, and offering four wrong ones invites typing "Player" over `Sonic Bang`; an operator's own verdict always keeps its icon so a wrong click is never permanent (so
+  *trim*, do not *hide*: `TypeOptionsFor` consults `CanOverrule` rather than duplicating it). And
   **"Clear claim" removes the ledger entry too** (`IdentityPriorStore.Remove` beside `ClassificationCommands.ClearVerdict`), or the row comes straight back on the next pass wearing
   *"… in previous log"*, which is the opposite of what the click looked like it did. Any write
   here (dropdown **or** band icon) goes through `Reconcile()` = `RederiveAsync()` + `Refresh()`, like `FightTable.ApplyOverride` always did: the census is right on its

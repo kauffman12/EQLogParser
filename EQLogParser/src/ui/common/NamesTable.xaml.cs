@@ -1,7 +1,9 @@
 using FontAwesome5;
 using log4net;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -94,6 +96,14 @@ namespace EQLogParser
        */
       public bool Overrulable { get; init; }
 
+      /*
+       * The Type dropdown for THIS row. The window has one ComboBox reused by every cell, so the list is set when a popup
+       * opens — and it is built in Core (IdentityVocabulary.TypeOptionsFor) by the same recognizers that hide a pencil, so
+       * no row offers Mercenary onto a raider or any kind at all onto an eye. Includes what the row already is, because
+       * the popup preselects that value.
+       */
+      public IReadOnlyList<IdentityVocabulary.TypeOption> TypeChoices { get; init; } = IdentityVocabulary.TypeOptions;
+
       /// <summary>The WHY cell's tooltip: the proof in one line, plus a short flag when one changes what to do.</summary>
       public string Provenance { get; init; } = string.Empty;
     }
@@ -113,6 +123,13 @@ namespace EQLogParser
     private NameRow? _typeEditRow;
     private NameRow? _classEditRow;
 
+    /*
+     * Whether the next census re-ranks the list or merges into the order already on screen. Set when the pane becomes
+     * visible and whenever the capture changes: ranking is information, and it belongs at the moment somebody navigates
+     * to the tab — not twice a second while they are reading it (MergeRows).
+     */
+    private bool _rankOnApply = true;
+
     // Applied once, then only on a theme change: re-sizing on every Loaded would fight an operator who dragged a column.
     private bool _widthsApplied;
 
@@ -120,7 +137,8 @@ namespace EQLogParser
     {
       InitializeComponent();
       namesGrid.ItemsSource = _rows;
-      typeEditComboBox.ItemsSource = IdentityVocabulary.TypeOptions;
+      // The Type list is NOT set here: one ComboBox serves every cell, so it is filled per row when that cell's popup opens
+      // (TypeEditMouseLeftButtonUp), from NameRow.TypeChoices.
 
       /*
        * ThemeConfig cannot answer a single size before MainWindow finishes its own init, which happens AFTER this markup
@@ -172,7 +190,11 @@ namespace EQLogParser
       }
 
       if (session is null) ClearRows();
-      else Refresh();
+      else
+      {
+        _rankOnApply = true;   // you just opened it: show the ranking, then hold it still (MergeRows)
+        Refresh();
+      }
     }
 
     private void UnfollowSession()
@@ -209,6 +231,7 @@ namespace EQLogParser
      */
     private void ClearRows()
     {
+      _rankOnApply = true;
       _rows.Clear();
       namesCaption.ToolTip = "Every name this capture mentions, what it was called and what kind of evidence said so. " +
                              "Click a row's pencil to overrule it.";
@@ -257,6 +280,7 @@ namespace EQLogParser
       PlayerClass = row.Class,
       Kind = row.Kind,
       Overrulable = row.Overrulable,
+      TypeChoices = IdentityVocabulary.TypeOptionsFor(row.Name, row.Kind, row.Reason),
       Provenance = ProvenanceFor(row),
     };
 
@@ -339,8 +363,20 @@ namespace EQLogParser
     {
       if (census is null) return;
 
-      _rows.Clear();
-      foreach (var row in census.Rows) _rows.Add(RowFrom(row));
+      /*
+       * The selection is a row OBJECT, and MergeRows replaces rows rather than mutating them, so it has to be handed back
+       * by NAME: the instance it pointed at is gone even though the line on screen never moved. An open dropdown's row is
+       * re-pointed for the same reason — its write goes out by name, so a stale reference costs only the popup's preselect,
+       * and a Type cell that opens blank reads as a bug in the classifier rather than in the refresh.
+       */
+      var selectedName = (namesGrid.SelectedItem as NameRow)?.Name;
+
+      MergeRows(_rows, census.Rows, _rankOnApply);
+      _rankOnApply = false;
+
+      if (selectedName is not null) namesGrid.SelectedItem = FindRow(selectedName);
+      if (_typeEditRow is not null) _typeEditRow = FindRow(_typeEditRow.Name);
+      if (_classEditRow is not null) _classEditRow = FindRow(_classEditRow.Name);
 
       /*
        * The census summary on HOVER, not in a line of its own. It is the same one-breath answer (what the capture holds,
@@ -354,6 +390,57 @@ namespace EQLogParser
     }
 
     /*
+     * Put a census into the list without moving what the reader is looking at.
+     *
+     * This pane follows the derive, so a pass lands every couple of seconds while a log grows. The version this replaces
+     * cleared the collection and re-added every row, which cost two things on each beat: the selection (so the title-bar
+     * icons lost their row) and the ORDER — rows are ranked, so as verdicts and totals moved the line under the cursor slid
+     * somewhere else. A list that rearranges itself twice a second cannot be read while it is live, which is the only time
+     * anybody wants it live.
+     *
+     * Three rules, in this order:
+     *
+     *   - A name already on the list KEEPS ITS SLOT. Its cells are replaced at that index (the collection's indexer), so a
+     *     row whose Type changed says the new thing without moving anything, itself included.
+     *   - A name the census no longer has leaves the list. That is the capture saying this name is gone; a verdict from the
+     *     first half of the night parked above an empty slot is exactly what this window was rewritten to stop.
+     *   - Names new since the last pass join at the BOTTOM, in census order. Putting them at their rank would shift every
+     *     row beneath them — the thing this method exists to prevent — so the ranking arrives on the next view instead
+     *     (_rankOnApply), which is when it is worth something.
+     *
+     * `rebuild` is that next view: everything out in census order, which is what opening the tab shows. An empty list also
+     * takes this path, so a pane opened on a fresh capture needs no special case.
+     */
+    internal static void MergeRows(ObservableCollection<NameRow> listed, IReadOnlyList<ClassificationReport.Row> census, bool rebuild)
+    {
+      if (rebuild || listed.Count == 0)
+      {
+        listed.Clear();
+        foreach (var row in census) listed.Add(RowFrom(row));
+        return;
+      }
+
+      var incoming = new Dictionary<string, ClassificationReport.Row>(census.Count, StringComparer.OrdinalIgnoreCase);
+      foreach (var row in census) incoming[row.Name] = row;
+
+      // Reverse because rows leave while we walk; names that survive are replaced where they stand.
+      var kept = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+      for (var i = listed.Count - 1; i >= 0; i--)
+      {
+        if (!incoming.TryGetValue(listed[i].Name, out var fresh)) { listed.RemoveAt(i); continue; }
+        kept.Add(listed[i].Name);
+        listed[i] = RowFrom(fresh);
+      }
+
+      // `kept.Add` is true the first time a name is seen, so one pass both dedupes and appends in census order.
+      foreach (var row in census)
+        if (kept.Add(row.Name)) listed.Add(RowFrom(row));
+    }
+
+    /// <summary>The live row for a name, or null: used to hand the selection and an open popup back after a merge.</summary>
+    private NameRow? FindRow(string name) => _rows.FirstOrDefault(r => name.Equals(r.Name, StringComparison.OrdinalIgnoreCase));
+
+    /*
      * The Type dropdown: click the pencil in a row, the list opens over the cell, and picking an entry writes that one
      * name. A cell edit edits its cell — batching stays where it always was, in the fight grids' right-click menu, which
      * takes a multi-selection through the same ClassificationCommands; a pencil drawn on ONE row promises that row and
@@ -365,6 +452,9 @@ namespace EQLogParser
       if (UiElementUtil.FindGridCell(icon) is not { } cell) return;
 
       _typeEditRow = row;
+
+      // This row's own list — the kinds its name can still be (IdentityVocabulary.TypeOptionsFor).
+      typeEditComboBox.ItemsSource = row.TypeChoices;
 
       // Preselect what the row already says, so the list opens on the current verdict — and so the guard in
       // TypeSelectionChanged can tell "the click that opened this" from "a different answer", which is the difference
@@ -383,8 +473,16 @@ namespace EQLogParser
     {
       if (sender is not ComboBox combo || combo.SelectedItem is not IdentityVocabulary.TypeOption option) return;
 
+      /*
+       * Three refusals before a write: no row (the click that opened the popup, or a popup already closed), the answer it
+       * already gives (a no-op must not spend a derive pass or rewrite mirror-overrides.txt), and a name whose own spelling
+       * settles the kind. The last one is redundant with the list this popup was opened with — deliberately so: the guard
+       * and the menu read the same recognizer, and if they ever drift the guard wins rather than writing what the pane
+       * never offered.
+       */
       var row = _typeEditRow;
       if (row is null || option.Kind == row.Kind || !row.Overrulable) return;
+      if (!row.TypeChoices.Contains(option)) return;
 
       /*
        * "Clear claim" takes back EVERYTHING this window remembers about the name, not only the line in

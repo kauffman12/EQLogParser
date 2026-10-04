@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
@@ -163,6 +164,83 @@ public class NamesTableTest
    * contradiction. The two proof clauses that used to quote filenames say what the file IS instead — "On the NPC List",
    * "The Name of a Spell".
    */
+  /*
+   * The Type dropdown belongs to the ROW, not to the window. One ComboBox serves every cell and its list comes from
+   * IdentityVocabulary.TypeOptionsFor — the same recognizers that hide a pencil — so no raider is offered Mercenary (a
+   * mercenary is what /target reported; typing it moves her damage onto a column nothing else fills) and a summon whose
+   * spelling names its master has one verdict and the way back out. RowFrom carries the list, which is what the popup binds
+   * when a cell opens, so this is checked without constructing a pane.
+   */
+  [TestMethod]
+  public void ARowOffersOnlyTheKindsItsNameAllows()
+  {
+    static string[] Words(NamesTable.NameRow row) => [.. row.TypeChoices.Select(o => o.Word)];
+
+    var raider = NamesTable.RowFrom(new ClassificationReport.Row
+    { Name = "Berta", Kind = IdentityKind.Player, Reason = "R3-joinraid" });
+    CollectionAssert.Contains(Words(raider), "Player", "the popup opens on the row's own answer");
+    CollectionAssert.Contains(Words(raider), "Pet", "a person may still be overruled about a summon");
+    CollectionAssert.DoesNotContain(Words(raider), "Mercenary",
+                                    "Mercenary is not a verdict an operator can put on a name");
+
+    var merc = NamesTable.RowFrom(new ClassificationReport.Row
+    { Name = "Stormpaw", Kind = IdentityKind.Merc, Reason = "R13-merc" });
+    CollectionAssert.Contains(Words(merc), "Mercenary", "what the row already is stays in its list");
+
+    var pet = NamesTable.RowFrom(new ClassificationReport.Row
+    { Name = "Sancus`s pet", Kind = IdentityKind.Pet, Reason = "R5-owner:Sancus" });
+    CollectionAssert.AreEquivalent(new[] { "Pet", "Clear claim" }, Words(pet));
+  }
+
+  /*
+   * The pane follows the derive — a census lands every couple of seconds while a log grows — and clearing the list on each
+   * one cost both the selection and the order: rows are ranked, so the line under the cursor slid twice a second and the
+   * list could not be read while it was live. MergeRows replaces a row's CELLS at its own index, drops names the capture
+   * lost, and appends newcomers at the bottom; the ranking returns when the tab is opened again (rebuild: true), which is
+   * the moment it is worth something.
+   */
+  [TestMethod]
+  public void ARefreshKeepsEveryRowWhereTheReaderLeftIt()
+  {
+    var listed = new ObservableCollection<NamesTable.NameRow>();
+    NamesTable.MergeRows(listed, [CensusRow("Ann"), CensusRow("Bob"), CensusRow("Cy")], rebuild: true);
+
+    // Cy now outranks everyone, Ann's verdict changed, and Dee has never been listed.
+    NamesTable.MergeRows(listed,
+      [CensusRow("Cy"), CensusRow("Ann", IdentityKind.Player, "R3-joinraid"), CensusRow("Bob"), CensusRow("Dee")], rebuild: false);
+
+    CollectionAssert.AreEqual(new[] { "Ann", "Bob", "Cy", "Dee" }, listed.Select(r => r.Name).ToList(),
+                              "the order on screen holds; only a new name arrives, and it arrives at the bottom");
+    Assert.AreEqual(IdentityKind.Player, listed[0].Kind, "a row whose verdict moved says the new thing IN ITS OLD SLOT");
+    Assert.AreEqual("Player", listed[0].Type);
+  }
+
+  [TestMethod]
+  public void ANameTheCensusDropsLeavesTheList()
+  {
+    var listed = new ObservableCollection<NamesTable.NameRow>();
+    NamesTable.MergeRows(listed, [CensusRow("Ann"), CensusRow("Bob")], rebuild: true);
+    NamesTable.MergeRows(listed, [CensusRow("Bob")], rebuild: false);
+
+    CollectionAssert.AreEqual(new[] { "Bob" }, listed.Select(r => r.Name).ToList(),
+                              "a name the capture stopped reporting leaves; a stale verdict parked above an empty slot is what this window exists to catch");
+  }
+
+  [TestMethod]
+  public void OpeningTheTabAgainReRanksTheList()
+  {
+    var listed = new ObservableCollection<NamesTable.NameRow>();
+    NamesTable.MergeRows(listed, [CensusRow("Ann"), CensusRow("Bob")], rebuild: true);
+    NamesTable.MergeRows(listed, [CensusRow("Bob"), CensusRow("Cy")], rebuild: false);
+    NamesTable.MergeRows(listed, [CensusRow("Cy"), CensusRow("Ann"), CensusRow("Bob")], rebuild: true);
+
+    CollectionAssert.AreEqual(new[] { "Cy", "Ann", "Bob" }, listed.Select(r => r.Name).ToList(),
+                              "navigating to the pane is when the ranking arrives — held still while read, current when reopened");
+  }
+
+  private static ClassificationReport.Row CensusRow(string name, IdentityKind kind = IdentityKind.Unknown, string reason = "")
+    => new() { Name = name, Kind = kind, Reason = reason };
+
   [TestMethod]
   public void NoRowTooltipNamesAFile()
   {

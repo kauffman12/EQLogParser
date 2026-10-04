@@ -148,6 +148,49 @@ public class IdentityVocabularyTest
   }
 
   /*
+   * The Type dropdown per row: the window shows one list for the whole vocabulary, and an operator read that as "this pane
+   * decides whether my raider is a mercenary". Two kinds are not opinions — Mercenary is what /target reported (typing it
+   * onto a raider moves her number to a column nothing else fills), and an eye is not a fighter of any kind — and where the
+   * name itself settles the answer, CanOverrule hides the pencil and this list keeps only the way back out. One recognizer
+   * for both, so the menu can never offer what the write path refuses.
+   */
+  [TestMethod]
+  public void TheTypeListOffersOnlyWhatANameCanBe()
+  {
+    static string[] Words(System.Collections.Generic.IReadOnlyList<IdentityVocabulary.TypeOption> options) =>
+      [.. options.Select(o => o.Word)];
+
+    var raider = IdentityVocabulary.TypeOptionsFor("Berta", IdentityKind.Player, "R3-joinraid");
+    CollectionAssert.Contains(Words(raider), "Player", "the row's own answer must be listed — the popup preselects it");
+    CollectionAssert.Contains(Words(raider), "Pet", "an operator may disagree about a summon");
+    CollectionAssert.Contains(Words(raider), "Clear claim", "taking a claim back is always reachable");
+    CollectionAssert.DoesNotContain(Words(raider), "Mercenary",
+                                    "a mercenary is what /target said; typing it onto a raider relocates her damage");
+
+    var merc = IdentityVocabulary.TypeOptionsFor("Stormpaw", IdentityKind.Merc, "R13-merc");
+    CollectionAssert.Contains(Words(merc), "Mercenary", "the answer the row already gives is always in its list");
+    Assert.IsFalse(merc.Count(o => o.Kind == IdentityKind.Merc) > 1, "one entry per answer, never two");
+
+    // An eye: never a person, never somebody's pet row (that would split its owner's output), NPC or nothing.
+    foreach (var kind in new[] { IdentityKind.Npc, IdentityKind.Unknown })
+    {
+      var eye = IdentityVocabulary.TypeOptionsFor("Eye of Zamul", kind, "R6-npcdb");
+      CollectionAssert.Contains(Words(eye), "NPC");
+      CollectionAssert.Contains(Words(eye), "Clear claim");
+      foreach (var no in new[] { IdentityKind.Player, IdentityKind.Pet, IdentityKind.Merc })
+        Assert.IsFalse(eye.Any(o => o.Kind == no), $"an eye may not be set to {no}");
+    }
+
+    // A summon whose spelling names its master: decided by the name, so nothing to choose but the way out.
+    var pet = IdentityVocabulary.TypeOptionsFor("Sancus`s pet", IdentityKind.Pet, "R5-owner:Sancus");
+    CollectionAssert.AreEquivalent(new[] { "Pet", "Clear claim" }, Words(pet));
+
+    // An operator's own claim keeps the whole vocabulary: a wrong click has to stay correctable by another click.
+    Assert.AreEqual(IdentityVocabulary.TypeOptions.Length,
+                    IdentityVocabulary.TypeOptionsFor("Eye of Zamul", IdentityKind.Player, "R10-manual").Count);
+  }
+
+  /*
    * What this application remembers about a name, as opposed to what the capture showed: the two codes no rule writes,
    * which is also why the corpus guard cannot see them (tests run with a cleared registry). The column says "Legacy";
    * the tooltip says WHICH store, in words — never a filename and never the internal name of the seed.

@@ -5448,3 +5448,74 @@ Tests touched: `IdentityRulesTest` (Frobum → Player/`R5-companion`, and the co
 `FightProjectionTest.StaticFriendlyStamp_DoesNotFlipSides` (its hand-written Pet+Friendly stamp now carries `R18-healedpet`, a code that really
 does write that shape), `IdentityPriorStoreTest` (vocabulary, plus the new bug-era refusal), and `NamesTableTest` in the Windows assembly —
 which builds here but has to be **run on Windows** like every other test that constructs a pane.
+
+## The identity pane holds still, and offers only what a name can be (2026-11)
+
+Two complaints about the Player/NPC Identity window came in as one sentence each and turned out to be the same complaint:
+the pane was built for the moment it is opened rather than for somebody reading it while the log grows.
+
+### A census that arrives must not move the list
+
+The window follows the derive (`FollowSession`, floored at 2 s), and `Apply` used to do `_rows.Clear()` followed by an
+`Add` per name. That is the natural way to write a swap-in-the-whole-collection pane, and it cost two things on every beat:
+the **selection** (so the title-bar icons lost their row), and the **order** — `ClassificationReport.Rows` is ranked
+(raid-side kinds first, then busiest), so as verdicts and totals moved, the line under the cursor slid somewhere else. A
+list that rearranges itself twice a second cannot be read while it is live, and live is the only time anybody opens it.
+
+`MergeRows` now holds the reading position with three rules:
+
+* **A name already listed keeps its slot.** Its cells are replaced at that index (`ObservableCollection`'s indexer), so a
+  row whose Type changed says the new thing without moving — itself included, and nothing around it shifts.
+* **A name the census no longer has leaves the list.** That is the capture saying the name is gone; a verdict from the first
+  half of the night parked above an empty slot is what this window was rewritten to stop.
+* **Newcomers join at the bottom**, in census order. Inserting them at their rank would shift every row beneath them, which
+  is the exact thing being prevented.
+
+Ranking is not lost, only deferred: `_rankOnApply` is set when the pane becomes visible and whenever the capture changes, so
+the ranking arrives **when somebody navigates to the tab** — the moment it is worth something — rather than continuously.
+
+One consequence worth naming: because rows are *replaced* rather than mutated, `SelectedItem` points at an instance that is
+no longer in the list even though its line never moved. The selection and any open popup are therefore handed back **by
+name** (`FindRow`). A Type cell that opens with a blank preselect reads as "the classifier lost my verdict", which is a worse
+bug report than the refresh actually deserves.
+
+### The Type menu belongs to the row
+
+One `ComboBox` serves every cell and used to bind `IdentityVocabulary.TypeOptions` at construction — all five answers on
+every row. The complaint was specific: *why does this pane offer Mercenary for my raider*. It is a fair question, because two
+of the five are not opinions an operator can hold:
+
+* **Mercenary** is what `/target` reported (R3-merc/R13-merc). Typing it onto a name moves that name's damage off the player
+  column and onto a column nothing else fills, and no file backs the claim afterwards. The entry survives only on a row that
+  already reads Mercenary — and taking that verdict back is *Clear claim*, where take-back always lived.
+* **An eye** (`Eye of Zamul`) never acts: docs/combat-mirror-design.md → "An eye is not a combatant". It cannot be a person,
+  a mercenary or somebody's summon, and minting a Pet row for it would sit beside that player's real pets and split one
+  person's output. NPC or nothing.
+
+`TypeOptionsFor(name, kind, source)` returns the trimmed list, and it *consults* `CanOverrule` rather than restating it: the
+recognizer that hides a pencil and the menu must be the same call, because two rules judging one dropdown is how a pane ends
+up offering what its own write path refuses (and `TypeSelectionChanged` re-checks the list anyway — if they ever drift, the
+guard wins). Two entries are never trimmed: the row's **own answer**, because the popup preselects it and a value missing from
+its own dropdown reads as a blank cell; and **Clear claim**, because taking a claim back has to stay reachable. An operator's
+own verdict (`R10-manual`/`Manual`/`Override`) keeps all five — a wrong click must stay correctable by another click.
+
+### What this application remembers, and the word for it
+
+Rows seeded from `PlayerRegistry` printed **`RegistrySeed`** in the Why column: the name of a seam in the program, presented
+as an answer about a person. The column says **Legacy** now and the hover names the store — `On the roster this app saved`, or
+`In the Pet Map as Sancus's`.
+
+Writing that forced the question of what is actually remembered, and the answer is narrower than "the registry": **two files
+persist**, players.txt (verified players plus the `!rejects`) and petmapping.txt. `_verifiedPets` and `_mercs` are cleared by
+`Init()` and filled only while a log is open (`AddVerifiedPet` from the possessive/heal/cast seams, `addMerc` from `/target`).
+So the seed's verified-pet and mercenary branches are *this-session* memory — redundant with R5-owner/R13-merc wherever a line
+exists, a backstop where none does — and describing them as saved state is wrong.
+
+The test lesson is the reusable part: `NoRuleCodeReachesTheScreenOnTheFixture` walks real rows from a **cold** registry
+(`PipelineHarness` clears `PlayerRegistry`), so the one code that reached production without a word was invisible to the one
+guard designed to catch it. A code whose only producer is state that tests clear belongs in the word table **and** in that
+table's test, not in the hope that some fixture warms the registry.
+
+Tests: `TheTypeListOffersOnlyWhatANameCanBe` (headless), and in the Windows assembly `ARowOffersOnlyTheKindsItsNameAllows`,
+`ARefreshKeepsEveryRowWhereTheReaderLeftIt`, `ANameTheCensusDropsLeavesTheList`, `OpeningTheTabAgainReRanksTheList` — the last
+three construct no WPF element, they exercise `MergeRows` against an `ObservableCollection`.
