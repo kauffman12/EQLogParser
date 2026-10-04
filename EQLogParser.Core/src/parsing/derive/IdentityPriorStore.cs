@@ -82,6 +82,13 @@ namespace EQLogParser
           // Files written before the gate below existed carry restated-database rows ("Name=Npc|R6-npcdb|..."). They
           // are not read back, and the load writes what is left so the noise leaves the FILE instead of being quietly
           // dropped again every start: whoever opens this file should find only entries worth arguing about.
+          //
+          // One retired code is refused BY NAME rather than by family. Until the companion line was read the right way
+          // round, "R5-called" stamped its name Pet Certain — and that name is the SUMMONER (MiscLineParser's census:
+          // every occurrence sits beside the same name's own `begins casting Summon …`). A ledger written by such a
+          // build remembers raid members as pets, which is worse than no memory: it would hold a real person off the
+          // board for the whole age window. So those rows are refused here and Save() rewrites them out.
+          if (parts[1].StartsWith("R5-called", StringComparison.OrdinalIgnoreCase)) { dropped++; continue; }
           if (!WorthRemembering(parts[1])) { dropped++; continue; }
 
           loaded[name] = new Prior(kind, parts[1] ?? string.Empty, seenAt, Math.Max(1, sightings));
@@ -99,7 +106,10 @@ namespace EQLogParser
       // hand-edited the file can see whether their edit was read or refused.
       if (loaded.Count > 0 || dropped > 0)
         Log.Info($"Identity priors for {_serverName}: {loaded.Count} remembered verdicts"
-                 + (dropped > 0 ? $", {dropped} rows refused as restatements and rewritten out of the file" : string.Empty));
+                 + (dropped > 0
+                    ? $", {dropped} rows refused (restated database answers, or companion claims from a build that "
+                      + "read the line backwards) and rewritten out of the file"
+                    : string.Empty));
 
       if (dropped > 0) Save();
     }
@@ -193,7 +203,8 @@ namespace EQLogParser
     /*
      * THE GATE: what this file is allowed to remember. An ALLOWLIST of rule families, one per EVENT a log had to
      * contain for the rule to speak - a target frame (R1), a /who roster (R2), chat and zone presence (R3), a
-     * recognisable cast (R4), "X is called to it owner" (R5-called), the opposition graph (R7), a charm line (R9), the
+     * recognisable cast (R4), "X is called to it owner" (R5-companion — the name in that line is the SUMMONER), the
+     * opposition graph (R7), a charm line (R9), the
      * merc signature (R13), heals from our side (R15/R18), a drink or a bite (R17), an eye of their own to hit (R19). Those are exactly the things a future log might not say again, which is the only reason to write one down —
      * R19 belongs in the list even though it decided nothing on the eight reference captures (design doc, "An eye
      * is not a combatant"): a name whose ONLY sighting is the eye bearing it is exactly the kind of thing the next
@@ -222,7 +233,7 @@ namespace EQLogParser
      */
     private static readonly string[] RememberedRules =
     [
-      "R1-", "R2-", "R3-", "R4-", "R5-called", "R7-", "R9-", "R13-", "R15-", "R17-", "R18-", "R19-",
+      "R1-", "R2-", "R3-", "R4-", "R5-companion", "R7-", "R9-", "R13-", "R15-", "R17-", "R18-", "R19-",
     ];
 
     /// <summary>True when a rule code names an event only the capture could have supplied, i.e. worth remembering.</summary>

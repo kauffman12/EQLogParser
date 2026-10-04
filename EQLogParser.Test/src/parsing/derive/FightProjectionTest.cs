@@ -175,12 +175,13 @@ public class FightProjectionTest
     [TestMethod]
     public void StaticFriendlyStamp_DoesNotFlipSides()
     {
-        // R5-called pets carry a (permanently open) Friendly interval: that is allegiance, not a
-        // charm - the pet must stay player-side so its damage lands on the boss row, not on itself.
+        // A name the OWNERSHIP rules stamp with a (permanently open) Friendly interval: that is allegiance, not a
+        // charm - the pet must stay player-side so its damage lands on the boss row, not on itself. R18 writes exactly
+        // this shape ("healed by the owner of our pets"), which is why the stamp below carries its code.
         var facts = BuildFacts(("Frobum", "BossX", 60, 10, LabelTypes.Melee));
         var timeline = new EntityTimeline();
-        timeline.SetIdentity("Frobum", IdentityKind.Pet, RuleStrength.Certain, "R5-called");
-        timeline.AddAffiliation(AffiliationKind.Friendly, "Frobum", T0, double.PositiveInfinity, RuleStrength.Certain, "R5-called");
+        timeline.SetIdentity("Frobum", IdentityKind.Pet, RuleStrength.Certain, "R18-healedpet");
+        timeline.AddAffiliation(AffiliationKind.Friendly, "Frobum", T0, double.PositiveInfinity, RuleStrength.Certain, "R18-healedpet");
 
         var rows = FightProjection.Build(facts, timeline);
         Assert.AreEqual(1, rows.Count);

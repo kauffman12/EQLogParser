@@ -306,6 +306,38 @@ public class IdentityPriorStoreTest
   }
 
   /*
+   * The one code refused BY NAME rather than by family. Until "X is called to it owner." was read the right way round,
+   * R5-called stamped its name Pet Certain — and the name in that line is the summoner (48 of 48 occurrences across six
+   * captures sit within three lines of the same name's own `begins casting Summon …`). A ledger written by such a build
+   * therefore remembers raid members as pets, which is the one stale verdict worse than no verdict at all: it holds a
+   * real person off the board for the whole 90-day age window, and no live evidence in the new log is strong enough to
+   * outvote a remembered Pet without also teaching the ledger to overrule the capture in front of it. So the rows are
+   * refused at load and rewritten out of the file, and the code under which they were written (R5-companion, the
+   * summoner reading) still round-trips normally.
+   */
+  [TestMethod]
+  public void ABugEraCompanionClaimIsRefusedAtLoadAndRewrittenOut()
+  {
+    // The store creates its server folder on the first Save; this test is writing a file the app never got to make.
+    Directory.CreateDirectory(Path.GetDirectoryName(LedgerPath)!);
+    File.WriteAllText(LedgerPath,
+                       "Romance=Pet|R5-called|1700000000|4\n" +
+                       "Beorun=Player|R5-companion|1700000000|2\n");
+
+    IdentityPriorStore.Instance.Init(Server);
+
+    Assert.IsFalse(IdentityPriorStore.Instance.TryGet("Romance", out _),
+                   "a raid member remembered as a pet by the retired code was read back");
+    Assert.IsTrue(IdentityPriorStore.Instance.TryGet("Beorun", out var kept),
+                  "the same event under the current code has to survive its own load");
+    Assert.AreEqual("R5-companion", kept.Reason);
+
+    // Refusing at load is only half of it: the FILE has to stop saying it, or every start re-reads the same mistake.
+    Assert.IsFalse(File.ReadAllText(LedgerPath).Contains("R5-called"),
+                   "the rewrite left the bug-era row in identity-priors.txt");
+  }
+
+  /*
    * A closed vocabulary, asserted at its size: a new rule has to ASK to be remembered. Leaving an event-reading rule
    * off costs memory for those names until someone adds it (small, self-healing, and today's census still shows the
    * live verdict); letting a permanent-input rule in files every log's built-in answers as "experience" forever,
@@ -318,7 +350,7 @@ public class IdentityPriorStoreTest
              {
                "R1-target", "R1-conflict", "R2-who", "R3-chat", "R3-merc", "R4-spell",
                "R3-joinraid", "R3-leaveraid", "R3-joingroup", "R3-leftgroup", "R3-leader",
-               "R5-called", "R7-graph", "R7-side", "R9-charm", "R13-merc", "R15-healed", "R17-selffeed", "R18-healedpet",
+               "R5-companion", "R7-graph", "R7-side", "R9-charm", "R13-merc", "R15-healed", "R17-selffeed", "R18-healedpet",
                "R19-eyeowner",
              })
       Assert.IsTrue(IdentityPriorStore.WorthRemembering(remembered), $"{remembered} reads lines and was refused");

@@ -166,8 +166,9 @@ public class SpellEffectIdentityTest
     ClassificationRules.Apply(run.Facts, timeline, run.HealFacts);
 
     // Every presence/chat/who/called claim in the fixture keeps its kind: R21 may only place names nothing else touched.
-    Assert.AreEqual(IdentityKind.Pet, timeline.IdentityWithSource("Frobum", out var called), "R5's called pet moved");
-    Assert.AreEqual("R5-called", called);
+    Assert.AreEqual(IdentityKind.Player, timeline.IdentityWithSource("Frobum", out var called),
+                    "the summoner named by the companion line moved off Player");
+    Assert.AreEqual("R5-companion", called);
 
     foreach (var speaker in new[] { "Chatterbox", "Raiderone" })
     {

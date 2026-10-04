@@ -65,7 +65,7 @@ namespace EQLogParser
 
       PreLineParser.EventsEvidence += OnPreLineEvidence;
       MiscLineParser.EventsWhoRoster += OnWhoRoster;
-      MiscLineParser.EventsCalledToOwner += OnCalledToOwner;
+      MiscLineParser.EventsCompanionCalled += OnCompanionCalled;
       MiscLineParser.EventsCharm += OnCharm;
       CastLineParser.EventsCastEvidence += OnCast;
 
@@ -86,7 +86,7 @@ namespace EQLogParser
 
       PreLineParser.EventsEvidence -= OnPreLineEvidence;
       MiscLineParser.EventsWhoRoster -= OnWhoRoster;
-      MiscLineParser.EventsCalledToOwner -= OnCalledToOwner;
+      MiscLineParser.EventsCompanionCalled -= OnCompanionCalled;
       MiscLineParser.EventsCharm -= OnCharm;
       CastLineParser.EventsCastEvidence -= OnCast;
 
@@ -115,7 +115,9 @@ namespace EQLogParser
 
     private void OnWhoRoster(string name, string cls, double time) => Emit(EvidenceFact.EvWhoRoster, name, time, cls);
 
-    private void OnCalledToOwner(string name, double time) => Emit(EvidenceFact.EvCalledToOwner, name, time);
+    // The companion line names the person the summon came TO (MiscLineParser's census), so this fact is about the
+    // summoner and carries no pet — which pair belongs to the possessive words and to petmapping.txt instead.
+    private void OnCompanionCalled(string name, double time) => Emit(EvidenceFact.EvCompanionCalled, name, time);
 
     // The start line never says who charmed anything (measured: no charm cast text precedes a
     // third-party "has been charmed." inside 20 s in any capture), so aux is null there; the wear-off

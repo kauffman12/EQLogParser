@@ -28,7 +28,7 @@ namespace EQLogParser
 
     // Mirror evidence (D8): fire-only recognitions, no branch consumes anything for them.
     internal static event Action<string, string, double> EventsWhoRoster;   // name, class, time
-    internal static event Action<string, double> EventsCalledToOwner;       // pet name, time
+    internal static event Action<string, double> EventsCompanionCalled;     // the SUMMONER whose companion arrived, time
     internal static event Action<string, double, bool, string> EventsCharm;  // name, time, is-start, owner
 
     private static string _randomPlayer;
@@ -37,7 +37,16 @@ namespace EQLogParser
     // Companion and charm line shapes (catalog R5/R9 evidence). Recognition only: the legacy
     // pipeline never consumed these and still does not. Charm NEG lines ("This NPC cannot be
     // charmed.", resists) deliberately do not match these suffixes.
-    private const string CalledToOwnerSuffix = " is called to it owner.";
+    //
+    // "X is called to it owner." names the OWNER, not the companion — the sentence is about where the summon
+    // went, and the client fills the subject slot with the summoner. Measured, because the grammar argues the other
+    // way: all 33 occurrences in eqlog_Kizant_xegony-09-20-25.txt and all 15 in eqlog_Kizant_xegony-01-06-24.txt
+    // sit within three lines of that same name's own `X begins casting Summon …` line, e.g.
+    //   Romance begins casting Summon Companion II.   /   Romance is called to it owner.
+    // and every subject across six captures casts player spells by the thousand (Romance 13,958 cast lines,
+    // Beorun 7,215) while none of them ever swings: `Romance joined the raid.`, `Nymera healed Romance for 0
+    // (26881) hit points` (docs/DesignNotes.md → "The companion line names the summoner").
+    private const string CompanionCalledSuffix = " is called to it owner.";
     private const string CharmedSuffix = " has been charmed.";
     private const string Charmed2Suffix = " is charmed.";
     private const string CharmEndMarker = " spell has worn off of ";
@@ -46,10 +55,10 @@ namespace EQLogParser
     {
       if (string.IsNullOrEmpty(action)) return;
 
-      if (action.EndsWith(CalledToOwnerSuffix, StringComparison.OrdinalIgnoreCase))
+      if (action.EndsWith(CompanionCalledSuffix, StringComparison.OrdinalIgnoreCase))
       {
-        var pet = action[..^CalledToOwnerSuffix.Length].Trim();
-        if (pet.Length > 0) EventsCalledToOwner?.Invoke(pet, beginTime);
+        var owner = action[..^CompanionCalledSuffix.Length].Trim();
+        if (owner.Length > 0) EventsCompanionCalled?.Invoke(owner, beginTime);
       }
       else if (action.EndsWith(CharmedSuffix, StringComparison.OrdinalIgnoreCase))
       {

@@ -46,8 +46,14 @@ public class IdentityRulesTest
         // R2: /who roster line proves player outright
         AssertIdentity(timeline, "Whoguy", IdentityKind.Player, "R2-who");
 
-        // R5: called-to-owner and owner-in-line (Sirmr`s pet). The named owner only corroborates.
-        AssertIdentity(timeline, "Frobum", IdentityKind.Pet, "R5-called");
+        /*
+         * R5's two shapes point at DIFFERENT names. `Sirmr`s pet` states its owner inside the name, so the PET is the
+         * claim and the owner only corroborates; "Frobum is called to it owner." describes where a summon arrived, and
+         * the name in it is the SUMMONER — measured on 48/48 occurrences across six captures, every one within three
+         * lines of that same name's own `begins casting Summon …` (docs/DesignNotes.md → "The companion line names the
+         * summoner"). A build that read this backwards put raid members on the sheet as Pets.
+         */
+        AssertIdentity(timeline, "Frobum", IdentityKind.Player, "R5-companion");
         AssertIdentity(timeline, "Sirmr`s pet", IdentityKind.Pet, "R5-owner:Sirmr");
         Assert.AreEqual(IdentityKind.Player, timeline.IdentityWithSource("Sirmr", out var ownerSrc), "owner corroboration missing");
         Assert.AreEqual("R5-owner", ownerSrc);

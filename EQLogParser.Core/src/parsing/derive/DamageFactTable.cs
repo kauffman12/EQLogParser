@@ -224,7 +224,7 @@ namespace EQLogParser
     public const byte EvMercJoinedGroup = 7;
     public const byte EvRaidLeader = 8;
     public const byte EvWhoRoster = 9;      // aux: class name
-    public const byte EvCalledToOwner = 10;
+    public const byte EvCompanionCalled = 10; // "X is called to it owner." — X is the SUMMONER, not the summon
     public const byte EvCharmStart = 11;
     public const byte EvCharmEnd = 12;
     public const byte EvCast = 13;          // aux: spell name

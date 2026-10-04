@@ -147,9 +147,10 @@ internal static class IdentityVocabulary
       "R3-leader" => "Led the Raid",
       "R3-merc" => "From /target as Mercenary",
       "R4-spell" => detail is null ? "Cast a Class Spell" : $"Cast {detail}",
-      "R5-called" => detail is null ? "Called to its Owner" : $"Called by {detail}",
+      // The companion line names the summoner (MiscLineParser's census), so the proof says what they did.
+      "R5-companion" => "Summoned a Companion",
       "R5-owner" => "Owner in Name",
-      "R6-npcdb" => "In npcs.txt",
+      "R6-npcdb" => "On the NPC List",
       "R7-graph" => "It Fights NPCs",
       "R7-side" => "It Attacks Raid",
       "R9-charm" => "Charm Window",
@@ -164,7 +165,7 @@ internal static class IdentityVocabulary
       "R20-petspell" => detail is null ? "Pet Spell" : $"Cast {detail} (pet)",
       "R21-spellshape" => "No Caster in Line",
       "R21-spellcast" => "Casting Message",
-      "R21-spelleffect" => "In spells.txt",
+      "R21-spelleffect" => "The Name of a Spell",
       _ => code.Length > 0 ? code : kind == IdentityKind.Unknown ? "Nothing identified it" : TypeWord(kind),
     };
 
@@ -227,7 +228,8 @@ internal static class IdentityVocabulary
     // The tail of R4-spell is the cast that earned it, so the tooltip can name it ("Cast Curse XVII") — including from
     // the ledger, which stores this string verbatim and therefore keeps the detail across logs.
     ["R4-spell"] = "Spell",
-    ["R5-called"] = "Called",
+    // The summon arrived at THEM: the line names the summoner, so the word says whose companion it was.
+    ["R5-companion"] = "Companion",
 
     // The proof is the name's own spelling: `Tuona`s ward` carries its owner in it. "Owner" alone asked a question
     // ("what do you mean owner?") that this answer settles without a second column.

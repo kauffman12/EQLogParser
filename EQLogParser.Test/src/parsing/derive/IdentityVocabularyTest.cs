@@ -41,7 +41,7 @@ public class IdentityVocabularyTest
      */
     "R3-joinraid", "R3-leaveraid", "R3-joingroup", "R3-leftgroup", "R3-leader", "R3-merc",
 
-    "R4-spell", "R5-called", "R5-owner", "R6-npcdb", "R7-graph", "R7-side", "R9-charm", "R10-manual",
+    "R4-spell", "R5-companion", "R5-owner", "R6-npcdb", "R7-graph", "R7-side", "R9-charm", "R10-manual",
     "R13-merc", "R14-shape", "R15-healed", "R16-comma", "R17-selffeed", "R18-healedpet", "R19-eyeowner",
     "R20-petspell",
     "R21-spellshape", "R21-spellcast", "R21-spelleffect",
@@ -182,7 +182,8 @@ public class IdentityVocabularyTest
     Assert.AreEqual("Chosen", IdentityVocabulary.WhyWord("Prior:Override"));
 
     Assert.AreEqual("It Fights NPCs in previous log", IdentityVocabulary.ProofText("Prior:R7-graph", IdentityKind.Player));
-    Assert.AreEqual("In npcs.txt in previous log", IdentityVocabulary.ProofText("Prior:R6-npcdb", IdentityKind.Npc));
+    // No hover names a FILE (the operator cannot open one from here): npcs.txt and spells.txt read as the lists they are.
+    Assert.AreEqual("On the NPC List in previous log", IdentityVocabulary.ProofText("Prior:R6-npcdb", IdentityKind.Npc));
 
     // The tail survives the prefix, which is what lets an older log's spell verdict still name its cast.
     Assert.AreEqual("R4-spell", IdentityVocabulary.CodeOf("Prior:R4-spell:Boastful Bellow XLVII"));
@@ -203,8 +204,10 @@ public class IdentityVocabularyTest
     Assert.AreEqual("Owner in Name in previous log", IdentityVocabulary.ProofText("Prior:R5-owner:Sancus", IdentityKind.Pet));
 
     // A called pet names who called it, because that line IS the sighting.
-    Assert.AreEqual("Called", IdentityVocabulary.WhyWord("R5-called"));
-    Assert.AreEqual("Called by Sancus", IdentityVocabulary.ProofText("R5-called:Sancus", IdentityKind.Pet));
+    // The line names the summoner, so the words say what THEY did — "Called by X" belonged to the backwards reading,
+    // in which the name was a pet and X was whoever it arrived at.
+    Assert.AreEqual("Companion", IdentityVocabulary.WhyWord("R5-companion"));
+    Assert.AreEqual("Summoned a Companion", IdentityVocabulary.ProofText("R5-companion", IdentityKind.Player));
   }
 
   /*
@@ -227,7 +230,7 @@ public class IdentityVocabularyTest
     Assert.AreEqual("Healed by the Raid", IdentityVocabulary.ProofText("R15-healed", IdentityKind.Player),
                     "a heal-based verdict with no walk over the heal stream still has to say what kind of proof it was");
     Assert.AreEqual("You chose NPC", IdentityVocabulary.ProofText("R10-manual", IdentityKind.Npc));
-    Assert.AreEqual("In spells.txt", IdentityVocabulary.ProofText("R21-spelleffect", IdentityKind.Npc));
+    Assert.AreEqual("The Name of a Spell", IdentityVocabulary.ProofText("R21-spelleffect", IdentityKind.Npc));
     Assert.AreEqual("No Caster in Line", IdentityVocabulary.ProofText("R21-spellshape", IdentityKind.Npc));
     Assert.AreEqual("Casting Message", IdentityVocabulary.ProofText("R21-spellcast", IdentityKind.Npc));
   }

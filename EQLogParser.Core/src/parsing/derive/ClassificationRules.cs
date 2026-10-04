@@ -489,9 +489,20 @@ namespace EQLogParser
             Claim(timeline, state,name, IdentityKind.Player, RuleStrength.Strong, "R19-eyeowner", double.NegativeInfinity);
             break;
 
-          case EvidenceFact.EvCalledToOwner:
-            Claim(timeline, state,name, IdentityKind.Pet, RuleStrength.Certain, "R5-called", double.NegativeInfinity);
-            Claim(timeline, state,AffiliationKind.Friendly, name, e.TimeS, double.PositiveInfinity, RuleStrength.Certain, "R5-called");
+          case EvidenceFact.EvCompanionCalled:
+            /*
+             * R5-companion: "X is called to it owner." names X, the person the summon arrived at — NOT the summon.
+             * The sentence reads as if it named the pet, and for a long time this rule read it that way, which put
+             * raid members on the sheet as Pets (Beorun, Romance, Sancus, Segejin). Measured the other way round:
+             * all 33 occurrences in one capture and all 15 in another sit within three lines of that same name's own
+             * `X begins casting Summon …`, and every subject across six captures casts player spells (13,958 for
+             * Romance) and never swings. See MiscLineParser's comment and docs/DesignNotes.md.
+             *
+             * Strong rather than Certain, exactly like R17's drink and R19's eye: only a player character summons a
+             * companion, but a `Targeted (NPC)` frame on the same name still outranks a behaviour.
+             */
+            playerBehavior.Add(name);
+            Claim(timeline, state, name, IdentityKind.Player, RuleStrength.Strong, "R5-companion", double.NegativeInfinity);
             break;
 
           case EvidenceFact.EvCharmStart:

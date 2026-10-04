@@ -647,7 +647,7 @@ namespace EQLogParser
     /*
      * Which side was this name fighting on at time t - identity, then CHARM reversal, then OWNERSHIP.
      *
-     * A Friendly interval from R5-called (a summoned pet) is a static statement of allegiance, not a flip:
+     * A Friendly interval written by an ownership rule is a static statement of allegiance, not a flip:
      * only R9-charm windows reverse a name's side for their duration. Source names are the rule tags stamped
      * by ClassificationRules; "R9-charm" prefixes both charm variants.
      *

@@ -323,7 +323,7 @@ namespace EQLogParser
      * owner line (R5-owner), a pet the operator mapped in petmapping.txt (RegistrySeed) or a bare custom
      * name the whole raid keeps healing
      * (R18-healedpet). Deliberately its own scan rather than `AffiliationAt(...) == PetOfPlayer`: a name can
-     * hold a stronger `Friendly` at the same time (R5-called writes one), and "somebody owns this" is a
+     * hold a stronger `Friendly` at the same time (a charm window writes one), and "somebody owns this" is a
      * different question from "which kind won the interval table".
      *
      * This is NOT `IsCharmedAt`. A charm is a temporary flip of a name that is normally the enemy's; these
