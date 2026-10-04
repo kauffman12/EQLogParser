@@ -58,7 +58,7 @@ namespace EQLogParser
 
     public App()
     {
-      // 33.x - key lives in one place; the test host calls the same method.
+      // The license key lives in exactly one place; the test host's [AssemblyInitialize] calls this same method.
       SyncFusionUtil.LoadLicense();
     }
 

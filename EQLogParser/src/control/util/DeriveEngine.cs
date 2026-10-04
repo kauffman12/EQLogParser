@@ -58,8 +58,6 @@ namespace EQLogParser
     // Newest row activity announced so far, so the announcement means "newer than last time" and not "still fighting".
     private double _lastAnnouncedActivityT = double.NegativeInfinity;
 
-    public event Action<string> DeriveFailed;
-
     // Liveness feedback while capture is dirty (raised on the timer, i.e. the dispatcher):
     // total captured facts since no snapshot covers them yet.
     public event Action<long> Capturing;
@@ -371,14 +369,15 @@ namespace EQLogParser
            * rule - and the meter must not go silent for the rest of the night over one hiccup, which is what the old
            * "stop the loop" latch did: it left a Re-derive button as the only recovery, and no legitimate flow needed
            * that button (its whole job had become this corner). Every attempt logs - a repeating stack in
-           * eqlogparser.log IS the diagnosis - QuietTick spaces the attempts on DeriveCadence.RetryDelayS (1 s
-           * doubling to a minute), and any success ends it. Note the finer grain above: a single classification STAGE
-           * failing never reaches here at all (ClassificationRules.RunStage retires just that stage).
+           * eqlogparser.log IS the diagnosis (there is deliberately no failure event on this class: nothing
+           * in the app listened to the one that was here, and the fight pane carries no failure state at all) - QuietTick
+           * spaces the attempts on DeriveCadence.RetryDelayS (1 s doubling to a minute), and any success ends it. Note the
+           * finer grain above: a single classification STAGE failing never reaches here at all (ClassificationRules.RunStage
+           * retires just that stage).
            */
           var failures = ++_deriveFailures;
           Log.Error($"Derive pass failed (attempt {failures}); " +
                     $"next retry in {DeriveCadence.RetryDelayS(failures):0} s", ex);
-          DeriveFailed?.Invoke(ex.Message);
           _sinceFailedPass.Restart();
         }
         catch (Exception)
