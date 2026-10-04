@@ -255,6 +255,50 @@ public class ClassificationReportTest
     Assert.IsFalse(row.IsDisagreement);
   }
 
+  /*
+   * The class column used to show only the roster block and ability words: the census asked
+   * GetDefaultPlayerClass, so every class LEARNED from casting - CastLineParser's confidence records, which is
+   * what legacy's Verified Players grid displayed - was invisible in the window built to replace it. Both
+   * getters must answer here: learned first, and the default still for names no cast taught.
+   */
+  [TestMethod]
+  public void AClassLearnedFromCastingShowsInTheCensus()
+  {
+    // Class writes gate on the host validator (CombatRecordLookup.IsValidClassName, wired by App.xaml.cs,
+    // "nothing is a class" headless) - same two-word stub PlayerRegistryPersistenceTest uses, restored in a
+    // finally because the hook is process state.
+    var savedValidator = CombatRecordLookup.IsValidClassName;
+    CombatRecordLookup.IsValidClassName = name => name is "Cleric" or "Warrior";
+    try
+    {
+      var raider = BusiestAttacker();
+      PlayerRegistry.Instance.SetActivePlayerClass(raider, "Cleric", 2, LogStartS());
+
+      // A default written after the learned record must not outrank it - the record says what this capture's
+      // casts showed, the default is a saved guess.
+      PlayerRegistry.Instance.SetDefaultPlayerClass(raider, "Warrior");
+
+      var learnedRow = Census().Rows.Single(r => r.Name.Equals(raider, StringComparison.OrdinalIgnoreCase));
+      Assert.AreEqual("Cleric", learnedRow.Class, "the spell-learned class must be the one displayed");
+
+      // And the roster default still answers for a name that never cast a class-bearing spell.
+      string secondName = null;
+      foreach (var f in Capture().Facts.Facts)
+      {
+        var name = Capture().Facts.InternedNames[f.AtkIdx];
+        if (!name.Equals(raider, StringComparison.OrdinalIgnoreCase)) { secondName = name; break; }
+      }
+      PlayerRegistry.Instance.SetDefaultPlayerClass(secondName, "Warrior");
+
+      var defaultRow = Census().Rows.Single(r => r.Name.Equals(secondName, StringComparison.OrdinalIgnoreCase));
+      Assert.AreEqual("Warrior", defaultRow.Class);
+    }
+    finally
+    {
+      CombatRecordLookup.IsValidClassName = savedValidator;
+    }
+  }
+
   [TestMethod]
   public void AbsenceIsNotAContradiction()
   {

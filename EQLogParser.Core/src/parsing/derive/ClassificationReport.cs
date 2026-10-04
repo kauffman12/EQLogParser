@@ -51,7 +51,8 @@ namespace EQLogParser
       /// <summary>The operator rejected it: no claim, and nothing auto-adds it again. See PlayerRegistry.IsRejected.</summary>
       public bool IsRejected { get; init; }
 
-      /// <summary>Class from the roster block or an ability word, null when neither supplied one.</summary>
+      /// <summary>Class for this name: what the class engine last recorded - a spell-learned class wins over
+      /// the roster block or ability-word default; null when none of them supplied one.</summary>
       public string? Class { get; init; }
 
       /// <summary>True when the players.txt entry carries no evidence timestamp, i.e. somebody typed it.</summary>
@@ -340,7 +341,10 @@ namespace EQLogParser
         priorSeenAt = prior.SeenAtS;
       }
 
-      var playerClass = NullIfEmpty(registry?.GetDefaultPlayerClass(name));
+      // Last-known, not just the default: GetDefaultPlayerClass sees only the roster block and ability words,
+      // so every class the engine LEARNED from casting (CastLineParser's records - including what R4's
+      // signature families write) was invisible in the one window built to show identities. The legacy
+      // Verified Players grid displayed learned classes; the replacement must not read less than it did.
       var petOwner = NullIfEmpty(registry?.GetPlayerFromPet(name));
       var legacyPlayer = registry?.IsVerifiedPlayer(name) ?? false;
       double lastSeen = 0;
@@ -355,7 +359,7 @@ namespace EQLogParser
         Reason = source,
         IsOperatorVerdict = isOperator,
         IsRejected = rejected,
-        Class = playerClass,
+        Class = NullIfEmpty(registry?.GetLastKnownPlayerClass(name)),
         TypedEntry = typed,
         LastSeenUnixSeconds = lastSeen,
         PetOwner = petOwner,
