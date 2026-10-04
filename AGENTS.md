@@ -310,7 +310,10 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   shipped once as "it stopped working after I restart"), and opening a log **starts a session immediately** (docking
   only in the open-log path once left the window present but sessionless - the exact uncheck/re-check experiment the
   user reaches for). During a bulk load the derived list is legitimately empty (both derive lanes park), so `FightTable`
-  shows a loading band over the table whose **one phrase is "Building derived fight list..." from EOF to the first snapshot** - `ReportCaptureProgress`
+  shows a loading band over the table whose **one phrase is "Building derived fight list..." from EOF to the first snapshot**, and **only on an open nobody
+  chose**: `FightTable.AllowsLoadBand` is off unless MainWindow's startup auto-monitor open turns it on, because through File / Recent the operator is watching
+  the application status line count their own click (`AManuallyOpenedLogStaysSilent` pins the silent half; a future open path that forgets the flag loses an
+  announcement rather than gaining an overlay nobody wanted) - `ReportCaptureProgress`
   still rides the reader pump, but a sub-100 tick says NOTHING in this window: the application-wide status line counts that same pump's percent and
   seconds already, and a second copy in the dock was removed as duplication. The session's first snapshot takes the band down for good - legacy filled rows
   per parsed line, the projection cannot (a cheap lane during bulk steals the ingest gate, reverted on measurement). The pane's top-right status section is
@@ -320,6 +323,16 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   the file opened (`LogProcessor` holds it), so drink evidence and chat identity join at the next open while facts and heals flow from now.
   One line per session in eqlogparser.log - `capture: started (file)` at open, `derive: first pass - N facts, M rows`
   at the first pass - so a list that silently fails to fill is diagnosed by which of the two lines is missing.
+- **The Names pane is asked, never fed, and its sentences live in a tooltip**: `NamesTable` subscribes to nothing. The census (a full classification pass) runs
+  when the pane is **first shown**, when the menu opens it, when a new log starts, and by the **Refresh** button — never on `DeriveEngine.Derived` and no longer
+  on every visibility change (`_filledOnce`, because auto-hide dock slides and tab switches each fired a rebuild, which reads as "the table keeps updating itself"
+  while somebody tries to read 4,000 rows). Four columns sorted by name (Name | Type | Why | Class): Damage/Healing left because an identity list must not rank
+  names by output (`ClassificationReport` still totals them — that is its own row order), and Owner left because `PlayerRegistry` answers it and the Pet Owners
+  window lists the same pairs. Two things moved to the **Why cell's tooltip** instead of being deleted: the cast a spell verdict rests on
+  (`ClassificationReport.Row.ReasonDetail`, taken as the **first** cast the R4/R20 gates accept — never by widening the claim source, since `StateStamp` hashes
+  sources and `IdentityPriorStore` persists them; `CensusCastProofTest`) and the sentences no column can carry — "your verdict" / "no claim (you took it back)"
+  are the only way to tell a row an operator wrote from one the rules inferred (`ProvenanceFor`, pinned by `NamesTableTest`, Windows-only). No status line: like
+  the fight list the pane says nothing about itself, so the census counts ride the caption's tooltip.
 - **A fight is "still going" on the capture's clock, and one file answers all three meter questions**: the overlay's numbers moved to the
   derived engine first, which left it painting derived figures while `FightManager` still decided whether you ever saw them (open on launch,
   close-for-real-when-hidden, open-yourself-on-a-pull). Those now go through **`MirrorMeter`** — the only reader of

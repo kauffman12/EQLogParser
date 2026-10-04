@@ -9,7 +9,10 @@
              d:DesignHeight="450" d:DesignWidth="900">
   <Grid>
     <Grid.RowDefinitions>
-      <RowDefinition Height="Auto"/>
+      <!-- The house title bar: every table in the app reserves EQGridTitleHeight for its caption row and docks its
+           controls to the right of it (SpellCountTable is the pattern). This row used to be Height="Auto" holding a
+           sentence, which made the pane's top band taller than the one above every other grid on screen. -->
+      <RowDefinition Height="{DynamicResource EQGridTitleHeight}"/>
       <RowDefinition Height="*"/>
     </Grid.RowDefinitions>
 
@@ -32,24 +35,39 @@
       </Style>
     </Grid.Resources>
 
-    <!-- One line of context, because "Unknown" means three different things and the window has to say which. -->
-    <DockPanel Grid.Row="0" Margin="4,3,4,3">
-      <Button x:Name="namesRefreshButton" DockPanel.Dock="Right" Content="Re-scan" Padding="8,2"
-              Click="RefreshClick" ToolTip="Rebuild the census from the captured facts"/>
-      <TextBlock x:Name="namesStatusText" VerticalAlignment="Center" FontSize="{DynamicResource EQContentSize}"
-                 Text="Who is every name in this log? Player, pet or NPC - open a combat log to identify them. This window replaces the old Verified Players and Verified Pets windows."/>
-    </DockPanel>
+    <!-- House title bar, house title, no status line: like the fight list, this pane says nothing about itself while you
+         read it (a census summary used to sit here and it made the band look like a report header). What the capture
+         holds is on hover - Apply puts the counts in the caption's tooltip, which is also why they are still computed. -->
+    <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
+      <Label x:Name="namesCaption" Content="Names" Style="{StaticResource EQTitleStyle}"
+             ToolTip="Every name this capture mentions, and the rule that placed it. This window replaces the old Verified Players and Verified Pets windows."/>
+    </StackPanel>
+    <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
+      <!-- One button, because this census is built on demand: nothing about it updates by itself. -->
+      <Button x:Name="namesRefreshButton" Content="Refresh" Margin="0,0,8,1" Height="{DynamicResource EQButtonHeight}" Padding="16,0,16,0"
+              Click="RefreshClick" ToolTip="Rebuild this list from the captured facts"/>
+    </StackPanel>
 
     <syncfusion:SfDataGrid x:Name="namesGrid" Grid.Row="1"
                            AllowResizingColumns="True"
+                           AllowSorting="True"
                            AutoGenerateColumns="False"
                            CurrentCellBorderThickness="0"
+                           FrozenColumnCount="1"
+                           GridLinesVisibility="Both"
                            HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
+                           IsReadOnly="True"
                            RowHeight="{DynamicResource EQTableRowHeight}"
                            RowHeaderWidth="{DynamicResource EQTableRowHeaderWidth}"
                            GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
                            SelectionMode="Extended"
                            ShowRowHeader="True">
+      <syncfusion:SfDataGrid.SortColumnDescriptions>
+        <!-- Names ascending, always. The census's own order (raid-side first, then busiest) rearranged rows underneath
+             whoever was reading and looking for one name meant scanning a shuffled list; sorting by hand is the whole
+             point of a 4,000 row table. -->
+        <syncfusion:SortColumnDescription ColumnName="Name" SortDirection="Ascending"/>
+      </syncfusion:SfDataGrid.SortColumnDescriptions>
       <syncfusion:SfDataGrid.ContextMenu>
         <ContextMenu>
           <MenuItem Header="This is an NPC" Click="SetNpcClick"/>
@@ -65,21 +83,28 @@
       <!--
         Widths are pixels, not grid stars: SfDataGrid's Width is a double, so "1.6*" throws while the column is being
         created and takes the whole window (and the app, which docks it at startup) down with a XamlParseException that
-        points at a line of markup and never says what it disliked. Proportion came for free before via ColumnSizer=Star
-        above, so dropping it means these numbers are now the layout: roomy where the reading is (Why, Notes, Name),
-        tight where the value is short, right-aligned where it is a number - the same shape HealingBreakdown uses.
+        points at a line of markup and never says what it disliked.
+
+        Four columns, and the ones this window used to carry are gone on purpose. Damage/Healing belong on a damage
+        board, not on an identity list; Owner is the Pet Owners window's own table (both read PlayerRegistry, so this
+        was a second copy of the same pairs); Notes held sentences that were mostly empty and, where they were not, are
+        now the WHY cell's tooltip — see ProvenanceFor.
       -->
       <syncfusion:SfDataGrid.Columns>
-        <syncfusion:GridTextColumn HeaderText="Name" MappingName="Name" Width="170"/>
-        <syncfusion:GridTextColumn HeaderText="Kind" MappingName="Kind" Width="80"/>
-        <!-- The whole point of the window: which rule read what, and when. A verdict with no reason beside it is
-             something to guess about; with the code, it is something to check against the log and correct. -->
-        <syncfusion:GridTextColumn HeaderText="Why" MappingName="Why" Width="260"/>
-        <syncfusion:GridTextColumn HeaderText="Class" MappingName="PlayerClass" Width="95"/>
-        <syncfusion:GridTextColumn HeaderText="Owner" MappingName="PetOwner" Width="130"/>
-        <syncfusion:GridTextColumn HeaderText="Notes" MappingName="Flags" Width="240"/>
-        <syncfusion:GridNumericColumn HeaderText="Damage" MappingName="Damage" NumberDecimalDigits="0" Width="110" TextAlignment="Right"/>
-        <syncfusion:GridNumericColumn HeaderText="Healing" MappingName="Healing" NumberDecimalDigits="0" Width="110" TextAlignment="Right"/>
+        <syncfusion:GridTextColumn HeaderText="Name" MappingName="Name" Width="190"/>
+        <syncfusion:GridTextColumn HeaderText="Type" MappingName="Type" Width="90"/>
+        <!-- The whole point of the window: which rule read what. The tooltip is the rest of the answer - the spell a
+             spell-based verdict rests on, and the few facts about a row that no column can say (that the operator wrote
+             it, took it back, or that this log never mentions the name). -->
+        <syncfusion:GridTemplateColumn HeaderText="Why" MappingName="Why" Width="320">
+          <syncfusion:GridTemplateColumn.CellTemplate>
+            <DataTemplate>
+              <TextBlock Text="{Binding Why}" FontSize="{DynamicResource EQContentSize}" VerticalAlignment="Center"
+                         ToolTip="{Binding Provenance}"/>
+            </DataTemplate>
+          </syncfusion:GridTemplateColumn.CellTemplate>
+        </syncfusion:GridTemplateColumn>
+        <syncfusion:GridTextColumn HeaderText="Class" MappingName="PlayerClass" Width="100"/>
       </syncfusion:SfDataGrid.Columns>
     </syncfusion:SfDataGrid>
   </Grid>

@@ -3947,7 +3947,7 @@ at all" (`UnresolvedInCapture`, `Row.IsUnresolved`, `ClassificationCommands.SetU
 `grep -rn Unresolved` returns nothing in either source or tests; it was lost when ClassificationReport.cs was rewritten from
 a stale buffer. It is a ~20-line addition with three tests, deliberately not re-added silently here.
 
-## The Names window, and why the flag column is the feature (2026-08-12)
+## The Names window: four columns, a census that is asked for, and sentences in a tooltip (2026-08-12, re-shaped 2026-08-13)
 
 `NamesTable` (View → **_Names**, docked beside the derived fight list) replaces the three hand-maintained panes. The
 panes could show what somebody typed; they could not show what the classifier concluded, so a wrong verdict had no
@@ -3956,20 +3956,58 @@ the `ContentControl`s stay so an existing `EQLogParserLayout.xml` still loads.
 
 Design points worth keeping:
 
-- **Built on demand, off the UI thread.** A derive lands every few seconds while a log loads and a census nobody has
-  open would be discarded each time, so `DeriveEngine.BuildNameCensus()` assembles the timeline exactly as a derive does
-  (roster seed → rules → overrides last) and is called on open / Re-scan / a derive that lands while visible. Facts can
-  arrive mid-walk: a census is display data, so one row shifting by one fact between passes is accepted rather than
-  putting a lock on the capture path; a refused walk keeps the previous list and logs.
+- **Asked, never fed.** `DeriveEngine.BuildNameCensus()` assembles the timeline exactly as a derive does (roster seed →
+  rules → overrides last), off the UI thread, and runs on **four explicit doors only**: the first time the pane is really
+  visible *and a session exists* (`FillOnFirstShow`; a show before any log opens does not spend the shot, or a later tab
+  click would read an empty grid forever), the menu opening it, a new log starting, and the Refresh button. It used to also run on every
+  `IsVisibleChanged`, which for a docked pane means each auto-hide slide, tab switch and restore — six words from the
+  operator describe what that felt like: *"it keeps updating as new data arrives"*. A list that refits itself under a
+  reader cannot be read, and a census nobody has open is thrown away every few seconds during a load. Nothing
+  subscribes to `DeriveEngine.Derived`; the Refresh button is not a workaround for a missing subscription, it IS the
+  design. Facts can still arrive mid-walk: a census is display data, so one row shifting by one fact between passes is
+  accepted rather than putting a lock on the capture path; a refused walk keeps the previous list and logs.
 - **No second source of truth.** Every verb goes through `ClassificationCommands` into the same per-server files (verdicts,
   roster, rejections) plus the ledger; nothing is stored in the window.
-- **The Notes column carries the action, not the kind.** "your verdict" / "no claim (you took it back)" / "older logs on
-  this server, x2" / "roster says player, rules say NPC" / "not in this log". Each sentence answers *should I act*, which
-  the Kind and Why columns cannot: `Prior:R6-npcdb` in Why must not read as if this capture produced it.
+- **Four columns: Name | Type | Why | Class, sorted by name.** The header says TYPE because "Kind" made people look for
+  a mob kind, and the cell prints words (`TypeWord`: Player / Pet / Merc / NPC / Unknown) because `Npc` is an enum
+  identifier. `IdentityKind` itself keeps its name — 381 reads across `parsing/derive`, every one of them the engine
+  talking about a *kind* of entity; renaming a load-bearing enum to fix a header is how a label eats a codebase.
+  Sorting by name replaced the census's own order (raid-side first, then busiest) because that order rearranged rows
+  under whoever was reading. Damage/Healing are gone from the grid: an identity list must not rank names by output, and
+  `ClassificationReport` still totals them internally — that is its row order and it costs one array pass over each
+  stream, which is why deleting the *rollup* was refused too (the census never uses them to classify; the rules carry
+  their own aggregates).
+- **Owner left with them, because it was a duplicate.** `ClassificationReport.Row.PetOwner` is
+  `PlayerRegistry.GetPlayerFromPet(name)`, and the Pet Owners window lists `PlayerRegistry.GetPetMappings()` — the same
+  petmapping.txt pairs in two panes. `RosterNames` still feeds both halves of every pair into the row set, so an owner
+  absent from this capture is still listed; only the second copy of the pairing went away.
+- **The Notes column became the WHY cell's tooltip.** It was mostly empty, and an almost-empty column is worse than no
+  column because it reads as "checked and clean". But two of its sentences have nowhere else to live — *"your verdict"*
+  and *"no claim (you took it back)"* are the only way this pane can tell a row an operator wrote from one the rules
+  inferred, and neither Type nor Why says it (`Prior:R6-npcdb` in Why at least carries its own marker). So `ProvenanceFor`
+  composes the same sentences on hover, one per line, and `NamesTableTest` still pins each of them.
+- **New: the cast behind a spell verdict, also as a tooltip.** Someone looking at `R4-spell` wants to know *which* spell,
+  which is a nice-to-know and not worth a fifth column. `ClassificationReport.Row.ReasonDetail` carries it: the census
+  walks the evidence rows once and keeps the **first** cast per caster that passes the very gates R4/R20 apply
+  (`IsClassSafeCast` / `IsPetCastSpell`) — first because that is the claim the timeline resolved to, and a later
+  restatement is what `SetIdentity`'s dedupe drops (`CensusCastProofTest`: Chantoya → `Boastful Bellow XLVII`,
+  Snapclaw → `Hobble of Spirits Snare VI`, Ferociousley's second accepted cast ignored).
+  **Why the detail is a separate field and not a richer source tag**: `StateStamp()` hashes each claim's `source`
+  ordinally and `IdentityPriorStore` persists reasons to disk, so `R4-spell:Boastful Bellow` would change identity's own
+  vocabulary — rule-prefix readers (`StartsWith("R9-charm")`, `RememberedRules`), a dozen exact-match assertions and
+  every saved ledger row — for the sake of a tooltip. Display detail stays on the display object; the tags stay words.
+  Guard: only a verdict whose source starts with `R4-spell`/`R20-petspell` may name a cast, so a borrowed
+  `Prior:R4-spell` never credits this capture with a cast it did not see.
+- **No status line, same style as the fight list.** The top row is the house title bar (`EQGridTitleHeight`, caption
+  left in `EQTitleStyle`, controls right) and its only content is the word "Names"; the census summary (names / players /
+  pets / mercs / NPCs / rejected · unplaced · contradicting the roster — i.e. every counter on `ClassificationReport`)
+  moved to the caption's tooltip, which keeps those counters read by something instead of quietly dead.
 
-Also added to the census: `TotalNames`, `UnresolvedInCapture`, `Row.IsUnresolved` (see the correction note above — written
-for real this time). Four new WPF-assembly tests (`EQLogParser.Wpf.Test/src/ui/common/NamesTableTest.cs`) pin the flag
-sentences; they **compile but cannot run on Linux**, so treat them as unbuilt evidence until a Windows run.
+Also added to the census earlier and still there: `TotalNames`, `UnresolvedInCapture`, `Row.IsUnresolved` (see the
+correction note above — written for real this time). Tests: `EQLogParser.Wpf.Test/src/ui/common/NamesTableTest.cs`
+(six tests: the tooltip sentences, the Type words, the cast sentence and its absence for non-spell verdicts) — these
+**compile but cannot run on Linux**, so treat them as unbuilt evidence until a Windows run; `CensusCastProofTest` lives in
+the cross-platform assembly and does run here (3/3).
 
 ## The one calculation a scope asks (DerivedTotals)
 
