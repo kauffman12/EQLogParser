@@ -122,8 +122,8 @@
         <!--
           The whole point of the window: which rule read what, in TWO WORDS ("Who", "Chat", "Spell", "Healed", "Owner",
           "NPC list" - see WhyWord), with the details demoted to the tooltip. It used to print the rule code
-          ("R15-healed") at three times this width, which pushed the pane past the width of its own dock to read a
-          string nobody could decode without the source open.
+          ("R15-healed") at 256 px - wider than the Class column and part of 771 px of fixed startup pixels across the
+          four - to read a string nobody could decode without the source open.
         -->
         <syncfusion:GridTemplateColumn HeaderText="Why" MappingName="Why" Width="150">
           <syncfusion:GridTemplateColumn.CellTemplate>

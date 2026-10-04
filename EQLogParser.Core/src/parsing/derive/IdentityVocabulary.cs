@@ -53,8 +53,8 @@ internal static class IdentityVocabulary
 
   /*
    * The WHY cell: two words naming the KIND of evidence. "R15-healed" and "R3-presence" made somebody open the source to
-   * read their own list; "Healed" and "Raid" do not — and the column stopped being wider than the other three put
-   * together (the pane used to need a second dock's width to show four columns).
+   * read their own list; "Healed" and "Raid" do not. The cell also stops costing more room than it says: 256 fixed pixels
+   * for `R15-healed`, where two words and a theme-scaled width need about half (docs/DesignNotes.md).
    */
   internal static string WhyWord(string? source)
   {

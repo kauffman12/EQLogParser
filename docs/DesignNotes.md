@@ -3943,11 +3943,12 @@ prior, a line read in this capture beats it, and a rejected name borrows nothing
 written with any `=` stripped, and a line that does not parse is dropped rather than repaired (`MalformedLinesAreDroppedNotRepaired`).
 
 **Correction recorded honestly**: two commit messages (3d19b15a, a64042a3) describe a census count of "names with no claim
-at all" (`UnresolvedInCapture`, `Row.IsUnresolved`, `ClassificationCommands.SetUnresolved`). That code is NOT in the tree —
-`grep -rn Unresolved` returns nothing in either source or tests; it was lost when ClassificationReport.cs was rewritten from
-a stale buffer. It is a ~20-line addition with three tests, deliberately not re-added silently here.
+at all" (`UnresolvedInCapture`, `Row.IsUnresolved`). That correction **is** in the tree now — `ClassificationReport.Row.IsUnresolved`
+(`Kind == Unknown && !IsRejected && Class is null`), the counter built at `HasFacts && IsUnresolved`, and
+`ClassificationReportTest` pinning both halves (roster membership is itself a claim, and a name that appears in no fact stream
+is not "unplaced in this capture"). `NamesTableTest` reads the counter too, so it cannot go missing quietly again.
 
-## The Names window: four columns, a census that is asked for, and sentences in a tooltip (2026-08-12, re-shaped 2026-08-13)
+## The Names window: four columns, dropdowns in two of them, and a census that is asked for (2026-08-12, re-shaped 2026-08-13 and 2026-11)
 
 `NamesTable` (View → **_Names**, docked beside the derived fight list) replaces the three hand-maintained panes. The
 panes could show what somebody typed; they could not show what the classifier concluded, so a wrong verdict had no
@@ -3968,9 +3969,9 @@ Design points worth keeping:
   accepted rather than putting a lock on the capture path; a refused walk keeps the previous list and logs.
 - **No second source of truth.** Every verb goes through `ClassificationCommands` into the same per-server files (verdicts,
   roster, rejections) plus the ledger; nothing is stored in the window.
-- **Four columns: Name | Type | Why | Class, sorted by name.** The header says TYPE because "Kind" made people look for
-  a mob kind, and the cell prints words (`TypeWord`: Player / Pet / Merc / NPC / Unknown) because `Npc` is an enum
-  identifier. `IdentityKind` itself keeps its name — 381 reads across `parsing/derive`, every one of them the engine
+- **Four columns: Name | Type | Why | Class, sorted by name, sized like every other table.** The header says TYPE because
+  "Kind" made people look for a mob kind, and the cell prints words (`IdentityVocabulary.TypeWord`: Player / Pet / Merc /
+  NPC / Unknown) because `Npc` is an enum identifier. `IdentityKind` itself keeps its name — 381 reads across `parsing/derive`, every one of them the engine
   talking about a *kind* of entity; renaming a load-bearing enum to fix a header is how a label eats a codebase.
   Sorting by name replaced the census's own order (raid-side first, then busiest) because that order rearranged rows
   under whoever was reading. Damage/Healing are gone from the grid: an identity list must not rank names by output, and
@@ -3981,33 +3982,104 @@ Design points worth keeping:
   `PlayerRegistry.GetPlayerFromPet(name)`, and the Pet Owners window lists `PlayerRegistry.GetPetMappings()` — the same
   petmapping.txt pairs in two panes. `RosterNames` still feeds both halves of every pair into the row set, so an owner
   absent from this capture is still listed; only the second copy of the pairing went away.
-- **The Notes column became the WHY cell's tooltip.** It was mostly empty, and an almost-empty column is worse than no
-  column because it reads as "checked and clean". But two of its sentences have nowhere else to live — *"your verdict"*
-  and *"no claim (you took it back)"* are the only way this pane can tell a row an operator wrote from one the rules
-  inferred, and neither Type nor Why says it (`Prior:R6-npcdb` in Why at least carries its own marker). So `ProvenanceFor`
-  composes the same sentences on hover, one per line, and `NamesTableTest` still pins each of them.
-- **New: the cast behind a spell verdict, also as a tooltip.** Someone looking at `R4-spell` wants to know *which* spell,
-  which is a nice-to-know and not worth a fifth column. `ClassificationReport.Row.ReasonDetail` carries it: the census
-  walks the evidence rows once and keeps the **first** cast per caster that passes the very gates R4/R20 apply
-  (`IsClassSafeCast` / `IsPetCastSpell`) — first because that is the claim the timeline resolved to, and a later
-  restatement is what `SetIdentity`'s dedupe drops (`CensusCastProofTest`: Chantoya → `Boastful Bellow XLVII`,
-  Snapclaw → `Hobble of Spirits Snare VI`, Ferociousley's second accepted cast ignored).
-  **Why the detail is a separate field and not a richer source tag**: `StateStamp()` hashes each claim's `source`
+- **The Notes column became the WHY cell's tooltip, and then the tooltip lost its sentences.** It was mostly empty, and an
+  almost-empty column is worse than no column because it reads as "checked and clean". But two of its lines have nowhere
+  else to live — *"You chose NPC"* and *"Claim taken back"* are the only way this pane can tell a row an operator wrote
+  from one the rules inferred, and neither Type nor Why says it. So `ProvenanceFor` composes them on hover, one SHORT line
+  each (`Cast: Boastful Bellow XLVII`, `Healed by 20 raiders`, `Earlier logs x2`, `players.txt says player`, `Not in this
+  log`) and `NamesTableTest` pins each one, because each answers a different action: leave it, re-check it, or go fix a
+  meter that is wrong right now.
+- **WHY speaks two words, and the vocabulary is closed** (2026-11). The column used to print `R15-healed` and
+  `Prior:R7-graph`, which is the rule book's private vocabulary rendered in the one place a person reads instead of
+  greps — and at three times the width of the class column. `IdentityVocabulary.WhyWord` (Core, next to the rules that
+  write these strings) maps each code to two words: `Healed`, `Chat`, `Who`, `Spell`, `Owner`, `NPC list`, `Name shape`,
+  `Chosen`… A borrowed answer keeps both facts (`Prior:R7-graph` → *Our side (earlier)* — the ledger stores the rule its
+  verdict came from, so the word is not invented), and R5's owner suffix comes off in the cell (*Owner*, not
+  *R5-owner:Sancus*) because who owns a pet is Pet Owners' table.
+  **An unknown code echoes itself rather than being guessed at**: a fallback like "Evidence" would file a new kind of proof
+  under an old meaning, and provenance is the only thing this window exists to be honest about. Coverage is asserted twice
+  over — an explicit list checked in both directions (missing word / stale word), and `NoRuleCodeReachesTheScreenOnTheFixture`,
+  which runs the rules fixture and fails on any row whose reason arrives untranslated. That corpus check immediately found a
+  code nobody had written a word for (`R3-chat` → *Chat*), which is the whole argument for asking the rules what they produce
+  rather than asking a list what somebody remembered.
+- **New: the cast behind a spell verdict, and the crowd behind a heal verdict, both as tooltips.** Someone looking at
+  `Healed` wants to know how many and someone looking at `Spell` wants to know which one; neither is worth a fifth column.
+  `Row.ReasonDetail` carries the cast: the census walks the evidence rows once and keeps the **first** accepted cast *per
+  gate* — per **gate**, not per caster, because "Hobble of Spirits VI" (the beastlord's own) is a prefix of "Hobble of
+  Spirits Snare VI" (the pet's), so one flat substring test let the pet's snare satisfy a PLAYER row and name it in the
+  tooltip. Same for `IsClassSafeCast` vs `IsPetCastSpell`, and asserted in both directions (`CensusCastProofTest`:
+  Chantoya → `Boastful Bellow XLVII`, Snapclaw → `Hobble of Spirits Snare VI`, Ferociousley's second accepted cast ignored,
+  and a name that casts the snare AND a class-safe family names the one whose own gate was passed).
+  `Row.HealedByCasters` carries the count, gated exactly like R15 — self-heals skipped, healer must be Strong *and*
+  raid-side (`IsRaidSideKind`), **distinct casters not lines** — and **0 means "not asked"**, not "nobody healed them": a
+  mob bathed in raid AoE keeps 0 because its verdict did not come from healing. `CensusHealProofTest` pins the gates with a
+  fixture that throws a Medium-corporate owner, two mob healers and the name's own self-heal at the count (2 survives, not
+  12), plus the "stronger verdict reports no crowd" case (`Targeted (NPC)` + twelve raid heals → `R1-target`, 0).
+  **Why the details are separate fields and not richer source tags**: `StateStamp()` hashes each claim's `source`
   ordinally and `IdentityPriorStore` persists reasons to disk, so `R4-spell:Boastful Bellow` would change identity's own
   vocabulary — rule-prefix readers (`StartsWith("R9-charm")`, `RememberedRules`), a dozen exact-match assertions and
   every saved ledger row — for the sake of a tooltip. Display detail stays on the display object; the tags stay words.
   Guard: only a verdict whose source starts with `R4-spell`/`R20-petspell` may name a cast, so a borrowed
   `Prior:R4-spell` never credits this capture with a cast it did not see.
+- **A verdict is edited where it is read: the pencil in its own cell** (2026-11). The right-click menu is gone from this
+  grid — and not replaced by another menu. Its verbs are now two `ComboBox`es in popups opened over the clicked cell
+  (`UiElementUtil.OpenCellPopup`) — **the helper MainWindow's Pet Owners edit and `DamageSummary`'s Group cell already call**, so
+  this pane joined the existing users instead of hand-rolling a Popup: placement on the cell, sizing to it, focus-back on close
+  and the close hook are exactly the parts that were fiddly, and the operator named the behaviour as the requirement — *"it was
+  similar to what's still in the pet owners where it had an icon to click on to expand the dropdown. i put a lot of work into
+  getting that working well"*. The class list is `MainActions.ClassList`, the same list those popups and the menus read.
+  Four decisions inside it:
+  - **the whole vocabulary in one list**, so it does not have to be remembered: *Player / Pet / Mercenary / NPC / Clear
+    claim* (`IdentityVocabulary.TypeOptions`, each answer exactly ONCE — the retired menu listed NPC twice, two handlers
+    doing the same thing behind two lines). "Clear claim" carries `IdentityKind.Unknown` because that is precisely what
+    `ClassificationCommands.ClearVerdict` writes, so the pane needs no second verb for one file;
+  - **the list preselects the row's current verdict**, which is what lets `TypeSelectionChanged` refuse a click that
+    changes nothing — otherwise a stray open-and-reselect spends a derive pass and rewrites mirror-overrides.txt. An
+    unplaced name selects nothing (clearing is an action, not a state the row is in);
+  - **a cell edit edits its cell.** Multi-select batching stays where it always was: the two title-bar icons act on the
+    selection (an icon with no row of its own has nothing else to act on), and the fight grids' menu still takes a block.
+    The class list is `MainActions.ClassList`, hoisted out of `MainWindow`'s private field so the window that owns a name
+    and the menus share ONE class vocabulary (`CombatRecordLookup.IsValidClassName` validates the word anyway, which is why
+    the list's leading blank writes nothing rather than a roster row with an empty class);
+  - **the class pencil appears on a `Player` row and nowhere else** (`NameRow.ClassEditable`), because that verb is not a
+    display choice: `SetDefaultPlayerClass` claims the name as a verified player AND appends it to players.txt. On an NPC row
+    that is precisely the pollution this window exists to catch; Pet/Merc rows get nothing (mercenaries are not persisted,
+    a pet's class belongs to nobody's roster); an unplaced name declares itself through Type first.
+- **A write in this pane now re-derives** (`Reconcile` → `RederiveAsync()` + `Refresh()`), the way `FightTable.ApplyOverride`
+  always did. The census builds its own timeline so it is correct on its own — but the fight list, the overlay and every
+  board read the LAST derive's snapshot, so an override written here left the rest of the application classifying by the old
+  answer until the cadence happened to run, and a log that stopped growing never re-derived at all. Both band icons go
+  through it too.
+- **The census walks the rules with a THROWAWAY `ClassificationState`.** It builds a fresh `EntityTimeline`, so the engine's
+  carried aggregates have nothing to be incremental over anyway — and passing them meant a UI-thread rule walk rewriting the
+  same cursor/candidate dictionaries the derive pump walks, one frame at a time. The census swallows what it throws and the
+  derive retires a stage after five failures: the two lanes must not be able to make each other look broken. A from-zero
+  replay costs tens of milliseconds of rules on whatever thread the pane opened on, once per deliberate refresh — which is
+  what a window that never updates by itself is for.
 - **No status line, same style as the fight list.** The top row is the house title bar (`EQGridTitleHeight`, caption
   left in `EQTitleStyle`, controls right) and its only content is the word "Names"; the census summary (names / players /
   pets / mercs / NPCs / rejected · unplaced · contradicting the roster — i.e. every counter on `ClassificationReport`)
   moved to the caption's tooltip, which keeps those counters read by something instead of quietly dead.
 
 Also added to the census earlier and still there: `TotalNames`, `UnresolvedInCapture`, `Row.IsUnresolved` (see the
-correction note above — written for real this time). Tests: `EQLogParser.Wpf.Test/src/ui/common/NamesTableTest.cs`
-(six tests: the tooltip sentences, the Type words, the cast sentence and its absence for non-spell verdicts) — these
-**compile but cannot run on Linux**, so treat them as unbuilt evidence until a Windows run; `CensusCastProofTest` lives in
-the cross-platform assembly and does run here (3/3).
+correction note above — written for real this time).
+
+**Column widths followed, and the numbers.** The pane was still carrying literal startup pixel counts (`Name=220`,
+`Type=150`, `Why=256`, `PlayerClass=145` = **771 px**, frozen whatever the theme said). `ApplyColumnWidths` now reads the same
+table every other grid uses — `CurrentNameWidth` for names (the meter's own name column), and short/medium/shortest sums for
+the rest, plus `CurrentFontSize + 16` on the two cells that carry a pencil (`EQIconStyle` is a square of the font size, and
+8+8 margins are the house icon spacing). At the default 12 pt that is **145 / 88 / 126 / 126 ≈ 385 px**, about half the old
+fixed total, and a theme or font change moves this grid with the others (applied on first `Loaded`, then from
+`EventsThemeChanged`; re-applying on every load would fight an operator who dragged a column).
+**Why not `DataGridUtil.RefreshTableColumns`:** its mapping table has no category for "a word plus an edit icon", and adding
+`Type` or `PlayerClass` there would resize every OTHER grid that maps a column by those words. `AllowResizingColumns` stays on.
+
+Tests: `EQLogParser.Wpf.Test/src/ui/common/NamesTableTest.cs` (the tooltip lines, the operator/rejection distinction, the
+cast and crowd sentences and their absence where they do not belong, `ClassEditable` per kind) — these **compile but cannot
+run on Linux**, so treat them as unbuilt evidence until a Windows run. The parts that do not need WPF moved to the
+cross-platform assembly on purpose: `IdentityVocabularyTest` (9: vocabulary coverage both directions, the corpus check, the
+echo-unknown law, prior/owner-suffix forms, the dropdown's five entries and its one Unknown), `CensusHealProofTest` (4) and
+`CensusCastProofTest` (4). Full cross-platform suite at this commit: **1562 passed, 8 skipped**.
 
 ## The one calculation a scope asks (DerivedTotals)
 

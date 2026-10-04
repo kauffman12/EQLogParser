@@ -329,10 +329,35 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   while somebody tries to read 4,000 rows). Four columns sorted by name (Name | Type | Why | Class): Damage/Healing left because an identity list must not rank
   names by output (`ClassificationReport` still totals them — that is its own row order), and Owner left because `PlayerRegistry` answers it and the Pet Owners
   window lists the same pairs. Two things moved to the **Why cell's tooltip** instead of being deleted: the cast a spell verdict rests on
-  (`ClassificationReport.Row.ReasonDetail`, taken as the **first** cast the R4/R20 gates accept — never by widening the claim source, since `StateStamp` hashes
-  sources and `IdentityPriorStore` persists them; `CensusCastProofTest`) and the sentences no column can carry — "your verdict" / "no claim (you took it back)"
+  (`ClassificationReport.Row.ReasonDetail` — taken per **gate**, not per caster, because "Hobble of Spirits VI" is a prefix of the pet's "Hobble of Spirits Snare
+  VI" and one flat substring test let the pet's spell name itself in a Player row's tooltip; never by widening the claim source, since `StateStamp` hashes
+  sources and `IdentityPriorStore` persists them — `CensusCastProofTest`) and the lines no column can carry — "You chose NPC" / "Claim taken back"
   are the only way to tell a row an operator wrote from one the rules inferred (`ProvenanceFor`, pinned by `NamesTableTest`, Windows-only). No status line: like
   the fight list the pane says nothing about itself, so the census counts ride the caption's tooltip.
+- **Identity WORDS live in `IdentityVocabulary` (Core), and its coverage is asserted twice**: the Why column used to print `R15-healed` / `Prior:R7-graph` at
+  256 px — the rule book's private vocabulary rendered where a person reads instead of greps. `WhyWord` maps each code to two words (`Healed`, `Chat`, `Who`,
+  `Spell`, `Owner`, `NPC list`, `Chosen`…), keeps the borrow marker on priors (`Prior:R7-graph` → *Our side (earlier)*; the ledger stores the rule a verdict came
+  from, so the word is not invented) and drops R5's owner suffix in the cell. **An unmapped code echoes itself rather than being guessed at** — a fallback like
+  "Evidence" would file a new kind of proof under an old meaning, and provenance is the one thing this pane must be honest about. `IdentityVocabularyTest` checks
+  the explicit list in both directions (missing word *and* stale word) **and** runs the rules fixture asserting no row reaches the screen wearing its code; that
+  corpus check immediately caught a code nobody had written a word for (`R3-chat`). Same discipline as the FCT and `HitLabel` vocabularies: a new rule arrives with
+  a word here, and `HealedByCasters` (the number behind *Healed*) is gated exactly like R15 — distinct raid-side Strong casters, self-heals skipped, **0 means "not
+  asked" rather than "nobody healed them"** (`CensusHealProofTest`).
+- **A verdict is edited in its own cell; a context menu hides verbs** (2026-11): the Names grid has **no** ContextMenu at all — right-drag is how a person grabs a
+  block of rows out of a long table, and this pane's menu carried its one most-important verb (*clear my claim*) invisibly while offering two identical NPC lines.
+  Type and Class each carry a pencil that opens a `ComboBox` in a popup over the clicked cell (`UiElementUtil.OpenCellPopup`, the same helper MainWindow's Pet Owners edit and DamageSummary's Group cell call - joined, not re-written, because its
+  cell placement, sizing, focus-back and close hook are the parts the operator meant by "i put a lot of work into getting that working well"). Four laws: the option list shows
+  the **whole** vocabulary at once (`IdentityVocabulary.TypeOptions`: Player / Pet / Mercenary / NPC / Clear claim — each answer exactly once, "Clear claim" carrying
+  `IdentityKind.Unknown` because that is what `ClassificationCommands.ClearVerdict` writes); the combo **preselects the row's current verdict** so the handler can
+  refuse a click that changes nothing (a no-op must not spend a derive pass or rewrite mirror-overrides.txt); a cell edit edits its cell — batching stays with the two
+  title-bar icons and the fight grids' menu; and **the class pencil appears only on a `Player` row** (`NameRow.ClassEditable`) because `SetDefaultPlayerClass` verifies
+  the name AND writes players.txt — an icon on an NPC row is exactly the pollution this window exists to catch, and Pet/Merc rows have nothing to persist. Any write
+  here (dropdown **or** band icon) goes through `Reconcile()` = `RederiveAsync()` + `Refresh()`, like `FightTable.ApplyOverride` always did: the census is right on its
+  own, but every other surface reads the LAST derive's snapshot. And `BuildNameCensus` classifies with a **throwaway** `ClassificationState` — it builds its own
+  `EntityTimeline`, so carried aggregates have nothing to be incremental over, and sharing them would put a UI-thread walk inside the derive pump's cursor tables
+  (census swallows, derive retires a stage after five failures). Column widths come from the theme table (`CurrentNameWidth` + short/medium sums + font-scaled icon
+  allowance: **771 px fixed → ~385 px** at 12 pt) but through this pane's own `ApplyColumnWidths`, NOT `DataGridUtil.RefreshTableColumns` — adding `Type`/`PlayerClass`
+  to its mapping list would resize every other grid that maps those words.
 - **A fight is "still going" on the capture's clock, and one file answers all three meter questions**: the overlay's numbers moved to the
   derived engine first, which left it painting derived figures while `FightManager` still decided whether you ever saw them (open on launch,
   close-for-real-when-hidden, open-yourself-on-a-pull). Those now go through **`MirrorMeter`** — the only reader of
