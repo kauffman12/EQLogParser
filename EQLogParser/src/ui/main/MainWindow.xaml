@@ -538,12 +538,13 @@
                       syncfusion:DockingManager.DesiredWidthInDockedMode="{DynamicResource EQFightWindowWidth}" syncfusion:DockingManager.DesiredWidthInFloatingMode="{DynamicResource EQFightWindowWidth}" syncfusion:DockingManager.CanDocument="False">
           <local:FightTable />
         </ContentControl>
-        <ContentControl x:Name="mirrorFightWindow" Padding="0" Margin="0" syncfusion:DockingManager.Header="Fight List (Derived)" syncfusion:DockingManager.State="Hidden"
-                      syncfusion:DockingManager.DesiredWidthInDockedMode="{DynamicResource EQFightWindowWidth}" syncfusion:DockingManager.DesiredWidthInFloatingMode="{DynamicResource EQFightWindowWidth}" syncfusion:DockingManager.CanDocument="False">
-          <local:MirrorFightTable />
-        </ContentControl>
+        <!-- Vestigial pane, no content on purpose. dockSite.xml files saved while the experimental list existed still
+             name "mirrorFightWindow", and LoadDockState throws on a window it cannot find - the catch resets the
+             operator's ENTIRE layout. This stub absorbs those stale entries; MainWindow hides it after every load. -->
+        <ContentControl x:Name="mirrorFightWindow" syncfusion:DockingManager.Header="Fight List (retired)" syncfusion:DockingManager.State="Hidden"
+                      syncfusion:DockingManager.CanDocument="False"/>
         <ContentControl x:Name="namesWindow" Padding="0" Margin="0" syncfusion:DockingManager.Header="Player/NPC Identity" syncfusion:DockingManager.State="Hidden"
-                      syncfusion:DockingManager.SideInDockedMode="Tabbed" syncfusion:DockingManager.TargetNameInDockedMode="mirrorFightWindow"
+                      syncfusion:DockingManager.SideInDockedMode="Tabbed" syncfusion:DockingManager.TargetNameInDockedMode="npcWindow"
                       syncfusion:DockingManager.DesiredWidthInDockedMode="{DynamicResource EQFightWindowWidth}" syncfusion:DockingManager.DesiredWidthInFloatingMode="{DynamicResource EQFightWindowWidth}" syncfusion:DockingManager.CanDocument="False">
           <local:NamesTable />
         </ContentControl>

@@ -154,17 +154,10 @@ namespace EQLogParser
       emuParsingIcon.Visibility = AppSettings.IsEmuParsingEnabled ? Visibility.Visible : Visibility.Hidden;
 
       /*
-       * The derived list IS the fight list: dock it at startup like the old one always did. (The
-       * EnableCombatMirror dial that gated this is deleted with the engine it hedged between; a settings.txt
-       * still carrying the word simply stops being read.)
-       */
-      DockingManager.SetState(mirrorFightWindow, DockState.Dock);
-
-      /*
        * Selecting rows in the fight list rebuilds the DAMAGE summary from the engine's own facts. One board
-       * on purpose (see MirrorFightTable.DerivedSelectionChanged).
+       * on purpose (see FightTable.DerivedSelectionChanged).
        */
-      if (mirrorFightWindow?.Content is MirrorFightTable fightTable) fightTable.DerivedSelectionChanged += DerivedSelectionChanged;
+      if (npcWindow?.Content is FightTable fightTable) fightTable.DerivedSelectionChanged += DerivedSelectionChanged;
 
       // upgrade
       if (ConfigUtil.IfSet("TriggersWatchForGINA"))
@@ -257,6 +250,17 @@ namespace EQLogParser
           }
         }
 
+        /*
+         * The fight list IS a core window, so it docks at startup whatever the saved state says: during the experiment
+         * an operator could have hidden "the old one" and shown the derived pane instead, and arriving at a restart
+         * with no fight list at all reads as the feature breaking - the exact failure the dock-at-startup law was
+         * written for. The vestigial experimental pane (an empty ContentControl that exists only so old dockSite.xml
+         * entries still resolve - LoadDockState throws on a missing window and the catch resets EVERYTHING) is hidden
+         * again even if the saved state restored it.
+         */
+        DockingManager.SetState(npcWindow, DockState.Dock);
+        DockingManager.SetState(mirrorFightWindow, DockState.Hidden);
+
         DamageStatsBuilder.Instance.EventsUpdateDataPoint += data => QueueChartUpdate(damageChartIcon, data);
         HealingStatsBuilder.Instance.EventsUpdateDataPoint += data => QueueChartUpdate(healingChartIcon, data);
         TankingStatsBuilder.Instance.EventsUpdateDataPoint += data => QueueChartUpdate(tankingChartIcon, data);
@@ -326,48 +330,23 @@ namespace EQLogParser
     }
 
     /*
-     * The app's fight-range provider: the spell/taunt/death/export paths read fights from here. While the engine
-     * is attached to a log it answers (legacy-shaped rows materialized off its facts - see
-     * DeriveEngine.MaterializeFights); the legacy table keeps answering until the deletion pass removes both it
-     * and this second branch. Both windows cannot own one export, so the ordering is the rule, not an accident:
-     * derived first, legacy while the engine is off.
+     * The app's fight-range provider: the spell/taunt/death/export paths read fights from here - legacy-shaped
+     * rows materialized off the capture's facts (see DeriveEngine.MaterializeFights). No live capture answers
+     * EMPTY: the export of a log that is not running has no fights, and there is no second engine to have an
+     * opinion - a fallback here would hide a dead session behind plausible numbers.
      */
     internal List<Fight> GetFights(bool selected = false)
-    {
-      if (mirrorFightWindow?.Content is MirrorFightTable fightTable && fightTable.SessionActive)
-      {
-        return fightTable.GetFights(selected);
-      }
-
-      if (npcWindow?.Content is FightTable table)
-      {
-        return selected ? table.GetSelectedFights() : table.GetFights();
-      }
-
-      return [];
-    }
+      => npcWindow?.Content is FightTable fightTable && fightTable.SessionActive
+        ? fightTable.GetFights(selected)
+        : [];
 
     // The scoped variant for consumers that only need fights overlapping a span (the death viewer's 20-second
-    // window around a kill). From the engine this materializes only the rows whose activity windows touch it;
-    // from the legacy store it is the cheap old list plus the same predicate the viewer always applied.
+    // window around a kill): the engine materializes only the rows whose activity windows touch it. Same empty
+    // answer as GetFights when no capture is running.
     internal List<Fight> GetFightsOverlapping(double fromT, double toT)
-    {
-      if (mirrorFightWindow?.Content is MirrorFightTable fightTable && fightTable.SessionActive)
-      {
-        return fightTable.GetFightsOverlapping(fromT, toT);
-      }
-
-      var all = npcWindow?.Content is FightTable table ? table.GetFights() : [];
-      var overlapping = new List<Fight>();
-      foreach (var fight in all)
-      {
-        if ((fight.BeginDamageTime <= toT && fight.LastDamageTime >= fromT) ||
-            (fight.BeginTankingTime <= toT && fight.LastTankingTime >= fromT))
-          overlapping.Add(fight);
-      }
-
-      return overlapping;
-    }
+      => npcWindow?.Content is FightTable fightTable && fightTable.SessionActive
+        ? fightTable.GetFightsOverlapping(fromT, toT)
+        : [];
 
     internal void AddAndCopyDamageParse(CombinedStats combined, List<PlayerStats> selected)
     {
@@ -800,43 +779,18 @@ namespace EQLogParser
 
     private void ComputeStats()
     {
-      if (npcWindow?.Content is FightTable table && table.GetSelectedFights() is { } fights && table.GetAllRanges() is { } allRanges)
-      {
-        var filtered = fights.OrderBy(npc => npc.Id);
-        var opened = SyncFusionUtil.GetOpenWindows(dockSite);
-
-        GenerateStatsOptions damageStatsOptions = new();
-        damageStatsOptions.Npcs.AddRange(filtered);
-        damageStatsOptions.AllRanges = allRanges;
-        damageStatsOptions.MinSeconds = 0;
-        _ = Task.Run(() => DamageStatsBuilder.Instance.BuildTotalStats(damageStatsOptions)).ContinueWith(t => Log.Error("DamageStatsBuilder error", t.Exception), TaskContinuationOptions.OnlyOnFaulted);
-
-        GenerateStatsOptions healingStatsOptions = new();
-        healingStatsOptions.Npcs.AddRange(filtered);
-        healingStatsOptions.AllRanges = allRanges;
-        healingStatsOptions.MinSeconds = 0;
-        _ = Task.Run(() => HealingStatsBuilder.Instance.BuildTotalStats(healingStatsOptions)).ContinueWith(t => Log.Error("HealingStatsBuilder error", t.Exception), TaskContinuationOptions.OnlyOnFaulted);
-
-        GenerateStatsOptions tankingStatsOptions = new();
-        tankingStatsOptions.Npcs.AddRange(filtered);
-        tankingStatsOptions.AllRanges = allRanges;
-        tankingStatsOptions.MinSeconds = 0;
-
-        if (opened.TryGetValue((tankingSummaryIcon.Tag as string)!, out var control) && control != null)
-        {
-          tankingStatsOptions.DamageType = ((TankingSummary)control.Content).DamageType;
-        }
-
-        _ = Task.Run(() => TankingStatsBuilder.Instance.BuildTotalStats(tankingStatsOptions)).ContinueWith(t => Log.Error("TankingStatsBuilder error", t.Exception), TaskContinuationOptions.OnlyOnFaulted);
-      }
+      // The timer's rebuild (damage validation toggles, load settling) re-announces the CURRENT selection through
+      // the exact path a click takes, so a settings change can never build boards from a different world than the
+      // one the list is pointing at. No capture, no selection, nothing to rebuild.
+      if (npcWindow?.Content is FightTable table && table.SessionActive)
+        DerivedSelectionChanged(table.GetSelectedFights());
     }
 
     /*
-     * The same question ComputeStats asks of FightManager state, asked of the the derivation instead: the
-     * builders get ordinary Fight objects whose blocks were rebuilt from captured facts, so the boards show what
-     * the derived list thinks happened without any summary knowing anything new. Damage and tanking are both fed
-     * here, off the same materialized rows — a derived row carries what the raid did to it in DamageBlocks and
-     * what it did to the raid in TankingBlocks, which is the split TankingStatsBuilder already reads.
+     * The board path, from the ONLY fight list: the builders get ordinary Fight objects whose blocks were rebuilt
+     * from captured facts, so no summary has to know anything new. Damage and tanking are both fed here, off the
+     * same materialized rows — a derived row carries what the raid did to it in DamageBlocks and what it did to
+     * the raid in TankingBlocks, which is the split TankingStatsBuilder already reads.
      *
      * The healing board arrives by a different door, because it reads records rather than fights: the session
      * materializes the heal facts inside this selection's window and hands them in as options.Heals (see
@@ -852,8 +806,8 @@ namespace EQLogParser
       if (session is null) return;
 
       /*
-       * Read the tanking board's NPC filter off the open window BEFORE leaving the UI thread — ComputeStats does
-       * the same lookup for the legacy path, and the dock site is not something a worker task may walk.
+       * Read the tanking board's NPC filter off the open window BEFORE leaving the UI thread - the dock site is
+       * not something a worker task may walk.
        */
       var tankingDamageType = 0;
       if (SyncFusionUtil.GetOpenWindows(dockSite).TryGetValue((tankingSummaryIcon.Tag as string)!, out var tankControl)
@@ -1252,7 +1206,7 @@ namespace EQLogParser
           // The derived fight list has no rows of its own until the first snapshot (bulk ingest parks the derive
           // lanes by design), so without this it would sit as a silent empty grid through the whole load. The
           // band owns itself from here: EOF flips it to "building", the first snapshot takes it down.
-          if (mirrorFightWindow?.Content is MirrorFightTable pumpTable) pumpTable.ReportCaptureProgress(filePercent);
+          if (npcWindow?.Content is FightTable pumpTable) pumpTable.ReportCaptureProgress(filePercent);
 
           statusText.Text = filePercent < 100.0 ? $"Reading Log.. {filePercent}% in {seconds} seconds" : $"Additional Processing... {seconds} seconds";
           statusText.Foreground = Application.Current.Resources["EQWarnForegroundBrush"] as SolidColorBrush;
@@ -1391,10 +1345,6 @@ namespace EQLogParser
               DockingManager.SetState(npcWindow, DockState.Dock);
             }
 
-            if (DockingManager.GetState(mirrorFightWindow) == DockState.Hidden)
-            {
-              DockingManager.SetState(mirrorFightWindow, DockState.Dock);
-            }
 
             CloseLogFile(changed);
             fileText.Text = $"-- {theFile}";

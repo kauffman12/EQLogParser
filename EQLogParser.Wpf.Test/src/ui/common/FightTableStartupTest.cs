@@ -5,14 +5,14 @@ using EQLogParser;
 namespace EQLogParser.Wpf.Test;
 
 /*
- * The startup contract for the derived fight list: `new MirrorFightTable()` must not throw, and its toolbar
+ * The startup contract for the derived fight list: `new FightTable()` must not throw, and its toolbar
  * handlers must distinguish "XAML is still parsing" from "the user clicked". MainWindow's own XAML constructs this
  * pane, so a constructor exception here is not a failed window - it is CreateAppError and no app at all.
  *
- * The reported crashes came in BOTH shapes, one build apart: first ShowHpChanged ran with mirrorShowHp itself still
+ * The reported crashes came in BOTH shapes, one build apart: first ShowHpChanged ran with fightShowHp itself still
  * null, then (with a sender-null guard in place) it fired again AFTER this checkbox was wired but BEFORE a column
- * declared later in the markup existed - NRE on mirrorDamageColumn. Lesson, and the convention every legacy table
- * already follows: guard on the PANE's readiness (`mirrorGrid?.View is null`), never on the sender's. The grid's View
+ * declared later in the markup existed - NRE on damageColumn. Lesson, and the convention every legacy table
+ * already follows: guard on the PANE's readiness (`fightGrid?.View is null`), never on the sender's. The grid's View
  * materializes only when the constructor assigns ItemsSource, so it is null for every synthetic pre-load firing and
  * non-null for every real one - including the constructor's own sync of the saved dials.
  *
@@ -25,7 +25,7 @@ namespace EQLogParser.Wpf.Test;
  * these tests pin the CONSTRUCTION contract - field wiring order and handler sentinels - not theme fidelity.
  */
 [TestClass]
-public sealed class MirrorFightTableStartupTest
+public sealed class FightTableStartupTest
 {
   private string _savedConfigDir = "";
   private string _tempDir = "";
@@ -34,7 +34,7 @@ public sealed class MirrorFightTableStartupTest
   public void Setup()
   {
     _savedConfigDir = ConfigUtil.ConfigDir;
-    _tempDir = Path.Combine(Path.GetTempPath(), "mirrorfight-" + Guid.NewGuid().ToString("N"));
+    _tempDir = Path.Combine(Path.GetTempPath(), "fightstartup-" + Guid.NewGuid().ToString("N"));
     Directory.CreateDirectory(_tempDir);
     ConfigUtil.ConfigDir = _tempDir;
     PlayerRegistry.Instance.Clear();
@@ -69,8 +69,8 @@ public sealed class MirrorFightTableStartupTest
   {
     // This line alone reproduces both reported crashes: it is MainWindow's own construction path for this pane,
     // run with no session and no log - the state at startup.
-    MirrorFightTable? table = null;
-    Sta.Run(() => table = new MirrorFightTable());
+    FightTable? table = null;
+    Sta.Run(() => table = new FightTable());
     Assert.IsNotNull(table);
   }
 
@@ -83,11 +83,11 @@ public sealed class MirrorFightTableStartupTest
     ConfigUtil.SetSetting("NpcShowInactivityBreaks", false);
     ConfigUtil.SetSetting("NpcShowHitPoints", false);
 
-    MirrorFightTable? table = null;
-    Sta.Run(() => table = new MirrorFightTable());
+    FightTable? table = null;
+    Sta.Run(() => table = new FightTable());
 
-    Assert.IsFalse(table!.mirrorShowBreaks.IsChecked == true, "the saved OFF survived XAML's IsChecked=True");
-    Assert.IsFalse(table.mirrorShowHp.IsChecked == true);
+    Assert.IsFalse(table!.fightShowBreaks.IsChecked == true, "the saved OFF survived XAML's IsChecked=True");
+    Assert.IsFalse(table.fightShowHp.IsChecked == true);
   }
 
   [TestMethod]
@@ -97,14 +97,14 @@ public sealed class MirrorFightTableStartupTest
     // Unchecking HP on a constructed pane is the user's click - the column must hide and the dial persist.
     ConfigUtil.SetSetting("NpcShowHitPoints", true);
 
-    MirrorFightTable? table = null;
+    FightTable? table = null;
     Sta.Run(() =>
     {
-      table = new MirrorFightTable();
-      table.mirrorShowHp.IsChecked = false;
+      table = new FightTable();
+      table.fightShowHp.IsChecked = false;
     });
 
-    Assert.IsTrue(table!.mirrorDamageColumn.IsHidden, "a post-load uncheck hid the column");
+    Assert.IsTrue(table!.damageColumn.IsHidden, "a post-load uncheck hid the column");
     Assert.IsFalse(ConfigUtil.IfSet("NpcShowHitPoints", true), "the dial was saved");
   }
 }

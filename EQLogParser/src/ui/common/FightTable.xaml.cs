@@ -1,666 +1,821 @@
-using Syncfusion.Data;
 using Syncfusion.UI.Xaml.Grid;
 using Syncfusion.UI.Xaml.ScrollAxis;
-using Syncfusion.Windows.Tools.Controls;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Input;
 using System.Windows.Threading;
+
+using EQLogParser;
 
 namespace EQLogParser
 {
+  /*
+   * THE fight list. Every grid convention is the old table's, kept on purpose: the same columns in the legacy order
+   * (Initial Hit Time | HP | Name, duration and hits on the row tooltip), the same search/HP/Inactivity/Tanking
+   * header - but the rows are DERIVED, not accumulated (CombatCapture → ClassificationRules → FightProjection →
+   * Sectionizer), so they re-derive when an override changes what a name is. When the legacy list was deleted this
+   * pane took over its window name and menu entry too. Selection feeds the summary boards from the captured facts
+   * (see DerivedSelectionChanged), and the right-click menu is where R10 lives: say what a name actually is
+   * (Set as Player / Mercenary / Pet / NPC), which saves per server and re-derives.
+   */
   public partial class FightTable
   {
-    // time before creating new group
-    public const int GroupTimeout = 120;
-    public const bool UseBatchMode = false;
+    /*
+     * Raised when the selection settles, with the derived fights behind the selected rows (empty when
+     * nothing is selected — an empty selection means "show no data", same as the old list's rule).
+     *
+     * One-way on purpose: the grid says WHICH fights, and MainWindow decides what a board is. Nothing can push
+     * a selection back into the grid, so no viewer can ever make the list disagree with itself.
+     */
+    internal event Action<IReadOnlyList<DerivedFight>> DerivedSelectionChanged;
 
-    // NPC Search
-    private static int _currentFightSearchIndex;
-    private static int _currentFightSearchDirection = 1;
-    private static Fight _currentSearchEntry;
-    private static bool _needSelectionChange;
+    // Selection settles on a short pause rather than per click, and much more cheaply than the 750 ms the
+    // legacy table waits: nothing is recomputed here, the click only says which fights are wanted. Long
+    // enough that dragging a range across a thousand rows fires once, short enough to feel immediate.
+    private const int SelectionSettleMs = 350;
 
-    private readonly ObservableCollection<Fight> _fights = [];
-    private readonly ObservableCollection<Fight> _nonTankingFights = [];
-    private bool _currentShowBreaks;
-    private bool _currentShowHp;
-    private int _currentGroup = 1;
-    private int _currentNonTankingGroup = 1;
-    private uint _currentSortId = 1;
-    private bool _needRefresh;
-    private bool _isEveryOther;
-    private TimeRange _allRanges;
-
-    private readonly List<Fight> _fightsToProcess = [];
-    private readonly List<Fight> _nonTankingFightsToProcess = [];
+    private ObservableCollection<DerivedFightRow> _rows = [];
     private readonly DispatcherTimer _selectionTimer;
-    private readonly DispatcherTimer _searchTextTimer;
-    private readonly DispatcherTimer _updateTimer;
-    private bool _batchMode = UseBatchMode;
+
+    // What was last announced, as fight ids. Two jobs: a stale snapshot's rows cannot be re-announced as
+    // if they were new, and a grid that re-raises SelectionChanged with the same selection (or with none,
+    // when an ItemsSource swap lands) must not clear stats nobody changed.
+    private List<int> _announcedIds = [];
 
     /*
-     * The grid's own span on the heartbeat (PerfCounters, UiBeatMonitor). It started with the table and keeps running whether or not the
-     * Fights tab is anywhere visible, inserting rows into a Syncfusion grid on the UI thread — which makes it a first-order suspect for
-     * any freeze reported in a different window, and the reason it is measured rather than assumed innocent.
+     * The names the last right-click wrote, kept until the derive they asked for finishes so the panel can say
+     * what actually became of them. Setting a name to Pet or Player takes its row OFF the list by design (only
+     * hostile-side names key an encounter), which otherwise reads as "my click deleted the fight".
      */
-    private static readonly int ProcessFightsId = PerfCounters.Register("ui.fightTable");
+    private List<string> _pendingOverride;
+
+    /*
+     * Loading-band state (see loadOverlay in the XAML). `_loadBandSettled` is this session's "a snapshot has
+     * landed" flag: the band goes down for good at the first Derived - a quiet stretch mid-file can legitimately
+     * complete a derive under 100 %, and real rows beat a bar - and it comes back only with the next session.
+     * `_capturedFacts` rides in from the session's capture event to put a number on what the build is chewing
+     * through; reading itself is announced by the application-wide status line, not here (see ReportCaptureProgress).
+     */
+    private bool _loadBandSettled;
+    private long _capturedFacts;
+
+    /*
+     * What a row IS, across derives. DerivedFight.Id cannot say that: FightProjection renumbers the list on every
+     * pass (Id = i + 1 over the rows of THAT pass), so one override - which removes rows on purpose - shifts
+     * every number after it, and restoring by id would highlight whatever fight moved into the old slot while
+     * showing its numbers underneath. A section of a name is identified by the name and the moment it began;
+     * both come out of the same facts on every pass.
+     */
+    private readonly record struct FightKey(string Name, double BeginTime);
+
+    private DeriveEngine _session;
+    private bool _currentShowBreaks;
+    private bool _currentShowHp;
+    private bool _currentShowTanking;
+
+    // The search box's placeholder doubles as the empty-filter state: while it shows, nothing is filtered.
+    private bool _searchPlaceholder;
 
     public FightTable()
     {
       InitializeComponent();
 
-      // fight search box
-      fightSearchBox.FontStyle = FontStyles.Italic;
+      // Same placeholder idiom as the legacy table: the prompt is text in the box, cleared on focus.
+      _searchPlaceholder = true;
       fightSearchBox.Text = Resource.NPC_SEARCH_TEXT;
+      fightSearchBox.FontStyle = FontStyles.Italic;
 
-      menuItemClear.IsEnabled = menuItemSelectFight.IsEnabled = menuItemUnselectFight.IsEnabled =
-        menuItemSetPet.IsEnabled = menuItemSetPlayer.IsEnabled = menuItemRefresh.IsEnabled = false;
+      fightGrid.ItemsSource = _rows;
+      fightShowBreaks.IsChecked = _currentShowBreaks = ConfigUtil.IfSet("NpcShowInactivityBreaks", true);
 
-      _selectionTimer = new DispatcherTimer(DispatcherPriority.Send) { Interval = new TimeSpan(0, 0, 0, 0, 750) };
-      _selectionTimer.Tick += (_, _) =>
-      {
-        if (!rightClickMenu.IsOpen)
-        {
-          _allRanges = new TimeRange();
-          var selected = dataGrid.SelectedItems?.Cast<Fight>().ToList();
-          if (selected != null)
-          {
-            foreach (var fight in selected.OrderBy(sel => sel.Id))
-            {
-              if (!fight.IsInactivity)
-              {
-                _allRanges.Add(new TimeSegment(fight.BeginTime, fight.LastTime));
-              }
-            }
-          }
+      // HP is the legacy table's own knob reading its own saved setting: the two grids sit side by side to be
+      // compared, so one checkbox's meaning should not fork between them.
+      fightShowHp.IsChecked = _currentShowHp = ConfigUtil.IfSet("NpcShowHitPoints");
+      damageColumn.IsHidden = !_currentShowHp;
 
-          MainActions.FireFightSelectionChanged(selected);
-        }
-        else
-        {
-          _needSelectionChange = true;
-        }
+      // Same inheritance for the tanking dial, same saved word ("NpcShowTanking", default on): an operator who
+      // hides mob-only rows in the legacy table keeps that filter on arrival.
+      fightShowTanking.IsChecked = _currentShowTanking = ConfigUtil.IfSet("NpcShowTanking", true);
 
-        _selectionTimer.Stop();
-      };
+      // The time column takes the theme's date-time width like every other table that stamps a line, rather
+      // than a hand-picked number that stops fitting when the font scale changes.
+      beginColumn.Width = ThemeConfig.CurrentDateTimeWidth;
+      ApplyFilter();
 
-      _searchTextTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 750) };
+      // Legacy's search debounce, same interval: a name typed at fight speed arrives in a few hundred ms.
+      _searchTextTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(750) };
       _searchTextTimer.Tick += (_, _) =>
       {
+        _searchTextTimer.Stop();
         if (fightSearchBox.Text.Length > 0)
         {
           SearchForNpc();
         }
-
-        _searchTextTimer.Stop();
       };
 
-      _updateTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1000) };
-      _updateTimer.Tick += (_, _) => DoProcessFights();
-      _updateTimer.Start();
-
-      // read show hp setting
-      _currentShowHp = ConfigUtil.IfSet("NpcShowHitPoints");
-      fightShowHitPoints.IsChecked = _currentShowHp;
-
-      // read show breaks and spells setting
-      fightShowBreaks.IsChecked = _currentShowBreaks = ConfigUtil.IfSet("NpcShowInactivityBreaks", true);
-      fightShowTanking.IsChecked = ConfigUtil.IfSet("NpcShowTanking", true);
-      dataGrid.ItemsSource = fightShowTanking.IsChecked.Value ? _fights : _nonTankingFights;
-
-      // default these columns to descending
-      var desc = new[] { "SortId" };
-      dataGrid.SortColumnsChanging += (s, e) => DataGridUtil.SortColumnsChanging(s, e, desc);
-      dataGrid.SortColumnsChanged += (s, e) => DataGridUtil.SortColumnsChanged(s, e, desc);
-
-      CombatEvents.ActiveDataCleared += EventsClearedActiveData;
-      FightManager.Instance.EventsRemovedFight += EventsRemovedFight;
-      FightManager.Instance.EventsNewFight += EventsNewFight;
-      FightManager.Instance.EventsUpdateFight += EventsUpdateFight;
-      FightManager.Instance.EventsNewNonTankingFight += EventsNewNonTankingFight;
-      ThemeConfig.EventsThemeChanged += EventsThemeChanged;
-      MainActions.EventsLogLoadingComplete += EventsLogLoadingComplete;
-    }
-
-    private void EventsLogLoadingComplete(string file, bool open)
-    {
-      if (open)
+      _selectionTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(SelectionSettleMs) };
+      _selectionTimer.Tick += (_, _) =>
       {
-        // Log loading complete — flush all queued fights at once
-        _batchMode = false;
-        _updateTimer.Stop();
-        DoProcessFights(); // process everything in one batch
-        _updateTimer.Start();
-      }
+        _selectionTimer.Stop();
+        AnnounceSelection();
+      };
+
+      DeriveEngine.ActiveChanged += OnActiveChanged;
+      Attach(DeriveEngine.Active);
     }
 
-    internal List<Fight> GetSelectedFights()
-    {
-      if (dataGrid?.SelectedItems is { } selected)
-      {
-        return selected.Cast<Fight>().Where(item => !item.IsInactivity).ToList();
-      }
-
-      return [];
-    }
-
-    internal List<Fight> GetFights()
-    {
-      if (dataGrid?.ItemsSource is ObservableCollection<Fight> fights)
-      {
-        return fights.Where(item => !item.IsInactivity).ToList();
-      }
-
-      return [];
-    }
-
-    internal TimeRange GetAllRanges()
-    {
-      return _allRanges;
-    }
-
-    private void EventsUpdateFight(Fight fight) => _needRefresh = true;
-    private void EventsRemovedFight(string name) => RemoveFight(name);
-    private void EventsNewFight(Fight fight) => ProcessFight(fight);
-    private void EventsNewNonTankingFight(Fight fight) => ProcessNonTankingFight(fight);
-    private void ClearClick(object sender, RoutedEventArgs e)
-    {
-      // Clear() no longer raises ActiveDataCleared itself (the signal belongs to the clear path, not the store), so
-      // this button raises it with the payload Clear's default used to pass through — the grids blank along with the store.
-      FightManager.Instance.Clear();
-      CombatEvents.FireActiveDataCleared(true);
-
-      // The record cache and every parsed event drop together here, which is the most the collector has ever had to hand back in one go.
-      GcTidyUp.Request("fight list cleared");
-    }
-    private void SelectionChanged(object sender, GridSelectionChangedEventArgs e) => DataGridSelectionChanged();
-
-    private void EventsThemeChanged(string _)
-    {
-      // just toggle row style to get it to refresh
-      var style = dataGrid.RowStyle;
-      dataGrid.RowStyle = null;
-      dataGrid.RowStyle = style;
-      DataGridUtil.RefreshTableColumns(dataGrid);
-    }
-
-    private void ItemsSourceChanged(object sender, GridItemsSourceChangedEventArgs e)
-    {
-      dataGrid.View.Filter = item => !(_currentShowBreaks is false && ((Fight)item).IsInactivity);
-    }
-
-    private static void RemoveFight(ObservableCollection<Fight> fights, string name)
-    {
-      for (var i = fights.Count - 1; i >= 0; i--)
-      {
-        if (!fights[i].IsInactivity && !string.IsNullOrEmpty(fights[i].Name) && fights[i].Name.Equals(name, StringComparison.OrdinalIgnoreCase))
-        {
-          fights.RemoveAt(i);
-        }
-      }
-    }
-
-    private void RightClickClosed(object sender, RoutedEventArgs e)
-    {
-      if (_needSelectionChange)
-      {
-        MainActions.FireFightSelectionChanged(dataGrid.SelectedItems?.Cast<Fight>().ToList());
-        _needSelectionChange = false;
-      }
-    }
-
-    private void RightClickOpening(object sender, ContextMenuEventArgs e)
-    {
-      var source = e.OriginalSource as dynamic;
-      if (source.DataContext is Fight fight)
-      {
-        dataGrid.CurrentItem = fight;
-      }
-    }
-
-    private void RemoveFight(string name)
+    private void OnActiveChanged()
     {
       Dispatcher.InvokeAsync(() =>
       {
-        RemoveFight(_fights, name);
-        RemoveFight(_nonTankingFights, name);
-      }, DispatcherPriority.DataBind);
-    }
-
-    private async void SetPetClick(object sender, RoutedEventArgs e)
-    {
-      if (dataGrid.SelectedItem is Fight { IsInactivity: false } npc)
-      {
-        var name = npc.Name;
-        await Task.Delay(120);
-        PlayerRegistry.Instance.AddVerifiedPet(name);
-        RemoveFight(name); // force in case already in the pet list for some reason
-      }
-    }
-
-    private async void SetPlayerClick(object sender, RoutedEventArgs e)
-    {
-      if (dataGrid.SelectedItem is Fight { IsInactivity: false } npc)
-      {
-        var name = npc.Name;
-        var dateTime = DateUtil.ToDotNetSeconds(DateTime.Now);
-        await Task.Delay(120);
-        PlayerRegistry.Instance.AddVerifiedPlayerByOperator(name, dateTime);
-        RemoveFight(name); // force in case already in the player list for some reason
-      }
-    }
-
-    private void ProcessFight(Fight fight)
-    {
-      lock (_fightsToProcess) _fightsToProcess.Add(fight);
-    }
-
-    private void ProcessNonTankingFight(Fight fight)
-    {
-      lock (_fightsToProcess) _nonTankingFightsToProcess.Add(fight);
-    }
-
-    /* Wrapped rather than instrumented inside, so the batch-mode early-out is not mistaken for a one-microsecond pass. */
-    private void DoProcessFights() => PerfCounters.Run(ProcessFightsId, ProcessFightQueue);
-
-    private void ProcessFightQueue()
-    {
-      if (_batchMode) return;
-
-      _isEveryOther = !_isEveryOther;
-
-      List<Fight> processList = null;
-      List<Fight> processNonTankingList = null;
-      lock (_fightsToProcess)
-      {
-        if (_fightsToProcess.Count > 0)
+        Detach();
+        Attach(DeriveEngine.Active);
+        if (DeriveEngine.Active is null)
         {
-          processList = [];
-          processList.AddRange(_fightsToProcess);
-          _fightsToProcess.Clear();
+          _selectionTimer.Stop();
+          _announcedIds = [];
+          _rows.Clear();
+          fightStatus.Text = "No log open";
+          SetLoadBand(null);
+        }
+        else
+        {
+          // A new session is a new load: the band may show again, and its counters start from nothing.
+          _loadBandSettled = false;
+          _capturedFacts = 0;
+          fightStatus.Text = "Capturing...";
+        }
+      });
+    }
+
+    // Derivation completes on a background thread; rows swap on the dispatcher. Big logs derive
+    // thousands of fights — a whole-collection ItemsSource swap re-lays-out once instead of
+    // signalling every row insert, and ItemsSourceChanged reapplies the divider filter.
+    // Internal for the band's WPF test (a live session is not needed to hand this panel a snapshot); every
+    // production call arrives through the session's Derived event.
+    internal void OnDerived(DerivedSnapshot snapshot)
+    {
+      Dispatcher.InvokeAsync(() =>
+      {
+        // Whatever the band was saying, the list itself is now the answer - including the mid-load case where
+        // the reader pump is still under 100 %: real rows beat a progress bar, and for this session they win.
+        _loadBandSettled = true;
+        SetLoadBand(null);
+
+        // The mark is a reference to an OLD row that the swap discards: drop it with the rows, or a cleared
+        // highlight would sit on nothing and the next search would skip its own bookkeeping.
+        ClearSearchMark();
+        /*
+         * What the user had selected, remembered by name + start time and put back on the new rows.
+         *
+         * A derive is not a rare event on this panel - every identity override re-derives on purpose - so a
+         * swap that dropped the selection would make the feature feel like it deleted the user's work: they set
+         * `Dangle` to Pet, and the row they were looking at plus the board under it both vanish. Name and start
+         * time are read off the same facts on every pass, so the fight (with this pass's numbers in it) is found
+         * again - see FightKey for why the row number cannot be that key.
+         *
+         * The one case not restored is a user-sorted grid: the keys survive but their new positions depend on how
+         * the sort landed, and guessing at row indices to restore a selection would put the highlight on some
+         * other fight. Better to lose the highlight than to lie about it.
+         */
+        var keep = new HashSet<FightKey>();
+        foreach (var fight in GetSelectedFights()) keep.Add(KeyOf(fight));
+        var restorable = keep.Count > 0 && fightGrid.SortColumnDescriptions.Count == 0;
+
+        // The rows the last announcement pointed at no longer exist: forget them rather than let the swap's
+        // selection reset look like a change and clear a summary nobody touched. What is on that board now
+        // came from the previous pass, and stays there until the next click - or until the selection below
+        // comes back, which re-announces with THIS pass's numbers.
+        _selectionTimer.Stop();
+        _announcedIds = [];
+
+        _rows = new ObservableCollection<DerivedFightRow>(snapshot.Rows);
+        fightGrid.ItemsSource = _rows;
+
+        if (restorable)
+        {
+          RestoreSelection(keep);
+          AnnounceSelection();
         }
 
-        if (_nonTankingFightsToProcess.Count > 0)
-        {
-          processNonTankingList = [];
-          processNonTankingList.AddRange(_nonTankingFightsToProcess);
-          _nonTankingFightsToProcess.Clear();
-        }
+        // The header says nothing more about this pass. "Derived HH:mm:ss - N fights, M facts, X ms" never fit
+        // the dock beside three columns, and the rows themselves are the message; what still earns the space is the
+        // override verdict (the user asked a question seconds before) and clearing a placeholder or stale failure
+        // line that has served its turn. Selection messages come from AnnounceSelection and must survive.
+        var outcome = OverrideOutcome().TrimStart(' ', '-');
+        if (outcome.Length > 0)
+          fightStatus.Text = outcome;
+        else if (fightStatus.Text == "No log open"
+              || fightStatus.Text.StartsWith("Capturing", StringComparison.Ordinal)
+              || fightStatus.Text.StartsWith("Derive failed", StringComparison.Ordinal))
+          fightStatus.Text = string.Empty;
+      });
+    }
+
+    private void OnDeriveFailed(string message)
+    {
+      // Both halves on the dispatcher: this handler runs on the derive thread, and OverrideOutcome reads the
+      // pending names from the UI thread - a cross-thread clear would only cost a sentence, but it is not that.
+      Dispatcher.InvokeAsync(() =>
+      {
+        _pendingOverride = null;
+        // The session retries a failed pass itself (backoff ladder, DeriveEngine); the line says so rather
+        // than leaving the reader looking for a button that no longer exists.
+        fightStatus.Text = $"Derive failed (retrying automatically): {message}";
+      });
+    }
+
+    /*
+     * What became of the names the user just ruled on, phrased by what the list actually does now. Nothing here
+     * guesses: a name still has a row if a row carrying its name came out of this pass, and "left the list" is
+     * the honest wording for a name that is raid-side now (its damage still counts, inside whatever it hit).
+     */
+    private string OverrideOutcome()
+    {
+      if (_pendingOverride is not { Count: > 0 } names) return string.Empty;
+      _pendingOverride = null;
+
+      var listed = 0;
+      foreach (var row in _rows)
+      {
+        if (row.Fight is not { } fight) continue;
+        for (var i = 0; i < names.Count; i++)
+          if (string.Equals(fight.Name, names[i], StringComparison.OrdinalIgnoreCase)) listed++;
       }
 
-      if (processList != null)
+      var gone = names.Count - listed;
+      if (gone == 0)
+        return $" - override applied, all {names.Count} name{(names.Count == 1 ? "" : "s")} still listed";
+
+      return $" - override applied: {gone} name{(gone == 1 ? "" : "s")} left the list"
+             + (listed > 0 ? $", {listed} still on it" : string.Empty);
+    }
+
+    /*
+     * Capture heartbeat (dispatcher thread already). The count used to replace the status line every tick, which
+     * read as a terminal ticking past; it belongs on the loading band, next to the file progress that says when
+     * the number will stop moving. With no band showing there is nothing to update - a settled list refreshes
+     * through OnDerived, which is the message.
+     */
+    private void OnCapturing(long total)
+    {
+      _capturedFacts = total;
+      if (loadOverlay.Visibility == Visibility.Visible) UpdateLoadDetail();
+    }
+
+    /*
+     * The reader pump MainWindow drives every ~500 ms while a file is open (byte progress through the log). Called
+     * on the dispatcher; `percent` counts against the size the file had when reading began, so a growing live tail
+     * runs past 100 - >= 100 means "reading is done", which is the truth from the reader's side, and the panel then
+     * waits for the first snapshot on its own. The percent itself is NOT shown here - the application-wide status
+     * line counts it already, and a second copy in the dock duplicates it without adding anything.
+     */
+    internal void ReportCaptureProgress(double percent)
+    {
+      if (Dispatcher.CheckAccess() == false)
       {
-        var lastWithTankingTime = double.NaN;
-
-        var searchAttempts = 0;
-        foreach (var fight in _fights.Reverse())
-        {
-          if (searchAttempts++ == 30 || fight.IsInactivity)
-          {
-            break;
-          }
-
-          lastWithTankingTime = double.IsNaN(lastWithTankingTime) ? fight.LastTime : Math.Max(lastWithTankingTime, fight.LastTime);
-        }
-
-        processList.ForEach(fight =>
-        {
-          if (!double.IsNaN(lastWithTankingTime) && fight.BeginTime - lastWithTankingTime >= GroupTimeout)
-          {
-            _currentGroup++;
-            AddDivider(fight, _fights, lastWithTankingTime);
-          }
-
-          fight.GroupId = _currentGroup;
-          AddFight(fight, _fights);
-          lastWithTankingTime = double.IsNaN(lastWithTankingTime) ? fight.LastTime : Math.Max(lastWithTankingTime, fight.LastTime);
-        });
-
-        NewRowsAdded(_fights);
+        Dispatcher.InvokeAsync(() => ReportCaptureProgress(percent));
+        return;
       }
 
-      if (processNonTankingList != null)
+      // No session gate: while the reader pump runs this window is either showing the band or docked-hidden
+      // (engine off), and a hidden band costs nothing. The only veto is "rows already landed this session".
+      if (_loadBandSettled) return;
+
+      // The reading phase says nothing HERE: the status line at the top of the application counts the same pump's
+      // percent (and seconds) already, and a second copy in the dock duplicates it. The one gap only this panel can
+      // speak of is EOF-to-first-snapshot - file done, rows still being built - so that is all the band shows.
+      if (percent >= 100.0)
+        SetLoadBand("Building derived fight list\u2026");
+    }
+
+    // null takes the band down; UI thread. The bar is the XAML's own indeterminate one - the only phase this band
+    // speaks of has no known length, and the phase that DOES (reading) reports through the application status line.
+    private void SetLoadBand(string headline)
+    {
+      if (headline is null)
       {
-        var lastNonTankingTime = double.NaN;
-
-        var searchAttempts = 0;
-        foreach (var fight in _nonTankingFights.Reverse())
-        {
-          if (searchAttempts++ == 30 || fight.IsInactivity)
-          {
-            break;
-          }
-
-          lastNonTankingTime = double.IsNaN(lastNonTankingTime) ? fight.LastDamageTime : Math.Max(lastNonTankingTime, fight.LastDamageTime);
-        }
-
-        processNonTankingList.ForEach(fight =>
-        {
-          if (!double.IsNaN(lastNonTankingTime) && fight.DamageHits > 0 && fight.BeginTime - lastNonTankingTime >= GroupTimeout)
-          {
-            _currentNonTankingGroup++;
-            AddDivider(fight, _nonTankingFights, lastNonTankingTime);
-          }
-
-          fight.NonTankingGroupId = _currentNonTankingGroup;
-          AddFight(fight, _nonTankingFights);
-          lastNonTankingTime = double.IsNaN(lastNonTankingTime) ? fight.LastDamageTime : Math.Max(lastNonTankingTime, fight.LastDamageTime);
-        });
-
-        NewRowsAdded(_nonTankingFights);
+        loadOverlay.Visibility = Visibility.Collapsed;
+        return;
       }
 
-      if (_needRefresh && ((processList == null && dataGrid.ItemsSource == _fights) || (processNonTankingList == null && dataGrid.ItemsSource == _nonTankingFights)) &&
-        (Keyboard.GetKeyStates(Key.LeftShift) & KeyStates.Down) == 0 && (Keyboard.GetKeyStates(Key.LeftCtrl) & KeyStates.Down) == 0)
+      loadText.Text = headline;
+      UpdateLoadDetail();
+      loadOverlay.Visibility = Visibility.Visible;
+    }
+
+    private void UpdateLoadDetail()
+      => loadDetail.Text = _capturedFacts > 0 ? $"{_capturedFacts:N0} facts captured" : "waiting for first facts";
+
+    private void Attach(DeriveEngine session)
+    {
+      _session = session;
+      if (session is not null)
       {
-        dataGrid?.View?.RefreshFilter();
-        _needRefresh = false;
+        session.Derived += OnDerived;
+        session.DeriveFailed += OnDeriveFailed;
+        session.Capturing += OnCapturing;
       }
     }
 
-    private void AddFight(Fight fight, ObservableCollection<Fight> list)
+    private void Detach()
     {
-      fight.SortId = _currentSortId++;
-      list.Add(fight);
-    }
-
-    private void AddDivider(Fight fight, ObservableCollection<Fight> list, double lastTime)
-    {
-      var seconds = fight.BeginTime - lastTime;
-      var divider = new Fight
+      if (_session is not null)
       {
-        LastTime = fight.BeginTime,
-        BeginTime = lastTime,
-        IsInactivity = true,
-        BeginTimeString = Fight.Breaktime,
-        Name = "Inactivity > " + DateUtil.FormatGeneralTime(seconds),
-        TooltipText = "No Data During This Time",
-        SortId = _currentSortId++
-      };
-
-      list.Add(divider);
-    }
-
-    private void NewRowsAdded(ObservableCollection<Fight> list)
-    {
-      if (dataGrid != null)
-      {
-        if (Parent is ContentControl control && DockingManager.GetState(control) != DockState.Hidden &&
-          !dataGrid.IsMouseOver && dataGrid.View?.Records?.Count > 1)
-        {
-          Dispatcher.InvokeAsync(() => dataGrid.ScrollInView(new RowColumnIndex(dataGrid.View.Records.Count, 0)));
-        }
+        _session.Derived -= OnDerived;
+        _session.DeriveFailed -= OnDeriveFailed;
+        _session.Capturing -= OnCapturing;
       }
+      _session = null;
     }
 
-    internal void DataGridSelectionChanged()
+    private void FightGridItemsSourceChanged(object sender, Syncfusion.UI.Xaml.Grid.GridItemsSourceChangedEventArgs e) => ApplyFilter();
+
+    private void MirrorSelectionChanged(object sender, GridSelectionChangedEventArgs e)
     {
-      _needSelectionChange = false;
-      // adds a delay where a drag-select doesn't keep sending events
+      // Restart the pause on every click so a dragged range announces once, at the end.
       _selectionTimer.Stop();
       _selectionTimer.Start();
-
-      var items = dataGrid.View.Records;
-      menuItemClear.IsEnabled = menuItemSelectFight.IsEnabled = menuItemUnselectFight.IsEnabled = items.Count > 0;
-
-      menuItemSetPet.IsEnabled = dataGrid.SelectedItems.Count == 1 && dataGrid.SelectedItem is Fight { IsInactivity: false } selected;
-      menuItemSetPlayer.IsEnabled = dataGrid.SelectedItems.Count == 1 && dataGrid.SelectedItem is Fight { IsInactivity: false, Name: var name } &&
-        PlayerRegistry.IsPossiblePlayerName(name);
-      menuItemRefresh.IsEnabled = dataGrid.SelectedItems.Count > 0;
     }
 
-    private void RefreshClick(object sender, RoutedEventArgs e)
+    internal IReadOnlyList<DerivedFight> GetSelectedFights()
     {
-      MainActions.FireFightSelectionChanged(dataGrid.SelectedItems?.Cast<Fight>().ToList());
-    }
+      if (fightGrid?.SelectedItems is not { } items) return [];
 
-    private void SelectGroupClick(object sender, RoutedEventArgs e)
-    {
-      _needSelectionChange = false;
-      foreach (var fight in GetFightGroup())
+      var selected = new List<DerivedFight>();
+      foreach (var item in items)
       {
-        if (!dataGrid.SelectedItems.Contains(fight))
-        {
-          dataGrid.SelectedItems.Add(fight);
-        }
+        // Divider rows are gaps, not fights — they carry no DerivedFight and select nothing.
+        if (item is DerivedFightRow { IsDivider: false } row && row.Fight is { } fight) selected.Add(fight);
       }
+
+      return selected;
     }
 
-    private void UnselectGroupClick(object sender, RoutedEventArgs e)
+    // Whether this window has a live session behind it: the answer to "does the engine answer for this log at
+    // all", which is what MainWindow asks before choosing who owns GetFights while both windows can exist.
+    internal bool SessionActive => _session != null;
+
+    /*
+     * The fights behind this window in the legacy shape the older consumers read: MainWindow.GetFights feeds
+     * these to the spell/taunt/death/export paths. `selected` is the grid's own selection; false is every row
+     * the list shows, in list order - the same set a "select all" would pick up.
+     */
+    internal List<Fight> GetFights(bool selected)
+        => _session?.MaterializeFights(selected ? GetSelectedFights() : null) ?? [];
+
+    // The scoped variant the death viewer wants per death click - see DeriveEngine.MaterializeFightsOverlapping
+    // for why materializing everything would be a full board's cost paid per keystroke.
+    internal List<Fight> GetFightsOverlapping(double fromT, double toT)
+        => _session?.MaterializeFightsOverlapping(fromT, toT) ?? [];
+
+    private void AnnounceSelection()
     {
-      _needSelectionChange = false;
-      foreach (var fight in GetFightGroup())
+      var selected = GetSelectedFights();
+      var ids = new List<int>(selected.Count);
+      foreach (var fight in selected) ids.Add(fight.Id);
+
+      if (SameIds(ids, _announcedIds)) return;
+
+      _announcedIds = ids;
+      DerivedSelectionChanged?.Invoke(selected);
+
+      fightStatus.Text = selected.Count == 0
+        ? "Selection cleared"
+        : $"Damage summary from derived facts: {selected.Count} fight{(selected.Count == 1 ? "" : "s")}";
+    }
+
+    private static bool SameIds(List<int> a, List<int> b)
+    {
+      if (a.Count != b.Count) return false;
+      for (var i = 0; i < a.Count; i++)
       {
-        dataGrid.SelectedItems.Remove(fight);
+        if (a[i] != b[i]) return false;
       }
+
+      return true;
     }
 
     private void ShowBreakChanged(object sender, RoutedEventArgs e)
     {
-      if (dataGrid?.View != null)
+      // Load-time contract: XAML sets IsChecked="True" WHILE InitializeComponent parses, and this handler must
+      // absorb that synthetic toggle - acting on it would overwrite the stored setting before the constructor
+      // reads it. The sentinel is the pane's readiness (the grid's View, materialized only when the constructor
+      // assigns ItemsSource), NOT the sender's nullness: a real startup firing was measured where this
+      // checkbox's field WAS already wired and a later element in the markup (a column) was not - so testing
+      // fightShowBreaks here would let that firing through to apply work on half-built state. Legacy tests
+      // dataGrid?.View != null everywhere for exactly this reason; a pane's own readiness is the only thing a
+      // mid-parse firing can be shown not to have.
+      if (fightGrid?.View is null) return;
+      if (fightShowBreaks.IsChecked.HasValue && fightShowBreaks.IsChecked != _currentShowBreaks)
       {
         _currentShowBreaks = fightShowBreaks.IsChecked == true;
         ConfigUtil.SetSetting("NpcShowInactivityBreaks", _currentShowBreaks);
-        dataGrid.View.RefreshFilter();
+        ApplyFilter();
       }
     }
 
+    // Show or hide the rounded-total column, like the legacy table's handler - except this one addresses its
+    // column by name: legacy reaches for dataGrid.Columns[1], which breaks the moment anyone reorders the XAML.
+    private void ShowHpChanged(object sender, RoutedEventArgs e)
+    {
+      // Load-time contract as in ShowBreakChanged - same pane-readiness sentinel, same reason: the measured
+      // startup crashes came in BOTH shapes (once with this checkbox's own field still null, once wired while
+      // damageColumn below was not), so only `View` separates a synthetic toggle from the constructor's
+      // real sync of the saved setting.
+      if (fightGrid?.View is null) return;
+      if (fightShowHp.IsChecked.HasValue && fightShowHp.IsChecked != _currentShowHp)
+      {
+        _currentShowHp = fightShowHp.IsChecked == true;
+        ConfigUtil.SetSetting("NpcShowHitPoints", _currentShowHp);
+        damageColumn.IsHidden = !_currentShowHp;
+      }
+    }
+
+    // "Include Fights with only Tanking data", the legacy table's third dial, ported. Same pane-readiness
+    // sentinel as ShowBreakChanged/ShowHpChanged (docs/DesignNotes.md -> "Handlers that XAML fires early"):
+    // the synthetic IsChecked="True" toggle lands mid-InitializeComponent and must not write the setting
+    // before the constructor reads it.
     private void ShowTankingChanged(object sender, RoutedEventArgs e)
     {
-      if (dataGrid?.View != null)
+      if (fightGrid?.View is null) return;
+      if (fightShowTanking.IsChecked.HasValue && fightShowTanking.IsChecked != _currentShowTanking)
       {
-        dataGrid.ItemsSource = (fightShowTanking.IsChecked == true) ? _fights : _nonTankingFights;
-        ConfigUtil.SetSetting("NpcShowTanking", fightShowTanking.IsChecked == true);
-        dataGrid.View.RefreshFilter();
+        _currentShowTanking = fightShowTanking.IsChecked == true;
+        ConfigUtil.SetSetting("NpcShowTanking", _currentShowTanking);
+        ApplyFilter();
       }
     }
 
-    private void ShowHitPointsChanged(object sender, RoutedEventArgs e)
+  /*
+     * R10 - the operator's verdict on a name, entered here and kept by IdentityOverrideStore.
+     *
+     * Actions go to every selected row at once (ctrl-click twenty rows, "all pets"), write ONE file, then ask
+     * for a re-derive instead of editing the grid. That is the whole design: an override is a new reading of the
+     * facts, and a reading changes more than the row's badge - which side its damage sits on, whether it keys a
+     * row at all, and which raider its output folds under. Patching the visible row would leave the board, the
+     * roll-ups and the next pass disagreeing with the label.
+     *
+     * The selection outlives the re-derive (see OnDerived), so the sequence reads as "that row changed shape",
+     * not "my click cleared the window".
+     */
+    private void OverridePlayerClick(object sender, RoutedEventArgs e) => ApplyOverride(IdentityKind.Player);
+
+    private void OverrideMercClick(object sender, RoutedEventArgs e) => ApplyOverride(IdentityKind.Merc);
+
+    private void OverridePetClick(object sender, RoutedEventArgs e) => ApplyOverride(IdentityKind.Pet);
+
+    private void OverrideNpcClick(object sender, RoutedEventArgs e) => ApplyOverride(IdentityKind.Npc);
+
+    private void OverrideClearClick(object sender, RoutedEventArgs e) => ApplyOverride(null);
+
+    // Names of the selected fights (dividers select nothing), written as one batch.
+    private void ApplyOverride(IdentityKind? kind)
     {
-      if (dataGrid?.View != null)
-      {
-        _currentShowHp = !_currentShowHp;
-        dataGrid.Columns[1].IsHidden = !_currentShowHp;
-        ConfigUtil.SetSetting("NpcShowHitPoints", _currentShowHp);
-      }
+      var names = new List<string>();
+      foreach (var fight in GetSelectedFights()) names.Add(fight.Name);
+      if (names.Count == 0) return;
+
+      // Remembered so the derive that follows can say what became of these names (see OverrideOutcome).
+      _pendingOverride = names;
+      IdentityOverrideStore.Instance.Apply(names, kind);
+
+      fightStatus.Text = kind is { } k
+        ? $"Override: {names.Count} name{(names.Count == 1 ? "" : "s")} set to {k} - re-deriving"
+        : $"Override cleared for {names.Count} name{(names.Count == 1 ? "" : "s")} - re-deriving";
+      _session?.RederiveAsync();
     }
 
-    private void FightSearchBoxGotFocus(object sender, RoutedEventArgs e)
+    // Greyed out unless the grid has a real fight selected; clearing is offered even with nothing selected,
+    // because "what did I save?" is asked most often right after a name stops appearing in the list at all
+    // (set as Pet and its row is gone by design, so there is nothing left to click).
+    private void MirrorContextMenuOpening(object sender, System.Windows.Controls.ContextMenuEventArgs e)
     {
-      if (fightSearchBox.Text == Resource.NPC_SEARCH_TEXT)
+      var hasFight = GetSelectedFights().Count > 0;
+
+      /*
+       * The position-based selects walk _rows in section order and select by grid POSITION (SelectByShown). A user sort
+       * reorders the records under those positions, so on a sorted grid they would highlight arbitrary fights - and
+       * announce them to the boards. Search does not have this problem: it walks the materialized view (SearchForNpc).
+       * Offer them only while the grid is unsorted; RestoreSelection already guards the same way.
+       */
+      var unsorted = fightGrid.SortColumnDescriptions.Count == 0;
+
+      // Enabled by what the grid can actually do with: all/unselect by current selection, group by a real row
+      // under the cursor (a divider carries no section of its own).
+      selectAllItem.IsEnabled = false;
+      foreach (var row in _rows)
       {
-        fightSearchBox.Text = "";
-        fightSearchBox.FontStyle = FontStyles.Normal;
+        if (IsShown(row) && row.Fight is not null) { selectAllItem.IsEnabled = unsorted; break; }
       }
+
+      unselectAllItem.IsEnabled = fightGrid.SelectedItems.Count > 0;
+      var hasCurrent = fightGrid.CurrentItem is DerivedFightRow { IsDivider: false };
+      selectGroupItem.IsEnabled = hasCurrent && unsorted;
+      unselectGroupItem.IsEnabled = hasCurrent && fightGrid.SelectedItems.Count > 0;
+
+      overridePlayerItem.IsEnabled = hasFight;
+      overrideMercItem.IsEnabled = hasFight;
+      overridePetItem.IsEnabled = hasFight;
+      overrideNpcItem.IsEnabled = hasFight;
+
+      // How many verdicts are on file for this server, so "Clear" says whether it has anything to do - the
+      // question gets asked most often about a name that no longer has a row to click (set as Pet hides it by
+      // design), where the menu is the only place left that can answer.
+      var saved = IdentityOverrideStore.Instance.Count;
+      overrideClearItem.IsEnabled = saved > 0 || hasFight;
+      overrideClearItem.Header = saved > 0 ? $"Clear Override ({saved} saved)" : "Clear Override";
     }
 
-    private void FightSearchBoxLostFocus(object sender, RoutedEventArgs e)
+    /*
+     * Two row dials, no more - Inactivity (dividers) and Tanking (rows whose whole story is something hitting
+     * us). Search deliberately does NOT hide rows. The point of a
+     * name here is to fight that raid event - the row needs to be HIGHLIGHTED and IN VIEW so the user can right-
+     * click it and select the whole group, not removed from the list they were reading. That is the legacy table's
+     * behavior, ported whole: one current result at a time, found on a debounce while typing, cycled with Enter /
+     * Shift+Enter (SearchForNpc).
+     */
+    private void ApplyFilter()
+    {
+      if (fightGrid?.View == null) return;
+      fightGrid.View.Filter = item => IsShown((DerivedFightRow)item);
+      fightGrid.View.RefreshFilter();
+    }
+
+    private bool IsShown(DerivedFightRow row) => row.IsDivider
+      ? _currentShowBreaks
+      : _currentShowTanking || ShownWhenTankingHidden(row.Fight);
+
+    // Legacy swapped whole lists for this dial (_fights vs _nonTankingFights); one predicate over the derived
+    // rows says the same thing. DamageToOwner is the raid's output ON this row, so zero means the line exists
+    // only because the anchor was hitting us. A person-row reads above zero whenever her person was struck,
+    // so nobody vanishes under the dial. Split out because it is the whole decision - and testable.
+    internal static bool ShownWhenTankingHidden(DerivedFight fight) => fight is null || fight.DamageToOwner > 0;
+
+    // The search's own state, walking the VISIBLE view (not _rows) both directions from the last hit - the same
+    // fields and arithmetic FightTable.SearchForNpc uses; ported, not re-invented.
+    private readonly DispatcherTimer _searchTextTimer;
+    private DerivedFightRow _searchEntry;
+    private int _searchIndex;
+    private int _searchDirection = 1;
+
+    private void SearchBoxGotFocus(object sender, RoutedEventArgs e)
+    {
+      if (!_searchPlaceholder) return;
+      _searchPlaceholder = false;
+      fightSearchBox.Text = string.Empty;
+      fightSearchBox.FontStyle = FontStyles.Normal;
+    }
+
+    private void RestoreSearchPlaceholder()
     {
       if (fightSearchBox.Text.Length == 0)
       {
+        _searchPlaceholder = true;
         fightSearchBox.Text = Resource.NPC_SEARCH_TEXT;
         fightSearchBox.FontStyle = FontStyles.Italic;
       }
     }
 
-    internal void FightSearchBoxKeyDown(object sender, KeyEventArgs e)
+    private void SearchBoxLostFocus(object sender, RoutedEventArgs e) => RestoreSearchPlaceholder();
+
+    private void SearchBoxKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
-      if (fightSearchBox.IsFocused)
+      if (e.Key == System.Windows.Input.Key.Enter)
       {
-        if (e.Key == Key.Escape)
-        {
-          fightSearchBox.Text = Resource.NPC_SEARCH_TEXT;
-          fightSearchBox.FontStyle = FontStyles.Italic;
-          if (_currentSearchEntry != null)
-          {
-            _currentSearchEntry.IsSearchResult = false;
-          }
-          dataGrid.Focus();
-        }
-        else if (e.Key == Key.Enter)
-        {
-          SearchForNpc(e.KeyboardDevice.IsKeyDown(Key.RightShift) || e.KeyboardDevice.IsKeyDown(Key.LeftShift));
-        }
+        // Explicit next / previous, legacy's Shift-Enter for backwards: cycle the same way while typing does not.
+        SearchForNpc(e.KeyboardDevice.IsKeyDown(System.Windows.Input.Key.RightShift)
+                     || e.KeyboardDevice.IsKeyDown(System.Windows.Input.Key.LeftShift));
+      }
+      else if (e.Key == System.Windows.Input.Key.Escape)
+      {
+        // Legacy's escape: clear the box to its placeholder, drop the highlight, hand focus to the grid - the
+        // next keystroke is a selection. The box text goes with it; there is nothing to cycle back to.
+        _searchPlaceholder = true;
+        fightSearchBox.Text = Resource.NPC_SEARCH_TEXT;
+        fightSearchBox.FontStyle = FontStyles.Italic;
+        ClearSearchMark();
+        fightGrid.Focus();
       }
     }
 
-    private IEnumerable<Fight> GetFightGroup()
-    {
-      if (dataGrid.CurrentItem is Fight { IsInactivity: false } npc)
-      {
-        if (dataGrid.ItemsSource == _fights)
-        {
-          return _fights.Where(fight => fight.GroupId == npc.GroupId);
-        }
-
-        if (dataGrid.ItemsSource == _nonTankingFights)
-        {
-          return _nonTankingFights.Where(fight => fight.NonTankingGroupId == npc.NonTankingGroupId);
-        }
-      }
-
-      return new List<Fight>();
-    }
-
-    private void SearchForNpc(bool backwards = false)
-    {
-      if (_currentSearchEntry != null)
-      {
-        _currentSearchEntry.IsSearchResult = false;
-      }
-
-      var records = dataGrid.View.Records;
-      if (fightSearchBox.Text.Length > 0 && records.Count > 0)
-      {
-        int checksNeeded;
-        int direction;
-        if (backwards)
-        {
-          direction = -1;
-          if (_currentFightSearchDirection != direction)
-          {
-            _currentFightSearchIndex -= 2;
-          }
-
-          if (_currentFightSearchIndex < 0)
-          {
-            _currentFightSearchIndex = records.Count - 1;
-          }
-
-          // 1 check/loop from start to finish or add a 2nd to continue from the middle to element - 1
-          checksNeeded = _currentFightSearchIndex == (records.Count - 1) ? 1 : 2;
-        }
-        else
-        {
-          direction = 1;
-          if (_currentFightSearchDirection != direction)
-          {
-            _currentFightSearchIndex += 2;
-          }
-
-          if (_currentFightSearchIndex >= records.Count)
-          {
-            _currentFightSearchIndex = 0;
-          }
-
-          // 1 check/loop from start to finish or add a 2nd to continue from the middle to element - 1
-          checksNeeded = _currentFightSearchIndex == 0 ? 1 : 2;
-        }
-
-        _currentFightSearchDirection = direction;
-
-        while (checksNeeded-- > 0)
-        {
-          for (var i = _currentFightSearchIndex; i < records.Count && i >= 0; i += 1 * direction)
-          {
-            if (records.GetItemAt(i) is Fight { Name: not null } npc && npc.Name.IndexOf(fightSearchBox.Text, StringComparison.OrdinalIgnoreCase) > -1)
-            {
-              npc.IsSearchResult = true;
-              _currentSearchEntry = npc;
-              _currentFightSearchIndex = i + (1 * direction);
-              Dispatcher.InvokeAsync(() => dataGrid.ScrollInView(new RowColumnIndex(dataGrid.ResolveToRowIndex(i), 0)));
-              return;
-            }
-          }
-
-          if (checksNeeded == 1)
-          {
-            _currentFightSearchIndex = (direction == 1) ? _currentFightSearchIndex = 0 : _currentFightSearchIndex = records.Count - 1;
-          }
-        }
-      }
-    }
-
-    private void FightSearchBoxTextChanged(object sender, TextChangedEventArgs e)
+    private void SearchBoxTextChanged(object sender, TextChangedEventArgs e)
     {
       _searchTextTimer?.Stop();
 
+      // Legacy's debounce fires only when something was ADDED: backspacing alone must not re-search, but it does
+      // drop the stale highlight so an old mark never sits on a row the text no longer names.
+      if (_searchPlaceholder) return;
       if (e.Changes.FirstOrDefault(change => change.AddedLength > 0) != null)
       {
         _searchTextTimer?.Start();
       }
+      else
+      {
+        ClearSearchMark();
+      }
     }
 
-    private void EventsClearedActiveData(bool cleared)
+    private void ClearSearchMark()
     {
-      _batchMode = UseBatchMode;
-      _nonTankingFights.Clear();
-      _nonTankingFightsToProcess.Clear();
-      _fights.Clear();
-      _fightsToProcess.Clear();
-      _currentGroup = 1;
-      _currentNonTankingGroup = 1;
-      _currentSearchEntry = null;
+      if (_searchEntry != null)
+      {
+        _searchEntry.IsSearchResult = false;
+        _searchEntry = null;
+      }
     }
 
-    private void AutoGeneratingColumn(object sender, AutoGeneratingColumnArgs e)
+    /*
+     * The port of FightTable.SearchForNpc: walk the visible records from the last hit, in the last direction,
+     * mark the one row that matches and scroll it into view. The index arithmetic (the += 2 / -= 2 on a
+     * direction change, the two-pass wrap) is the legacy's word for word - it has lived with thousands of rows.
+     */
+    private void SearchForNpc(bool backwards = false)
     {
-      if (e.Column.MappingName == "SortId")
+      ClearSearchMark();
+
+      // Legacy walks View.Records - the materialized item list, not the view itself.
+      var records = fightGrid.View.Records;
+      if (fightSearchBox.Text.Length == 0 || records.Count == 0) return;
+
+      int checksNeeded;
+      var direction = 1;
+      if (backwards)
       {
-        e.Column.SortMode = DataReflectionMode.Value;
-        e.Column.DisplayBinding = new Binding
+        direction = -1;
+        if (_searchDirection != direction)
         {
-          Path = new PropertyPath("BeginTimeString")
-        };
-        e.Column.TextAlignment = TextAlignment.Center;
-        e.Column.ShowToolTip = true;
-        e.Column.ToolTipTemplate = (DataTemplate)Application.Current.Resources["TemplateToolTip"];
-        e.Column.HeaderText = "Initial Hit Time";
-        e.Column.Width = ThemeConfig.CurrentDateTimeWidth;
-      }
-      else if (e.Column.MappingName == "DamageTotal")
-      {
-        e.Column.IsHidden = !_currentShowHp;
-        e.Column.DisplayBinding = new Binding
+          _searchIndex -= 2;
+        }
+
+        if (_searchIndex < 0)
         {
-          Path = new PropertyPath(e.Column.MappingName),
-          Converter = new TotalFormatConverter()
-        };
-        e.Column.TextAlignment = TextAlignment.Right;
-        e.Column.ShowToolTip = true;
-        e.Column.ToolTipTemplate = (DataTemplate)Application.Current.Resources["TemplateToolTip"];
-        e.Column.HeaderText = "HP";
-        e.Column.ColumnSizer = GridLengthUnitType.Auto;
-        e.Column.Padding = new Thickness(4, 0, 4, 0);
-      }
-      else if (e.Column.MappingName == "Name")
-      {
-        e.Column.ShowToolTip = true;
-        e.Column.ToolTipTemplate = (DataTemplate)Application.Current.Resources["TemplateToolTip"];
-        e.Column.ColumnSizer = GridLengthUnitType.AutoLastColumnFill;
-        e.Column.Padding = new Thickness(4, 0, 0, 0);
+          _searchIndex = records.Count - 1;
+        }
+
+        // 1 check/loop from start to finish or add a 2nd to continue from the middle to element - 1
+        checksNeeded = _searchIndex == (records.Count - 1) ? 1 : 2;
       }
       else
       {
-        e.Cancel = true;
+        direction = 1;
+        if (_searchDirection != direction)
+        {
+          _searchIndex += 2;
+        }
+
+        if (_searchIndex >= records.Count)
+        {
+          _searchIndex = 0;
+        }
+
+        // 1 check/loop from start to finish or add a 2nd to continue from the middle to element - 1
+        checksNeeded = _searchIndex == 0 ? 1 : 2;
       }
+
+      _searchDirection = direction;
+
+      while (checksNeeded-- > 0)
+      {
+        for (var i = _searchIndex; i < records.Count && i >= 0; i += 1 * direction)
+        {
+          // Case-insensitive on purpose: rows are stored CapitalizeFirst and the user types however they type.
+          // A divider row's name is the gap label, never a fight, so it simply never matches.
+          if (records.GetItemAt(i) is DerivedFightRow { Name: not null } row &&
+              row.Name.IndexOf(fightSearchBox.Text, StringComparison.OrdinalIgnoreCase) > -1)
+          {
+            row.IsSearchResult = true;
+            _searchEntry = row;
+            _searchIndex = i + (1 * direction);
+            Dispatcher.InvokeAsync(() => fightGrid.ScrollInView(new RowColumnIndex(fightGrid.ResolveToRowIndex(i), 0)));
+            return;
+          }
+        }
+
+        if (checksNeeded == 1)
+        {
+          _searchIndex = (direction == 1) ? 0 : records.Count - 1;
+        }
+      }
+    }
+
+    /*
+     * The right-click menu's selection items. Programmatic selects go through SelectRows over the SHOWN rows -
+     * the same run walk RestoreSelection uses, because SelectRows wants contiguous grid ranges and a hidden row
+     * (a filtered-out divider or name) takes no range. Each handler announces straight away rather than waiting
+     * out the settle timer: "Select All" is one deliberate act, not a drag to debounce; the timer's later tick
+     * re-announces the same ids and no-ops.
+     */
+    private void SelectAllClick(object sender, RoutedEventArgs e)
+    {
+      SelectByShown(row => row.Fight is not null);
+      AnnounceSelection();
+    }
+
+    private void UnselectAllClick(object sender, RoutedEventArgs e)
+    {
+      fightGrid.SelectedItems.Clear();
+      AnnounceSelection();
+    }
+
+    private void SelectGroupClick(object sender, RoutedEventArgs e) => SelectGroup(true);
+
+    private void UnselectGroupClick(object sender, RoutedEventArgs e) => SelectGroup(false);
+
+    // The group of a row is its SECTION: every fight between the same pair of inactivity rows - legacy's GroupId
+    // meaning, read off THIS display list. Walked rather than taken from fight.GroupId on purpose: that stamp
+    // comes from the walk over ALL fights (the "Fight N" number a stats run reads), while the dividers the user
+    // sees come from the walk over the VISIBLE ones, and a hidden pet row active across a quiet gap can bridge a
+    // divider in one but not the other. What the user sees is the definition, so the group stops at what the
+    // user sees. A sorted grid does not matter: _rows keeps section order regardless of how the view is arranged.
+    private void SelectGroup(bool add)
+    {
+      if (fightGrid.CurrentItem is not DerivedFightRow { IsDivider: false } target) return;
+
+      var idx = _rows.IndexOf(target);
+      var lo = idx;
+      while (lo > 0 && !_rows[lo - 1].IsDivider) lo--;
+      var hi = idx;
+      while (hi + 1 < _rows.Count && !_rows[hi + 1].IsDivider) hi++;
+
+      // Dividers are gaps, not fights: never selected, even though IsShown lets them through with breaks on.
+      var section = new HashSet<DerivedFightRow>();
+      for (var i = lo; i <= hi; i++)
+        if (!_rows[i].IsDivider) section.Add(_rows[i]);
+      Predicate<DerivedFightRow> inSection = row => section.Contains(row);
+
+      if (add)
+      {
+        SelectByShown(inSection);
+      }
+      else
+      {
+        var remove = new HashSet<DerivedFightRow>();
+        foreach (var item in fightGrid.SelectedItems)
+        {
+          if (item is DerivedFightRow { IsDivider: false } row && inSection(row)) remove.Add(row);
+        }
+
+        foreach (var row in remove) fightGrid.SelectedItems.Remove(row);
+      }
+
+      AnnounceSelection();
+    }
+
+    // The run walk RestoreSelection already needs: select every shown row matching the predicate, range by range.
+    private void SelectByShown(Predicate<DerivedFightRow> matches)
+    {
+      var first = FirstRecordRow();
+      var runStart = -1;
+      for (var i = 0; i <= _rows.Count; i++)
+      {
+        var hit = i < _rows.Count && IsShown(_rows[i]) && matches(_rows[i]);
+        if (hit && runStart < 0) runStart = i;
+        else if (!hit && runStart >= 0)
+        {
+          fightGrid.SelectRows(first + runStart, first + i - 1);
+          runStart = -1;
+        }
+      }
+    }
+
+    /*
+     * Put the highlight back on the rows whose fight ids survived the swap.
+     *
+     * SelectRows wants CONTIGUOUS grid-row ranges, so the kept set is walked as runs. Positions are counted over
+     * the shown rows only (a hidden divider takes no grid row), and offset by wherever this grid's records
+     * actually start rather than by an assumed header height.
+     */
+    private static FightKey KeyOf(DerivedFight fight) => new(fight.Name, fight.BeginTime);
+
+    private void RestoreSelection(HashSet<FightKey> keepKeys)
+    {
+      var first = FirstRecordRow();
+      var runStart = -1;
+      for (var i = 0; i <= _rows.Count; i++)
+      {
+        var hit = i < _rows.Count && IsShown(_rows[i]) && _rows[i].Fight is { } fight && keepKeys.Contains(KeyOf(fight));
+        if (hit && runStart < 0) runStart = i;
+        else if (!hit && runStart >= 0)
+        {
+          fightGrid.SelectRows(first + runStart, first + i - 1);
+          runStart = -1;
+        }
+      }
+    }
+
+    // Where the data rows begin, read off the grid instead of assumed: a row that is not a record (header,
+    // filter row, footer) resolves to no record at all, so the first index answering 0 IS the first row.
+    private int FirstRecordRow()
+    {
+      for (var i = 0; i < 8; i++)
+      {
+        if (fightGrid.ResolveToRecordIndex(i) == 0) return i;
+      }
+      return 1;
     }
   }
 }

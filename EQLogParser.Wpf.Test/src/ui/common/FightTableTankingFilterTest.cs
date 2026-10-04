@@ -14,23 +14,23 @@ namespace EQLogParser.Wpf.Test.src.ui.common;
  * was hitting us, which is exactly what the dial off is for.
  */
 [TestClass]
-public class MirrorFightTableTankingFilterTest
+public class FightTableTankingFilterTest
 {
   [TestMethod]
   public void ARowTheRaidNeverTouched_HidesWhenTankingIsOff()
   {
     var tankingOnly = new DerivedFight { DamageToOwner = 0, DamageByOwner = 5000 };
-    Assert.IsFalse(MirrorFightTable.ShownWhenTankingHidden(tankingOnly));
+    Assert.IsFalse(FightTable.ShownWhenTankingHidden(tankingOnly));
   }
 
   [TestMethod]
   public void ARowTheRaidDamaged_StaysWhateverTheDialSays()
   {
     var fought = new DerivedFight { DamageToOwner = 1, DamageByOwner = 5000 };
-    Assert.IsTrue(MirrorFightTable.ShownWhenTankingHidden(fought));
+    Assert.IsTrue(FightTable.ShownWhenTankingHidden(fought));
 
     var outputOnly = new DerivedFight { DamageToOwner = 12000, DamageByOwner = 0 };
-    Assert.IsTrue(MirrorFightTable.ShownWhenTankingHidden(outputOnly));
+    Assert.IsTrue(FightTable.ShownWhenTankingHidden(outputOnly));
   }
 
   [TestMethod]
@@ -38,6 +38,6 @@ public class MirrorFightTableTankingFilterTest
   {
     // Defensive half: a row with no fight object is nobody's "tanking only" evidence, so the dial must not
     // eat it - absence that deletes rows is how data goes missing without an error.
-    Assert.IsTrue(MirrorFightTable.ShownWhenTankingHidden(null));
+    Assert.IsTrue(FightTable.ShownWhenTankingHidden(null));
   }
 }
