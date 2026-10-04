@@ -4943,6 +4943,39 @@ App.xaml), which the headless host doesn't have — the test stubs them into a b
 construction contract, not theme fidelity; and a startup crash class that only a full app launch reproduces is a standing argument
 for launching the built app before shipping UI code.
 
+## A pane built inside MainWindow's parse cannot read a theme width (2026-11)
+
+"The fight list shows no Initial Hit Time" was not a binding problem, a hidden column, or the layout file: it was **ordering**.
+`FightTable` is declared in `MainWindow.xaml`, so WPF constructs it from `InitializeComponent()`, and
+`MainActions.SetMainWindow(this)` → `ThemeConfig.Init(this)` happens on the *next* lines of that constructor. The theme widths are
+bare fields — `internal static double CurrentDateTimeWidth` and friends — assigned only by `SetThemeFontSizes`, so during this pane's
+constructor the read returns **0.0**, and the column got `new GridColumn { Width = 0.0, … }`. A zero-width *fixed* column is not
+removed and not collapsed into text: `SfDataGrid` reports it as a column (visible, `Width.Value == 0`, included in
+`GetColumns().Count`) that occupies nothing. Nothing else on the pane could notice.
+
+**Why only this column broke.** The two neighbors read widths too, but as `Width = Auto` + `ColumnSizer`: `DataGridUtil.RefreshTableColumns`
+continues past any column whose `Sizer != None` (so the theme's word never reaches it), and `GridColumnSizer.Auto` writes an actual pixel
+width back later — HP rendered because its sizer ran, and "Initial Hit Time" had no sizer to save it. That is also why the trap stayed
+invisible in review: every *other* `Width = ThemeConfig.Current…` read in the app sits in a handler that runs after theme init
+(`AutoGeneratingColumn`, `Loaded`, summary-pane load), and the one other constructor reader, `HitLogViewer`, is safe for a reason worth
+naming — it is instantiated lazily by `SyncFusionUtil.OpenWindow` from a summary pane, long after theme init.
+
+**The fix is a timing move plus a listener, not a number** (`FightTable`): the ctor passes no `Width`; `fightGrid.Loaded` applies
+`ThemeConfig.CurrentDateTimeWidth`, and `EventsThemeChanged` re-applies it so a font-scale change moves this column like every other
+themed grid. Loaded is guaranteed later than the theme init because `ThemeConfig.Init` runs at the end of `MainWindow..ctor`, strictly
+after the parse that built the pane; the handler is *attached* on that same Loaded (with `-=` before `+=`, since a re-dock can load the
+pane twice) and *detached* on `Unloaded`, because `ThemeConfig`'s event is process-static and outlives any single pane — this class is
+constructed by MainWindow **and** by the headless test host, and an unhooked `Loaded` would leak the whole application's theme fan-out.
+`ApplyTimeColumnWidth` is the single expression both hooks call, so they cannot drift.
+
+**What the test can and cannot prove.** `FightTableTimeColumnTest` (Wpf.Test) pins that the constructor writes nothing (a theme value no
+vendor default produces is absent until applied, then present) and that a later theme still lands — i.e. no width is banked from the
+early read. It deliberately does **not** fire either hook: raising `FrameworkElement.LoadedEvent` on an `SfDataGrid` walks the grid's own
+load path with no `PresentationSource` behind it, which is the same class of windowless-thread path that already cost this suite two 60 s
+`Sta` wedges; and no headless process can raise `EventsThemeChanged` at all, because every raiser runs
+`SetThemeFontSizes`/`SetThemeResources`, which dereference `_mainWindow.npcWindow` and `main.statusText`. The event plumbing is therefore
+documented rather than measured — the arithmetic the hooks hand over is what is asserted.
+
 ## A test host is unlicensed, and Syncfusion says so at construction (2026-11)
 
 Two Windows runs in a row: the second one lost two `Sta.Run` bodies — `TheFirstSnapshotTakesTheBandDownForGood` and

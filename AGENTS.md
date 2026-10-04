@@ -91,6 +91,15 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   so a View guard there swallows every real toggle on a pane that never arranges (`ARealToggleAfterLoadStillReachesTheColumn`
   failed exactly this way). A test where a post-load toggle must still reach its column belongs with any handler like this
   (`FightTableStartupTest`). Reasoning: docs/DesignNotes.md → "Handlers that XAML fires early".
+- **A pane that MainWindow builds during its own `InitializeComponent` cannot read a theme width**: `ThemeConfig.Current*Width` are
+  plain fields assigned by `SetThemeFontSizes`, which runs only after `SetMainWindow` → `ThemeConfig.Init` — i.e. after every control
+  declared in `MainWindow.xaml` has been constructed — so a constructor read gets `0.0`, and a zero-width **fixed** column exists without
+  ever rendering. That is how the derived fight list shipped with no "Initial Hit Time" while its Auto-sized HP sibling looked fine
+  (`DataGridUtil.RefreshTableColumns` skips sizer columns, and the sizer writes real pixels). So: apply at `Loaded`, follow
+  `ThemeConfig.EventsThemeChanged` (attach there, detach on `Unloaded` — that event is process-static and outlives any pane), and leave
+  the read in a constructor only for windows opened lazily (`HitLogViewer`, which the summary panes build long after theme init).
+  `FightTableTimeColumnTest` pins it by measuring `FightTable.ApplyTimeColumnWidth` — neither hook is fired there because raising `Loaded`
+  on an SfDataGrid wakes the grid's own load path in a windowless host and every ThemeConfig raiser needs a live MainWindow.
 - **Namespaces**: the WPF app AND `EQLogParser.Core` each compile every source into the flat `namespace EQLogParser`, whatever folder it
   lives in — folders state what something is (parsing, util, perf), not its namespace. The one historical exception,
   `EQLogParser.Mirror`, was dissolved with the engine's renaming; declaring a per-folder namespace in either project breaks tests'

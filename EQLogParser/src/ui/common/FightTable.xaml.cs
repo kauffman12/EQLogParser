@@ -105,10 +105,12 @@ namespace EQLogParser
       // hides mob-only rows in the legacy table keeps that filter on arrival.
       fightShowTanking.IsChecked = _currentShowTanking = ConfigUtil.IfSet("NpcShowTanking", true);
 
-      // The time column's width is applied at Loaded, not here - see OnGridLoaded: ThemeConfig does not exist
-      // yet at constructor time, and a zero-width fixed column "exists" without ever showing in the grid.
+      // The time column's width is applied at Loaded, not here - see ApplyTimeColumnWidth: ThemeConfig does not
+      // exist yet at constructor time, and a zero-width fixed column "exists" without ever showing in the grid.
+      // The theme listener attaches with the load and leaves with the pane (ThemeConfig's event is process-static
+      // and outlives every pane; this class is constructed by MainWindow AND by the headless test host).
       fightGrid.Loaded += OnGridLoaded;
-      ThemeConfig.EventsThemeChanged += EventsThemeChanged;
+      Unloaded += (_, _) => ThemeConfig.EventsThemeChanged -= EventsThemeChanged;
 
       ApplyFilter();
 
@@ -139,16 +141,30 @@ namespace EQLogParser
     }
 
     /*
+     * The ONE place that decides the time column's width, so the two hooks below cannot drift apart. internal for
+     * FightTableTimeColumnTest: neither hook can be raised from a windowless host (that class says why), so the test
+     * measures this method and the fact that a constructor run under a themeless ThemeConfig leaves the column at 0.
+     */
+    internal void ApplyTimeColumnWidth() => beginColumn.Width = ThemeConfig.CurrentDateTimeWidth;
+
+    /*
      * The time column's width comes from ThemeConfig, and MainWindow initializes that only AFTER this pane's
      * constructor has returned (InitializeComponent → SetMainWindow → ThemeConfig.Init). Reading the static in
      * the ctor hands back 0.0, and a zero-width fixed column "exists" but shows nothing in the grid - which is
      * how the pane shipped without its Initial Hit Time while its HP sibling, Auto-sized by its own sizer,
-     * looked fine. Loaded fires strictly later than the theme init; theme or font changes re-apply like every
-     * other themed grid in the app.
+     * looked fine. Loaded fires strictly later than the theme init.
      */
-    private void OnGridLoaded(object sender, RoutedEventArgs e) => beginColumn.Width = ThemeConfig.CurrentDateTimeWidth;
+    private void OnGridLoaded(object sender, RoutedEventArgs e)
+    {
+      ApplyTimeColumnWidth();
 
-    private void EventsThemeChanged(string _) => beginColumn.Width = ThemeConfig.CurrentDateTimeWidth;
+      // Re-armed rather than added once: a re-dock unloads and reloads this pane, and an element that never
+      // unloaded can raise Loaded twice - the listener must stay exactly one entry deep.
+      ThemeConfig.EventsThemeChanged -= EventsThemeChanged;
+      ThemeConfig.EventsThemeChanged += EventsThemeChanged;
+    }
+
+    private void EventsThemeChanged(string _) => ApplyTimeColumnWidth();
 
     private void OnActiveChanged()
     {
