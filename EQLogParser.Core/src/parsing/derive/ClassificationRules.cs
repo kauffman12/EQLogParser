@@ -195,7 +195,7 @@ namespace EQLogParser
        * R21 before the shape rules and before the graph, because a spell is not a combatant and the graph would
        * otherwise read its damage as a fighter's (docs/combat-mirror-design.md).
        */
-      RunStage("R21 spell effects", outcome, () => ApplySpellEffects(facts, timeline));
+      RunStage("R21 spell effects", outcome, () => ApplySpellEffects(facts, timeline, state));
 
       // Name shape before the graph, because the graph reads it: an article-shaped defender is no longer an
       // unknown edge, so attackers that were starved by "a skeleton" being unclassified get their evidence.
@@ -1006,31 +1006,80 @@ namespace EQLogParser
      * meter keeps the numbers; what changes is that the row they belong to says "A Spell" instead of pretending to be a
      * fighter. Refusing such facts at the door would move raid damage-taken totals and belongs with that conversation.
      */
-    private static void ApplySpellEffects(IFactTable facts, EntityTimeline timeline)
+    /*
+     * Three kinds of proof that a name is a spell, in the order a person would trust them: what the DAMAGE LINE said, then
+     * what was seen BEING CAST, then what the SPELL LIST says.
+     *
+     * The flag is the line's own shape ("X has taken N damage from Sonic Bang XII by .") and it comes first because it needs no
+     * data file at all. The gap is RANKS, not names: spells.txt carries "Sonic Bang" (54439) and "Curse XVII" (72133) but not the
+     * formulations this era's client prints — probed against the shipped file, `Sonic Bang XII`, `Gluttering Decay IX` and
+     * `Void Devour Rk. IV` all answer nothing — so a dictionary-only rule leaves exactly those attackers to the graph, which reads
+     * a spell beating a mob as a player.
+     *
+     * The casting message is the second one, and it is the reason no dictionary gate is needed for the rest: CastLineParser
+     * already turns every `X begins casting Y.` / `begins singing Y.` / `activates Y.` line into a SpellData — calling
+     * EQDataStore.AddUnknownSpell when the data does not know the name — and hands the resolved spell token to the fact table
+     * as the aux of an EvCast row. A name the game prints in that slot IS a spell, whatever spells.txt says about it, so this
+     * rule reads the token rather than consulting the database: it covers next expansion's ranks as they print, with no build.
+     * It claims only names NOTHING else has claimed, because that is the one way a spell token could collide with a fighter —
+     * a pet named after a spell is claimed by R5 two stages earlier and keeps its row.
+     *
+     * The database lookup catches what neither line shape offered: a formulation that never printed a cast in this capture
+     * (ranks and formulations are their own rows — data/spells.txt carries "Curse XVII" at 72133 and "Curse XVII Rk. II" at
+     * 72134), so no name surgery is needed here either.
+     *
+     * Both feeds are cursored into carried NAME SETS and re-played every pass: the walk sees each fact and evidence row once,
+     * while a carried quiet pass still verdicts the names it learned two hours ago. Proof order is why the replay is ordered:
+     * all three claim at Strong, so whichever gets there first owns the reason string.
+     */
+    private static void ApplySpellEffects(IFactTable facts, EntityTimeline timeline, ClassificationState state)
     {
-      /*
-       * Two kinds of proof, in the order a person would trust them: what the LINE said, then what the SPELL LIST says.
-       *
-       * The flag is the line's own shape — "X has taken N damage from Sonic Bang by ." — and it is the stronger of the two
-       * because it does not depend on this build shipping this expansion's data. "Sonic Bang" is not in the shipped
-       * spells.txt at all, so a name-only rule would leave that attacker to the graph, which reads a spell beating a mob as
-       * a player. The database lookup catches the rest: ranks and formulations arrive as their own rows (data/spells.txt
-       * carries "Curse XVII" at 72133 and "Curse XVII Rk. II" at 72134), so no name surgery is needed here.
-       */
-      foreach (var f in facts.Facts)
+      var factList = facts.Facts;
+      for (var fi = state.R21FactCursor; fi < factList.Length; fi++)
       {
-        if (!f.AttackerIsSpell) continue;
-        ClaimSpellEffect(facts.NameOf(f.AtkIdx), timeline);
+        if (factList[fi].AttackerIsSpell) state.SpellLineNames.Add(facts.NameOf(factList[fi].AtkIdx));
       }
+      state.R21FactCursor = factList.Length;
 
+      var evidence = facts.Evidence;
+      for (var ei = state.R21EvidenceCursor; ei < evidence.Length; ei++)
+      {
+        if (evidence[ei].Kind != EvidenceFact.EvCast) continue;
+        var spell = facts.AuxOf(evidence[ei].AuxIdx);
+        /*
+         * Only a name the capture also used as an attacker or defender needs a verdict: a spell that was merely cast and never
+         * named in a combat line has no row anywhere for the answer to appear on (rows come from facts), so claiming it would
+         * cost a timeline entry and move the state digest — forcing a full rebuild over a verdict nothing reads — for its whole
+         * log. Measured on eqlog_Kizant_xegony-09-20-25.txt: 1,044 cast tokens, of which the fact table names a handful.
+         */
+        if (string.IsNullOrEmpty(spell) || facts.NameIndexOf(spell) < 0 || LooksLikeEntityName(spell)) continue;
+        state.SpellCastNames.Add(spell);
+      }
+      state.R21EvidenceCursor = evidence.Length;
+
+      foreach (var name in state.SpellLineNames) ClaimSpellEffect(name, timeline, "R21-spellshape", requiresSilence: false);
+      foreach (var name in state.SpellCastNames) ClaimSpellEffect(name, timeline, "R21-spellcast", requiresSilence: true);
       foreach (var name in facts.InternedNames)
       {
-        if (!SpellNamed(name)) continue;
-        ClaimSpellEffect(name, timeline);
+        if (SpellNamed(name)) ClaimSpellEffect(name, timeline, "R21-spelleffect", requiresSilence: false);
       }
     }
 
-    private static void ClaimSpellEffect(string? name, EntityTimeline timeline)
+    /*
+     * The shapes the game uses for CREATURES, refused on the cast-token feed. A tokenizer that splits
+     * `X begins casting Y.` trusts the line, and one capture of this size hands it 1,085 tokens — enough that a name doing
+     * double duty (a pet named after a spell) has to be protected by grammar rather than left to a tie: articles and a
+     * possessive are how a fighter's name arrives, so those tokens claim nothing and the behaviour rules keep their say.
+     * Server-qualified names are refused too, as everywhere else in the identity rules.
+     */
+    private static bool LooksLikeEntityName(string name) =>
+      name.StartsWith("A ", StringComparison.OrdinalIgnoreCase)
+        || name.StartsWith("An ", StringComparison.OrdinalIgnoreCase)
+        || name.StartsWith("The ", StringComparison.OrdinalIgnoreCase)
+        || name.Contains(':')
+        || OwnerInName(name) is not null;
+
+    private static void ClaimSpellEffect(string? name, EntityTimeline timeline, string source, bool requiresSilence)
     {
       if (string.IsNullOrEmpty(name)) return;
 
@@ -1042,12 +1091,23 @@ namespace EQLogParser
        */
       if (IsSelfTargetDamageSpell(name)) return;
 
-      // Better provenance wins: something that called this creature, targeted it as an NPC, or heard it speak in a raid
-      // channel knows more than a name comparison does, and an operator's verdict outranks everything here anyway.
-      timeline.IdentityAt(name, double.PositiveInfinity, out var held, out _);
-      if (held >= RuleStrength.Strong) return;
+      /*
+       * Better provenance wins: something that called this creature, targeted it as an NPC, or heard it speak in a raid channel
+       * knows more than a name comparison does, and an operator's verdict outranks everything here anyway. The casting-message
+       * branch asks for MORE than the others — silence, not merely a weaker claim — because it is the only one that reads a
+       * token instead of recognising the name: a raid member or pet whose name happens to be a spell's name keeps its own row.
+       */
+      if (requiresSilence)
+      {
+        if (timeline.HasIdentity(name)) return;
+      }
+      else
+      {
+        timeline.IdentityAt(name, double.PositiveInfinity, out var held, out _);
+        if (held >= RuleStrength.Strong) return;
+      }
 
-      timeline.SetIdentity(name, IdentityKind.Npc, RuleStrength.Strong, "R21-spelleffect", double.NegativeInfinity);
+      timeline.SetIdentity(name, IdentityKind.Npc, RuleStrength.Strong, source, double.NegativeInfinity);
     }
 
     /*

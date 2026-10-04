@@ -90,6 +90,13 @@ internal static class IdentityVocabulary
     return colon > 0 ? s[..colon] : s;
   }
 
+  /// <summary>
+  /// Whether a source is one of R21's three spell verdicts (R21-spellshape / R21-spellcast / R21-spelleffect). One
+  /// recognizer for the whole family, shared by CanOverrule and the report: three codes mean one answer to the operator,
+  /// and a fourth spell code must not quietly grow a pencil because somebody compared against one spelling.
+  /// </summary>
+  internal static bool IsSpellEffect(string? source) => CodeOf(source).StartsWith("R21-", StringComparison.Ordinal);
+
   /// <summary>True when this verdict came from an earlier log on this server rather than from the open capture.</summary>
   internal static bool IsPrior(string? source) =>
     !string.IsNullOrEmpty(source) && source.StartsWith(PriorPrefix, StringComparison.Ordinal);
@@ -136,19 +143,21 @@ internal static class IdentityVocabulary
       "R5-called" => detail is null ? "Called to its Owner" : $"Called by {detail}",
       "R5-owner" => "Owner in Name",
       "R6-npcdb" => "In npcs.txt",
-      "R7-graph" => "It Fights Mobs",
+      "R7-graph" => "It Fights NPCs",
       "R7-side" => "It Attacks Raid",
       "R9-charm" => "Charm Window",
       "R10-manual" or "Manual" or "Override" => $"You chose {TypeWord(kind)}",
       "R13-merc" => "From /target as Mercenary",
-      "R14-shape" => "Mob Name Shape",
+      "R14-shape" => "NPC Name Shape",
       "R15-healed" => healedByCasters > 0 ? $"Healed by {healedByCasters:N0} raiders" : "Healed by the Raid",
       "R16-comma" => "Titled Name",
       "R17-selffeed" => "Drank or Ate",
       "R18-healedpet" => "Healed by our Pets' Owner",
       "R19-eyeowner" => "Hit the Eye named after them",
       "R20-petspell" => detail is null ? "Pet Spell" : $"Cast {detail} (pet)",
-      "R21-spelleffect" => "A Spell, not a Fighter",
+      "R21-spellshape" => "No Caster in Line",
+      "R21-spellcast" => "Casting Message",
+      "R21-spelleffect" => "In spells.txt",
       _ => code.Length > 0 ? code : kind == IdentityKind.Unknown ? "Nothing identified it" : TypeWord(kind),
     };
 
@@ -174,7 +183,7 @@ internal static class IdentityVocabulary
     // An operator's own claim always keeps its pencil: taking it back has to remain possible even on a name whose
     // spelling says otherwise, or a wrong click would be permanent.
     if (code is "R10-manual" or "Manual" or "Override") return true;
-    if (code == "R21-spelleffect") return false;
+    if (IsSpellEffect(source)) return false;
     if (string.IsNullOrEmpty(name)) return true;
 
     // One recognizer for "is this a spell", shared with R21 (ClassificationRules.SpellNamed): a rule and the words shown
@@ -220,12 +229,12 @@ internal static class IdentityVocabulary
 
     // The attack graph says which side a name fights on, so the words say exactly that rather than "Our side", which
     // could be read as an assertion about loyalty instead of a count of who got hit.
-    ["R7-graph"] = "Fights Mobs",
+    ["R7-graph"] = "Fights NPCs",
     ["R7-side"] = "Attacks Raid",
     ["R9-charm"] = "Charmed",
     ["R10-manual"] = "Chosen",
     ["R13-merc"] = "Mercenary",
-    ["R14-shape"] = "Mob Name",
+    ["R14-shape"] = "NPC Name",
     ["R15-healed"] = "Healed",
     ["R16-comma"] = "Titled Name",
     ["R17-selffeed"] = "Drinking",
@@ -233,8 +242,13 @@ internal static class IdentityVocabulary
     ["R19-eyeowner"] = "Own Eye",
     ["R20-petspell"] = "Pet Spell",
 
-    // A name that only ever appears as the attacker on a spell line ("Curse XVII Rk. III by ."). It is not a creature
-    // and must never read as a person — see ClassificationRules.ApplySpellEffects.
+    /*
+     * The three ways R21 learns a name is a spell — the damage line that named no caster, a casting message, and the spell
+     * list (see ClassificationRules.ApplySpellEffects). ONE cell word for all three because the operator's question is
+     * "what is this thing?", not "which of my data said so?": a spell is not a creature and must never read as a person.
+     */
+    ["R21-spellshape"] = "A Spell",
+    ["R21-spellcast"] = "A Spell",
     ["R21-spelleffect"] = "A Spell",
 
     // Two spellings the files themselves carry, kept mapped because they are already on disk:

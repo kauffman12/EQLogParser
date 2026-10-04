@@ -285,6 +285,9 @@ namespace EQLogParser
     int TauntCount { get; }
     IReadOnlyList<string> InternedNames { get; }
     short InternName(string name);
+
+    /// <summary>Lookup without interning: the name's index, or -1 when this capture never named it.</summary>
+    short NameIndexOf(string name);
     string NameOf(short idx);
     short InternSubtype(string subtype);
     string SubtypeOf(ushort idx);
@@ -383,6 +386,13 @@ namespace EQLogParser
     }
 
     public string NameOf(short idx) => _names[idx];
+
+    /*
+     * Look a name up WITHOUT adding it (same OrdinalIgnoreCase key as InternName). Rules that want to know whether a name took
+     * part in the capture must not intern it: interning from a read path would grow the very pool they are asking about, and the
+     * id's string is what rows display.
+     */
+    public short NameIndexOf(string name) => _nameMap.TryGetValue(name, out var idx) ? idx : (short)-1;
 
     public short InternSubtype(string subtype)
     {

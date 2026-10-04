@@ -69,6 +69,8 @@ namespace EQLogParser
     internal int R15HealCursor;                  // R15 heal walk
     internal int R15VetoCursor;                  // R15 swing-back veto over facts.Facts
     internal int R7FactCursor;                   // R7 edge walk
+    internal int R21FactCursor;                  // R21 line-shape flag walk over facts.Facts
+    internal int R21EvidenceCursor;              // R21 cast-message walk over facts.Evidence
     internal int R18HealCursor;                  // R18 heal walk
     internal int R18VetoCursor;                  // R18 swing-back veto
 
@@ -109,6 +111,14 @@ namespace EQLogParser
     internal readonly Dictionary<string, ClassificationRules.HealEdgeAgg> R18Candidates = new(StringComparer.Ordinal);
     internal readonly Dictionary<string, AttackVeto> R18Vetos = new(StringComparer.Ordinal);
 
+    // ---- R21: spell names, both feeds carried as NAME SETS (the claims are re-played onto each fresh store,
+    // in proof order — a name the damage line itself named first, then one only a casting message named, and that
+    // second set only ever holds names the capture also fought: see the pool gate in ApplySpellEffects).
+    // The sets, not the cursors, are what makes a carried pass still verdict OLD names. ----
+
+    internal readonly HashSet<string> SpellLineNames = new(StringComparer.Ordinal);
+    internal readonly HashSet<string> SpellCastNames = new(StringComparer.Ordinal);
+
     // ---- R7: per-attacker side evidence; the eval loop runs over the carry every pass like today ----
 
     internal readonly Dictionary<string, ClassificationRules.SideAgg> GraphAggs = new(StringComparer.Ordinal);
@@ -127,6 +137,8 @@ namespace EQLogParser
       R15HealCursor = 0;
       R15VetoCursor = 0;
       R7FactCursor = 0;
+      R21FactCursor = 0;
+      R21EvidenceCursor = 0;
       R18HealCursor = 0;
       R18VetoCursor = 0;
 
@@ -146,6 +158,8 @@ namespace EQLogParser
       R15Vetos.Clear();
       R18Candidates.Clear();
       R18Vetos.Clear();
+      SpellLineNames.Clear();
+      SpellCastNames.Clear();
       GraphAggs.Clear();
       Charms = null;
     }

@@ -43,7 +43,8 @@ public class IdentityVocabularyTest
 
     "R4-spell", "R5-called", "R5-owner", "R6-npcdb", "R7-graph", "R7-side", "R9-charm", "R10-manual",
     "R13-merc", "R14-shape", "R15-healed", "R16-comma", "R17-selffeed", "R18-healedpet", "R19-eyeowner",
-    "R20-petspell", "R21-spelleffect",
+    "R20-petspell",
+    "R21-spellshape", "R21-spellcast", "R21-spelleffect",
 
     // The two spellings the FILES carry, so they must map even though no rule writes them: what
     // IdentityOverrideStore.LoadAll reports as a row's source ("Override"), and AddRow's word for an override read out of
@@ -75,7 +76,14 @@ public class IdentityVocabularyTest
      * operator verdict that three files spell differently, and "Mercenary" is the same /target finding that two rules can
      * reach. A third such group means one cell now stands for two kinds of proof — which is the failure this guards.
      */
-    string[] shared = ["Override", "Manual", "R10-manual", "R3-merc", "R13-merc"];
+    /*
+     * The R21 trio shares one word on purpose: three ways of learning a name is a spell (the damage line named no caster, a
+     * casting message, the spell list) and the column answers "what is this thing?", not "which of my data said so" — the
+     * distinction rides in the tooltip. Override/Manual/R10-manual are one operator verdict spelled three ways by three files,
+     * and R3-merc/R13-merc are the same /target finding two rules reach.
+     */
+    string[] shared = ["Override", "Manual", "R10-manual", "R3-merc", "R13-merc",
+                       "R21-spellshape", "R21-spellcast", "R21-spelleffect"];
     foreach (var group in IdentityVocabulary.WhyWords.GroupBy(kvp => kvp.Value).Where(g => g.Count() > 1))
       Assert.IsTrue(group.All(kvp => shared.Contains(kvp.Key)),
                     $"the word \"{group.Key}\" stands for more than one rule: {string.Join(", ", group.Select(kvp => kvp.Key))}");
@@ -169,11 +177,11 @@ public class IdentityVocabularyTest
   [TestMethod]
   public void AnEarlierVerdictSaysSoInTheTooltipAndNotInTheCell()
   {
-    Assert.AreEqual("Fights Mobs", IdentityVocabulary.WhyWord("Prior:R7-graph"));
+    Assert.AreEqual("Fights NPCs", IdentityVocabulary.WhyWord("Prior:R7-graph"));
     Assert.AreEqual("NPC List", IdentityVocabulary.WhyWord("Prior:R6-npcdb"));
     Assert.AreEqual("Chosen", IdentityVocabulary.WhyWord("Prior:Override"));
 
-    Assert.AreEqual("It Fights Mobs in previous log", IdentityVocabulary.ProofText("Prior:R7-graph", IdentityKind.Player));
+    Assert.AreEqual("It Fights NPCs in previous log", IdentityVocabulary.ProofText("Prior:R7-graph", IdentityKind.Player));
     Assert.AreEqual("In npcs.txt in previous log", IdentityVocabulary.ProofText("Prior:R6-npcdb", IdentityKind.Npc));
 
     // The tail survives the prefix, which is what lets an older log's spell verdict still name its cast.
@@ -219,7 +227,9 @@ public class IdentityVocabularyTest
     Assert.AreEqual("Healed by the Raid", IdentityVocabulary.ProofText("R15-healed", IdentityKind.Player),
                     "a heal-based verdict with no walk over the heal stream still has to say what kind of proof it was");
     Assert.AreEqual("You chose NPC", IdentityVocabulary.ProofText("R10-manual", IdentityKind.Npc));
-    Assert.AreEqual("A Spell, not a Fighter", IdentityVocabulary.ProofText("R21-spelleffect", IdentityKind.Npc));
+    Assert.AreEqual("In spells.txt", IdentityVocabulary.ProofText("R21-spelleffect", IdentityKind.Npc));
+    Assert.AreEqual("No Caster in Line", IdentityVocabulary.ProofText("R21-spellshape", IdentityKind.Npc));
+    Assert.AreEqual("Casting Message", IdentityVocabulary.ProofText("R21-spellcast", IdentityKind.Npc));
   }
 
   /*
@@ -233,6 +243,12 @@ public class IdentityVocabularyTest
                    "the ownership word in the name IS the evidence; the dropdown could only be wrong");
     Assert.IsFalse(IdentityVocabulary.CanOverrule("Sancus`s pet", null),
                    "no verdict yet is not a reason to offer one that contradicts the name");
+    Assert.IsFalse(IdentityVocabulary.CanOverrule("Sonic Bang", "Prior:R21-spellcast"),
+               "a spell verdict remembered from an older log keeps the pencil off too — CodeOf strips the marker, so IsSpellEffect sees R21 either way");
+    Assert.IsTrue(IdentityVocabulary.CanOverrule("Useless", "R7-graph"),
+               "a name the graph merely placed keeps its pencil — that verdict is a guess to correct");
+    Assert.IsFalse(IdentityVocabulary.CanOverrule("Sonic Bang", "R7-graph"),
+               "a name spells.txt answers for gets no pencil even when only the graph placed it: it cannot be a fighter");
     Assert.IsFalse(IdentityVocabulary.CanOverrule("Sonic Bang", "R21-spelleffect"),
                    "a spell effect typed as a Player would put it on the roster");
 
