@@ -63,9 +63,15 @@ public sealed class FightTableLoadBandTest
     });
   }
 
-  // The panel's handlers arrive through Dispatcher.InvokeAsync; an STA test thread runs no message loop, so
-  // every step flushes the queue at the lowest priority before asserting on what it changed.
-  private static void Flush() => Dispatcher.CurrentDispatcher.Invoke(new Action(() => { }), DispatcherPriority.SystemIdle);
+  /*
+   * The panel's handlers arrive through Dispatcher.InvokeAsync at Normal, so the flush must pump AT Normal:
+   * that drains every queued handler and stops above Loaded/Render. Pumping LOWER (SystemIdle) additionally runs
+   * the pane's first arrange pass - and with the band visible that pass starts the indeterminate bar's INFINITE
+   * animation on a windowless test thread, which took the render-thread path and hung the run for the full 60 s
+   * Sta budget (measured on Windows: both band-showing tests hung, AReadingTick - same pump, band collapsed -
+   * sailed through in milliseconds). Priority is load-bearing in both directions.
+   */
+  private static void Flush() => Dispatcher.CurrentDispatcher.Invoke(new Action(() => { }), DispatcherPriority.Normal);
 
   [TestMethod]
   public void AReadingTickSaysNothingHere()

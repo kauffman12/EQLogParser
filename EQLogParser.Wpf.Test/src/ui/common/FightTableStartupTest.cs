@@ -86,11 +86,20 @@ public sealed class FightTableStartupTest
     ConfigUtil.SetSetting("NpcShowInactivityBreaks", false);
     ConfigUtil.SetSetting("NpcShowHitPoints", false);
 
-    FightTable? table = null;
-    Sta.Run(() => table = new FightTable());
+    bool breaksChecked = true;
+    bool hpChecked = true;
+    Sta.Run(() =>
+    {
+      var table = new FightTable();
+      // Every DP read happens HERE: the controls belong to this thread, and touching them after Sta.Run
+      // returns reads another thread's objects - an InvalidOperationException on the MTA test thread that
+      // fails the test AFTER the code under test already passed.
+      breaksChecked = table.fightShowBreaks.IsChecked == true;
+      hpChecked = table.fightShowHp.IsChecked == true;
+    });
 
-    Assert.IsFalse(table!.fightShowBreaks.IsChecked == true, "the saved OFF survived XAML's IsChecked=True");
-    Assert.IsFalse(table.fightShowHp.IsChecked == true);
+    Assert.IsFalse(breaksChecked, "the saved OFF survived XAML's IsChecked=True");
+    Assert.IsFalse(hpChecked);
   }
 
   [TestMethod]
@@ -100,14 +109,17 @@ public sealed class FightTableStartupTest
     // Unchecking HP on a constructed pane is the user's click - the column must hide and the dial persist.
     ConfigUtil.SetSetting("NpcShowHitPoints", true);
 
-    FightTable? table = null;
+    bool columnHidden = false;
     Sta.Run(() =>
     {
-      table = new FightTable();
-      table.fightShowHp.IsChecked = false;
+      var table = new FightTable();
+      table.fightShowHp.IsChecked = false;   // the user's click
+      // Same thread law as everywhere else: IsHidden is a DP, read it where it lives. ConfigUtil below is
+      // plain static state and happily answers on the MTA test thread.
+      columnHidden = table.damageColumn.IsHidden;
     });
 
-    Assert.IsTrue(table!.damageColumn.IsHidden, "a post-load uncheck hid the column");
+    Assert.IsTrue(columnHidden, "a post-load uncheck hid the column");
     Assert.IsFalse(ConfigUtil.IfSet("NpcShowHitPoints", true), "the dial was saved");
   }
 }

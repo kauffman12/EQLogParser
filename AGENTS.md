@@ -58,6 +58,13 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   (`FctSkiaCanvas`, a window, a control) goes through `Sta.Run(...)` (`EQLogParser.Wpf.Test/src/Sta.cs`), which claims a thread as STA, runs
   the body there and rethrows at the call site so a failure still reads as a failed assertion. `Dispatcher.CurrentDispatcher` does not help;
   it hands out a dispatcher on any thread and fails in the same constructor. The lane guide test found this by failing three for three.
+  Two companion laws from the Fight List panes, both measured on Windows: **every DependencyObject read belongs
+  INSIDE the `Sta.Run` body** — an assertion that touches `IsChecked`/`IsHidden` after the body returned fails with
+  "a different thread owns it" *after* the code under test already passed (capture plain bools in the body, assert
+  those outside; `ConfigUtil` is static state and answers anywhere); and **flush at the priority the handlers queued
+  at (Normal), never lower** — pumping at SystemIdle also runs the pane's first arrange, whose pass starts an
+  indeterminate ProgressBar's infinite animation on a windowless thread and hung both band-showing tests for the
+  full 60 s budget while the band-collapsed twin sailed through.
 - **XAML-fired handlers guard the PANE, not the sender**: a handler attached to a property XAML itself sets (`IsChecked="True"`) runs
   DURING `InitializeComponent`, and not all named fields are wired at once — measured startup crashes came in both shapes: once with the
   checkbox field itself null, once with the checkbox wired while a column declared later in the markup was not (NRE one line past a
