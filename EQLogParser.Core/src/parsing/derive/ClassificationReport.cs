@@ -81,6 +81,18 @@ namespace EQLogParser
       public int PriorSightings { get; init; }
       public long PriorSeenAtS { get; init; }
 
+      /*
+       * The concrete thing a SPELL-BASED verdict came from, e.g. "Boastful Bellow I.". R4 and R20 claim a name from a
+       * cast line and their reason tag says only which rule fired, so the census walks the evidence rows to name the
+       * cast itself: the FIRST class-safe/pet-safe cast of that name, which is the claim the timeline resolved to.
+       *
+       * Display detail and nothing more — no verdict, digest or file reads it, which is why the rule tags themselves
+       * stay clean vocabulary words (`R4-spell`, not `R4-spell:Boastful Bellow`): the digest hashes sources, the prior
+       * ledger persists them, and a spell name in either would be a format change to identity's own language for the
+       * sake of a tooltip. Null for every rule that is not spell-based.
+       */
+      public string? ReasonDetail { get; init; }
+
       /// <summary>Sum of this name's damage facts (its own hits; a defender gets no credit for being hit).</summary>
       public double Damage { get; init; }
 
@@ -207,6 +219,10 @@ namespace EQLogParser
         }
       }
 
+      // Which cast earned each spell-based verdict (see Row.ReasonDetail). One walk over the evidence rows — identity
+      // evidence is sparse by design ("common, but not per-hit") and only cast lines the R4/R20 gates accept are kept.
+      var castProof = BuildCastProof(damageFacts);
+
       // Index by display name, case-insensitively: the pool keeps one id per entity however the line spelled it, but
       // registry and override rows are their own strings and have to fold onto that same row.
       var rows = new Dictionary<string, Row>(StringComparer.OrdinalIgnoreCase);
@@ -214,7 +230,7 @@ namespace EQLogParser
       {
         for (short i = 0; i < names.Count; i++)
         {
-          AddRow(rows, names[i], timeline, overrides, registry, priors, damage[i], healing[i], events[i], hasFacts: true);
+          AddRow(rows, names[i], timeline, overrides, registry, priors, castProof, damage[i], healing[i], events[i], hasFacts: true);
         }
       }
 
@@ -228,14 +244,14 @@ namespace EQLogParser
       {
         foreach (var entry in overrides.All())
         {
-          if (!rows.ContainsKey(entry.Key)) AddRow(rows, entry.Key, timeline, overrides, registry, priors, 0, 0, 0, hasFacts: false);
+          if (!rows.ContainsKey(entry.Key)) AddRow(rows, entry.Key, timeline, overrides, registry, priors, castProof, 0, 0, 0, hasFacts: false);
         }
       }
       if (registry is not null)
       {
         foreach (var name in RosterNames(registry))
         {
-          if (!rows.ContainsKey(name)) AddRow(rows, name, timeline, overrides, registry, priors, 0, 0, 0, hasFacts: false);
+          if (!rows.ContainsKey(name)) AddRow(rows, name, timeline, overrides, registry, priors, castProof, 0, 0, 0, hasFacts: false);
         }
       }
 
@@ -251,7 +267,7 @@ namespace EQLogParser
       {
         foreach (var entry in priors.All())
         {
-          if (!rows.ContainsKey(entry.Key)) AddRow(rows, entry.Key, timeline, overrides, registry, priors, 0, 0, 0, hasFacts: false);
+          if (!rows.ContainsKey(entry.Key)) AddRow(rows, entry.Key, timeline, overrides, registry, priors, castProof, 0, 0, 0, hasFacts: false);
         }
       }
 
@@ -301,8 +317,31 @@ namespace EQLogParser
 
     private static string? NullIfEmpty(string? value) => string.IsNullOrEmpty(value) ? null : value;
 
+    /// <summary>First accepted cast per caster, for Row.ReasonDetail. Null when the capture has no evidence rows.</summary>
+    private static Dictionary<string, string>? BuildCastProof(DamageFactTable? facts)
+    {
+      if (facts is null || facts.EvidenceCount == 0) return null;
+
+      Dictionary<string, string>? proof = null;
+      foreach (var e in facts.Evidence)
+      {
+        if (e.Kind != EvidenceFact.EvCast) continue;
+        var spell = facts.AuxOf(e.AuxIdx);
+        if (string.IsNullOrEmpty(spell)) continue;
+        // THE SAME GATES the rules apply, or the tooltip would name a cast that claimed nothing. A future third
+        // spell rule has to be listed here too; a name that is missing from this map simply gets no detail.
+        if (!ClassificationRules.IsClassSafeCast(spell!) && !ClassificationRules.IsPetCastSpell(spell!)) continue;
+
+        proof ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var caster = facts.NameOf(e.NameIdx);
+        if (!string.IsNullOrEmpty(caster) && !proof.ContainsKey(caster!)) proof[caster!] = spell!;
+      }
+      return proof;
+    }
+
     private static Row AddRow(Dictionary<string, Row> rows, string name, EntityTimeline? timeline,
                               IdentityOverrideStore? overrides, PlayerRegistry? registry, IdentityPriorStore? priors,
+                              Dictionary<string, string>? castProof,
                               double damage, double healing, long events, bool hasFacts)
     {
       var kind = IdentityKind.Unknown;
@@ -357,6 +396,11 @@ namespace EQLogParser
         Name = name,
         Kind = kind,
         Reason = source,
+        // Only a verdict THIS capture's spell rules fired gets a spell named beside it; "Prior:R4-spell" is another
+        // log's conclusion and this file's casts are not what proved it.
+        ReasonDetail = (source.StartsWith("R4-spell", StringComparison.Ordinal)
+                        || source.StartsWith("R20-petspell", StringComparison.Ordinal))
+                       && castProof is not null && castProof.TryGetValue(name, out var spell) ? spell : null,
         IsOperatorVerdict = isOperator,
         IsRejected = rejected,
         Class = NullIfEmpty(registry?.GetLastKnownPlayerClass(name)),
