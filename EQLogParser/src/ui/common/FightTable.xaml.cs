@@ -334,7 +334,7 @@ namespace EQLogParser
 
     private void FightGridItemsSourceChanged(object sender, Syncfusion.UI.Xaml.Grid.GridItemsSourceChangedEventArgs e) => ApplyFilter();
 
-    private void MirrorSelectionChanged(object sender, GridSelectionChangedEventArgs e)
+    private void GridSelectionChanged(object sender, GridSelectionChangedEventArgs e)
     {
       // Restart the pause on every click so a dragged range announces once, at the end.
       _selectionTimer.Stop();
@@ -492,7 +492,7 @@ namespace EQLogParser
     // Greyed out unless the grid has a real fight selected; clearing is offered even with nothing selected,
     // because "what did I save?" is asked most often right after a name stops appearing in the list at all
     // (set as Pet and its row is gone by design, so there is nothing left to click).
-    private void MirrorContextMenuOpening(object sender, System.Windows.Controls.ContextMenuEventArgs e)
+    private void GridContextMenuOpening(object sender, System.Windows.Controls.ContextMenuEventArgs e)
     {
       var hasFight = GetSelectedFights().Count > 0;
 

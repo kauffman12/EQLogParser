@@ -28,7 +28,7 @@
           </Setter.Value>
         </Setter>
       </Style>
-      <Style x:Key="MirrorRowStyle" TargetType="sfgrid:VirtualizingCellsControl">
+      <Style x:Key="FightRowStyle" TargetType="sfgrid:VirtualizingCellsControl">
         <Style.Triggers>
           <!-- The inactivity divider keeps legacy's own color: ColorRowStyleConverter paints every
                Breaktime row with the warning brush (salmon/dark orange by theme), not the search one. -->
@@ -77,9 +77,9 @@
                            IsReadOnly="True"
                            RowHeight="{DynamicResource EQTableRowHeight}"
                            RowHeaderWidth="{DynamicResource EQTableExtendedRowHeaderWidth}"
-                           RowStyle="{DynamicResource MirrorRowStyle}"
-                           ContextMenuOpening="MirrorContextMenuOpening"
-                           SelectionChanged="MirrorSelectionChanged"
+                           RowStyle="{DynamicResource FightRowStyle}"
+                           ContextMenuOpening="GridContextMenuOpening"
+                           SelectionChanged="GridSelectionChanged"
                            SelectionMode="Extended"
                            ShowRowHeader="True"
                            SourceType="{x:Type local:DerivedFightRow}">
