@@ -68,10 +68,13 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
 - **XAML-fired handlers guard the PANE, not the sender**: a handler attached to a property XAML itself sets (`IsChecked="True"`) runs
   DURING `InitializeComponent`, and not all named fields are wired at once — measured startup crashes came in both shapes: once with the
   checkbox field itself null, once with the checkbox wired while a column declared later in the markup was not (NRE one line past a
-  sender-null guard). So every such handler opens with the pane-readiness sentinel — `dataGrid?.View != null` (legacy) / `mirrorGrid?.View is null`
-  return (derived list) — never `senderField is null`. View materializes when the constructor assigns ItemsSource, so it swallows every
-  synthetic firing and passes every real one, including the constructor's own dial sync; a test where a post-load toggle must still reach
-  its column belongs with any handler like this (`FightTableStartupTest`). Reasoning: docs/DesignNotes.md → "Handlers that XAML fires early".
+  sender-null guard). So every such handler opens with the pane-readiness sentinel — whatever the body actually needs, never
+  `senderField is null`: handlers that READ the grid's view gate on it (`dataGrid?.View != null` in TankingSummary,
+  DamageBreakdown, HitLogViewer); `FightTable`'s dial handlers gate on `_paneReady`, a flag set on the constructor's last line —
+  because `SfDataGrid.View` materializes only on the grid's **Loaded** pass (its ItemsSource callback bails while `!isGridLoaded`),
+  so a View guard there swallows every real toggle on a pane that never arranges (`ARealToggleAfterLoadStillReachesTheColumn`
+  failed exactly this way). A test where a post-load toggle must still reach its column belongs with any handler like this
+  (`FightTableStartupTest`). Reasoning: docs/DesignNotes.md → "Handlers that XAML fires early".
 - **Namespaces**: the WPF app AND `EQLogParser.Core` each compile every source into the flat `namespace EQLogParser`, whatever folder it
   lives in — folders state what something is (parsing, util, perf), not its namespace. The one historical exception,
   `EQLogParser.Mirror`, was dissolved with the engine's renaming; declaring a per-folder namespace in either project breaks tests'

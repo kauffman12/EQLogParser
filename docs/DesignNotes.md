@@ -55,7 +55,7 @@ lines ──parsers──▶ CombatCapture
                     └─ two ordinal sets per row: facts AT the owner / facts BY the owner
                           │
         ┌─────────────────┼──────────────────────┬─────────────────────┐
-   MirrorFightTable   FightSummarySource/Heals  MirrorMeter + LiveFights   Names window /
+   FightTable         FightSummarySource/Heals  MirrorMeter + LiveFights   Names window /
    (legacy's 3 cols,  (the REAL builders get     ("still going" on the      identity census
     sections, search,  materialized records —    capture's clock; the
     overrides)         same code as legacy)      meter's quiet dial is the
@@ -4896,35 +4896,44 @@ sweeps incremental, and the gated benchmark is what shows that - not speculation
 
 ## Handlers that XAML fires early (2026-10)
 
-Two startup crashes in `MirrorFightTable`, one build apart, taught the same lesson twice — and the codebase already knew it.
+Two startup crashes in `FightTable`, one build apart, taught the same lesson twice — and the codebase already knew it.
 
 **Crash 1** (`f2438c88` shipped the HP checkbox): `NullReferenceException` at `ShowHpChanged`, inside
-`MirrorFightTable.InitializeComponent`, out through `MainWindow..ctor` → `CreateAppError`, every launch. XAML sets
+`FightTable.InitializeComponent`, out through `MainWindow..ctor` → `CreateAppError`, every launch. XAML sets
 `IsChecked="True"` on a CheckBox whose `Checked/Unchecked` point at that handler, and WPF raises the event *as it applies the
-property* — mid-parse, when no named field of the control exists yet. The handler read `mirrorShowHp.IsChecked` off the null field.
+property* — mid-parse, when no named field of the control exists yet. The handler read `fightShowHp.IsChecked` off the null field.
 
-**The first fix was wrong in a way worth remembering.** It guarded `if (mirrorShowHp is null) return;` — testing the *sender*.
+**The first fix was wrong in a way worth remembering.** It guarded `if (fightShowHp is null) return;` — testing the *sender*.
 
-**Crash 2** (same method, one deeper): NRE at `mirrorDamageColumn.IsHidden`, meaning the handler ran **past** the sender guard —
-`mirrorShowHp` was wired while `mirrorDamageColumn` (declared ~35 lines later in the markup, inside the grid) was not. So
+**Crash 2** (same method, one deeper): NRE at `damageColumn.IsHidden`, meaning the handler ran **past** the sender guard —
+`fightShowHp` was wired while `damageColumn` (declared ~35 lines later in the markup, inside the grid) was not. So
 pre-load firings are not one event at one instant: whatever the exact mechanism (the checkbox carries a custom
 `Template="{StaticResource CustomCheckBoxTemplate}"`, and template materialization is a known way for a toggle to push its value
 back during parse), **multiple synthetic firings land at different points of the parse, each seeing a different half-wired pane.**
 A sender-null guard can only ever catch the subset where that one field happens to be null.
 
-**The convention every legacy table already follows**: guard on the *pane's readiness* — `dataGrid?.View != null`
-(FightTable, TankingSummary, DamageBreakdown with its literal `// check if call is during initialization`, HitLogViewer's
-`dataGrid is { View: not null }`). This is why that idiom looks redundant until it saves you. `SfDataGrid.View` materializes only
-when something assigns `ItemsSource`, and the constructor does that *before* syncing the checkboxes from saved settings:
+**The convention the other tables already follow**: guard on the *pane's readiness*, never on the sender — `dataGrid?.View != null`
+(TankingSummary, DamageBreakdown with its literal `// check if call is during initialization`, HitLogViewer's
+`dataGrid is { View: not null }`). This is why that idiom looks redundant until it saves you. But the sentinel must be what the
+handler's body actually needs, and this pane learned the split the expensive way (2026-11):
 
-- during `InitializeComponent`: `mirrorGrid` (or its View) is null → every synthetic firing is swallowed, whatever field state it sees;
-- in the constructor's dial sync and after: View exists → real events, including `IsChecked = ConfigUtil.IfSet(...)`, run fully.
+**`SfDataGrid.View` does NOT materialize when the constructor assigns `ItemsSource`** — that is how this section used to claim it
+worked, and production never disagreed because a docked pane loads before anyone can click. Decompiled against SfGrid 34.2.8:
+the ItemsSource callback (`OnItemsSourceChanged`) returns early while `!isGridLoaded`, and `SetSourceList` / `CreateCollectionView`
+run only from `RefreshContainerAndView()` — the grid's **Loaded** pass. A constructed-but-never-arranged pane (the headless test
+host; a dock that starts hidden) keeps `View` null *forever*, so a View guard in these handlers swallowed every **real** toggle,
+not just the synthetic ones. That is exactly how `ARealToggleAfterLoadStillReachesTheColumn` failed: post-construction uncheck,
+handler ran, guard swallowed, column stayed visible. For handlers that READ the view (filter, records) the View timing is right
+and the null-view skip is a feature; the dial handlers read no view at all — they touch one column and saved settings, and
+`ApplyFilter` already tolerates an absent view until one exists.
 
-Both mirror handlers now open with `if (mirrorGrid?.View is null) return;`. The rule generalizes to any pane: **a handler attached
-to a property XAML itself sets must test the one object that cannot exist until the pane is fully loaded** — not the sender, not
-"some field", but the readiness sentinel the rest of the app uses.
+What the dials gate on now is `_paneReady`, a flag set on the constructor's **last line**: false for every mid-parse synthetic
+firing (named fields may be half-wired), true from then on (every XAML field wired; the constructor's own dial sync still lands in
+the false half and that is harmless — the very next statement sets `damageColumn.IsHidden` explicitly). The rule generalizes to any
+pane: **a handler attached to a property XAML itself sets must test the one thing that cannot exist until the pane is ready for
+what the body does** — the View, if the body reads the view; construction completion, if it only touches fields — never the sender.
 
-**Test coverage, and its limits.** `MirrorFightTableStartupTest` (Wpf.Test) pins three things: plain construction (MainWindow's own
+**Test coverage, and its limits.** `FightTableStartupTest` (Wpf.Test) pins three things: plain construction (MainWindow's own
 path), "a saved-OFF dial survives XAML's IsChecked=True" (the silent corruption the synthetic toggle would cause), and — the half
 that keeps this fix honest — "a real post-load uncheck still hides the column and saves the dial", because a guard too eager to
 swallow passes every crash test while breaking the feature. These compile anywhere but only run on Windows; **constructing themed
@@ -4938,7 +4947,7 @@ for launching the built app before shipping UI code.
 **Why: a user asked, twice, "when would anyone ever press Re-derive?" — and the honest answer was once.** The button
 existed because a failed pass latched auto-derive OFF for the life of the session ("stop the loop, leave Re-derive
 available"). Enumerating the triggers said otherwise: quiescence fires a full pass at load end; the cadence keeps a live
-tail fresh; an identity override calls `RederiveAsync` itself (`MirrorFightTable.xaml.cs:393`); opening the derived meter
+tail fresh; an identity override calls `RederiveAsync` itself (`FightTable.xaml.cs`); opening the derived meter
 forces a full pass (`DamageOverlayWindow.xaml.cs:226`). A press in healthy life recomputes what is already on screen.
 The button's entire job was the crash corner — furniture advertising our own bugs. And the latch itself predates the
 two-lane cadence: when derives only ran at load-end, stopping the loop cost a pass or two; under a 0.5-3 s refresh it

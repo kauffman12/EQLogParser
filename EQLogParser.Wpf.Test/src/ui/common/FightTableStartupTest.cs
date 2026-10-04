@@ -11,10 +11,12 @@ namespace EQLogParser.Wpf.Test;
  *
  * The reported crashes came in BOTH shapes, one build apart: first ShowHpChanged ran with fightShowHp itself still
  * null, then (with a sender-null guard in place) it fired again AFTER this checkbox was wired but BEFORE a column
- * declared later in the markup existed - NRE on damageColumn. Lesson, and the convention every legacy table
- * already follows: guard on the PANE's readiness (`fightGrid?.View is null`), never on the sender's. The grid's View
- * materializes only when the constructor assigns ItemsSource, so it is null for every synthetic pre-load firing and
- * non-null for every real one - including the constructor's own sync of the saved dials.
+ * declared later in the markup existed - NRE on damageColumn. Lesson: guard on the PANE's readiness, never on the
+ * sender's. The dial handlers gate on _paneReady - a flag set on the constructor's LAST line - and deliberately NOT on
+ * fightGrid.View: the View materializes only on the grid's Loaded pass (SfDataGrid's ItemsSource callback bails while
+ * !isGridLoaded, so a constructor assignment creates none), and this pane is never arranged here - a View guard would be
+ * null forever and swallow the real toggle ARealToggleAfterLoadStillReachesTheColumn throws at it. The flag IS false for
+ * every synthetic pre-load firing, which is the half AXamlCheckedBoxDoesNotOverwriteASavedDialBeforeItIsRead pins.
  *
  * No test had ever CONSTRUCTED either fight table (NamesTableTest deliberately tests only its formatting seam),
  * which is how a guaranteed startup crash crossed a whole batch of commits.

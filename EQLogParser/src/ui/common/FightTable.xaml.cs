@@ -76,6 +76,18 @@ namespace EQLogParser
     private bool _currentShowHp;
     private bool _currentShowTanking;
 
+    /*
+     * Pane readiness for the dial handlers: false until the constructor's last line. A synthetic IsChecked toggle
+     * fires DURING InitializeComponent (the XAML sets IsChecked="True" on every dial), and at that moment this flag
+     * is still false; by the time it flips, every XAML-named field is wired. It is deliberately NOT fightGrid.View:
+     * SfDataGrid materializes View only on its Loaded pass - its ItemsSource callback (OnItemsSourceChanged) returns
+     * early while the grid is not yet loaded, and SetSourceList/CreateCollectionView run from the load path only -
+     * so a pane that is constructed but never arranged keeps View null forever and a View guard would swallow every
+     * REAL toggle (measured: FightTableStartupTest's post-load uncheck landed in exactly that dead zone). The handler
+     * bodies touch columns and saved settings, and ApplyFilter already tolerates an absent view until one exists.
+     */
+    private bool _paneReady;
+
     // The search box's placeholder doubles as the empty-filter state: while it shows, nothing is filtered.
     private bool _searchPlaceholder;
 
@@ -125,6 +137,10 @@ namespace EQLogParser
 
       DeriveEngine.ActiveChanged += OnActiveChanged;
       Attach(DeriveEngine.Active);
+
+      // Last line on purpose: the dial handlers gate on this, and a synthetic IsChecked firing from the XAML parse
+      // must not outrun it. From here on every XAML field is wired, so a real toggle can act on full state.
+      _paneReady = true;
     }
 
     private void OnActiveChanged()
@@ -403,13 +419,13 @@ namespace EQLogParser
     {
       // Load-time contract: XAML sets IsChecked="True" WHILE InitializeComponent parses, and this handler must
       // absorb that synthetic toggle - acting on it would overwrite the stored setting before the constructor
-      // reads it. The sentinel is the pane's readiness (the grid's View, materialized only when the constructor
-      // assigns ItemsSource), NOT the sender's nullness: a real startup firing was measured where this
-      // checkbox's field WAS already wired and a later element in the markup (a column) was not - so testing
-      // fightShowBreaks here would let that firing through to apply work on half-built state. Legacy tests
-      // dataGrid?.View != null everywhere for exactly this reason; a pane's own readiness is the only thing a
-      // mid-parse firing can be shown not to have.
-      if (fightGrid?.View is null) return;
+      // reads it. The sentinel is _paneReady (constructor's last line), NOT the sender's nullness: a real startup
+      // firing was measured where this checkbox's field WAS already wired and a later element in the markup (a
+      // column) was not - so testing fightShowBreaks here would let that firing through to half-built state.
+      // It is also not fightGrid.View: View materializes only on the grid's Loaded pass, so on a pane that never
+      // arranges the guard would swallow every real toggle forever (see _paneReady). ApplyFilter below tolerates
+      // a missing view until one exists.
+      if (!_paneReady) return;
       if (fightShowBreaks.IsChecked.HasValue && fightShowBreaks.IsChecked != _currentShowBreaks)
       {
         _currentShowBreaks = fightShowBreaks.IsChecked == true;
@@ -422,11 +438,10 @@ namespace EQLogParser
     // column by name: legacy reaches for dataGrid.Columns[1], which breaks the moment anyone reorders the XAML.
     private void ShowHpChanged(object sender, RoutedEventArgs e)
     {
-      // Load-time contract as in ShowBreakChanged - same pane-readiness sentinel, same reason: the measured
-      // startup crashes came in BOTH shapes (once with this checkbox's own field still null, once wired while
-      // damageColumn below was not), so only `View` separates a synthetic toggle from the constructor's
-      // real sync of the saved setting.
-      if (fightGrid?.View is null) return;
+      // Load-time contract as in ShowBreakChanged - _paneReady sentinel, same reason: the measured startup
+      // crashes came in BOTH shapes (once with this checkbox's own field still null, once wired while
+      // damageColumn below was not), so only the flag separates a synthetic toggle from a real one.
+      if (!_paneReady) return;
       if (fightShowHp.IsChecked.HasValue && fightShowHp.IsChecked != _currentShowHp)
       {
         _currentShowHp = fightShowHp.IsChecked == true;
@@ -441,7 +456,8 @@ namespace EQLogParser
     // before the constructor reads it.
     private void ShowTankingChanged(object sender, RoutedEventArgs e)
     {
-      if (fightGrid?.View is null) return;
+      // Load-time contract as in ShowBreakChanged - _paneReady sentinel, same reason.
+      if (!_paneReady) return;
       if (fightShowTanking.IsChecked.HasValue && fightShowTanking.IsChecked != _currentShowTanking)
       {
         _currentShowTanking = fightShowTanking.IsChecked == true;
