@@ -352,20 +352,34 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   corpus check immediately caught a code nobody had written a word for (`R3-chat`). Same discipline as the FCT and `HitLabel` vocabularies: a new rule arrives with
   a word here, and `HealedByCasters` (the number behind *Healed*) is gated exactly like R15 — distinct raid-side Strong casters, self-heals skipped, **0 means "not
   asked" rather than "nobody healed them"** (`CensusHealProofTest`).
-- **A spell effect is not a fighter (R21), and it takes TWO proofs to say so**: when the client writes `Goratoar has taken 18724 damage from Slicing Energy by .` there is no
+- **A spell effect is not a fighter (R21), and it takes THREE proofs to say so**: when the client writes `Goratoar has taken 18724 damage from Slicing Energy by .` there is no
   caster for the attacker field, so `DamageLineParser` substitutes **the spell** and sets `AttackerIsSpell` (`CombatCapture` carries it onto the fact) — and a spell in an
   attacker field is an actor as far as the identity rules are concerned. Measured on `eqlog_Kizant_xegony-09-03-26.txt`: **706** lines end `by .` and **135** read `from your <spell>.`
   (against 45,904 that name their caster normally); over its first 250 MB `ApplySpellEffects` places **49** names out of a 227-name pool and **471** of their facts are aimed at
   **mobs** — the raid's own dots on the raid's own targets, which is exactly the evidence R7 reads as "one of ours" (`Tsikut's Chant of Frost Rk. III` 24, `Strangle XVII Rk. III` 26,
   `Spiter Blood Rk. II` 21). That is how a curse reached the roster column as "Player | Our side"; the 717 raid-directed facts keep their side and only gain the truth (`A Spell`).
-  Three laws. (1) **Early stage, Strong not Certain** — an independent identity (R6 npcdb, R9 charm, a name some spell also matches) keeps its better provenance
-  (`BetterEvidenceOutranksTheSpellDictionary`), so a rule that fires on dictionary membership may never paint over evidence. (2) **Line shape first, `spells.txt` second** — the flag
-  does not depend on this build shipping this expansion's data, and the dictionary answers every formulation because each rank is its OWN row (`Curse XVII` 72133, `Curse XVII Rk. II`
-  72134), so there is no name surgery and no bare-rank guessing; measured corpus is **49/49 in spells.txt**, i.e. the flag path earns nothing today and stays as the guard for data we
-  do not ship, tested through its own fixture rank (`Gluttering Decay IX`). (3) **`… Feedback XII.` on `You have taken` gets NO verdict** — that is the local player's own spell bouncing
-  back: NPC is as wrong as Player and no entity exists. R7 refuses those edges, R21 refuses the name, both pinned, because a guard on one path only is how this survived. One recognizer
-  (`SpellNamed`, shared with `IdentityVocabulary.CanOverrule`) so a rule and its own display words cannot disagree about where a spell name begins — same discipline as `EyeSummonOwnerInName`.
-  Tests: `SpellEffectIdentityTest` (real line shapes both directions, the flag-only rank, the feedback refusal, evidence outranks the dictionary).
+  Four laws. (1) **Early stage, Strong not Certain** — an independent identity (R6 npcdb, R9 charm, a name some spell also matches) keeps its better provenance
+  (`BetterEvidenceOutranksTheSpellDictionary`), so a rule that fires on dictionary membership may never paint over evidence. (2) **Three proofs in the order a person would trust them: what the LINE said, then what the game said somebody CAST, then what
+  `spells.txt` says.** The flag does not depend on this build shipping this expansion's data; the second feed is `X begins casting Y.` — `CastLineParser` already resolves that name (calling
+  `AddUnknownSpell` when the database has no row) and hands it over as the aux of an `EvCast` evidence row, so ranks postdating this build are known the day they print. It is **pool-gated**
+  (`facts.NameIndexOf(spell) >= 0`, a lookup that never interns — interning from a read path grows the pool whose size it is asking about): a name no combat line ever used gets **no timeline entry**.
+  Measured on `eqlog_Kizant_xegony-09-20-25.txt`: **1,085** cast tokens, **41** refused by law (3), and **0 of the remaining 1,044 appear as an attacker or defender**, so claiming them would add ~1,000
+  rows to a window about fighters and move `StateStamp()` on every first-time cast, buying a full rebuild over verdicts no board reads; where such a name *is* in the pool the claim still lands, which is why
+  this feed is a rule and not a lookup. Its real place is the report — see the next bullet. (3) **A token wearing a creature's shape claims nothing**: articles and possessives (`LooksLikeEntityName`) are how
+  this log names fighters, 1,085 trusted tokens include them, and a Strong spell verdict arriving first would freeze out R14's article rule and R5's ownership rule at equal strength
+  (`ACastTokenWearingACreatureShapeClaimsNothing`). Learned while pinning that: `AddUnknownSpell` makes **R14 decline a name the spell store has heard**, so such a token can legitimately stay unplaced — assert
+  "not a spell verdict", never "must be NPC". (4) **A spell row says A Spell and cites the line that said so** (`R21-spellshape` *No Caster in Line*, `R21-spellcast` *Casting Message*, `R21-spelleffect`
+  *In spells.txt*, all three typing as **A Spell**, never a side-word for something that is not a "it"), and it gets **no pencil**: `IdentityVocabulary.CanOverrule` consults the same `SpellNamed`/`IsSpellEffect`
+  recognizer the rule uses — a rule and the words shown for its verdict must never disagree about where a spell name begins, same discipline as `EyeSummonOwnerInName`. **`… Feedback XII.` on `You have taken`
+  gets NO verdict at all** — that is the local player's own spell bouncing back: NPC is as wrong as Player and no entity exists; R7 refuses those edges and R21 refuses the name, both pinned, because a guard on
+  one path only is how this survived.
+- **A remembered verdict loses to what this capture watched happen**: the pane listed `Asphyxiating Grasp Rk. III` as **Player**, and the mechanism was memory, not the graph — that name has **0 facts** on
+  `eqlog_Kizant_xegony-09-20-25.txt` (pool index −1; it prints only as `Controla begins casting …`, in `… has taken N damage from … by Controla.` lines that do NOT set `AttackerIsSpell`, and in interrupt
+  lines), and the prior store is consulted precisely when this log says nothing. So `ClassificationReport.BuildCastNames` collects the capture's `EvCast` aux names **only when a ledger is actually being read**
+  (`priors.Count == 0` builds nothing) and `AddRow`'s last-resort borrow steps aside for it: the row answers `Npc · A Spell · Casting Message` instead of *"… in previous log"*. Deliberately not a rule claim (law 2 above,
+  same numbers) and the ledger FILE is left alone — memory is refused per pass, not rewritten, so an operator's file keeps its history and the screen keeps the fresher word. Pinned by
+  `ARememberedFighterThisLogWatchedBeingCastSaysAspell`. Tests: `SpellEffectIdentityTest` (real line shapes both directions, the flag-only rank, the feedback refusal, evidence outranks the dictionary, the pool gate,
+  the grammar guard, the memory correction) and `IdentityVocabularyTest` (the words and the one-line law).
 - **A verdict is edited in its own cell; a context menu hides verbs** (2026-11): the Names grid has **no** ContextMenu at all — right-drag is how a person grabs a
   block of rows out of a long table, and this pane's menu carried its one most-important verb (*clear my claim*) invisibly while offering two identical NPC lines.
   Type and Class each carry a pencil that opens a `ComboBox` in a popup over the clicked cell (`UiElementUtil.OpenCellPopup`, the same helper MainWindow's Pet Owners edit and DamageSummary's Group cell call - joined, not re-written, because its

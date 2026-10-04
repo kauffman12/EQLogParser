@@ -4149,6 +4149,56 @@ Four decisions:
   not "Our side"/"Enemy". The one recognizer is shared with the ignore-list gate exactly like `EyeSummonOwnerInName` (R19) does:
   a meter and a rule that disagree about a name shape are two bugs and no test.
 
+### Second round: casting messages, what memory is allowed to say, and where the answer may be written
+
+A player then measured `Asphyxiating Grasp Rk. III` sitting on the same list with a **Player** verdict beside it, and asked for
+the rule to read the other place the game names a spell: `Controla begins casting Asphyxiating Grasp Rk. III.` The request was
+right; the diagnosis needed a measurement, because that name has **no facts at all** on
+`eqlog_Kizant_xegony-09-20-25.txt` (1.0 GB): it is absent from the fact table's name pool (index −1 of 296), it never appears as
+attacker or defender, and the only lines carrying it are cast messages, `Controla hit an acolyte for N points of chromatic damage
+by Asphyxiating Grasp Rk. III.` (which stores the spell as the fact's *subtype*, not as a name), `… has taken N damage from … by
+Controla.` (which, unlike the `by .` shape measured above, does **not** set `AttackerIsSpell` because a caster did print), and
+`Controla's Asphyxiating Grasp Rk. III spell is interrupted.` So the graph could not have called it Player in *this* capture; what
+put it on the list with an answer was **the ledger** — cross-log memory is consulted exactly when the current capture says nothing,
+which is the one situation a spell-name-with-no-facts is always in.
+
+Three things follow, and each is a decision about WHERE an answer belongs rather than whether it is true:
+
+- **The cast message becomes R21's second feed** (`R21-spellcast`), read off the `EvCast` evidence rows `CastLineParser` already
+  produces — it resolves every cast/sing/activate line into a `SpellData`, calling `AddUnknownSpell` when `spells.txt` has no row,
+  and passes the resolved name as the evidence row's aux. Reading the game's own act of naming instead of a dictionary this build had
+  to ship is the R21 equivalent of "new content arrives silent, never guessed at". It claims at Strong and **only a name nobody has
+  spoken for** (`requiresSilence`): raid members named after spells exist, and a cast line spelling the same words must not
+  overwrite chat, presence, ownership or an operator's click.
+- **The feed is gated on the fact pool, so no timeline entry is made for a name nothing fought.** Measured on the same capture:
+  **1,085** distinct cast tokens; the grammar guard below refuses **41** of them; and of the remaining **1,044**, **zero** are named
+  as an attacker or defender. Claiming them anyway would have put ~1,000 spell rows into a window whose purpose is the raid's
+  fighters, and — worse for the engine — each first-time cast would move `EntityTimeline.StateStamp()`, which is the gate the cheap
+  derive lane carries rows through: a Strong NPC verdict genuinely does force a full rebuild, so a meter would pay one every time
+  somebody tries a new spell, in exchange for verdicts no board reads. Hence `facts.NameIndexOf(spell) >= 0` (a lookup that never
+  interns — interning from a read path would grow the pool whose size it is asking about). A name that *is* in the pool still gets
+  its claim, which is why this stays a rule rather than a report-time lookup: other shapes put spell names into the pool, and today
+  those same names arrive through the flag.
+- **A token wearing a creature's shape claims nothing** (`LooksLikeEntityName`: an article or one of the five possessives). A
+  tokenizer trusts its line, and a capture hands it a thousand tokens; among them are names whose own spelling says "fighter".
+  A Strong spell verdict that got there first would freeze out R14 (article shape, Medium) and R5 (ownership) at equal strength —
+  the same ordering mistake this file records for charm windows and unplaced names, arriving from the opposite direction. Pinning
+  this test surfaced a related fact worth knowing: because `CastLineParser` calls `AddUnknownSpell`, **R14 declines any name the
+  spell store has heard**, so an article-shaped cast token can legitimately end up unplaced rather than NPC. The assertion is
+  therefore "no spell verdict", never "must be NPC".
+- **Memory loses the argument at the seam where it is consulted.** `ClassificationReport.BuildCastNames` walks the capture's
+  `EvCast` aux names, but only when a prior store with entries is being read (`priors.Count == 0` builds nothing, so an ordinary
+  pass pays nothing), and `AddRow`'s last-resort borrow steps aside for a name this log watched being cast: the row answers
+  **Npc · A Spell**, cites *Casting Message*, and stops saying *"in previous log"*. It is not written into the timeline (the row
+  exists only because memory produced it), and the ledger file itself is left untouched — refusing a remembered verdict per pass
+  keeps the operator's file as history while the screen carries the fresher word. That is the whole of the "remembers X was Player,
+  but now says Mob" request: the pane no longer offers *Mob* for these names either, since the status word follows the verdict and
+  the verdict is now correct; the one-line provenance rule from the previous chapter supplies the citation.
+
+Nothing here changes the boards. On `eqlog_Kizant_xegony-09-20-25.txt` the spell rows that have facts are still **28** by line shape
+and **3** by `spells.txt` (1,511 flagged facts), `R21-spellcast` adds **0** names to the timeline, and the capture's fight list,
+damage totals and tank board are identical before and after.
+
 ## The one calculation a scope asks (DerivedTotals)
 
 The requirement came from how the damage meter is used: if I watch a log, kill ten mobs inside my reset window, then
