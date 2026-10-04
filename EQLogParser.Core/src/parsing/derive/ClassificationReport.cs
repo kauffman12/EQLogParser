@@ -93,6 +93,16 @@ namespace EQLogParser
        */
       public string? ReasonDetail { get; init; }
 
+      /*
+       * How many DIFFERENT raid-side names healed this name. R15 decides on BREADTH (so many distinct Strong casters,
+       * not so many lines), so this is the number that actually answered "why does that mob-shaped name read as one of
+       * ours?" — worth a tooltip line and, like ReasonDetail, read by nothing but the window.
+       *
+       * It is filled for heal-based verdicts only (see HealCasterProof). On every other row 0 means "not asked", NOT
+       * "nobody healed them": a name the whole raid pets but R1-target already placed gets no walk over the heal stream.
+       */
+      public int HealedByCasters { get; init; }
+
       /// <summary>Sum of this name's damage facts (its own hits; a defender gets no credit for being hit).</summary>
       public double Damage { get; init; }
 
@@ -223,6 +233,10 @@ namespace EQLogParser
       // evidence is sparse by design ("common, but not per-hit") and only cast lines the R4/R20 gates accept are kept.
       var castProof = BuildCastProof(damageFacts);
 
+      // How wide a heal-based verdict's crowd was (see Row.HealedByCasters). Asks for nothing until a row reads
+      // "R15-healed", so the walk is paid only by captures that actually rest on that rule.
+      var healProof = new HealCasterProof(timeline, healFacts);
+
       // Index by display name, case-insensitively: the pool keeps one id per entity however the line spelled it, but
       // registry and override rows are their own strings and have to fold onto that same row.
       var rows = new Dictionary<string, Row>(StringComparer.OrdinalIgnoreCase);
@@ -230,7 +244,7 @@ namespace EQLogParser
       {
         for (short i = 0; i < names.Count; i++)
         {
-          AddRow(rows, names[i], timeline, overrides, registry, priors, castProof, damage[i], healing[i], events[i], hasFacts: true);
+          AddRow(rows, names[i], timeline, overrides, registry, priors, castProof, healProof, damage[i], healing[i], events[i], hasFacts: true);
         }
       }
 
@@ -244,14 +258,14 @@ namespace EQLogParser
       {
         foreach (var entry in overrides.All())
         {
-          if (!rows.ContainsKey(entry.Key)) AddRow(rows, entry.Key, timeline, overrides, registry, priors, castProof, 0, 0, 0, hasFacts: false);
+          if (!rows.ContainsKey(entry.Key)) AddRow(rows, entry.Key, timeline, overrides, registry, priors, castProof, healProof, 0, 0, 0, hasFacts: false);
         }
       }
       if (registry is not null)
       {
         foreach (var name in RosterNames(registry))
         {
-          if (!rows.ContainsKey(name)) AddRow(rows, name, timeline, overrides, registry, priors, castProof, 0, 0, 0, hasFacts: false);
+          if (!rows.ContainsKey(name)) AddRow(rows, name, timeline, overrides, registry, priors, castProof, healProof, 0, 0, 0, hasFacts: false);
         }
       }
 
@@ -267,7 +281,7 @@ namespace EQLogParser
       {
         foreach (var entry in priors.All())
         {
-          if (!rows.ContainsKey(entry.Key)) AddRow(rows, entry.Key, timeline, overrides, registry, priors, castProof, 0, 0, 0, hasFacts: false);
+          if (!rows.ContainsKey(entry.Key)) AddRow(rows, entry.Key, timeline, overrides, registry, priors, castProof, healProof, 0, 0, 0, hasFacts: false);
         }
       }
 
@@ -317,31 +331,61 @@ namespace EQLogParser
 
     private static string? NullIfEmpty(string? value) => string.IsNullOrEmpty(value) ? null : value;
 
-    /// <summary>First accepted cast per caster, for Row.ReasonDetail. Null when the capture has no evidence rows.</summary>
-    private static Dictionary<string, string>? BuildCastProof(DamageFactTable? facts)
+    /*
+     * Which cast earned a spell-based verdict, kept SEPARATELY PER RULE GATE because the two gates claim different
+     * kinds: `IsClassSafeCast` is R4's (the caster is a player) and `IsPetCastSpell` is R20's (the caster is somebody's
+     * pet). One shared "first accepted cast" map would let a name that cast both — the pet-spell line first, the class
+     * line later — read "R4-spell" beside the PET's spell, crediting the wrong line for the verdict. First per gate,
+     * because that is the claim the timeline resolved to: a later restatement is what SetIdentity's dedupe drops.
+     *
+     * A third spell rule has to be listed here too (and in Row.ReasonDetail's own gate); a name missing from these maps
+     * simply gets no detail.
+     */
+    private sealed class CastProof
     {
-      if (facts is null || facts.EvidenceCount == 0) return null;
+      private Dictionary<string, string>? _classSafe;
+      private Dictionary<string, string>? _petSpell;
 
-      Dictionary<string, string>? proof = null;
+      /// <summary>The first cast THIS capture's spell rules accepted for this name, chosen by the rule that won.</summary>
+      public string? For(string source, string name) => source switch
+      {
+        _ when source.StartsWith("R4-spell", StringComparison.Ordinal) => Look(_classSafe, name),
+        _ when source.StartsWith("R20-petspell", StringComparison.Ordinal) => Look(_petSpell, name),
+        _ => null,   // every other rule has no cast behind it, and "Prior:R4-spell" is another log's conclusion
+      };
+
+      public void AddClassSafe(string caster, string spell) => (_classSafe ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)).TryAdd(caster, spell);
+
+      public void AddPetSpell(string caster, string spell) => (_petSpell ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)).TryAdd(caster, spell);
+
+      private static string? Look(Dictionary<string, string>? map, string name)
+        => map is not null && map.TryGetValue(name, out var spell) ? spell : null;
+    }
+
+    /// <summary>First accepted cast per caster and gate, for Row.ReasonDetail. Empty when the capture has no evidence rows.</summary>
+    private static CastProof BuildCastProof(DamageFactTable? facts)
+    {
+      var proof = new CastProof();
+      if (facts is null || facts.EvidenceCount == 0) return proof;
+
       foreach (var e in facts.Evidence)
       {
         if (e.Kind != EvidenceFact.EvCast) continue;
         var spell = facts.AuxOf(e.AuxIdx);
         if (string.IsNullOrEmpty(spell)) continue;
-        // THE SAME GATES the rules apply, or the tooltip would name a cast that claimed nothing. A future third
-        // spell rule has to be listed here too; a name that is missing from this map simply gets no detail.
-        if (!ClassificationRules.IsClassSafeCast(spell!) && !ClassificationRules.IsPetCastSpell(spell!)) continue;
-
-        proof ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var caster = facts.NameOf(e.NameIdx);
-        if (!string.IsNullOrEmpty(caster) && !proof.ContainsKey(caster!)) proof[caster!] = spell!;
+        if (string.IsNullOrEmpty(caster)) continue;
+
+        // THE SAME GATES the rules apply, or the tooltip would name a cast that claimed nothing.
+        if (ClassificationRules.IsClassSafeCast(spell!)) proof.AddClassSafe(caster!, spell!);
+        else if (ClassificationRules.IsPetCastSpell(spell!)) proof.AddPetSpell(caster!, spell!);
       }
       return proof;
     }
 
     private static Row AddRow(Dictionary<string, Row> rows, string name, EntityTimeline? timeline,
                               IdentityOverrideStore? overrides, PlayerRegistry? registry, IdentityPriorStore? priors,
-                              Dictionary<string, string>? castProof,
+                              CastProof castProof, HealCasterProof healProof,
                               double damage, double healing, long events, bool hasFacts)
     {
       var kind = IdentityKind.Unknown;
@@ -396,11 +440,10 @@ namespace EQLogParser
         Name = name,
         Kind = kind,
         Reason = source,
-        // Only a verdict THIS capture's spell rules fired gets a spell named beside it; "Prior:R4-spell" is another
-        // log's conclusion and this file's casts are not what proved it.
-        ReasonDetail = (source.StartsWith("R4-spell", StringComparison.Ordinal)
-                        || source.StartsWith("R20-petspell", StringComparison.Ordinal))
-                       && castProof is not null && castProof.TryGetValue(name, out var spell) ? spell : null,
+        // Named by the rule that actually fired (see CastProof): only a verdict THIS capture's spell rules wrote gets a
+        // cast beside it, and never one that claimed the other kind.
+        ReasonDetail = castProof.For(source, name),
+        HealedByCasters = healProof.For(source, name),
         IsOperatorVerdict = isOperator,
         IsRejected = rejected,
         Class = NullIfEmpty(registry?.GetLastKnownPlayerClass(name)),
@@ -418,6 +461,63 @@ namespace EQLogParser
       };
       rows[name] = row;
       return row;
+    }
+
+    /*
+     * Distinct raid-side casters per healed name, for Row.HealedByCasters.
+     *
+     * LAZY ON PURPOSE. The walk is the expensive kind — one `IdentityAt` per heal line, because R15 counts only casters
+     * whose own identity is already Strong and raid-side — and a capture in which no name rests on R15 should not pay
+     * for it just because somebody opened a window. The first row that reads "R15-healed" builds the table; every later
+     * one reuses it.
+     *
+     * THE SAME GATES R15 APPLIES (self-heals skipped, healer Strong + raid-side via ClassificationRules.IsRaidSideKind),
+     * or the tooltip would count a crowd the rule did not require — mob healers included, which is how a boss healed by
+     * its own cleric could report "healed by 20 players". The MINIMA themselves are not re-checked here: this number
+     * describes a verdict the rules already made, it does not second-guess it.
+     */
+    private sealed class HealCasterProof
+    {
+      private readonly EntityTimeline? _timeline;
+      private readonly HealFactTable? _heals;
+      private Dictionary<string, HashSet<string>>? _byName;
+
+      public HealCasterProof(EntityTimeline? timeline, HealFactTable? heals)
+      {
+        _timeline = timeline;
+        _heals = heals;
+      }
+
+      /// <summary>Caster breadth for a heal-based verdict; answers 0 without touching the store for any other rule.</summary>
+      public int For(string? source, string name)
+      {
+        if (source is not { Length: > 0 } || !source.StartsWith("R15-healed", StringComparison.Ordinal)) return 0;
+        Ensure();
+        return _byName is not null && _byName.TryGetValue(name, out var casters) ? casters.Count : 0;
+      }
+
+      private void Ensure()
+      {
+        if (_byName is not null) return;
+        var table = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+        _byName = table;
+
+        if (_timeline is null || _heals is null) return;
+        var heals = _heals.Heals;
+        for (var i = 0; i < heals.Length; i++)
+        {
+          var h = heals[i];
+          var healer = _heals.NameOf(h.HealerIdx);
+          var healed = _heals.NameOf(h.HealedIdx);
+          if (healer == healed) continue;                       // a self-heal says nothing about who tends them
+
+          var hk = _timeline.IdentityAt(healer, h.TimeS, out var hs, out _);
+          if (hs < RuleStrength.Strong || !ClassificationRules.IsRaidSideKind(hk)) continue;
+
+          if (!table.TryGetValue(healed, out var casters)) casters = table[healed] = new HashSet<string>(StringComparer.Ordinal);
+          casters.Add(healer);
+        }
+      }
     }
 
     private static int KindRank(IdentityKind kind) => kind switch

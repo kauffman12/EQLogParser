@@ -22,6 +22,22 @@ public class CensusCastProofTest
 {
   private static string FixturePath => Path.Combine(AppContext.BaseDirectory, "mini-data", "derive", "rules-fixture.txt");
 
+  // Inline captures, for shapes the shared fixture does not hold (one name casting two different families).
+  private static PipelineHarness.DeriveRunResult RunDerive(params string[] lines)
+  {
+    var dir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "census-cast-" + Guid.NewGuid().ToString("N")));
+    var log = Path.Combine(dir.FullName, "eqlog_Probeone_Eqgate.txt");   // filename seeds ConfigUtil.PlayerName
+    try
+    {
+      File.WriteAllLines(log, lines);
+      return PipelineHarness.RunFileDerived(log);
+    }
+    finally
+    {
+      try { Directory.Delete(dir.FullName, true); } catch (IOException) { }
+    }
+  }
+
   [TestInitialize]
   public void Setup() => PlayerRegistry.Instance.Clear();
 
@@ -79,6 +95,34 @@ public class CensusCastProofTest
     Assert.IsNotNull(row);
     Assert.AreEqual("R4-spell", row!.Reason);
     Assert.AreEqual("Focused Paragon of Spirit XXXIV", row.ReasonDetail);
+  }
+
+  /*
+   * The cast that PROVED it is the one whose own gates were passed, not merely any spell the name ever said. The pet
+   * form ("Hobble of Spirits Snare VI") and the player form ("Hobble of Spirits VI") share a prefix while being two
+   * different spells with two different verdicts, so one flat substring test would let the snare satisfy a PLAYER row —
+   * which is what happened first: the tooltip named the pet's spell beside "Player", because the accepted cast was
+   * remembered per name instead of per gate. Same for the reverse: a class-safe rank must not be read as the pet claim.
+   */
+  [TestMethod]
+  public void APlayerWhoAlsoCastsThePetFormNamesTheCastThatWon()
+  {
+    var run = RunDerive(
+        // The pet's snare arrives first, and would be the "first accepted cast" under a name-keyed search.
+        "[Mon May 04 18:50:05 2026] Boltshelt begins casting Hobble of Spirits Snare VI.",
+        "[Mon May 04 18:50:20 2026] Boltshelt begins casting Boastful Bellow XLVII.");
+
+    var timeline = new EntityTimeline();
+    ClassificationRules.Apply(run.Facts, timeline, run.HealFacts);
+    var report = ClassificationReport.Build(timeline, run.Facts, run.HealFacts,
+                                            IdentityOverrideStore.Instance, PlayerRegistry.Instance);
+
+    var row = report.Find("Boltshelt");
+    Assert.IsNotNull(row);
+    Assert.AreEqual(IdentityKind.Player, row!.Kind);
+    Assert.AreEqual("R4-spell", row.Reason);
+    Assert.AreEqual("Boastful Bellow XLVII", row.ReasonDetail,
+        "a Player row may only name a cast that claims a player; the snare is why this name also has a pet claim");
   }
 
   [TestMethod]

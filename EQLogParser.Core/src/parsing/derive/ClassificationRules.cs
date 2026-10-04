@@ -806,9 +806,14 @@ namespace EQLogParser
       }
     }
 
-    // Pet/Player/Merc = our side of the board (the projection's own reading; a Friendly interval is a
-    // separate question and callers that care ask AffiliationAt themselves).
-    private static bool IsRaidSideKind(IdentityKind kind)
+    /*
+     * Pet/Player/Merc = our side of the board (the projection's own reading; a Friendly interval is a
+     * separate question and callers that care ask AffiliationAt themselves).
+     *
+     * Internal because the name census counts R15's crowd with THESE gates (ClassificationReport.HealCasterProof):
+     * a tooltip that counted mob healers alongside raid ones would report a bigger crowd than the rule required.
+     */
+    internal static bool IsRaidSideKind(IdentityKind kind)
       => kind is IdentityKind.Player or IdentityKind.Merc or IdentityKind.Pet;
 
     internal sealed class HealEdgeAgg

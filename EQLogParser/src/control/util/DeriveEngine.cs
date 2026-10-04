@@ -198,9 +198,17 @@ namespace EQLogParser
 
       try
       {
+        /*
+         * A THROWAWAGE classification state, deliberately: the window builds a fresh EntityTimeline, so the carried
+         * aggregates have nothing to be incremental over - and sharing them with this call would let a UI thread and the
+         * derive thread walk and rewrite the same cursors and candidate tables at the same moment (the census swallows
+         * what it throws, a derive pass retires a stage after five). The price is a from-zero replay of the rules on
+         * whatever thread the window opened on - tens of milliseconds for the rules, off the capture path, once per
+         * deliberate refresh - which is what a pane that says "nothing updates by itself" is for.
+         */
         var timeline = new EntityTimeline();
         RegistrySeed.Apply(timeline, _facts, _capture.FirstEventTime, _capture.LastEventTime);
-        ClassificationRules.Apply(_facts, timeline, _heals, _classification);
+        ClassificationRules.Apply(_facts, timeline, _heals);
         IdentityOverrideStore.Instance.Apply(timeline);
 
         return ClassificationReport.Build(timeline, _facts, _heals, IdentityOverrideStore.Instance,
