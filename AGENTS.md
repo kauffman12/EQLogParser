@@ -64,8 +64,11 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   those outside; `ConfigUtil` is static state and answers anywhere); and **flush at the priority the handlers queued
   at (Normal), never lower** — pumping at SystemIdle also runs the pane's first arrange, whose pass starts an
   indeterminate ProgressBar's infinite animation on a windowless thread and hung both band-showing tests for the
-  full 60 s budget while the band-collapsed twin sailed through. The host carries a third, process-shaped law (measured
-  2026-11; mechanism in docs/DesignNotes.md → "A test host is unlicensed"): neither app nor tests touch
+  full 60 s budget while the band-collapsed twin sailed through. An `Sta.Run` timeout names **live** threads only: the interrupt probe takes
+  bodies down (an interrupt is delivered *in* a managed wait; a thread that never yields stays armed and dies at its next wait, after
+  the failure is reported), so an earlier entry whose thread is gone would point the reader at a corpse — and "first reported ~N s ago"
+  counts from detection, because nothing can notice a wedge before its own budget expired. The host carries a third, process-shaped law
+  (measured 2026-11; mechanism in docs/DesignNotes.md → "A test host is unlicensed"): neither app nor tests touch
   `SyncfusionLicenseProvider.RegisterLicense` directly — both call `SyncFusionUtil.LoadLicense()`, one key constant that is
   empty in the repo (a vendor no-op; whoever holds a real key manages it there) — and on a machine whose validation still
   produces a message, the

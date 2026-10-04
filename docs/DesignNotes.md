@@ -4995,6 +4995,14 @@ by a unit test (vendor internals); the pin is that Wpf.Test builds themed Syncfu
 regression reads as a body wedged in `SfDataGrid.ctor` with `LicenseHelper` under it — where `Sta.Run`'s probe now says so
 instead of leaving a bare 60 s timeout.
 
+Two honesty rules were tightened in that report afterwards, both about what the probe can actually see. An interrupt is delivered **in**
+a managed wait (verified on .NET 10: a thread that never yields takes nothing, and keeps the interrupt armed until its next wait, which
+may be long after the failure was reported), so "the probe landed nowhere" describes the 5 s window and licenses only the weaker claim —
+the body was not in an interruptible wait *then*. And the list of earlier stuck threads is filtered to `IsAlive`, because the probe takes
+bodies down: naming a thread that already exited sends the reader to a corpse, and the point of the list is that a name in it is somewhere
+still worth looking. Its wording says "first reported ~N s ago" for the same reason — nothing can observe a wedge before its own budget
+expires, so the timestamp is detection, not onset.
+
 ## The derive that survives its own rules (2026-10)
 
 **Why: a user asked, twice, "when would anyone ever press Re-derive?" — and the honest answer was once.** The button
