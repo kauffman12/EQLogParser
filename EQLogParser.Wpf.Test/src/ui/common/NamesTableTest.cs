@@ -72,7 +72,14 @@ public class NamesTableTest
     Assert.AreEqual("NPC", row.Type);
     Assert.AreEqual("Chosen", row.Why, "a verdict the operator wrote says so in the Why column itself, in two words");
     StringAssert.Contains(row.Provenance, "You chose NPC");
-    StringAssert.Contains(row.Provenance, "Not in this log", "a hand-written row should say it has no facts behind it");
+
+    /*
+     * One line, and nothing about the row being outside a capture. The tooltip used to add "Not in this log" here, which
+     * read as an error message on a perfectly ordinary hand-written verdict — the absence is already visible in the fact
+     * columns, and the request was for ONE short line that answers in a blink (docs/DesignNotes.md).
+     */
+    Assert.IsFalse(row.Provenance.Contains("\n"), $"a plain override should hover as one line, got: {row.Provenance}");
+    Assert.IsTrue(row.Overrulable, "an operator's own claim must always be takeable back");
 
     // The dropdown preselects from Kind and refuses to write what the row already says; without this, a click that
     // changes nothing would spend a derive pass and rewrite mirror-overrides.txt.
@@ -89,6 +96,13 @@ public class NamesTableTest
     StringAssert.Contains(row.Provenance, "Claim taken back");
     Assert.IsFalse(row.Provenance.Contains("You chose"),
                    "a name the operator refused reads like a name they classified - the two need different actions");
+
+    /*
+     * A refusal has no live verdict behind it, so its own sentence is THE line rather than a second one bolted under what the
+     * rules would have said: two answers to one question. And one line is the hover law for every state (see
+     * ProvenanceFor) - this is the row most likely to grow an extra sentence, which is why the law is asserted here too.
+     */
+    Assert.IsFalse(row.Provenance.Contains("\n"), $"a refusal should read as one line, got: {row.Provenance}");
   }
 
   [TestMethod]
@@ -103,10 +117,14 @@ public class NamesTableTest
     var row = NamesTable.RowFrom(CensusWithoutACapture(ledger).Find("Rememb")!);
 
     Assert.AreEqual("NPC", row.Type);
-    Assert.AreEqual("Our side (earlier)", row.Why,
-                    "the cell must not claim this capture produced it - and must not print the rule code either");
-    StringAssert.Contains(row.Provenance, "Earlier logs x2");
-    Assert.IsFalse(row.Provenance.Contains("Cast:"),
+    /*
+     * The cell says the SAME word a local verdict says ("Fights Mobs") and carries no marker: paying column width for
+     * "(earlier)" was asked to stop, and a cell reading "Our side (earlier)" was two mysteries stacked. Where it does say
+     * it is the tooltip, in words, with the count riding on the proof clause.
+     */
+    Assert.AreEqual("Fights Mobs", row.Why, "the cell names the kind of proof and nothing else");
+    StringAssert.Contains(row.Provenance, "in previous log x2");
+    Assert.IsFalse(row.Provenance.Contains("Cast"),
                    "a borrowed verdict has no cast behind it in THIS log; naming one would credit this capture with proving it");
   }
 
@@ -121,7 +139,12 @@ public class NamesTableTest
     var row = NamesTable.RowFrom(census.Find("Berta")!);
 
     Assert.IsTrue(census.Disagreements >= 1);
-    StringAssert.Contains(row.Provenance, "players.txt says player");
+    StringAssert.Contains(row.Provenance, "players.txt says Player");
+
+    // The roster flag rides on the SAME line as the proof (middot, the house separator in caption tooltips): the proof is what
+    // somebody asks about, this is the reason to go fix something - one hover, one breath.
+    Assert.IsFalse(row.Provenance.Contains("\n"), $"the disagreement flag must not take a line of its own: {row.Provenance}");
+    StringAssert.Contains(row.Provenance, " · ");
   }
 
   /*
@@ -136,25 +159,31 @@ public class NamesTableTest
     {
       Name = "Chantoya",
       Kind = IdentityKind.Player,
-      Reason = "R4-spell",
+      Reason = "R4-spell:Boastful Bellow XLVII",
       ReasonDetail = "Boastful Bellow XLVII",
       HasFacts = true,
     });
 
     Assert.AreEqual("Player", bard.Type);
     Assert.AreEqual("Spell", bard.Why);
-    StringAssert.Contains(bard.Provenance, "Cast: Boastful Bellow XLVII");
+
+    /*
+     * The cast is named in the proof LINE, not as a second labelled row: "Cast Boastful Bellow XLVII". The rank matters
+     * because that rank is what the rule checked, and it travels inside the source string for the same reason the ledger
+     * keeps one - an older log's verdict can still say what it read.
+     */
+    Assert.AreEqual("Cast Boastful Bellow XLVII", bard.Provenance);
 
     var mob = NamesTable.RowFrom(new ClassificationReport.Row
     {
       Name = "A bone walker",
       Kind = IdentityKind.Npc,
-      Reason = "R14-article",
+      Reason = "R14-shape",
       HasFacts = true,
     });
 
     Assert.AreEqual("NPC", mob.Type);
-    Assert.IsFalse(mob.Provenance.Contains("Cast:"),
+    Assert.IsFalse(mob.Provenance.Contains("Cast"),
                    "only a spell-based verdict has a cast; inventing the line would put a lie in the tooltip");
   }
 
@@ -189,7 +218,7 @@ public class NamesTableTest
       HasFacts = true,
     });
 
-    Assert.AreEqual("NPC list", npc.Why);
+    Assert.AreEqual("NPC List", npc.Why);
     Assert.IsFalse(npc.Provenance.Contains("Healed by"),
                    "the crowd line belongs to a heal-based verdict only; printing it elsewhere rewrites this row's provenance");
   }

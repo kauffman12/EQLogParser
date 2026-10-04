@@ -1,9 +1,7 @@
 using FontAwesome5;
 using log4net;
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -33,8 +31,11 @@ namespace EQLogParser
    *
    *   - Not a live grid, and deliberately so. A derive runs every few seconds while a log loads and a census nobody has
    *     open would be thrown away each time; worse, a list that rearranges itself under a reader cannot be read at all.
-   *     So the census is built ON DEMAND ONLY — when the pane is first shown, when the menu opens it, when a new log
-   *     starts, and by the Refresh button — off the UI thread, applied in one swap. Nothing subscribes to the derive.
+   *     So the census is built OFF THE UI THREAD and swapped in whole. What it does now is keep itself current: it
+   *     follows the derive while the pane is visible (at most twice a second) and rebuilds every time it becomes
+   *     visible, so opening the tab never shows yesterday's list. It was one-shot behind a "Refresh" button before, which
+   *     read as a broken pane the first time a name was missing; the subscription is taken on show and given back on
+   *     hide, so a census nobody is looking at is never built.
    *   - Not a second source of truth. Every verb here writes through ClassificationCommands into the same per-server
    *     files the old panes used (verdicts, roster, rejections) plus the sighting ledger. Nothing is stored here, so
    *     closing the window loses nothing and a file edited by hand still wins on the next open.
@@ -85,7 +86,14 @@ namespace EQLogParser
        */
       public bool ClassEditable => Kind == IdentityKind.Player;
 
-      /// <summary>The WHY cell's tooltip: the details behind the two words, one short line each.</summary>
+      /*
+       * Whether this row may be overruled at all — false where the name itself decides (a summon whose spelling carries its
+       * owner, a spell effect), so the pencil is not drawn rather than offering three wrong answers beside the one right
+       * one. ClassificationReport.Row passes it through; IdentityVocabulary.CanOverrule is the rule.
+       */
+      public bool Overrulable { get; init; }
+
+      /// <summary>The WHY cell's tooltip: the proof in one line, plus a short flag when one changes what to do.</summary>
       public string Provenance { get; init; } = string.Empty;
     }
 
@@ -94,16 +102,18 @@ namespace EQLogParser
     private readonly ObservableCollection<NameRow> _rows = [];
     private int _refreshInFlight;
 
+    // The engine this pane follows, and the floor between automatic rebuilds (see EventsDerived). An explicit Refresh()
+    // — menu, first show, after a write — never waits.
+    private DeriveEngine? _followed;
+    private long _lastAutoRefreshMs;
+    private const long AutoRefreshFloorMs = 2000;
+
     // Which row's dropdown is open. One at a time by construction (StaysOpen=False), cleared when the popup closes.
     private NameRow? _typeEditRow;
     private NameRow? _classEditRow;
 
     // Applied once, then only on a theme change: re-sizing on every Loaded would fight an operator who dragged a column.
     private bool _widthsApplied;
-
-    // Spent by the first show that had a session to census. After that only an explicit ask rebuilds the list — see the
-    // class comment and FillOnFirstShow.
-    private bool _filledOnce;
 
     public NamesTable()
     {
@@ -125,16 +135,82 @@ namespace EQLogParser
       ThemeConfig.EventsThemeChanged += EventsThemeChanged;
 
       /*
-       * ONCE, on the first time the pane is really visible. This used to refresh on EVERY visibility change, which for
-       * a docked pane means every auto-hide slide, tab switch and restore — and a census rebuilt while you read it
-       * looks like a table that keeps updating itself. The menu-open path and a new log both call Refresh() directly,
-       * so nothing is left empty by this being one-shot.
+       * Current while visible, silent while hidden. A docked pane's visibility flips on every auto-hide slide and tab
+       * switch, which is why the first version of this window subscribed to nothing at all — but the other half of that
+       * design was a "Refresh" button, and an operator who does not know the button exists concludes the feature is
+       * broken. So: take the subscription on show, give it back on hide, rebuild once per show (before the reader's eye
+       * reaches the grid) and then on the derive's own beat while the pane is up.
+       *
+       * ActiveChanged belongs in the same contract: a log closing leaves no engine to follow and nothing worth reading,
+       * and opening another must not leave this window attached to the capture that just died.
        */
       IsVisibleChanged += static (s, e) =>
       {
-        if (e.NewValue is not true || s is not NamesTable table) return;
-        table.FillOnFirstShow();
+        if (s is not NamesTable table) return;
+        if (e.NewValue is true) table.FollowSession();
+        else table.UnfollowSession();
       };
+      DeriveEngine.ActiveChanged += EventsActiveChanged;
+    }
+
+    /*
+     * Follow whatever capture is open: subscribe to its derive, take a census, and empty the grid if there is nothing to
+     * census. Idempotent — re-attaching to the engine already followed does not double-subscribe.
+     */
+    private void FollowSession()
+    {
+      var session = DeriveEngine.Active;
+      if (!ReferenceEquals(_followed, session))
+      {
+        UnfollowSession();
+        if (session is not null)
+        {
+          session.Derived += EventsDerived;
+          _followed = session;
+        }
+      }
+
+      if (session is null) ClearRows();
+      else Refresh();
+    }
+
+    private void UnfollowSession()
+    {
+      if (_followed is null) return;
+      _followed.Derived -= EventsDerived;
+      _followed = null;
+    }
+
+    private void EventsActiveChanged()
+    {
+      if (IsVisible) FollowSession();
+      else UnfollowSession();
+    }
+
+    /*
+     * One derive pass finished. Throttled: a live raid hands out passes around twice a second and the census walks every
+     * name in the capture plus the heal stream (R15's caster count), which is enough to be felt if it ran at full rate.
+     * Two seconds behind while the pane is open is invisible next to a list that never moved.
+     */
+    private void EventsDerived(DerivedSnapshot _) => ThrottledRefresh();
+
+    internal void ThrottledRefresh()
+    {
+      var now = Environment.TickCount64;
+      if (now - _lastAutoRefreshMs < AutoRefreshFloorMs) return;
+      _lastAutoRefreshMs = now;
+      Refresh();
+    }
+
+    /*
+     * Empty the grid: the capture this window was reading is gone. Last night's names sitting over a closed log are worse
+     * than an empty table, and nothing here could explain them — this pane shows no status line.
+     */
+    private void ClearRows()
+    {
+      _rows.Clear();
+      namesCaption.ToolTip = "Every name this capture mentions, what it was called and what kind of evidence said so. " +
+                             "Click a row's pencil to overrule it.";
     }
 
     /// <summary>Rebuild the list from the captured facts. Safe to call from anywhere; harmless while one is running.</summary>
@@ -176,9 +252,10 @@ namespace EQLogParser
     {
       Name = row.Name,
       Type = IdentityVocabulary.TypeWord(row.Kind),
-      Why = IdentityVocabulary.WhyWord(row.Reason),
+      Why = IdentityVocabulary.WhyWord(row.Reason, row.Kind),
       PlayerClass = row.Class,
       Kind = row.Kind,
+      Overrulable = row.Overrulable,
       Provenance = ProvenanceFor(row),
     };
 
@@ -189,27 +266,40 @@ namespace EQLogParser
      */
 
     /*
-     * The WHY cell's tooltip: the detail behind those two words, one SHORT line each — a name, a count, a state. It is
-     * not prose any more for the same reason the column is not: hovering should answer in a blink ("Boastful Bellow
-     * XLVII", "Healed by 20 raiders", "You chose NPC"), and a sentence per line made the whole pane feel like a report.
+     * The first line is the PROOF, in one clause: "Cast Spire of Arcanum", "Healed by 20 raiders", "From /who", "Owner
+     * in Name", "From Chat in previous log". Core builds it from the same source string that decided the cell
+     * (IdentityVocabulary.ProofText), so a verdict remembered from an older capture still names its evidence instead of
+     * printing "(earlier)" and leaving the detail out — which is the half that made the old tooltip useless: the cell said
+     * one word, the hover said which rule number, and neither said what the rule had read.
      *
-     * What each line still has to be able to say, though, is unchanged and pinned by NamesTableTest: whether the row
-     * rests on the operator's own click (needs no correction), on an older log (might), or on players.txt while the
-     * rules say NPC (somebody's meter is wrong right now). Those are the three answers a person acts on, and the tooltip
-     * is the only place any of them appear.
+     * One flag may ride behind it, and only the one that changes what a person does next: the roster swearing this name is a
+     * player while these rules put it on the enemy side (somebody's meter is wrong right now). Everything else the census knows
+     * stays in the log. "Not in this log" is gone — it read as an error on a row whose Type already says Unknown — and a hover is
+     * never empty: an unplaced name answers "Nothing identified it".
      */
     internal static string ProvenanceFor(ClassificationReport.Row row)
     {
-      var lines = new List<string>();
-      if (row.ReasonDetail is not null) lines.Add($"Cast: {row.ReasonDetail}");
-      if (row.HealedByCasters > 0) lines.Add($"Healed by {row.HealedByCasters:N0} raiders");
-      if (row.IsOperatorVerdict) lines.Add($"You chose {IdentityVocabulary.TypeWord(row.Kind)}");
-      if (row.IsRejected) lines.Add("Claim taken back");
-      if (row.IsPrior) lines.Add($"Earlier logs x{row.PriorSightings:N0}");
-      if (row.IsDisagreement) lines.Add("players.txt says player");
-      else if (row.LegacySaysPlayer && row.Kind != IdentityKind.Player) lines.Add("In players.txt");
-      if (!row.HasFacts) lines.Add("Not in this log");
-      return string.Join("\n", lines);
+      /*
+       * ONE line, always, and no newline anywhere in this method — the hover answers "why does it say That", and a four-line
+       * form makes the eye work for the one clause that matters (docs/DesignNotes.md → "The tooltip lost its sentences").
+       *
+       * A taken-back claim SUPERSEDES the proof clause rather than joining it: a rejected name has no live verdict to explain,
+       * so pairing "Claim taken back" with what the rules would have said printed two answers to one question. The roster flag
+       * rides behind a middot like every other caption tooltip here, because "somebody's meter is wrong right now" is worth
+       * saying on the same breath as the proof rather than on a line of its own.
+       */
+      var proof = row.IsRejected
+        ? "Claim taken back — you said this name is not one of ours"
+        : IdentityVocabulary.ProofText(row.Reason, row.Kind, row.HealedByCasters);
+
+      // The sighting count rides on the proof clause too: "From Chat in previous log x7".
+      if (row.IsPrior && row.PriorSightings > 1) proof = $"{proof} x{row.PriorSightings:N0}";
+
+      var roster = row.IsDisagreement ? "players.txt says Player"
+                 : row.LegacySaysPlayer && row.Kind != IdentityKind.Player ? "in players.txt"
+                 : null;
+
+      return roster is null ? proof : $"{proof} · {roster}";
     }
 
     /*
@@ -265,30 +355,10 @@ namespace EQLogParser
     }
 
     /*
-     * The one automatic census. A show with no session yet does NOT spend the shot: at startup the pane can be laid out
-     * before (or instead of, with AutoMonitor off) any log opening, and burning the flag there would leave a later tab
-     * click — which is not one of the explicit doors — reading an empty grid forever. What it does not do is fill a
-     * second time: a census taken mid-bulk lists what has been captured so far, and that is the accepted cost of a
-     * pane that never changes underneath a reader — Refresh is right there.
-     */
-    private void FillOnFirstShow()
-    {
-      if (_filledOnce || DeriveEngine.Active is null) return;
-      _filledOnce = true;
-      Refresh();
-    }
-
-    private IEnumerable<string> SelectedNames()
-    {
-      foreach (var item in namesGrid.SelectedItems)
-        if (item is NameRow row && !string.IsNullOrEmpty(row.Name)) yield return row.Name;
-    }
-
-    /*
      * The Type dropdown: click the pencil in a row, the list opens over the cell, and picking an entry writes that one
-     * name. A cell edit edits its cell — batching stays where it always was (the two icons in the title bar act on the
-     * selection, and the fight grids' right-click menu still takes a multi-select), because a pencil drawn on ONE row
-     * promises that row and nothing else.
+     * name. A cell edit edits its cell — batching stays where it always was, in the fight grids' right-click menu, which
+     * takes a multi-selection through the same ClassificationCommands; a pencil drawn on ONE row promises that row and
+     * nothing else.
      */
     private void TypeEditMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
@@ -315,10 +385,18 @@ namespace EQLogParser
       if (sender is not ComboBox combo || combo.SelectedItem is not IdentityVocabulary.TypeOption option) return;
 
       var row = _typeEditRow;
-      if (row is null || option.Kind == row.Kind) return;
+      if (row is null || option.Kind == row.Kind || !row.Overrulable) return;
 
+      /*
+       * "Clear claim" takes back EVERYTHING this window remembers about the name, not only the line in
+       * mirror-overrides.txt: without the ledger entry going too, the row comes straight back on the next derive wearing
+       * its remembered verdict, which is the opposite of what the click looks like it did. Setting a verdict drops the
+       * prior as well — this capture's answer now outranks it, and IdentityPriorStore.Recall stops offering it, so the
+       * "... in previous log" tooltip cannot survive the override that replaced it.
+       */
       if (option.Kind == IdentityKind.Unknown) ClassificationCommands.ClearVerdict(IdentityOverrideStore.Instance, row.Name);
       else ClassificationCommands.SetVerdict(IdentityOverrideStore.Instance, PlayerRegistry.Instance, row.Name, option.Kind);
+      IdentityPriorStore.Instance.Remove(row.Name);
 
       Reconcile();
       typeEditPopup.IsOpen = false;
@@ -369,24 +447,15 @@ namespace EQLogParser
       Refresh();
     }
 
-    // The two band icons. They take the SELECTION (a title-bar icon has no row of its own), and their tooltips say so.
-    private void RejectClick(object sender, RoutedEventArgs e)
-    {
-      var names = SelectedNames().ToList();
-      if (names.Count == 0) return;
-      foreach (var name in names)
-        ClassificationCommands.Reject(IdentityOverrideStore.Instance, PlayerRegistry.Instance, name);
-      Reconcile();
-    }
-
-    private void ClearPriorClick(object sender, RoutedEventArgs e)
-    {
-      var names = SelectedNames().ToList();
-      if (names.Count == 0) return;
-      foreach (var name in names) IdentityPriorStore.Instance.Remove(name);
-      Reconcile();
-    }
-
-    private void RefreshClick(object sender, RoutedEventArgs e) => Refresh();
+    /*
+     * The three controls that used to sit right of the caption are gone, and their verbs with them rather than hidden:
+     *
+     *   "Refresh"       — the window follows the derive while it is visible (FollowSession), so nothing needs asking.
+     *   "Not a player"  — DelVerdict plus a re-derive, which the Type cell's "Clear claim" does on the row it is drawn on;
+     *                     batch work stays in the fight grids' menu. ClassificationCommands.Reject itself is unchanged and
+     *                     still writes players.txt `!Name` for whoever calls it from there.
+     *   "Forget older   — same reach as choosing a Type here: both drop the ledger entry beside the verdict (above), so a
+     *    logs decisions"  remembered answer cannot outlive the click that overruled it.
+     */
   }
 }

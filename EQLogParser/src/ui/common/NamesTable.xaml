@@ -43,24 +43,20 @@
       <Label x:Name="namesCaption" Content="Names" Style="{StaticResource EQTitleStyle}"
              ToolTip="Every name this capture mentions, what it was called and what kind of evidence said so. Click a row's pencil to overrule it. This window replaces the old Verified Players and Verified Pets windows."/>
     </StackPanel>
-    <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <!--
-        The two verbs that act on more than the row you clicked, and so have no cell to live in. They are the survivors
-        of the right-click menu this pane used to carry: every identity verdict (Player / Pet / Merc / NPC, or clear)
-        now comes from the pencil in a Type cell, but these two are not verdicts about what a name IS - one takes back
-        the claim AND stops the learning paths (players.txt `!Name`), the other forgets what this server's earlier logs
-        concluded. Icons with tooltips, in the order you would reach for them, left of the button.
-      -->
-      <fa:ImageAwesome x:Name="rejectIcon" Icon="Solid_Times" Style="{StaticResource EQIconStyle}" Cursor="Hand"
-                       Margin="8,1,8,2" VerticalAlignment="Center" MouseLeftButtonUp="RejectClick"
-                       ToolTip="Not a player: take back the claim on the selected names and stop learning them again. The row stays listed"/>
-      <fa:ImageAwesome x:Name="clearPriorIcon" Icon="Solid_Undo" Style="{StaticResource EQIconStyle}" Cursor="Hand"
-                       Margin="0,1,8,2" VerticalAlignment="Center" MouseLeftButtonUp="ClearPriorClick"
-                       ToolTip="Forget what this server's older logs decided about the selected names. Verdicts, players.txt and pet mappings are untouched"/>
-      <!-- One button, because this census is built on demand: nothing about it updates by itself. -->
-      <Button x:Name="namesRefreshButton" Content="Refresh" Margin="0,0,8,1" Height="{DynamicResource EQButtonHeight}" Padding="16,0,16,0"
-              Click="RefreshClick" ToolTip="Rebuild this list from the captured facts"/>
-    </StackPanel>
+    <!--
+      Nothing on the right of the title band. The pane used to carry three controls there, and all three are gone on
+      purpose rather than moved:
+
+        "Refresh"  - the list updates itself now. A census that needs a button to look current reads as broken the first
+                     time a name is missing; Apply re-runs on every derive pass and on log open/close/clear.
+        "Not a player" (Solid_Times) - its whole effect is DelVerdict + Re-derive, which the Type cell's "Clear claim"
+                     does in one click on the row it applies to (and on a multi-selection, the same two title-bar icons
+                     the window already keeps for batch work).
+        "Forget old log decisions" (Solid_Undo) - same reach, so this too lives in the dropdown: choosing a Type overrules
+                     a remembered verdict, and "Clear claim" drops it. The ledger entry itself is removed by both.
+
+      The row-selection icons above stay: they are the BATCH verbs, which no cell can express.
+    -->
 
     <syncfusion:SfDataGrid x:Name="namesGrid" Grid.Row="1"
                            AllowResizingColumns="True"
@@ -112,7 +108,13 @@
           <syncfusion:GridTemplateColumn.CellTemplate>
             <DataTemplate>
               <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                <!--
+                  No pencil where the answer is forced: a summon whose own spelling carries its owner (`Tuona`s ward`) and
+                  a spell effect ("A Spell") each have exactly one right Type, and offering three wrong ones beside it is an
+                  invitation to break a row nobody can put back. NameRow.Overrulable decides; see CanOverrule.
+                -->
                 <fa:ImageAwesome Margin="8,1,4,0" Style="{StaticResource EQIconStyle}" Icon="Regular_Edit" Cursor="Hand"
+                                 Visibility="{Binding Overrulable, Converter={StaticResource BooleanToVisibilityConverter}}"
                                  MouseLeftButtonUp="TypeEditMouseLeftButtonUp" ToolTip="Choose what this name is"/>
                 <TextBlock VerticalAlignment="Center" Text="{Binding Type}"/>
               </StackPanel>
@@ -120,12 +122,13 @@
           </syncfusion:GridTemplateColumn.CellTemplate>
         </syncfusion:GridTemplateColumn>
         <!--
-          The whole point of the window: which rule read what, in TWO WORDS ("Who", "Chat", "Spell", "Healed", "Owner",
-          "NPC list" - see WhyWord), with the details demoted to the tooltip. It used to print the rule code
-          ("R15-healed") at 256 px - wider than the Class column and part of 771 px of fixed startup pixels across the
-          four - to read a string nobody could decode without the source open.
+          The whole point of the window: which rule read what, in TWO WORDS ("Who", "Chat", "Cast", "Healed", "Owner in
+          Name" - see WhyWord), with the details demoted to the tooltip. It used to print the rule code ("R15-healed") at
+          256 px - wider than the Class column and part of 771 px of fixed startup pixels across the four - to read a
+          string nobody could decode without the source open. Then it carried " (earlier)" on every remembered verdict,
+          which paid width for something only a hover needs; the cell is bare now and the tooltip ends in "in previous log".
         -->
-        <syncfusion:GridTemplateColumn HeaderText="Why" MappingName="Why" Width="150">
+        <syncfusion:GridTemplateColumn HeaderText="Why" MappingName="Why" Width="110">
           <syncfusion:GridTemplateColumn.CellTemplate>
             <DataTemplate>
               <TextBlock Text="{Binding Why}" FontSize="{DynamicResource EQContentSize}" VerticalAlignment="Center"
