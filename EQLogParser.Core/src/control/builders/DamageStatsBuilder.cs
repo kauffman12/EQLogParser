@@ -27,7 +27,28 @@ namespace EQLogParser
     private StatsGenerationEvent _lastStatsEvent;
     private string _title;
 
-    internal DamageStatsBuilder()
+    /*
+     * Only the process-wide board listens for "the log closed", and it signs up exactly once - here, not in the
+     * instance constructor.
+     *
+     * The instance constructor used to subscribe, which was fine while this class had exactly one instance. It no
+     * longer has: DerivedTotals builds a throwaway scope per calculation (the damage meter asks about once a second),
+     * and a constructor subscription on a short-lived object is a permanent one - the static event holds the delegate,
+     * the delegate holds the builder, and the builder holds its groups, per-player dictionaries and generated stats.
+     * Measured: ten overlay calculations left twenty subscribers behind through a full GC, about 118 KB of retained
+     * heap each, growing for as long as the meter stayed open (and making every later clear walk thousands of
+     * lock-taking handlers). See DerivedTotalsTest.ACalculationLeavesNothingWatchingTheClearSignal.
+     *
+     * A scoped builder has nothing to be cleared: nobody keeps its result, and the surface painting it blanks itself
+     * when the session ends. The singleton's handler is kept verbatim - reset the boards, and drop group assignments
+     * only when the server of the opened log changed.
+     */
+    static DamageStatsBuilder()
+    {
+      Instance.ClearedByActiveData();
+    }
+
+    private void ClearedByActiveData()
     {
       CombatEvents.ActiveDataCleared += (bool serverChanged) =>
       {

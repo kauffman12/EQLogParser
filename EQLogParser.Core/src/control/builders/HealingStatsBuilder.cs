@@ -32,16 +32,24 @@ namespace EQLogParser
     private string _title;
     private bool _isLimited;
 
-    internal HealingStatsBuilder()
+    /*
+     * The clear signal belongs to the singleton, not to an instance - the same law DamageStatsBuilder documents with
+     * its measurement. Nothing builds a throwaway healing scope today, which is exactly why this is written the safe
+     * way now: the day someone does (a heal column on the meter is the obvious candidate), an instance subscription
+     * would leak one board per refresh and nobody would think to look here.
+     */
+    static HealingStatsBuilder()
     {
-      CombatEvents.ActiveDataCleared += (_) =>
-      {
-        lock (_lock)
-        {
-          Reset(true);
-        }
-      };
+      Instance.ClearedByActiveData();
     }
+
+    private void ClearedByActiveData() => CombatEvents.ActiveDataCleared += (_) =>
+    {
+      lock (_lock)
+      {
+        Reset(true);
+      }
+    };
 
     internal StatsGenerationEvent GetLastStats()
     {

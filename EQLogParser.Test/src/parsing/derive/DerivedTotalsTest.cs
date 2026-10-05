@@ -168,6 +168,52 @@ public class DerivedTotalsTest
           "a scope calculation ran on its own builder — the board an open summary shows is untouched");
     }
 
+    /*
+     * The retention law behind DerivedTotals' second rule. The damage meter asks about once a second, so a scope that
+     * outlives its own call is not a small leak — it is the process: ~118 KB retained per refresh measured through a
+     * full GC before the builders signed up for CombatEvents.ActiveDataCleared in their static constructors instead of
+     * their instance ones.
+     *
+     * The count reads the static event's own delegate list by reflection on purpose: the thing being pinned is what is
+     * NOT ours to remove, and a production counter would give that wiring a reason to exist. Both halves matter — the
+     * number must not grow with more calculations, and it must be no larger after a collect (a scope that died
+     * unobserved is fine; one kept alive by the event is the bug).
+     */
+    [TestMethod]
+    public void ACalculationLeavesNothingWatchingTheClearSignal()
+    {
+        var (rows, index, facts) = TwoPulls();
+        var heals = NoHeals(facts);
+
+        // Warm both paths once: the singletons' own handlers are one-time wiring and belong in the baseline.
+        _ = DerivedTotals.For(rows, index, facts, heals);
+        _ = DerivedTotals.ForOverlay(rows, index, facts, heals, T0, T0 + 100);
+        var before = ActiveDataClearedSubscribers();
+
+        for (var i = 0; i < 5; i++)
+        {
+            _ = DerivedTotals.ForOverlay(rows, index, facts, heals, T0, T0 + 100);   // damage + tanking scope
+            _ = DerivedTotals.For(rows, index, facts, heals);                          // and the list's own scope
+        }
+
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+
+        var after = ActiveDataClearedSubscribers();
+        Assert.AreEqual(before, after,
+          $"ten scoped calculations left {after - before} extra handler(s) on the process-static clear signal — "
+          + "a throwaway builder that subscribes there is never collected, and this path runs once a second");
+    }
+
+    private static int ActiveDataClearedSubscribers()
+    {
+        var field = typeof(CombatEvents).GetField("ActiveDataCleared",
+          System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        Assert.IsNotNull(field, "CombatEvents.ActiveDataCleared is where the boards sign up");
+        return (field.GetValue(null) as Delegate)?.GetInvocationList().Length ?? 0;
+    }
+
     // Options for the shared builder holding exactly one derived row, the way a one-row click would.
     private static GenerateStatsOptions SummaryForRow(DerivedFight row, FightFactIndex index, DamageFactTable facts)
     {

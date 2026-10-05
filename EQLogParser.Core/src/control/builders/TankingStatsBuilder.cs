@@ -24,16 +24,17 @@ namespace EQLogParser
     private List<Fight> _selected;
     private string _title;
 
-    internal TankingStatsBuilder()
+    /*
+     * Same law as DamageStatsBuilder: the clear signal belongs to the singleton, never to an instance. Tanking is the
+     * half DerivedTotals builds a second time for every damage-meter refresh, so an instance subscription here leaked
+     * twice per tick - see DamageStatsBuilder's static constructor for the measurement.
+     */
+    static TankingStatsBuilder()
     {
-      lock (_lock)
-      {
-        CombatEvents.ActiveDataCleared += (_) =>
-        {
-          Reset();
-        };
-      }
+      Instance.ClearedByActiveData();
     }
+
+    private void ClearedByActiveData() => CombatEvents.ActiveDataCleared += (_) => Reset();
 
     internal void RebuildTotalStats(GenerateStatsOptions options)
     {

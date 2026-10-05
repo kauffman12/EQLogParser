@@ -18,6 +18,13 @@
  * the millions of per-line accumulations it replaces on the parse path, noise — and leaves the shared one untouched
  * (pinned: ARefreshLeavesTheBoardsLastAnswerAlone).
  *
+ * THE SECOND RULE, which is what made the first one affordable: a scope has to be collectible when it returns, so
+ * nothing here may hold or take a subscription to process-static state. A constructor subscription on an object built
+ * once a second IS a permanent subscription - the static event outlives the caller - and the caller of ForOverlay is
+ * the damage meter: ~118 KB of builder retained per refresh, measured through a full GC, growing for as long as the
+ * board stayed open, until the builders' ActiveDataCleared wiring moved to their own singletons.
+ * (pinned: ACalculationLeavesNothingWatchingTheClearSignal).
+ *
  * Runs on the caller's thread and returns the event that instance produced. It does not hop to a dispatcher: where
  * the hop happens is a property of the consumer (MainWindow.OnGenerationStatus queues at Background), and doing it
  * here would put a UI assumption inside code the overlay, the summary and a test all share.
