@@ -6568,10 +6568,25 @@ case including the no-op one, because an empty diff *is* the "only when changed"
 separate check. It also fixes things an equality gate cannot: the wholesale swap is why selection has to be re-found by name +
 start time (`FightKey`), and it is where flicker comes from.
 
+**Re-run on a raid-focused capture (2026-11), and the control biting.** `eqlog_Kizant_xegony.txt` (374 MB, 1.93 M facts, ~770 visible
+rows against Incogitable's ~4,835 — a night of real pulls rather than a farm night): **0 no-op passes out of 11**, median **42 rows
+touched** (min 10, max 362), movers `EndReason` ×119, `DamageTotal`/`DamageHits` ×98, `DamageByOwner` ×79, `LastTime` ×65. Re-run at
+finer grain (`EQLP_LIVE_TAIL_PASSES=24`, ~80 k facts per simulated pass): **still 0 no-ops out of 23**, with the smallest touched sets
+at 6 rows on quiet prefixes, and the cheap digest still reporting 0 false negatives.
+
+So across both shapes — a 4,835-row farm night and a 770-row raid night, at two granularities — an equality gate finds nothing to
+skip, while an incremental update touches roughly **5 % of the visible rows** instead of all of them. That is the number that decides it.
+
+The control column found something here as well: at the full prefix, **the same input projected twice differed in 20–38 rows** (0 at
+the small prefix, and 0 for Incogitable's warmed pair). That is the parse-side-effect pet drift of the section above surfacing in
+ROW CONTENT — `DamageToOwner`/`EndReason` on a couple of dozen rows — not merely in which ordinal list a fact joined. Two readings: a
+gate would fire spuriously once per session (harmless), and "identical input, identical output" is not yet a property this process
+has, which gives the open question above a second, row-level reason to be answered.
+
 Caveat stated plainly, because it is the one thing this study cannot see: 12 prefixes over 1.9 M facts means each simulated pass
 covered ~160 k facts, while a live pass covers roughly a second (tens of facts). The passes nobody would skip are therefore
 measured at coarse granularity; heal-only stretches — the realistic no-op shape, since heals bump the captured count but open no
 fight row — are averaged away at this size. Measuring those properly means folding a real increment stream (parse once, then
 `FightProjectionCache` over growing fact windows), which is the same machinery the production pass uses and would be the natural
-instrument if someone wants the finer number. The decision above does not depend on it: incremental updating wins whether the
-no-op share is 0 % or 40 %.
+instrument if someone wants the finer number (the 24-pass Kizant run is a first step toward that granularity, and it changed nothing
+about the verdict). The decision above does not depend on it: incremental updating wins whether the no-op share is 0 % or 40 %.
