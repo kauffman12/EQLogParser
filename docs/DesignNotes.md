@@ -5680,52 +5680,55 @@ notes). The measurement harness that produced this table was never committed -
 it printed and asserted nothing, which makes it a script wearing a test
 attribute. Standing rule: AGENTS.md -> "A gated real-log test is disposable".
 
-## Roster memory: one import, four files, aging on the file's own clock (2026-11)
+## Memory: one import, three files, aging on the file's own clock (2026-11)
 
 The layout this work converged on, written down before the code so the reason
-survives. Under `config/<server>/`:
+survives. First draft said "four files, one per law"; that was one file per
+COLUMN, and the word `roster` was wrong too - in this game a roster is the live
+raid list (`/raid`, `/who` right now), which is exactly what the rules call
+R2-who and R3-joinraid. The criterion that works is **who writes it, and whether
+a human must be able to revert one claim without disturbing another**. Under
+`config/<server>/`:
 
-| file | what it is | who writes it | read by |
+| file | what it holds | who writes it | read by |
 | --- | --- | --- | --- |
-| `identity-priors.txt` | what a previous capture's RULES concluded, with the rule word | `IdentityPriorStore.Record` after a pass | identity census (display fallback only) |
-| `roster.txt` (new) | who this server counts as one of us, plus sightings and a learned class | imported once from `players.txt`, then by sightings during play | startup identity seed, in place of `RegistrySeed`'s roster half |
-| `petmapping.txt` | pet -> owner pairs | stays as today | `RegistrySeed` (the pair survives every log) |
-| `class.txt` (new) | an operator's class for a name | only the pane | class lookup, above anything a capture teaches |
+| `identity-priors.txt` (extended) | machine memory: a previous capture's RULE verdict with the rule word, plus "this name is one of us", sightings, a learned class | `IdentityPriorStore.Record` after a pass; once, the importer below | identity census, and the startup identity seed that `RegistrySeed`'s roster half feeds today |
+| `mirror-overrides.txt` (extended) | operator claims: `Name=Kind`, now `Name=Kind\|Class` | only the pane | identity/class lookup, above anything a capture teaches; one Revert drops both halves |
+| `petmapping.txt` (unchanged) | pet -> owner pairs | stays as today, the Pet Owners grid edits it | `RegistrySeed` (the pair survives every log) |
 
-Why `roster.txt` is NOT folded into `identity-priors.txt`, which was the first
-plan and is wrong. The prior store's gate is an allowlist of rule families, and
-its law is that a row carries the rule word that witnessed it: "the rule code is
-stored with it". A `players.txt` row holds `Name=<ticks>[,Class]` - no rule word
-at all - so importing it there means inventing one, which turns an assertion
-into statistics, the exact failure that file's header forbids (and that this
-project already documented for the old roster). Separating the files keeps each
-law intact: priors stay "what a log witnessed", roster stays "who is ours".
+Three files where four are in use now: `players.txt` retires after its one-time
+import, and nothing new is added. The class column of `players.txt` was never a
+human's - all 873 rows across the 14 server folders carry a parser timestamp and
+zero were typed - so it is machine memory and lives with machine memory; an
+operator typing a class is an override, which is why it rides in the override
+file rather than a `class.txt` of its own.
 
-The import runs **once**, gated on `roster.txt` not existing yet. Existence is
-the whole condition - no timestamp comparing, no re-import - and because every
-one of these paths is per server folder, "first run on a fresh server seeds from
-that server's roster" comes for free. Afterwards `players.txt` is legacy input:
-never read again, never written by parsing (the parser's membership writes go
-away in the same change that moves seeding), which is what makes the memory
-question have one answer instead of two.
+Two laws keep that merger honest:
 
-Aging moves off `DateTime.Now` onto the file's own newest row plus an entry cap,
-for the reason measured in "What a capture proves with empty memory": 99 of
-xegony's 209 rows sit past `Save()`'s 180-day wall clock right now, so a two-
-week holiday plus one save currently deletes half a raid. A window measured
-against the newest thing this server has seen cannot do that - it travels with
-the player - and it still lets a dead name finally leave.
+- **`Imported` is a provenance word only the importer can write.** The prior
+  store's gate is an allowlist of rule families because a row must carry what
+  witnessed it, and a `players.txt` line (`Name=<ticks>[,Class]`) records no rule
+  at all - so inventing one for it would launder an assertion into statistics,
+  the failure that file's header forbids. A row saying "carried over from
+  players.txt, reason unknown" states exactly what it knows and nothing more,
+  seeds identity at the strength `RegistrySeed` uses today (no name gains
+  authority from being remembered), and `Record` can never produce or upgrade it.
+- **Aging reads the file's newest row, not `DateTime.Now`.** 99 of xegony's 209
+  rows sit past `Save()`'s 180-day wall clock today: a holiday plus one save
+  currently deletes half a raid. A window measured against the newest thing this
+  server has seen travels with the player and cannot do that, and still lets a
+  dead name eventually leave. The `M`/operator bit exists for completeness; no
+  shipped file used it.
 
-Class is split for the same reason in miniature: every class word in
-`players.txt` today was written by a parser (all 873 rows across 14 folders are
-timestamped, zero hand-typed), and 3-15 of them per capture cannot be re-learned
-while others get re-learned *differently* (`Tuona Shaman->Druid` in four captures
-spanning 2022-2026). A thing the operator typed must not share a column with a
-thing a log guessed, so it gets its own file and outranks the guess; roster rows
-imported from `players.txt` carry an `M` bit only if a human set them, which
-none did.
+The import runs **once**, gated on nothing but its own target already having an
+imported row - i.e. absent memory means import, present memory means never
+again. No timestamp comparing, no re-import; and since every path here is per
+server folder, "a first log on a fresh server seeds from that server's own
+roster" comes for free. Afterwards `players.txt` is legacy input: never read
+again, and the parser's membership writes stop in the same change that moves
+seeding, so "where does memory come from" has one answer instead of two.
 
-`Remove` in the identity pane means *forget*: drop the ledger entry and the
-roster row, learn again normally next sighting. It never means veto - the
-`!Name` rejection is deleted (0026a22d) because no shipped build ever had a way
-to write one.
+`Remove` in the identity pane means *forget*: drop the remembered row, learn
+again normally on the next sighting. It never means veto - the `!Name` rejection
+is deleted (0026a22d) because no shipped build ever had a way to write one.
+
