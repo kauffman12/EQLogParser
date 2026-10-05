@@ -1081,15 +1081,17 @@ namespace EQLogParser
      * open when it was last looked at.
      */
     /*
-     * The same door as "Pet Owners" directly below it: SyncFusionUtil.ToggleWindow, so the two panes that share the
-     * right-hand strip answer their menu items identically. SetState(Dock) used to sit here, which is not a show/hide at
-     * all - it pulled the pane out of the strip and into the middle of the layout, so a menu item people press to PEEK at
-     * a list relocated the window they were peeking at. The census is built on demand, so the explicit Refresh stays.
+     * The same door as "Pet Owners" directly below it - ToggleWindow, so the two panes sharing the right-hand strip answer
+     * their menu items identically. SetState(Dock) used to sit here, which is not a show/hide at all: it pulled the pane out
+     * of its strip into the middle of the layout, so a menu item people press to PEEK at a list relocated it.
+     *
+     * No Refresh call here, and that is deliberate: showing the pane fires IsVisibleChanged, which subscribes and rebuilds.
+     * This handler used to force a census on the way through as well - two full classification passes per click (~460 ms on
+     * a 5.5k-name capture), for a list that was about to be rebuilt anyway by the event the toggle itself raises.
      */
     private void MenuItemNamesClick(object sender, RoutedEventArgs e)
     {
       SyncFusionUtil.ToggleWindow(dockSite, nameof(namesWindow));
-      if (namesWindow?.Content is NamesTable namesTable) namesTable.Refresh();
     }
 
     /*

@@ -66,31 +66,35 @@ namespace EQLogParser
       DockingManager.SetDesiredWidthInFloatingMode(window, size);
     }
 
+    /*
+     * Show or hide a window from its menu item. Two properties the old shape got wrong for the edge panes.
+     *
+     * SHOW WHENEVER IT IS NOT ON SCREEN, not "when its state is Hidden". A window docked in a tab group behind another tab
+     * is not visible either, and under the old test its menu item HID it (state was already Dock), so a click on
+     * "Pet Owners" while its group showed something else made it disappear. "Not visible" is what the operator means.
+     *
+     * COME BACK THE WAY IT WENT AWAY. The Document/Dock ladder in ShowStateFor is for windows that live in the middle of the
+     * layout; a pane whose markup says SideInDockedMode=Right (the identity strip: Pet Owners, Player/NPC Identity) has to
+     * return auto-hidden, because SetState(Dock) on it yanks the pane out of its strip and drops it over the tables - the
+     * exact relocation an operator never asked for and cannot undo from this menu.
+     */
     internal static void ToggleWindow(DockingManager dockSite, string name, bool force = false)
     {
       var opened = GetOpenWindows(dockSite);
       if (opened.TryGetValue(name, out var control))
       {
-        if (DockingManager.GetState(control) == DockState.Hidden || force)
+        if (force || DockingManager.GetState(control) == DockState.Hidden || !control.IsVisible)
         {
-          if (DockingManager.GetCanDocument(control))
-          {
-            DockingManager.SetState(control, DockState.Document);
-          }
-          else if (DockingManager.GetCanDock(control))
-          {
-            DockingManager.SetState(control, DockState.Dock);
-          }
-          else if (DockingManager.GetCanFloat(control))
-          {
-            DockingManager.SetState(control, DockState.Float);
-          }
-          else
+          var showState = ShowStateFor(control);
+          if (showState == DockState.Hidden)
           {
             Log.Warn("Can not determine ControlControl state for: " + name);
           }
-
-          dockSite.ActivateWindow(name);
+          else
+          {
+            DockingManager.SetState(control, showState);
+            dockSite.ActivateWindow(name);
+          }
         }
         else
         {
@@ -102,6 +106,27 @@ namespace EQLogParser
           DockingManager.SetState(control, DockState.Hidden);
         }
       }
+    }
+
+    /*
+     * Which state a hidden window goes back to. Its own method because it is the whole policy of "show or hide, never
+     * relocate", and it reads only attached properties, so a test can ask it about a ContentControl without building a
+     * docking layout (which needs a realized DockingManager and therefore a live window).
+     *
+     * A side wins over every other shape: SideInDockedMode is what the markup says about where this window belongs, and an
+     * edge belongs to a strip whose tabs slide out. Only a window with no side - one that docks in the middle - earns
+     * Document/Dock/Float.
+     */
+    internal static DockState ShowStateFor(ContentControl window)
+    {
+      var side = DockingManager.GetSideInDockedMode(window);
+      if (side is DockSide.Left or DockSide.Right or DockSide.Top or DockSide.Bottom) return DockState.AutoHidden;
+      if (DockingManager.GetCanDocument(window)) return DockState.Document;
+      if (DockingManager.GetCanDock(window)) return DockState.Dock;
+      if (DockingManager.GetCanFloat(window)) return DockState.Float;
+
+      // Nothing to show: reported back as Hidden so the caller warns instead of putting a window somewhere arbitrary.
+      return DockState.Hidden;
     }
 
     // This is where closing summary tables and line charts will get disposed
