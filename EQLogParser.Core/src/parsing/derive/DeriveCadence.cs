@@ -85,37 +85,69 @@ namespace EQLogParser
     /*
      * The decision itself, and it answers two questions rather than one: WHETHER to pass, and WHICH pass.
      *
-     * `count` is what the capture holds now, `lastDerivedCount` what the last finished pass of either lane covered,
-     * `quietSeconds` how long the count has held still, `factsPerSecond` how fast it was growing over the observation window,
-     * `sinceAnyPassS`/`sinceFullPassS` how long ago the last pass of either lane / of the expensive lane ended, and
-     * `lastFullPassSeconds` what that expensive pass cost (callers measure all of these monotonically; positive infinity means
-     * "never happened", so the first board arrives promptly).
+     * `count` is what the capture holds now; `lastProjectedCount` and `lastClassifiedCount` are what the last pass of EITHER
+     * lane and of the EXPENSIVE lane respectively covered; `quietSeconds` how long the count has held still,
+     * `factsPerSecond` how fast it was growing over the observation window, `sinceAnyPassS`/`sinceFullPassS` how long ago the
+     * last pass of either lane / of the expensive lane ended, and `lastFullPassSeconds` what that expensive pass cost (callers
+     * measure all of these monotonically; positive infinity means "never happened", so the first board arrives promptly).
+     *
+     * TWO watermarks, where the rule used to take one — and the bug that bought is worth keeping in words, because both lanes
+     * looking healthy is exactly how it hid. With a single `lastDerivedCount`, a cheap pass retired the count without retiring
+     * the debt: the facts it folded were on screen but had never been through the rule book, and the very first test below
+     * ("captured == derived") then answered None for as long as nothing else arrived. Pull the file at 21:04, a last burst of
+     * lines lands, the cheap lane folds it, the raid goes home — and every identity those last facts carried (the pet that
+     * finally spoke, the charm on the way out) stayed unclassified permanently, because nothing was ever "new" again to wake the
+     * expensive lane. Two counters say the two true things: what the surfaces show, and what the rules have read.
      *
      * No argument is a tick count, on purpose: the whole rule has to read the same however often it is asked.
      */
-    public static DeriveKind Decide(long count, long lastDerivedCount, double quietSeconds, double factsPerSecond,
+    public static DeriveKind Decide(long count, long lastProjectedCount, long lastClassifiedCount,
+                                    double quietSeconds, double factsPerSecond,
                                     double sinceAnyPassS, double sinceFullPassS, double lastFullPassSeconds)
     {
-      // Nothing captured, or nothing the surfaces do not already show: an idle log must cost exactly nothing.
-      if (count <= 0 || count == lastDerivedCount) return DeriveKind.None;
+      // Nothing captured: an idle log must cost exactly nothing.
+      if (count <= 0) return DeriveKind.None;
+
+      /*
+       * "Owed" is a comparison, never a flag: each lane owes whatever the capture holds beyond where that lane last finished,
+       * so a pass that covered N and a capture that then went BACKWARD (a fresh session over the same counters is the case to
+       * fear) can only ever ask for more work, never less.
+       */
+      var projectsOwed = count != lastProjectedCount;
+      var classifiesOwed = count != lastClassifiedCount;
+
+      // Both lanes up to date: the surfaces already show everything, and neither has anything to say about it.
+      if (!projectsOwed && !classifiesOwed) return DeriveKind.None;
 
       /*
        * The load stopped moving. This is the classic trigger and what a finished file needs, and it asks for the EXPENSIVE lane
        * on purpose: at the end of a load the rules have the whole capture in front of them, which is when they learn the things
        * a cheap refresh cannot (a name nobody owns yet, a pet whose owner spoke once at minute forty).
+       *
+       * The cheap lane may NOT answer this moment. Silence is the one verdict that says "the rules can now see everything there
+       * is", which is precisely when the debt owed since the last full pass has to be paid - and it is paid even when nothing new
+       * arrived after that cheap pass, because the whole bug was a fold consuming the count the rules had not read.
        */
-      if (quietSeconds >= QuietSeconds) return DeriveKind.Full;
+      if (quietSeconds >= QuietSeconds) return classifiesOwed ? DeriveKind.Full : DeriveKind.None;
 
       // A file being read. Bulk load ends in quiet and the rule above catches it there; BOTH lanes park, because the cheap one
       // still holds the gate that the loader needs.
       if (factsPerSecond >= BulkFactsPerSecond) return DeriveKind.None;
 
       /*
-       * A live tail. The expensive lane keeps the cadence it has always had — its cost is what sets the wait, and that wait is
-       * what keeps ingest affordable — and anything cheaper in between is the cheap lane.
+       * A live tail. The expensive lane keeps the cadence it has always had - its cost is what sets the wait, and that wait is
+       * what keeps ingest affordable - and anything cheaper in between is the cheap lane. Each lane asks only about its own
+       * debt, so a tail that outran the cheap clock but not the rule book still folds, and vice versa.
        */
-      if (sinceFullPassS >= LiveIntervalSeconds(lastFullPassSeconds)) return DeriveKind.Full;
-      return sinceAnyPassS >= FastFloorSeconds ? DeriveKind.ProjectionOnly : DeriveKind.None;
+      if (classifiesOwed && sinceFullPassS >= LiveIntervalSeconds(lastFullPassSeconds)) return DeriveKind.Full;
+      if (projectsOwed && sinceAnyPassS >= FastFloorSeconds) return DeriveKind.ProjectionOnly;
+
+      /*
+       * Nothing new to fold and the expensive lane's clock has not run out. The debt is real but not yet due, which is the
+       * ordinary state of a live raid between full passes; `AClassificationDebtIsNotForgottenByACheapPass` pins that it still
+       * gets paid on the quiet tick rather than being written off here.
+       */
+      return DeriveKind.None;
     }
 
     /*

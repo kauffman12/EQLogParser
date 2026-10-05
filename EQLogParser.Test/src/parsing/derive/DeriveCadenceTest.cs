@@ -63,10 +63,10 @@ public class DeriveCadenceTest
     public void AnIdleLogAsksForNothing()
     {
         Assert.AreEqual(DeriveKind.None,
-            DeriveCadence.Decide(Derived, Derived, 3600, 0, 3600, 3600, 0),
+            DeriveCadence.Decide(Derived, Derived, Derived, 3600, 0, 3600, 3600, 0),
             "captured == derived must cost nothing, forever — neither lane, however long the log sits");
         Assert.AreEqual(DeriveKind.None,
-            DeriveCadence.Decide(0, -1, 3600, 0, double.PositiveInfinity, double.PositiveInfinity, 0),
+            DeriveCadence.Decide(0, -1, -1, 3600, 0, double.PositiveInfinity, double.PositiveInfinity, 0),
             "a log with no facts must not spin");
     }
 
@@ -81,11 +81,11 @@ public class DeriveCadenceTest
         const double sinceLastPass = DeriveCadence.FloorSeconds;
 
         Assert.AreEqual(DeriveKind.Full,
-            DeriveCadence.Decide(Derived + 500, Derived, 0.05, 10_000, sinceLastPass, sinceLastPass, 0.65),
+            DeriveCadence.Decide(Derived + 500, Derived, Derived, 0.05, 10_000, sinceLastPass, sinceLastPass, 0.65),
             "a live tail must refresh on the cost-aware clock, not on a silence that never comes");
 
         Assert.AreEqual(DeriveKind.None,
-            DeriveCadence.Decide(Derived + 500, Derived, 0.05, 10_000, sinceLastPass / 20, sinceLastPass / 3, 0.65),
+            DeriveCadence.Decide(Derived + 500, Derived, Derived, 0.05, 10_000, sinceLastPass / 20, sinceLastPass / 3, 0.65),
             "the same tail must still be throttled — both lanes have a floor, and neither is now");
     }
 
@@ -98,12 +98,12 @@ public class DeriveCadenceTest
     public void TheCheapLaneRunsBetweenExpensivePasses()
     {
         Assert.AreEqual(DeriveKind.ProjectionOnly,
-            DeriveCadence.Decide(Derived + 500, Derived, 0.05, 10_000, DeriveCadence.FastFloorSeconds,
+            DeriveCadence.Decide(Derived + 500, Derived, Derived, 0.05, 10_000, DeriveCadence.FastFloorSeconds,
                                        DeriveCadence.FloorSeconds * 0.9, 0.65),
             "past the cheap floor but before the expensive one is due: rows yes, rules no");
 
         Assert.AreEqual(DeriveKind.None,
-            DeriveCadence.Decide(Derived + 500, Derived, 0.05, 10_000, DeriveCadence.FastFloorSeconds * 0.5,
+            DeriveCadence.Decide(Derived + 500, Derived, Derived, 0.05, 10_000, DeriveCadence.FastFloorSeconds * 0.5,
                                        DeriveCadence.FloorSeconds * 0.9, 0.65),
             "and the cheap lane still has a floor of its own — it holds the ingest gate too");
     }
@@ -117,9 +117,46 @@ public class DeriveCadenceTest
     public void ACheapPassNeverPushesTheExpensiveOneAway()
     {
         Assert.AreEqual(DeriveKind.Full,
-            DeriveCadence.Decide(Derived + 500, Derived, 0.05, 10_000, sinceAnyPassS: 0.01,
+            DeriveCadence.Decide(Derived + 500, Derived, Derived, 0.05, 10_000, sinceAnyPassS: 0.01,
                                        sinceFullPassS: DeriveCadence.FloorSeconds, lastFullPassSeconds: 0.65),
             "a cheap pass a hundred milliseconds ago must not buy the rule book another interval");
+    }
+
+    /*
+     * The bug TWO watermarks exist for, and it is worth reading as a timeline rather than as arguments. A raid's last lines
+     * arrive; the cheap lane folds them onto the board in half a second; the players go home and the file stops moving. With
+     * ONE counter that fold had retired "there is new data", so the rule book — which had never seen those facts — was never
+     * asked again: no pet folded onto the raider who finally spoke, no charm on the way out, permanently, until the log was
+     * reopened. Silence is precisely the moment the debt must be paid, because it is when the rules can see the whole capture.
+     */
+    [TestMethod]
+    public void AClassificationDebtIsNotForgottenByACheapPass()
+    {
+        const long captured = Derived + 500;
+
+        // The cheap lane caught up with the capture; the expensive one stopped 500 facts short.
+        Assert.AreEqual(DeriveKind.Full,
+            DeriveCadence.Decide(captured, lastProjectedCount: captured, lastClassifiedCount: Derived,
+                quietSeconds: DeriveCadence.QuietSeconds, factsPerSecond: 0,
+                sinceAnyPassS: 0.1, sinceFullPassS: 0.1, lastFullPassSeconds: 0.65),
+            "nothing new arrived since the cheap fold, and it still owes the rules — silence must not write off that debt");
+
+        /*
+         * And mid-tail, where both clocks have run their own races: everything is folded onto the board, the rule book's
+         * interval elapsed, so classify even though the cheap lane has nothing left to do. This is the same law as
+         * ACheapPassNeverPushesTheExpensiveOneAway stated from the other lane's side — one counter could not express it at all.
+         */
+        Assert.AreEqual(DeriveKind.Full,
+            DeriveCadence.Decide(captured, lastProjectedCount: captured, lastClassifiedCount: Derived,
+                quietSeconds: 0.05, factsPerSecond: 200,
+                sinceAnyPassS: 0.1, sinceFullPassS: DeriveCadence.LiveIntervalSeconds(0.65), lastFullPassSeconds: 0.65),
+            "a fold consumes the cheap clock, never the classification one");
+
+        // While BOTH lanes have nothing owed, an idle log still costs exactly nothing — the fix must not become a spin loop.
+        Assert.AreEqual(DeriveKind.None,
+            DeriveCadence.Decide(captured, lastProjectedCount: captured, lastClassifiedCount: captured,
+                quietSeconds: 3600, factsPerSecond: 0, sinceAnyPassS: 3600, sinceFullPassS: 3600, lastFullPassSeconds: 0.65),
+            "caught up on both lanes is the same silence as having nothing to do");
     }
 
     // Both lanes hold off while a file is being read: whichever one runs, it parks ingest while it runs.
@@ -129,7 +166,7 @@ public class DeriveCadenceTest
         const double loading = 60_000d;
 
         Assert.AreEqual(DeriveKind.None,
-            DeriveCadence.Decide(Derived + (long)loading, Derived, 0.05, loading,
+            DeriveCadence.Decide(Derived + (long)loading, Derived, Derived, 0.05, loading,
                                        DeriveCadence.FastFloorSeconds * 10, DeriveCadence.CeilingSeconds * 2, 0.65),
             "bulk parks the cheap lane even though it would be nearly free — the loader owns the gate");
     }
@@ -139,7 +176,7 @@ public class DeriveCadenceTest
     public void AQuietLoadFiresImmediately()
     {
         Assert.AreEqual(DeriveKind.Full,
-            DeriveCadence.Decide(50_000, -1, DeriveCadence.QuietSeconds, 200_000, double.PositiveInfinity,
+            DeriveCadence.Decide(50_000, -1, -1, DeriveCadence.QuietSeconds, 200_000, double.PositiveInfinity,
                                        double.PositiveInfinity, 0),
             "growth that stops is the classic trigger, even at bulk rate — and it asks for the EXPENSIVE lane: at the end of a load "
             + "the rules have the whole capture in front of them, which is when they learn what a cheap refresh cannot");
@@ -155,17 +192,17 @@ public class DeriveCadenceTest
         const double loading = 60_000d; // facts/second: a file being read
 
         Assert.AreEqual(DeriveKind.None,
-            DeriveCadence.Decide(Derived + (long)loading, Derived, 0.2, loading, double.PositiveInfinity,
+            DeriveCadence.Decide(Derived + (long)loading, Derived, Derived, 0.2, loading, double.PositiveInfinity,
                                        double.PositiveInfinity, 0.65),
             "mid-bulk must park, not pass");
         Assert.AreEqual(DeriveKind.Full,
-            DeriveCadence.Decide(Derived + (long)loading, Derived, DeriveCadence.QuietSeconds, loading,
+            DeriveCadence.Decide(Derived + (long)loading, Derived, Derived, DeriveCadence.QuietSeconds, loading,
                                        double.PositiveInfinity, double.PositiveInfinity, 0.65),
             "and must fire the moment the load stops moving");
 
         // A raid's worth of lines is orders of magnitude slower than this and must not be mistaken for it.
         Assert.AreEqual(DeriveKind.Full,
-            DeriveCadence.Decide(Derived + 40, Derived, 0.2, 400, DeriveCadence.FloorSeconds,
+            DeriveCadence.Decide(Derived + 40, Derived, Derived, 0.2, 400, DeriveCadence.FloorSeconds,
                                        DeriveCadence.FloorSeconds, 0.65));
     }
 
@@ -185,17 +222,17 @@ public class DeriveCadenceTest
         {
             var factsPerSecond = 25_000d;
             Assert.AreEqual(DeriveKind.None,
-                DeriveCadence.Decide(capturedNow, Derived, 0.1, factsPerSecond, double.PositiveInfinity,
+                DeriveCadence.Decide(capturedNow, Derived, Derived, 0.1, factsPerSecond, double.PositiveInfinity,
                                            double.PositiveInfinity, 0.65),
                 $"bulk ingest at a {pollSeconds}s poll must still read as bulk");
         }
 
         // Same for the quiet verdict: silence of one second is one second however often it was checked.
         Assert.AreEqual(DeriveKind.Full,
-            DeriveCadence.Decide(capturedNow, Derived, DeriveCadence.QuietSeconds, 0, double.PositiveInfinity,
+            DeriveCadence.Decide(capturedNow, Derived, Derived, DeriveCadence.QuietSeconds, 0, double.PositiveInfinity,
                                        double.PositiveInfinity, 0.65));
         Assert.AreEqual(DeriveKind.None,
-            DeriveCadence.Decide(capturedNow, Derived, DeriveCadence.QuietSeconds * 0.5, 0, 0, 0, 0.65),
+            DeriveCadence.Decide(capturedNow, Derived, Derived, DeriveCadence.QuietSeconds * 0.5, 0, 0, 0, 0.65),
             "half the quiet window is not the quiet window, whatever the poll rate");
 
         /*
@@ -205,10 +242,10 @@ public class DeriveCadenceTest
          * exists to make impossible.
          */
         Assert.AreEqual(DeriveKind.None,
-            DeriveCadence.Decide(capturedNow, Derived, 0.001, DeriveCadence.BulkFactsPerSecond, 0, 0, 0),
+            DeriveCadence.Decide(capturedNow, Derived, Derived, 0.001, DeriveCadence.BulkFactsPerSecond, 0, 0, 0),
             "bulk parks even one millisecond after the previous pass — a load ends in quiet, not on the interval");
         Assert.AreEqual(DeriveKind.Full,
-            DeriveCadence.Decide(Derived + 1, Derived, DeriveCadence.QuietSeconds, 0, double.PositiveInfinity,
+            DeriveCadence.Decide(Derived + 1, Derived, Derived, DeriveCadence.QuietSeconds, 0, double.PositiveInfinity,
                                        double.PositiveInfinity, 0),
             "a single new fact after the quiet window goes now, with no rate to compare against");
     }
@@ -235,7 +272,7 @@ public class DeriveCadenceTest
         var healed = 40_000L;           // heal events, no damage alongside them
 
         Assert.AreEqual(DeriveKind.None,
-            DeriveCadence.Decide(captured + healed, Derived, 0.1, 30_000, 0.2, double.PositiveInfinity, 0),
+            DeriveCadence.Decide(captured + healed, Derived, Derived, 0.1, 30_000, 0.2, double.PositiveInfinity, 0),
             "a healing-only stretch is still moving and must read as busy, not quiet — 30k events/second is bulk, and bulk parks until the count stops");
     }
 

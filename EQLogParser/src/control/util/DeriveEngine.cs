@@ -95,7 +95,25 @@ namespace EQLogParser
     private readonly DispatcherTimer _quietTimer;
     private int _deriveInFlight;
     private long _lastTickCount = -1;
-    private long _lastDerivedCount = -1;
+
+    /*
+     * TWO watermarks, where this class used to keep one, and the bug two counters is the fix for: a cheap lane fold puts facts
+     * on screen without putting them through the rule book, so "what the surfaces show" and "what the rules have read" are two
+     * different numbers. With one counter, a cheap pass retired the count that classification still owed, and the cadence's
+     * first test ("captured == derived") then answered None for as long as nothing further arrived - which, when the last lines
+     * of a raid night are what the fold covered, is forever. DeriveCadence.Decide takes both.
+     *
+     * Both are written from what a pass COVERED (snapshot.FactCount, measured inside the ingest gate), never from a re-read of
+     * CapturedTotal outside it: acknowledging facts nobody processed is the same mistake wearing a different hat.
+     */
+    private long _lastProjectedCount = -1;
+    private long _lastClassifiedCount = -1;
+
+    /*
+     * Explicit requests, so one arriving while a pass runs waits to be served instead of being dropped on the busy flag -
+     * see DeriveRequests for why a dropped override on an otherwise idle log is never retried by anything.
+     */
+    private readonly DeriveRequests _requests = new();
 
     /*
      * How often the cadence is asked. It is a POLLS rate, not the refresh rate — DeriveCadence takes seconds and
@@ -282,7 +300,18 @@ namespace EQLogParser
 
     public void RederiveAsync(DeriveKind kind)
     {
-      if (_disposed || Interlocked.Exchange(ref _deriveInFlight, 1) == 1) return;
+      if (_disposed) return;
+
+      /*
+       * Stamped BEFORE the busy test, which is the whole point: a request that arrives while a pass is running used to fall
+       * straight through that `return` and vanish. A cheap fold asks for nothing (it inherits verdicts, so stamping would make
+       * every half-second refresh look like an operator's correction). The owed request is paid off in this task's finally.
+       */
+      if (kind == DeriveKind.Full) _requests.Arrive();
+      if (Interlocked.Exchange(ref _deriveInFlight, 1) == 1) return;
+
+      // What existed when THIS pass started is what it answers; anything later is still owed when it finishes.
+      var requestBound = _requests.StartBound();
 
       /*
        * What reaches the player's own log. An expensive pass is an event worth a line; the cheap lane runs twice a second, and four
@@ -298,6 +327,10 @@ namespace EQLogParser
 
       _ = Task.Run(() =>
       {
+        // Only a pass that FINISHED may settle a request: an owed request plus a deterministic throw is the one
+        // combination that must not spin, so retries after a failure belong to DeriveCadence.RetryDelayS alone.
+        var succeeded = false;
+
         try
         {
           var sw = Stopwatch.StartNew();
@@ -392,7 +425,14 @@ namespace EQLogParser
           // Swapped before the event: a selection made from the fresh rows materializes against the pass
           // that made them, never against the previous snapshot's facts.
           _snapshot = snapshot;
-          _lastDerivedCount = CapturedTotal;
+
+          /*
+           * Both watermarks read what this pass COVERED, taken inside the ingest gate when the snapshot was assembled - not
+           * a fresh CapturedTotal from out here, where lines may have landed while the task waited its turn. Acknowledging
+           * facts nobody projected or classified is how a capture ends permanently under-derived with nothing ever asking again.
+           */
+          _lastProjectedCount = snapshot.FactCount;
+          if (classified is not null) _lastClassifiedCount = snapshot.FactCount;
 
           // Any completed pass - either lane, even one that logged degraded stages - pays off the failure ladder.
           _deriveFailures = 0;
@@ -422,6 +462,8 @@ namespace EQLogParser
             try { LiveDamageObserved?.Invoke(); }
             catch (Exception ex) { Log.Error("Live-damage subscriber failed", ex); }
           }
+
+          succeeded = true;
         }
         catch (Exception ex) when (!_disposed)
         {
@@ -451,6 +493,21 @@ namespace EQLogParser
           // derive that restarted its own stopwatch would be re-attempted at the floor cadence forever.
           _sinceAnyPass.Restart();
           Interlocked.Exchange(ref _deriveInFlight, 0);
+
+          /*
+           * Release first, then look at the debt: the flag must be down before a follow-up request can take it, or the cascade
+           * below would be the pass that never starts. An expensive pass settles exactly the requests that existed when it
+           * began (DeriveRequests), so an override applied while it was working is what keeps one owed - and the operator's
+           * correction is served one pass later instead of never.
+           *
+           * Nothing happens on a failed pass. The debt stays visible to the next pass that finishes, and the retry ladder owns
+           * the pacing after a throw - an immediate cascade over poison would be a loop with a log in it.
+           */
+          if (succeeded)
+          {
+            if (kind == DeriveKind.Full) _requests.ServedThrough(requestBound);
+            if (_requests.IsOwed) RederiveAsync(DeriveKind.Full);
+          }
         }
       });
     }
@@ -656,7 +713,8 @@ namespace EQLogParser
      * which never offers two silent ticks, held one snapshot for the whole encounter, and every surface reading it (the
      * fight list, a click's summary, the damage meter) showed the same frozen numbers until the file stopped growing.
      *
-     * Derivation itself parks ingest at the gate, so a completed pass always leaves count == lastDerivedCount.
+     * Derivation itself parks ingest at the gate, so a completed pass always leaves count equal to the watermark of whichever
+     * lane ran - and only that lane's, which is why there are two of them.
      */
     private void QuietTick(object sender, EventArgs e)
     {
@@ -683,9 +741,12 @@ namespace EQLogParser
 
       // Dirty-while-idle feedback doubles as field diagnostics: "capturing… 0 captured" separates
       // an empty log from a stalled pipeline without needing a debugger.
-      if (count != _lastDerivedCount) Capturing?.Invoke(count);
+      // "capturing" is about what the player can see move, which lags on the CHEAP lane's number: the rules being behind
+      // that same count is normal between full passes and must not make a live raid look stalled.
+      if (count != _lastProjectedCount) Capturing?.Invoke(count);
 
-      var kind = DeriveCadence.Decide(count, _lastDerivedCount, _sinceFactChange.Elapsed.TotalSeconds,
+      var kind = DeriveCadence.Decide(count, _lastProjectedCount, _lastClassifiedCount,
+                                            _sinceFactChange.Elapsed.TotalSeconds,
                                             factsPerSecond, _sinceAnyPass.Elapsed.TotalSeconds,
                                             _sinceFullPass.Elapsed.TotalSeconds, _lastFullPassSeconds);
       if (kind != DeriveKind.None) RederiveAsync(kind);
