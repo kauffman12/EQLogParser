@@ -335,7 +335,7 @@ public class IdentityPriorStoreTest
                "R1-target", "R1-conflict", "R2-who", "R3-chat", "R3-merc", "R4-spell",
                "R3-joinraid", "R3-leaveraid", "R3-joingroup", "R3-leftgroup", "R3-leader",
                "R5-companion", "R7-graph", "R7-side", "R9-charm", "R13-merc", "R15-healed", "R17-selffeed", "R18-healedpet",
-               "R19-eyeowner",
+               "R19-eyeowner", "R22-guildmate",
              })
       Assert.IsTrue(IdentityPriorStore.WorthRemembering(remembered), $"{remembered} reads lines and was refused");
 

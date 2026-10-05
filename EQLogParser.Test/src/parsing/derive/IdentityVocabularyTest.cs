@@ -46,6 +46,10 @@ public class IdentityVocabularyTest
     "R20-petspell",
     "R21-spellshape", "R21-spellcast", "R21-spelleffect",
 
+    // "Your guildmate X has completed …" - the client's own guild list speaking (R22). The census that made it a rule:
+    // docs/DesignNotes.md -> "What the cold misses actually are".
+    "R22-guildmate",
+
     /*
      * Not a rule, and it cannot come out of a fixture: PipelineHarness clears PlayerRegistry, so nothing in any test
      * seeds from it. That blind spot is how "RegistrySeed" was printable as a verdict word — the corpus guard below walks

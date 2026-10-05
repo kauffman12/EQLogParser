@@ -227,6 +227,19 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   legacy placed reading identically: two pets whose owner the registry never learned contribute nothing to the legacy
   board at all, while the line's own ownership word (`ClassificationRules.OwnerInName` → `AttackerOwner`) folds them under
   their raiders here. Do not force the two sides into agreement — the gap is the experiment; the test pins its shape.
+- **Chat channels are a closed claim list, and one announcement shape is R22**: R3-chat claims a speaker only on
+  guild/raid/group/fellowship — tell shout/ooc/**zone chatter never does**, because `] Bane tells General:1, 'WTS Full NoS collect
+  sets 3kr each'` is a bazaar hailer and `Bane` sits in npcs.txt as a mob; the same reason `begins singing` was refused
+  (`Shalowain begins singing her Rhapsody of Pain.` is an NPC bard). What *was* built is the one shape whose grammar
+  belongs to the speaker rather than the thing it names: **`Your guildmate X has completed … achievement.`** —
+  `PreLineParser.TryGetGuildmate` (fire-only, like `Targeted (NPC)`: reports evidence, consumes nothing; letters-only
+  name so a server-qualified one is refused) → `EvidenceFact.EvGuildmate` → **Player at Strong** `R22-guildmate`, which
+  sits under the frames the client produces by looking at the entity (like R17's drink, R19's eye) and over npcs.txt,
+  where person-shaped names do sit. `RememberedRules` gained `R22-`, so a silent regular is claimed once and remembered;
+  **no `players.txt` write is involved.** Measured yield: the winning claim on **22** roster names on Incogitable (168
+  named there) and **1** on `-09-20-25` (`Blazem`, four achievement lines in a 3-hour capture), while pool-wide placement
+  stays at its 82.5 % — the rule moves the people the aggregate was never about. Numbers, refusals and why tells are out:
+  docs/DesignNotes.md → "What was built out of it: R22-guildmate"; pinned by `GuildmateRuleTest`.
 - **Entity names are looked up without case**: the parser capitalizes every name it hands out (`ParserUtil.UpdateAttacker`/
   `UpdateDefender`/`UpdateSlain` all finish with `TextUtils.CapitalizeFirst`), so a fact says `A bone walker`; evidence lines keep
   what EQ wrote — `a bone walker has been charmed.`, a wear-off, a tell. So **every entity lookup is case-insensitive**:

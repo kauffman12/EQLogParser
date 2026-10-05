@@ -470,6 +470,23 @@ namespace EQLogParser
             }
             break;
 
+          case EvidenceFact.EvGuildmate:
+            /*
+             * R22: "Your guildmate X has completed … achievement." The client prints this from its OWN guild list, so it
+             * reports membership rather than inferring a person from behaviour - and it is the only line some silent
+             * regulars ever give (docs/DesignNotes.md -> "What the cold misses actually are": of the roster names a cold
+             * pass cannot place on Incogitable, ONE has any attack fact at all, while 213 names arrive this way).
+             *
+             * Strong, not Certain, on purpose: that keeps the rule under the frames the client produces from looking at the
+             * entity itself, exactly like R17's drink and R19's eye. The half that matters for a roster is that it still
+             * outranks npcs.txt, where person-shaped names do sit (`Alleza`, `Mirala`) and no capture can tell a mob with
+             * such a name from somebody's guildmate. Measured: 10,541 lines over four captures, 433 distinct names across
+             * two of them, and not one of those names reads Npc or Pet under the rule book.
+             */
+            playerBehavior.Add(name);
+            Claim(timeline, state, name, IdentityKind.Player, RuleStrength.Strong, "R22-guildmate", double.NegativeInfinity);
+            break;
+
           case EvidenceFact.EvSelfFeeds:
             // R17: the actor on a consume line ("Glug… / Chomp… <name> takes a drink / bite from …"). Only a
             // player character carries a flask or a loaf. Strong rather than Certain, so a Targeted (NPC) verdict

@@ -37,6 +37,13 @@ namespace EQLogParser
         EventsEvidence?.Invoke(action[15..].Trim(), lineData.BeginTime, EvidenceFact.EvTargetedNpc);
       }
 
+      // Fire-only recognition: an achievement announcement naming somebody in the local player's OWN guild list (R22).
+      // No parser needs this line, so claiming it here would only hide it from the ones that might.
+      if (TryGetGuildmate(action, out var guildmate))
+      {
+        EventsEvidence?.Invoke(guildmate, lineData.BeginTime, EvidenceFact.EvGuildmate);
+      }
+
       if (action.Length > 10)
       {
         if (action.Length > 20 && action.StartsWith("Targeted (Player)", StringComparison.OrdinalIgnoreCase))
@@ -161,6 +168,44 @@ namespace EQLogParser
       }
 
       return false;
+    }
+
+    /*
+     * The one shape the guild announcement takes:
+     *
+     *   "Your guildmate Blazem has completed Partisan of Candlemaker's Workshop achievement."
+     *
+     * Measured over four captures before being trusted: 10,541 lines, and EVERY one of them is
+     * "Your guildmate <name> has completed" - no other verb appeared on any capture. The 433 distinct names two of
+     * those captures print are letters only (no apostrophe, no dot, no server qualifier), and NONE of them is placed
+     * Npc or Pet by the rule book, which is the check that makes this a claim worth writing down: the client writes
+     * the sentence out of its own guild list, so it reports a character rather than guessing from behaviour. It is
+     * also the only evidence some silent regulars ever give - see docs/DesignNotes.md -> "What the cold misses
+     * actually are", which counts why combat evidence cannot reach them and why tells and `begins singing` were
+     * refused (both name NPCs: `] Bane tells General:1, 'WTS Full NoS collect sets 3kr each'` is a bazaar hailer
+     * whose name is in npcs.txt, and `Shalowain begins singing her Rhapsody of Pain.` is a NPC bard).
+     */
+    private const string GuildmatePrefix = "Your guildmate ";
+    private const string GuildmateVerb = "has completed";
+
+    internal static bool TryGetGuildmate(string action, out string name)
+    {
+      name = string.Empty;
+
+      if (!action.StartsWith(GuildmatePrefix, StringComparison.OrdinalIgnoreCase)) return false;
+
+      var from = GuildmatePrefix.Length;
+      while (from < action.Length && action[from] == ' ') from++;
+
+      // The same recognizer every other identity branch uses: letters only, and a dot means a server-qualified
+      // name, which is never a key this pipeline takes.
+      var end = FindPossiblePlayerName(action, out var isCrossServer, from, -1, ' ');
+      if (end == -1 || isCrossServer) return false;
+
+      if (!action.AsSpan(end).TrimStart().StartsWith(GuildmateVerb, StringComparison.OrdinalIgnoreCase)) return false;
+
+      name = action[from..end];
+      return name.Length > 0;
     }
 
     internal static int FindPossiblePlayerName(string action, out bool isCrossServer, int startIndex, int stopIndex, char stopChar)

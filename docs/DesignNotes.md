@@ -5893,6 +5893,33 @@ the roster file therefore tests it against names it cannot know, and a perfect c
 of one file tops out near those numbers for that reason alone, not because evidence went
 unread.
 
+### What was built out of it: R22-guildmate (built)
+
+One of those shapes became a rule, because it is the only one whose grammar belongs to the *speaker's* side of the
+relationship rather than to the thing it names: **`Your guildmate X has completed … achievement.`** The client writes
+that sentence out of its own guild list, so it reports membership instead of inferring a person from behaviour.
+`PreLineParser.TryGetGuildmate` recognises it (letters-only name through the same `FindPossiblePlayerName` every other
+identity branch uses, so a server-qualified name is refused), fires `EvidenceFact.EvGuildmate`, and **does not consume
+the line** — fire-only, like the `Targeted (NPC)` recognition above it. `ClassificationRules` claims **Player at
+Strong** under code `R22-guildmate`: Strong rather than Certain so it sits under the frames the client produces by
+looking at the entity (R17's drink and R19's eye live at the same rung) while still outranking npcs.txt, where
+person-shaped names really do sit (`Alleza`, `Mirala` — the Names pane would otherwise file a somebody's-guildmate as a
+mob). `IdentityPriorStore.RememberedRules` gained `R22-`, which is what makes it worth having: a silent guildmate is
+claimed in one capture and remembered in the next, with no `players.txt` write involved.
+
+**Measured yield, same method on both captures** (cold registry, rules applied over the capture's own facts): the
+winning claim on **22** roster names on Incogitable out of the 168 that file names at all, and **1** on
+`eqlog_Kizant_xegony-09-20-25.txt` — that one is `Blazem`, the quiet-named regular whose whole identity in a 3-hour
+capture is four achievement lines. Pool-wide the same run places 82.5 % of named entities on the short capture, which
+is the ~83 % figure the table above already quotes: **the rule does not move the aggregate.** It moves exactly the
+people the aggregate was never about.
+
+`GuildmateRuleTest` holds the shape (real achievement wordings, case-insensitive match, name returned as the line wrote
+it), the refusal of names this pipeline cannot key on, the strength ordering against npcs.txt, and — the half that keeps
+the rule honest — the shapes that were **refused**: tells (`] Bane tells General:1, 'WTS Full NoS collect sets 3kr
+each'` is a bazaar hailer), shout/ooc, zone chatter and `Shalowain begins singing her Rhapsody of Pain.`, every one of
+which can name a mob.
+
 ### The unread chat shapes, counted before writing them
 
 Three shapes no rule reads, counted on every local capture and then held against what the
