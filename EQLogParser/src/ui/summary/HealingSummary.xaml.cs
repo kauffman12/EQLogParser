@@ -88,8 +88,14 @@ namespace EQLogParser
 
           if (dataGrid.SelectedItem is PlayerStats playerStats && dataGrid.SelectedItems.Count == 1)
           {
-            menuItemSetPlayerClass.IsEnabled = PlayerRegistry.Instance.IsVerifiedPlayer(playerStats.OrigName);
-            menuItemSetAsPlayer.IsEnabled = !PlayerRegistry.Instance.IsVerifiedPlayer(playerStats.OrigName) &&
+            /*
+             * Third pane, same two questions through the same seam (docs/DesignNotes.md → "The one seam that answers").
+             * No IsOneOfUsOrMerc here: this menu has no "assign as pet of" item, so the pair question is not asked — and
+             * it is NOT replaced with the plain one either, which would have quietly treated mercs as players somewhere
+             * nobody requested.
+             */
+            menuItemSetPlayerClass.IsEnabled = IdentityLookup.IsOneOfUs(playerStats.OrigName);
+            menuItemSetAsPlayer.IsEnabled = !IdentityLookup.IsOneOfUs(playerStats.OrigName) &&
             PlayerRegistry.IsPossiblePlayerName(playerStats.OrigName);
             menuItemShowDeathLog.IsEnabled = !string.IsNullOrEmpty(playerStats.Special) && playerStats.Special.Contains("X");
             selectedName = playerStats.OrigName;
