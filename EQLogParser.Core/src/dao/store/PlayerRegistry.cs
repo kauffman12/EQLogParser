@@ -78,8 +78,16 @@ namespace EQLogParser
       LifecycleManager.Register(this);
     }
 
-    internal bool IsVerifiedPlayer(string name) => !string.IsNullOrEmpty(name) && (name == Labels.Unassigned || SecondPerson.Contains(name)
-      || ThirdPerson.Contains(name) || _verifiedPlayers.ContainsKey(name));
+    /*
+     * The three frozen word lists, as one question: is this STRING the local player or a pronoun standing for somebody
+     * ("you", "your", "himself", "Unassigned")? Shared with IdentityLookup so the seam that replaced players.txt answers
+     * those rows exactly as the roster did - they are vocabulary, not knowledge, and no capture can place them. See the
+     * lists above for why they can never be rebuilt from evidence.
+     */
+    internal static bool IsPersonWord(string name) =>
+      !string.IsNullOrEmpty(name) && (name == Labels.Unassigned || SecondPerson.Contains(name) || ThirdPerson.Contains(name));
+
+    internal bool IsVerifiedPlayer(string name) => IsPersonWord(name) || _verifiedPlayers.ContainsKey(name);
     internal bool IsPetOrPlayerOrMerc(string name) => !string.IsNullOrEmpty(name) && (IsVerifiedPlayer(name) || IsVerifiedPet(name) || IsMerc(name));
     internal bool IsPetOrPlayerOrSpell(string name) => IsPetOrPlayerOrMerc(name) || CombatRecordLookup.IsPlayerSpell(name);
     internal bool IsMerc(string name) => _mercs.TryGetValue(StringCache.GetOrAdd(name), out _);

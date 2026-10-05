@@ -5941,24 +5941,22 @@ and `Targeted (NPC)`, and it would place 425 hailers who are not this operator's
 
 ## Memory: one import, three files, one wall clock (2026-11)
 
-> **Status: decided 2026-11, NOT BUILT.** Read every table row below as "what it will hold", because none of it exists
-> yet. What is true in the tree today:
+> **Status: decided 2026-11; the roster's half is BUILT, the retirement of `players.txt` is not.** What is true in the tree:
 >
-> - `players.txt` is still written by the parser exactly as before (`Name=<ticks>[,Class]`), and nothing imports it.
-> - `identity-priors.txt` holds rule verdicts only — no membership rows, no learned classes, no `Imported` provenance word.
+> - **Built:** `identity-priors.txt` carries a second lane — "this application called this name one of us", with the class
+>   it was seen casting and its own wall-clock stamp — under the provenance word `Imported`. See
+>   *The roster lane: membership is not a verdict, so it keeps its own clock* below.
+> - **Built:** one query seam answers "is this one of ours?" — see *The one seam that answers* below. Its call sites are
+>   being migrated pane by pane; until a pane is moved it still asks the roster directly.
+> - `players.txt` is still written by the parser exactly as before (`Name=<ticks>[,Class]`) and seeded into
+>   `PlayerRegistry`. Importing it happens once per server folder, into the ledger.
 > - `identity-overrides.txt` holds `Name=Kind` with **no class field**. An operator-set class exists today but lives in the
 >   WRONG file for the plan: the Names pane's Class pencil calls `PlayerRegistry.SetDefaultPlayerClass`, which writes the name
 >   into `players.txt` as a verified player (which is why the icon appears only on a Player row). Moving that claim to
 >   `Name=Kind|Class` in the override file is the unbuilt half.
-> - Aging is still three disagreeing rules: `PlayerRegistry.Save()` cuts a player at
->   **200 days** past their newest sighting (a row with no timestamp never expires),
->   `IdentityPriorStore` prunes 90 days behind its **own newest row**, and
->   **`petmapping.txt` has no expiry whatsoever** - the plan below replaces all three
->   with one window and gives pet rows the timestamp they need to have one.
-> - Already true: `petmapping.txt` unchanged, "roster" reserved for the live `/who` groups of one capture
->   (`RaidRosterStore`, in memory), and no `!Name` rejection anywhere.
->
-> When the work lands, delete this block rather than leaving it as history — a stale "not built" note is worse than none.
+> - Aging: `PlayerRegistry.StaleDays` = **200** is the one dial over players.txt and petmapping.txt (both stamped, both
+>   aged against `DateTime.Now`); the ledger's RULE lane still prunes 90 days behind its own newest row, and the roster
+>   lane is exempt from that rule — see below.
 
 The layout this work converged on, written down before the code so the reason
 survives. First draft said "four files, one per law"; that was one file per
@@ -6050,3 +6048,85 @@ seeding, so "where does memory come from" has one answer instead of two.
 again normally on the next sighting. It never means veto - the `!Name` rejection
 is deleted (0026a22d) because no shipped build ever had a way to write one.
 
+
+### The roster lane: membership is not a verdict, so it keeps its own clock (built 2026-11)
+
+`identity-priors.txt` now holds two kinds of row under one name, and the shape says which is which:
+`Name=Kind|Reason|SeenAtS|Sightings[|Ours[|Class]]`. Five fields is a rule's memory of what a capture witnessed; six
+saying `Unknown|Imported` is this application's memory that it *called this name one of ours*, with the class it was seen
+casting in the seventh. A four-field row still loads - it is an ordinary verdict, not a roster row - and six fields are
+written from now on.
+
+Why this file had to take it rather than `players.txt` growing columns: **`players.txt` has nowhere to put the class**, which
+is the one fact that makes a learned name worth keeping (`Name=<ticks>[,Class]`, where the class is whatever
+`SetDefaultPlayerClass` last wrote and cannot say *which* spell earned it). A fourth file was refused for the reason this
+chapter already gives - two files holding overlapping truth about one name is exactly what went wrong before.
+
+The laws, each of which is a hole closed while writing this rather than one imagined:
+
+- **Membership is not a verdict, so it does not pass the gate that decides verdicts.** The ledger's allowlist
+  (`WorthRemembering`) exists because a rule row must carry what witnessed it; `Imported` witnesses nothing, and so it is
+  *absent from `RememberedRules`* - a roster row can never be borrowed as a verdict about some later, quieter capture -
+  while the **load** path lets it through that same gate on purpose. The two look like a contradiction and are not: the
+  gate is a rule about rule rows. A name may sit on the roster for years and be called Npc by every pass (`IsOneOfUs`
+  then answers no, correctly), so `Kind.Unknown` is the honest value and the ledger must survive holding it.
+- **Two clocks, deliberately.** The rule lane ages against *the newest row in the file* (log time: a replay of last year's
+  backup should not age out a verdict this capture just restated), while the roster ages against `DateTime.Now` through
+  the single dial that already ages players.txt and petmapping.txt - **200 days** (`PlayerRegistry.StaleDays`). What is
+  being aged is our memory, not the log, and the difference shows on a replay: playing through a two-year-old capture
+  refreshes a name in the roster lane *today* and must not touch what the rules concluded about it in 2024.
+- **The roster is exempt from both halves of rule pruning.** Ninety-days-behind-newest would drop anyone who took a season
+  off, and the `MaxEntries` cap - sized for inferred verdicts, of which a decade produces thousands - would silently evict
+  the operator's own list. Roster rows are also **not** counted toward that cap: a roster is bounded by how many people
+  play on one server, not by a storage decision.
+- **`SeenAtS <= 0` is a statement, not an observation.** A hand-typed list and a file imported without timestamps carry no
+  claim about when; those never retire. The same rule already keeps `players.txt` rows with no ticks forever.
+- **Writes do not collide.** `RememberRoster` keeps whatever verdict and reason a row already carried (a name the graph
+  decided is NPC can still be on the list - the two statements are allowed to disagree), and moves the stamp **forward
+  only**, so re-importing an old players.txt cannot rewind an active player's clock. `ForgetRoster` takes membership and
+  class off while leaving a witnessed verdict underneath; a row whose only content *was* membership leaves the file, since
+  there is no reason for it to sit there being re-dropped by every later pass. `Record` can neither set the bit nor upgrade
+  it - otherwise the derive would start filing its own inferences onto the operator's list.
+- **A changed verdict takes the later of two stamps.** When `Record` writes a *different* Kind under the same name it takes
+  `Math.Max(existing, captureEndS)` rather than the capture's time alone. Replaying a backup must not age out an active
+  player's class: `captureEndS` belongs to the log's clock and can be years behind the wall clock that reads this field.
+
+Nothing about `PlayerRegistry`'s behaviour changed with this: seeding, 200-day pruning, players.txt writes and the roster
+that `RegistrySeed` feeds are byte-identical, which is what "additive" has to mean here - a session classifies exactly as
+it did whether or not identity-priors.txt exists. The importer that fills this lane, and the point at which players.txt
+stops being written, are the next sections.
+
+### The one seam that answers "is this one of ours?" (built 2026-11)
+
+`IdentityLookup.IsOneOfUs(name[, t])` in Core is the address of one question, asked in this order:
+
+1. **the operator** - `identity-overrides.txt`; a person decided, so nothing else is asked, in either direction;
+2. **what the capture watched** - the open derive session's timeline (R10 already replays overrides into it, which is what
+   makes step 1 redundant for an open session and necessary for a closed one);
+3. **this application's memory** - the ledger's roster lane and `PlayerRegistry`, which is that lane's in-memory mirror.
+
+Two details carry weight. The frozen *person words* (`you`, `yourself`, `himself`, `Unassigned`) answer before any store,
+because they are vocabulary rather than knowledge: no capture can place them, and You-mapping across the app reads exactly
+those rows - PlayerRegistry keeps the lists and now exposes them as `IsPersonWord` so the seam and the roster cannot drift.
+And a **live `Unknown` falls through** instead of answering no: Unknown means "this log never said anything about the
+name", which is not an answer about it; treating it as a no would drop every saved regular for the whole session after a
+mid-log attach.
+
+The capture outranks memory because memory's whole failure mode is that it cannot be wrong about a name it collected in
+2013, while a rules pass is wrong about the fight in front of the window - which is what a meter row, a right-click menu
+and a pet-folding decision are actually about.
+
+**`IsOneOfUs` means "the evidence calls this name a PLAYER"** and deliberately does not fold in Mercenary or Pet, even
+though both fight beside us: every caller that meant "player OR merc" says so today (`… || PlayerRegistry.IsMerc(name)`),
+and quietly widening the answer would move those menus and filters without anybody choosing it. Pet or Npc is a real
+answer, not a missing one - `No`. Callers who need the other kinds read the timeline verdict, which answers all four.
+
+Core cannot see the engine, so the live hop is a seam (`IdentityLookup.LiveVerdict`, the same shape as
+`CombatRecordLookup`): `DeriveEngine.Start` wires it to its carried timeline and `Dispose` takes it down *only if it is
+still the same delegate*, because a new session can be wired before an old engine is disposed and blanking that one would
+send every identity question back to memory behind its owner's back. The engine's `EntityTimeline?` field is `volatile`:
+a full pass builds a fresh timeline and swaps the reference, so a UI-thread read sees either the old verdicts or the new
+ones, never a half-written table.
+
+Call sites move one pane per commit, and while a pane has not moved it still asks the roster - that is the state this file
+describes today, not a design compromise. What is on the seam now: [see the commits that reference this section].

@@ -85,6 +85,10 @@ namespace EQLogParser
      */
     private readonly FightProjection.FightProjectionCache _projection = new();
 
+    // Bound in the constructor so Dispose can tell "my seam is still wired" from "another session already replaced it"
+    // (a method group allocates a fresh delegate each time, so ReferenceEquals needs one stored instance).
+    private readonly Func<string, double, IdentityKind> _liveKindAt;
+
     private readonly DispatcherTimer _quietTimer;
     private int _deriveInFlight;
     private long _lastTickCount = -1;
@@ -127,7 +131,12 @@ namespace EQLogParser
      * The staleness this accepts is stated in DeriveCadence: a verdict readable only from facts that arrived after the last
      * full pass (a pet folding onto its raiders, a charm flipping a name) lands one full cadence later.
      */
-    private EntityTimeline? _carriedTimeline;
+    /*
+     * Volatile because IdentityLookup reads it from the UI thread while a pass publishes it from the derive task. A full
+     * pass BUILDS a new timeline and swaps the reference (ClassificationRules/RegistrySeed/overrides never revise one in
+     * place), so a reader sees either the old verdicts or the new ones, never a half-written table.
+     */
+    private volatile EntityTimeline? _carriedTimeline;
 
     /*
      * Rule aggregates and stream cursors carried across classifying passes so the costly walks resume where they
@@ -164,6 +173,7 @@ namespace EQLogParser
       _heals = new HealFactTable(_facts);
       _capture = new CombatCapture(_facts, _heals);
       ChatSink = new IdentityChatSink(_capture);
+      _liveKindAt = LiveKindAt;
       _quietTimer = new DispatcherTimer(DispatcherPriority.Background)
       {
         Interval = TimeSpan.FromMilliseconds(TimerIntervalMs)
@@ -178,9 +188,24 @@ namespace EQLogParser
     {
       _capture.Start();
       Active = this;
+
+      /*
+       * The seam IdentityLookup asks when it wants to know what THIS capture decided about a name (docs: the roster stops
+       * answering a question about evidence). Wiring it here rather than in Core is the dependency direction: Core owns
+       * the question, the engine owns the verdicts, and closing the session takes the seam away so the app's memory
+       * answers again instead of reading a dead capture's timeline.
+       */
+      IdentityLookup.LiveVerdict = _liveKindAt;
       ActiveChanged?.Invoke();
       _quietTimer.Start();
     }
+
+    // IdentityLookup's view of the carried verdicts. Unknown means "this log never said", which is the seam's cue to ask
+    // memory rather than an answer about the name; PositiveInfinity means "as far as we know".
+    private IdentityKind LiveKindAt(string? name, double t) =>
+      name is null || _carriedTimeline is not { } timeline ? IdentityKind.Unknown
+        : double.IsPositiveInfinity(t) ? timeline.Identity(name)
+        : timeline.IdentityAt(name, t);
 
     /*
      * The name census for the Player/NPC Identity window. Built on demand rather than carried in the snapshot: a derive lands every
@@ -412,6 +437,10 @@ namespace EQLogParser
       // a closed log's records are still reachable.
       _snapshot = null;
       _carriedTimeline = null;
+
+      // Only take the seam down if it is still OURS: a new session can already be wired by the time an old engine is
+      // disposed, and blanking that one would send every identity question back to memory behind its owner's back.
+      if (ReferenceEquals(IdentityLookup.LiveVerdict, _liveKindAt)) IdentityLookup.LiveVerdict = null;
       if (ReferenceEquals(Active, this))
       {
         Active = null;
