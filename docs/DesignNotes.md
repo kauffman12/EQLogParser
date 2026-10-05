@@ -6823,3 +6823,31 @@ the review asked for it to stop being implicit. It is bounded and self-healing: 
 cursor table. The accepted window is therefore one cheap-lane cadence on a name that (a) first appears as a cast
 token and (b) later appears in a combat line - the same bound as every other verdict the carried lane folds. See
 the pool-gate comment in `ClassificationRules.ApplySpellEffects`.
+### The spell database as the side witness: measured, useful, and not enough alone (2026-10)
+
+The operator's proposal was that a caster-less spell should be sided by the data — *"it should show up with a class mask
+and level that's <= 250 to show that's from a player… [a mob's spell] should be > level 250 and not have a player class
+mask"*. Tested against every attacker name in `eqlog_Kizant_xegony-2.txt` that the shipped `spells.txt` answers for
+(17 names), comparing `(ClassMask != 0 && Level <= 250)` with where its damage actually landed:
+
+| group | level / class mask | where its facts land | verdict today | reading |
+|---|---|---|---|---|
+| `Strangle` (9,346 hits), `Rune` (19,339) | 128 / 8192, 126 / 8192 | NPCs, plus 12 and 97 raid-side ticks (friendly fire) | `Player / R4-spell` | player-castable → ours ✓ |
+| `Rotten Egg`, `Infected Magic` (243), `Poisonous Explosion` (138), `Feel What I Feel` (96), `Burning Glob Burst` (32) … | **255 / 0** | **all of it on our people** | `Npc / R21-spellshape` | mob-cast → the tanking board's input ✓ |
+| `Breath of the Council` | 255 / 0 | 6 facts, all on NPCs | `Npc / R21-spellshape` | a mob's dot that ticked on another mob (the rule's only real miss) |
+
+Agreement: **14 of 17**. The three misses are benign and both directions are represented, so the rule is not a oracle —
+but the data really does separate the two families exactly as described (`255 / mask 0` is how every mob spell in the file
+reads; the two player rows are the only ones with a class mask).
+
+**Why it cannot be the primary witness**: the rank formulations this era prints are not in `spells.txt` at all. Probed on
+the same capture, `Grip of Pustim Rk. III`, `Dread Pyre XIII Rk. III` and `Rotten Egg Rk. II` answer **nothing** — the file
+carries the unranked row (`Rotten Egg`, level 255) and its own rank rows for older content, not these. That is precisely why
+R21 has three feeds in trust order (what the line said → what was seen being cast → what `spells.txt` says), and why the
+**defender's identity stays the witness**: all 34 rank-shaped attacker names in this capture have their facts on NPCs and are
+sided that way today, which is the operator's own instruction — *"You have to look at who is taking damage if you can't tell
+if it's a player spell."* The class-mask reading therefore belongs to the row's tooltip/wording as corroboration where the DB
+answers, not to the routing table. Both named examples check out end to end: `Grip of Pustim Rk. III` = 11 facts, 11 on NPCs;
+`Rotten Egg` = level 255, mask 0, 2 facts, both on our people — so damage taken by raid members arrives on the tanking side and
+damage dealt to mobs on the raid's side, in this capture, with no correction needed. The open defect is only the **word**:
+both rows print `NPC` in the Type cell.
