@@ -226,12 +226,14 @@ internal static class IdentityVocabulary
       "R21-spelleffect" => "The Name of a Spell",
 
       /*
-       * The two codes no rule writes; both mean "this application remembered it". Neither names a file, and the phrases
-       * are honest about scope: players.txt and petmapping.txt are the ONLY two stores this app persists, so "the roster
-       * this app saved" covers saved names and "the Pet Map" covers a mapped summon (whose person arrives in the detail).
-       * Verified pets and mercenaries are learned while a log is open and never reach disk at all.
+       * The two codes no rule writes; both mean "this application remembered it", and the hover is where that gets
+       * specific. Neither names a file (the operator cannot open what a hover points at), and the phrases are honest about
+       * scope: players.txt and petmapping.txt are the ONLY two stores this app persists, so the verified-player branch
+       * says the list it came from — "From old Verified List", the words an operator uses for players.txt — while a mapped
+       * summon says it is the pet map and names the person in the detail. Verified pets and mercenaries are learned while a
+       * log is open and never reach disk at all, so they are never described as saved state.
        */
-      "RegistrySeed" => detail is null ? "On the roster this app saved" : $"In the Pet Map as {detail}'s",
+      "RegistrySeed" => detail is null ? "From old Verified List" : $"In the Pet Map as {detail}'s",
       "You" => "Your own character",
       _ => code.Length > 0 ? code : kind == IdentityKind.Unknown ? "Nothing identified it" : TypeWord(kind),
     };
@@ -332,13 +334,13 @@ internal static class IdentityVocabulary
     /*
      * Not a rule: this application's own memory, written before the capture said anything. A cold registry cannot
      * produce it in a test, which is exactly how this code reached the screen as its own name — so it is listed here and
-     * in the test's word list next to the rules. The cell says WHERE the name was remembered from — the old Verified
-     * Players list, which is what players.txt was called on screen — because "Legacy" told a reader nothing they could act
-     * on; what sits underneath are the
-     * roster this app saves and the pet map, and the tooltip says which one (a name that only LOOKS like one of ours
-     * because an old session said so is the case where the difference matters).
+     * in the test's word list next to the rules. The CELL stays short ("Legacy": the column is 4,000 rows deep and one
+     * wide word makes the whole list ragged); where the name was remembered FROM is the tooltip's job — the old Verified
+     * Players list, which is what players.txt was called on screen, or the pet map for a summon. A name that only LOOKS
+     * like one of ours because an old session said so is exactly the case where that difference matters, and it is a
+     * hover-length question, not a column-width one.
      */
-    ["RegistrySeed"] = "From old Verified List",
+    ["RegistrySeed"] = "Legacy",
 
     /*
      * Also not a rule, and also unreachable from a cold test (nothing in a fixture writes the roster lane), which is why

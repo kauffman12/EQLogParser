@@ -6801,7 +6801,7 @@ then re-classifying:
 | `eqlog_Kizant_xegony-2.txt` | 262 | 18 | **0** | 18 |
 | `eqlog_Incogitable_xegony.txt` | 2,752 | 77 | **0** | 77 |
 
-No wrong verdict anywhere. What memory does replace is the **reason**: those rows hover *"From old Verified List"*
+No wrong verdict anywhere. What memory does replace is the **reason**: the cell drops *"Fights Mobs"* / *"Healed by N raiders"* for *"Legacy"*, while the hover says *"From old Verified List"*
 instead of *"Fights Mobs"* / *"Healed by 20 raiders"*, on names this capture watched fight. And the direction that
 would actually hurt cannot happen: a roster entry that is simply wrong still loses every NPC-side claim tested -
 

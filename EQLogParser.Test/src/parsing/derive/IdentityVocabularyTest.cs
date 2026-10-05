@@ -57,7 +57,7 @@ public class IdentityVocabularyTest
      * Not a rule, and it cannot come out of a fixture: PipelineHarness clears PlayerRegistry, so nothing in any test
      * seeds from it. That blind spot is how "RegistrySeed" was printable as a verdict word — the corpus guard below walks
      * real rows from a COLD registry and never sees it. It belongs in this list so the vocabulary tests hold it: a row
-     * that came from this app's own saved memory reads "From old Verified List".
+     * that came from this app's own saved memory reads "Legacy" in the cell and names its store on hover.
      */
     "RegistrySeed",
 
@@ -90,13 +90,6 @@ public class IdentityVocabularyTest
    */
   private static readonly string[] SelfSpelled = [IdentityPriorStore.RosterReason];
 
-  /*
-   * The one vocabulary entry allowed to be wider than the cell was sized for, on the operator's own request: "Legacy" sat
-   * in that column telling a reader nothing they could act on, so the row now says WHERE the name was remembered from.
-   * A rare row buying a longer phrase is worth it; a second entry would mean the column is simply too narrow, and that is
-   * a width conversation, not a word list. Anything else that does not fit has to be shortened.
-   */
-  private static readonly string[] WideWords = ["RegistrySeed"];
 
   [TestMethod]
   public void EveryRuleWordHasAWordWorthPrinting()
@@ -115,8 +108,7 @@ public class IdentityVocabularyTest
         Assert.AreNotEqual(code, word, $"{code} has no word of its own and reached the screen as its own code");
       else Assert.AreEqual(code, word, "a word allowed to spell itself stopped spelling itself");
       Assert.IsFalse(LooksLikeACode(word), $"{code} mapped to something that is still a rule code: {word}");
-      if (Array.IndexOf(WideWords, code) < 0)
-        Assert.IsTrue(word.Length <= 14, $"{code} maps to a phrase too wide for the cell: {word}");
+      Assert.IsTrue(word.Length <= 14, $"{code} maps to a phrase too wide for the cell: {word}");
     }
 
     // The other direction: nothing in the table that no rule can produce.
@@ -127,9 +119,6 @@ public class IdentityVocabularyTest
         "the vocabulary and the rules disagree about how many verdict words exist");
 
     // The self-spelling exemption, counted: one word in the whole vocabulary may equal its own key, and it is this one.
-    CollectionAssert.AreEquivalent(WideWords,
-        IdentityVocabulary.WhyWords.Where(kv => kv.Value.Length > 14).Select(kv => kv.Key).ToArray(),
-        "a word outgrew the cell; the wide-word exemption is one entry and a width conversation, not a list");
     CollectionAssert.AreEquivalent(SelfSpelled,
                                    IdentityVocabulary.WhyWords.Where(e => e.Value == e.Key).Select(e => e.Key).ToList(),
                                    "a provenance reached the screen as its own file token (or a listed word stopped spelling itself)");
@@ -247,14 +236,16 @@ public class IdentityVocabularyTest
 
   /*
    * What this application remembers about a name, as opposed to what the capture showed: the two codes no rule writes,
-   * which is also why the corpus guard cannot see them (tests run with a cleared registry). The column says "From old Verified List";
-   * the tooltip says WHICH store, in words — never a filename and never the internal name of the seed.
+   * which is also why the corpus guard cannot see them (tests run with a cleared registry). The column stays short -
+   * "Legacy" — because one wide word makes a 4,000-row list ragged; the tooltip says WHERE it was remembered from, in the
+   * operator’s own words ("From old Verified List" is what players.txt was called on screen), never a filename and
+   * never the internal name of the seed.
    */
   [TestMethod]
   public void WhatTheAppRemembersReadsLegacyAndNamesItsStore()
   {
-    Assert.AreEqual("From old Verified List", IdentityVocabulary.WhyWord("RegistrySeed"));
-    Assert.AreEqual("On the roster this app saved", IdentityVocabulary.ProofText("RegistrySeed", IdentityKind.Player));
+    Assert.AreEqual("Legacy", IdentityVocabulary.WhyWord("RegistrySeed"), "the cell stays short; the store belongs to the hover");
+    Assert.AreEqual("From old Verified List", IdentityVocabulary.ProofText("RegistrySeed", IdentityKind.Player));
 
     // A mapped summon names its person — that pair is the whole reason the row exists.
     Assert.AreEqual("In the Pet Map as Sancus's", IdentityVocabulary.ProofText("RegistrySeed:Sancus", IdentityKind.Pet));
