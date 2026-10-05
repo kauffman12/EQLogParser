@@ -241,7 +241,16 @@ Settings and setup windows (`FctSettingsWindow`, `DamageMeterSettingsWindow`) fo
 
 ### Build Warnings
 - **The solution builds with zero warnings, and stays there.** Verify before committing:
-  `dotnet build EQLogParser.sln -p:EnableWindowsTargeting=true --nologo 2>&1 | grep -cE ": (warning|error) [A-Z]+[0-9]+"` prints **0**.
+  `dotnet build EQLogParser.sln -p:EnableWindowsTargeting=true --no-incremental --nologo 2>&1 | grep -cE ": (warning|error) [A-Z]+[0-9]+"` prints **0**.
+  **`--no-incremental` is not decoration — MSBuild emits diagnostics only for projects it actually compiles.** Run the count after a `dotnet test`
+  or any earlier build and the tree is up to date, so the pipeline prints **0** about assemblies it never rebuilt: a brand-new file's warning can
+  sit in the compile you did not grep (that is how MSTEST0017 in `IdentityWriterInvariantTest.cs` reached a commit while the local count read 0).
+  The same trap makes a *passing* count worthless right after an IDE build. If the count is taken on an incremental build it did not happen.
+- **Analyzers are part of "the warnings", and not all of them are compiler warnings.** `MSTEST####` diagnostics come from the MSTest analyzer
+  package and fire on test-assembly code (`Assert.AreEqual` argument order = MSTEST0017), so a count that skips compiling `EQLogParser.Test` or
+  `EQLogParser.Wpf.Test` cannot see them even though it prints 0. Measured 2026-11: a full
+  `--no-incremental` solution build on Linux reported **0** for the file whose MSTEST0017 the Windows IDE flagged twice — so treat the analyzer class
+  of diagnostics as needing the Windows build (or the IDE) to be seen at all. When the two disagree, the IDE is not being fussy.
   Match diagnostics, not the words: MSBuild's own summary ends with `0 Warning(s)` / `0 Error(s)`, so a grep for "warning" is never silent and teaches nobody to read the number.
 - **Fix the cause; never suppress.** No `#pragma warning disable` and no `<NoWarn>` in any project today — a suppressed warning is a rule somebody read as a fact later. If a warning is genuinely wrong for this codebase, the fix lands in a project property with a comment saying why, not in a pragma at the call site.
 - A new warning is fixed in the commit that introduced it, not queued: warnings arrive in fleets (one annotating file produced nine identical ones), so the count only stays readable if each one dies immediately.
