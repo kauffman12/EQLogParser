@@ -6019,6 +6019,18 @@ Three laws keep that merger honest:
   General, which is precisely why nothing knows him; that stays true by decision.) Achievement lines —
   `X has earned the <title> title!`, already R22 — join the same list as captures show more shapes.
 
+- **The importer feeds classification, and UI questions about "is this one of ours?" are answered BY classification —
+  there must not be a second authority.** Every remaining `PlayerRegistry.IsVerifiedPlayer(...)` call site (You-mapping in
+  the grids, the right-click menus, the meter's group/pet folding, `DamageValidator`) asks a question the identity rules
+  already answer: "does any evidence say this name is a player?" Answering it from a roster set that only *grows* is what
+  produced the original complaint — names collected 2012-2026 read as people forever. So the order of work is fixed:
+  (1) extend the prior ledger with the roster bit + learned class, which makes it the memory of "one of us";
+  (2) expose one query seam — `IdentityLookup.IsOneOfUs(name, t)` in Core — that reads the engine's verdict for a name
+  (override > live rule > ledger row), never a store of its own;
+  (3) migrate the UI call sites onto that seam, one commit per pane, so a meter and the Names window can never disagree
+  about who is on our side; (4) only then stop writing `players.txt`.
+  A roster bit therefore reaches those callers *through* `RegistrySeed`, exactly as players.txt does today — a name gains
+  no authority from being remembered — and the importer writes ledger rows, never a private dictionary.
 - **An operator claim never ages.** `Save()`'s existing "no timestamp = permanent" is
   already that rule for hand-typed players (the `M` bit exists but no shipped file used
   it); extending it to overrides and Pet Map edits means a year off does not erase what
