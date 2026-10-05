@@ -126,7 +126,16 @@ namespace EQLogParser
         {
           var isFirst = false;
           var name = stats.OrigName;
-          if (!PlayerRegistry.Instance.IsVerifiedPlayer(name)) continue;
+
+          /*
+           * The chart bars a class group per player, so this is the plain question — "is this one of ours" — through the
+           * seam (docs/DesignNotes.md → "The one seam that answers"). Two things worth noting about the site itself: it
+           * runs inside Task.Run, which is why the seam's live hop takes EntityTimeline.SyncRoot and hands back a plain
+           * IdentityKind rather than a live collection (docs/DesignNotes.md → "The seam's live hop locks; its internal
+           * reads do not"); and no merc pair is asked here, so a mercenary stays out of the class bars exactly as it did
+           * when the roster answered alone.
+           */
+          if (!IdentityLookup.IsOneOfUs(name)) continue;
 
           if (string.IsNullOrEmpty(theClass) || stats.ClassName != theClass)
           {

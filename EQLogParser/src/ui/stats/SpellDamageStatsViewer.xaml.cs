@@ -78,7 +78,9 @@ namespace EQLogParser
       {
         foreach (var kv in fight.DdDamage)
         {
-          if (!isPlayerOnly || PlayerRegistry.Instance.IsVerifiedPlayer(kv.Value.Caster) || PlayerRegistry.Instance.IsMerc(kv.Value.Caster))
+          // "Show players only" is the pair question — a mercenary's spells belong in this view, and tonight's capture can
+          // place a caster players.txt never heard of (docs/DesignNotes.md -> "The one seam that answers").
+          if (!isPlayerOnly || IdentityLookup.IsOneOfUsOrMerc(kv.Value.Caster))
           {
             if (!playerDdTotals.TryGetValue(kv.Key, out var ddStats))
             {
@@ -96,7 +98,9 @@ namespace EQLogParser
 
         foreach (var kv in fight.DoTDamage)
         {
-          if (!isPlayerOnly || PlayerRegistry.Instance.IsVerifiedPlayer(kv.Value.Caster) || PlayerRegistry.Instance.IsMerc(kv.Value.Caster))
+          // "Show players only" is the pair question — a mercenary's spells belong in this view, and tonight's capture can
+          // place a caster players.txt never heard of (docs/DesignNotes.md -> "The one seam that answers").
+          if (!isPlayerOnly || IdentityLookup.IsOneOfUsOrMerc(kv.Value.Caster))
           {
             if (!playerDoTTotals.TryGetValue(kv.Key, out var dotStats))
             {
@@ -114,7 +118,9 @@ namespace EQLogParser
 
         foreach (var kv in fight.ProcDamage)
         {
-          if (!isPlayerOnly || PlayerRegistry.Instance.IsVerifiedPlayer(kv.Value.Caster) || PlayerRegistry.Instance.IsMerc(kv.Value.Caster))
+          // "Show players only" is the pair question — a mercenary's spells belong in this view, and tonight's capture can
+          // place a caster players.txt never heard of (docs/DesignNotes.md -> "The one seam that answers").
+          if (!isPlayerOnly || IdentityLookup.IsOneOfUsOrMerc(kv.Value.Caster))
           {
             if (!playerProcTotals.TryGetValue(kv.Key, out var procStats))
             {
@@ -168,8 +174,9 @@ namespace EQLogParser
           var pass = false;
           if (item is SpellDamageRow row)
           {
-            pass = !_currentShowPlayers || PlayerRegistry.Instance.IsVerifiedPlayer(row.Caster) ||
-                   PlayerRegistry.Instance.IsMerc(row.Caster);
+            // The grid's own filter repeats the same question the aggregation above asked, so the checkbox cannot include
+            // a caster on one path and drop her on the other.
+            pass = !_currentShowPlayers || IdentityLookup.IsOneOfUsOrMerc(row.Caster);
             pass = pass && (_currentType == null || _currentType.Equals(row.Type)) && (_currentSpell == null ||
               _currentSpell.Equals(row.Spell)) && (_currentPlayer == null || _currentPlayer.Equals(row.Caster));
           }
