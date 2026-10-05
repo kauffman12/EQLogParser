@@ -37,8 +37,9 @@ namespace EQLogParser;
  *     repeats its own cell word rather than showing an empty hover (docs: an empty tooltip reads as a broken pane).
  *
  *   - SOME ROWS CANNOT BE OVERRULED, AND SAY SO BY HAVING NO EDIT ICON. `CanOverrule` is where that is decided — a name
- *     whose own spelling proves it ("Tuona`s ward") or that is not a fighter at all (a spell effect) has exactly one
- *     right answer, and a pencil offering four wrong ones is worse than no pencil.
+ *     whose own spelling proves it ("Tuona`s ward") or whose VERDICT says it is not a fighter at all (an R21 spell shape) has
+ *     exactly one right answer, and a pencil offering four wrong ones is worse than no pencil. The test is the evidence, not
+ *     the string: a raid member named after a spell keeps their pencil (Strangle, Rune — docs/DesignNotes.md).
  */
 internal static class IdentityVocabulary
 {
@@ -79,7 +80,8 @@ internal static class IdentityVocabulary
    *
    * The current answer is always in the list: the popup preselects it, and a value missing from its own dropdown reads as
    * a blank cell. An operator's OWN claim keeps every entry — a wrong click has to stay correctable by another click.
-   * Where the name itself settles the answer (`Sancus`s pet`, a spell) CanOverrule already hides the pencil; the list is
+   * Where the name itself settles the answer (`Sancus`s pet`) or the verdict says it is no fighter at all (an R21 spell
+   * shape), CanOverrule already hides the pencil; the list is
    * trimmed by that same call rather than by a second opinion, because two rules deciding one menu is how a pane ends up
    * offering what its own write path then refuses.
    */
@@ -263,10 +265,19 @@ internal static class IdentityVocabulary
     if (IsSpellEffect(source)) return false;
     if (string.IsNullOrEmpty(name)) return true;
 
-    // One recognizer for "is this a spell", shared with R21 (ClassificationRules.SpellNamed): a rule and the words shown
-    // for its verdict must never disagree about what counts as a spell, or the pane hides a pencil on rows the rules are
-    // still willing to call people.
-    return ClassificationRules.OwnerInName(name) is null && !ClassificationRules.SpellNamed(name);
+    /*
+     * What settles a Type is the EVIDENCE that produced the verdict, not whether the name matches a spells.txt row. R21 is
+     * refused above; a name carrying an owner word inside it ("Tuona`s ward") is refused here, because that spelling IS the
+     * evidence and the dropdown could only be wrong.
+     *
+     * A name that merely equals a spell keeps its pencil. Two raid members in eqlog_Kizant_xegony-2.txt are exactly that -
+     * "Strangle" (9,346 attack facts) and "Rune" (19,339), both verdicted Player through R4-spell, both names the shipped
+     * spells.txt answers for (level 128 / mask 8192 and level 126 / mask 8192 - player-castable rows) - and the shape test
+     * this replaced took their pencil away: a mis-claim on a real person could not be corrected from this window at all, the
+     * one failure mode every other rule here is written to avoid. A behaviour verdict (graph, heals, /who, chat, a cast) is
+     * somebody ACTING, so it stays correctable even when the string is also a spell.
+     */
+    return ClassificationRules.OwnerInName(name) is null;
   }
 
   /*

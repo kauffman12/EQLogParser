@@ -501,9 +501,13 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   entry survives only on a row that already reads Mercenary); **an eye is NPC or nothing** (`Eye of <name>` never acts — docs/DesignNotes.md → "Breadth of evidence, measured" — and a Pet row for it would sit beside its owner's real pets and split one person's output); and **`Clear claim` is never trimmed** (take-back must stay
   reachable). The row's own answer is always in the list because the popup preselects it: a value missing from its own dropdown reads as a blank cell. An operator's own
   claim (`R10-manual`/`Manual`/`Override`) keeps every entry — a wrong click has to stay correctable by another click.
-  Two more from the same list: **some rows get no pencil at all** (`Overrulable` → `CanOverrule`) — a summon whose spelling carries its master and an R21 spell effect each have one
+  Two more from the same list: **some rows get no pencil at all** (`Overrulable` → `CanOverrule`) — a summon whose spelling carries its master and a row whose VERDICT is an R21 spell shape (current or `Prior:`-remembered) each have one
   right answer, and offering four wrong ones invites typing "Player" over `Sonic Bang`; an operator's own verdict always keeps its icon so a wrong click is never permanent (so
-  *trim*, do not *hide*: `TypeOptionsFor` consults `CanOverrule` rather than duplicating it). And
+  *trim*, do not *hide*: `TypeOptionsFor` consults `CanOverrule` rather than duplicating it). **The refusal reads the evidence, never the string**: `CanOverrule` used to end in `!SpellNamed(name)`, which stripped the pencil from raid members whose
+  names happen to be spells — measured on `eqlog_Kizant_xegony-2.txt`, **Strangle** (9,346 attack facts) and **Rune** (19,339), both Player via R4-spell, both names the shipped spells.txt answers for (level 128 / mask 8192, level 126 / mask 8192) —
+  and a wrong verdict on a real person then could not be taken back from this window at all, the one failure mode every other rule here exists to avoid. A behaviour verdict (graph, heals, /who, chat, a cast) is somebody ACTING, so it stays
+  correctable even when the word doubles as a spell. The same measurement refused a parser "fix": `Boom!` keeps its bang because spells.txt carries both `Boom` (13031) and `Boom!` (54752), and "is this string a spell NAME?" must consult
+  `_spellsNameDb` only — abbreviations legitimately carry punctuation. Docs/DesignNotes.md → "A name that equals a spell is not a spell row". And
   **"Clear claim" removes the ledger entry too** (`IdentityPriorStore.Remove` beside `ClassificationCommands.ClearVerdict`), or the row comes straight back on the next pass wearing
   *"… in previous log"*, which is the opposite of what the click looked like it did. Any write
   here (dropdown **or** band icon) goes through `Reconcile()` = `RederiveAsync()` + `Refresh()`, like `FightTable.ApplyOverride` always did: the census is right on its

@@ -6851,3 +6851,30 @@ answers, not to the routing table. Both named examples check out end to end: `Gr
 `Rotten Egg` = level 255, mask 0, 2 facts, both on our people — so damage taken by raid members arrives on the tanking side and
 damage dealt to mobs on the raid's side, in this capture, with no correction needed. The open defect is only the **word**:
 both rows print `NPC` in the Type cell.
+
+### A name that equals a spell is not a spell row (and keeps its pencil)
+
+Reported from the window: "i also see a player named Strangle which is correct. but it doesn't enable the button to change the
+Type." Correct verdict, missing control — and the cause was a rule answering the wrong question. `CanOverrule` ended with
+`!ClassificationRules.SpellNamed(name)`, so **any** row whose string matched a spell entry lost its pencil whatever had placed
+it. Two raid members in `eqlog_Kizant_xegony-2.txt` are exactly that:
+
+| Name | Attack facts | Verdict · reason | Also a spells.txt row |
+|---|---|---|---|
+| Strangle | 9,346 | Player · R4-spell | yes — level 128, class mask 8192 (player-castable) |
+| Rune | 19,339 | Player · R4-spell | yes — level 126, class mask 8192 |
+
+The pencil is the ONLY way an operator corrects a verdict, so a name-shape refusal there can silence a person permanently —
+the same self-inflicted-lockout family as the deleted `!Name` veto. The refusal now asks what PRODUCED the verdict: R21's spell
+shapes (current or `Prior:`-remembered) have no fighter behind them, an owner word inside the name (`Tuona`s ward`) is settled by
+its own spelling, and everything else stays editable even when the word doubles as a spell.
+
+The companion question — "shouldn't `Boom!` be parsed as Boom instead of keeping an exclamation point?" — was measured and
+**refused**. spells.txt carries BOTH `Boom` (id 13031) and `Boom!` (id 54752: level 255, target 1, class mask 2), so the bang in
+`Soell has taken 170483 damage from Boom! by .` is part of a real spell name rather than sentence punctuation left in the slot.
+A trailing-bang trim was written for it, gated on "the data answers for the name without the bang", and deleted when the data
+said otherwise; what `Boom!` really lacks is its A-Spell verdict, which belongs with the Spell-kind decision, not with the
+parser. Two traps surfaced on the way: `_spellsNameDb` is the only honest answer to "is this string a spell name" (the
+abbreviation dictionary holds punctuated short forms — row 13031's abbreviation is `Boom!`), and the per-name accessors each
+filter their list (`Adps > 0`, `Damaging > 0`, `Damaging < 0`), so they answer "what does this spell do" but not "is this a
+spell" — a mob explosion at level 255 with none of those flags answers nothing through them.

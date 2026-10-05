@@ -358,8 +358,10 @@ public class IdentityVocabularyTest
   }
 
   /*
-   * Two kinds of name have exactly one right Type, and a pencil next to them offers three wrong answers. Everything else —
-   * including a verdict the operator wrote themselves — keeps it.
+   * Two things have exactly one right Type - a summon whose own spelling is the evidence (`Tuona`s ward`), and a verdict that
+   * says the name is not a fighter at all (R21's spell shapes, current or remembered). Everything else keeps the pencil,
+   * including a name that merely equals a spell: what protects a row is the evidence behind its verdict, measured on
+   * raid members called Strangle and Rune. A pencil never writes anything the operator cannot take back afterwards.
    */
   [TestMethod]
   public void ANameThatDecidesItsOwnTypeGetsNoPencil()
@@ -372,8 +374,13 @@ public class IdentityVocabularyTest
                "a spell verdict remembered from an older log keeps the pencil off too — CodeOf strips the marker, so IsSpellEffect sees R21 either way");
     Assert.IsTrue(IdentityVocabulary.CanOverrule("Useless", "R7-graph"),
                "a name the graph merely placed keeps its pencil — that verdict is a guess to correct");
-    Assert.IsFalse(IdentityVocabulary.CanOverrule("Sonic Bang", "R7-graph"),
-               "a name spells.txt answers for gets no pencil even when only the graph placed it: it cannot be a fighter");
+    // What decides this is the EVIDENCE, not the string. The shipped spells.txt answers for both of these names, and both
+    // are raid members in eqlog_Kizant_xegony-2.txt (Strangle 9,346 attack facts, Rune 19,339, Player via R4-spell) - a
+    // shape test here silenced real people so completely that a wrong verdict on them could not be taken back at all.
+    Assert.IsTrue(IdentityVocabulary.CanOverrule("Strangle", "R4-spell"),
+               "a person whose name is also a spell keeps the pencil");
+    Assert.IsTrue(IdentityVocabulary.CanOverrule("Rune", "R7-graph"),
+               "the same, for a graph verdict on a spell-shaped name: correctable beats protected when the capture watched it act");
     Assert.IsFalse(IdentityVocabulary.CanOverrule("Sonic Bang", "R21-spelleffect"),
                    "a spell effect typed as a Player would put it on the roster");
 
