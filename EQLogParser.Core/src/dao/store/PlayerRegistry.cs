@@ -3,6 +3,12 @@ using System.Collections.Frozen;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 
+/*
+ * Annotations only, no null-flow analysis (the project builds with Nullable=disable): TryReadRosterLine answers with an
+ * optional class name, and saying so is what the annotation is for. Same convention as IdentityPriorStore.
+ */
+#nullable enable annotations
+
 namespace EQLogParser
 {
   /* Process-lifetime singleton: its Timer is stopped by Shutdown() when LifecycleManager tears the app
@@ -462,31 +468,8 @@ namespace EQLogParser
            * claim that belongs on the identity override (Set as NPC). The permanent rejection this line used to implement
            * was deleted: no shipped build could write one (docs/DesignNotes.md → "A veto nobody could switch on").
            */
-          if (!string.IsNullOrEmpty(player) && player.Length > 2 && !player.StartsWith('!'))
+          if (TryReadRosterLine(player, out var name, out var seenAtS, out var className))
           {
-            var parsed = 0d;
-            string name;
-            string className = null;
-            var split = player.Split('=');
-            if (split.Length == 2)
-            {
-              name = split[0];
-              var split2 = split[1].Split(',');
-              if (split2.Length >= 2)
-              {
-                double.TryParse(split2[0], NumberStyles.Any, CultureInfo.InvariantCulture, out parsed);
-                className = split2[1];
-              }
-              else
-              {
-                double.TryParse(split[1], NumberStyles.Any, CultureInfo.InvariantCulture, out parsed);
-              }
-            }
-            else
-            {
-              name = player;
-            }
-
             // Hand-edited files may carry the literal "You"; it means whoever is playing now. (The old code
             // assigned to the ForEach parameter here, which was then never read - a foreach variable cannot be
             // reassigned, so the remap happens on `name`, where it does something.)
@@ -495,7 +478,7 @@ namespace EQLogParser
               name = ConfigUtil.PlayerName;
             }
 
-            AddVerifiedPlayer(name, parsed, true);
+            AddVerifiedPlayer(name, seenAtS, true);
             SetDefaultPlayerClass(name, className, true);
           }
         }
@@ -533,8 +516,79 @@ namespace EQLogParser
           AddPetToPlayer(key, value, true);
         }
 
+        /*
+         * The ledger's roster lane is the durable half of this list (identity-priors.txt holds membership plus the class a
+         * name was seen casting, which players.txt has nowhere to put). Seeding from it costs nothing while both files
+         * exist - the names are already here - and it is what keeps memory warm on the day players.txt stops being read:
+         * the registry becomes a mirror of the ledger rather than a store that loses its memory when one file goes.
+         *
+         * The ServerName guard is load-bearing. MainWindow loads this registry while the ledger may still be answering for
+         * the PREVIOUS server (a log switch), and seeding then would put another server's raid into tonight's You-mapping.
+         */
+        var ledger = IdentityPriorStore.Instance;
+        if (string.Equals(ledger.ServerName, ConfigUtil.ServerName, StringComparison.OrdinalIgnoreCase))
+        {
+          foreach (var entry in ledger.RosterEntries())
+          {
+            var name = entry.Key;
+            if (_verifiedPlayers.ContainsKey(name)) continue;
+
+            /*
+             * init:true, always. This is a load, not a sighting: the stamp on the row is the last time anything saw this
+             * name, and overwriting it with today's date is exactly how petmapping.txt aged a whole file out in one
+             * startup (docs/DesignNotes.md → "A load is not a sighting").
+             */
+            AddVerifiedPlayer(name, entry.Value.SeenAtS, true);
+            SetDefaultPlayerClass(name, entry.Value.Class, true);
+          }
+        }
+
         _petMappingUpdated = false;
       }
+    }
+
+    /*
+     * The players.txt grammar, ONE copy: `Name[=<dotnet seconds>[,<Class>]]`. Init loads through it and RosterImport
+     * carries the same file into the ledger, so the two readers cannot drift into disagreeing about which lines are names
+     * (a name one reader sees and the other refuses is a name on half the memory).
+     *
+     * False means "this line is not a claim about a player", and there are three shapes of that: empty or too short to be
+     * a name, a leading '!' (the shape a person reaches for to cross something out - ignored as input, honoured as nothing;
+     * see this class's header on the deleted rejection tombstone), and a name no player can have (`Unk`, an empty tail).
+     * A line whose timestamp does not parse is NOT refused: it keeps 0, which means "a statement, never retires" - the
+     * hand-typed half of every old file.
+     */
+    internal static bool TryReadRosterLine(string? line, out string name, out double seenAtS, out string? className)
+    {
+      name = string.Empty;
+      seenAtS = 0d;
+      className = null;
+
+      if (string.IsNullOrEmpty(line) || line.Length <= 2 || line.StartsWith('!')) return false;
+
+      var split = line.Split('=');
+      if (split.Length == 1)
+      {
+        name = line.Trim();
+      }
+      else
+      {
+        // Only the FIRST '=' is read as a separator: the rest of the row is timestamp then class, and a name carrying
+        // one is not a thing EQ writes, so split[0] is the whole name either way.
+        name = split[0].Trim();
+        var value = split[1].Split(',');
+        double.TryParse(value[0], NumberStyles.Any, CultureInfo.InvariantCulture, out seenAtS);
+        if (value.Length >= 2 && value[1].Length > 0) className = value[1];
+      }
+
+      // A row whose name is blank after trimming is not a row: whitespace only, or "=123". Nothing downstream can use it,
+      // and AddVerifiedPlayer would have stored the empty string as a roster key.
+      if (name.Length == 0) return false;
+
+      // Deliberately NOT IsPossiblePlayerName: that gate wants letters only, and a curated file legitimately holds
+      // names it fails ("Akini, Xanathan"). Refusing such a row at LOAD is how a curated list disappears silently - the
+      // bug this class's header is full of. A caller may tighten further on its own reasons; RosterImport does.
+      return true;
     }
 
     internal void Save()

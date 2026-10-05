@@ -91,6 +91,20 @@ namespace EQLogParser
     /// <summary>Loads the ledger for the current ConfigUtil.ServerName.</summary>
     public void Init() => Init(ConfigUtil.ServerName);
 
+    /*
+     * Which server's ledger is loaded right now. A caller that wants to WRITE into it from the outside (the roster
+     * importer) asks this first, because Save() files rows under whatever name this field holds: writing "server B's"
+     * names while this object still answers to server A is how one folder quietly acquires another's roster.
+     */
+    internal string ServerName => _serverName;
+
+    /*
+     * One file write for a caller that applied many rows through the persist:false overloads. Without it an importer of
+     * a thousand names rewrites the whole ledger a thousand times; with it the batch is atomic in the only sense this
+     * file can offer, since the rows are already in memory either way.
+     */
+    internal void FlushChanges() => Save();
+
     public void Init(string serverName)
     {
       var loaded = new Dictionary<string, Prior>(StringComparer.OrdinalIgnoreCase);

@@ -5948,8 +5948,11 @@ and `Targeted (NPC)`, and it would place 425 hailers who are not this operator's
 >   *The roster lane: membership is not a verdict, so it keeps its own clock* below.
 > - **Built:** one query seam answers "is this one of ours?" — see *The one seam that answers* below. Its call sites are
 >   being migrated pane by pane; until a pane is moved it still asks the roster directly.
-> - `players.txt` is still written by the parser exactly as before (`Name=<ticks>[,Class]`) and seeded into
->   `PlayerRegistry`. Importing it happens once per server folder, into the ledger.
+> - **Built:** the importer — see *The one-time roster import* below. It moves membership (and the class a name was seen
+>   casting) into the ledger once per server folder, invents no timestamps, and refuses the wrong folder.
+> - `players.txt` is still read AND written exactly as before: `PlayerRegistry` loads it into memory and still saves it,
+>   because the commit that stops the writes has not happened. Retiring the file is the next step; its rename
+>   (`players.imported.txt`) goes with that commit rather than this one, for the reason given in the import section.
 > - `identity-overrides.txt` holds `Name=Kind` with **no class field**. An operator-set class exists today but lives in the
 >   WRONG file for the plan: the Names pane's Class pencil calls `PlayerRegistry.SetDefaultPlayerClass`, which writes the name
 >   into `players.txt` as a verified player (which is why the icon appears only on a Player row). Moving that claim to
@@ -6130,3 +6133,81 @@ ones, never a half-written table.
 
 Call sites move one pane per commit, and while a pane has not moved it still asks the roster - that is the state this file
 describes today, not a design compromise. What is on the seam now: [see the commits that reference this section].
+
+### The one-time roster import: membership moves, and nothing else does (built 2026-11)
+
+`RosterImport.ImportPlayersFileOnce(server)` runs at log open, from `MainWindow`'s per-server block, in the order the
+stores are read: `identity-overrides.txt`, then `identity-priors.txt`, then the import, then `PlayerRegistry.Init()`. It
+writes the ledger's roster lane and nothing else - no verdict, no override, no second dictionary.
+
+**Measured on this machine's 18 roster files: 1,850 rows, of which 777 carry a class** (largest single folder 438 names,
+exegony 209). Every one of those 777 class words is something `identity-priors.txt`'s rule lane could not hold and
+`players.txt` could only hold anonymously - which is the whole argument for the lane, now paid off. Zero rows in those
+files are undated, zero start with `!`, and zero are shaped like prose, so the file is machine-written end to end; that is
+also why the importer's junk rules are cheap and few.
+
+Four laws, and each one is a hole rather than a style:
+
+- **The gate is "does this folder's ledger already carry roster rows?", not a marker file.** A marker answers *did we
+  run?* while saying nothing about whether anything arrived; the roster bit is the same fact with the same lifetime as the
+  data it describes, and it survives an operator deleting an archive by hand. Afterwards the call costs one `File.Exists`.
+  It therefore also does **not** re-import a players.txt that somebody edits or restores later - the ledger is the
+  durable list from here, and re-reading a backup on every open would rewrite membership behind the operator's back.
+- **The import writes no stamps of its own.** A row carries the `=ticks` the file gave it; a row with none stays at `0`,
+  which is the value no dial ever retires. Stamping today would make an operator's entire list young on the day it was
+  copied and then silently age the whole 200-day window from that copy instead of from the last sighting - the same class
+  of error as *A load is not a sighting* below.
+- **One `FlushChanges()` for the whole list.** The rows go in through the `persist: false` overloads. A thousand names
+  through the saving overload means a thousand rewrites of one file, and a crash halfway leaves a roster nobody can
+  explain. Because the write is idempotent (`RememberRoster` moves stamps forward only), a run that dies halfway is fixed
+  by starting it again - which is why refusing to archive the source is safe.
+- **The folder is checked, not trusted.** `IdentityPriorStore.Save()` files every row under the server name *it holds*,
+  and MainWindow loads the registry before the identity stores when a switch happens - so an importer asked about server
+  B while the ledger still answers for server A would move one server's raid into another folder's file, silently and
+  permanently. `IdentityPriorStore.ServerName` exists for this question.
+
+**What it refuses, named exactly:** the frozen person words (`you`, `yourself`, `himself`, `Unassigned` - vocabulary,
+never knowledge: the same list the seam answers with), the unknown marker `Unknown`, a row whose name is blank after
+trimming, and a leading `!`. What it pointedly does **not** apply is `PlayerRegistry.IsPossiblePlayerName`: that gate
+wants letters plus at most one dot, so it refuses `Akini, Xanathan` (one summon, two masters) and any hand-typed name with
+a space. Measured across those 18 files it refuses nothing today, and it is still not applied - the cost is asymmetric: a
+junk row in the ledger is one line, while a load path that silently drops a curated name puts that name in the registry's
+memory but not in the file that outlives the registry, which is the divergence this chapter exists to prevent.
+
+**One grammar for one file.** `PlayerRegistry.TryReadRosterLine` is now the single reader of `Name[=<ticks>[,<Class>]]`:
+`Init()` loads through it and the importer carries the same lines, so the two cannot drift into disagreeing about which
+lines are names - a name one reader sees and the other refuses is a name on half the memory. Its behaviour is unchanged
+for every line `Init()` used to accept (it additionally trims, and rejects a row whose name is blank after trimming,
+which would otherwise store the empty string as a roster key). The importer capitalizes the first letter before writing,
+because the parser hands out capitalized names and identity keys case-insensitively: otherwise which spelling a row
+*displays* as depends on whether it arrived from the census or from the ledger.
+
+**The source file stays where it is.** The plan said rename to `players.imported.txt`; that rename arrives with the commit
+that deletes the writing code, because `PlayerRegistry` still saves players.txt: archiving today would leave an operator
+holding a *stale* archive and a live file of the same names inside one session - two files that look like a migration and
+a rollback and are actually both in-flight. Leaving it is not a parked decision either way: the import is idempotent, so
+the retirement commit can do the move whenever it exists.
+
+**And memory follows the ledger.** `PlayerRegistry.Init()` now seeds from `RosterEntries()` after players.txt and
+petmapping.txt, guarded by the same server-name check, with `init: true` throughout - see the next section. That is what
+makes the file retireable: You-mapping and `+Pets` folding survive without it. Tests: `RosterImportTest` (the carry incl.
+stamps and class, once-per-folder, absent-file silence, junk refused while good rows land, `You` remapped to the local
+character and refused when none is open, the wrong folder refused with no file created behind it, seeding with no
+players.txt at all, and eviction across both stores).
+
+### A load is not a sighting (2026-11)
+
+The rule that governs every stamp in `config/<server>/`, stated once because three files now obey it:
+**reading a file into memory is not evidence, so a load may not write, and may not date.** Concretely: `AddVerifiedPlayer`,
+`AddVerifiedPet`, `AddPetToPlayer` and `SetDefaultPlayerClass` all take `init`, and every path that seeds - players.txt,
+petmapping.txt, and now the ledger's roster lane - passes `true`, so nothing is marked dirty and no timestamp moves.
+
+The failure mode is not hypothetical. `AddPetToPlayer` used to end with `AddVerifiedPet(pet)` and drop its own `init`,
+which stamped the entire pet file with today's date at every startup: 96.6% of a file rewritten on an unchanged load, and -
+the part that mattered - **nothing in it could ever expire**, because expiry reads the stamp the loader had just refreshed.
+The same bug in the roster lane would make a 200-day dial decorative.
+
+What this buys the import: seeding from `RosterEntries()` keeps each row's own `SeenAtS` verbatim, so a name last seen in
+March is still old after the migration - which is correct, and is the point of aging our memory rather than the log. The
+pinning test asserts the sharp half by writing nothing back: seed from a ledger, call `Save()`, and require that no
+players.txt appeared (`TheRegistrySeedsItselfFromTheLedgerWithoutPlayersTxt`).

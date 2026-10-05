@@ -14,8 +14,8 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
 - .NET 10 SDK (10.0.4xx) lives in `~/.dotnet`; prepend it on every shell: `export PATH="$HOME/.dotnet:$PATH"`. The system's dotnet 8 will not satisfy `global.json` (`"10.0"`, `rollForward: latestPatch`).
 - Full solution on Linux: `dotnet build EQLogParser.sln -p:EnableWindowsTargeting=true` (flag lets the WPF projects cross-compile; no source changes needed).
 - **Zero warnings is the bar, and it is counted, not hoped for**: `dotnet build EQLogParser.sln -p:EnableWindowsTargeting=true --nologo 2>&1 | grep -cE ": (warning|error) [A-Z]+[0-9]+"` prints **0** before a commit (match diagnostics, not words — MSBuild's summary always contains `0 Warning(s)`). Nine CS8632s shipped once because a file in Core (project `Nullable=disable`) wrote `string?` without opening `#nullable enable annotations`; the whole fleet is one pragma, and it is why each new warning dies in its own commit (docs/CodingStandards.md → "Build Warnings", "Nullable Reference Types"). Nothing in this repo suppresses a warning (`#pragma warning disable`, `<NoWarn>`) — fixing the cause is the rule.
-- Tests: `dotnet test EQLogParser.Test/EQLogParser.Test.csproj` is the non-WPF suite (**1,545 passed / 8 env-gated skips**, plain `net10.0`). `EQLogParser.Wpf.Test` targets `net10.0-windows` and only
-  runs on Windows (153 tests); both assemblies together measure **1,698 passed / 8 skipped** there (2026-11). A Windows run that *loses* `Sta.Run` bodies rather than failing them is the failure mode to watch.
+- Tests: `dotnet test EQLogParser.Test/EQLogParser.Test.csproj` is the non-WPF suite (**1,605 passed / 7 env-gated skips**, plain `net10.0`, 2026-11). `EQLogParser.Wpf.Test` targets `net10.0-windows` and only
+  runs on Windows (153 tests); both assemblies together measure **1,758 passed / 7 skipped** there (2026-11). A Windows run that *loses* `Sta.Run` bodies rather than failing them is the failure mode to watch.
 - **Real-log corpus layout (local/, gitignored)**: `local/logs/live/` holds live-format captures; `local/logs/emu/` holds EMU-server captures (THJ/TSS/Heroes Forge shapes) that need the app's `EnableEmuParsing` behaviour. The env-gated real-log tests run them via **`EQLP_EMU=1`**, which sets `AppSettings.IsEmuParsingEnabled` for the duration of a `PipelineHarness` run (restored after — the flag is process-global and live-format logs misparse with it on). Without it an EMU capture parses with DamageLineParser's live grammar and silently loses the `(Owner: X)` / `scores a critical hit! (N)` shapes, so a parity run over `emu/` without the flag measures nothing. Timestamps are the same `[DDD MMM dd HH:mm:ss yyyy]` shape in both directories.
 
 ## Testing Guidelines
@@ -412,6 +412,34 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   raider" are two statements (`RemovingAPlayerKeepsItsPetMapping`); and a permanent "not one of ours" would arrive as a
   sixth dropdown word over `Set as NPC` — an assertion the rules can weigh — never as a silence that refuses evidence.
   Reasoning: docs/DesignNotes.md → "A veto nobody could switch on".
+- **Roster memory is the ledger's second lane; one import fills it, and `players.txt` stays live until the commit that stops
+  writing it.** `identity-priors.txt` carries per name both the rule verdict *and* "this application called this name one of
+  ours" (`Ours`, plus the class it was seen casting) under the provenance word `Imported`. Membership is **not** a verdict:
+  Kind stays `Unknown`, `Record` can neither set nor upgrade the bit (a name on the list for a decade may be called Npc by
+  every pass), and roster rows are exempt from the rule lane's 90-day and `MaxEntries` pruning — they age on the single dial
+  `PlayerRegistry.StaleDays` = **200** against `DateTime.Now`, and `SeenAtS <= 0` is a statement that never retires.
+  `RosterImport.ImportPlayersFileOnce(server)` runs at log open **once per folder**, gated on "does this ledger already carry
+  roster rows" rather than a marker file — so an edited or restored players.txt is **not** re-imported, and the call costs
+  one `File.Exists` afterwards. It writes **no stamps of its own** (the file's ticks survive verbatim; stamping today would
+  restart every name's 200-day clock on the day it was copied), batches through ONE `FlushChanges()` instead of rewriting the
+  ledger per row, **refuses a folder the loaded ledger does not answer for**, and **leaves the source file where it is** (its
+  rename to `players.imported.txt` waits for the commit that deletes the writing code — archiving while the registry still
+  saves it leaves a stale archive and a live file of the same names inside one session). **The load order in MainWindow's
+  per-server block is overrides → priors → import → `PlayerRegistry.Init`, and it is not cosmetic**: `IdentityPriorStore.Save()`
+  files every row under the server name *it* holds, and the registry used to load first, so a switch would have written one
+  server's raid into another folder (the same guard is re-checked inside the import and inside the seed). `PlayerRegistry.Init()`
+  then seeds from that lane after players.txt/petmapping.txt with `init: true` everywhere — **"a load is not a sighting"** is
+  the law over all three files (`AddPetToPlayer` once ended with `AddVerifiedPet(pet)`, stamping **96.6 %** of petmapping.txt
+  every startup so nothing could ever expire). `TryReadRosterLine` is the ONE reader of `Name[=<ticks>[,Class]]` — Init and
+  the importer cannot drift about which lines are names — and the importer deliberately does **not** apply
+  `IsPossiblePlayerName`: it wants letters only, so it would drop curated names (`Akini, Xanathan` = one summon, two masters);
+  measured over 18 local roster files (**1,850 rows, 777 of them with a class**, zero undated, zero `!`) it refuses nothing
+  today, and the asymmetry still decides — a junk row is one line, a silently dropped curated name is memory that disagrees
+  with its own file. Ask "is this one of ours?" through **`IdentityLookup.IsOneOfUs(name[, t])`** — operator override → the
+  open session's timeline → memory (the roster lane and `PlayerRegistry`, its in-memory mirror) — never a store of its own;
+  the frozen person words answer before any store via `PlayerRegistry.IsPersonWord`, and a live `Unknown` **falls through**
+  instead of answering no. Tests: `RosterImportTest`, `IdentityLookupTest`, `IdentityPriorStoreTest`. Numbers and reasoning:
+  docs/DesignNotes.md → "The one-time roster import", "A load is not a sighting".
 - **A spell effect is not a fighter (R21), and it takes THREE proofs to say so**: when the client writes `Goratoar has taken 18724 damage from Slicing Energy by .` there is no
   caster for the attacker field, so `DamageLineParser` substitutes **the spell** and sets `AttackerIsSpell` (`CombatCapture` carries it onto the fact) — and a spell in an
   attacker field is an actor as far as the identity rules are concerned. Measured on `eqlog_Kizant_xegony-09-03-26.txt`: **706** lines end `by .` and **135** read `from your <spell>.`

@@ -401,7 +401,8 @@ public class IdentityPriorStoreTest
   }
 
   /*
-   * THE ROSTER LANE (docs/roster-import-plan.md). players.txt held one fact this file already modelled - the class a name
+   * THE ROSTER LANE (docs/DesignNotes.md → "The roster lane: membership is not a verdict"). players.txt held one fact
+   * this file already modelled - the class a name
    * was seen casting - so membership moved here, as a SECOND statement on the row rather than a new kind of verdict. The
    * tests below are the seams that keep the two statements from leaking into each other: what a rule witnessed, and what
    * this application chose to call one of its own.

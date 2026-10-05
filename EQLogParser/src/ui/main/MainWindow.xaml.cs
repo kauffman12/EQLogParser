@@ -1404,16 +1404,24 @@ namespace EQLogParser
 
             if (changed)
             {
+              /*
+               * The three per-server identity stores load in the order that reads them: the operator's own verdicts
+               * (identity-overrides.txt, R10 — loaded before the engine's first derive or the rules answer alone), then
+               * the sighting ledger (identity-priors.txt), then the roster, which seeds itself from that ledger. The order
+               * is not cosmetic: PlayerRegistry reads the ledger's roster lane, and IdentityPriorStore files what it is
+               * given under the server name IT holds — while this block still ran with the ledger pointing at the server
+               * we just left, one server's names landed in another's file.
+               */
+              IdentityOverrideStore.Instance.Init(server);
+              IdentityPriorStore.Instance.Init(server);
+
+              // players.txt -> the ledger's roster lane, once per server folder (RosterImport: why once, and why the
+              // source file is left where it is). Runs before PlayerRegistry.Init so that the registry's memory comes up
+              // carrying this folder's roster whether or not the file still exists.
+              RosterImport.ImportPlayersFileOnce(server);
+
               // update pet/player windows all at once
               PlayerRegistry.Instance.Init();
-
-              // R10: the operator's own verdicts on names are per server too (identity-overrides.txt), and they
-              // have to be loaded before the engine's first derive or the rules answer alone.
-              IdentityOverrideStore.Instance.Init(server);
-
-              // Same per-server reasoning for the sighting ledger (identity-priors.txt): what older logs on THIS
-              // server concluded, kept for names a later capture has no evidence about.
-              IdentityPriorStore.Instance.Init(server);
               MainActions.LoadVerified(verifiedPlayersWindow, verifiedPetsWindow, PlayerRegistry.Instance.GetVerifiedPlayers(),
                 PlayerRegistry.Instance.GetVerifiedPets());
               MainActions.LoadPetOwners(petMappingWindow, PlayerRegistry.Instance.GetPetMappings());

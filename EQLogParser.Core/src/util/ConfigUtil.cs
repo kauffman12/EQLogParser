@@ -17,8 +17,14 @@ namespace EQLogParser
 
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly ConcurrentDictionary<string, string> ApplicationSettings = new();
+    // Internal, not private: RosterImport reads players.txt and has to name the file rather than keep a second spelling
+    // of it (two constants for one file is how a migration ends up pointed at nothing).
     private const string PetMappingFile = "petmapping.txt";
-    private const string PlayersFile = "players.txt";
+    // players.imported.txt is where this file goes on the day it stops being read. NOT renamed by the importer that
+    // copies it into identity-priors.txt, because the registry still writes it: archiving here would leave an operator
+    // holding a stale archive AND a live file of the same names inside one session. The move arrives with the commit that
+    // deletes the writing code (docs/DesignNotes.md → "The one-time roster import").
+    internal const string PlayersFile = "players.txt";
 
     // R10: "set as player / merc / pet / npc" from the derived fight list, per server (IdentityOverrideStore).
     // Same shape as petmapping.txt - name=Kind - and the same folder, because it is the same kind of claim:
@@ -155,10 +161,22 @@ namespace EQLogParser
       return petMapping;
     }
 
-    internal static List<string> ReadPlayers()
-    {
-      return ReadList(ServerFilePath(PlayersFile, ServerName));
-    }
+    internal static List<string> ReadPlayers() => ReadPlayers(ServerName);
+
+    /*
+     * The players.txt lines of ONE named server folder. A folder name is a parameter here rather than read from
+     * ServerName because RosterImport runs at the moment the app has just switched servers, and "which file did we
+     * just read?" must not depend on a global that another path may still be holding.
+     */
+    internal static List<string> ReadPlayers(string serverName) =>
+      string.IsNullOrEmpty(serverName) ? [] : ReadList(ServerFilePath(PlayersFile, serverName));
+
+    /*
+     * Absent and empty are different answers: a file that is not there makes no statement about the names it would have
+     * held, while an empty one says "nobody". ReadList returns empty for both, so the importer asks this first.
+     */
+    internal static bool ServerFileExists(string file, string serverName) =>
+      !string.IsNullOrEmpty(serverName) && !string.IsNullOrEmpty(ConfigDir) && File.Exists(ServerFilePath(file, serverName));
 
     /*
      * One per-server file under the config dir. Path.Combine, not the `@"\"` concatenation these used to use:
