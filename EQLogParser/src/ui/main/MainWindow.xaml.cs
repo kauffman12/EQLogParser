@@ -1427,9 +1427,13 @@ namespace EQLogParser
 
               // update pet/player windows all at once
               PlayerRegistry.Instance.Init();
-              MainActions.LoadVerified(verifiedPlayersWindow, verifiedPetsWindow, PlayerRegistry.Instance.GetVerifiedPlayers(),
+              // The owner picker (and the collections behind it) read the durable roster lane UNION this session's store,
+              // so the list of "who is one of ours" has one answer (IdentityLookup.OurPeopleNames: why the store alone stopped being it).
+              MainActions.LoadVerified(verifiedPlayersWindow, verifiedPetsWindow, IdentityLookup.OurPeopleNames(),
                 PlayerRegistry.Instance.GetVerifiedPets());
-              MainActions.LoadPetOwners(petMappingWindow, PlayerRegistry.Instance.GetPetMappings());
+              // The pair list comes from the ledger lane UNION the store (IdentityLookup.OurPetOwners: the same source OwnerOf
+              // consults, so the grid and the boards cannot disagree about whose pet a name is).
+              MainActions.LoadPetOwners(petMappingWindow, [.. IdentityLookup.OurPetOwners().Select(kv => new PetMapping(kv.Key, kv.Value))]);
             }
 
             _recentFiles.Remove(theFile);

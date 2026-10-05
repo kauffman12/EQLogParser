@@ -197,5 +197,45 @@ namespace EQLogParser
   /// <summary>Pet by tonight's verdict or by the store (charm windows fold; a mapping with no verdict still counts).</summary>
   internal static bool IsKnownPet(string? name) => IsPet(name) || PlayerRegistry.Instance.IsVerifiedPet(name);
 
+
+    /*
+     * The list a person assigns a pet TO (the Pet Owners owner picker). It used to be exactly
+     * `PlayerRegistry.GetVerifiedPlayers()` — i.e. whoever tonight's ingest happened to claim — which meant the picker and
+     * the identity verdicts were two different answers to "who is one of ours?". Now it is the durable roster lane PLUS the
+     * session store, so an imported roster is pickable whether or not a log ran, and the store still contributes names the
+     * lanes have not seen yet. Operator Player overrides will join this list when they become pickable verdicts rather than
+     * census rows; deliberately not read here today, because that store enumerates claims of all four kinds and filtering
+     * them into a player list is the census's job, not the picker's.
+     */
+    internal static List<string> OurPeopleNames()
+    {
+      var names = new SortedSet<string>(System.StringComparer.OrdinalIgnoreCase);
+      foreach (var entry in IdentityPriorStore.Instance.RosterEntries()) names.Add(entry.Key);
+      foreach (var name in PlayerRegistry.Instance.GetVerifiedPlayers()) names.Add(name);
+      return [.. names];
+    }
+
+
+    /*
+     * The pet -> owner pairs the Pet Owners window lists and edits. One answer for "whose pet is this?" now runs through
+     * `OwnerOf`, so the LIST has to come from the same places: the ledger's ownership lane (what petmapping.txt imported,
+     * plus every pair this application has witnessed and kept) UNION the session store, with the store winning where both
+     * name a pet — the window writes there, so an operator's edit made five minutes ago beats an import that says
+     * otherwise. Charm owners are not in here: they are tonight's evidence, they reach every board through OwnerOf, and a
+     * row somebody can't edit is not the same kind of thing as this window's rows (docs/DesignNotes.md -> "A charm takes a
+     * mob off the enemy list").
+     */
+    internal static Dictionary<string, string> OurPetOwners()
+    {
+      var pairs = new Dictionary<string, string>(System.StringComparer.OrdinalIgnoreCase);
+
+      foreach (var entry in IdentityPriorStore.Instance.PetEntries())
+        if (!string.IsNullOrEmpty(entry.Value.Owner)) pairs[entry.Key] = entry.Value.Owner!;
+
+      foreach (var mapping in PlayerRegistry.Instance.GetPetMappings()) pairs[mapping.Pet] = mapping.Owner;
+
+      return pairs;
+    }
+
   }
 }
