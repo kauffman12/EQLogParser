@@ -80,7 +80,9 @@ namespace EQLogParser
      * away from itself lands on a pet or another mob. Measured on Incogitable against the classification the app runs:
      * legacy's unfiltered "damage taken" is 7,114,675,399, of which 4,823,236,582 sits on names classified as NPC and
      * 428,146,449 on pets; what the three targets leave is 1,850,853,404 — 91,036 facts with a Player behind them and
-     * 9,480 a Merc (`RealLogBoardsTest` prints that census, `HitByNpcCensusTest` the residue around it).
+     * 9,480 a Merc. (The parity harnesses that used to print those figures — `RealLogBoardsTest` and the early
+     * `HitByNpcCensusTest` census — are deleted; the numbers above are what the same measurement read, kept here so a
+     * reader of this branch can see what the three targets cost. docs/DesignNotes.md → "The legacy engine is deleted".)
      *
      * AtOwner is the same test that splits DamageToOwner from DamageByOwner — the split legacy draws too, with
      * FightManager putting everything aimed at the npc in DamageBlocks and the mob's own output in TankingBlocks.

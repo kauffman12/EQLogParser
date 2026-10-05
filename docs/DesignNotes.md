@@ -5608,3 +5608,74 @@ a door to it, nothing in the wild carries a `!Name` row, and the machinery is **
 "A veto nobody could switch on" under the players.txt section for what remains (`RemoveVerifiedPlayer` evicts; evidence
 afterwards is free). This pane's pencil keeps four kinds plus "Clear claim", which is the unset a row needs; a permanent
 "not one of ours" would have to arrive as `Set as NPC`, an assertion the rules can weigh, not as a silence.
+
+## What a capture proves with empty memory (2026-11)
+
+The roster-persistence question - should the parser keep writing
+`players.txt`, and what does an empty memory actually cost? - was answered by
+measurement, not taste. A cold run means: `PlayerRegistry.Clear()`, no
+`IdentityPriorStore`, no `RegistrySeed`, then the real rule book over a real
+capture; the server's own `players.txt` is joined afterwards as the answer key.
+
+| capture | roster rows the capture mentions | placed cold | need memory | file-classed rows teaching nothing cold | p50 into a sitting before a name is first seen |
+| --- | --- | --- | --- | --- | --- |
+| `eqlog_Incogitable_xegony.txt` (616-day file) | 165 | 146 = 88% | 19 | 15 of 71 | 287 s |
+| `eqlog_Kizant_xegony-09-03-26.txt` | 79 | 73 = 92% | 6 | 5 of 49 | 767 s |
+| `eqlog_Kizant_xegony-01-06-24.txt` | 104 | 91 = 87% | 13 | 3 of 56 | 229 s |
+| `eqlog_Kizant_xegony-9-18-22.txt` | 54 | 45 = 83% | 9 | 6 of 39 | 824 s |
+| `eqlog_Roper_thj.txt` (EMU) | 1 | 1 = 100% | 0 | - | 157 s |
+
+What each column decides.
+
+- **Cold recall is 83-92%, and every miss is `Unplaced [none]`** - no evidence
+  of any kind, not a weak claim. Recurring names (Gimson/Grimson, Iceland,
+  Trundrumbalind, Zariyah, Niridak, Tuona) are the permanent silent member: she
+  never casts a class-safe spell, never speaks, never takes a drink, and joins
+  before the log opens. No rule tweak recovers her; only memory does. The cost
+  is narrower than the percentage suggests, though - an Unplaced raider still
+  gets a board row and her incoming damage still reads raid-side (Unknown
+  passes `IsRaidVictimAt`'s exclusion). What empty memory really breaks is
+  ownership: `+Pets` folding, charm folding, friendly-fire decisions.
+- **Pets are where cold genuinely fails.** The rules rebuild pet identity at
+  13.6% and prove 23 of the 96 owner pairs in `petmapping.txt`: that file knows
+  four times what any one capture does. Pet memory is durable by necessity;
+  player membership is closer to a label.
+- **Class is mostly re-derivable, partly not.** Cold parsing puts a class on
+  61-77% of player-side names (499/647, 428/600, 78/129, 63/92); the rows that
+  teach nothing are 3-15 per capture. The `different` list repeats across four
+  captures spanning 2022-2026 (`Tuona Shaman->Druid`, `Fawntemplar
+  Shaman->Druid`, `Moldar Shadow Knight->Ranger`, `Covennx Berserker->Rogue`) -
+  either the file's default is stale or the name really does teach two classes
+  over a night. Either reading argues the same way: an operator-set class must
+  outrank what a log guesses, so it wants its own store rather than a column
+  sharing a file with machine dust.
+- **Rule verdicts must not become membership.** Cold, the rules call 643 names
+  Player where the registry knows 165 of them in-log - a farm night is the
+  union of many other people's raid groups. Writing that back as "verified" is
+  how roster pollution complaints happen; the ledger may hold it as a prior
+  (rule + strength), but never as the roster.
+
+Two measurement traps, both mine, recorded so nobody re-reads them as findings.
+Headless class writes go through `CombatRecordLookup.IsValidClassName`, whose
+default is `_ => false` (`App.xaml.cs` wires it in production): unwired, a
+census reads "no class anywhere" and measures the harness instead of the app.
+And any "how long until it knows" figure must be measured inside a session -
+these captures span months (Incogitable: 616 days), so a file-relative offset
+prints 30 million seconds, which is the elapsed time since somebody's wedding,
+not a settle time. A 30-minute silence splits a sitting.
+
+Decisions taken from this. `players.txt`/`petmapping.txt` are imported **once**,
+gated on the new per-server memory file not existing yet - existence is the
+whole condition, no timestamp comparing; the folder is already per server, so a
+first log on a fresh server seeds from that server's roster and nothing else.
+Memory then ages by sightings rather than `Save()`'s 180-day wall clock (99 of
+the 209 xegony rows are past that line today, and all 873 rows across the 14
+server folders carry a parser timestamp - zero hand-typed). Operator-set class
+moves to its own small file. `Remove` in the pane means *forget*, never veto.
+
+Retired with this: `RegistryRebuildTest` (its exit gate was satisfied and its
+60% recall floor is superseded by the table above) and `HitByNpcCensusTest`
+(whose premise died with the rule it proposed, documented earlier in these
+notes). The measurement harness that produced this table was never committed -
+it printed and asserted nothing, which makes it a script wearing a test
+attribute. Standing rule: AGENTS.md -> "A gated real-log test is disposable".

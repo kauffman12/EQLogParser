@@ -149,8 +149,8 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   graph run only inside the app's derive (`DeriveEngine`), or in a test that calls them. Measured on Incogitable:
   "damage facts whose defender no rule placed" reads **1,525,786 / 583 B** on the seeded timeline against **4,323 /
   1.69 B (0.25 % of hit facts)** after `ClassificationRules.Apply` — a 350× difference, because that is how many mobs the
-  rules place out of the way. Two documents were written on the wrong side of this before it was caught (`HitByNpcCensusTest`
-  proposed a rule from it; `IsRaidVictimAt` quoted its numbers from it), and the proposal died once the rules ran: with a
+  rules place out of the way. Two documents were written on the wrong side of this before it was caught (a gated census
+  test since deleted proposed a rule from it; `IsRaidVictimAt` quoted its numbers from it), and the proposal died once the rules ran: with a
   classified timeline, "a mob keeps hitting it" identifies **zero** roster players and its top names are mobs the NPC
   database does not know (`Herald of the Outer Brood`, `War Trainer Prime`), so no such rule exists. Build the timeline
   the way the retired board census did it — fresh `EntityTimeline`, `RegistrySeed.Apply`,
@@ -734,6 +734,18 @@ npcs.txt; it is the *only* evidence for **6** names (Incogitable) and **4** (Kiz
   fail in silence — see `FrenzyClassTest` setup. Frenzy Strike AA casts (`... VII Caza`) stay unused: the AA
   rank word breaks the roman-rank anchor; extending it is a measured step of its own. Numbers:
   docs/combat-mirror-design.md → "The frenzy verb proves a class, never a person".
+- **A gated real-log test is disposable; a print harness is not a test.** The `EQLP_*` gates exist to answer one question
+  over a local capture. Once it is answered, **delete the gate and move the numbers to docs/DesignNotes.md** — that is
+  where findings live, and an assertion-free `[TestMethod]` that skips everywhere proves nothing except that it printed
+  ("Passed" on zero `Assert.` calls is not coverage; a stale gate also rots: it cites paths and plans nobody has).
+  Keep a gated test only when something must be *asserted* on real data no fixture can reach: `LiveFightsRealLogTest`
+  (a row live at its own last activity), `IncrementalClassificationTest`/`DeriveIncrementBenchmarkTest` (carried pass ==
+  full replay, plus the projection/classification split named as the re-measure command), `UnrowedFactsTest`,
+  `MeterBoardCostRealLogTest`/`RealLogBenchTest` (named cost probes). Deleted on those terms:
+  `RegistryRebuildTest` (phase exit gate satisfied, recall figures recorded in DesignNotes) and `HitByNpcCensusTest`
+  (premise dead with the rule it proposed) — so a comment or doc that cites a deleted census is a bug to fix, not a
+  reference to preserve. Before deleting anything here, run it: a one-off measurement is worth more executed twice
+  than argued about (docs/DesignNotes.md → "What a capture proves with empty memory").
 - **`EQLogParser.Wpf.Test`** is the Windows-only assembly (WPF and Skia surfaces, `EnableWindowsTargeting`): it builds everywhere but its
   tests need Windows to run, so `dotnet test` on the other assembly says nothing about it. Build it explicitly when touching app UI code.
 - **Releases**: when touching `sign.cmd` or `EQLogParserInstall/*.iss`, read `docs/ReleaseChecklist.md`
