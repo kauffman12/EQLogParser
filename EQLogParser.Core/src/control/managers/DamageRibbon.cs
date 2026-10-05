@@ -34,8 +34,8 @@ namespace EQLogParser
     /*
      * The ribbon's own seam for "is this one of ours", so its rules stay testable without runtime state (tests assign a
      * delegate). Its default asks the application-wide seam now rather than players.txt alone, so a death line reads "a
-     * raid member fell" for somebody tonight's capture proved and nobody ever typed (docs/DesignNotes.md -> "The one seam
-     * that answers"). Called per DEATH, not per damage line, so the extra hops cost nothing measurable.
+     * raid member fell" for somebody tonight's capture proved and nobody ever typed — the question is the seam's, spelled out at
+     * docs/DesignNotes.md -> "The one seam that answers". Called per DEATH, not per damage line, so the extra hops cost nothing measurable.
      */
     internal Func<string, bool> IsPlayerName { get; set; } = IdentityLookup.IsOneOfUs;
 

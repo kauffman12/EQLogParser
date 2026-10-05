@@ -64,8 +64,19 @@ public class DocsPointerTest
   /*
    * The comparison key: four words, lower-cased. Four because two is enough for a coincidence ("A fight", "The name")
    * and six would fail on every paraphrase; paraphrasing is what these citations do.
+   *
+   * A WRAPPED citation is collapsed first, and only a wrap: the regex captures across newlines, so a phrase broken in the
+   * middle of a block comment arrives as "The one seam" + newline + " * that answers", and the four-word key became
+   * "the one seam *" — which reported a section that plainly exists as a broken pointer. The collapse covers the newline,
+   * the indentation and the comment's own leading asterisk; NOTHING else is stripped, so intra-word punctuation still has
+   * to agree with the heading exactly as before (a citation for "R0–R20" keeps its dash). A citation should still be
+   * written whole on one line because comments read better that way — the checker just no longer fails when one doesn't.
    */
-  private static string Key(string title) => string.Join(' ', title.ToLowerInvariant().Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Take(4));
+  private static readonly Regex CommentWrap = new(@"\s*\n\s*\*?\s*", RegexOptions.Compiled);
+
+  private static string Key(string title) =>
+    string.Join(' ', CommentWrap.Replace(title, " ").ToLowerInvariant()
+                    .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Take(4));
 
   /* Code, markup and the agent guide: everything a reader of this repository actually follows. obj/bin are skipped
    * because generated files carry copies of source comments with paths that mean nothing. */
