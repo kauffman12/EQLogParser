@@ -28,6 +28,14 @@ namespace EQLogParser
 
     // Mirror evidence (D8): fire-only recognitions, no branch consumes anything for them.
     internal static event Action<string, string, double> EventsWhoRoster;   // name, class, time
+
+    /*
+     * "A person loots." Loot, win-roll and corruption lines used to end in `AddVerifiedPlayer`, which filled a store the
+     * derived rules never consult; they publish here instead, so the claim reaches the rule book as evidence WITH its
+     * timestamp (R23-loot). One publisher, one verdict chain — the store is not a second authority on who is a player
+     * (docs/DesignNotes.md → "The checks that decide who is a player").
+     */
+    internal static event Action<string, double> EventsLooterIdentified;    // name, time
     internal static event Action<string, double> EventsCompanionCalled;     // the SUMMONER whose companion arrived, time
     internal static event Action<string, double, bool, string> EventsCharm;  // name, time, is-start, owner
 
@@ -314,7 +322,7 @@ namespace EQLogParser
                   {
                     looter = split[0].Equals("you", StringComparison.OrdinalIgnoreCase) ? ConfigUtil.PlayerName : split[0];
                     var item = ParserUtil.JoinWords(split, itemsIndex + 1, i - itemsIndex - 1);
-                    PlayerRegistry.Instance.AddVerifiedPlayer(looter, lineData.BeginTime);
+                    EventsLooterIdentified?.Invoke(looter, lineData.BeginTime);
                     var record = new LootRecord { Item = StringCache.GetOrAdd(item), Player = StringCache.GetOrAdd(looter), Quantity = 0, IsCurrency = false, Npc = StringCache.GetOrAdd("Won Roll (Not Looted)") };
                     RecordsStore.Instance.Add(record, lineData.BeginTime);
                     handled = true;
@@ -374,7 +382,7 @@ namespace EQLogParser
 
                     if (ParseCurrency(split, lootedIndex + 1, i, out var item, out var count))
                     {
-                      PlayerRegistry.Instance.AddVerifiedPlayer(name, lineData.BeginTime);
+                      EventsLooterIdentified?.Invoke(name, lineData.BeginTime);
                       var record = new LootRecord { Item = StringCache.GetOrAdd(item), Player = StringCache.GetOrAdd(name), Quantity = count, IsCurrency = true };
                       RecordsStore.Instance.Add(record, lineData.BeginTime);
                       handled = true;
@@ -390,7 +398,7 @@ namespace EQLogParser
 
                     if (count > 0 && count != ushort.MaxValue)
                     {
-                      PlayerRegistry.Instance.AddVerifiedPlayer(looter, lineData.BeginTime);
+                      EventsLooterIdentified?.Invoke(looter, lineData.BeginTime);
                       var record = new LootRecord { Item = StringCache.GetOrAdd(item), Player = StringCache.GetOrAdd(looter), Quantity = count, IsCurrency = false, Npc = StringCache.GetOrAdd(npc) };
                       RecordsStore.Instance.Add(record, lineData.BeginTime);
                       handled = true;
@@ -414,7 +422,7 @@ namespace EQLogParser
                     {
                       looter = player[..^1];
                       looter = looter.Equals("you", StringComparison.OrdinalIgnoreCase) ? ConfigUtil.PlayerName : looter;
-                      PlayerRegistry.Instance.AddVerifiedPlayer(looter, lineData.BeginTime);
+                      EventsLooterIdentified?.Invoke(looter, lineData.BeginTime);
                       var item = ParserUtil.JoinWords(split, 1, i - 2);
                       var record = new LootRecord { Item = StringCache.GetOrAdd(item), Player = StringCache.GetOrAdd(looter), Quantity = 0, IsCurrency = false, Npc = StringCache.GetOrAdd("Given (Not Looted)") };
                       RecordsStore.Instance.Add(record, lineData.BeginTime);
@@ -466,7 +474,7 @@ namespace EQLogParser
                 var count = split[3][0] == 'a' ? 1 : ParserUtil.ParseUInt(split, 3); item = item[..^3];
                 if (count > 0 && count != ushort.MaxValue)
                 {
-                  PlayerRegistry.Instance.AddVerifiedPlayer(looter, lineData.BeginTime);
+                  EventsLooterIdentified?.Invoke(looter, lineData.BeginTime);
                   var record = new LootRecord { Item = StringCache.GetOrAdd(item), Player = StringCache.GetOrAdd(looter), Quantity = count, IsCurrency = false, Npc = StringCache.GetOrAdd("") };
                   RecordsStore.Instance.Add(record, lineData.BeginTime);
                   handled = true;

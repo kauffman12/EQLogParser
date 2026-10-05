@@ -456,6 +456,19 @@ namespace EQLogParser
             Claim(timeline, state,name, IdentityKind.Merc, RuleStrength.Strong, "R3-merc", double.NegativeInfinity);
             break;
 
+          case EvidenceFact.EvLooter:
+            /*
+             * R23: "--X has looted a … from Y's corpse.--", "X wins roll", corruption and currency splits. A mob does not
+             * loot and the line names the taker. Measured clean in shape (0 article-shaped or possessive names among 11
+             * distinct looters on Incogitable, 24 on Kizant-09-20-25) and SMALL in yield, so it claims Medium: enough to
+             * catch a silent raider who never casts where a rule is watching, never enough to outvote what the capture
+             * watched that name do. It replaces an AddVerifiedPlayer call, which wrote a store these rules never read
+             * (docs/DesignNotes.md → "The checks that decide who is a player").
+             */
+            if (!LooksLikeEntityName(name) && !PlayerRegistry.IsPersonWord(name))
+              Claim(timeline, state, name, IdentityKind.Player, RuleStrength.Medium, "R23-loot", double.NegativeInfinity);
+            break;
+
           case EvidenceFact.EvWhoRoster:
             playerBehavior.Add(name);
             Claim(timeline, state,name, IdentityKind.Player, RuleStrength.Certain, "R2-who", double.NegativeInfinity);

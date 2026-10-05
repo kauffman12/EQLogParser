@@ -560,7 +560,7 @@ namespace EQLogParser
      */
     private static readonly string[] RememberedRules =
     [
-      "R1-", "R2-", "R3-", "R4-", "R5-companion", "R7-", "R9-", "R13-", "R15-", "R17-", "R18-", "R19-", "R22-",
+      "R1-", "R2-", "R3-", "R4-", "R5-companion", "R7-", "R9-", "R13-", "R15-", "R17-", "R18-", "R19-", "R22-", "R23-",
     ];
 
     /// <summary>True when a rule code names an event only the capture could have supplied, i.e. worth remembering.</summary>

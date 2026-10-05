@@ -232,6 +232,7 @@ namespace EQLogParser
     public const byte EvSelfFeeds = 15;     // "Glug…/Chomp… <name> takes a drink/bite from …" — vessel-agnostic
     public const byte EvEyeOwnedStrike = 16; // <name> struck the summon named after them: `X hits Eye of X` (R19)
     public const byte EvGuildmate = 17;      // "Your guildmate <name> has completed …" - the client's own guild list speaking (R22)
+    public const byte EvLooter = 18;         // "--<name> has looted a … / wins roll …" - a person loots, a mob does not (R23)
 
     public readonly int Seq;
     public readonly long TimeS;

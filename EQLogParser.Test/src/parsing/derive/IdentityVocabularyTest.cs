@@ -50,6 +50,9 @@ public class IdentityVocabularyTest
     // docs/DesignNotes.md -> "What the cold misses actually are".
     "R22-guildmate",
 
+    // A loot line names the taker (R23), replacing an AddVerifiedPlayer call that wrote a store these rules never read.
+    "R23-loot",
+
     /*
      * Not a rule, and it cannot come out of a fixture: PipelineHarness clears PlayerRegistry, so nothing in any test
      * seeds from it. That blind spot is how "RegistrySeed" was printable as a verdict word — the corpus guard below walks

@@ -65,6 +65,7 @@ namespace EQLogParser
 
       PreLineParser.EventsEvidence += OnPreLineEvidence;
       MiscLineParser.EventsWhoRoster += OnWhoRoster;
+      MiscLineParser.EventsLooterIdentified += OnLooter;
       MiscLineParser.EventsCompanionCalled += OnCompanionCalled;
       MiscLineParser.EventsCharm += OnCharm;
       CastLineParser.EventsCastEvidence += OnCast;
@@ -86,6 +87,7 @@ namespace EQLogParser
 
       PreLineParser.EventsEvidence -= OnPreLineEvidence;
       MiscLineParser.EventsWhoRoster -= OnWhoRoster;
+      MiscLineParser.EventsLooterIdentified -= OnLooter;
       MiscLineParser.EventsCompanionCalled -= OnCompanionCalled;
       MiscLineParser.EventsCharm -= OnCharm;
       CastLineParser.EventsCastEvidence -= OnCast;
@@ -117,6 +119,10 @@ namespace EQLogParser
 
     // The companion line names the person the summon came TO (MiscLineParser's census), so this fact is about the
     // summoner and carries no pet — which pair belongs to the possessive words and to petmapping.txt instead.
+    // A loot line names the person who took the item (R23-loot). No combat fact ever carries that knowledge, so this
+    // publish is the only route from the line into the rule book.
+    private void OnLooter(string name, double time) => Emit(EvidenceFact.EvLooter, name, time);
+
     private void OnCompanionCalled(string name, double time) => Emit(EvidenceFact.EvCompanionCalled, name, time);
 
     // The start line never says who charmed anything (measured: no charm cast text precedes a

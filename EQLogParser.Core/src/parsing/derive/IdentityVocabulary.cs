@@ -214,6 +214,7 @@ internal static class IdentityVocabulary
       "R15-healed" => healedByCasters > 0 ? $"Healed by {healedByCasters:N0} raiders" : "Healed by the Raid",
       "R16-comma" => "Titled Name",
       // The client's own guild list, not a guess from behaviour: see PreLineParser's census.
+      "R23-loot" => "Took Loot From a Corpse",
       "R22-guildmate" => "Named You Their Guildmate",
       "R17-selffeed" => "Drank or Ate",
       "R18-healedpet" => "Healed by our Pets' Owner",
@@ -311,6 +312,7 @@ internal static class IdentityVocabulary
     ["R14-shape"] = "NPC Name",
     ["R15-healed"] = "Healed",
     ["R16-comma"] = "Titled Name",
+    ["R23-loot"] = "Looted",
     ["R22-guildmate"] = "Guildmate",
     ["R17-selffeed"] = "Drinking",
     ["R18-healedpet"] = "Our Pet",

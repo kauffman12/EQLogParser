@@ -6317,3 +6317,31 @@ evidence and the ledger may speak again).
 memory that disagrees with its own file. That is why the roster import does not apply `IsPossiblePlayerName` (it wants
 letters only, so it would drop ``Akini, Xanathan`s Warder`` — one summon, two masters) and why the pet-map import keeps the
 unassigned text that the roster side refuses.
+
+### The claim moves to the evidence stream (2026-11) — loot lines are the first shape through the door
+
+The direction was chosen, not drifted into: **a line that proves somebody is a person becomes EVIDENCE in the classification
+system, not a write into `PlayerRegistry`.** The registry stops being a second authority on identity and keeps what it is
+actually good at (the icon map, the class windows, the operator's curated pet list while that migrates). Three reasons won
+it, all measured rather than stylistic:
+
+* **Only the evidence stream carries WHEN.** `RegistrySeed` applies every stored name at `NegativeInfinity` — "true for the
+  whole log" — so a pet verified at 21:00 becomes retroactively owned at 19:00. An `EvidenceFact` is stamped per line.
+* **Provenance.** A registry-sourced row can only say *Legacy*, one word for drink lines, `/target`, imports and hand-typed
+  map rows alike. A rule code says which fact the verdict rests on, which is what makes an override adjudicable.
+* **Ordering.** Strong (60) beats seed (8) beats nothing; a store flattens every claim to "was in a set", so the weakest
+  evidence cannot be distinguished from the strongest and stale memory cannot lose to a fresh observation.
+
+The first shape converted is **R23-loot**: the five `MiscLineParser` loot/win-roll/corruption branches that ended in
+`AddVerifiedPlayer` now publish `EvidenceFact.EvLooter`, and the rule claims **Player at Medium**. Census: 11 distinct
+looters on Incogitable and 24 on Kizant-09-20-25, **zero** article-shaped or possessive — clean enough to claim, small
+enough to claim Medium. `LooterRuleTest` pins the line reaching a verdict *and* that the store no longer receives the
+write; without the second half a re-added `AddVerifiedPlayer` would be invisible, since every reader moved to the verdicts.
+
+What this means for the shapes still writing the registry, and why they are listed rather than converted in one sweep: each
+one needs its **reader** moved before its write can go, or a window empties instead of migrating. `has looted` had no
+consumer outside classification, which is exactly why it went first. The order from here: drink / raid-leader / who-roster
+(their rules already exist) → the Verified Players window and chat filters onto `IdentityLookup` → pet pairs (the
+Mend Companion family) into the ownership lane → then `players.txt` stops being written at all, which is the change the
+standing `_playersUpdated` drain has been blocking. The tell/sing shapes stay refused: they name bazaar hailers and NPC
+bards, and a claim that cannot be made is not a write to relocate.
