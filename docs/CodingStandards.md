@@ -209,6 +209,25 @@ Settings and setup windows (`FctSettingsWindow`, `DamageMeterSettingsWindow`) fo
 - **Exit vocabulary.** Save and Cancel only — no close mark, no Esc. Changes preview live on the target but persist only on Save (staged-config pattern; see DesignNotes), and a control that cannot preview yet must not silently commit either.
 - **Never draw controls onto the thing they configure.** The settings form lives in its own companion window; the overlay stays pure display.
 
+## What Gets a Unit Test
+
+- **Tests cover the code we wrote and must not break: parsing, derivation, calculations, file formats, decisions.** A damage line that
+  parses into the wrong field, a duration that counts a second off, a ledger row that rewrites the wrong server's folder — none of it is
+  visible, all of it is arithmetic or grammar, and a test is the only place the rule can live.
+- **Cosmetic UI is not tested.** Whether a title bar sits above a table, a column's width, a label's wording that reads well on screen:
+  somebody opens the app, looks, and it is done in three seconds. A test for that costs more to write than the feature does, and asserts a
+  decision nobody can accidentally regress because they would see it.
+- **The dividing line is "can this break silently?", not "is it UI?".** A dock layout resetting itself for every user on restart, an
+  identity verdict flipping onto the wrong side, a pet folding under the wrong owner — those are UI *surfaces* whose failure is invisible
+  until someone loses work, so they are tested. Layout and appearance are not.
+- **When a UI rule really is logic, test the layer we own it in** — the function that decides (`ShowStateFor`'s edge branch) or the markup
+  declaration that states it (`SideInDockedMode="Right"`, `State="AutoHidden"` in `MainWindow.xaml`) — and never the pixel, the vendor's
+  property round-trip, or a control's internals. `EQLogParser.Test/src/ui/DockingMarkupTest.cs` is the shape: pin what we declare. What needs
+  a live window is a checklist line in `docs/ReleaseChecklist.md`, not a unit test that asserts its own inputs.
+- **A test that only ever confirms the assumption it was written from gets deleted, not re-lettered.** `AWindowInTheMiddleKeepsItsOwnShape`
+  asserted docking states for panes the test itself configured; on Windows the vendor getter returned something other than what was set and the
+  assertion measured coercion instead of behaviour (2026-11). Missing coverage leaves a note where it will be looked for.
+
 ## Performance Guidelines
 
 ### Collection Choices
