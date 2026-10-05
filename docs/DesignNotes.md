@@ -6583,9 +6583,54 @@ now prints one line with everything that could differ — ledger rows, override 
 and pet counts, heal count — because the way to find this class of drift is to see which number moved, not to argue
 about the routing code.
 
-**The design question this leaves open** (not a test problem): should a name's Pet-ness be a parse side effect at all,
-when the capture already says it in words the timeline reads — R5's possessive forms and the cast lines? A claim that
-comes from evidence would be reproducible; one that comes from "did this process happen to verify the name first" is not.
+### The parse side effect was a missing store reset, not identity design (2026-11 — resolves the section above)
+
+The question above got answered by instrumenting the two registration sites (`HealingLineParser`'s possessive heal target and
+`CastLineParser`'s Pet-target spell branch) and printing what each saw for the drifting names. **Pet-ness never moved because of a design
+choice about registries; it moved because `PipelineHarness` forgot to reset one process-global store.**
+
+`EQDataStore.FindPreviousCast` (reached from `TryGetLandsOnOther` → `FindByLandsOn`) resolves an ambiguous spell-name match by asking
+`RecordsStore.GetCastsBySpellName(name, 8)` what this caster printed recently. Leftover cast records from an earlier parse of the same file
+therefore change **how many rows a line resolves to**, and `CastLineParser` registers a custom-named pet only when that resolution yields
+exactly one row (its own comment: "dont change a pet into a player by accident"). Traced on Incogitable, the same spell name for the same
+line came back with `n=1` on pass 1 and `n=6`, `16`, `24`, `40` on pass 2 — so on the second parse the branch ran and its guard refused, and
+the name stayed unplaced. Adding `RecordsStore.Instance.Clear(false)` to the harness's per-capture reset list makes pass 2 equal pass 1:
+verified pets **182 = 182**, with Squirticus, Plimpy and Stormclaw claimed on both parses.
+
+**Production was never affected.** `RecordsStore` registers with `LifecycleManager` (like `EQDataStore` and `PlayerRegistry`) and its
+`Clear(serverChanged)` runs on the log-close/another-opens fan-out, so one session's capture cannot parse against another session's cast
+memory. What the earlier investigation ruled out — the prior ledger, the override file, the learned-spell count, a freshly constructed
+`EQDataStore`, `HealingLineParser.ClearCaches()` — is now explained rather than mysterious: they were all genuinely identical, because the
+store that mattered was not on the list anyone thought to check. The "one capture per process" discipline is retired; the harness reset and
+its comment are the fix.
+
+**What replaces the discipline**: `CaptureReproducibilityTest` — a fixture plus a gated real-capture run (`EQLP_REPRODUCIBLE=<log>`, add
+`EQLP_EMU=1` for EMU shapes) that parses the file TWICE and compares verified-pet set, row count, tanking-side hit count, unrouted fact
+count, both damage sums, and every interned name's verdict *and* provenance. Green on Incogitable (rows 4,662 = 4,662; pets 182 = 182; tank
+hits 101,254 = 101,254; unrouted 305,127 = 305,127; no verdict moved). Ground-truth parity work can now compare boards inside one process
+without a footnote.
+
+**And the design idea that grew out of the question is refused on measurement.** The tempting rule was: *a spell whose `spells.txt` row
+targets Pet/Pet2 landed on this name, so claim it as a pet* — which would have made the claim evidence-based and independent of registration.
+Collected over Incogitable's first parse, there are **65** such names, and what the rule book makes of them today:
+
+| verdict | names | examples |
+|---|---|---|
+| Pet | 26 | (the ones the registry also claimed) |
+| **Player** | **17** | Beorun (`Diminutive Companion I`), Stonegrabber Shaman, Nipsy, Funky, Eddie, Pickles, Colours |
+| Npc | 13 | `a candlefolk flame worshipper`, Mojo, Infection, Vengeance, Fluffy |
+| Unknown | 9 | Everlast, Sarto, Betebish, Wagclaw |
+
+So the shape does not mean "pet": pet-target rows land on raiders and on mobs too (group-ish effects — `Theft of Essence VI`,
+`Burnout XVI`, `Tiny Companion` appearing for names that are plainly not pets). A rule built on it would have moved a dozen real raiders
+onto the Pet column, which is exactly the failure mode this project has refused elsewhere (R15 must not flip a verdict on heal volume; R21
+says what a name is, not what a fact did). Ownership keeps coming from the possessive words and `petmapping.txt`. If someone wants this
+shape again, the number to beat is 17 Player names, on more than one capture.
+
+**The residual truth worth keeping from the original section**: pet-ness IS still registered as a parse side effect (`AddVerifiedPet` from
+two parser branches), and `RegistrySeed` still carries it at strength 8. That is now known to be *deterministic per capture* rather than
+lucky, which is all the reproducibility question needed; making it evidence-based remains an open design idea, not a correctness defect —
+and the obvious evidence for it just measured as unsafe.
 
 ### The fight list patches its rows instead of rebuilding them
 

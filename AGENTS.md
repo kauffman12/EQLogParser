@@ -810,15 +810,22 @@ npcs.txt; it is the *only* evidence for **6** names (Incogitable) and **4** (Kiz
   (premise dead with the rule it proposed) — so a comment or doc that cites a deleted census is a bug to fix, not a
   reference to preserve. Before deleting anything here, run it: a one-off measurement is worth more executed twice
   than argued about (docs/DesignNotes.md → "What a capture proves with empty memory").
-- **A real-log board number comes from one capture per process** (2026-11): parsing the same file a second time inside
-  one process changes which names are verified pets — on Incogitable, 102,420 tanking-side facts on the first parse and
-  **104,126** on the second, the difference being exactly `Squirticus`/`Plimpy`/`Stormclaw` losing a `Pet / RegistrySeed`
-  claim (verified pets 182 → 178, players unchanged). Pet-ness is registered as a **side effect of parsing** (a ``X`s pet``
-  heal target, a Pet-target spell target), and the ruling that follows is measurement discipline, not a fix: an isolated run
-  per capture, and re-measure anything read out of a mixed `--filter` run. The ledger, the override file, the learned-spell
-  set, a freshly constructed `EQDataStore` and `HealingLineParser.ClearCaches()` were each ruled out by measurement, so do not
-  "isolate" those again; `UnrowedFactsTest`'s census prints the PROCESS STATE line that shows which number moved. Reasoning:
-  docs/DesignNotes.md → "Pet-ness is a parse side effect".
+- **Identical input gives identical output inside one process, and it is asserted** (2026-11; this replaces the
+  "one real-log capture per process" discipline that was written down while the cause was unknown):
+  `CaptureReproducibilityTest` parses a capture twice and compares verified-pet set, row count, tanking-side hits, unrouted
+  facts, both damage sums and every name's verdict+source — fixture always, real capture under `EQLP_REPRODUCIBLE=<log>`
+  (green on Incogitable: pets 182 = 182, tank hits 101,254 = 101,254). The drift was one store missing from
+  **`PipelineHarness`'s reset list**: `EQDataStore.FindPreviousCast` resolves an ambiguous spell-name match through
+  `RecordsStore.GetCastsBySpellName`, so a previous parse's leftover cast records changed how many rows a line resolved to, and
+  `CastLineParser` registers a custom-named pet **only when that resolution yields exactly one row** — measured directly as the same
+  spell returning n=1 on pass 1 and n=6/16/24/40 on pass 2 for identical lines. Production never had the gap (`RecordsStore`
+  registers with `LifecycleManager`, so a log close/open clears it). Do not remove that clear from the harness, and do not
+  re-isolate the things already ruled out by measurement: the ledger, the override file, the learned-spell set, a freshly
+  constructed `EQDataStore`, `HealingLineParser.ClearCaches()`. Reasoning and the rest of the numbers: docs/DesignNotes.md →
+  "Pet-ness is a parse side effect". **The related rule idea stays refused on measurement**: "a spell whose `spells.txt` Target is
+  Pet/Pet2 landed here, so this name is a pet" — over Incogitable those 65 candidate names read Pet 26 / **Player 17 (including the
+  raider Beorun)** / Npc 13 / Unknown 9, because pet-target rows also land on raiders and mobs. Owner folding needs the possessive
+  words and petmapping.txt; this shape is not evidence.
 - **`EQLogParser.Wpf.Test`** is the Windows-only assembly (WPF and Skia surfaces, `EnableWindowsTargeting`): it builds everywhere but its
   tests need Windows to run, so `dotnet test` on the other assembly says nothing about it. Build it explicitly when touching app UI code.
 - **Releases**: when touching `sign.cmd` or `EQLogParserInstall/*.iss`, read `docs/ReleaseChecklist.md`

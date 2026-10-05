@@ -151,19 +151,27 @@ internal static class PipelineHarness
         // Same pattern LineParsersTest uses. In tests ConfigUtil.ServerName is empty, so Clear()
         // does not Save() anything.
         //
-        // WHAT THESE RESETS DO NOT REACH — measured 2026-11 by running eqlog_Incogitable_xegony.txt TWICE in one process
-        // (same file, same 1,891,875 facts, same 420,115 heals): the first parse routes 102,420 facts tanking-side, the second
-        // 104,126. The difference is four names' worth of Pet claims that `AddVerifiedPet` registers while parsing and a later
-        // parse in the same process does not — verified pets 182 -> 178, verified players unchanged at 534; the names are
-        // Squirticus (1,625 facts), Plimpy (61) and Stormclaw (20). Each rides `IsRaidVictimAt` on its DEFENDER, so losing the
-        // claim moves facts from the tanking board into the unrouted drop: same total, different split, nothing throws.
-        // Ruled out by measurement (identical in both orders): IdentityPriorStore (0 rows), IdentityOverrideStore (0), the learned
-        // spell set (14), a freshly CONSTRUCTED EQDataStore per run, and HealingLineParser's repeat cache.
-        // So: **one real-log capture per process** if the number matters, or treat every parse after the first as history-dependent.
-        // The census in UnrowedFactsTest prints the state line that locates this class of drift in one look. The open design
-        // question — not a test problem — is whether Pet-ness should be a parse side effect at all when R5's possessive words and
-        // the cast lines already say it on the timeline.
+        // RecordsStore is part of the reset set, and that one line closes a drift this project spent two investigations on:
+        // running eqlog_Incogitable_xegony.txt twice in one process used to route 102,420 facts tanking-side the first time and
+        // 104,126 the second - verified pets 182 -> 178, with Squirticus (1,625 facts), Plimpy (61) and Stormclaw (20) reading
+        // Pet/RegistrySeed on the first parse and Unknown on the second. Same file, same fact count, same rows: only the split moved,
+        // because IsRaidVictimAt(defender) answers raid-side for an UNPLACED name and not for a Pet.
+        //
+        // The mechanism is not identity design - it is this reset list missing one store. EQDataStore.FindPreviousCast resolves an
+        // ambiguous spell-name match by asking RecordsStore.GetCastsBySpellName what this caster cast recently, so leftover records from
+        // an earlier parse in the same process change how many rows a cast line resolves to; CastLineParser registers a custom-named pet
+        // only when that resolution yields exactly one row (its own guard: "dont change a pet into a player by accident"), so on the
+        // second parse the registration silently stops. Measured directly, tracing the two registration sites: the same spell came back
+        // with n=1 on pass 1 and n=6/16/24/40 on pass 2 for identical lines. Clearing RecordsStore per capture makes pass 2 equal pass 1
+        // (verifiedPets 182 = 182, all three names claimed both times).
+        //
+        // PRODUCTION WAS NEVER AFFECTED: RecordsStore registers with LifecycleManager (RecordsStore.cs) and its Clear(serverChanged) runs
+        // on the log-close/another-opens fan-out, so one app session's capture never parses against another's cast memory. The gap was
+        // the harness - which is why "one real-log capture per process" was written down as a measurement rule before this line existed.
+        // It is no longer needed: `CaptureReproducibilityTest` asserts identical input -> identical output inside one process, on a fixture
+        // and (gated) on a real capture.
         PlayerRegistry.Instance.Clear();
+        RecordsStore.Instance.Clear(false);
 
         Action<DamageProcessedEvent>? observer = null;
         if (onEvent is not null)
