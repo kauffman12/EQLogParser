@@ -29,7 +29,7 @@ namespace EQLogParser
    * - ONLY WHAT A LATER LOG MIGHT NOT ANSWER AGAIN IS RECORDED. An entry means "some rule read this name off an
    * EVENT in a real log" - a target frame, a /who roster, guild speech, a charm line, the graph - and the rule code
    * is stored with it. A verdict whose input the app owns forever is not memory, it is a restatement; see
-   * WorthRemembering for that vocabulary. Operator verdicts live in mirror-overrides.txt (Manual), roster membership
+   * WorthRemembering for that vocabulary. Operator verdicts live in identity-overrides.txt (Manual), roster membership
    * in players.txt and pet mappings in petmapping.txt: copying any of those in here would launder an assertion into
    * statistics.
    *
@@ -216,7 +216,7 @@ namespace EQLogParser
      *   R5-owner    "X`s pet" states its owner inside the name, and the durable half of that claim (who owns what)
      *               belongs to petmapping.txt, where the operator can actually see and edit it.
      *   R0-local    this session's own character, from settings - present by construction.
-     *   R10/Manual  the operator's verdict: mirror-overrides.txt IS that file, and copying it in here would report a
+     *   R10/Manual  the operator's verdict: identity-overrides.txt IS that file, and copying it in here would report a
      *               human assertion as "N captures agreed".
      *   RegistrySeed / "You"  this session's roster inputs, not evidence.
      *   Prior       this file reading itself. Recording it is how a wrong name becomes permanently right.

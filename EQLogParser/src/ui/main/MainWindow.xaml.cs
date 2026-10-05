@@ -420,7 +420,7 @@ namespace EQLogParser
          * nothing was live, NewFightObserved opens it on the next pull instead. No session running answers false: a
          * capture that is not running has no facts, and this path does not fall back to have something to say.
          */
-        if (MirrorMeter.HasLiveFight())
+        if (DerivedMeter.HasLiveFight())
         {
           _damageOverlay?.Close();
           _damageOverlay = new DamageOverlayWindow(false, reset);
@@ -1405,7 +1405,7 @@ namespace EQLogParser
               // update pet/player windows all at once
               PlayerRegistry.Instance.Init();
 
-              // R10: the operator's own verdicts on names are per server too (mirror-overrides.txt), and they
+              // R10: the operator's own verdicts on names are per server too (identity-overrides.txt), and they
               // have to be loaded before the engine's first derive or the rules answer alone.
               IdentityOverrideStore.Instance.Init(server);
 

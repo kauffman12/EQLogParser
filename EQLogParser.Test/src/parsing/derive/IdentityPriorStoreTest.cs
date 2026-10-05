@@ -9,7 +9,7 @@ namespace EQLogParser;
  *
  *   - Only what a rule READ off an EVENT is recorded, with its rule code - and only what a LATER LOG might not answer
  *     again. npcs.txt (R6), a name's own spelling (R14/R16), the word "pet" inside a summon's name (R5-owner), this
- *     session's character (R0-local), Manual verdicts (mirror-overrides.txt), roster names (players.txt) and this
+ *     session's character (R0-local), Manual verdicts (identity-overrides.txt), roster names (players.txt) and this
  *     file's own contents are inputs rather than evidence: they answer the same way in every capture, so writing them
  *     down is noise that cannot be corrected from, and would turn an assertion into statistics about itself.
  *   - Agreement is idempotent per capture. Derivation re-runs whenever a filter or override changes; a counter
@@ -419,7 +419,7 @@ public class IdentityPriorStoreTest
     foreach (var name in names)
       Assert.AreEqual(ownVerdicts[name], timeline.IdentityWithSource(name, out _),
                       "clearing a prior reached into this capture's own classification");
-    foreach (var other in new[] { "mirror-overrides.txt", "players.txt", "petmapping.txt" })
+    foreach (var other in new[] { "identity-overrides.txt", "players.txt", "petmapping.txt" })
       Assert.IsFalse(File.Exists(Path.Combine(_tempDir, Server, other)),
                      $"clearing a prior wrote {other}; one menu item touches one file");
   }

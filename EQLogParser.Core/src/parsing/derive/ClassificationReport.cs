@@ -45,7 +45,7 @@ namespace EQLogParser
       /// <summary>The rule that decided, e.g. "R1-target", "R6-npcdb", "Manual". Empty when nothing claimed the name.</summary>
       public string Reason { get; init; } = string.Empty;
 
-      /// <summary>This name carries an operator verdict in mirror-overrides.txt (and can be reverted).</summary>
+      /// <summary>This name carries an operator verdict in identity-overrides.txt (and can be reverted).</summary>
       public bool IsOperatorVerdict { get; init; }
 
       /// <summary>Class for this name: what the class engine last recorded - a spell-learned class wins over
@@ -579,7 +579,7 @@ namespace EQLogParser
   /*
    * The two things an operator can DO about a name in this engine, in one place, so the Names window and the fight grids'
    * right-click menus cannot drift into writing different files again (they do today: "Add player" writes
-   * players.txt while "Set as Pet" writes mirror-overrides.txt).
+   * players.txt while "Set as Pet" writes identity-overrides.txt).
    *
    * Every command leaves the capture untouched — these are readings, not edits of history — so the caller re-runs
    * the derive afterwards (DeriveEngine.RunDeriveAsync) and the whole board updates without a re-parse. Nothing here

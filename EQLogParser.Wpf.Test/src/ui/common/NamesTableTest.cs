@@ -91,7 +91,7 @@ public class NamesTableTest
     Assert.IsTrue(row.Overrulable, "an operator's own claim must always be takeable back");
 
     // The dropdown preselects from Kind and refuses to write what the row already says; without this, a click that
-    // changes nothing would spend a derive pass and rewrite mirror-overrides.txt.
+    // changes nothing would spend a derive pass and rewrite identity-overrides.txt.
     Assert.AreEqual(IdentityKind.Npc, row.Kind);
   }
 
@@ -161,7 +161,7 @@ public class NamesTableTest
 
   /*
    * No hover in this pane names a file. Four of them sit behind these rows (players.txt, npcs.txt, identity-priors.txt,
-   * mirror-overrides.txt), and naming one answers "which file said so" rather than the question a tooltip is for; worst of
+   * identity-overrides.txt), and naming one answers "which file said so" rather than the question a tooltip is for; worst of
    * all was the roster flag on a row whose Type came from a rule, where "in players.txt" looked like an unresolved
    * contradiction. The two proof clauses that used to quote filenames say what the file IS instead — "On the NPC List",
    * "The Name of a Spell".

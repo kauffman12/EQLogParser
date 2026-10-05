@@ -464,7 +464,7 @@ namespace EQLogParser
 
       // Preselect what the row already says, so the list opens on the current verdict — and so the guard in
       // TypeSelectionChanged can tell "the click that opened this" from "a different answer", which is the difference
-      // between refreshing a window and rewriting mirror-overrides.txt for nothing. An unplaced name selects nothing:
+      // between refreshing a window and rewriting identity-overrides.txt for nothing. An unplaced name selects nothing:
       // "Clear claim" is an action, not what the row currently is.
       typeEditComboBox.SelectedValue = row.Kind == IdentityKind.Unknown ? null : row.Kind;
 
@@ -481,7 +481,7 @@ namespace EQLogParser
 
       /*
        * Three refusals before a write: no row (the click that opened the popup, or a popup already closed), the answer it
-       * already gives (a no-op must not spend a derive pass or rewrite mirror-overrides.txt), and a name whose own spelling
+       * already gives (a no-op must not spend a derive pass or rewrite identity-overrides.txt), and a name whose own spelling
        * settles the kind. The last one is redundant with the list this popup was opened with — deliberately so: the guard
        * and the menu read the same recognizer, and if they ever drift the guard wins rather than writing what the pane
        * never offered.
@@ -492,7 +492,7 @@ namespace EQLogParser
 
       /*
        * "Clear claim" takes back EVERYTHING this window remembers about the name, not only the line in
-       * mirror-overrides.txt: without the ledger entry going too, the row comes straight back on the next derive wearing
+       * identity-overrides.txt: without the ledger entry going too, the row comes straight back on the next derive wearing
        * its remembered verdict, which is the opposite of what the click looks like it did. Setting a verdict drops the
        * prior as well — this capture's answer now outranks it, and IdentityPriorStore.Recall stops offering it, so the
        * "... in previous log" tooltip cannot survive the override that replaced it.

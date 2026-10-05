@@ -32,18 +32,18 @@ namespace EQLogParser
     private int _savedDamageMode;
 
     /*
-     * The numbers come from the capture: one calculation over the mirrored facts inside a window (DerivedTotals).
+     * The numbers come from the capture: one calculation over the captured facts inside a window (DerivedTotals).
      * The old running-total tally this replaced is deleted along with the engine that fed it, so no dial selects
      * between engines any more - and none of the open/close rules can disagree about which one is on.
      *
-     * What moves over is only WHERE the numbers come from: one calculation over the mirrored facts inside a window
+     * What moves over is only WHERE the numbers come from: one calculation over the captured facts inside a window
      * (DerivedTotals), instead of the overlay's own running totals. The meter's policy stays here, because it always was
      * the meter's — `OverlayDamageMode` deciding when a quiet board zeroes itself (0 = on kill, i.e. the engagement gap,
      * otherwise N seconds), and the window starting at the reset. That is why the engine holds no "current fight": the
      * seconds a board covers is this component's business.
      */
-    private bool _mirrorMeterWarned;
-    private int _mirrorFailures;
+    private bool _meterWarned;
+    private int _meterFailures;
 
     /*
      * The first second this board adds up, STATIC on purpose. Legacy got "the meter closed with the X and came back where it
@@ -57,7 +57,7 @@ namespace EQLogParser
      * Nothing runs while no window exists, so an X does not age the start either. A reopen inside the quiet range therefore
      * shows the whole pull, and a reopen after it gets one fresh board — which is the dial deciding, not a special case here.
      */
-    private static double _mirrorWindowT = -1;
+    private static double _meterWindowT = -1;
     private int _currentShowCritRate;
     private int _savedShowCritRate;
     private bool _currentHideOthers;
@@ -250,7 +250,7 @@ namespace EQLogParser
        * ResetOverlayFights on every log open). Reset to null as well, so a later re-enable cannot inherit the previous
        * capture's window start.
        */
-      _mirrorWindowT = -1;
+      _meterWindowT = -1;
       if (session is not null) session.Derived += OnDerived;
     }
 
@@ -402,7 +402,7 @@ namespace EQLogParser
      * is indistinguishable from correct numbers, which is the worst failure a meter can have — so failures blank the
      * board and say so in the log instead.
      */
-    private DamageOverlayStats BuildMirrorUpdate()
+    private DamageOverlayStats BuildMeterUpdate()
     {
       var session = DeriveEngine.Active;
       if (session is null)
@@ -410,9 +410,9 @@ namespace EQLogParser
         // Loud, not legacy. The dial means "the derived numbers, or nothing": an empty board plus one line saying why.
         // Falling back to the old tally would put two engines' numbers on one screen with no hint of which one is being
         // read, and the moment the legacy path goes away that fallback becomes a silent blank.
-        if (!_mirrorMeterWarned)
+        if (!_meterWarned)
         {
-          _mirrorMeterWarned = true;
+          _meterWarned = true;
           Log.Warn("Damage meter: the derived fight list is enabled but no capture is running, so the board stays "
                    + "empty until a log is opened (turn Derived Fight List off to use the legacy tally).");
         }
@@ -420,7 +420,7 @@ namespace EQLogParser
         return null;
       }
 
-      _mirrorMeterWarned = false;
+      _meterWarned = false;
 
       try
       {
@@ -435,10 +435,10 @@ namespace EQLogParser
          * old logs are for.
          */
         var nowT = (DateTime.Now - DateTime.MinValue).TotalSeconds;
-        var timeout = MirrorMeter.TimeoutFor(_currentDamageMode);
+        var timeout = DerivedMeter.TimeoutFor(_currentDamageMode);
 
         // Phase 1: the seconds this board covers, from what is stored and nothing else (no lastFactT known before building).
-        var fromT = LiveFights.WindowStartFor(_mirrorWindowT, double.NaN, nowT, timeout);
+        var fromT = LiveFights.WindowStartFor(_meterWindowT, double.NaN, nowT, timeout);
         var update = session.BuildOverlayStats(fromT, nowT, out var lastFactT);
 
         /*
@@ -447,8 +447,8 @@ namespace EQLogParser
          * here, so the next pull counts from now rather than from an old reset. Otherwise the start carries forward, including
          * across this window being closed and reopened.
          */
-        _mirrorWindowT = LiveFights.WindowStartFor(_mirrorWindowT, lastFactT, nowT, timeout);
-        if (_mirrorWindowT != fromT)
+        _meterWindowT = LiveFights.WindowStartFor(_meterWindowT, lastFactT, nowT, timeout);
+        if (_meterWindowT != fromT)
         {
           return null;
         }
@@ -469,10 +469,10 @@ namespace EQLogParser
          * says so — first time immediately, then every 30th tick with the running count so a fault that repeats at timer
          * rate cannot bury the log while still being visible as a growing number.
          */
-        _mirrorFailures++;
-        if (_mirrorFailures == 1 || _mirrorFailures % 30 == 0)
+        _meterFailures++;
+        if (_meterFailures == 1 || _meterFailures % 30 == 0)
         {
-          Log.Error($"Damage meter: derived build failed ({_mirrorFailures} time(s)); the board is empty until it works",
+          Log.Error($"Damage meter: derived build failed ({_meterFailures} time(s)); the board is empty until it works",
             ex);
         }
 
@@ -503,7 +503,7 @@ namespace EQLogParser
           lock (StatsLock)
           {
             damageOverlayStats = _stats;
-            var update = BuildMirrorUpdate();
+            var update = BuildMeterUpdate();
 
             if (update == null)
             {
@@ -620,7 +620,7 @@ namespace EQLogParser
          * between pulls closes instead of waiting out the log, and comes back on the next pull through
          * DeriveEngine.LiveDamageObserved rather than lingering invisibly until the app restarts.
          */
-        var stillSomethingToShow = MirrorMeter.HasLiveFight(_currentDamageMode);
+        var stillSomethingToShow = DerivedMeter.HasLiveFight(_currentDamageMode);
         if (!stillSomethingToShow)
         {
           MainActions.CloseDamageOverlay(false);
@@ -1076,7 +1076,7 @@ namespace EQLogParser
          * The board holds nothing between ticks - it is recomputed from the facts inside its seconds - so a reset is
          * moving the window's start to the next tick and nothing else.
          */
-        _mirrorWindowT = -1;
+        _meterWindowT = -1;
       }
     }
 

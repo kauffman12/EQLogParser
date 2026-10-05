@@ -464,7 +464,7 @@ public class ClassificationReportTest
   }
 
   /* A verdict is a claim about KIND and nothing else. players.txt is not part of it: "that is the enemy" belongs in
-   * mirror-overrides.txt (R10), while the roster stays a record of who is ours. (This fixture used to arrive through a
+   * identity-overrides.txt (R10), while the roster stays a record of who is ours. (This fixture used to arrive through a
    * `!Name` rejection whose lifting the test asserted; nothing writes one any more — see
    * PlayerRegistryPersistenceTest — and the census pool has no reason to hold a name that neither the log nor the
    * roster mentions, so the surviving half is pinned on a name the capture really spoke about.) */
