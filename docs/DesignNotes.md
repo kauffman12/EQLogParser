@@ -5842,6 +5842,21 @@ attribute. Standing rule: AGENTS.md -> "A gated real-log test is disposable".
 
 ## Memory: one import, three files, aging on the file's own clock (2026-11)
 
+> **Status: decided 2026-11, NOT BUILT.** Read every table row below as "what it will hold", because none of it exists
+> yet. What is true in the tree today:
+>
+> - `players.txt` is still written by the parser exactly as before (`Name=<ticks>[,Class]`), and nothing imports it.
+> - `identity-priors.txt` holds rule verdicts only — no membership rows, no learned classes, no `Imported` provenance word.
+> - `identity-overrides.txt` holds `Name=Kind` with **no class field**. An operator-set class exists today but lives in the
+>   WRONG file for the plan: the Names pane's Class pencil calls `PlayerRegistry.SetDefaultPlayerClass`, which writes the name
+>   into `players.txt` as a verified player (which is why the icon appears only on a Player row). Moving that claim to
+>   `Name=Kind|Class` in the override file is the unbuilt half.
+> - Aging is still `PlayerRegistry.Save()`'s 180-day **wall-clock** cut (the one this section exists to replace).
+> - Already true: `petmapping.txt` unchanged, "roster" reserved for the live `/who` groups of one capture
+>   (`RaidRosterStore`, in memory), and no `!Name` rejection anywhere.
+>
+> When the work lands, delete this block rather than leaving it as history — a stale "not built" note is worse than none.
+
 The layout this work converged on, written down before the code so the reason
 survives. First draft said "four files, one per law"; that was one file per
 COLUMN, and the word `roster` was wrong too - in this game a roster is the live
