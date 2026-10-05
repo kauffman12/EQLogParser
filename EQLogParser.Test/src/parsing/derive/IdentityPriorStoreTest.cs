@@ -33,6 +33,16 @@ public class IdentityPriorStoreTest
   private const string Server = "Ledger Test";
   private const long DayS = 24 * 60 * 60;
 
+  private static readonly string[] SideFiles = ["identity-overrides.txt", "players.txt", "petmapping.txt"];
+
+  /// <summary>What one of this server's OTHER files holds right now — null when it is not there. The comparison the "one menu
+  /// item touches one file" test runs on, so a file another test class happened to flush cannot make it fail.</summary>
+  private string? SideFileContent(string name)
+  {
+    var path = Path.Combine(_tempDir, Server, name);
+    return File.Exists(path) ? File.ReadAllText(path) : null;
+  }
+
   [TestInitialize]
   public void Setup()
   {
@@ -583,15 +593,24 @@ public class IdentityPriorStoreTest
     // comparison below is about the clear rather than about what the rules happen to conclude.
     var ownVerdicts = names.ToDictionary(n => n, n => timeline.IdentityWithSource(n, out _));
 
-    ClassificationCommands.ClearPrior(store, names[0]);
+    // "One menu item touches one file" is a statement about what the CLEAR changes, so it is measured as bytes-before /
+    // bytes-after rather than as "these files do not exist". Absence was the bug in the test itself: `PlayerRegistry` is a
+    // process-global singleton that other classes leave holding verified players, and anything that flushes it during this run
+    // drops a players.txt into THIS run's temp folder whether or not the clear had anything to do with it — which is how the same
+    // test passed and failed in one Windows session. Contents being unchanged survives that; existence could not. (The next step for
+    // these stores, when someone wants zero disk: hand them a writer/sink so persistence is injectable and this becomes a pure
+    // in-memory assertion like any other calculation.)
+    string?[] before = [.. SideFiles.Select(SideFileContent)];
+
+ClassificationCommands.ClearPrior(store, names[0]);
 
     Assert.IsFalse(store.TryGet(names[0], out _));
     Assert.IsTrue(store.All().Count > 1, "clearing one name emptied the ledger");
     foreach (var name in names)
       Assert.AreEqual(ownVerdicts[name], timeline.IdentityWithSource(name, out _),
                       "clearing a prior reached into this capture's own classification");
-    foreach (var other in new[] { "identity-overrides.txt", "players.txt", "petmapping.txt" })
-      Assert.IsFalse(File.Exists(Path.Combine(_tempDir, Server, other)),
-                     $"clearing a prior wrote {other}; one menu item touches one file");
+    for (var i = 0; i < SideFiles.Length; i++)
+      Assert.AreEqual(before[i], SideFileContent(SideFiles[i]),
+                      $"clearing one prior changed {SideFiles[i]}; one menu item touches one file");
   }
 }
