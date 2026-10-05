@@ -1663,8 +1663,6 @@ namespace EQLogParser
       _eqLogReader?.Dispose();
       _notifyIcon?.Dispose();
       petMappingGrid?.Dispose();
-      verifiedPetsGrid?.Dispose();
-      verifiedPlayersGrid?.Dispose();
       SystemEvents.PowerModeChanged -= SystemEventsPowerModeChanged;
 
       // restore from backup will use explicit mode
