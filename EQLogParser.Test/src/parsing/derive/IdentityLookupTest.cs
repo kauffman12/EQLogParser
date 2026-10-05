@@ -159,6 +159,44 @@ public class IdentityLookupTest
   }
 
   [TestMethod]
+  public void AMercenaryAnswersTheSecondQuestionAndNotTheFirst()
+  {
+    /*
+     * `IsOneOfUsOrMerc` is the name for what six call sites used to write by hand (`IsVerifiedPlayer(x) || IsMerc(x)`):
+     * the panes that list combatants — the spell viewer's "players only", a meter's grouping, the ribbon — want a merc in
+     * the room. Naming it here is what keeps the widening in one place instead of six that can drift.
+     */
+    PlayerRegistry.Instance.AddMerc("Kajid");
+
+    Assert.IsTrue(IdentityLookup.IsOneOfUsOrMerc("kajid"), "a /target mercenary stopped being a combatant of ours");
+    Assert.IsFalse(IdentityLookup.IsOneOfUs("Kajid"), "and yet it is still not on the roster — the two questions differ");
+    Assert.IsFalse(IdentityLookup.IsOneOfUsOrMerc("Stranger"));
+  }
+
+  [TestMethod]
+  public void AVerdictOfMercCountsForTheSecondQuestion()
+  {
+    Watch("Vashne", IdentityKind.Merc);
+
+    Assert.IsTrue(IdentityLookup.IsOneOfUsOrMerc("Vashne"));
+    Assert.IsFalse(IdentityLookup.IsOneOfUsOrMerc("Stormclaw"), "a pet is neither question, however much it fights beside us");
+  }
+
+  [TestMethod]
+  public void TheOperatorOutvotesAStaleTargetMemory()
+  {
+    /*
+     * `/target` memory is per-session and can be wrong about a name the operator has since decided on: an override saying
+     * NPC must not be outvoted by a mercenary reading from earlier in the night. (An override saying PLAYER never reaches
+     * this branch — IsOneOfUs already answered true, which is correct for a filter asking for combatants of ours.)
+     */
+    PlayerRegistry.Instance.AddMerc("Brambel");
+    IdentityOverrideStore.Instance.Set("Brambel", IdentityKind.Npc);
+
+    Assert.IsFalse(IdentityLookup.IsOneOfUsOrMerc("Brambel"), "a stale /target reading kept a name in the player list");
+  }
+
+  [TestMethod]
   public void TheTimedFormAsksAboutTheMomentItWasGiven()
   {
     // The seam receives the time it was handed, so a charmed raider can be ours at 20:00 and not at 20:05.

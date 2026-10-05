@@ -123,10 +123,24 @@ namespace EQLogParser
 
             if (dataGrid.SelectedItem is PlayerStats playerStats && dataGrid.SelectedItems.Count == 1)
             {
-              menuItemSetPlayerClass.IsEnabled = PlayerRegistry.Instance.IsVerifiedPlayer(playerStats.OrigName);
+              /*
+               * "Is this one of ours?" is the seam's question now (docs/DesignNotes.md → "The one seam that answers"): override,
+               * then what this capture watched, then memory. Two visible
+               * consequences, both intended: a raider the rules proved tonight gets her class menu even though she was
+               * never typed into players.txt, and "Set as Verified Player" goes grey for her because she is already
+               * ours — the item is for names nothing can place, not for names this log just did.
+               */
+              menuItemSetPlayerClass.IsEnabled = IdentityLookup.IsOneOfUs(playerStats.OrigName);
+
+              /*
+               * The negated PAIR question: "neither a player nor a mercenary". A merc is a combatant of ours without
+               * being one of us, and offering one as somebody's pet is wrong for the same reason it is wrong to offer a
+               * raid member — so this asks the second question rather than the first (IsOneOfUsOrMerc: why that is a
+               * named question instead of `!IsOneOfUs(x) && !IsMerc(x)` at every call site).
+               */
               menuItemSetAsPet.IsEnabled = playerStats.OrigName != Labels.Unk && playerStats.OrigName != Labels.Rs &&
-              !PlayerRegistry.Instance.IsVerifiedPlayer(playerStats.OrigName) && !PlayerRegistry.Instance.IsMerc(playerStats.OrigName);
-              menuItemSetAsPlayer.IsEnabled = !PlayerRegistry.Instance.IsVerifiedPlayer(playerStats.OrigName) &&
+              !IdentityLookup.IsOneOfUsOrMerc(playerStats.OrigName);
+              menuItemSetAsPlayer.IsEnabled = !IdentityLookup.IsOneOfUs(playerStats.OrigName) &&
               PlayerRegistry.IsPossiblePlayerName(playerStats.OrigName);
               selectedName = playerStats.OrigName;
               menuItemShowDeathLog.IsEnabled = !string.IsNullOrEmpty(playerStats.Special) && playerStats.Special.Contains('X');
@@ -160,7 +174,9 @@ namespace EQLogParser
       menuItemPetOptions.Children.Clear();
       if (CurrentStats != null)
       {
-        foreach (var stats in CurrentStats.StatsList.Where(stats => PlayerRegistry.Instance.IsVerifiedPlayer(stats.OrigName)).OrderBy(stats => stats.OrigName))
+        // The "assign owner" list is built from the same question, so the grid and this dropdown can never disagree
+        // about who may own a pet — one seam, one answer (docs/DesignNotes.md → "Memory: one import, three files").
+        foreach (var stats in CurrentStats.StatsList.Where(stats => IdentityLookup.IsOneOfUs(stats.OrigName)).OrderBy(stats => stats.OrigName))
         {
           var item = new MenuItem { IsEnabled = true, Header = stats.OrigName };
           item.Click += AssignOwnerClick;

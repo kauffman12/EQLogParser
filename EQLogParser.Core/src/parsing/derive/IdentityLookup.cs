@@ -81,5 +81,33 @@ namespace EQLogParser
       //    durable roster and PlayerRegistry is its in-memory mirror, fed from it at log open (PlayerRegistry.Init).
       return IdentityPriorStore.Instance.TryGetRoster(name) || PlayerRegistry.Instance.IsVerifiedPlayer(name);
     }
+
+    /*
+     * The SECOND question, named instead of spelled out at every call site: "player OR mercenary". Half a dozen panes ask
+     * it — the spell-damage viewer's "players only" filter, the "Set as Pet of" enable rules — and each one today writes
+     * `IsVerifiedPlayer(x) || PlayerRegistry.IsMerc(x)` by hand. Folding Merc into IsOneOfUs was refused (class comment: a
+     * merc is on nobody's roster, and widening that answer moves menus nobody chose to move), so the widening lives HERE,
+     * where the difference is one line rather than six call sites free to drift apart.
+     *
+     * A merc is claimed by what was DECIDED or SEEN, never by memory alone: `/target` fills PlayerRegistry's mercenary set
+     * for the session (it is not persisted — docs/DesignNotes.md → "What this application remembers"), and an operator
+     * override saying Merc counts too, because step 1 of the seam ends questions in both directions.
+     */
+    internal static bool IsOneOfUsOrMerc(string? name) => IsOneOfUsOrMerc(name, double.PositiveInfinity);
+
+    internal static bool IsOneOfUsOrMerc(string? name, double t)
+    {
+      if (string.IsNullOrEmpty(name)) return false;
+      if (IsOneOfUs(name, t)) return true;
+
+      // The operator before the session memory: an override is an answer, not a hint, and a stale /target reading must not
+      // outvote what a person decided about this name.
+      if (IdentityOverrideStore.Instance.TryGet(name, out var chosen)) return chosen == IdentityKind.Merc;
+
+      var live = LiveVerdict;
+      if (live is not null && live(name, t) == IdentityKind.Merc) return true;
+
+      return PlayerRegistry.Instance.IsMerc(name);
+    }
   }
 }

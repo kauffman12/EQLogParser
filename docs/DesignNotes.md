@@ -6132,7 +6132,24 @@ a full pass builds a fresh timeline and swaps the reference, so a UI-thread read
 ones, never a half-written table.
 
 Call sites move one pane per commit, and while a pane has not moved it still asks the roster - that is the state this file
-describes today, not a design compromise. What is on the seam now: [see the commits that reference this section].
+describes today, not a design compromise.
+
+**On the seam now:** `DamageSummary` (the row context menu's three enable rules and the "assign owner" dropdown). The next
+ones are `TankingSummary`, `HealingSummary`, `SpellDamageStatsViewer`, `ColumnChart`, `SpellCountBuilder`'s fallback and
+`DamageRibbon`'s default `IsPlayerName`. **Not** on it, deliberately: the parsers (`DamageLineParser`, `HealingLineParser`,
+`CastLineParser`), which run during ingest where no timeline exists yet, and `ClassificationReport`, whose whole job is to
+compare the roster against the verdict - pointing it at the seam would make it agree with itself and report no
+disagreements ever.
+
+**The second question has a name.** Six call sites wrote `IsVerifiedPlayer(x) || PlayerRegistry.IsMerc(x)` by hand; that
+pair is now `IdentityLookup.IsOneOfUsOrMerc(x)`, which keeps the widening in one place instead of six that can drift. A
+merc is claimed by what was decided or seen (an override, a `/target` reading this session) and never by the roster lane -
+a mercenary is on nobody's raid list, which is why folding it into `IsOneOfUs` stays refused while the pair question needs
+it. An operator override wins over stale `/target` memory in both directions (pinned in `IdentityLookupTest`).
+
+What a migrated pane changes visibly, stated once because it is the same in every pane: a name tonight's capture proved but
+nobody ever typed anywhere now appears in "players only" filters and owner dropdowns, and "Set as Verified Player" greys
+out for her - that item is for names nothing can place.
 
 ### The one-time roster import: membership moves, and nothing else does (built 2026-11)
 
