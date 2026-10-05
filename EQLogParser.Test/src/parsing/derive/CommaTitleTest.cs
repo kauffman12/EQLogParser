@@ -10,7 +10,7 @@ namespace EQLogParser;
  * after it, and the two markers do not overlap — `Kratakel, Lord Misery` takes neither an article nor (until Sep
  * 2026) a registry entry, while carrying 71M of attack damage across our captures.
  *
- * Measured over the six captures 2022-2026 (docs/combat-mirror-design.md → "A comma means it is not a player"):
+ * Measured over the six captures 2022-2026 (docs/DesignNotes.md → "The NPC registry in data/npcs.txt"):
  * exactly 11 name fields carry a comma, seven of them also arrive with `Targeted (NPC)` (Certain), one is an owned
  * summon, and none — not once in four years — ever appears under `Targeted (Player)`. The three left over rest on
  * npcs.txt alone, which is the arrangement this rule backs up for content newer than any list we ship.
@@ -152,7 +152,7 @@ public class CommaTitleTest
      * The one counterexample class this shape has: summon names are free text, so a pet may be called
      * "Feroun, come back", and it prints with no ownership word for R5 to read. It stays our side because R16 runs
      * after R15 — which only considers names still Unknown — so the ordering decides in favour of the heal lines.
-     * Same lesson as `A good egg` (docs/combat-mirror-design.md → "Fourth audit"): a shape may say a name is not
+     * Same lesson as `A good egg` (docs/DesignNotes.md → "Breadth of evidence, measured"): a shape may say a name is not
      * a person, never which side it fights on.
      */
     [TestMethod]

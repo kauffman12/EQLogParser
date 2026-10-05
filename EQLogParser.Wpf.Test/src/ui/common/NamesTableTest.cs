@@ -353,7 +353,7 @@ public class NamesTableTest
   }
 
   /*
-   * "Healed" is decided by BREADTH, so the number that justifies it is a headcount (docs/combat-mirror-design.md →
+   * "Healed" is decided by BREADTH, so the number that justifies it is a headcount (docs/DesignNotes.md → "Breadth of evidence, measured" →
    * "Fourth audit": pets draw 19-52 distinct casters, every genuine hostile measured tops out at 10). CensusHealProofTest
    * pins that the count is the rule's own crowd; what is pinned here is that the cell says the evidence in two words and
    * the tooltip says how much - and that no other verdict borrows the line.

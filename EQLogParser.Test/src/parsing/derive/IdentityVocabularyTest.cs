@@ -9,7 +9,7 @@ namespace EQLogParser;
  * means asserting what it covers, like every other closed vocabulary here. A new rule arrives with a word AND with an entry
  * in RuleWords below; either half missing fails here.
  *
- * Three contracts beyond coverage, all from the operator's complaints (docs/DesignNotes.md → "A name is not its glyph"):
+ * Three contracts beyond coverage, all from the operator's complaints (docs/DesignNotes.md → "The identity pane holds still"):
  *
  *   - The cell never carries "(earlier)". A borrowed verdict prints the same word as a local one and the tooltip says
  *     "in previous log" — the column is for identifying the proof, the hover is for weighing it.

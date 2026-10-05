@@ -3,7 +3,7 @@ using EQLogParser;
 namespace EQLogParser;
 
 /*
- * R19 - the eye a player summons (docs/combat-mirror-design.md → "An eye is not a combatant").
+ * R19 - the eye a player summons (docs/DesignNotes.md → "Breadth of evidence, measured").
  *
  * The client names the summon after whoever called it: `Eye of Shennron`, written in the same slot a mob name
  * goes, with no possessive and no owner line. Eight captures 2022-2026 (~4.2 GB) give:

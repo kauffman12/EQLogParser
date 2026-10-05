@@ -5,8 +5,8 @@ using EQLogParser;
 namespace EQLogParser.Wpf.Test
 {
   /// <summary>
-  /// What one refresh of the fight list's own row-building costs — the half of the cheap lane (docs/DesignNotes.md -> "How long a
-  /// meter update takes") that lives on this side of the seam, where the display rows are made.
+  /// What one refresh of the fight list's own row-building costs — the half of the cheap lane that lives on this side of the
+  /// seam, where the display rows are made (docs/DesignNotes.md -> "How long a meter update takes").
   ///
   /// The reason it needs its own number: the live cadence now runs a projection-only pass every half-second in between expensive
   /// ones, and that pass does not stop at the projection — <see cref="DerivedFightRows.Build"/> walks every row the capture has

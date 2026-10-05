@@ -7,7 +7,7 @@ namespace EQLogParser;
  * a person would — and the negatives that keep each of them from being smarter than the log.
  *
  *   R5 vocabulary  the game writes ownership in five words, not two: pet, warder, ward, familiar, mount
- *                  (docs/combat-mirror-design.md → audit 4). "ward" is what the newer logs call a summon;
+ *                  (docs/DesignNotes.md → "Breadth of evidence, measured"). "ward" is what the newer logs call a summon;
  *                  a capture from 2025/2026 has ~10x more wards than warders.
  *   R14 name shape an article in front of a name is the client saying "this is a thing": player names never
  *                  take one, custom pet names never take one.

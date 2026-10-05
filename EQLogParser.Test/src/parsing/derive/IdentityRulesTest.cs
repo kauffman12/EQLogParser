@@ -2,7 +2,7 @@ using EQLogParser;
 
 namespace EQLogParser;
 
-// Phase 2 identity rules (docs/batch-parsing-plan.md R-catalog), cold mode: a fresh EntityTimeline
+// Phase 2 identity rules (docs/DesignNotes.md → "The identity rule book" R-catalog), cold mode: a fresh EntityTimeline
 // fed only by ClassificationRules over the evidence facts — no registry seed, so every verdict is
 // attributable to a rule. The fixture exercises one case per implemented rule plus the negatives
 // that keep each rule honest (say-channel speaker stays Unknown, buff wear-off on a player name
@@ -224,7 +224,7 @@ public class IdentityRulesTest
         // Closed vocabulary, house law: a new family arrives with a census over several eras AND
         // servers (mob-shaped caster count must stay zero), one settings-free table row, and tests.
         // Finishing Blow was refused entry on measurement: every attacker already held a stronger
-        // claim, so the modifier mask stays stats-only (docs/combat-mirror-design.md).
+        // claim, so the modifier mask stays stats-only (docs/DesignNotes.md → "A versioned class-spell family claims its caster").
         Assert.AreEqual(15, EQDataStore.ClassSafeSpellFamilies.Length);
         Assert.AreEqual(1, EQDataStore.PetCastSpellFamilies.Length);
 

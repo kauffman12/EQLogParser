@@ -11,7 +11,7 @@ namespace EQLogParser;
  *   The raised servant then attacks under ``<master>`s pet`` — the same name every other swarm pet uses, verified
  *   first-hand on the server (a necro called Kazcro: its risen corpses were `Kazcro`s pet`) and confirmed against
  *   six captures, where a master's possessive-pet share jumps 3.6x/8.7x in the 90 s after a raise burst while
- *   control pet owners move 1.0x-2.3x (docs/combat-mirror-design.md -> "Corpses need no rule"). Nothing in the
+ *   control pet owners move 1.0x-2.3x (docs/DesignNotes.md → "A raised corpse needs no rule"). Nothing in the
  *   log ever says which of those lines came from a corpse, so there is nothing here to interpret: R5 already
  *   cuts the owner off the name and credits the master, which is the outcome a raid meter wants.
  *

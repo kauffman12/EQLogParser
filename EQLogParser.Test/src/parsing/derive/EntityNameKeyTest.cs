@@ -16,7 +16,7 @@ namespace EQLogParser;
  * Enemy) and falls back instead of failing loudly. EQ itself cannot host two entities whose names differ only by
  * case, which is why PlayerRegistry has always been OrdinalIgnoreCase; EntityTimeline is the same store for the
  * same entities. R9's charm windows are where this was found — a charmed mob stayed an enemy row in the fight
- * list while its own accounting happily credited it (docs/combat-mirror-design.md).
+ * list while its own accounting happily credited it (docs/DesignNotes.md → "The parsing direction").
  *
  * Lookups canonicalise. Storage used to keep every spelling; it no longer does — `DamageFactTable.InternName` is
  * ignore-case too and displays one form per entity, because an ordinal pool gave one mob two ids and left each
