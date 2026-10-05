@@ -3918,6 +3918,54 @@ to read Unknown. A census test that demanded Player verdicts from a cold run wou
 tests park `ConfigUtil.ConfigDir` in a temp folder, re-`Init` the store to prove a verdict reached disk, and leave both
 singletons empty on the way out (`AGENTS`: no parallelization, this is process state).
 
+### The Names census reads the derive's own timeline
+
+**Changed 2026-11.** `DeriveEngine.BuildNameCensus` used to assemble a second identity picture for the Player/NPC Identity window:
+`RegistrySeed.Apply` + `ClassificationRules.Apply` + `IdentityOverrideStore.Apply` over the whole capture, on a throwaway classification
+state, every time the window refreshed (which is every derive while the tab is open, floored at 2 s). It now reads **`_carriedTimeline`**,
+the instance the last expensive pass published, and runs only `ClassificationReport.Build`. Measured on
+`eqlog_Kizant_xegony.txt` (392 MB live capture) with the assertion that keeps the two answers identical:
+
+```
+[census-cost] eqlog_Kizant_xegony.txt: rule book (the half the pane no longer pays) 500 ms; report over the carried timeline 93 ms; rows 280
+```
+
+Re-measure with `EQLP_NAMES_CENSUS_COST=<log> dotnet test --filter OnARealCapture_CarriedCensusMatchesARuleRunAndIsTheCheaperHalf`
+(add `EQLP_EMU=1` for an EMU capture). For comparison, the same rule book inside a derive pass measured 186 ms (Kizant) / 261 ms
+(Incogitable) — the census paid that per refresh while the pass had just paid it.
+
+**Why reuse is legitimate.** A census is a *display* of a timeline, so two timelines built from one capture must say the same thing; that
+is now asserted on the fixture and on a real capture rather than argued (`ACensusOverTheCarriedTimeline_AgreesWithAWholeRuleRun`,
+`TwoTimelinesFromOneCapture_AgreeOnEveryName`, and the gated real-log twin). Two bonuses worth as much as the time: the window can no
+longer disagree with the grids — it used to run its rule book seconds *after* the pass behind the fight list, so a name could read Player
+in this pane while sitting under another verdict on the boards — and nothing in the census touches the carried classification
+**aggregates**. Those cursors and candidate tables remain the derive thread's alone, which is the reason the copy looked necessary in the
+first place.
+
+**No lock, by construction rather than by hope.** Publication is by reassignment: `Classify` builds a NEW timeline and only then assigns
+`_carriedTimeline`, and `FightProjection` reads a timeline without writing one. So the object the census walks is already frozen — a later
+pass replaces the reference. (The narrow identity readers on this class still take `SyncRoot`, as they always did; the census does not
+need it, and holding a lock across a ~90 ms walk would serialize the UI against every `OwnerOf` call in the app.)
+
+**One code change had to come first: an operator's verdict may not depend on which timeline it is read from.**
+`ClassificationReport.AddRow` used to consult `IdentityOverrideStore` only when the timeline said Unknown, because `Classify` replays the
+override file into every timeline at Manual strength — an unstated precondition of *every* caller. Over a carried instance, a claim written
+since that pass would answer with the verdict the player had just rejected. So the store now outranks the timeline directly (one dictionary
+lookup per row), and when both agree the source the rules wrote survives: `R10-manual` is the truer provenance than `Manual` when the
+timeline really did carry the claim, and the Why column's word is what a reader greps. Taking a claim back falls through to what the rules
+saw — not to nothing.
+
+**Accepted staleness, stated**: a verdict that only newer facts could produce arrives one expensive cadence later (the same accepted
+staleness as the fight list — see "A derive pass continues where the last one stopped"). An operator's own write is never stale, because the
+report reads the live store. The pane still triggers a full re-derive on every write it makes (`Reconcile`), so the timeline catches up on
+its own.
+
+**A test-side law that this work exposed**: `NamesCensusCarryTest`'s own helper replayed the override file into the timeline by default, so
+the first version of "an override written after the pass wins" passed its Kind assertion for the wrong reason — the timeline already said
+Manual and the report's fallback had nothing to do with it. The helper takes `applyOverrides:` now, and the stale-state case is built
+explicitly. A fixture that reconstructs the production precondition without being asked to cannot fail when the precondition is missing.
+
+
 ## The sighting ledger: what this server's older logs concluded (2026-08-12)
 
 Asked whether the classifier's data should be serialized and built up across log files. Splitting the question was the

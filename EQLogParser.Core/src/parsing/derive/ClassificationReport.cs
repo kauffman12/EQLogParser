@@ -422,11 +422,20 @@ namespace EQLogParser
         source = why ?? string.Empty;
       }
 
-      // No timeline (window opened before the first derive) still has to show an operator's own verdict rather than
-      // "Unknown", or the list contradicts the file it was built from.
+      /*
+       * The operator's own word outranks the rules. It always did in practice - DeriveEngine.Classify replays identity-overrides.txt
+       * into every timeline at Manual strength, so the timeline usually already says it - but that made the report depend on WHICH
+       * timeline it was handed. The Names pane now reads the timeline the last expensive pass published instead of re-running the rule
+       * book for itself (docs/DesignNotes.md → "The Names census reads the derive's own timeline"), and a name overruled since that pass
+       * would otherwise answer with the verdict the player just rejected. Saying it here costs one dictionary lookup per row and removes
+       * a hidden precondition from every caller.
+       *
+       * When the two agree, the source the rules wrote stays: "R10-manual" is the truer provenance than "Manual" when the timeline really
+       * did carry the claim, and the Why column's word is what a reader greps for.
+       */
       IdentityKind verdict = IdentityKind.Unknown;
       var isOperator = overrides is not null && overrides.TryGet(name, out verdict);
-      if (isOperator && kind == IdentityKind.Unknown)
+      if (isOperator && kind != verdict)
       {
         kind = verdict;
         source = "Manual";

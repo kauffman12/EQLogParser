@@ -256,13 +256,24 @@ namespace EQLogParser
 
     /*
      * The name census for the Player/NPC Identity window. Built on demand rather than carried in the snapshot: a derive lands every
-     * few seconds while a log loads and a census nobody has open would be thrown away each time. The timeline is
-     * assembled exactly as a derive assembles it - roster seed, rules, operator overrides last - so what the window
-     * shows is what the boards were classified with, including the roster (docs/DesignNotes.md → "The name census: what the Names window reads").
+     * few seconds while a log loads and a census nobody has open would be thrown away each time.
      *
-     * Facts can arrive while this walks them. That is acceptable here and nowhere else: a census is display data, and
-     * a name whose damage shifts by one fact between two passes costs nobody a decision, whereas a lock on the capture
-     * path would be paid for by every event. A table that refuses the walk outright leaves the previous list on screen.
+     * It reads THE TIMELINE THE LAST EXPENSIVE PASS PUBLISHED (`_carriedTimeline`) instead of assembling a second one. It used to run
+     * `RegistrySeed` + `ClassificationRules` again here, on a throwaway state, which is the same rule book the derive had just finished:
+     * measured 186 ms on Kizant and 261 ms on Incogitable per census (docs/DesignNotes.md → "The Names census reads the derive's own
+     * timeline"), paid again on every 2 s auto-refresh with the tab open, and landing on a thread of the app's choosing. Reusing the
+     * published instance buys two further things beyond the time: the window cannot disagree with the grids any more (it read a rule book
+     * that ran a few seconds LATER than the one behind the fight list, so a name could say Player in this pane and sit under another
+     * verdict on the boards), and nothing here touches the carried classification AGGREGATES - cursors and candidate tables stay the
+     * derive thread's alone, which is what made the old copy look necessary.
+     *
+     * Reading that instance without a lock is sound because publication is by reassignment: `Classify` builds a NEW timeline and only
+     * assigns `_carriedTimeline` when it is finished (and `FightProjection` reads a timeline, never writes one), so what this walks is
+     * already frozen - a later pass replaces the reference, it does not edit this object.
+     *
+     * Facts can arrive while this walks them. That is acceptable here and nowhere else: a census is display data, and a name whose
+     * damage shifts by one fact between two passes costs nobody a decision, whereas a lock on the capture path would be paid for by
+     * every event. A table that refuses the walk outright leaves the previous list on screen.
      */
     public ClassificationReport? BuildNameCensus()
     {
@@ -271,17 +282,24 @@ namespace EQLogParser
       try
       {
         /*
-         * A THROWAWAGE classification state, deliberately: the window builds a fresh EntityTimeline, so the carried
-         * aggregates have nothing to be incremental over - and sharing them with this call would let a UI thread and the
-         * derive thread walk and rewrite the same cursors and candidate tables at the same moment (the census swallows
-         * what it throws, a derive pass retires a stage after five). The price is a from-zero replay of the rules on
-         * whatever thread the window opened on - tens of milliseconds for the rules, off the capture path, once per
-         * deliberate refresh - which is what a pane that says "nothing updates by itself" is for.
+         * An operator's verdict written since that pass is NOT replayed into the carried instance (mutating a published timeline would
+         * move its state stamp and buy a full rebuild, with readers in the middle). It does not need to be: ClassificationReport asks the
+         * override store itself, and an override outranks a rule verdict there - so the window is current on the operator's own writes
+         * and stale only on what no one but the rules could know, which is exactly one expensive cadence (docs/DesignNotes.md →
+         * "A derive pass continues where the last one stopped").
          */
-        var timeline = new EntityTimeline();
-        RegistrySeed.Apply(timeline, _facts, _capture.FirstEventTime, _capture.LastEventTime);
-        ClassificationRules.Apply(_facts, timeline, _heals);
-        IdentityOverrideStore.Instance.Apply(timeline);
+        var timeline = _carriedTimeline;
+        if (timeline is null)
+        {
+          /*
+           * No expensive pass has finished yet - the window was opened in the moment between the log opening and its first full
+           * derive. Run the rule book here rather than show a list of Unknowns; this is the one case where that work is not a duplicate.
+           */
+          timeline = new EntityTimeline();
+          RegistrySeed.Apply(timeline, _facts, _capture.FirstEventTime, _capture.LastEventTime);
+          ClassificationRules.Apply(_facts, timeline, _heals);
+          IdentityOverrideStore.Instance.Apply(timeline);
+        }
 
         return ClassificationReport.Build(timeline, _facts, _heals, IdentityOverrideStore.Instance,
                                          PlayerRegistry.Instance, IdentityPriorStore.Instance);
