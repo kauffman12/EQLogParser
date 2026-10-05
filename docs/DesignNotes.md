@@ -5976,7 +5976,7 @@ a human must be able to revert one claim without disturbing another**. Under
 | --- | --- | --- | --- |
 | `identity-priors.txt` (extended) | machine memory: a previous capture's RULE verdict with the rule word, plus "this name is one of us", sightings, a learned class | `IdentityPriorStore.Record` after a pass; once, the importer below | identity census, and the startup identity seed that `RegistrySeed`'s roster half feeds today |
 | `identity-overrides.txt` (extended) | operator claims: `Name=Kind`, now `Name=Kind\|Class` | only the pane | identity/class lookup, above anything a capture teaches; one Revert drops both halves |
-| `petmapping.txt` (unchanged) | pet -> owner pairs | stays as today, the Pet Owners grid edits it | `RegistrySeed` (the pair survives every log) |
+| `petmapping.txt` (**stamped — built**) | pet -> owner pairs, now `Fluffy=Ziggy\|<dotnet seconds>` when this application saw the pair | the parser's ownership learning, `'My leader is X'` in chat, the Pet Owners grid edit | `RegistrySeed` (the pair survives every log); the suffix is stripped at load so no UI ever prints it |
 
 Three files where four are in use now: `players.txt` retires after its one-time
 import, and nothing new is added. The class column of `players.txt` was never a
@@ -6005,6 +6005,20 @@ Three laws keep that merger honest:
   identity must then agree: pet pairs need a last-seen stamp to age at all, and the
   prior ledger's "90 days behind my own newest row" becomes the same window against
   now, because a ledger nobody opens currently keeps everything forever.
+  **Built for the two files that exist today** (2026-11): `PlayerRegistry.StaleDays` = **200** is the single dial, and
+  pet rows carry their own stamp because — as this item said — a pair with no time cannot be asked whether it is still
+  true. The stamp is written on a *sighting* (a possessive line, a chat ownership line, an edit in the grid) from the
+  wall clock, since what ages is our memory and replaying last year's capture refreshes a pet today; rows with no stamp
+  are statements and never retire. A load is **not** a sighting — `AddPetToPlayer` used to end with `AddVerifiedPet(pet)`,
+  dropping its own `init`, so every startup stamped the whole file with today's date and nothing could expire while the
+  file looked freshly written (pinned; the same class pins that one dial ages both files in one save).
+- **The capture import reads the channels somebody plays with (decided 2026-11, not built).** Group, Raid and
+  Fellowship — plus a guild channel where an operator shares one. **General is ignored**: its
+  `Player Name Joined/Left The Channel.` lines fire for everyone in a city-wide channel, so every name in them is a
+  stranger in another zone, and the census would collect passers-by instead of a raid. (`Blazem` speaks only in
+  General, which is precisely why nothing knows him; that stays true by decision.) Achievement lines —
+  `X has earned the <title> title!`, already R22 — join the same list as captures show more shapes.
+
 - **An operator claim never ages.** `Save()`'s existing "no timestamp = permanent" is
   already that rule for hand-typed players (the `M` bit exists but no shipped file used
   it); extending it to overrides and Pet Map edits means a year off does not erase what
