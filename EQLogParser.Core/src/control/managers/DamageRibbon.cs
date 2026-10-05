@@ -31,7 +31,13 @@ namespace EQLogParser
     private readonly List<string> _lines = [];
     private bool _subscribed;
 
-    internal Func<string, bool> IsPlayerName { get; set; } = PlayerRegistry.Instance.IsVerifiedPlayer;
+    /*
+     * The ribbon's own seam for "is this one of ours", so its rules stay testable without runtime state (tests assign a
+     * delegate). Its default asks the application-wide seam now rather than players.txt alone, so a death line reads "a
+     * raid member fell" for somebody tonight's capture proved and nobody ever typed (docs/DesignNotes.md -> "The one seam
+     * that answers"). Called per DEATH, not per damage line, so the extra hops cost nothing measurable.
+     */
+    internal Func<string, bool> IsPlayerName { get; set; } = IdentityLookup.IsOneOfUs;
 
     // Subscribe to the parsers' static events. Idempotent: an Initialize called twice must not double-feed lines.
     internal void Initialize()

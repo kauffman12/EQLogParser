@@ -25,7 +25,7 @@ namespace EQLogParser
       {
         if (action is SpellCast { SpellData: not null } cast)
         {
-          if ((playerLookup is not null && playerLookup.Contains(cast.Caster)) || (playerLookup is null && PlayerRegistry.Instance.IsVerifiedPlayer(cast.Caster)))
+          if ((playerLookup is not null && playerLookup.Contains(cast.Caster)) || (playerLookup is null && IdentityLookup.IsOneOfUs(cast.Caster))) // seam: roster, then this capture, then memory
           {
             UpdateMaps(cast.SpellData, cast.Caster, result.PlayerCastCounts, result.PlayerInterruptedCounts, result.MaxCastCounts,
               result.UniqueSpells, cast.Interrupted);
@@ -39,7 +39,7 @@ namespace EQLogParser
         // don't include detrimental received spells since they're mostly things like being nuked
         if (action is ReceivedSpell { SpellData: not null, IsWearOff: false } received)
         {
-          if ((playerLookup is not null && playerLookup.Contains(received.Receiver)) || (playerLookup is null && PlayerRegistry.Instance.IsVerifiedPlayer(received.Receiver)))
+          if ((playerLookup is not null && playerLookup.Contains(received.Receiver)) || (playerLookup is null && IdentityLookup.IsOneOfUs(received.Receiver))) // seam, same question as the cast loop
           {
             UpdateMaps(received.SpellData, received.Receiver, result.PlayerReceivedCounts, null, result.MaxReceivedCounts, result.UniqueSpells);
             result.UniquePlayers[received.Receiver] = true;
