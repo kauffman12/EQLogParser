@@ -89,6 +89,9 @@ namespace EQLogParser
     // (a method group allocates a fresh delegate each time, so ReferenceEquals needs one stored instance).
     private readonly Func<string, double, IdentityKind> _liveKindAt;
 
+    /// <summary>The owner half of the same seam, held as a field so Dispose can tell whether the seam is still ours.</summary>
+    private readonly Func<string, string?> _liveOwner;
+
     private readonly DispatcherTimer _quietTimer;
     private int _deriveInFlight;
     private long _lastTickCount = -1;
@@ -174,6 +177,7 @@ namespace EQLogParser
       _capture = new CombatCapture(_facts, _heals);
       ChatSink = new IdentityChatSink(_capture);
       _liveKindAt = LiveKindAt;
+      _liveOwner = LiveOwnerOf;
       _quietTimer = new DispatcherTimer(DispatcherPriority.Background)
       {
         Interval = TimeSpan.FromMilliseconds(TimerIntervalMs)
@@ -196,6 +200,7 @@ namespace EQLogParser
        * answers again instead of reading a dead capture's timeline.
        */
       IdentityLookup.LiveVerdict = _liveKindAt;
+      IdentityLookup.LiveOwner = _liveOwner;
       ActiveChanged?.Invoke();
       _quietTimer.Start();
     }
@@ -215,6 +220,20 @@ namespace EQLogParser
 
       lock (timeline.SyncRoot)
         return double.IsPositiveInfinity(t) ? timeline.Identity(name) : timeline.IdentityAt(name, t);
+    }
+
+    /*
+     * "Whose pet, according to this capture?" — the charm window's owner (docs/DesignNotes.md -> "A charm takes a mob off
+     * the enemy list"), which lives nowhere else: no file records that tonight's `a bone walker` belonged to Kylo. Same
+     * locking law as LiveKindAt above, for the same reason: this answers UI-thread questions while a pass mutates the
+     * table on a task thread, and nothing may escape the lock but a string.
+     */
+    private string? LiveOwnerOf(string? name)
+    {
+      if (name is null || _carriedTimeline is not { } timeline) return null;
+
+      lock (timeline.SyncRoot)
+        return timeline.OwnerOf(name, double.PositiveInfinity);
     }
 
     /*
@@ -451,6 +470,7 @@ namespace EQLogParser
       // Only take the seam down if it is still OURS: a new session can already be wired by the time an old engine is
       // disposed, and blanking that one would send every identity question back to memory behind its owner's back.
       if (ReferenceEquals(IdentityLookup.LiveVerdict, _liveKindAt)) IdentityLookup.LiveVerdict = null;
+      if (ReferenceEquals(IdentityLookup.LiveOwner, _liveOwner)) IdentityLookup.LiveOwner = null;
       if (ReferenceEquals(Active, this))
       {
         Active = null;

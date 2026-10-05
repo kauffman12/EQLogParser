@@ -170,10 +170,10 @@ namespace EQLogParser
       /* Which of my pets, if either, is on this line: the pet's own numbers get rows of their own (FctRow), so "counts as
          me" and "is my pet" have to stay separate questions. Damage landing ON the pet is still just damage taken — there
          is no pet row for that, because "who was hit" is not something a player filters. */
-      var petAttacker = PlayerRegistry.Instance.GetPlayerFromPet(record.Attacker) == Subject;
+      var petAttacker = IdentityLookup.OwnerOf(record.Attacker) == Subject;
       var iAmAttacker = record.Attacker == Subject || petAttacker;
       var iAmDefender = record.Defender == Subject ||
-                        PlayerRegistry.Instance.GetPlayerFromPet(record.Defender) == Subject;
+                        IdentityLookup.OwnerOf(record.Defender) == Subject;
 
       // FCT covers one character's fight only (Subject says which); anything else is noise
       if (!iAmAttacker && !iAmDefender)
@@ -322,10 +322,10 @@ namespace EQLogParser
       }
 
       var iAmCaster = e.Record.Attacker == Subject ||
-                      PlayerRegistry.Instance.GetPlayerFromPet(e.Record.Attacker) == Subject;
+                      IdentityLookup.OwnerOf(e.Record.Attacker) == Subject;
       var iAmResister = e.Record.Defender == Subject ||
                         e.Record.Defender == "You" || // a line worded with the literal "You" still means me
-                        PlayerRegistry.Instance.GetPlayerFromPet(e.Record.Defender) == Subject;
+                        IdentityLookup.OwnerOf(e.Record.Defender) == Subject;
 
       if (!iAmCaster && !iAmResister)
       {

@@ -41,12 +41,14 @@ public class IdentityLookupTest
     IdentityOverrideStore.Instance.Init(Server);
     IdentityPriorStore.Instance.Init(Server);
     IdentityLookup.LiveVerdict = null;
+    IdentityLookup.LiveOwner = null;
   }
 
   [TestCleanup]
   public void Cleanup()
   {
     IdentityLookup.LiveVerdict = null;
+    IdentityLookup.LiveOwner = null;
     PlayerRegistry.Instance.Clear();
 
     // Load a server that does not exist so nothing remembered here answers for the next class.
@@ -63,6 +65,98 @@ public class IdentityLookupTest
 
   private static void Watch(string name, IdentityKind kind) =>
     IdentityLookup.LiveVerdict = (n, _) => string.Equals(n, name, StringComparison.OrdinalIgnoreCase) ? kind : IdentityKind.Unknown;
+
+
+  /*
+   * The KIND questions (IdentityLookup.KindAt and its three readers) — docs/DesignNotes.md → "The checks that decide who
+   * is a player". Every case here is a disagreement between the sources, for the same reason as the membership tests
+   * above: agreement proves only that lookups work.
+   */
+
+  // A verdict from a previous capture, written the only way the ledger accepts one: through a timeline whose rule code it
+  // is allowed to remember (docs/DesignNotes.md -> "What this application remembers").
+  private static void WitnessedPreviously(string name, IdentityKind kind)
+  {
+    var timeline = new EntityTimeline();
+    timeline.SetIdentity(name, kind, RuleStrength.Certain, "R7-graph");
+    IdentityPriorStore.Instance.Record(timeline, [name], ((DateTimeOffset) DateTime.UtcNow).ToUnixTimeSeconds());
+  }
+
+  [TestMethod]
+  public void ANameOnTheRosterIsAMemberBeforeItIsAKind()
+  {
+    /*
+     * The distinction the whole roster lane rests on. players.txt remembers nine hundred names and says nothing about what
+     * any of them ARE, so a name carried there answers "one of ours" YES and every kind question NO. If this ever flips, a
+     * decade-old list starts outvoting tonight's rules about what a name is — the exact failure R6/npcs.txt showed.
+     */
+    IdentityPriorStore.Instance.RememberRoster("Silent", NowS(), className: null, persist: false);
+
+    Assert.IsTrue(IdentityLookup.IsOneOfUs("Silent"));
+    Assert.AreEqual(IdentityKind.Unknown, IdentityLookup.KindAt("Silent"), "membership leaked into the kind answer");
+    Assert.IsFalse(IdentityLookup.IsPlayer("Silent"));
+    Assert.IsFalse(IdentityLookup.IsPet("Silent"));
+  }
+
+  [TestMethod]
+  public void TonightOutvotesWhatAPreviousCaptureConcluded()
+  {
+    WitnessedPreviously("Kylo", IdentityKind.Pet);
+    Assert.IsTrue(IdentityLookup.IsPet("Kylo"), "a remembered verdict does not answer when tonight says nothing");
+
+    Watch("Kylo", IdentityKind.Player);
+    Assert.IsTrue(IdentityLookup.IsPlayer("Kylo"));
+    Assert.IsFalse(IdentityLookup.IsPet("Kylo"), "the ledger outvoted the capture it was remembered from");
+  }
+
+  [TestMethod]
+  public void TheOperatorEndsTheKindQuestionInBothDirections()
+  {
+    ClassificationCommands.SetVerdict(IdentityOverrideStore.Instance, "Betebeatz", IdentityKind.Npc);
+    Watch("Betebeatz", IdentityKind.Player);
+
+    Assert.AreEqual(IdentityKind.Npc, IdentityLookup.KindAt("Betebeatz"), "a verdict is an answer, not a hint");
+    Assert.IsFalse(IdentityLookup.IsPlayer("Betebeatz"));
+
+    ClassificationCommands.ClearVerdict(IdentityOverrideStore.Instance, "Betebeatz");
+    Assert.IsTrue(IdentityLookup.IsPlayer("Betebeatz"), "the unset has to give the question back to the capture");
+  }
+
+  [TestMethod]
+  public void AMercenaryStandsOnOurSideWithoutBeingARaider()
+  {
+    WitnessedPreviously("Sancus", IdentityKind.Merc);
+
+    Assert.IsTrue(IdentityLookup.IsPlayerSide("Sancus"));
+    Assert.IsFalse(IdentityLookup.IsPlayer("Sancus"), "folding Merc into Player moves damage onto a column nothing fills");
+    Assert.IsFalse(IdentityLookup.IsOneOfUs("Sancus"), "a merc is on nobody's roster");
+  }
+
+  [TestMethod]
+  public void OwnerOfAsksTonightFirstAndTheMapAfter()
+  {
+    PlayerRegistry.Instance.AddPetToPlayer("Fluffy", "Ziggy");
+    Assert.AreEqual("Ziggy", IdentityLookup.OwnerOf("Fluffy"), "the imported pet map does not answer the owner question");
+
+    /*
+     * A charm window is tonight's fact and lives in no file (docs/DesignNotes.md -> "A charm takes a mob off the enemy
+     * list"), so it has to beat the map. The seam is what carries it: Core owns the question, the engine owns the answer.
+     */
+    IdentityLookup.LiveOwner = pet => pet == "Fluffy" ? "Kylo" : null;
+    Assert.AreEqual("Kylo", IdentityLookup.OwnerOf("Fluffy"));
+
+    // No session open (the seam is down) and the map answers again — the app's memory, not a dead capture's timeline.
+    IdentityLookup.LiveOwner = null;
+    Assert.AreEqual("Ziggy", IdentityLookup.OwnerOf("Fluffy"));
+  }
+
+  [TestMethod]
+  public void AnUnmappedNameAnswersNoOwnerRatherThanAnEmptyString()
+  {
+    Assert.IsNull(IdentityLookup.OwnerOf("Mystery"));
+    Assert.IsNull(IdentityLookup.OwnerOf(null));
+    Assert.IsNull(IdentityLookup.OwnerOf(string.Empty));
+  }
 
   [TestMethod]
   public void ANameNothingKnows_IsNotOnesOfOurs()

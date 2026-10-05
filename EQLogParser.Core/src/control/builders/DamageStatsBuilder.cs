@@ -288,7 +288,7 @@ namespace EQLogParser
                     }
                     else if (isValid)
                     {
-                      var isAttackerPet = PlayerRegistry.Instance.IsVerifiedPet(record.Attacker);
+                      var isAttackerPet = IdentityLookup.IsPet(record.Attacker);
                       var isNewFrame = StatsUtil.CheckNewFrame(prevPlayerTimes, stats.Name, block.BeginTime);
 
                       _raidTotals.Total += record.Total;
@@ -517,7 +517,7 @@ namespace EQLogParser
 
     private void UpdatePetMapping(DamageRecord damage)
     {
-      var petName = PlayerRegistry.Instance.GetPlayerFromPet(damage.Attacker);
+      var petName = IdentityLookup.OwnerOf(damage.Attacker);
       if ((!string.IsNullOrEmpty(petName) && petName != Labels.Unassigned) || !string.IsNullOrEmpty(petName = damage.AttackerOwner))
       {
         if (!_playerPets.TryGetValue(petName, out var mapping))

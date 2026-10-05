@@ -6265,3 +6265,55 @@ What this buys the import: seeding from `RosterEntries()` keeps each row's own `
 March is still old after the migration - which is correct, and is the point of aging our memory rather than the log. The
 pinning test asserts the sharp half by writing nothing back: seed from a ledger, call `Save()`, and require that no
 players.txt appeared (`TheRegistrySeedsItselfFromTheLedgerWithoutPlayersTxt`).
+
+## The checks that decide who is a player (kept, moved, corrected) — 2026-11
+
+The legacy engine decided identity by **ingesting into `PlayerRegistry`**: about twenty parser call sites each claimed
+"this name is a person" or "this pet belongs to this player" out of one line's shape, and every surface then asked that
+store. The derived engine kept the *shapes* (they are the knowledge) and moved the *answers* into the rule book, with two
+files behind it: `identity-overrides.txt` for what an operator decided and `identity-priors.txt` for what a previous
+capture's rules earned and for the two imported lists (roster, pet map). This is the census of the old checks, because a
+claim that survives only in somebody's memory gets deleted by the next person who cannot see why it was there.
+
+**KEPT where they are — the ingest path, still `PlayerRegistry`, on purpose.** Each of these needs the answer inside the
+same line it parsed, and several are welded to `IsPossiblePlayerName` (tonight's grammar), which no verdict chain
+reproduces. Asking a timeline mid-parse would also take that table's lock from inside the parse.
+
+| The line the game writes | Where it is checked | What it claims |
+|---|---|---|
+| ``X`s pet`` / ``X pet`` attacking or being hit | `DamageLineParser.CheckOwner` | owner X is a known player → the pair is learned and lands on the record as `AttackerOwner`. Derived twin: R5-owner's five possessive words over the name pool. |
+| `(Owner: X)` on an EMU server (`EnableEmuParsing`) | `DamageLineParser` melee + spell branches | both halves at once, from the server's own text — no inference. |
+| `Mend Companion`, `Warder's Shielding`, `Might of the Wild Spirits` | `HealingLineParser` | a spell only a pet owner casts names healer **and** healed: healer is a person, healed is their pet. |
+| `Elemental Conversion` | `DamageLineParser` | same shape on the other side — a shaman transmute names its master. |
+| `(Assassinate)`, `(Headshot)`, `(Double Bow Shot)`, `(Slay Undead)` … | `LineModifiersParser` | a class ability says *class* (and thus personhood). The stricter derived twin is R4-spell's versioned families: rank-anchored, `spells.txt`-gated, silent on content it does not know. |
+| `[130 Class] Name (Group: n)` / `AFK` who-roster lines | `MiscLineParser.ParseWho` | name + class + group handed over by the game. Membership, not a verdict — which is why it never needed a rule. |
+| loot trades, `you win … roll`, `X wins roll`, corruption/roll-away lines | `MiscLineParser` (five branches) | a person loots; a mob does not. There is **no** derived twin because a loot line produces no combat fact, so this stays the only place the claim is made — the reason the ingest path could not simply be deleted. |
+| `X tells …`, `X says …`, channel senders | `ChatDB`, `ChatFilter` | legacy remembers the speaker. The derived rules **refuse** most of it (see below), so this is one place the new system deliberately claims less. |
+
+**MOVED onto the seam.** The *reads* that only wanted an answer, not a write, now go through `IdentityLookup` —
+`OwnerOf` (whose pet), `IsPet` / `IsPlayer` / `IsPlayerSide` (what a name is), `IsOneOfUs` / `IsOneOfUsOrMerc`
+(membership): the `X +Pets` grouping key, both `DamageStatsBuilder` owner lookups, the four FCT subject matches, the
+"show pets" filters on the Damage and Tanking summaries, `SpellCountBuilder`. Two behaviour changes came with that, both
+wanted: a charm window folds now (tonight's `a bone walker` lands on its charmer even though no file pairs them), and a
+name the registry remembers as somebody's pet follows **tonight's** verdict when the capture says otherwise. What still
+asks the registry directly outside the parser is deliberate too — `PetOwnersReport` and the Names census's owner column
+*report the store itself*, so reading a live window into them would make the window disagree with its own data.
+
+**REFUSED, with the measurement that refused it.** Tell/zone chatter as identity (`Bane` and `Paul` sit in `npcs.txt`
+while their lines are bazaar hailers, and identity is keyed by NAME so spelling cannot fix it); `X begins singing …`
+(`Shalowain begins singing her Rhapsody of Pain.` is an NPC bard that npcs.txt *and* being attacked both place); raid-AoE
+heal volume as a flip (every hostile measured tops out at 10 distinct healing casters, pets take heals from 19–52); and
+a charm window deciding anything about a *player*'s side beyond the flip itself.
+
+**CORRECTED rather than deleted — the two that were actively wrong.** `X is called to it owner.` was read as "this name is
+somebody's pet" for its whole life; 48 of 48 occurrences sit beside that same subject's own `begins casting Summon …`, so
+it names the **summoner** (R5-companion, Player) and the ledger refuses the bug-era Pet rows at load rather than letting a
+remembered wrongness outvote a live capture for 90 days. And the `!Name` tombstone in players.txt — a permanent "not one
+of ours" whose only door lost its menu entry 76 minutes after it was written, so no installed build could ever have made
+one: deleted, with `Clear claim` as the single unset (`ARemovedNameLeavesTheFileAndCanBeLearnedAgain` holds that later
+evidence and the ledger may speak again).
+
+**The asymmetry that decides new refusals.** Refusing a junk row costs one line of memory; dropping a curated row is
+memory that disagrees with its own file. That is why the roster import does not apply `IsPossiblePlayerName` (it wants
+letters only, so it would drop ``Akini, Xanathan`s Warder`` — one summon, two masters) and why the pet-map import keeps the
+unassigned text that the roster side refuses.

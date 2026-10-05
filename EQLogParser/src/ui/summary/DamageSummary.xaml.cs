@@ -773,11 +773,11 @@ namespace EQLogParser
 
           var name = playerStats.Name;
           var className = playerStats.ClassName;
-          var isPet = PlayerRegistry.Instance.IsVerifiedPet(name);
+          var isPet = IdentityLookup.IsPet(name);
 
           if (isPet)
           {
-            var ownerName = PlayerRegistry.Instance.GetPlayerFromPet(name);
+            var ownerName = IdentityLookup.OwnerOf(name);
             if (!string.IsNullOrEmpty(ownerName) && ownerName != Labels.Unassigned)
             {
               var owner = CurrentStats?.ExpandedStatsList.FirstOrDefault(s => s.Name == ownerName);

@@ -44,6 +44,13 @@ namespace EQLogParser
     /// </summary>
     internal static Func<string, double, IdentityKind>? LiveVerdict { get; set; }
 
+    /// <summary>
+    /// The second hop the engine wires beside LiveVerdict: "whose pet is this, according to this capture?" — a charm
+    /// window's owner, which no file holds. Null with no session, so OwnerOf falls through to memory (docs/DesignNotes.md
+    /// -> "A charm takes a mob off the enemy list"). Same dependency direction as LiveVerdict: Core owns the question.
+    /// </summary>
+    internal static Func<string, string?>? LiveOwner { get; set; }
+
     /// <summary>"Is this name one of ours?" — as of the end of what we know about it.</summary>
     internal static bool IsOneOfUs(string? name) => IsOneOfUs(name, double.PositiveInfinity);
 
@@ -109,5 +116,73 @@ namespace EQLogParser
 
       return PlayerRegistry.Instance.IsMerc(name);
     }
+  /*
+   * THE KIND QUESTIONS — what a name IS, answered by the verdict chain rather than by any store's bookkeeping:
+   * the operator's override, then this capture (the live session's timeline, which is the whole rule book including the
+   * charm and pet-ownership windows), then what a previous capture left in identity-priors.txt. The Mercenary question has
+   its own seam already (`IsMercenary` below) because the operator's roster of mercenaries is a store, not a verdict.
+   *
+   * What deliberately does NOT answer a kind question is PlayerRegistry._verifiedPlayers: that list is MEMBERSHIP
+   * ("this raid had this person"), and membership has its own seam above. Reading it as a kind is how a name listed for a
+   * decade outvotes every rule, which is the failure the whole roster lane exists to stop (docs/DesignNotes.md ->
+   * "The one seam that answers 'is this one of ours?'"). `IsPlayerSide` keeps Mercenary as its own kind: a mercenary is
+   * somebody's summon, not a raider, and folding one into the other moves damage onto a column nothing else fills.
+   */
+    internal static IdentityKind KindAt(string? name)
+    {
+      if (string.IsNullOrEmpty(name)) return IdentityKind.Unknown;
+
+      // The operator ends the question, in both directions (docs/DesignNotes.md -> "A veto nobody could switch on").
+      if (IdentityOverrideStore.Instance.TryGet(name!, out var chosen)) return chosen;
+
+      // Tonight's evidence. Unknown means the rules never saw the name, so it falls through rather than answering.
+      var live = LiveVerdict;
+      if (live is not null)
+      {
+        var kind = live(name!, double.PositiveInfinity);
+        if (kind != IdentityKind.Unknown) return kind;
+      }
+
+      // Memory: a verdict a previous capture's rules earned. Membership is NOT here — that is IsOneOfUs's question.
+      if (IdentityPriorStore.Instance.TryGet(name!, out var prior) && prior.Kind != IdentityKind.Unknown) return prior.Kind;
+
+      return IdentityKind.Unknown;
+    }
+
+    internal static bool IsPlayer(string? name) => KindAt(name) == IdentityKind.Player;
+    internal static bool IsPet(string? name) => KindAt(name) == IdentityKind.Pet;
+    /// <summary>Player or Merc: the two kinds that stand on our side. Not membership — see IsOneOfUs.</summary>
+    internal static bool IsPlayerSide(string? name) => KindAt(name) is IdentityKind.Player or IdentityKind.Merc;
+
+    /*
+     * "Whose pet is this?" for a surface that is not inside the parse (a click summary, a report, a fight classifier).
+     *
+     * The live session answers FIRST when it has an owner, because a charm window is what the capture watched happen
+     * tonight; the registry answers after, and the registry is already seeded from identity-priors.txt's ownership lane at
+     * startup (PlayerRegistry.Init), which is what lets petmapping.txt stop being read without these callers losing a pair.
+     *
+     * WHAT STILL ASKS THE REGISTRY DIRECTLY, and why that is not an oversight: the ingest path (DamageLineParser's
+   * "is this my pet", ChatDB/ChatFilter's sender filters, CastLineParser's target check, DamageBreakdown/HitLogViewer's
+   * name-shape filters) reads the store the parser itself is filling at that moment, and several of them pair the lookup
+   * with IsPossiblePlayerName — tonight's line grammar, which no verdict chain reproduces. Asking a timeline while the
+   * parser is mid-line would also take that table's lock from inside the parse. Those are the checks documented as KEPT in
+   * docs/DesignNotes.md -> "The checks that decide who is a player", and each one is a deliberate stay, not a leftover.
+   *
+   * The write side has NOT moved yet: the Pet Owners window still edits the registry (and writes petmapping.txt), so the
+     * registry stays the freshest copy of an operator's hand during a session and has to be the fallback rather than the
+     * last word. When that window writes the lane instead, this lookup narrows to timeline → lane; until then it is the one
+     * call site, and nine copies of `GetPlayerFromPet` are gone.
+     */
+    internal static string? OwnerOf(string? pet)
+    {
+      if (string.IsNullOrEmpty(pet)) return null;
+
+      var owner = LiveOwner?.Invoke(pet!);
+      if (!string.IsNullOrEmpty(owner)) return owner;
+
+      var mapped = PlayerRegistry.Instance.GetPlayerFromPet(pet!);
+      return string.IsNullOrEmpty(mapped) ? null : mapped;
+    }
+
   }
 }

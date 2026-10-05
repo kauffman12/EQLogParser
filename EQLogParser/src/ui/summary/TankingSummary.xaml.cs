@@ -361,7 +361,7 @@ namespace EQLogParser
             className = playerStats.ClassName;
           }
 
-          var isPet = PlayerRegistry.Instance.IsVerifiedPet(name);
+          var isPet = IdentityLookup.IsPet(name);
           if (isPet && _currentPetValue is false)
           {
             return false;
