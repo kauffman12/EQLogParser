@@ -6730,3 +6730,96 @@ fight row — are averaged away at this size. Measuring those properly means fol
 `FightProjectionCache` over growing fact windows), which is the same machinery the production pass uses and would be the natural
 instrument if someone wants the finer number (the 24-pass Kizant run is a first step toward that granularity, and it changed nothing
 about the verdict). The decision above does not depend on it: incremental updating wins whether the no-op share is 0 % or 40 %.
+
+## A rank formulation is not a sentence end (2026-10)
+
+The operator's report was the alarming kind: rows called **"II"** and **"III"** in the identity list.
+*"what in the world is parsing to that? that seems like a broken parser."* It was, in one branch of one
+parser, on one line shape. Captured in `local/logs/live/eqlog_Kizant_xegony-2.txt` (467 MB, 2,270,292 damage
+facts, 1,247,992 heals):
+
+```
+Bastion of Divinity Rk. II healed Xxuro over time for 6670 hit points by Bastion of Divinity Effect II.
+```
+
+The client glues two sentences onto one log line, and `HealingLineParser.HandleHealed` finds the actor for
+such a line by taking the word after a `.` or `!` that sits just before `" healed "` -
+`Your ward heals you as it breaks! You healed Niktaza for 8970 (86306) hit points by Healing Ward.` EQ person
+names are single tokens, so "the word after the punctuation" has always been a healer. A spell's **rank
+formulation** puts a period two characters before the last word, and the branch read `Rk.`'s period as a sentence
+end, took what followed it, and stored `"II"` as the healer. Two names, eight lines.
+
+Where they surfaced is worth stating, because it explains why this was invisible for so long: those names appear
+in **no damage fact at all** (0 of 2,270,292). The heal stream interns into the same name pool, and the Names
+window walks that pool - so the row appeared with nothing to explain it, `Unknown` and no reason, forever. The
+identity list was the only surface that could see a parser bug in the healing path.
+
+The fix recognises the rank marker instead of pattern-matching punctuation (`IsSentenceEnd`): a `.` whose two
+preceding characters are `Rk` ends nothing. The line then has no healer, and the record is refused whole - exactly
+what its rank-free sibling does today:
+
+```
+Bastion of Divinity healed Xxuro over time for 6670 hit points by Bastion of Divinity Effect.   (never stored)
+```
+
+Measured cost on that capture: heals 1,247,992 → **1,247,984**, i.e. the eight rank-subject lines and nothing else;
+the pool holds no roman-numeral name afterwards (`HealFactTable`/`LineParsersTest` pin both halves). Refusing the
+line rather than renaming it is a deliberate half-measure: putting these heals on the spell's own name would move
+the healing board, and *that* is its own decision (see "A spell type" below). What this commit refuses is inventing
+a fighter out of a roman numeral. **The general law: a name comes from a subject span or the line is not stored -
+no branch may take a name from "the token after some punctuation".**
+
+### The same capture's spells, and the Spell type question
+
+34 rank-shaped names carry damage in that capture, and their identity reads `Npc / A Spell` for **all 34** (R21's
+line-shape feed). Where their damage lands answers the operator's question - *"You have to look at who is taking
+damage if you can't tell if it's a player spell"*:
+
+| | rank-shaped attacker names | their facts | those facts' defenders |
+|---|---|---|---|
+| Kizant-2 | 34, all `R21-spellshape` | 590 hits / ~24 M | **NPC for every one**, 0 on the raid's side |
+
+So the *side* logic is already right (they key off their targets and read as ours); the **type cell lies** - a list
+of the raid's own damage-over-time spells is presented under `NPC`, in the same column as the things they were cast
+at. An `IdentityKind.Spell` is the honest word, and the operator asked for it. It is not an enum add: 25 sites across
+9 files read `IdentityKind.Npc`, and several of those are routing decisions (`FightProjection.FactTarget` treats a
+defender that reads `Npc` as noise; `IsRaidVictimAt` excludes `Npc`; the charm and pet predicates do the same).
+Flipping 34 rows from `Npc` to a new kind moves facts between boards unless each of those sites is answered on
+measurement - which is what the reproducibility harness now makes possible (a board diff on three captures, not an
+argument). Parked here rather than half-done.
+
+### What a returning player's memory blocks, measured (closes the review's "weak seeds" item)
+
+The open finding was plausible by inspection: R7 and R15 skip names that already carry a verdict, and
+`RegistrySeed` writes strength 8 before any rule runs - so remembered names might never generate competing
+evidence. Simulated on three captures by putting every name the cold pass called Player onto the verified list,
+then re-classifying:
+
+| capture | name pool | names answered from the seed | cold evidence said something OTHER than Player | cold proof was R7/R15 |
+|---|---|---|---|---|
+| `eqlog_Kizant_xegony.txt` | 279 | 17 | **0** | 17 |
+| `eqlog_Kizant_xegony-2.txt` | 262 | 18 | **0** | 18 |
+| `eqlog_Incogitable_xegony.txt` | 2,752 | 77 | **0** | 77 |
+
+No wrong verdict anywhere. What memory does replace is the **reason**: those rows hover *"From old Verified List"*
+instead of *"Fights Mobs"* / *"Healed by 20 raiders"*, on names this capture watched fight. And the direction that
+would actually hurt cannot happen: a roster entry that is simply wrong still loses every NPC-side claim tested -
+
+```
+A scalewrought assailant -> Npc/R6-npcdb      An astral barnacle -> Npc/R1-target
+A Woeful oracle          -> Npc/R14-shape
+```
+
+So the finding closes as *provenance, not correctness*. The residual decision is a consistency one: the ledger
+already has a law that "a remembered verdict loses to what this capture watched being cast" (the R21 correction);
+R7/R15 do not re-run for seeded names, so the same principle is unenforced there. Making them run costs edge walks
+over 77 of 2,752 names on Incogitable - not free, and only a word-quality win today.
+
+### R21's pool gate staleness, stated as accepted
+
+A cast token refused because its name was not yet in the entity pool is never reconsidered inside that pass, and
+the review asked for it to stop being implicit. It is bounded and self-healing: any verdict change moves
+`EntityTimeline.StateStamp()`, which buys a **full rebuild**, and a full rebuild re-walks every fact with an empty
+cursor table. The accepted window is therefore one cheap-lane cadence on a name that (a) first appears as a cast
+token and (b) later appears in a combat line - the same bound as every other verdict the carried lane folds. See
+the pool-gate comment in `ClassificationRules.ApplySpellEffects`.

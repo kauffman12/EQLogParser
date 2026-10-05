@@ -1092,6 +1092,14 @@ namespace EQLogParser
          * named in a combat line has no row anywhere for the answer to appear on (rows come from facts), so claiming it would
          * cost a timeline entry and move the state digest — forcing a full rebuild over a verdict nothing reads — for its whole
          * log. Measured on eqlog_Kizant_xegony-09-20-25.txt: 1,044 cast tokens, of which the fact table names a handful.
+         *
+         * ACCEPTED STALENESS, stated because a review asked for it not to be implicit: a token refused here while its name is
+         * outside the pool is not reconsidered by this carried pass (the gate is a read, and a read must never intern — the pool
+         * whose size it asks about is the pool the next rebuild hashes). The window is bounded and self-healing: any verdict change
+         * moves EntityTimeline.StateStamp(), a moved stamp buys a full rebuild, and a full rebuild re-walks every fact with empty
+         * cursor tables, where the name is in the pool by then. Worst case is one cheap-lane cadence on a name that prints as a cast
+         * token first and reaches a combat line later — the same bound every other carried verdict lives under.
+         * docs/DesignNotes.md → "R21's pool gate staleness, stated as accepted".
          */
         if (string.IsNullOrEmpty(spell) || facts.NameIndexOf(spell) < 0 || LooksLikeEntityName(spell)) continue;
         state.SpellCastNames.Add(spell);

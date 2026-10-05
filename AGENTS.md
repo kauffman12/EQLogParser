@@ -256,6 +256,22 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   `raw` and `CapitalizeFirst(raw)`, which differ only at index 0. Subtype/label tables stay ordinal (they are vocabulary words that
   settings and `Labels` constants compare against). `EntityNameKeyTest` pins identity, affiliation, ownership and "one entity per name"
   across spellings; `NamePoolTest` pins one-id-per-entity, order-independent display and that the heal stream interns into the same pool.
+- **A name comes from a subject span, never from "the token after some punctuation"**: `HealingLineParser` finds the actor of a
+  glued-sentence line (`…as it breaks! You healed Niktaza for …`) by taking what follows a `.`/`!` before `" healed "`, which worked
+  while every EQ person name was one token — and minted entities called **"II"** and **"III"** from
+  `Bastion of Divinity Rk. II healed Xxuro over time for 6670 hit points by Bastion of Divinity Effect II.`, because the period of a
+  spell's **rank formulation** is not a sentence end (`IsSentenceEnd` recognises `Rk.`; 8 such lines in
+  `eqlog_Kizant_xegony-2.txt`, heal facts 1,247,992 → 1,247,984, no roman name left in the pool). The damage path never saw them — 0 of
+  2,270,292 damage facts — only the heal stream interns those names, and the **identity list is the one surface that shows a parser bug
+  in a heal line**, so a row with no reason printed is parser evidence, not a classification gap. Such a line is now refused whole (like its
+  rank-free sibling, which has never been stored); crediting caster-less heals onto the spell's own name would move the healing board and is
+  its own decision. Two related measured standings: **the Type cell reading `NPC` for a spell is known-wrong and open** (all 34 rank-shaped
+  attacker names in that capture read `A Spell` as reason with every one of their 590 hits on an NPC — adding `IdentityKind.Spell` touches
+  25 `IdentityKind.Npc` sites, several of them board-routing predicates, so it arrives with a real-capture board diff, not as an enum add);
+  and **a ledger seed never changes an answer** (17 / 18 / 77 names answered from the seed on three captures, **0** disagreeing with the
+  capture's own evidence; a deliberately wrong roster entry still loses to `R6-npcdb`, `R1-target` and `R14-shape`) — what memory costs is
+  the *reason word*, so "weak seeds block R7/R15" closed as provenance-only and re-opening those gates needs new measurement, not the old
+  argument. Numbers: docs/DesignNotes.md → "A rank formulation is not a sentence end".
 - **A charm window is the NPC's death; its pet's death is not one**: `DerivedFight.EndReason` says *why* a row ended while
   `Dead` stays the flag every consumer reads (overlay, grid styling, `FightSummarySource`). A `has been charmed.` sighting closes that name's row as `Charmed`
   (status word `dead, charmed`) — the raid finished that encounter by taking the mob off the enemy list — and a death **inside** a window is skipped by dead-marking
