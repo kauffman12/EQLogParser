@@ -6345,3 +6345,83 @@ consumer outside classification, which is exactly why it went first. The order f
 Mend Companion family) into the ownership lane → then `players.txt` stops being written at all, which is the change the
 standing `_playersUpdated` drain has been blocking. The tell/sing shapes stay refused: they name bazaar hailers and NPC
 bards, and a claim that cannot be made is not a write to relocate.
+
+## Splitting PlayerRegistry by job, and where a default class really lives (2026-11)
+
+"Remove PlayerRegistry" is not a question that can be answered, because the class is not one thing. Read as five jobs:
+(1) **identity memory** — verified players, `players.txt`; (2) **pet → owner map** — `petmapping.txt`; (3) **class**: an
+operator's default per name plus time-windowed observed classes; (4) **person-word vocabulary and name-shape validators**
+(`IsPersonWord`, `IsPossiblePlayerName/PetName`); (5) **mercenary list**. Only job 1 is a duplicate of the new system, and
+jobs 2–5 are load-bearing for reasons that have nothing to do with the identity question. The outcome that was agreed is not
+a deleted class but a class that survives with three jobs and gets renamed to what it does.
+
+**The read path already migrated; the write path did not.** UI identity questions resolve through `IdentityLookup.IsOneOfUs`
+(18 call sites) with exactly one remaining `GetDefaultPlayerClass`, and nothing in the UI asks `IsVerifiedPlayer`. The old
+store survives as a *write target* whose only consumer is its own `RegistrySeed`. Writes outside the class: `LineModifiersParser` 4,
+`ChatDB` 3, `DamageLineParser` 3, `HealingLineParser` 2, `MiscLineParser` 1, `CastLineParser` 1, `LogProcessor` 1, and **7 in
+`PreLineParser` that no grep finds** because they go through the injected `addVerifiedPlayer` callback — which is why an early
+"delete the six" count was wrong. Operator writes (`NamesTable`, `SummaryTable`, `MainWindow`, summary panes) stay: those are
+human decisions, not inference.
+
+### The class precedence law
+
+One resolver, `IdentityLookup.ClassOf(name, t)`, in this order: **1.** the observed class window covering `t` (committed by
+confidence; a player can change class mid-log, so 20 minutes of mage and 2 minutes of enchanter are both true and neither is
+"the" class); **2.** else the operator's **default**, one value per name; **3.** else no class. Today the default *is* the
+primary answer for icons and the class column, so writing the resolver is what makes "dynamic first" a behaviour instead of an
+intention. **Clearing a default deletes the field** — it means "no default specified", never an empty string or `"Unknown"`;
+the resolver then falls back to observation by construction.
+
+**Where the default is stored: `identity-priors.txt`, the roster row's `Class` field.** The lane already carries the column and
+imports 777 classed rows from real roster files, so this is a code step, not a format change; no `ClassSource` field is added,
+because with dynamic-first precedence nothing behaves differently for imported versus typed values. A class-set on a name with
+no roster row **creates the row** (the pencil only appears on `Player` rows, and an operator naming a class is one of ours),
+**without a sighting stamp** — which matters because today's write does the opposite:
+`SetDefaultPlayerClass` executes `_verifiedPlayers[name] = ToDotNetSeconds(DateTime.Now); _playersUpdated = true;`, so
+"call this a bard" also stamps membership as *observed right now* and dirties `players.txt`. That breaks the law this file
+already states ("a load is not a sighting"), the one whose violation aged 96.6 % of petmapping.txt out in a single startup.
+
+### Two laws this session produced
+
+**Retire both directions of a legacy file in one commit.** Writing and reading are one contract. Retiring only the writes
+leaves a stale reader that still wins precedence — `PlayerRegistry.Init` loads `players.txt` before seeding the roster lane and
+the seed skips any name already present, so a file nobody updates becomes permanently authoritative. That is worse than doing
+nothing, because it looks like migration happened.
+
+**A write may be deleted only when an evidence twin publishes the same fact from the same line.** Measured both ways: seven
+`PreLineParser` calls whose twins exist were deleted and two of five pinned tests flipped to evidence assertions cleanly, while
+three did not receive the evidence (`NeedProcessing_JoinedRaid_VerifiesPlayer` expected `Cinda`, `…_GlugLine_ExtractsDrinker`
+expected `Fizz`) even though `PreLineParser` invokes `EventsEvidence` unconditionally at its joined-raid and drink branches —
+so those five tests are the contract ("this line identified this name", injected through the callback), and the arrivals must be
+printed before any assertion is touched. Deleting a write with **no** twin silently erases memory nothing else records.
+
+### `"You"` resolves at the parse seam, everywhere
+
+`ParserUtil.UpdateAttacker/UpdateDefender/UpdateSlain` already replace `"You"/"Your"` with `ConfigUtil.PlayerName`, and
+`PlayerName` is set per opened log (from the file, cleared on close), which is what makes it safe to open somebody else's
+capture. The 36 remaining `"You"` occurrences split three ways: shape detection on raw tokens (keep — the line genuinely said
+"You"), one-line safety guards (`Save()` skipping a literal `You` row: keep), and defensive lookups that exist only because a
+path leaked an unresolved name (`PlayerRegistry` `IsVerifiedPlayer`/class lookups: delete, each deletion proving the seam).
+The real gap is **identity and evidence publishing, which does not pass through `ParserUtil`** — `PreLineParser` extracts names
+by its own substring logic, so `You take a drink from their Water Flask.` would publish `EvSelfFeeds("You")` and R17 would claim
+it Player at Strong, minting a permanent roster row named "You". The rule: resolve at the seam; when `PlayerName` is null,
+**identity paths refuse rather than store**. Transient `"You"` at parse time is harmless; an unresolved name in durable memory is not.
+
+### Surfaces retired this session
+
+Verified Players and Verified Pets are **empty `ContentControl` shells**, names kept: `LoadDockState` throws on a window name it
+cannot resolve and the catch calls `ResetState()`, which would wipe every pane, size and position for every user whose
+`dockSite.xml` predates the removal. Fixing that (drop unknown names instead of resetting) is what makes dead UI permanently
+removable. Pet Owners' pair list reads `IdentityLookup.OurPetOwners()` (ownership lane ∪ store, store winning because the window
+writes there) and its owner picker `IdentityLookup.OurPeopleNames()` (roster lane ∪ store), so the grid and the boards consult
+the same source as `OwnerOf`. Charm owners are deliberately not rows — tonight's evidence, reaching boards through `OwnerOf`.
+
+### Definition of done
+
+An invariant test: **no identity writer outside `parsing/derive`, and every UI identity question answered through
+`IdentityLookup`.** When that passes the migration is finished by construction rather than by this document claiming it. Until
+then `players.txt` keeps being written, the class pencil still lands in the old store, and steps to close are, in short: roster-lane
+class writer + read precedence flip + the three operator call sites retargeted; `ClassOf` resolver adopted by every UI read; the
+`twin?` census over all 17 write sites measured on captures (the `ChatDB` trio publishes nothing rules consume and goes first);
+the five `NeedProcessing_*` tests re-pinned, then the callback dropped from `NeedProcessing` and `LogProcessor`; writes and
+reader of `players.txt` retired together; pet-owner edits written to the lane; observed class windows stay memory-only forever.
