@@ -83,8 +83,16 @@ The enforced choices that differ from what most editors default to:
 
 ## Code Organization
 
-- Use `/* ... */` comment blocks for method, class, enum, and field documentation
-- XML documentation comments (`/// <summary>`) are **only** for WPF component class headers (e.g., `TriggersView`, `ConditionEditor`) where tooling or designers may consume them
+- **Comment blocks carry prose; `///` carries a one-line contract.** `/* ... */` is the shape for narrative — why a thing
+  exists, what was measured, what breaks if it changes. `/// <summary>` states what a member promises, and is used both on
+  WPF component class headers (`TriggersView`, `ConditionEditor`, where designers and tooling read them) and on engine APIs
+  (`ClassificationReport`, `IdentityVocabulary`, `FightSummarySource`): **39 of the 243 tracked `.cs` files** carry one, so it
+  is house style rather than an exception to hunt down. What the form may not do is grow: a `///` block needing three sentences
+  has become a DesignNotes entry with a pointer at the call site.
+- **A comment that cites a document may only cite one that ships.** `docs/DesignNotes.md`, `docs/CodingStandards.md`,
+  `docs/ReleaseChecklist.md` and `docs/TtsPacks.md` are in git; the rest of `docs/` is local working material (a design map, a
+  census dump) that a fresh clone will not contain. A pointer to a file nobody else has is worse than no pointer — it reads as
+  verification and cannot be followed. Durable reasoning goes **into** DesignNotes and the comment points there.
 - **Remove unused `using` statements** (IDE0005) — see **Visual Studio Cleanup Code**; the cleanup runs on every touched file before commit
 - Methods are ordered by visibility (public first, then internal, then private)
 - Related methods are grouped together
