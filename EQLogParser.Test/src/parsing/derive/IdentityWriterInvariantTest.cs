@@ -68,7 +68,7 @@ public class IdentityWriterInvariantTest
       ". Publish evidence (EventsEvidence / EvidenceFact) and let the rule book decide the verdict — a parser cannot outweigh " +
       "a Targeted (NPC) frame or a charm sighting, and nothing outside derive is remembered in identity-priors.txt.");
 
-    Assert.AreEqual(string.Join(", ", stale), "",
+    Assert.AreEqual("", string.Join(", ", stale),
       "these files no longer write identity but are still listed as debt — delete the entries: " + string.Join(", ", stale));
 
     var drifted = found.Where(kv => AllowedStoreWrites.TryGetValue(kv.Key, out var n) && n != kv.Value)
