@@ -103,6 +103,28 @@ namespace EQLogParser
       return incoming;
     }
 
+    /*
+     * Whether the character at `index` is the end of a SENTENCE, i.e. whether the healer's name starts right after
+     * it. The client glues two sentences onto one log line ("Your ward heals you as it breaks! You healed Niktaza
+     * for 8970 (86306) hit points by Healing Ward.", "Rowanoak is soothed by Brell's Soothing Wave. Farzi healed
+     * Rowanoak for 524 …"), so a period or bang before the last word means "the actor begins here" - and EQ person
+     * names are single tokens, which is why taking that last word has always worked for them.
+     *
+     * A spell's RANK formulation is not a sentence end. The client writes `Bastion of Divinity Rk. II healed Xxuro
+     * over time for 6670 hit points by Bastion of Divinity Effect II.` with the SPELL as subject and nobody named, and
+     * the old test read the period of "Rk." as a sentence end: it took the word after it and minted a healer called
+     * "II" (measured on eqlog_Kizant_xegony-2.txt: 8 such lines, names "II" and "III", both landing in the identity
+     * list as permanent Unknown rows - the only way a rank fragment can be born anywhere in this parser, since no
+     * other branch takes a name from after a period). With the marker recognised the subject is what it always was,
+     * not a person, and the line is dropped exactly like its rank-free sibling "Bastion of Divinity healed Xxuro over
+     * time for 6670 hit points by Bastion of Divinity Effect.", which has no healer and has never been stored.
+     * Resurrecting caster-less heals onto the spell's own name is a separate decision (it would move the healing
+     * board); what this refuses is inventing a fighter out of a roman numeral.
+     */
+    private static bool IsSentenceEnd(string test, int index) =>
+      test[index] == '!' || (test[index] == '.' &&
+        !(index >= 2 && char.ToUpperInvariant(test[index - 2]) == 'R' && char.ToUpperInvariant(test[index - 1]) == 'K'));
+
     private static HealRecord HandleHealed(string part, int optional, double beginTime)
     {
       // [Sun Feb 24 21:00:58 2019] Foob's promised interposition is fulfilled Foob healed himself for 44238 hit points by Promised Interposition Heal V. (Lucky Critical)
@@ -137,7 +159,7 @@ namespace EQLogParser
         {
           done = true;
         }
-        else if ((previous - 1 >= 0 && (test[previous - 1] == '.' || test[previous - 1] == '!')) || (previous - 9 > 0 &&
+        else if ((previous - 1 >= 0 && IsSentenceEnd(test, previous - 1)) || (previous - 9 > 0 &&
           test.IndexOf("fulfilled", previous - 9, StringComparison.Ordinal) > -1))
         {
           healer = test[(previous + 1)..];

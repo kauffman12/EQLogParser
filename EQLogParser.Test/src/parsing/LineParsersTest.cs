@@ -62,6 +62,56 @@ namespace EQLogParser
       Assert.AreEqual("Blessing of the Ancients III", heal.SubType);
     }
 
+    /*
+     * `Bastion of Divinity Rk. II healed Xxuro …` puts a SPELL in the healer slot and names no person. The period of
+     * "Rk." is not a sentence end, so the parser must not read "the word after the last period" as the actor: it used to,
+     * and the identity list filled with rows called "II" and "III" (measured on eqlog_Kizant_xegony-2.txt). The line is
+     * refused whole, like every other caster-less heal subject; what must never happen again is a rank fragment walking
+     * out of this parser as an entity name.
+     */
+    [TestMethod]
+    public void Process_SpellRankSubject_MintsNoRankFragmentName()
+    {
+      var ok = HealingLineParser.Process(Line(
+        "Bastion of Divinity Rk. II healed Xxuro over time for 6670 hit points by Bastion of Divinity Effect II.", 5));
+
+      Assert.IsFalse(ok);
+      Assert.AreEqual(0, RecordsStore.Instance.GetAllHeals().Count());
+    }
+
+    // The three glued-sentence shapes the punctuation branch exists for still find their healer.
+    [TestMethod]
+    public void Process_HealerAfterGluedSentence_StillParsesTheActor()
+    {
+      Assert.IsTrue(HealingLineParser.Process(Line(
+        "Your ward heals you as it breaks! You healed Niktaza for 8970 (86306) hit points by Healing Ward. (Critical)", 5)));
+      Assert.IsTrue(HealingLineParser.Process(Line(
+        "Rowanoak is soothed by Brell's Soothing Wave. Farzi healed Rowanoak for 524 hit points by Brell's Sacred Soothing Wave.", 6)));
+      Assert.IsTrue(HealingLineParser.Process(Line(
+        "Foob's promised interposition is fulfilled Foob healed himself for 44238 hit points by Promised Interposition Heal V. (Lucky Critical)", 7)));
+
+      var heals = RecordsStore.Instance.GetAllHeals().Select(h => h.Item2).ToList();
+      Assert.AreEqual(3, heals.Count);
+      Assert.AreEqual("TestPlayer", heals[0].Healer, "the bang shape still hands the heal to the local player");
+      Assert.AreEqual("Niktaza", heals[0].Healed);
+      Assert.AreEqual("Farzi", heals[1].Healer, "a period that really does end a sentence still ends it");
+      Assert.AreEqual("Foob", heals[2].Healer);
+    }
+
+    // A rank formulation on the SPELL slot (not the subject) was never affected and must stay parseable.
+    [TestMethod]
+    public void Process_RankFormulationOnSpellSlot_KeepsHealerAndSpell()
+    {
+      Assert.IsTrue(HealingLineParser.Process(Line(
+        "Findawenye healed Piemastaj`s pet for 2823 (78079) hit points by Mending Splash Rk. III. (Critical)", 5)));
+
+      var heal = RecordsStore.Instance.GetAllHeals().Single().Item2;
+      Assert.AreEqual("Findawenye", heal.Healer);
+      Assert.AreEqual("Mending Splash Rk. III", heal.SubType);
+      Assert.AreEqual(2823UL, heal.Total);
+      Assert.AreEqual(78079UL, heal.OverTotal);
+    }
+
     [TestMethod]
     public void Process_RepeatedHeal_SharesOneRecordInstanceFromTheThirdSighting()
     {
