@@ -345,7 +345,7 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   sources and `IdentityPriorStore` persists them — `CensusCastProofTest`) and the lines no column can carry — "You chose NPC" / "Claim taken back"
   are the only way to tell a row an operator wrote from one the rules inferred (`ProvenanceFor`, pinned by `NamesTableTest`, Windows-only). **No status line and no
   header**: the pane is the grid alone — the shape Pet Owners has, because the dock tab already says "Player/NPC Identity" — so nothing on screen prints the census
-  counters (`TotalNames`/`Rejected`/`UnresolvedInCapture`/`Disagreements` are computed and tested, and have no surface); see the docking law below.
+  counters (`TotalNames`/`UnresolvedInCapture`/`Disagreements` are computed and tested, and have no surface); see the docking law below.
 - **The two identity panes share one right-hand strip** (2026-11): Player/NPC Identity sits with Pet Owners (`State="AutoHidden"`, `SideInDockedMode="Right"`) instead of
   tabbing with the fight list — and it is `AutoHidden`, never `Float`, because a floated window is a separate OS window that **cannot** share a tab strip, so "floating +
   tabbed together" has exactly one reading. Three laws ride on that. (1) **One width for both tabs**, from
@@ -373,10 +373,23 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   `RegistrySeed` (identity coming from this application's own memory rather than from this capture) reached the screen as its own name because `PipelineHarness` calls
   `PlayerRegistry.Instance.Clear()`, so no fixture can ever produce one — it is therefore listed in `RuleWords` explicitly, reads **Legacy**, and hovers which store it came
   from (`On the roster this app saved`, or `In the Pet Map as Sancus's`). Say the word "Legacy", never a filename and never the seam's name. This matters because exactly two
-  stores persist — players.txt (verified players plus the `!rejects`) and petmapping.txt — while `_verifiedPets` and `_mercs` are cleared by `Init()` and filled only while a
+  stores persist — players.txt (verified players) and petmapping.txt — while `_verifiedPets` and `_mercs` are cleared by `Init()` and filled only while a
   log is open, so the seed's verified-pet and mercenary branches are this-session memory and must never be described as saved state. Same discipline as the FCT and `HitLabel` vocabularies: a new rule arrives with
   a word here, and `HealedByCasters` (the number behind *Healed*) is gated exactly like R15 — distinct raid-side Strong casters, self-heals skipped, **0 means "not
   asked" rather than "nobody healed them"** (`CensusHealProofTest`).
+- **Identity has two writes and one unset — and no veto.** `ClassificationCommands` is the whole vocabulary: `SetVerdict`
+  (Player / Pet / Merc / NPC into `mirror-overrides.txt`) and `ClearVerdict`, which the Type dropdown's **"Clear claim"**
+  calls. That entry is the *only* unset, so "isn't there already an option to clear the name?" is answered by the same
+  five words in that dropdown (plus `Remove` on the roster) and by nothing else. **Nothing writes or reads a `players.txt`
+  `!Name` rejection any more.** That tombstone arrived 2026-09-28 16:05 (`9de0f230`) and its sole door — Verified Players'
+  ✕, meaning the write inside `RemoveVerifiedPlayer` — lost its menu entry **76 minutes later** (`3b92e096`), three days
+  after the newest tag `2.4.1`; no installed build could ever have made one, so it is deleted rather than parked and there
+  is no file in the wild to migrate. Three consequences to hold: a removal is an **eviction**, so later evidence AND the
+  prior ledger are free to speak about that name again (`ARemovedNameLeavesTheFileAndCanBeLearnedAgain`,
+  `ALedgerFillsSilenceAndNeverContradictsEvidence`); `petmapping.txt` never cascades, because "X's pet" and "X is a
+  raider" are two statements (`RemovingAPlayerKeepsItsPetMapping`); and a permanent "not one of ours" would arrive as a
+  sixth dropdown word over `Set as NPC` — an assertion the rules can weigh — never as a silence that refuses evidence.
+  Reasoning: docs/DesignNotes.md → "A veto nobody could switch on".
 - **A spell effect is not a fighter (R21), and it takes THREE proofs to say so**: when the client writes `Goratoar has taken 18724 damage from Slicing Energy by .` there is no
   caster for the attacker field, so `DamageLineParser` substitutes **the spell** and sets `AttackerIsSpell` (`CombatCapture` carries it onto the fact) — and a spell in an
   attacker field is an actor as far as the identity rules are concerned. Measured on `eqlog_Kizant_xegony-09-03-26.txt`: **706** lines end `by .` and **135** read `from your <spell>.`

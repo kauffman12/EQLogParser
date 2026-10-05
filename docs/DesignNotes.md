@@ -3828,20 +3828,20 @@ on the ~5 minute auto-save while any other entry keeps it fresh. The file was th
 nobody but the operator could write: guild alts, a mainsurname-only entry. Persistence for a name that survives only
 while something else re-confirms it is not persistence.
 
-The filter is now `entry.Value > cutOff || IsManualEntry(entry.Key) || IsRejected(entry.Key)`, and three more rules
-came with it, all of them about not spending operator data on inference:
+The filter is now `entry.Value > cutOff || IsManualEntry(entry.Key)`, and the rules that came with it are all about not
+spending operator data on inference:
 
 - **A hand-typed name keeps its claim for the lifetime of the file.** `AddVerifiedPlayer` no longer stamps names that
   have no timestamp, so a typed entry never becomes "stale" and cannot be reaped; only evidence-dated entries age.
-- **Removal writes a tombstone** (`!Name`) instead of letting the row disappear, and `Init` reads `!Name`, an empty
-  value and a malformed timestamp as "rejection marker": the name stops being auto-confirmed AND stops claiming
-  `Player` identity in `RegistrySeed`. A user who deletes a raid boss off their list gets what they asked for on the
-  next derive rather than watching it come back a minute later.
-- **A rejected owner loses ownership, not the mapping.** `petmapping.txt` stays intact because "Goruuk's pet" being
-  somebody's pet is a different fact from Goruuk being on this server's roster — cascading into the pairs would throw
-  away learned structure to express doubt about one name. The registry simply stops claiming the owner as a raider, and
-  `RegistrySeed` refuses an ownership edge whose target was rejected; R5 still reads the line's own possessive text
-  (`ClassificationRules.OwnerInName`) for the pet itself.
+- **Removal is an eviction, not a veto** (`RemoveVerifiedPlayer` takes the row out and says nothing else, so a later
+  capture's evidence is free to teach that name again). It used to write a `!Name` tombstone: `Init` read `!Name`, an
+  empty value and a malformed timestamp as "rejection marker", the learning paths were refused permanently, and
+  `RegistrySeed` withheld `Player` identity from an owner whose row had been struck. That machinery is deleted — see
+  "A veto nobody could switch on" below for the git evidence that it never had a door — and what remains is the plain
+  half of what the click always looked like.
+- **Removing a player never touches `petmapping.txt`.** "Goruuk's pet" being somebody's pet is a different fact from
+  Goruuk being on this server's roster — cascading into the pairs would throw away learned structure to express doubt
+  about one name. R5 still reads the line's own possessive text (`ClassificationRules.OwnerInName`) for the pet itself.
 
 Round-trip coverage lives in `EQLogParser.Test/src/store/PlayerRegistryPersistenceTest.cs` — there was none: no test
 constructed a registry with a `ConfigDir`, so every `Init`/`Save`/re-`Init` path (including that filter) was untested
@@ -3853,6 +3853,30 @@ One cross-platform fix fell out of making those paths work: `CacheDir` concatena
 `"\\petmapping.txt"`), which on Linux produced one filename per server with a literal backslash inside it rather than
 a file in the server's folder — so nothing in this repository's CI could ever have exercised the read-back path. Both
 now go through `Path.Combine`, and the test asserts the files land *in* the server directory.
+
+### A veto nobody could switch on: `!Name` is deleted, not parked
+
+The tombstone was machinery with no door, and the history says so in three commits:
+
+- `9de0f230` (**2026-09-28 16:05**) wrote the veto — `_rejectedPlayers`, the `!Name` rows in `players.txt`, the gate at
+  the top of `AddVerifiedPlayer`, `RegistrySeed`'s refusal of a rejected owner, and `ClassificationCommands.Reject`. The
+  only thing that ever created one was the Verified Players window's ✕ → `RemoveVerifiedPlayer`, which stamped it.
+- `3b92e096` (**76 minutes later, same day**) retired that window's menu entry. From then on nothing in the UI reached
+  either verb: the Names window's "Not a player" took back the *override*, and the fight grids' menu offers Set as
+  Player / Mercenary / Pet / NPC plus Clear Override.
+- The newest release tag is `2.4.1`, from **2026-09-25** — three days before a rejection could exist at all.
+
+So no build anyone has installed ever offered a way to write `!Name`. There is no file in the wild carrying one, nothing
+in an installer that needs migrating and no operator decision to honour; what the deletion removes is a state where an
+invisible text row made a name permanently unlearnable, reachable only by hand-editing a file in `%AppData%`.
+
+What a removal says now is the plain half of what the click always looked like: `RemoveVerifiedPlayer` evicts the roster
+row, pet mappings keep their structure (`RemovingAPlayerKeepsItsPetMapping`), and a later capture's evidence is free to
+teach the name again (`ARemovedNameLeavesTheFileAndCanBeLearnedAgain`). The ledger is not silenced either —
+`ALedgerFillsSilenceAndNeverContradictsEvidence` asserts that a name whose roster row was taken away keeps its remembered
+verdict, because an eviction is not a veto. Taking a *claim* back remains a UI verb (the Type dropdown's "Clear claim"
+drops the override and the ledger entry together), and if "never call this one of ours again" is ever wanted it arrives as
+an assertion in `mirror-overrides.txt` — `Set as NPC`, which the rules can weigh — rather than as a silence.
 
 ## The name census: what the Names window reads, and what an override costs
 
@@ -3869,9 +3893,10 @@ Four decisions, each because the obvious version was wrong:
   ever got hit and a pet that only ever got healed (heal facts share that one pool: `HealFactTable` interns through the
   damage table, so index N is the same string in both streams). Filtering to attackers would hide the rows an auditor
   comes to look at.
-- **Operator-only names are listed even with zero facts**: a rejection, a typed alt, and — the one that mattered — a
-  verdict on a name this particular capture doesn't contain. Without it the window contradicts its own file and looks
-  like it ignored the override; there is simply nothing to apply it to.
+- **Operator-only names are listed even with zero facts**: a typed alt, and — the one that mattered — a verdict on a
+  name this particular capture doesn't contain. Without it the window contradicts its own file and looks like it ignored
+  the override; there is simply nothing to apply it to. (Both stores that could put such a name on the list are read
+  back into the row set: `mirror-overrides.txt` and the roster. A rejection used to be a third source.)
 - **Totals are summed from the facts, never taken from a summary board.** The census answers "how busy was this name"
   for the whole capture; a board number carries the current fight selection into an audit list. Cost: one pass per
   stream writing into arrays indexed by name id (no hashing, no per-fact allocation), then ~6k timeless
@@ -3897,7 +3922,7 @@ singletons empty on the way out (`AGENTS`: no parallelization, this is process s
 
 Asked whether the classifier's data should be serialized and built up across log files. Splitting the question was the
 whole answer, because two different things hide inside it. **Verdicts are already persisted** where a person said them:
-`mirror-overrides.txt` (Manual strength), `players.txt` (membership + rejections), `petmapping.txt`, npcs.db — all read in
+`mirror-overrides.txt` (Manual strength), `players.txt` (membership), `petmapping.txt`, npcs.db — all read in
 by R10/RegistrySeed on every open. What was NOT kept is the rules' own conclusions, and persisting those would create a
 truth with no line evidence behind it while making the census's *why* column lie. Concretely: R7 builds sides out of what
 the timeline already knows (`kinds[]` over every defender edge), so yesterday's conclusion arriving as input lets the
@@ -3937,14 +3962,14 @@ Four properties make it safe, all pinned (`IdentityPriorStoreTest`, 9 tests):
   entry rather than `DateTimeOffset.UtcNow` means replaying last season's backups does not nuke the ledger.
 
 Census rows carry `IsPrior` with `Reason = "Prior:<code>"`, `PriorSightings`, `PriorSeenAtS`; an operator verdict beats a
-prior, a line read in this capture beats it, and a rejected name borrows nothing (`ALedgerFillsSilenceAndNeverContradictsEvidence`,
-`AnOperatorVerdictOutranksTheLedger`). Storage is `<ConfigDir>/<server>/identity-priors.txt` as
+prior, a line read in this capture beats it — and taking a roster row away silences nothing, since an eviction is not a
+veto (`ALedgerFillsSilenceAndNeverContradictsEvidence`, `AnOperatorVerdictOutranksTheLedger`). Storage is `<ConfigDir>/<server>/identity-priors.txt` as
 `Name=Kind|Reason|SeenAtS|Sightings`; `LoadProperties` splits on `=` and needs exactly two parts, so recorded reasons are
 written with any `=` stripped, and a line that does not parse is dropped rather than repaired (`MalformedLinesAreDroppedNotRepaired`).
 
 **Correction recorded honestly**: two commit messages (3d19b15a, a64042a3) describe a census count of "names with no claim
 at all" (`UnresolvedInCapture`, `Row.IsUnresolved`). That correction **is** in the tree now — `ClassificationReport.Row.IsUnresolved`
-(`Kind == Unknown && !IsRejected && Class is null`), the counter built at `HasFacts && IsUnresolved`, and
+(`Kind == Unknown && Class is null`), the counter built at `HasFacts && IsUnresolved`, and
 `ClassificationReportTest` pinning both halves (roster membership is itself a claim, and a name that appears in no fact stream
 is not "unplaced in this capture"). `NamesTableTest` reads the counter too, so it cannot go missing quietly again.
 
@@ -3975,7 +4000,7 @@ Design points worth keeping:
   path; a refused walk keeps the previous list and logs. With no engine at all the grid is **emptied** (`ClearRows`) — last
   night's names sitting over a closed log are worse than an empty table, and this pane shows no status line to explain them.
 - **No second source of truth.** Every verb goes through `ClassificationCommands` into the same per-server files (verdicts,
-  roster, rejections) plus the ledger; nothing is stored in the window.
+  roster) plus the ledger; nothing is stored in the window.
 - **Four columns: Name | Type | Why | Class, sorted by name, sized like every other table.** The header says TYPE because
   "Kind" made people look for a mob kind, and the cell prints words (`IdentityVocabulary.TypeWord`: Player / Pet / Merc /
   NPC / Unknown) because `Npc` is an enum identifier. `IdentityKind` itself keeps its name — 381 reads across `parsing/derive`, every one of them the engine
@@ -4004,8 +4029,8 @@ Design points worth keeping:
   that pair is the state where a player's damage leaves the board. **Never blank**: an unplaced name reads *"Nothing identified it
   yet — click the pencil to say what it is"*, because the empty cell is exactly the row somebody hovers. "Not in this log" is gone
   outright: it read as an error message on a perfectly ordinary hand-written verdict, and the fact columns already show the absence.
-  `NamesTableTest` pins each surviving sentence and the one-line law (asserted again on the rejection row and the disagreement row,
-  the two states most likely to grow a second line).
+  `NamesTableTest` pins each surviving sentence and the one-line law (asserted again on the cleared-claim row and the
+  disagreement row, the two states most likely to grow a second line).
 - **WHY speaks two words, and the vocabulary is closed** (2026-11). The column used to print `R15-healed` and
   `Prior:R7-graph`, which is the rule book's private vocabulary rendered in the one place a person reads instead of
   greps — and at three times the width of the class column. `IdentityVocabulary.WhyWord` (Core, next to the rules that
@@ -4090,7 +4115,7 @@ Design points worth keeping:
   caption's tooltip. The caption is gone now: the pane is the grid and nothing above it, the shape Pet Owners has — a dock
   tab already prints "Player/NPC Identity" over it, and this window lives in a narrow slide-out strip where every vertical
   pixel belongs to a row. Consequence stated honestly: **the census counters have no surface any more.** `TotalNames`,
-  `Rejected`, `UnresolvedInCapture` and `Disagreements` are still computed and still pinned by `ClassificationReportTest`,
+  `UnresolvedInCapture` and `Disagreements` are still computed and still pinned by `ClassificationReportTest`,
   but nothing on screen prints them; they are diagnostics, and this pane's law is that it says nothing about itself. Where
   the pane lives is its own note: "The two identity panes share the right edge".
 
@@ -4107,8 +4132,8 @@ fixed total, and a theme or font change moves this grid with the others (applied
 **Why not `DataGridUtil.RefreshTableColumns`:** its mapping table has no category for "a word plus an edit icon", and adding
 `Type` or `PlayerClass` there would resize every OTHER grid that maps a column by those words. `AllowResizingColumns` stays on.
 
-Tests: `EQLogParser.Wpf.Test/src/ui/common/NamesTableTest.cs` (the tooltip lines, the one-line law, the operator/rejection
-distinction, the cast and crowd sentences and their absence where they do not belong, `ClassEditable` per kind) — these
+Tests: `EQLogParser.Wpf.Test/src/ui/common/NamesTableTest.cs` (the tooltip lines, the one-line law, the difference between
+a verdict and a claim taken back, the cast and crowd sentences and their absence where they do not belong, `ClassEditable` per kind) — these
 **compile but cannot run on Linux**, so treat them as unbuilt evidence until a Windows run. The parts that do not need WPF moved
 to the cross-platform assembly on purpose: `IdentityVocabularyTest` (vocabulary coverage both directions, the corpus check, the
 echo-unknown law, prior/owner-suffix forms, one-line tooltips and no blank tooltip, `Overrulable`, the dropdown's five entries
@@ -5512,7 +5537,7 @@ as an answer about a person. The column says **Legacy** now and the hover names 
 `In the Pet Map as Sancus's`.
 
 Writing that forced the question of what is actually remembered, and the answer is narrower than "the registry": **two files
-persist**, players.txt (verified players plus the `!rejects`) and petmapping.txt. `_verifiedPets` and `_mercs` are cleared by
+persist**, players.txt (verified players) and petmapping.txt. `_verifiedPets` and `_mercs` are cleared by
 `Init()` and filled only while a log is open (`AddVerifiedPet` from the possessive/heal/cast seams, `addMerc` from `/target`).
 So the seed's verified-pet and mercenary branches are *this-session* memory — redundant with R5-owner/R13-merc wherever a line
 exists, a backstop where none does — and describing them as saved state is wrong.
@@ -5574,8 +5599,12 @@ than as two strips stacked on the right edge, and that a Type dropdown still wor
 tables (Pet Owners' Owner editor has lived in exactly that state for years, which is the evidence it is fine — evidence, not
 proof).
 
-**One verb died on the way and nobody announced it**: with the header's icons deleted, `ClassificationCommands.Reject` — the hard rejection that writes
-`!Name` into players.txt — has **no caller anywhere in the UI**. The fight grids' menu offers Set as Player / Mercenary / Pet / NPC and Clear Override (all of them
-`SetVerdict`/`ClearVerdict` over the selection), and this pane's pencil offers four kinds plus "Clear claim". So the saved roster can only grow or be renamed, never
-pushed back, and `Reject` survives in its class and its tests. Whether that verb comes back (a sixth dropdown entry, or a fight-grid menu item) is a product call — but it
-is a call, not an oversight to rediscover through a bug report.
+**And the verb that was never alive**: what this section used to record — "`ClassificationCommands.Reject`, the hard
+rejection writing `!Name` into players.txt, has no caller anywhere in the UI; it survives in its class and its tests" — was
+a kinder reading than the history. The veto arrived at 16:05 on 2026-09-28 (`9de0f230`), and the only control that could
+reach it, Verified Players' ✕ (the sole caller of `RemoveVerifiedPlayer`, which is where the stamp was written), lost its
+menu entry **76 minutes later** in `3b92e096`; the newest tag, `2.4.1`, is from 2026-09-25. So no installed build ever had
+a door to it, nothing in the wild carries a `!Name` row, and the machinery is **deleted** rather than parked — see
+"A veto nobody could switch on" under the players.txt section for what remains (`RemoveVerifiedPlayer` evicts; evidence
+afterwards is free). This pane's pencil keeps four kinds plus "Clear claim", which is the unset a row needs; a permanent
+"not one of ours" would have to arrive as `Set as NPC`, an assertion the rules can weigh, not as a silence.
