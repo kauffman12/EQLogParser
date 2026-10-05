@@ -4211,8 +4211,10 @@ Design points worth keeping:
   caption's tooltip. The caption is gone now: the pane is the grid and nothing above it, the shape Pet Owners has — a dock
   tab already prints "Player/NPC Identity" over it, and this window lives in a narrow slide-out strip where every vertical
   pixel belongs to a row. Consequence stated honestly: **the census counters have no surface any more.** `TotalNames`,
-  `UnresolvedInCapture` and `Disagreements` are still computed and still pinned by `ClassificationReportTest`,
-  but nothing on screen prints them; they are diagnostics, and this pane's law is that it says nothing about itself. Where
+  `UnresolvedInCapture` and the five kind counts are still computed and still pinned by `ClassificationReportTest`,
+  but nothing on screen prints them; they are diagnostics, and this pane's law is that it says nothing about itself.
+  Three counters with neither a surface nor a single test reader (`TotalFacts`, `OperatorVerdicts`, `Disagreements`) were
+  deleted rather than kept — an invisible number is not the same thing as a preserved signal. Where
   the pane lives is its own note: "The two identity panes share the right edge".
 
 Also added to the census earlier and still there: `TotalNames`, `UnresolvedInCapture`, `Row.IsUnresolved` (see the
@@ -5619,9 +5621,10 @@ about the name.
 
 * **No hover names a file.** `ProvenanceFor` used to append the roster's opinion (`players.txt says Player`, or `in players.txt`), which read as
   a second verdict issued by something the operator cannot open from this window; on a row whose Type came from a rule it looked like a
-  contradiction nobody had explained. Removed. What it was pointing at is still counted — `Row.IsDisagreement` →
-  `ClassificationReport.Disagreements` — but with the header gone that number has no surface on screen either: "counted"
-  now means "available to a diagnostic", not "the operator can read it". Two proof
+  contradiction nobody had explained. Removed. What it was pointing at remains a row fact (`Row.IsDisagreement`: roster says
+  Player, verdict says NPC) and nothing more — the census-wide `Disagreements` counter went out with the header that printed
+  it, so there is no number in either direction: the pane says nothing about itself, and computing an unread total would have
+  been the kind of dead machinery this branch's review exists to catch. Two proof
   clauses that quoted filenames follow the same rule — `R6-npcdb` says **"On the NPC List"** and `R21-spelleffect` says **"The Name of a Spell"**.
   `NoRowTooltipNamesAFile` sweeps every kind × reason this pane can show for `.txt`, "players", "npcs", "priors" and "overrides".
 * **A missing pencil keeps its space.** Type offers no pencil on a spell effect or a summon whose own spelling fixes its answer
@@ -5739,11 +5742,26 @@ The dock tab carries those words already and a caption inside a slide-out strip 
 also finishes what the "(earlier)" and status-line decisions started — see the earlier bullet, which now records the honest
 cost: the census counters have no surface at all.
 
-**The menu item stopped relocating the pane.** `MenuItemNamesClick` used to call `DockingManager.SetState(namesWindow,
+**The menu item stopped relocating the pane — twice.** `MenuItemNamesClick` used to call `DockingManager.SetState(namesWindow,
 Dock.Dock)`, which is not a show/hide at all: pressed to peek at a list, it pulled the window out of its strip and into the
-middle of the layout. It now calls `SyncFusionUtil.ToggleWindow`, exactly what the "Pet Owners" item next to it does, so the
-two panes that share a panel answer their two menu items identically (the census is built on demand, so the explicit
-`Refresh()` stays).
+middle of the layout. Switching it to `SyncFusionUtil.ToggleWindow` (what the "Pet Owners" item does) looked like the fix and
+was the same bug wearing a shared helper: `ToggleWindow` showed a window only when `GetState == Hidden`, then chose the new
+state from CanDocument/CanDock/CanFloat — and an edge pane is dockable, so the ladder answered `Dock`. Reading review caught
+it. Two changes, both in the helper rather than in one handler:
+
+- **Showing asks the window's own side first.** `SyncFusionUtil.ShowStateFor` returns `AutoHidden` for anything declaring
+  `SideInDockedMode` of Left/Right/Top/Bottom; only a window with no side earns Document/Dock/Float. That is "show or hide,
+  never relocate" enforced where every menu item goes through, so Pet Owners gets it too.
+- **Not-visible means show.** The test is `force || state == Hidden || !control.IsVisible`. A pane sitting in a tab group
+  behind another tab has state `Dock` and was therefore HID by its own menu item — the opposite of what clicking its name
+  means — while an auto-hidden pane whose slide-out is shut is not on screen either.
+
+Extracted as a pure decision because the ladder's effect needs a realized `DockingManager`, which needs a live window: what a
+windowless host can pin is which state a pane is handed back (`EQLogParser.Wpf.Test/src/ui/util/DockingPaneToggleTest.cs`).
+**One thing still needs a Windows click-through**: `GetState`'s exact value for a closed auto-hidden pane can only be observed
+running, so the show path is written to be correct under either reading (it cannot dock an edge pane) rather than relying on
+which one it is. The explicit `Refresh()` this section used to justify is gone: showing the pane raises `IsVisibleChanged`,
+`FollowSession` rebuilds, and forcing a census in the handler meant two full classification passes per click.
 
 **A saved layout beats markup, so a move needs a repair — and the repair runs once.** `LoadDockState` applies
 `dockSite.xml` after this markup has been parsed, which means editing the XAML alone changes nothing for anyone who has run
