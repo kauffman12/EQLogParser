@@ -6539,6 +6539,48 @@ about the routing code.
 when the capture already says it in words the timeline reads — R5's possessive forms and the cast lines? A claim that
 comes from evidence would be reproducible; one that comes from "did this process happen to verify the name first" is not.
 
+### The fight list patches its rows instead of rebuilding them
+
+**Built 2026-11.** `RowPatch` (Core, `src/control/ui/`) turns one displayed row list into the next while keeping every row object that
+survives, and `FightTable.OnDerived` uses it before falling back to the whole-collection swap. The measured reason is the next section: a
+derive pass is never a visual no-op, but on a raid night it touches ~5 % of the rows (~40 of ~770), so the win was in per-row content,
+not in an equality gate — and an empty update set then *is* the only-when-needed behaviour that gate was chasing.
+
+Four laws, one of them found by a test refusing the first draft.
+
+1. **Instances survive; content moves.** `Apply` copies cells into the row already on screen (`DerivedFightRow.CopyDisplayFrom`) and
+   never substitutes an object, which is what lets the grid keep its selection and scroll position with no name lookup at all (the Names
+   pane has a companion law where rows ARE replaced, so it must hand the selection back by name — this pane no longer does). `Fight`
+   rides along with the copy: leaving the old `DerivedFight` behind would feed the boards one-pass-stale numbers to a row whose cells
+   just moved, and a selection materializes from that object.
+2. **A plan resolves every position to a concrete instance.** The first draft had `Apply` walk the INCOMING list and insert wherever the
+   live list did not already hold “that” row — which is never, because the incoming rows are different objects with equal keys; it
+   inserted newcomers over survivors and the grid would have gotten brand-new rows anyway. `Plan.Layout` now holds, for each position of
+   the new list, the SURVIVING old object where one matched. `OneRowChanged_OneUpdateAndEveryInstanceKept` is the assertion that caught
+   it — `Assert.AreSame` on a row identity, not “the list looks right”.
+3. **A patch never lies about order or ambiguity.** Matched keys arriving out of relative order (a re-sort) return null; so does a
+   duplicate key on either side. `maxChurn` turns the caller back to the wholesale path before mutating anything when too much of the
+   list is new — the pane uses `max(256, rows / 2)`, which admits the measured worst pass (1,594 touched of 4,835).
+4. **Keys are stamped by the builder.** A fight row keys on name + start time (the pair the selection restore already trusted); an
+   inactivity divider keys on where its gap STARTS, never on its label, because that label grows as the gap is measured against newer
+   facts — keyed on the text, every divider would read as one row leaving and another arriving on every pass.
+   `EveryRowInTheSameSnapshot_HasItsOwnKey` guards the failure that would silence the whole feature: a duplicate key makes `Build` refuse
+   forever, which looks exactly like “the patch never applies”.
+
+**Two states deliberately keep the wholesale path**, both because a patch cannot make their bookkeeping come true: a **sorted** grid
+would hold updated cells in yesterday’s order (no cheap live re-sort exists on this control, and guessing row positions is the failure
+mode the selection code already refuses), and **“show tanking” off** filters per ROW on `Fight.DamageToOwner`, a field a patch mutates
+— the shipped `Syncfusion.SfGrid.WPF` (34.2.8) exposes no `RefreshLiveFilter` to ask for, verified by inspecting the assembly rather
+than by hoping. A live raid pane spends its whole night unsorted and unfiltered, which is where the win lives.
+
+Re-announcement is conditional too: the summary boards are rebuilt only when a pass actually updated (or removed) a row the operator has
+selected — re-materializing an untouched selection every ~500 ms would spend a stats run to redraw identical figures. The search mark
+survives a pass now as well, so it stops blinking off twice a second.
+
+Tests: `EQLogParser.Test/src/control/RowPatchTest.cs` (17 headless tests over a stand-in row type — layout, churn caps, refusals) and
+`EQLogParser.Wpf.Test/src/control/util/DerivedFightRowPatchTest.cs` (key stability across two builds, per-cell notification counts, the
+divider-label law, a three-pass run holding its objects). The second needs Windows; the first carries the logic.
+
 ### Would an equality gate have saved anything? Measured: no — so the fight list wants an incremental update (2026-11)
 
 The proposal was to stop repainting surfaces when a derive pass changed nothing visible. Before writing the comparison,

@@ -20,17 +20,42 @@ namespace EQLogParser
     // Row numbers are not data: the grid's row-header template shows the live position, exactly
     // like the current Fight Table - divider rows count, hidden dividers renumber. No `No` field.
     public bool IsDivider { get; init; }
-    public string Name { get; init; } = string.Empty;
-    public string Identity { get; init; } = string.Empty;
-    public string Source { get; init; } = string.Empty;
-    public string Begin { get; init; } = string.Empty;
-    public string Last { get; init; } = string.Empty;
-    public string Duration { get; init; } = string.Empty;
+
+    /*
+     * What identifies this row from one derive pass to the next. For a fight it is the pair the selection restore already
+     * trusted (name + start time - see FightTable.FightKey for why the row number cannot be it); for an inactivity divider it is
+     * where the gap starts, which is stable while its LABEL grows: "Inactivity > 5 minutes" becoming "> 7 minutes" is the same gap
+     * measured against a newer fact, and keying on the text would count it as a row leaving and another arriving.
+     *
+     * The key is stamped at build time because only the builder knows which kind of row this is and what its gap begins at; RowPatch
+     * then asks for nothing but this string.
+     */
+    internal string Key { get; init; } = string.Empty;
+
+    // Displayed cells. Settable with change notification so a derive pass can update a row IN PLACE (RowPatch) instead of handing
+    // the grid a new object for it: the setter is where "did this cell change?" gets answered, per cell.
+    private string _name = string.Empty;
+    private string _identity = string.Empty;
+    private string _source = string.Empty;
+    private string _begin = string.Empty;
+    private string _last = string.Empty;
+    private string _duration = string.Empty;
+    private string _status = string.Empty;
+    private string _tooltip = string.Empty;
+    private long _damage;
+    private long _hits;
+
+    public string Name { get => _name; set => Set(ref _name, value); }
+    public string Identity { get => _identity; set => Set(ref _identity, value); }
+    public string Source { get => _source; set => Set(ref _source, value); }
+    public string Begin { get => _begin; set => Set(ref _begin, value); }
+    public string Last { get => _last; set => Set(ref _last, value); }
+    public string Duration { get => _duration; set => Set(ref _duration, value); }
 
     // Numeric so grid sorting is numeric.
-    public long Damage { get; init; }
-    public long Hits { get; init; }
-    public string Status { get; init; } = string.Empty;
+    public long Damage { get => _damage; set => Set(ref _damage, value); }
+    public long Hits { get => _hits; set => Set(ref _hits, value); }
+    public string Status { get => _status; set => Set(ref _status, value); }
 
     // The row search highlighted. The one live property on an otherwise value-object row - it changes after
     // construction, which is why the grid's DataTrigger reaches it through PropertyChanged (legacy's own
@@ -51,6 +76,45 @@ namespace EQLogParser
     public event PropertyChangedEventHandler PropertyChanged;
 
     /*
+     * Everything the row SHOWS, compared cell by cell. Used by RowPatch to decide whether this row needs anything at all: on a live
+     * raid night roughly 95 % of rows come back identical and get no write, no notification and no grid work (measured: median 42
+     * changed rows of ~770; docs/DesignNotes.md → "Would an equality gate have saved anything?"). `Key`, `IsDivider` and
+     * `IsSearchResult` are deliberately NOT part of it — the first two define identity, and the third is the reader's own mark, which a
+     * rebuild must not be able to erase by arriving with a fresh one.
+     */
+    internal bool SameDisplayAs(DerivedFightRow other) =>
+      Name == other.Name && Identity == other.Identity && Source == other.Source && Begin == other.Begin
+      && Last == other.Last && Duration == other.Duration && Damage == other.Damage && Hits == other.Hits
+      && Status == other.Status && TooltipText == other.TooltipText;
+
+    /*
+     * Copy the displayed cells (and the fight behind them) from the pass that just arrived, notifying per cell through the setters.
+     * `Fight` rides along because a selection is materialized from it: leaving the OLD object here would keep feeding the boards last
+     * pass's numbers to a row whose cells just moved. The instance stays, the data does not.
+     */
+    internal void CopyDisplayFrom(DerivedFightRow source)
+    {
+      Name = source.Name;
+      Identity = source.Identity;
+      Source = source.Source;
+      Begin = source.Begin;
+      Last = source.Last;
+      Duration = source.Duration;
+      Damage = source.Damage;
+      Hits = source.Hits;
+      Status = source.Status;
+      TooltipText = source.TooltipText;
+      Fight = source.Fight;
+    }
+
+    private void Set<T>(ref T field, T value, [System.Runtime.CompilerServices.CallerMemberName] string name = "")
+    {
+      if (EqualityComparer<T>.Default.Equals(field, value)) return;
+      field = value;
+      PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+    }
+
+    /*
      * The row tooltip the grid's TemplateToolTip binds, in legacy's exact shape (FightManager):
      *   "#Hits To Players: t, #Hits From Players: f, Time Alive: Ns"
      * Duration and hits left the columns with this table's slim-down to the legacy three, so they live here.
@@ -59,11 +123,12 @@ namespace EQLogParser
      * included), and the damage index already keeps those ordinals for the tank board. The end status rides
      * on the end when there is one, since no column shows it any more either.
      */
-    public string TooltipText { get; init; } = string.Empty;
+    public string TooltipText { get => _tooltip; set => Set(ref _tooltip, value); }
 
     // The row's data, for the one thing the grid has to be able to DO right now: hand a selection to a
-    // stats run. Formatted strings are what the grid shows; this is what a selection means.
-    internal DerivedFight Fight { get; init; }
+    // stats run. Formatted strings are what the grid shows; this is what a selection means. Settable because a patched row keeps its
+    // object and must still point at the CURRENT pass's fight (CopyDisplayFrom), or the boards under a selection go stale by one pass.
+    internal DerivedFight Fight { get; set; }
   }
 
   internal sealed class DerivedSnapshot
@@ -123,6 +188,7 @@ namespace EQLogParser
           snapshot.Rows.Add(new DerivedFightRow
           {
             IsDivider = true,
+            Key = DividerKey(gapFrom),
             Name = "Inactivity > " + DateUtil.FormatGeneralTime(Math.Max(0, gapTo - gapFrom)),
           });
           continue;
@@ -137,6 +203,7 @@ namespace EQLogParser
           tooltip += $", {status}";
         snapshot.Rows.Add(new DerivedFightRow
         {
+          Key = FightKey(fight),
           Name = fight.Name,
           Identity = identity.ToString(),
           Source = source ?? string.Empty,
@@ -166,6 +233,13 @@ namespace EQLogParser
 
       return snapshot;
     }
+
+    // The two key shapes, in one place so a fight row and a divider row cannot drift into colliding keys (a collision is what RowPatch
+    // refuses outright - it cannot guess which of two rows an incoming one is).
+    internal static string FightKey(DerivedFight fight) => $"F:{fight.Name}\u0000{fight.BeginTime.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)}";
+
+    internal static string DividerKey(double gapFrom) =>
+      $"D:{gapFrom.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)}";
 
     /*
      * The status column: how the row ended, and who owned it when it did. A charm close says "dead, charmed"

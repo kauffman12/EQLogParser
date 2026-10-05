@@ -197,13 +197,58 @@ namespace EQLogParser
     {
       Dispatcher.InvokeAsync(() =>
       {
+        if (snapshot?.Rows == null) return;
+
         // Whatever the band was saying, the list itself is now the answer - including the mid-load case where
         // the reader pump is still under 100 %: real rows beat a progress bar, and for this session they win.
         _loadBandSettled = true;
         SetLoadBand(null);
 
-        // The mark is a reference to an OLD row that the swap discards: drop it with the rows, or a cleared
-        // highlight would sit on nothing and the next search would skip its own bookkeeping.
+        /*
+         * Patch first, rebuild only when the patch cannot be honest about it (RowPatch: a re-sort, a duplicate key, or more than
+         * about half the list churned). On a live raid night that means the ordinary pass updates ~40 rows and leaves ~730 alone
+         * (docs/DesignNotes.md → "Would an equality gate have saved anything?"), so the row objects under the reader's selection,
+         * the scroll position and the search mark all survive untouched — no re-lookup by name, no blink.
+         */
+        /*
+         * Two states keep the wholesale path, both because a patch cannot make their bookkeeping come true. A SORTED grid would hold
+         * updated cells in yesterday's order (this build's Syncfusion has no live re-sort the pane can call cheaply, and guessing row
+         * positions is the failure mode the selection code already refuses). And with "show tanking" off the view filters per ROW on
+         * Fight.DamageToOwner — a field a patch mutates — and there is no filter refresh to ask for either (checked against the shipped
+         * assembly: no RefreshLiveFilter), so a row that starts or stops taking damage would stay hidden or stay shown. Patching the
+         * unfiltered, unsorted list — which is what a live raid pane spends its whole night in — is where the win lives.
+         */
+        var canPatch = _rows.Count > 0 && fightGrid.SortColumnDescriptions.Count == 0 && _currentShowTanking;
+        var patch = canPatch
+          ? RowPatch.Build<DerivedFightRow>(_rows, snapshot.Rows, static row => row.Key,
+                                            static (a, b) => a.SameDisplayAs(b), Math.Max(256, _rows.Count / 2))
+          : null;
+        if (patch != null)
+        {
+          // What the reader has selected, by INSTANCE: those objects are about to stay in the list, so no restore is needed — but a
+          // selected row that this pass edited means the boards under it now show one pass-old numbers.
+          var selected = fightGrid?.SelectedItems is { } items ? items.Cast<object>().ToList() : [];
+          RowPatch.Apply(_rows, patch, static (target, source) => target.CopyDisplayFrom(source));
+
+          // A marked row that left the list takes its highlight with it; one that stayed keeps it WITHOUT a repaint, which is the
+          // difference between a search mark that holds and one that blinks off twice a second.
+          if (_searchEntry != null && !_rows.Contains(_searchEntry)) ClearSearchMark();
+
+          /*
+           * Re-announce only when there is something to announce: the same selection over rows this pass did not touch still describes
+           * the same board, and re-materializing it on every pass would spend a stats run to redraw identical figures. An empty
+           * selection announces nothing either way.
+           */
+          var touched = selected.Count > 0 &&
+                        (patch.Updates.Any(u => selected.Contains(u.Existing)) || patch.Removals.Any(selected.Contains));
+          if (touched) AnnounceSelection();
+          return;
+        }
+
+        /*
+         * Wholesale rebuild below: the mark is a reference to an OLD row that the swap discards, so drop it here, or a cleared
+         * highlight would sit on nothing and the next search would skip its own bookkeeping.
+         */
         ClearSearchMark();
         /*
          * What the user had selected, remembered by name + start time and put back on the new rows.
