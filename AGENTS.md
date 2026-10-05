@@ -281,7 +281,7 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   load is when the rules finally see the whole capture, which is when they learn what a refresh cannot); growth **rate** >= `BulkFactsPerSecond` (25,000/s;
   a file reads at ~170k facts/s against tens/s while tailing) => `None`, and that parks **both** lanes because the cheap one still holds the
   `CombatCapture._gate` the loader needs; full clock due => `Full`; else cheap clock due => `ProjectionOnly`. The ceiling stays load-bearing:
-  `BuildMirrorUpdate` zeroes the board after the meter's quiet window (`LiveFights.TimeoutFor`, 30 s at the default dial) of quiet measured against *the
+  `BuildMeterUpdate` zeroes the board after the meter's quiet window (`LiveFights.TimeoutFor`, 30 s at the default dial) of quiet measured against *the
   snapshot's* last fact, so a slower cadence makes the refresh rule and the expiry rule argue and the meter blanks on a live raid. Opening a derived meter
   also calls `RederiveAsync()` directly (the expensive lane), since an empty window reads as broken. Every threshold is a duration or a rate rather than a
   tick count — the pump (now **100 ms**) only decides how close to its moment a pass lands, and a per-check allowance would shorten the quiet window and the
@@ -378,7 +378,7 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   a word here, and `HealedByCasters` (the number behind *Healed*) is gated exactly like R15 — distinct raid-side Strong casters, self-heals skipped, **0 means "not
   asked" rather than "nobody healed them"** (`CensusHealProofTest`).
 - **Identity has two writes and one unset — and no veto.** `ClassificationCommands` is the whole vocabulary: `SetVerdict`
-  (Player / Pet / Merc / NPC into `mirror-overrides.txt`) and `ClearVerdict`, which the Type dropdown's **"Clear claim"**
+  (Player / Pet / Merc / NPC into `identity-overrides.txt`) and `ClearVerdict`, which the Type dropdown's **"Clear claim"**
   calls. That entry is the *only* unset, so "isn't there already an option to clear the name?" is answered by the same
   five words in that dropdown (plus `Remove` on the roster) and by nothing else. **Nothing writes or reads a `players.txt`
   `!Name` rejection any more.** That tombstone arrived 2026-09-28 16:05 (`9de0f230`) and its sole door — Verified Players'
@@ -424,7 +424,7 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   cell placement, sizing, focus-back and close hook are the parts the operator meant by "i put a lot of work into getting that working well"). Four laws: the option list shows
   **its own row's** vocabulary, not the whole one (`NameRow.TypeChoices` ← `IdentityVocabulary.TypeOptionsFor`; the five answers exist in `IdentityVocabulary.TypeOptions`, each written exactly once, "Clear claim" carrying
   `IdentityKind.Unknown` because that is what `ClassificationCommands.ClearVerdict` writes); the combo **preselects the row's current verdict** so the handler can
-  refuse a click that changes nothing (a no-op must not spend a derive pass or rewrite mirror-overrides.txt); a cell edit edits its cell — batching lives in the
+  refuse a click that changes nothing (a no-op must not spend a derive pass or rewrite identity-overrides.txt); a cell edit edits its cell — batching lives in the
   fight grids' menu alone now, this pane has no buttons at all; and **the class pencil appears only on a `Player` row** (`NameRow.ClassEditable`) because `SetDefaultPlayerClass` verifies
   the name AND writes players.txt — an icon on an NPC row is exactly the pollution this window exists to catch, and Pet/Merc rows have nothing to persist. Any write
   **Three kinds are trimmed by the same recognizers that hide a pencil** — one recognizer decides the menu AND the write guard (`TypeSelectionChanged` re-checks
@@ -447,7 +447,7 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   to its mapping list would resize every other grid that maps those words.
 - **A fight is "still going" on the capture's clock, and one file answers all three meter questions**: the overlay's numbers moved to the
   derived engine first, which left it painting derived figures while `FightManager` still decided whether you ever saw them (open on launch,
-  close-for-real-when-hidden, open-yourself-on-a-pull). Those now go through **`MirrorMeter`** — the only reader of
+  close-for-real-when-hidden, open-yourself-on-a-pull). Those now go through **`DerivedMeter`** — the only reader of
   `OverlayDamageFromMirror`, so "which engine is the meter reading" has one address and no legacy fallback anywhere on the path ("no session"
   answers *false* - there is no second engine left on this path to consult) — over **`LiveFights`** (Core: a row is live when it is not `Dead` and its last activity in
   **either** direction window sits inside the gap). Three rules that must not be "simplified": (1) **now = the capture's newest event, never
@@ -462,7 +462,7 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   comparing two constant spellings of 30 passes even after somebody edits it to 300. (3) **the X closes the window and disables nothing — so the next damage
   brings the board back, onto the same seconds**: `DeriveEngine.LiveDamageObserved` fires while damage is fresh (`LiveFights.HasFreshDamage` = activity newer than the
   last announcement AND something still live), because legacy's `EventsNewOverlayFight` fired on **every damage line** of a fight (`UpdateIfNewFightMap` raises it whenever
-  `DamageHits > 0`, outside the new-fight branch) and that is what its X felt like. Continuity needs the other half: `DamageOverlayWindow._mirrorWindowT` (the second the board
+  `DamageHits > 0`, outside the new-fight branch) and that is what its X felt like. Continuity needs the other half: `DamageOverlayWindow._meterWindowT` (the second the board
   adds up from) is **static**, since a derived board holds nothing between ticks and an instance field would be reborn at "now" — closing a window is not a reset, only the clear
   button and the dial's own quiet rule (`LiveFights.WindowStartFor`) move it. Both halves were defects in the first port: announcing one row per life kept a closed meter shut
   until the *next pull*, and the instance start made a reopened board forget the seconds already spent. Rate is per derive rather than per line, bounded by
