@@ -30,7 +30,10 @@ namespace EQLogParser
 
     // Group view tracking for incremental updates
     private List<GroupEntry> _groupEntries;
-    private PlayerStats _currentEditPlayer = null!;
+    /* The row the group popup is editing. It starts unset until a selection arrives (the handler below asks), and this
+     * project builds with Nullable=disable, so no null-forgiving initializer is needed to satisfy anything — one would only
+     * hide the real state from whoever reads it next (docs/CodingStandards.md → Nullable Reference Types). */
+    private PlayerStats _currentEditPlayer;
 
     public DamageSummary()
     {
@@ -494,7 +497,7 @@ namespace EQLogParser
       if (sender is not ComboBox combo || combo.SelectedIndex == -1)
         return;
 
-      if (_currentEditPlayer == null || _currentEditPlayer.AssignedGroup == combo.SelectedIndex)
+      if (_currentEditPlayer is null || _currentEditPlayer.AssignedGroup == combo.SelectedIndex)
         return;
 
       var oldGroupId = _currentEditPlayer.AssignedGroup;
