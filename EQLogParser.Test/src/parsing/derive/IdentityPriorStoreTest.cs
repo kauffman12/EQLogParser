@@ -400,6 +400,176 @@ public class IdentityPriorStoreTest
     StringAssert.Contains(File.ReadAllText(LedgerPath), "Witnessed", "cleaning the file took the good row with it");
   }
 
+  /*
+   * THE ROSTER LANE (docs/roster-import-plan.md). players.txt held one fact this file already modelled - the class a name
+   * was seen casting - so membership moved here, as a SECOND statement on the row rather than a new kind of verdict. The
+   * tests below are the seams that keep the two statements from leaking into each other: what a rule witnessed, and what
+   * this application chose to call one of its own.
+   */
+
+  // A number space shared with players.txt and petmapping.txt: dotnet-epoch seconds, as the parser writes fact times too.
+  private static long NowS() => (long)DateUtil.ToDotNetSeconds(DateTime.Now);
+
+  [TestMethod]
+  public void ALegacyFourFieldRowStillLoadsAndIsNotARosterRow()
+  {
+    Directory.CreateDirectory(Path.GetDirectoryName(LedgerPath)!);
+    File.WriteAllLines(LedgerPath, ["Witnessed=Npc|R7-graph|1700000000|3"]);
+
+    IdentityPriorStore.Instance.Init(Server);
+
+    Assert.IsTrue(IdentityPriorStore.Instance.TryGet("Witnessed", out var row),
+                  "a ledger written before the roster bit existed stopped loading - every server's memory is now one field longer to read");
+    Assert.IsFalse(row.Ours, "a four-field row is a verdict somebody witnessed, not membership; defaulting it to the roster " +
+                             "would put every remembered NPC on the operator's list");
+    Assert.IsNull(row.Class);
+    Assert.IsFalse(IdentityPriorStore.Instance.TryGetRoster("Witnessed", out _));
+  }
+
+  [TestMethod]
+  public void TheRosterBitAndTheClassRoundTripThroughTheFile()
+  {
+    var store = IdentityPriorStore.Instance;
+    store.RememberRoster("Betebeatz", NowS(), "Wizard");
+    store.RememberRoster("Strangle", NowS(), null);
+
+    Assert.IsTrue(File.Exists(LedgerPath), "a roster write did not reach the per-server file");
+    StringAssert.Contains(File.ReadAllText(LedgerPath), "Betebeatz=Unknown|Imported|", "the row does not read like a roster row");
+
+    store.Init(Server);
+
+    Assert.IsTrue(store.TryGetRoster("Betebeatz", out var cls));
+    Assert.AreEqual("Wizard", cls, "the learned class did not survive the file - the one fact players.txt could not carry");
+    Assert.IsTrue(store.TryGetRoster("Strangle", out var none));
+    Assert.IsNull(none, "an untyped name came back with a class it was never given");
+    Assert.AreEqual(IdentityKind.Unknown, store.All().First(e => e.Key == "Betebeatz").Value.Kind,
+                    "being on the list is not an identity verdict; writing Player here would let the roster outvote the rules");
+  }
+
+  [TestMethod]
+  public void RememberingTheRosterKeepsAVerdictTheRulesAlreadyHad()
+  {
+    var store = IdentityPriorStore.Instance;
+    var witnessed = new EntityTimeline();
+    witnessed.SetIdentity("Healedmob", IdentityKind.Player, RuleStrength.Strong, "R15-healed");
+    store.Record(witnessed, ["Healedmob"], 1_700_000_000);
+
+    store.RememberRoster("Healedmob", NowS(), "Cleric");
+
+    Assert.IsTrue(store.TryGet("Healedmob", out var row));
+    Assert.AreEqual(IdentityKind.Player, row.Kind, "membership rewrote what a capture witnessed");
+    Assert.AreEqual("R15-healed", row.Reason, "the provenance of the verdict was replaced by the roster's own word");
+    Assert.AreEqual(1, row.Sightings, "being remembered is not a sighting");
+    Assert.IsTrue(row.Ours);
+    Assert.AreEqual("Cleric", row.Class);
+
+    /*
+     * Idempotence: the import runs at startup and a rolled-back players.txt can be imported again. Running it twice on the
+     * same list must change nothing, so re-adding a name nobody touched writes no new time and no rewrite of the file.
+     */
+    var before = File.ReadAllText(LedgerPath);
+    store.RememberRoster("Healedmob", NowS() - 400 * DayS, "Cleric");
+    Assert.IsTrue(store.TryGet("Healedmob", out var again));
+    Assert.AreEqual(row.SeenAtS, again.SeenAtS, "an older sighting moved the clock and re-dated the roster");
+    Assert.AreEqual(before, File.ReadAllText(LedgerPath), "re-importing the same name rewrote identity-priors.txt for nothing");
+  }
+
+  [TestMethod]
+  public void ForgettingARosterNameLeavesAWitnessedVerdictAlone()
+  {
+    var store = IdentityPriorStore.Instance;
+
+    // Two names, two shapes: one row carries a rule's claim underneath, one is nothing but membership.
+    var witnessed = new EntityTimeline();
+    witnessed.SetIdentity("Graphed", IdentityKind.Npc, RuleStrength.Medium, "R7-graph");
+    store.Record(witnessed, ["Graphed"], 1_700_000_000);
+    store.RememberRoster("Graphed", NowS(), "Shadowknight");
+    store.RememberRoster("Justlisted", NowS(), "Wizard");
+
+    store.ForgetRoster("Graphed");
+    store.ForgetRoster("Justlisted");
+
+    Assert.IsTrue(store.TryGet("Graphed", out var kept), "taking a name off the roster deleted what a capture had witnessed");
+    Assert.IsFalse(kept.Ours);
+    Assert.IsNull(kept.Class, "the class rode away with a verdict that does not own it");
+    Assert.AreEqual("R7-graph", kept.Reason);
+
+    Assert.IsFalse(store.TryGet("Justlisted", out _), "a row whose only content was membership has no reason to stay in the file");
+  }
+
+  [TestMethod]
+  public void ARosterRowOutlivesTheRuleLanesPruneAndAStaleVerdictDoesNot()
+  {
+    var store = IdentityPriorStore.Instance;
+    var fresh = NowS();
+
+    // Membership is not evidence, so the rule lane's "90 days behind the newest sighting" cannot be what decides it -
+    // that dial would drop a raid member who took a season off, which is exactly what players.txt never did. (The wall
+    // clock has its own, much longer dial: ARosterNameAgesOnTheWallClock.)
+    store.RememberRoster("Quietplayer", fresh - 150 * DayS, null);
+
+    var timeline = new EntityTimeline();
+    timeline.SetIdentity("Oldfact", IdentityKind.Npc, RuleStrength.Medium, "R7-graph");
+    store.Record(timeline, ["Oldfact"], 1_700_000_000);
+
+    Assert.IsTrue(store.TryGet("Quietplayer", out _), "the prune reached a roster row it does not own");
+    Assert.IsFalse(store.TryGet("Oldfact", out _), "the rule lane stopped pruning while exempting the roster");
+  }
+
+  [TestMethod]
+  public void ARosterNameAgesOnTheWallClockAndAStatementNeverDoes()
+  {
+    Directory.CreateDirectory(Path.GetDirectoryName(LedgerPath)!);
+    var now = (long)DateUtil.ToDotNetSeconds(DateTime.Now);
+    File.WriteAllLines(LedgerPath,
+    [
+      $"Playedrecently=Unknown|Imported|{now - 10 * DayS}|0|True|Wizard",
+      $"Gonedormonths=Unknown|Imported|{now - (PlayerRegistry.StaleDays + 5) * DayS}|0|True|Warrior",
+      "Handtyped=Unknown|Imported|0|0|True|Rogue",
+    ]);
+
+    IdentityPriorStore.Instance.Init(Server);
+
+    Assert.IsTrue(IdentityPriorStore.Instance.TryGetRoster("Playedrecently", out _));
+    Assert.IsFalse(IdentityPriorStore.Instance.TryGetRoster("Gonedormonths", out _),
+                   "a roster name outlived the same StaleDays dial that ages players.txt and petmapping.txt");
+    Assert.IsTrue(IdentityPriorStore.Instance.TryGetRoster("Handtyped", out var cls),
+                  "a row with no time is a statement, not an observation - no dial retires a curated list");
+    Assert.AreEqual("Rogue", cls);
+
+    // Aged out means OUT of the file too: a row every start re-reads and re-drops is how a memory file fills with corpses.
+    var saved = File.ReadAllText(LedgerPath);
+    Assert.IsFalse(saved.Contains("Gonedormonths", StringComparison.Ordinal), "the aged name stayed in identity-priors.txt");
+    StringAssert.Contains(saved, "Handtyped", "aging took the curated rows with it");
+  }
+
+  [TestMethod]
+  public void RecordNeverTurnsANameIntoARosterRow()
+  {
+    var store = IdentityPriorStore.Instance;
+    var timeline = new EntityTimeline();
+    timeline.SetIdentity("Stranger", IdentityKind.Player, RuleStrength.Certain, "R2-who");
+
+    store.Record(timeline, ["Stranger"], NowS());
+
+    Assert.IsTrue(store.TryGet("Stranger", out var row));
+    Assert.IsFalse(row.Ours,
+                   "the derive put a name it merely inferred onto the operator's list - the file would start collecting its own guesses");
+
+    // And a changed verdict keeps the roster's own clock: replaying a two-year-old backup must not rewind the stamp the
+    // wall-clock prune reads, which would age an active player's class out of the file.
+    store.RememberRoster("Stranger", NowS(), "Ranger");
+    var older = new EntityTimeline();
+    older.SetIdentity("Stranger", IdentityKind.Npc, RuleStrength.Medium, "R7-graph");
+    store.Record(older, ["Stranger"], NowS() - 700 * DayS);
+
+    Assert.IsTrue(store.TryGet("Stranger", out var after));
+    Assert.AreEqual(IdentityKind.Npc, after.Kind, "a capture's new verdict was refused");
+    Assert.AreEqual(1, after.Sightings, "a fresh belief kept the old count");
+    Assert.IsTrue(after.Ours && after.Class == "Ranger", "the roster half was spent by a verdict change");
+    Assert.IsTrue(store.TryGetRoster("Stranger", out _));
+  }
+
   [TestMethod]
   public void ForgettingOneNameLeavesEveryOtherFileAlone()
   {

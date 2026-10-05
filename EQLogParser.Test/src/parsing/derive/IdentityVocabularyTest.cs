@@ -58,11 +58,26 @@ public class IdentityVocabularyTest
      */
     "RegistrySeed",
 
+    /*
+     * Also not a rule, and for the same testable reason: no fixture writes the ledger's roster lane, so the corpus run
+     * below cannot produce it. It is membership imported from players.txt (IdentityPriorStore.RosterReason), and its one
+     * word is "Imported" - never a filename, never a rule code.
+     */
+    IdentityPriorStore.RosterReason,
+
     // The two spellings the FILES carry, so they must map even though no rule writes them: what
     // IdentityOverrideStore.LoadAll reports as a row's source ("Override"), and AddRow's word for an override read out of
     // the file before any timeline existed — this window opened before the first derive pass ("Manual").
     "Override", "Manual",
   ];
+
+  /*
+   * The one vocabulary entry allowed to display itself verbatim. It is not a rule code — no R-number, no dash, nothing
+   * LooksLikeACode accepts — it is the English word identity-priors.txt writes in its Reason field for a name that is on
+   * this application's roster, and the cell says the same word the operator would read if they opened the file. Every
+   * OTHER key must be translated, which is what the count below holds.
+   */
+  private static readonly string[] SelfSpelled = [IdentityPriorStore.RosterReason];
 
   [TestMethod]
   public void EveryRuleWordHasAWordWorthPrinting()
@@ -71,7 +86,15 @@ public class IdentityVocabularyTest
     {
       var word = IdentityVocabulary.WhyWord(code);
       Assert.AreNotEqual(string.Empty, word, $"{code} prints nothing");
-      Assert.AreNotEqual(code, word, $"{code} has no word of its own and reached the screen as its own code");
+
+      /*
+       * The guard is "no RULE CODE reaches the screen", and LooksLikeACode below is what enforces that. Differing from
+       * the key is only a proxy for it, and one entry legitimately spells itself: SelfSpelled below, counted against the
+       * table at the end so this exemption cannot quietly grow to cover a code somebody forgot words for.
+       */
+      if (Array.IndexOf(SelfSpelled, code) < 0)
+        Assert.AreNotEqual(code, word, $"{code} has no word of its own and reached the screen as its own code");
+      else Assert.AreEqual(code, word, "a word allowed to spell itself stopped spelling itself");
       Assert.IsFalse(LooksLikeACode(word), $"{code} mapped to something that is still a rule code: {word}");
       Assert.IsTrue(word.Length <= 14, $"{code} maps to a phrase too wide for the cell: {word}");
     }
@@ -82,6 +105,11 @@ public class IdentityVocabularyTest
 
     Assert.AreEqual(RuleWords.Length, IdentityVocabulary.WhyWords.Count,
         "the vocabulary and the rules disagree about how many verdict words exist");
+
+    // The self-spelling exemption, counted: one word in the whole vocabulary may equal its own key, and it is this one.
+    CollectionAssert.AreEquivalent(SelfSpelled,
+                                   IdentityVocabulary.WhyWords.Where(e => e.Value == e.Key).Select(e => e.Key).ToList(),
+                                   "a provenance reached the screen as its own file token (or a listed word stopped spelling itself)");
 
     /*
      * Two codes may share a word, but only where they are genuinely the SAME answer written down twice: "Chosen" is one
@@ -207,6 +235,12 @@ public class IdentityVocabularyTest
 
     // A mapped summon names its person — that pair is the whole reason the row exists.
     Assert.AreEqual("In the Pet Map as Sancus's", IdentityVocabulary.ProofText("RegistrySeed:Sancus", IdentityKind.Pet));
+
+    // The roster lane of the ledger is memory too, and it says so in one clause that already contains "carried over" -
+    // appending the usual " in previous log" to it would print the same sentence twice.
+    Assert.AreEqual("Imported", IdentityVocabulary.WhyWord($"{IdentityVocabulary.PriorPrefix}{IdentityPriorStore.RosterReason}"));
+    Assert.AreEqual("Carried over from the roster this app saved",
+                    IdentityVocabulary.ProofText($"{IdentityVocabulary.PriorPrefix}{IdentityPriorStore.RosterReason}", IdentityKind.Unknown));
 
     // Your own character reads alike whichever of the two codes carried it, and hovers as a sentence.
     Assert.AreEqual(IdentityVocabulary.WhyWord("R0-local"), IdentityVocabulary.WhyWord("You"));

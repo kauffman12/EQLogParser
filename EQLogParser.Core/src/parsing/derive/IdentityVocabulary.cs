@@ -172,6 +172,15 @@ internal static class IdentityVocabulary
   {
     var code = CodeOf(source);
     var detail = DetailOf(source);
+
+    /*
+     * The roster lane of identity-priors.txt, answered before the switch because it is the one proof whose own words
+     * already say "carried over": appending " in previous log" to it would print the same sentence twice. No filename
+     * (the operator cannot open what this window points at) and no rule code, because no rule wrote it.
+     */
+    if (code == IdentityPriorStore.RosterReason)
+      return "Carried over from the roster this app saved";
+
     var text = code switch
     {
       "R0-local" => "Your own name",
@@ -319,6 +328,13 @@ internal static class IdentityVocabulary
      * because an old session said so is the case where the difference matters).
      */
     ["RegistrySeed"] = "Legacy",
+
+    /*
+     * Also not a rule, and also unreachable from a cold test (nothing in a fixture writes the roster lane), which is why
+     * it is listed here and in the test's word list beside the rules: an unmapped code echoes itself on screen, and
+     * "Imported" echoing as "Imported" would read as a bug report rather than as where the name came from.
+     */
+    [IdentityPriorStore.RosterReason] = "Imported",
 
     // Two spellings the files themselves carry, kept mapped because they are already on disk:
     //   "Override" — what IdentityOverrideStore.LoadAll hands back as a row's source.

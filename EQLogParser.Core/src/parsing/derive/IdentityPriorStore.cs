@@ -26,12 +26,26 @@ namespace EQLogParser
    *
    * Three rules keep the file honest:
    *
-   * - ONLY WHAT A LATER LOG MIGHT NOT ANSWER AGAIN IS RECORDED. An entry means "some rule read this name off an
-   * EVENT in a real log" - a target frame, a /who roster, guild speech, a charm line, the graph - and the rule code
+   * - ONLY WHAT A LATER LOG MIGHT NOT ANSWER AGAIN IS RECORDED by Record. An entry means "some rule read this name off
+   * an EVENT in a real log" - a target frame, a /who roster, guild speech, a charm line, the graph - and the rule code
    * is stored with it. A verdict whose input the app owns forever is not memory, it is a restatement; see
-   * WorthRemembering for that vocabulary. Operator verdicts live in identity-overrides.txt (Manual), roster membership
-   * in players.txt and pet mappings in petmapping.txt: copying any of those in here would launder an assertion into
-   * statistics.
+   * WorthRemembering for that vocabulary. Operator verdicts live in identity-overrides.txt (Manual) and pet mappings in
+   * petmapping.txt: copying any of those in here would launder an assertion into statistics.
+   *
+   * THE SECOND LANE: THE ROSTER BIT. The rule above forbids Record from writing membership, and it still does - what
+   * changed is that MEMBERSHIP moved here, because players.txt could not carry the one fact this file already models:
+   * the class a learned name was seen casting (see RememberRoster). So a row is now two statements that share a name
+   * and nothing else:
+   *
+   *   Kind/Reason/SeenAtS/Sightings  what a rule read off an event, on the LOG's clock, aged against this file's newest
+   *                                  sighting ("IT EXPIRES" below).
+   *   Ours/Class                     what this application called the name, aged on the WALL clock at
+   *                                  PlayerRegistry.StaleDays like players.txt and petmapping.txt always were.
+   *
+   * Both stamps are dotnet-epoch seconds - the same number players.txt rows carry - so one field (SeenAtS) serves both
+   * lanes; what differs is WHICH clock retires it, and a roster row is never retired by the rule lane's "90 days behind
+   * the newest sighting". A roster row with no time (SeenAtS <= 0) is a statement, not an observation, and outlives
+   * every dial.
    *
    * - AGREEMENT IS IDEMPOTENT PER CAPTURE. Derivation re-runs whenever a filter or an override changes, so a
    * counter bumped per pass would report "41 captures agreed" for one evening re-derived 41 times. Sighting time is
@@ -47,13 +61,28 @@ namespace EQLogParser
 
     public static IdentityPriorStore Instance { get; } = new();
 
-    /// <summary>One remembered verdict, with the reason that produced it and how often it was agreed.</summary>
-    internal readonly record struct Prior(IdentityKind Kind, string Reason, long SeenAtS, int Sightings);
+    /*
+     * One row, two lanes (see the header). Kind/Reason/SeenAtS/Sightings are what a rule read off an event; Ours/Class
+     * are what this application called the name and when it last saw it. A name can hold both, either or - before this
+     * file knew about the roster - only the first four, which is why the loader accepts a four-field row.
+     *
+     * Sightings counts CAPTURES that agreed on Kind+Reason, so a row that exists only because the roster named it has 0:
+     * nobody witnessed anything, and "remembered" must not read as "confirmed once".
+     */
+    internal readonly record struct Prior(IdentityKind Kind, string Reason, long SeenAtS, int Sightings, bool Ours, string? Class);
 
     // Staleness is measured against the newest sighting in the file, so a player rebuilding last season's logs keeps
-    // what they had; the cap is a memory guard for a name-heavy server played for years.
+    // what they had; the cap is a memory guard for a name-heavy server played for years. Neither reaches a roster row:
+    // membership ages on PlayerRegistry.StaleDays against the wall clock (PruneRosterLocked).
     private const long StaleS = 90L * 24 * 60 * 60;
     private const int MaxEntries = 25_000;
+
+    /*
+     * The provenance word of a row that exists because the ROSTER named it. Deliberately absent from RememberedRules:
+     * Record can neither produce it nor upgrade it, and IdentityVocabulary gives it the one tooltip that is true for it
+     * ("carried over from the roster this app saved") - never a filename, never a rule code.
+     */
+    internal const string RosterReason = "Imported";
 
     private readonly object _gate = new();
     private readonly Dictionary<string, Prior> _byName = new(StringComparer.OrdinalIgnoreCase);
@@ -66,41 +95,62 @@ namespace EQLogParser
     {
       var loaded = new Dictionary<string, Prior>(StringComparer.OrdinalIgnoreCase);
       var dropped = 0;                       // rows the gate below refused, see the log line at the end
+      var roster = 0;                        // rows carrying the roster bit, whatever else they hold
       _serverName = serverName ?? string.Empty;
 
       if (!string.IsNullOrEmpty(_serverName))
       {
         foreach (var (name, value) in ConfigUtil.ReadIdentityPriors(_serverName))
         {
-          // Name=Kind|Reason|SeenAtS|Sightings. Anything malformed is dropped rather than repaired: a half-read row
-          // would put a name on the list with a verdict nobody wrote.
+          // Name=Kind|Reason|SeenAtS|Sightings[|Ours[|Class]]. A four-field row is the shape written before the roster
+          // lane existed and loads unchanged; anything SHORTER or longer is dropped rather than repaired, because a
+          // half-read row would put a name on the list with a verdict nobody wrote.
           var parts = value.Split('|');
-          if (parts.Length != 4 || string.IsNullOrEmpty(name)) continue;
-          if (!Enum.TryParse<IdentityKind>(parts[0], out var kind) || kind == IdentityKind.Unknown) continue;
+          if (parts.Length is < 4 or > 6 || string.IsNullOrEmpty(name)) continue;
+          if (!Enum.TryParse<IdentityKind>(parts[0], out var kind)) continue;
           if (!long.TryParse(parts[2], out var seenAt) || !int.TryParse(parts[3], out var sightings)) continue;
 
-          // Files written before the gate below existed carry restated-database rows ("Name=Npc|R6-npcdb|..."). They
-          // are not read back, and the load writes what is left so the noise leaves the FILE instead of being quietly
-          // dropped again every start: whoever opens this file should find only entries worth arguing about.
+          /*
+           * The roster bit bypasses the allowlist below, and it may carry Kind.Unknown. That is not a hole in the gate:
+           * what the gate refuses is a VERDICT restated from a file the app always has, and this bit is not a verdict -
+           * it is the membership players.txt used to hold, which now has nowhere else to live because the class lives
+           * beside it. It buys a name no authority in the rules: IdentityLookup reads it as "the app's own list", and a
+           * capture's evidence outvotes it the moment the capture says anything.
+           */
+          var ours = parts.Length >= 5 && bool.TryParse(parts[4], out var flag) && flag;
+          var className = parts.Length == 6 && parts[5].Length > 0 ? parts[5] : null;
+
+          // Files written before this gate existed carry restated-database rows ("Name=Npc|R6-npcdb|..."). They are not
+          // read back, and the load writes what is left so the noise leaves the FILE instead of being quietly dropped
+          // again every start: whoever opens this file should find only entries worth arguing about.
           //
           /*
-           * One allowlist decides what survives a load, and that is deliberate - no by-name special cases next to it. The
+           * One allowlist decides what a VERDICT needs to survive a load, and that is deliberate - no by-name special
+           * cases next to it. The
            * concrete reason the gate must stay an ALLOWLIST: "R5-called" (a build that read "X is called to it owner." the
            * wrong way round stamped its subject Pet Certain, and the subject is the SUMMONER - MiscLineParser's census) is
            * simply absent from RememberedRules now, so a ledger written by that build loses those rows here and Save()
            * rewrites them out. Had the retired code been refused by name instead, the next retired rule would have arrived
            * with a second list to forget.
            */
-          if (!WorthRemembering(parts[1])) { dropped++; continue; }
+          if (ours) roster++;
+          else if (kind == IdentityKind.Unknown || !WorthRemembering(parts[1])) { dropped++; continue; }
 
-          loaded[name] = new Prior(kind, parts[1] ?? string.Empty, seenAt, Math.Max(1, sightings));
+          // Sightings keeps its own value rather than being floored at 1: a roster-only row legitimately has none, and
+          // rounding it up would advertise one witnessed capture for a name nothing was ever read off.
+          loaded[name] = new Prior(kind, parts[1] ?? string.Empty, seenAt, Math.Max(0, sightings), ours, className);
         }
       }
 
+      bool aged;
       lock (_gate)
       {
         _byName.Clear();
         foreach (var (name, prior) in loaded) _byName[name] = prior;
+
+        // Membership ages while nobody is looking too: an operator who stopped playing this server in the spring should
+        // not find its names still treated as raid members, and no rule pass has to run for that to be noticed.
+        aged = PruneRosterLocked();
       }
 
       // One line per log opened, because "did the memory load?" is otherwise unanswerable from a player's log file:
@@ -108,12 +158,13 @@ namespace EQLogParser
       // hand-edited the file can see whether their edit was read or refused.
       if (loaded.Count > 0 || dropped > 0)
         Log.Info($"Identity priors for {_serverName}: {loaded.Count} remembered verdicts"
+                 + (roster > 0 ? $", {roster} carried over from the roster" : string.Empty)
                  + (dropped > 0
                     ? $", {dropped} rows refused (restated database answers, or companion claims from a build that "
                       + "read the line backwards) and rewritten out of the file"
                     : string.Empty));
 
-      if (dropped > 0) Save();
+      if (dropped > 0 || aged) Save();
     }
 
     public int Count
@@ -178,9 +229,14 @@ namespace EQLogParser
           _byName.TryGetValue(name, out var existing);
           if (existing.Kind != kind)
           {
-            // A changed verdict is a fresh belief, not the old one plus one: keeping the count would advertise
-            // "agreed 40 times" about a conclusion that was wrong for 39 of them.
-            _byName[name] = new Prior(kind, reason!, captureEndS, 1);
+            /*
+             * A changed verdict is a fresh belief, not the old one plus one: keeping the count would advertise
+             * "agreed 40 times" about a conclusion that was wrong for 39 of them. The time is the MAX rather than the
+             * capture's own end because this row may also be carrying the roster bit, whose stamp is when the operator
+             * last saw the name: replaying a two-year-old backup must not rewind that and let the wall-clock prune take
+             * a still-active raid member's class away. Record touches Kind/Reason/Sightings and nothing the roster owns.
+             */
+            _byName[name] = existing with { Kind = kind, Reason = reason!, SeenAtS = Math.Max(existing.SeenAtS, captureEndS), Sightings = 1 };
             changed = true;
             continue;
           }
@@ -193,9 +249,134 @@ namespace EQLogParser
         }
 
         if (PruneLocked()) changed = true;
+        if (PruneRosterLocked()) changed = true;
       }
 
       if (changed) Save();
+    }
+
+    /*
+     * ROSTER LANE: "this application called the name one of ours, and here is the class it was seen using". Membership
+     * is not an identity verdict and this method never makes one - an existing Kind/Reason/Sightings survive untouched,
+     * so a name the graph decided is NPC keeps that decision while still sitting on the roster (the two statements are
+     * allowed to disagree; IdentityLookup is where the reading order lives).
+     *
+     * seenAtS is the SAME dotnet-epoch number players.txt rows carry (0 = "a statement": a hand-typed name nobody ever
+     * saw do anything, which no dial retires). It moves FORWARD only: re-importing an old list, or confirming a name in
+     * a replayed backup, must not age an active player out, and the import has to be idempotent - running it twice on
+     * the same list changes nothing, so a rolled-back players.txt can be imported again without side effects.
+     */
+    public void RememberRoster(string? name, long seenAtS, string? className) => RememberRoster(name, seenAtS, className, persist: true);
+
+    /*
+     * persist:false is for the ingest path (the parser confirming a name on a loot line), which is batched by
+     * PlayerRegistry's own save timer exactly as players.txt was; operator writes persist at once. The in-memory answer
+     * is immediate either way - that is what "is this one of ours?" reads.
+     */
+    internal void RememberRoster(string? name, long seenAtS, string? className, bool persist)
+    {
+      if (string.IsNullOrEmpty(name)) return;
+
+      var classOf = string.IsNullOrEmpty(className) ? null : className;
+      bool changed;
+      lock (_gate)
+      {
+        if (!_byName.TryGetValue(name, out var existing))
+        {
+          /*
+           * A name the ledger has never heard. Kind stays Unknown on purpose: being on the list is not evidence of what
+           * the name IS, and a row that claimed Player would let the roster outvote every later rule at equal strength.
+           */
+          _byName[name] = new Prior(IdentityKind.Unknown, RosterReason, Math.Max(0, seenAtS), 0, true, classOf);
+          changed = true;
+        }
+        else
+        {
+          var updated = existing with
+          {
+            Ours = true,
+            // A name already carrying a learned class keeps it unless this write has one: the roster's untyped rows
+            // (the hand-typed half of players.txt) are silence about class, not an erasure of it.
+            Class = classOf ?? existing.Class,
+            SeenAtS = Math.Max(existing.SeenAtS, Math.Max(0, seenAtS)),
+          };
+          changed = updated != existing;
+          if (changed) _byName[name] = updated;
+        }
+      }
+
+      if (changed && persist) Save();
+    }
+
+    /// <summary>Take the roster bit off a name. A remembered VERDICT on the same name is a different statement and stays.</summary>
+    public void ForgetRoster(string? name) => ForgetRoster(name, persist: true);
+
+    internal void ForgetRoster(string? name, bool persist)
+    {
+      if (string.IsNullOrEmpty(name)) return;
+
+      bool changed;
+      lock (_gate)
+      {
+        if (!_byName.TryGetValue(name, out var existing)) { changed = false; }
+        else if (!existing.Ours) { changed = false; }
+        else if (existing.Kind != IdentityKind.Unknown && WorthRemembering(existing.Reason))
+        {
+          // The rule row survives with its own clock; only the membership and the class that rode with it leave.
+          _byName[name] = existing with { Ours = false, Class = null };
+          changed = true;
+        }
+        else
+        {
+          // Nothing underneath but the roster's own claim, so the row has no reason to exist.
+          _byName.Remove(name);
+          changed = true;
+        }
+      }
+
+      if (changed && persist) Save();
+    }
+
+    /// <summary>True when this application's roster carries the name; className is what it was last seen as.</summary>
+    public bool TryGetRoster(string? name, out string? className)
+    {
+      if (string.IsNullOrEmpty(name)) { className = null; return false; }
+      lock (_gate)
+      {
+        if (_byName.TryGetValue(name, out var prior) && prior.Ours) { className = prior.Class; return true; }
+      }
+      className = null;
+      return false;
+    }
+
+    public bool TryGetRoster(string? name) => TryGetRoster(name, out _);
+
+    /// <summary>Snapshot of the roster lane for the registry to seed itself from at log open, sorted by name.</summary>
+    public List<KeyValuePair<string, Prior>> RosterEntries()
+    {
+      lock (_gate)
+      {
+        var list = new List<KeyValuePair<string, Prior>>(_byName.Count);
+        foreach (var (name, prior) in _byName)
+        {
+          if (prior.Ours) list.Add(new KeyValuePair<string, Prior>(name, prior));
+        }
+        list.Sort(static (a, b) => string.CompareOrdinal(a.Key, b.Key));
+        return list;
+      }
+    }
+
+    /// <summary>One pass after another server's ledger was read: the file exists but holds no membership yet.</summary>
+    public bool HasRosterRows
+    {
+      get
+      {
+        lock (_gate)
+        {
+          foreach (var prior in _byName.Values) if (prior.Ours) return true;
+        }
+        return false;
+      }
     }
 
     /*
@@ -250,7 +431,12 @@ namespace EQLogParser
       return false;
     }
 
-    // Caller holds the gate. Returns true when something left the dictionary.
+    /*
+     * Caller holds the gate. Roster rows are EXEMPT from both halves of this prune - the size cap included, because the
+     * cap is a guard against a decade of inferred verdicts and evicting "this is one of ours" under somebody who is
+     * still playing would be the file silently forgetting its own list. What a roster row does instead is age on the
+     * wall clock next door (PruneRosterLocked).
+     */
     private bool PruneLocked()
     {
       if (_byName.Count == 0) return false;
@@ -264,6 +450,7 @@ namespace EQLogParser
         List<string>? doomed = null;
         foreach (var (name, prior) in _byName)
         {
+          if (prior.Ours) continue;
           if (newest - prior.SeenAtS > StaleS) (doomed ??= []).Add(name);
         }
         if (doomed is not null)
@@ -273,14 +460,58 @@ namespace EQLogParser
         }
       }
 
-      if (_byName.Count <= MaxEntries) return changed;
+      var candidates = new List<KeyValuePair<string, Prior>>(_byName.Count);
+      foreach (var (name, prior) in _byName)
+      {
+        if (!prior.Ours) candidates.Add(new KeyValuePair<string, Prior>(name, prior));
+      }
+      if (candidates.Count <= MaxEntries) return changed;
 
       // Over the cap, keep the most recently seen: an entry that has not been confirmed for longer is the one whose
       // claim is likeliest to be stale anyway.
-      var byAge = new List<KeyValuePair<string, Prior>>(_byName);
-      byAge.Sort(static (a, b) => b.Value.SeenAtS.CompareTo(a.Value.SeenAtS));
-      foreach (var entry in byAge.Skip(MaxEntries)) _byName.Remove(entry.Key);
+      candidates.Sort(static (a, b) => b.Value.SeenAtS.CompareTo(a.Value.SeenAtS));
+      foreach (var entry in candidates.Skip(MaxEntries)) _byName.Remove(entry.Key);
       return true;
+    }
+
+    /*
+     * Caller holds the gate. The roster lane's own expiry: the SAME number of days players.txt and petmapping.txt were
+     * aged at (PlayerRegistry.StaleDays) against the wall clock, so one dial ages every memory this program keeps.
+     * Two exemptions are load-bearing:
+     *
+     *   SeenAtS <= 0   a statement, not an observation. The hand-typed half of an old players.txt carried no time at
+     *                  all; retiring those is how a curated list dies silently.
+     *   future stamps  nothing retires backwards, so a log whose clock runs ahead cannot age the list.
+     *
+     * Aging takes the MEMBERSHIP off (and the class with it), leaving a rule row that earned its place: what expires is
+     * "the operator's list", not a verdict some capture witnessed.
+     */
+    private bool PruneRosterLocked()
+    {
+      if (_byName.Count == 0) return false;
+
+      var nowS = (long)DateUtil.ToDotNetSeconds(DateTime.Now);
+      var staleS = (long)PlayerRegistry.StaleDays * 24 * 60 * 60;
+      List<string>? expired = null;
+      foreach (var (name, prior) in _byName)
+      {
+        if (!prior.Ours || prior.SeenAtS <= 0) continue;
+        if (nowS - prior.SeenAtS > staleS) (expired ??= []).Add(name);
+      }
+      if (expired is null) return false;
+
+      foreach (var name in expired) ForgetRosterLocked(name);
+      Log.Info($"Identity priors for {_serverName}: {expired.Count} roster names aged out ({PlayerRegistry.StaleDays} days " +
+               "without a sighting)");
+      return true;
+    }
+
+    // Caller holds the gate. Same rule as the public ForgetRoster: a witnessed verdict underneath stays.
+    private void ForgetRosterLocked(string name)
+    {
+      if (!_byName.TryGetValue(name, out var existing) || !existing.Ours) return;
+      if (existing.Kind != IdentityKind.Unknown && WorthRemembering(existing.Reason)) _byName[name] = existing with { Ours = false, Class = null };
+      else _byName.Remove(name);
     }
 
     private void Save()
@@ -294,9 +525,12 @@ namespace EQLogParser
         foreach (var (name, prior) in _byName)
         {
           // '=' is the key/value separator LoadProperties splits on, and a rule code could in principle carry one -
-          // dropping it keeps every saved line parseable rather than silently unlinking the row below it.
+          // dropping it keeps every saved line parseable rather than silently unlinking the row below it. The class is
+          // written last so a name whose class somehow contains a separator cannot shift the fields in front of it.
           var reason = (prior.Reason ?? string.Empty).Replace("=", string.Empty);
-          lines.Add(new KeyValuePair<string, string>(name, $"{prior.Kind}|{reason}|{prior.SeenAtS}|{prior.Sightings}"));
+          var className = (prior.Class ?? string.Empty).Replace("=", string.Empty).Replace("|", string.Empty);
+          lines.Add(new KeyValuePair<string, string>(name,
+            $"{prior.Kind}|{reason}|{prior.SeenAtS}|{prior.Sightings}|{(prior.Ours ? "True" : "False")}|{className}"));
         }
       }
       ConfigUtil.SaveIdentityPriors(lines, _serverName);
