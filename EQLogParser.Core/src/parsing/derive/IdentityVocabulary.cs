@@ -204,7 +204,8 @@ internal static class IdentityVocabulary
       // The companion line names the summoner (MiscLineParser's census), so the proof says what they did.
       "R5-companion" => "Summoned a Companion",
       "R5-owner" => "Owner in Name",
-      "R6-npcdb" => "On the NPC List",
+      // npcs.txt is the game's creature database this app ships, and "NPC DB" is what an operator calls it.
+      "R6-npcdb" => "In the NPC DB",
       "R7-graph" => "It Fights Mobs",
       "R7-side" => "It Attacks Raid",
       "R9-charm" => "Charm Window",
@@ -300,7 +301,7 @@ internal static class IdentityVocabulary
     // The proof is the name's own spelling: `Tuona`s ward` carries its owner in it. "Owner" alone asked a question
     // ("what do you mean owner?") that this answer settles without a second column.
     ["R5-owner"] = "Owner in Name",
-    ["R6-npcdb"] = "NPC List",
+    ["R6-npcdb"] = "NPC DB",
 
     // The attack graph says which side a name fights on, so the words say exactly that rather than "Our side", which
     // could be read as an assertion about loyalty instead of a count of who got hit.
@@ -331,11 +332,13 @@ internal static class IdentityVocabulary
     /*
      * Not a rule: this application's own memory, written before the capture said anything. A cold registry cannot
      * produce it in a test, which is exactly how this code reached the screen as its own name — so it is listed here and
-     * in the test's word list next to the rules. "Legacy" is the operator's word for it; what sits underneath are the
+     * in the test's word list next to the rules. The cell says WHERE the name was remembered from — the old Verified
+     * Players list, which is what players.txt was called on screen — because "Legacy" told a reader nothing they could act
+     * on; what sits underneath are the
      * roster this app saves and the pet map, and the tooltip says which one (a name that only LOOKS like one of ours
      * because an old session said so is the case where the difference matters).
      */
-    ["RegistrySeed"] = "Legacy",
+    ["RegistrySeed"] = "From old Verified List",
 
     /*
      * Also not a rule, and also unreachable from a cold test (nothing in a fixture writes the roster lane), which is why

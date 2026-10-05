@@ -381,7 +381,7 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   passes per click), and `SetSideInDockedMode` BEFORE `SetState` is what makes two auto-hidden panes share one strip.
 - **Identity WORDS live in `IdentityVocabulary` (Core), its coverage is asserted twice, and its tooltip is ONE line**: the Why column used to print `R15-healed` /
   `Prior:R7-graph` at 256 px — the rule book's private vocabulary rendered where a person reads instead of greps. `WhyWord` maps each code to two words (`Healed`, `Chat`,
-  `Who`, `Spell`, `Owner in Name`, `NPC List`, `Chosen`, `A Spell`…), **says the same word for a borrowed verdict as for a local one** (`Prior:R7-graph` → *Fights Mobs*;
+  `Who`, `Spell`, `Owner in Name`, `NPC DB`, `Chosen`, `A Spell`, *From old Verified List*…), **says the same word for a borrowed verdict as for a local one** (`Prior:R7-graph` → *Fights Mobs*;
   the ledger stores the rule so the word is true) and puts the borrow in the tooltip instead — `It Fights Mobs in previous log x2`. The `(earlier)` cell marker was dropped
   on request after being tried twice: column width for a provenance footnote, and one cell carrying two mysteries. **The hover is exactly one short proof clause** (no
   `Cast:`/`Earlier logs:` labels, no "Not in this log" — that read as an error on an ordinary hand-written verdict) and it is **never blank**: an unplaced name answers
