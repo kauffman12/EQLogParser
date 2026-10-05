@@ -200,12 +200,22 @@ namespace EQLogParser
       _quietTimer.Start();
     }
 
-    // IdentityLookup's view of the carried verdicts. Unknown means "this log never said", which is the seam's cue to ask
-    // memory rather than an answer about the name; PositiveInfinity means "as far as we know".
-    private IdentityKind LiveKindAt(string? name, double t) =>
-      name is null || _carriedTimeline is not { } timeline ? IdentityKind.Unknown
-        : double.IsPositiveInfinity(t) ? timeline.Identity(name)
-        : timeline.IdentityAt(name, t);
+    /*
+     * IdentityLookup's view of the carried verdicts. Unknown means "this log never said", which is the seam's cue to ask
+     * memory rather than an answer about the name; PositiveInfinity means "as far as we know".
+     *
+     * The lock is the whole point of this method's shape (docs/DesignNotes.md → "The one seam that answers"): the carried
+     * timeline is mutated by passes on a task thread while this answers menu enables on the UI thread, and a Dictionary read
+     * racing an insert can throw or answer "nobody here" for a name that is in the table. Keeping the hop inside a lock (and
+     * returning a plain IdentityKind) also means no live collection ever escapes to the caller.
+     */
+    private IdentityKind LiveKindAt(string? name, double t)
+    {
+      if (name is null || _carriedTimeline is not { } timeline) return IdentityKind.Unknown;
+
+      lock (timeline.SyncRoot)
+        return double.IsPositiveInfinity(t) ? timeline.Identity(name) : timeline.IdentityAt(name, t);
+    }
 
     /*
      * The name census for the Player/NPC Identity window. Built on demand rather than carried in the snapshot: a derive lands every

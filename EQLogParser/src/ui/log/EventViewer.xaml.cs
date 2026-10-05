@@ -74,18 +74,27 @@ namespace EQLogParser
     private void Load()
     {
       var list = new List<EventRow>();
+
+      // "Is this one of the capture's mobs?" asked of the classified timeline - the same answer NamesTable shows -
+      // rather than "did this name carry a legacy fight row": a name no rule placed is Unknown, and that is the honest
+      // word for a text-choice question. npcs.txt still counts, as before.
+      //
+      // The timeline belongs to the derive worker, which folds verdicts into it on a task thread; this window reads it
+      // here, so every read is taken under EntityTimeline.SyncRoot (docs/DesignNotes.md -> "The one seam that answers").
+      // An unlocked Dictionary read racing an insert can throw, and a throw in a window's Load is a crash.
+      var timeline = DeriveEngine.Active?.Snapshot?.Timeline;
+      bool SaidNpc(string name)
+      {
+        if (timeline is null || EQDataStore.Instance.IsKnownNpc(name)) return EQDataStore.Instance.IsKnownNpc(name);
+        lock (timeline.SyncRoot) return timeline.Identity(name) is IdentityKind.Npc;
+      }
+
       foreach (var (beginTime, record) in RecordsStore.Instance.GetAllDeaths())
       {
         if (!(PlayerRegistry.Instance.IsVerifiedPet(record.Killed) && !PlayerRegistry.IsPossiblePlayerName(record.Killed)))
         {
-          // "Is this one of the capture's mobs?" asked of the classified timeline - the same answer NamesTable
-          // shows - rather than "did this name carry a legacy fight row": a name no rule placed is Unknown, and
-          // that is the honest word for a text-choice question. npcs.txt still counts, as before.
-          var timeline = DeriveEngine.Active?.Snapshot?.Timeline;
-          var isActorNpc = (timeline is not null && timeline.Identity(record.Killer) is IdentityKind.Npc)
-                           || EQDataStore.Instance.IsKnownNpc(record.Killer);
-          var isTargetNpc = (timeline is not null && timeline.Identity(record.Killed) is IdentityKind.Npc)
-                            || EQDataStore.Instance.IsKnownNpc(record.Killed);
+          var isActorNpc = SaidNpc(record.Killer);
+          var isTargetNpc = SaidNpc(record.Killed);
           var isActorPlayer = PlayerRegistry.Instance.IsPetOrPlayerOrSpell(record.Killer);
           var isTargetPlayer = PlayerRegistry.Instance.IsPetOrPlayerOrMerc(record.Killed);
 

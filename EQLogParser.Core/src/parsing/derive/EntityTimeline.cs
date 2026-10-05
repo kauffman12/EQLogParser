@@ -92,6 +92,30 @@ namespace EQLogParser
     private readonly Dictionary<string, List<AffiliationInterval>> _affiliation = new(StringComparer.OrdinalIgnoreCase);
 
     /*
+     * CROSS-THREAD READS TAKE THIS. A timeline is built and folded on the derive worker (DeriveEngine's pass runs under
+     * Task.Run off a DispatcherTimer tick), but verdicts are asked from elsewhere: IdentityLookup.LiveVerdict answers menu
+     * enables on the UI thread, EventViewer walks the snapshot for its kill rows, and SpellDamageStatsViewer filters its
+     * "players only" grid inside a Task.Run. A plain Dictionary read racing an insert that resizes is not a benign miss — it
+     * throws (IndexOutOfRange on a bucket walk) or reports a name as absent, and a menu handler that throws is a crash.
+     *
+     * The convention, therefore: **mutators lock here, and any caller from another thread takes SyncRoot around its own
+     * read** (Monitor is reentrant, so a caller may hold it across several lookups). Nothing on the read side of this class
+     * locks, and that is deliberate rather than an omission: the rule book asks a name's identity millions of times per
+     * classify pass, and an uncontended lock costs enough to move a pass by tens of percent — paying it to protect a
+     * handful of UI reads is the wrong trade. The trade holds only because there is exactly one mutator at any moment (the
+     * pass that owns the instance: a cheap lane folds into the carried timeline, a full pass swaps a fresh one in under the
+     * engine's gate) and readers never mutate, so the only race is writer-against-foreign-reader — which the two sides
+     * above do exclude. A second writer, or a reader that runs on the derive thread while another pass might run, breaks the
+     * argument and would need read-side locking for real.
+     *
+     * DeriveEngine._liveKindAt (the seam's live hop) and EventViewer's kill rows are the two foreign readers today; both
+     * take the lock. NamesWithIdentity() is NOT part of the safe set — it hands out a live Keys view and belongs to the
+     * folding thread (its only callers are tests).
+     *
+     */
+    internal readonly object SyncRoot = new();
+
+    /*
      * An INCREMENTAL digest of everything this store holds, summed in at insert time. Both mutators below drop a
      * re-assertion of something already recorded (identical kind + strength + time + source + owner returns early, because
      * it adds no read-time information), so this value moves exactly when the answer to any lookup could have changed —
@@ -113,6 +137,11 @@ namespace EQLogParser
     public void SetIdentity(string name, IdentityKind kind, int strength, string source, double effectiveFrom = double.NegativeInfinity)
     {
       if (string.IsNullOrEmpty(name)) return;
+      lock (SyncRoot) SetIdentityLocked(name, kind, strength, source, effectiveFrom);
+    }
+
+    private void SetIdentityLocked(string name, IdentityKind kind, int strength, string source, double effectiveFrom)
+    {
       var list = GetOrCreate(_identity, name);
 
       // Dedupe identical assignments: hot callers (owner-line damage facts, join-line churn)
@@ -136,6 +165,11 @@ namespace EQLogParser
     public void AddAffiliation(AffiliationKind kind, string name, double t0, double t1, int strength, string source, string owner = null)
     {
       if (string.IsNullOrEmpty(name)) return;
+      lock (SyncRoot) AddAffiliationLocked(kind, name, t0, t1, strength, source, owner);
+    }
+
+    private void AddAffiliationLocked(AffiliationKind kind, string name, double t0, double t1, int strength, string source, string owner)
+    {
       var list = GetOrCreate(_affiliation, name);
 
       // Same dedupe rationale as SetIdentity (identical interval = no new read-time information).

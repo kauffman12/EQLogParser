@@ -6147,6 +6147,43 @@ merc is claimed by what was decided or seen (an override, a `/target` reading th
 a mercenary is on nobody's raid list, which is why folding it into `IsOneOfUs` stays refused while the pair question needs
 it. An operator override wins over stale `/target` memory in both directions (pinned in `IdentityLookupTest`).
 
+### The seam's live hop locks; its internal reads do not
+
+Putting the seam under the menu handlers exposed a hazard that had been in the app since the first derive pass ran on a
+task thread. A `DerivedSnapshot` hands out the engine's **carried** `EntityTimeline`, and a cheap lane folds new verdicts
+into *that same instance* while its worker thread runs (`Task.Run` off a `DispatcherTimer` tick, `DeriveEngine`). The UI
+thread reads verdicts: menu enables go through `IdentityLookup.LiveVerdict`, and `EventViewer` had been walking
+`Snapshot.Timeline.Identity(...)` for its kill rows since that window was written. A plain-`Dictionary` read racing an
+insert that resizes is not a benign miss - it throws on the bucket walk, or answers "nobody here" about a name that is in
+the table - and a throw inside a menu handler is a crash. `SpellDamageStatsViewer`'s "players only" filter runs inside a
+`Task.Run`, which is what turned this from latent to certain and got it fixed before that pane was migrated.
+
+The convention is asymmetric on purpose: **the mutators take `EntityTimeline.SyncRoot`, and any caller from another thread
+takes the same lock around its own read.** Nothing on the read side of `EntityTimeline` locks. The rule book asks a name's
+identity millions of times per classify pass (186-261 ms against which an uncontended lock per lookup is a real tax), and
+the trade holds because there is exactly one mutator at any moment - the pass that owns the instance, with a full pass
+swapping a fresh timeline in under the engine's gate - and readers never mutate. So writer-against-foreign-reader is the
+only race, and both of its sides do exclude each other. A second writer breaks the argument outright; so does a reader that
+lives on the derive thread while another pass might run. Both would need read-side locking for real, not this note.
+
+Two consequences. The dedupe that makes inserts cheap (a re-asserted identical tuple returns before touching the list) now
+runs *inside* the lock, and hot callers re-assert thousands of times per name - so the lock is taken far more often than
+claims land; what is paid per insert is one uncontended monitor, against reads that pay nothing. And
+`NamesWithIdentity()` hands out a live `Keys` view: it is not part of the safe set, and its only callers are tests.
+
+The per-insert lock was not benchmarked, deliberately: inserts are thousands per pass against millions of unlocked reads,
+so the arithmetic bound is far below the noise, and `DeriveIncrementBenchmarkTest` (see its header for the invocation) is
+the tool if that ever needs proving. Note that its gate takes a path the test host resolves against the test assembly's own
+directory - pass an **absolute** path, or it reports "set EQLP_DERIVE_INCREMENT=..." while your shell insists it is set.
+
+Foreign readers today: `DeriveEngine.LiveKindAt` (the seam's hop - it locks and returns a plain `IdentityKind`, so no live
+collection escapes) and `EventViewer.SaidNpc`. `EntityTimelineConcurrencyTest` pins the two laws that can be observed while
+a table resizes underneath: **a claim once visible stays visible** (nothing removes from this store, so a name going
+missing mid-flight is a torn walk), and **walking the key set under the lock does not throw**. The second half fails
+deterministically the moment the mutators stop locking - checked by hand, because a concurrency test that passes with the
+bug pinned is decoration (the first version of this test did exactly that, and was rewritten around the observable laws
+rather than "no exception was thrown").
+
 What a migrated pane changes visibly, stated once because it is the same in every pane: a name tonight's capture proved but
 nobody ever typed anywhere now appears in "players only" filters and owner dropdowns, and "Set as Verified Player" greys
 out for her - that item is for names nothing can place.
