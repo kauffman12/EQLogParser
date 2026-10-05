@@ -345,7 +345,7 @@ internal static class IdentityVocabulary
     /*
      * The ledger's ownership lane, and the same argument as the row above: no fixture writes it, so the corpus run beside
      * these tests cannot reach it, and an unmapped code echoes itself on screen. "Pet Map" is what the operator called the
-     * file; the filename itself never appears (docs/DesignNotes.md -> "No hover names a file").
+     * file; the filename itself never appears on screen (docs/DesignNotes.md -> "What this application remembers").
      */
     [IdentityPriorStore.OwnerReason] = "Pet Map",
 

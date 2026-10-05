@@ -486,34 +486,29 @@ namespace EQLogParser
         var mapping = ConfigUtil.ReadPetMapping();
         foreach (var key in mapping.Keys)
         {
-          if (!mapping.TryGetValue(key, out var value) || "You".Equals(key, StringComparison.OrdinalIgnoreCase))
+          if (!mapping.TryGetValue(key, out var ownerValue) || "You".Equals(key, StringComparison.OrdinalIgnoreCase))
             continue;
 
           /*
-           * The optional `|<dotnet seconds>` tail is this application's sighting stamp, not part of the owner's name —
-           * stripped here so nothing downstream (the Pet Owners grid, +Pets folding, the meters) ever sees it. A row
-           * without the tail came from an operator's keyboard or from a build that did not stamp, and is kept: rows
-           * with no time are statements, and StaleDays only ever retires observations.
+           * One grammar for both readers of this file — see TryReadPetMapLine (it also lifts the sighting stamp off the
+           * tail so nothing downstream ever has to know it exists).
            */
-          var bar = value.IndexOf('|');
-          if (bar >= 0)
+          if (!TryReadPetMapLine(key, ownerValue, out var owner, out var seenAtS)) continue;
+          if (seenAtS > 0) _petSeenAt[key] = seenAtS;
+
+          if ("You".Equals(owner, StringComparison.OrdinalIgnoreCase))
           {
-            if (double.TryParse(value.AsSpan(bar + 1), out var seenAt) && seenAt > 0) _petSeenAt[key] = seenAt;
-            value = value[..bar];
+            owner = ConfigUtil.PlayerName;
           }
 
-          if ("You".Equals(value, StringComparison.OrdinalIgnoreCase))
+          // An owner is a person by construction: +Pets folding and the You-mapping both ask the player list.
+          if (!_verifiedPlayers.ContainsKey(owner))
           {
-            value = ConfigUtil.PlayerName;
-          }
-
-          if (!_verifiedPlayers.ContainsKey(value))
-          {
-            AddVerifiedPlayer(value, 0d, true);
+            AddVerifiedPlayer(owner, 0d, true);
           }
 
           AddVerifiedPet(key, true);
-          AddPetToPlayer(key, value, true);
+          AddPetToPlayer(key, owner, true);
         }
 
         /*
@@ -528,6 +523,32 @@ namespace EQLogParser
         var ledger = IdentityPriorStore.Instance;
         if (string.Equals(ledger.ServerName, ConfigUtil.ServerName, StringComparison.OrdinalIgnoreCase))
         {
+          /*
+           * The ownership lane first, and for the same reason as the roster lane below: identity-priors.txt is what keeps
+           * this data after petmapping.txt stops being read. `RosterImport.ImportPetMapOnce` fills the lane from that file
+           * at the same moment, so while both exist this seed adds nothing — the pairs are already loaded above — and it is
+           * the whole memory on the day the file is gone.
+           *
+           * A pet whose ledger owner is not otherwise known also lands in the player list, exactly as the file loop above
+           * does: an owner is a person by construction, and +Pets folding and the You-mapping both ask that list.
+           */
+          foreach (var entry in ledger.PetEntries())
+          {
+            var pet = entry.Key;
+            if (_petToPlayer.ContainsKey(pet)) continue;
+
+            var owner = entry.Value.Owner;
+            if (string.IsNullOrEmpty(owner)) continue;
+            if ("You".Equals(owner, StringComparison.OrdinalIgnoreCase)) owner = ConfigUtil.PlayerName;
+
+            if (!_verifiedPlayers.ContainsKey(owner!)) AddVerifiedPlayer(owner!, 0d, true);
+            AddVerifiedPet(pet, true);
+            AddPetToPlayer(pet, owner!, true);
+
+            // The lane's stamp is this app's sighting of the pet; carry it so an old mapping still ages on its own clock.
+            if (entry.Value.SeenAtS > 0 && !_petSeenAt.ContainsKey(pet)) _petSeenAt[pet] = entry.Value.SeenAtS;
+          }
+
           foreach (var entry in ledger.RosterEntries())
           {
             var name = entry.Key;
@@ -545,6 +566,39 @@ namespace EQLogParser
 
         _petMappingUpdated = false;
       }
+    }
+
+    /*
+     * The petmapping.txt grammar, ONE copy: `<pet>=<owner>[|<dotnet seconds>]`. Init loads through it and RosterImport
+     * carries the same pairs into the ledger's ownership lane, so the two readers cannot disagree about which rows are
+     * mappings — a pet one reader adopts and the other refuses is a pet whose owner folds on one board and not the other.
+     *
+     * The stamp tail belongs to THIS application ("when did we last see this name in a log"), not to the owner's name, and
+     * it is stripped here so nothing downstream — the Pet Owners grid, +Pets folding, the meters — ever has to know it
+     * exists. A row with no tail is kept: rows without a time are statements (typed by hand, or written by a build that
+     * did not stamp), and StaleDays only ever retires observations.
+     */
+    internal static bool TryReadPetMapLine(string? pet, string? ownerValue, out string owner, out double seenAtS)
+    {
+      owner = string.Empty;
+      seenAtS = 0d;
+
+      if (string.IsNullOrEmpty(pet)) return false;
+
+      var value = ownerValue ?? string.Empty;
+      var bar = value.IndexOf('|');
+      if (bar >= 0)
+      {
+        if (double.TryParse(value.AsSpan(bar + 1), out var stamped) && stamped > 0) seenAtS = stamped;
+        value = value[..bar];
+      }
+
+      // An owner of "" is a row the Pet Owners grid cannot show and no board can fold onto. "Unassigned" is NOT refused:
+      // that text is data the operator sees and edits, and judging it here would make two authorities of what a row means.
+      if (value.Length == 0) return false;
+
+      owner = value;
+      return true;
     }
 
     /*

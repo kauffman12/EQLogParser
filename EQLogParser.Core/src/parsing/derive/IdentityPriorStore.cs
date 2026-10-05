@@ -417,7 +417,8 @@ namespace EQLogParser
      * Same shape as the roster lane and for the same reasons: it is NOT a verdict, it moves its stamp FORWARD only (so an
      * old list can be imported twice with no effect and a replayed backup cannot age an active pet out), a hand-typed row
      * carries 0 which means "a statement, never retires", and clearing it leaves any witnessed verdict underneath alone.
-     * Owner text is stored verbatim, INCLUDING the "Unassigned" text petmapping.txt uses for a pet nobody has mapped —
+     * Owner text is stored verbatim, INCLUDING the unassigned text petmapping.txt writes for a pet nobody has mapped
+     * (Labels.Unassigned, "Unknown Pet Owner") —
      * that string is data the Pet Owners grid shows and edits, and deciding here whether it counts as an owner is one of
      * the two places a rule and a UI could disagree about what a row means.
      */

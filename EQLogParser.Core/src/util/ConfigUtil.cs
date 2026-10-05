@@ -19,7 +19,9 @@ namespace EQLogParser
     private static readonly ConcurrentDictionary<string, string> ApplicationSettings = new();
     // Internal, not private: RosterImport reads players.txt and has to name the file rather than keep a second spelling
     // of it (two constants for one file is how a migration ends up pointed at nothing).
-    private const string PetMappingFile = "petmapping.txt";
+    // Internal, not private: RosterImport migrates this file into the ledger's ownership lane and has to name it rather
+    // than keep a second spelling of it (same reason as PlayersFile below).
+    internal const string PetMappingFile = "petmapping.txt";
     // players.imported.txt is where this file goes on the day it stops being read. NOT renamed by the importer that
     // copies it into identity-priors.txt, because the registry still writes it: archiving here would leave an operator
     // holding a stale archive AND a live file of the same names inside one session. The move arrives with the commit that
@@ -154,10 +156,17 @@ namespace EQLogParser
       }
     }
 
-    internal static Dictionary<string, string> ReadPetMapping()
+    internal static Dictionary<string, string> ReadPetMapping() => ReadPetMapping(ServerName);
+
+    /*
+     * The petmapping.txt pairs of ONE named server folder. The folder is a parameter for the same reason players.txt's is:
+     * RosterImport runs at the instant the app has switched servers, and "which file did we read" has to be answerable
+     * regardless of what ConfigUtil.ServerName happens to hold by the time the reader returns.
+     */
+    internal static Dictionary<string, string> ReadPetMapping(string serverName)
     {
       var petMapping = new Dictionary<string, string>();
-      LoadProperties(petMapping, ReadList(ServerFilePath(PetMappingFile, ServerName)));
+      LoadProperties(petMapping, ReadList(ServerFilePath(PetMappingFile, serverName)));
       return petMapping;
     }
 

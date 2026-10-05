@@ -25,10 +25,12 @@ namespace EQLogParser
    * (IdentityLookup reads that as two true statements, not a contradiction). `Record` can never write this lane; the
    * importer is the only path from a file into it.
    *
-   * PET OWNERS NEED NO IMPORT, and reading this file is where a reader would expect them. Ownership lives in
-   * petmapping.txt (which stamps its own sightings now) and `RegistrySeed` feeds those pairs every start; an owner is on
-   * the roster because PlayerRegistry.Init seeds mapping owners into the player list, exactly as it always did. Copying
-   * the pairs in here too would put one fact in two files, which is how the two of them start disagreeing.
+   * THE PET SIDE IS `ImportPetMapOnce`, beside this one. It used to be true that ownership needed no import — while
+   * petmapping.txt was still a live file there was nowhere else for the pairs to be, and copying them would have put one
+   * fact in two files. That is exactly what is being unwound: the ledger's ownership lane (IdentityPriorStore.RememberPet)
+   * becomes the store, so the pair is copied ONCE, at the same moment and under the same once-per-folder gate, and after
+   * that the file stops being read. Two files holding one fact is the failure; two files holding it during a migration,
+   * with one of them on its way out, is the migration.
    *
    * THREE LAWS OF THE RUN:
    *
@@ -148,6 +150,83 @@ namespace EQLogParser
       }
 
       return new Outcome(applied, withClass, refused);
+    }
+
+    /// <summary>The petmapping.txt migration for the server this app is currently pointed at.</summary>
+    internal static Outcome ImportPetMapOnce() => ImportPetMapOnce(ConfigUtil.ServerName);
+
+    /*
+     * petmapping.txt -> the ledger's ownership lane, once per server folder. Same three laws as ImportPlayersFileOnce and
+     * for identical reasons (the lane has the same lifetime as the data, stamps move forward only, 0 means "a statement"),
+     * so read that header first; what differs is only WHAT travels: a pair rather than a name, and an owner that is a
+     * PERSON, which is why PlayerRegistry.Init also seeds owners into its player list.
+     *
+     * Runs after IdentityPriorStore.Init(server) and before PlayerRegistry.Init(), so the registry comes up carrying this
+     * folder's mappings whether or not the file still exists a week from now.
+     */
+    internal static Outcome ImportPetMapOnce(string? serverName)
+    {
+      if (string.IsNullOrEmpty(serverName)) return default;
+
+      var ledger = IdentityPriorStore.Instance;
+
+      // Wrong folder and already-carried, both silent, both for the reasons spelled out in ImportPlayersFileOnce: the
+      // ledger files what it is given under the server name IT holds, and the lane's own contents are the record that
+      // this ran. Hand-restoring petmapping.txt is not a reason to import again — the ledger is the durable map now.
+      if (!string.Equals(ledger.ServerName, serverName, StringComparison.OrdinalIgnoreCase)) return default;
+      if (ledger.HasOwnerRows) return default;
+
+      if (!ConfigUtil.ServerFileExists(ConfigUtil.PetMappingFile, serverName)) return default;
+
+      var applied = 0;
+      var refused = 0;
+
+      foreach (var (pet, ownerValue) in ConfigUtil.ReadPetMapping(serverName))
+      {
+        // One grammar for both readers — PlayerRegistry.TryReadPetMapLine strips the sighting stamp off the tail.
+        if (!PlayerRegistry.TryReadPetMapLine(pet, ownerValue, out var owner, out var seenAtS)
+            || "You".Equals(pet, StringComparison.OrdinalIgnoreCase))
+        {
+          if (!string.IsNullOrWhiteSpace(pet)) refused++;
+          continue;
+        }
+
+        /*
+         * "You" as an owner means whoever is playing now (the file is hand-edited); with no character open there is nobody
+         * to mean, and the row is skipped rather than putting the literal word on a map the identity rules would later
+         * meet. The pet name keeps its own spelling otherwise and is capitalized because the parser hands out capitalized
+         * names while identity keys case-insensitively — same reasoning, and the same measured split, as the roster import.
+         */
+        if ("You".Equals(owner, StringComparison.OrdinalIgnoreCase)) owner = ConfigUtil.PlayerName ?? string.Empty;
+
+        /*
+         * Refused: an owner nobody was ever named for, and the unknown marker. What is deliberately NOT refused — unlike
+         * the roster import above — is PersonWord: the unassigned text (Labels.Unassigned) IS one of those words, and
+         * petmapping.txt uses it as data
+         * the Pet Owners grid displays and edits, so dropping those rows would silently shrink an operator's map while the
+         * file loop in PlayerRegistry.Init keeps loading them. A junk row (a pronoun somebody typed) costs one line of
+         * memory; a curated row dropped is memory that disagrees with its own file.
+         */
+        if (string.IsNullOrEmpty(owner) || Labels.Unk.Equals(owner, StringComparison.OrdinalIgnoreCase))
+        {
+          refused++;
+          continue;
+        }
+
+        // Owner text travels verbatim otherwise, "Unassigned" included: it is what the Pet Owners grid displays and edits.
+        ledger.RememberPet(TextUtils.CapitalizeFirst(pet), TextUtils.CapitalizeFirst(owner), (long)seenAtS, persist: false);
+        applied++;
+      }
+
+      if (applied > 0) ledger.FlushChanges();
+
+      if (applied > 0 || refused > 0)
+      {
+        Log.Info($"roster: imported {applied} pet mappings from {ConfigUtil.PetMappingFile}"
+                 + (refused > 0 ? $", {refused} lines refused" : string.Empty));
+      }
+
+      return new Outcome(applied, 0, refused);
     }
   }
 }

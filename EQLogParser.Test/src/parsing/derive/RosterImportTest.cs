@@ -258,6 +258,99 @@ public class RosterImportTest
 
   // ---- helpers -------------------------------------------------------------------------------------------------
 
+
+  [TestMethod]
+  public void TheFirstOpenCarriesThePetMapIntoTheLedgerAndTheRegistry()
+  {
+    var stamp = Math.Round(DateUtil.ToDotNetSeconds(DateTime.Now.AddDays(-10)));
+    WritePetMapFile([$"Fluffy=Ziggy|{stamp:0}", $"Bub={Labels.Unassigned}"]);
+
+    var result = RosterImport.ImportPetMapOnce(Server);
+    Assert.AreEqual(2, result.Applied, $"a pair was not carried; file = [{string.Join(" | ", ReadPetMapFile())}]");
+
+    Assert.IsTrue(IdentityPriorStore.Instance.TryGetOwner("Fluffy", out var owner));
+    Assert.AreEqual("Ziggy", owner, "the sighting stamp leaked into the owner's name");
+    Assert.IsTrue(IdentityPriorStore.Instance.TryGet("Fluffy", out var prior));
+    Assert.AreEqual((long)stamp, prior.SeenAtS, "the file's own clock did not survive the move");
+
+    // The registry is a mirror of the lane: this is the order MainWindow runs (import, then Init), and it is what lets
+    // petmapping.txt stop being read without the +Pets folding or the Pet Owners window losing anything.
+    PlayerRegistry.Instance.Init();
+    Assert.AreEqual("Ziggy", PlayerRegistry.Instance.GetPlayerFromPet("Fluffy"));
+    Assert.IsTrue(PlayerRegistry.Instance.IsVerifiedPet("Fluffy"));
+    Assert.IsTrue(PlayerRegistry.Instance.IsVerifiedPlayer("Ziggy"), "a mapped owner is not on the player list");
+  }
+
+  [TestMethod]
+  public void ThePetMapIsImportedOncePerFolder()
+  {
+    WritePetMapFile(["Fluffy=Ziggy"]);
+
+    Assert.IsTrue(RosterImport.ImportPetMapOnce(Server).DidWork);
+    Assert.IsFalse(RosterImport.ImportPetMapOnce(Server).DidWork, "the lane's own contents are the record that this ran");
+
+    // A hand-restored petmapping.txt afterwards is not re-imported: the ledger is the durable map from here, and a second
+    // pass could only resurrect pairs an operator had since removed.
+    WritePetMapFile(["Fluffy=Ziggy", "Squirrel=Ditto"]);
+    Assert.IsFalse(RosterImport.ImportPetMapOnce(Server).DidWork);
+    Assert.IsFalse(IdentityPriorStore.Instance.TryGetOwner("Squirrel"));
+  }
+
+  [TestMethod]
+  public void APetMapForTheWrongFolderIsRefusedAndNothingIsWritten()
+  {
+    WritePetMapFile(["Fluffy=Ziggy"], "Other Server");
+
+    var result = RosterImport.ImportPetMapOnce("Other Server");
+
+    Assert.AreEqual(0, result.Applied);
+    Assert.IsFalse(IdentityPriorStore.Instance.HasOwnerRows);
+    Assert.IsFalse(File.Exists(LedgerPath), "a refused migration still wrote the ledger — one server's pets in another's file");
+  }
+
+  [TestMethod]
+  public void AnOwnerOfYouMeansWhoeverIsPlayingNow()
+  {
+    WritePetMapFile(["Fluffy=you"]);
+
+    Assert.AreEqual(1, RosterImport.ImportPetMapOnce(Server).Applied);
+    Assert.IsTrue(IdentityPriorStore.Instance.TryGetOwner("Fluffy", out var owner));
+    Assert.AreEqual("Melodyn", owner, "the hand-edited You row did not resolve to the local character");
+
+    // With no character open there is nobody to mean, so the row is refused rather than mapping a pet to the word "you".
+    ConfigUtil.PlayerName = "";
+    WritePetMapFile(["Squirrel=You"], "Other Server");
+    Assert.AreEqual(0, RosterImport.ImportPetMapOnce("Other Server").Applied);
+  }
+
+  [TestMethod]
+  public void UnassignedIsCarriedBecauseTheGridDisplaysIt()
+  {
+    /*
+     * The unassigned text (Labels.Unassigned — "Unknown Pet Owner") is a person word that IsPersonWord refuses on the
+     * ROSTER side, and it must survive here: it is
+     * what petmapping.txt writes for a pet this app has seen but never mapped, the Pet Owners window lists it, and
+     * PlayerRegistry's own file loop keeps loading those rows. Dropping them would make the migration shrink somebody's
+     * map — one row of junk costs nothing, one curated row lost is memory that disagrees with its own file.
+     */
+    WritePetMapFile([$"Bub={Labels.Unassigned}"]);
+
+    Assert.AreEqual(1, RosterImport.ImportPetMapOnce(Server).Applied);
+    Assert.IsTrue(IdentityPriorStore.Instance.TryGetOwner("Bub", out var owner));
+    Assert.AreEqual(Labels.Unassigned, owner);
+  }
+
+  [TestMethod]
+  public void AnEmptyOrMissingPetMapCostsNothingAndSaysNothing()
+  {
+    Assert.IsFalse(RosterImport.ImportPetMapOnce(Server).DidWork, "no file, nothing to carry");
+    Assert.IsFalse(IdentityPriorStore.Instance.HasOwnerRows);
+
+    WritePetMapFile([]);
+    Assert.IsFalse(RosterImport.ImportPetMapOnce(Server).DidWork);
+    Assert.AreEqual(0, IdentityPriorStore.Instance.Count);
+  }
+
   private string LedgerPath => Path.Combine(_tempDir, Server, "identity-priors.txt");
 
   private string PlayersFilePath => Path.Combine(_tempDir, Server, "players.txt");
@@ -271,4 +364,16 @@ public class RosterImportTest
 
   private List<string> ReadPlayersFile() =>
     File.Exists(PlayersFilePath) ? [.. File.ReadAllLines(PlayersFilePath)] : [];
+  private string PetMapPath(string server) => Path.Combine(_tempDir, server, "petmapping.txt");
+
+  private void WritePetMapFile(string[] lines, string server = Server)
+  {
+    Directory.CreateDirectory(Path.Combine(_tempDir, server));
+    File.WriteAllLines(PetMapPath(server), lines);
+  }
+
+  private List<string> ReadPetMapFile() =>
+    File.Exists(PetMapPath(Server)) ? [.. File.ReadAllLines(PetMapPath(Server))] : [];
+
+
 }

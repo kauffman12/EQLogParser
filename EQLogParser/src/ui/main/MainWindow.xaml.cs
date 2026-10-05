@@ -1420,6 +1420,11 @@ namespace EQLogParser
               // carrying this folder's roster whether or not the file still exists.
               RosterImport.ImportPlayersFileOnce(server);
 
+              // petmapping.txt -> the ledger's ownership lane, once per server folder (same gate, same reasons; see
+              // RosterImport). Both migrations sit here so the two legacy files retire on one seam: after this line the
+              // ledger holds membership, class and ownership for this folder, and PlayerRegistry below is a mirror of it.
+              RosterImport.ImportPetMapOnce(server);
+
               // update pet/player windows all at once
               PlayerRegistry.Instance.Init();
               MainActions.LoadVerified(verifiedPlayersWindow, verifiedPetsWindow, PlayerRegistry.Instance.GetVerifiedPlayers(),
