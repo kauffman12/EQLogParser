@@ -140,13 +140,13 @@ public class NamesTableTest
   }
 
   /*
-   * A verified raider overridden to NPC is exactly the state in which a player's damage leaves the board, and the census
-   * still counts it — that count is what the caption's tooltip prints ("N contradict the roster"), where it belongs: it is
-   * one number about the whole capture, not a flag welded onto every affected row. On the row itself the hover now answers
-   * only the question asked, which for this name is "you said so".
+   * A verified raider overridden to NPC is exactly the state in which a player's damage leaves the board. The row knows it
+   * (`Row.IsDisagreement`) and says nothing about it: the header strip that used to print a whole-capture count was removed
+   * on request, so the pane carries no number, and a badge on the row would paint half the list — the hover answers only
+   * the question asked, which for this name is "you said so".
    */
   [TestMethod]
-  public void AContradictedRosterCountsInTheCensusAndStaysOffTheRow()
+  public void AContradictedRosterIsKnownOnTheRowAndSaidNowhere()
   {
     PlayerRegistry.Instance.AddVerifiedPlayer("Berta", 1_700_000_000);
     ClassificationCommands.SetVerdict(IdentityOverrideStore.Instance, "Berta", IdentityKind.Npc);
@@ -154,7 +154,8 @@ public class NamesTableTest
     var census = CensusWithoutACapture();
     var row = NamesTable.RowFrom(census.Find("Berta")!);
 
-    Assert.IsTrue(census.Disagreements >= 1, "the disagreement stopped counting in the census");
+    Assert.IsTrue(census.Find("Berta")!.IsDisagreement,
+                  "the row stopped knowing that the roster and the verdict contradict each other");
     Assert.AreEqual("You chose NPC", row.Provenance,
                     $"the hover states the operator's own claim and appends nothing: {row.Provenance}");
   }

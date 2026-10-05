@@ -298,10 +298,11 @@ namespace EQLogParser
      *
      * Nothing rides behind it any more. It used to append the roster's opinion ("players.txt says Player", or just "in
      * players.txt"), which read as a second verdict from a source the operator cannot see — and on a row this window had
-     * already decided, naming a FILE answered "which file said so" rather than the one question a hover is for. The
-     * disagreement it was pointing at is not hidden: it counts in the caption's tooltip (`N contradict the roster`) and
-     * `Row.IsDisagreement` still decides that number. "Not in this log" is gone on the same grounds — it read as an error
-     * on a row whose Type already says Unknown. A hover is never empty: an unplaced name answers "Nothing identified it".
+     * already decided, naming a FILE answered "which file said so" rather than the one question a hover is for. What that
+     * flag was pointing at is still a fact about the row (`ClassificationReport.Row.IsDisagreement`) but it is printed
+     * nowhere: this pane has no header strip to carry a census-wide count, and a per-row badge would paint half the list.
+     * "Not in this log" is gone on the same grounds — it read as an error on a row whose Type already says Unknown. A hover
+     * is never empty: an unplaced name answers "Nothing identified it".
      */
     internal static string ProvenanceFor(ClassificationReport.Row row)
     {
@@ -311,9 +312,8 @@ namespace EQLogParser
        *
        * The proof clause is whatever the deciding rule can say, and NOTHING where no rule says anything - which is the
        * same state the dropdown words "Clear claim": taking a verdict back leaves the name unclaimed rather than
-       * inventing an answer for the hover to explain. The roster flag rides behind a middot like every other caption
-       * tooltip here, because "somebody's meter is wrong right now" is worth saying on the same breath as the proof
-       * rather than on a line of its own.
+       * inventing an answer for the hover to explain. One clause, no separators: every rider that ever joined this string
+       * (the roster's opinion, "not in this log", the file names) explained something the reader had not asked about.
        */
       var proof = IdentityVocabulary.ProofText(row.Reason, row.Kind, row.HealedByCasters);
 

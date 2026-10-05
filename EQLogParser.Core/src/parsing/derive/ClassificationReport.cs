@@ -111,7 +111,12 @@ namespace EQLogParser
 
       /*
        * The roster says "one of ours" and the classifier says NPC. That direction is the only real disagreement, and
-       * it is the list an operator acts on: a raid member pushed to the enemy column loses her damage on the flip.
+       * it is the thing an operator acts on: a raid member pushed to the enemy column loses her damage on the flip.
+       *
+       * A ROW-level fact and nothing more. It used to feed a `Disagreements` counter that a header strip printed above the
+       * grid; the strip was removed on request (the pane is the table alone), so counting these became a number with no
+       * place to be read - and "counted somewhere invisible" is not a reason to keep computing it. If a surface for the
+       * whole-capture count ever comes back, this property is its input.
        *
        * Unknown is deliberately NOT a disagreement — it means "this capture has no opinion", which is what every
        * guild alt who sat out this log reads, along with the 12-42% of facts whose names legacy never verified
@@ -141,17 +146,20 @@ namespace EQLogParser
     /// <summary>Rows in display order: raid-side kinds first, then busiest, then by name.</summary>
     public IReadOnlyList<Row> Rows { get; }
 
+    /*
+     * The census's own counters. NOTHING on screen prints them: the Names window is the grid alone (no header, no status
+     * line — see docs/DesignNotes.md), so these are diagnostics, asserted by tests and available to whoever puts a surface
+     * back. The three that had neither a surface nor a single test reader (TotalFacts, OperatorVerdicts, Disagreements) are
+     * gone rather than parked; the rest stay because a classification pass is judged by its shape, and this is that shape.
+     */
     /// <summary>Every name the census lists: fact pool plus every hand-written row.</summary>
     public int TotalNames { get; }
 
-    public int TotalFacts { get; }
     public int Players { get; }
     public int Pets { get; }
     public int Mercs { get; }
     public int Npcs { get; }
     public int Unknown { get; }
-    public int OperatorVerdicts { get; }
-    public int Disagreements { get; }
 
     /*
      * Names the capture itself could not place, counting only rows that appear in the fact streams. The distinction is
@@ -161,21 +169,17 @@ namespace EQLogParser
      */
     public int UnresolvedInCapture { get; }
 
-    private ClassificationReport(IReadOnlyList<Row> rows, int totalFacts, int players, int pets, int mercs, int npcs,
-                                 int unknown, int operatorVerdicts, int disagreements,
+    private ClassificationReport(IReadOnlyList<Row> rows, int players, int pets, int mercs, int npcs, int unknown,
                                  int totalNames, int unresolvedInCapture)
     {
       TotalNames = totalNames;
       UnresolvedInCapture = unresolvedInCapture;
       Rows = rows;
-      TotalFacts = totalFacts;
       Players = players;
       Pets = pets;
       Mercs = mercs;
       Npcs = npcs;
       Unknown = unknown;
-      OperatorVerdicts = operatorVerdicts;
-      Disagreements = disagreements;
     }
 
     /// <summary>Looks a name up case-insensitively, the way every entity lookup in this pipeline compares.</summary>
@@ -303,14 +307,11 @@ namespace EQLogParser
 
       var report = new ClassificationReport(
         list,
-        totalFacts: (damageFacts?.FactCount ?? 0) + (healFacts?.HealCount ?? 0),
         players: Count(list, IdentityKind.Player),
         pets: Count(list, IdentityKind.Pet),
         mercs: Count(list, IdentityKind.Merc),
         npcs: Count(list, IdentityKind.Npc),
         unknown: Count(list, IdentityKind.Unknown),
-        operatorVerdicts: list.Count(static r => r.IsOperatorVerdict),
-        disagreements: list.Count(static r => r.IsDisagreement),
         totalNames: list.Count,
         unresolvedInCapture: list.Count(static r => r.HasFacts && r.IsUnresolved));
       return report;
