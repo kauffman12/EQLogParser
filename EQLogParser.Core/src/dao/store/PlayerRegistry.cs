@@ -405,6 +405,13 @@ namespace EQLogParser
 
         foreach (var player in saved)
         {
+          /*
+           * A leading '!' is IGNORED as input, not honoured as a verdict: the file is hand-editable and '!' is the shape a
+           * person reaches for to cross something out, so a line wearing it must not come back as a player named "!Foo".
+           * It carries no meaning beyond that - nothing consults it, and "this name is not one of ours" is an affirmative
+           * claim that belongs on the identity override (Set as NPC). The permanent rejection this line used to implement
+           * was deleted: no shipped build could write one (docs/DesignNotes.md → "A veto nobody could switch on").
+           */
           if (!string.IsNullOrEmpty(player) && player.Length > 2 && !player.StartsWith('!'))
           {
             var parsed = 0d;

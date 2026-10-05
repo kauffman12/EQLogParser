@@ -83,12 +83,14 @@ namespace EQLogParser
           // are not read back, and the load writes what is left so the noise leaves the FILE instead of being quietly
           // dropped again every start: whoever opens this file should find only entries worth arguing about.
           //
-          // One retired code is refused BY NAME rather than by family. Until the companion line was read the right way
-          // round, "R5-called" stamped its name Pet Certain — and that name is the SUMMONER (MiscLineParser's census:
-          // every occurrence sits beside the same name's own `begins casting Summon …`). A ledger written by such a
-          // build remembers raid members as pets, which is worse than no memory: it would hold a real person off the
-          // board for the whole age window. So those rows are refused here and Save() rewrites them out.
-          if (parts[1].StartsWith("R5-called", StringComparison.OrdinalIgnoreCase)) { dropped++; continue; }
+          /*
+           * One allowlist decides what survives a load, and that is deliberate - no by-name special cases next to it. The
+           * concrete reason the gate must stay an ALLOWLIST: "R5-called" (a build that read "X is called to it owner." the
+           * wrong way round stamped its subject Pet Certain, and the subject is the SUMMONER - MiscLineParser's census) is
+           * simply absent from RememberedRules now, so a ledger written by that build loses those rows here and Save()
+           * rewrites them out. Had the retired code been refused by name instead, the next retired rule would have arrived
+           * with a second list to forget.
+           */
           if (!WorthRemembering(parts[1])) { dropped++; continue; }
 
           loaded[name] = new Prior(kind, parts[1] ?? string.Empty, seenAt, Math.Max(1, sightings));

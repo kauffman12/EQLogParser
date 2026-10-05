@@ -88,7 +88,7 @@ internal static class IdentityVocabulary
     var code = CodeOf(source);
     if (code is "R10-manual" or "Manual" or "Override") return TypeOptions;
 
-    var eye = !string.IsNullOrEmpty(name) && ClassificationRules.EyeSummonOwnerInName(name!) is not null;
+    var eye = name is { Length: > 0 } eyeName && ClassificationRules.EyeSummonOwnerInName(eyeName) is not null;
     var decided = !CanOverrule(name, source);
 
     var list = new List<TypeOption>(TypeOptions.Length);
