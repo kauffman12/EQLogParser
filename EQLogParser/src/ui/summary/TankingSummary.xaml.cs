@@ -129,10 +129,16 @@ namespace EQLogParser
 
           if (dataGrid.SelectedItem is PlayerStats playerStats && dataGrid.SelectedItems.Count == 1)
           {
-            menuItemSetPlayerClass.IsEnabled = PlayerRegistry.Instance.IsVerifiedPlayer(playerStats.OrigName);
+            /*
+             * Same three questions as DamageSummary, same seam (docs/DesignNotes.md → "The one seam that answers"):
+             * override, then what this capture watched, then memory. The two panes must not be able to disagree about
+             * whether the name under the cursor is one of ours — one said yes from players.txt while the other asked the
+             * rules and this grid's "Set as player" greyed out a raid member her own damage just proved.
+             */
+            menuItemSetPlayerClass.IsEnabled = IdentityLookup.IsOneOfUs(playerStats.OrigName);
             menuItemSetAsPet.IsEnabled = playerStats.OrigName != Labels.Unk && playerStats.OrigName != Labels.Rs &&
-            !PlayerRegistry.Instance.IsVerifiedPlayer(playerStats.OrigName) && !PlayerRegistry.Instance.IsMerc(playerStats.OrigName);
-            menuItemSetAsPlayer.IsEnabled = !PlayerRegistry.Instance.IsVerifiedPlayer(playerStats.OrigName) &&
+            !IdentityLookup.IsOneOfUsOrMerc(playerStats.OrigName);
+            menuItemSetAsPlayer.IsEnabled = !IdentityLookup.IsOneOfUs(playerStats.OrigName) &&
             PlayerRegistry.IsPossiblePlayerName(playerStats.OrigName);
             selectedName = playerStats.OrigName;
             menuItemShowDeathLog.IsEnabled = !string.IsNullOrEmpty(playerStats.Special) && playerStats.Special.Contains('X');
@@ -166,7 +172,8 @@ namespace EQLogParser
       menuItemPetOptions.Children.Clear();
       if (CurrentStats != null)
       {
-        foreach (var stats in CurrentStats.StatsList.Where(stats => PlayerRegistry.Instance.IsVerifiedPlayer(stats.OrigName)).OrderBy(stats => stats.OrigName))
+        // The owner list is the same question as the menu above, so it cannot offer somebody the menu refused.
+        foreach (var stats in CurrentStats.StatsList.Where(stats => IdentityLookup.IsOneOfUs(stats.OrigName)).OrderBy(stats => stats.OrigName))
         {
           var item = new MenuItem { IsEnabled = true, Header = stats.OrigName };
           item.Click += AssignOwnerClick;
