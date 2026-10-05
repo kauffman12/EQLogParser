@@ -4056,8 +4056,9 @@ Design points worth keeping:
   - **the list preselects the row's current verdict**, which is what lets `TypeSelectionChanged` refuse a click that
     changes nothing — otherwise a stray open-and-reselect spends a derive pass and rewrites mirror-overrides.txt. An
     unplaced name selects nothing (clearing is an action, not a state the row is in);
-  - **a cell edit edits its cell.** Multi-select batching stays where it always was: the two title-bar icons act on the
-    selection (an icon with no row of its own has nothing else to act on), and the fight grids' menu still takes a block.
+  - **a cell edit edits its cell.** Multi-select batching stays where it always was — the fight grids' context menu takes a
+    block (Set as Player / Mercenary / Pet / NPC, Clear Override). The "two title-bar icons" this bullet pointed at are gone
+    with the header, so this pane has no buttons of any kind; a batch verb needs a selection and only those grids have one.
     The class list is `MainActions.ClassList`, hoisted out of `MainWindow`'s private field so the window that owns a name
     and the menus share ONE class vocabulary (`CombatRecordLookup.IsValidClassName` validates the word anyway, which is why
     the list's leading blank writes nothing rather than a roster row with an empty class);
@@ -4084,10 +4085,14 @@ Design points worth keeping:
   derive retires a stage after five failures: the two lanes must not be able to make each other look broken. A from-zero
   replay costs tens of milliseconds of rules on whatever thread the pane opened on, once per deliberate refresh — which is
   what a window that never updates by itself is for.
-- **No status line, same style as the fight list.** The top row is the house title bar (`EQGridTitleHeight`, caption
-  left in `EQTitleStyle`, controls right) and its only content is the word "Names"; the census summary (names / players /
-  pets / mercs / NPCs / rejected · unplaced · contradicting the roster — i.e. every counter on `ClassificationReport`)
-  moved to the caption's tooltip, which keeps those counters read by something instead of quietly dead.
+- **No status line, and in the end no header either.** This bullet used to describe the house title bar
+  (`EQGridTitleHeight`, the word "Names" in `EQTitleStyle`, controls right) with the census summary demoted to that
+  caption's tooltip. The caption is gone now: the pane is the grid and nothing above it, the shape Pet Owners has — a dock
+  tab already prints "Player/NPC Identity" over it, and this window lives in a narrow slide-out strip where every vertical
+  pixel belongs to a row. Consequence stated honestly: **the census counters have no surface any more.** `TotalNames`,
+  `Rejected`, `UnresolvedInCapture` and `Disagreements` are still computed and still pinned by `ClassificationReportTest`,
+  but nothing on screen prints them; they are diagnostics, and this pane's law is that it says nothing about itself. Where
+  the pane lives is its own note: "The two identity panes share the right edge".
 
 Also added to the census earlier and still there: `TotalNames`, `UnresolvedInCapture`, `Row.IsUnresolved` (see the
 correction note above — written for real this time).
@@ -5429,8 +5434,9 @@ about the name.
 
 * **No hover names a file.** `ProvenanceFor` used to append the roster's opinion (`players.txt says Player`, or `in players.txt`), which read as
   a second verdict issued by something the operator cannot open from this window; on a row whose Type came from a rule it looked like a
-  contradiction nobody had explained. Removed. What it was pointing at is still counted, in the one place the claim is about: the caption's
-  tooltip prints `N contradict the roster` from `ClassificationReport.Disagreements`, driven by `Row.IsDisagreement`, which stays. Two proof
+  contradiction nobody had explained. Removed. What it was pointing at is still counted — `Row.IsDisagreement` →
+  `ClassificationReport.Disagreements` — but with the header gone that number has no surface on screen either: "counted"
+  now means "available to a diagnostic", not "the operator can read it". Two proof
   clauses that quoted filenames follow the same rule — `R6-npcdb` says **"On the NPC List"** and `R21-spelleffect` says **"The Name of a Spell"**.
   `NoRowTooltipNamesAFile` sweeps every kind × reason this pane can show for `.txt`, "players", "npcs", "priors" and "overrides".
 * **A missing pencil keeps its space.** Type offers no pencil on a spell effect or a summon whose own spelling fixes its answer
@@ -5519,3 +5525,57 @@ table's test, not in the hope that some fixture warms the registry.
 Tests: `TheTypeListOffersOnlyWhatANameCanBe` (headless), and in the Windows assembly `ARowOffersOnlyTheKindsItsNameAllows`,
 `ARefreshKeepsEveryRowWhereTheReaderLeftIt`, `ANameTheCensusDropsLeavesTheList`, `OpeningTheTabAgainReRanksTheList` — the last
 three construct no WPF element, they exercise `MergeRows` against an `ObservableCollection`.
+
+## The two identity panes share the right edge (2026-11)
+
+Player/NPC Identity moved out of the fight list's tab group and into **Pet Owners'** panel on the right, and lost its header
+row on the way. Three things had to be decided that a dock markup does not decide for you.
+
+**AutoHidden, not Float — because "tabbed with" is a property of one container.** Read literally, "floating window on the
+right" is `DockState.Float`, but a floated window is a separate OS window: it cannot share a tab strip with anything, so the
+second half of the request would be silently lost. `AutoHidden` is what Pet Owners already is — a strip on the right edge
+that slides the clicked tab out over the tables and costs nothing while closed — which is also what "just be like the pet
+owners" asks for. Both panes now declare `State="AutoHidden" SideInDockedMode="Right"`, and two windows auto-hidden on the
+same side are grouped into that side's panel by Syncfusion itself (`FindAutoHiddenSiblings` is the private half of it). A
+real floating window remains a one-attribute change if the strip ever annoys somebody more than the tab does.
+
+**One width, taken from the table rather than written beside the markup.** Two tabs in one panel that want different widths
+make the panel jump under the cursor on every switch, so `EQIdentityStripWidth` is computed once and handed to both panes
+(`ThemeConfig.SetThemeFontSizes` → `SyncFusionUtil.SetDesiredWidth`). The number is `NamesTable.DesiredPaneWidth()`: this
+pane's own four columns + its row header + 18 px of scrollbar — **539 px at the default 12 pt font** (Name 145, Type 88 with
+its pencil, Class 126, Why 126, row header 36, scrollbar 18). It is a function rather than a constant for two reasons: a
+literal beside the dock markup drifts the day `ApplyColumnWidths` changes, and the failure mode of a strip that is too
+narrow is the worst kind here — the Why column simply sits behind a horizontal scrollbar in a pane the operator cannot widen
+past the panel. Pet Owners goes from 340 px to the same 539 as its price for sharing; its Owner column is
+`AutoWithLastColumnFill`, so it just gets roomier.
+
+**No header at all.** The `EQGridTitleHeight` row holding the word "Names" is deleted, so the pane is one child: the grid.
+The dock tab carries those words already and a caption inside a slide-out strip spends 30 vertical pixels repeating it. This
+also finishes what the "(earlier)" and status-line decisions started — see the earlier bullet, which now records the honest
+cost: the census counters have no surface at all.
+
+**The menu item stopped relocating the pane.** `MenuItemNamesClick` used to call `DockingManager.SetState(namesWindow,
+Dock.Dock)`, which is not a show/hide at all: pressed to peek at a list, it pulled the window out of its strip and into the
+middle of the layout. It now calls `SyncFusionUtil.ToggleWindow`, exactly what the "Pet Owners" item next to it does, so the
+two panes that share a panel answer their two menu items identically (the census is built on demand, so the explicit
+`Refresh()` stays).
+
+**A saved layout beats markup, so a move needs a repair — and the repair runs once.** `LoadDockState` applies
+`dockSite.xml` after this markup has been parsed, which means editing the XAML alone changes nothing for anyone who has run
+the app before: their own file still says the identity pane tabs with `npcWindow`. So `MainWindowOnLoaded` calls
+`MigrateIdentityPaneIntoRightStrip()` next to the two standing fixups (`npcWindow` docked, `mirrorFightWindow` hidden). It
+is guarded by a config flag (`IdentityStripMigrated`) rather than being a law: an operator who moves the pane afterwards
+keeps that arrangement, because nothing here runs twice, and *Options → Reset Window State* remains the escape hatch for
+every other thing a stale layout got wrong. The body is wrapped in `try`/`Log.Debug` because this is the startup path — an
+arrangement this build cannot express must cost a strip, not a window.
+
+Needs a Windows run to confirm what no headless test can see: that the two panes really land as tabs of one strip rather
+than as two strips stacked on the right edge, and that a Type dropdown still works while its pane is slid out over the
+tables (Pet Owners' Owner editor has lived in exactly that state for years, which is the evidence it is fine — evidence, not
+proof).
+
+**One verb died on the way and nobody announced it**: with the header's icons deleted, `ClassificationCommands.Reject` — the hard rejection that writes
+`!Name` into players.txt — has **no caller anywhere in the UI**. The fight grids' menu offers Set as Player / Mercenary / Pet / NPC and Clear Override (all of them
+`SetVerdict`/`ClearVerdict` over the selection), and this pane's pencil offers four kinds plus "Clear claim". So the saved roster can only grow or be renamed, never
+pushed back, and `Reject` survives in its class and its tests. Whether that verb comes back (a sixth dropdown entry, or a fight-grid menu item) is a product call — but it
+is a call, not an oversight to rediscover through a bug report.

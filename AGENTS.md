@@ -343,8 +343,19 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   (`ClassificationReport.Row.ReasonDetail` — taken per **gate**, not per caster, because "Hobble of Spirits VI" is a prefix of the pet's "Hobble of Spirits Snare
   VI" and one flat substring test let the pet's spell name itself in a Player row's tooltip; never by widening the claim source, since `StateStamp` hashes
   sources and `IdentityPriorStore` persists them — `CensusCastProofTest`) and the lines no column can carry — "You chose NPC" / "Claim taken back"
-  are the only way to tell a row an operator wrote from one the rules inferred (`ProvenanceFor`, pinned by `NamesTableTest`, Windows-only). No status line: like
-  the fight list the pane says nothing about itself, so the census counts ride the caption's tooltip.
+  are the only way to tell a row an operator wrote from one the rules inferred (`ProvenanceFor`, pinned by `NamesTableTest`, Windows-only). **No status line and no
+  header**: the pane is the grid alone — the shape Pet Owners has, because the dock tab already says "Player/NPC Identity" — so nothing on screen prints the census
+  counters (`TotalNames`/`Rejected`/`UnresolvedInCapture`/`Disagreements` are computed and tested, and have no surface); see the docking law below.
+- **The two identity panes share one right-hand strip** (2026-11): Player/NPC Identity sits with Pet Owners (`State="AutoHidden"`, `SideInDockedMode="Right"`) instead of
+  tabbing with the fight list — and it is `AutoHidden`, never `Float`, because a floated window is a separate OS window that **cannot** share a tab strip, so "floating +
+  tabbed together" has exactly one reading. Three laws ride on that. (1) **One width for both tabs**, from
+  `NamesTable.DesiredPaneWidth()` (its four columns + row header + scrollbar — **539 px at 12 pt**) fed to `EQIdentityStripWidth` by `ThemeConfig`: a panel whose two tabs
+  want different widths jumps on every switch, and a strip narrower than the table hides the Why column behind a horizontal scrollbar in a pane that cannot be widened past
+  the panel — never replace the call with a constant. (2) **Markup loses to `dockSite.xml`**, so moving a pane means repairing the saved layout once:
+  `MainWindow.MigrateIdentityPaneIntoRightStrip()` runs after `LoadDockState` beside the standing `npcWindow`/`mirrorFightWindow` fixups, is gated by the
+  `IdentityStripMigrated` config flag (someone who moves it later keeps their choice; Reset Window State stays the escape hatch) and is wrapped in `try`/`Log.Debug` because
+  a throw on this path costs the main window. (3) **A menu item shows or hides, it never relocates**: `MenuItemNamesClick` calls `SyncFusionUtil.ToggleWindow` like the
+  "Pet Owners" item beside it; the old `SetState(namesWindow, Dock)` pulled the pane out of its strip into the middle of the layout.
 - **Identity WORDS live in `IdentityVocabulary` (Core), its coverage is asserted twice, and its tooltip is ONE line**: the Why column used to print `R15-healed` /
   `Prior:R7-graph` at 256 px — the rule book's private vocabulary rendered where a person reads instead of greps. `WhyWord` maps each code to two words (`Healed`, `Chat`,
   `Who`, `Spell`, `Owner in Name`, `NPC List`, `Chosen`, `A Spell`…), **says the same word for a borrowed verdict as for a local one** (`Prior:R7-graph` → *Fights Mobs*;
@@ -354,8 +365,8 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   *"Nothing identified it yet — click the pencil to say what it is"*, because the empty cell is the row somebody hovers. `NameRow.Provenance` asserts no newline for every
   state and never carries a newline (asserted again on the refusal row and the disagreement row, the two most likely to grow a second one; a refusal's own sentence
   **supersedes** the proof clause). **No hover names a file** — the roster's opinion used to ride behind the proof (`From Chat · players.txt says Player`) and read as a second
-  verdict from a source this window cannot open; what it pointed at is counted instead, in the one place the claim is about: the caption's tooltip prints `N contradict the
-  roster` from `Row.IsDisagreement`. **An unmapped code echoes itself rather than being guessed at** — a fallback like
+  verdict from a source this window cannot open; what it pointed at is counted instead (`Row.IsDisagreement` →
+  `ClassificationReport.Disagreements`) — and with the header deleted even that number has no surface on screen, so "counted" means available to a diagnostic, not readable. **An unmapped code echoes itself rather than being guessed at** — a fallback like
   "Evidence" would file a new kind of proof under an old meaning, and provenance is the one thing this pane must be honest about. `IdentityVocabularyTest` checks
   the explicit list in both directions (missing word *and* stale word) **and** runs the rules fixture asserting no row reaches the screen wearing its code; that
   corpus check immediately caught a code nobody had written a word for (`R3-chat`). **A code whose only producer is state a test clears cannot be caught by that corpus run**:
@@ -400,8 +411,8 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   cell placement, sizing, focus-back and close hook are the parts the operator meant by "i put a lot of work into getting that working well"). Four laws: the option list shows
   **its own row's** vocabulary, not the whole one (`NameRow.TypeChoices` ← `IdentityVocabulary.TypeOptionsFor`; the five answers exist in `IdentityVocabulary.TypeOptions`, each written exactly once, "Clear claim" carrying
   `IdentityKind.Unknown` because that is what `ClassificationCommands.ClearVerdict` writes); the combo **preselects the row's current verdict** so the handler can
-  refuse a click that changes nothing (a no-op must not spend a derive pass or rewrite mirror-overrides.txt); a cell edit edits its cell — batching stays with the two
-  title-bar icons and the fight grids' menu; and **the class pencil appears only on a `Player` row** (`NameRow.ClassEditable`) because `SetDefaultPlayerClass` verifies
+  refuse a click that changes nothing (a no-op must not spend a derive pass or rewrite mirror-overrides.txt); a cell edit edits its cell — batching lives in the
+  fight grids' menu alone now, this pane has no buttons at all; and **the class pencil appears only on a `Player` row** (`NameRow.ClassEditable`) because `SetDefaultPlayerClass` verifies
   the name AND writes players.txt — an icon on an NPC row is exactly the pollution this window exists to catch, and Pet/Merc rows have nothing to persist. Any write
   **Three kinds are trimmed by the same recognizers that hide a pencil** — one recognizer decides the menu AND the write guard (`TypeSelectionChanged` re-checks
   `row.TypeChoices.Contains(option)`), because two rules judging one dropdown is how a pane offers what its own write path then refuses: **Mercenary is not a verdict an
@@ -642,8 +653,8 @@ npcs.txt; it is the *only* evidence for **6** names (Incogitable) and **4** (Kiz
   starting at the same pixel — a difference in what a row *allows* (spell effects and self-naming summons get no Type pencil; only a Player row gets a
   Class one) was being rendered as a ragged left edge (`ARowWithoutAPencilStillPaysForOne`). (3) **No hover names a file.** The roster flag
   ("players.txt says Player", "in players.txt") is gone from `ProvenanceFor`: it read as a second verdict from a source the operator cannot open, and worst
-  on rows the rules had merely classified. Disagreements still count where they are about — one number on the caption's tooltip (`Row.IsDisagreement` →
-  `ClassificationReport.Disagreements`) — and the two proof clauses that quoted filenames say what those files are (`On the NPC List`, `The Name of a Spell`).
+  on rows the rules had merely classified. Disagreements still count where they are about (`Row.IsDisagreement` →
+  `ClassificationReport.Disagreements`, no surface on screen since the header went) — and the two proof clauses that quoted filenames say what those files are (`On the NPC List`, `The Name of a Spell`).
 - **An eye is not a combatant; hitting your own eye says the striker is a player.** `Eye of <name>` is the magian
   summon (`Eye of Zamul`, ranks named after people: `Eye of Zomm`) and it never acts — **0** hostile lines in eight
   captures, all **348** damage lines against one worth exactly **1 point**, **346 / 348** of them struck by the raider
