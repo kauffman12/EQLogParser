@@ -130,7 +130,7 @@ namespace EQLogParser
      * And only a player character eats or drinks: measured across three captures, 370 such lines naming 67
      * distinct actors, none article-shaped ("a X") and exactly one colliding with npcs.txt (a player who happens
      * to share a mob's name). The drink half has been verifying players into the registry for years; eating is the
-     * same line with a different sound, so it verifies the same way and feeds R17 (docs/combat-mirror-design.md).
+     * same line with a different sound, so it verifies the same way and feeds R17 (docs/DesignNotes.md → "The identity rule book").
      */
     private static readonly (string Sound, string Verb)[] ConsumeShapes =
     [

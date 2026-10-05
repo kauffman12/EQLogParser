@@ -120,7 +120,7 @@ namespace EQLogParser
        *
        * Unknown is deliberately NOT a disagreement — it means "this capture has no opinion", which is what every
        * guild alt who sat out this log reads, along with the 12-42% of facts whose names legacy never verified
-       * (docs/combat-mirror-design.md). Flagging absence would paint the list red and bury the rows that are actual
+       * (docs/DesignNotes.md → "What a capture proves with empty memory"). Flagging absence would paint the list red and bury the rows that are actual
        * contradictions. Pets and mercs are excluded for the same reason they are not contradictions: players.txt
        * legitimately holds pet OWNER names, and a pet/merc verdict costs its owner nothing.
        */

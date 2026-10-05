@@ -63,8 +63,7 @@ namespace EQLogParser
       return result;
     }
 
-    // Class-safe spells the generic single-mask rule cannot see (docs/batch-parsing-plan.md R4
-    // tier 1). The Bard spires I-III carry class mask 0 in spells.txt and would fall through;
+    // Class-safe spells the generic single-mask rule cannot see (docs/DesignNotes.md → "A versioned class-spell family claims its caster"). The Bard spires I-III carry class mask 0 in spells.txt and would fall through;
     // older-era seed epic names are not in the current data file at all but stay curated because
     // they are certain from spell identity whenever a data version carries them. "Spear of Pain"
     // is deliberately NOT here: the current file maps it mask=Shd and that mapping stands.

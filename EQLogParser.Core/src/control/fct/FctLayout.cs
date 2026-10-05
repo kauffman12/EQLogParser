@@ -6,7 +6,7 @@ namespace EQLogParser
    * Where a hit spawns and how far it may travel — one table for every backend, so a tuning change is one edit
    * instead of a copy-paste pair. Direction is vertical: text about my targets rises out of the top of the overlay and
    * text about my own body sinks out of the bottom, with a band across the middle kept clear because that is where EQ's
-   * own windows sit and where the spell effects being looked at happen (docs/combat-text-overlay-design.md §1).
+   * own windows sit and where the spell effects being looked at happen (docs/DesignNotes.md → "Two region schemes: bands and split").
    *
    * There are two region schemes, and which one is live is a FctStage: bands (the original — the vertical direction above
    * is its invariant, and the protected strip lives in the middle of the canvas) and split (the genre's side-by-side layout,

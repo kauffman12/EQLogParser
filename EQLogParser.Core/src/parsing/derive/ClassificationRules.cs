@@ -1,7 +1,7 @@
 #nullable enable annotations
 namespace EQLogParser
 {
-  // Strength scale for the rule catalog (docs/batch-parsing-plan.md): higher wins on conflict and
+  // Strength scale for the rule catalog (docs/DesignNotes.md → "The identity rule book"): higher wins on conflict and
   // a weaker rule never retracts a stronger assignment (EntityTimeline read-time resolution).
   internal static class RuleStrength
   {
@@ -193,7 +193,7 @@ namespace EQLogParser
 
       /*
        * R21 before the shape rules and before the graph, because a spell is not a combatant and the graph would
-       * otherwise read its damage as a fighter's (docs/combat-mirror-design.md).
+       * otherwise read its damage as a fighter's (docs/DesignNotes.md → "A spell is not a fighter: R21").
        */
       RunStage("R21 spell effects", outcome, () => ApplySpellEffects(facts, timeline, state));
 
@@ -473,7 +473,7 @@ namespace EQLogParser
           case EvidenceFact.EvSelfFeeds:
             // R17: the actor on a consume line ("Glug… / Chomp… <name> takes a drink / bite from …"). Only a
             // player character carries a flask or a loaf. Strong rather than Certain, so a Targeted (NPC) verdict
-            // on the same name still wins (docs/combat-mirror-design.md R17).
+            // on the same name still wins (docs/DesignNotes.md → "The identity rule book").
             playerBehavior.Add(name);
             Claim(timeline, state,name, IdentityKind.Player, RuleStrength.Strong, "R17-selffeed", double.NegativeInfinity);
             break;
@@ -510,7 +510,7 @@ namespace EQLogParser
             // stable answer; the Friendly interval is time-scoped, per D3). One write is enough even though a
             // charm confirm line writes "a skeleton" and every line where that mob is the SUBJECT writes
             // "A skeleton": EntityTimeline keys identity case-insensitively, so SideAt finds this assignment
-            // whichever spelling it was asked with (docs/combat-mirror-design.md).
+            // whichever spelling it was asked with (docs/DesignNotes.md → "The parsing direction").
             Claim(timeline, state,name, IdentityKind.Npc, RuleStrength.Strong, "R9-charm", double.NegativeInfinity);
             break;
 
@@ -741,7 +741,7 @@ namespace EQLogParser
      * name says about itself. This is how a mercenary or a pet with a custom name and no owner line shows up:
      * it never speaks, never joins, owns nothing and casts nothing the DB can name - but half the raid keeps
      * topping it up ("Trelania healed Triumph for 47587 … by Symbol of Sharosh"). Measured over six captures
-     * (docs/combat-mirror-design.md → "Fourth audit"): the unfiltered heal graph offers 38 names in Kizant 2026
+     * (docs/DesignNotes.md → "Breadth of evidence, measured"): the unfiltered heal graph offers 38 names in Kizant 2026
      * and 217 in Incogitable; the gates below keep 23 and 65 of them, and what they take is 19-23 names per raid
      * day carrying 6-14 % of that capture's damage facts. None of the claimed names on any of the six files is a
      * known NPC or ever carried the target frame's `Targeted (NPC)` verdict.

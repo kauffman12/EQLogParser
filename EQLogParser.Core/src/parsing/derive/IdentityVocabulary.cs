@@ -73,7 +73,7 @@ internal static class IdentityVocabulary
    *     and no file backs the claim afterwards. A row that already reads Mercenary keeps the entry — the popup opens on
    *     the current answer — and taking that verdict back is "Clear claim", which is where it always lived.
    *   - **An eye is not a fighter of any kind.** `Eye of Zamul` never acts (ClassificationRules.EyeSummonOwnerInName;
-   *     docs/combat-mirror-design.md → "An eye is not a combatant"), so it cannot be a person, a mercenary, or somebody's
+   *     docs/DesignNotes.md → "Breadth of evidence, measured"), so it cannot be a person, a mercenary, or somebody's
    *     summon — and minting a Pet row for it would sit beside that player's real pets and split one person's output.
    *     NPC is the only kind it can be.
    *

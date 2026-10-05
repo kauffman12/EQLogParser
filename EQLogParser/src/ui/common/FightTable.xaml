@@ -100,7 +100,7 @@
                                    ShowToolTip="True" ToolTipTemplate="{StaticResource TemplateToolTip}"/>
       </syncfusion:SfDataGrid.Columns>
       <!--
-        R10 (docs/combat-mirror-design.md): the rules are inference, and a name whose evidence never crosses a
+        R10 (docs/DesignNotes.md → "The name census: what the Names window reads, and what an override costs"): the rules are inference, and a name whose evidence never crosses a
         gate needs a human to say what it is. Applies to every selected row, saves per server, and re-derives -
         see FightTable.ApplyOverride for why that is a re-read of the facts rather than an edit of the row.
       -->

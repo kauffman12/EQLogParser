@@ -186,7 +186,7 @@ namespace EQLogParser
      * The name census for the Player/NPC Identity window. Built on demand rather than carried in the snapshot: a derive lands every
      * few seconds while a log loads and a census nobody has open would be thrown away each time. The timeline is
      * assembled exactly as a derive assembles it - roster seed, rules, operator overrides last - so what the window
-     * shows is what the boards were classified with, including the roster (docs/combat-mirror-design.md).
+     * shows is what the boards were classified with, including the roster (docs/DesignNotes.md → "The name census: what the Names window reads").
      *
      * Facts can arrive while this walks them. That is acceptable here and nowhere else: a census is display data, and
      * a name whose damage shifts by one fact between two passes costs nobody a decision, whereas a lock on the capture

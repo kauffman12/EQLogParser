@@ -14,7 +14,7 @@ namespace EQLogParser
    * crit tier sits above every lane any more; that made the dial's zero point at something the player could not see. Their hue is pushed
    * deeper than dealt damage rather than brighter, because a light orange and the yellow it must stand apart from converge at scale. Periodic ticks (DoT/HoT) are
    * deliberately the smallest numeric tier: they are the noisiest stream in the game and the first thing grouping
-   * and filtering will target — see docs/combat-text-overlay-design.md §4, docs/DesignNotes.md.
+   * and filtering will target — see docs/DesignNotes.md → "Floating Combat Text".
    */
   internal static class FctStyle
   {

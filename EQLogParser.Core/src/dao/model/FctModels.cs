@@ -90,7 +90,7 @@ namespace EQLogParser
     // the source lane survives even for crits: the renderer pools a crit onto its producing lane's region
     public bool Crit;
 
-    // DoT/HoT tick: smaller type, and the first candidate for grouping (docs/combat-text-overlay-design.md §4)
+    // DoT/HoT tick: smaller type, and the first candidate for grouping (docs/DesignNotes.md → "Floating Combat Text")
     public bool Periodic;
 
     /* A proc (Labels.Proc): an item or spell effect that fires on its own rather than the swing or cast the player

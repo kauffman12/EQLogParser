@@ -442,7 +442,7 @@ namespace EQLogParser
      *
      * It is an INCREMENTAL digest: every accepted insertion adds a term to `_digest` (see that field), so reading this
      * costs O(1) instead of walking every name and entry — which was not academic, hashing 2,436 names on Incogitable
-     * measured ~250 ms per pass, more than the fold it was guarding (docs/DesignNotes.md → "Continuing a projection").
+     * measured ~250 ms per pass, more than the fold it was guarding (docs/DesignNotes.md → "A derive pass that starts where the last one stopped").
      * The two mutators are the only writers and both drop re-assertions, so rules replaying the same evidence over and
      * over leave it alone, which is precisely what lets a live refresh skip re-projection.
      *

@@ -123,7 +123,7 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   `'s corpse` off **attackers** before a record exists — so a servant's hit is indistinguishable from a player who is alive again. A named
   corpse belongs in the fight list only because facts put it there (raid members hitting it keeps it; defender names keep the suffix), and a
   corpse DoT that hits us is an ordinary hostile under its stripped name — `EQLogParser.Test/src/parsing/derive/RaisedCorpseTest.cs` pins all
-  four cases. Reasoning: docs/combat-mirror-design.md → "Corpses need no rule".
+  four cases. Reasoning: docs/DesignNotes.md → "A raised corpse needs no rule".
 - **Compare boards, not just rows, before replacing a grid** (method preserved; the census was retired with the
   legacy engine in 2026-10 - its final numbers are in docs/DesignNotes.md → "The legacy engine is deleted").
   `RealLogBoardsTest` was gated on `EQLP_DERIVE_BOARDS=<log>` (with `EQLP_DERIVE_DIAG=name,name` for "folded under
@@ -256,7 +256,7 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   charm spell are two acts on two clocks, and tightening the tail with the split leaves rows reading "still going" after their mob
   became the raid's pet. Numbers (rows closed `Charmed`: **3 / 9 / 12** on three captures, taken out of the
   `Gap` counts that used to hide them; charmed-owned rows **0→6** and **0→5** once the exemption landed) and reasoning:
-  docs/combat-mirror-design.md → "What a window does to the list and the board"; pinned by `CharmRowProjectionTest`.
+  docs/DesignNotes.md → "A charm takes a mob off the enemy list"; pinned by `CharmRowProjectionTest`.
 - **A row is one life, and the split gap is legacy's expiry (30 s)**: `FightProjection.EngagementGapS` is **30 seconds**,
   kept as one number for both lists — not legacy's pair (60 s until boss-directed damage lands), because a row that has not hurt anybody for
   half a minute is over either way, and a threshold keyed on which side the first hit went makes boundaries a function of damage
@@ -432,8 +432,7 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   **Three kinds are trimmed by the same recognizers that hide a pencil** — one recognizer decides the menu AND the write guard (`TypeSelectionChanged` re-checks
   `row.TypeChoices.Contains(option)`), because two rules judging one dropdown is how a pane offers what its own write path then refuses: **Mercenary is not a verdict an
   operator can put on a name** (it is what `/target` reported — R3-merc/R13-merc — and typing it onto a raider moves her damage onto a column nothing else fills, so the
-  entry survives only on a row that already reads Mercenary); **an eye is NPC or nothing** (`Eye of <name>` never acts — docs/combat-mirror-design.md → "An eye is not a
-  combatant" — and a Pet row for it would sit beside its owner's real pets and split one person's output); and **`Clear claim` is never trimmed** (take-back must stay
+  entry survives only on a row that already reads Mercenary); **an eye is NPC or nothing** (`Eye of <name>` never acts — docs/DesignNotes.md → "Breadth of evidence, measured" — and a Pet row for it would sit beside its owner's real pets and split one person's output); and **`Clear claim` is never trimmed** (take-back must stay
   reachable). The row's own answer is always in the list because the popup preselects it: a value missing from its own dropdown reads as a blank cell. An operator's own
   claim (`R10-manual`/`Manual`/`Override`) keeps every entry — a wrong click has to stay correctable by another click.
   Two more from the same list: **some rows get no pencil at all** (`Overrulable` → `CanOverrule`) — a summon whose spelling carries its master and an R21 spell effect each have one
@@ -650,7 +649,7 @@ npcs.txt; it is the *only* evidence for **6** names (Incogitable) and **4** (Kiz
   `PipelineHarness` calls `PlayerRegistry.Instance.Clear()` and only `MainWindow` ever calls its `Init()`, so `RegistrySeed` contributes nothing
   in any measurement here. Two names wearing two jobs is not a collision in this table, because identity is keyed on the NAME: `Sancus` is a
   raider (in players.txt, and the subject of "Sancus is called to it owner.", which names the SUMMONER — next bullet), while `Sancus`s pet`
-  is its own row that R5-owner claims as Pet. Numbers and the reading procedure: docs/combat-mirror-design.md → "Fourth audit".
+  is its own row that R5-owner claims as Pet. Numbers and the reading procedure: docs/DesignNotes.md → "Breadth of evidence, measured".
 - **"X is called to it owner." names the SUMMONER, never the summon.** The sentence argues the other way, and this rule read it the wrong way
   for its whole life: `R5-called` stamped Pet Certain and put raid members on the sheet as pets (Beorun, Romance, Sancus, Segejin).
   Measured instead: **33 of 33** occurrences in `eqlog_Kizant_xegony-09-20-25.txt` and **15 of 15** in `-01-06-24` sit within three lines of
@@ -687,7 +686,7 @@ npcs.txt; it is the *only* evidence for **6** names (Incogitable) and **4** (Kiz
   legacy's own exceptions and the list is closed: `TheCountableEyeListIsThreeWordsNoMore`. Measured yield: R19 wins **2 names** (`Depravity`, `Pixnn`) and both also held an
   equal-strength chat/presence claim, so nothing moved Unknown→Player on this corpus — it is a last resort plus a
   ledger entry (`R19-` is in `IdentityPriorStore.RememberedRules`). Numbers and reasoning:
-  docs/combat-mirror-design.md → "An eye is not a combatant"; pinned by `EyeSummonTest`.
+  docs/DesignNotes.md → "Breadth of evidence, measured" (the eye census); pinned by `EyeSummonTest`.
 - **A versioned cast line is tier-1 identity; the pet's Snare claims Pet, not the player.**
   `EQDataStore.ClassSafeSpellFamilies` (closed at **15**: Boastful Bellow/Boastful Conclusion → Bard,
   Frenzy/Paragon/Focused Paragon of Spirit + Hobble of Spirits → Beastlord, Tireless Sprint → Berserker,
@@ -720,7 +719,7 @@ npcs.txt; it is the *only* evidence for **6** names (Incogitable) and **4** (Kiz
   Hobble split lives in a test). Battle Leap Warcry itself prints
   **zero lines** in every local capture — it ships on user assertion plus the spell DB's War|Ber column,
   with plain Battle Leap's 470 zero-article casts as nearest corroboration; numbers:
-  docs/combat-mirror-design.md → "Casting words are identity", "Identity certain, class one of two".
+  docs/DesignNotes.md → "A versioned class-spell family claims its caster".
 - **The frenzy verb claims a class, never a person — and classes are time-bounded.** `X frenzies on Y for N`
   is the berserker frenzy AA (85,685 lines, zero article-shaped actors; a monster's frenzy reads
   `is struck by a frenzied assault` and names no attacker), so `DamageLineParser`'s melee branch — gated on
@@ -735,7 +734,7 @@ npcs.txt; it is the *only* evidence for **6** names (Incogitable) and **4** (Kiz
   Headless class writes need the App.xaml.cs host hook (`CombatRecordLookup.IsValidClassName`) wired or they
   fail in silence — see `FrenzyClassTest` setup. Frenzy Strike AA casts (`... VII Caza`) stay unused: the AA
   rank word breaks the roman-rank anchor; extending it is a measured step of its own. Numbers:
-  docs/combat-mirror-design.md → "The frenzy verb proves a class, never a person".
+  docs/DesignNotes.md → "Breadth of evidence, measured" (the frenzy census).
 - **A gated real-log test is disposable; a print harness is not a test.** The `EQLP_*` gates exist to answer one question
   over a local capture. Once it is answered, **delete the gate and move the numbers to docs/DesignNotes.md** — that is
   where findings live, and an assertion-free `[TestMethod]` that skips everywhere proves nothing except that it printed

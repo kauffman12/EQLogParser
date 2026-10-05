@@ -308,7 +308,7 @@ namespace EQLogParser
     {
       /*
        * ONE line, always, and no newline anywhere in this method — the hover answers "why does it say That", and a four-line
-       * form makes the eye work for the one clause that matters (docs/DesignNotes.md → "The tooltip lost its sentences").
+       * form makes the eye work for the one clause that matters (docs/DesignNotes.md → "The Names window: four columns, dropdowns in two of them").
        *
        * The proof clause is whatever the deciding rule can say, and NOTHING where no rule says anything - which is the
        * same state the dropdown words "Clear claim": taking a verdict back leaves the name unclaimed rather than

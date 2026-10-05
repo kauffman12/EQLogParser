@@ -3973,6 +3973,102 @@ at all" (`UnresolvedInCapture`, `Row.IsUnresolved`). That correction **is** in t
 `ClassificationReportTest` pinning both halves (roster membership is itself a claim, and a name that appears in no fact stream
 is not "unplaced in this capture"). `NamesTableTest` reads the counter too, so it cannot go missing quietly again.
 
+## Breadth of evidence, measured: what a name's counts say when its shape does not (2026-11)
+
+Four identity rules whose thresholds are numbers rather than adjectives. Each number below is why a gate sits where it sits;
+moving one means re-measuring over several captures, not re-arguing the sentence. (Code comments point here — the censuses
+were taken in a working document nobody else has, which is the failure docs/CodingStandards.md now forbids.)
+
+### Who heals a name tells a pet from a mob that merely got raid AoE (R15)
+
+`Yokii healed an arcborn wraith for 2 hit points` is an ordinary line: raid AoE waters the mob stack, so "the raid healed
+it" cannot mean "it is ours". R15 therefore accepts a healer only at **≥ Strong** — deliberately not satisfied by
+`RegistrySeed`, which writes strength 8 — needs **≥ 10 heal lines from ≥ 2 such casters**, and any swing back above the
+friendly-fire share vetoes the claim, because a boss answers for itself by swinging at the raid.
+
+Measured over eight captures: R15 alone moves **6–14 %** of each capture's damage facts onto a side with **zero** overlap
+against `Targeted (NPC)` or the NPC database. Its yield is mostly custom-named pets rather than unverified people — 20 of 25
+registry pets in the 2026 capture read `R15-healed`, while petmapping.txt holds 96 owner pairs and the log's own possessive
+lines prove just 18. Derived-vs-legacy parity is unchanged by it (2024: 691/691 field-matched; Incogitable: 4,473/4,473).
+
+**Heal VOLUME must never flip an NPC verdict; caster BREADTH does.** Pets are healed by **19–52 distinct casters**; every
+genuine hostile measured tops out at **10** (Zelnithak, Captain Kar, Rufus Invictus, Tallongast, `an echo`). A mob standing
+in a raid AoE pool is healed by a handful of the raid by accident; a pet is kept alive by half of it on purpose.
+
+And **`Targeted (NPC)` means "not a player", never "not ours"** — it fires on pets. `Useless` reads `Npc:R1-target` in
+Incogitable with 303,554 attack edges while the raid healed it 47,752 times from 52 casters (`Dragon`, `Bark`, `Dangle`,
+`Speedbump`, `Cutie`, `Funky` behave the same way); 0.4–18.8 % of a capture's facts sit on the enemy column through this
+shape. `Player` from R15 therefore reads "raid-side, never verified", and owner attribution still needs the registry.
+
+### An eye never acts, so hitting one proves the striker (R19)
+
+`Eye of Zamul` is the magian summon, and it is not a combatant: **0** hostile lines across eight captures, **348** damage
+lines against one, each worth exactly **1 point**, and **346 / 348** of them struck by the raider whose name the eye carries.
+So eyes are refused at the door of BOTH fact tables (damage always was; heals were not, which is how one `Jondolar healed Eye
+of Shennron for 148 points` line put an `Eye of X | Unknown` row in the identity list), and the eye branch of the damage
+parser reports evidence on which R19 claims the **striker** Player at Strong.
+
+Two refusals follow from the same census. The **cast line is not evidence**: `begins casting Eye of Zomm` prints even where
+no eye ever materialises (Incogitable: 6 casters, 0 entities), and one magian can cast on another player's eye.
+And **ownership is never modelled**, because anyone can kill an eye — **5 of 376** eye deaths name a foreign raider — and a
+wrong owner is precisely what poisons R15. One recognizer, `ClassificationRules.EyeSummonOwnerInName`, is shared by the
+ignore gate and the rule (a meter and a rule must never disagree about where an eye name begins), it fires BEFORE
+`CheckOwner`/`CombatCapture.AddDamage` (leave the shape in the tables and the day a sixth word joins `OwnerSuffixes`, R5's
+name-pool sweep adopts every eye in the raid), and the countable-eye list is closed at three — `Veeshan`, `Despair`,
+`Mother`, legacy's own exceptions — which `TheCountableEyeListIsThreeWordsNoMore` enforces.
+
+Yield: R19 wins **2 names** (`Depravity`, `Pixnn`) and both already held an equal-strength chat/presence claim, so nothing
+moved Unknown→Player on this corpus. It is a last resort plus a ledger entry, not a recall engine.
+
+### A versioned class-spell family claims its caster; the class only when the data is unambiguous (R4-spell, R20-petspell)
+
+`X begins casting Boastful Bellow VI.` names a caster whose class the spell DB already answers for. Census 2022→2026 + THJ:
+**17,304** Boastful Bellow and **14,689** Boastful Conclusion lines, ~**25k** Frenzy / Paragon / Focused Paragon of Spirit —
+and **zero** article-shaped casters, **zero** possessive-pet casters. Engine yield: 3 names nobody else could place
+(Chori, Dram, Metalplayer) Unknown→Player.
+
+Four laws, each with a shape that would have gone wrong without the measurement:
+
+- The family list is **closed at 15** entries (Boastful Bellow/Conclusion → Bard; Frenzy/Paragon/Focused Paragon + Hobble of
+  Spirits → Beastlord; Tireless Sprint → Berserker; Celestial Regeneration/Focused CR → Cleric; Spirit of the Wood/Nature's
+  Boon → Druid; Gather Mana/Eldritch Rune → Enchanter; Battle Leap Warcry/Battle Leap → Warrior **or** Berserker), asserted by
+  `VersionedFamilyListsAreFifteenAndOneNoMore`.
+- **The rank is part of the match and must be the whole tail.** Versionless never prints (measured: 0 lines) and matches
+  nothing; a rank absent from `spells.txt` passes the text gate but fails the data gate, so new-expansion content is silent,
+  never guessed.
+- **A family may be multi-bit** (War|Ber): those ranks claim Player Certain while `GetSpellClass` stays **null** and no class
+  is ever written — they are seeded into `_classAmbiguousFamilyRanks`, not the label path, and
+  `ClassificationRules.IsClassSafeCast` accepts label-or-ambiguous as "the data knows this rank". Both directions are asserted
+  because the null half fails silently if seeding ever regresses into labels, and a coin-flipped class column is worse than
+  silence.
+- **`Hobble of Spirits Snare <rank>` is a different spell from `Hobble of Spirits <rank>`** — the pet's (~24k lines:
+  Stormclaw, Cutie, Bark) versus the beastlord's own (10 lines, cast by Paragon casters). The pet form claims its caster **Pet
+  at Strong** under `R20-petspell` and invents no owner; the rank anchor is exactly what stops the player prefix from
+  swallowing `Snare VI`. Stormclaw's own `says, 'My leader is Beorun.'` already feeds ownership through `ChatLineParser` —
+  ownership comes from those lines and the possessive words, never from a rule about spells.
+
+**Refused deliberately**: `Finishing Blow` — 8,204 lines, zero mob or pet attackers — because every attacker already held a
+stronger claim, so the rule's yield was zero and its bug surface was not. Modifier masks stay stats-only.
+`Battle Leap Warcry` prints **zero** lines in every local capture; it ships on user assertion plus the spells DB's War|Ber
+column, with plain Battle Leap's 470 zero-article casts as the nearest corroboration — recorded here so the entry does not
+look measured when it is not.
+
+### The frenzy verb proves a class, never a person
+
+`X frenzies on Y for N` is the berserker frenzy AA: **85,685** lines with **zero** article-shaped actors, while a monster's
+frenzy reads `is struck by a frenzied assault` and names no attacker at all. So `DamageLineParser`'s melee branch (gated on
+`ParserUtil.IsHitTypeAddition`, the same seam that skips the verb's `on`) writes the class — `SetActivePlayerClass(attacker,
+GetClassLabel(SpellClass.Ber), 2, lineTime)` — and **no identity**: no verified-player entry, no timeline verdict. Whoever
+frenzies IS a berserker; they are not necessarily a player.
+
+Class lives only in `PlayerRegistry`'s time-windowed records because classes change mid-log (Covennx has frenzy lines only in
+the 2025/26 captures): confidence 2, a peer of `CastLineParser`'s, commits the first window immediately, but an opposing class
+needs `LowConfidenceThreshold` = **8** sightings and commits from the first odd sighting's own second — one stray cast cannot
+flip a class while a real reclass flips inside a pull. `GetPlayerClass(name, t)` reads per second (before the first record it
+answers that record; nothing backdates). Headless class writes need the App.xaml.cs host hook
+(`CombatRecordLookup.IsValidClassName`) wired or they fail in silence — see `FrenzyClassTest` setup. Frenzy Strike AA casts
+(`... VII Caza`) stay unused: the AA rank word breaks the roman-rank anchor, and extending it is a measured step of its own.
+
 ## The Names window: four columns, dropdowns in two of them, and a census that is asked for (2026-08-12, re-shaped 2026-08-13 and 2026-11)
 
 `NamesTable` (View → **_Names**, docked beside the derived fight list) replaces the three hand-maintained panes. The
@@ -4408,7 +4504,7 @@ is why only one event (`EventsClearedActiveData`, `180ff710`) had to move before
   in the workstream whose behavior `dotnet test` on Linux cannot observe.
 - **The 0.06–0.11 % residue**: raid-side swings onto a name the seed calls a pet whose ownership interval does not answer
   `IsOurPetAt` at that second. Belongs to seed interval consistency; do not widen a gate exemption to hide it.
-- Remaining legacy readers stay in `docs/legacy-replacement-map.md` order: overlay → `EventViewer`'s `IsLifetimeNpc` →
+- Remaining legacy readers stay in the working map's (`docs/legacy-replacement-map.md`, untracked) order: overlay → `EventViewer`'s `IsLifetimeNpc` →
   `LineChart`'s `FightTimeout` constant → `FightTable` → parse-time stat accumulation (`HitRecord`/`RecordsStore` last,
   until the line viewers read fact tables). Roster files never go away.
 
@@ -4474,6 +4570,66 @@ the same rows per player and in total; its tank half counts the 120 + 90 the mob
 sliced meter equals a sliced list) and `TheMeterBuildsOnItsOwnBuilders` (a refresh leaves the shared damage builder's answer
 alone and never announces on the shared tank board). What still needs watching on Windows is not the arithmetic but the
 wiring: that the timer's window advances, that expiry zeroes the board, and whether a real pull's numbers look like the pulls.
+
+## A charm takes a mob off the enemy list: what that does to the rows, the boards and a corpse (2026-11)
+
+`X has been charmed.` is not a status note, it is the raid finishing an encounter without killing anything: the mob left
+the enemy side. Treating it as one more damage event is how the fight list reported "still going" over a mob that had become
+the raid's pet eleven seconds earlier.
+
+**A window is the NPC's death, and its pet's death is not one.** `DerivedFight.EndReason` says WHY a row ended while `Dead`
+stays the flag every consumer reads (overlay, grid styling, `FightSummarySource`). A `has been charmed.` sighting closes that
+name's row as `Charmed` (status word `dead, charmed`); a death **inside** a window is skipped by dead-marking
+(`FightProjection.DiedWhileCharmed`, with 1 s of slack because that death IS the window's exclusive `T1`) and stays on
+`CharmEndReason.Death`. One corpse must not hand out two kills, and the skip is also what stops a pet dying in custody from
+dead-marking whichever same-named row happened to be open.
+
+**Inside the window the mob's numbers belong to whoever holds it.** Its damage reaches the board with
+`AttackerOwner = OwnerOf(name, t)`, so `+Pets` folds an evening of charming one mob type under its charmer; an **ownerless**
+window leaves that field null rather than picking a raider; and a flipped **defender** is exempt from the friendly-fire drop,
+because deleting the raid's own stray swings onto their new pet would shrink their meter. Measured: rows closed `Charmed`
+**3 / 9 / 12** on three captures (taken out of the `Gap` counts that used to hide them), and charmed-owned rows **0→6** and
+**0→5** once the exemption landed — that second number is the raid's own meter, so it is not a cosmetic change.
+
+**Closing needs its own clock.** A charm closes only a row whose last fact sits inside `EventTailWindowS`, never the 30 s
+that splits rows: the raid's last swing and somebody else's charm spell are two acts on two clocks, and tightening the tail
+with the split leaves rows reading "still going" after their mob became the raid's pet.
+
+**A charmed mob has no fight row of its own — hidden, never deleted.** `CharmPetRows.Visible` keeps `DerivedFight.RaidPet`
+rows off the grid (same rule that keeps ``Ziggy`s pet`` out of the legacy table) while the encounter row the charm closed stays
+listed as `dead, charmed`. Hiding is display-only: `DerivedSnapshot.AllFights` keeps every row and
+`DeriveEngine.BuildSummaryInput` hands the hidden ones back through `CharmPetRows.WithHiddenPets`, because a board is built
+from whatever was clicked and **6** hidden rows on Incogitable carry up to **90,646,488** damage between them. A pet row's span
+begins *after* its encounter closes, so overlap alone can never reach it — that is what `DerivedFight.EncounterRow` (the row the
+charm closed, chained across a pull's reopening) exists for; rows whose mob was charmed without ever being fought have no link
+(**3 of Incogitable's 6**) and come back on span overlap alone. Census: visible **4,076 of 4,082** and **1,037 of 1,041**, every
+hidden row an article-shaped mob.
+
+**`RaidPet` is not `CharmedOwned`.** A charmed raid member carries `CharmedOwned`, stays on the list and reads `charmed`. The
+reason is identity, not display: `"X has been charmed."` registers X as an NPC at R9-charm's *Strong* strength, so the winning
+verdict says NPC for her too — which makes the projection's real question "does this name have an NPC reason that is NOT the
+charm line?" (`EntityTimeline.HasIndependentIdentity`). Pinned by `CharmRowProjectionTest` (`APetRowIsNotOnTheFightList`,
+`HidingAPetRowDoesNotDeleteItsDamage`, `WithHiddenPetsAddsPairedOrOverlappingRowsOnly`, `ACharmedRaidMemberStaysOnTheList`).
+
+### A raised corpse needs no rule, and two things must never be inferred from it
+
+`<name>'s corpse rises to serve <master>.` (Wake the Dead) does not put a fighter on the field under its own name: the risen
+corpse attacks as ``<master>`s pet``, exactly like any swarm pet, so the existing R5 ownership cut already credits the master.
+Server-verified on a necro called Kazcro, and measurable in the logs — across six captures a master's possessive-pet share jumps
+**×3.6–×8.7** immediately after a raise burst while control names move **≤ ×2.3**.
+
+Two bans, both measured rather than stylistic:
+
+- **Never mint a pet label for it.** An ``X`s pets`` row would sit beside the real ``X`s pet`` row and split one player's output
+  in two — the same failure `OwnerSuffixes` exists to prevent.
+- **Never decide side or identity from the `'s corpse` shape.** That shape also carries **488 M HP** of lingering boss DoT
+  across **29 never-raised** names; every `falls in battle.` line belongs to a respawning husk mob rather than to a servant; and
+  `ParserUtil.UpdateAttacker` strips `'s corpse` off **attackers** before any record exists, so a servant's hit is
+  indistinguishable from a player who is alive again.
+
+A named corpse therefore belongs in the fight list only because facts put it there (raid members hitting it keeps it; defender
+names keep the suffix), and a corpse DoT that hits us is an ordinary hostile under its stripped name. All four cases are pinned
+by `EQLogParser.Test/src/parsing/derive/RaisedCorpseTest.cs`.
 
 ## One row per life: what the engagement gap splits, and what a duration column owes (2026-10)
 
@@ -5523,7 +5679,7 @@ of the five are not opinions an operator can hold:
 * **Mercenary** is what `/target` reported (R3-merc/R13-merc). Typing it onto a name moves that name's damage off the player
   column and onto a column nothing else fills, and no file backs the claim afterwards. The entry survives only on a row that
   already reads Mercenary — and taking that verdict back is *Clear claim*, where take-back always lived.
-* **An eye** (`Eye of Zamul`) never acts: docs/combat-mirror-design.md → "An eye is not a combatant". It cannot be a person,
+* **An eye** (`Eye of Zamul`) never acts: docs/DesignNotes.md → "Breadth of evidence, measured" (the census lives there). It cannot be a person,
   a mercenary or somebody's summon, and minting a Pet row for it would sit beside that player's real pets and split one
   person's output. NPC or nothing.
 
