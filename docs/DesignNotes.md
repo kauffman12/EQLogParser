@@ -5686,7 +5686,11 @@ The layout this work converged on, written down before the code so the reason
 survives. First draft said "four files, one per law"; that was one file per
 COLUMN, and the word `roster` was wrong too - in this game a roster is the live
 raid list (`/raid`, `/who` right now), which is exactly what the rules call
-R2-who and R3-joinraid. The criterion that works is **who writes it, and whether
+R2-who and R3-joinraid - and there IS such a feature: `RaidRosterStore` collects the `/who`
+groups a capture prints (in memory, cleared by `LifecycleManager` when another log opens) and
+offers them in DamageSummary's "By Group" dropdown. It is per-file by construction and saves
+nothing; that is the correct shape for it, and the reason this note must not reuse the word for
+durable memory. The criterion that works is **who writes it, and whether
 a human must be able to revert one claim without disturbing another**. Under
 `config/<server>/`:
 
