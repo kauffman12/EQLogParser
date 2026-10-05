@@ -246,7 +246,7 @@ namespace EQLogParser
         if (searchResult.SpellData[0].Target == (int)SpellTarget.Pet || searchResult.SpellData[0].Target == (int)SpellTarget.Pet2)
         {
           // dont change a pet into a player by accident
-          if (searchResult.SpellData.Count == 1 && !PlayerRegistry.Instance.IsVerifiedPet(target) && !PlayerRegistry.Instance.IsVerifiedPlayer(target))
+          if (searchResult.SpellData.Count == 1 && !IdentityLookup.IsKnownPet(target) && !IdentityLookup.IsNameOfOurPerson(target))
           {
             foreach (var spell in PetSpells)
             {

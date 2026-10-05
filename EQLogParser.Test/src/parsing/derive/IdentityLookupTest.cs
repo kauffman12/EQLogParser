@@ -158,6 +158,27 @@ public class IdentityLookupTest
     Assert.IsNull(IdentityLookup.OwnerOf(string.Empty));
   }
 
+
+  [TestMethod]
+  public void TheParsePathsAskTheChainAndTheStoreTogether()
+  {
+    /*
+     * The widened reads exist so authority can move onto the seam WITHOUT losing a fold that works today: tonight's
+     * verdict or charm window answers, and the store this parser is filling still counts.
+     */
+    PlayerRegistry.Instance.AddVerifiedPet("Fluffy");
+    PlayerRegistry.Instance.AddPetToPlayer("Fluffy", "Ziggy");
+    Assert.IsTrue(IdentityLookup.IsKnownPet("Fluffy"), "a mapped pet with no verdict stopped counting");
+
+    // The one thing that must NOT widen: a pronoun or placeholder in an owner slot mints a mapping to nothing.
+    Assert.IsFalse(IdentityLookup.IsNameOfOurPerson(Labels.Unk));
+    Assert.IsFalse(IdentityLookup.IsNameOfOurPerson("you"));
+    Assert.IsTrue(IdentityLookup.IsOneOfUs("you"), "the guard above is a narrowing of IsOneOfUs, not a different question");
+
+    PlayerRegistry.Instance.AddVerifiedPlayer("Kilsa", 0d);
+    Assert.IsTrue(IdentityLookup.IsNameOfOurPerson("Kilsa"));
+  }
+
   [TestMethod]
   public void ANameNothingKnows_IsNotOnesOfOurs()
   {

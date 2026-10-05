@@ -184,5 +184,18 @@ namespace EQLogParser
       return string.IsNullOrEmpty(mapped) ? null : mapped;
     }
 
+
+  /*
+   * Two WIDENED reads for the parse path, where a name has to be ownable right now. They are supersets on purpose: the
+   * verdict chain first, then the store this parser is filling, so moving authority onto the seam cannot lose a fold that
+   * works today. The guard that is NOT a superset is `IsPersonWord`: IsOneOfUs answers true for the vocabulary rows ("you",
+   * "himself", "Unknown Pet Owner") because membership-wise they are ours, and a possessive owner slot must never accept
+   * one — that would mint a mapping to a pronoun. (docs/DesignNotes.md → "The checks that decide who is a player")
+   */
+  internal static bool IsNameOfOurPerson(string? name) => !PlayerRegistry.IsPersonWord(name) && IsOneOfUs(name);
+
+  /// <summary>Pet by tonight's verdict or by the store (charm windows fold; a mapping with no verdict still counts).</summary>
+  internal static bool IsKnownPet(string? name) => IsPet(name) || PlayerRegistry.Instance.IsVerifiedPet(name);
+
   }
 }

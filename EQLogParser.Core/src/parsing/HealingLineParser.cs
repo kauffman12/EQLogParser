@@ -276,7 +276,7 @@ namespace EQLogParser
 
         // check for pets
         var possessive = healed.IndexOf("`s ", StringComparison.Ordinal);
-        if (possessive > -1 && PlayerRegistry.Instance.IsVerifiedPlayer(healed[..possessive]))
+        if (possessive > -1 && IdentityLookup.IsNameOfOurPerson(healed[..possessive]))
         {
           PlayerRegistry.Instance.AddVerifiedPet(healed);
         }

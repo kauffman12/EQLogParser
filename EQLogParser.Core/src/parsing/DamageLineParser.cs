@@ -1111,7 +1111,7 @@ namespace EQLogParser
           if (PlayerRegistry.IsPossiblePlayerName(name, pIndex))
           {
             var player = name[..pIndex];
-            if (PlayerRegistry.Instance.IsVerifiedPlayer(player))
+            if (IdentityLookup.IsNameOfOurPerson(player))
             {
               owner = player;
               PlayerRegistry.Instance.AddPetToPlayer(name, owner);
