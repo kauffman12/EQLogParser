@@ -48,6 +48,9 @@ public class FightProjectionIncrementTest
 
         internal void JoinedRaid(string name, double t)
           => Facts.AddEvidence(new EvidenceFact(_seq++, (long)(T0 + t), Facts.InternName(name), EvidenceFact.EvJoinedRaid));
+
+        internal void Taunt(string npc, double t)
+          => Facts.AddTaunt(new TauntFact(_seq++, (long)(T0 + t), Facts.InternName(npc)));
     }
 
     /*
@@ -109,6 +112,73 @@ public class FightProjectionIncrementTest
         Assert.IsTrue(cache.LastPassContinued,
             "new facts under a classification that says the same thing about every name are a continuation");
         Assert.AreEqual(300, rows.Single().DamageToOwner);
+    }
+
+    /*
+     * A summary board is materialized through the SAME index this cache carries (rows and index travel together on
+     * purpose), so a cached materialization is only good while everything it read is where it was. It used to be keyed on the
+     * row alone, which made the second click on an ongoing pull re-serve the first click's answer - measured: row 300 damage,
+     * summary still 100, and the identical cached object. The meter could not show this because its windowed path is never
+     * cached, so the symptom was two surfaces of one engine printing different totals for one mob, with nothing thrown.
+     *
+     * Two ways a row moves without touching either ordinal run are checked beside the obvious one: a death closing it (a
+     * queued death, no damage) and a line arriving in the taunt stream, which the materializer walks whole rather than
+     * reading from this row's own runs.
+     */
+    [TestMethod]
+    public void ASummaryOfALivingRowFollowsEveryCheapPass()
+    {
+        var log = new Capture();
+        log.Hit("Zomm", "A bone walker", 100, 0);
+        var timeline = Classify(log.Facts);
+        var cache = new FightProjection.FightProjectionCache();
+
+        var row = cache.Project(log.Facts, timeline).Single();
+        var index = cache.Index;
+
+        Assert.AreEqual(100L, index.SummaryFightFor(row, log.Facts).DamageTotal, "the click sees its own moment in the fight");
+        Assert.AreSame(index.SummaryFightFor(row, log.Facts), index.SummaryFightFor(row, log.Facts),
+            "an unchanged row is still served from cache - invalidation must not cost a rebuild per click");
+
+        log.Hit("Zomm", "A bone walker", 200, 5);
+        var grownRow = cache.Project(log.Facts, timeline).Single();
+        Assert.IsTrue(cache.LastPassContinued, "same verdicts, so this is the cheap lane that used to hand back the stale answer");
+
+        Assert.AreEqual(300L, index.SummaryFightFor(grownRow, log.Facts).DamageTotal,
+            "the row grew 100 → 300 across a continuation, so its materialized summary grows too");
+
+        // A death arrives with no fact for either ordinal run: the row's own state is what changed.
+        log.Slain("A bone walker", 9);
+        var deadRow = cache.Project(log.Facts, timeline).Single();
+        Assert.IsTrue(index.SummaryFightFor(deadRow, log.Facts).Dead,
+            "a death that adds no damage still reaches the board built from this row");
+    }
+
+    /*
+     * The third stale-cache shape, which the two ordinal counts cannot see: taunts are a name-keyed stream the
+     * materializer walks whole (FightSummarySource's taunt pass), so a line that arrives AFTER somebody clicked the row
+     * belongs to it just as much as one that arrived before. The stamp therefore carries the stream's length.
+     */
+    [TestMethod]
+    public void ATauntArrivingAfterAClickStillReachesThatRowsSummary()
+    {
+        var log = new Capture();
+        log.Hit("Zomm", "A bone walker", 100, 0);
+        log.Hit("Zomm", "A bone walker", 100, 10);      // the row's span already covers second 5
+        var timeline = Classify(log.Facts);
+        var cache = new FightProjection.FightProjectionCache();
+
+        var row = cache.Project(log.Facts, timeline).Single();
+        var index = cache.Index;
+        Assert.AreEqual(0, index.SummaryFightFor(row, log.Facts).TauntBlocks.Count, "nothing had taunted it at click time");
+
+        // The line arrives late (the file reaches it after the click), inside a span nobody changes: no new damage fact,
+        // no state flip - only the stream the materializer walks whole grew.
+        log.Taunt("A bone walker", 5);
+        var grown = cache.Project(log.Facts, timeline).Single();
+
+        Assert.AreEqual(1, index.SummaryFightFor(grown, log.Facts).TauntBlocks.Count,
+            "the taunt line arrived after the first click; the row's summary was built before it existed and must be rebuilt");
     }
 
     /*

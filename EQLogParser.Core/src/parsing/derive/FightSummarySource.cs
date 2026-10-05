@@ -100,7 +100,13 @@ namespace EQLogParser
      */
     private readonly Dictionary<DerivedFight, List<int>> _tankingOrdinals = new();
 
-    private readonly Dictionary<DerivedFight, Fight> _summaries = new();
+    /*
+     * A materialized summary plus a stamp of everything BuildFight read out of the mutable world. See SummaryFightFor.
+     */
+    private readonly record struct CachedSummary(Fight Built, int DamageCount, int TankCount, int TauntCount,
+      double BeginTime, double LastTime, bool Dead, int GroupId);
+
+    private readonly Dictionary<DerivedFight, CachedSummary> _summaries = new();
 
     public long DamageFactCount { get; private set; }
 
@@ -164,19 +170,47 @@ namespace EQLogParser
       => _damageOrdinals.TryGetValue(fight, out var ordinals) ? ordinals : [];
 
     /*
-     * The Fight the damage summary will be handed for this derived row, built on first request and kept
-     * (re-clicking a row is free; the cache is dropped with the snapshot). Locked because selection events
-     * arrive on the dispatcher while materializing happens on a worker task, and two clicks must not both
-     * build the same fight.
+     * The Fight the damage summary will be handed for this derived row, built on first request and kept while it is
+     * still the answer (re-clicking a finished row is free). Locked because selection events arrive on the dispatcher
+     * while materializing happens on a worker task, and two clicks must not both build the same fight.
+     *
+     * "While it is still the answer" is the whole bug this shape exists to kill. Caching used to key on the row alone,
+     * which was sound exactly as long as one index meant one snapshot; it no longer does, because the cheap lane
+     * (DeriveCadence.ProjectionOnly) carries THIS index instance from pass to pass and keeps extending the open rows.
+     * A mob clicked twice during a live pull therefore answered with the materialization made at its first click -
+     * measured: the derived row held 300 damage, its summary still said 100, and it was the identical cached object.
+     * The meter never showed this because its windowed path is deliberately never cached, so the two surfaces of one
+     * engine disagreed and nothing threw.
+     *
+     * An entry is therefore reused only while every input BuildFight read still matches its stamp: the two ordinal
+     * runs, the taunt stream's length (taunts are walked whole, so a line that arrives after the first click is
+     * otherwise invisible to this row), and the row's own bounds and state - Dead flips from a queued death with no
+     * new damage fact, and GroupId is re-stamped by Sectionizer every pass. Identity and charm owners need no stamp:
+     * an index instance is folded under one timeline state, and a pass that moved a verdict discards this cache along
+     * with the rows it belongs to (FightProjectionCache).
      */
     internal Fight SummaryFightFor(DerivedFight fight, DamageFactTable facts)
     {
       lock (_gate)
       {
-        if (_summaries.TryGetValue(fight, out var cached)) return cached;
+        var damageCount = _damageOrdinals.TryGetValue(fight, out var run) ? run.Count : 0;
+        var tankCount = _tankingOrdinals.TryGetValue(fight, out var tankRun) ? tankRun.Count : 0;
+
+        if (_summaries.TryGetValue(fight, out var cached)
+            && cached.DamageCount == damageCount
+            && cached.TankCount == tankCount
+            && cached.TauntCount == facts.TauntCount
+            && cached.BeginTime == fight.BeginTime
+            && cached.LastTime == fight.LastTime
+            && cached.Dead == fight.Dead
+            && cached.GroupId == fight.GroupId)
+        {
+          return cached.Built;
+        }
 
         var built = BuildFight(fight, facts, double.NegativeInfinity, double.PositiveInfinity);
-        _summaries[fight] = built;
+        _summaries[fight] = new CachedSummary(built, damageCount, tankCount, facts.TauntCount,
+          fight.BeginTime, fight.LastTime, fight.Dead, fight.GroupId);
         return built;
       }
     }
