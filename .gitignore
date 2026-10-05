@@ -14,6 +14,10 @@ local/
 # un-ignore as the others or tooling treats it as disposable). Everything else under docs/ is a local working document for discussions
 # (combat-mirror-design.md, legacy-replacement-map.md, TtsPacks.md, counter-variable-issue.md, …)
 # and stays out of the repo; durable decisions belong in DesignNotes.md.
+# A review session's own summary follows the same rule as an unmaintained docs/ file: it is a working document,
+# and its durable half belongs in DesignNotes.md (it duplicates that file otherwise).
+/gtp-review.md
+
 docs/*
 !docs/DesignNotes.md
 !docs/CodingStandards.md
