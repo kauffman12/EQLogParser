@@ -5679,3 +5679,53 @@ Retired with this: `RegistryRebuildTest` (its exit gate was satisfied and its
 notes). The measurement harness that produced this table was never committed -
 it printed and asserted nothing, which makes it a script wearing a test
 attribute. Standing rule: AGENTS.md -> "A gated real-log test is disposable".
+
+## Roster memory: one import, four files, aging on the file's own clock (2026-11)
+
+The layout this work converged on, written down before the code so the reason
+survives. Under `config/<server>/`:
+
+| file | what it is | who writes it | read by |
+| --- | --- | --- | --- |
+| `identity-priors.txt` | what a previous capture's RULES concluded, with the rule word | `IdentityPriorStore.Record` after a pass | identity census (display fallback only) |
+| `roster.txt` (new) | who this server counts as one of us, plus sightings and a learned class | imported once from `players.txt`, then by sightings during play | startup identity seed, in place of `RegistrySeed`'s roster half |
+| `petmapping.txt` | pet -> owner pairs | stays as today | `RegistrySeed` (the pair survives every log) |
+| `class.txt` (new) | an operator's class for a name | only the pane | class lookup, above anything a capture teaches |
+
+Why `roster.txt` is NOT folded into `identity-priors.txt`, which was the first
+plan and is wrong. The prior store's gate is an allowlist of rule families, and
+its law is that a row carries the rule word that witnessed it: "the rule code is
+stored with it". A `players.txt` row holds `Name=<ticks>[,Class]` - no rule word
+at all - so importing it there means inventing one, which turns an assertion
+into statistics, the exact failure that file's header forbids (and that this
+project already documented for the old roster). Separating the files keeps each
+law intact: priors stay "what a log witnessed", roster stays "who is ours".
+
+The import runs **once**, gated on `roster.txt` not existing yet. Existence is
+the whole condition - no timestamp comparing, no re-import - and because every
+one of these paths is per server folder, "first run on a fresh server seeds from
+that server's roster" comes for free. Afterwards `players.txt` is legacy input:
+never read again, never written by parsing (the parser's membership writes go
+away in the same change that moves seeding), which is what makes the memory
+question have one answer instead of two.
+
+Aging moves off `DateTime.Now` onto the file's own newest row plus an entry cap,
+for the reason measured in "What a capture proves with empty memory": 99 of
+xegony's 209 rows sit past `Save()`'s 180-day wall clock right now, so a two-
+week holiday plus one save currently deletes half a raid. A window measured
+against the newest thing this server has seen cannot do that - it travels with
+the player - and it still lets a dead name finally leave.
+
+Class is split for the same reason in miniature: every class word in
+`players.txt` today was written by a parser (all 873 rows across 14 folders are
+timestamped, zero hand-typed), and 3-15 of them per capture cannot be re-learned
+while others get re-learned *differently* (`Tuona Shaman->Druid` in four captures
+spanning 2022-2026). A thing the operator typed must not share a column with a
+thing a log guessed, so it gets its own file and outranks the guess; roster rows
+imported from `players.txt` carry an `M` bit only if a human set them, which
+none did.
+
+`Remove` in the identity pane means *forget*: drop the ledger entry and the
+roster row, learn again normally next sighting. It never means veto - the
+`!Name` rejection is deleted (0026a22d) because no shipped build ever had a way
+to write one.
