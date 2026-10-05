@@ -74,3 +74,14 @@ Nothing else holds a version: the `<Version>` entries in the `.csproj` files are
    superseded docs under `{app}\data` — never a user's files, and never a name the current `[Files]` section installs.
 
    If this release bumps `Microsoft.ML.OnnxRuntime` or `KokoroSharp`, the published Kokoro pack has to be rebuilt against it and `TtsPackManager` re-pointed at the new tag: the installed managed ONNX wrapper and the pack's native `onnxruntime.dll` must be the same version, and KokoroSharp runs on top of everything in the pack.
+
+## Docking states a unit test cannot reach
+
+Two behaviours depend on state a headless test cannot build; both have shipped broken once.
+
+- [ ] **Show a pane that is hidden behind another tab.** Click the Pet Owners menu item while Player/NPC Identity is the visible
+  tab of the right-hand strip: it must PEEK in the strip, not move into the middle of the layout, and pressing the item again hides
+  it where it was. (`ToggleWindow` shows rather than relocates; a floated pane cannot share a tab strip at all.)
+- [ ] **Restart with an OLD `dockSite.xml`.** Launch on a layout saved by a previous build: the window state must survive. The
+  retired Verified Players / Verified Pets windows are empty hidden shells for exactly this reason — `LoadDockState` throws on a
+  name it cannot resolve and the catch calls `ResetState()`, which wipes every pane, size and position.
