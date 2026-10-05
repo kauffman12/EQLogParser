@@ -69,7 +69,13 @@ namespace EQLogParser
      * Sightings counts CAPTURES that agreed on Kind+Reason, so a row that exists only because the roster named it has 0:
      * nobody witnessed anything, and "remembered" must not read as "confirmed once".
      */
-    internal readonly record struct Prior(IdentityKind Kind, string Reason, long SeenAtS, int Sightings, bool Ours, string? Class);
+    /*
+     * Owner is the PET lane: "this name's master", the statement petmapping.txt used to hold. It is null for everything
+     * that is not a pet, and — like `Ours` — it is NOT a verdict: an owner text says nothing about whether the name is a
+     * player or a mob, so a row can carry one with Kind still Unknown. Both lanes are membership-shaped, which is why both
+     * bypass the verdict allowlist on load and both age on PlayerRegistry.StaleDays rather than on the rule lane's clock.
+     */
+    internal readonly record struct Prior(IdentityKind Kind, string Reason, long SeenAtS, int Sightings, bool Ours, string? Class, string? Owner = null);
 
     // Staleness is measured against the newest sighting in the file, so a player rebuilding last season's logs keeps
     // what they had; the cap is a memory guard for a name-heavy server played for years. Neither reaches a roster row:
@@ -110,17 +116,21 @@ namespace EQLogParser
       var loaded = new Dictionary<string, Prior>(StringComparer.OrdinalIgnoreCase);
       var dropped = 0;                       // rows the gate below refused, see the log line at the end
       var roster = 0;                        // rows carrying the roster bit, whatever else they hold
+      var owners = 0;                        // rows carrying a pet's owner, whatever else they hold
       _serverName = serverName ?? string.Empty;
 
       if (!string.IsNullOrEmpty(_serverName))
       {
         foreach (var (name, value) in ConfigUtil.ReadIdentityPriors(_serverName))
         {
-          // Name=Kind|Reason|SeenAtS|Sightings[|Ours[|Class]]. A four-field row is the shape written before the roster
-          // lane existed and loads unchanged; anything SHORTER or longer is dropped rather than repaired, because a
-          // half-read row would put a name on the list with a verdict nobody wrote.
+          /*
+           * Name=Kind|Reason|SeenAtS|Sightings[|Ours[|Class[|Owner]]]. A four-field row is the shape written before the
+           * roster lane existed and loads unchanged; anything SHORTER or longer is dropped rather than repaired, because a
+           * half-read row would put a name on the list with a verdict nobody wrote. The tail fields were appended in the
+           * order the lanes arrived, and each is optional, so a file written by any older build still parses.
+           */
           var parts = value.Split('|');
-          if (parts.Length is < 4 or > 6 || string.IsNullOrEmpty(name)) continue;
+          if (parts.Length is < 4 or > 7 || string.IsNullOrEmpty(name)) continue;
           if (!Enum.TryParse<IdentityKind>(parts[0], out var kind)) continue;
           if (!long.TryParse(parts[2], out var seenAt) || !int.TryParse(parts[3], out var sightings)) continue;
 
@@ -132,7 +142,8 @@ namespace EQLogParser
            * capture's evidence outvotes it the moment the capture says anything.
            */
           var ours = parts.Length >= 5 && bool.TryParse(parts[4], out var flag) && flag;
-          var className = parts.Length == 6 && parts[5].Length > 0 ? parts[5] : null;
+          var className = parts.Length >= 6 && parts[5].Length > 0 ? parts[5] : null;
+          var owner = parts.Length == 7 && parts[6].Length > 0 ? parts[6] : null;
 
           // Files written before this gate existed carry restated-database rows ("Name=Npc|R6-npcdb|..."). They are not
           // read back, and the load writes what is left so the noise leaves the FILE instead of being quietly dropped
@@ -147,12 +158,18 @@ namespace EQLogParser
            * rewrites them out. Had the retired code been refused by name instead, the next retired rule would have arrived
            * with a second list to forget.
            */
+          /*
+           * Both memory lanes bypass the verdict allowlist for the same reason given above: membership and ownership are
+           * not verdicts, and the gate exists only to stop this file restating answers it always has (npcs.txt, spell
+           * data). An owner-only row is what a petmapping.txt import looks like.
+           */
           if (ours) roster++;
+          else if (owner is not null) owners++;
           else if (kind == IdentityKind.Unknown || !WorthRemembering(parts[1])) { dropped++; continue; }
 
           // Sightings keeps its own value rather than being floored at 1: a roster-only row legitimately has none, and
           // rounding it up would advertise one witnessed capture for a name nothing was ever read off.
-          loaded[name] = new Prior(kind, parts[1] ?? string.Empty, seenAt, Math.Max(0, sightings), ours, className);
+          loaded[name] = new Prior(kind, parts[1] ?? string.Empty, seenAt, Math.Max(0, sightings), ours, className, owner);
         }
       }
 
@@ -173,6 +190,7 @@ namespace EQLogParser
       if (loaded.Count > 0 || dropped > 0)
         Log.Info($"Identity priors for {_serverName}: {loaded.Count} remembered verdicts"
                  + (roster > 0 ? $", {roster} carried over from the roster" : string.Empty)
+                 + (owners > 0 ? $", {owners} carrying a pet owner" : string.Empty)
                  + (dropped > 0
                     ? $", {dropped} rows refused (restated database answers, or companion claims from a build that "
                       + "read the line backwards) and rewritten out of the file"
@@ -394,6 +412,121 @@ namespace EQLogParser
     }
 
     /*
+     * PET LANE — "whose pet is this", the statement petmapping.txt carried (`Fluffy=Ziggy|4021234567`).
+     *
+     * Same shape as the roster lane and for the same reasons: it is NOT a verdict, it moves its stamp FORWARD only (so an
+     * old list can be imported twice with no effect and a replayed backup cannot age an active pet out), a hand-typed row
+     * carries 0 which means "a statement, never retires", and clearing it leaves any witnessed verdict underneath alone.
+     * Owner text is stored verbatim, INCLUDING the "Unassigned" text petmapping.txt uses for a pet nobody has mapped —
+     * that string is data the Pet Owners grid shows and edits, and deciding here whether it counts as an owner is one of
+     * the two places a rule and a UI could disagree about what a row means.
+     */
+
+    /// <summary>What this application wrote down about ownership: "this application remembers it" — not a rule code.</summary>
+    public const string OwnerReason = "PetMap";
+
+    public void RememberPet(string? petName, string? owner, long seenAtS) => RememberPet(petName, owner, seenAtS, persist: true);
+
+    internal void RememberPet(string? petName, string? owner, long seenAtS, bool persist)
+    {
+      if (string.IsNullOrEmpty(petName) || string.IsNullOrEmpty(owner)) return;
+
+      bool changed;
+      lock (_gate)
+      {
+        if (!_byName.TryGetValue(petName, out var existing))
+        {
+          /*
+           * A name the ledger never heard: Kind stays Unknown because ownership is not evidence of what a name IS. A row
+           * that claimed Pet here would let an old mapping file outvote tonight's rules about a name that grew up into a
+           * player-shaped something else.
+           */
+          _byName[petName] = new Prior(IdentityKind.Unknown, OwnerReason, Math.Max(0, seenAtS), 0, false, null, owner);
+          changed = true;
+        }
+        else
+        {
+          var updated = existing with
+          {
+            Owner = owner,
+            SeenAtS = Math.Max(existing.SeenAtS, Math.Max(0, seenAtS)),
+            // A row that existed only as a verdict gains the ownership provenance word nothing else can supply; a row
+            // already owned by this lane keeps its word (a capture-learned owner does not rewrite an operator's import).
+            Reason = WorthRemembering(existing.Reason) || existing.Ours ? existing.Reason : OwnerReason,
+          };
+          changed = updated != existing;
+          if (changed) _byName[petName] = updated;
+        }
+      }
+
+      if (changed && persist) Save();
+    }
+
+    /// <summary>The owner this application remembers for a pet name; null when it has no mapping.</summary>
+    public bool TryGetOwner(string? name, out string? owner)
+    {
+      if (string.IsNullOrEmpty(name)) { owner = null; return false; }
+      lock (_gate)
+      {
+        if (_byName.TryGetValue(name, out var prior) && !string.IsNullOrEmpty(prior.Owner)) { owner = prior.Owner; return true; }
+      }
+      owner = null;
+      return false;
+    }
+
+    public bool TryGetOwner(string? name) => TryGetOwner(name, out _);
+
+    /// <summary>Snapshot of the ownership lane for the registry to seed itself from at log open, sorted by pet name.</summary>
+    public List<KeyValuePair<string, Prior>> PetEntries()
+    {
+      lock (_gate)
+      {
+        var list = new List<KeyValuePair<string, Prior>>(_byName.Count);
+        foreach (var (name, prior) in _byName)
+        {
+          if (!string.IsNullOrEmpty(prior.Owner)) list.Add(new KeyValuePair<string, Prior>(name, prior));
+        }
+        list.Sort(static (a, b) => string.CompareOrdinal(a.Key, b.Key));
+        return list;
+      }
+    }
+
+    /// <summary>True when this ledger already carries ownership — the gate the petmapping.txt import asks.</summary>
+    public bool HasOwnerRows
+    {
+      get
+      {
+        lock (_gate)
+        {
+          foreach (var prior in _byName.Values) if (!string.IsNullOrEmpty(prior.Owner)) return true;
+        }
+        return false;
+      }
+    }
+
+    /// <summary>Drop a mapping. A verdict or roster bit on the same name is a different statement and stays.</summary>
+    public void ForgetPet(string? name) => ForgetPet(name, persist: true);
+
+    internal void ForgetPet(string? name, bool persist)
+    {
+      bool changed;
+      lock (_gate) changed = ClearOwnerLocked(name);
+      if (changed && persist) Save();
+    }
+
+    // Caller holds the gate. Returns true when a mapping was actually removed.
+    private bool ClearOwnerLocked(string? name)
+    {
+      if (string.IsNullOrEmpty(name) || !_byName.TryGetValue(name, out var existing) || string.IsNullOrEmpty(existing.Owner)) return false;
+
+      var cleared = existing with { Owner = null };
+      // Nothing else in the row was earned by evidence or by membership: an imported owner-only row has no reason to stay.
+      if (!cleared.Ours && (cleared.Kind == IdentityKind.Unknown || !WorthRemembering(cleared.Reason))) _byName.Remove(name);
+      else _byName[name] = cleared;
+      return true;
+    }
+
+    /*
      * THE GATE: what this file is allowed to remember. An ALLOWLIST of rule families, one per EVENT a log had to
      * contain for the rule to speak - a target frame (R1), a /who roster (R2), chat and zone presence (R3), a
      * recognisable cast (R4), "X is called to it owner" (R5-companion — the name in that line is the SUMMONER), the
@@ -474,10 +607,12 @@ namespace EQLogParser
         }
       }
 
+      // Both memory lanes are exempt: the cap guards against a decade of INFERRED verdicts, and evicting "this is one of
+      // ours" or "Fluffy belongs to Ziggy" would be the file silently forgetting data somebody keeps by hand.
       var candidates = new List<KeyValuePair<string, Prior>>(_byName.Count);
       foreach (var (name, prior) in _byName)
       {
-        if (!prior.Ours) candidates.Add(new KeyValuePair<string, Prior>(name, prior));
+        if (!prior.Ours && prior.Owner is null) candidates.Add(new KeyValuePair<string, Prior>(name, prior));
       }
       if (candidates.Count <= MaxEntries) return changed;
 
@@ -507,16 +642,25 @@ namespace EQLogParser
       var nowS = (long)DateUtil.ToDotNetSeconds(DateTime.Now);
       var staleS = (long)PlayerRegistry.StaleDays * 24 * 60 * 60;
       List<string>? expired = null;
+      List<string>? expiredPets = null;
       foreach (var (name, prior) in _byName)
       {
-        if (!prior.Ours || prior.SeenAtS <= 0) continue;
-        if (nowS - prior.SeenAtS > staleS) (expired ??= []).Add(name);
+        if (prior.SeenAtS <= 0) continue;              // a statement, not an observation: never retires
+        if (nowS - prior.SeenAtS <= staleS) continue;
+        if (prior.Ours) (expired ??= []).Add(name);
+        if (!string.IsNullOrEmpty(prior.Owner)) (expiredPets ??= []).Add(name);
       }
-      if (expired is null) return false;
+      if (expired is null && expiredPets is null) return false;
 
-      foreach (var name in expired) ForgetRosterLocked(name);
-      Log.Info($"Identity priors for {_serverName}: {expired.Count} roster names aged out ({PlayerRegistry.StaleDays} days " +
-               "without a sighting)");
+      expired?.ForEach(ForgetRosterLocked);
+      // The call's bool answer is deliberately dropped here: this pass reports what aged out, it does not act per name.
+      expiredPets?.ForEach(name => ClearOwnerLocked(name));
+
+      var what = new List<string>();
+      if (expired is { Count: > 0 }) what.Add($"{expired.Count} roster names aged out");
+      if (expiredPets is { Count: > 0 }) what.Add($"{expiredPets.Count} pet mappings aged out");
+      Log.Info($"Identity priors for {_serverName}: {string.Join(", ", what)} " +
+               $"({PlayerRegistry.StaleDays} days without a sighting)");
       return true;
     }
 
@@ -543,8 +687,10 @@ namespace EQLogParser
           // written last so a name whose class somehow contains a separator cannot shift the fields in front of it.
           var reason = (prior.Reason ?? string.Empty).Replace("=", string.Empty);
           var className = (prior.Class ?? string.Empty).Replace("=", string.Empty).Replace("|", string.Empty);
+          var owner = (prior.Owner ?? string.Empty).Replace("=", string.Empty).Replace("|", string.Empty);
           lines.Add(new KeyValuePair<string, string>(name,
-            $"{prior.Kind}|{reason}|{prior.SeenAtS}|{prior.Sightings}|{(prior.Ours ? "True" : "False")}|{className}"));
+            $"{prior.Kind}|{reason}|{prior.SeenAtS}|{prior.Sightings}|{(prior.Ours ? "True" : "False")}|{className}"
+            + (owner.Length > 0 ? $"|{owner}" : string.Empty)));
         }
       }
       ConfigUtil.SaveIdentityPriors(lines, _serverName);

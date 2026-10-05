@@ -181,6 +181,12 @@ internal static class IdentityVocabulary
     if (code == IdentityPriorStore.RosterReason)
       return "Carried over from the roster this app saved";
 
+    // The ledger's ownership lane (petmapping.txt's heir): same shape as the roster row above — memory rather than a rule,
+    // and the sentence has to say WHICH of the two files' worth of memory this is, because a mapping can outlive both the
+    // pet and the claim that it was ever a pet.
+    if (code == IdentityPriorStore.OwnerReason)
+      return "Carried over from the pet map this app saved";
+
     var text = code switch
     {
       "R0-local" => "Your own name",
@@ -335,6 +341,13 @@ internal static class IdentityVocabulary
      * "Imported" echoing as "Imported" would read as a bug report rather than as where the name came from.
      */
     [IdentityPriorStore.RosterReason] = "Imported",
+
+    /*
+     * The ledger's ownership lane, and the same argument as the row above: no fixture writes it, so the corpus run beside
+     * these tests cannot reach it, and an unmapped code echoes itself on screen. "Pet Map" is what the operator called the
+     * file; the filename itself never appears (docs/DesignNotes.md -> "No hover names a file").
+     */
+    [IdentityPriorStore.OwnerReason] = "Pet Map",
 
     // Two spellings the files themselves carry, kept mapped because they are already on disk:
     //   "Override" — what IdentityOverrideStore.LoadAll hands back as a row's source.

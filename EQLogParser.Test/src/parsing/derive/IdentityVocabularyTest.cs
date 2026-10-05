@@ -65,6 +65,14 @@ public class IdentityVocabularyTest
      */
     IdentityPriorStore.RosterReason,
 
+    /*
+     * And the same again for the ledger's OWNERSHIP lane (IdentityPriorStore.OwnerReason): only a petmapping.txt import
+     * writes it, so no cold fixture can produce a row wearing it. Its word is "Pet Map" — the operator's name for the file
+     * that held this data before the ledger did — and unlike the roster word it is NOT self-spelled, because "PetMap" on a
+     * screen reads like a bug report rather than a provenance.
+     */
+    IdentityPriorStore.OwnerReason,
+
     // The two spellings the FILES carry, so they must map even though no rule writes them: what
     // IdentityOverrideStore.LoadAll reports as a row's source ("Override"), and AddRow's word for an override read out of
     // the file before any timeline existed — this window opened before the first derive pass ("Manual").
