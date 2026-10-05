@@ -378,7 +378,10 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   a word here, and `HealedByCasters` (the number behind *Healed*) is gated exactly like R15 — distinct raid-side Strong casters, self-heals skipped, **0 means "not
   asked" rather than "nobody healed them"** (`CensusHealProofTest`).
 - **Identity has two writes and one unset — and no veto.** `ClassificationCommands` is the whole vocabulary: `SetVerdict`
-  (Player / Pet / Merc / NPC into `identity-overrides.txt`) and `ClearVerdict`, which the Type dropdown's **"Clear claim"**
+  (Player / Pet / Merc / NPC into `identity-overrides.txt` — shipped as `mirror-overrides.txt`, which
+  `ReadIdentityOverrides` still reads ONLY until the new name has been written once, because importing by existence is
+  one rule and merging two verdict files would resurrect a reverted claim: `ALegacyMirrorFileIsReadOnceAndThenSuperseded`)
+  and `ClearVerdict`, which the Type dropdown's **"Clear claim"**
   calls. That entry is the *only* unset, so "isn't there already an option to clear the name?" is answered by the same
   five words in that dropdown (plus `Remove` on the roster) and by nothing else. **Nothing writes or reads a `players.txt`
   `!Name` rejection any more.** That tombstone arrived 2026-09-28 16:05 (`9de0f230`) and its sole door — Verified Players'
