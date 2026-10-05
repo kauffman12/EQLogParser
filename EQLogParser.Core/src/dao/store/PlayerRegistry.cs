@@ -32,6 +32,31 @@ namespace EQLogParser
 
     private readonly ConcurrentDictionary<string, string> _defaultPlayerClass = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, byte> _gameGeneratedPets = new();
+    /*
+     * One calendar dial for both files this class writes. A row retires when the application has not seen its subject
+     * for this many days — players.txt rows carry their own sighting time, and petmapping.txt rows now carry one too
+     * (`Fluffy=Ziggy|4021234560`), so the same sentence is true of both: *seen lately, kept; unseen, gone*. Two numbers
+     * here would mean a player can be forgotten while their pet is still remembered, which is not a statement anybody
+     * chose. Hand-written rows carry no time and are therefore statements rather than sightings: they never retire.
+     */
+    internal const int StaleDays = 200;
+
+    /*
+     * The pet side's sighting clock, in the same .NET seconds the player rows use. It is deliberately separate from
+     * _petToPlayer: that dictionary is the OPERATOR's data (the Pet Owners grid edits it and its Owner text goes out to
+     * the UI), while this one is bookkeeping this application keeps about when it last saw a name in a log. The stamp
+     * is wall-clock rather than log time on purpose — "when did WE last see this pet", because what ages out is our
+     * memory, and playing through last year's capture refreshes it today.
+     */
+    /*
+     * The stamp this process hands out, so a name sighted many times in one session is written once (the hot path is
+     * every possessive damage line) and the first sighting after a load is what replaces an old stamp. A session that
+     * ran for years would stop refreshing; a raid night is measured in hours.
+     */
+    private static readonly double SessionStamp = DateUtil.ToDotNetSeconds(DateTime.Now);
+
+    private readonly ConcurrentDictionary<string, double> _petSeenAt = new();
+
     private readonly ConcurrentDictionary<string, string> _petToPlayer = new();
     private readonly ConcurrentDictionary<string, ActivePlayerClass> _activePlayerClass = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, byte> _takenPetOrPlayerAction = new();
@@ -93,6 +118,7 @@ namespace EQLogParser
           _activePlayerClass.Clear();
           _takenPetOrPlayerAction.Clear();
           _verifiedPets.Clear();
+          _petSeenAt.Clear();
           _verifiedPlayers.Clear();
           _mercs.Clear();
           _playersUpdated = false;
@@ -116,8 +142,12 @@ namespace EQLogParser
         needEvent = AddPetToPlayerNoLock(pet, player, init);
       }
 
-      // make sure it's a pet too
-      AddVerifiedPet(pet);
+      /*
+       * Make sure it is a pet too — and carry `init`, because Init() registers the pairs it just read out of
+       * petmapping.txt. A load is not a sighting: without this every row in the file got today's date at startup, so
+       * the aging dial could never expire anything while the file looked freshly stamped.
+       */
+      AddVerifiedPet(pet, init);
 
       if (needEvent)
       {
@@ -142,6 +172,17 @@ namespace EQLogParser
       var needEvent = false;
       var petMappingEvent = false;
       var petMapping = default(PetMapping);
+
+      /*
+       * A sighting refreshes the row's clock — including for a pet already known, which is the case that matters: the
+       * mapping loaded from petmapping.txt at Init and the pet walked back into the log. Without this the row would age
+       * out while being seen every night. The compare is what keeps it off the hot path: after the first sighting in a
+       * session there is nothing left to write.
+       */
+      if (!init && (!_petSeenAt.TryGetValue(name, out var lastSeen) || lastSeen < SessionStamp))
+      {
+        _petSeenAt[name] = SessionStamp;
+      }
 
       lock (_lock)
       {
@@ -385,6 +426,7 @@ namespace EQLogParser
         _activePlayerClass.Clear();
         _takenPetOrPlayerAction.Clear();
         _verifiedPets.Clear();
+        _petSeenAt.Clear();
         _verifiedPlayers.Clear();
         _mercs.Clear();
         _playersUpdated = false;
@@ -456,6 +498,19 @@ namespace EQLogParser
           if (!mapping.TryGetValue(key, out var value) || "You".Equals(key, StringComparison.OrdinalIgnoreCase))
             continue;
 
+          /*
+           * The optional `|<dotnet seconds>` tail is this application's sighting stamp, not part of the owner's name —
+           * stripped here so nothing downstream (the Pet Owners grid, +Pets folding, the meters) ever sees it. A row
+           * without the tail came from an operator's keyboard or from a build that did not stamp, and is kept: rows
+           * with no time are statements, and StaleDays only ever retires observations.
+           */
+          var bar = value.IndexOf('|');
+          if (bar >= 0)
+          {
+            if (double.TryParse(value.AsSpan(bar + 1), out var seenAt) && seenAt > 0) _petSeenAt[key] = seenAt;
+            value = value[..bar];
+          }
+
           if ("You".Equals(value, StringComparison.OrdinalIgnoreCase))
           {
             value = ConfigUtil.PlayerName;
@@ -508,7 +563,7 @@ namespace EQLogParser
              * Init() loads plain names at time 0, so one newly learned name was enough to cost an operator both
              * their curated entries and their ownership rows, silently.
              */
-            if (kv.Value != 0 && (now - DateUtil.FromDotNetSeconds(kv.Value)).TotalDays >= 200)
+            if (kv.Value != 0 && (now - DateUtil.FromDotNetSeconds(kv.Value)).TotalDays >= StaleDays)
             {
               continue;
             }
@@ -526,7 +581,22 @@ namespace EQLogParser
         {
           // no generated or unassigned pets but allow for warders
           var filtered = _petToPlayer.Where(kv => !_gameGeneratedPets.ContainsKey(kv.Key) && IsPossiblePetName(kv.Key));
-          petList = [.. filtered];
+          var now = DateTime.Now;
+
+          petList = [];
+          foreach (var kv in filtered)
+          {
+            var seenAt = _petSeenAt.TryGetValue(kv.Key, out var stamped) ? stamped : 0d;
+
+            // Same law as the player rows above: an un-dated row is a statement and stays; a sighting older than the
+            // dial means the pet has not been in any log this application read, and its row leaves with it. That is
+            // what makes the file stop carrying every summon from the last four years.
+            if (seenAt != 0 && (now - DateUtil.FromDotNetSeconds(seenAt)).TotalDays >= StaleDays)
+              continue;
+
+            petList.Add(new KeyValuePair<string, string>(kv.Key, seenAt == 0 ? kv.Value : $"{kv.Value}|{Math.Round(seenAt)}"));
+          }
+
           _petMappingUpdated = false;
         }
 
@@ -772,7 +842,12 @@ namespace EQLogParser
         _petToPlayer[pet] = player;
 
         if (!init)
+        {
+          // Learning a pair — or re-assigning one in the Pet Owners grid — is a sighting, and it restarts the row's
+          // clock. That is how an operator's edit keeps a pet that would otherwise have aged out of the file.
+          _petSeenAt[pet] = SessionStamp;
           _petMappingUpdated = true;
+        }
 
         return !init;
       }

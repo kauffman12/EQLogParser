@@ -170,7 +170,116 @@ public class PlayerRegistryPersistenceTest
     Assert.IsTrue(PlayerRegistry.Instance.IsVerifiedPlayer("Betebeatz"), "an ordinary row did not load");
   }
 
+  // ---- the pet side's calendar ---------------------------------------------------------------------------------
+  /*
+   * petmapping.txt carries an optional sighting stamp after the owner — `Fluffy=Ziggy|4021234560` — and StaleDays is
+   * the one dial both files age on. Three things had to be true at once: the dead weight leaves (a four-year-old file
+   * of every summon in the game was the complaint), the Owner text the Pet Owners grid shows stays clean, and a row
+   * that predates the stamp format is never deleted for something it cannot have.
+   */
+
+  [TestMethod]
+  public void APetUnseenForStaleDaysLeavesTheFile()
+  {
+    WritePetMappingFile([$"Ghrahb=Ziggy|{StampDaysAgo(PlayerRegistry.StaleDays + 5)}"]);
+    PlayerRegistry.Instance.Init();
+
+    Assert.IsTrue(PlayerRegistry.Instance.GetPetMappings().Any(m => m.Pet == "Ghrahb" && m.Owner == "Ziggy"),
+      "control: the row did not load (it is dropped at SAVE, not at load, like a stale player row)");
+
+    // A save only writes the mapping file when something changed, so change something.
+    PlayerRegistry.Instance.AddPetToPlayer("Bubbles", "Ziggy");
+    PlayerRegistry.Instance.Save();
+
+    var saved = ReadPetMappingFile();
+    Assert.IsFalse(saved.Any(l => l.Contains("Ghrahb", StringComparison.Ordinal)),
+      $"a pet not sighted for {PlayerRegistry.StaleDays} days stayed in the file; file = [{string.Join(" | ", saved)}]");
+    Assert.IsTrue(saved.Any(l => l.StartsWith("Bubbles=", StringComparison.Ordinal)),
+      $"the save that dropped the stale row skipped the new one too; file = [{string.Join(" | ", saved)}]");
+  }
+
+  [TestMethod]
+  public void APetRowCarryingNoStampIsAStatementAndStays()
+  {
+    /*
+     * Two kinds of row have no stamp: one an operator typed into the file, and one written by a build that predates the
+     * format. Neither can be judged for an age it never recorded — this is exactly the law that stopped Save() from
+     * deleting curated player rows, applied to the pet file.
+     */
+    WritePetMappingFile(["Fluffy=Ziggy"]);
+    PlayerRegistry.Instance.Init();
+
+    PlayerRegistry.Instance.AddPetToPlayer("Bubbles", "Ziggy");
+    PlayerRegistry.Instance.Save();
+
+    var saved = ReadPetMappingFile();
+    Assert.IsTrue(saved.Any(l => l.StartsWith("Fluffy=Ziggy", StringComparison.Ordinal)),
+      $"an un-stamped row was retired; file = [{string.Join(" | ", saved)}]");
+    Assert.IsFalse(saved.Any(l => l.Contains('|') && l.StartsWith("Fluffy", StringComparison.Ordinal)),
+      $"a stamp was invented for a row nobody observed; file = [{string.Join(" | ", saved)}]");
+  }
+
+  [TestMethod]
+  public void ASightingRefreshesTheStampAndTheOwnerTextStaysClean()
+  {
+    // A row whose stored stamp is stale, sighted again today: it must survive, and reappear stamped.
+    WritePetMappingFile([$"Ghrahb=Ziggy|{StampDaysAgo(PlayerRegistry.StaleDays + 5)}"]);
+    PlayerRegistry.Instance.Init();
+
+    // What a capture does with a possessive line: the pair is already known, and the pet is sighted anyway.
+    PlayerRegistry.Instance.AddVerifiedPet("Ghrahb");
+    PlayerRegistry.Instance.AddPetToPlayer("Bubbles", "Ziggy");
+    PlayerRegistry.Instance.Save();
+
+    var saved = ReadPetMappingFile();
+    var ghrahb = saved.FirstOrDefault(l => l.StartsWith("Ghrahb=", StringComparison.Ordinal));
+    Assert.IsNotNull(ghrahb, $"a pet sighted today still aged out; file = [{string.Join(" | ", saved)}]");
+
+    var owner = ghrahb[(ghrahb.IndexOf('=') + 1)..];
+    Assert.IsTrue(owner.Contains('|'), "the surviving row lost its stamp, so it can never age");
+    Assert.AreEqual("Ziggy", owner[..owner.IndexOf('|')], "the stamp leaked into the owner text");
+
+    Assert.IsTrue(PlayerRegistry.Instance.GetPetMappings().Any(m => m.Pet == "Ghrahb" && m.Owner == "Ziggy"),
+      "the in-memory mapping carries a stamp the UI would print");
+  }
+
+  [TestMethod]
+  public void OneDialAgesBothFiles()
+  {
+    /*
+     * StaleDays is one number for both files this class writes, and both halves have to answer to it in the same save:
+     * a player forgotten while their pet is still remembered is not a rule anybody chose.
+     */
+    var tooOld = Math.Round(DateUtil.ToDotNetSeconds(DateTime.Now.AddDays(-(PlayerRegistry.StaleDays + 5))));
+    WritePlayersFile([$"Goruuk={tooOld}"]);
+    WritePetMappingFile([$"Ghrahb=Goruuk|{StampDaysAgo(PlayerRegistry.StaleDays + 5)}"]);
+    PlayerRegistry.Instance.Init();
+
+    PlayerRegistry.Instance.AddVerifiedPlayer("Newbie", DateUtil.ToDotNetSeconds(DateTime.Now));
+    PlayerRegistry.Instance.AddPetToPlayer("Bubbles", "Newbie");
+    PlayerRegistry.Instance.Save();
+
+    var players = ReadPlayersFile();
+    var pets = ReadPetMappingFile();
+    Assert.IsFalse(players.Any(l => l.Contains("Goruuk", StringComparison.Ordinal)),
+      $"the player row survived the dial; file = [{string.Join(" | ", players)}]");
+    Assert.IsFalse(pets.Any(l => l.Contains("Ghrahb", StringComparison.Ordinal)),
+      $"the pet row survived the same dial; file = [{string.Join(" | ", pets)}]");
+  }
+
   // ---- helpers -----------------------------------------------------------------------------------------------
+
+  private static string StampDaysAgo(int days) => Math.Round(DateUtil.ToDotNetSeconds(DateTime.Now.AddDays(-days))).ToString();
+
+  private string PetMappingFilePath => Path.Combine(_tempDir, "Perstest", "petmapping.txt");
+
+  private void WritePetMappingFile(string[] lines)
+  {
+    Directory.CreateDirectory(Path.Combine(_tempDir, "Perstest"));
+    File.WriteAllLines(PetMappingFilePath, lines);
+  }
+
+  private List<string> ReadPetMappingFile() => File.Exists(PetMappingFilePath) ? [.. File.ReadAllLines(PetMappingFilePath)] : [];
 
   private string PlayersFilePath => Path.Combine(_tempDir, "Perstest", "players.txt");
 
