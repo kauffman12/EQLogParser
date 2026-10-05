@@ -55,7 +55,7 @@ lines ──parsers──▶ CombatCapture
                     └─ two ordinal sets per row: facts AT the owner / facts BY the owner
                           │
         ┌─────────────────┼──────────────────────┬─────────────────────┐
-   FightTable         FightSummarySource/Heals  MirrorMeter + LiveFights   Names window /
+   FightTable         FightSummarySource/Heals  DerivedMeter + LiveFights   Names window /
    (legacy's 3 cols,  (the REAL builders get     ("still going" on the      identity census
     sections, search,  materialized records —    capture's clock; the
     overrides)         same code as legacy)      meter's quiet dial is the
@@ -3876,7 +3876,7 @@ teach the name again (`ARemovedNameLeavesTheFileAndCanBeLearnedAgain`). The ledg
 `ALedgerFillsSilenceAndNeverContradictsEvidence` asserts that a name whose roster row was taken away keeps its remembered
 verdict, because an eviction is not a veto. Taking a *claim* back remains a UI verb (the Type dropdown's "Clear claim"
 drops the override and the ledger entry together), and if "never call this one of ours again" is ever wanted it arrives as
-an assertion in `mirror-overrides.txt` — `Set as NPC`, which the rules can weigh — rather than as a silence.
+an assertion in `identity-overrides.txt` — `Set as NPC`, which the rules can weigh — rather than as a silence.
 
 ## The name census: what the Names window reads, and what an override costs
 
@@ -3884,7 +3884,7 @@ an assertion in `mirror-overrides.txt` — `Set as NPC`, which the rules can wei
 this capture mentioned", built for one purpose: letting a person audit classification instead of noticing one mistake
 mid-fight. The fight grids' right-click stays (that is where mistakes get noticed) but both it and the window go through
 `ClassificationCommands`, because before this there were two verbs writing two files — "Add player" went to
-`players.txt`, "Set as Pet" to `mirror-overrides.txt`, at different strengths.
+`players.txt`, "Set as Pet" to `identity-overrides.txt`, at different strengths.
 
 Four decisions, each because the obvious version was wrong:
 
@@ -3896,7 +3896,7 @@ Four decisions, each because the obvious version was wrong:
 - **Operator-only names are listed even with zero facts**: a typed alt, and — the one that mattered — a verdict on a
   name this particular capture doesn't contain. Without it the window contradicts its own file and looks like it ignored
   the override; there is simply nothing to apply it to. (Both stores that could put such a name on the list are read
-  back into the row set: `mirror-overrides.txt` and the roster. A rejection used to be a third source.)
+  back into the row set: `identity-overrides.txt` and the roster. A rejection used to be a third source.)
 - **Totals are summed from the facts, never taken from a summary board.** The census answers "how busy was this name"
   for the whole capture; a board number carries the current fight selection into an audit list. Cost: one pass per
   stream writing into arrays indexed by name id (no hashing, no per-fact allocation), then ~6k timeless
@@ -3922,7 +3922,7 @@ singletons empty on the way out (`AGENTS`: no parallelization, this is process s
 
 Asked whether the classifier's data should be serialized and built up across log files. Splitting the question was the
 whole answer, because two different things hide inside it. **Verdicts are already persisted** where a person said them:
-`mirror-overrides.txt` (Manual strength), `players.txt` (membership), `petmapping.txt`, npcs.db — all read in
+`identity-overrides.txt` (Manual strength), `players.txt` (membership), `petmapping.txt`, npcs.db — all read in
 by R10/RegistrySeed on every open. What was NOT kept is the rules' own conclusions, and persisting those would create a
 truth with no line evidence behind it while making the census's *why* column lie. Concretely: R7 builds sides out of what
 the timeline already knows (`kinds[]` over every defender edge), so yesterday's conclusion arriving as input lets the
@@ -3941,7 +3941,7 @@ Four properties make it safe, all pinned (`IdentityPriorStoreTest`, 9 tests):
   answers for that name in every capture that mentions it — remembering it buys a row and no knowledge, and keeps
   contradicting a corrected database until the entry dies of age), `R14-shape`/`R16-comma` (the name's own spelling
   travels with it), `R5-owner` (the possessive is in the name; the durable claim belongs to petmapping.txt where the
-  operator can edit it), `R0-local` (this session's character), `Manual`/`R10` (mirror-overrides.txt is that file),
+  operator can edit it), `R0-local` (this session's character), `Manual`/`R10` (identity-overrides.txt is that file),
   `RegistrySeed`/`You`, and `Prior` — this file reading itself is how a wrong name becomes permanently right.
   An allowlist because the failures are unequal: forgetting an event rule costs memory until someone adds it; admitting
   a permanent-input rule makes every log on earth file its built-in answers as experience, which no UI can show. A new
@@ -4079,7 +4079,7 @@ Design points worth keeping:
     doing the same thing behind two lines). "Clear claim" carries `IdentityKind.Unknown` because that is precisely what
     `ClassificationCommands.ClearVerdict` writes, so the pane needs no second verb for one file;
   - **the list preselects the row's current verdict**, which is what lets `TypeSelectionChanged` refuse a click that
-    changes nothing — otherwise a stray open-and-reselect spends a derive pass and rewrites mirror-overrides.txt. An
+    changes nothing — otherwise a stray open-and-reselect spends a derive pass and rewrites identity-overrides.txt. An
     unplaced name selects nothing (clearing is an action, not a state the row is in);
   - **a cell edit edits its cell.** Multi-select batching stays where it always was — the fight grids' context menu takes a
     block (Set as Player / Mercenary / Pet / NPC, Clear Override). The "two title-bar icons" this bullet pointed at are gone
@@ -4460,7 +4460,7 @@ measured earlier still stand; they get re-run with the overlay swap, which is th
 `OverlayDamageFromMirror` (settings.txt, off by default) points `DamageOverlayWindow`'s once-a-second build at
 `DerivedTotals.ForOverlay(rows, index, facts, heals, fromT, toT)` — damage and tanking halves, each on its own builder
 instance, returned as the `DamageOverlayStats` container the overlay already paints. What did NOT move: the meter's
-policy. `_mirrorWindowT` is stamped at open/reset (`ResetOverlayFights` moves it too), and the expiry test is still
+policy. `_meterWindowT` is stamped at open/reset (`ResetOverlayFights` moves it too), and the expiry test is still
 legacy's — quiet for longer than `mode == 0 ? FightManager.FightTimeout : mode` and the board zeroes with the window
 reopening here. That split is the whole point of the seam: *which seconds* is the surface's business, *what they add up
 to* is the derivation's, and it is why no "current fight" concept had to be invented inside the capture.
@@ -4651,7 +4651,7 @@ orders of magnitude rather than by guesswork. The throttle scales with measured 
 the 3 s floor (≈20% of wall time parked at the gate while a raid is fighting, which buys a meter that moves); a 10 s
 pass would be spaced to the ceiling instead of running back to back.
 
-**The ceiling has a reason.** `BuildMirrorUpdate` applies the meter's own expiry to whatever it has: quiet for longer
+**The ceiling has a reason.** `BuildMeterUpdate` applies the meter's own expiry to whatever it has: quiet for longer
 than `_currentDamageMode` (or `FightManager.FightTimeout` = 30 s in the default mode 0) and the board zeroes, because
 that is how a meter is supposed to behave after a pull. It measures quietness against *the last fact the snapshot knows
 about*, so a cadence allowed to let a snapshot age past 30 s would blank the board on a raid that was fighting the whole
@@ -4929,12 +4929,12 @@ pull at all.
 - **Hiding.** A hidden derived meter closes for real when nothing is live and comes back on the next announcement, instead of
   lingering invisibly for the rest of the process.
 - **Reset.** `FullResetClick` resets each engine the way that engine keeps a board: legacy discards its builder and
-  FightManager's overlay set (those hold running totals), derived moves its window start (`_mirrorWindowT = -1`) because a
+  FightManager's overlay set (those hold running totals), derived moves its window start (`_meterWindowT = -1`) because a
   derived board holds nothing at all.
 
 ### The seam, and why it is one file
 
-`MirrorMeter` (app) is now the only reader of `OverlayDamageFromMirror`, and the only place that answers "which engine is the
+`DerivedMeter` (app) is now the only reader of `OverlayDamageFromMirror`, and the only place that answers "which engine is the
 meter reading". Before this the key was read in two components and the second still asked `FightManager`, which is how a
 half-ported surface looks finished. It holds no policy: `TimeoutFor(mode)` maps the `OverlayDamageMode` dial (0 = on kill →
 the 30 s engagement gap, otherwise N seconds) so the board's expiry and the live question cannot drift into two different
@@ -4956,7 +4956,11 @@ What is left on this path is not the wiring but the default: flip `OverlayDamage
 
 ### One dial for both surfaces (2026-10, burn-in)
 
-`OverlayDamageFromMirror` is retired. The list's `EnableCombatMirror` is now the ONLY dial: `MirrorMeter.Enabled`
+*(Names in the notes above predate 2026-11: the engine was "the combat mirror" then - `MirrorMeter` is now
+`DerivedMeter`, and the operator's file `mirror-overrides.txt` is now `identity-overrides.txt`, with the old name read
+once when the new one has never been written. Same objects, older words.)*
+
+`OverlayDamageFromMirror` is retired. The list's `EnableCombatMirror` is now the ONLY dial: `DerivedMeter.Enabled`
 reads `AppSettings.IsCombatMirrorEnabled` live (no static capture), and the overlay window reads it live at every
 decision site instead of capturing one at construction. The motivation was the exact failure mode this file keeps
 flagging: two words let a meter paint derived numbers while its open/close/reset rules still answered to legacy
@@ -5697,7 +5701,7 @@ a human must be able to revert one claim without disturbing another**. Under
 | file | what it holds | who writes it | read by |
 | --- | --- | --- | --- |
 | `identity-priors.txt` (extended) | machine memory: a previous capture's RULE verdict with the rule word, plus "this name is one of us", sightings, a learned class | `IdentityPriorStore.Record` after a pass; once, the importer below | identity census, and the startup identity seed that `RegistrySeed`'s roster half feeds today |
-| `mirror-overrides.txt` (extended) | operator claims: `Name=Kind`, now `Name=Kind\|Class` | only the pane | identity/class lookup, above anything a capture teaches; one Revert drops both halves |
+| `identity-overrides.txt` (extended) | operator claims: `Name=Kind`, now `Name=Kind\|Class` | only the pane | identity/class lookup, above anything a capture teaches; one Revert drops both halves |
 | `petmapping.txt` (unchanged) | pet -> owner pairs | stays as today, the Pet Owners grid edits it | `RegistrySeed` (the pair survives every log) |
 
 Three files where four are in use now: `players.txt` retires after its one-time
