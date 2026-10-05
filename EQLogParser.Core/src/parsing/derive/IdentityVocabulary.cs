@@ -205,7 +205,7 @@ internal static class IdentityVocabulary
       "R5-companion" => "Summoned a Companion",
       "R5-owner" => "Owner in Name",
       "R6-npcdb" => "On the NPC List",
-      "R7-graph" => "It Fights NPCs",
+      "R7-graph" => "It Fights Mobs",
       "R7-side" => "It Attacks Raid",
       "R9-charm" => "Charm Window",
       "R10-manual" or "Manual" or "Override" => $"You chose {TypeWord(kind)}",
@@ -304,7 +304,7 @@ internal static class IdentityVocabulary
 
     // The attack graph says which side a name fights on, so the words say exactly that rather than "Our side", which
     // could be read as an assertion about loyalty instead of a count of who got hit.
-    ["R7-graph"] = "Fights NPCs",
+    ["R7-graph"] = "Fights Mobs",
     ["R7-side"] = "Attacks Raid",
     ["R9-charm"] = "Charmed",
     ["R10-manual"] = "Chosen",

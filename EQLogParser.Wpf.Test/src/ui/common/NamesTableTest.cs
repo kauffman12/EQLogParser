@@ -133,7 +133,7 @@ public class NamesTableTest
      * "(earlier)" was asked to stop, and a cell reading "Our side (earlier)" was two mysteries stacked. Where it does say
      * it is the tooltip, in words, with the count riding on the proof clause.
      */
-    Assert.AreEqual("Fights NPCs", row.Why, "the cell names the kind of proof and nothing else");
+    Assert.AreEqual("Fights Mobs", row.Why, "the cell names the kind of proof and nothing else");
     StringAssert.Contains(row.Provenance, "in previous log x2");
     Assert.IsFalse(row.Provenance.Contains("Cast"),
                    "a borrowed verdict has no cast behind it in THIS log; naming one would credit this capture with proving it");

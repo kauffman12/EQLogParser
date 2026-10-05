@@ -296,11 +296,11 @@ public class IdentityVocabularyTest
   [TestMethod]
   public void AnEarlierVerdictSaysSoInTheTooltipAndNotInTheCell()
   {
-    Assert.AreEqual("Fights NPCs", IdentityVocabulary.WhyWord("Prior:R7-graph"));
+    Assert.AreEqual("Fights Mobs", IdentityVocabulary.WhyWord("Prior:R7-graph"));
     Assert.AreEqual("NPC List", IdentityVocabulary.WhyWord("Prior:R6-npcdb"));
     Assert.AreEqual("Chosen", IdentityVocabulary.WhyWord("Prior:Override"));
 
-    Assert.AreEqual("It Fights NPCs in previous log", IdentityVocabulary.ProofText("Prior:R7-graph", IdentityKind.Player));
+    Assert.AreEqual("It Fights Mobs in previous log", IdentityVocabulary.ProofText("Prior:R7-graph", IdentityKind.Player));
     // No hover names a FILE (the operator cannot open one from here): npcs.txt and spells.txt read as the lists they are.
     Assert.AreEqual("On the NPC List in previous log", IdentityVocabulary.ProofText("Prior:R6-npcdb", IdentityKind.Npc));
 
