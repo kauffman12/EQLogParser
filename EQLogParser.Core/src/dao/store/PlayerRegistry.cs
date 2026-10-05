@@ -38,11 +38,6 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<string, byte> _verifiedPets = new();
     private readonly ConcurrentDictionary<string, double> _verifiedPlayers = new();
 
-    /* Names the operator took back out of the player list (`!Name` in players.txt). Ignore-case on purpose:
-     * the parser capitalizes every name it hands out (TextUtils.CapitalizeFirst) while this file is typed by
-     * hand, and a rejection that misses because of one letter silently un-rejects the name. */
-    private readonly ConcurrentDictionary<string, byte> _rejectedPlayers = new(StringComparer.OrdinalIgnoreCase);
-
     private readonly ConcurrentDictionary<string, byte> _mercs = new(StringComparer.OrdinalIgnoreCase);
     private readonly Timer _saveTimer;
     private readonly TimeSpan _saveInterval = TimeSpan.FromSeconds(30);
@@ -64,21 +59,6 @@ namespace EQLogParser
     internal bool IsPetOrPlayerOrSpell(string name) => IsPetOrPlayerOrMerc(name) || CombatRecordLookup.IsPlayerSpell(name);
     internal bool IsMerc(string name) => _mercs.TryGetValue(StringCache.GetOrAdd(name), out _);
     internal List<string> GetVerifiedPlayers() => [.. _verifiedPlayers.Keys];
-
-    // "The operator said this one is not one of ours, and it is not to be re-learned." See RejectVerifiedPlayer.
-    internal bool IsRejectedPlayer(string name) => !string.IsNullOrEmpty(name) && _rejectedPlayers.ContainsKey(name);
-    internal List<string> GetRejectedPlayers() => [.. _rejectedPlayers.Keys];
-
-    /*
-     * Drops a rejection WITHOUT claiming anything. AddVerifiedPlayerByOperator also lifts a rejection, but it adds the
-     * name to the player roster on the way through - wrong for the operator who just said "that is an NPC" or "that is
-     * somebody's pet" on the engine. A verdict supersedes "make no claim"; it does not imply "is a raider".
-     */
-    internal void ClearRejectedPlayer(string name)
-    {
-      if (string.IsNullOrEmpty(name)) return;
-      lock (_lock) { _rejectedPlayers.TryRemove(name, out _); }
-    }
 
     /// <summary>The roster's evidence stamp for a name: true with the unix seconds it was last confirmed, false when
     /// the roster does not know it. A TRUE result with 0 means a hand-typed (or legacy-file) entry - nothing has ever
@@ -114,7 +94,6 @@ namespace EQLogParser
           _takenPetOrPlayerAction.Clear();
           _verifiedPets.Clear();
           _verifiedPlayers.Clear();
-          _rejectedPlayers.Clear();
           _mercs.Clear();
           _playersUpdated = false;
           _petMappingUpdated = false;
@@ -211,12 +190,6 @@ namespace EQLogParser
 
       lock (_lock)
       {
-        // An operator rejection outranks evidence, permanently: every one of the parser paths that learn players
-        // (loot lines, who rosters, class-ability words, owner-printed-in-line) lands here, so without this gate
-        // a deleted name is back in the list on the next log and the removal means nothing.
-        if (_rejectedPlayers.ContainsKey(name))
-          return;
-
         if (_verifiedPlayers.TryGetValue(name, out var lastTime))
         {
           if (playerTime > lastTime)
@@ -262,9 +235,7 @@ namespace EQLogParser
     }
 
     /*
-     * An operator assertion - the "Set as Player" menus and nothing else. It differs from AddVerifiedPlayer by
-     * clearing a rejection first: someone who deleted a name and later decides it was wrong has to be able to put
-     * it back, and "the file says !Name" must not be the thing that argues with them.
+     * An operator assertion - the "Set as Player" menus and nothing else.
      */
     internal void AddVerifiedPlayerByOperator(string name, double playerTime)
     {
@@ -273,12 +244,6 @@ namespace EQLogParser
 
       if (name.Equals("You", StringComparison.OrdinalIgnoreCase))
         name = ConfigUtil.PlayerName;
-
-      lock (_lock)
-      {
-        if (_rejectedPlayers.TryRemove(name, out _))
-          _playersUpdated = true;
-      }
 
       AddVerifiedPlayer(name, playerTime);
     }
@@ -389,21 +354,21 @@ namespace EQLogParser
       lock (_lock)
       {
         /*
-         * The removal is a verdict, not a cache eviction, so it is remembered: players.txt keeps `!Name` and the
-         * learning paths are refused from here on (AddVerifiedPlayer). Deleting quietly did not work - the first
-         * loot line of the next parse put the name straight back, which made the operator's edit last about one
-         * log.
+         * A plain eviction, and it says nothing else: the first loot line of a later capture is free to teach this
+         * name all over again, because that line is evidence and an old "not one of ours" is not. (The roster used to
+         * keep a `!Name` tombstone that refused every learning path permanently. Nothing could ever write one - the
+         * only control that called it lost its menu entry on the same day the tombstone was invented, three days
+         * after the last release - so the veto shipped as machinery with no door and is gone.)
          *
          * It deliberately does NOT reach into _petToPlayer any more. "Ziggy is not a player" and "Fluffy belongs
          * to Ziggy" are separate statements, and the old cascade threw away rows of petmapping.txt that the
          * operator would otherwise have to retype - including, because Init() seeds every mapping owner into
          * _verifiedPlayers at time 0, the mappings of perfectly good raiders whose only evidence was the file.
          *
-         * "No claim" is all this says. When the operator means "that is the enemy", that is an assertion and it
-         * belongs on the engine's manual override (R10, IdentityKind.Npc), where it feeds opposition instead of
-         * merely silencing a guess.
+         * "Take that name off the list" is all this says. When the operator means "that is the enemy", that is an
+         * assertion and it belongs on the engine's manual override (R10, IdentityKind.Npc), where it feeds opposition
+         * instead of merely silencing a guess.
          */
-        _rejectedPlayers[name] = 1;
         _verifiedPlayers.TryRemove(name, out _);
         _playersUpdated = true;
       }
@@ -421,22 +386,11 @@ namespace EQLogParser
         _takenPetOrPlayerAction.Clear();
         _verifiedPets.Clear();
         _verifiedPlayers.Clear();
-        _rejectedPlayers.Clear();
         _mercs.Clear();
         _playersUpdated = false;
         _petMappingUpdated = false;
 
         var saved = ConfigUtil.ReadPlayers();
-
-        // Pass one: the rejections. Before anything is claimed, and in its own pass so `!Name` wins whichever
-        // order the two lines were written in.
-        foreach (var line in saved)
-        {
-          if (!line.StartsWith('!')) continue;
-
-          var rejected = line.Substring(1).Trim();
-          if (rejected.Length > 2) _rejectedPlayers[StringCache.GetOrAdd(rejected)] = 1;
-        }
 
         /*
          * The operator's own character is a player by definition, so this one name is not allowed to be in shadow:
@@ -446,8 +400,6 @@ namespace EQLogParser
          */
         if (!string.IsNullOrEmpty(ConfigUtil.PlayerName))
         {
-          _rejectedPlayers.TryRemove(ConfigUtil.PlayerName, out _);
-
           AddVerifiedPlayer(ConfigUtil.PlayerName, DateUtil.ToDotNetSeconds(DateTime.Now), true);
         }
 
@@ -485,9 +437,6 @@ namespace EQLogParser
             {
               name = ConfigUtil.PlayerName;
             }
-
-            // A rejection also withholds the class: `!Goruuk,Wizard` should not leave a class opinion behind.
-            if (_rejectedPlayers.ContainsKey(name)) continue;
 
             AddVerifiedPlayer(name, parsed, true);
             SetDefaultPlayerClass(name, className, true);
@@ -532,24 +481,13 @@ namespace EQLogParser
           var now = DateTime.Now;
 
           /*
-           * Rejections are written unfiltered. The plain rows go through IsPossiblePlayerName, which keeps the
-           * junk out of the player list - but a rejection is usually about a name that test has no useful opinion
-           * on ("that thing is not one of ours", said of a mob), and dropping the row would silently un-reject it.
-           * Both halves come out sorted because this file is hand-edited: a stable order is what makes it
-           * diffable, and an operator who cannot see what changed cannot audit a classifier.
+           * Written sorted because this file is hand-edited: a stable order is what makes it diffable, and an
+           * operator who cannot see what changed cannot audit the classifier that wrote it.
            */
-          foreach (var name in _rejectedPlayers.Keys.OrderBy(n => n, StringComparer.OrdinalIgnoreCase))
-          {
-            if (!string.IsNullOrEmpty(name) && !"You".Equals(name, StringComparison.OrdinalIgnoreCase))
-            {
-              playerList.Add("!" + name);
-            }
-          }
-
           foreach (var kv in _verifiedPlayers.OrderBy(k => k.Key, StringComparer.OrdinalIgnoreCase))
           {
             if (string.IsNullOrEmpty(kv.Key) || !IsPossiblePlayerName(kv.Key) ||
-              "You".Equals(kv.Key, StringComparison.OrdinalIgnoreCase) || _rejectedPlayers.ContainsKey(kv.Key))
+              "You".Equals(kv.Key, StringComparison.OrdinalIgnoreCase))
             {
               continue;
             }

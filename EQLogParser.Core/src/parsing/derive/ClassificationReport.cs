@@ -48,9 +48,6 @@ namespace EQLogParser
       /// <summary>This name carries an operator verdict in mirror-overrides.txt (and can be reverted).</summary>
       public bool IsOperatorVerdict { get; init; }
 
-      /// <summary>The operator rejected it: no claim, and nothing auto-adds it again. See PlayerRegistry.IsRejected.</summary>
-      public bool IsRejected { get; init; }
-
       /// <summary>Class for this name: what the class engine last recorded - a spell-learned class wins over
       /// the roster block or ability-word default; null when none of them supplied one.</summary>
       public string? Class { get; init; }
@@ -125,12 +122,12 @@ namespace EQLogParser
       public bool IsDisagreement => LegacySaysPlayer && Kind == IdentityKind.Npc;
 
       /*
-       * Nothing has any claim on this name: no kind from this capture's lines, no operator verdict, not in the roster,
-       * and NOT rejected (a rejection is a decision, this is an absence). These are the rows the Names window sorts last
+       * Nothing has any claim on this name: no kind from this capture's lines, no operator verdict, not in the roster.
+       * These are the rows the Names window sorts last
        * and the only ones worth spending an override on - a busy name nobody can place is where the rules are missing
        * something, while an Unknown guild alt who sat the fight out is just an alt.
        */
-      public bool IsUnresolved => Kind == IdentityKind.Unknown && !IsRejected && Class is null;
+      public bool IsUnresolved => Kind == IdentityKind.Unknown && Class is null;
 
       /*
        * Whether an operator may still change this row's Type — false where the answer is forced by the name itself, so the
@@ -153,7 +150,6 @@ namespace EQLogParser
     public int Mercs { get; }
     public int Npcs { get; }
     public int Unknown { get; }
-    public int Rejected { get; }
     public int OperatorVerdicts { get; }
     public int Disagreements { get; }
 
@@ -166,7 +162,7 @@ namespace EQLogParser
     public int UnresolvedInCapture { get; }
 
     private ClassificationReport(IReadOnlyList<Row> rows, int totalFacts, int players, int pets, int mercs, int npcs,
-                                 int unknown, int rejected, int operatorVerdicts, int disagreements,
+                                 int unknown, int operatorVerdicts, int disagreements,
                                  int totalNames, int unresolvedInCapture)
     {
       TotalNames = totalNames;
@@ -178,7 +174,6 @@ namespace EQLogParser
       Mercs = mercs;
       Npcs = npcs;
       Unknown = unknown;
-      Rejected = rejected;
       OperatorVerdicts = operatorVerdicts;
       Disagreements = disagreements;
     }
@@ -314,7 +309,6 @@ namespace EQLogParser
         mercs: Count(list, IdentityKind.Merc),
         npcs: Count(list, IdentityKind.Npc),
         unknown: Count(list, IdentityKind.Unknown),
-        rejected: list.Count(static r => r.IsRejected),
         operatorVerdicts: list.Count(static r => r.IsOperatorVerdict),
         disagreements: list.Count(static r => r.IsDisagreement),
         totalNames: list.Count,
@@ -324,7 +318,7 @@ namespace EQLogParser
 
     /*
      * The names the roster knows that this log never mentioned: the verified list (which also holds the typed rows,
-     * stamped at load), every rejection, and both halves of every saved pet pair — a mapping whose owner is absent
+     * stamped at load) and both halves of every saved pet pair — a mapping whose owner is absent
      * from this capture is exactly the stale row worth making visible instead of letting it fold into a pet with no
      * owner. Copies, not views: these dictionaries are being written by the parser while a window enumerates, and the
      * census wants one consistent picture. Mercs are not listed here because nothing persists them — a merc only ever
@@ -333,7 +327,6 @@ namespace EQLogParser
     private static IEnumerable<string> RosterNames(PlayerRegistry registry)
     {
       foreach (var name in registry.GetVerifiedPlayers()) yield return name;
-      foreach (var name in registry.GetRejectedPlayers()) yield return name;
       foreach (var map in registry.GetPetMappings())
       {
         yield return map.Pet;
@@ -438,15 +431,12 @@ namespace EQLogParser
         source = "Manual";
       }
 
-      var rejected = registry?.IsRejectedPlayer(name) ?? false;
-
       // Last resort, and deliberately behind both the rules and the operator: borrow yesterday's verdict only when
-      // this capture said nothing about the name AND nobody has claimed it. A rejected name gets nothing at all -
-      // "no claim" is the operator speaking about exactly this situation.
+      // this capture said nothing about the name AND nobody has claimed it.
       int priorSightings = 0;
       long priorSeenAt = 0;
       var isPrior = false;
-      if (kind == IdentityKind.Unknown && !isOperator && !rejected
+      if (kind == IdentityKind.Unknown && !isOperator
           && priors is not null && priors.TryGet(name, out var prior))
       {
         /*
@@ -495,7 +485,6 @@ namespace EQLogParser
         ReasonDetail = castProof.For(source, name),
         HealedByCasters = healProof.For(source, name),
         IsOperatorVerdict = isOperator,
-        IsRejected = rejected,
         Class = NullIfEmpty(registry?.GetLastKnownPlayerClass(name)),
         TypedEntry = typed,
         LastSeenUnixSeconds = lastSeen,
@@ -588,7 +577,7 @@ namespace EQLogParser
   }
 
   /*
-   * The three things an operator can DO about a name, in one place, so the Names window and the fight grids'
+   * The two things an operator can DO about a name in this engine, in one place, so the Names window and the fight grids'
    * right-click menus cannot drift into writing different files again (they do today: "Add player" writes
    * players.txt while "Set as Pet" writes mirror-overrides.txt).
    *
@@ -598,16 +587,13 @@ namespace EQLogParser
    */
   internal static class ClassificationCommands
   {
-    /// <summary>"That is a player / pet / merc / NPC." Writes the verdict that outranks every rule, and drops a
-    /// rejection: an explicit claim supersedes "make no claim about this name".</summary>
-    public static void SetVerdict(IdentityOverrideStore overrides, PlayerRegistry registry, string name, IdentityKind kind)
-    {
+    /// <summary>"That is a player / pet / merc / NPC." Writes the verdict that outranks every rule.</summary>
+    public static void SetVerdict(IdentityOverrideStore overrides, string name, IdentityKind kind) =>
       overrides.Set(name, kind);
-      registry.ClearRejectedPlayer(name);
-    }
 
     /// <summary>"I was wrong, let the rules answer again." The rules' own conclusion comes back on the next derive;
-    /// a roster entry learned from loot lines is NOT deleted by this — that is what Reject is for.</summary>
+    /// a roster entry learned from loot lines is NOT deleted by this — it takes a verdict of the other kind, or the
+    /// roster's own removal, which lives on PlayerRegistry.</summary>
     public static void ClearVerdict(IdentityOverrideStore overrides, string name) => overrides.Remove(name);
 
     /// <summary>"Forget what this server's older logs concluded about this name." Removes the ledger row only —
@@ -615,14 +601,5 @@ namespace EQLogParser
     /// name reads Unknown again on a capture whose own lines say nothing.</summary>
     public static void ClearPrior(IdentityPriorStore priors, string name) => priors.Remove(name);
 
-    /// <summary>"Not a player, and stop guessing." No identity claim at all (see Row.IsRejected), so the rules can
-    /// still conclude something from evidence in this log; pet mappings are left alone.</summary>
-    public static void Reject(IdentityOverrideStore overrides, PlayerRegistry registry, string name)
-    {
-      overrides.Remove(name);
-      // The roster's own removal verb IS the tombstone: it writes `!Name`, refuses the learning paths from here on,
-      // and (since 2026-08) leaves pet mappings alone.
-      registry.RemoveVerifiedPlayer(name);
-    }
   }
 }

@@ -103,7 +103,7 @@ public class IdentityPriorStoreTest
   {
     var timeline = Classified(out var facts);
     var store = IdentityPriorStore.Instance;
-    store.Record(timeline, facts.InternedNames, PlayerRegistry.Instance, CaptureEndS(facts));
+    store.Record(timeline, facts.InternedNames, CaptureEndS(facts));
 
     // A real capture, end to end: everything mini-fight.txt places rests on the shipped database or on a name's own
     // spelling, and neither is something next season's log would be unable to answer. So the ledger stays empty.
@@ -114,7 +114,7 @@ public class IdentityPriorStoreTest
     // A capture that witnessed an event is remembered, WITH its rule code: a verdict nobody can trace back to a line is
     // the one thing this file must never become.
     var witnessed = Witnessed(facts, out var names);
-    store.Record(witnessed, names, PlayerRegistry.Instance, CaptureEndS(facts));
+    store.Record(witnessed, names, CaptureEndS(facts));
 
     Assert.IsTrue(store.TryGet(names[0], out var remembered));
     Assert.AreEqual("R7-graph", remembered.Reason, "the rule code was not stored with the verdict");
@@ -132,7 +132,7 @@ public class IdentityPriorStoreTest
     // The override store writes Manual into the SAME timeline the ledger reads; a prior must not be able to launder it.
     var target = facts.InternedNames[0];
     ClassificationRules.ApplyManualOverride(timeline, target, IdentityKind.Merc);
-    IdentityPriorStore.Instance.Record(timeline, facts.InternedNames, PlayerRegistry.Instance, CaptureEndS(facts));
+    IdentityPriorStore.Instance.Record(timeline, facts.InternedNames, CaptureEndS(facts));
 
     if (IdentityPriorStore.Instance.TryGet(target, out var remembered))
     {
@@ -150,13 +150,13 @@ public class IdentityPriorStoreTest
     var witnessed = Witnessed(facts, out var names);
     var pet = names[0];
     for (var pass = 0; pass < 5; pass++)
-      store.Record(witnessed, names, PlayerRegistry.Instance, endS);
+      store.Record(witnessed, names, endS);
 
     Assert.IsTrue(store.TryGet(pet, out var same));
     Assert.AreEqual(1, same.Sightings, "five derives of ONE log reported five captures");
 
     // A genuinely later capture is the only thing that counts as another sighting.
-    store.Record(witnessed, names, PlayerRegistry.Instance, endS + DayS);
+    store.Record(witnessed, names, endS + DayS);
     Assert.IsTrue(store.TryGet(pet, out var newer));
     Assert.AreEqual(2, newer.Sightings);
     Assert.AreEqual(endS + DayS, newer.SeenAtS);
@@ -172,12 +172,12 @@ public class IdentityPriorStoreTest
     // lets one name carry two different conclusions without needing a fixture per verdict.
     var firstPass = new EntityTimeline();
     firstPass.SetIdentity("Something", IdentityKind.Npc, RuleStrength.Medium, "R7-graph");
-    store.Record(firstPass, names, PlayerRegistry.Instance, 1_700_000_000);
+    store.Record(firstPass, names, 1_700_000_000);
 
     // A genuinely different conclusion from another line: the graph thought NPC, a /who roster says Player.
     var secondPass = new EntityTimeline();
     secondPass.SetIdentity("Something", IdentityKind.Player, RuleStrength.Certain, "R2-who");
-    store.Record(secondPass, names, PlayerRegistry.Instance, 1_700_000_000 + DayS);
+    store.Record(secondPass, names, 1_700_000_000 + DayS);
 
     Assert.IsTrue(store.TryGet("Something", out var current));
     Assert.AreEqual(IdentityKind.Player, current.Kind, "the ledger kept the older conclusion");
@@ -187,27 +187,11 @@ public class IdentityPriorStoreTest
   }
 
   [TestMethod]
-  public void ARejectedNameIsNeverRemembered()
-  {
-    // Spelled with a timeline that WOULD be remembered (R7-graph is on the gate). Left to the fixture's own pet name
-    // this would pass for the wrong reason, since grammar-shaped verdicts are refused regardless of rejection.
-    var store = IdentityPriorStore.Instance;
-    var witnessed = new EntityTimeline();
-    witnessed.SetIdentity("Takenback", IdentityKind.Npc, RuleStrength.Medium, "R7-graph");
-
-    PlayerRegistry.Instance.RemoveVerifiedPlayer("Takenback");
-    store.Record(witnessed, ["Takenback"], PlayerRegistry.Instance, 1_700_000_000);
-
-    Assert.IsFalse(store.TryGet("Takenback", out _),
-                   "a name the operator took back came back wearing last season's memory");
-  }
-
-  [TestMethod]
   public void TheLedgerRoundTripsThroughItsFile()
   {
     Classified(out var facts);
     var witnessed = Witnessed(facts, out var names);
-    IdentityPriorStore.Instance.Record(witnessed, names, PlayerRegistry.Instance, CaptureEndS(facts));
+    IdentityPriorStore.Instance.Record(witnessed, names, CaptureEndS(facts));
 
     Assert.IsTrue(File.Exists(LedgerPath), $"the ledger was not written per server: {LedgerPath}");
     var before = IdentityPriorStore.Instance.All();
@@ -258,16 +242,16 @@ public class IdentityPriorStoreTest
     // Built through the real recording path (a timeline plus Record), so expiry is judged on what actually gets saved.
     old.SetIdentity("Oldname", IdentityKind.Npc, RuleStrength.Medium, "R7-graph");
     old.SetIdentity("Newname", IdentityKind.Npc, RuleStrength.Medium, "R7-graph");
-    store.Record(old, names, PlayerRegistry.Instance, 1_700_000_000);
+    store.Record(old, names, 1_700_000_000);
 
     Assert.IsTrue(store.TryGet("Oldname", out _));
-    store.Record(old, names, PlayerRegistry.Instance, 1_700_000_000 + 200 * DayS);
+    store.Record(old, names, 1_700_000_000 + 200 * DayS);
 
     // Both names were re-seen at the new time... so expiry has to be judged per name: neither is stale.
     Assert.IsTrue(store.TryGet("Oldname", out var refreshed), "a name seen again was dropped for another's age");
 
     // Now leave one behind: only the second name keeps being sighted.
-    store.Record(old, ["Newname"], PlayerRegistry.Instance, 1_700_000_000 + 400 * DayS);
+    store.Record(old, ["Newname"], 1_700_000_000 + 400 * DayS);
     Assert.IsFalse(store.TryGet("Oldname", out _), "an entry 400 days behind the newest one outlived its grace");
     Assert.IsTrue(store.TryGet("Newname", out _));
   }
@@ -293,7 +277,7 @@ public class IdentityPriorStoreTest
     restated.SetIdentity("Charmmob", IdentityKind.Npc, RuleStrength.Strong, "R9-charm");
     restated.SetIdentity("Whoed", IdentityKind.Player, RuleStrength.Certain, "R2-who");
 
-    store.Record(restated, names, PlayerRegistry.Instance, 1_700_000_000);
+    store.Record(restated, names, 1_700_000_000);
 
     foreach (var noise in new[] { "Dbmob", "A shape walker", "Kratakel, Lord Misery", "Sancus`s pet", "Me" })
       Assert.IsFalse(store.TryGet(noise, out _),
@@ -379,13 +363,13 @@ public class IdentityPriorStoreTest
 
     var witnessed = new EntityTimeline();
     witnessed.SetIdentity("Same", IdentityKind.Npc, RuleStrength.Medium, "R7-graph");
-    store.Record(witnessed, ["Same"], PlayerRegistry.Instance, 1_700_000_000);
+    store.Record(witnessed, ["Same"], 1_700_000_000);
 
     // A later capture that can only say "it is in npcs.txt": weaker, and no news. The remembered reason stays the
     // strongest thing any log witnessed, with no sighting spent on restating a shipped file.
     var restated = new EntityTimeline();
     restated.SetIdentity("Same", IdentityKind.Npc, RuleStrength.Medium, "R6-npcdb");
-    store.Record(restated, ["Same"], PlayerRegistry.Instance, 1_700_000_000 + DayS);
+    store.Record(restated, ["Same"], 1_700_000_000 + DayS);
 
     Assert.IsTrue(store.TryGet("Same", out var kept));
     Assert.AreEqual("R7-graph", kept.Reason, "a database restatement overwrote what a line had read");
@@ -422,7 +406,7 @@ public class IdentityPriorStoreTest
     var timeline = Classified(out var facts);
     var store = IdentityPriorStore.Instance;
     var witnessed = Witnessed(facts, out var names);
-    store.Record(witnessed, names, PlayerRegistry.Instance, CaptureEndS(facts));
+    store.Record(witnessed, names, CaptureEndS(facts));
 
     // "Forget what older logs decided" is the smallest possible action. Read this capture's own verdicts first, so the
     // comparison below is about the clear rather than about what the rules happen to conclude.

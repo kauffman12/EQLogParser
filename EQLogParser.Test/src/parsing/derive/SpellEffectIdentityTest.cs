@@ -278,7 +278,7 @@ public class SpellEffectIdentityTest
       // which is the whole point: it is the kind of thing that can be wrong in exactly this direction.
       var lastNight = new EntityTimeline();
       lastNight.SetIdentity(spell, IdentityKind.Player, 60, "R7-graph");
-      priors.Record(lastNight, [spell], null, captureEndS: 1_700_000_000);
+      priors.Record(lastNight, [spell], captureEndS: 1_700_000_000);
 
       // Tonight the same name is only ever named as what somebody cast.
       var run = RunOut(

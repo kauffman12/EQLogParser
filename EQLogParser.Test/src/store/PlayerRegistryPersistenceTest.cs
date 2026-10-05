@@ -9,11 +9,13 @@ namespace EQLogParser;
  *     the file without them. The same branch also deleted their petmapping.txt rows on the way past, and Init()
  *     seeds every mapping OWNER into the player list at time 0, so a curated list lost both its names and its
  *     ownership data as a side effect of playing.
- *   - A removal means something. Deleting an entry used to last exactly one log: the first loot line of the next
- *     parse handed the name straight back. A removal is now a row in the same file (`!Name`) and the learning
- *     paths are refused, while "Set as Player" (AddVerifiedPlayerByOperator) can still revive it.
- *   - Saying "not one of ours" makes no claim. It silences the guess; it does not name the enemy. That second
- *     thing is an assertion and belongs on the engine's manual override (R10), not here.
+ *   - A removal is an eviction, not a veto. `RemoveVerifiedPlayer` takes the row out of the file and says nothing
+ *     else, so a later capture's evidence is free to teach that name again. This class used to pin a `!Name`
+ *     tombstone that refused every learning path permanently — machinery no shipped build could ever switch on:
+ *     it arrived seven hours before the only window that could write one lost its menu entry, three days after the
+ *     last release (`2.4.1`). Nothing to preserve, so nothing here argues for it.
+ *   - Claiming a name is an assertion and lives elsewhere. "This one is ours" is a roster row; "that one is the
+ *     enemy" is the engine's manual override (R10). players.txt only ever says the first thing.
  *
  * ConfigUtil.ConfigDir/ServerName/PlayerName are process globals and PlayerRegistry is a process-lifetime
  * singleton, so each test parks them in a temp folder (same pattern as IdentityOverrideStoreTest) and leaves the
@@ -94,8 +96,13 @@ public class PlayerRegistryPersistenceTest
   }
 
   [TestMethod]
-  public void ARemovedNameIsNotLearnedBack()
+  public void ARemovedNameLeavesTheFileAndCanBeLearnedAgain()
   {
+    /*
+     * Both halves of "a removal is an eviction": the row goes out of players.txt and stays out across a reload, and
+     * evidence afterwards is welcome to put the name back. The second half is what the deleted `!Name` tombstone used
+     * to refuse — see this class's header for why that veto is not worth carrying.
+     */
     PlayerRegistry.Instance.AddVerifiedPlayer("Goruuk", DateUtil.ToDotNetSeconds(DateTime.Now));
     PlayerRegistry.Instance.Save();
     Assert.IsTrue(PlayerRegistry.Instance.IsVerifiedPlayer("Goruuk"), "control: the name was never in the list");
@@ -104,55 +111,15 @@ public class PlayerRegistryPersistenceTest
     PlayerRegistry.Instance.Save();
 
     var saved = ReadPlayersFile();
-    Assert.IsTrue(saved.Contains("!Goruuk"), $"the removal was not written as a rejection; file = [{string.Join(" | ", saved)}]");
-    Assert.IsFalse(saved.Contains("Goruuk"), "the name is still in the file as a claim next to its rejection");
+    Assert.IsFalse(saved.Any(l => l.Contains("Goruuk", StringComparison.Ordinal)),
+      $"the removal left a row behind; file = [{string.Join(" | ", saved)}]");
 
-    // The whole point: the same evidence that put it there in the first place must not re-claim it.
     PlayerRegistry.Instance.Init();
-    Assert.IsTrue(PlayerRegistry.Instance.IsRejectedPlayer("Goruuk"), "the rejection did not survive a reload");
+    Assert.IsFalse(PlayerRegistry.Instance.IsVerifiedPlayer("Goruuk"), "a removed name survived the reload");
+
     PlayerRegistry.Instance.AddVerifiedPlayer("Goruuk", DateUtil.ToDotNetSeconds(DateTime.Now));
-    Assert.IsFalse(PlayerRegistry.Instance.IsVerifiedPlayer("Goruuk"),
-      "a loot-line-shaped add re-claimed a name the operator had taken back");
-  }
-
-  [TestMethod]
-  public void ARejectionWinsWhateverTheLineOrder()
-  {
-    WritePlayersFile(["Zyphon", "!Zyphon"]);
-    PlayerRegistry.Instance.Init();
-    Assert.IsFalse(PlayerRegistry.Instance.IsVerifiedPlayer("Zyphon"), "the rejection lost to a claim written before it");
-
-    WritePlayersFile(["!Bexala", "Bexala"]);
-    PlayerRegistry.Instance.Init();
-    Assert.IsFalse(PlayerRegistry.Instance.IsVerifiedPlayer("Bexala"), "the rejection lost to a claim written after it");
-  }
-
-  [TestMethod]
-  public void ARejectionIsCheckedWithoutCase()
-  {
-    // The parser capitalizes every name it hands out (TextUtils.CapitalizeFirst) and this file is typed by hand.
-    WritePlayersFile(["!a bone walker"]);
-    PlayerRegistry.Instance.Init();
-
-    Assert.IsTrue(PlayerRegistry.Instance.IsRejectedPlayer("A bone walker"), "the capital form of a rejected name is not rejected");
-    PlayerRegistry.Instance.AddVerifiedPlayer("A bone walker", DateUtil.ToDotNetSeconds(DateTime.Now));
-    Assert.IsFalse(PlayerRegistry.Instance.IsVerifiedPlayer("A bone walker"));
-  }
-
-  [TestMethod]
-  public void AnOperatorAddRevivesARejectedName()
-  {
-    WritePlayersFile(["!Goruuk"]);
-    PlayerRegistry.Instance.Init();
-
-    PlayerRegistry.Instance.AddVerifiedPlayerByOperator("Goruuk", DateUtil.ToDotNetSeconds(DateTime.Now));
-
-    Assert.IsTrue(PlayerRegistry.Instance.IsVerifiedPlayer("Goruuk"), "the operator could not put the name back");
-    Assert.IsFalse(PlayerRegistry.Instance.IsRejectedPlayer("Goruuk"), "the revival left the shadow in place");
-
-    PlayerRegistry.Instance.Save();
-    var saved = ReadPlayersFile();
-    Assert.IsFalse(saved.Contains("!Goruuk"), $"the rejected row outlived the operator's decision; file = [{string.Join(" | ", saved)}]");
+    Assert.IsTrue(PlayerRegistry.Instance.IsVerifiedPlayer("Goruuk"),
+      "a name the operator removed could not be re-learned from evidence");
   }
 
   [TestMethod]
@@ -192,36 +159,15 @@ public class PlayerRegistryPersistenceTest
   }
 
   [TestMethod]
-  public void TheOperatorsOwnCharacterIsNeverInShadow()
+  public void TheOperatorsOwnCharacterIsAlwaysAPlayer()
   {
-    // Whatever else the file says, the person playing now is a player: You-mapping across the app depends on it.
-    WritePlayersFile(["!Melodyn", "Betebeatz"]);
+    // Whatever else the file says, the person playing now is a player: You-mapping across the app depends on it,
+    // and Init() claims that one name without being asked (ConfigUtil.PlayerName is set in the setup above).
+    WritePlayersFile(["Betebeatz"]);
     PlayerRegistry.Instance.Init();
 
-    Assert.IsTrue(PlayerRegistry.Instance.IsVerifiedPlayer("Melodyn"), "the local player was rejected");
-    Assert.IsFalse(PlayerRegistry.Instance.GetRejectedPlayers().Contains("Melodyn"));
-    Assert.IsFalse(PlayerRegistry.Instance.IsRejectedPlayer("Betebeatz"), "control: an untouched name became rejected");
-  }
-
-  [TestMethod]
-  public void ARejectedPetMappingOwnerIsNotClaimedAsARaider()
-  {
-    // petmapping.txt used to smuggle rejected names back in as raid members through RegistrySeed's owner claim.
-    WritePlayersFile(["!Xanathan"]);
-    Directory.CreateDirectory(Path.Combine(_tempDir, "Perstest"));
-    File.WriteAllLines(Path.Combine(_tempDir, "Perstest", "petmapping.txt"), ["Akini=Xanathan"]);
-
-    PlayerRegistry.Instance.Init();
-
-    Assert.IsTrue(PlayerRegistry.Instance.GetPetMappings().Any(m => m.Pet == "Akini" && m.Owner == "Xanathan"),
-      "the ownership row should still be read - it is a different statement from who the owner is");
-    Assert.IsFalse(PlayerRegistry.Instance.IsVerifiedPlayer("Xanathan"),
-      "a mapping that quotes a rejected name re-claimed it as a player");
-
-    var timeline = new EntityTimeline();
-    RegistrySeed.Apply(timeline, new DamageFactTable(), double.NaN, double.NaN);
-    Assert.AreEqual(IdentityKind.Unknown, timeline.Identity("Xanathan"),
-      "RegistrySeed claimed a rejected name from the pet mapping");
+    Assert.IsTrue(PlayerRegistry.Instance.IsVerifiedPlayer("Melodyn"), "the local player was not in the list");
+    Assert.IsTrue(PlayerRegistry.Instance.IsVerifiedPlayer("Betebeatz"), "an ordinary row did not load");
   }
 
   // ---- helpers -----------------------------------------------------------------------------------------------

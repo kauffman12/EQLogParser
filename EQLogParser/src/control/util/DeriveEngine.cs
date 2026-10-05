@@ -316,8 +316,7 @@ namespace EQLogParser
                */
               try
               {
-                IdentityPriorStore.Instance.Record(classified, _facts.InternedNames, PlayerRegistry.Instance,
-                                                   (long)_capture.LastEventTime);
+                IdentityPriorStore.Instance.Record(classified, _facts.InternedNames, (long)_capture.LastEventTime);
               }
               catch (Exception ex)
               {

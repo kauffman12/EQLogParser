@@ -93,11 +93,6 @@ internal static class RegistrySeed
 
       if (!knownOwner || owner.Contains(',', StringComparison.Ordinal)) continue;   // `Akini, Xanathan`s Warder` = one summon, two masters
 
-      // A name the operator took back out of the player list is not claimed here either. The OWNERSHIP row still
-      // stands ("this summon belongs to that text" is a different statement from "that text is a raider"), but a
-      // rejected name gets no identity from the mapping that quotes it.
-      if (registry.IsRejectedPlayer(owner)) continue;
-
       if (timeline.IdentityWithSource(owner, out _) is not IdentityKind.Player)
         timeline.SetIdentity(owner, IdentityKind.Player, SeedStrengthVerified, "RegistrySeed", double.NegativeInfinity);
     }

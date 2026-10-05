@@ -202,7 +202,7 @@ public class ClassificationReportTest
     PlayerRegistry.Instance.AddVerifiedPlayerByOperator(name, DateTimeOffset.UtcNow.ToUnixTimeSeconds());
     Assert.IsFalse(Census().Find(name)!.IsDisagreement, "a verified pet read as a disagreement before any override");
 
-    ClassificationCommands.SetVerdict(IdentityOverrideStore.Instance, PlayerRegistry.Instance, name, IdentityKind.Npc);
+    ClassificationCommands.SetVerdict(IdentityOverrideStore.Instance, name, IdentityKind.Npc);
     var overridden = Census().Find(name)!;
     Assert.IsTrue(overridden.IsOperatorVerdict, "the census did not say the verdict was the operator's");
     Assert.AreEqual(IdentityKind.Npc, overridden.Kind, "an override that outranks nothing is not an override");
@@ -218,7 +218,7 @@ public class ClassificationReportTest
   public void AVerdictSurvivesTheFileItWasWrittenTo()
   {
     var name = Census().Rows.First(r => r.Kind == IdentityKind.Npc).Name;
-    ClassificationCommands.SetVerdict(IdentityOverrideStore.Instance, PlayerRegistry.Instance, name, IdentityKind.Merc);
+    ClassificationCommands.SetVerdict(IdentityOverrideStore.Instance, name, IdentityKind.Merc);
 
     // Re-read from disk the way a fresh window on a reopened log would.
     IdentityOverrideStore.Instance.Init("Census Test");
@@ -339,7 +339,6 @@ public class ClassificationReportTest
 
     var row = census.Rows.First(static r => r.HasFacts && r.IsUnresolved);
     Assert.AreEqual(IdentityKind.Unknown, row.Kind);
-    Assert.IsFalse(row.IsRejected, "a decision was counted as an absence");
     Assert.IsNull(row.Class);
     Assert.IsFalse(row.IsDisagreement, "absence is not a contradiction - see Row.IsDisagreement");
   }
@@ -376,7 +375,7 @@ public class ClassificationReportTest
     var ledger = IdentityPriorStore.Instance;
     var remembered = new EntityTimeline();
     remembered.SetIdentity(silent, IdentityKind.Npc, RuleStrength.Medium, "R7-graph");
-    ledger.Record(remembered, [silent], PlayerRegistry.Instance, 1_700_000_000);
+    ledger.Record(remembered, [silent], 1_700_000_000);
 
     var after = Census(ledger);
     Assert.IsTrue(after.Find(silent)!.IsPrior);
@@ -385,9 +384,10 @@ public class ClassificationReportTest
   }
 
   /*
-   * Cross-log memory, and the three ways it must NOT be allowed to speak. A prior fills a name this capture's rules
-   * could not place; it never overrides a verdict this log reached from lines; a rejection borrows nothing ("no claim"
-   * is about exactly this); and an operator verdict outranks it, since both are claims and only one came from a human.
+   * Cross-log memory, and the two ways it must NOT be allowed to speak. A prior fills a name this capture's rules could
+   * not place; it never overrides a verdict this log reached from lines; and an operator verdict outranks it, since both
+   * are claims and only one came from a human. What it DOES survive is a roster edit: taking a name out of players.txt
+   * is an eviction, not a veto (see PlayerRegistryPersistenceTest), and the last pinned case below holds that line.
    */
   /*
    * A name the ledger knows and this capture never mentioned still has to be ON the list. Without it the ledger is
@@ -400,8 +400,8 @@ public class ClassificationReportTest
     var ledger = IdentityPriorStore.Instance;
     var remembered = new EntityTimeline();
     remembered.SetIdentity("Rememb", IdentityKind.Npc, RuleStrength.Medium, "R7-graph");
-    ledger.Record(remembered, ["Rememb"], PlayerRegistry.Instance, 1_700_000_000);
-    ledger.Record(remembered, ["Rememb"], PlayerRegistry.Instance, 1_800_000_000);
+    ledger.Record(remembered, ["Rememb"], 1_700_000_000);
+    ledger.Record(remembered, ["Rememb"], 1_800_000_000);
 
     var row = Census(ledger).Find("Rememb");
 
@@ -423,7 +423,7 @@ public class ClassificationReportTest
     var remembered = new EntityTimeline();
     remembered.SetIdentity(silent, IdentityKind.Npc, RuleStrength.Medium, "R7-graph");
     remembered.SetIdentity(placed, IdentityKind.Player, RuleStrength.Certain, "R1-target");
-    ledger.Record(remembered, [silent, placed], PlayerRegistry.Instance, 1_700_000_000);
+    ledger.Record(remembered, [silent, placed], 1_700_000_000);
 
     var borrowed = Census(ledger).Find(silent)!;
     Assert.AreEqual(IdentityKind.Npc, borrowed.Kind, "the ledger did not fill the gap");
@@ -435,11 +435,16 @@ public class ClassificationReportTest
     Assert.AreEqual(IdentityKind.Pet, itsOwn.Kind, "yesterday's answer outvoted a line read today");
     Assert.IsFalse(itsOwn.IsPrior);
 
-    // A rejection is the operator speaking about this exact situation: no memory fills it in.
+    /*
+     * And the line on the other side: taking the roster row away is an eviction, not a veto, so it does NOT silence the
+     * ledger. A `!Name` tombstone used to block memory here (and every learning path); nothing in any shipped build
+     * could write one, and the behaviour this asserts is the honest remainder — an old verdict stays on the list until
+     * somebody overrules it or the ledger is cleared.
+     */
     PlayerRegistry.Instance.RemoveVerifiedPlayer(silent);
-    var rejected = Census(ledger).Find(silent)!;
-    Assert.AreEqual(IdentityKind.Unknown, rejected.Kind, "a rejected name came back wearing the ledger");
-    Assert.IsFalse(rejected.IsPrior);
+    var evicted = Census(ledger).Find(silent)!;
+    Assert.AreEqual(IdentityKind.Npc, evicted.Kind, "a roster removal revived a veto over the ledger");
+    Assert.IsTrue(evicted.IsPrior, "and the row lost the one thing that made it worth listing");
   }
 
   [TestMethod]
@@ -448,9 +453,9 @@ public class ClassificationReportTest
     var ledger = IdentityPriorStore.Instance;
     var remembered = new EntityTimeline();
     remembered.SetIdentity("Zzquietname", IdentityKind.Npc, RuleStrength.Medium, "R7-graph");
-    ledger.Record(remembered, ["Zzquietname"], PlayerRegistry.Instance, 1_700_000_000);
+    ledger.Record(remembered, ["Zzquietname"], 1_700_000_000);
 
-    ClassificationCommands.SetVerdict(IdentityOverrideStore.Instance, PlayerRegistry.Instance, "Zzquietname", IdentityKind.Merc);
+    ClassificationCommands.SetVerdict(IdentityOverrideStore.Instance, "Zzquietname", IdentityKind.Merc);
 
     var row = Census(ledger).Find("Zzquietname")!;
     Assert.AreEqual(IdentityKind.Merc, row.Kind);
@@ -458,33 +463,25 @@ public class ClassificationReportTest
     Assert.IsFalse(row.IsPrior, "a row the operator owns was attributed to last season");
   }
 
+  /* A verdict is a claim about KIND and nothing else. players.txt is not part of it: "that is the enemy" belongs in
+   * mirror-overrides.txt (R10), while the roster stays a record of who is ours. (This fixture used to arrive through a
+   * `!Name` rejection whose lifting the test asserted; nothing writes one any more — see
+   * PlayerRegistryPersistenceTest — and the census pool has no reason to hold a name that neither the log nor the
+   * roster mentions, so the surviving half is pinned on a name the capture really spoke about.) */
   [TestMethod]
-  public void ARejectedNameStaysOnTheListEvenWithNoEvidence()
+  public void AVerdictClaimsAnKindWithoutTouchingTheRoster()
   {
-    const string name = "Zznotaname";
-    ClassificationCommands.Reject(IdentityOverrideStore.Instance, PlayerRegistry.Instance, name);
+    var name = BusiestAttacker();
+    var rosterBefore = PlayerRegistry.Instance.GetVerifiedPlayers();
 
-    var row = Census().Find(name);
-    Assert.IsNotNull(row, "a rejection with no facts vanished from the audit list");
-    Assert.IsTrue(row!.IsRejected);
-    Assert.IsFalse(row.HasFacts);
-    Assert.AreEqual(IdentityKind.Unknown, row.Kind, "a rejection is supposed to make no claim");
-  }
+    ClassificationCommands.SetVerdict(IdentityOverrideStore.Instance, name, IdentityKind.Npc);
 
-  [TestMethod]
-  public void SettingAVerdictLiftsARejectionWithoutClaimingARaider()
-  {
-    const string name = "Zznotaname";
-    ClassificationCommands.Reject(IdentityOverrideStore.Instance, PlayerRegistry.Instance, name);
-    Assert.IsTrue(PlayerRegistry.Instance.IsRejectedPlayer(name));
-
-    ClassificationCommands.SetVerdict(IdentityOverrideStore.Instance, PlayerRegistry.Instance, name, IdentityKind.Npc);
-
-    Assert.IsFalse(PlayerRegistry.Instance.IsRejectedPlayer(name), "an explicit verdict did not supersede the shadow");
-    Assert.IsFalse(PlayerRegistry.Instance.IsVerifiedPlayer(name), "\"this is an NPC\" must not add a roster player");
+    CollectionAssert.AreEquivalent(rosterBefore, PlayerRegistry.Instance.GetVerifiedPlayers(),
+      "\"this is an NPC\" moved the roster as well as the verdict");
 
     var row = Census().Find(name)!;
-    Assert.IsFalse(row.IsRejected);
     Assert.AreEqual(IdentityKind.Npc, row.Kind);
+    Assert.IsTrue(row.IsOperatorVerdict);
+    Assert.AreEqual("R10-manual", row.Reason);
   }
 }

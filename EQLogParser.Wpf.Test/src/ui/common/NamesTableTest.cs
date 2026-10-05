@@ -19,10 +19,10 @@ namespace EQLogParser.Wpf.Test;
  * The WORDS themselves - "Chosen" for R10-manual, "Healed" for R15-healed, the dropdown's five entries - are asserted in
  * IdentityVocabularyTest (EQLogParser.Test), including the corpus check that no rule code reaches the screen. What is
  * pinned here is the part only this file owns: which LINES a row's tooltip gets, since each one tells a person whether to
- * ACT. A verdict resting on their own click needs no correction; one resting on an older log might; "Claim taken back" must
- * not read like "You chose"; and NOTHING names a file any more — players.txt used to ride behind the proof as a second
- * verdict from a source the operator cannot open from here, which read as a contradiction nobody had explained on rows the
- * rules had merely classified. The pane's own shape is pinned too: the column order, and the fact that a row which offers
+ * ACT. A verdict resting on their own click needs no correction; one resting on an older log might; a claim that was taken
+ * back says only "Nothing identified it", because that absence is the whole of it; and NOTHING names a file any more —
+ * players.txt used to ride behind the proof as a second verdict from a source the operator cannot open from here, which
+ * read as a contradiction nobody had explained on rows the rules had merely classified. The pane's own shape is pinned too: the column order, and the fact that a row which offers
  * no pencil still reserves its width (PlaceholderVisibilityConverter), so the words in the column line up.
  *
  * Most of this needs no WPF — RowFrom is a plain mapping — so only the column-order test constructs the pane, through
@@ -74,7 +74,7 @@ public class NamesTableTest
   [TestMethod]
   public void AVerdictTheOperatorGaveSaysSo()
   {
-    ClassificationCommands.SetVerdict(IdentityOverrideStore.Instance, PlayerRegistry.Instance, "Nicky", IdentityKind.Npc);
+    ClassificationCommands.SetVerdict(IdentityOverrideStore.Instance, "Nicky", IdentityKind.Npc);
 
     var row = NamesTable.RowFrom(CensusWithoutACapture().Find("Nicky")!);
 
@@ -95,23 +95,25 @@ public class NamesTableTest
     Assert.AreEqual(IdentityKind.Npc, row.Kind);
   }
 
+  /* A claim the operator took back keeps its row (the roster still lists the name) and says nothing beyond the absence.
+   * This test used to pin a "Claim taken back" sentence for the players.txt `!Name` refusal; that veto was unreachable in
+   * every shipped build - see PlayerRegistry.RemoveVerifiedPlayer - and an invented explanation of a state nobody can
+   * reach is worse than the plain "Nothing identified it" this state already answers with. */
   [TestMethod]
-  public void ARejectionIsNotReportedAsAVerdict()
+  public void AClaimTakenBackSaysNothingIdentifiedIt()
   {
-    ClassificationCommands.Reject(IdentityOverrideStore.Instance, PlayerRegistry.Instance, "Ghosty");
+    PlayerRegistry.Instance.AddVerifiedPlayer("Ghosty", DateUtil.ToDotNetSeconds(DateTime.Now));
+    ClassificationCommands.SetVerdict(IdentityOverrideStore.Instance, "Ghosty", IdentityKind.Npc);
+    Assert.IsTrue(CensusWithoutACapture().Find("Ghosty")!.IsOperatorVerdict, "control: the claim was never written");
 
+    ClassificationCommands.ClearVerdict(IdentityOverrideStore.Instance, "Ghosty");
     var row = NamesTable.RowFrom(CensusWithoutACapture().Find("Ghosty")!);
 
-    StringAssert.Contains(row.Provenance, "Claim taken back");
+    Assert.AreEqual(IdentityKind.Unknown, row.Kind);
+    StringAssert.Contains(row.Provenance, "Nothing identified it");
     Assert.IsFalse(row.Provenance.Contains("You chose"),
-                   "a name the operator refused reads like a name they classified - the two need different actions");
-
-    /*
-     * A refusal has no live verdict behind it, so its own sentence is THE line rather than a second one bolted under what the
-     * rules would have said: two answers to one question. And one line is the hover law for every state (see
-     * ProvenanceFor) - this is the row most likely to grow an extra sentence, which is why the law is asserted here too.
-     */
-    Assert.IsFalse(row.Provenance.Contains("\n"), $"a refusal should read as one line, got: {row.Provenance}");
+                   "a taken-back claim still reads like the operator's answer - the two need different actions");
+    Assert.IsFalse(row.Provenance.Contains("\n"), $"an absence should hover as one line, got: {row.Provenance}");
   }
 
   [TestMethod]
@@ -120,8 +122,8 @@ public class NamesTableTest
     var ledger = IdentityPriorStore.Instance;
     var remembered = new EntityTimeline();
     remembered.SetIdentity("Rememb", IdentityKind.Npc, RuleStrength.Medium, "R7-graph");
-    ledger.Record(remembered, ["Rememb"], PlayerRegistry.Instance, 1_700_000_000);
-    ledger.Record(remembered, ["Rememb"], PlayerRegistry.Instance, 1_800_000_000);
+    ledger.Record(remembered, ["Rememb"], 1_700_000_000);
+    ledger.Record(remembered, ["Rememb"], 1_800_000_000);
 
     var row = NamesTable.RowFrom(CensusWithoutACapture(ledger).Find("Rememb")!);
 
@@ -147,7 +149,7 @@ public class NamesTableTest
   public void AContradictedRosterCountsInTheCensusAndStaysOffTheRow()
   {
     PlayerRegistry.Instance.AddVerifiedPlayer("Berta", 1_700_000_000);
-    ClassificationCommands.SetVerdict(IdentityOverrideStore.Instance, PlayerRegistry.Instance, "Berta", IdentityKind.Npc);
+    ClassificationCommands.SetVerdict(IdentityOverrideStore.Instance, "Berta", IdentityKind.Npc);
 
     var census = CensusWithoutACapture();
     var row = NamesTable.RowFrom(census.Find("Berta")!);
@@ -416,7 +418,7 @@ public class NamesTableTest
     Assert.AreEqual(0, census.UnresolvedInCapture);
 
     // Every command has to survive being asked with nothing selected and nothing open.
-    ClassificationCommands.Reject(IdentityOverrideStore.Instance, PlayerRegistry.Instance, "Nobody");
+    ClassificationCommands.SetVerdict(IdentityOverrideStore.Instance, "Nobody", IdentityKind.Npc);
     ClassificationCommands.ClearPrior(IdentityPriorStore.Instance, "Nobody");
     ClassificationCommands.ClearVerdict(IdentityOverrideStore.Instance, "Nobody");
   }

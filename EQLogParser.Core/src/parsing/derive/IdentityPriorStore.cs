@@ -31,7 +31,7 @@ namespace EQLogParser
    * is stored with it. A verdict whose input the app owns forever is not memory, it is a restatement; see
    * WorthRemembering for that vocabulary. Operator verdicts live in mirror-overrides.txt (Manual), roster membership
    * in players.txt and pet mappings in petmapping.txt: copying any of those in here would launder an assertion into
-   * statistics. Names the operator rejected are skipped outright - "no claim" outranks our memory.
+   * statistics.
    *
    * - AGREEMENT IS IDEMPOTENT PER CAPTURE. Derivation re-runs whenever a filter or an override changes, so a
    * counter bumped per pass would report "41 captures agreed" for one evening re-derived 41 times. Sighting time is
@@ -154,7 +154,7 @@ namespace EQLogParser
      * the same file reports the same time, so agreement cannot inflate, and two captures of the same evening taken an
      * hour apart still count as the sighting they were.
      */
-    public void Record(EntityTimeline? timeline, IReadOnlyList<string>? names, PlayerRegistry? registry, long captureEndS)
+    public void Record(EntityTimeline? timeline, IReadOnlyList<string>? names, long captureEndS)
     {
       if (timeline is null || names is not { Count: > 0 }) return;
 
@@ -164,10 +164,6 @@ namespace EQLogParser
         foreach (var name in names)
         {
           if (string.IsNullOrEmpty(name)) continue;
-
-          // The operator's "no claim" and their verdicts are their own files' business; a rejected name in particular
-          // must not be able to come back wearing our memory of last season.
-          if (registry is not null && registry.IsRejectedPlayer(name)) continue;
 
           var kind = timeline.IdentityWithSource(name, out var reason);
 

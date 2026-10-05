@@ -309,14 +309,13 @@ namespace EQLogParser
        * ONE line, always, and no newline anywhere in this method — the hover answers "why does it say That", and a four-line
        * form makes the eye work for the one clause that matters (docs/DesignNotes.md → "The tooltip lost its sentences").
        *
-       * A taken-back claim SUPERSEDES the proof clause rather than joining it: a rejected name has no live verdict to explain,
-       * so pairing "Claim taken back" with what the rules would have said printed two answers to one question. The roster flag
-       * rides behind a middot like every other caption tooltip here, because "somebody's meter is wrong right now" is worth
-       * saying on the same breath as the proof rather than on a line of its own.
+       * The proof clause is whatever the deciding rule can say, and NOTHING where no rule says anything - which is the
+       * same state the dropdown words "Clear claim": taking a verdict back leaves the name unclaimed rather than
+       * inventing an answer for the hover to explain. The roster flag rides behind a middot like every other caption
+       * tooltip here, because "somebody's meter is wrong right now" is worth saying on the same breath as the proof
+       * rather than on a line of its own.
        */
-      var proof = row.IsRejected
-        ? "Claim taken back — you said this name is not one of ours"
-        : IdentityVocabulary.ProofText(row.Reason, row.Kind, row.HealedByCasters);
+      var proof = IdentityVocabulary.ProofText(row.Reason, row.Kind, row.HealedByCasters);
 
       // The sighting count rides on the proof clause too: "From Chat in previous log x7".
       if (row.IsPrior && row.PriorSightings > 1) proof = $"{proof} x{row.PriorSightings:N0}";
@@ -499,7 +498,7 @@ namespace EQLogParser
        * "... in previous log" tooltip cannot survive the override that replaced it.
        */
       if (option.Kind == IdentityKind.Unknown) ClassificationCommands.ClearVerdict(IdentityOverrideStore.Instance, row.Name);
-      else ClassificationCommands.SetVerdict(IdentityOverrideStore.Instance, PlayerRegistry.Instance, row.Name, option.Kind);
+      else ClassificationCommands.SetVerdict(IdentityOverrideStore.Instance, row.Name, option.Kind);
       IdentityPriorStore.Instance.Remove(row.Name);
 
       Reconcile();
@@ -556,11 +555,11 @@ namespace EQLogParser
      *
      *   "Refresh"       — the window follows the derive while it is visible (FollowSession), so nothing needs asking.
      *   "Not a player"  — DelVerdict plus a re-derive, which the Type cell's "Clear claim" does on the row it is drawn on.
-     *                     One truth worth writing down before somebody looks for it: NO surface in the app calls
-     *                     ClassificationCommands.Reject any more, so nothing writes players.txt `!Name` — that hard
-     *                     rejection lives in the class and its tests only. The fight grids' menu offers Set as
-     *                     Player/Mercenary/Pet/NPC and Clear Override; putting "Not a player" back is a menu item, not new
-     *                     machinery.
+     *                     Nothing in this app writes a players.txt `!Name` veto and nothing reads one: that machinery
+     *                     arrived seven hours before the only window that could set it lost its menu entry, three days
+     *                     after the last release, so no shipped build ever had a door to it (see
+     *                     PlayerRegistry.RemoveVerifiedPlayer). "Take this name off my roster" is still a thing Remove
+     *                     does; "never work out who this is again" was never a thing anybody could ask for.
      *   "Forget older   — same reach as choosing a Type here: both drop the ledger entry beside the verdict (above), so a
      *    logs decisions"  remembered answer cannot outlive the click that overruled it.
      */
