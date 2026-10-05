@@ -340,6 +340,40 @@ namespace EQLogParser
       if (changed && persist) Save();
     }
 
+    /*
+     * An operator's DEFAULT class for a name — the value the resolver falls back to when this capture observed none
+     * (docs/DesignNotes.md -> "The class precedence law"). Separate from `RememberRoster` on purpose: that method treats an
+     * absent class as silence and keeps whatever the row held, which is right for ingest (a loot line confirming a name says
+     * nothing about class) and wrong here, where a blank selection MEANS "no default any more". Null therefore assigns null.
+     *
+     * seenAtS stays 0 on a brand-new row: an edit is a statement, not a sighting, so it does not start an age clock — the law
+     * that keeps `init:true` on every load (`SeenAtS <= 0` never retires). Kind stays Unknown for the same reason the roster
+     * lane always leaves it: this says "one of ours, called a bard", not "the rules proved Player".
+     */
+    public void SetRosterClass(string? name, string? className)
+    {
+      if (string.IsNullOrEmpty(name) || "You".Equals(name, StringComparison.OrdinalIgnoreCase)) return;
+
+      var classOf = string.IsNullOrEmpty(className) ? null : className;
+      bool changed;
+      lock (_gate)
+      {
+        if (!_byName.TryGetValue(name, out var existing))
+        {
+          _byName[name] = new Prior(IdentityKind.Unknown, RosterReason, 0, 0, true, classOf);
+          changed = true;
+        }
+        else
+        {
+          var updated = existing with { Ours = true, Class = classOf };
+          changed = updated != existing;
+          if (changed) _byName[name] = updated;
+        }
+      }
+
+      if (changed) Save();
+    }
+
     /// <summary>Take the roster bit off a name. A remembered VERDICT on the same name is a different statement and stays.</summary>
     public void ForgetRoster(string? name) => ForgetRoster(name, persist: true);
 

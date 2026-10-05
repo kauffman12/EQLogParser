@@ -829,25 +829,37 @@ namespace EQLogParser
     // only do this from user interaction
     internal void SetDefaultPlayerClass(string name, string className, bool init = false)
     {
-      if (!string.IsNullOrEmpty(name) && CombatRecordLookup.IsValidClassName(className))
+      // The literal "You" is resolved to ConfigUtil.PlayerName by the parsers; this is the safety check behind that rule, kept
+      // because a durable row named "You" would be unreachable through the lookups that normalise it.
+      if (string.IsNullOrEmpty(name) || "You".Equals(name, StringComparison.OrdinalIgnoreCase)) return;
+
+      var clear = string.IsNullOrEmpty(className);
+      if (!clear && !CombatRecordLookup.IsValidClassName(className)) return;
+
+      var needEvent = false;
+
+      lock (_lock)
       {
-        var needEvent = false;
+        // A blank selection means "no default any more" — remove it, never store an empty word the readers must re-filter.
+        if (clear) _defaultPlayerClass.TryRemove(name, out _);
+        else _defaultPlayerClass[name] = className!;
 
-        lock (_lock)
+        if (!init)
         {
-          _defaultPlayerClass[name] = className;
-
-          if (!init)
-          {
-            // make sure player data is saved
-            _verifiedPlayers[name] = DateUtil.ToDotNetSeconds(DateTime.Now);
-            _playersUpdated = true;
-            needEvent = true;
-          }
+          /*
+           * An operator edit is not a sighting. This used to stamp `_verifiedPlayers[name]` with today's date and mark
+           * players.txt dirty, so "call this a bard" also asserted "we just watched this name in a line" — resetting the age
+           * clock of a name nothing observed, the same law whose violation aged 96.6 % of petmapping.txt out in one startup.
+           * The durable home is the roster lane (IdentityPriorStore.SetRosterClass), whose row for an edit carries a 0 stamp
+           * (never retires) and is seeded back into this map at Init — so a name whose ONLY fact is this class assignment
+           * still comes back next launch, without the file it used to be written into.
+           */
+          IdentityPriorStore.Instance.SetRosterClass(name, clear ? null : className);
+          needEvent = true;
         }
-
-        if (needEvent) EventsUpdateDefaultPlayerClass?.Invoke(new PlayerClassMapping { Player = name, ClassName = className });
       }
+
+      if (needEvent) EventsUpdateDefaultPlayerClass?.Invoke(new PlayerClassMapping { Player = name, ClassName = clear ? string.Empty : className });
     }
 
     internal static bool IsPossiblePlayerName(string part, int stop = -1)
