@@ -8,15 +8,10 @@
              xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
              mc:Ignorable="d"
              d:DesignHeight="450" d:DesignWidth="900">
+  <!-- ONE CHILD, THE GRID. No header row: the dock tab over this pane already says "Player/NPC Identity", and this
+       window lives in a narrow slide-out strip on the right where 30 vertical pixels belong to rows, not to repeating the
+       tab. Pet Owners is the model — grid, column headers, done. -->
   <Grid>
-    <Grid.RowDefinitions>
-      <!-- The house title bar: every table in the app reserves EQGridTitleHeight for its caption row and docks its
-           controls to the right of it (SpellCountTable is the pattern). This row used to be Height="Auto" holding a
-           sentence, which made the pane's top band taller than the one above every other grid on screen. -->
-      <RowDefinition Height="{DynamicResource EQGridTitleHeight}"/>
-      <RowDefinition Height="*"/>
-    </Grid.RowDefinitions>
-
     <Grid.Resources>
       <!-- Hidden rather than Collapsed: a row that offers no pencil still reserves its width, so the words in the Type
            and Class columns line up whether or not this row can be overruled. See PlaceholderVisibilityConverter. -->
@@ -40,29 +35,27 @@
       </Style>
     </Grid.Resources>
 
-    <!-- House title bar, house title, no status line: like the fight list, this pane says nothing about itself while you
-         read it (a census summary used to sit here and it made the band look like a report header). What the capture
-         holds is on hover - Apply puts the counts in the caption's tooltip, which is also why they are still computed. -->
-    <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
-      <Label x:Name="namesCaption" Content="Names" Style="{StaticResource EQTitleStyle}"
-             ToolTip="Every name this capture mentions, what it was called and what kind of evidence said so. Click a row's pencil to overrule it. This window replaces the old Verified Players and Verified Pets windows."/>
-    </StackPanel>
     <!--
-      Nothing on the right of the title band. The pane used to carry three controls there, and all three are gone on
+      And nothing above the grid either. The census counts that used to sit in the caption, and then on its hover, are
+      computed as before (ClassificationReport owns them, tests pin them) but have no surface here: this is a list of
+      names, not a report header.
+
+      Three controls used to ride at the right of the header, and all three are gone on
       purpose rather than moved:
 
         "Refresh"  - the list updates itself now. A census that needs a button to look current reads as broken the first
                      time a name is missing; Apply re-runs on every derive pass and on log open/close/clear.
         "Not a player" (Solid_Times) - its whole effect is DelVerdict + Re-derive, which the Type cell's "Clear claim"
-                     does in one click on the row it applies to (and on a multi-selection, the same two title-bar icons
-                     the window already keeps for batch work).
+                     does in one click on the row it applies to.
         "Forget old log decisions" (Solid_Undo) - same reach, so this too lives in the dropdown: choosing a Type overrules
                      a remembered verdict, and "Clear claim" drops it. The ledger entry itself is removed by both.
 
-      The row-selection icons above stay: they are the BATCH verbs, which no cell can express.
+      BATCH work - setting a whole block of selected names at once - is not here and never was expressible in a cell: it
+      lives in the fight grids' context menu (Set as Player / Mercenary / Pet / NPC, Clear Override). This pane has no
+      buttons of any kind left, only the two pencils.
     -->
 
-    <syncfusion:SfDataGrid x:Name="namesGrid" Grid.Row="1"
+    <syncfusion:SfDataGrid x:Name="namesGrid"
                            AllowResizingColumns="True"
                            AllowSorting="True"
                            AutoGenerateColumns="False"

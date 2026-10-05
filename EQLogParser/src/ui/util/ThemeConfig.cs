@@ -272,7 +272,17 @@ namespace EQLogParser
       Application.Current.Resources["EQTableExtendedRowHeaderWidth"] = 38 + ((CurrentFontSize - 10) * 2);
       Application.Current.Resources["EQCheckBoxScale"] = 0.9 + ((CurrentFontSize - 10) * 0.06);
       SyncFusionUtil.SetDesiredWidth("EQFightWindowWidth", 220 + (14.0 * CurrentFontSize), _mainWindow.npcWindow);
-      SyncFusionUtil.SetDesiredWidth("EQPetMappingWindowWidth", 220 + (10.0 * CurrentFontSize), _mainWindow.petMappingWindow);
+      /*
+       * The right-hand identity strip holds Pet Owners and Player/NPC Identity as ONE tabbed panel, so both panes are given
+       * the same number — a shared panel whose two tabs want different widths jumps under the cursor when you switch. The
+       * value is the identity grid's own column arithmetic (NamesTable.DesiredPaneWidth) rather than a constant written
+       * beside the dock markup: too narrow and the Why column sits behind a horizontal scrollbar in a pane that cannot be
+       * widened past the strip, and the number would have to be re-derived by hand every time a column changes. Pet Owners
+       * gets roomier than it was (its Owner column fills the space), which is what sharing a panel with a wider table costs.
+       */
+      var identityStrip = NamesTable.DesiredPaneWidth();
+      SyncFusionUtil.SetDesiredWidth("EQIdentityStripWidth", identityStrip, _mainWindow.petMappingWindow);
+      SyncFusionUtil.SetDesiredWidth("EQIdentityStripWidth", identityStrip, _mainWindow.namesWindow);
       SyncFusionUtil.SetDesiredWidth("EQPlayersWindowWidth", 180 + (10.0 * CurrentFontSize), _mainWindow.verifiedPlayersWindow);
       SyncFusionUtil.SetDesiredHeight("EQParseWindowHeight", 10.0 * (CurrentFontSize + 2), _mainWindow.playerParseTextWindow);
     }

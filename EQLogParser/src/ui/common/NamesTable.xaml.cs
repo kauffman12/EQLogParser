@@ -48,8 +48,9 @@ namespace EQLogParser
    * of hand-rolling a Popup (placement, sizing, focus-back and the close hook are in that helper). There is no context
    * menu on this grid at all: right-drag and right-click
    * are how a person grabs a block of rows out of a long table, and a menu drawn over that gesture hid the one verb
-   * almost nobody knew existed ("clear my claim" lived only in the fight grids). The two title-bar icons keep taking the
-   * selection, because an icon with no row of its own has nothing else to act on.
+   * almost nobody knew existed ("clear my claim" lived only in the fight grids). BATCH work — setting a whole block of
+   * selected names at once — is the one thing a cell cannot express, and it lives in the fight grids' context menu; this
+   * pane keeps no buttons of its own any more, only the two pencils.
    */
   public partial class NamesTable
   {
@@ -233,8 +234,6 @@ namespace EQLogParser
     {
       _rankOnApply = true;
       _rows.Clear();
-      namesCaption.ToolTip = "Every name this capture mentions, what it was called and what kind of evidence said so. " +
-                             "Click a row's pencil to overrule it.";
     }
 
     /// <summary>Rebuild the list from the captured facts. Safe to call from anywhere; harmless while one is running.</summary>
@@ -243,8 +242,8 @@ namespace EQLogParser
       var session = DeriveEngine.Active;
       if (session is null)
       {
-        // A log that has not opened yet is not an error and gets no message: the pane says "Names" over an empty grid,
-        // because a caption that changes with state is the status line this window was told not to have.
+        // A log that has not opened yet is not an error and gets no message: the pane shows an empty grid, because a
+        // heading that changes with state is the status line this window was told not to have.
         return;
       }
 
@@ -336,6 +335,24 @@ namespace EQLogParser
      * happens to map a column by those words. AllowResizingColumns stays on, so anybody who wants more room takes it;
      * these are the widths that fit the longest word each column can print.
      */
+    /*
+     * What this grid wants to be wide, asked by ThemeConfig to size the right-hand identity strip (MainWindow's
+     * namesWindow/petMappingWindow pair). The two panes are tabbed into ONE panel, so they must ask for the SAME width or
+     * the strip jumps when you switch tabs — and the width has to come from this file's own column arithmetic, because a
+     * number written next to the dock markup drifts the day a column changes and the last column ends up behind a
+     * horizontal scrollbar in a pane nobody can widen past the strip.
+     */
+    internal static double DesiredPaneWidth()
+    {
+      var fontSize = ThemeConfig.CurrentFontSize;
+      var iconAllowance = fontSize + 16;                       // EQIconStyle square + the 8+8 margins
+      var columns = ThemeConfig.CurrentNameWidth
+                  + ThemeConfig.CurrentShortWidth + iconAllowance                                    // Type + its pencil
+                  + 2 * (ThemeConfig.CurrentMediumWidth + ThemeConfig.CurrentShortestWidth);         // Class and Why
+      var rowHeader = Application.Current.Resources["EQTableRowHeaderWidth"] is double w ? w : 32.0;  // ShowRowHeader="True"
+      return columns + rowHeader + 18;                        // 18: the vertical scrollbar that comes with a long list
+    }
+
     private void ApplyColumnWidths()
     {
       if (namesGrid?.Columns is null) return;
@@ -377,16 +394,6 @@ namespace EQLogParser
       if (selectedName is not null) namesGrid.SelectedItem = FindRow(selectedName);
       if (_typeEditRow is not null) _typeEditRow = FindRow(_typeEditRow.Name);
       if (_classEditRow is not null) _classEditRow = FindRow(_classEditRow.Name);
-
-      /*
-       * The census summary on HOVER, not in a line of its own. It is the same one-breath answer (what the capture holds,
-       * how much of it is unplaced, how many rows contradict the roster) and it keeps every counter on
-       * ClassificationReport read by something; it just no longer occupies the title bar while somebody reads names.
-       */
-      namesCaption.ToolTip = $"{census.TotalNames:N0} names: {census.Players:N0} players, {census.Pets:N0} pets, " +
-                             $"{census.Mercs:N0} mercs, {census.Npcs:N0} NPCs, {census.Rejected:N0} rejected" +
-                             (census.UnresolvedInCapture > 0 ? $" · {census.UnresolvedInCapture:N0} unplaced in this log" : string.Empty) +
-                             (census.Disagreements > 0 ? $" · {census.Disagreements:N0} contradict the roster" : string.Empty);
     }
 
     /*
@@ -548,9 +555,12 @@ namespace EQLogParser
      * The three controls that used to sit right of the caption are gone, and their verbs with them rather than hidden:
      *
      *   "Refresh"       — the window follows the derive while it is visible (FollowSession), so nothing needs asking.
-     *   "Not a player"  — DelVerdict plus a re-derive, which the Type cell's "Clear claim" does on the row it is drawn on;
-     *                     batch work stays in the fight grids' menu. ClassificationCommands.Reject itself is unchanged and
-     *                     still writes players.txt `!Name` for whoever calls it from there.
+     *   "Not a player"  — DelVerdict plus a re-derive, which the Type cell's "Clear claim" does on the row it is drawn on.
+     *                     One truth worth writing down before somebody looks for it: NO surface in the app calls
+     *                     ClassificationCommands.Reject any more, so nothing writes players.txt `!Name` — that hard
+     *                     rejection lives in the class and its tests only. The fight grids' menu offers Set as
+     *                     Player/Mercenary/Pet/NPC and Clear Override; putting "Not a player" back is a menu item, not new
+     *                     machinery.
      *   "Forget older   — same reach as choosing a Type here: both drop the ledger entry beside the verdict (above), so a
      *    logs decisions"  remembered answer cannot outlive the click that overruled it.
      */

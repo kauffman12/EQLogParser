@@ -545,13 +545,8 @@
              operator's ENTIRE layout. This stub absorbs those stale entries; MainWindow hides it after every load. -->
         <ContentControl x:Name="mirrorFightWindow" syncfusion:DockingManager.Header="Fight List (retired)" syncfusion:DockingManager.State="Hidden"
                       syncfusion:DockingManager.CanDocument="False"/>
-        <ContentControl x:Name="namesWindow" Padding="0" Margin="0" syncfusion:DockingManager.Header="Player/NPC Identity" syncfusion:DockingManager.State="Hidden"
-                      syncfusion:DockingManager.SideInDockedMode="Tabbed" syncfusion:DockingManager.TargetNameInDockedMode="npcWindow"
-                      syncfusion:DockingManager.DesiredWidthInDockedMode="{DynamicResource EQFightWindowWidth}" syncfusion:DockingManager.DesiredWidthInFloatingMode="{DynamicResource EQFightWindowWidth}" syncfusion:DockingManager.CanDocument="False">
-          <local:NamesTable />
-        </ContentControl>
         <ContentControl x:Name="petMappingWindow" syncfusion:DockingManager.Header="Pet Owners" syncfusion:DockingManager.State="AutoHidden" syncfusion:DockingManager.SideInDockedMode="Right" 
-                      syncfusion:DockingManager.DesiredWidthInDockedMode="{DynamicResource EQPetMappingWindowWidth}" syncfusion:DockingManager.DesiredWidthInFloatingMode="{DynamicResource EQPetMappingWindowWidth}" syncfusion:DockingManager.CanDocument="False">
+                      syncfusion:DockingManager.DesiredWidthInDockedMode="{DynamicResource EQIdentityStripWidth}" syncfusion:DockingManager.DesiredWidthInFloatingMode="{DynamicResource EQIdentityStripWidth}" syncfusion:DockingManager.CanDocument="False">
           <syncfusion:SfDataGrid x:Name="petMappingGrid"
                                 ItemsSource="{x:Static local:MainActions.PetPlayersView}"
                                 AllowResizingColumns="False"
@@ -577,6 +572,31 @@
             </syncfusion:SfDataGrid.Columns>
           </syncfusion:SfDataGrid>
         </ContentControl>
+        <!--
+          Player/NPC Identity, in the SAME right-hand panel as Pet Owners (it used to tab with the fight list).
+
+          The two belong together because they are the same question asked twice - "who is this name?" and "whose summon is
+          it?" - and both are lookups over the identity files rather than something you drive the boards from. The fight
+          list keeps its own column all to itself, since selecting a row there moves every other window on the screen.
+
+          AutoHidden like Pet Owners, so neither one eats screen space while closed: a strip on the right edge slides the
+          tab you click out over the tables. Both ask for ThemeConfig's EQIdentityStripWidth, which is sized from the
+          identity grid's own columns (NamesTable.DesiredPaneWidth) because a shared panel whose two tabs want different
+          widths jumps under the cursor when you switch.
+        -->
+        <ContentControl x:Name="namesWindow" Padding="0" Margin="0" syncfusion:DockingManager.Header="Player/NPC Identity" syncfusion:DockingManager.State="AutoHidden"
+                      syncfusion:DockingManager.SideInDockedMode="Right"
+                      syncfusion:DockingManager.DesiredWidthInDockedMode="{DynamicResource EQIdentityStripWidth}" syncfusion:DockingManager.DesiredWidthInFloatingMode="{DynamicResource EQIdentityStripWidth}" syncfusion:DockingManager.CanDocument="False">
+          <local:NamesTable />
+        </ContentControl>
+        <!--
+          The two windows Player/NPC Identity replaced. They stay Hidden (the app still fills their grids through
+          MainActions.LoadVerified, and RemovePlayerMouseDown / RemovePetMouseDown still answer from them), but nothing
+          shows them any more: the identity pane lists the same names with the evidence beside them.
+
+          They are NOT deleted, for the mirrorFightWindow reason two panes up — a dockSite.xml saved while one of these was
+          open names it, and LoadDockState throws on a window it cannot find, which resets the operator's ENTIRE layout.
+        -->
         <ContentControl x:Name="verifiedPlayersWindow" syncfusion:DockingManager.Header="Verified Players" syncfusion:DockingManager.State="Hidden" syncfusion:DockingManager.SideInDockedMode="Tabbed" 
                       syncfusion:DockingManager.TargetNameInDockedMode="verifiedPetsWindow" syncfusion:DockingManager.DesiredWidthInDockedMode="{DynamicResource EQPlayersWindowWidth}" syncfusion:DockingManager.DesiredWidthInFloatingMode="{DynamicResource EQPlayersWindowWidth}"
                       syncfusion:DockingManager.CanDocument="False">

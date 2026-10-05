@@ -261,6 +261,7 @@ namespace EQLogParser
          */
         DockingManager.SetState(npcWindow, DockState.Dock);
         DockingManager.SetState(mirrorFightWindow, DockState.Hidden);
+        MigrateIdentityPaneIntoRightStrip();
 
         DamageStatsBuilder.Instance.EventsUpdateDataPoint += data => QueueChartUpdate(damageChartIcon, data);
         HealingStatsBuilder.Instance.EventsUpdateDataPoint += data => QueueChartUpdate(healingChartIcon, data);
@@ -1079,10 +1080,50 @@ namespace EQLogParser
      * window reopened after an hour should answer about the log that is open now rather than about the one that was
      * open when it was last looked at.
      */
+    /*
+     * The same door as "Pet Owners" directly below it: SyncFusionUtil.ToggleWindow, so the two panes that share the
+     * right-hand strip answer their menu items identically. SetState(Dock) used to sit here, which is not a show/hide at
+     * all - it pulled the pane out of the strip and into the middle of the layout, so a menu item people press to PEEK at
+     * a list relocated the window they were peeking at. The census is built on demand, so the explicit Refresh stays.
+     */
     private void MenuItemNamesClick(object sender, RoutedEventArgs e)
     {
-      DockingManager.SetState(namesWindow, DockState.Dock);
+      SyncFusionUtil.ToggleWindow(dockSite, nameof(namesWindow));
       if (namesWindow?.Content is NamesTable namesTable) namesTable.Refresh();
+    }
+
+    /*
+     * One-time repair of a saved layout for the identity pane.
+     *
+     * Player/NPC Identity moved out of the fight list's tab group into the right-hand strip beside Pet Owners. A dockSite.xml
+     * written before that says "tabbed with npcWindow", and an operator would keep getting the OLD arrangement with no way
+     * to notice the new one exists - so the saved state is corrected once, then left alone: anyone who moves the pane after
+     * this build starts keeps their choice, because nothing here runs twice. Options / Reset Window State stays the escape
+     * hatch for anything else a stale layout got wrong.
+     *
+     * The tab link is set BEFORE the state, and the whole thing is guarded: an arrangement this build cannot express is
+     * logged, not thrown - MainWindowOnLoaded is the startup path, and a dock exception there takes the window down with it.
+     */
+    private void MigrateIdentityPaneIntoRightStrip()
+    {
+      const string migratedKey = "IdentityStripMigrated";
+      if (ConfigUtil.IfSet(migratedKey)) return;
+      ConfigUtil.SetSetting(migratedKey, true);
+
+      try
+      {
+        /*
+         * Side first, then state, and nothing else: two windows auto-hidden on the SAME side share that side's panel and
+         * tab together (that grouping is Syncfusion's own — it looks for auto-hidden siblings rather than a target name), so
+         * naming a partner would be a second opinion about a layout the side already decides.
+         */
+        DockingManager.SetSideInDockedMode(namesWindow, DockSide.Right);
+        DockingManager.SetState(namesWindow, DockState.AutoHidden);
+      }
+      catch (Exception ex)
+      {
+        Log.Debug("Identity pane could not be moved into the right-hand strip", ex);
+      }
     }
 
     private void MenuItemWindowClick(object sender, RoutedEventArgs e)
