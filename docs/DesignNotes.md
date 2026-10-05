@@ -4957,8 +4957,8 @@ What is left on this path is not the wiring but the default: flip `OverlayDamage
 ### One dial for both surfaces (2026-10, burn-in)
 
 *(Names in the notes above predate 2026-11: the engine was "the combat mirror" then - `MirrorMeter` is now
-`DerivedMeter`, and the operator's file `mirror-overrides.txt` is now `identity-overrides.txt`, with the old name read
-once when the new one has never been written. Same objects, older words.)*
+`DerivedMeter`, and the operator's file was to be `mirror-overrides.txt` before it ever reached an installed build; it
+ships as `identity-overrides.txt`. Same objects, older words, nothing to migrate.)*
 
 `OverlayDamageFromMirror` is retired. The list's `EnableCombatMirror` is now the ONLY dial: `DerivedMeter.Enabled`
 reads `AppSettings.IsCombatMirrorEnabled` live (no static capture), and the overlay window reads it live at every

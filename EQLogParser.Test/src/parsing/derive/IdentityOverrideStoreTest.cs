@@ -116,32 +116,6 @@ public class IdentityOverrideStoreTest
     Assert.IsTrue(reopened.TryGet("Triumph", out _));
   }
 
-  /*
-   * The rename from `mirror-overrides.txt` is an import by existence, the same rule players.txt follows into
-   * identity-priors.txt: the legacy name is read ONLY while identity-overrides.txt has never been written, and the first
-   * save takes ownership. Reading both and merging would resurrect a verdict the operator reverted under the one file
-   * they could see in the folder, so "the new file exists" has to be the whole rule.
-   */
-  [TestMethod]
-  public void ALegacyMirrorFileIsReadOnceAndThenSuperseded()
-  {
-    var dir = Path.Combine(_tempDir, "Ovrtest");
-    Directory.CreateDirectory(dir);
-    File.WriteAllText(Path.Combine(dir, "mirror-overrides.txt"), "Grailstone=Pet\n");
-
-    var fromLegacy = new IdentityOverrideStore();
-    fromLegacy.Init("Ovrtest");
-    Assert.IsTrue(fromLegacy.TryGet("Grailstone", out var kind), "the pre-rename file was not read at all");
-    Assert.AreEqual(IdentityKind.Pet, kind);
-
-    // Once the new file exists - even holding nothing - the legacy rows are gone: a revert has to stick.
-    File.WriteAllText(Path.Combine(dir, "identity-overrides.txt"), "");
-    var afterSave = new IdentityOverrideStore();
-    afterSave.Init("Ovrtest");
-    Assert.IsFalse(afterSave.TryGet("Grailstone", out _),
-                  "the superseded file still fed a verdict the operator can no longer see or revert");
-  }
-
   [TestMethod]
   public void ClearingAnOverrideGivesTheRulesOwnAnswerBack()
   {

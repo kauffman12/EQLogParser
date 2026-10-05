@@ -23,12 +23,10 @@ namespace EQLogParser
     // R10: "set as player / merc / pet / npc" from the derived fight list, per server (IdentityOverrideStore).
     // Same shape as petmapping.txt - name=Kind - and the same folder, because it is the same kind of claim:
     // something the operator knows that the log does not say.
-    /// <summary>The operator's own verdicts on names, written by the Identity pane. Named for what it holds;
-    /// it shipped as `mirror-overrides.txt` while the derived engine was called "the combat mirror", and that
-    /// name is still read once - see ReadIdentityOverrides.</summary>
+    /* The operator's own verdicts on names, written by the Identity pane. Named for what it holds; the name it
+     * carried while the derived engine was called "the combat mirror" never reached an installed build, so there is
+     * nothing to read under it - this file arrives with the branch. */
     private const string IdentityOverridesFileName = "identity-overrides.txt";
-    /// <summary>The pre-rename filename, read ONLY while identity-overrides.txt has never been written.</summary>
-    private const string LegacyIdentityOverridesFileName = "mirror-overrides.txt";
     private const string IdentityPriorFile = "identity-priors.txt";
     private static string _archiveDir;
     private static string _settingsFile;
@@ -180,19 +178,7 @@ namespace EQLogParser
 
       // Path.Combine rather than the `@"\"` concatenation its neighbours use: this has to round-trip on a host
       // where a backslash is a filename character, and the engine's rule tests run there.
-      //
-      // The rename is an import by existence, the same rule players.txt follows into identity-priors.txt: the legacy
-      // name is read ONLY while the new one has never been written, and the first save takes ownership. Both files
-      // existing is therefore not a merge - the new one wins - because unioning two verdict files would resurrect a
-      // claim somebody reverted under the only name they could see in the folder. The superseded file is left on
-      // disk rather than deleted: it is user data, and it stops being read the moment its replacement exists.
-      var file = Path.Combine(ConfigDir, serverName, IdentityOverridesFileName);
-      if (!File.Exists(file))
-      {
-        var legacy = Path.Combine(ConfigDir, serverName, LegacyIdentityOverridesFileName);
-        if (File.Exists(legacy)) file = legacy;
-      }
-      LoadProperties(overrides, ReadList(file));
+      LoadProperties(overrides, ReadList(Path.Combine(ConfigDir, serverName, IdentityOverridesFileName)));
       return overrides;
     }
 
