@@ -368,8 +368,31 @@ namespace EQLogParser
           // Both sides NPC-side happens when a Friendly interval flips a player into the enemy
           // column: the charmed raider owns that row herself. Two mobs on each other (a mob pet,
           // or boss-vs-boss noise) is not a raid fight at all and stays out of the list.
-          if (!IsFlipped(timeline, atkName, t)) continue;
-          key = atkName; creditAttacker = false; charmed = true;
+          if (IsFlipped(timeline, atkName, t))
+          {
+            key = atkName; creditAttacker = false; charmed = true;
+          }
+          /*
+           * ... except when the attacker is not a creature at all. `Goratoar has taken 18724 damage from Slicing Energy
+           * by .` carries NO caster in the line, so the parser puts the SPELL where the attacker belongs (DamageFact.
+           * AttackerIsSpell) and R21 reasonably says "that name is a spell effect, not an NPC". SideOf then reads both
+           * endpoints NPC-side, and this branch - which exists to drop mob-on-mob noise - was deleting the raid's own
+           * damage with it: measured on eqlog_Incogitable_xegony.txt, 382 facts / 32,932,003 damage sat in exactly this
+           * condition, and a synthetic one-fact capture produced no row at all. That is the raid's dot doing the raid's
+           * job on the raid's own target, and legacy counted it (FightManager's `record.AttackerIsSpell && defender`
+           * re-decision, which also renamed the caster to Labels.Unk - see FightSummarySource.RecordFrom for the other
+           * half of that choice).
+           *
+           * Asked THIS way round matters: an R21 spell name is NPC-side because it is not a person, which is a different
+           * statement from "this exchange involves no raid damage". The fact keys on its DEFENDER - the encounter the
+           * damage landed on - and credits nobody, because naming a caster the log never printed would put somebody's
+           * evening under a spell. A genuine mob-on-mob exchange still has neither of these flags and stays out.
+           */
+          else if (fact.AttackerIsSpell)
+          {
+            key = defName; creditAttacker = false;
+          }
+          else continue;
         }
         else if (atkSide == Side.Npc && defSide == Side.Unknown)
         {

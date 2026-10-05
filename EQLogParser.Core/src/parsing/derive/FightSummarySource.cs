@@ -74,9 +74,10 @@ namespace EQLogParser
   internal sealed class FightFactIndex
   {
     /*
-     * The classification this index belongs to, for one question only: was this attacker inside an R9 charm
-     * window, i.e. somebody's pet for this span? Null (the default) means "nobody is anyone's pet here", which
-     * keeps every other caller and test behaving exactly as before.
+     * The classification this index belongs to, for two questions. (1) Was this attacker inside an R9 charm window, i.e.
+     * somebody's pet for this span? (2) Is the TARGET of a caster-less spell line one of ours - which decides whether the
+     * record names what the line said or says Labels.Unk (RecordFrom). Null (the default) means "nobody is anyone's pet here"
+     * and "no target was placed on our side", which keeps every other caller and test behaving exactly as before.
      */
     private readonly EntityTimeline _charmers;
 
@@ -489,6 +490,29 @@ namespace EQLogParser
     private DamageRecord RecordFrom(DamageFact fact, DamageFactTable facts)
     {
       var attacker = facts.NameOf(fact.AtkIdx);
+
+      /*
+       * A line with no caster in it names its SPELL where the attacker belongs (`… damage from Slicing Energy by .`), and a
+       * board must not turn that noun into a raid member: the damage grid puts one row per Attacker, so an unreplaced name
+       * would give "Slicing Energy" a column, a DPS number and a spot beside Illuminai. Legacy answered this the same way -
+       * FightManager's `record.AttackerIsSpell && defender` re-decision sets record.Attacker = Labels.Unk for exactly the
+       * non-player target case - so the damage still counts toward the raid and the fight while nobody is invented to own it.
+       *
+       * The target test is legacy's own predicate (IsPetOrPlayerOrMerc), not "the attacker is a spell": a spell bouncing off
+       * one of OUR people stays as it was, because that route is the tanking side of a fight against the spell itself, which
+       * is what legacy keyed the row on and what the operator sees there today.
+       */
+      /*
+       * Asked of the classification this index was built with, not of IdentityLookup: the seam there needs the engine's
+       * LiveVerdict hook wired, and a summary can be materialized by anything (a test, a background board) that has this
+       * timeline and no session. No timeline at all reads as "the target is not one of ours", which is the common case for a
+       * caster-less line anyway - its targets are mobs.
+       */
+      if (fact.AttackerIsSpell)
+      {
+        var target = _charmers?.IdentityAt(facts.NameOf(fact.DefIdx), fact.TimeS);
+        if (target is not IdentityKind.Player and not IdentityKind.Pet and not IdentityKind.Merc) attacker = Labels.Unk;
+      }
 
       return new DamageRecord
       {

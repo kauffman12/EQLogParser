@@ -96,6 +96,48 @@ public class SpellEffectIdentityTest
   }
 
   /*
+   * R21 is a rule about what a NAME is; it may not change what a FACT did. Both endpoints of these lines read NPC-side - the
+   * spell because R21 says it is not a person, the mob because a placed name hits a placed mob - and the branch that drops
+   * mob-on-mob noise was deleting the raid's own dot damage along with them. Measured on eqlog_Incogitable_xegony.txt: 382
+   * facts / 32,932,003 damage in exactly this condition; this fixture, one fact, produced no fight row at all. Legacy counted
+   * it (FightManager's spell re-decision), so the fight list and the meter simply read low and nothing said so.
+   *
+   * The row keys on the TARGET and credits nobody: the line names no caster, and inventing one would hand somebody an evening
+   * of damage they never dealt. Labels.Unk is legacy's own word for that column and is asserted rather than eyeballed - a spell
+   * name promoted to a damage-dealer row would read as an unidentified raid member on every board in the application.
+   */
+  [TestMethod]
+  public void ASpellsDamageOnAMobStillCountsAsDamageToThatMob()
+  {
+    var run = RunOut(
+      "[Mon May 04 18:50:00 2026] Bithika slams a gnoll for 200 points of damage.",
+      "[Mon May 04 18:50:02 2026] A gnoll has taken 335500 damage from Curse XVII Rk. III by .");
+
+    var timeline = new EntityTimeline();
+    ClassificationRules.Apply(run.Facts, timeline, run.HealFacts);
+
+    // The index carries the classification like FightProjectionCache does, so the materialized record can ask whether a
+    // caster-less line hit one of ours (FightSummarySource.RecordFrom).
+    var index = new FightFactIndex(timeline);
+    var rows = FightProjection.Build(run.Facts, timeline, index.OnFact);
+
+    var gnoll = rows.SingleOrDefault(r => r.Name == "A gnoll");
+    Assert.IsNotNull(gnoll, "damage a line could not attribute still belongs to the mob it landed on");
+    Assert.AreEqual(335700L, gnoll!.DamageToOwner, "the dot shares its row with the swing beside it");
+
+    var board = DerivedTotals.For([gnoll], index, run.Facts, new HealFactTable(run.Facts))?.CombinedStats;
+    Assert.IsNotNull(board);
+    Assert.AreEqual(335700L, (long)board.RaidStats.Total, "the raid total keeps damage the log never attributed");
+
+    var bit = board.StatsList.FirstOrDefault(p => p.Name == "Bithika");
+    Assert.IsNotNull(bit, "the one raider this capture names is on the board");
+    Assert.AreEqual(200L, (long)bit.Total, "unattributed damage does not move onto the nearest player");
+
+    Assert.IsNull(board.StatsList.FirstOrDefault(p => p.Name == "Curse XVII Rk. III"),
+      "a spell must not become a damage-dealer row - legacy writes Labels.Unk for this exact shape");
+  }
+
+  /*
    * The other half of the capture, which was already answered correctly and must not move: a spell beating on the raid reads
    * hostile. Provenance now says "a spell" instead of "it attacks the raid", because that is the truer of the two — but the
    * side is unchanged, so a boss dot's damage still lands on the enemy column of every board.

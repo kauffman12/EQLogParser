@@ -46,7 +46,9 @@ public class FightSummarySourceTest
         var line = timeline ?? new EntityTimeline();
         ClassificationRules.Apply(facts, line);
 
-        var index = new FightFactIndex();
+        // The index carries the classification, exactly as FightProjectionCache does in the application: the materialized
+        // record asks that timeline whether a caster-less spell line hit one of ours (FightSummarySource.RecordFrom).
+        var index = new FightFactIndex(line);
         var fights = FightProjection.Build(facts, line, index.OnFact);
         Sectionizer.StampGroupIds(fights);
         return (fights, index, facts);
@@ -235,6 +237,12 @@ public class FightSummarySourceTest
         facts.AddFact(new DamageFact(1, (long)T0 + 1, a, d, total: 250, typeId: LabelTypes.Dot,
           flags: DamageFact.FlagAttackerIsSpell, modMask: 0, subIdx: ushort.MaxValue));
 
+        // The same spell shape aimed at ONE OF OURS instead of at a mob. It gets its own row (legacy keys that exchange on
+        // the spell name too) and it is where the other half of the record-name rule shows: the noun stays.
+        var s = facts.InternName("Dread Pheromones");
+        facts.AddFact(new DamageFact(2, (long)T0 + 2, s, a, total: 60, typeId: LabelTypes.Dot,
+          flags: DamageFact.FlagAttackerIsSpell, modMask: 0, subIdx: ushort.MaxValue));
+
         var timeline = new EntityTimeline();
         timeline.SetIdentity("Illuminai", IdentityKind.Player, RuleStrength.Strong, "R3-presence");
         timeline.SetIdentity("Echohead", IdentityKind.Npc, RuleStrength.Medium, "R4-spell");
@@ -249,7 +257,17 @@ public class FightSummarySourceTest
         {
             var fact = table.Facts[i];
             var record = records[i];
-            Assert.AreEqual(table.NameOf(fact.AtkIdx), record.Attacker);
+
+            /*
+             * One deliberate exception to "a materialized record is its fact, verbatim", and it is spelled out below rather
+             * than derived here so this loop cannot go tautological: a line that named NO caster (`… has taken 335500 damage
+             * from Curse XVII Rk. III by .`) carries the spell where an attacker belongs, the damage grid puts one row per
+             * Attacker, and copying that noun through hands a curse a damage column beside real raiders. Legacy answers with
+             * Labels.Unk (FightManager's AttackerIsSpell re-decision for a non-player target), so the total is kept and nobody
+             * is invented.
+             */
+            if (!fact.AttackerIsSpell) Assert.AreEqual(table.NameOf(fact.AtkIdx), record.Attacker);
+
             Assert.AreEqual(table.NameOf(fact.DefIdx), record.Defender);
             Assert.AreEqual(fact.Total, record.Total);
             Assert.AreEqual(LabelTypes.LabelOf(fact.TypeId), record.Type, "the label word is the same interned literal the parsers write");
@@ -258,6 +276,22 @@ public class FightSummarySourceTest
             Assert.AreEqual(table.SubtypeOf(fact.SubIdx) ?? LabelTypes.LabelOf(fact.TypeId), record.SubType);
             Assert.AreEqual(fact.AttackerIsSpell, record.AttackerIsSpell);
         }
+
+        // The spell-flagged record: damage kept, caster name replaced by legacy's word for "we were not told".
+        var spellRecord = records[1];
+        Assert.IsTrue(spellRecord.AttackerIsSpell, "the line's own evidence still rides on the record");
+        Assert.AreEqual(250u, spellRecord.Total, "replacing a name never loses the damage");
+        Assert.AreEqual(Labels.Unk, spellRecord.Attacker,
+            "an unattributed dot must not become a damage-dealer row named after a spell");
+
+        // And the same shape hitting one of OURS keeps its noun: that exchange is the tanking side of a fight AGAINST the
+        // spell, which is what legacy keys the row on and what the operator reads there.
+        var spellRow = Row(rows, "Dread Pheromones");
+        var spellSide = index.SummaryFightFor(spellRow, table);
+        var tankRecord = TankRecords(spellSide).Single();
+        Assert.AreEqual("Illuminai", tankRecord.Defender, "the exchange is the raid's damage-taken half");
+        Assert.AreEqual("Dread Pheromones", tankRecord.Attacker,
+            "a boss dot beating on a raider stays attributed to the thing the line named");
 
         Assert.AreEqual("Echohead", summary.Name);
         Assert.AreEqual(Row(rows, "Echohead").Id, summary.Id);
