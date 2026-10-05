@@ -6718,6 +6718,11 @@ ROW CONTENT — `DamageToOwner`/`EndReason` on a couple of dozen rows — not me
 gate would fire spuriously once per session (harmless), and "identical input, identical output" is not yet a property this process
 has, which gives the open question above a second, row-level reason to be answered.
 
+**Closed 2026-11, same day**: after `PipelineHarness` gained `RecordsStore.Instance.Clear(false)` (see "The parse side effect was a missing
+store reset"), the identical probe re-run on Kizant reports **`CONTROL same input twice: 0 rows differ`** at the small prefix AND at the full
+1.93 M-fact prefix (`pass 12: facts 1,929,949 visible rows 773 … CONTROL … 0 rows differ`). The row-level symptom and the board-level one
+were the same defect, and `CaptureReproducibilityTest` now keeps it dead.
+
 Caveat stated plainly, because it is the one thing this study cannot see: 12 prefixes over 1.9 M facts means each simulated pass
 covered ~160 k facts, while a live pass covers roughly a second (tens of facts). The passes nobody would skip are therefore
 measured at coarse granularity; heal-only stretches — the realistic no-op shape, since heals bump the captured count but open no
