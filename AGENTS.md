@@ -741,6 +741,18 @@ npcs.txt; it is the *only* evidence for **6** names (Incogitable) and **4** (Kiz
   fail in silence — see `FrenzyClassTest` setup. Frenzy Strike AA casts (`... VII Caza`) stay unused: the AA
   rank word breaks the roman-rank anchor; extending it is a measured step of its own. Numbers:
   docs/DesignNotes.md → "Breadth of evidence, measured" (the frenzy census).
+- **A cold miss is usually a name this capture never puts into combat — measure the shape before writing a rule for it**
+  (2026-11). On Incogitable, of the roster names a cold pass cannot place: **1** has any attack fact, **4** take any heal,
+  **0** reach R15's floor — they live only in tells, achievement pings, buff lines and cast lines. So "we still see them
+  attacking what everyone attacks / being healed by players" is not a missing rule: **R7-graph and R15-healed are those
+  rules**, and they place 147 of the 165 placeable names. `players.txt` is also a **superset of any one night** (165 of its
+  209 rows are named anywhere in Incogitable, 62 in another capture), which caps what any single-file classifier can score
+  — quote recall against named rows, not file rows. Three unread chat shapes were then counted on every local capture:
+  **`Your guildmate X has …` is clean** (0 names among them read Npc/Pet on four captures, article-free, recovers 7/3 roster
+  misses) and is the one candidate rule; **`X tells …` is refused** (`Bane`, `Paul` are in npcs.txt while their lines are
+  bazaar hailers — identity is keyed by NAME, so spelling cannot fix it); **`X begins singing …` is refused**
+  (`Shalowain begins singing her Rhapsody of Pain.` is an NPC placed by npcs.txt *and* by being attacked). Numbers and the
+  per-capture table: docs/DesignNotes.md → "What the cold misses actually are".
 - **A gated real-log test is disposable; a print harness is not a test.** The `EQLP_*` gates exist to answer one question
   over a local capture. Once it is answered, **delete the gate and move the numbers to docs/DesignNotes.md** — that is
   where findings live, and an assertion-free `[TestMethod]` that skips everywhere proves nothing except that it printed

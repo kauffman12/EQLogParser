@@ -5846,10 +5846,12 @@ Decisions taken from this. `players.txt`/`petmapping.txt` are imported **once**,
 gated on the new per-server memory file not existing yet - existence is the
 whole condition, no timestamp comparing; the folder is already per server, so a
 first log on a fresh server seeds from that server's roster and nothing else.
-Memory then ages by sightings rather than `Save()`'s 180-day wall clock (99 of
-the 209 xegony rows are past that line today, and all 873 rows across the 14
-server folders carry a parser timestamp - zero hand-typed). Operator-set class
-moves to its own small file. `Remove` in the pane means *forget*, never veto.
+Memory keeps **one wall clock** over every durable
+file (the law is restated under "Memory: one import, three files, one wall clock"
+below; pets get an expiry too, since `petmapping.txt` has none today). All 873 rows
+across the 14 server folders carry a parser timestamp - zero hand-typed. Operator-set
+class moves in with machine memory rather than staying in a file the parser rewrites.
+`Remove` in the pane means *forget*, never veto.
 
 Retired with this: `RegistryRebuildTest` (its exit gate was satisfied and its
 60% recall floor is superseded by the table above) and `HitByNpcCensusTest`
@@ -5858,7 +5860,59 @@ notes). The measurement harness that produced this table was never committed -
 it printed and asserted nothing, which makes it a script wearing a test
 attribute. Standing rule: AGENTS.md -> "A gated real-log test is disposable".
 
-## Memory: one import, three files, aging on the file's own clock (2026-11)
+## What the cold misses actually are (2026-11)
+
+The question worth asking before buying memory: if a raider casts no class spell and
+never speaks, do we not still see them **attacking what everyone attacks** and
+**being healed by known players**? Both intuitions are already rules - R7-graph is the
+first, R15-healed the second - and on `eqlog_Incogitable_xegony.txt` they place **147
+of the 165** roster names a cold pass places at all. The remaining 18, counted over that
+capture's 1.89 M damage facts and 420 k heals:
+
+| what such a rule would need | names among the 18 misses |
+| --- | --- |
+| any attack fact at all | **1** (Reckin, 7 swings) |
+| an attack landing on something that reads NPC | 1 |
+| attacking an NPC some placed Player also attacks | 1 (the same Reckin) |
+| any heal landing on them | 4 |
+| healed by at least one placed Player | 2 |
+| meeting R15's floor (10 heals from 2 our-side casters) | **0** |
+
+So: yes, we would see that - and these are exactly the names where this file shows
+neither. They are not quiet raiders, they are **names this capture never puts into
+combat**. What they appear in is conversation and status text: `Grimson tells General:1,
+'roting on telthel…'`, `Your guildmate Zachil has completed … achievement`, `Hotmail is
+enveloped by an aura of spiritual renewal`, `Rythemm begins casting Holy Infusion Heal VII
+Azia.` Nine of the eighteen do reach the timeline as a chat fact and stay unclaimed because
+R3-chat claims only guild/raid/group/fellowship, not tells.
+
+The same run corrects the recall table above, in both directions: **`players.txt` is a
+superset of any one night.** Only 165 of its 209 rows are named anywhere in Incogitable;
+on `eqlog_Kizant_xegony-01-06-24.txt`, 104; on `-09-20-25`, 62. Scoring a capture against
+the roster file therefore tests it against names it cannot know, and a perfect classifier
+of one file tops out near those numbers for that reason alone, not because evidence went
+unread.
+
+### The unread chat shapes, counted before writing them
+
+Three shapes no rule reads, counted on every local capture and then held against what the
+rules already say about the same names - because a rule that claims an NPC is worse than a
+rule that misses a player:
+
+| shape | distinct names (Incogitable / Kizant-01-06-24) | Unknown names it would place | roster misses it recovers | **would lie** |
+| --- | --- | --- | --- | --- |
+| `Your guildmate X has …` | 213 / 220 | 26 / 27 | **7 / 3** | **none** - and none on the other two captures either; no article or possessive shape among them |
+| `X tells …` | 661 / 768 | 425 / 482 | 5 / 3 | `Paul`, `Bane` - both in npcs.txt (R6-npcdb) while their lines are bazaar hailers (`] Bane tells General:1, 'WTS Full NoS collect sets 3kr each'`) |
+| `X begins singing …` | 63 / 0 | 13 / 0 | 0 / 0 | `Shalowain begins singing her Rhapsody of Pain.` - placed Npc twice over (npcs.txt **and** attacked) |
+
+So the game does hand out one clean, unowned claim: it says *your guildmate*, which is a
+statement about a real character in your guild, and it recovers more silent regulars than
+memory would for a fraction of the cost. Tells and singing are **refused on measurement**:
+player names collide with NPC names, identity is keyed by name (so a second spelling cannot
+fix it), and `Shalowain` is an NPC that sings. A tell rule would have to sit under npcs.txt
+and `Targeted (NPC)`, and it would place 425 hailers who are not this operator's raid anyway.
+
+## Memory: one import, three files, one wall clock (2026-11)
 
 > **Status: decided 2026-11, NOT BUILT.** Read every table row below as "what it will hold", because none of it exists
 > yet. What is true in the tree today:
@@ -5869,7 +5923,11 @@ attribute. Standing rule: AGENTS.md -> "A gated real-log test is disposable".
 >   WRONG file for the plan: the Names pane's Class pencil calls `PlayerRegistry.SetDefaultPlayerClass`, which writes the name
 >   into `players.txt` as a verified player (which is why the icon appears only on a Player row). Moving that claim to
 >   `Name=Kind|Class` in the override file is the unbuilt half.
-> - Aging is still `PlayerRegistry.Save()`'s 180-day **wall-clock** cut (the one this section exists to replace).
+> - Aging is still three disagreeing rules: `PlayerRegistry.Save()` cuts a player at
+>   **200 days** past their newest sighting (a row with no timestamp never expires),
+>   `IdentityPriorStore` prunes 90 days behind its **own newest row**, and
+>   **`petmapping.txt` has no expiry whatsoever** - the plan below replaces all three
+>   with one window and gives pet rows the timestamp they need to have one.
 > - Already true: `petmapping.txt` unchanged, "roster" reserved for the live `/who` groups of one capture
 >   (`RaidRosterStore`, in memory), and no `!Name` rejection anywhere.
 >
@@ -5900,7 +5958,7 @@ zero were typed - so it is machine memory and lives with machine memory; an
 operator typing a class is an override, which is why it rides in the override
 file rather than a `class.txt` of its own.
 
-Two laws keep that merger honest:
+Three laws keep that merger honest:
 
 - **`Imported` is a provenance word only the importer can write.** The prior
   store's gate is an allowlist of rule families because a row must carry what
@@ -5910,12 +5968,22 @@ Two laws keep that merger honest:
   players.txt, reason unknown" states exactly what it knows and nothing more,
   seeds identity at the strength `RegistrySeed` uses today (no name gains
   authority from being remembered), and `Record` can never produce or upgrade it.
-- **Aging reads the file's newest row, not `DateTime.Now`.** 99 of xegony's 209
-  rows sit past `Save()`'s 180-day wall clock today: a holiday plus one save
-  currently deletes half a raid. A window measured against the newest thing this
-  server has seen travels with the player and cannot do that, and still lets a
-  dead name eventually leave. The `M`/operator bit exists for completeness; no
-  shipped file used it.
+- **Aging is one wall clock, measured against `DateTime.Now`, over every durable
+  file.** Asked plainly: *if we have not seen a player or a pet in about six months,
+  drop them.* The stamp being aged is the **log time of the newest sighting** - which
+  is what `players.txt` already stores and refreshes on every newer sighting, so the
+  cut already means "gone half a year" rather than "parsed half a year ago": on
+  xegony (today 2026-10-05) 99 of 209 rows are past 180 days but only **27** are past
+  the shipped **200**, and their newest sighting is March. The two stores that persist
+  identity must then agree: pet pairs need a last-seen stamp to age at all, and the
+  prior ledger's "90 days behind my own newest row" becomes the same window against
+  now, because a ledger nobody opens currently keeps everything forever.
+- **An operator claim never ages.** `Save()`'s existing "no timestamp = permanent" is
+  already that rule for hand-typed players (the `M` bit exists but no shipped file used
+  it); extending it to overrides and Pet Map edits means a year off does not erase what
+  a human decided, while everything the parser inferred can expire. A year-old archive
+  opened today raises nothing - which is correct: replaying old logs is not evidence
+  that somebody still plays.
 
 The import runs **once**, gated on nothing but its own target already having an
 imported row - i.e. absent memory means import, present memory means never
