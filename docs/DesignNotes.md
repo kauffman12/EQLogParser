@@ -6538,3 +6538,40 @@ about the routing code.
 **The design question this leaves open** (not a test problem): should a name's Pet-ness be a parse side effect at all,
 when the capture already says it in words the timeline reads — R5's possessive forms and the cast lines? A claim that
 comes from evidence would be reproducible; one that comes from "did this process happen to verify the name first" is not.
+
+### Would an equality gate have saved anything? Measured: no — so the fight list wants an incremental update (2026-11)
+
+The proposal was to stop repainting surfaces when a derive pass changed nothing visible. Before writing the comparison,
+`LiveTailChangeProbeTest` (gated `EQLP_LIVE_TAIL_PROBE=<log> EQLP_LIVE_TAIL_PASSES=n`) replayed
+`eqlog_Incogitable_xegony.txt` as **growing prefixes** — parse and rules see only what has "arrived", as a live session does —
+projected each prefix through the engine's own entry point, and compared the fields a surface reads for the rows the grid shows
+(`RaidPet` rows excluded, since `CharmPetRows.Visible` hides them): both damage totals, hit counts, end time, dead + end-reason +
+charm, group id, and the two direction windows.
+
+**Over 11 comparisons: 0 no-op passes.** Every prefix changed something, touching a median of **188 rows** (min 21, max 1,594) out
+of ~4,835 visible. The columns that moved tell the story: `EndReason` 155 row-instances (rows being closed is the most common
+event), `DamageTotal`/`DamageHits` 44, `DamageByOwner` 33, `LastTime` 28, `Dead` 24.
+
+Two secondary results matter as much:
+
+- **The cheap stamp works but has nothing to gate.** A digest of `(visible row count, sum of damage, sum of tanking, dead count)`
+  — one integer walk, measured **0 ms** at 4,835 rows, versus **1.75 ms** to build the deep per-row content strings — produced
+  **zero false negatives and zero false positives**. So a stamp is *usable*; it just never says "same".
+- **Control: the same prefix projected twice differed in 0 rows**, at both the first prefix (78,421 facts) and the full file. The
+  parse-side-effect drift recorded above did not show up between two warmed parses of identical input. It remains a first-parse
+  vs later-parse effect, which for a hypothetical gate would mean one extra repaint at session start — harmless, but the reason a
+  gate must never be load-bearing for correctness.
+
+**What follows.** An equality gate is a mechanism that would fire almost never and cost a comparison every time. An
+**incremental row update** — touch only the rows whose content moved instead of discarding and rebuilding ~4,835 — wins in every
+case including the no-op one, because an empty diff *is* the "only when changed" behaviour, obtained for free rather than as a
+separate check. It also fixes things an equality gate cannot: the wholesale swap is why selection has to be re-found by name +
+start time (`FightKey`), and it is where flicker comes from.
+
+Caveat stated plainly, because it is the one thing this study cannot see: 12 prefixes over 1.9 M facts means each simulated pass
+covered ~160 k facts, while a live pass covers roughly a second (tens of facts). The passes nobody would skip are therefore
+measured at coarse granularity; heal-only stretches — the realistic no-op shape, since heals bump the captured count but open no
+fight row — are averaged away at this size. Measuring those properly means folding a real increment stream (parse once, then
+`FightProjectionCache` over growing fact windows), which is the same machinery the production pass uses and would be the natural
+instrument if someone wants the finer number. The decision above does not depend on it: incremental updating wins whether the
+no-op share is 0 % or 40 %.

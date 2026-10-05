@@ -803,7 +803,9 @@ npcs.txt; it is the *only* evidence for **6** names (Incogitable) and **4** (Kiz
   Keep a gated test only when something must be *asserted* on real data no fixture can reach: `LiveFightsRealLogTest`
   (a row live at its own last activity), `IncrementalClassificationTest`/`DeriveIncrementBenchmarkTest` (carried pass ==
   full replay, plus the projection/classification split named as the re-measure command), `UnrowedFactsTest`,
-  `MeterBoardCostRealLogTest`/`RealLogBenchTest` (named cost probes). Deleted on those terms:
+  `MeterBoardCostRealLogTest`/`RealLogBenchTest` (named cost probes) and `LiveTailChangeProbeTest`
+  (`EQLP_LIVE_TAIL_PROBE` — replays a capture as growing prefixes and prints which rows a pass actually changes; its answer
+  killed the equality-gate proposal and is in DesignNotes). Deleted on those terms:
   `RegistryRebuildTest` (phase exit gate satisfied, recall figures recorded in DesignNotes) and `HitByNpcCensusTest`
   (premise dead with the rule it proposed) — so a comment or doc that cites a deleted census is a bug to fix, not a
   reference to preserve. Before deleting anything here, run it: a one-off measurement is worth more executed twice
