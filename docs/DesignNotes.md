@@ -6425,3 +6425,78 @@ class writer + read precedence flip + the three operator call sites retargeted; 
 `twin?` census over all 17 write sites measured on captures (the `ChatDB` trio publishes nothing rules consume and goes first);
 the five `NeedProcessing_*` tests re-pinned, then the callback dropped from `NeedProcessing` and `LogProcessor`; writes and
 reader of `players.txt` retired together; pet-owner edits written to the lane; observed class windows stay memory-only forever.
+
+## Boundary defects the classification review found (2026-11)
+
+The branch's core — evidence, verdicts, incremental folding — measured well. All four defects were at a **boundary** between
+the new engine and something old on the other side: an event, a cache, a cadence, a dropped fact. Each one is silent, which is
+what they have in common and why they survived a green suite.
+
+**A subscription held by a lambda dies only with the publisher.** `DamageStatsBuilder`/`EncounterStatsBuilder` subscribe to
+`DeriveEngine.Derived`, a **static** event, from their constructors — and every meter refresh news up a builder while the engine
+lives for the whole session. Measured on a 2-row board: **+118 KB retained per refresh, flat after GC**, so an 8-hour raid night
+with one refresh a minute leaked ~5.6 MB of live stats graphs that also got walked on every `Derived` raise (superlinear). The
+previous owner unsubscribed in `Dispose`; the derived port moved construction into `UpdateStats` and dropped that, which is how a
+mechanical leak looked like a working feature. The builders are **now subscribers by design** — `Derived` delivers exactly what
+`UpdateStats` needs and they re-window it themselves (`GenerateStatsOptions.Fights`/`Heals`), which the legacy fan-out through
+`ProcessData` never did. So each registers a named handler in its own static `Initialize()` (the seam that used to register an
+empty delegate, same trigger, no ordering risk) and **`UpdateStats` unsubscribes before subscribing** — idempotent under repeated
+`Reset()`, self-healing if a caller ever builds one directly. The rule for anyone else subscribing to this event: the subscription
+belongs on something that outlives the instance. `DerivedBoardSubscriptionTest`.
+
+**A cached materialization must stamp every input, including a boolean.** `FightFactIndex.CachedSummary` carried counts and time
+bounds but not `Dead`, so a row whose next fact was its killing blow grew from 100 to 300 damage while its summary kept serving the
+previous pass's number: the cache gate's own comment reasoned out loud that "hits alone cannot catch an unchanged-total append" and
+still omitted the flag. `DerivedFight.Dead` has three setters (`MarkDead`, a charmed window, a carry restoring it) and **none of
+them touches a time**, so no ordinal bound can ever witness that flip; the same argument kills `GroupId`, set by a post-projection
+stamper, and it is in the stamp too. `LastPassContinued` already rebuilds every fight on a resumed pass, which is why this needed a
+real capture to notice rather than a unit test. Assert **the summary's number**, never "a summary object was returned" — the old
+fixture asserted non-null and passed while wrong. `ACacheStampSeesADeath`.
+
+**Quiescence must be measured over work owed, not work delivered.** The cheap derive lane runs the projection only, so on a quiet
+capture `ProjectedTotal == CapturedTotal` while the rule book still owes every fact from the last cheap pass — and the pump compared
+those two numbers, saw them hold still for two ticks, retired the count **before** `RunPassAsync` could consume it, and answered
+`None` forever. The end of a load is precisely when classification matters most (it is when the rules first see the whole capture),
+and the only recovery was re-opening the log or the ~21 s full pass a busy tail never reaches — so a fight list that looked complete
+was being drawn from unclassified facts, with no error anywhere. `DeriveCadence.Decide` now takes the watermark of the last **full**
+pass and opens the cheap lane on `projected > lastFull || (projected == captured && captured != classified)`. The debt term is
+checked AFTER still-growing/bulk cases; the full pass clears the debt first (cheap at T2 would otherwise clear it with no rule run at
+all); bulk parks both lanes — a read at ~170k facts/s must not spend 400 ms classifying each pump, and a load ends in quiet anyway.
+Assert which lane is due, never merely that one ran: a `ProjectionOnly` answers "is the file done" and nothing else.
+`QuietOpensAFullPassWhileTheRuleBookStillOwesFacts`.
+
+**R21 answers what a NAME is; it may not decide what a FACT did.** A caster-less line (`Goratoar has taken 18724 damage from
+Slicing Energy by .`) puts the SPELL in the attacker field, so both endpoints read NPC-side — the spell because R21 says it is not a
+person, the mob because a placed name hits a placed mob — and the branch built to drop mob-on-mob noise deleted the raid's own dot
+damage with it: **382 facts / 32,932,003 damage** on `eqlog_Incogitable_xegony.txt`, and a one-fact fixture produced no fight row at
+all. Legacy counted it (`FightManager`'s `record.AttackerIsSpell && defender` re-decision), so the derived surfaces read low with no
+exception. Routing now keys such a fact on its **defender** and credits nobody: an encounter's damage is what landed on it, whether
+or not the log could name who put it there; keeping it unrouted instead would leave every DPS denominator divided over the kills and
+swings and nothing else. Restoring it moved that capture's row-damage total 581,308,025,638 → **581,336,319,803** (+28,294,165; the
+gap to 32.9M is facts whose defender has no row for other reasons) and rows 4,661 → 4,662.
+
+The second half was not optional: the damage grid puts **one row per `record.Attacker`**, so after routing alone a curse would have
+been listed as a damage dealer with its own DPS column beside real raiders. `FightSummarySource.RecordFrom` now writes `Labels.Unk`
+for exactly the case legacy wrote it for — caster-less line, target not one of ours — and keeps the noun when the target IS ours,
+because that exchange is the tanking half of a fight against the spell itself. The target question is asked of the index's own
+`EntityTimeline`, not of `IdentityLookup`: that seam needs `DeriveEngine`'s `LiveVerdict` hook wired, and a summary can be
+materialized by anything holding a timeline and no session (the test helper now builds its index the way `FightProjectionCache`
+does, so materialization is tested against production's wiring rather than a leaner one). `ASpellsDamageOnAMobStillCountsAsDamageToThatMob`.
+
+**A board may not answer "who owns this name?" for a whole selection.** `DamageStatsBuilder` folded every record of a pet name
+under one owner: it asked `IdentityLookup.OwnerOf(attacker)` **untimed** and cached `_petToPlayer[name]`, last write winning, so a
+mob charmed twice in one selection — leashed by Firstowner, unfriended, recharmed by Secondowner — printed 100 + 200 as a single
+`Secondowner +Pets = 300`, a number nobody dealt. The record already carries the truth (a derived record's `AttackerOwner` comes
+from the line's own possessive word or the charm window the fact fell in, resolved at the fact's own second), and the fold now asks
+the record first, falling back to the per-name map only for records that carry nothing (stored records from a previous session).
+The untimed lookup is still right where the question really is untimed — "whose pet is this now", a menu's enable rule, a row being
+labelled — which is why the fix prefers rather than deletes it. `EachOwnerOfOneCharmNameKeepsItsOwnShare` fails without it (the
+first owner's row does not exist at all), and needs a mob-target fixture: a charmed name beating on a *raider* reads friendly fire
+and is dropped by design, so that shape produces no rows and the test would pass on an empty board.
+
+**What the review left open on purpose.** The pet-map editing surface in `MainWindow` (and the "set as pet of" entries on the two
+summary panes) still writes `petmapping.txt`, so legacy memory remains a write target while charm-derived owners reach the boards
+through `OwnerOf` instead of appearing in that list; `IdentityLookup.OurPetOwners()` already unions the lanes for reading. Deleting
+the write path would take away the only way an operator fixes an ownerless pet, so it stays a product decision rather than a
+cleanup — see "Definition of done" below. Mercenary was *not* left as a writable verdict: `IdentityVocabulary.TypeOptionsFor`
+offers it only on a row that already reads Mercenary (or one the operator claimed), so no dropdown can move a raider onto that kind.

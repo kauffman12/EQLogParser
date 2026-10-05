@@ -315,8 +315,21 @@ namespace EQLogParser
                       _raidTotals.Total += record.Total;
                       StatsUtil.UpdateDamageStats(stats, record, isNewFrame, isAttackerPet);
 
-                      if ((!_petToPlayer.TryGetValue(record.Attacker, out var player) && !_playerPets.ContainsKey(record.Attacker))
-                      || player == Labels.Unassigned)
+                      /*
+                       * Whose pet is this? The record's own answer first. A derived record carries the owner this LINE said,
+                       * or the owner of the charm window this fact fell inside (FightSummarySource.OwnerOf), and a name can be
+                       * possessed twice in one selection — a mob charmed by one raider, unfriended, recharmed by another — where
+                       * an untimed lookup answers with the LAST owner for every record of that name. Measured before this line
+                       * existed: 100 damage for Firstowner and 200 for Secondowner came out as a single "Secondowner +Pets = 300",
+                       * a number nobody did.
+                       *
+                       * The per-name map stays for records the capture never attributed (stored records from a previous session,
+                       * whose AttackerOwner is empty) — it is the fallback, not the authority.
+                       */
+                      var player = !string.IsNullOrEmpty(record.AttackerOwner) ? record.AttackerOwner
+                        : _petToPlayer.TryGetValue(record.Attacker, out var mapped) ? mapped : null;
+
+                      if ((player is null && !_playerPets.ContainsKey(record.Attacker)) || player == Labels.Unassigned)
                       {
                         topLevelStats[record.Attacker] = stats;
                         stats.IsTopLevel = true;
@@ -538,8 +551,10 @@ namespace EQLogParser
 
     private void UpdatePetMapping(DamageRecord damage)
     {
-      var petName = IdentityLookup.OwnerOf(damage.Attacker);
-      if ((!string.IsNullOrEmpty(petName) && petName != Labels.Unassigned) || !string.IsNullOrEmpty(petName = damage.AttackerOwner))
+      // The owner the record itself carries wins; the untimed lookup is the fallback for records that carry none (see the
+      // fold in ComputeDamageStats, which does the same and is where an untimed answer would move damage to the wrong person).
+      var petName = !string.IsNullOrEmpty(damage.AttackerOwner) ? damage.AttackerOwner : IdentityLookup.OwnerOf(damage.Attacker);
+      if ((!string.IsNullOrEmpty(petName) && petName != Labels.Unassigned))
       {
         if (!_playerPets.TryGetValue(petName, out var mapping))
         {

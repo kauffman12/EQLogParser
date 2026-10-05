@@ -71,6 +71,48 @@ public class DerivedTotalsTest
         return Derive(facts, timeline);
     }
 
+    /*
+     * One mob charmed twice inside one selection — leashed by Firstowner, unfriended, recharmed by Secondowner. Each raider's
+     * board must show the damage their own window held: the fold used to ask WHO OWNS THIS NAME (untimed, answered once for the
+     * whole board) and every record of that name landed under whoever held the leash last, so 100 + 200 printed as a single
+     * "Secondowner +Pets = 300" — a number nobody dealt.
+     *
+     * The index here carries the timeline the way FightProjectionCache does, because the materialized record gets its owner from
+     * that classification: an empty timeline answers null and the fold falls back to the untimed lookup, which is exactly the
+     * behaviour this test exists to make impossible.
+     */
+    [TestMethod]
+    public void EachOwnerOfOneCharmNameKeepsItsOwnShare()
+    {
+        // The leashed mob beating on the raid's target: a charmed name's own damage is counted (it is the raid's output), and
+        // it is folded onto whoever held it. Beating on a RAIDER instead would read as friendly fire and be dropped by design.
+        var facts = BuildFacts(
+            ("A vexed hound", "Grimling", 100, 0, LabelTypes.Melee),
+            ("A vexed hound", "Grimling", 200, 6, LabelTypes.Melee));
+
+        var timeline = new EntityTimeline();
+        timeline.SetIdentity("Illuminai", IdentityKind.Player, RuleStrength.Strong, "R3-joinraid");
+        // Two charm windows on one name: friendly to Firstowner for the first seconds, then to Secondowner. The source
+        // word is what marks a window as a CHARM rather than a raid buff (EntityTimeline.OwnerOf).
+        timeline.AddAffiliation(AffiliationKind.Friendly, "A vexed hound", T0, T0 + 5, 9, "R9-charm", "Firstowner");
+        timeline.AddAffiliation(AffiliationKind.Friendly, "A vexed hound", T0 + 3, T0 + 10, 9, "R9-charm", "Secondowner");
+
+        ClassificationRules.Apply(facts, timeline);
+        var index = new FightFactIndex(timeline);
+        var rows = FightProjection.Build(facts, timeline, index.OnFact);
+        Sectionizer.StampGroupIds(rows);
+
+        var board = DerivedTotals.For(rows, index, facts, new HealFactTable(facts))?.CombinedStats;
+        Assert.IsNotNull(board);
+
+        foreach (var (who, amount) in new[] { ("Firstowner", 100L), ("Secondowner", 200L) })
+        {
+            var row = board.StatsList.FirstOrDefault(s => s.Name == who + " +Pets");
+            Assert.IsNotNull(row, $"{who} lost a leashed mob's damage to whoever held it last");
+            Assert.AreEqual(amount, (long)row!.Total, "each window answers for its own seconds");
+        }
+    }
+
     private static DerivedFight Row(List<DerivedFight> rows, string name)
         => rows.First(r => r.Name == name);
 
