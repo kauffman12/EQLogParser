@@ -187,6 +187,15 @@ public class UnrowedFactsTest
             Console.WriteLine($"[census] {Path.GetFileName(path)}");
             Console.WriteLine($"[census]   facts {facts.FactCount:N0} | rows {rows.Count:N0} | damage-side {index.DamageFactCount:N0}"
               + $" | tanking-side {index.TankingFactCount:N0} | unrouted(Neither) {index.UnroutedFactCount:N0}");
+            // The process state a census silently inherits. Identity reads all three — the ledger, the operator's file, and the
+            // spell names this process LEARNED while parsing (EQDataStore.UnknownSpellCount) — so a split that moves between runs
+            // is diagnosed by which number here moved, not by arguing about the routing code.
+            Console.WriteLine($"[census]   PROCESS STATE priors server='{IdentityPriorStore.Instance.ServerName}' count={IdentityPriorStore.Instance.Count}" +
+              $" rosterRows={IdentityPriorStore.Instance.HasRosterRows} petRows={IdentityPriorStore.Instance.HasOwnerRows}" +
+              $" | overrides count={IdentityOverrideStore.Instance.Count}" +
+              $" | learned spells={EQDataStore.Instance.UnknownSpellCount:N0}" +
+              $" | registry players={PlayerRegistry.Instance.GetVerifiedPlayers().Count:N0} pets={PlayerRegistry.Instance.GetVerifiedPets().Count:N0}" +
+              $" | heals={run.HealFacts.HealCount:N0}");
             Console.WriteLine($"[census]   UNROWED {unrowed:N0} facts ({(facts.FactCount == 0 ? 0 : 100.0 * unrowed / facts.FactCount):0.##} %),"
               + $" {unrowedDamage:N0} damage; claimed+unrowed == total: {claimed.Count + unrowed == facts.FactCount}");
             foreach (var pair in byPair.OrderByDescending(p => p.Value).Take(10))

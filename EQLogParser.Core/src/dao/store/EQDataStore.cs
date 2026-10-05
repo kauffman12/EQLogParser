@@ -463,6 +463,14 @@ namespace EQLogParser
     }
 
 
+    /*
+     * How many spell names this process has been told about but holds no data for — the size of R21's second feed (a cast
+     * line resolves its token through AddUnknownSpell), and the reason the store is per-run state rather than read-only data:
+     * parsing one capture changes which names the NEXT parse considers "a spell the game printed", which reaches identity and
+     * therefore the fight rows. `Clear` empties it; tests that measure a capture reset it first (PipelineHarness).
+     */
+    internal int UnknownSpellCount => _unknownSpellDb.Count;
+
     internal SpellData AddUnknownSpell(string spellName)
     {
       if (!_unknownSpellDb.TryGetValue(spellName, out var result))

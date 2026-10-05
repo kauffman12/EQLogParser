@@ -76,6 +76,10 @@ internal static class PipelineHarness
     internal static void EnsureDataStore()
     {
         Environment.CurrentDirectory = AppDomain.CurrentDomain.BaseDirectory;
+        // Host injection mirroring App.xaml.cs (the app supplies resx labels; the default
+        // lookup returns null, which would leave EQDataStore's class maps empty headless).
+        CombatRecordLookup.ClassLabelByEnumName = ClassLabel;
+
         if (_dataStore == null)
         {
             // Host injection mirroring App.xaml.cs (the app supplies resx labels; the default
@@ -136,11 +140,29 @@ internal static class PipelineHarness
         // Clear parser state left by other tests in this process (assembly is serialized, not isolated).
         DamageLineParser.ResetProcessState();
 
+        // The heal stream's repeat store is static process state (AGENTS: "The heal store and its RepeatFilter are
+        // static"), so each capture gets its own first-sighting semantics. Hygiene, not the fix for the residue noted below:
+        // clearing it does NOT bring the missing pet claims back (measured).
+                HealingLineParser.ClearCaches();
+
         // The registry is a process-lifetime singleton the parsers read for every name lookup;
         // without this, verifications from earlier tests' logs leak into this run's routing
         // (measured: the same real log compared as 4473 vs 4274 current fights across two runs).
         // Same pattern LineParsersTest uses. In tests ConfigUtil.ServerName is empty, so Clear()
         // does not Save() anything.
+        //
+        // WHAT THESE RESETS DO NOT REACH — measured 2026-11 by running eqlog_Incogitable_xegony.txt TWICE in one process
+        // (same file, same 1,891,875 facts, same 420,115 heals): the first parse routes 102,420 facts tanking-side, the second
+        // 104,126. The difference is four names' worth of Pet claims that `AddVerifiedPet` registers while parsing and a later
+        // parse in the same process does not — verified pets 182 -> 178, verified players unchanged at 534; the names are
+        // Squirticus (1,625 facts), Plimpy (61) and Stormclaw (20). Each rides `IsRaidVictimAt` on its DEFENDER, so losing the
+        // claim moves facts from the tanking board into the unrouted drop: same total, different split, nothing throws.
+        // Ruled out by measurement (identical in both orders): IdentityPriorStore (0 rows), IdentityOverrideStore (0), the learned
+        // spell set (14), a freshly CONSTRUCTED EQDataStore per run, and HealingLineParser's repeat cache.
+        // So: **one real-log capture per process** if the number matters, or treat every parse after the first as history-dependent.
+        // The census in UnrowedFactsTest prints the state line that locates this class of drift in one look. The open design
+        // question — not a test problem — is whether Pet-ness should be a parse side effect at all when R5's possessive words and
+        // the cast lines already say it on the timeline.
         PlayerRegistry.Instance.Clear();
 
         Action<DamageProcessedEvent>? observer = null;

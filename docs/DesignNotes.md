@@ -6500,3 +6500,41 @@ through `OwnerOf` instead of appearing in that list; `IdentityLookup.OurPetOwner
 the write path would take away the only way an operator fixes an ownerless pet, so it stays a product decision rather than a
 cleanup — see "Definition of done" below. Mercenary was *not* left as a writable verdict: `IdentityVocabulary.TypeOptionsFor`
 offers it only on a row that already reads Mercenary (or one the operator claimed), so no dropdown can move a raider onto that kind.
+
+### Pet-ness is a parse side effect, so the second parse of a capture in one process reads differently (2026-11)
+
+Measured by running `eqlog_Incogitable_xegony.txt` **twice inside one test process** — same file, same
+1,891,875 damage facts, same 420,115 heals, same 4,840 rows:
+
+| parse | damage-side | tanking-side | unrouted (Neither) | registry pets | registry players |
+|---|---|---|---|---|---|
+| first in process | 1,500,010 | **102,420** | 287,325 | **182** | 534 |
+| second in process | 1,500,010 | **104,126** | 285,619 | **178** | 534 |
+
+The whole difference is four names. `Squirticus` (1,625 facts), `Plimpy` (61) and `Stormclaw` (20) read
+`Pet / RegistrySeed` on the first parse and `Unknown` on the second — 1,706 facts, exactly the amount that moved
+between the tanking board and the unrouted drop. Same damage total, different split, nothing throws: the projection
+asks `IsRaidVictimAt(defender)` per fact, and an unplaced defender answers raid-side while a Pet does not.
+
+Why they are claims rather than facts: no log line says "this is a pet". The name becomes a verified pet as a
+**side effect of parsing** — `HealingLineParser` registers the target of a ``Ziggy`s pet`` heal, `CastLineParser`
+registers the target of a spell whose stored row targets Pet/Pet2 — and `RegistrySeed` then seeds those names at
+strength 8 for the classification pass. The second parse reaches those same lines and does not register them, so
+something the parser consults on the way to `AddVerifiedPet` has already been spent by the first parse.
+
+What was ruled out **by measurement**, in the order tried (each of these was identical in both orders): the identity
+ledger (`IdentityPriorStore`, 0 rows — nothing writes it outside `DeriveEngine`), the operator override file (0), the
+learned-spell set (`EQDataStore.UnknownSpellCount`, 14 in every order), constructing a **brand-new** `EQDataStore` per
+run instead of reusing the singleton, and `HealingLineParser.ClearCaches()`. So the residue is not any store the
+harness can reset; it lives in the interaction between parser-side verification and process-lifetime state.
+
+**The rule that follows for measurement:** a board number taken from a real log means something only from **one
+capture per process**. Every figure quoted in these notes for `Incogitable` came from an isolated run, so they stand;
+anything read out of a mixed filtered run is history-dependent and must be re-measured. `UnrowedFactsTest`'s census
+now prints one line with everything that could differ — ledger rows, override count, learned spells, registry player
+and pet counts, heal count — because the way to find this class of drift is to see which number moved, not to argue
+about the routing code.
+
+**The design question this leaves open** (not a test problem): should a name's Pet-ness be a parse side effect at all,
+when the capture already says it in words the timeline reads — R5's possessive forms and the cast lines? A claim that
+comes from evidence would be reproducible; one that comes from "did this process happen to verify the name first" is not.

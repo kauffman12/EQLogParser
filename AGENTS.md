@@ -808,6 +808,15 @@ npcs.txt; it is the *only* evidence for **6** names (Incogitable) and **4** (Kiz
   (premise dead with the rule it proposed) — so a comment or doc that cites a deleted census is a bug to fix, not a
   reference to preserve. Before deleting anything here, run it: a one-off measurement is worth more executed twice
   than argued about (docs/DesignNotes.md → "What a capture proves with empty memory").
+- **A real-log board number comes from one capture per process** (2026-11): parsing the same file a second time inside
+  one process changes which names are verified pets — on Incogitable, 102,420 tanking-side facts on the first parse and
+  **104,126** on the second, the difference being exactly `Squirticus`/`Plimpy`/`Stormclaw` losing a `Pet / RegistrySeed`
+  claim (verified pets 182 → 178, players unchanged). Pet-ness is registered as a **side effect of parsing** (a ``X`s pet``
+  heal target, a Pet-target spell target), and the ruling that follows is measurement discipline, not a fix: an isolated run
+  per capture, and re-measure anything read out of a mixed `--filter` run. The ledger, the override file, the learned-spell
+  set, a freshly constructed `EQDataStore` and `HealingLineParser.ClearCaches()` were each ruled out by measurement, so do not
+  "isolate" those again; `UnrowedFactsTest`'s census prints the PROCESS STATE line that shows which number moved. Reasoning:
+  docs/DesignNotes.md → "Pet-ness is a parse side effect".
 - **`EQLogParser.Wpf.Test`** is the Windows-only assembly (WPF and Skia surfaces, `EnableWindowsTargeting`): it builds everywhere but its
   tests need Windows to run, so `dotnet test` on the other assembly says nothing about it. Build it explicitly when touching app UI code.
 - **Releases**: when touching `sign.cmd` or `EQLogParserInstall/*.iss`, read `docs/ReleaseChecklist.md`
