@@ -64,7 +64,7 @@ public class IdentityVocabularyTest
     /*
      * Also not a rule, and for the same testable reason: no fixture writes the ledger's roster lane, so the corpus run
      * below cannot produce it. It is membership imported from players.txt (IdentityPriorStore.RosterReason), and its one
-     * word is "Imported" - never a filename, never a rule code.
+     * cell word is "Saved Roster" - never a filename, never a rule code (its code stays `Imported` inside the ledger).
      */
     IdentityPriorStore.RosterReason,
 
@@ -88,14 +88,19 @@ public class IdentityVocabularyTest
    * this application's roster, and the cell says the same word the operator would read if they opened the file. Every
    * OTHER key must be translated, which is what the count below holds.
    */
-  private static readonly string[] SelfSpelled = [IdentityPriorStore.RosterReason];
+  /*
+   * Empty, and that is the point: every code this application can put on a row now has a word of its own — including the
+   * ledger's roster lane, which used to echo "Imported" until it was given "Saved Roster". The mechanism stays because an
+   * exemption somebody forgot to remove is how jargon survives; a NEW code may only spell itself by being listed here.
+   */
+  private static readonly string[] SelfSpelled = [];
 
 
   /*
    * The evidence lines sort by IdentityVocabulary.ClaimRanks, so the same coverage discipline holds for it as for the words: every
    * source that can reach a hover says where it ranks, and nothing ranks under a name no word map knows. Both directions again —
    * a rank whose word was deleted is as much drift as a word nobody ranked. `RuleWords` is the list for both, memory lanes
-   * ("Imported", "Pet Map") included: they sit at the bottom of the table on purpose, because remembering is the weakest thing
+   * (`Imported`/"Saved Roster", `PetMap`/"Pet Map") included: they sit at the bottom on purpose, because remembering is the weakest thing
    * this application can say about a name.
    */
   [TestMethod]
@@ -154,6 +159,17 @@ public class IdentityVocabularyTest
        * (252 px at 12 pt), which holds it; a longer word has to arrive with a width decision, not steal one.
        */
       Assert.IsTrue(word.Length <= 18, $"{code} maps to a phrase too wide for the cell: {word}");
+
+      /*
+       * The HOVER is held short too, because "remember to keep them short" was said after the first sweep produced
+       * `Pet Cast Hobble of Spirits Snare VI` (35 characters of spell name nobody verifies). 28 is the longest static
+       * clause on screen today — `Name Begins With an Article` at 27 — and a clause that needs to outgrow it has to say
+       * what it looked at in fewer words, not widen the tooltip. Two clauses legitimately exceed it by carrying their
+       * proof's own name: R4's cast (`Cast Tsikut's Chant of Frost Rk. III`) and RegistrySeed's pet-map owner; this loop
+       * asks for no detail, so both answer their short form and stay inside.
+       */
+      var proof = IdentityVocabulary.ProofText(code, IdentityKind.Npc);
+      Assert.IsTrue(proof.Length <= 28, $"{code} hovers as a {proof.Length}-character sentence: {proof}");
     }
 
     // The other direction: nothing in the table that no rule can produce.
@@ -297,8 +313,8 @@ public class IdentityVocabularyTest
 
     // The roster lane of the ledger is memory too, and it says so in one clause that already contains "carried over" -
     // appending the usual " in previous log" to it would print the same sentence twice.
-    Assert.AreEqual("Imported", IdentityVocabulary.WhyWord($"{IdentityVocabulary.PriorPrefix}{IdentityPriorStore.RosterReason}"));
-    Assert.AreEqual("Remembered from This App's Roster",
+    Assert.AreEqual("Saved Roster", IdentityVocabulary.WhyWord($"{IdentityVocabulary.PriorPrefix}{IdentityPriorStore.RosterReason}"));
+    Assert.AreEqual("On the Saved Player Roster",
                     IdentityVocabulary.ProofText($"{IdentityVocabulary.PriorPrefix}{IdentityPriorStore.RosterReason}", IdentityKind.Unknown));
 
     // Your own character reads alike whichever of the two codes carried it, and hovers as a sentence.
@@ -368,7 +384,7 @@ public class IdentityVocabularyTest
   public void TheOwnerSuffixComesOffTheCell()
   {
     Assert.AreEqual("Owner in Pet Name", IdentityVocabulary.WhyWord("R5-owner:Sancus"));
-    Assert.AreEqual("Owner in the Pet's Name in previous log", IdentityVocabulary.ProofText("Prior:R5-owner:Sancus", IdentityKind.Pet));
+    Assert.AreEqual("Owner in Pet's Name in previous log", IdentityVocabulary.ProofText("Prior:R5-owner:Sancus", IdentityKind.Pet));
 
     // A called pet names who called it, because that line IS the sighting.
     // The line names the summoner, so the words say what THEY did — "Called by X" belonged to the backwards reading,
@@ -391,7 +407,7 @@ public class IdentityVocabularyTest
     Assert.AreEqual("Left Raid", IdentityVocabulary.ProofText("R3-leaveraid", IdentityKind.Player));
     Assert.AreEqual("Led the Raid", IdentityVocabulary.ProofText("R3-leader", IdentityKind.Player));
     Assert.AreEqual("Cast Spire of Arcanum", IdentityVocabulary.ProofText("R4-spell:Spire of Arcanum", IdentityKind.Player));
-    Assert.AreEqual("Pet Cast Hobble of Spirits Snare VI",
+    Assert.AreEqual("Cast Pet Spell",
                     IdentityVocabulary.ProofText("R20-petspell:Hobble of Spirits Snare VI", IdentityKind.Pet));
     Assert.AreEqual("Healed by 20 Raiders", IdentityVocabulary.ProofText("R15-healed", IdentityKind.Player, 20));
     Assert.AreEqual("Healed by Players", IdentityVocabulary.ProofText("R15-healed", IdentityKind.Player),

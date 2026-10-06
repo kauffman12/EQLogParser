@@ -268,19 +268,19 @@ internal static class IdentityVocabulary
      * (the operator cannot open what this window points at) and no rule code, because no rule wrote it.
      */
     if (code == IdentityPriorStore.RosterReason)
-      return "Remembered from This App's Roster";
+      return "On the Saved Player Roster";
 
     // The ledger's ownership lane (petmapping.txt's heir): same shape as the roster row above — memory rather than a rule,
     // and the sentence has to say WHICH of the two files' worth of memory this is, because a mapping can outlive both the
     // pet and the claim that it was ever a pet.
     if (code == IdentityPriorStore.OwnerReason)
-      return "Remembered from This App's Pet Map";
+      return "On the Saved Pet Map";
 
     var text = code switch
     {
       "R0-local" => "Your Own Name",
       "R1-target" => "From /target",
-      "R1-conflict" => "Targeted as Both NPC and Player",
+      "R1-conflict" => "Targeted as NPC and Player",
       "R2-who" => "From /who",
       "R3-chat" => "From Chat",
       "R3-joinraid" => "Joined Raid",
@@ -294,7 +294,7 @@ internal static class IdentityVocabulary
       "R5-companion" => "Summoned a Companion",
       // The name itself is the evidence, and the phrase now says WHICH name: the pet's (asked directly: "instead of
       // Owner in Name can the tooltip say Owner in Pet Name to be more clear?").
-      "R5-owner" => "Owner in the Pet's Name",
+      "R5-owner" => "Owner in Pet's Name",
       // npcs.txt is the game's creature database this app ships, and "NPC DB" is what an operator calls it.
       "R6-npcdb" => "In the NPC DB",
       // No "It " prefix (every other clause starts with what the name did) and no "mobs": the app's word is NPC.
@@ -320,7 +320,9 @@ internal static class IdentityVocabulary
       // Not "our": a capture says who healed whom, not whose side the reader is on.
       "R18-healedpet" => "Healed by a Player Pet",
       "R19-eyeowner" => "Hit Their Own Eye",
-      "R20-petspell" => detail is null ? "Cast by a Pet" : $"Pet Cast {detail}",
+      // No spell name: the detail was the longest string on the pane for information nobody checks ("which pet spell?"),
+      // and the cell word already says what it is. Asked directly: "Pet Cast Hobble of Spirits can just say Cast Pet Spell".
+      "R20-petspell" => "Cast Pet Spell",
 
       /*
        * R21's three proofs, phrased so the CELL can carry the plain kind word ("Spell") and the hover carry the
@@ -471,7 +473,7 @@ internal static class IdentityVocabulary
      * it is listed here and in the test's word list beside the rules: an unmapped code echoes itself on screen, and
      * "Imported" echoing as "Imported" would read as a bug report rather than as where the name came from.
      */
-    [IdentityPriorStore.RosterReason] = "Imported",
+    [IdentityPriorStore.RosterReason] = "Saved Roster",
 
     /*
      * The ledger's ownership lane, and the same argument as the row above: no fixture writes it, so the corpus run beside

@@ -411,6 +411,10 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   covering **each other in both directions**, so a new rule cannot reach a hover and sort by accident. Two traps that look like free
   wins: an evidence line may **not** be just a verdict word, but it MAY name a source containing one (*In the NPC DB*) — that
   assertion was written too broadly and the test caught it (the app's word for a hostile name is **NPC**, never "monster" or "mob");
+  **AND NOTHING IS LONG**: a static hover clause is capped at 28 characters (`EveryRuleWordHasAWordWorthPrinting`), measured max 27
+  (*Name Begins With an Article*), because the first sweep shipped `Pet Cast Hobble of Spirits Snare VI` — 35 characters of spell name
+  nobody verifies, now **Cast Pet Spell**. Only two clauses may outgrow it, and only by carrying their own proof's name: R4's cast and
+  RegistrySeed's pet-map owner. Cell words stay ≤ 18 (*Owner in Pet Name* is the widest).
   and direction is decided from the **final (+∞)** verdicts so a sentence can
   never contradict the Type column beside it (charm windows are deliberately not consulted: *"Damaged Players"* means "hit names this
   capture called players"). **The cost law came with the request** ("I dont want memory to go up significantly"): `IdentityKind[]` +
@@ -475,7 +479,8 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   Reasoning: docs/DesignNotes.md → "A veto nobody could switch on".
 - **Roster memory is the ledger's second lane; one import fills it, and `players.txt` stays live until the commit that stops
   writing it.** `identity-priors.txt` carries per name both the rule verdict *and* "this application called this name one of
-  ours" (`Ours`, plus the class it was seen casting) under the provenance word `Imported`. Membership is **not** a verdict:
+  ours" (`Ours`, plus the class it was seen casting) under the provenance word `Imported` — the code inside the file, which the
+  Names pane renders as **Saved Roster** / *On the Saved Player Roster* (codes stay machine words; only what a person reads changed). Membership is **not** a verdict:
   Kind stays `Unknown`, `Record` can neither set nor upgrade the bit (a name on the list for a decade may be called Npc by
   every pass), and roster rows are exempt from the rule lane's 90-day and `MaxEntries` pruning — they age on the single dial
   `PlayerRegistry.StaleDays` = **200** against `DateTime.Now`, and `SeenAtS <= 0` is a statement that never retires.

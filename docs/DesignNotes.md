@@ -7117,5 +7117,18 @@ column automatically rather than clipping, and `IdentityVocabularyTest` keeps Wh
 raised from 14 for *Owner in Pet Name*, whose whole content is naming whose name carries the owner (the Why column is
 252 px wide and holds it).
 
+**Then they were cut short (same day).** "remember to keep them short" arrived with two concrete cases, and both names were
+longer than the fact they carry: `Owner in the Pet's Name` → **Owner in Pet's Name** (19), `Pet Cast Hobble of Spirits Snare VI`
+→ **Cast Pet Spell** (14 — the spell name was the longest string on the pane and nothing verifies it), `Targeted as Both NPC
+and Player` → **Targeted as NPC and Player**. The two memory hovers were rewritten because "Remembered from This App's Roster"
+asked *remembered what?*: **On the Saved Player Roster** (26) and **On the Saved Pet Map** (20), with the roster lane's cell
+word going from `Imported` (which is the ledger's internal provenance code, still written to file) to **Saved Roster**. That
+last one emptied the test's `SelfSpelled` exemption list — the lane had been allowed to echo its own code, and nothing on
+screen does that now, so the mechanism stays as a guard an author must deliberately use.
+
+The shortness law is asserted rather than remembered: every detail-free proof clause must fit **28 characters** (max today 27).
+`Cast Tsikut's Chant of Frost Rk. III` and `In the Pet Map as Sancus's` are the two clauses that grow, and they grow because the
+name IS the proof; a new clause that wants more room rewords itself instead of widening the tooltip.
+
 Suite after the sweep: **1,681 passed / 10 env-gated skipped**, solution builds with **0 warnings**. `EQLogParser.Wpf.Test`
 (NamesTableTest's cell/width assertions) still needs its Windows run along with the other pending UI items.
