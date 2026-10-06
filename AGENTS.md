@@ -694,7 +694,12 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
 - **Healing is a second fact table, never extra columns on the damage one**: `HealFactTable` shares the damage table's name
   pool and its sequence counter (`IFactTable.NextSeq()`), and nothing else. One array of the union (42 B) sat **57 % full of
   zeros** at capacity — measured with a temporary probe, not estimated — because each side's tail fields are words the other's
-  log lines cannot write; split, they are 32 B and 40 B. The stronger reason is that `DamageFactsByFight` is a **contiguous
+  log lines cannot write; split, they are **32 B each** — and the heal row reaches 32 by *field order*, not by trimming:
+  its ten fields want 30 bytes, but declaring `Seq` (int) before `TimeS` (long) opened four bytes of alignment pad and
+  eight of tail pad for **40**, so a new field goes where its width earns a place (wide → narrow: long, `uint`s, `int`,
+  two-byte fields, bytes) and `AFactIsItsMeasuredSizeNotWishes` is what sees it drift — the CLR may reorder fields, so a
+  struct size is a fact about this build, and only the assertion makes padding change visible (32 MB on a 4 M-heal night,
+  all of it overlapping any future chunking/compression work, so don't count that saving twice). The stronger reason is that `DamageFactsByFight` is a **contiguous
   ordinal run** (the spine is fight-major, time ascending inside it), so a shared array would force every heal to carry a
   `FightId`, and heals outside a fight are the healing report, not an edge case: 16,947 events on the reference capture, heal-only,
   because a heal opens no fight. Three laws, all pinned by `HealFactCaptureTest`: **one sequence across both tables** (each

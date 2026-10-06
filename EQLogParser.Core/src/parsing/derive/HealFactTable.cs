@@ -19,8 +19,8 @@ namespace EQLogParser
    * "who hit whom". If the two streams ever turn out to want the same treatment, this file and its tap are
    * one deletion away from folding into DamageFactTable; the projection is where that decision will show up.
    *
-   * 40 B/fact (see the size test). Heal lines run at roughly a quarter of the damage rate on the logs
-   * measured here, so on a 5 M-damage-fact log this table costs ~50 MB against damage's 160 MB — and it is
+   * 32 B/fact (see the size test). Heal lines run at roughly a quarter of the damage rate on the logs
+   * measured here, so on a 5 M-damage-fact log this table costs ~40 MB against damage's 160 MB — and it is
    * counted in the same D2 memory estimate (EstimatedBytes).
    */
   internal readonly struct HealFact
@@ -41,12 +41,21 @@ namespace EQLogParser
     public const byte FlagHealerPlayerSide = 2;
     public const byte FlagHealedPlayerSide = 4;
 
-    // Shared sequence with the damage stream (one counter in CombatCapture), so a heal and a hit that
-    // happen between two timestamps keep the order the consumer saw them in.
-    public readonly int Seq;
+    /*
+     * FIELD ORDER IS THE LAYOUT. Declaration order here is 32 bytes; the same ten fields in the order this
+     * struct shipped in are 40 — an `int` declared before the lone `long` costs four bytes of alignment pad at
+     * offset 4, and eight bytes of tail pad then push the row past 32. That is eight bytes on every heal the
+     * engine keeps (32 MB off a night that stores 4 M of them), so the rule for this struct is: widest field
+     * first, then the four-byte fields, then the two-byte ones, then the bytes.
+     *
+     * Nothing here narrows: no time range, amount, participant index or modifier was shortened to fit. The CLR
+     * is allowed to reorder fields, so the layout is a fact about this build rather than a promise — which is
+     * why HealFactCaptureTest asserts the size and this comment points at that assertion.
+     */
+
+    // dotnet-epoch seconds as the parser fires them (~6.4e10 in the 2020s): long is required, an int overflowed
+    // silently and corrupted every timestamp (see DamageFact.TimeS).
     public readonly long TimeS;
-    public readonly short HealerIdx;
-    public readonly short HealedIdx;
 
     /*
      * What landed, and what the line asked for: "for 3461 (60581)" is Total 3461, OverTotal 60581, and the
@@ -60,8 +69,13 @@ namespace EQLogParser
      */
     public readonly uint Total;
     public readonly uint OverTotal;
-    public readonly byte TypeId;    // LabelTypes.Heal or LabelTypes.Hot
-    public readonly byte Flags;
+
+    // Shared sequence with the damage stream (one counter in CombatCapture), so a heal and a hit that
+    // happen between two timestamps keep the order the consumer saw them in.
+    public readonly int Seq;
+
+    public readonly short HealerIdx;
+    public readonly short HealedIdx;
 
     // HealRecord.ModifiersMask as parsed (-1 when the line carried no modifier text). The healing board's
     // filters read it, so a derived board needs it for the same reason damage does.
@@ -70,6 +84,9 @@ namespace EQLogParser
     // Spell name index ("Heroic Renewal Rk. II"), which is what HealRecord.SubType holds and what
     // StatsUtil.CreateRecordKey builds its activity windows from.
     public readonly ushort SubIdx;
+
+    public readonly byte TypeId;    // LabelTypes.Heal or LabelTypes.Hot
+    public readonly byte Flags;
 
     public HealFact(int seq, long timeS, short healerIdx, short healedIdx, uint total, uint overTotal,
       byte typeId, byte flags, short modMask, ushort subIdx)

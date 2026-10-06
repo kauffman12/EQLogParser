@@ -37,7 +37,7 @@ queue, not an experiment.
 ```
 lines ──parsers──▶ CombatCapture
                     ├─ DamageFactTable (32 B/fact: names, spell, label mask, direction flags)
-                    └─ HealFactTable   (40 B/fact: asks/landed/over; one shared name pool,
+                    └─ HealFactTable   (32 B/fact: asks/landed/over; one shared name pool,
                                         ONE sequence across both tables)
                           │
              DeriveCadence.Decide ── None | ProjectionOnly | Full
@@ -3703,7 +3703,20 @@ Heals now flow into `HealFactTable` off `HealingLineParser.EventsHealProcessed` 
 table. Measured with a temporary probe over `EQLogParser.Test/data/derive/heal-fight.txt`: 5 of 9 events are heals, and
 one array of the union (42 B: 36 for the shared fields plus the four damage-only bytes a heal can never write, and
 always a zero) sat **57 % full of zeros** at capacity, **40 %** after trimming to what is shared. Split, each stream
-pays only its own tail: 32 B and 40 B.
+pays only its own tail: **32 B each**.
+
+That second number moved after the split, and it moved on *ordering*, not on fields. The ten fields a heal carries want
+30 bytes; the struct measured 40 because an `int` (`Seq`) was declared before the struct's one `long` (`TimeS`), so four
+bytes of alignment padding opened the row and eight more closed it. Declared wide-to-narrow — long, the two `uint`s,
+the `int`, the four two-byte fields, the two bytes — the same ten fields with the same values measure **32**, which is
+8 B on every heal a session keeps (**32 MB** on a night that stores 4 M of them, and it was 26 MB of *occupied* bytes on
+beta's 3.43 M before capacity is counted). Nothing was narrowed to get there: no time range, amount, participant index
+or modifier lost width, and the values round-trip verbatim (`HealFactCaptureTest`). Two things worth keeping in mind
+before this is called free. The CLR may reorder fields, so a struct size is a fact about this build rather than a
+promise — which is exactly why `AFactIsItsMeasuredSizeNotWishes` asserts 32 and would catch a future field inserted in
+the middle widening every heal by 8 with no reader behaving differently. And the saving **overlaps** any future chunked
+or compressed storage (gtp-improvements #1/#7): compressing a table that is already 20 % smaller buys less, so the two
+are not additive.
 
 One array was not merely wasteful, it was wrong. `DamageFactsByFight` is a **contiguous ordinal run** per fight — a
 consequence of the 64-bit spine being fight-major with time ascending inside it — so one array would force every heal

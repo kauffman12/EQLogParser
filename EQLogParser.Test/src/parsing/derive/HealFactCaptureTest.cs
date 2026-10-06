@@ -50,24 +50,31 @@ public class HealFactCaptureTest
     /*
      * DamageFact gained ModifiersMask (the six modifier filters' input) inside its existing 32 bytes by
      * deleting OverTotal, which damage never wrote. If this ever reads 40, that was paid for instead of
-     * recycled: on a 5 M-damage-fact log that is 40 MB for a field nothing reads. HealFact genuinely costs
-     * 40 — it carries what landed AND what was asked for, which is the number healing tabs are built from.
+     * recycled: on a 5 M-damage-fact log that is 40 MB for a field nothing reads.
+     *
+     * HealFact reads 32 the same way, but through layout rather than through a deleted field: the ten fields it
+     * carries need 30 bytes, and they came to 40 purely because an int was declared before the lone long. Same
+     * fields, same widths, ordered wide-to-narrow, and a night that stores 4 M heals keeps 32 MB less. So this
+     * assertion is about padding too, and it is the only thing that can see padding change — the CLR may reorder
+     * fields, which makes the size a fact about this build rather than a promise, and a future field inserted in
+     * the middle of that struct would widen every heal by 8 with no code reading anything differently.
      */
     [TestMethod]
     public void AFactIsItsMeasuredSizeNotWishes()
     {
         Assert.AreEqual(32, Unsafe.SizeOf<DamageFact>(), "damage facts are the most numerous thing the engine holds");
-        Assert.AreEqual(40, Unsafe.SizeOf<HealFact>());
+        Assert.AreEqual(32, Unsafe.SizeOf<HealFact>(),
+          "ordered wide-to-narrow this row is 30 bytes of payload in a 32-byte struct; an int before the long made it 40");
 
         /*
-         * The heal table's estimate is its own buffer at 40 B a fact. The damage table's EstimatedBytes covers
+         * The heal table's estimate is its own buffer at 32 B a fact. The damage table's EstimatedBytes covers
          * every stream that class holds (deaths, taunts, identities, evidence as well as facts) because D2's
          * revisit trigger is a process peak, not one array — so it is asserted for growth rather than for an
          * exact number, which would have to restate capacities the table keeps to itself.
          */
         var facts = new DamageFactTable(1_000);
         var heals = new HealFactTable(facts, 1_000);
-        Assert.AreEqual(40_000L, heals.EstimatedBytes, "40 B a heal fact, at capacity, no per-record allocation");
+        Assert.AreEqual(32_000L, heals.EstimatedBytes, "32 B a heal fact, at capacity, no per-record allocation");
 
         /*
          * The estimate prices the BUFFER, not the row count — which is the honest statement for D2's memory
