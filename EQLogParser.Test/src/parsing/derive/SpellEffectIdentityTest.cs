@@ -92,7 +92,7 @@ public class SpellEffectIdentityTest
       Assert.IsTrue(IdentityVocabulary.IsSpellEffect(source), $"a spell effect reads {source}");
       Assert.AreEqual("Spell", IdentityVocabulary.TypeWord(kind),
                       "the Type cell says WHAT it is; the Why cell says how we know, and that word stays 'A Spell'");
-      Assert.AreEqual("A Spell", IdentityVocabulary.WhyWord(IdentityVocabulary.CodeOf(source)));
+      Assert.AreEqual("Spell", IdentityVocabulary.WhyWord(IdentityVocabulary.CodeOf(source)));
 
       var row = report.Find(spell);
       Assert.IsNotNull(row, $"{spell} is missing from the census");
@@ -162,13 +162,13 @@ public class SpellEffectIdentityTest
                     "a boss dot beating on the raid is a spell name, and it must not read as one of ours either");
     Assert.AreEqual("R21-spellshape", sonic,
                "the no-caster damage line is the proof, ahead of the spell list and the casting message");
-    Assert.AreEqual("A Spell", IdentityVocabulary.WhyWord(IdentityVocabulary.CodeOf(sonic)),
+    Assert.AreEqual("Spell", IdentityVocabulary.WhyWord(IdentityVocabulary.CodeOf(sonic)),
                     "the cell has to say this is not a fighter");
 
     /*
      * The second proof, tested apart from the first: a spell rank this build's spells.txt does not carry. New expansion
      * content arrives silent and is never guessed at (the law R14/R16 follow for names), but the LINE still says "by .", and
-     * that shape needs no dictionary — so an unknown spell becomes "A Spell" rather than falling through to the graph,
+     * that shape needs no dictionary — so an unknown spell becomes "Spell" rather than falling through to the graph,
      * where raid damage on a mob would have made it a raid member.
      */
     Assert.IsFalse(ClassificationRules.SpellNamed("Gluttering Decay IX"), "the fixture invents a rank the data does not ship");
@@ -371,7 +371,7 @@ public class SpellEffectIdentityTest
       Assert.AreEqual(IdentityKind.Spell, row!.Kind, "last night's Player beat a cast line printed in this capture");
       Assert.AreEqual("R21-spellcast", row.Reason);
       Assert.IsFalse(row.IsPrior, "the answer is this file's, so the pane must not say 'in previous log'");
-      Assert.AreEqual("A Spell", IdentityVocabulary.WhyWord(row.Reason));
+      Assert.AreEqual("Spell", IdentityVocabulary.WhyWord(row.Reason));
     }
     finally
     {

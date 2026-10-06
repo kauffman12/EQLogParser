@@ -5778,11 +5778,12 @@ real floating window remains a one-attribute change if the strip ever annoys som
 **One width, taken from the table rather than written beside the markup.** Two tabs in one panel that want different widths
 make the panel jump under the cursor on every switch, so `EQIdentityStripWidth` is computed once and handed to both panes
 (`ThemeConfig.SetThemeFontSizes` → `SyncFusionUtil.SetDesiredWidth`). The number is `NamesTable.DesiredPaneWidth()`: this
-pane's own four columns + its row header + 18 px of scrollbar — **539 px at the default 12 pt font** (Name 145, Type 88 with
-its pencil, Class 126, Why 126, row header 36, scrollbar 18). It is a function rather than a constant for two reasons: a
+pane's own four columns + its row header + 18 px of scrollbar — **≈ 568 px at the default 12 pt font** (Name 145, Type 117
+with its pencil, Class 126, Why 126, row header 36, scrollbar 18; the Type term grew from 88 when Spell rows gained their two-word
+direction names — see "The identity words were swept"). It is a function rather than a constant for two reasons: a
 literal beside the dock markup drifts the day `ApplyColumnWidths` changes, and the failure mode of a strip that is too
 narrow is the worst kind here — the Why column simply sits behind a horizontal scrollbar in a pane the operator cannot widen
-past the panel. Pet Owners goes from 340 px to the same 539 as its price for sharing; its Owner column is
+past the panel. Pet Owners goes from 340 px to the same ≈ 568 as its price for sharing; its Owner column is
 `AutoWithLastColumnFill`, so it just gets roomier.
 
 **No header at all.** The `EQGridTitleHeight` row holding the word "Names" is deleted, so the pane is one child: the grid.
@@ -7047,3 +7048,74 @@ Open thread that all of this sharpens: the fact clause needs one more bucket. A 
 all tallied from counters that already exist in the same loop (`f.AtkIdx == f.DefIdx` is free):
 *Damaged itself*, *Damaged pets*, *Damaged monsters*, and combinations (*Damaged pets and monsters*), with self suppressed when a
 name also hit others… or shown, since "hits itself" is a fact a reader can check. Wording plus tests, no new pass over the facts.
+
+
+## The identity words were swept (2026-11): one style, casters named, and the Type column pays for its longest word
+
+An operator read the Names pane word by word and rejected most of them. Nothing below is a behaviour change — every
+verdict, ranking and cost law stayed as it was; what changed is the language between the rules and a person, plus one
+column that had stopped fitting its own vocabulary. Earlier sections of this document quote the words **as they read at
+the time**, and are not rewritten: a 2026-09 section saying *A Spell* is a record of what shipped then, and the numbers in
+it were measured under it. This section is the current word list; `IdentityVocabulary` remains the only place any of it is
+written (AGENTS → the identity-words bullet), and the full table below is generated from that one table by walking its keys,
+so it cannot drift from the code.
+
+**The style law**, because "try to be more consistent with this stuff" was the actual request:
+
+- **Title Case**, first word always capital, short words (`in`, `and`, `the`, `by`, `of`, `as`, `a`) lower *inside* a
+  phrase. That is exactly what *In the NPC DB* and *Owner in Pet Name* look like — the two the operator pointed at.
+- **Only this application's nouns**: Player, Pet, Mercenary, NPC, Spell. "Monster" and "mob" appear nowhere else on screen
+  (the creature file is the **NPC DB**), so a hover using them read like a different program's vocabulary. Same for "our":
+  a capture says who healed or hit whom; it never says whose side the reader is on.
+- **The hover names what it looked at**, not the mechanism: *No Caster in Spell Damage* (which slot was empty) instead of
+  *No Caster in Line*, which was true of every damage line ever parsed; *Name Begins With an Article* instead of
+  *NPC Name Shape*; *Reported Charmed* instead of *Charm Window*.
+- **A cell word and its dropdown entry are the same word**, so `TypeWord(Merc)` stopped printing "Merc" beside a popup
+  preselected on "Mercenary".
+
+| code | cell was → is | hover was → is |
+|---|---|---|
+| R4-spell | Spell → **Class Spell** | unchanged (*Cast Curse XVII*) |
+| R5-owner | Owner in Name → **Owner in Pet Name** | Owner in Name → **Owner in the Pet's Name** |
+| R6-npcdb | NPC DB | In the NPC DB (capitalisation confirmed as the model) |
+| R7-graph | Fights Mobs → **Attacks NPC** | It Fights Mobs → **Attacks NPCs** |
+| R7-side | Attacks Raid → **Attacks Player** | It Attacks Raid → **Attacks Players** |
+| R9-charm | Charmed | Charm Window → **Reported Charmed** |
+| R10-manual / Manual / Override | Chosen | You chose X → **You Chose X** |
+| R14-shape | NPC Name | NPC Name Shape → **Name Begins With an Article** |
+| R15-healed | Healed | Healed by 20 raiders → **Healed by 20 Raiders**; bare form **Healed by Players** |
+| R16-comma | Titled Name | Titled Name → **Name Carries a Title** |
+| R17-selffeed | Drinking → **Ate or Drank** | Drank or Ate → **Ate or Drank** (the line can be a bite) |
+| R18-healedpet | Our Pet → **Pet Healed It** | Healed by our Pets' Owner → **Healed by a Player Pet** |
+| R19-eyeowner | Own Eye → **Hit Own Eye** | Hit the Eye named after them → **Hit Their Own Eye** |
+| R20-petspell | Pet Spell | Cast X (pet) → **Pet Cast X** (bare: **Cast by a Pet**) |
+| R21-spellshape/cast/effect | A Spell → **Spell** ×3 | No Caster in Line → **No Caster in Spell Damage**; Casting Message → **Seen Being Cast**; The Name of a Spell → **Name of a Known Spell** |
+| RegistrySeed | Legacy | From old Verified List → **From the Old Verified List** (pet-map branch unchanged: *In the Pet Map as X's*) |
+| Roster lane (`Imported`) | Imported | Carried over from the roster this app saved → **Remembered from This App's Roster** |
+| Owner lane (`Pet Map`) | Pet Map | Carried over from the pet map this app saved → **Remembered from This App's Pet Map** |
+| no verdict | Not placed → **Not Placed** | Nothing identified it → **Nothing Identified It** |
+
+**Spell direction is named by the caster.** `Enemy Spell`/`Our Spell` became **`NPC Spell`** (every fact landed on one of
+ours, so something hostile cast it) and **`Player Spell`** (every fact landed on an NPC). The unmixed case is the whole
+rule: a spell whose facts went both ways, or that has no facts, still answers plain `Spell` rather than guessing, and the
+hover says which half it saw (`DirectionPhrase`). The constants were renamed to match (`NpcSpellWord`, `PlayerSpellWord`),
+and `TypeWordFor`'s parameter is `hitsOnNpcs`.
+
+**Why R4 and R21 no longer share a word.** Both mapped to `Spell`: one because the name CAST a class rank (so it is a
+person), the other because its name IS a spell (so it is not). Two rows reading the same Why word for opposite reasons is
+the ambiguity that makes a list unreadable, so R4 became **Class Spell** — the tooltip already named the actual cast, which
+was doing the disambiguating work anyway. `TypeWord(Spell)` stays plain `Spell`, so the *kind* word and R21's cell word agree.
+
+**The Type column width came from the vocabulary, not a theme bucket.** It sized itself as `CurrentShortWidth + iconAllowance`
+= 60 + 28 = 88 px at 12 pt, chosen when "Mercenary" was the longest answer. `Player Spell` is longer than any of those, so
+the cell clipped. `NamesTable.TypeColumnWidth()` now measures the closed list itself — the longest of the five dropdown
+words plus the two direction words (12 characters) times 0.62 em, floored at the Medium bucket — giving **89.28 px of text
+(117.28 with the pencil)** at 12 pt and growing with `ApplicationFontSize`. `DesiredPaneWidth()` reads the same call, so the
+identity strip asks for the room instead of hiding Why behind a horizontal scrollbar; the cost is **+29 px** on the shared
+right-hand strip (≈ 539 → ≈ 568), which Pet Owners absorbs by filling its last column. A future Type word pays for its own
+column automatically rather than clipping, and `IdentityVocabularyTest` keeps Why cells at ≤ 18 characters — the ceiling
+raised from 14 for *Owner in Pet Name*, whose whole content is naming whose name carries the owner (the Why column is
+252 px wide and holds it).
+
+Suite after the sweep: **1,681 passed / 10 env-gated skipped**, solution builds with **0 warnings**. `EQLogParser.Wpf.Test`
+(NamesTableTest's cell/width assertions) still needs its Windows run along with the other pending UI items.

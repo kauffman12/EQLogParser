@@ -274,7 +274,7 @@ namespace EQLogParser
     internal static NameRow RowFrom(ClassificationReport.Row row) => new()
     {
       Name = row.Name,
-      // Core decides the cell word (a Spell row carries direction: "Enemy Spell" / "Our Spell"); the fallback keeps a row
+      // Core decides the cell word (a Spell row carries its caster side: "NPC Spell" / "Player Spell"); the fallback keeps a row
       // built outside the census — every test fixture, and any future caller that assembles a Row by hand — answering with the
       // plain kind word rather than an empty cell.
       Type = row.TypeDisplay.Length > 0 ? row.TypeDisplay : IdentityVocabulary.TypeWord(row.Kind),
@@ -293,7 +293,7 @@ namespace EQLogParser
      */
 
     /*
-     * The first line is the PROOF, in one clause: "Cast Spire of Arcanum", "Healed by 20 raiders", "From /who", "Owner
+     * The first line is the PROOF, in one clause: "Cast Spire of Arcanum", "Healed by 20 Raiders", "From /who", "Owner
      * in Name", "From Chat in previous log". Core builds it from the same source string that decided the cell
      * (IdentityVocabulary.ProofText), so a verdict remembered from an older capture still names its evidence instead of
      * printing "(earlier)" and leaving the detail out — which is the half that made the old tooltip useless: the cell said
@@ -305,7 +305,7 @@ namespace EQLogParser
      * flag was pointing at is still a fact about the row (`ClassificationReport.Row.IsDisagreement`) but it is printed
      * nowhere: this pane has no header strip to carry a census-wide count, and a per-row badge would paint half the list.
      * "Not in this log" is gone on the same grounds — it read as an error on a row whose Type already says Unknown. A hover
-     * is never empty: an unplaced name answers "Nothing identified it".
+     * is never empty: an unplaced name answers "Nothing Identified It".
      */
     internal static string ProvenanceFor(ClassificationReport.Row row)
     {
@@ -325,7 +325,7 @@ namespace EQLogParser
 
       /*
        * Then whatever ELSE applies, one phrase per line, computed in Core (`Row.OtherEvidence`): the other rules that claimed
-       * this name and what the capture watched it do ("Damaged players"). A row one rule claimed and whose facts point nowhere
+       * this name and what the capture watched it do ("Damaged Players"). A row one rule claimed and whose facts point nowhere
        * has nothing here and hovers as the single sentence it always did — the extra lines only exist where there is more to say,
        * which is what the operator asked for after "why does it just say A Spell?".
        */
@@ -355,10 +355,28 @@ namespace EQLogParser
       var fontSize = ThemeConfig.CurrentFontSize;
       var iconAllowance = fontSize + 16;                       // EQIconStyle square + the 8+8 margins
       var columns = ThemeConfig.CurrentNameWidth
-                  + ThemeConfig.CurrentShortWidth + iconAllowance                                    // Type + its pencil
+                  + TypeColumnWidth() + iconAllowance                                               // Type + its pencil
                   + 2 * (ThemeConfig.CurrentMediumWidth + ThemeConfig.CurrentShortestWidth);         // Class and Why
       var rowHeader = Application.Current.Resources["EQTableRowHeaderWidth"] is double w ? w : 32.0;  // ShowRowHeader="True"
       return columns + rowHeader + 18;                        // 18: the vertical scrollbar that comes with a long list
+    }
+
+    /*
+     * The Type column is as wide as the LONGEST word it can ever have to show, because the words are a closed list and a
+     * clipped one reads as a broken cell: the row's Type appeared as "Player Spe…". It used to take the theme's Short
+     * bucket (5 ems), which was chosen when the widest answer was "Mercenary" — and the direction words that Spell rows
+     * carry ("Player Spell") are longer than any of those, so one bucket no longer covers the vocabulary.
+     *
+     * Measured from the list itself rather than hard-coded: a new Type word pays for its own column at the next theme
+     * change, and `DesiredPaneWidth` reads the same call, so the identity strip never hides the Why column behind a
+     * horizontal scrollbar because a word grew. The factor is the widest ordinary advance in these UI fonts (0.62 em),
+     * floored at the Medium bucket so a small application font cannot make this column narrower than the other short ones.
+     */
+    internal static double TypeColumnWidth()
+    {
+      var longest = Math.Max(IdentityVocabulary.NpcSpellWord.Length, IdentityVocabulary.PlayerSpellWord.Length);
+      foreach (var option in IdentityVocabulary.TypeOptions) longest = Math.Max(longest, option.Word.Length);
+      return Math.Max(ThemeConfig.CurrentMediumWidth, longest * ThemeConfig.CurrentFontSize * 0.62);
     }
 
     private void ApplyColumnWidths()
@@ -373,7 +391,7 @@ namespace EQLogParser
         var width = column.MappingName switch
         {
           "Name" => ThemeConfig.CurrentNameWidth,
-          "Type" => ThemeConfig.CurrentShortWidth + iconAllowance,
+          "Type" => TypeColumnWidth() + iconAllowance,
           "Why" => ThemeConfig.CurrentMediumWidth + ThemeConfig.CurrentShortestWidth,
           "PlayerClass" => ThemeConfig.CurrentMediumWidth + ThemeConfig.CurrentShortestWidth,
           _ => 0.0,

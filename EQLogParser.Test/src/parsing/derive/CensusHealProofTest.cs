@@ -4,7 +4,7 @@ namespace EQLogParser;
 
 /*
  * The census's answer to "why does that read as one of ours?" when the answer is HEALING. R15 places a name from the
- * breadth of its crowd — so many DISTINCT raid-side casters, not so many lines (docs/DesignNotes.md → "Breadth of evidence, measured") — and `Row.HealedByCasters` carries that number so the window can say "Healed by 20 raiders" instead of
+ * breadth of its crowd — so many DISTINCT raid-side casters, not so many lines (docs/DesignNotes.md → "Breadth of evidence, measured") — and `Row.HealedByCasters` carries that number so the window can say "Healed by 20 Raiders" instead of
  * printing the rule code and sending the operator to read the source.
  *
  * Four laws, one per test:

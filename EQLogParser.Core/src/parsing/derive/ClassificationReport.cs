@@ -101,7 +101,7 @@ namespace EQLogParser
       public int HealedByCasters { get; init; }
 
       /// <summary>Sum of this name's damage facts (its own hits; a defender gets no credit for being hit).</summary>
-      /// <summary>Damage facts this name dealt whose DEFENDER reads player-side. Feeds the hover's "Damaged players".</summary>
+      /// <summary>Damage facts this name dealt whose DEFENDER reads player-side. Feeds the hover's "Damaged Players".</summary>
       public int HitsOnRaid { get; init; }
 
       /// <summary>Damage facts this name dealt whose defender reads Npc — the other half of that clause.</summary>
@@ -249,7 +249,7 @@ namespace EQLogParser
        * 2.27M-fact capture that is the difference between free and another fifth of a second on a window's census, which is why
        * this is not written as `timeline.IdentityAt(defender, t)` inside the loop. The FINAL (+infinity) verdict is what counts,
        * so the sentence a row prints can never contradict the Type column beside it; charm windows are deliberately not
-       * consulted — "Damaged players" means "hit names this capture called players", the cheap claim and the honest one.
+       * consulted — "Damaged Players" means "hit names this capture called players", the cheap claim and the honest one.
        */
       IdentityKind[] verdict = count > 0 ? new IdentityKind[count] : [];
       int[] onRaid = count > 0 ? new int[count] : [];
@@ -301,7 +301,7 @@ namespace EQLogParser
         for (short i = 0; i < names.Count; i++)
         {
           AddRow(rows, names[i], timeline, overrides, registry, priors, castProof, seenCasts, healProof, damage[i], healing[i],
-                 events[i], hasFacts: true, hitsOnRaid: onRaid[i], hitsOnMobs: onMobs[i]);
+                 events[i], hasFacts: true, hitsOnRaid: onRaid[i], hitsOnNpcs: onMobs[i]);
         }
       }
 
@@ -460,7 +460,7 @@ namespace EQLogParser
                               IdentityOverrideStore? overrides, PlayerRegistry? registry, IdentityPriorStore? priors,
                               CastProof castProof, HashSet<string>? seenCasts, HealCasterProof healProof,
                               double damage, double healing, long events, bool hasFacts,
-                              int hitsOnRaid = 0, int hitsOnMobs = 0)
+                              int hitsOnRaid = 0, int hitsOnNpcs = 0)
     {
       var kind = IdentityKind.Unknown;
       string source = string.Empty;
@@ -556,9 +556,9 @@ namespace EQLogParser
         Healing = healing,
         Events = events,
         HitsOnRaid = hitsOnRaid,
-        HitsOnMobs = hitsOnMobs,
-        TypeDisplay = IdentityVocabulary.TypeWordFor(kind, hitsOnRaid, hitsOnMobs),
-        OtherEvidence = BuildOtherEvidence(timeline, name, source, hitsOnRaid, hitsOnMobs),
+        HitsOnMobs = hitsOnNpcs,
+        TypeDisplay = IdentityVocabulary.TypeWordFor(kind, hitsOnRaid, hitsOnNpcs),
+        OtherEvidence = BuildOtherEvidence(timeline, name, source, hitsOnRaid, hitsOnNpcs),
       };
       rows[name] = row;
       return row;
@@ -630,13 +630,13 @@ namespace EQLogParser
      * nothing at all for the rest.
      */
     private static string BuildOtherEvidence(EntityTimeline? timeline, string name, string winningSource,
-                                             int hitsOnRaid, int hitsOnMobs)
+                                             int hitsOnRaid, int hitsOnNpcs)
     {
       const int maxExtraLines = 4;   // IdentityVocabulary/NamesTable prints the head proof line; five lines is the budget
 
       if (timeline is null) return string.Empty;
       var claims = timeline.ClaimsOf(name);
-      var direction = IdentityVocabulary.DirectionPhrase(hitsOnRaid, hitsOnMobs);
+      var direction = IdentityVocabulary.DirectionPhrase(hitsOnRaid, hitsOnNpcs);
       if (claims.Count == 0 && direction is null) return string.Empty;
 
       List<(int Rank, int Strength, string Phrase)>? lines = null;
@@ -653,7 +653,7 @@ namespace EQLogParser
       }
 
       // The fact clause competes with the claims on rank rather than always trailing them: for a Spell row it is the sentence
-      // the reader came for ("Damaged players"), and it outranks the R21 shape claim that got the row its kind.
+      // the reader came for ("Damaged Players"), and it outranks the R21 shape claim that got the row its kind.
       if (direction is not null && seenPhrases.Add(direction))
         (lines ??= new List<(int, int, string)>()).Add((IdentityVocabulary.FactClauseRank, 0, direction));
 

@@ -14,7 +14,7 @@ namespace EQLogParser;
  * Those strings are right where they belong — in a log line, in the ledger, in a diff of someone's overrides file — and
  * wrong everywhere a person reads them. Two tables live here:
  *
- *   WHY  (the cell)  — one to three words naming the KIND of proof: "Who", "Chat", "Cast", "Owner in Name", "Joined Raid".
+ *   WHY  (the cell)  — one to three words naming the KIND of proof: "Who", "Chat", "Class Spell", "Owner in Pet Name", "Joined Raid".
  *   PROOF(the tooltip) — the same idea with its one detail: "From /who", "Cast Spire of Arcanum", "Healed by 20 raiders".
  *
  * Both are as short as they are because this is a 4,000-row list: a sentence per row made the pane read like a report and
@@ -33,7 +33,7 @@ namespace EQLogParser;
  *     previous log". The ledger stores the rule (and its detail: the cast, the owner) with the verdict, which is what
  *     lets a borrowed answer name the proof it borrowed.
  *
- *   - THE TOOLTIP IS NEVER BLANK. A name nothing placed gets "Not placed" / "Nothing identified it"; anything unmapped
+ *   - THE TOOLTIP IS NEVER BLANK. A name nothing placed gets "Not Placed" / "Nothing Identified It"; anything unmapped
  *     repeats its own cell word rather than showing an empty hover (docs: an empty tooltip reads as a broken pane).
  *
  *   - SOME ROWS CANNOT BE OVERRULED, AND SAY SO BY HAVING NO EDIT ICON. `CanOverrule` is where that is decided — a name
@@ -110,38 +110,48 @@ internal static class IdentityVocabulary
 
   /*
    * A Spell row's cell carries DIRECTION, because that is the one question the four kinds could not answer about it: the name is
-   * not a fighter, but the capture watched its facts go SOMEWHERE. Two words, closed, and only for Spell:
-   * "Enemy Spell" when everything it hit was one of ours, "Our Spell" when everything it hit was a monster. Mixed or unclaimed
-   * targets answer plain "Spell" rather than guessing — and the tooltip always says which of the two it saw (DirectionPhrase).
+   * not a fighter, but the capture watched its facts go SOMEWHERE. Two words, closed, and only for Spell — named by WHOSE SIDE
+   * CAST it, which is what a reader is actually asking: **NPC Spell** when everything it hit was one of ours (a mob's doT, an
+   * environmental effect), **Player Spell** when everything it hit was an NPC. "Our Spell"/"Enemy Spell" were the first attempt
+   * and both were wrong in different directions: "our" reads as *mine*, which no evidence supports — the capture shows a spell
+   * landing on NPCs, not who cast it — and "enemy" names a relation to the reader instead of the thing on screen.
+   *
+   * Mixed or unreadable targets answer plain "Spell" rather than guessing, and the tooltip says which half it saw
+   * (DirectionPhrase), so declining to name a caster stays visible rather than silent.
    */
-  internal const string EnemySpellWord = "Enemy Spell";
-  internal const string OurSpellWord = "Our Spell";
+  internal const string NpcSpellWord = "NPC Spell";
+  internal const string PlayerSpellWord = "Player Spell";
 
-  /// <summary>The TYPE cell for a row: the kind's word, with direction when the kind is Spell.</summary>
-  internal static string TypeWordFor(IdentityKind kind, int hitsOnRaid, int hitsOnMobs)
+  /// <summary>The TYPE cell for a row: the kind's word, with the caster side when the kind is Spell.</summary>
+  internal static string TypeWordFor(IdentityKind kind, int hitsOnRaid, int hitsOnNpcs)
     => kind is not IdentityKind.Spell ? TypeWord(kind)
-       : hitsOnRaid > 0 && hitsOnMobs == 0 ? EnemySpellWord
-       : hitsOnMobs > 0 && hitsOnRaid == 0 ? OurSpellWord
+       : hitsOnRaid > 0 && hitsOnNpcs == 0 ? NpcSpellWord
+       : hitsOnNpcs > 0 && hitsOnRaid == 0 ? PlayerSpellWord
        : TypeWord(kind);
 
   /*
    * What the capture watched a name DO, in the fewest honest words. A closed list of three, decided by WHO the defender's own
    * verdict was at the end of the pass — so the sentence and the identity column cannot contradict each other. A name that hit
-   * raid AND monsters says exactly that rather than being forced onto one side.
+   * raid AND NPCs says exactly that rather than being forced onto one side.
+   *
+   * The word is **NPC**, because that is what every Type cell, dropdown and header in this application says; "monster" and
+   * "mob" appear nowhere else on screen and made a hover read like another program's vocabulary (asked directly: "we dont
+   * really use 'monsters' anywhere in the app"). Title case throughout: first word always capital, short words like
+   * in/and/the/by lower inside a phrase — which is what "In the NPC DB" and "Owner in Pet Name" already looked like.
    */
-  internal const string DamagedPlayersPhrase = "Damaged players";
-  internal const string DamagedMonstersPhrase = "Damaged monsters";
-  internal const string DamagedBothPhrase = "Damaged players and monsters";
+  internal const string DamagedPlayersPhrase = "Damaged Players";
+  internal const string DamagedNpcsPhrase = "Damaged NPCs";
+  internal const string DamagedBothPhrase = "Damaged Players and NPCs";
 
   /// <summary>Where the fact clause sorts among the claims: above inference and databases, below what was heard or seen
   /// directly — the capture watched it happen, which outranks a guess but not a target frame or an operator's word.</summary>
   internal const int FactClauseRank = 75;
 
   /// <summary>The fact clause for a row's hover, or null when its facts point nowhere decidable.</summary>
-  internal static string? DirectionPhrase(int hitsOnRaid, int hitsOnMobs)
-    => hitsOnRaid > 0 && hitsOnMobs > 0 ? DamagedBothPhrase
+  internal static string? DirectionPhrase(int hitsOnRaid, int hitsOnNpcs)
+    => hitsOnRaid > 0 && hitsOnNpcs > 0 ? DamagedBothPhrase
        : hitsOnRaid > 0 ? DamagedPlayersPhrase
-       : hitsOnMobs > 0 ? DamagedMonstersPhrase
+       : hitsOnNpcs > 0 ? DamagedNpcsPhrase
        : null;
 
   /*
@@ -183,14 +193,16 @@ internal static class IdentityVocabulary
   {
     IdentityKind.Player => "Player",
     IdentityKind.Pet => "Pet",
-    IdentityKind.Merc => "Merc",
+    // "Mercenary", not "Merc": the Type dropdown offers that word, and a cell reading "Merc" beside a
+    // popup preselected on "Mercenary" looks like two different answers to the same question.
+    IdentityKind.Merc => "Mercenary",
     IdentityKind.Npc => "NPC",
     IdentityKind.Spell => "Spell",
     _ => "Unknown",
   };
 
   /// <summary>The word a row with no verdict at all prints, so the column is never empty and the hover has something to repeat.</summary>
-  internal const string NotPlaced = "Not placed";
+  internal const string NotPlaced = "Not Placed";
 
   /// <summary>Stripped from a source that arrived as "Prior:&lt;rule&gt;" — an older log on this server said it.</summary>
   internal const string PriorPrefix = "Prior:";
@@ -256,19 +268,19 @@ internal static class IdentityVocabulary
      * (the operator cannot open what this window points at) and no rule code, because no rule wrote it.
      */
     if (code == IdentityPriorStore.RosterReason)
-      return "Carried over from the roster this app saved";
+      return "Remembered from This App's Roster";
 
     // The ledger's ownership lane (petmapping.txt's heir): same shape as the roster row above — memory rather than a rule,
     // and the sentence has to say WHICH of the two files' worth of memory this is, because a mapping can outlive both the
     // pet and the claim that it was ever a pet.
     if (code == IdentityPriorStore.OwnerReason)
-      return "Carried over from the pet map this app saved";
+      return "Remembered from This App's Pet Map";
 
     var text = code switch
     {
-      "R0-local" => "Your own name",
+      "R0-local" => "Your Own Name",
       "R1-target" => "From /target",
-      "R1-conflict" => "Targeted as both NPC and player",
+      "R1-conflict" => "Targeted as Both NPC and Player",
       "R2-who" => "From /who",
       "R3-chat" => "From Chat",
       "R3-joinraid" => "Joined Raid",
@@ -280,27 +292,44 @@ internal static class IdentityVocabulary
       "R4-spell" => detail is null ? "Cast a Class Spell" : $"Cast {detail}",
       // The companion line names the summoner (MiscLineParser's census), so the proof says what they did.
       "R5-companion" => "Summoned a Companion",
-      "R5-owner" => "Owner in Name",
+      // The name itself is the evidence, and the phrase now says WHICH name: the pet's (asked directly: "instead of
+      // Owner in Name can the tooltip say Owner in Pet Name to be more clear?").
+      "R5-owner" => "Owner in the Pet's Name",
       // npcs.txt is the game's creature database this app ships, and "NPC DB" is what an operator calls it.
       "R6-npcdb" => "In the NPC DB",
-      "R7-graph" => "It Fights Mobs",
-      "R7-side" => "It Attacks Raid",
-      "R9-charm" => "Charm Window",
-      "R10-manual" or "Manual" or "Override" => $"You chose {TypeWord(kind)}",
+      // No "It " prefix (every other clause starts with what the name did) and no "mobs": the app's word is NPC.
+      // R7-graph counts edges in both directions and lands on whichever side dominates; R7-side is the narrower
+      // sighting that it swings at raid members at all.
+      "R7-graph" => "Attacks NPCs",
+      "R7-side" => "Attacks Players",
+      // The capture's own combat line named it: `X has been charmed.` "Charm Window" was the mechanism's name — jargon
+      // a reader has to be taught before the hover means anything.
+      "R9-charm" => "Reported Charmed",
+      "R10-manual" or "Manual" or "Override" => $"You Chose {TypeWord(kind)}",
       "R13-merc" => "From /target as Mercenary",
-      "R14-shape" => "NPC Name Shape",
-      "R15-healed" => healedByCasters > 0 ? $"Healed by {healedByCasters:N0} raiders" : "Healed by the Raid",
-      "R16-comma" => "Titled Name",
+      // Which shape? The article is the game's own "this is a thing" marker, so the hover says where it looked
+      // instead of gesturing at "shape" (same reason R21 stopped saying "No Caster in Line").
+      "R14-shape" => "Name Begins With an Article",
+      "R15-healed" => healedByCasters > 0 ? $"Healed by {healedByCasters:N0} Raiders" : "Healed by Players",
+      // `Ghulel, Tier Doomservant` — a comma with a title behind it, which is how the game writes a named mob.
+      "R16-comma" => "Name Carries a Title",
       // The client's own guild list, not a guess from behaviour: see PreLineParser's census.
       "R23-loot" => "Took Loot From a Corpse",
       "R22-guildmate" => "Named You Their Guildmate",
-      "R17-selffeed" => "Drank or Ate",
-      "R18-healedpet" => "Healed by our Pets' Owner",
-      "R19-eyeowner" => "Hit the Eye named after them",
-      "R20-petspell" => detail is null ? "Pet Spell" : $"Cast {detail} (pet)",
-      "R21-spellshape" => "No Caster in Line",
-      "R21-spellcast" => "Casting Message",
-      "R21-spelleffect" => "The Name of a Spell",
+      "R17-selffeed" => "Ate or Drank",
+      // Not "our": a capture says who healed whom, not whose side the reader is on.
+      "R18-healedpet" => "Healed by a Player Pet",
+      "R19-eyeowner" => "Hit Their Own Eye",
+      "R20-petspell" => detail is null ? "Cast by a Pet" : $"Pet Cast {detail}",
+
+      /*
+       * R21's three proofs, phrased so the CELL can carry the plain kind word ("Spell") and the hover carry the
+       * difference. "No Caster in Line" was true of every damage line ever parsed — the informative half is WHICH slot
+       * was empty, so it says where it looked (asked directly: "instead of 'No Caster in Line' be more specific").
+       */
+      "R21-spellshape" => "No Caster in Spell Damage",
+      "R21-spellcast" => "Seen Being Cast",
+      "R21-spelleffect" => "Name of a Known Spell",
 
       /*
        * The two codes no rule writes; both mean "this application remembered it", and the hover is where that gets
@@ -310,9 +339,9 @@ internal static class IdentityVocabulary
        * summon says it is the pet map and names the person in the detail. Verified pets and mercenaries are learned while a
        * log is open and never reach disk at all, so they are never described as saved state.
        */
-      "RegistrySeed" => detail is null ? "From old Verified List" : $"In the Pet Map as {detail}'s",
-      "You" => "Your own character",
-      _ => code.Length > 0 ? code : kind == IdentityKind.Unknown ? "Nothing identified it" : TypeWord(kind),
+      "RegistrySeed" => detail is null ? "From the Old Verified List" : $"In the Pet Map as {detail}'s",
+      "You" => "Your Own Character",
+      _ => code.Length > 0 ? code : kind == IdentityKind.Unknown ? "Nothing Identified It" : TypeWord(kind),
     };
 
     return IsPrior(source) ? $"{text} in previous log" : text;
@@ -382,19 +411,24 @@ internal static class IdentityVocabulary
 
     // The tail of R4-spell is the cast that earned it, so the tooltip can name it ("Cast Curse XVII") — including from
     // the ledger, which stores this string verbatim and therefore keeps the detail across logs.
-    ["R4-spell"] = "Spell",
+    /*
+     * "Class Spell", not "Spell": R21's verdict IS a spell — it is one — and two rows reading the same Why word for
+     * opposite reasons ("this cast a bard rank, so it is a person" vs "its name is a spell, so it is not") is the
+     * ambiguity worth avoiding. The tooltip names the actual cast either way.
+     */
+    ["R4-spell"] = "Class Spell",
     // The summon arrived at THEM: the line names the summoner, so the word says whose companion it was.
     ["R5-companion"] = "Companion",
 
     // The proof is the name's own spelling: `Tuona`s ward` carries its owner in it. "Owner" alone asked a question
     // ("what do you mean owner?") that this answer settles without a second column.
-    ["R5-owner"] = "Owner in Name",
+    ["R5-owner"] = "Owner in Pet Name",
     ["R6-npcdb"] = "NPC DB",
 
-    // The attack graph says which side a name fights on, so the words say exactly that rather than "Our side", which
-    // could be read as an assertion about loyalty instead of a count of who got hit.
-    ["R7-graph"] = "Fights Mobs",
-    ["R7-side"] = "Attacks Raid",
+    // The attack graph says which side a name fights on, so the words count who got hit rather than asserting loyalty —
+    // and the noun is NPC, the word this application uses everywhere else. "Mobs" lived only in these two cells.
+    ["R7-graph"] = "Attacks NPC",
+    ["R7-side"] = "Attacks Player",
     ["R9-charm"] = "Charmed",
     ["R10-manual"] = "Chosen",
     ["R13-merc"] = "Mercenary",
@@ -403,9 +437,9 @@ internal static class IdentityVocabulary
     ["R16-comma"] = "Titled Name",
     ["R23-loot"] = "Looted",
     ["R22-guildmate"] = "Guildmate",
-    ["R17-selffeed"] = "Drinking",
-    ["R18-healedpet"] = "Our Pet",
-    ["R19-eyeowner"] = "Own Eye",
+    ["R17-selffeed"] = "Ate or Drank",
+    ["R18-healedpet"] = "Pet Healed It",
+    ["R19-eyeowner"] = "Hit Own Eye",
     ["R20-petspell"] = "Pet Spell",
 
     /*
@@ -413,9 +447,13 @@ internal static class IdentityVocabulary
      * list (see ClassificationRules.ApplySpellEffects). ONE cell word for all three because the operator's question is
      * "what is this thing?", not "which of my data said so?": a spell is not a creature and must never read as a person.
      */
-    ["R21-spellshape"] = "A Spell",
-    ["R21-spellcast"] = "A Spell",
-    ["R21-spelleffect"] = "A Spell",
+    /*
+     * ONE cell word for all three, and it is the kind word the Type column already uses. "A Spell" read as a sentence
+     * fragment beside rows that said plain "Spell" (asked directly: "it's weird that sometimes there's A Spell and Spell").
+     */
+    ["R21-spellshape"] = "Spell",
+    ["R21-spellcast"] = "Spell",
+    ["R21-spelleffect"] = "Spell",
 
     /*
      * Not a rule: this application's own memory, written before the capture said anything. A cold registry cannot

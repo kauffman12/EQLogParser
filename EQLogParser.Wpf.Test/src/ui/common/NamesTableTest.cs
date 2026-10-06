@@ -20,7 +20,7 @@ namespace EQLogParser.Wpf.Test;
  * IdentityVocabularyTest (EQLogParser.Test), including the corpus check that no rule code reaches the screen. What is
  * pinned here is the part only this file owns: which LINES a row's tooltip gets, since each one tells a person whether to
  * ACT. A verdict resting on their own click needs no correction; one resting on an older log might; a claim that was taken
- * back says only "Nothing identified it", because that absence is the whole of it; and NOTHING names a file any more —
+ * back says only "Nothing Identified It", because that absence is the whole of it; and NOTHING names a file any more —
  * players.txt used to ride behind the proof as a second verdict from a source the operator cannot open from here, which
  * read as a contradiction nobody had explained on rows the rules had merely classified. The pane's own shape is pinned too: the column order, and the fact that a row which offers
  * no pencil still reserves its width (PlaceholderVisibilityConverter), so the words in the column line up.
@@ -80,7 +80,7 @@ public class NamesTableTest
 
     Assert.AreEqual("NPC", row.Type);
     Assert.AreEqual("Chosen", row.Why, "a verdict the operator wrote says so in the Why column itself, in two words");
-    StringAssert.Contains(row.Provenance, "You chose NPC");
+    StringAssert.Contains(row.Provenance, "You Chose NPC");
 
     /*
      * One line, and nothing about the row being outside a capture. The tooltip used to add "Not in this log" here, which
@@ -98,7 +98,7 @@ public class NamesTableTest
   /* A claim the operator took back keeps its row (the roster still lists the name) and says nothing beyond the absence.
    * This test used to pin a "Claim taken back" sentence for the players.txt `!Name` refusal; that veto was unreachable in
    * every shipped build - see PlayerRegistry.RemoveVerifiedPlayer - and an invented explanation of a state nobody can
-   * reach is worse than the plain "Nothing identified it" this state already answers with. */
+   * reach is worse than the plain "Nothing Identified It" this state already answers with. */
   [TestMethod]
   public void AClaimTakenBackSaysNothingIdentifiedIt()
   {
@@ -110,8 +110,8 @@ public class NamesTableTest
     var row = NamesTable.RowFrom(CensusWithoutACapture().Find("Ghosty")!);
 
     Assert.AreEqual(IdentityKind.Unknown, row.Kind);
-    StringAssert.Contains(row.Provenance, "Nothing identified it");
-    Assert.IsFalse(row.Provenance.Contains("You chose"),
+    StringAssert.Contains(row.Provenance, "Nothing Identified It");
+    Assert.IsFalse(row.Provenance.Contains("You Chose"),
                    "a taken-back claim still reads like the operator's answer - the two need different actions");
     Assert.IsFalse(row.Provenance.Contains("\n"), $"an absence should hover as one line, got: {row.Provenance}");
   }
@@ -133,7 +133,7 @@ public class NamesTableTest
      * "(earlier)" was asked to stop, and a cell reading "Our side (earlier)" was two mysteries stacked. Where it does say
      * it is the tooltip, in words, with the count riding on the proof clause.
      */
-    Assert.AreEqual("Fights Mobs", row.Why, "the cell names the kind of proof and nothing else");
+    Assert.AreEqual("Attacks NPC", row.Why, "the cell names the kind of proof and nothing else");
     StringAssert.Contains(row.Provenance, "in previous log x2");
     Assert.IsFalse(row.Provenance.Contains("Cast"),
                    "a borrowed verdict has no cast behind it in THIS log; naming one would credit this capture with proving it");
@@ -156,7 +156,7 @@ public class NamesTableTest
 
     Assert.IsTrue(census.Find("Berta")!.IsDisagreement,
                   "the row stopped knowing that the roster and the verdict contradict each other");
-    Assert.AreEqual("You chose NPC", row.Provenance,
+    Assert.AreEqual("You Chose NPC", row.Provenance,
                     $"the hover states the operator's own claim and appends nothing: {row.Provenance}");
   }
 
@@ -165,7 +165,8 @@ public class NamesTableTest
    * identity-overrides.txt), and naming one answers "which file said so" rather than the question a tooltip is for; worst of
    * all was the roster flag on a row whose Type came from a rule, where "in players.txt" looked like an unresolved
    * contradiction. The two proof clauses that used to quote filenames say what the file IS instead — "On the NPC List",
-   * "The Name of a Spell".
+   * "Name of a Known Spell". The app's word for a hostile name is NPC and for a cast-side spell is
+   * Player Spell — no "monster", no "mob", no "our", nowhere on this pane.
    */
   /*
    * The Type dropdown belongs to the ROW, not to the window. One ComboBox serves every cell and its list comes from
@@ -371,7 +372,7 @@ public class NamesTableTest
     });
 
     Assert.AreEqual("Healed", healed.Why);
-    StringAssert.Contains(healed.Provenance, "Healed by 20 raiders");
+    StringAssert.Contains(healed.Provenance, "Healed by 20 Raiders");
 
     // A mob the raid keeps getting hit by AoE heals has no crowd to report - 0 means "never asked", not "nobody".
     var npc = NamesTable.RowFrom(new ClassificationReport.Row
@@ -433,7 +434,7 @@ public class NamesTableTest
    *   - the shape is additive — a row with nothing extra still hovers as exactly one line, which is what every other test in this
    *     file assumes and what most rows are;
    *   - head plus tail stays inside the five-line budget;
-   *   - the TYPE cell carries whatever word Core chose (a Spell row's direction: "Enemy Spell" / "Our Spell"), and falls back to
+   *   - the TYPE cell carries whatever word Core chose (a Spell row's direction: "NPC Spell" / "Player Spell"), and falls back to
    *     the plain kind word when a row was assembled by hand and says nothing.
    */
   [TestMethod]
@@ -449,7 +450,7 @@ public class NamesTableTest
       OtherEvidence = IdentityVocabulary.DamagedPlayersPhrase,
     });
 
-    Assert.AreEqual("Enemy Spell", spell.Type, "the direction word Core chose reaches the cell unchanged");
+    Assert.AreEqual("NPC Spell", spell.Type, "the direction word Core chose reaches the cell unchanged");
 
     var lines = spell.Provenance.Split('\n');
     Assert.AreEqual(2, lines.Length, $"head plus one clause: {spell.Provenance}");
@@ -466,7 +467,7 @@ public class NamesTableTest
     var busy = NamesTable.RowFrom(new ClassificationReport.Row
     {
       Name = "Frost", Kind = IdentityKind.Npc, Reason = "R9-charm", HasFacts = true,
-      OtherEvidence = string.Join("\n", Enumerable.Repeat(IdentityVocabulary.DamagedMonstersPhrase, 4)),
+      OtherEvidence = string.Join("\n", Enumerable.Repeat(IdentityVocabulary.DamagedNpcsPhrase, 4)),
     });
     Assert.AreEqual(5, busy.Provenance.Split('\n').Length, "the hover budget is five lines: the proof plus four");
   }

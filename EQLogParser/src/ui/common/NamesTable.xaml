@@ -110,7 +110,7 @@
               <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
                 <!--
                   No pencil where the answer is forced: a summon whose own spelling carries its owner (`Tuona`s ward`) and
-                  a spell effect ("A Spell") each have exactly one right Type, and offering three wrong ones beside it is an
+                  a spell effect (its Type reads "Spell") each have exactly one right Type, and offering three wrong ones beside it is an
                   invitation to break a row nobody can put back. NameRow.Overrulable decides; see CanOverrule.
 
                   The space is taken either way: PlaceholderVisibilityConverter answers HIDDEN, not Collapsed, so a row with no pencil still reserves

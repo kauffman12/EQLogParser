@@ -266,7 +266,7 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   in a heal line**, so a row with no reason printed is parser evidence, not a classification gap. Such a line is now refused whole (like its
   rank-free sibling, which has never been stored); crediting caster-less heals onto the spell's own name would move the healing board and is
   its own decision. Two related measured standings: **the Type cell reading `NPC` for a spell is known-wrong and open** (all 34 rank-shaped
-  attacker names in that capture read `A Spell` as reason with every one of their 590 hits on an NPC — adding `IdentityKind.Spell` touches
+  attacker names in that capture read `Spell` as reason with every one of their 590 hits on an NPC — adding `IdentityKind.Spell` touches
   25 `IdentityKind.Npc` sites, several of them board-routing predicates, so it arrives with a real-capture board diff, not as an enum add);
   and **a ledger seed never changes an answer** (17 / 18 / 77 names answered from the seed on three captures, **0** disagreeing with the
   capture's own evidence; a deliberately wrong roster entry still loses to `R6-npcdb`, `R1-target` and `R14-shape`) — what memory costs is
@@ -395,10 +395,12 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   **and** that the `by .` caster-less shape still substitutes and flags the spell (a lone `.` is not a name with a stray dot). Cost of the pair:
   facts 2,270,292 → **2,286,368 (+16,076)**, pool 262 → **259**, aim-only facts 5.9% → 6.5%. Reasoning and the retracted grep-based claim it
   required: docs/DesignNotes.md → "Two capture gaps a hover question exposed".
-- **The Type cell carries the judgement, the hover carries the reasons** (2026-11): a Spell row reads **Enemy Spell** when every
-  fact it dealt landed on a name that reads player-side, **Our Spell** when every one landed on an Npc, and plain **Spell** when the
-  targets disagree or read Unknown — "both" is not a judgement about who owns a DoT, so the cell declines and the hover says
-  *Damaged players and monsters*. Only Spell rows can get a direction word (`IdentityVocabulary.TypeWordFor`), `Kind` itself never
+- **The Type cell carries the judgement, the hover carries the reasons** (2026-11): a Spell row reads **NPC Spell** when every
+  fact it dealt landed on a name that reads player-side (something on the other side cast it), **Player Spell** when every one
+  landed on an NPC, and plain **Spell** when the targets disagree or read Unknown — "both" is not a judgement about who owns a DoT,
+  so the cell declines and the hover says *Damaged Players and NPCs*. **The words are named by the caster, not by the reader**:
+  "Our Spell"/"Enemy Spell" were the first attempt and both died on the wording — "our" claims the reader's own side (no evidence in
+  a capture says who cast a caster-less DoT) and "enemy" states a relation to the reader instead of naming what is on screen. Only Spell rows can get a direction word (`IdentityVocabulary.TypeWordFor`), `Kind` itself never
   becomes a side-word, and the pane uses `Row.TypeDisplay` with a fallback to `TypeWord(kind)` so a hand-built Row is never blank.
   Below the head proof line the hover lists **every other rule that claimed the name plus the one fact clause**, one phrase per line,
   built in Core (`Row.OtherEvidence`) and appended by `NamesTable.ProvenanceFor` as `proof + "\n" + tail`: **a single-claim row whose
@@ -408,8 +410,9 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   four extra lines (five with the head). `EverySourceThatCanBeRankedIsRankedAndEveryRankHasAWord` holds `ClaimRanks` and `WhyWords` to
   covering **each other in both directions**, so a new rule cannot reach a hover and sort by accident. Two traps that look like free
   wins: an evidence line may **not** be just a verdict word, but it MAY name a source containing one (*In the NPC DB*) — that
-  assertion was written too broadly and the test caught it; and direction is decided from the **final (+∞)** verdicts so a sentence can
-  never contradict the Type column beside it (charm windows are deliberately not consulted: *"Damaged players"* means "hit names this
+  assertion was written too broadly and the test caught it (the app's word for a hostile name is **NPC**, never "monster" or "mob");
+  and direction is decided from the **final (+∞)** verdicts so a sentence can
+  never contradict the Type column beside it (charm windows are deliberately not consulted: *"Damaged Players"* means "hit names this
   capture called players"). **The cost law came with the request** ("I dont want memory to go up significantly"): `IdentityKind[]` +
   two `int[]` are resolved/incremented **pool-sized, never per fact** (an `IdentityAt` inside the 2.27 M-fact loop costs ~0.2 s a census
   does not have), `EntityTimeline.ClaimsOf` returns the timeline's own list **without copying**, and the only retained thing per row is
@@ -419,7 +422,7 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
 - **The two identity panes share one right-hand strip** (2026-11): Player/NPC Identity sits with Pet Owners (`State="AutoHidden"`, `SideInDockedMode="Right"`) instead of
   tabbing with the fight list — and it is `AutoHidden`, never `Float`, because a floated window is a separate OS window that **cannot** share a tab strip, so "floating +
   tabbed together" has exactly one reading. Three laws ride on that. (1) **One width for both tabs**, from
-  `NamesTable.DesiredPaneWidth()` (its four columns + row header + scrollbar — **539 px at 12 pt**) fed to `EQIdentityStripWidth` by `ThemeConfig`: a panel whose two tabs
+  `NamesTable.DesiredPaneWidth()` (its four columns + row header + scrollbar — **≈ 568 px at 12 pt**; the Type term is `TypeColumnWidth()`, sized from the longest word that column can ever print, not a theme bucket) fed to `EQIdentityStripWidth` by `ThemeConfig`: a panel whose two tabs
   want different widths jumps on every switch, and a strip narrower than the table hides the Why column behind a horizontal scrollbar in a pane that cannot be widened past
   the panel — never replace the call with a constant. (2) **Markup loses to `dockSite.xml`**, so moving a pane means repairing the saved layout once:
   `MainWindow.MigrateIdentityPaneIntoRightStrip()` runs after `LoadDockState` beside the standing `npcWindow`/`mirrorFightWindow` fixups, is gated by the
@@ -436,8 +439,13 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   passes per click), and `SetSideInDockedMode` BEFORE `SetState` is what makes two auto-hidden panes share one strip.
 - **Identity WORDS live in `IdentityVocabulary` (Core), its coverage is asserted twice, and each tooltip LINE is one short phrase**: the Why column used to print `R15-healed` /
   `Prior:R7-graph` at 256 px — the rule book's private vocabulary rendered where a person reads instead of greps. `WhyWord` maps each code to two words (`Healed`, `Chat`,
-  `Who`, `Spell`, `Owner in Name`, `NPC DB`, `Chosen`, `A Spell`, `Legacy`…) — the cell stays short and the HOVER names the store (*From old Verified List* for players.txt, *In the Pet Map as X’s*); **says the same word for a borrowed verdict as for a local one** (`Prior:R7-graph` → *Fights Mobs*;
-  the ledger stores the rule so the word is true) and puts the borrow in the tooltip instead — `It Fights Mobs in previous log x2`. The `(earlier)` cell marker was dropped
+  `Who`, `Class Spell`, `Owner in Pet Name`, `NPC DB`, `Chosen`, `Spell`, `Legacy`…) — the cell stays short and the HOVER names the store (*From the Old Verified List* for players.txt, *In the Pet Map as X’s*); **says the same word for a borrowed verdict as for a local one** (`Prior:R7-graph` → *Attacks NPC*;
+  the ledger stores the rule so the word is true) and puts the borrow in the tooltip instead — `Attacks NPCs in previous log x2`.
+  **STYLE IS ASSERTED, NOT ASKED FOR**: Title Case (first word capital, short words like in/and/the/by lower inside a phrase), and
+  ONLY this application's nouns — Player, Pet, Mercenary, NPC, Spell. "Monster", "mob" and "our" are deleted vocabulary: the app says
+  NPC everywhere else on screen, and a hover that says otherwise reads like another program's. R4's cell is `Class Spell` while R21's is
+  `Spell`, because both were plain `Spell` for opposite reasons (this one CAST a rank; that one IS a spell), and the Type cell already
+  carries direction for those rows, so `TypeWord(Merc)` says **Mercenary** to match the dropdown entry it preselects. The `(earlier)` cell marker was dropped
   on request after being tried twice: column width for a provenance footnote, and one cell carrying two mysteries. **The hover's head line is exactly one short proof clause** (no `Cast:`/`Earlier logs:` labels, no "Not in this log" — that read as an error on an ordinary hand-written verdict), and anything further is a SEPARATE line from `Row.OtherEvidence`, never a second clause glued on with a dash. And it is **never blank**: an unplaced name answers *"Nothing identified it yet — click the pencil to say what it is"*, because the empty cell is the row somebody hovers. `NameRow.Provenance` asserts that its **head line** carries no newline for every state (asserted again on the refusal row and the disagreement row, the two most likely to grow one; a refusal's own sentence **supersedes** the proof clause), while `ExtraEvidenceRidesBelowTheProofLineInTheHover` holds the cap — head plus at most four `OtherEvidence` lines, five in total. **No hover names a file** — the roster's opinion used to ride behind the proof (`From Chat · players.txt says Player`) and read as a second
   verdict from a source this window cannot open. What it pointed at is still a fact ON THE ROW (`Row.IsDisagreement`); the whole-capture count it used to feed was deleted together with the header that printed it, so no number about disagreements exists in either direction — printing nothing is the pane's law, and computing an unread figure for nobody is not a substitute. **An unmapped code echoes itself rather than being guessed at** — a fallback like
   "Evidence" would file a new kind of proof under an old meaning, and provenance is the one thing this pane must be honest about. `IdentityVocabularyTest` checks
@@ -508,7 +516,7 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   attacker field is an actor as far as the identity rules are concerned. Measured on `eqlog_Kizant_xegony-09-03-26.txt`: **706** lines end `by .` and **135** read `from your <spell>.`
   (against 45,904 that name their caster normally); over its first 250 MB `ApplySpellEffects` places **49** names out of a 227-name pool and **471** of their facts are aimed at
   **mobs** — the raid's own dots on the raid's own targets, which is exactly the evidence R7 reads as "one of ours" (`Tsikut's Chant of Frost Rk. III` 24, `Strangle XVII Rk. III` 26,
-  `Spiter Blood Rk. II` 21). That is how a curse reached the roster column as "Player | Our side"; the 717 raid-directed facts keep their side and only gain the truth (`A Spell`).
+  `Spiter Blood Rk. II` 21). That is how a curse reached the roster column as "Player | Our side"; the 717 raid-directed facts keep their side and only gain the truth (Type **NPC Spell**, Why `Spell`).
   Four laws. (1) **Early stage, Strong not Certain** — an independent identity (R6 npcdb, R9 charm, a name some spell also matches) keeps its better provenance
   (`BetterEvidenceOutranksTheSpellDictionary`), so a rule that fires on dictionary membership may never paint over evidence. (2) **Three proofs in the order a person would trust them: what the LINE said, then what the game said somebody CAST, then what
   `spells.txt` says.** The flag does not depend on this build shipping this expansion's data; the second feed is `X begins casting Y.` — `CastLineParser` already resolves that name (calling
@@ -519,15 +527,15 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   this feed is a rule and not a lookup. Its real place is the report — see the next bullet. (3) **A token wearing a creature's shape claims nothing**: articles and possessives (`LooksLikeEntityName`) are how
   this log names fighters, 1,085 trusted tokens include them, and a Strong spell verdict arriving first would freeze out R14's article rule and R5's ownership rule at equal strength
   (`ACastTokenWearingACreatureShapeClaimsNothing`). Learned while pinning that: `AddUnknownSpell` makes **R14 decline a name the spell store has heard**, so such a token can legitimately stay unplaced — assert
-  "not a spell verdict", never "must be NPC". (4) **A spell row says A Spell and cites the line that said so** (`R21-spellshape` *No Caster in Line*, `R21-spellcast` *Casting Message*, `R21-spelleffect`
-  *In spells.txt*, all three typing as **A Spell**, never a side-word for something that is not a "it"), and it gets **no pencil**: `IdentityVocabulary.CanOverrule` consults the same `SpellNamed`/`IsSpellEffect`
+  "not a spell verdict", never "must be NPC". (4) **A spell row says A Spell and cites the line that said so** (`R21-spellshape` *No Caster in Spell Damage*, `R21-spellcast` *Seen Being Cast*, `R21-spelleffect`
+  *Name of a Known Spell*, all three typing as **Spell** in the Why cell — never a side-word for something that is not an "it"), and it gets **no pencil**: `IdentityVocabulary.CanOverrule` consults the same `SpellNamed`/`IsSpellEffect`
   recognizer the rule uses — a rule and the words shown for its verdict must never disagree about where a spell name begins, same discipline as `EyeSummonOwnerInName`. **`… Feedback XII.` on `You have taken`
   gets NO verdict at all** — that is the local player's own spell bouncing back: NPC is as wrong as Player and no entity exists; R7 refuses those edges and R21 refuses the name, both pinned, because a guard on
   one path only is how this survived.
 - **A remembered verdict loses to what this capture watched happen**: the pane listed `Asphyxiating Grasp Rk. III` as **Player**, and the mechanism was memory, not the graph — that name has **0 facts** on
   `eqlog_Kizant_xegony-09-20-25.txt` (pool index −1; it prints only as `Controla begins casting …`, in `… has taken N damage from … by Controla.` lines that do NOT set `AttackerIsSpell`, and in interrupt
   lines), and the prior store is consulted precisely when this log says nothing. So `ClassificationReport.BuildCastNames` collects the capture's `EvCast` aux names **only when a ledger is actually being read**
-  (`priors.Count == 0` builds nothing) and `AddRow`'s last-resort borrow steps aside for it: the row answers `Npc · A Spell · Casting Message` instead of *"… in previous log"*. Deliberately not a rule claim (law 2 above,
+  (`priors.Count == 0` builds nothing) and `AddRow`'s last-resort borrow steps aside for it: the row answers `NPC · Spell · Seen Being Cast` instead of *"… in previous log"*. Deliberately not a rule claim (law 2 above,
   same numbers) and the ledger FILE is left alone — memory is refused per pass, not rewritten, so an operator's file keeps its history and the screen keeps the fresher word. Pinned by
   `ARememberedFighterThisLogWatchedBeingCastSaysAspell`. Tests: `SpellEffectIdentityTest` (real line shapes both directions, the flag-only rank, the feedback refusal, evidence outranks the dictionary, the pool gate,
   the grammar guard, the memory correction) and `IdentityVocabularyTest` (the words and the one-line law).

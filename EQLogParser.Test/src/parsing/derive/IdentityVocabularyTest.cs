@@ -4,7 +4,7 @@ namespace EQLogParser;
 
 /*
  * The vocabulary a person reads, as opposed to the codes the rules write. The Names window used to print "R10-manual" and
- * "Prior:R7-graph" in a column called Why; that column is now two or three words ("Chosen", "Owner in Name", "Joined Raid")
+ * "Prior:R7-graph" in a column called Why; that column is now two or three words ("Chosen", "Owner in Pet Name", "Joined Raid")
  * and its tooltip is the proof in one line, so the mapping has to be bounded as carefully as the rules themselves — which
  * means asserting what it covers, like every other closed vocabulary here. A new rule arrives with a word AND with an entry
  * in RuleWords below; either half missing fails here.
@@ -13,7 +13,7 @@ namespace EQLogParser;
  *
  *   - The cell never carries "(earlier)". A borrowed verdict prints the same word as a local one and the tooltip says
  *     "in previous log" — the column is for identifying the proof, the hover is for weighing it.
- *   - Nothing renders blank. A name no rule placed says "Not placed" and hovers as "Nothing identified it".
+ *   - Nothing renders blank. A name no rule placed says "Not Placed" and hovers as "Nothing Identified It".
  *   - The tooltip names EVIDENCE, not sentences: a cast, a count, a source line — which is why R4 keeps the rank inside its
  *     source string and ProofText reads it back out.
  */
@@ -121,7 +121,7 @@ public class IdentityVocabularyTest
     Assert.IsTrue(IdentityVocabulary.ClaimRank("R7-graph") > IdentityVocabulary.ClaimRank("R6-npcdb"));
     Assert.IsTrue(IdentityVocabulary.ClaimRank("R6-npcdb") > IdentityVocabulary.ClaimRank(IdentityPriorStore.RosterReason));
 
-    // The fact clause ("Damaged players") outranks a rule's claim: it is what the capture watched happen, and on a Spell row it
+    // The fact clause ("Damaged Players") outranks a rule's claim: it is what the capture watched happen, and on a Spell row it
     // is the sentence the reader came for.
     Assert.IsTrue(IdentityVocabulary.FactClauseRank > IdentityVocabulary.ClaimRank("R21-spellshape"));
 
@@ -147,7 +147,13 @@ public class IdentityVocabularyTest
         Assert.AreNotEqual(code, word, $"{code} has no word of its own and reached the screen as its own code");
       else Assert.AreEqual(code, word, "a word allowed to spell itself stopped spelling itself");
       Assert.IsFalse(LooksLikeACode(word), $"{code} mapped to something that is still a rule code: {word}");
-      Assert.IsTrue(word.Length <= 14, $"{code} maps to a phrase too wide for the cell: {word}");
+      /*
+       * Eighteen characters is the widest cell word on screen, and it belongs to R5-owner ("Owner in Pet Name") because
+       * naming WHOSE name carries the owner IS the whole content of that proof — "Owner" alone asked a question, and
+       * "Owner in Name" left a reader looking for an owner column. The Why column is two Medium+Shortest buckets wide
+       * (252 px at 12 pt), which holds it; a longer word has to arrive with a width decision, not steal one.
+       */
+      Assert.IsTrue(word.Length <= 18, $"{code} maps to a phrase too wide for the cell: {word}");
     }
 
     // The other direction: nothing in the table that no rule can produce.
@@ -277,14 +283,14 @@ public class IdentityVocabularyTest
    * What this application remembers about a name, as opposed to what the capture showed: the two codes no rule writes,
    * which is also why the corpus guard cannot see them (tests run with a cleared registry). The column stays short -
    * "Legacy" — because one wide word makes a 4,000-row list ragged; the tooltip says WHERE it was remembered from, in the
-   * operator’s own words ("From old Verified List" is what players.txt was called on screen), never a filename and
+   * operator’s own words ("From the Old Verified List" is what players.txt was called on screen), never a filename and
    * never the internal name of the seed.
    */
   [TestMethod]
   public void WhatTheAppRemembersReadsLegacyAndNamesItsStore()
   {
     Assert.AreEqual("Legacy", IdentityVocabulary.WhyWord("RegistrySeed"), "the cell stays short; the store belongs to the hover");
-    Assert.AreEqual("From old Verified List", IdentityVocabulary.ProofText("RegistrySeed", IdentityKind.Player));
+    Assert.AreEqual("From the Old Verified List", IdentityVocabulary.ProofText("RegistrySeed", IdentityKind.Player));
 
     // A mapped summon names its person — that pair is the whole reason the row exists.
     Assert.AreEqual("In the Pet Map as Sancus's", IdentityVocabulary.ProofText("RegistrySeed:Sancus", IdentityKind.Pet));
@@ -292,12 +298,12 @@ public class IdentityVocabularyTest
     // The roster lane of the ledger is memory too, and it says so in one clause that already contains "carried over" -
     // appending the usual " in previous log" to it would print the same sentence twice.
     Assert.AreEqual("Imported", IdentityVocabulary.WhyWord($"{IdentityVocabulary.PriorPrefix}{IdentityPriorStore.RosterReason}"));
-    Assert.AreEqual("Carried over from the roster this app saved",
+    Assert.AreEqual("Remembered from This App's Roster",
                     IdentityVocabulary.ProofText($"{IdentityVocabulary.PriorPrefix}{IdentityPriorStore.RosterReason}", IdentityKind.Unknown));
 
     // Your own character reads alike whichever of the two codes carried it, and hovers as a sentence.
     Assert.AreEqual(IdentityVocabulary.WhyWord("R0-local"), IdentityVocabulary.WhyWord("You"));
-    Assert.AreEqual("Your own character", IdentityVocabulary.ProofText("You", IdentityKind.Player));
+    Assert.AreEqual("Your Own Character", IdentityVocabulary.ProofText("You", IdentityKind.Player));
   }
 
   [TestMethod]
@@ -323,7 +329,7 @@ public class IdentityVocabularyTest
   {
     Assert.AreEqual(IdentityVocabulary.NotPlaced, IdentityVocabulary.WhyWord(null, IdentityKind.Unknown));
     Assert.AreEqual(IdentityVocabulary.NotPlaced, IdentityVocabulary.WhyWord(string.Empty, IdentityKind.Unknown));
-    Assert.AreEqual("Nothing identified it", IdentityVocabulary.ProofText(null, IdentityKind.Unknown));
+    Assert.AreEqual("Nothing Identified It", IdentityVocabulary.ProofText(null, IdentityKind.Unknown));
 
     // A kind with no reason at all (a hand-written row before any timeline existed) repeats its type rather than printing
     // the word for an unplaced name.
@@ -338,11 +344,11 @@ public class IdentityVocabularyTest
   [TestMethod]
   public void AnEarlierVerdictSaysSoInTheTooltipAndNotInTheCell()
   {
-    Assert.AreEqual("Fights Mobs", IdentityVocabulary.WhyWord("Prior:R7-graph"));
+    Assert.AreEqual("Attacks NPC", IdentityVocabulary.WhyWord("Prior:R7-graph"));
     Assert.AreEqual("NPC DB", IdentityVocabulary.WhyWord("Prior:R6-npcdb"));
     Assert.AreEqual("Chosen", IdentityVocabulary.WhyWord("Prior:Override"));
 
-    Assert.AreEqual("It Fights Mobs in previous log", IdentityVocabulary.ProofText("Prior:R7-graph", IdentityKind.Player));
+    Assert.AreEqual("Attacks NPCs in previous log", IdentityVocabulary.ProofText("Prior:R7-graph", IdentityKind.Player));
     // No hover names a FILE (the operator cannot open one from here): npcs.txt and spells.txt read as the lists they are.
     Assert.AreEqual("In the NPC DB in previous log", IdentityVocabulary.ProofText("Prior:R6-npcdb", IdentityKind.Npc));
 
@@ -354,15 +360,15 @@ public class IdentityVocabularyTest
   }
 
   /*
-   * R5's owner evidence names the KIND of proof, not the owner: "Owner in Name" says the word `Tuona`s ward` carries its
+   * R5's owner evidence names the KIND of proof, not the owner: "Owner in Pet Name" says the word `Tuona`s ward` carries its
    * own answer. WHO owns it belongs to the Pet Owners window, and printing it here was one of the reasons the old column
    * needed a second dock's width.
    */
   [TestMethod]
   public void TheOwnerSuffixComesOffTheCell()
   {
-    Assert.AreEqual("Owner in Name", IdentityVocabulary.WhyWord("R5-owner:Sancus"));
-    Assert.AreEqual("Owner in Name in previous log", IdentityVocabulary.ProofText("Prior:R5-owner:Sancus", IdentityKind.Pet));
+    Assert.AreEqual("Owner in Pet Name", IdentityVocabulary.WhyWord("R5-owner:Sancus"));
+    Assert.AreEqual("Owner in the Pet's Name in previous log", IdentityVocabulary.ProofText("Prior:R5-owner:Sancus", IdentityKind.Pet));
 
     // A called pet names who called it, because that line IS the sighting.
     // The line names the summoner, so the words say what THEY did — "Called by X" belonged to the backwards reading,
@@ -385,15 +391,15 @@ public class IdentityVocabularyTest
     Assert.AreEqual("Left Raid", IdentityVocabulary.ProofText("R3-leaveraid", IdentityKind.Player));
     Assert.AreEqual("Led the Raid", IdentityVocabulary.ProofText("R3-leader", IdentityKind.Player));
     Assert.AreEqual("Cast Spire of Arcanum", IdentityVocabulary.ProofText("R4-spell:Spire of Arcanum", IdentityKind.Player));
-    Assert.AreEqual("Cast Hobble of Spirits Snare VI (pet)",
+    Assert.AreEqual("Pet Cast Hobble of Spirits Snare VI",
                     IdentityVocabulary.ProofText("R20-petspell:Hobble of Spirits Snare VI", IdentityKind.Pet));
-    Assert.AreEqual("Healed by 20 raiders", IdentityVocabulary.ProofText("R15-healed", IdentityKind.Player, 20));
-    Assert.AreEqual("Healed by the Raid", IdentityVocabulary.ProofText("R15-healed", IdentityKind.Player),
+    Assert.AreEqual("Healed by 20 Raiders", IdentityVocabulary.ProofText("R15-healed", IdentityKind.Player, 20));
+    Assert.AreEqual("Healed by Players", IdentityVocabulary.ProofText("R15-healed", IdentityKind.Player),
                     "a heal-based verdict with no walk over the heal stream still has to say what kind of proof it was");
-    Assert.AreEqual("You chose NPC", IdentityVocabulary.ProofText("R10-manual", IdentityKind.Npc));
-    Assert.AreEqual("The Name of a Spell", IdentityVocabulary.ProofText("R21-spelleffect", IdentityKind.Npc));
-    Assert.AreEqual("No Caster in Line", IdentityVocabulary.ProofText("R21-spellshape", IdentityKind.Npc));
-    Assert.AreEqual("Casting Message", IdentityVocabulary.ProofText("R21-spellcast", IdentityKind.Npc));
+    Assert.AreEqual("You Chose NPC", IdentityVocabulary.ProofText("R10-manual", IdentityKind.Npc));
+    Assert.AreEqual("Name of a Known Spell", IdentityVocabulary.ProofText("R21-spelleffect", IdentityKind.Npc));
+    Assert.AreEqual("No Caster in Spell Damage", IdentityVocabulary.ProofText("R21-spellshape", IdentityKind.Npc));
+    Assert.AreEqual("Seen Being Cast", IdentityVocabulary.ProofText("R21-spellcast", IdentityKind.Npc));
   }
 
   /*
@@ -454,7 +460,7 @@ public class IdentityVocabularyTest
   {
     Assert.AreEqual("Player", IdentityVocabulary.TypeWord(IdentityKind.Player));
     Assert.AreEqual("Pet", IdentityVocabulary.TypeWord(IdentityKind.Pet));
-    Assert.AreEqual("Merc", IdentityVocabulary.TypeWord(IdentityKind.Merc));
+    Assert.AreEqual("Mercenary", IdentityVocabulary.TypeWord(IdentityKind.Merc), "the cell says the word its own dropdown offers");
     Assert.AreEqual("NPC", IdentityVocabulary.TypeWord(IdentityKind.Npc), "the enum's word is \"Npc\"");
     Assert.AreEqual("Unknown", IdentityVocabulary.TypeWord(IdentityKind.Unknown),
                     "a blank reads like a rendering failure; this name simply has no verdict");

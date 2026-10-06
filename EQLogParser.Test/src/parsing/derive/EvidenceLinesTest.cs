@@ -9,9 +9,9 @@ namespace EQLogParser;
  * Line" while its own row was the answer to "is this ours?" (docs/DesignNotes.md → the R21 chapter).
  *
  * So a row now carries:
- *   - TYPE DIRECTION for a Spell name — "Enemy Spell" when everything it hit was one of ours, "Our Spell" when everything it hit
+ *   - TYPE DIRECTION for a Spell name — "NPC Spell" when everything it hit was one of ours, "Player Spell" when everything it hit
  *     was a monster, plain "Spell" when the targets disagree or read Unknown. The judgement in the cell, the reason in the hover;
- *   - `Row.OtherEvidence` — every OTHER claim on the name plus one fact clause ("Damaged players"), one phrase per line, ranked
+ *   - `Row.OtherEvidence` — every OTHER claim on the name plus one fact clause ("Damaged Players"), one phrase per line, ranked
  *     by IdentityVocabulary.ClaimRanks and capped at four (the head proof line makes five).
  *
  * The cost rules that shaped this (the operator's constraint, and a fair one): WHOSE-SIDE is resolved once per name into a
@@ -74,15 +74,15 @@ public class EvidenceLinesTest
     var row = report.Find("Tinstag Rk. II");
     Assert.IsNotNull(row, "the substituted spell name is a row: " + string.Join(", ", report.Rows.Select(r => r.Name)));
     Assert.AreEqual(IdentityKind.Spell, row.Kind);
-    Assert.AreEqual("Enemy Spell", row.TypeDisplay);
+    Assert.AreEqual("NPC Spell", row.TypeDisplay);
     Assert.AreEqual(2, row.HitsOnRaid);
     Assert.AreEqual(0, row.HitsOnMobs);
 
     // The phrase says the reason for the word, in the same words a person would use. No counts, no rule codes.
-    Assert.AreEqual("Damaged players", row.OtherEvidence);
+    Assert.AreEqual("Damaged Players", row.OtherEvidence);
   }
 
-  /// <summary>The opposite direction — our own dot on the raid's targets — reads "Our Spell".</summary>
+  /// <summary>The opposite direction — a dot on the raid's targets — reads "Player Spell".</summary>
   [TestMethod]
   public void ACasterLessSpellThatHurtMonstersReadsOurSpell()
   {
@@ -93,8 +93,8 @@ public class EvidenceLinesTest
     var row = report.Find("Strangle XVII Rk. III");
     Assert.IsNotNull(row, "the substituted spell name is a row: " + string.Join(", ", report.Rows.Select(r => r.Name)));
     Assert.AreEqual(IdentityKind.Spell, row.Kind);
-    Assert.AreEqual("Our Spell", row.TypeDisplay);
-    Assert.AreEqual("Damaged monsters", row.OtherEvidence);
+    Assert.AreEqual("Player Spell", row.TypeDisplay);
+    Assert.AreEqual("Damaged NPCs", row.OtherEvidence);
   }
 
   /*
@@ -112,7 +112,7 @@ public class EvidenceLinesTest
     Assert.IsNotNull(row, "the substituted spell name is a row: " + string.Join(", ", report.Rows.Select(r => r.Name)));
     Assert.AreEqual(IdentityKind.Spell, row.Kind);
     Assert.AreEqual("Spell", row.TypeDisplay);
-    Assert.AreEqual("Damaged players and monsters", row.OtherEvidence);
+    Assert.AreEqual("Damaged Players and NPCs", row.OtherEvidence);
 
     // ...and only Spell rows ever get a direction word: a person's cell is the kind, whatever they hit.
     Assert.AreEqual("Player", IdentityVocabulary.TypeWordFor(IdentityKind.Player, 99, 0));
