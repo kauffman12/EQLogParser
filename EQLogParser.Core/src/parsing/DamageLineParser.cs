@@ -647,12 +647,21 @@ namespace EQLogParser
       }
       // [Mon May 10 22:18:46 2021] A dendridic shard was chilled to the bone for 410 points of non-melee damage.
       // [Sat Jan 04 13:22:29 2025] YOU are chilled to the bone for 2700 points of non-melee damage!
+      //
+      // No attacker in the line at all, so this row used to be named "Reverse DS" - a DAMAGE-TYPE word standing where an
+      // entity's name belongs, which read as one: on one capture, 69,651 facts and 5,741,957,900 damage on a row beside the raiders, holding a "Player · A Spell" verdict no rule ever signed. The number is kept; the actor is called what the
+      // line says (Labels.Unattributed), and ParserUtil.IsUnattributedName refuses it identity in R7.
+      //
+      // The POSSESSIVE cousin of this shape - `Waxwork Abolishion is pierced by Piemastaj's thorns for 154597 points of
+      // non-melee damage.` - needs no branch: the first branch above takes everything between "by" and a trailing `'s` as the
+      // attacker, so those facts were always captured under the owner's own name. See docs/DesignNotes.md → "Damage the capture never saw, and damage it invented"
+      // for that measurement and for how a probe that fed ParseLine a stamped line made it look like nine billion missing.
       else if (isIndex > -1 && byIndex == -1 && (forIndex + 2) == pointsOfIndex && nonMeleeIndex > pointsOfIndex
         && split[stop].StartsWith("damage", StringComparison.OrdinalIgnoreCase))
       {
         defender = ParserUtil.JoinWords(split, 0, isIndex);
         var damage = ParserUtil.ParseUInt(split, pointsOfIndex - 1);
-        attacker = Labels.Rs;
+        attacker = Labels.Unattributed;
         defender = ParserUtil.UpdateDefender(defender, attacker);
         record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Ds, Labels.Ds);
       }

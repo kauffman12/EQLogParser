@@ -1222,6 +1222,10 @@ namespace EQLogParser
         var atk = facts.NameOf(f.AtkIdx);
         if (kinds[atk] != IdentityKind.Unknown) continue;
 
+        // Not an entity: what the parser writes when a line names no source. Without this the placeholder "attacked" mobs
+        // all night and earned "R7-graph" - a person invented out of a hole in the grammar (ParserUtil.IsUnattributedName).
+        if (ParserUtil.IsUnattributedName(atk)) continue;
+
         // A spell name is not a combatant. "You have taken N damage from X." leaves the attacker
         // field holding a spell, and when that spell targets Self in the spell DB ("Cloudburst
         // Strike Feedback XII") the fact is the local player hitting themselves with their own
@@ -1243,8 +1247,12 @@ namespace EQLogParser
         }
 
         var def = facts.NameOf(f.DefIdx);
-        var dk = kinds[def];
         if (!aggByAttacker.TryGetValue(atk, out var agg)) aggByAttacker[atk] = agg = new SideAgg();
+
+        // A placeholder defender is no side evidence either; counted as unclassified so the unknown-share guard still sees it
+        if (ParserUtil.IsUnattributedName(def)) { agg.UnknownEdges++; continue; }
+
+        var dk = kinds[def];
         switch (dk)
         {
           case IdentityKind.Npc: agg.AddNpc(def, f.TimeS); break;

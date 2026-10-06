@@ -107,6 +107,12 @@ namespace EQLogParser
       /// <summary>Damage facts this name dealt whose defender reads Npc — the other half of that clause.</summary>
       public int HitsOnMobs { get; init; }
 
+      /// <summary>Damage facts whose defender reads Pet — its own victim group, because "players" is not the word for them.</summary>
+      public int HitsOnPets { get; init; }
+
+      /// <summary>Damage facts where attacker and defender are the SAME name: a reflect, a feedback, a beam bounced off one's own chest.</summary>
+      public int SelfHits { get; init; }
+
       /// <summary>The Type cell's word: the kind's word, plus direction for a Spell ("Enemy Spell" / "Our Spell").</summary>
       public string TypeDisplay { get; init; } = string.Empty;
 
@@ -254,6 +260,8 @@ namespace EQLogParser
       IdentityKind[] verdict = count > 0 ? new IdentityKind[count] : [];
       int[] onRaid = count > 0 ? new int[count] : [];
       int[] onMobs = count > 0 ? new int[count] : [];
+      int[] onPets = count > 0 ? new int[count] : [];
+      int[] onSelf = count > 0 ? new int[count] : [];
 
       if (timeline is not null && count > 0)
       {
@@ -268,7 +276,12 @@ namespace EQLogParser
           events[f.AtkIdx]++;
 
           var defKind = verdict[f.DefIdx];
-          if (defKind is IdentityKind.Player or IdentityKind.Merc or IdentityKind.Pet) onRaid[f.AtkIdx]++;
+
+          // Self first: a fact whose attacker and defender are the same name is not "damaging players", it is the name hitting
+          // itself (Bjpotratz's whole raid-side number was that, 61 copies of one Evoker reflect).
+          if (f.AtkIdx == f.DefIdx) onSelf[f.AtkIdx]++;
+          else if (defKind is IdentityKind.Player or IdentityKind.Merc) onRaid[f.AtkIdx]++;
+          else if (defKind is IdentityKind.Pet) onPets[f.AtkIdx]++;
           else if (defKind is IdentityKind.Npc) onMobs[f.AtkIdx]++;
         }
       }
@@ -301,7 +314,8 @@ namespace EQLogParser
         for (short i = 0; i < names.Count; i++)
         {
           AddRow(rows, names[i], timeline, overrides, registry, priors, castProof, seenCasts, healProof, damage[i], healing[i],
-                 events[i], hasFacts: true, hitsOnRaid: onRaid[i], hitsOnNpcs: onMobs[i]);
+                 events[i], hasFacts: true, hitsOnRaid: onRaid[i], hitsOnNpcs: onMobs[i],
+                 hitsOnPets: onPets[i], hitsOnSelf: onSelf[i]);
         }
       }
 
@@ -460,7 +474,7 @@ namespace EQLogParser
                               IdentityOverrideStore? overrides, PlayerRegistry? registry, IdentityPriorStore? priors,
                               CastProof castProof, HashSet<string>? seenCasts, HealCasterProof healProof,
                               double damage, double healing, long events, bool hasFacts,
-                              int hitsOnRaid = 0, int hitsOnNpcs = 0)
+                              int hitsOnRaid = 0, int hitsOnNpcs = 0, int hitsOnPets = 0, int hitsOnSelf = 0)
     {
       var kind = IdentityKind.Unknown;
       string source = string.Empty;
@@ -557,8 +571,11 @@ namespace EQLogParser
         Events = events,
         HitsOnRaid = hitsOnRaid,
         HitsOnMobs = hitsOnNpcs,
-        TypeDisplay = IdentityVocabulary.TypeWordFor(kind, hitsOnRaid, hitsOnNpcs),
-        OtherEvidence = BuildOtherEvidence(timeline, name, source, hitsOnRaid, hitsOnNpcs),
+        HitsOnPets = hitsOnPets,
+        SelfHits = hitsOnSelf,
+        // Pets count as raid-side for WHO A SPELL BELONGS TO (a pet is one of ours); the fact clause below splits them out again.
+        TypeDisplay = IdentityVocabulary.TypeWordFor(kind, hitsOnRaid + hitsOnPets, hitsOnNpcs),
+        OtherEvidence = BuildOtherEvidence(timeline, name, source, hitsOnRaid, hitsOnNpcs, hitsOnPets, hitsOnSelf),
       };
       rows[name] = row;
       return row;
@@ -630,13 +647,13 @@ namespace EQLogParser
      * nothing at all for the rest.
      */
     private static string BuildOtherEvidence(EntityTimeline? timeline, string name, string winningSource,
-                                             int hitsOnRaid, int hitsOnNpcs)
+                                             int hitsOnRaid, int hitsOnNpcs, int hitsOnPets = 0, int hitsOnSelf = 0)
     {
       const int maxExtraLines = 4;   // IdentityVocabulary/NamesTable prints the head proof line; five lines is the budget
 
       if (timeline is null) return string.Empty;
       var claims = timeline.ClaimsOf(name);
-      var direction = IdentityVocabulary.DirectionPhrase(hitsOnRaid, hitsOnNpcs);
+      var direction = IdentityVocabulary.DirectionPhrase(hitsOnRaid, hitsOnNpcs, hitsOnPets, hitsOnSelf);
       if (claims.Count == 0 && direction is null) return string.Empty;
 
       List<(int Rank, int Strength, string Phrase)>? lines = null;

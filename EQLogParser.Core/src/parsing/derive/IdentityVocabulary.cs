@@ -139,20 +139,51 @@ internal static class IdentityVocabulary
    * really use 'monsters' anywhere in the app"). Title case throughout: first word always capital, short words like
    * in/and/the/by lower inside a phrase — which is what "In the NPC DB" and "Owner in Pet Name" already looked like.
    */
+  /*
+   * VICTIM GROUPS, closed at eight sentences. Pets are their OWN group because "players" is not the word for them: Ashenback
+   * spends 798 facts on pets, and a raid full of pet lines read as people being beaten. Self is its own too, and it is what
+   * makes the set honest - Bjpotratz's entire "raid-side" tally was 61 copies of her own refracted beam landing on her, which
+   * this phrase used to render as "Damaged Players". A name whose only victim is itself now says so; a name with real targets
+   * reports those and stays quiet about its self-hits (the row's count still holds them).
+   *
+   * Written as eight literals rather than assembled: the census builds this per name over the whole pool, and a closed list is
+   * also what the test can check word for word. Longest is 30 characters - "Damaged Players, Pets and NPCs" - which is the cap.
+   */
   internal const string DamagedPlayersPhrase = "Damaged Players";
   internal const string DamagedNpcsPhrase = "Damaged NPCs";
-  internal const string DamagedBothPhrase = "Damaged Players and NPCs";
+  internal const string DamagedPetsPhrase = "Damaged Pets";
+  internal const string DamagedSelfPhrase = "Damaged Itself";
+  internal const string DamagedPlayersAndNpcsPhrase = "Damaged Players and NPCs";
+  internal const string DamagedPlayersAndPetsPhrase = "Damaged Players and Pets";
+  internal const string DamagedNpcsAndPetsPhrase = "Damaged NPCs and Pets";
+  internal const string DamagedEveryonePhrase = "Damaged Players, Pets and NPCs";
+
+  /// <summary>The longest sentence this table can hand out; the hover-length law is asserted against it.</summary>
+  internal const int MaxClauseLength = 30;
 
   /// <summary>Where the fact clause sorts among the claims: above inference and databases, below what was heard or seen
   /// directly — the capture watched it happen, which outranks a guess but not a target frame or an operator's word.</summary>
   internal const int FactClauseRank = 75;
 
-  /// <summary>The fact clause for a row's hover, or null when its facts point nowhere decidable.</summary>
-  internal static string? DirectionPhrase(int hitsOnRaid, int hitsOnNpcs)
-    => hitsOnRaid > 0 && hitsOnNpcs > 0 ? DamagedBothPhrase
-       : hitsOnRaid > 0 ? DamagedPlayersPhrase
-       : hitsOnNpcs > 0 ? DamagedNpcsPhrase
-       : null;
+  /*
+   * The fact clause for a row's hover, or null when its facts point nowhere decidable. One bit per victim group, so the whole
+   * table is one switch: no allocation in a path that runs once per name over a pool of thousands.
+   */
+  internal static string? DirectionPhrase(int hitsOnPlayers, int hitsOnNpcs, int hitsOnPets = 0, int selfHits = 0)
+  {
+    var victims = (hitsOnPlayers > 0 ? 1 : 0) | (hitsOnNpcs > 0 ? 2 : 0) | (hitsOnPets > 0 ? 4 : 0);
+    return victims switch
+    {
+      0 => selfHits > 0 ? DamagedSelfPhrase : null,
+      1 => DamagedPlayersPhrase,
+      2 => DamagedNpcsPhrase,
+      4 => DamagedPetsPhrase,
+      3 => DamagedPlayersAndNpcsPhrase,
+      5 => DamagedPlayersAndPetsPhrase,
+      6 => DamagedNpcsAndPetsPhrase,
+      _ => DamagedEveryonePhrase
+    };
+  }
 
   /*
    * How important a CLAIM is when a hover can only show a few of them (IdentityPriorStore's own lanes and the rule book both

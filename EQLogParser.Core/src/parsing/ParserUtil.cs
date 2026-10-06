@@ -35,7 +35,7 @@ namespace EQLogParser
 
       if (ThirdPerson.Contains(name))
       {
-        return !string.IsNullOrEmpty(attacker) && attacker != Labels.Rs && attacker != Labels.Unk
+        return !string.IsNullOrEmpty(attacker) && !IsUnattributedName(attacker)
           ? attacker
           : name;
       }
@@ -47,6 +47,16 @@ namespace EQLogParser
 
       return name;
     }
+
+    /*
+     * Names that are NOT entities: what the parser writes into an attacker field when the line itself names no source.
+     * "Reverse DS" is a damage-TYPE word (Labels.Rs) that spent years standing where a name belongs, and it read as one -
+     * 69,651 facts and 5.74 billion damage on one capture, attributed to nobody and placed by no rule while claiming the
+     * spell-casting verdict R21 hands out for "No Caster in Line". Labels.Unk rides along for the other no-source shapes.
+     * Every one of them is refused identity here and in R7, so the board keeps the number and drops the imaginary actor.
+     */
+    internal static bool IsUnattributedName(string name)
+      => name == Labels.Unattributed || name == Labels.Rs || name == Labels.Unk;
 
     /// <summary>
     /// Updates the attacker name: handles corpse suffixes and player name replacement.

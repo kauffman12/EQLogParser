@@ -462,6 +462,20 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   log is open, so the seed's verified-pet and mercenary branches are this-session memory and must never be described as saved state. Same discipline as the FCT and `HitLabel` vocabularies: a new rule arrives with
   a word here, and `HealedByCasters` (the number behind *Healed*) is gated exactly like R15 — distinct raid-side Strong casters, self-heals skipped, **0 means "not
   asked" rather than "nobody healed them"** (`CensusHealProofTest`).
+- **A parser placeholder is never a person, and victims are named in groups.** `Labels.Unattributed` ("Unattributed Damage") fills
+  an attacker slot the log left empty. "Reverse DS" (a damage-TYPE word) used to sit there and it read as an entity — **69,651 facts
+  and 5.74 billion damage** on one capture, arriving with `Player · A Spell` because R21's spell recognizer matched a parser constant.
+  `ParserUtil.IsUnattributedName` (that word plus the old `"Reverse DS"` plus `Labels.Unk`) is the ONE recognizer: R7 skips those names
+  as attacker and counts them unclassified as defender, so the number stays on the board and the imaginary actor goes. Separately, a
+  row's fact clause says WHO was hit in **eight closed sentences** (`IdentityVocabulary`: Players / NPCs / Pets, their three pairs, all
+  three together, "Damaged Itself"): pets are not players (798 of `Ashenback`'s facts land on pets), and **self is its own group** — a
+  raider whose entire raid-side tally was her own reflected beam must not hover "Damaged Players". Self is excluded from the raid
+  bucket; pets still count raid-side for the *other* question (`TypeWordFor`: whose spell was it). Longest sentence is 30 characters =
+  `MaxClauseLength`, asserted against the table in `EvidenceLinesTest`. A new victim group arrives with a word, a bit in that switch and
+  tests — never by widening a phrase. And before writing a "missing damage" branch, run it through the PIPELINE: `DamageLineParser.ParseLine`
+  takes the action WITHOUT its `[timestamp]`, and a stamped line yields garbage (that is how nine billion already-captured points looked
+  lost; docs/DesignNotes.md → "Damage the capture never saw, and damage it invented").
+
 - **Identity has two writes and one unset — and no veto.** `ClassificationCommands` is the whole vocabulary: `SetVerdict`
   (Player / Pet / Merc / NPC into `identity-overrides.txt` — the name it ships under; the pre-release spelling
   `mirror-overrides.txt` never reached an installed build, so nothing reads it and no migration code exists) and

@@ -7132,3 +7132,68 @@ name IS the proof; a new clause that wants more room rewords itself instead of w
 
 Suite after the sweep: **1,681 passed / 10 env-gated skipped**, solution builds with **0 warnings**. `EQLogParser.Wpf.Test`
 (NamesTableTest's cell/width assertions) still needs its Windows run along with the other pending UI items.
+
+### Damage the capture never saw, and damage it invented
+
+Two things came out of reading one capture's numbers against another's (`eqlog_Kizant_beta-11-30-25.txt`: 6,957,983 damage facts
+and 3,430,154 heal facts). One is a real defect that is now fixed. The other was never a defect at all — it was a probe I ran
+wrong, and it is recorded here because the same wrong measurement was drawn twice in this session and would have shipped a branch
+nobody needed.
+
+**The placeholder that read as a raider.** `<X> was chilled to the bone for N points of non-melee damage.` names no source, and
+`DamageLineParser` filled the attacker field with `Labels.Rs` — **"Reverse DS", a damage-TYPE word standing where an entity's name
+belongs**. That shape carries **69,651 attacker facts and 5,741,957,900 damage** on the beta capture — the same before and after the change below, since
+the number was never the problem — and before it, the identity census rendered the row **`Player · A Spell · No Caster in Line`**: R21's spell-shape recognizer matched a parser constant, so an
+invented actor came pre-equipped with the verdict the game writes for caster-less spells. The number was never the problem, so the
+number stays. What changed is the name — `Labels.Unattributed`, "Unattributed Damage" — and `ParserUtil.IsUnattributedName`
+(which also answers for the old `"Reverse DS"` spelling and for `Labels.Unk`, the other no-source shape) refuses those names
+identity: **R7 skips them as attacker**, and as defender it counts them as unclassified rather than letting a placeholder hand a
+side to whatever hit it. That guard matters because the placeholder reliably "attacked three mob instances over a minute" — the
+exact evidence `R7-graph` reads as one of ours. Expect an "Unattributed Damage" row on any capture with this shape: it is the
+honest version of a name that was never there. `ParserUtil.ReplacePlayer` reads the same recognizer, so a third-person defender
+is no longer renamed into the placeholder either.
+
+**The nine billion that were never lost.** `<boss> is pierced by <raider>'s thorns for N points of non-melee damage.` is 68,680
+lines on beta and is present in **all eleven live captures** (15,700 to 282,377 lines per file; 9.6 billion points on beta). I
+reported that as silently dropped — measured, I said, by parsing the line and getting no record. The claim was false in its own
+execution: **`DamageLineParser.ParseLine(string action)` takes the action ALONE**, and I handed it the whole line with its
+`[Sun Nov 23 18:43:49 2025]` prefix, so the "defender" swallowed the timestamp and the harness I ran before that reported nothing
+at all. Pushed through the real pipeline the shape was always captured — by the first `is … by …` branch, which takes everything
+between "by" and a trailing `'s` as the attacker:
+
+```
+[Sun Nov 23 18:43:49 2025] Waxwork Abolishion is pierced by Piemastaj's thorns for 154597 points of non-melee damage.
+  → fact: attacker "Piemastaj", defender "Waxwork Abolishion", total 154597
+```
+
+credited straight to the raid member whose name the possessive carries, which is what a meter wants (no `+Pets` detour, no owned
+row in the Names pane). Nothing shipped for it except this paragraph and a pin. Its older cousin behaves the same way —
+`YOU are pierced by Zelnithak's thorns for 4568 points of non-melee damage!` (141 such lines on `xegony-9-18-22`) is credited to
+the boss that owns the thorns.
+
+**Victims are named in groups, and self is a group.** The same capture made the identity hover say two wrong things. A raider's row
+can carry raid-side facts that are all *herself* (`Bjpotratz` on `xegony-2`: 61 of them, every one `Bjpotratz hit Bjpotratz for N
+points of fire damage by Corona Beam Refraction X.`) and the clause read **"Damaged players"** — my own first answer to the operator
+was built on reading that literally, and it was wrong twice over: the other 10,642 of that name's facts hit monsters, and the
+"raid-side pet" I claimed it was beating on (`Spitetangle`) reads **Npc at Certain via `R1-target`** and spends 4,434 facts beating
+players, which is exactly why R15's friendly-fire veto never let it be claimed ours (that tally counts zero-total attempts too —
+`agg.Friendly > 0` would have caught it only because the vetoes count misses). Pets were the other lie: they were folded into
+"players" though a capture is full of them (`Ashenback` spends 798 facts on pets; `Waxwork Abolishion hits Sancus`s pet for 37072
+points of damage.` is an ordinary line). So the clause table is closed at **eight sentences** — Players / NPCs / Pets, their three
+two-way pairs, all three together, and **"Damaged Itself"** for a name whose only victim is itself. Self is counted separately from
+the raid bucket (a name with real targets reports those and stays quiet about its own); pets count as raid-side for the *other*
+question the row answers, which spell a caster's was (`TypeWordFor`). Longest sentence is 30 characters, which is the hover cap
+(`IdentityVocabulary.MaxClauseLength`), asserted against the table rather than remembered.
+
+**Measured again on beta after both changes** (6,957,983 facts, 643 rows): the placeholder row reads `Unknown / Unknown` with its
+5.74 billion intact and no rule claiming it — before, the same row carried `Player · A Spell`. On the victim clauses over those 643
+rows, 113 say "Damaged Players", 28 name all three groups, and the biggest pet-victim rows are `Tallongast, The Egg` (9,982 facts on
+pets), `The Colossus of Skylance` (5,434) and `Xanzerok` (2,783). Self-hits are common (Cuddls 783, Fawntemplar 742) but **no beta row
+is self-only**, which is the point: "Damaged Itself" is reserved for a name with nothing else to say, which is what `Bjpotratz` was on
+`xegony-2`.
+
+**What re-parsing an old capture shows.** A row named "Unattributed Damage" wherever "Reverse DS" used to be (same points, honest
+label); hovers that say Pets or Itself instead of Players; and nothing at all different about thorns damage, because nothing was
+wrong with it. Pinned by `UnattributedDamageTest` (the placeholder keeps its number while earning no side; the possessive shape is
+already credited to its owner; `ParseLine` takes the action without its stamp) and `EvidenceLinesTest` (the eight-sentence table,
+its cap, pets, self).

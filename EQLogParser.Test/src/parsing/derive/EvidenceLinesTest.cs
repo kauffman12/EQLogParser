@@ -120,6 +120,94 @@ public class EvidenceLinesTest
   }
 
   /*
+   * Pets are not players. Real line from the 11-30-25 capture: `Waxwork Abolishion hits Sancus`s pet for 37072 points of damage.`
+   * The pet reads Pet through R5's own ownership cut, so a name whose victims are pets has to say PETS - "Damaged Players" was
+   * the word, and Ashenback spends 798 facts on those victims (docs/DesignNotes.md → the fact-clause chapter).
+   */
+  [TestMethod]
+  public void ANameWhoseVictimsArePetsSaysPets()
+  {
+    var report = Census(out _,
+                        (0, "Waxwork Abolishion hits Sancus`s pet for 37072 points of damage."),
+                        (2, "Waxwork Abolishion hits Kogbag`s pet for 21299 points of damage."));
+
+    var row = report.Find("Waxwork Abolishion");
+    Assert.IsNotNull(row);
+    Assert.AreEqual(2, row.HitsOnPets, "both defenders carry an ownership word: " + row.Kind);
+    Assert.AreEqual(0, row.HitsOnRaid, "a pet is not a player");
+    Assert.AreEqual(IdentityVocabulary.DamagedPetsPhrase, row.OtherEvidence);
+  }
+
+  /*
+   * And self is neither. The row that started this: Bjpotratz's 61 "raid-side" facts were all one line - her own Evoker beam,
+   * refracted back onto her - and the hover said "Damaged Players" about a woman who never touched an ally.
+   */
+  [TestMethod]
+  public void ANameWhoseOnlyVictimIsItselfSaysItself()
+  {
+    var report = Census(out _,
+                        (0, "Bjpotratz hit Bjpotratz for 29847 points of fire damage by Corona Beam Refraction X."),
+                        (3, "Bjpotratz hit Bjpotratz for 31120 points of fire damage by Corona Beam Refraction X."));
+
+    var row = report.Find("Bjpotratz");
+    Assert.IsNotNull(row);
+    Assert.AreEqual(2, row.SelfHits);
+    Assert.AreEqual(0, row.HitsOnRaid, "a reflect is not damage done to players");
+    Assert.AreEqual(IdentityVocabulary.DamagedSelfPhrase, row.OtherEvidence,
+                    $"{row.Name} hit only itself but the hover says \"{row.OtherEvidence}\"");
+  }
+
+  /// <summary>Victims of several kinds are all named - the clause never picks a favourite and hides the rest.</summary>
+  [TestMethod]
+  public void ANameThatHitPetsAndMonstersNamesBoth()
+  {
+    var report = Census(out _,
+                        (0, "Waxwork Abolishion hits Sancus`s pet for 37072 points of damage."),
+                        (2, "Waxwork Abolishion kicks A gnoll for 500 points of damage."));
+
+    var row = report.Find("Waxwork Abolishion");
+    Assert.IsNotNull(row);
+    Assert.AreEqual(IdentityVocabulary.DamagedNpcsAndPetsPhrase, row.OtherEvidence);
+  }
+
+  /*
+   * THE CLAUSE TABLE IS CLOSED, and every sentence in it stays short enough for a tooltip: one line, no wrapping, the head proof
+   * line still fits above it. "Damaged Players, Pets and NPCs" at 30 characters is the longest this can say - which is why the
+   * cap is measured against the table rather than remembered (a longer phrase belongs in the cell, not the hover).
+   */
+  [TestMethod]
+  public void TheClauseTableIsEightSentencesAndEveryOneFitsTheHover()
+  {
+    var expected = new[]
+    {
+      null, IdentityVocabulary.DamagedPlayersPhrase, IdentityVocabulary.DamagedNpcsPhrase,
+      IdentityVocabulary.DamagedPlayersAndNpcsPhrase, IdentityVocabulary.DamagedPetsPhrase,
+      IdentityVocabulary.DamagedPlayersAndPetsPhrase, IdentityVocabulary.DamagedNpcsAndPetsPhrase,
+      IdentityVocabulary.DamagedEveryonePhrase
+    };
+
+    for (var flags = 0; flags < 8; flags++)
+    {
+      var clause = IdentityVocabulary.DirectionPhrase(flags & 1, (flags >> 1) & 1, (flags >> 2) & 1, 0);
+      Assert.AreEqual(expected[flags], clause, $"victim flags {flags}");
+      if (clause is not null) Assert.AreEqual(clause.Length, clause.Trim().Length, $"flags {flags} carry stray space");
+    }
+
+    // Self answers only when nothing else did: a name with real targets reports those.
+    Assert.AreEqual(IdentityVocabulary.DamagedSelfPhrase, IdentityVocabulary.DirectionPhrase(0, 0, 0, 5));
+    Assert.IsNull(IdentityVocabulary.DirectionPhrase(0, 0, 0, 0));
+
+    foreach (var clause in new[] { IdentityVocabulary.DamagedPlayersPhrase, IdentityVocabulary.DamagedNpcsPhrase,
+                                   IdentityVocabulary.DamagedPetsPhrase, IdentityVocabulary.DamagedSelfPhrase,
+                                   IdentityVocabulary.DamagedPlayersAndNpcsPhrase, IdentityVocabulary.DamagedPlayersAndPetsPhrase,
+                                   IdentityVocabulary.DamagedNpcsAndPetsPhrase, IdentityVocabulary.DamagedEveryonePhrase })
+    {
+      Assert.IsTrue(clause.Length <= IdentityVocabulary.MaxClauseLength,
+                    $"\"{clause}\" is {clause.Length} characters, over the hover budget of {IdentityVocabulary.MaxClauseLength}");
+    }
+  }
+
+  /*
    * More than one rule spoke about this name — npcs.txt and a charm line — so the hover lists both instead of only the winner.
    * ("Frost" is in the shipped npcs.txt; that data file is already a fixture for R6 across this suite.)
    */
