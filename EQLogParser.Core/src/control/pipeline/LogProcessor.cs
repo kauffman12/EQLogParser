@@ -20,11 +20,27 @@ namespace EQLogParser
     private Task _readTask;
     private volatile bool _isDisposed;
 
+    /*
+     * Bound ONCE, in the constructor, because the call site below converts an INSTANCE method group, and that
+     * conversion allocates a new delegate every time it is written: measured 64 bytes per line on .NET 10 Release,
+     * which over the 10-million-line capture is ~610 MB of short-lived delegates — pure garbage, but garbage the
+     * collector still has to walk during a load.
+     *
+     * The two arguments beside it are left exactly as they were, and that asymmetry is measured rather than
+     * inconsistent: a non-capturing lambda and a STATIC method group are both cached by the compiler at 0 bytes per
+     * call (the static one lives in a generated field; the lambda captures nothing, so there is no display class to
+     * build). A processor-owned field also keeps the lifecycle explicit — this delegate dies with the processor that
+     * owns it instead of becoming another process-global reference. PlayerRegistry.Instance is a process singleton
+     * (`{ get; } = new()`), so binding here cannot outlive or bypass it: Clear() empties its contents, never its identity.
+     */
+    private readonly Action<string> _addMerc;
+
     internal LogProcessor(string fileName, IChatSink chatSink, ITriggerHook triggerHook)
     {
       _fileName = fileName ?? string.Empty;
       _chatSink = chatSink ?? throw new ArgumentNullException(nameof(chatSink));
       _triggerHook = triggerHook ?? throw new ArgumentNullException(nameof(triggerHook));
+      _addMerc = PlayerRegistry.Instance.AddMerc;
     }
 
     // The consuming task once LinkTo has run. Headless callers must wait for this to finish
@@ -95,7 +111,7 @@ namespace EQLogParser
           }
         }
 
-        if (PreLineParser.NeedProcessing(lineData, (name, time) => PlayerRegistry.Instance.AddVerifiedPlayer(name, time), PlayerRegistry.IsPossiblePlayerName, PlayerRegistry.Instance.AddMerc))
+        if (PreLineParser.NeedProcessing(lineData, (name, time) => PlayerRegistry.Instance.AddVerifiedPlayer(name, time), PlayerRegistry.IsPossiblePlayerName, _addMerc))
         {
           // may as well split once if most things use it
           lineData.Split = lineData.Action.Split(' ');

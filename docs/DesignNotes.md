@@ -3148,6 +3148,35 @@ allocated). `HealRecord` was unchanged at 48 B — it needs `OverTotal`, and the
 paying for a field in the type that has none. That paragraph's "next step down" was taken: the label went into a byte and both records fell to 40 B, which is
 the subsection below. Anything below *that* wants two-byte name ids, and that is the flat-array conversation in the section above, not a trimming job.
 
+#### Allocation traffic is not retained memory: the delegate on every line
+
+`gtp-improvements.md` #8 claims ~611 MB of delegate allocation over a 10,015,348-line capture, from `LogProcessor.DoPreProcess`
+passing `PlayerRegistry.Instance.AddMerc` as an argument. The claim was worth re-measuring rather than trusting, because the line
+passes **three** callbacks and only one of them can be at fault:
+
+| what is written at the call site | bytes allocated per line (.NET 10, Release) |
+|---|---|
+| `PlayerRegistry.Instance.AddMerc` — instance method group | **64 B** (a new delegate object, every time) |
+| `(name, time) => PlayerRegistry.Instance.AddVerifiedPlayer(name, time)` — non-capturing lambda | **0 B** (cached by the compiler) |
+| `PlayerRegistry.IsPossiblePlayerName` — static method group | **0 B** (cached by the compiler) |
+| a readonly field holding the delegate | 0 B |
+
+So the fix is one readonly field bound in the constructor, and the two arguments left exactly as they were. The asymmetry is the
+finding: an *instance* method-group conversion has to capture its receiver, so it allocates; a static conversion and a lambda that
+captures nothing are hoisted into a generated static field by the compiler. "Cache every delegate" would have added two fields,
+two indirections and zero bytes saved — which is why this table is in the repo and not just the phrase "cache the delegate".
+
+64 B × 10 M lines ≈ 640 MB, matching the reported figure. Read it as what it is: **allocation traffic, not retained memory**. The
+delegates were short-lived gen-0 garbage; nothing after the load holds one. The benefit is a collector that runs fewer times during
+a load, and this repo has measured before that allocation volume and elapsed time do not move together — the same probe that found
+the delegate found no independent timing win (it sat inside run-to-run variation), so no speedup is claimed here either.
+
+`LogProcessorIdentityCallbackTest` pins the *wiring*, both callbacks at once, through the real consumer loop: a mercenary join line
+reaches the registry's merc set and a raid join line reaches its verified players. It deliberately does not assert allocation — a
+line's legitimate work (the action substring, `Split(' ')`, interning) is on the order of a kilobyte, so no GC counter separates 64
+bytes of delegate from it, and a threshold that passes today is a coin flip on another machine. Costs of that kind live in this
+chapter, which is where measured-and-not-asserted numbers belong.
+
 #### Sixteen words in one byte: what a record's label costs
 
 A `HitRecord` said what kind of event it was with an `int` id into `StringCache` — four bytes to name one of sixteen words. Those sixteen are fourteen damage

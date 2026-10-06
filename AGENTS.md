@@ -708,6 +708,17 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   splits her in half; **quiescence counts heals too** (`DeriveEngine.CapturedTotal`), else a healing-only stretch reads as quiet
   and fires a derive over facts still arriving. `HealFact.OverTotal` keeps the log's two meanings apart — with a paren it is the
   amount *after* over-heal, without one it is `0` = "the line said no more", never "zero was asked".
+- **Only an INSTANCE method group allocates — measure before caching a delegate**: passing `X.Instance.Method` as an argument
+  converts a fresh delegate every call (measured **64 B/line**, ~640 MB over a 10-million-line capture), while a
+  non-capturing lambda and a **static** method group are both compiler-cached at **0 B** — so `LogProcessor` holds one readonly
+  `_addMerc` bound in its constructor and leaves the two sibling callbacks written inline, and "cache every delegate" would buy
+  two fields and zero bytes. Allocation traffic is not retained memory: no speedup is claimed (the probe found none inside
+  run-to-run variation) and the number lives in docs/DesignNotes.md → "Allocation traffic is not retained memory".
+  `LogProcessorIdentityCallbackTest` pins the **wiring** of both callbacks through the real consumer loop and deliberately does
+  NOT assert allocation — a line's legitimate work (substring, `Split`, interning) is ~1 KB, so no GC counter separates 64 bytes
+  from it and any threshold would be machine-specific. Same fixture, related law: **EQ writes `X joined the raid.`** (1,151 times
+  across twelve captures; `has joined the raid.` **zero**, though the group line keeps its `has`) because the raid branch tests the
+  whole prefix with a name check that refuses spaces — the tidier sentence enters the branch, fails the check and verifies nobody.
 - **The healing board's derived door is a record seam, not another Fight**: `HealingStatsBuilder` never reads a
   `Fight` — it takes `(time, HealRecord)` pairs and windows them itself against `AllRanges`, so the derivation reaches it
   through `GenerateStatsOptions.Heals`, filled by `HealSummarySource.Materialize`. Four rules. (1) **null means "say
