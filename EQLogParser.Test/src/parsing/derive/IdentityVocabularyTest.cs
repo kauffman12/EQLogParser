@@ -515,6 +515,61 @@ public class IdentityVocabularyTest
     Assert.AreEqual(1, IdentityVocabulary.TypeOptions.Count(o => o.Kind == IdentityKind.Unknown));
   }
 
+  /*
+   * WHAT THE GUILD LINE IS CALLED. The rule reads `Your guildmate X has completed … achievement.`, and the client's own guild list
+   * is why the claim can be trusted — but nothing on screen talks about guilds: no count of them exists, no roster of them is kept,
+   * and asked twice (the second time about this very hover clause) the word wanted was the EVENT, not the relationship. The CODE
+   * stays `R22-guildmate` — it is a machine word in identity-priors.txt and in eqlogparser.log, where renaming would orphan rows
+   * already written — so only what a person reads changed. Nothing else in the vocabulary may mention a guild either: that word
+   * exists to justify one claim, not to become a category on screen.
+   */
+  [TestMethod]
+  public void TheAchievementClaimNeverSaysGuildmateOnScreen()
+  {
+    Assert.AreEqual("Achievement", IdentityVocabulary.WhyWord("R22-guildmate"));
+    Assert.AreEqual("Achievement Message", IdentityVocabulary.ProofText("R22-guildmate", IdentityKind.Player));
+
+    // Borrowed from an older log on this server, the words are the same and only the tail is added.
+    Assert.AreEqual("Achievement Message in previous log", IdentityVocabulary.ProofText("Prior:R22-guildmate", IdentityKind.Player));
+
+    foreach (var word in IdentityVocabulary.WhyWords.Values)
+      Assert.IsFalse(word.Contains("guild", StringComparison.OrdinalIgnoreCase), $"a WHY cell mentions a guild: {word}");
+    foreach (var code in RuleWords)
+      Assert.IsFalse(IdentityVocabulary.ProofText(code, IdentityKind.Player).Contains("guild", StringComparison.OrdinalIgnoreCase),
+                     $"{code} hovers with a mention of a guild");
+  }
+
+  /*
+   * THE SPELL-DATABASE CLAUSES (asked directly: "the ones listed as spell maybe also check if they're in the spell database? that
+   * seems useful to know"). Hover words like any other — short, title case, and never a filename, because a tooltip points at
+   * something the operator cannot open. "In the NPC DB" is the pattern this application already uses for a shipped database, so
+   * the pair says Spell DB rather than inventing a second way to name one.
+   */
+  [TestMethod]
+  public void TheSpellDatabaseClausesAreHoverWordsNotFileNames()
+  {
+    foreach (var clause in new[] { IdentityVocabulary.InSpellDbPhrase, IdentityVocabulary.NotInSpellDbPhrase })
+    {
+      Assert.IsTrue(clause.Length <= IdentityVocabulary.MaxClauseLength, $"\"{clause}\" is {clause.Length} characters, over the hover budget");
+      Assert.IsFalse(clause.Contains(".txt", StringComparison.OrdinalIgnoreCase), $"a hover names a file: {clause}");
+      Assert.IsTrue(clause.EndsWith("Spell DB", StringComparison.Ordinal),
+                    $"the sibling of \"In the NPC DB\" stopped matching it: {clause}");
+    }
+
+    Assert.AreEqual(IdentityVocabulary.InSpellDbPhrase.Length,
+                    IdentityVocabulary.NotInSpellDbPhrase.Length - "Not ".Length,
+                    "the two clauses are one phrase plus its negation, so a reader learns the pair once");
+
+    /*
+     * The one R21 proof that IS the lookup has to be recognised as such by the report, or a hover would say membership twice:
+     * once as "Name of a Known Spell" and once as this table's own clause.
+     */
+    Assert.IsTrue(IdentityVocabulary.IsSpellListClaim("R21-spelleffect"));
+    Assert.IsTrue(IdentityVocabulary.IsSpellListClaim("Prior:R21-spelleffect"), "a borrowed spell-list claim is still the lookup");
+    Assert.IsFalse(IdentityVocabulary.IsSpellListClaim("R21-spellshape"), "the shape claim is not a data lookup — that row gets the clause");
+    Assert.IsFalse(IdentityVocabulary.IsSpellListClaim("R21-spellcast"));
+  }
+
   private static bool LooksLikeACode(string word)
     => word.Length > 2 && word[0] == 'R' && char.IsDigit(word[1]) && word.Contains('-');
 }

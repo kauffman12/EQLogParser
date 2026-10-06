@@ -5998,6 +5998,12 @@ person-shaped names really do sit (`Alleza`, `Mirala` — the Names pane would o
 mob). `IdentityPriorStore.RememberedRules` gained `R22-`, which is what makes it worth having: a silent guildmate is
 claimed in one capture and remembered in the next, with no `players.txt` write involved.
 
+**What the pane calls it.** The cell reads *Achievement* and the hover *Achievement Message* — neither says "guildmate", which was
+asked for twice (the second time about the hover clause itself: *"i didnt want guildmate mentioned. thats not important. just call it
+Achievement Message"*). The guild list is why the claim can be weighed, not a category the app tracks: no count of guildmates exists
+and no roster of them is kept, so a word implying one invites a question this window cannot answer. Only the machine word stays
+`R22-guildmate` (identity-priors.txt, eqlogparser.log); `TheAchievementClaimNeverSaysGuildmateOnScreen` keeps the vocabulary honest.
+
 **Measured yield, same method on both captures** (cold registry, rules applied over the capture's own facts): the
 winning claim on **22** roster names on Incogitable out of the 168 that file names at all, and **1** on
 `eqlog_Kizant_xegony-09-20-25.txt` — that one is `Blazem`, the quiet-named regular whose whole identity in a 3-hour
@@ -7027,7 +7033,8 @@ monsters*. Kind itself is unchanged (`Spell`, never a side-word for something th
 get a direction word — `TypeWordFor(Player, 99, 0)` is still *Player*.
 
 **`Row.OtherEvidence` is the second half of the hover**: every *other* claim on the name plus the one fact clause, one phrase per
-line, capped at four (the head proof line the pane prints makes five). Built in Core so the words are testable anywhere; the pane's
+line, capped at nine (the head proof line the pane prints makes ten — it was four/five until the same capture said the cap was
+cutting explanations in half; see "Two follow-ups" below). Built in Core so the words are testable anywhere; the pane's
 only job is `proof + "\n" + tail`, and it appends nothing when the tail is empty — **a row one rule claimed whose facts point
 nowhere hovers exactly as it did before**, which is what most rows are and what the existing one-line tests still assert. Lines are
 ordered by `IdentityVocabulary.ClaimRanks` (an operator's word 100 → a target frame 90 → chat/guild 80 → behaviour 70 → inference
@@ -7057,8 +7064,35 @@ players", the cheap claim and the honest one.
 
 One assertion changed shape while being written, and the test earned its keep: the hover was to contain **no kind word**, which is
 wrong as stated, because *In the NPC DB* names a source. The law is narrower — an evidence line is never **just** a verdict word —
-and that is what `ExtraLinesAreCappedCarryNoCodesAndDoNotMove` holds, alongside the five-line cap, "no rule codes reach the hover",
+and that is what `ExtraLinesAreCappedCarryNoCodesAndDoNotMove` holds, alongside the ten-line budget, "no rule codes reach the hover",
 and determinism (two identical passes produce byte-identical tails and cells; the census runs on a timer under somebody's cursor).
+
+**Two follow-ups on the same window (2026-11).** Both came from reading the pane over `eqlog_Kizant_xegony-2.txt` (2,286,368 facts,
+259 pooled names) after the friendly-fire question, and both are display-only — no rule, no verdict, no cost per fact.
+
+1. **The budget went from five lines to ten** (`BuildOtherEvidence`'s `maxExtraLines` 4 → 9), asked for directly: *"maybe have the
+   tooltips show the top 10 instead of top 5"*. Measured on that capture, a busy raider has nine extra lines to show and used to
+   have four: `Coas` (From Chat · Joined Raid · Left Raid · Damaged NPCs · Ate or Drank · Hit Their Own Eye · Summoned a Companion
+   · Owner in Pet's Name · Took Loot From a Corpse), `Reisil` and `Ammeren` all land on exactly ten with the head, so the new cap is
+   reached rather than guessed at. It stays a **cap** — that is what keeps a hover a tooltip instead of a report — and the ranking is
+   untouched, which is why "top 10" means *the ten highest-ranked lines*, not the first ten in timeline order.
+2. **A Spell row says whether this build's spell database knows its name**: `In the Spell DB` / `Not in the Spell DB`
+   (`IdentityVocabulary`, sibling wording of the existing *In the NPC DB*; never a filename). The reason is a gap in R21's own words:
+   the three proofs say HOW a name was learned (an empty caster slot, a casting message, the list) and only `R21-spelleffect` says
+   anything about the data, so "a rank newer than this build" looked identical to "a name that merely spelled like a spell". Asked
+   directly: *"the ones listed as spell maybe also check if they're in the spell database? that seems useful to know"*. It sorts at the
+   spell-data rank (50), below the fact clause, so the victim sentence stays first; and **`IdentityVocabulary.IsSpellListClaim` keeps
+   it from saying membership twice** — when an `R21-spelleffect` claim exists on the row, membership is already on screen. Measured on
+   that capture: **56 of 57 Spell rows print `In the Spell DB`; none prints `Not in the Spell DB`** (every caster-less name this
+   capture wrote is in the shipped `spells.txt`, which is the expected shape for a current expansion — the negative case is pinned by
+   the fixture `Tinstag Rk. II` instead); the 57th is `Frost`, whose head line **is** *Name of a Known Spell*, so the flag suppressed
+   the extra line and the information rides in the head exactly as designed. Cost: one dictionary lookup, asked only of rows that
+   already read Spell (dozens), never per fact and never per name.
+3. **The achievement line stopped mentioning guilds.** The cell was already *Achievement*; the hover said *Achievement For a Guildmate*
+   and the word went too: it is **`Achievement Message`** now (*"i didnt want guildmate mentioned. thats not important. just call it
+   Achievement Message"*). The code stays `R22-guildmate` — machine word in identity-priors.txt and eqlogparser.log, where renaming
+   would orphan rows already written — and `TheAchievementClaimNeverSaysGuildmateOnScreen` sweeps the whole vocabulary so the word
+   cannot come back through another rule's clause.
 
 ## Two capture gaps a hover question exposed (2026-11)
 

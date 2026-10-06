@@ -16,8 +16,8 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
 - **Zero warnings is the bar, and it is counted, not hoped for**: `dotnet build EQLogParser.sln -p:EnableWindowsTargeting=true --no-incremental --nologo 2>&1 | grep -cE ": (warning|error) [A-Z]+[0-9]+"` prints **0** before a commit
   (`--no-incremental` is load-bearing: MSBuild reports diagnostics only for projects it recompiles, so counting after `dotnet test` prints 0 about
   assemblies it never rebuilt — that is how an MSTEST0017 in a new test file shipped past a "clean" local count; docs/CodingStandards.md → "Build Warnings") (match diagnostics, not words — MSBuild's summary always contains `0 Warning(s)`). Nine CS8632s shipped once because a file in Core (project `Nullable=disable`) wrote `string?` without opening `#nullable enable annotations`; the whole fleet is one pragma, and it is why each new warning dies in its own commit (docs/CodingStandards.md → "Build Warnings", "Nullable Reference Types"). Nothing in this repo suppresses a warning (`#pragma warning disable`, `<NoWarn>`) — fixing the cause is the rule.
-- Tests: `dotnet test EQLogParser.Test/EQLogParser.Test.csproj` is the non-WPF suite (**1,697 passed / 10 env-gated skips**, plain `net10.0`, 2026-11 — the two idle-retry decisions, the lane-expiry law and the re-announce stamp are in that count). `EQLogParser.Wpf.Test` targets `net10.0-windows` and only
-  runs on Windows (154 tests as of this round, not executable from Linux); its total therefore belongs to a Windows run rather than being quoted here — add it to the headless number instead of trusting an arithmetic total. A Windows run that *loses* `Sta.Run` bodies rather than failing them is the failure mode to watch.
+- Tests: `dotnet test EQLogParser.Test/EQLogParser.Test.csproj` is the non-WPF suite (**1,700 passed / 10 env-gated skips**, plain `net10.0`, 2026-11 — the two idle-retry decisions, the lane-expiry law, the re-announce stamp, the ten-line hover budget and the Spell rows' spell-database clause are in that count). `EQLogParser.Wpf.Test` targets `net10.0-windows` and only
+  runs on Windows; its total belongs to a Windows run rather than being quoted here (a `[TestMethod]` grep counts data-driven variants and is not an executed count) — add it to the headless number instead of trusting arithmetic. A Windows run that *loses* `Sta.Run` bodies rather than failing them is the failure mode to watch.
 - **Real-log corpus layout (local/, gitignored)**: `local/logs/live/` holds live-format captures; `local/logs/emu/` holds EMU-server captures (THJ/TSS/Heroes Forge shapes) that need the app's `EnableEmuParsing` behaviour. The env-gated real-log tests run them via **`EQLP_EMU=1`**, which sets `AppSettings.IsEmuParsingEnabled` for the duration of a `PipelineHarness` run (restored after — the flag is process-global and live-format logs misparse with it on). Without it an EMU capture parses with DamageLineParser's live grammar and silently loses the `(Owner: X)` / `scores a critical hit! (N)` shapes, so a parity run over `emu/` without the flag measures nothing. Timestamps are the same `[DDD MMM dd HH:mm:ss yyyy]` shape in both directories.
 
 ## Testing Guidelines
@@ -238,7 +238,10 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   name so a server-qualified one is refused) → `EvidenceFact.EvGuildmate` → **Player at Strong** `R22-guildmate`, which
   sits under the frames the client produces by looking at the entity (like R17's drink, R19's eye) and over npcs.txt,
   where person-shaped names do sit. `RememberedRules` gained `R22-`, so a silent regular is claimed once and remembered;
-  **no `players.txt` write is involved.** Measured yield: the winning claim on **22** roster names on Incogitable (168
+  **no `players.txt` write is involved.** **Neither display word says "guildmate"** — the cell reads *Achievement* and the hover
+  *Achievement Message* (asked twice, the second time about the hover clause itself); the CODE stays `R22-guildmate` because it is a
+  machine word in identity-priors.txt and eqlogparser.log, and `TheAchievementClaimNeverSaysGuildmateOnScreen` sweeps the whole
+  vocabulary so the word cannot return through another rule's clause. Measured yield: the winning claim on **22** roster names on Incogitable (168
   named there) and **1** on `-09-20-25` (`Blazem`, four achievement lines in a 3-hour capture), while pool-wide placement
   stays at its 82.5 % — the rule moves the people the aggregate was never about. Numbers, refusals and why tells are out:
   docs/DesignNotes.md → "What was built out of it: R22-guildmate"; pinned by `GuildmateRuleTest`.
@@ -411,7 +414,15 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   facts point nowhere keeps hovering as exactly one line** (the existing one-line tests still hold). Ordering is
   `IdentityVocabulary.ClaimRanks` — operator 100 → target frame 90 → chat/guild 80 → behaviour 70 → **fact clause 75** → inference 60
   → npcdb/grammar/spell-data 50 → the two memory lanes 20, unknown codes at `UnrankedClaimRank` 45 — ties by strength then ordinal, cap
-  four extra lines (five with the head). `EverySourceThatCanBeRankedIsRankedAndEveryRankHasAWord` holds `ClaimRanks` and `WhyWords` to
+  **nine extra lines (ten with the head)** — raised from four/five on measurement, not for tidiness: a busy raider (`Coas`, `Reisil`,
+  `Ammeren`) has nine to show and had four of them cut off. It is still a cap, and ranking is what decides WHICH ten. **A Spell row
+  also says whether the shipped spell database knows the name** (`In the Spell DB` / `Not in the Spell DB`, worded beside the existing
+  *In the NPC DB*, never a filename) because two of R21's three proofs say nothing about the data — askable on real captures only as
+  "a rank newer than this build" vs "a name that only spelled like a spell". It sorts at 50 (below the fact clause, which stays first)
+  and `IdentityVocabulary.IsSpellListClaim` stops it printing beside an existing *Name of a Known Spell* claim; one dictionary lookup,
+  asked **only of rows that already read Spell**, never per name or per fact. On `eqlog_Kizant_xegony-2.txt`: 56 of 57 Spell rows print
+  it, and the exception (`Frost`) carries membership in its head line instead — asserted both directions by
+  `ASpellRowSaysWhetherTheSpellDatabaseKnowsTheName`. `EverySourceThatCanBeRankedIsRankedAndEveryRankHasAWord` holds `ClaimRanks` and `WhyWords` to
   covering **each other in both directions**, so a new rule cannot reach a hover and sort by accident. Two traps that look like free
   wins: an evidence line may **not** be just a verdict word, but it MAY name a source containing one (*In the NPC DB*) — that
   assertion was written too broadly and the test caught it (the app's word for a hostile name is **NPC**, never "monster" or "mob");

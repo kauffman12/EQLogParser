@@ -12,7 +12,9 @@ namespace EQLogParser;
  *   - TYPE DIRECTION for a Spell name — "NPC Spell" when everything it hit was one of ours, "Player Spell" when everything it hit
  *     was a monster, plain "Spell" when the targets disagree or read Unknown. The judgement in the cell, the reason in the hover;
  *   - `Row.OtherEvidence` — every OTHER claim on the name plus one fact clause ("Damaged Players"), one phrase per line, ranked
- *     by IdentityVocabulary.ClaimRanks and capped at four (the head proof line makes five).
+ *     by IdentityVocabulary.ClaimRanks and capped at nine (the head proof line makes ten); a SPELL row also says whether this
+ *     build's spell database contains the name, because the three R21 proofs say HOW a name was learned and only one of them
+ *     is a data lookup (`ASpellRowSaysWhetherTheSpellDatabaseKnowsTheName`).
  *
  * The cost rules that shaped this (the operator's constraint, and a fair one): WHOSE-SIDE is resolved once per name into a
  * pool-sized array rather than per fact, claims are enumerated from the timeline's own list without copying it, and the result is
@@ -22,7 +24,7 @@ namespace EQLogParser;
 [TestClass]
 public class EvidenceLinesTest
 {
-  private const int MaxExtraLines = 4;
+  private const int MaxExtraLines = 9;
 
   [TestInitialize]
   public void Setup()
@@ -79,7 +81,7 @@ public class EvidenceLinesTest
     Assert.AreEqual(0, row.HitsOnMobs);
 
     // The phrase says the reason for the word, in the same words a person would use. No counts, no rule codes.
-    Assert.AreEqual("Damaged Players", row.OtherEvidence);
+    AssertSpellTail(row, "Damaged Players");
   }
 
   /// <summary>The opposite direction — a dot on the raid's targets — reads "Player Spell".</summary>
@@ -94,7 +96,7 @@ public class EvidenceLinesTest
     Assert.IsNotNull(row, "the substituted spell name is a row: " + string.Join(", ", report.Rows.Select(r => r.Name)));
     Assert.AreEqual(IdentityKind.Spell, row.Kind);
     Assert.AreEqual("Player Spell", row.TypeDisplay);
-    Assert.AreEqual("Damaged NPCs", row.OtherEvidence);
+    AssertSpellTail(row, "Damaged NPCs");
   }
 
   /*
@@ -112,11 +114,48 @@ public class EvidenceLinesTest
     Assert.IsNotNull(row, "the substituted spell name is a row: " + string.Join(", ", report.Rows.Select(r => r.Name)));
     Assert.AreEqual(IdentityKind.Spell, row.Kind);
     Assert.AreEqual("Spell", row.TypeDisplay);
-    Assert.AreEqual("Damaged Players and NPCs", row.OtherEvidence);
+    AssertSpellTail(row, "Damaged Players and NPCs");
 
     // ...and only Spell rows ever get a direction word: a person's cell is the kind, whatever they hit.
     Assert.AreEqual("Player", IdentityVocabulary.TypeWordFor(IdentityKind.Player, 99, 0));
     Assert.AreEqual("NPC", IdentityVocabulary.TypeWordFor(IdentityKind.Npc, 0, 99));
+  }
+
+  /*
+   * A SPELL row says whether the shipped spell database knows its name. Two of R21's three proofs say nothing about the data,
+   * which left a reader unable to tell "a rank newer than this build" from "a name that only LOOKED like a spell" — asked
+   * directly: "the ones listed as spell maybe also check if they're in the spell database? that seems useful to know". The line
+   * is added only when no claim already states membership (R21-spelleffect IS the lookup), so the hover never says it twice.
+   */
+  [TestMethod]
+  public void ASpellRowSaysWhetherTheSpellDatabaseKnowsTheName()
+  {
+    // These two guards are assertions ABOUT THE SHIPPED DATA: if spells.txt gains or loses a row, this test says so here rather
+    // than quietly testing one direction twice.
+    Assert.IsTrue(ClassificationRules.SpellNamed("Strangle XVII Rk. III"),
+                  "fixture: the shipped spell database must still know this rank (id 72747)");
+    Assert.IsFalse(ClassificationRules.SpellNamed("Tinstag Rk. II"),
+                   "fixture: this name must stay unknown to the shipped spell database");
+
+    var report = Census(out _,
+                        (0, "A gnoll has taken 900 damage from Strangle XVII Rk. III by ."),
+                        (2, "You have taken 900 damage from Tinstag Rk. II by ."));
+
+    var known = report.Find("Strangle XVII Rk. III");
+    var missing = report.Find("Tinstag Rk. II");
+    Assert.IsNotNull(known);
+    Assert.IsNotNull(missing);
+
+    // Known: either this table's own clause or the claim that is the lookup — and never the wrong answer.
+    var knownLines = Rows(known);
+    Assert.IsTrue(knownLines.Contains(IdentityVocabulary.InSpellDbPhrase)
+                  || knownLines.Contains(IdentityVocabulary.ProofText("R21-spelleffect", IdentityKind.Spell)),
+                  $"the database knows this name but the hover says: {known.OtherEvidence}");
+    Assert.IsFalse(knownLines.Contains(IdentityVocabulary.NotInSpellDbPhrase),
+                   $"the database knows this name but the hover says: {known.OtherEvidence}");
+
+    CollectionAssert.Contains(Rows(missing), IdentityVocabulary.NotInSpellDbPhrase,
+                              $"a Spell name the data has never heard of must say so: {missing.OtherEvidence}");
   }
 
   /*
@@ -275,4 +314,19 @@ public class EvidenceLinesTest
 
   private static List<string> Rows(ClassificationReport.Row row)
     => row.OtherEvidence.Length == 0 ? [] : row.OtherEvidence.Split('\n').ToList();
+
+  /*
+   * What a SPELL row's tail is allowed to look like: the victim clause FIRST (rank 75 outranks a database claim's 50 — the capture
+   * watching something happen beats a lookup), then exactly ONE line about the spell database, phrased either as this table's own
+   * clause or as R21's spell-list proof, depending on which claim the timeline got to record.
+   */
+  private static void AssertSpellTail(ClassificationReport.Row row, string victimClause)
+  {
+    var lines = Rows(row);
+    Assert.AreEqual(2, lines.Count, $"{row.Name}: expected the victim clause plus one spell-database line, got: {row.OtherEvidence}");
+    Assert.AreEqual(victimClause, lines[0], $"{row.Name}: the fact clause should outrank the database claim");
+    Assert.IsTrue(lines[1] is IdentityVocabulary.InSpellDbPhrase or IdentityVocabulary.NotInSpellDbPhrase
+                  || lines[1] == IdentityVocabulary.ProofText("R21-spelleffect", IdentityKind.Spell),
+                  $"{row.Name}: a Spell row's second line names the spell database, got \"{lines[1]}\"");
+  }
 }

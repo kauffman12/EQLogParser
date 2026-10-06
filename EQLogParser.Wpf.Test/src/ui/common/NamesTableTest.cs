@@ -433,7 +433,8 @@ public class NamesTableTest
    *   - the row's own proof line stays FIRST: the blink-read answer is the verdict's reason, and the rest reads downward;
    *   - the shape is additive — a row with nothing extra still hovers as exactly one line, which is what every other test in this
    *     file assumes and what most rows are;
-   *   - head plus tail stays inside the five-line budget;
+   *   - head plus tail stays inside the ten-line budget (nine extra lines: asked for directly, because four cut a
+   *     busy raider's own explanation in half);
    *   - the TYPE cell carries whatever word Core chose (a Spell row's direction: "NPC Spell" / "Player Spell"), and falls back to
    *     the plain kind word when a row was assembled by hand and says nothing.
    */
@@ -467,8 +468,9 @@ public class NamesTableTest
     var busy = NamesTable.RowFrom(new ClassificationReport.Row
     {
       Name = "Frost", Kind = IdentityKind.Npc, Reason = "R9-charm", HasFacts = true,
-      OtherEvidence = string.Join("\n", Enumerable.Repeat(IdentityVocabulary.DamagedNpcsPhrase, 4)),
+      // Nine identical clauses: dedupe happens per DISTINCT phrase upstream, so this measures only the cap.
+      OtherEvidence = string.Join("\n", Enumerable.Repeat(IdentityVocabulary.DamagedNpcsPhrase, 9)),
     });
-    Assert.AreEqual(5, busy.Provenance.Split('\n').Length, "the hover budget is five lines: the proof plus four");
+    Assert.AreEqual(10, busy.Provenance.Split('\n').Length, "the hover budget is ten lines: the proof plus nine");
   }
 }

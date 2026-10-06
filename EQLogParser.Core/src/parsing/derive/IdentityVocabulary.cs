@@ -161,6 +161,21 @@ internal static class IdentityVocabulary
   /// <summary>The longest sentence this table can hand out; the hover-length law is asserted against it.</summary>
   internal const int MaxClauseLength = 30;
 
+  /*
+   * Whether the spell database this application ships knows a SPELL row's name, as its own hover line. Asked directly:
+   * "the ones listed as spell maybe also check if they're in the spell database? that seems useful to know" — because the
+   * three R21 proofs answer HOW the name was learned (an empty caster slot, a casting message, the list itself) and only
+   * the third of them says anything about the data. So a curse whose rank postdates this build's spells.txt now reads
+   * `No Caster in Spell Damage` / `Not in the Spell DB` instead of leaving the reader to guess whether the app has ever
+   * heard of it, and an operator's own Spell verdict says the same thing about the name they typed.
+   *
+   * "Spell DB" is the sibling of the existing "In the NPC DB", and no filename appears (the operator cannot open what a
+   * hover points at). Only a row that READS as a Spell asks the question — asking it of 4,000 people would add a line to
+   * every tooltip to say something nobody asks about them.
+   */
+  internal const string InSpellDbPhrase = "In the Spell DB";
+  internal const string NotInSpellDbPhrase = "Not in the Spell DB";
+
   /// <summary>Where the fact clause sorts among the claims: above inference and databases, below what was heard or seen
   /// directly — the capture watched it happen, which outranks a guess but not a target frame or an operator's word.</summary>
   internal const int FactClauseRank = 75;
@@ -263,6 +278,10 @@ internal static class IdentityVocabulary
   /// </summary>
   internal static bool IsSpellEffect(string? source) => CodeOf(source).StartsWith("R21-", StringComparison.Ordinal);
 
+  /// <summary>Whether this source is the one R21 proof that IS a spell-database lookup (R21-spelleffect). Its hover clause
+  /// already states membership, so the report does not print a second line saying the same thing.</summary>
+  internal static bool IsSpellListClaim(string? source) => CodeOf(source) == "R21-spelleffect";
+
   /// <summary>True when this verdict came from an earlier log on this server rather than from the open capture.</summary>
   internal static bool IsPrior(string? source) =>
     !string.IsNullOrEmpty(source) && source.StartsWith(PriorPrefix, StringComparison.Ordinal);
@@ -346,11 +365,15 @@ internal static class IdentityVocabulary
       "R16-comma" => "Name Carries a Title",
       // The client's own guild list, not a guess from behaviour: see PreLineParser's census.
       "R23-loot" => "Took Loot From a Corpse",
-      // The line is an ACHIEVEMENT announcement; the guild part is why it can be trusted (the client writes it from its own
-      // guild list), so the hover names the event and keeps the source. Asked directly: "that 'guildmate' message should be
-      // considered an achievement message. the who reason is Achievement." The CODE stays `R22-guildmate` — it is a machine
-      // word in the ledger and the log, where renaming would orphan rows already written.
-      "R22-guildmate" => "Achievement For a Guildmate",
+      /*
+       * The line is an ACHIEVEMENT announcement; the guild part is only WHY it can be trusted (the client writes it from its
+       * own guild list), so neither the cell nor the hover mentions it. Asked directly twice, the second time about this very
+       * clause: "i didnt want guildmate mentioned. thats not important. just call it Achievement Message." Nothing about the
+       * rule counts, matches or remembers guilds beyond the one line it reads, and a word implying a relationship nobody
+       * measured invites the question ("how many guildmates?") this pane cannot answer. The CODE stays `R22-guildmate` — it is
+       * a machine word in the ledger and the log, where renaming would orphan rows already written.
+       */
+      "R22-guildmate" => "Achievement Message",
       "R17-selffeed" => "Ate or Drank",
       // Not "our": a capture says who healed whom, not whose side the reader is on.
       "R18-healedpet" => "Healed by a Player Pet",

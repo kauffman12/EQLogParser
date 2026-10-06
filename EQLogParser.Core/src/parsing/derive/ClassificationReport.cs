@@ -575,7 +575,7 @@ namespace EQLogParser
         SelfHits = hitsOnSelf,
         // Pets count as raid-side for WHO A SPELL BELONGS TO (a pet is one of ours); the fact clause below splits them out again.
         TypeDisplay = IdentityVocabulary.TypeWordFor(kind, hitsOnRaid + hitsOnPets, hitsOnNpcs),
-        OtherEvidence = BuildOtherEvidence(timeline, name, source, hitsOnRaid, hitsOnNpcs, hitsOnPets, hitsOnSelf),
+        OtherEvidence = BuildOtherEvidence(timeline, name, source, kind, hitsOnRaid, hitsOnNpcs, hitsOnPets, hitsOnSelf),
       };
       rows[name] = row;
       return row;
@@ -644,12 +644,19 @@ namespace EQLogParser
      * Cost is per NAME, not per fact — ClaimsOf hands back the timeline's own list without copying it (the caller must not
      * mutate), ProofText maps to interned literals, and the whole thing returns a single string (empty in the common case of one
      * claim and no direction). A 4,000-name census allocates a handful of small lists for the rows that have several claims and
-     * nothing at all for the rest.
+     * nothing at all for the rest. The ONE lookup beyond the timeline is the spell-database question, and it is asked only of a
+     * row that already reads Spell (dozens on a night's capture), never per fact and never per name.
      */
-    private static string BuildOtherEvidence(EntityTimeline? timeline, string name, string winningSource,
+    private static string BuildOtherEvidence(EntityTimeline? timeline, string name, string winningSource, IdentityKind kind,
                                              int hitsOnRaid, int hitsOnNpcs, int hitsOnPets = 0, int hitsOnSelf = 0)
     {
-      const int maxExtraLines = 4;   // IdentityVocabulary/NamesTable prints the head proof line; five lines is the budget
+      /*
+       * IdentityVocabulary/NamesTable prints the head proof line, so ten lines is the whole hover. Asked directly for ten
+       * instead of five: the rows this binds are the interesting ones — a raider claimed by chat, a guild achievement, an eye,
+       * a loot line and the fact clause had four of their six lines cut off, and the truncated half was the part that explained
+       * the verdict. The cap stays a cap rather than disappearing: it is what keeps a hover a tooltip instead of a report.
+       */
+      const int maxExtraLines = 9;
 
       if (timeline is null) return string.Empty;
       var claims = timeline.ClaimsOf(name);
@@ -658,15 +665,31 @@ namespace EQLogParser
 
       List<(int Rank, int Strength, string Phrase)>? lines = null;
       var seenPhrases = new HashSet<string>(StringComparer.Ordinal);
+      var spellListStated = false;
 
       foreach (var claim in claims)
       {
+        // R21's spell-LIST proof is the DB answer already; no second line says it again.
+        if (IdentityVocabulary.IsSpellListClaim(claim.Source)) spellListStated = true;
+
         // The winner is the head line the pane already prints; listing it twice would be padding.
         if (string.Equals(claim.Source, winningSource, StringComparison.Ordinal)) continue;
 
         var phrase = IdentityVocabulary.ProofText(claim.Source, claim.Kind);
         if (phrase.Length == 0 || !seenPhrases.Add(phrase)) continue;
         (lines ??= new List<(int, int, string)>()).Add((IdentityVocabulary.ClaimRank(claim.Source), claim.Strength, phrase));
+      }
+
+      /*
+       * A Spell row also says whether the shipped spell database knows the name — which of the three R21 proofs did it is in
+       * the head line, but "does this build's data contain it" is the question a reader asks next, and a rank newer than this
+       * build looks identical to a name that merely spelled like a spell. Sorts with the other database-grade claims.
+       */
+      if (kind == IdentityKind.Spell && !spellListStated)
+      {
+        var dbPhrase = ClassificationRules.SpellNamed(name) ? IdentityVocabulary.InSpellDbPhrase : IdentityVocabulary.NotInSpellDbPhrase;
+        if (seenPhrases.Add(dbPhrase))
+          (lines ??= new List<(int, int, string)>()).Add((IdentityVocabulary.ClaimRank("R21-spelleffect"), 0, dbPhrase));
       }
 
       // The fact clause competes with the claims on rank rather than always trailing them: for a Spell row it is the sentence
