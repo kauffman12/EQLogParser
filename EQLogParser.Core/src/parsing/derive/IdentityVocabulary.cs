@@ -315,7 +315,11 @@ internal static class IdentityVocabulary
       "R16-comma" => "Name Carries a Title",
       // The client's own guild list, not a guess from behaviour: see PreLineParser's census.
       "R23-loot" => "Took Loot From a Corpse",
-      "R22-guildmate" => "Named You Their Guildmate",
+      // The line is an ACHIEVEMENT announcement; the guild part is why it can be trusted (the client writes it from its own
+      // guild list), so the hover names the event and keeps the source. Asked directly: "that 'guildmate' message should be
+      // considered an achievement message. the who reason is Achievement." The CODE stays `R22-guildmate` — it is a machine
+      // word in the ledger and the log, where renaming would orphan rows already written.
+      "R22-guildmate" => "Achievement For a Guildmate",
       "R17-selffeed" => "Ate or Drank",
       // Not "our": a capture says who healed whom, not whose side the reader is on.
       "R18-healedpet" => "Healed by a Player Pet",
@@ -438,7 +442,10 @@ internal static class IdentityVocabulary
     ["R15-healed"] = "Healed",
     ["R16-comma"] = "Titled Name",
     ["R23-loot"] = "Looted",
-    ["R22-guildmate"] = "Guildmate",
+    // **Achievement**, not "Guildmate": what happened is that an achievement was announced. Nothing about the rule counts,
+    // matches or remembers guilds beyond the one line it reads, and a cell word implying a relationship nobody measured
+    // invites exactly the question ("how many guildmates?") this pane cannot answer.
+    ["R22-guildmate"] = "Achievement",
     ["R17-selffeed"] = "Ate or Drank",
     ["R18-healedpet"] = "Pet Healed It",
     ["R19-eyeowner"] = "Hit Own Eye",
