@@ -6878,3 +6878,53 @@ parser. Two traps surfaced on the way: `_spellsNameDb` is the only honest answer
 abbreviation dictionary holds punctuated short forms — row 13031's abbreviation is `Boom!`), and the per-name accessors each
 filter their list (`Adps > 0`, `Damaging > 0`, `Damaging < 0`), so they answer "what does this spell do" but not "is this a
 spell" — a mob explosion at level 255 with none of those flags answers nothing through them.
+
+## The Spell kind: a name the client puts in a fighter's slot
+
+`IdentityKind.Spell` (Core, `EntityTimeline`) answers a question the four kinds could not: **what is a spell name doing in an
+attacker field?** The client writes `A gnoll has taken 335500 damage from Curse XVII Rk. III by .` with an empty caster and
+substitutes the spell (`AttackerIsSpell`), and the raid's own DoT effects arrive with the same emptiness
+(`Bastion of Divinity Rk. II healed Xxuro over time for 6670 hit points by Bastion of Divinity Effect II.`). Calling those NPC
+put an effect in the same column as the gnoll; calling them Player / "our side" is what got reported from the window. Spell is
+neither: `IdentityLookup` still answers "not one of ours", the Type cell reads **Spell**, and the Why cell keeps R21's three
+proof words (*No Caster in Line*, *Casting Message*, *In spells.txt*).
+
+**Three predicates had to be pinned to the NPC arm, because every board was measured under the old reading.** `SideAt`
+(`FightProjection`) treats Spell exactly as Npc on both its branches; `EntityTimeline.IsRaidVictimAt` adds Spell to its
+exclusion list (`not Npc and not Pet` alone would have made an effect's name in a DEFENDER slot "one of us being beaten on" and
+silently widened the tank board); R7's defender switch gets `case IdentityKind.Spell:` on the NPC arm because `default` there
+means Player/Pet/Merc, so a fall-through would have let a spell defend a name into "R7-side" enemyhood. `CharmWindows.IsOurSide`
+and `HasIndependentIdentity` are left asking about Npc: no charm line has ever named a spell, so the unreachable arm is not
+worth widening.
+
+**A/B on `eqlog_Kizant_xegony-2.txt` (467 MB, 2,270,292 damage facts), same probe either side of the change:**
+
+| | before | after |
+|---|---|---|
+| census names / players / pets / mercs / unknown | 264 / 57 / 58 / 0 / 28 | identical |
+| Npc rows | **121** | **64** (the 57 R21 rows moved to Spell) |
+| R21 rows and their kind | 57, all `Npc` | 57, all `Spell` |
+| fight rows / row damage sum | **277 / 792,266,411,943** | **277 / 792,266,411,943** |
+| Σ begin, Σ last, Σ hits, Σ damage-taken, RaidPet rows | 17,707,706,692,384 / …706,703,485 / 2,170,124 / 787,450,748,610 / 21 | identical |
+
+`Strangle` and `Rune` (the raid members whose names are also spells) read `Player · R4-spell` with the pencil on both sides of
+it, and `Boom!` — whose bang spells.txt turns out to own (id 54752, and a second row 13031 `Boom`) — reads `Spell` now instead
+of `Npc`, which is what the operator asked for without touching the parser.
+
+### Open, found by the parity work: which names get fight rows moves run to run on one fixed file
+
+The A/B could not use a row fingerprint, because **two runs of the same binary over the same capture produce different name
+sets**: the ordinal *and* case-insensitive hashes of the 83 distinct row names both move (`71,387,943,702` vs `6,678,452,459`;
+case-insensitive `-28,620,767,896` vs `115,312,201,838`). Everything else is stable to the byte — 277 rows, Σ damage
+792,266,411,943, Σ begin, Σ last, Σ hits, Σ damage-taken and the 21 RaidPet rows — and there are **no case twins** among the row
+names, so it is not the `A bone walker`/`a bone walker` problem this pipeline already solved. Measured with the Spell work
+stashed as well (`15,943,990,649` vs `21,074,517,515`), so it is **pre-existing**, not introduced here.
+
+What that says: row count and every magnitude are reproducible while the *identity of some rows* is not — consistent with an
+equal-strength identity tie being resolved by hash/HashSet enumeration order somewhere in classification (EntityTimeline
+resolves ties by "same strength: later time wins", and several stages iterate `facts.InternedNames` or a `ConcurrentDictionary`).
+The way to chase it is to print the sorted name list from two runs of `EQ_REVIEW_SPELLKIND`-style probe (`/tmp/eq-ab`) over this
+capture and diff which names appear, then find whose verdict differs. Until then: **do not use a global fingerprint as a parity
+gate** — compare per-person numbers, which is how the retired board census did it and why.
+
+Reproduce: `cd /tmp/eq-ab && dotnet run --no-build -c Debug -- <capture>` twice; the `AB name=` line moves, `dmg`/`hits` do not.

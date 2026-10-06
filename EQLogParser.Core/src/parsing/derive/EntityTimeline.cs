@@ -11,7 +11,18 @@ namespace EQLogParser
     Npc = 2,
     Merc = 3,
     // Owned companion (catalog R5): player-side by affiliation, never a player itself.
-    Pet = 4
+    Pet = 4,
+
+    /*
+     * A SPELL NAME standing where a fighter would be (catalog R21) - neither side. The client writes `… damage from Slicing
+     * Energy by .` with an empty caster slot and fills it with the spell, so the word that reaches the name pool is a spell and
+     * not a creature; the raid's own DoT effects arrive the same way (`Bastion of Divinity Rk. II healed Xxuro over time for
+     * 6670 hit points by Bastion of Divinity Effect II.`), equally nameless and equally not an opponent. NPC made those look
+     * like mobs the raid had failed to fight; Player / "our side" is what the operator reported seeing. Spell answers the
+     * identity question without claiming one: never one of ours (IdentityLookup), never a victim below, and it routes exactly
+     * as the NPC verdict it replaced, so adding the kind moves no number on any board.
+     */
+    Spell = 5
   }
 
   // Answer to "whose side is this name on, right now?" — genuinely time-scoped (charm windows,
@@ -415,7 +426,12 @@ namespace EQLogParser
       if (name is null) return false;
 
       var kind = IdentityAt(name, t);
-      return kind is not IdentityKind.Npc and not IdentityKind.Pet;
+      /*
+       * Exclusion, and Spell belongs with the two it already excludes: an effect's name standing in a defender slot is not "one
+       * of us being beaten on" any more than a mob or somebody's pet is. Left out, the tanking board would have widened with
+       * DoT ticks on the same day the kind was added - silently, which is how that board's rules are written against.
+       */
+      return kind is not IdentityKind.Npc and not IdentityKind.Pet and not IdentityKind.Spell;
     }
 
     /*

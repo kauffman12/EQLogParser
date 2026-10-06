@@ -689,9 +689,15 @@ namespace EQLogParser
       var kind = timeline.IdentityAt(name, t);
       if (kind is IdentityKind.Unknown) return Side.Unknown;
 
+      /*
+       * A Spell name keeps the NPC arm of this decision exactly as it behaved before the kind existed: R21's rows WERE NPC, and
+       * every fight row, +Pets fold and tanking column was measured under that reading, so a vocabulary change must not move one
+       * number. Whether the raid's own DoT should count as the raid's OUTPUT is a separate measurable question and would arrive
+       * with its own board diff (docs/DesignNotes.md → "A name that equals a spell is not a spell row").
+       */
       if (IsFlipped(timeline, name, t))
-        return kind is IdentityKind.Npc ? Side.Player : Side.Npc;
-      if (kind is not IdentityKind.Npc)
+        return kind is IdentityKind.Npc or IdentityKind.Spell ? Side.Player : Side.Npc;
+      if (kind is not IdentityKind.Npc and not IdentityKind.Spell)
         return Side.Player;
       return timeline.IsOurPetAt(name, t) ? Side.Player : Side.Npc;
     }

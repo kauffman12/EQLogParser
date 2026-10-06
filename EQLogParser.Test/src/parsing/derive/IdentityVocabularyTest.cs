@@ -431,7 +431,7 @@ public class IdentityVocabularyTest
     var options = IdentityVocabulary.TypeOptions;
 
     CollectionAssert.AreEqual(
-        new[] { "Player", "Pet", "Mercenary", "NPC", "Clear claim" },
+        new[] { "Player", "Pet", "Mercenary", "NPC", "Spell", "Clear claim" },
         options.Select(o => o.Word).ToArray());
 
     Assert.AreEqual(options.Length, options.Select(o => o.Kind).Distinct().Count(),
@@ -440,8 +440,9 @@ public class IdentityVocabularyTest
 
   /*
    * "Clear claim" carries IdentityKind.Unknown on purpose: ClassificationCommands.ClearVerdict removes the row and lets the
-   * capture's own rules speak, which is what "no verdict" means. It is NOT a sixth type — the cell for an unplaced name says
-   * "Unknown" and stays grey — and Unknown appears in the list exactly once, as that action.
+   * capture's own rules speak, which is what "no verdict" means. It is NOT another type — the cell for an unplaced name says
+   * "Unknown" and stays grey — and Unknown appears in the list exactly once, as that action. Spell IS a kind (R21: a caster-less
+   * spell name in a fighter's slot) and is offered like Player or NPC; it claims no side either way.
    */
   [TestMethod]
   public void ClearingAClaimIsTheUnknownKindRatherThanASixthType()

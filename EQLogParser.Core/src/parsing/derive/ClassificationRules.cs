@@ -1156,7 +1156,8 @@ namespace EQLogParser
         if (held >= RuleStrength.Strong) return;
       }
 
-      timeline.SetIdentity(name, IdentityKind.Npc, RuleStrength.Strong, source, double.NegativeInfinity);
+      // Spell rather than Npc: the rule's whole point is that this name is not a fighter of either side (see IdentityKind).
+      timeline.SetIdentity(name, IdentityKind.Spell, RuleStrength.Strong, source, double.NegativeInfinity);
     }
 
     /*
@@ -1247,6 +1248,9 @@ namespace EQLogParser
         switch (dk)
         {
           case IdentityKind.Npc: agg.AddNpc(def, f.TimeS); break;
+          // The NPC arm on purpose: `default` below means Player/Pet/Merc, so a Spell defender falling through would count as
+          // player-side opposition and could get its ATTACKER named an enemy ("R7-side") merely for hitting a spell effect.
+          case IdentityKind.Spell: agg.AddNpc(def, f.TimeS); break;
           case IdentityKind.Unknown: agg.UnknownEdges++; break;
           default: agg.AddPlayerSide(def, f.TimeS); break;  // Player/Pet/Merc
         }

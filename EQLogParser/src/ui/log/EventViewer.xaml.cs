@@ -86,7 +86,9 @@ namespace EQLogParser
       bool SaidNpc(string name)
       {
         if (timeline is null || EQDataStore.Instance.IsKnownNpc(name)) return EQDataStore.Instance.IsKnownNpc(name);
-        lock (timeline.SyncRoot) return timeline.Identity(name) is IdentityKind.Npc;
+        // Spell joins NPC here because this asks "is the dead name a thing rather than a person"; R21's rows answered that as
+        // NPC before the kind existed, and a death line naming an effect should read the same way it always did.
+        lock (timeline.SyncRoot) return timeline.Identity(name) is IdentityKind.Npc or IdentityKind.Spell;
       }
 
       foreach (var (beginTime, record) in RecordsStore.Instance.GetAllDeaths())

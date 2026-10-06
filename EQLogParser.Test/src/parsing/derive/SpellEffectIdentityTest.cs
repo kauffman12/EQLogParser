@@ -86,8 +86,13 @@ public class SpellEffectIdentityTest
     foreach (var spell in new[] { "Curse XVII Rk. III", "Fire Trap Rk. II", "Ball of Fire" })
     {
       var kind = timeline.IdentityWithSource(spell, out var source);
-      Assert.AreEqual(IdentityKind.Npc, kind, $"{spell} reads as a fighter (source {source ?? "none"})");
+      // Spell is the kind this shape earns: not a fighter of either side. It used to be NPC, which put an effect's name in the
+      // same column as the gnoll and made the raid's own DoT read like something the raid failed to fight.
+      Assert.AreEqual(IdentityKind.Spell, kind, $"{spell} should be a spell name, not a fighter (source {source ?? "none"})");
       Assert.IsTrue(IdentityVocabulary.IsSpellEffect(source), $"a spell effect reads {source}");
+      Assert.AreEqual("Spell", IdentityVocabulary.TypeWord(kind),
+                      "the Type cell says WHAT it is; the Why cell says how we know, and that word stays 'A Spell'");
+      Assert.AreEqual("A Spell", IdentityVocabulary.WhyWord(IdentityVocabulary.CodeOf(source)));
 
       var row = report.Find(spell);
       Assert.IsNotNull(row, $"{spell} is missing from the census");
@@ -153,8 +158,8 @@ public class SpellEffectIdentityTest
 
     var timeline = Apply(run, out _);
 
-    Assert.AreEqual(IdentityKind.Npc, timeline.IdentityWithSource("Sonic Bang", out var sonic),
-                    "a boss dot beating on the raid must not read as one of ours");
+    Assert.AreEqual(IdentityKind.Spell, timeline.IdentityWithSource("Sonic Bang", out var sonic),
+                    "a boss dot beating on the raid is a spell name, and it must not read as one of ours either");
     Assert.AreEqual("R21-spellshape", sonic,
                "the no-caster damage line is the proof, ahead of the spell list and the casting message");
     Assert.AreEqual("A Spell", IdentityVocabulary.WhyWord(IdentityVocabulary.CodeOf(sonic)),
@@ -167,10 +172,40 @@ public class SpellEffectIdentityTest
      * where raid damage on a mob would have made it a raid member.
      */
     Assert.IsFalse(ClassificationRules.SpellNamed("Gluttering Decay IX"), "the fixture invents a rank the data does not ship");
-    Assert.AreEqual(IdentityKind.Npc, timeline.IdentityWithSource("Gluttering Decay IX", out var unknown),
+    Assert.AreEqual(IdentityKind.Spell, timeline.IdentityWithSource("Gluttering Decay IX", out var unknown),
                     "the line's own shape has to carry the verdict when the dictionary cannot");
     Assert.AreEqual("R21-spellshape", unknown,
                "a spell nobody shipped data for is still recognised from its line shape — no dictionary involved");
+  }
+
+  /*
+   * The Spell kind claims NEITHER side, and the two predicates that decide that are asserted here because both would have
+   * widened a board silently on the day the kind was added. IdentityLookup answers "kind != Unknown → kind == Player", so a
+   * spell is never one of ours (the operator's original complaint was caster-less spells reading Player / our side). Worse was
+   * EntityTimeline.IsRaidVictimAt, whose exclusion list is `not Npc and not Pet`: an effect's name standing in a DEFENDER slot
+   * would have become "one of us being beaten on" and joined the tanking board - which is exactly the silent number-movement
+   * every rule on that board is written against. SideAt keeps the NPC arm for Spell too, so nothing this capture already counted
+   * moved at all.
+   */
+  [TestMethod]
+  public void ASpellNameBelongsToNeitherSide()
+  {
+    var run = RunOut(
+      "[Mon May 04 18:50:00 2026] A gnoll bites Spelleffect for 100 damage.",
+      "[Mon May 04 18:50:02 2026] A gnoll has taken 335500 damage from Curse XVII Rk. III by .",
+      "[Mon May 04 18:50:04 2026] Spelleffect has taken 12000 damage from Sonic Bang by .");
+
+    var timeline = Apply(run, out _);
+
+    foreach (var spell in new[] { "Curse XVII Rk. III", "Sonic Bang" })
+    {
+      Assert.AreEqual(IdentityKind.Spell, timeline.IdentityAt(spell, double.PositiveInfinity), spell);
+      Assert.IsFalse(timeline.IsRaidVictimAt(spell, double.PositiveInfinity),
+                     $"{spell} standing in a defender slot is not one of us taking damage — the tank board would grow without a sound");
+    }
+
+    // The mob keeps its own reading: the spell did not colour what it attacked.
+    Assert.AreEqual(IdentityKind.Npc, timeline.IdentityAt("A gnoll", double.PositiveInfinity));
   }
 
   /*
@@ -333,7 +368,7 @@ public class SpellEffectIdentityTest
       var row = report.Find(spell);
 
       Assert.IsNotNull(row, "a remembered name belongs on the list whether or not this log fought it");
-      Assert.AreEqual(IdentityKind.Npc, row!.Kind, "last night's Player beat a cast line printed in this capture");
+      Assert.AreEqual(IdentityKind.Spell, row!.Kind, "last night's Player beat a cast line printed in this capture");
       Assert.AreEqual("R21-spellcast", row.Reason);
       Assert.IsFalse(row.IsPrior, "the answer is this file's, so the pane must not say 'in previous log'");
       Assert.AreEqual("A Spell", IdentityVocabulary.WhyWord(row.Reason));

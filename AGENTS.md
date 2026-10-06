@@ -458,7 +458,17 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   the frozen person words answer before any store via `PlayerRegistry.IsPersonWord`, and a live `Unknown` **falls through**
   instead of answering no. Tests: `RosterImportTest`, `IdentityLookupTest`, `IdentityPriorStoreTest`. Numbers and reasoning:
   docs/DesignNotes.md → "The one-time roster import", "A load is not a sighting".
-- **A spell effect is not a fighter (R21), and it takes THREE proofs to say so**: when the client writes `Goratoar has taken 18724 damage from Slicing Energy by .` there is no
+- **A spell effect is not a fighter (R21), and it takes THREE proofs to say so — and the kind it earns is `Spell`, not NPC**:
+  `IdentityKind.Spell` (Core) is neither side. Three predicates were pinned to the NPC arm when it was added, because every board
+  was measured under the old reading: `FightProjection.SideAt` (both branches), `EntityTimeline.IsRaidVictimAt` (`not Npc and not Pet`
+  alone would have made an effect's name in a defender slot "one of us being beaten on" and silently widened the tank board) and
+  R7's defender switch (`default` there means Player/Pet/Merc, so a Spell fall-through would hand out enemyhood to its attacker).
+  The dropdown offers **Spell** as a verdict an operator can write; it credits and vetoes nobody, which is why it is safe to offer.
+  Pinned by `ASpellNameBelongsToNeitherSide` and by the A/B in docs/DesignNotes.md → "The Spell kind" (57 rows move Npc→Spell on
+  `eqlog_Kizant_xegony-2.txt`; fight rows **277** and row damage **792,266,411,943** identical, as are Σ begin/last/hits/taken).
+  The same A/B surfaced a **pre-existing** nondeterminism worth knowing before you trust any global parity hash: two runs of the
+  same binary over the same file give different *row-name sets* (same 277 rows, same every magnitude, no case twins) — compare
+  boards per person, never by fingerprint. when the client writes `Goratoar has taken 18724 damage from Slicing Energy by .` there is no
   caster for the attacker field, so `DamageLineParser` substitutes **the spell** and sets `AttackerIsSpell` (`CombatCapture` carries it onto the fact) — and a spell in an
   attacker field is an actor as far as the identity rules are concerned. Measured on `eqlog_Kizant_xegony-09-03-26.txt`: **706** lines end `by .` and **135** read `from your <spell>.`
   (against 45,904 that name their caster normally); over its first 250 MB `ApplySpellEffects` places **49** names out of a 227-name pool and **471** of their facts are aimed at

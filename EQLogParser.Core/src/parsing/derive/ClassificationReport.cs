@@ -124,7 +124,7 @@ namespace EQLogParser
        * contradictions. Pets and mercs are excluded for the same reason they are not contradictions: players.txt
        * legitimately holds pet OWNER names, and a pet/merc verdict costs its owner nothing.
        */
-      public bool IsDisagreement => LegacySaysPlayer && Kind == IdentityKind.Npc;
+      public bool IsDisagreement => LegacySaysPlayer && Kind is IdentityKind.Npc or IdentityKind.Spell;
 
       /*
        * Nothing has any claim on this name: no kind from this capture's lines, no operator verdict, not in the roster.
@@ -159,6 +159,11 @@ namespace EQLogParser
     public int Pets { get; }
     public int Mercs { get; }
     public int Npcs { get; }
+
+    /// <summary>Names the capture identified as a spell standing in a fighter's slot (R21). Computed, not printed: the pane
+    /// shows no counters (docs/DesignNotes.md), and this one exists so a test can hold the kind's population steady.</summary>
+    public int Spells { get; }
+
     public int Unknown { get; }
 
     /*
@@ -169,8 +174,8 @@ namespace EQLogParser
      */
     public int UnresolvedInCapture { get; }
 
-    private ClassificationReport(IReadOnlyList<Row> rows, int players, int pets, int mercs, int npcs, int unknown,
-                                 int totalNames, int unresolvedInCapture)
+    private ClassificationReport(IReadOnlyList<Row> rows, int players, int pets, int mercs, int npcs, int spells,
+                                 int unknown, int totalNames, int unresolvedInCapture)
     {
       TotalNames = totalNames;
       UnresolvedInCapture = unresolvedInCapture;
@@ -179,6 +184,7 @@ namespace EQLogParser
       Pets = pets;
       Mercs = mercs;
       Npcs = npcs;
+      Spells = spells;
       Unknown = unknown;
     }
 
@@ -311,6 +317,7 @@ namespace EQLogParser
         pets: Count(list, IdentityKind.Pet),
         mercs: Count(list, IdentityKind.Merc),
         npcs: Count(list, IdentityKind.Npc),
+        spells: Count(list, IdentityKind.Spell),
         unknown: Count(list, IdentityKind.Unknown),
         totalNames: list.Count,
         unresolvedInCapture: list.Count(static r => r.HasFacts && r.IsUnresolved));
@@ -461,7 +468,7 @@ namespace EQLogParser
          */
         if (seenCasts is not null && seenCasts.Contains(name))
         {
-          kind = IdentityKind.Npc;
+          kind = IdentityKind.Spell;
           source = "R21-spellcast";
         }
         else
@@ -575,7 +582,8 @@ namespace EQLogParser
       IdentityKind.Pet => 1,
       IdentityKind.Merc => 2,
       IdentityKind.Npc => 3,
-      _ => 4,
+      IdentityKind.Spell => 4,
+      _ => 5,
     };
 
     private static int Count(IReadOnlyList<Row> rows, IdentityKind kind)

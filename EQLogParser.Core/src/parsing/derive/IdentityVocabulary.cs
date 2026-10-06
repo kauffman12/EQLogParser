@@ -61,6 +61,10 @@ internal static class IdentityVocabulary
     new("Pet", IdentityKind.Pet),
     new("Mercenary", IdentityKind.Merc),
     new("NPC", IdentityKind.Npc),
+    // Spell is the answer the rules could reach and an operator could not write: a caster-less spell name sitting in a
+    // fighter's slot (docs/DesignNotes.md → "A name that equals a spell is not a spell row"). It claims no side, so choosing it
+    // neither credits nor vetoes anybody - which is why it is safe to offer on every overrulable row.
+    new("Spell", IdentityKind.Spell),
     new("Clear claim", IdentityKind.Unknown),
   ];
 
@@ -111,6 +115,7 @@ internal static class IdentityVocabulary
     IdentityKind.Pet => "Pet",
     IdentityKind.Merc => "Merc",
     IdentityKind.Npc => "NPC",
+    IdentityKind.Spell => "Spell",
     _ => "Unknown",
   };
 
