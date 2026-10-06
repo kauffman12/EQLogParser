@@ -6,6 +6,13 @@ decide whether parallel parsing is worth designing:
 1. **How fast is a shard that reads only its own slice?** (`plan` + `parse`)
 2. **Does merging shards reproduce the sequential capture?** (`merge` + `diff` + `boards`)
 
+> **STATUS (2026-11): the numbers below are the record; the code does not build.** The legacy fight engine was deleted
+> after these measurements were taken, and `Program.cs` still calls `FightManager` and `DamageLineParser.CheckSlainQueue`
+> (4 errors). Nothing is in `EQLogParser.sln`, so the solution stays clean either way. Port those two calls to the
+> derived path before re-running anything; do not trust a rebuild of the old binary. The side-flag census (`flagcheck`)
+> has been removed outright, because what it measured no longer exists — see "The finding that matters more than
+> sharding" below.
+
 ```bash
 export PATH="$HOME/.dotnet:$PATH"
 dotnet build EQLogParser.Tools/RangeSpike/RangeSpike.csproj -c Release
@@ -19,7 +26,8 @@ dotnet $BIN parse --file $F --from A --to B --seed $SEED --out s0.spool --cwd $P
 dotnet $BIN merge --dir shards --out merged.spool           # remap name pools, renumber the shared sequence
 dotnet $BIN diff    --ignore-seq --a seq.spool --b merged.spool   # row-for-row, content only
 dotnet $BIN boards  --a seq.spool --b merged.spool          # per-name meter totals: what a player would see
-dotnet $BIN flagcheck --a seq.spool                         # is a side flag a fact about the line at all?
+# (flagcheck retired: it asked whether a side flag is a fact about the line, the answer came back "no", and
+#  the engine deleted those bits. Bits 2/3 on damage or 2/4 on heal coming back non-zero is the new alarm.)
 ```
 
 ## Speed (8 physical cores, one NVMe file, wall clock including 8 process starts + spool writes)
@@ -68,6 +76,14 @@ Consequences:
 - Line-derived bits are unaffected: `OwnerInLine`/`AttackerIsSpell` are off the text, and `ModMask` was
   already captured for exactly this reason (AGENTS: "the byte that filters live in").
 
+**Followed through (2026-11): the bits are gone.** `DamageFact`'s attacker/defender player-side bits and `HealFact`'s
+healer/healed pair were deleted along with the four `PlayerRegistry.IsPetOrPlayerOrMerc` lookups that filled them — ~15 M
+registry calls per large capture, spent stamping an answer that this census showed to be unreproducible. "When did the
+registry learn this name" already travels honestly as `IdentityEvent` (with `Seq` and `TimeS`), which is the non-lossy form
+of the same knowledge; identity itself is decided per name by the rule book over captured evidence. Retired bits stay
+*retired rather than free*: a new flag takes a higher value, so a spool written by an older build cannot be misread as
+claiming it. Law and pointers: docs/DesignNotes.md → "A fact carries what its line says, not what the registry thought".
+
 ## The two real boundary leaks (both fixable)
 
 1. **Identity timing.** A worker with an empty registry re-verifies raiders a previous shard already knew:
@@ -84,6 +100,7 @@ Consequences:
 
 Sharding is viable and worth ~3-4× on the parse stage, which today is 85 % of load time. The prerequisites are
 small and each is independently desirable: (a) pass the operator seed explicitly instead of via process
-globals, (b) stop stamping registry *opinions* into facts, (c) overlap reads to cover parser state. The
+globals, (b) ~~stop stamping registry *opinions* into facts~~ **done 2026-11 — the side bits are deleted from both fact
+tables**, (c) overlap reads to cover parser state. The
 ugly part is not the parser — it is that `PlayerRegistry`, `ConfigUtil.PlayerName` and every line parser's
 statics are process-global, which is why this had to be a separate executable to measure honestly.

@@ -7392,3 +7392,53 @@ label); hovers that say Pets or Itself instead of Players; and nothing at all di
 wrong with it. Pinned by `UnattributedDamageTest` (the placeholder keeps its number while earning no side; the possessive shape is
 already credited to its owner; `ParseLine` takes the action without its stamp) and `EvidenceLinesTest` (the eight-sentence table,
 its cap, pets, self).
+
+## A fact carries what its line says, not what the registry thought (2026-11)
+
+`CombatCapture` used to ask `PlayerRegistry` four questions per event — attacker and defender on damage, healer and
+healed on heals — and wrote the answers into each fact's `Flags`: bit 4 "attacker looked player-side", bit 8 "defender
+did", and 2/4 for the same pair on a heal. Over the 952 MiB capture that is ~15 million registry lookups (the tap reads
+**3,529,215** events there: 2,285,746 damage + 1,243,469 heal) spent stamping an opinion. The cost was not the reason they
+went.
+
+**What they recorded could not be reproduced.** RangeSpike's own `flagcheck` (the spool auditor built for the sharding
+study) found **32 of 999 attacker names carrying both values of the side bit inside one sequential pass** — `Betebeatz`
+reads side=0 on 9,512 facts and side=1 on 5,342 — and 28 healer names flipping across 52,302 heal facts. A bit that
+changes mid-file for the same name is a timestamped snapshot of registry state wearing the shape of a fact: replay from a
+different starting prefix and it moves, warm-up order moves it, and a sharded reader *cannot* get it right at all (this
+census is exactly what made "stop stamping opinions into facts" prerequisite (b) in
+`EQLogParser.Tools/RangeSpike/README.md`). It also poisoned the flag column's meaning: `OwnerInLine` and `AttackerIsSpell`
+beside it are genuinely line-derived, so nothing on the page distinguished evidence from opinion.
+
+**Where that knowledge lives instead.** *When* the registry learned a name already travels as an `IdentityEvent` carrying
+`Seq` and `TimeS` — the non-lossy form of "what did you believe at that second" — and what a name *is* is decided per name
+by the rule book over captured evidence (R15/R7 need the same timeline anyway). Deleting the fact-side copies removed no
+information, only an unverifiable summary of it.
+
+**The bits stay retired rather than recycled.** Older spool files (`*.spool`, written before this change) hold 4/8 on
+damage and 2/4 on heal with the deleted meaning, so a new flag takes a **higher** bit; `DamageFact`/`HealFact` carry that
+note in place of the constants, and the census that justifies it is quoted there so it doesn't have to be re-derived. A
+single shared constant per table names what *is* derived from the line:
+
+```csharp
+public const byte LineDerivedFlagMask = FlagAttackerIsSpell | FlagOwnerInLine;   // damage
+public const byte LineDerivedFlagMask = FlagOwnerInLine;                        // heal
+```
+
+**Reachability of what remains, measured on `eqlog_Kizant_xegony-2.txt`** (467 MB): `OwnerInLine` on **546,376** of
+2,285,746 damage facts (R5 sweeps the name pool for those words anyway, and `FightSummarySource.OwnerOf` folds a pet's
+damage from this byte — it has consumers); `AttackerIsSpell` on **1,149** (the caster-less `X has taken N damage from <spell> by .`
+shape); and the heal side's owner bit on **0 of 1,243,469** — because `HealingLineParser` refuses a healer name that isn't
+player-shaped, so `"Reisil`s pet healed itself for 15750 hit points by Venom Claw XVI."` produces no record at all. That
+bit is left in place, unpurchased: it rides padding, and "no line writes it today" is one capture's measurement rather than
+a proof — `FactFlagLawTest.APossessivePetHealLineReachesNoFactAtAll` names the shape so whoever changes the heal parser
+comes back and re-measures. (The opposite lesson is `OverTotal`: a field no damage line could write, carried for years.)
+
+**Pinned by** `EQLogParser.Test/src/parsing/derive/FactFlagLawTest.cs` — verified players produce a fact with *no* flags;
+a registry-known pet named plainly carries none while the same creature written as `X`s pet` does; the caster-less spell
+substitution is still flagged; a possessive-pet heal line reaches no fact; a mixed sweep asserts **nothing outside
+`LineDerivedFlagMask`** ever appears on either stream; and the live values are pinned against the retired ones. Proven
+load-bearing by stamping `flags |= 4` from `IsPetOrPlayerOrMerc` back into the tap: three of those tests fail, and go green
+on revert. The parser callbacks' own law (a registry opinion is a *verdict*, so it reaches the identity channel only) is in
+`LogProcessorIdentityCallbackTest`; the earlier `IsVerified*`-as-callback fix was `74d05c39`.
+

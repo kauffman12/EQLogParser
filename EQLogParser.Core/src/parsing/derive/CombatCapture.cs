@@ -156,15 +156,21 @@ namespace EQLogParser
       var r = e.Record;
       if (string.IsNullOrEmpty(r.Attacker) || string.IsNullOrEmpty(r.Defender)) return;
 
-      // Registry verdicts at this exact instant (same thread/instant as FightManager's own call —
-      // handlers run back-to-back in one event dispatch; nothing mutates the registry between them).
-      var registry = PlayerRegistry.Instance;
-
+      /*
+       * Every flag here is readable off the line the parser just handled — that is the whole rule, and it is why
+       * two of them are gone. FlagAttkPlayerSide / FlagDefPlayerSide used to record what PlayerRegistry answered for
+       * each name at the instant the event fired: ~15 million lookups over a 952 MiB capture, and — the reason they
+       * were deleted rather than optimised — an answer no consumer can reproduce. It is not a property of the line:
+       * the same name carries the bit only from the second its evidence arrived, so two runs over one file with a
+       * different store warm-up differ in it, and a parallel or sharded reader cannot get it right at all (RangeSpike's
+       * own census was built to prove that, and said so). Identity is derived per name by the rule book from captured
+       * evidence, and WHEN the registry learned something travels honestly as IdentityEvent (VerifiedPlayer/Pet with
+       * Seq and TimeS) — which is the non-lossy form of the same knowledge. What stays on the fact is what the line
+       * says: a spell standing in for an absent caster, and an ownership word inside a name.
+       */
       var flags = (byte)0;
       if (r.AttackerIsSpell) flags |= DamageFact.FlagAttackerIsSpell;
       if (HasOwnershipInLine(e.Action, r.Attacker)) flags |= DamageFact.FlagOwnerInLine;
-      if (registry.IsPetOrPlayerOrMerc(r.Attacker)) flags |= DamageFact.FlagAttkPlayerSide;
-      if (registry.IsPetOrPlayerOrMerc(r.Defender)) flags |= DamageFact.FlagDefPlayerSide;
 
       lock (_gate)
       {
@@ -201,12 +207,9 @@ namespace EQLogParser
       var r = e.Record;
       if (r is null || string.IsNullOrEmpty(r.Healer) || string.IsNullOrEmpty(r.Healed)) return;
 
-      var registry = PlayerRegistry.Instance;
-
+      // Same law as the damage tap: line-derived bits only. See HandleDamage for what replaced the registry answers.
       var flags = (byte)0;
       if (HasOwnershipInName(r.Healer)) flags |= HealFact.FlagOwnerInLine;
-      if (registry.IsPetOrPlayerOrMerc(r.Healer)) flags |= HealFact.FlagHealerPlayerSide;
-      if (registry.IsPetOrPlayerOrMerc(r.Healed)) flags |= HealFact.FlagHealedPlayerSide;
 
       lock (_gate)
       {

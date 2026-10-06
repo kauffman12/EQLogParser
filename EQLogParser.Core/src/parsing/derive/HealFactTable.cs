@@ -36,10 +36,16 @@ namespace EQLogParser
      */
     public const byte FlagOwnerInLine = 1;
 
-    // PlayerRegistry answers at the instant the parser fired (same contract, same caveat as
-    // DamageFact.FlagAttkPlayerSide): a fact about what the live pipeline saw, not a judgment.
-    public const byte FlagHealerPlayerSide = 2;
-    public const byte FlagHealedPlayerSide = 4;
+    /*
+     * Bits 2 and 4 are RETIRED, not free: they held PlayerRegistry's answer for healer and healed at the instant the
+     * line fired — a snapshot of an opinion rather than of the sentence, which is why nothing could reproduce it and
+     * nothing outside retired tooling read it. See DamageFact's same note: identity comes from the rules over captured
+     * evidence, and "when did the registry learn this" travels as IdentityEvent. A NEW flag here starts at bit 8 so an
+     * older spool file's old bits cannot be misread as it.
+     */
+
+    // The live bits, asserted by FactsCarryOnlyWhatTheirOwnLinesSay: no registry opinion rides on a fact.
+    public const byte LineDerivedFlagMask = FlagOwnerInLine;
 
     /*
      * FIELD ORDER IS THE LAYOUT. Declaration order here is 32 bytes; the same ten fields in the order this
@@ -104,8 +110,6 @@ namespace EQLogParser
     }
 
     public bool OwnerInLine => (Flags & FlagOwnerInLine) != 0;
-    public bool HealerPlayerSide => (Flags & FlagHealerPlayerSide) != 0;
-    public bool HealedPlayerSide => (Flags & FlagHealedPlayerSide) != 0;
 
     // What the line wanted, stated the way a caller means it: a heal with no "(amount)" asked for what it
     // landed. Use this for sums and ratios; use OverTotal when materializing a record, so the record behaves

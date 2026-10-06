@@ -113,14 +113,16 @@ namespace EQLogParser
     public const byte FlagAttackerIsSpell = 1;
     public const byte FlagOwnerInLine = 2;   // ownership evidence ("X`s pet", "Owner: X") present on the raw line
 
-    // What PlayerRegistry.IsPetOrPlayerOrMerc answered for this name at the instant the parser
-    // fired this event — captured by the engine on the same thread, same instant as FightManager
-    // consumes it. This is a FACT (what the current pipeline saw), not a judgment: replaying the
-    // pipeline requires the same answers, and Phase 2 rules layer retroactive reclassification on
-    // top of them. Verified mid-log names therefore read player-side only from their evidence time
-    // onward — exactly like the live registry did.
-    public const byte FlagAttkPlayerSide = 4;
-    public const byte FlagDefPlayerSide = 8;
+    /*
+     * Bits 4 and 8 are RETIRED, not free. They held what PlayerRegistry.IsPetOrPlayerOrMerc answered for each
+     * name at the instant the event fired — a snapshot of the registry's opinion rather than of the line, which made
+     * it unreproducible (a name carries it only from its own evidence second onward, so warm-up order changes it and
+     * a sharded reader cannot get it right at all). Nothing read them outside retired measurement tooling; identity
+     * is derived per name by the rules, and "when did the registry learn this" travels as IdentityEvent instead.
+     *
+     * So a NEW flag takes bit 16 or higher, never 4/8: spool files written by an older build have those bits set
+     * with the old meaning, and reusing them would read last night's registry opinion as this build's new fact.
+     */
 
     // consumer-order sequence across BOTH fact streams — preserves within-second line order, which
     // the slain queue's flush-vs-enqueue decisions depend on
@@ -159,8 +161,12 @@ namespace EQLogParser
 
     public bool AttackerIsSpell => (Flags & FlagAttackerIsSpell) != 0;
     public bool OwnerInLine => (Flags & FlagOwnerInLine) != 0;
-    public bool AttackerPlayerSide => (Flags & FlagAttkPlayerSide) != 0;
-    public bool DefenderPlayerSide => (Flags & FlagDefPlayerSide) != 0;
+
+    /*
+     * The two live bits, and nothing else — asserted rather than commented, because a registry opinion smuggled back
+     * onto a fact would look exactly like the deleted pair: correct on a warm single pass, wrong everywhere else.
+     */
+    public const byte LineDerivedFlagMask = FlagAttackerIsSpell | FlagOwnerInLine;
   }
 
   // One "X was slain by Y!" / "X died." line.

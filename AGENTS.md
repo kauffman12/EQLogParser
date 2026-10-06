@@ -755,6 +755,23 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   reproduced row needs. This is the `HitRecord` rule applied one layer down: a field belongs to the type whose lines can write it.
   Numbers and the refused heal shapes (10,194 pet self-heals / 2,688 pet-healed-passive / 120 HoT = 2.9 % of heal-action lines, all
   healer-less or self-directed): docs/DesignNotes.md → "The byte that filters live in", "Healing joins the capture".
+- **A fact carries what its own line says, never what the registry believed**: `CombatCapture` no longer asks
+  `PlayerRegistry` about attacker/defender/healer/healed — those four `IsPetOrPlayerOrMerc` lookups (~15 M per large
+  capture) stamped bits that RangeSpike's census showed to be **unreproducible**: 32 of 999 attacker names carried BOTH
+  values of one side bit in a single sequential pass (`Betebeatz`: side=0 on 9,512 facts, side=1 on 5,342), 28 healer
+  names flipped across 52,302 heal facts. When the registry learned something travels honestly as `IdentityEvent` (`Seq`,
+  `TimeS`); what a name IS is decided per name by the rule book. Two laws from the deletion: **a flag on a fact is only
+  ever line-derived** — `DamageFact.LineDerivedFlagMask` / `HealFact.LineDerivedFlagMask` name that set, and
+  `FactFlagLawTest` asserts nothing outside it appears on either stream (verified players now produce a fact with *no*
+  flags; prove a new stamp bites by adding one and watching three tests fail). **Retired bit values stay retired instead
+  of being reused** — 4/8 on damage and 2/4 on heal hold an older build's opinion inside existing `*.spool` files, so a
+  new flag takes a higher bit; the census is quoted in the table files so it is not re-derived. Measured reachability on
+  `eqlog_Kizant_xegony-2.txt`: damage `OwnerInLine` **546,376** / 2,285,746 (R5 and `FightSummarySource.OwnerOf` read it),
+  `AttackerIsSpell` **1,149**; heal `OwnerInLine` **0 of 1,243,469**, because `HealingLineParser` refuses a non-player-shaped
+  healer (`Reisil\`s pet healed itself …` makes no record) — that bit stays as padding, and
+  `APossessivePetHealLineReachesNoFactAtAll` names the shape to re-measure if the heal parser ever accepts it. Same class
+  as the parser-callback law in `LogProcessorIdentityCallbackTest`: a registry *verdict* reaches the identity channel, never
+  a fact. Numbers: docs/DesignNotes.md → "A fact carries what its line says, not what the registry thought".
 - **Damage taken is a second ordinal set on the index, never extra columns on the damage one**: `FightFactIndex`
   keeps `_damageOrdinals` (facts aimed AT the row's owner) and `_tankingOrdinals` (facts that owner dealt), routed by
   the flag from the single `ownerSink?.Invoke(fact, ordinal, row, key == defName)` call in `FightProjection` — the

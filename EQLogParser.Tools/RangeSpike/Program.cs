@@ -48,7 +48,6 @@ internal static class Program
             "parse" => ParseShard(opt),
             "merge" => Merge(opt),
             "diff" => Diff(opt),
-            "flagcheck" => FlagCheck(opt),
             "boards" => Boards(opt),
             _ => Help(),
         } : Help();
@@ -438,18 +437,22 @@ internal static class Program
         $"{Seq(f.Seq)}|{f.TimeS}|{Name(s, f.HealerIdx)}->{Name(s, f.HealedIdx)}|{f.Total}|{f.OverTotal}|{f.TypeId}|{f.Flags}|{f.ModMask}|{Spell(s, f.SubIdx)}";
 
     /*
-     * Which bits move at a shard boundary, and whether anything moves with them. The two sides of a fact
-     * (FlagAttkPlayerSide/FlagDefPlayerSide) are the registry's ANSWER at capture time, so they are the one
-     * thing an empty worker can get wrong; every other field is off the line itself. If the histogram shows
-     * only those bits moving, the boundary problem is a knowledge problem — fixable by seeding or by
-     * re-deriving flags at merge from the union of what all workers learned — and not a parsing problem.
+     * Which bits move at a shard boundary, and whether anything moves with them.
+     *
+     * This used to be the census that PROVED the boundary problem was a knowledge problem: the two side bits
+     * (FlagAttkPlayerSide/FlagDefPlayerSide) were the registry's answer at capture time, flipped on 32 of 999
+     * attacker names within ONE sequential pass, and nothing about a shard's text could reproduce them. Those bits are
+     * now deleted from the engine (docs/DesignNotes.md -> "A fact carries what its line says"), which is prerequisite
+     * (b) of the sharding design satisfied at source — so today a non-zero count on bits 2/3 means something was
+     * stamped into a fact that the line cannot write, and THAT is the bug to chase. Bits 0/1 (AttkIsSpell, OwnerInLine)
+     * are off the text and must be identical across workers; anything in 4-7 is an accident or a new flag that
+     * reused a retired value.
      */
     private static void FlagReport(Spool a, Spool b)
     {
         var n = Math.Min(a.Damage.Length, b.Damage.Length);
         var flagsOnly = 0;
         long[] bitCount = new long[9];
-        const byte SideBits = DamageFact.FlagAttkPlayerSide | DamageFact.FlagDefPlayerSide;
         for (var i = 0; i < n; i++)
         {
             var x = a.Damage[i];
@@ -467,7 +470,8 @@ internal static class Program
         }
 
         Console.WriteLine($"[diff] damage flag bits moved: AttkIsSpell={bitCount[0]:N0} OwnerInLine={bitCount[1]:N0} " +
-                          $"AttkPlayerSide={bitCount[2]:N0} DefPlayerSide={bitCount[3]:N0} other={bitCount[4] + bitCount[5] + bitCount[6] + bitCount[7]:N0}");
+                          $"retired-side-bits={bitCount[2] + bitCount[3]:N0} (must be 0: deleted from the engine) " +
+                          $"other={bitCount[4] + bitCount[5] + bitCount[6] + bitCount[7]:N0}");
         Console.WriteLine($"[diff] damage rows differing on flags: those differing ONLY on flags = {flagsOnly:N0}");
     }
 
@@ -496,41 +500,14 @@ internal static class Program
     private static string Spell(Spool s, ushort idx) => idx == ushort.MaxValue || idx >= s.Spells.Count ? "-" : s.Spells[idx];
 
     /*
-     * Is a side flag a fact about the line, or a fact about when the line was read? Groups one capture's facts
-     * by name and asks whether the player-side bit for that NAME ever changes inside a single sequential pass.
-     * If it does, the bit is not derivable from the line at all — it is a timestamped snapshot of the
-     * registry's opinion — which is why no amount of careful shard boundaries can reproduce it.
+     * FlagCheck is GONE, and so is the mode that ran it. It existed to answer "is a side flag a fact about the line,
+     * or about when the line was read?" — it measured 32 of 999 attacker names carrying both values of one side bit
+     * inside a single sequential pass (Betebeatz: side=0 on 9,512 facts, side=1 on 5,342) and 28 healer names flipping
+     * across 52,302 heal facts. The answer was "the latter", and the engine has since deleted those bits rather than
+     * keep a reproducible-answer problem in the storage format; identity is derived per name by the rule book from
+     * captured evidence. A new census is wanted only if bits 2/3 (damage) or 2/4 (heal) ever come back non-zero —
+     * that would mean an opinion is being stamped into a fact again.
      */
-    private static int FlagCheck(Options o)
-    {
-        var s = Spool.Load(o.A!);
-        Report("attacker", DamageFact.FlagAttkPlayerSide, s, i => (s.Damage[i].AtkIdx, s.Damage[i].Flags), s.Damage.Length);
-        Report("defender", DamageFact.FlagDefPlayerSide, s, i => (s.Damage[i].DefIdx, s.Damage[i].Flags), s.Damage.Length);
-        Report("healer", HealFact.FlagHealerPlayerSide, s, i => (s.Heal[i].HealerIdx, s.Heal[i].Flags), s.Heal.Length);
-        return 0;
-    }
-
-    private static void Report(string what, byte bit, Spool s, Func<int, (short idx, byte flags)> pick, int total = 0)
-    {
-        var seenNo = new Dictionary<short, long>();
-        var seenYes = new Dictionary<short, long>();
-        for (var i = 0; i < total; i++)
-        {
-            var (idx, flags) = pick(i);
-            if (idx < 0) continue;
-            var dict = (flags & bit) != 0 ? seenYes : seenNo;
-            dict[idx] = dict.TryGetValue(idx, out var c) ? c + 1 : 1;
-        }
-
-        var both = seenNo.Keys.Intersect(seenYes.Keys).ToList();
-        var facts = both.Sum(n => seenNo[n] + seenYes[n]);
-        Console.WriteLine($"[flagcheck] {what,-9} facts={total:N0} names={seenNo.Keys.Union(seenYes.Keys).Count():N0} " +
-                          $"names whose side bit CHANGES mid-file={both.Count:N0} facts they cover={facts:N0} ({facts * 100.0 / Math.Max(1, total):F1}%)");
-        foreach (var n in both.OrderByDescending(n => seenNo[n] + seenYes[n]).Take(5))
-        {
-            Console.WriteLine($"[flagcheck]   {Name(s, n)}: side=0 on {seenNo[n]:N0} facts, side=1 on {seenYes[n]:N0}");
-        }
-    }
 
     /*
      * The acceptance test a player would run: does each name's board number survive the sharding?
