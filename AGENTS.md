@@ -377,6 +377,27 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   are the only way to tell a row an operator wrote from one the rules inferred (`ProvenanceFor`, pinned by `NamesTableTest`, Windows-only). **No status line and no
   header**: the pane is the grid alone — the shape Pet Owners has, because the dock tab already says "Player/NPC Identity" — so nothing on screen prints the census
   counters that survive (`TotalNames`/`UnresolvedInCapture`/the five kind counts are computed and tested with no surface — the whole-capture `Disagreements` count went out with its header, since "counted but invisible" is not a reason to compute); see the docking law below.
+- **The Type cell carries the judgement, the hover carries the reasons** (2026-11): a Spell row reads **Enemy Spell** when every
+  fact it dealt landed on a name that reads player-side, **Our Spell** when every one landed on an Npc, and plain **Spell** when the
+  targets disagree or read Unknown — "both" is not a judgement about who owns a DoT, so the cell declines and the hover says
+  *Damaged players and monsters*. Only Spell rows can get a direction word (`IdentityVocabulary.TypeWordFor`), `Kind` itself never
+  becomes a side-word, and the pane uses `Row.TypeDisplay` with a fallback to `TypeWord(kind)` so a hand-built Row is never blank.
+  Below the head proof line the hover lists **every other rule that claimed the name plus the one fact clause**, one phrase per line,
+  built in Core (`Row.OtherEvidence`) and appended by `NamesTable.ProvenanceFor` as `proof + "\n" + tail`: **a single-claim row whose
+  facts point nowhere keeps hovering as exactly one line** (the existing one-line tests still hold). Ordering is
+  `IdentityVocabulary.ClaimRanks` — operator 100 → target frame 90 → chat/guild 80 → behaviour 70 → **fact clause 75** → inference 60
+  → npcdb/grammar/spell-data 50 → the two memory lanes 20, unknown codes at `UnrankedClaimRank` 45 — ties by strength then ordinal, cap
+  four extra lines (five with the head). `EverySourceThatCanBeRankedIsRankedAndEveryRankHasAWord` holds `ClaimRanks` and `WhyWords` to
+  covering **each other in both directions**, so a new rule cannot reach a hover and sort by accident. Two traps that look like free
+  wins: an evidence line may **not** be just a verdict word, but it MAY name a source containing one (*In the NPC DB*) — that
+  assertion was written too broadly and the test caught it; and direction is decided from the **final (+∞)** verdicts so a sentence can
+  never contradict the Type column beside it (charm windows are deliberately not consulted: *"Damaged players"* means "hit names this
+  capture called players"). **The cost law came with the request** ("I dont want memory to go up significantly"): `IdentityKind[]` +
+  two `int[]` are resolved/incremented **pool-sized, never per fact** (an `IdentityAt` inside the 2.27 M-fact loop costs ~0.2 s a census
+  does not have), `EntityTimeline.ClaimsOf` returns the timeline's own list **without copying**, and the only retained thing per row is
+  the one tooltip string the pane already kept — nothing allocates for a single-claim row. Tests: `EvidenceLinesTest`,
+  `IdentityVocabularyTest`, (Windows) `NamesTableTest.ExtraEvidenceRidesBelowTheProofLineInTheHover`.
+  Reasoning and measured fixtures: docs/DesignNotes.md → "The cell carries the judgement, the hover carries the reasons".
 - **The two identity panes share one right-hand strip** (2026-11): Player/NPC Identity sits with Pet Owners (`State="AutoHidden"`, `SideInDockedMode="Right"`) instead of
   tabbing with the fight list — and it is `AutoHidden`, never `Float`, because a floated window is a separate OS window that **cannot** share a tab strip, so "floating +
   tabbed together" has exactly one reading. Three laws ride on that. (1) **One width for both tabs**, from

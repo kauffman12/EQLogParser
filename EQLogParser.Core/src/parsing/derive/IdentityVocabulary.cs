@@ -108,6 +108,76 @@ internal static class IdentityVocabulary
     return list;
   }
 
+  /*
+   * A Spell row's cell carries DIRECTION, because that is the one question the four kinds could not answer about it: the name is
+   * not a fighter, but the capture watched its facts go SOMEWHERE. Two words, closed, and only for Spell:
+   * "Enemy Spell" when everything it hit was one of ours, "Our Spell" when everything it hit was a monster. Mixed or unclaimed
+   * targets answer plain "Spell" rather than guessing — and the tooltip always says which of the two it saw (DirectionPhrase).
+   */
+  internal const string EnemySpellWord = "Enemy Spell";
+  internal const string OurSpellWord = "Our Spell";
+
+  /// <summary>The TYPE cell for a row: the kind's word, with direction when the kind is Spell.</summary>
+  internal static string TypeWordFor(IdentityKind kind, int hitsOnRaid, int hitsOnMobs)
+    => kind is not IdentityKind.Spell ? TypeWord(kind)
+       : hitsOnRaid > 0 && hitsOnMobs == 0 ? EnemySpellWord
+       : hitsOnMobs > 0 && hitsOnRaid == 0 ? OurSpellWord
+       : TypeWord(kind);
+
+  /*
+   * What the capture watched a name DO, in the fewest honest words. A closed list of three, decided by WHO the defender's own
+   * verdict was at the end of the pass — so the sentence and the identity column cannot contradict each other. A name that hit
+   * raid AND monsters says exactly that rather than being forced onto one side.
+   */
+  internal const string DamagedPlayersPhrase = "Damaged players";
+  internal const string DamagedMonstersPhrase = "Damaged monsters";
+  internal const string DamagedBothPhrase = "Damaged players and monsters";
+
+  /// <summary>Where the fact clause sorts among the claims: above inference and databases, below what was heard or seen
+  /// directly — the capture watched it happen, which outranks a guess but not a target frame or an operator's word.</summary>
+  internal const int FactClauseRank = 75;
+
+  /// <summary>The fact clause for a row's hover, or null when its facts point nowhere decidable.</summary>
+  internal static string? DirectionPhrase(int hitsOnRaid, int hitsOnMobs)
+    => hitsOnRaid > 0 && hitsOnMobs > 0 ? DamagedBothPhrase
+       : hitsOnRaid > 0 ? DamagedPlayersPhrase
+       : hitsOnMobs > 0 ? DamagedMonstersPhrase
+       : null;
+
+  /*
+   * How important a CLAIM is when a hover can only show a few of them (IdentityPriorStore's own lanes and the rule book both
+   * appear here). Ordered by how directly the app KNOWS: an operator's word beats a target frame, which beats a voice in chat,
+   * which beats what the name did, which beats inference, which beats a database or a guess about grammar. Unknown codes get
+   * the middle rank and sort by their own spelling, so an unranked new rule still appears in a stable position rather than
+   * jumping between passes.
+   */
+  /*
+   * THE TABLE, NOT A SWITCH — because "every rule says how important it is" is assertable only if the list can be read. The
+   * identity-coverage test checks these keys against WhyWord's keys in both directions (a rank without a word, a word without
+   * a rank), so a new rule cannot ship that reaches a hover and sorts by accident. The two memory lanes ("Imported" from
+   * identity-priors.txt's roster row, "PetMap" from its pet-map heir) sit at the bottom: they phrase through ProofText like any
+   * other source, but memory is the weakest thing the app can say about a name.
+   */
+  internal static readonly IReadOnlyDictionary<string, int> ClaimRanks = new Dictionary<string, int>(StringComparer.Ordinal)
+  {
+    ["R10-manual"] = 100, ["Manual"] = 100, ["Override"] = 100,
+    ["R1-target"] = 90, ["R3-merc"] = 90, ["R13-merc"] = 90, ["R2-who"] = 90, ["R0-local"] = 90, ["R1-conflict"] = 90,
+    ["R3-chat"] = 80, ["R3-joinraid"] = 80, ["R3-leader"] = 80, ["R22-guildmate"] = 80,
+    ["R3-joingroup"] = 80, ["R3-leaveraid"] = 80, ["R3-leftgroup"] = 80,
+    ["R9-charm"] = 70, ["R5-owner"] = 70, ["R5-companion"] = 70, ["R19-eyeowner"] = 70, ["R17-selffeed"] = 70,
+    ["R20-petspell"] = 70, ["R4-spell"] = 70, ["R15-healed"] = 70, ["R18-healedpet"] = 70,
+    ["R7-graph"] = 60, ["R7-side"] = 60,
+    ["R6-npcdb"] = 50, ["R14-shape"] = 50, ["R16-comma"] = 50, ["R23-loot"] = 50,
+    ["R21-spellshape"] = 50, ["R21-spellcast"] = 50, ["R21-spelleffect"] = 50,
+    ["RegistrySeed"] = 20, [IdentityPriorStore.RosterReason] = 20, [IdentityPriorStore.OwnerReason] = 20,
+  };
+
+  /// <summary>The neutral rank for a code the table above does not list — see ClaimRanks for why that list is asserted.</summary>
+  internal const int UnrankedClaimRank = 45;
+
+  internal static int ClaimRank(string? source)
+    => !string.IsNullOrEmpty(source) && ClaimRanks.TryGetValue(CodeOf(source), out var rank) ? rank : UnrankedClaimRank;
+
   /// <summary>The TYPE cell: the header says Type, so a value has to read like a type and never like an enum identifier.</summary>
   internal static string TypeWord(IdentityKind kind) => kind switch
   {

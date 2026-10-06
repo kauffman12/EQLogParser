@@ -91,6 +91,45 @@ public class IdentityVocabularyTest
   private static readonly string[] SelfSpelled = [IdentityPriorStore.RosterReason];
 
 
+  /*
+   * The evidence lines sort by IdentityVocabulary.ClaimRanks, so the same coverage discipline holds for it as for the words: every
+   * source that can reach a hover says where it ranks, and nothing ranks under a name no word map knows. Both directions again —
+   * a rank whose word was deleted is as much drift as a word nobody ranked. `RuleWords` is the list for both, memory lanes
+   * ("Imported", "Pet Map") included: they sit at the bottom of the table on purpose, because remembering is the weakest thing
+   * this application can say about a name.
+   */
+  [TestMethod]
+  public void EverySourceThatCanBeRankedIsRankedAndEveryRankHasAWord()
+  {
+    foreach (var word in RuleWords)
+      Assert.IsTrue(IdentityVocabulary.ClaimRanks.ContainsKey(word),
+                    $"[{word}] can appear in a hover's evidence list but never said where it ranks");
+
+    foreach (var ranked in IdentityVocabulary.ClaimRanks.Keys)
+      Assert.IsTrue(RuleWords.Contains(ranked),
+                    $"the rank table lists [{ranked}], which no rule writes and no word map knows");
+
+    /*
+     * The order a reader would trust, asserted as behaviour rather than as numbers in a table: an operator's own word over a
+     * target frame, over a voice in chat, over what the name did, over inference, over a database or a guess about grammar.
+     * Reordering this is a legitimate decision; doing it by accident is what fails here.
+     */
+    Assert.IsTrue(IdentityVocabulary.ClaimRank("Manual") > IdentityVocabulary.ClaimRank("R1-target"));
+    Assert.IsTrue(IdentityVocabulary.ClaimRank("R1-target") > IdentityVocabulary.ClaimRank("R3-chat"));
+    Assert.IsTrue(IdentityVocabulary.ClaimRank("R3-chat") > IdentityVocabulary.ClaimRank("R5-owner"));
+    Assert.IsTrue(IdentityVocabulary.ClaimRank("R5-owner") > IdentityVocabulary.ClaimRank("R7-graph"));
+    Assert.IsTrue(IdentityVocabulary.ClaimRank("R7-graph") > IdentityVocabulary.ClaimRank("R6-npcdb"));
+    Assert.IsTrue(IdentityVocabulary.ClaimRank("R6-npcdb") > IdentityVocabulary.ClaimRank(IdentityPriorStore.RosterReason));
+
+    // The fact clause ("Damaged players") outranks a rule's claim: it is what the capture watched happen, and on a Spell row it
+    // is the sentence the reader came for.
+    Assert.IsTrue(IdentityVocabulary.FactClauseRank > IdentityVocabulary.ClaimRank("R21-spellshape"));
+
+    // A code nobody ranked does not borrow a neighbour's position by accident; it lands at its own neutral rank, in the middle of
+    // the list and out of neither end. `RuleWords` covers everything real, so this branch is only reachable by new code.
+    Assert.AreEqual(IdentityVocabulary.UnrankedClaimRank, IdentityVocabulary.ClaimRank("R99-newthing"));
+  }
+
   [TestMethod]
   public void EveryRuleWordHasAWordWorthPrinting()
   {

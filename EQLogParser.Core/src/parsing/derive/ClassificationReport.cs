@@ -101,6 +101,24 @@ namespace EQLogParser
       public int HealedByCasters { get; init; }
 
       /// <summary>Sum of this name's damage facts (its own hits; a defender gets no credit for being hit).</summary>
+      /// <summary>Damage facts this name dealt whose DEFENDER reads player-side. Feeds the hover's "Damaged players".</summary>
+      public int HitsOnRaid { get; init; }
+
+      /// <summary>Damage facts this name dealt whose defender reads Npc — the other half of that clause.</summary>
+      public int HitsOnMobs { get; init; }
+
+      /// <summary>The Type cell's word: the kind's word, plus direction for a Spell ("Enemy Spell" / "Our Spell").</summary>
+      public string TypeDisplay { get; init; } = string.Empty;
+
+      /*
+       * Everything ELSE that applies to this name, one short phrase per line (up to four, so the hover plus its own proof line
+       * stays a five-line note): the other rules that claimed it, ranked by how directly the app knows, then what the capture
+       * watched it do. Empty for a name one rule claimed and whose facts point nowhere — most rows are exactly that, and they
+       * hover as the single sentence they always did. Built in Core so the words are testable anywhere, retained as ONE string
+       * per row (the pane already kept one) rather than a list per row: no new per-row allocation on a 4,000-name census.
+       */
+      public string OtherEvidence { get; init; } = string.Empty;
+
       public double Damage { get; init; }
 
       /// <summary>Sum of this name's heal facts, over-heal excluded — Total is what landed.</summary>
@@ -225,12 +243,33 @@ namespace EQLogParser
       double[] healing = count > 0 ? new double[count] : [];
       long[] events = count > 0 ? new long[count] : [];
 
+      /*
+       * WHOSE SIDE each member of the name pool reads, resolved ONCE per name into a pool-sized array (a few thousand lookups,
+       * ~3 KB per kind) so the fact walk below stays two array reads and an increment: no dictionary touched per fact. On a
+       * 2.27M-fact capture that is the difference between free and another fifth of a second on a window's census, which is why
+       * this is not written as `timeline.IdentityAt(defender, t)` inside the loop. The FINAL (+infinity) verdict is what counts,
+       * so the sentence a row prints can never contradict the Type column beside it; charm windows are deliberately not
+       * consulted — "Damaged players" means "hit names this capture called players", the cheap claim and the honest one.
+       */
+      IdentityKind[] verdict = count > 0 ? new IdentityKind[count] : [];
+      int[] onRaid = count > 0 ? new int[count] : [];
+      int[] onMobs = count > 0 ? new int[count] : [];
+
+      if (timeline is not null && count > 0)
+      {
+        for (short i = 0; i < names!.Count; i++) verdict[i] = timeline.IdentityAt(names[i], double.PositiveInfinity);
+      }
+
       if (damageFacts is not null)
       {
         foreach (var f in damageFacts.Facts)
         {
           damage[f.AtkIdx] += f.Total;
           events[f.AtkIdx]++;
+
+          var defKind = verdict[f.DefIdx];
+          if (defKind is IdentityKind.Player or IdentityKind.Merc or IdentityKind.Pet) onRaid[f.AtkIdx]++;
+          else if (defKind is IdentityKind.Npc) onMobs[f.AtkIdx]++;
         }
       }
       if (healFacts is not null)
@@ -261,7 +300,8 @@ namespace EQLogParser
       {
         for (short i = 0; i < names.Count; i++)
         {
-          AddRow(rows, names[i], timeline, overrides, registry, priors, castProof, seenCasts, healProof, damage[i], healing[i], events[i], hasFacts: true);
+          AddRow(rows, names[i], timeline, overrides, registry, priors, castProof, seenCasts, healProof, damage[i], healing[i],
+                 events[i], hasFacts: true, hitsOnRaid: onRaid[i], hitsOnMobs: onMobs[i]);
         }
       }
 
@@ -419,7 +459,8 @@ namespace EQLogParser
     private static Row AddRow(Dictionary<string, Row> rows, string name, EntityTimeline? timeline,
                               IdentityOverrideStore? overrides, PlayerRegistry? registry, IdentityPriorStore? priors,
                               CastProof castProof, HashSet<string>? seenCasts, HealCasterProof healProof,
-                              double damage, double healing, long events, bool hasFacts)
+                              double damage, double healing, long events, bool hasFacts,
+                              int hitsOnRaid = 0, int hitsOnMobs = 0)
     {
       var kind = IdentityKind.Unknown;
       string source = string.Empty;
@@ -514,6 +555,10 @@ namespace EQLogParser
         Damage = damage,
         Healing = healing,
         Events = events,
+        HitsOnRaid = hitsOnRaid,
+        HitsOnMobs = hitsOnMobs,
+        TypeDisplay = IdentityVocabulary.TypeWordFor(kind, hitsOnRaid, hitsOnMobs),
+        OtherEvidence = BuildOtherEvidence(timeline, name, source, hitsOnRaid, hitsOnMobs),
       };
       rows[name] = row;
       return row;
@@ -574,6 +619,51 @@ namespace EQLogParser
           casters.Add(healer);
         }
       }
+    }
+
+    /*
+     * The hover's extra lines: every other claim on the name, plus the one fact clause, ranked and capped.
+     *
+     * Cost is per NAME, not per fact — ClaimsOf hands back the timeline's own list without copying it (the caller must not
+     * mutate), ProofText maps to interned literals, and the whole thing returns a single string (empty in the common case of one
+     * claim and no direction). A 4,000-name census allocates a handful of small lists for the rows that have several claims and
+     * nothing at all for the rest.
+     */
+    private static string BuildOtherEvidence(EntityTimeline? timeline, string name, string winningSource,
+                                             int hitsOnRaid, int hitsOnMobs)
+    {
+      const int maxExtraLines = 4;   // IdentityVocabulary/NamesTable prints the head proof line; five lines is the budget
+
+      if (timeline is null) return string.Empty;
+      var claims = timeline.ClaimsOf(name);
+      var direction = IdentityVocabulary.DirectionPhrase(hitsOnRaid, hitsOnMobs);
+      if (claims.Count == 0 && direction is null) return string.Empty;
+
+      List<(int Rank, int Strength, string Phrase)>? lines = null;
+      var seenPhrases = new HashSet<string>(StringComparer.Ordinal);
+
+      foreach (var claim in claims)
+      {
+        // The winner is the head line the pane already prints; listing it twice would be padding.
+        if (string.Equals(claim.Source, winningSource, StringComparison.Ordinal)) continue;
+
+        var phrase = IdentityVocabulary.ProofText(claim.Source, claim.Kind);
+        if (phrase.Length == 0 || !seenPhrases.Add(phrase)) continue;
+        (lines ??= new List<(int, int, string)>()).Add((IdentityVocabulary.ClaimRank(claim.Source), claim.Strength, phrase));
+      }
+
+      // The fact clause competes with the claims on rank rather than always trailing them: for a Spell row it is the sentence
+      // the reader came for ("Damaged players"), and it outranks the R21 shape claim that got the row its kind.
+      if (direction is not null && seenPhrases.Add(direction))
+        (lines ??= new List<(int, int, string)>()).Add((IdentityVocabulary.FactClauseRank, 0, direction));
+
+      if (lines is null || lines.Count == 0) return string.Empty;
+
+      var ordered = lines.OrderBy(l => l.Rank, Comparer<int>.Create(static (a, b) => b.CompareTo(a)))
+                         .ThenByDescending(l => l.Strength)
+                         .ThenBy(l => l.Phrase, StringComparer.Ordinal)
+                         .Take(maxExtraLines);
+      return string.Join('\n', ordered.Select(l => l.Phrase));
     }
 
     private static int KindRank(IdentityKind kind) => kind switch

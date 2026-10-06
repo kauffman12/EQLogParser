@@ -292,6 +292,17 @@ namespace EQLogParser
       return false;
     }
 
+    /*
+     * EVERY claim this capture recorded for the name, in insertion order — the identity list's tooltip reads this so a hover
+     * can say what EACH rule saw rather than only the winner. Two things it deliberately is not:
+     *   - not a copy: the census walks thousands of names and an allocation per name is exactly the memory this feature was
+     *     told not to spend; the caller enumerates and does not mutate (same read-only convention as every non-derive reader
+     *     here — writes belong to the derive worker, UI readers take SyncRoot);
+     *   - not filtered: lower-strength and superseded claims stay in, which is the whole point. IdentityAt still decides.
+     */
+    internal IReadOnlyList<IdentityAssignment> ClaimsOf(string name)
+      => _identity.TryGetValue(name, out var list) ? list : System.Array.Empty<IdentityAssignment>();
+
     // Strongest assignment at +infinity, with its provenance (Phase 2 report input).
     public IdentityKind IdentityWithSource(string name, out string source)
     {

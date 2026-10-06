@@ -423,4 +423,51 @@ public class NamesTableTest
     ClassificationCommands.ClearPrior(IdentityPriorStore.Instance, "Nobody");
     ClassificationCommands.ClearVerdict(IdentityOverrideStore.Instance, "Nobody");
   }
+
+  /*
+   * The extra evidence lines ("one short phrase per line for each rule that applied", and what the capture watched the name do)
+   * are built in Core — `Row.OtherEvidence` — so which phrases exist, in what order, and how they are capped is asserted by
+   * EvidenceLinesTest in the portable assembly. What is THIS pane's behaviour, and therefore pinned here:
+   *
+   *   - the row's own proof line stays FIRST: the blink-read answer is the verdict's reason, and the rest reads downward;
+   *   - the shape is additive — a row with nothing extra still hovers as exactly one line, which is what every other test in this
+   *     file assumes and what most rows are;
+   *   - head plus tail stays inside the five-line budget;
+   *   - the TYPE cell carries whatever word Core chose (a Spell row's direction: "Enemy Spell" / "Our Spell"), and falls back to
+   *     the plain kind word when a row was assembled by hand and says nothing.
+   */
+  [TestMethod]
+  public void ExtraEvidenceRidesBelowTheProofLineInTheHover()
+  {
+    var spell = NamesTable.RowFrom(new ClassificationReport.Row
+    {
+      Name = "Strangle XVII Rk. III",
+      Kind = IdentityKind.Spell,
+      Reason = "R21-spellshape",
+      HasFacts = true,
+      TypeDisplay = IdentityVocabulary.TypeWordFor(IdentityKind.Spell, 240, 0),
+      OtherEvidence = IdentityVocabulary.DamagedPlayersPhrase,
+    });
+
+    Assert.AreEqual("Enemy Spell", spell.Type, "the direction word Core chose reaches the cell unchanged");
+
+    var lines = spell.Provenance.Split('\n');
+    Assert.AreEqual(2, lines.Length, $"head plus one clause: {spell.Provenance}");
+    Assert.AreEqual(IdentityVocabulary.ProofText("R21-spellshape", IdentityKind.Spell), lines[0],
+                    "the row's own proof line stays first — the rest is supporting evidence, not a replacement");
+
+    var plain = NamesTable.RowFrom(new ClassificationReport.Row
+    {
+      Name = "A bone walker", Kind = IdentityKind.Npc, Reason = "R14-shape", HasFacts = true,
+    });
+    Assert.AreEqual("NPC", plain.Type, "a row assembled without a TypeDisplay still answers with the kind word");
+    Assert.IsFalse(plain.Provenance.Contains("\n"), $"one claim and no direction hovers as one line: {plain.Provenance}");
+
+    var busy = NamesTable.RowFrom(new ClassificationReport.Row
+    {
+      Name = "Frost", Kind = IdentityKind.Npc, Reason = "R9-charm", HasFacts = true,
+      OtherEvidence = string.Join("\n", Enumerable.Repeat(IdentityVocabulary.DamagedMonstersPhrase, 4)),
+    });
+    Assert.AreEqual(5, busy.Provenance.Split('\n').Length, "the hover budget is five lines: the proof plus four");
+  }
 }

@@ -274,7 +274,10 @@ namespace EQLogParser
     internal static NameRow RowFrom(ClassificationReport.Row row) => new()
     {
       Name = row.Name,
-      Type = IdentityVocabulary.TypeWord(row.Kind),
+      // Core decides the cell word (a Spell row carries direction: "Enemy Spell" / "Our Spell"); the fallback keeps a row
+      // built outside the census — every test fixture, and any future caller that assembles a Row by hand — answering with the
+      // plain kind word rather than an empty cell.
+      Type = row.TypeDisplay.Length > 0 ? row.TypeDisplay : IdentityVocabulary.TypeWord(row.Kind),
       Why = IdentityVocabulary.WhyWord(row.Reason, row.Kind),
       PlayerClass = row.Class,
       Kind = row.Kind,
@@ -320,7 +323,13 @@ namespace EQLogParser
       // The sighting count rides on the proof clause too: "From Chat in previous log x7".
       if (row.IsPrior && row.PriorSightings > 1) proof = $"{proof} x{row.PriorSightings:N0}";
 
-      return proof;
+      /*
+       * Then whatever ELSE applies, one phrase per line, computed in Core (`Row.OtherEvidence`): the other rules that claimed
+       * this name and what the capture watched it do ("Damaged players"). A row one rule claimed and whose facts point nowhere
+       * has nothing here and hovers as the single sentence it always did — the extra lines only exist where there is more to say,
+       * which is what the operator asked for after "why does it just say A Spell?".
+       */
+      return row.OtherEvidence.Length == 0 ? proof : proof + "\n" + row.OtherEvidence;
     }
 
     /*

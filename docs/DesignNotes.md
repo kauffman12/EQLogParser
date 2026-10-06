@@ -6928,3 +6928,51 @@ capture and diff which names appear, then find whose verdict differs. Until then
 gate** — compare per-person numbers, which is how the retired board census did it and why.
 
 Reproduce: `cd /tmp/eq-ab && dotnet run --no-build -c Debug -- <capture>` twice; the `AB name=` line moves, `dmg`/`hits` do not.
+
+### The cell carries the judgement, the hover carries the reasons (2026-11)
+
+The Spell kind landed and the window still read wrong to the person using it: a curse whose every fact landed on raid members
+hovered *"No Caster in Line"* — the weakest of R21's three proofs, and silent about the one question the row exists to answer
+(*is this ours?*). The operator asked for the judgement **in the cell** with simple phrases underneath: *"Enemy Spell"*,
+*"Damaged players"*, and "one short phrase per line for each rule that applied".
+
+**What shipped.** `IdentityVocabulary.TypeWordFor(kind, hitsOnRaid, hitsOnMobs)` puts direction on the Spell rows only:
+**Enemy Spell** when everything the name hit reads player-side, **Our Spell** when everything it hit reads Npc, and plain
+**Spell** when the targets disagree or read Unknown — "both" is not a judgement about who owns a DoT (the same effect ticks on
+a charmed raider and on the raid's real target inside one pull), so the cell declines and the hover says *Damaged players and
+monsters*. Kind itself is unchanged (`Spell`, never a side-word for something that is not an "it"), and only Spell rows can ever
+get a direction word — `TypeWordFor(Player, 99, 0)` is still *Player*.
+
+**`Row.OtherEvidence` is the second half of the hover**: every *other* claim on the name plus the one fact clause, one phrase per
+line, capped at four (the head proof line the pane prints makes five). Built in Core so the words are testable anywhere; the pane's
+only job is `proof + "\n" + tail`, and it appends nothing when the tail is empty — **a row one rule claimed whose facts point
+nowhere hovers exactly as it did before**, which is what most rows are and what the existing one-line tests still assert. Lines are
+ordered by `IdentityVocabulary.ClaimRanks` (an operator's word 100 → a target frame 90 → chat/guild 80 → behaviour 70 → inference
+60 → npcdb/grammar/spell-data 50 → the two memory lanes 20), with the **fact clause at 75** so it outranks the rule's own claim: for
+a Spell row it is the sentence the reader came for. Ties break on strength then ordinal, and an unranked code lands at
+`UnrankedClaimRank` (45) rather than borrowing a neighbour's slot — `RuleWords` covers everything real, so that branch is only
+reachable by new code, which is exactly what the coverage test forbids: **`ClaimRanks` and `WhyWords` must cover each other in both
+directions** (`EverySourceThatCanBeRankedIsRankedAndEveryRankHasAWord`), same discipline as the FCT/`HitLabel` vocabularies.
+
+**Measured (fixtures mirroring the reported shapes, `EvidenceLinesTest`):**
+
+| row | cell | kind | tail |
+|---|---|---|---|
+| `Tinstag Rk. II` (2 caster-less hits on us) | **Enemy Spell** | Spell | *Damaged players* |
+| `Strangle XVII Rk. III` (2 hits on mobs) | **Our Spell** | Spell | *Damaged monsters* |
+| `Doomsigil XII Rk. III` (one each) | Spell | Spell | *Damaged players and monsters* |
+| `Frost` (npcdb + `has been charmed.`) | NPC | Npc | *In the NPC DB* under the charm's own line |
+
+**The cost law, because the ask came with "I don't want memory to go up significantly".** WHOSE-SIDE is resolved **once per name**
+into a pool-sized `IdentityKind[]` (a few thousand lookups) rather than an `IdentityAt` per fact — on 2.27 M facts that is the
+difference between free and another fifth of a second on a census — and the direction tally is two more pool-sized `int[]`s
+(~12 KB per 1,000 names) incremented inside the damage loop that already existed. `EntityTimeline.ClaimsOf` hands back the
+timeline's **own list**, not a copy; the only thing retained per row is one string, which the pane already kept. Nothing allocates
+per fact and nothing allocates for a single-claim row. Verdicts used are the **final** (+∞) ones, so a sentence can never contradict
+the Type column beside it; charm windows are deliberately not consulted — *"Damaged players"* means "hit names this capture called
+players", the cheap claim and the honest one.
+
+One assertion changed shape while being written, and the test earned its keep: the hover was to contain **no kind word**, which is
+wrong as stated, because *In the NPC DB* names a source. The law is narrower — an evidence line is never **just** a verdict word —
+and that is what `ExtraLinesAreCappedCarryNoCodesAndDoNotMove` holds, alongside the five-line cap, "no rule codes reach the hover",
+and determinism (two identical passes produce byte-identical tails and cells; the census runs on a timer under somebody's cursor).
