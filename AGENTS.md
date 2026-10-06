@@ -377,6 +377,24 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   are the only way to tell a row an operator wrote from one the rules inferred (`ProvenanceFor`, pinned by `NamesTableTest`, Windows-only). **No status line and no
   header**: the pane is the grid alone — the shape Pet Owners has, because the dock tab already says "Player/NPC Identity" — so nothing on screen prints the census
   counters that survive (`TotalNames`/`UnresolvedInCapture`/the five kind counts are computed and tested with no surface — the whole-capture `Disagreements` count went out with its header, since "counted but invisible" is not a reason to compute); see the docking law below.
+- **An outcome word decides; a tag never un-happens it, and a name never carries the sentence's period** (2026-11, both measured on
+  `eqlog_Kizant_xegony-2.txt`). (1) `riposte!`/`ripostes!` had an extra guard, `"(Strikethrough)" != split[^1]`, that made the parser
+  return **no record** for `X tries to bite Y, but Y ripostes! (Strikethrough)` — **16,076 of that capture's 21,277 ripostes**, reaching
+  nothing at all: `StatsUtil` counts `RiposteHits`/`MeleeAttempts` from the LABEL, the modifier tally needs a record to carry the mask, and
+  R7/R15 read facts. Blocks/parries/dodges tagged the same were always kept, and the branch's own comment block lists that exact shape as
+  supported — so a `missType` arm that returns nothing for a documented shape is a bug to measure, not behaviour to preserve. The real
+  distinction lives in the MASK (`LineModifiersParser.IsRiposte` = Riposte bit **without** Strikethrough, "attacker struck through a riposte")
+  and is asserted off `record.ModifiersMask`: **sub-set by asking the mask, never by dropping the line**
+  (`TestBlock_RiposteOfStrikethroughYou`/`Other`, whose `Assert.IsNull` pins were flipped with the measurement written in; the mask-only
+  `but miss! (Riposte Strikethrough)` → Miss shape is untouched). (2) In `X has taken N damage from <empty> by Y.` — blank spell slot, the
+  effect's own name in the caster slot — the arm that copies the by-slot into `spell` ran **before** the trailing-period fix, so the name and
+  the subtype key kept the sentence's `.`: 3 of 262 pool names ended in '.', each a twin (`Infected Magic.`/`Infected Magic`, `Burning Glob
+  Burst.`, `Arcstone Rock Fall.`), and since R21's third proof is spells.txt — which cannot answer a dotted key, like the ordinal subtype table
+  it also poisoned — the clean twin read *Spell* while its shadow sat as **Unplaced**. Same defect class as case-insensitivity in
+  `NamePoolTest`: a name differing from itself by punctuation. `TestTaken_EmptySpellSlotLeavesTheSentencePeriodOutOfTheName` pins the strip
+  **and** that the `by .` caster-less shape still substitutes and flags the spell (a lone `.` is not a name with a stray dot). Cost of the pair:
+  facts 2,270,292 → **2,286,368 (+16,076)**, pool 262 → **259**, aim-only facts 5.9% → 6.5%. Reasoning and the retracted grep-based claim it
+  required: docs/DesignNotes.md → "Two capture gaps a hover question exposed".
 - **The Type cell carries the judgement, the hover carries the reasons** (2026-11): a Spell row reads **Enemy Spell** when every
   fact it dealt landed on a name that reads player-side, **Our Spell** when every one landed on an Npc, and plain **Spell** when the
   targets disagree or read Unknown — "both" is not a judgement about who owns a DoT, so the cell declines and the hover says

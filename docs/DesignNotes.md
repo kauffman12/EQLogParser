@@ -6976,3 +6976,74 @@ One assertion changed shape while being written, and the test earned its keep: t
 wrong as stated, because *In the NPC DB* names a source. The law is narrower — an evidence line is never **just** a verdict word —
 and that is what `ExtraLinesAreCappedCarryNoCodesAndDoNotMove` holds, alongside the five-line cap, "no rule codes reach the hover",
 and determinism (two identical passes produce byte-identical tails and cells; the census runs on a timer under somebody's cursor).
+
+## Two capture gaps a hover question exposed (2026-11)
+
+The question was about a row, not the parser: *"how did Bjpotratz damage players and monsters?"* — asked of the new fact clause
+on a real night's capture. Answering it properly turned up two things that never entered the capture, and required retracting an
+answer I had already given from a truncated grep. All numbers below are from `eqlog_Kizant_xegony-2.txt` (467 MB).
+
+### A riposte tagged `(Strikethrough)` was not in the capture at all
+
+```
+[Sun Oct 04 19:39:01 2026] Spitetangle tries to bite Foob, but Foob ripostes! (Strikethrough)
+```
+
+`DamageLineParser`'s outcome switch had `&& "(Strikethrough)" != split[^1]` on the `riposte!`/`ripostes!` arm only, so this line
+returned **no record** — and with no record it reached nothing: `StatsUtil` counts `RiposteHits` and `MeleeAttempts` from the
+LABEL, the modifier tally needs a record to carry the mask, and R7/R15 hostility shares read facts. Measured on this capture:
+**21,277 riposte lines, 16,076 of them (75%) ending in that tag**. The same shape for blocks, parries and dodges
+(`… but Ashenback blocks! (Strikethrough)`, 52,443 name-restated attempt lines overall) was always kept; the guard singled out the
+one outcome whose real-world lines almost always carry the tag — and the branch's own comment block eight lines above lists
+`An enchanted Syldon stalker tries to crush YOU, but YOU riposte! (Strikethrough)` as an input it handles.
+
+The distinction the guard was reaching for is real, and it already lives in the **mask**: `LineModifiersParser.IsRiposte` is
+"Riposte bit **and not** Strikethrough", because a Strikethrough Riposte means the *attacker* struck through the defender's
+riposte. That is a statement about the modifier pair — readable off `record.ModifiersMask`, still asserted — and it is not a reason
+to un-count an event the sentence plainly reported. Two tests pinned `Assert.IsNull` on exactly these two lines; they pinned
+behaviour without recording a reason, and are flipped with the measurement written in
+(`TestBlock_RiposteOfStrikethroughYou`, `TestBlock_RiposteOfStrikethroughOther`). The mask-only shape (`… but miss! (Riposte
+Strikethrough)` → Miss) was already correct and is untouched.
+
+**Law: an outcome word decides; a parenthetical tag cannot un-happen an event.** Sub-set by asking the mask, never by dropping
+the line. Any `missType` arm that returns nothing for a shape its own comments list as supported is a bug to measure, not a
+behaviour to preserve.
+
+### The sentence's period became part of an entity name
+
+```
+[Sun Oct 04 18:58:53 2026] You have taken 253713 damage from  by Infected Magic.
+```
+
+The spell slot is blank and the effect's own name sits in the caster slot. That arm (`else if (string.IsNullOrEmpty(spell))`)
+took the "not sure when this happens" shortcut **before** the trailing-period fix that the sibling arm applied, so the attacker
+name — and the subtype key derived from it — kept the sentence's `.`. Measured: **3 of 262 pool names ended in '.'**, each a twin of
+a name already in the pool (`Infected Magic.`/`Infected Magic`, `Burning Glob Burst.`, `Arcstone Rock Fall.`), and because R21's
+third proof is `spells.txt` — which cannot answer a dotted key, exactly like the ordinal subtype table it also poisoned — the clean
+twin read **Spell** while its dotted shadow sat in the identity list as **Unplaced**. Six lines on this capture; the class of defect
+is the same one `NamePoolTest` exists for: *a name that differs from itself by punctuation*. Fixed by making the strip unconditional
+inside that branch (`TestTaken_EmptySpellSlotLeavesTheSentencePeriodOutOfTheName`, which also pins that the `by .` caster-less shape
+still substitutes and flags the spell — a lone `.` is not "a name with a stray dot").
+
+### What the question was actually about, and a claim retracted
+
+`Bjpotratz` reads **Player** (R4-spell Certain + R3-chat), dealt 10,642 facts on NPCs and **61 with a raid-side defender** —
+and every one of those 61 is `Bjpotratz hit Bjpotratz for N points of fire damage by Corona Beam Refraction X.`, the Evoker's own
+refracted beam. So the tally was faithful and the WORDING was not: a row that beat on monsters and singed itself hovered
+"Damaged players and monsters", which is how a friendly-fire accusation gets read into a log where nobody friendly-fired anybody. My first answer — that the raid-side half
+came from beating on a raid pet called `Spitetangle` — was wrong twice over, produced by reading the top six lines of a grouped
+grep: `Spitetangle` is **Npc at Certain (`R1-target`**, npcdb also claims it), and it is not passive at all — **3,654 attack facts,
+3,550 of them aimed at players** (1,553 aim-only), 139.7 M damage. The raid healing a mob that then beats on the raid is exactly the
+shape R15's veto exists for, and the veto counts **every** fact including zero-total aims (5.9% of this capture's facts are aims), so
+it was never claimed raid-side. The lesson is the one this file already carries: a grouped grep's first six rows is not a census —
+run the instrumented pass before asserting what a name did.
+
+**After** both fixes, same probe: facts **2,270,292 → 2,286,368 (+16,076, exactly the tagged ripostes)**, pool names
+**262 → 259** with **zero** ending in '.' and zero twins, aim-only facts 133,033 (5.9%) → **149,109 (6.5%)** — every new fact is an
+attempt with no number, which is what the shape promises.
+
+Open thread that all of this sharpens: the fact clause needs one more bucket. A raid member's own refraction (self), `Spitetangle`'s
+104 facts on **Pets**, `Ashenback`'s 798 — under the current two-bucket tally all three print *Damaged players*. Proposed closed set,
+all tallied from counters that already exist in the same loop (`f.AtkIdx == f.DefIdx` is free):
+*Damaged itself*, *Damaged pets*, *Damaged monsters*, and combinations (*Damaged pets and monsters*), with self suppressed when a
+name also hit others… or shown, since "hits itself" is a fact a reader can check. Wording plus tests, no new pass over the facts.

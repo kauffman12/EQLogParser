@@ -899,18 +899,78 @@ namespace EQLogParser
       Assert.AreEqual("Crushes", record.SubType);
     }
 
+    /*
+     * These two asserted `IsNull` — they pinned the parser's behaviour rather than a reason, and the cost of that pin was
+     * measured on eqlog_Kizant_xegony-2.txt: **16,076 of its 21,277 riposte lines** end in `(Strikethrough)`, and with no record
+     * they reached nothing. Not RiposteHits or MeleeAttempts (StatsUtil counts those from the LABEL), not the Strikethrough
+     * modifier tally (which needs a record to carry the mask at all), not the attempt as hostility evidence for R7/R15 — nothing.
+     * Same-shape blocks, parries and dodges tagged (Strikethrough) were always kept (see TestBlock_MissRiposteStrikethrough just
+     * below), so the guard singled out the one outcome whose real-world lines almost always carry the tag.
+     *
+     * The distinction worth keeping is in the MASK, and it already exists: LineModifiersParser.IsRiposte requires the Riposte bit
+     * WITHOUT Strikethrough because a Strikethrough Riposte is the ATTACKER striking through a defender's riposte. That is a fact
+     * about the modifier pair — readable off record.ModifiersMask below, asserted here so both halves stay true.
+     */
     [TestMethod]
     public void TestBlock_RiposteOfStrikethroughYou()
     {
       var record = ParseAction("An enchanted Syldon stalker tries to crush YOU, but YOU riposte! (Strikethrough)");
-      Assert.IsNull(record);
+      Assert.IsNotNull(record, "the sentence says a riposte happened; a modifier tag cannot un-happen it");
+      Assert.AreEqual("An enchanted Syldon stalker", record.Attacker);
+      Assert.AreEqual(ConfigUtil.PlayerName, record.Defender);
+      Assert.AreEqual(Labels.Riposte, record.Type);
+      Assert.AreEqual("Crushes", record.SubType);
+      Assert.AreEqual((uint)0, record.Total, "an outcome with no number is still an outcome");
+
+      // Strikethrough rides on the mask; the pair still reads "attacked through a riposte", which IsRiposte refuses.
+      Assert.IsTrue(LineModifiersParser.IsStrikethrough(record.ModifiersMask));
+      Assert.IsFalse(LineModifiersParser.IsRiposte(record.ModifiersMask));
     }
 
     [TestMethod]
     public void TestBlock_RiposteOfStrikethroughOther()
     {
       var record = ParseAction("Zelnithak tries to hit Fllint, but Fllint ripostes! (Strikethrough)");
-      Assert.IsNull(record);
+      Assert.IsNotNull(record);
+      Assert.AreEqual("Zelnithak", record.Attacker);
+      Assert.AreEqual("Fllint", record.Defender);
+      Assert.AreEqual(Labels.Riposte, record.Type);
+      Assert.IsTrue(LineModifiersParser.IsStrikethrough(record.ModifiersMask));
+
+      // The untagged spelling is the same outcome; the two must not diverge because of a tag.
+      var plain = ParseAction("Zelnithak tries to hit Fllint, but Fllint ripostes!");
+      Assert.IsNotNull(plain);
+      Assert.AreEqual(plain.Type, record.Type);
+      Assert.AreEqual(plain.SubType, record.SubType);
+    }
+
+    /*
+     * `from  by X.` — an empty spell slot with the effect's own name in the caster slot. Stripping the sentence period is not
+     * cosmetic: the dotted spelling entered the NAME pool (3 of 262 names on eqlog_Kizant_xegony-2.txt) and the SUBTYPE table,
+     * both of which are keyed so that a spell's key must match exactly — spells.txt cannot answer "Infected Magic.", so R21's
+     * third proof failed, the clean twin read `Spell` and its dotted shadow sat in the identity list as Unplaced. One key per
+     * effect is the law; this is the seam where a second one was being minted.
+     */
+    [TestMethod]
+    public void TestTaken_EmptySpellSlotLeavesTheSentencePeriodOutOfTheName()
+    {
+      var record = ParseAction("You have taken 253713 damage from  by Infected Magic.");
+      Assert.IsNotNull(record);
+      Assert.AreEqual("Infected Magic", record.Attacker);
+      Assert.AreEqual("Infected Magic", record.SubType);
+      Assert.AreEqual((uint)253713, record.Total);
+
+      // The same effect named through the ordinary shape writes the same subtype key — that is what "one key per effect" means.
+      var other = ParseAction("Grendish the Crusader has taken 1003231 damage from Infected Magic by Ashk. (Lucky Critical)");
+      Assert.IsNotNull(other);
+      Assert.AreEqual(record.SubType, other.SubType);
+
+      // The `by .` self-cast shape still substitutes the SPELL and flags it: that branch reads the period differently and must
+      // keep doing so (attacker "." is not a name with a stray dot on it).
+      var casterless = ParseAction("Goratoar has taken 18724 damage from Slicing Energy by .");
+      Assert.IsNotNull(casterless);
+      Assert.AreEqual("Slicing Energy", casterless.Attacker);
+      Assert.IsTrue(casterless.AttackerIsSpell);
     }
 
     [TestMethod]

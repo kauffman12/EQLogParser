@@ -267,7 +267,20 @@ namespace EQLogParser
               break;
             case "riposte!":
             case "ripostes!":
-              missType = (stop == i && butIndex > -1 && i > tryIndex && "(Strikethrough)" != split[^1]) ? 5 : missType;
+              /*
+               * This used to add `&& "(Strikethrough)" != split[^1]`, which threw away the line rather than downgrading it —
+               * including the branch's own documented example (`An enchanted Syldon stalker tries to crush YOU, but YOU riposte!
+               * (Strikethrough)`, eight comments above). Measured on eqlog_Kizant_xegony-2.txt: **16,076 of 21,277** riposte lines
+               * end in that tag, and with no record they contributed NOTHING at all — not RiposteHits or MeleeAttempts (StatsUtil
+               * counts those from the label), not the Strikethrough mask tally, not the attempt as hostility evidence.
+               *
+               * The distinction the guard was reaching for is real but lives in the MASK, where it is already modelled:
+               * LineModifiersParser.IsRiposte is "Riposte bit and NOT Strikethrough" because a Strikethrough Riposte is the
+               * ATTACKER striking through a riposte. That is a statement about the modifier pair, not about what the sentence
+               * said — and the sentence said "Fllint ripostes!". Blocks, parries and dodges tagged (Strikethrough) were never
+               * dropped; only the riposte was. Anyone who needs the pierced-through subset asks fact.ModMask.
+               */
+              missType = (stop == i && butIndex > -1 && i > tryIndex) ? 5 : missType;
               break;
             case "blow!":
               missType = (stop == i && butIndex > -1 && i > tryIndex && split[i - 2] == "absorbs") ? 6 : missType;
@@ -533,15 +546,30 @@ namespace EQLogParser
             attacker = spell;
             attackerIsSpell = true;
           }
-          else if (string.IsNullOrEmpty(spell))
+          else
           {
-            // not sure when this happens
-            spell = attacker;
-          }
-          else if (!string.IsNullOrEmpty(attacker) && attacker[^1] == '.')
-          {
-            // fix spell name
-            attacker = attacker[..^1];
+            /*
+             * The by-slot is the last thing on the line, so its final character is the sentence's period. EVERY reading below
+             * needs it gone, which is why this is not an `else if` arm: the empty-spell path (`You have taken 253713 damage from
+             * by Infected Magic.` — the spell slot blank, the spell's own name in the caster slot) skipped it and minted a
+             * phantom entity. Measured on eqlog_Kizant_xegony-2.txt: three of 262 pool names ended in '.', each a twin of a name
+             * already in the pool — "Infected Magic." alongside "Infected Magic", plus "Burning Glob Burst." and "Arcstone Rock
+             * Fall." — and because R21's third proof is spells.txt, which cannot answer a dotted key (the subtype table is ordinal
+             * too), the clean twin read `Spell` while its dotted shadow sat in the identity list as **Unplaced**. The 6 lines here
+             * are noise; the class of defect (a name that differs from itself by punctuation) is not, and NamePoolTest exists for
+             * exactly this seam.
+             */
+            if (!string.IsNullOrEmpty(attacker) && attacker[^1] == '.')
+            {
+              attacker = attacker[..^1];
+            }
+
+            if (string.IsNullOrEmpty(spell))
+            {
+              // The spell slot is blank and the caster slot holds the effect's name. No attackerIsSpell flag: R21 reads
+              // spells.txt for this shape, so the row already answers `Spell` once the period is off.
+              spell = attacker;
+            }
           }
         }
         else if (yourIndex > -1)
