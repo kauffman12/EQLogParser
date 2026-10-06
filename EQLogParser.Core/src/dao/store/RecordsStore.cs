@@ -28,7 +28,8 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<string, bool> _recordNeedsEvent = new();
     private readonly Dictionary<string, NpcResistStats> _npcSpellStatsDict = [];
     private readonly List<RecordList> _playerAmbiguityCastCache = [];
-    private readonly ConcurrentDictionary<string, List<CachedCast>> _spellNameIndex = new();
+    // One entry per ambiguous spell name. The value carries its own ordering fact — see CastHistory.
+    private readonly ConcurrentDictionary<string, CastHistory> _spellNameIndex = new();
     private readonly Timer _eventTimer;
 
     private static readonly string[] TimedRecordTypes =
@@ -101,11 +102,15 @@ namespace EQLogParser
         _playerAmbiguityCastCache.Clear();
       }
 
-      foreach (var list in _spellNameIndex.Values)
+      foreach (var history in _spellNameIndex.Values)
       {
-        lock (list)
+        lock (history)
         {
-          list.Clear();
+          history.Casts.Clear();
+
+          // A cleared history is ordered again by definition, and the flag is per session: the next log's appends
+          // start from nothing, so carrying a retired fast path across captures would cost queries for no safety.
+          history.AscendingTime = true;
         }
       }
       _spellNameIndex.Clear();
@@ -183,10 +188,10 @@ namespace EQLogParser
         Add(_playerAmbiguityCastCache, spell, beginTime);
         if (string.IsNullOrEmpty(spell.Spell)) return;
         var cached = new CachedCast(beginTime, spell);
-        var list = _spellNameIndex.GetOrAdd(spell.Spell, _ => []);
-        lock (list)
+        var history = _spellNameIndex.GetOrAdd(spell.Spell, _ => new CastHistory());
+        lock (history)
         {
-          list.Add(cached);
+          history.Add(cached);
         }
       }
     }
@@ -209,26 +214,60 @@ namespace EQLogParser
 
     internal List<CachedCast> GetCastsBySpellName(string spellName, double duration)
     {
-      if (!_spellNameIndex.TryGetValue(spellName, out var list))
+      /*
+       * "What did this spell name cast in the last few seconds?" — asked while resolving an ambiguous
+       * abbreviation (EQDataStore.FindPreviousCast), several times per ambiguous line, against a history that
+       * grows all night. The old shape paid for both halves of that: it allocated the result with capacity for
+       * the spell's ENTIRE history, and it walked the entire history looking for a handful of recent entries.
+       *
+       * Measured on Incogitable by gtp-improvements.md: 214,487 queries visited 149,232,044 entries and returned
+       * 164,263 matches — about 700 entries examined per match. The same bound scan visits 376,345 and returns the
+       * identical count; on the 952 MiB capture it was 53.7 M visited for ~235 K matches, on beta 67.8 M for ~265 K.
+       * That is a scaling hazard rather than a headline speedup (the doc recorded no proportional whole-load win, and
+       * none is promised here): a question about eight seconds should not cost in proportion to a night.
+       *
+       * Two changes, one per half. The result list grows instead of being pre-sized to the history — measured 0.77
+       * matches per query, so the old capacity was ~900× the answer. And the scan stops at the first entry older than
+       * the window WHEN IT CAN PROVE THE REST ARE OLDER STILL, which is only when this spell's appends all arrived
+       * ascending (CastHistory.AscendingTime). Nothing assumes monotonic time from the file: one out-of-order append
+       * retires the fast path for that name and the full walk comes back.
+       */
+      if (!_spellNameIndex.TryGetValue(spellName, out var history))
       {
         return [];
       }
 
+      // The anchor stays exactly as it was: the newest cast in the global ambiguity cache, not this spell's newest
+      // and not wall time. It is a quirk (a log whose clock jumps moves the window) and it is the behaviour every
+      // existing resolution depends on, so bounding the scan is not the day to change which casts are "recent".
       var end = _playerAmbiguityCastCache.Count - 1;
       if (end <= -1) return [];
 
       var endTime = _playerAmbiguityCastCache[end].BeginTime - duration;
-      lock (list)
+      lock (history)
       {
-        var result = new List<CachedCast>(list.Count);
-        for (var i = list.Count - 1; i >= 0; i--)
+        var casts = history.Casts;
+        // Plain null, no `?`: Core compiles with nullable annotations disabled, and annotating anyway is the
+        // CS8632 this repo has had nine of — the fix is the annotation context or none at all, never a pragma.
+        List<CachedCast> result = null;
+        for (var i = casts.Count - 1; i >= 0; i--)
         {
-          if (list[i].BeginTime >= endTime)
+          var cast = casts[i];
+          if (cast.BeginTime >= endTime)
           {
-            result.Add(list[i]);
+            // Grown on demand: a query that finds nothing allocates no list at all (Array.Empty below), and one
+            // that finds its usual single match pays for four slots rather than for the night.
+            result ??= [];
+            result.Add(cast);
+          }
+          else if (history.AscendingTime)
+          {
+            // Ascending appends, so everything further back is at least as old as this entry.
+            break;
           }
         }
-        return result;
+
+        return result ?? [];
       }
     }
 
@@ -438,6 +477,35 @@ namespace EQLogParser
       public readonly double BeginTime;
       public readonly SpellCast Cast;
       internal CachedCast(double beginTime, SpellCast cast) { BeginTime = beginTime; Cast = cast; }
+    }
+
+    /*
+     * One ambiguous spell's cast history, plus the ONE fact about that history which lets a recent-cast query stop
+     * early: whether every append landed at or after its predecessor. Tracked rather than assumed because the input
+     * is a text log — timestamps can repeat, and a restored or concatenated file can hand the parser seconds out of
+     * order. Three measured captures showed no violation, and a production path may not be built on that: one
+     * backwards append flips this flag for good (within a session) and the caller goes back to walking the whole
+     * list, which is exactly what it did before the bound existed. Losing the fast path is cheap; losing matches is
+     * not, and an assumption here would lose them silently — same-looking board, wrong spell resolved.
+     *
+     * Equal timestamps keep the flag set: the window test is inclusive (>= endTime), so a run of casts inside one
+     * second is still ascending for the purpose of "everything further back is older".
+     */
+    private sealed class CastHistory
+    {
+      internal readonly List<CachedCast> Casts = [];
+
+      internal bool AscendingTime = true;
+
+      internal void Add(CachedCast cast)
+      {
+        if (AscendingTime && Casts.Count > 0 && cast.BeginTime < Casts[^1].BeginTime)
+        {
+          AscendingTime = false;
+        }
+
+        Casts.Add(cast);
+      }
     }
   }
 }

@@ -719,6 +719,20 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   from it and any threshold would be machine-specific. Same fixture, related law: **EQ writes `X joined the raid.`** (1,151 times
   across twelve captures; `has joined the raid.` **zero**, though the group line keeps its `has`) because the raid branch tests the
   whole prefix with a name check that refuses spaces — the tidier sentence enters the branch, fails the check and verifies nobody.
+- **A recent-cast query may be bounded only by the store's own proof of order**: `RecordsStore.GetCastsBySpellName` answered
+  "what did this ambiguous spell name cast recently" by allocating capacity for the spell's whole history and walking all of it
+  (**149,232,044 entries visited across 214,487 queries** on Incogitable for 164,263 matches — ~700 examined per match; the bound
+  scan reads 376,345 and returns identical matches). Now: result grown on demand (measured 0.77 matches/query — the old capacity
+  was ~900× the answer), and the backwards scan breaks at the first entry older than the window **only while `CastHistory.AscendingTime`
+  holds** — one backwards append retires the fast path for that spell name and the full walk comes back, because a restored or
+  concatenated log really can hand one name's seconds out of order, and an assumed-order scan there silently returns *nothing*
+  (no throw; a board that looks fine while an abbreviation resolved to the wrong rank). The window anchor stays **the store's
+  newest cast** — not this spell's, not wall time: a quirk, and every existing resolution depends on it, so bounding cost was not
+  the day to change which casts are "recent". `RecentCastQueryTest` pins *which casts come back* (window arithmetic with the
+  inclusive boundary, newest-first because the caller takes the first usable one, same-second bursts intact, one name never
+  borrowing another's, and eleven matches surviving a backwards append) and was verified against a deliberately naive unconditional
+  `break`, which fails it — a guard no test can fire is not a guard. Visit counts are not asserted (only elapsed time sees them,
+  which is machine-specific): docs/DesignNotes.md → "A question about eight seconds must not read the whole night".
 - **The healing board's derived door is a record seam, not another Fight**: `HealingStatsBuilder` never reads a
   `Fight` — it takes `(time, HealRecord)` pairs and windows them itself against `AllRanges`, so the derivation reaches it
   through `GenerateStatsOptions.Heals`, filled by `HealSummarySource.Materialize`. Four rules. (1) **null means "say

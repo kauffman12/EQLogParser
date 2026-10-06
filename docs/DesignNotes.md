@@ -3177,6 +3177,43 @@ line's legitimate work (the action substring, `Split(' ')`, interning) is on the
 bytes of delegate from it, and a threshold that passes today is a coin flip on another machine. Costs of that kind live in this
 chapter, which is where measured-and-not-asserted numbers belong.
 
+#### A question about eight seconds must not read the whole night
+
+Resolving an ambiguous spell abbreviation (`EQDataStore.FindPreviousCast`) asks `RecordsStore.GetCastsBySpellName` what that
+spell name cast recently. Until now the answer cost in proportion to the whole capture: it allocated the result list with
+capacity for the spell's **entire history** and then walked all of it looking for a handful of entries. Measured over
+Incogitable by `gtp-improvements.md` #6, and re-read here rather than taken on faith:
+
+| | queries | entries visited | matches returned |
+|---|---:|---:|---:|
+| as it stood | 214,487 | **149,232,044** | 164,263 |
+| bounded scan | 214,487 | **376,345** | 164,263 |
+
+About **700 entries examined per match** — the whole night searched for a question about eight seconds. The other two
+captures read 53.7 M visited for ~235 K matches (952 MiB) and 67.8 M for ~265 K (beta). Matches identical, so nothing was
+dropped to get there.
+
+Two changes, one per half of the cost. The result list is grown on demand instead of pre-sized at `list.Count` (measured 0.77
+matches per query — the capacity was roughly nine hundred times the answer, allocated several times per ambiguous line), and
+the backwards scan **stops at the first entry older than the window, and only when it can prove the rest are older still**.
+
+That condition is the whole design. `_spellNameIndex` values became a small `CastHistory` carrying its cast list plus one bit:
+have all appends for this spell name arrived ascending? One backwards append retires the fast path for that name and the full
+walk comes back. The three captures measured showed no violation, and production may not be built on that: the input is a text
+file, so a restored or concatenated log really can hand one name's seconds out of order, and an assumed-order scan there
+returns *nothing* — no throw, no warning, a board that looks normal while an abbreviation resolved to the wrong rank. The other
+reason the anchor stays untouched is worth stating too: the window is anchored on the **newest cast in the store**, not on this
+spell's newest and not on wall time. That is a quirk with the same hazard in a clock-jumping log, but which casts count as
+"recent" is behaviour every existing resolution depends on, so bounding the scan was not the day to change it.
+
+`RecentCastQueryTest` (9 tests) pins the half a benchmark cannot see — **which casts come back**: window boundaries stated as
+arithmetic (`>= anchor - duration`, so an 8-second window over one-per-second casts holds nine), newest-first because the caller
+takes the first usable cast, caster filtering left in the caller where it belongs, same-second bursts not cut, an unrelated name
+borrowing nothing, and the safety law: eleven ascending casts plus one backwards append still return all eleven. That last test
+was checked against a deliberately naive implementation (an unconditional `break`) and fails it, along with one neighbour —
+without that check the guard is just a clause nobody has ever seen fire. The visit-count reduction itself is not asserted: only
+elapsed time can see it, which is machine-specific. Costs of that kind live in this chapter.
+
 #### Sixteen words in one byte: what a record's label costs
 
 A `HitRecord` said what kind of event it was with an `int` id into `StringCache` — four bytes to name one of sixteen words. Those sixteen are fourteen damage
