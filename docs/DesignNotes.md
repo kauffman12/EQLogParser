@@ -7456,3 +7456,72 @@ load-bearing by stamping `flags |= 4` from `IsPetOrPlayerOrMerc` back into the t
 on revert. The parser callbacks' own law (a registry opinion is a *verdict*, so it reaches the identity channel only) is in
 `LogProcessorIdentityCallbackTest`; the earlier `IsVerified*`-as-callback fix was `74d05c39`.
 
+
+## A perf batch measured head to head: what five commits actually moved (2026-11)
+
+A reviewer asked what the last five commits improved, and the honest answer needed a measurement rather than five
+commit messages. Method: one temporary probe file, **untracked and byte-identical on every revision measured**, so the
+only difference between runs is the code under test — ingest a capture through `LogProcessor` with `CombatCapture`
+holding both fact tables, then report four things: retained heap (`GC.GetTotalMemory(forceFullCollection: true)`),
+allocation **volume** (`GC.GetTotalAllocatedBytes`), per-generation collection counts, and `Unsafe.SizeOf` of both fact
+rows. Peak process size was sampled from outside every 250 ms (summed RSS of the test host). Release configuration,
+one machine, one capture: `eqlog_Kizant_xegony-2.txt`, 467 MB, 4,707,447 lines. Two runs per end of the range.
+
+| metric | baseline `c1c034e8` | HEAD `c8e9b487` | delta |
+|---|---|---|---|
+| retained heap after ingest | 413 / 413 MB | **397 / 397 MB** | **−16 MB (−3.9 %)** |
+| allocated during ingest | 7,897 / 7,899 MB | **7,416 / 7,422 MB** | **−480 MB (−6.1 %)** |
+| gen-0 collections | 524 / 523 | **494 / 494** | −30 (−5.7 %) |
+| ingest wall | 8,043 / 7,965 ms | **7,571 / 7,482 ms** | −~480 ms (−6.0 %) |
+| peak test-host RSS | 788 / 789 MB | 781 / 784 MB | −5…−7 MB |
+
+**The captured data is identical on both sides** — 2,285,746 damage facts, 1,243,469 heals, 432 deaths, 222,961
+evidence rows, 85 identity events, run after run. That parity is the precondition for reading any of the above as an
+improvement instead of a different parse.
+
+Run-to-run spread within one revision was ±90 ms wall and ≤3 MB allocated, which is what makes the bigger steps below
+credible and marks the smaller ones as indicative. Retention reproduced to the megabyte on both ends.
+
+**Per-commit ladder** (one run each, `+` = that commit applied on top of the one above):
+
+| revision | wall ms | allocated MB | retained MB | gc0 | what it is |
+|---|---|---|---|---|---|
+| `c1c034e8` | 8,004 (avg) | 7,898 | 413 | 524 | baseline |
+| `+ d3cc6697` | 7,776 | 7,854 | **397** | 523 | `HealFact` 40 → 32 B by field order |
+| `+ e81c3991` | 7,755 | **7,571** | 397 | **503** | per-line method-group delegate bound once |
+| `+ 14fbfc13` | 7,701 | **7,418** | 397 | 493 | recent-cast scans bounded + capacity right-sized |
+| `+ 3714bf23` | **7,480** | 7,414 | 398 | 492 | registry-opinion flags deleted |
+| `+ c8e9b487` | 7,527 (avg) | 7,419 | 397 | 494 | class read in place + `reg.*` counters |
+
+Reading the ladder, three things are worth keeping in mind for the next perf conversation:
+
+- **The whole retained-memory win is one commit.** `d3cc6697` took 16 MB and nothing after it moved retention —
+  as expected from what each change is. The heal rows themselves went 47.4 → 37.9 MB (1,243,469 × 8 B), and the rest of
+  the 16 MB is backing-array capacity: a 40-byte row table grows and copies differently from a 32-byte one, so packing
+  eight bytes pays at the array level too, not only per record.
+- **The delegate fix did exactly what its commit message claimed it would, including the part that said "no win".** It
+  removed 283 MB of allocation and 20 gen-0 collections while wall time moved ~20 ms. Allocation traffic is not time,
+  and this is the measurement that proves the distinction instead of asserting it — which matters because it also says
+  "do not expect GC-count reductions to show up as milliseconds here".
+- **The flags commit was the biggest single wall-time step** (−221 ms) from work that produced no number anyone read:
+  ~7 M registry lookups on this capture (3.53 M events × 2 participants), removed because they were also lying
+  (docs/DesignNotes.md → "A fact carries what its line says, not what the registry thought"). Correctness and cost came
+  out of the same deletion.
+- **`c8e9b487` is invisible to this instrument by construction** — `GetPlayerClass` is a board-rebuild read, never an
+  ingest one. Its evidence is the separate allocation probe (72 bytes → under 8 per call, control loop included). A test
+  that only ever measures loading cannot see it, and neither can this table.
+
+**Caveats that bound these figures.** One machine, one capture, Release, and a *test host* rather than the application:
+no WPF windows, no charts, no FCT overlay, no Syncfusion grids — so this measures the parse/derive pipeline's memory, not
+the process a player sees, and peak RSS here sits ~390 MB below what the app reaches with UI and grids live. The capture
+is one night of one server; its ratio of heals to damage (1.24 M : 2.29 M) sets how much the row packing matters. The
+probe is deleted — re-measuring means recreating it, which is a ~30-line file over `LogProcessor` + `CombatCapture` and
+the four numbers named above; do not trust any version of these figures quoted without that ladder next to it.
+
+**Why "master versus develop" cannot be measured this way:** at `master` (264 commits back, the merge base) `LogProcessor`
+still lives in the WPF application project and the headless test project targets plain `net10.0` against Core + Utils only —
+moving the pipeline into Core is itself one of those 264 commits (`16eeae24`). So no Linux-runnable harness can drive a
+full ingest at master, and the faithful whole-application comparison has to be run on Windows: open the same capture in
+both builds and read the process working set after EOF. A partial Core-only comparison (parser plus `RecordsStore`
+retention over the same lines) is runnable at both revisions but measures one slice of the pipeline, not the app, and a
+264-commit delta would attribute everything — the legacy engine's deletion included — to a single number.
