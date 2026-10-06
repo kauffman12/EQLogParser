@@ -2588,6 +2588,20 @@ the prefix is also how a stall line reads: `in progress meter.loadstats 812 ms` 
 | `audio.synth` | span | turning text into samples, measured inside `EQLogParser.Audio` and reported through `AudioManager.PerfSink` because that assembly references no counter code (**off the UI thread**). This is where the engines differ: a neural model on one machine, SAPI or WinRT on the next, and the same build either way |
 | `audio.file` | span | reading and decoding a sound file for a player, including the cache miss that has to open it (**off the UI thread**) |
 | `ui.worldstop` | span | how late the watchdog's own pool timer ran behind its interval, recorded only past 500 ms — the one in-app figure that sees a stop-the-world, since the collection freezes the watchdog too (**off the UI thread**) |
+| `reg.class` | span | one class read (`PlayerRegistry.GetPlayerClass`) — the lookup every stats builder pays **per player row** for its Class column, off the UI thread. This is the number that decides whether names want flat ids: tens of thousands of reads a second at a few microseconds says string-keyed lookups are not the wall and "flat name -> id" is not worth starting |
+| `reg.identity` | span | one walk of the "is this one of ours?" chain (operator override -> this capture -> memory). Count and worst per heartbeat instead of an argument about four dictionary hops; a cheap span sorts itself out of the printed table, which is an answer too |
+| `reg.write` | count | registry write calls the parse makes: a verified-player claim, a pet pair, a class sighting. One ``X`s pet`` line asks for a claim AND a mapping, and a capture holds half a million of them |
+
+**A board-row read that allocates is a bug, and it was one.** `GetPlayerClass(name, t)` answered by copying the name's
+class-boundary list into a fresh array and binary-searching it *outside* the lock — measured at **72 bytes per read** with
+`GC.GetAllocatedBytesForCurrentThread`. Nothing about that copy was load-bearing: the list is one entry for almost every
+name, the lock is per-name (not the store's), and `GetLastKnownPlayerClass` beside it has always read in place. Since the
+three stats builders ask this once per row per rebuild — hundreds of times a second on a live raid, thousands at once on a
+select-all — the shape was pure garbage pressure on the exact path whose "stable memory over repeated selections" is an
+acceptance criterion. `FrenzyClassTest.AReclassIsReadAtItsBoundaryWithoutAnArrayPerRead` pins both halves (which side of a
+boundary answers, and under 8 bytes a read, with a control loop proving the probe can see a per-call allocation); restoring
+the copy makes it fail by name. `ANameNobodyClassifiedAnswersItsDefault` pins the sibling branch: no time-windowed record
+means the roster default answers, and the moment a sighting commits, the window answers from its own second onward.
 
 `Register` is called once per span in a field initializer and the handle is kept, because this runs inside frame paths and looking a name
 up per call is the kind of thing that would create the hitch it measures. `Register(name, uiThread: false)` keeps a span's cost on the

@@ -51,6 +51,14 @@ namespace EQLogParser
     /// </summary>
     internal static Func<string, string?>? LiveOwner { get; set; }
 
+    /*
+     * Counted and timed as `reg.identity` (uiThread: false — the volume is the census and the board rebuilds, not a click).
+     * This chain is the one a reader might try to make cheap by giving names flat ids, so the chain carries its own number:
+     * count/average/worst per heartbeat says whether four hops of dictionary lookups are anything at all next to the fold.
+     * Cheap spans sort themselves out of the printed table, which is an answer too.
+     */
+    private static readonly int LookupId = PerfCounters.Register("reg.identity", uiThread: false);
+
     /// <summary>"Is this name one of ours?" — as of the end of what we know about it.</summary>
     internal static bool IsOneOfUs(string? name) => IsOneOfUs(name, double.PositiveInfinity);
 
@@ -61,6 +69,19 @@ namespace EQLogParser
      * latest verdict — which is what a grid row or a context menu means by "is this a player".
      */
     internal static bool IsOneOfUs(string? name, double t)
+    {
+      var mark = PerfCounters.Begin(LookupId);
+      try
+      {
+        return IsOneOfUsCore(name, t);
+      }
+      finally
+      {
+        PerfCounters.End(mark);
+      }
+    }
+
+    private static bool IsOneOfUsCore(string? name, double t)
     {
       if (string.IsNullOrEmpty(name)) return false;
 

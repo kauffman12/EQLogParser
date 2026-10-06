@@ -121,5 +121,77 @@ namespace EQLogParser
       Assert.AreEqual(42u, record.Total);
       Assert.AreEqual(EQDataStore.Instance.GetClassLabel(SpellClass.Ber), PlayerRegistry.Instance.GetPlayerClass(ConfigUtil.PlayerName, 100));
     }
+
+    [TestMethod]
+    public void AReclassIsReadAtItsBoundaryWithoutAnArrayPerRead()
+    {
+      /*
+       * The read a board row pays for. Every stats builder fills a Class column by asking this once per player row per
+       * rebuild — a couple of hundred times a second during a live raid, thousands at once on a select-all — so both halves
+       * belong here: WHICH side of a boundary answers, and what the answer costs.
+       */
+      var berserker = EQDataStore.Instance.GetClassLabel(SpellClass.Ber);
+      var cleric = EQDataStore.Instance.GetClassLabel(SpellClass.Clr);
+
+      PlayerRegistry.Instance.SetActivePlayerClass("Tolzol", berserker, 1, 100);
+      PlayerRegistry.Instance.SetActivePlayerClass("Tolzol", cleric, 1, 400);
+
+      Assert.AreEqual(berserker, PlayerRegistry.Instance.GetPlayerClass("Tolzol", 50), "before the first boundary answers the first one — a window does not backdate");
+      Assert.AreEqual(berserker, PlayerRegistry.Instance.GetPlayerClass("Tolzol", 100));
+      Assert.AreEqual(berserker, PlayerRegistry.Instance.GetPlayerClass("Tolzol", 399));
+      Assert.AreEqual(cleric, PlayerRegistry.Instance.GetPlayerClass("Tolzol", 400), "a reclass takes effect at its own second");
+      Assert.AreEqual(cleric, PlayerRegistry.Instance.GetPlayerClass("Tolzol", double.PositiveInfinity));
+
+      /*
+       * And the answer is read in place. It used to copy the boundary list into a new array and search that outside the lock:
+       * one allocation per row, to avoid holding a lock for the few comparisons it makes over a list that is one entry long
+       * for almost every name. The probe below is what distinguishes the two shapes — the old code cost ~32-56 bytes a read.
+       */
+      const int reads = 20_000;
+
+      for (var i = 0; i < 500; i++)
+      {
+        PlayerRegistry.Instance.GetPlayerClass("Tolzol", 399);
+      }
+
+      var start = GC.GetAllocatedBytesForCurrentThread();
+      for (var i = 0; i < reads; i++)
+      {
+        PlayerRegistry.Instance.GetPlayerClass("Tolzol", 399);
+      }
+      var perRead = (GC.GetAllocatedBytesForCurrentThread() - start) / (double)reads;
+
+      // Sensitivity control: a two-element array really does trip this threshold, so the assert above is not vacuous.
+      var controlStart = GC.GetAllocatedBytesForCurrentThread();
+      var kept = 0;
+      for (var i = 0; i < reads; i++)
+      {
+        var probe = new string[2];
+        kept += probe.Length; // observed, so the JIT cannot elide the allocation it is here to measure
+      }
+      var perArray = (GC.GetAllocatedBytesForCurrentThread() - controlStart) / (double)reads;
+      Assert.AreEqual(2 * reads, kept);
+
+      Assert.IsTrue(perArray > 8, $"the probe cannot see a per-call allocation ({perArray:F1} bytes for an array it is meant to catch)");
+      Assert.IsTrue(perRead < 8,
+        $"a class read allocates {perRead:F1} bytes per call: the boundary list is being copied out of the lock again "
+        + "(one allocation per board row, per rebuild)");
+    }
+
+    [TestMethod]
+    public void ANameNobodyClassifiedAnswersItsDefault()
+    {
+      // The branch beside the one above: no time-windowed record at all (a roster class, never a watched cast), and then the
+      // moment a sighting commits, the window answers from its own second onward — including earlier than that, which is the
+      // documented "a load is not a sighting / no backdating" shape rather than an accident.
+      var cleric = EQDataStore.Instance.GetClassLabel(SpellClass.Clr);
+      var berserker = EQDataStore.Instance.GetClassLabel(SpellClass.Ber);
+
+      PlayerRegistry.Instance.SetDefaultPlayerClass("Vexil", cleric);
+      Assert.AreEqual(cleric, PlayerRegistry.Instance.GetPlayerClass("Vexil", 10));
+
+      PlayerRegistry.Instance.SetActivePlayerClass("Vexil", berserker, 2, 500);
+      Assert.AreEqual(berserker, PlayerRegistry.Instance.GetPlayerClass("Vexil", 600));
+    }
   }
 }
