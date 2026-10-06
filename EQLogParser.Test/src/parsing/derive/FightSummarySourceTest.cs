@@ -231,7 +231,7 @@ public class FightSummarySourceTest
         var facts = new DamageFactTable(64);
         var a = facts.InternName("Illuminai");
         var d = facts.InternName("Echohead");
-        var subFire = (ushort)facts.InternSubtype("Greater Summoning: Fire");
+        var subFire = facts.InternSubtype("Greater Summoning: Fire");
         facts.AddFact(new DamageFact(0, (long)T0, a, d, total: 500, typeId: LabelTypes.Dd,
           flags: 0, modMask: 0, subIdx: subFire));
         facts.AddFact(new DamageFact(1, (long)T0 + 1, a, d, total: 250, typeId: LabelTypes.Dot,

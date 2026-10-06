@@ -56,8 +56,23 @@ namespace EQLogParser
      *
      * Nothing runs while no window exists, so an X does not age the start either. A reopen inside the quiet range therefore
      * shows the whole pull, and a reopen after it gets one fresh board — which is the dial deciding, not a special case here.
+     *
+     * The one remaining "legitimate mover" needs a witness: a NEW CAPTURE. That check lives in BuildMeterUpdate against
+     * _meterStartId rather than in FollowActiveSession, because a window must not be required to exist at the moment a
+     * session swaps (a board nobody is watching has no window), and a window may first listen for a session whose board had
+     * already started — which is how resetting on subscription used to throw away a reopen's seconds.
      */
     private static double _meterWindowT = -1;
+
+    /*
+     * Which session wrote the stored start; a value of -1 carries no tag worth checking (WindowStartFor(-1) starts at "now" either
+     * way). Tagged by DeriveEngine.SessionId, never by the engine itself: this is a STATIC, and the meter window is hidden rather
+     * than closed when its X is clicked, so holding the instance would keep a DISPOSED engine - every fact table in it - reachable
+     * from a window nobody is looking at, for as long as the app stays open with no log. That is precisely what DeriveEngine.Dispose
+     * promises not to allow ("must not stay the reason a closed log's records are still reachable"); an id answers the same question
+     * while retaining nothing.
+     */
+    private static int _meterStartId;
     private int _currentShowCritRate;
     private int _savedShowCritRate;
     private bool _currentHideOthers;
@@ -246,11 +261,12 @@ namespace EQLogParser
       _derivedFrom = session;
 
       /*
-       * A new capture is a new board: the stored start second describes a log that is gone (legacy got the same reset from
-       * ResetOverlayFights on every log open). Reset to null as well, so a later re-enable cannot inherit the previous
-       * capture's window start.
+       * No start reset here. "A new capture is a new board" is still the rule - but it is decided against the session that owns
+       * the stored start (BuildMeterUpdate checks _meterStartId), because subscription state is not the same thing: this ran
+       * on EVERY construction, first listen included, so a window reopened under a session whose board had already started used to
+       * reset the seconds that session was in the middle of spending. The tag makes "new capture" and "reopen keeps its seconds"
+       * both true at once.
        */
-      _meterWindowT = -1;
       if (session is not null) session.Derived += OnDerived;
     }
 
@@ -421,6 +437,15 @@ namespace EQLogParser
       }
 
       _meterWarned = false;
+
+      // The stored start belongs to the session that wrote it. A swapped-in session - or an old tag left behind by a capture whose
+      // window was already closed when the swap happened - starts at zero, and this is where that is paid: no window needs to have
+      // been listening to the old session for this to be true.
+      if (_meterStartId != session.SessionId)
+      {
+        _meterWindowT = -1;
+        _meterStartId = session.SessionId;
+      }
 
       try
       {
@@ -630,18 +655,23 @@ namespace EQLogParser
 
     private void LoadStats(UIElementCollection children, CombinedStats localStats)
     {
+      /*
+       * The display step the legacy overlay did inside its tally loop (class filter + the local player's slot), restored over the
+       * derived board. `children.Count - 1` is how many PLAYER bars exist — the title bar is not one. It runs over both panels,
+       * exactly as the legacy build applied it to damage and tanking alike.
+       */
+      var shown = MeterDisplaySelection.SelectRows(localStats.StatsList, _currentSelectedClass, children.Count - 1, ConfigUtil.PlayerName);
+
       for (var i = 0; i < children.Count; i++)
       {
         var statIndex = i;
         var damageBar = children[i] as DamageBar;
-        if (localStats.StatsList.Count > statIndex)
+        if (shown.Count > statIndex)
         {
-          var stat = localStats.StatsList[statIndex];
-          var barPercent = (statIndex == 0) ? 100.0 : stat.Total / (double)localStats.StatsList[0].Total * 100.0;
+          var stat = shown[statIndex];
+          var barPercent = (statIndex == 0) ? 100.0 : stat.Total / (double)shown[0].Total * 100.0;
 
-          var playerName = ConfigUtil.PlayerName;
-          var isMe = !string.IsNullOrEmpty(playerName) && stat.Name.StartsWith(playerName, StringComparison.OrdinalIgnoreCase) &&
-            (playerName.Length >= stat.Name.Length || stat.Name[playerName.Length] == ' ');
+          var isMe = MeterDisplaySelection.IsPlayerName(stat.Name, ConfigUtil.PlayerName);
 
           string name;
           string className;

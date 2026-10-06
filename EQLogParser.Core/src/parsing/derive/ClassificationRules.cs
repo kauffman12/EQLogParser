@@ -1093,18 +1093,44 @@ namespace EQLogParser
          * cost a timeline entry and move the state digest — forcing a full rebuild over a verdict nothing reads — for its whole
          * log. Measured on eqlog_Kizant_xegony-09-20-25.txt: 1,044 cast tokens, of which the fact table names a handful.
          *
-         * ACCEPTED STALENESS, stated because a review asked for it not to be implicit: a token refused here while its name is
-         * outside the pool is not reconsidered by this carried pass (the gate is a read, and a read must never intern — the pool
-         * whose size it asks about is the pool the next rebuild hashes). The window is bounded and self-healing: any verdict change
-         * moves EntityTimeline.StateStamp(), a moved stamp buys a full rebuild, and a full rebuild re-walks every fact with empty
-         * cursor tables, where the name is in the pool by then. Worst case is one cheap-lane cadence on a name that prints as a cast
-         * token first and reaches a combat line later — the same bound every other carried verdict lives under.
-         * docs/DesignNotes.md → "R21's pool gate staleness, stated as accepted".
+         * The gate is a read and must stay one (a read that interning would grow the pool whose size it asks about) - but a
+         * refusal here is only a SUSPENSE, not a verdict: the token parks in SpellCastRejected and the promotion pass below
+         * re-asks each pass. The cursor has already walked past this evidence line, so without the list the refusal would be
+         * permanent - and the old assumption that repaired it (any verdict change buys a full rebuild that re-walks everything)
+         * is wrong: a new fact interns its names without moving any verdict, StateStamp stays put, no rebuild happens, and a
+         * name whose first sighting was a cast token stayed Unknown for the rest of the capture. docs/DesignNotes.md →
+         * "R21's pool gate staleness, stated as accepted".
          */
-        if (string.IsNullOrEmpty(spell) || facts.NameIndexOf(spell) < 0 || LooksLikeEntityName(spell)) continue;
+        if (string.IsNullOrEmpty(spell) || LooksLikeEntityName(spell)) continue;   // grammar refusals heal: they are about the token, not the capture
+        if (facts.NameIndexOf(spell) < 0)
+        {
+          state.SpellCastRejected.Add(spell);
+          continue;
+        }
         state.SpellCastNames.Add(spell);
       }
       state.R21EvidenceCursor = evidence.Length;
+
+      /*
+       * Promote whatever the pool has since earned a name. The walk above only sees NEW evidence lines, so this is the only place
+       * a parked token gets re-asked. Names enter the interned pool and never leave it within one capture, so every promotion is
+       * permanent - the set drains toward the names that were cast but never fought (which stay parked at no cost: a handful of
+       * string refs, re-checked once per full pass). Allocations happen only on an actual promotion.
+       */
+      if (state.SpellCastRejected.Count > 0)
+      {
+        List<string>? ready = null;
+        foreach (var spell in state.SpellCastRejected)
+          if (facts.NameIndexOf(spell) >= 0) (ready ??= []).Add(spell);
+        if (ready is not null)
+        {
+          foreach (var spell in ready)
+          {
+            state.SpellCastRejected.Remove(spell);
+            state.SpellCastNames.Add(spell);
+          }
+        }
+      }
 
       foreach (var name in state.SpellLineNames) ClaimSpellEffect(name, timeline, "R21-spellshape", requiresSilence: false);
       foreach (var name in state.SpellCastNames) ClaimSpellEffect(name, timeline, "R21-spellcast", requiresSilence: true);

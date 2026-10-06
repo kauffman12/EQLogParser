@@ -381,6 +381,57 @@ public class SpellEffectIdentityTest
     }
   }
 
+  /*
+   * The review's reproduction, shaped as its own fixture: a spell that prints FIRST as a cast token and only later reaches
+   * a combat line. The pool gate is a read over the capture's interned names, and the evidence cursor walks each EvCast
+   * row exactly once - so without the parked list, pass one's refusal was permanent: the new fact interns its names
+   * without moving any verdict, StateStamp never moves, no full rebuild ever happens, and the carried pass answered
+   * Unknown while a from-zero replay answered Spell. The fix is the promotion walk in ApplySpellEffects: a parked token is
+   * re-asked every pass, and the pool only grows within one capture, so the verdict lands on the first full pass after the
+   * name's first fact - the same bounded staleness every other carried verdict lives under.
+   */
+  [TestMethod]
+  public void ACastTokenThatReachesCombatLaterIsClaimedByACarriedPass()
+  {
+    const string spell = "Slicing Energy";
+
+    var facts = new DamageFactTable(64);
+    var heals = new HealFactTable(facts);
+    var state = new ClassificationState();
+    var seq = 0;
+
+    // Pass one: the cast line only. The token is outside the name pool, so the gate parks it.
+    facts.AddEvidence(new EvidenceFact(seq++, 1_700_000_000L, facts.InternName("Spelleffect"), EvidenceFact.EvCast, facts.InternAux(spell)));
+
+    var first = new EntityTimeline();
+    RegistrySeed.Apply(first, facts, double.NaN, double.NaN);
+    var outcome = ClassificationRules.Apply(facts, first, heals, state);
+    Assert.IsTrue(outcome.FailedRules.Count == 0, "a rule stage threw: " + string.Join(", ", outcome.FailedRules));
+    Assert.AreEqual(IdentityKind.Unknown, first.IdentityAt(spell, double.PositiveInfinity),
+      "a spell merely cast must not become a row before the capture fights it");
+
+    // Pass two, carried: the same capture continues and the spell lands in an attacker slot. Fresh store per pass - that is
+    // the contract - with the SAME state, which is what makes this pass a carried one rather than a from-zero replay.
+    facts.AddFact(new DamageFact(seq++, 1_700_000_010L, facts.InternName(spell), facts.InternName("A gnoll"),
+                                 total: 18_724, typeId: 1, flags: 0, modMask: 0, subIdx: ushort.MaxValue));
+
+    var carried = new EntityTimeline();
+    RegistrySeed.Apply(carried, facts, double.NaN, double.NaN);
+    var carriedOutcome = ClassificationRules.Apply(facts, carried, heals, state);
+    Assert.IsTrue(carriedOutcome.FailedRules.Count == 0, "a rule stage threw: " + string.Join(", ", carriedOutcome.FailedRules));
+
+    Assert.AreEqual(IdentityKind.Spell, carried.IdentityAt(spell, double.PositiveInfinity),
+      "the parked token was never re-asked: the carried pass kept the pool-gate refusal from before the name had a row");
+    Assert.AreEqual("R21-spellcast", SourceOf(carried, spell));
+
+    // And the from-zero reference still agrees - the carried answer is the same verdict on the same source.
+    var replay = new EntityTimeline();
+    RegistrySeed.Apply(replay, facts, double.NaN, double.NaN);
+    var replayOutcome = ClassificationRules.Apply(facts, replay, heals);
+    Assert.IsTrue(replayOutcome.FailedRules.Count == 0, "replay stage threw: " + string.Join(", ", replayOutcome.FailedRules));
+    Assert.AreEqual(IdentityKind.Spell, replay.IdentityAt(spell, double.PositiveInfinity));
+  }
+
   private static string? SourceOf(EntityTimeline timeline, string name)
   {
     timeline.IdentityWithSource(name, out var source);

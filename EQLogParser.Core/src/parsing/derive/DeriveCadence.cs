@@ -163,6 +163,55 @@ namespace EQLogParser
      */
     public static double RetryDelayS(int consecutiveFailures)
       => consecutiveFailures <= 0 ? 0 : Math.Min(60d, Math.Pow(2, consecutiveFailures - 1));
+
+    /*
+     * How many retries a FAILED derive may make on a capture that has stopped growing before it parks. A closed log offers no
+     * other trigger, so the ladder is the only thing that will ever run the lane again - and for a failure that is deterministic
+     * (a rule that throws on this capture's data, a projection bug) the attempts cannot succeed, so "loudly visible in the log"
+     * would otherwise mean one full pass of CPU and one error-with-stack EVERY MINUTE for as long as the window stays open:
+     * ~10,000 of each in an idle week, in the same file that carries the raid. The first attempts are worth having - some throws
+     * are transient (a ledger mid-write, a file unlocked late) - so this is a run allowance for the quiet case, not a mute.
+     */
+    public const int MaxQuietFailureRetries = 8;
+
+    /*
+     * What to do about an outstanding derive failure on THIS tick: wait (nothing due), retry, or park (see the allowance).
+     *
+     * The ladder above spaces the attempts; this decides that an attempt is DUE and actually happens when nothing else will fire
+     * one - which is the idle-capture case the cadence below cannot see: an override arrives while a full pass is already working,
+     * that pass throws, and then a closed log never grows, so neither quiescence nor a live tail ever asks for the expensive lane
+     * again and the operator's click degrades to "logged, not acted on". A failure is always present when that debt sits (the pass
+     * that could have settled it was the one that threw), which is why the question takes only the ladder's own inputs.
+     *
+     * Two refusals belong to the decision rather than to the caller:
+     *   - **never into a load.** While a file is being read, a retry would park ingest at the gate on top of the load; the load's
+     *     own quiet tick settles the debt when it ends.
+     *   - **never forever on a dead capture.** Only a quiet capture parks: while facts arrive, passes happen for their own sake and
+     *     the allowance does not apply (counting them would hide live failures, which is the one thing this must not do).
+     * Backoff is preserved exactly - inside RetryDelayS(failures) nothing is due.
+     */
+    public static FailureRetry DecideFailureRetry(int consecutiveFailures, double sinceFailedPassS, double factsPerSecond,
+                                                 int quietRetriesSpent)
+    {
+      if (consecutiveFailures <= 0) return FailureRetry.Wait;                       // nothing owed - there is no debt to retry
+      if (factsPerSecond >= BulkFactsPerSecond) return FailureRetry.Wait;           // a load is running - let it finish first
+      if (sinceFailedPassS < RetryDelayS(consecutiveFailures)) return FailureRetry.Wait;
+      if (factsPerSecond <= 0d && quietRetriesSpent >= MaxQuietFailureRetries) return FailureRetry.Park;
+      return FailureRetry.Retry;
+    }
+  }
+
+  /// <summary>What the cadence asks of an outstanding derive failure: see DecideFailureRetry.</summary>
+  public enum FailureRetry
+  {
+    /// <summary>Not now - inside the ladder's rung, or a load is running.</summary>
+    Wait,
+
+    /// <summary>Run the expensive lane again.</summary>
+    Retry,
+
+    /// <summary>Stop asking: this capture is quiet and the allowance is spent. Growth or an explicit re-derive resumes it.</summary>
+    Park,
   }
 
   /*

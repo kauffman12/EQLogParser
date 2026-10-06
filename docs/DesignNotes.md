@@ -99,8 +99,9 @@ inferred into them.
   per pass (each rule replays its carried claims in stage order) because a carried timeline leaked verdicts upstream
   rules must not see. A quiet Full tick measured ~380 ms of rules → **2 ms** on Incogitable (1.89 M facts).
 - Failure degrades one stage at a time: swallow-and-report, retire after five IN A ROW, session-level retry ladder
-  1 s→60 s; and in TESTS the same guard **rethrows** (`FailFastStages`, raised by both assemblies at init) because a
-  silently dead rule reads exactly like an empty column.
+  1 s→60 s that also fires when the capture goes quiet, **parks** after `MaxQuietFailureRetries` attempts on a dead capture
+  (one line says so; growth resumes it) and never runs *into* a bulk load; and in TESTS the same guard **rethrows**
+  (`FailFastStages`, raised by both assemblies at init) because a silently dead rule reads exactly like an empty column.
 
 ### One clock law: the capture's time is the clock
 
@@ -4661,6 +4662,34 @@ verdict says NPC for her too — which makes the projection's real question "doe
 charm line?" (`EntityTimeline.HasIndependentIdentity`). Pinned by `CharmRowProjectionTest` (`APetRowIsNotOnTheFightList`,
 `HidingAPetRowDoesNotDeleteItsDamage`, `WithHiddenPetsAddsPairedOrOverlappingRowsOnly`, `ACharmedRaidMemberStaysOnTheList`).
 
+**A close that lands past the ceiling settles the window at the cap and is dropped.** The merge walk closes on the earliest of
+the three signals (hit-our-side, death, wear-off) — but only while that signal is *inside* `MaxWindowS` of the latest sighting.
+A death or wear-off printed later can no longer extend the span: `MaxWindowS` is how long we credit a name as ours on one
+sighting, and a slain line four minutes past the cap used to stretch the window to the death, re-friending every later mob of
+that name for the difference and dead-marking the true death as "not while charmed" (reproduced: a 360 s cap plus a death at
++1,000 s produced a 1,000 s charm). The boundary matches the start side, where a sighting at exactly the cap already fails to
+merge (`t >= lastStart + MaxWindowS` settles). Damage between cap and death is not the pet's: `CountFacts` only counts inside
+`[T0, T1)`. Pinned by `CharmWindowPolicyTest.ADeathAfterTheCapDoesNotStretchTheWindow` and
+`DamageBetweenTheCapAndALateDeathIsNotCreditedToTheCharm`.
+
+**What the ceiling was doing on a real night, measured before/after over Incogitable (1.9 M damage facts).** This is not the corner case the
+fixture suggests: the same binary run twice over one capture, charm census only.
+
+| | windows | by end reason | longest window | credited facts / total |
+|---|---|---|---|---|
+| before (late close could stretch) | 10 | Wear-off 5, Death 4, hit-our-side 1 | **15,761,812 s ≈ 182 days** | 3,464 / 50,998,815 |
+| after | 10 | Wear-off 5, **cap 3**, Death 1, hit-our-side 1 | **360 s** (= the cap) | 2,944 / 42,805,654 |
+
+One name (`A scalewrought terrastriker`) was held as ours for half a year of file — its window ran from the charm to a death line printed
+182 days later — which made every later mob of that name friendly on the timeline, and folded **33,097,611** damage across 2,890 facts under a
+pet that had expired within minutes. A second window ran 48,209 s (13 h) and a third overshot the cap by 25 s before a death reeled it in; both
+now close at 360 s. Total effect: **520 facts / 8,193,161 damage** of pet credit removed, and three `Cap` closes that did not exist before.
+
+**So the row-level charm census quoted above (rows closed `Charmed` **3 / 9 / 12**, charmed-owned rows **0→6** and **0→5**) predates this fix**
+and is stale in a known direction: closing at the cap moves which rows a charm is allowed to end, and a 182-day window was keeping whole stretches
+of the capture out of "still going". Re-take those three numbers on the same captures before quoting them again; the measurement above is the
+window-level truth from the re-measure command in this section's own harness.
+
 ### A raised corpse needs no rule, and two things must never be inferred from it
 
 `<name>'s corpse rises to serve <master>.` (Wake the Dead) does not put a fighter on the field under its own name: the risen
@@ -5225,7 +5254,13 @@ half is not decoration: without it the last hit of a kill would pop a board over
 **Continue where it left off.** Legacy got this without trying — its accumulation lives in statics (`DamageOverlayWindow._stats`/`_statsBuilder`) and in FightManager's fights, so
 a reopened window kept painting what it had not thrown away. A derived board holds nothing between ticks: it is recomputed from the facts inside `[windowT, now]`, so the only thing
 that can carry is `windowT`, and that field was an instance member — reborn at "now" with every reopen, which quietly deleted the seconds already spent on the pull from the numbers
-while the raid kept going. It is static now, and the decision is a rule (`LiveFights.WindowStartFor`): the stored start survives unless it is absent (first tick after a clear) or the
+while the raid kept going. It is static now - and keyed to the SESSION that wrote it (`_meterStartId`), because "static" used to mean "the start survives a window swap": every new window
+saw the existing session as new on first build and reset `_meterWindowT`, so an auto-opened meter reopened over a live pull started at zero and lost the seconds already spent. A swapped-in
+session - or a tag left behind by a capture whose window was closed when the swap happened - starts at zero, and that is paid in `BuildMeterUpdate`, where no window needs to have been listening
+for the old session for it to be true. **The tag is an id, never the engine**: `DeriveEngine.SessionId` is a process-unique number from a static
+counter, and holding the instance in a static instead would make a hidden meter window the reason a DISPOSED engine — every fact table in it — stays
+reachable for the rest of the run. The X hides this window rather than closing it, and `Dispose` promises that closing a log stops being the reason its
+records are still alive, so no surface may keep an engine reference past the session it belongs to. The decision is a rule (`LiveFights.WindowStartFor`): the stored start survives unless it is absent (first tick after a clear) or the
 capture has been quiet past the meter's own dial, in which case the board zeroes and starts here. Nothing runs while no window exists, so an X does not age the start either — a reopen
 inside the range gets the whole pull, a reopen after it gets one fresh board, and in both cases it is `OverlayDamageMode` deciding rather than a special case in the window. And the `now` that rule measures against is **wall time, on purpose** - the one
 meter rule that must see the real world: the dial (mode 0 = the engagement gap, else N seconds) is a promise in *real* seconds about how long a quiet board stays up, and a lag
@@ -5529,7 +5564,14 @@ placed (every log starts that way), so the degradation direction is "less known"
 changes the timeline's content digest, and the carry gate re-folds rather than mixing rule books across passes.
 (2) A session-level throw retries on `DeriveCadence.RetryDelayS` — 1 s, doubling, capped at 60 s, zeroed by any
 completed pass; a transient fault (locked file, AV scan) vanishes inside a second, deterministic poison becomes a slow
-repeating stack in eqlogparser.log, which *is* the diagnosis. (3) `IdentityPriorStore.Record` — a write for the NEXT
+repeating stack in eqlogparser.log, which *is* the diagnosis. An outstanding failure is owed its attempt even when the
+cadence has nothing to ask (`DeriveCadence.DecideFailureRetry` → `Wait`/`Retry`/`Park`): never *into* a load — the bulk
+guard belongs to the decision, because a retry holds the ingest gate on top of the read — and never *forever* on a capture
+that stopped growing. That last refusal is what keeps the diagnosis affordable: a closed log never stops owing the retry, so
+unbounded attempts over a deterministic throw are one full pass of CPU plus one error-with-stack every minute for the rest
+of the day (`MaxQuietFailureRetries` = 8, then ONE parked line and silence until a new fact, a re-derive or a new log).
+~10,000 of each was the alternative over an idle week, in the file that carries the raid. A live capture is exempt from
+parking by construction: its failing passes would run anyway, and hiding a live failure to save log space is the worse trade. (3) `IdentityPriorStore.Record` — a write for the NEXT
 log's benefit — cannot fail a pass at all: wrapped, logged, boards untouched. The Re-derive button and its handler are
 deleted, and the pane shows no failure state at all (its top-right status section was removed on request) - the journal
 line above is the only trace of a failing pass. Tests: the guard laws (streak
@@ -6131,14 +6173,22 @@ The laws, each of which is a hole closed while writing this rather than one imag
   off, and the `MaxEntries` cap - sized for inferred verdicts, of which a decade produces thousands - would silently evict
   the operator's own list. Roster rows are also **not** counted toward that cap: a roster is bounded by how many people
   play on one server, not by a storage decision.
+- **Expiry is per lane, and a lane outlives its siblings.** The 90-day rule-lane pass used to delete *whole entries*, which
+  is how recording one fresh verdict retired a pet mapping nobody asked to lose - including an undated one, whose exemption
+  the wall-clock dial never got to apply (reproduced). Now: a doomed row that carries `Owner` keeps the mapping and only its
+  stale VERDICT lane is rewritten out (to the owner-only shape, `SeenAtS` surviving as the stamp the 200-day wall dial reads);
+  a doomed row without one leaves. The ownership lane ages on `PruneRosterLocked`'s own clock alone - the two statements
+  "the rules concluded X" and "Fluffy belongs to Ziggy" stop and start independently, and an entry is deleted only when
+  nothing under it remains.
 - **`SeenAtS <= 0` is a statement, not an observation.** A hand-typed list and a file imported without timestamps carry no
   claim about when; those never retire. The same rule already keeps `players.txt` rows with no ticks forever.
 - **Writes do not collide.** `RememberRoster` keeps whatever verdict and reason a row already carried (a name the graph
   decided is NPC can still be on the list - the two statements are allowed to disagree), and moves the stamp **forward
   only**, so re-importing an old players.txt cannot rewind an active player's clock. `ForgetRoster` takes membership and
-  class off while leaving a witnessed verdict underneath; a row whose only content *was* membership leaves the file, since
-  there is no reason for it to sit there being re-dropped by every later pass. `Record` can neither set the bit nor upgrade
-  it - otherwise the derive would start filing its own inferences onto the operator's list.
+  class off while leaving a witnessed verdict underneath - **and the ownership lane too**, because "X's pet" and "X was on
+  the roster" are two statements, exactly as it leaves one when `ForgetPet` clears its own; a row whose only content *was*
+  membership leaves the file, since there is no reason for it to sit there being re-dropped by every later pass. `Record`
+  can neither set the bit nor upgrade it - otherwise the derive would start filing its own inferences onto the operator's list.
 - **A changed verdict takes the later of two stamps.** When `Record` writes a *different* Kind under the same name it takes
   `Math.Max(existing, captureEndS)` rather than the capture's time alone. Replaying a backup must not age out an active
   player's class: `captureEndS` belongs to the log's clock and can be years behind the wall clock that reads this field.
@@ -6667,9 +6717,33 @@ mode the selection code already refuses), and **“show tanking” off** filters
 — the shipped `Syncfusion.SfGrid.WPF` (34.2.8) exposes no `RefreshLiveFilter` to ask for, verified by inspecting the assembly rather
 than by hoping. A live raid pane spends its whole night unsorted and unfiltered, which is where the win lives.
 
-Re-announcement is conditional too: the summary boards are rebuilt only when a pass actually updated (or removed) a row the operator has
-selected — re-materializing an untouched selection every ~500 ms would spend a stats run to redraw identical figures. The search mark
-survives a pass now as well, so it stops blinking off twice a second.
+Re-announcement is conditional too — see the next section for what "conditional" means once law 1 guarantees the backing object moves
+every rebuild. The search mark survives a pass now as well, so it stops blinking off twice a second.
+
+### What makes a board go one pass stale
+
+**Built 2026-11, corrected the same month.** Clicking a fight row hands `MainWindow` a selection; it materializes one record per selected fact
+and runs three builders. That is the expensive door in this app, and the pane has to decide when to walk it without either redrawing identical
+figures or leaving a board a pass behind.
+
+Two signals were tried and both are wrong in opposite directions:
+
+- **the row diff** (`patch.Updates`/`Removals` intersected with the selection) misses a rebuild where every CELL reads the same but the answer
+  moved — an ownership or charm verdict shifted, so the same facts now split between `X +Pets` and the mob, and damage/tanking routing followed.
+  `SameDisplayAs` cannot see routing; that was the original bug.
+- **object identity** ("the selected row's `Fight` is a different instance than before") over-corrects: law 1 makes that true on EVERY full pass,
+  because `refreshBacking` re-points every survivor by design. A whole-capture selection materializes in seconds (measured at HEAD on a night's
+  capture: ~3.8 s select-all against ~30 ms for one mob), the cadence hands out full passes every few seconds, and each announcement writes its own
+  `Derived damage summary: N fight(s), M record(s)` line into the player's log — so leaving the raid-total selection up during a pull turns into
+  continuous work plus a log line per pass. Cost with no answer behind it.
+
+**The rule now: announce when the ids change, when the patch edited or removed a selected row, or when the capture's CONTENT stamp moved**
+(`FightTable.SelectionStamp`: `FactCount` — the engine's captured total, heals included — folded with the timeline's identity digest). Those two terms are
+exactly what materialization reads: which facts exist, and what the rules say about names. New fact ⇒ first term moves; an override, a charm window,
+or a rank the rules could not see last pass ⇒ second term moves. Equal on both means every figure under the selection is already what the builders
+would produce, so skipping the rebuild cannot leave anything stale — it is not a throttle, and nothing is dropped or deferred: an announcement that
+is skipped is an announcement with nothing to say. Both terms are O(1) by construction (the digest is summed in at insert time), so the question costs
+nothing per pass even with thousands of selected rows.
 
 Tests: `EQLogParser.Test/src/control/RowPatchTest.cs` (17 headless tests over a stand-in row type — layout, churn caps, refusals) and
 `EQLogParser.Wpf.Test/src/control/util/DerivedFightRowPatchTest.cs` (key stability across two builds, per-cell notification counts, the
@@ -6816,14 +6890,22 @@ already has a law that "a remembered verdict loses to what this capture watched 
 R7/R15 do not re-run for seeded names, so the same principle is unenforced there. Making them run costs edge walks
 over 77 of 2,752 names on Incogitable - not free, and only a word-quality win today.
 
-### R21's pool gate staleness, stated as accepted
+### R21's pool gate staleness: parked, re-asked, bounded (2026-11)
 
-A cast token refused because its name was not yet in the entity pool is never reconsidered inside that pass, and
-the review asked for it to stop being implicit. It is bounded and self-healing: any verdict change moves
-`EntityTimeline.StateStamp()`, which buys a **full rebuild**, and a full rebuild re-walks every fact with an empty
-cursor table. The accepted window is therefore one cheap-lane cadence on a name that (a) first appears as a cast
-token and (b) later appears in a combat line - the same bound as every other verdict the carried lane folds. See
-the pool-gate comment in `ClassificationRules.ApplySpellEffects`.
+A cast token refused because its name was not yet in the entity pool is never reconsidered inside that pass - the
+evidence cursor walks each `EvCast` row exactly once - and a review asked for that to stop being implicit. The first
+stated bound ("any verdict change moves `StateStamp()`, which buys a full rebuild that re-walks everything") turned
+out to be **wrong**: a new fact interns its names without moving any verdict, so the stamp never moves, no rebuild
+happens, and the carried pass answered **Unknown** for a name whose first sighting was a cast token while a from-zero
+replay of the same capture answered **Spell** (reproduced). Unbounded in practice, not one cadence.
+
+The fix is to make the refusal a *suspense*: `ClassificationState.SpellCastRejected` parks the tokens the pool gate
+refused, and `ApplySpellEffects` re-asks every parked token before it claims. Names enter the interned pool and never
+leave it within one capture, so every promotion is permanent - the set drains toward the cast-but-never-fought names,
+which stay parked at the cost of a handful of string refs re-checked once per full pass (the allocation happens only on
+an actual promotion). Grammar refusals (`LooksLikeEntityName`) and empty tokens heal nothing, so they are not parked.
+The bound is now genuinely what it was always meant to be: one full cadence after the name's first fact - the same as
+every other carried verdict. Pinned by `SpellEffectIdentityTest.ACastTokenThatReachesCombatLaterIsClaimedByACarriedPass`.
 ### The spell database as the side witness: measured, useful, and not enough alone (2026-10)
 
 The operator's proposal was that a caster-less spell should be sided by the data — *"it should show up with a class mask

@@ -170,7 +170,9 @@ namespace EQLogParser
       {
         MarkTs(e.BeginTime);
 
-        var subIdx = string.IsNullOrEmpty(r.SubType) ? DamageFactTable.NoSubtype : (ushort)Math.Max(0, (int)_facts.InternSubtype(r.SubType));
+        // Empty answers NoSubtype on the intern side itself; the clamp that used to sit here was only there because
+        // InternSubtype returned a short that wrapped past 32768, and the wrap landed on 0 = the first subtype.
+        var subIdx = _facts.InternSubtype(r.SubType);
         _facts.AddFact(new DamageFact(
           seq: ++_sequence,
           timeS: ToTimeS(e.BeginTime),

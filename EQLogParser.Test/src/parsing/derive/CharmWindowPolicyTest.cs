@@ -332,4 +332,42 @@ public class CharmWindowPolicyTest
         Assert.AreEqual(CharmEndReason.LogEnd, outcome.Charms[0].Reason);
         Assert.AreEqual(T("[Sun Apr 26 19:06:00 2026]"), outcome.Charms[0].T1);
     }
+
+    [TestMethod]
+    public void ADeathAfterTheCapDoesNotStretchTheWindow()
+    {
+        // The measured shape: a charm stood, went quiet past the ceiling, and eight minutes later a same-name
+        // mob died. Before the cap won that late slain line closed the window at the DEATH, re-friending every
+        // later mob of that name for six more minutes and hiding the true death under "died while charmed".
+        var outcome = Run(out var timeline, out _,
+            "[Sun Apr 26 13:47:00 2026] an imbued whipgrass has been charmed.",
+            "[Sun Apr 26 15:09:40 2026] An imbued whipgrass was slain by Sirmr!");
+
+        Assert.AreEqual(1, outcome.Charms.Count);
+        var w = outcome.Charms[0];
+        Assert.AreEqual(CharmEndReason.Cap, w.Reason, "a late death closed the window instead of the ceiling");
+        Assert.AreEqual(T("[Sun Apr 26 13:53:00 2026]"), w.T1, "the span ends at the cap, not at the death");
+
+        // and the timeline agrees on both sides of that boundary: ours at the charm, hostile at the death -
+        // which is what keeps that death closing the fight row instead of being skipped as custody.
+        Assert.AreEqual(AffiliationKind.Friendly, timeline.AffiliationAt("an imbued whipgrass", T("[Sun Apr 26 13:47:00 2026]"), out _));
+        Assert.AreEqual(AffiliationKind.Enemy, timeline.AffiliationAt("an imbued whipgrass", T("[Sun Apr 26 15:09:40 2026]"), out _));
+    }
+
+    [TestMethod]
+    public void DamageBetweenTheCapAndALateDeathIsNotCreditedToTheCharm()
+    {
+        // The credit question with the same shape: a hit that lands after the ceiling belongs to whatever that
+        // name is by then, not to a charm that had already expired.
+        var outcome = Run(out _, out _,
+            "[Sun Apr 26 13:47:00 2026] an imbued whipgrass has been charmed.",
+            "[Sun Apr 26 13:54:00 2026] An imbued whipgrass hits a grodog thug for 900 points of damage.",
+            "[Sun Apr 26 15:09:40 2026] An imbued whipgrass was slain by Sirmr!");
+
+        var w = outcome.Charms[0];
+        Assert.AreEqual(CharmEndReason.Cap, w.Reason);
+        Assert.AreEqual(T("[Sun Apr 26 13:53:00 2026]"), w.T1);
+        Assert.AreEqual(0, w.FactCount, "a hit after the cap was counted as the pet's");
+        Assert.AreEqual(0UL, w.CreditedTotal);
+    }
 }

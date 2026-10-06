@@ -119,6 +119,16 @@ namespace EQLogParser
     internal readonly HashSet<string> SpellLineNames = new(StringComparer.Ordinal);
     internal readonly HashSet<string> SpellCastNames = new(StringComparer.Ordinal);
 
+    /*
+     * R21 cast tokens the pool gate REFUSED: the cursor already walked past them, so a carried pass will never re-read the
+     * evidence line that named them - what it CAN do is re-ask the question each pass, because the pool only grows (a name
+     * enters as its first combat line arrives and never leaves). Without this list the refusal was permanent: a new fact
+     * interns its names without moving any verdict, so StateStamp never moves, no full rebuild ever happens, and a name
+     * whose first sighting was a cast token stayed Unknown for the rest of the capture (docs/DesignNotes.md →
+     * "R21's pool gate staleness, stated as accepted" - the bound that comment promised is what this set restores).
+     */
+    internal readonly HashSet<string> SpellCastRejected = new(StringComparer.Ordinal);
+
     // ---- R7: per-attacker side evidence; the eval loop runs over the carry every pass like today ----
 
     internal readonly Dictionary<string, ClassificationRules.SideAgg> GraphAggs = new(StringComparer.Ordinal);
@@ -160,6 +170,7 @@ namespace EQLogParser
       R18Vetos.Clear();
       SpellLineNames.Clear();
       SpellCastNames.Clear();
+      SpellCastRejected.Clear();
       GraphAggs.Clear();
       Charms = null;
     }

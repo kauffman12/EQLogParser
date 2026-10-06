@@ -109,4 +109,58 @@ public class NamePoolTest
         Assert.AreEqual(1, rows.Count(r => r.Name.Equals("a namekey pet", StringComparison.OrdinalIgnoreCase)),
                         "the same mob appears as more than one fight row");
     }
+
+    [TestMethod]
+    public void SubtypeIdsRoundTripPastTheOldSignedShortWrap()
+    {
+        // The stored id is a ushort with NoSubtype reserved at the top, so the 32,769th distinct verb must come back as a
+        // usable id - the old short return wrapped to negative at exactly this index and the capture's clamp rewrote the
+        // wrap to 0, which is the FIRST subtype: a capture that ever grew past 32k verbs would have read its newest word
+        // as its oldest one.
+        var t = new DamageFactTable();
+
+        const int past = ushort.MaxValue - 1;   // capacity; the sentinel top value stays out of the table
+        for (var i = 0; i < past; i++)
+        {
+            var name = "v" + i;
+            var id = t.InternSubtype(name);
+            Assert.AreEqual(i, id, "id drifted from the intern order at index " + i);
+        }
+
+        // The reported boundary, one on each side of where a signed short turns negative.
+        Assert.AreEqual((ushort)32767, t.InternSubtype("v" + 32767));
+        var wrapped = t.InternSubtype("v" + 32768);
+        Assert.AreEqual((ushort)32768, wrapped, "the 32,769th verb wrapped to a negative id");
+        Assert.AreEqual("v" + 32768, t.SubtypeOf(wrapped), "the wrap aliased the new verb onto an earlier one");
+        Assert.AreEqual("v0", t.SubtypeOf(0), "subtype 0 was disturbed by the high ids");
+    }
+
+    [TestMethod]
+    public void SubtypeInternAnswersTheSentinelForAnEmptyWord()
+    {
+        // No modifier text is stored as NoSubtype itself, which is why the capture no longer needs a ternary to map it -
+        // and SubtypeOf must keep reading that sentinel back as "nothing" rather than as an index.
+        var t = new DamageFactTable();
+
+        Assert.AreEqual(DamageFactTable.NoSubtype, t.InternSubtype(string.Empty));
+        Assert.AreEqual(DamageFactTable.NoSubtype, t.InternSubtype(null));
+        Assert.IsNull(t.SubtypeOf(DamageFactTable.NoSubtype));
+    }
+
+    [TestMethod]
+    public void AuxIdsRefuseToWrapRatherThanAlias()
+    {
+        // The aux table holds spell tokens and channel words, small in practice - but a read that SILENTLY wraps at the
+        // 32,768th entry hands back null for a name the capture used, and a later alias hands back somebody else's. The
+        // id field is a short by construction (both EvidenceFact fields), so the table throws at the same boundary
+        // instead.
+        var t = new DamageFactTable();
+
+        for (var i = 0; i < short.MaxValue - 1; i++) Assert.AreEqual((short)i, t.InternAux("x" + i));
+        Assert.AreEqual(short.MaxValue - 1, t.InternAux("x" + (short.MaxValue - 1)));
+        Assert.Throws<InvalidOperationException>(() => t.InternAux("x" + short.MaxValue));
+
+        // A refused entry must not consume its slot: the table still answers everything it took.
+        Assert.AreEqual(short.MaxValue - 1, t.InternAux("x" + (short.MaxValue - 1)));
+    }
 }

@@ -291,7 +291,7 @@ namespace EQLogParser
     /// <summary>Lookup without interning: the name's index, or -1 when this capture never named it.</summary>
     short NameIndexOf(string name);
     string NameOf(short idx);
-    short InternSubtype(string subtype);
+    ushort InternSubtype(string subtype);
     string SubtypeOf(ushort idx);
     void AddFact(DamageFact fact);
     void AddDeath(DeathFact death);
@@ -396,15 +396,29 @@ namespace EQLogParser
      */
     public short NameIndexOf(string name) => _nameMap.TryGetValue(name, out var idx) ? idx : (short)-1;
 
-    public short InternSubtype(string subtype)
+    /*
+     * The id's type is part of the contract, and it is the SAME one the fact carries: subIdx is a ushort with NoSubtype
+     * reserved as its top value, so an answer wider than that would alias (a signed short wraps at 32768 and the old call
+     * site clamped the wrap to 0 - the FIRST subtype, which is how a capture's 32,769th distinct verb would have been read
+     * as its first) and an answer narrower than it wastes half the space. Empty answers NoSubtype itself: that is what the
+     * one call site used to spend a ternary on, and nothing may ever intern the sentinel.
+     */
+    public ushort InternSubtype(string subtype)
     {
-      if (string.IsNullOrEmpty(subtype)) return -1;
-      if (_subtypeMap.TryGetValue(subtype, out var idx)) return (short)idx;
-      if (_subtypes.Count >= ushort.MaxValue - 1) throw new InvalidOperationException("capture: subtype table exceeded capacity");
+      if (string.IsNullOrEmpty(subtype)) return NoSubtype;
+      if (_subtypeMap.TryGetValue(subtype, out var idx)) return idx;
+      /*
+       * Stops rather than clamps or aliases, and NAMES the offender: CombatCapture.AddDamage swallows this so one poison line
+       * cannot stop the capture, which leaves LogProcessor's consumer fault as the only surface - and "capacity" without the verb
+       * that hit it is a message nobody can act on. A real capture uses ~1,100 of these ids (measured), so arriving here means
+       * something is interning junk, not that the session was long.
+       */
+      if (_subtypes.Count >= ushort.MaxValue - 1)
+        throw new InvalidOperationException($"capture: subtype table exceeded its {ushort.MaxValue - 1} entries at '{subtype}'");
       _subtypes.Add(subtype);
       idx = (ushort)(_subtypes.Count - 1);
       _subtypeMap[subtype] = idx;
-      return (short)idx;
+      return idx;
     }
 
     public string SubtypeOf(ushort idx) => idx == NoSubtype ? null : _subtypes[idx];
@@ -439,10 +453,19 @@ namespace EQLogParser
       _evidences[_evidenceCount++] = evidence;
     }
 
+    /*
+     * short on purpose: both EvidenceFact fields that can carry this id are shorts, and a read must not silently wrap. The
+     * capacity check is what makes that true - without it the 32,769th distinct aux would intern at -32768, AuxOf would hand
+     * back null for a name the capture actually used, and a later alias would hand back somebody else's.
+     */
     public short InternAux(string aux)
     {
       if (string.IsNullOrEmpty(aux)) return -1;
       if (_auxMap.TryGetValue(aux, out var idx)) return idx;
+      // Stops rather than wrapping to a negative id (which AuxOf would read as "no aux" or as another name's), and names the
+      // string that got here - see InternSubtype for why the message has to carry the offender.
+      if (_auxs.Count >= short.MaxValue)
+        throw new InvalidOperationException($"capture: aux table exceeded its {short.MaxValue - 1} entries at '{aux}'");
       _auxs.Add(aux);
       idx = (short)(_auxs.Count - 1);
       _auxMap[aux] = idx;

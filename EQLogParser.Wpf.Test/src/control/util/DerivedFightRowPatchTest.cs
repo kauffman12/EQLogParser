@@ -204,5 +204,44 @@ namespace EQLogParser.Wpf.Test
       Pass([Fight("Grul", 0, 20, damage: 500), Fight("MoK", 4_000, 4_030)]);
       Assert.AreSame(grul, live.First(r => !r.IsDivider && r.Name == "Grul"), "a quiet pass must not disturb anything");
     }
+
+    /*
+     * What the pane asks before spending a board rebuild on a selection it has ALREADY announced — FightTable.SelectionStamp. The
+     * two terms are the only things a materialized board reads: which facts were captured, and what the rules say about names.
+     *
+     * Row instances are deliberately NOT the signal, and this test is the guard against going back to them: the backing refresh above
+     * re-points every survivor on purpose (that is what lets a click materialize against the current pass at all), so "a selected row's
+     * Fight is another object" is true on EVERY full pass. Measured cost of asking it that way: a whole-capture selection takes seconds to
+     * materialize, the cadence hands out full passes every few seconds, and each announcement writes its own `Derived damage summary:`
+     * line into the player's log — continuous work to redraw figures that had not moved (docs/DesignNotes.md → "What makes a board go one
+     * pass stale").
+     */
+    [TestMethod]
+    public void TheStampFollowsFactsAndVerdicts_NotRowInstances()
+    {
+      // Same facts, same verdicts, entirely new row objects: nothing under the selection can have moved, so nothing is announced.
+      Assert.AreEqual(FightTable.SelectionStamp(Snapshot()), FightTable.SelectionStamp(Snapshot()),
+                      "a rebuild of identical content must not cost a stats run");
+
+      // A captured fact more: everything downstream may have moved, and this is the cheap half of the question.
+      var sameRowsMoreFacts = DerivedFightRows.Build([Fight("Grul", 0, 20)], new EntityTimeline(), 7,
+                                                     new DamageFactTable(8), new FightFactIndex());
+      var noFacts = DerivedFightRows.Build([Fight("Grul", 0, 20)], new EntityTimeline(), 0,
+                                           new DamageFactTable(8), new FightFactIndex());
+      Assert.AreNotEqual(FightTable.SelectionStamp(noFacts), FightTable.SelectionStamp(sameRowsMoreFacts),
+                         "the capture grew - the boards under a selection are suspect until rebuilt");
+
+      /*
+       * No new fact AT ALL, and the rules changed their mind. This is the case the row diff cannot see: the same facts now ROUTE
+       * differently (`X +Pets` folding, a charm window closing), so every cell still reads the same while the split between the damage
+       * board and the tanking one — and who owns the number — has moved under it.
+       */
+      var verdicts = new EntityTimeline();
+      verdicts.SetIdentity("Grul", IdentityKind.Npc, RuleStrength.Strong, "R6-npcdb");
+      var reclassified = DerivedFightRows.Build([Fight("Grul", 0, 20)], verdicts, 0,
+                                                new DamageFactTable(8), new FightFactIndex());
+      Assert.AreNotEqual(FightTable.SelectionStamp(noFacts), FightTable.SelectionStamp(reclassified),
+                         "a moved verdict with no new fact must still announce - routing lives behind the cells");
+    }
   }
 }

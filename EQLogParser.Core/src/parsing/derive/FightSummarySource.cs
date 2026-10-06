@@ -127,9 +127,21 @@ namespace EQLogParser
     // count: a fact lands in at most one of them — the rest are unrouted and cost nothing but a counter.
     public long EstimatedBytes => (DamageFactCount + TankingFactCount) * 4L;
 
+    /*
+     * The gate is the index's whole reader/writer boundary. The index outlives the pass that fills it - the cheap lane
+     * (DeriveCadence.ProjectionOnly) carries this instance from pass to pass and keeps appending while a meter or a click
+     * enumerates it on another thread - so EVERY entry below takes it: an append can never tear an enumeration, and the
+     * dictionary lookups never race a rehash. OnFact pays one uncontended lock per fact (measured negligible against the
+     * fold it feeds); a reader holding it during BuildFight just serializes the writer for that row's build.
+     */
     // Passed to FightProjection.Build as its owner sink — see the delegate's comment for why the answer
     // has to come from the projection rather than be recomputed here.
     internal void OnFact(DamageFact fact, int ordinal, DerivedFight owner, FightProjection.FactTarget target)
+    {
+      lock (_gate) OnFactLocked(fact, ordinal, owner, target);
+    }
+
+    private void OnFactLocked(DamageFact fact, int ordinal, DerivedFight owner, FightProjection.FactTarget target)
     {
       // Neither means "no board wants this": a mob biting another mob, a boss clearing somebody's swarm. It is
       // counted so the routing can be audited (UnroutedFactCount is the only sign of how much of a capture is
@@ -152,7 +164,10 @@ namespace EQLogParser
       else TankingFactCount++;
     }
 
-    internal bool HasDamage(DerivedFight fight) => _damageOrdinals.ContainsKey(fight);
+    internal bool HasDamage(DerivedFight fight)
+    {
+      lock (_gate) return _damageOrdinals.ContainsKey(fight);
+    }
 
     /*
      * A row whose facts all point away from it — a charmed raider's own output is the ordinary case, and so is
@@ -160,15 +175,43 @@ namespace EQLogParser
      * tanking one, which is why this cannot be answered as !HasDamage: asking that way silently dropped a
      * player's damage taken whenever the raid never landed a hit on whatever was hitting them.
      */
-    internal bool HasTanking(DerivedFight fight) => _tankingOrdinals.ContainsKey(fight);
+    internal bool HasTanking(DerivedFight fight)
+    {
+      lock (_gate) return _tankingOrdinals.ContainsKey(fight);
+    }
 
+    /*
+     * The list handed back is the LIVE one - no copy (a night's row is tens of thousands of ints, and this is called per visible
+     * row). That is safe for its callers and dangerous as an API, so the rule is stated where it can be obeyed: enumerate the
+     * result only from the derive thread that just filled it, never from a UI or worker thread while a capture is folding - an
+     * enumerator over a List<int> being appended to throws. Materialization never walks these; it re-reads through
+     * SummaryFightFor/InWindow under the gate.
+     *
+     * Anything that needs only the NUMBER asks TankingOrdinalCount instead, which hands out nothing mutable.
+     */
     internal IReadOnlyList<int> TankingOrdinalsFor(DerivedFight fight)
-      => _tankingOrdinals.TryGetValue(fight, out var ordinals) ? ordinals : [];
+    {
+      lock (_gate) return _tankingOrdinals.TryGetValue(fight, out var ordinals) ? ordinals : [];
+    }
+
+    /// <summary>Count-only answer for row cells (`# Hits To Players`): see TankingOrdinalsFor for why the list is not handed out.</summary>
+    internal int TankingOrdinalCount(DerivedFight fight)
+    {
+      lock (_gate) return _tankingOrdinals.TryGetValue(fight, out var ordinals) ? ordinals.Count : 0;
+    }
 
     // The ordinals behind a row, in table order — for the tests that hold this index to its contract, so
     // they can check a row against the fact table itself instead than against another copy of my bookkeeping.
     internal IReadOnlyList<int> DamageOrdinalsFor(DerivedFight fight)
-      => _damageOrdinals.TryGetValue(fight, out var ordinals) ? ordinals : [];
+    {
+      lock (_gate) return _damageOrdinals.TryGetValue(fight, out var ordinals) ? ordinals : [];
+    }
+
+    /// <summary>Count-only answer; see TankingOrdinalCount for why a count has its own door.</summary>
+    internal int DamageOrdinalCount(DerivedFight fight)
+    {
+      lock (_gate) return _damageOrdinals.TryGetValue(fight, out var ordinals) ? ordinals.Count : 0;
+    }
 
     /*
      * The Fight the damage summary will be handed for this derived row, built on first request and kept while it is
@@ -230,7 +273,10 @@ namespace EQLogParser
      * once-a-second meter can pay; the cache it saves is correctness.
      */
     internal Fight? SummaryFightInWindow(DerivedFight fight, DamageFactTable facts, double fromT, double toT)
-      => BuildFight(fight, facts, fromT, toT);
+    {
+      // Same boundary as SummaryFightFor: a pass appending while the meter slices would tear this walk.
+      lock (_gate) return BuildFight(fight, facts, fromT, toT);
+    }
 
     /*
      * Whose pet this attacker's damage belongs to. Two sources, in order of how well they are evidenced:
@@ -539,7 +585,7 @@ namespace EQLogParser
 
     /*
      * A derived record's SubType is never null. The fact table stores "this line carried no modifier text" as
-     * NoSubtype (-1) and plain melee is the ordinary case of that, but StatsUtil.UpdateDamageStats looks the
+     * NoSubtype (the sentinel top value of a ushort id) and plain melee is the ordinary case of that, but StatsUtil.UpdateDamageStats looks the
      * subtype up in a ConcurrentDictionary — which throws on a null key, inside DamageStatsBuilder's catch that
      * logs and carries on. So a null here is an empty board, not a rougher one. The type word stands in: the
      * activity window is identical either way, only the breakdown gets one sub-row per kind instead of one per

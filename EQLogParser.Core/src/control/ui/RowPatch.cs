@@ -26,6 +26,10 @@ internal static class RowPatch
 {
   internal sealed class Plan<T> where T : class
   {
+    /// <summary>Every surviving row paired with the row that replaces its content, in list order. `Updates` is the subset whose
+    /// displayed content differs; the rest still need their backing reference refreshed, which is why both are kept.</summary>
+    internal List<(T Existing, T Source)> Matched = [];
+
     /// <summary>Surviving rows whose displayed content differs, paired with the row to copy from.</summary>
     internal List<(T Existing, T Source)> Updates = [];
 
@@ -93,6 +97,7 @@ internal static class RowPatch
       lastMatchedNext = at;
 
       var source = next[at];
+      plan.Matched.Add((row, source));
       if (sameContent(row, source)) plan.Unchanged++;
       else plan.Updates.Add((row, source));
       survivorByNext[keyOf(row)] = row;
@@ -115,12 +120,27 @@ internal static class RowPatch
   }
 
   /*
-   * Carry the plan out on the live list. Order matters: content first (survivors are still where they were and a grid repaints
-   * them through property change), then removals, then newcomers walked into position by reading the target sequence — because
-   * survivors are already in each other's order, that walk lands every newcomer exactly once with no index arithmetic to get wrong.
+   * Carry the plan out on the live list. Order matters: backing first, content second (survivors are still where they were and a
+   * grid repaints them through property change), then removals, then newcomers walked into position by reading the target sequence —
+   * because survivors are already in each other's order, that walk lands every newcomer exactly once with no index arithmetic to get
+   * wrong.
+   *
+   * `refreshBacking` runs on EVERY survivor, including the ones whose display did not move. A grid row holds a reference to the pass
+   * that produced it - a reclassifying rebuild hands out brand-new objects for every row while most of their cells read identically,
+   * and a survivor that keeps last pass's object would later be materialized against an index keyed on the new ones: a selection
+   * that answers with an empty board. Content alone cannot carry this, because "display identical" is not "same backing": only the
+   * refresh, applied to the whole Matched set, makes row and snapshot agree again.
    */
-  internal static void Apply<T>(IList<T> target, Plan<T> plan, Action<T, T> copyContent) where T : class
+  internal static void Apply<T>(IList<T> target, Plan<T> plan, Action<T, T> copyContent,
+                                Action<T, T>? refreshBacking = null) where T : class
   {
+    if (refreshBacking is not null)
+    {
+      foreach (var (existing, source) in plan.Matched)
+      {
+        refreshBacking(existing, source);
+      }
+    }
     foreach (var (existing, source) in plan.Updates) copyContent(existing, source);
     foreach (var row in plan.Removals) target.Remove(row);
 

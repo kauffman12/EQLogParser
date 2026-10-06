@@ -392,6 +392,13 @@ namespace EQLogParser
           _byName[name] = existing with { Ours = false, Class = null };
           changed = true;
         }
+        else if (!string.IsNullOrEmpty(existing.Owner))
+        {
+          // No verdict worth keeping, but "X's pet" and "X was on the roster" are two statements: the mapping outlives
+          // the removal that took the membership off, exactly as it outlives a ForgetPet clearing its own lane.
+          _byName[name] = existing with { Ours = false, Class = null };
+          changed = true;
+        }
         else
         {
           // Nothing underneath but the roster's own claim, so the row has no reason to exist.
@@ -637,7 +644,24 @@ namespace EQLogParser
         }
         if (doomed is not null)
         {
-          foreach (var name in doomed) _byName.Remove(name);
+          foreach (var name in doomed)
+          {
+            _byName.TryGetValue(name, out var entry);
+
+            // The ownership lane does not age on THIS clock. "Fluffy belongs to Ziggy" has its own dial (PruneRosterLocked's
+            // StaleDays against the wall), and dropping it here would retire a mapping nobody asked to lose just because a
+            // different name was re-learned late in the file - which is what an import followed by one new log does. What dies
+            // on this clock is the VERDICT lane: a stale Kind/Reason is rewritten out, leaving the row holding exactly what a
+            // mapping with no witnessed verdict holds (the SeenAtS survives - it is the stamp the wall-clock dial reads).
+            if (entry.Owner is not null)
+            {
+              _byName[name] = new Prior(IdentityKind.Unknown, OwnerReason, entry.SeenAtS, 0, false, null, entry.Owner);
+            }
+            else
+            {
+              _byName.Remove(name);
+            }
+          }
           changed = true;
         }
       }

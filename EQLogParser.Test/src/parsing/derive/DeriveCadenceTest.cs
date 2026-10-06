@@ -301,4 +301,60 @@ public class DeriveCadenceTest
         previous = delay;
       }
     }
+
+    /*
+     * The idle-capture retry: an override-triggered pass fails and the log stops growing, so Decide answers None forever -
+     * the count-based cadence has nothing new to say about it. The retry has to be owed by the FAILURE itself, on its own
+     * ladder; the bulk guard keeps a retry from parking ingest on top of a load that is still reading (that load's own quiet
+     * tick settles the debt when it ends), and how LONG an idle capture may keep being owed is the next test's rule.
+     */
+    [TestMethod]
+    public void AFailedPassIsOwedItsRetryOnAnIdleCapture()
+    {
+      Assert.AreEqual(FailureRetry.Wait, DeriveCadence.DecideFailureRetry(0, 60d, 0d, 0), "no failures outstanding - nothing is owed at any interval");
+
+      // Inside the current rung: not due yet, whatever else the tick can see.
+      Assert.AreEqual(FailureRetry.Wait, DeriveCadence.DecideFailureRetry(1, 0.5d, 0d, 0), "the first rung is a whole second");
+      Assert.AreEqual(FailureRetry.Wait, DeriveCadence.DecideFailureRetry(3, 3.9d, 0d, 0), "the third rung is four seconds");
+
+      // Rung expired: owed - and it stays owed while the capture keeps being idle, which is the case the cadence cannot see.
+      Assert.AreEqual(FailureRetry.Retry, DeriveCadence.DecideFailureRetry(1, 1.0d, 0d, 0));
+      Assert.AreEqual(FailureRetry.Retry, DeriveCadence.DecideFailureRetry(3, 4.0d, 0d, 0));
+      Assert.AreEqual(FailureRetry.Wait, DeriveCadence.DecideFailureRetry(7, 59.9d, 0d, 0), "the capped rung is a whole minute");
+      Assert.AreEqual(FailureRetry.Retry, DeriveCadence.DecideFailureRetry(7, 60d, 0d, 0), "capped at the minute, owed from there on");
+
+      // A live tail is still a live tail: owed once the rung expires at whatever rate the raid is running.
+      Assert.AreEqual(FailureRetry.Retry, DeriveCadence.DecideFailureRetry(1, 2d, 5d, 0), "tens of facts a second is a raid, not a load");
+
+      // While a file is still being read: not owed - a retry would hold the ingest gate the loader needs.
+      Assert.AreEqual(FailureRetry.Wait, DeriveCadence.DecideFailureRetry(1, 10d, DeriveCadence.BulkFactsPerSecond, 0), "at the bulk rate the load's quiet tick owns the debt");
+      Assert.AreEqual(FailureRetry.Wait, DeriveCadence.DecideFailureRetry(2, 10d, DeriveCadence.BulkFactsPerSecond + 1, 0));
+    }
+
+    /*
+     * How long that debt may be paid out on a DEAD capture. A failure that repeats is not going to heal itself, and a closed log
+     * never stops owing the retry, so unbounded attempts are one full pass of CPU plus one error-with-stack every minute for the
+     * rest of the day - in the same file that carries the raid (~10,000 of each over an idle week at the ladder's cap). So the
+     * quiet case runs on an allowance. A capture with facts flowing is exempt from parking: its failing passes would run anyway,
+     * and a live failure hidden to save log space is the worse trade by a mile.
+     */
+    [TestMethod]
+    public void IdleRetriesComeFromAnAllowanceRatherThanForever()
+    {
+      var spent = DeriveCadence.MaxQuietFailureRetries;
+
+      // Up to the allowance, an idle capture keeps getting its retry - years after its last fact if nobody opens anything else.
+      Assert.AreEqual(FailureRetry.Retry, DeriveCadence.DecideFailureRetry(7, 3600d, 0d, spent - 1));
+
+      // Spent: parked, and staying parked however long the wait goes on or how many more times the ladder turns over.
+      Assert.AreEqual(FailureRetry.Park, DeriveCadence.DecideFailureRetry(7, 3600d, 0d, spent));
+      Assert.AreEqual(FailureRetry.Park, DeriveCadence.DecideFailureRetry(9, 86400d, 0d, spent + 5));
+
+      // Inside the rung, "not yet" still wins: the tick has nothing to decide, so it must not report a park.
+      Assert.AreEqual(FailureRetry.Wait, DeriveCadence.DecideFailureRetry(3, 1d, 0d, spent));
+
+      // Facts arriving reset the question entirely: retry while the raid runs, at any allowance; and a load still never retries.
+      Assert.AreEqual(FailureRetry.Retry, DeriveCadence.DecideFailureRetry(7, 60d, 5d, spent));
+      Assert.AreEqual(FailureRetry.Wait, DeriveCadence.DecideFailureRetry(7, 60d, DeriveCadence.BulkFactsPerSecond, spent));
+    }
 }

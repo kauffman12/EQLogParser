@@ -369,6 +369,20 @@ namespace EQLogParser
         {
           var (t, reason, closeOwner) = closes[ci++];
           if (!open || t < t0) continue;   // a close with no charm sighting behind it says nothing
+
+          /*
+           * A signal that lands past the ceiling settles the window at the cap and is dropped: MaxWindowS is how long we are
+           * willing to credit this name as ours on one sighting, and a death or wear-off four minutes after the cap would extend
+           * the window well past that - which is exactly how a charm of 13:47 used to stretch to 15:09 off one late slain line,
+           * re-friending every later mob of that name for six minutes and dead-marking its true death as "not while charmed".
+           * The boundary matches the start side, where a sighting at exactly the cap already fails to merge: t >= cap settles.
+           */
+          if (t >= lastStart + MaxWindowS)
+          {
+            Close(lastStart + MaxWindowS, CharmEndReason.Cap, null);
+            continue;
+          }
+
           Close(t, reason, closeOwner);
         }
       }

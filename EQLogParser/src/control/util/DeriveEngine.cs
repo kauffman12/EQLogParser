@@ -35,6 +35,17 @@ namespace EQLogParser
   {
     public static DeriveEngine Active { get; private set; }
 
+    /*
+     * A process-unique number for this capture, so a surface can tell "the session I already looked at" from "a session that
+     * replaced it" WITHOUT holding the engine. That is not a nicety: Dispose promises that closing a log stops being the reason
+     * its records are still reachable, and a long-lived window that tags "which capture wrote my state" with the instance itself
+     * breaks exactly that promise (a hidden meter window would keep a dead engine - every fact table in it - alive for the rest of
+     * the run). Ids come from a static counter starting at 1, so 0 means "no session seen" and two captures never share one.
+     */
+    internal int SessionId { get; } = Interlocked.Increment(ref _sessionCounter);
+
+    private static int _sessionCounter;
+
     public static event Action ActiveChanged;
 
     // Raised on the derivation thread; subscribers marshal to the dispatcher themselves.
@@ -178,6 +189,18 @@ namespace EQLogParser
 
     // Time since the last THREW pass; only consulted while _deriveFailures > 0.
     private readonly Stopwatch _sinceFailedPass = Stopwatch.StartNew();
+
+    /*
+     * Quiet retries spent on the CURRENT failure: attempts made while the capture was not growing. The allowance
+     * (DeriveCadence.MaxQuietFailureRetries) exists because a deterministic throw on a closed log would otherwise run a full pass
+     * and write an error-with-stack once a minute for the life of the window - the same file that carries the raid. Any new fact
+     * clears it: a capture that starts moving again is exactly the reason to try, and while facts arrive every pass happens for its
+     * own sake (and logs its own failure) without this counter counting anything.
+     */
+    private volatile int _quietFailureRetries;
+
+    // One park line per parking, not one per tick - QuietTick asks ten times a second.
+    private volatile bool _failureParkLogged;
 
     // The first pass of a session logs itself once, whatever lane the cadence picked: "the list never filled"
     // is otherwise invisible in a log that carries a million fact lines - either MainWindow's session-started
@@ -454,6 +477,8 @@ namespace EQLogParser
 
           // Any completed pass - either lane, even one that logged degraded stages - pays off the failure ladder.
           _deriveFailures = 0;
+          _quietFailureRetries = 0;
+          _failureParkLogged = false;
           // "continued" is the interesting half of the cost story: a continuing pass walked only what arrived since the
           // last one, while a rebuild re-walked the night (a new identity verdict anywhere earns one).
           Note($"Derive done: {snapshot.FightCount} fights, {sw.ElapsedMilliseconds} ms " +
@@ -738,14 +763,6 @@ namespace EQLogParser
     {
       if (_disposed) return;
 
-      /*
-       * A pass that threw comes back on the ladder - 1 s, doubling to a minute - instead of never: the old latch froze
-       * every derived surface for the rest of the night over one hiccup. The gate sits ahead of the clock reads below
-       * so a failing derive costs one attempt per rung rather than a pump-rate storm on the derive gate.
-       */
-      if (_deriveFailures > 0 && _sinceFailedPass.Elapsed.TotalSeconds < DeriveCadence.RetryDelayS(_deriveFailures))
-        return;
-
       var count = CapturedTotal;
 
       // Growth over the window since the last ask, as a rate: the same ingest reads the same however often it is polled.
@@ -755,13 +772,55 @@ namespace EQLogParser
       var factsPerSecond = windowS > 0 ? grown / windowS : 0d;
       _sinceTick.Restart();
 
-      if (grown > 0) _sinceFactChange.Restart();
+      if (grown > 0)
+      {
+        _sinceFactChange.Restart();
+
+        // New facts are a reason to try again, so a parked retry is not parked for a live capture - and a failure that has
+        // been quiet long enough to park comes back the moment the file does.
+        if (_quietFailureRetries != 0) _quietFailureRetries = 0;
+      }
 
       // Dirty-while-idle feedback doubles as field diagnostics: "capturing… 0 captured" separates
       // an empty log from a stalled pipeline without needing a debugger.
       // "capturing" is about what the player can see move, which lags on the CHEAP lane's number: the rules being behind
       // that same count is normal between full passes and must not make a live raid look stalled.
       if (count != _lastProjectedCount) Capturing?.Invoke(count);
+
+      /*
+       * A pass that threw comes back on the ladder - 1 s, doubling to a minute - instead of never: the old latch froze
+       * every derived surface for the rest of the night over one hiccup. The decision lives in DeriveCadence (one place
+       * answers backoff AND "is this tick allowed to try"), and it carries the two things that make a retry wrong on its
+       * own: inside the current rung nothing is due, and while a file is still being read a retry would park ingest at the
+       * gate on top of the load - the load's own quiet tick settles the debt when the file stops.
+       *
+       * The reason it fires here rather than through Decide is the idle capture: an override arrives while a pass is
+       * running, that pass throws, and a closed log never grows again - quiescence has already happened and no live tail
+       * ever will, so Decide answers None forever and the operator's click degrades to "logged, not acted on". A failure
+       * is always present when this debt sits (the pass that could have settled it was the one that threw).
+       */
+      if (_deriveFailures > 0)
+      {
+        var decision = DeriveCadence.DecideFailureRetry(_deriveFailures, _sinceFailedPass.Elapsed.TotalSeconds,
+                                                       factsPerSecond, _quietFailureRetries);
+        if (decision == FailureRetry.Park)
+        {
+          if (!_failureParkLogged)
+          {
+            _failureParkLogged = true;
+            Log.Info($"Derive retries parked after {_quietFailureRetries} quiet attempts " +
+                     "(the failure is repeating and nothing is arriving); the next new fact, a re-derive or a new log tries again");
+          }
+          return;
+        }
+
+        if (decision == FailureRetry.Retry)
+        {
+          if (factsPerSecond <= 0d) _quietFailureRetries++;
+          RederiveAsync(DeriveKind.Full);
+          return;
+        }
+      }
 
       var kind = DeriveCadence.Decide(count, _lastProjectedCount, _lastClassifiedCount,
                                             _sinceFactChange.Elapsed.TotalSeconds,

@@ -197,7 +197,7 @@ namespace EQLogParser
         snapshot.FightCount++;
         var identity = timeline.IdentityWithSource(fight.Name, out var source);
         var status = StatusOf(fight);
-        var tooltip = $"#Hits To Players: {damageIndex.TankingOrdinalsFor(fight).Count}, "
+        var tooltip = $"#Hits To Players: {damageIndex.TankingOrdinalCount(fight)}, "
                     + $"#Hits From Players: {fight.DamageHits}, Time Alive: {(long)fight.DurationSeconds}s";
         if (status.Length > 0)
           tooltip += $", {status}";

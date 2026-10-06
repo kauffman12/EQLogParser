@@ -46,6 +46,20 @@ namespace EQLogParser
     private List<int> _announcedIds = [];
 
     /*
+     * What the announced ids were last MATERIALIZED against: the snapshot's own content stamp (see SelectionStamp). The
+     * announcement is what spends the expensive work - MainWindow materializes one record per selected fact and runs three
+     * builders - so "did anything this pass could render move?" is the question that decides it, and instance identity cannot
+     * answer it: a reclassifying rebuild replaces every backing DerivedFight, so "the object changed" is true on every full
+     * pass whether or not a single figure did (measured cost of that misreading: a whole-capture selection re-materializes in
+     * seconds, once per pass, forever - docs/DesignNotes.md → "What makes a board go one pass stale").
+     */
+    private long _announcedStamp;
+
+    // The stamp of the newest snapshot this pane has been handed (the one _rows came from). Announcing records it, so
+    // "what did the board get built from?" stays answerable while a pass is in flight.
+    private long _currentStamp;
+
+    /*
      * Loading-band state (see loadOverlay in the XAML). `_loadBandSettled` is this session's "a snapshot has
      * landed" flag: the band goes down for good at the first Derived - a quiet stretch mid-file can legitimately
      * complete a derive under 100 %, and real rows beat a bar - and it comes back only with the next session.
@@ -176,6 +190,11 @@ namespace EQLogParser
         {
           _selectionTimer.Stop();
           _announcedIds = [];
+
+          // Nothing is announced, so nothing may be remembered as announced: a stamp left over from the log that just closed
+          // could otherwise match a new capture's first snapshot by arithmetic (fact totals restart at zero every session) and
+          // swallow an announcement that has never happened.
+          _announcedStamp = 0;
           _rows.Clear();
           SetLoadBand(null);
         }
@@ -198,6 +217,8 @@ namespace EQLogParser
       Dispatcher.InvokeAsync(() =>
       {
         if (snapshot?.Rows == null) return;
+
+        _currentStamp = SelectionStamp(snapshot);
 
         // Whatever the band was saying, the list itself is now the answer - including the mid-load case where
         // the reader pump is still under 100 %: real rows beat a progress bar, and for this session they win.
@@ -228,7 +249,14 @@ namespace EQLogParser
           // What the reader has selected, by INSTANCE: those objects are about to stay in the list, so no restore is needed — but a
           // selected row that this pass edited means the boards under it now show one pass-old numbers.
           var selected = fightGrid?.SelectedItems is { } items ? items.Cast<object>().ToList() : [];
-          RowPatch.Apply(_rows, patch, static (target, source) => target.CopyDisplayFrom(source));
+          var contentMoved = SelectionStamp(snapshot) != _announcedStamp;
+
+          // The refresh runs on EVERY survivor, not just the display-updated ones: a reclassifying rebuild hands out brand-new
+          // DerivedFight objects for every row while most cells read identically, and the snapshot this pass published is keyed on
+          // the new objects — a survivor still holding last pass's fight would materialize as "no damage, no tanking" the next time
+          // its boards are built.
+          RowPatch.Apply(_rows, patch, static (target, source) => target.CopyDisplayFrom(source),
+                               static (target, source) => target.Fight = source.Fight);
 
           // A marked row that left the list takes its highlight with it; one that stayed keeps it WITHOUT a repaint, which is the
           // difference between a search mark that holds and one that blinks off twice a second.
@@ -238,10 +266,17 @@ namespace EQLogParser
            * Re-announce only when there is something to announce: the same selection over rows this pass did not touch still describes
            * the same board, and re-materializing it on every pass would spend a stats run to redraw identical figures. An empty
            * selection announces nothing either way.
+           *
+           * Two signals, because they fail differently. The row-level diff catches what THIS list saw move. The stamp catches what the
+           * list cannot: a rebuild where every cell reads identically but the ANSWER changed - an ownership or charm verdict moved, so
+           * the same facts now split between `X +Pets` and the mob, and damage/tanking routing followed. That is invisible to
+           * SameDisplayAs and to object identity alike; the stamp is exactly its two causes (newly captured facts, moved verdicts).
            */
           var touched = selected.Count > 0 &&
-                        (patch.Updates.Any(u => selected.Contains(u.Existing)) || patch.Removals.Any(selected.Contains));
-          if (touched) AnnounceSelection();
+                        (contentMoved ||
+                         patch.Updates.Any(u => selected.Contains(u.Existing)) ||
+                         patch.Removals.Any(selected.Contains));
+          if (touched) AnnounceSelection(force: true);
           return;
         }
 
@@ -273,6 +308,7 @@ namespace EQLogParser
         // comes back, which re-announces with THIS pass's numbers.
         _selectionTimer.Stop();
         _announcedIds = [];
+        _announcedStamp = 0;   // same reason as the session-change path: these rows are gone, so no content memory survives
 
         _rows = new ObservableCollection<DerivedFightRow>(snapshot.Rows);
         fightGrid.ItemsSource = _rows;
@@ -413,16 +449,40 @@ namespace EQLogParser
     internal List<Fight> GetFightsOverlapping(double fromT, double toT)
         => _session?.MaterializeFightsOverlapping(fromT, toT) ?? [];
 
-    private void AnnounceSelection()
+    /*
+     * `force` is the pass-driven re-announce: the selection itself did not change, but the rows under it did (a display edit, a row
+     * this pass removed, or a rebuilt backing object), so the board must be rebuilt even though the ids are the ones already announced.
+     * The dedup stays for everything else — an ItemsSource swap landing and the settle timer firing both announce the same selection,
+     * and only the first may materialize (see OnDerived's wholesale path, which clears _announcedIds before the swap on purpose).
+     */
+    private void AnnounceSelection(bool force = false)
     {
       var selected = GetSelectedFights();
       var ids = new List<int>(selected.Count);
       foreach (var fight in selected) ids.Add(fight.Id);
 
-      if (SameIds(ids, _announcedIds)) return;
+      if (!force && SameIds(ids, _announcedIds)) return;
 
       _announcedIds = ids;
+      _announcedStamp = _currentStamp;
       DerivedSelectionChanged?.Invoke(selected);
+    }
+
+    /*
+     * A cheap stamp of what a board WOULD be computed from, in O(1): the two inputs a materialized selection reads.
+     *   - `FactCount` - the engine's captured total (damage facts AND heals), so any new event moves it; and
+     *   - the timeline's identity digest, which moves when a verdict moves (an override, a charm window, a rank the rules
+     *     could not see last pass and can now) even though no fact arrived.
+     * A row's own numbers are derived from those two, so "both equal" means every figure on every board under this selection
+     * is already correct - and one announcement that costs seconds (measured: a whole-capture select-all) is skipped instead of
+     * spent redrawing the same figures. A hand-built snapshot with no timeline answers 0, which simply leaves the stamp at
+     * whatever the last real pass recorded.
+     */
+    internal static long SelectionStamp(DerivedSnapshot snapshot)
+    {
+      var facts = snapshot.FactCount;
+      var verdicts = snapshot.Timeline is { } timeline ? timeline.StateStamp() : 0L;
+      return unchecked((facts * 397) ^ verdicts);
     }
 
     private static bool SameIds(List<int> a, List<int> b)
@@ -742,7 +802,7 @@ namespace EQLogParser
      */
     private void SelectAllClick(object sender, RoutedEventArgs e)
     {
-      SelectByShown(row => row.Fight is not null);
+      SelectShownRuns(row => row.Fight is not null);
       AnnounceSelection();
     }
 
@@ -780,7 +840,7 @@ namespace EQLogParser
 
       if (add)
       {
-        SelectByShown(inSection);
+        SelectShownRuns(inSection);
       }
       else
       {
@@ -796,46 +856,54 @@ namespace EQLogParser
       AnnounceSelection();
     }
 
-    // The run walk RestoreSelection already needs: select every shown row matching the predicate, range by range.
-    private void SelectByShown(Predicate<DerivedFightRow> matches)
-    {
-      var first = FirstRecordRow();
-      var runStart = -1;
-      for (var i = 0; i <= _rows.Count; i++)
-      {
-        var hit = i < _rows.Count && IsShown(_rows[i]) && matches(_rows[i]);
-        if (hit && runStart < 0) runStart = i;
-        else if (!hit && runStart >= 0)
-        {
-          fightGrid.SelectRows(first + runStart, first + i - 1);
-          runStart = -1;
-        }
-      }
-    }
-
     /*
-     * Put the highlight back on the rows whose fight ids survived the swap.
-     *
-     * SelectRows wants CONTIGUOUS grid-row ranges, so the kept set is walked as runs. Positions are counted over
-     * the shown rows only (a hidden divider takes no grid row), and offset by wherever this grid's records
-     * actually start rather than by an assumed header height.
+     * Put the highlight back on the rows whose fights survived the swap — the same walk as every other programmatic select.
      */
     private static FightKey KeyOf(DerivedFight fight) => new(fight.Name, fight.BeginTime);
 
     private void RestoreSelection(HashSet<FightKey> keepKeys)
+      => SelectShownRuns(row => row.Fight is { } fight && keepKeys.Contains(KeyOf(fight)));
+
+    // Both programmatic selects share this: select every SHOWN row matching the predicate, range by range.
+    // The grid positions come from ShownRunPositions — counted over the shown rows only, because a hidden divider or a
+    // filtered-out name takes no grid row and counting it would push every later range down by one per hidden row.
+    private void SelectShownRuns(Predicate<DerivedFightRow> matches)
     {
       var first = FirstRecordRow();
+      foreach (var (from, to) in ShownRunPositions(_rows, IsShown, matches))
+        fightGrid.SelectRows(first + from, first + to);
+    }
+
+    /*
+     * The walk's decision, apart from the grid so it can be tested without one: the closed runs of shown-and-matching rows,
+     * as [from, to] pairs in SHOWN positions (0-based among the rows the view actually renders). A hidden row closes any open
+     * run but does not advance the position, and a shown row that does not match closes the run AND advances it — the next run
+     * starts after the row that broke the first.
+     */
+    internal static List<(int From, int To)> ShownRunPositions(IReadOnlyList<DerivedFightRow> rows,
+                                                              Predicate<DerivedFightRow> isShown,
+                                                              Predicate<DerivedFightRow> matches)
+    {
+      var runs = new List<(int, int)>();
+      var visiblePos = 0;
       var runStart = -1;
-      for (var i = 0; i <= _rows.Count; i++)
+      for (var i = 0; i <= rows.Count; i++)
       {
-        var hit = i < _rows.Count && IsShown(_rows[i]) && _rows[i].Fight is { } fight && keepKeys.Contains(KeyOf(fight));
-        if (hit && runStart < 0) runStart = i;
-        else if (!hit && runStart >= 0)
+        var hit = i < rows.Count && isShown(rows[i]) && matches(rows[i]);
+        if (hit)
         {
-          fightGrid.SelectRows(first + runStart, first + i - 1);
+          if (runStart < 0) runStart = visiblePos;
+        }
+        else if (runStart >= 0)
+        {
+          runs.Add((runStart, visiblePos - 1));
           runStart = -1;
         }
+
+        if (i < rows.Count && isShown(rows[i])) visiblePos++;
       }
+
+      return runs;
     }
 
     // Where the data rows begin, read off the grid instead of assumed: a row that is not a record (header,
