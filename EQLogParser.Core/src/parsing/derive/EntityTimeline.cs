@@ -8,6 +8,15 @@ namespace EQLogParser
   {
     Unknown = 0,
     Player = 1,
+
+    /*
+     * THE APP'S WORD, and it is narrower than the client's. In this application NPC means NONE of player, pet or
+     * mercenary - a hostile-shaped name with no ownership behind it. The client's target frame is what muddies it:
+     * `Targeted (NPC)` asserts only "not a player", and it prints that for somebody's custom-named wolf exactly as it
+     * prints it for a skeleton, so the frame's verdict may not outvote a POSITIVE claim. When a rule proves ownership
+     * - the name spells it (`Ammeren`s pet`, R5), a spell only a pet can be aimed at hit it (R24), its own summon line
+     * named it - the kind is Pet and the cell says Pet. See docs/DesignNotes.md → "What NPC means here".
+     */
     Npc = 2,
     Merc = 3,
     // Owned companion (catalog R5): player-side by affiliation, never a player itself.

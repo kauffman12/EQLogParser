@@ -1011,6 +1011,20 @@ namespace EQLogParser
           PreLineParser.ReportEvidence(eyeOwner, lineData.BeginTime, EvidenceFact.EvEyeOwnedStrike);
         }
 
+        /*
+         * The other ownership fact a damage line can state without saying so: SOME spells can only be aimed at a pet,
+         * so when one of them lands the DEFENDER is somebody's summon - `Wanabe hit Fred for 176000 points of
+         * unresistable damage by Elemental Conversion VI.` names no possessive, never appears as `Wanabe`s pet`, and
+         * reads `Targeted (NPC)` like any custom-named wolf, yet the spell's own target slot (spell data Target = Pet
+         * or Pet2) is the game stating what it hit. R24 claims the name Pet from this sighting and FightProjection
+         * stops crediting the caster; ClassificationRules.PetSlotSpellNames has the census (75 such hits across two
+         * captures, on names that are never a mob and never a listed raider).
+         */
+        if (!checkLineType && ClassificationRules.IsPetSlotSpell(record.SubType))
+        {
+          PreLineParser.ReportEvidence(defender, lineData.BeginTime, EvidenceFact.EvPetSlotHit);
+        }
+
         if (!checkLineType && !InIgnoreList(defender))
         {
           if (resist != SpellResist.Undefined && defender != attacker &&

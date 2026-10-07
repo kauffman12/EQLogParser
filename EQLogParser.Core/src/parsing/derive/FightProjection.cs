@@ -339,19 +339,25 @@ namespace EQLogParser
         if (atkSide == Side.Player && defSide == Side.Player)
         {
           /*
-           * Friendly fire is dropped — EXCEPT when the defender is a charmed mob. A mob under charm reads
+           * Friendly fire is dropped — EXCEPT when the defender is a CHARMED mob. A mob under charm reads
            * player-side, but it is not a raider: swings that land on it come from the raid's own mistake (AoE
            * splash, or an add the charm did not take out of the fight) and they are real damage a meter has to
-           * keep. Silently deleting them would shrink a player's total for the crime of hitting their own pet,
-           * which is how this looked before charm windows could be seen at all. They key on the mob's name, so
-           * the row that opens is the mob's post-charm half; nobody gets credit for being hit by their allies.
+           * keep. They key on the mob's name, so the row that opens is the mob's post-charm half; nobody gets
+           * credit for being hit by their allies.
            *
            * A charmed RAIDER attacking us reads the other way (her identity flips to Npc-side, she owns her own
-           * row), and a pet damaging its own side stays dropped — the log gives us no story to tell about it.
+           * row).
+           *
+           * Everything else that merely reads player-side is friendly fire, and that includes our OWN PETS -
+           * whether ownership came from the raid healing it from fifteen directions (R18), from the spell
+           * database saying this one can only hit a pet (R24: Elemental Conversion, Valiant Symbiosis, Warder's
+           * Gift), or from petmapping.txt. Damage a raider deals to their own summon is not output: it pads a
+           * meter with a mechanic the raid chose to run, and the same policy already drops raider-on-raider and
+           * raider-on-mercenary facts. Census (docs/DesignNotes.md → "Damage our own side earns nothing"):
+           * 75 pet-slot-spell hits across two captures, 7.4 M damage, on names that are never a mob and never a
+           * listed raider - all of it formerly credited.
            */
-          // Our pet reads player-side by ownership rather than by charm, and gets the same exemption: see the
-          // comment above - the raid's swings on its own pet are real damage and stay counted.
-          if ((!IsFlipped(timeline, defName, t) && !timeline.IsOurPetAt(defName, t)) || IsFlipped(timeline, atkName, t)) continue;
+          if (!IsFlipped(timeline, defName, t) || IsFlipped(timeline, atkName, t)) continue;
           key = defName;
           creditAttacker = true;
         }

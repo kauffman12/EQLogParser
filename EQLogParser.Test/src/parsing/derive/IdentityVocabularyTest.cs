@@ -53,6 +53,9 @@ public class IdentityVocabularyTest
     // A loot line names the taker (R23), replacing an AddVerifiedPlayer call that wrote a store these rules never read.
     "R23-loot",
 
+    // A spell whose own target slot is a pet hit this name, so the name is one (R24) - Elemental Conversion and friends.
+    "R24-petslot",
+
     /*
      * Not a rule, and it cannot come out of a fixture: PipelineHarness clears PlayerRegistry, so nothing in any test
      * seeds from it. That blind spot is how "RegistrySeed" was printable as a verdict word — the corpus guard below walks

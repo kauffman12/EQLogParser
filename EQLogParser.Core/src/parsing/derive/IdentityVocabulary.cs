@@ -221,7 +221,7 @@ internal static class IdentityVocabulary
     ["R3-chat"] = 80, ["R3-joinraid"] = 80, ["R3-leader"] = 80, ["R22-guildmate"] = 80,
     ["R3-joingroup"] = 80, ["R3-leaveraid"] = 80, ["R3-leftgroup"] = 80,
     ["R9-charm"] = 70, ["R5-owner"] = 70, ["R5-companion"] = 70, ["R19-eyeowner"] = 70, ["R17-selffeed"] = 70,
-    ["R20-petspell"] = 70, ["R4-spell"] = 70, ["R15-healed"] = 70, ["R18-healedpet"] = 70,
+    ["R20-petspell"] = 70, ["R4-spell"] = 70, ["R15-healed"] = 70, ["R18-healedpet"] = 70, ["R24-petslot"] = 70,
     ["R7-graph"] = 60, ["R7-side"] = 60,
     ["R6-npcdb"] = 50, ["R14-shape"] = 50, ["R16-comma"] = 50, ["R23-loot"] = 50,
     ["R21-spellshape"] = 50, ["R21-spellcast"] = 50, ["R21-spelleffect"] = 50,
@@ -381,6 +381,9 @@ internal static class IdentityVocabulary
       // No spell name: the detail was the longest string on the pane for information nobody checks ("which pet spell?"),
       // and the cell word already says what it is. Asked directly: "Pet Cast Hobble of Spirits can just say Cast Pet Spell".
       "R20-petspell" => "Cast Pet Spell",
+      // The SPELL is what the line proves, so the clause says who it can hit rather than naming the spell (spell names
+      // are the longest strings this pane has ever carried, and nobody verifies them).
+      "R24-petslot" => "Hit by a Pet-Only Spell",
 
       /*
        * R21's three proofs, phrased so the CELL can carry the plain kind word ("Spell") and the hover carry the
@@ -504,6 +507,7 @@ internal static class IdentityVocabulary
     ["R18-healedpet"] = "Pet Healed It",
     ["R19-eyeowner"] = "Hit Own Eye",
     ["R20-petspell"] = "Pet Spell",
+    ["R24-petslot"] = "Pet Only Spell",
 
     /*
      * The three ways R21 learns a name is a spell — the damage line that named no caster, a casting message, and the spell

@@ -20,8 +20,10 @@ namespace EQLogParser;
  *   4. A charm window explains heals instead of R18 - those names already belong to R9, and minting a whole-span
  *      ownership interval from heals cast during a charm would keep a hostile mob on our side outside the window.
  *   5. Ownership ends when the top-ups stop (+ tail), so a mob the raid later fights gets its row back.
- *   6. Hiding is display-only: the raid's stray swings on their own pet stay counted and come back with a
- *      selection that overlaps them (the same law CharmPetRows exists for).
+ *   6. Damage our own side deals to our own pet earns NO credit and keys no row (policy, asked and answered
+ *      2026-11: a meter must not pad a raider with a mechanic the raid chose to run - Elemental Conversion on
+ *      their own wolf is not output). Only a CHARMED mob keeps its damage, because there the raid was genuinely
+ *      fighting it; hiding-vs-counting still lives with CharmPetRows for those rows.
  *   7. petmapping.txt reaches the timeline at last, so `Dangle`'s damage folds under Strangle instead of
  *      sitting under a name no raid member owns.
  */
@@ -148,34 +150,40 @@ public class OurPetTest
   }
 
   /*
-   * Display-only hiding, the CharmPetRows law applied to this new source of pet rows: the raid's stray swings on
-   * their own pet are real damage (they must not vanish with the row) and a selection that overlaps them gets
-   * them back.
+   * The policy on our own side's damage to our own pet: no credit, no row. This is the one place the meter used to
+   * pay out for a mechanic the raid ran on purpose - a raider's stray swing (or an Elemental Conversion burn) landing
+   * on their own summon landed in their total. Friendly fire already dropped raider-on-raider and raider-on-mercenary;
+   * a pet is the same case with a name the client prints as "NPC".
+   *
+   * What this does NOT do is lose the fight: the raid's real work on the mob stands untouched, and the exemption that
+   * keeps damage on a CHARMED mob - a genuinely fought enemy the charm took off the target list - is asserted next
+   * door in CharmRowProjectionTest, along with the hiding-is-display-only law that used to ride on this test.
    */
   [TestMethod]
-  public void TheRaidSHitsOnTheirOwnPetStayCountedAndOffTheList()
+  public void TheRaidSHitsOnTheirOwnPetEarnNoCreditAndKeyNoRow()
   {
     var lines = PetLines();
 
-    // A stray swing inside the pull, so a selection over the mob's row overlaps it and gets the damage back.
+    // A stray swing inside the pull, plus one aimed by a spell that can only hit a pet (R24 proves THAT name).
     lines.Add($"[{Timestamp(19, 0, 7)}] You hit {Pet} for 1234 points of damage.");
+    lines.Add($"[{Timestamp(19, 0, 8)}] Healer01 hit {Pet} for 4321 points of unresistable damage by Elemental Conversion VI.");
     var run = RunDerive(lines.ToArray());
 
     var timeline = new EntityTimeline();
     ClassificationRules.Apply(run.Facts, timeline, run.HealFacts);
     var rows = FightProjection.Build(run.Facts, timeline);
 
-    var petRow = Row(rows, Pet);
-    Assert.IsNotNull(petRow, "the friendly-fire facts disappeared with no row at all - the damage is gone");
-    Assert.IsTrue(petRow.RaidPet, "a pet row reached the fight list");
-    Assert.AreEqual(1234, petRow.DamageTotal);
-
-    CollectionAssert.DoesNotContain(CharmPetRows.Visible(rows), petRow);
+    Assert.IsNull(Row(rows, Pet), "damage on our own pet still opened a row of its own");
 
     var mob = Row(rows, "A rune-etched warblade");
     Assert.IsNotNull(mob);
-    Assert.IsTrue(CharmPetRows.WithHiddenPets([mob], rows).Contains(petRow),
-                  "hiding the row took the raid's damage with it");
+    Assert.AreEqual(900 + 700, mob.DamageToOwner,
+                    "the raid's own pet-burn found its way onto the raid's damage: " + mob.DamageToOwner);
+
+    // The facts themselves are not gone - a meter that never saw them could not say why nobody earned anything.
+    var burned = 0;
+    foreach (var f in run.Facts.Facts) if (f.Total == 4321) burned++;
+    Assert.AreEqual(1, burned, "the pet-burn fact left the capture instead of going uncredited");
   }
 
   /*

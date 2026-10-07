@@ -404,6 +404,9 @@ namespace EQLogParser
       var targetPlayer = state.TargetPlayer;
       var playerBehavior = state.PlayerBehavior;
 
+      // R24 sightings are claimed after the target-frame ladder below, so they are collected here and written there.
+      var petSlotHits = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
       var evidence = facts.Evidence;
       for (var ei = state.EvidenceCursor; ei < evidence.Length; ei++)
       {
@@ -508,6 +511,11 @@ namespace EQLogParser
             Claim(timeline, state,name, IdentityKind.Player, RuleStrength.Strong, "R17-selffeed", double.NegativeInfinity);
             break;
 
+          case EvidenceFact.EvPetSlotHit:
+            // Collected, not claimed: the write belongs after the Targeted (NPC) stamp so the positive claim wins.
+            petSlotHits.Add(name);
+            break;
+
           case EvidenceFact.EvEyeOwnedStrike:
             /*
              * R19: the eye named after you struck by YOU means you called it, and only a player character summons
@@ -589,6 +597,30 @@ namespace EQLogParser
         {
           timeline.SetIdentity(name, IdentityKind.Player, RuleStrength.Certain, "R1-target", double.NegativeInfinity);
         }
+      }
+
+      /*
+       * R24: a spell that can only hit a pet hit this name, so this name is a pet. Written after the ladder on
+       * purpose: `Targeted (NPC)` asserts a NEGATIVE - "not a player" - and this asserts a POSITIVE, and NPC in this
+       * application means non-pet, non-player, non-mercenary. An uncontradicted positive claim therefore removes the
+       * ground under the residual word rather than losing a strength contest to it: the target frame never says "this
+       * is not a pet", and it prints NPC for a custom-named wolf because that is the client's word for "not a person".
+       *
+       * Equal strength (Certain), equal effective time, so the tie falls to insertion order - which is why this loop
+       * sits below the ladder instead of above it. What still outranks it: a name this capture saw as a PLAYER or a
+       * MERCENARY keeps that verdict (a person is not a summon), and an operator's R10 claim beats everything, as ever.
+       */
+      foreach (var name in petSlotHits)
+      {
+        /*
+         * A person is not a summon, so ANY claim this capture made that the name is a Player or a Mercenary refuses
+         * the sighting - not merely the verdict that happens to have won the tie. Names collide, frames contradict each
+         * other (illusion state writes R1-conflict), and the cost of getting this backwards is a raid member's whole
+         * evening filed behind a pet's name, which is worse than never claiming the pet.
+         */
+        if (timeline.HasIndependentIdentity(name, IdentityKind.Player, double.PositiveInfinity)
+          || timeline.HasIndependentIdentity(name, IdentityKind.Merc, double.PositiveInfinity)) continue;
+        Claim(timeline, state, name, IdentityKind.Pet, RuleStrength.Certain, "R24-petslot", double.NegativeInfinity);
       }
     }
 
@@ -1380,5 +1412,27 @@ namespace EQLogParser
     // Cheap dict lookup, reached only for facts whose attacker has no identity yet.
     internal static bool IsSelfTargetDamageSpell(string name)
       => EQDataStore.Instance.GetDamagingSpellByName(name) is { Target: (byte) SpellTarget.Self };
+
+    /*
+     * R24 - does the spell data say this spell's own TARGET SLOT is a pet (SpellTarget.Pet 14 / Pet2 38)?
+     *
+     * Ask it of a spell name taken from a damage line, never of an entity name and never of a heal/buff line. The
+     * census that makes this sound is per-fact, not per-name: across eqlog_Incogitable_xegony.txt and
+     * eqlog_Kizant_xegony-01-06-24.txt (3.57 M + 7.44 M lines) only 14 + 61 damage facts carry such a spell -
+     * Elemental Conversion (shaman), Valiant/Relentless Symbiosis, Warder's Gift - 2.16 M + 5.29 M damage between
+     * them, and every one of those 75 defenders is a custom summon name (Fred, Joann, Puksuu, Stormclaw, Bofa,
+     * Wholewheat): ZERO named a mob (no article shape) and ZERO named a name any Targeted (Player) frame had given.
+     * The same 2,125 DB rows read across ALL line kinds are a different population - most are beneficial pet buffs
+     * (Aegis of X, pet charms) whose names appear in heal and buff text beside raid members - which is the measured
+     * reason an earlier "pet target" identity idea died. It dies for the reading, not for the fact: filtered to what a
+     * damage line can state, the recognizer agreed with every defender in both captures.
+     *
+     * GetSpellByName, not GetDamagingSpellByName: Elemental Conversion's damaging column is 0 in this build's spells.txt
+     * while the client writes 176,000 points of damage for it, so the flag cannot be trusted at this seam - only the
+     * target slot can. A name with several DB rows takes the first, and a rank this build does not ship answers null:
+     * silent, never guessed.
+     */
+    internal static bool IsPetSlotSpell(string? spell)
+      => EQDataStore.Instance.GetSpellByName(spell) is { Target: (byte) SpellTarget.Pet or (byte) SpellTarget.Pet2 };
   }
 }
