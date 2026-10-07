@@ -8334,3 +8334,54 @@ memory came out *slightly higher* than master. Not yet decomposed — the trims 
 split, `HitLabel`) are all reductions, so the increase is expected to be the carry (`FightProjectionCache`'s rows plus the
 index blocks) rather than the capture; that question belongs to the same revisit as Clear All. Quoted as reported, not as a
 measurement protocol: one open, one machine, no journal attached.
+
+## What Clear All means when there is no store to wipe (2026-11)
+
+The deleted legacy table had a **Clear All** that wiped `FightManager`'s store. It was missed the moment the derived pane
+became the fight list, and the ask came back in the operator's own words: *"litereally clear all the fights. take me back as
+if i didnt load this log file… sure keep the list of pets or players that you figure out from the log that got serialized…
+just like that state"*, then the precise form: *"its like doing file open monitor on the same file again if that makes sense"*.
+
+**Why the obvious implementation cannot work.** Deleting rows is not a thing that exists here. Every row on the grid is folded
+from the captured facts, so a "cleared" list refills itself on the next derive pass — and passes are automatic (cadence, an
+override, a meter opening), so the button would read as broken rather than as destructive-but-correct. The proposal this
+displaces is a **row floor**: drop the carried rows and start `FightProjectionCache` from the current fact ordinal, so no
+later rebuild can resurrect them. It is buildable — `ProjectionState` already carries a watermark, so "pretend everything so
+far was folded and produced nothing" is a few lines — but it is not what was asked for, and it has a tell: with the facts still
+captured, the healing board and every click-summary still cover the wiped past, which is *not* "as if I never loaded it". It also
+touches the incremental machinery's four load-bearing parts (watermark coverage, the carried `FightFactIndex`, `LiveFights`, the
+selection stamp) for a state nobody wanted.
+
+**What it is now**: `FightTable.ClearAllClick` → `MainActions.ClearAllFights` → **`MainWindow.ClearAllFights()` = `OpenLogFile(AppSettings.CurrentLogFile, 0)`**.
+That is the File / Open Monitor open over the file already sitting there — a path that already exists, already runs on every
+manual open, and therefore already has its ordering verified: `CloseLogFile(false)` → `LifecycleManager.Clear(false)` (per-capture
+stores reset, `ActiveDataCleared` raised for the seven views), reader disposed and rebuilt over the same file at `lastMins: 0`
+(seek to EOF, follow from now), a fresh `DeriveEngine`, the chat sink recomposed, overlays unsubscribed and re-subscribed when the
+load reaches "monitoring". Afterwards the app holds what a fresh monitor open holds: **no facts, no rows, blank boards**, status line
+saying `Monitoring Log (from end of file)`.
+
+**What survives is not a special case — it is the absence of a registration.** `LifecycleManager`'s list is
+`EQDataStore`, `PlayerRegistry`, `RaidRosterStore`, `RecordsStore`: the per-capture stores. `IdentityOverrideStore`
+(identity-overrides.txt) and `IdentityPriorStore` (identity-priors.txt: verdict lane, roster lane, ownership lane) are **not on it**;
+they move only when `Init(serverName)` is called, which `OpenLogFile` does when the SERVER changes — and a re-open of the same file
+is not a server change. So the operator's saved verdicts, roster and pet map stay loaded, which is exactly "the data that got
+serialized", reached by the same mechanism that loads them on any open rather than by a clear-specific carve-out. That is the law
+`ClearedSessionMemoryTest` pins in both directions: a `Clear` under either payload keeps saved verdicts and the ledger, a reload of
+the folder reads them back off disk, and a *different* folder's memory does not come along.
+
+**The consequence to keep saying out loud: the past is unloaded, not destroyed.** The log file is untouched, so opening it again — with
+history rather than from end of file — reads the night back. It is also the app's cheapest memory release: the capture this drops is the
+largest object the process owns (docs → "The slots a finished load stopped writing" measures 342 MB retained at EOF on the reference
+capture), which matters while the branch is still arguing about being slightly heavier than master.
+
+**Menu hygiene, learned the same afternoon.** Two entries in that menu were unreadable: *Clear Override (N saved)* — the only "clear"
+present next to the missing Clear All, hence *"some weird clear on the right-click that i have no idea what it does"* — is now
+**Clear My Claim**, matching the Names dropdown's own word, with a tooltip naming whose choice it takes back; and its icon moved from
+`Solid_Times` to `Solid_Undo`, leaving the destructive item legacy's own glyph (`Regular_TrashAlt`). The general rule: **one glyph per
+verb in a menu** — two Times icons is how a "clear" gets clicked by accident. Clear All sits in its own section at the end, and is
+enabled only when this pane has a live session (`_session is not null`), because "unload everything" over an empty window is nothing to do.
+
+**Ordering that is load-bearing at the click**: the re-open runs synchronously inside the menu item's `Click`, so by the time the context
+menu closes, `DeriveEngine.ActiveChanged` has already dropped this pane's rows and reset the selection gate (the previous section) — and
+`CloseMenu()` finds nothing pending. Without that ordering, closing the menu would announce a selection whose fights no longer exist,
+which is the same class of bug as announcing one behind an open menu.

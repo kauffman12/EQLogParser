@@ -3,13 +3,14 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace EQLogParser
 {
   /*
-   * Who may raise CombatEvents.ActiveDataCleared. The seven grids and charts blank on this signal, so its owners are
-   * the app's CLEAR PATHS - LifecycleManager's new-capture fan-out (the log closed / another one opens) and the fight
-   * list's Clear All button - and not FightManager. Raising it from FightManager.Clear worked right up until the day
-   * the legacy store gets deleted, which is the event's quiet deadline: a board that keeps showing the previous
-   * night's raid because nobody raised "cleared" is worse than an empty one. These two tests are the same law seen
-   * from both sides: the path raises, and a bare store reset (which will outlive nothing - it dies with the pipeline)
-   * stays silent on its own.
+   * Who may raise CombatEvents.ActiveDataCleared. The seven grids and charts blank on this signal, so it belongs to the
+   * app's CLEAR PATH - LifecycleManager's new-capture fan-out (the log closed / another one opens) - and not to a store.
+   * It used to fire inside FightManager.Clear as well, which meant the clearest signal in the application died with whichever
+   * store was scheduled for deletion; that store is gone now and the law outlived it. The fight list's Clear All is NOT a second
+   * raiser: it re-opens the same file as a monitor session (MainWindow.ClearAllFights) and CloseLogFile brings it here, so one
+   * raise still covers every way the app loses a capture - and ClearedSessionMemoryTest pins what does NOT go with it. These
+   * tests are the law from both sides: the path raises, and a bare store reset (which will outlive nothing - it dies with the
+   * pipeline) stays silent on its own.
    */
   [TestClass]
   public sealed class LifecycleManagerTest

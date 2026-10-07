@@ -1555,6 +1555,31 @@ namespace EQLogParser
       }
     }
 
+    /*
+     * The fight list's "Clear All", in the only shape a projection can honour. Legacy's button wiped FightManager's store;
+     * there is no store here - every row is folded from the captured facts, so deleting rows would put them all back on the
+     * next pass. What this means is instead what the operator does by hand when they want this state: File / Open Monitor on
+     * the file that is already open. `lastMins: 0` seeks to end of file and follows from now, so afterwards the app holds
+     * exactly what a fresh monitor open holds - no facts, no rows, the seven views blanked (CloseLogFile fans out
+     * LifecycleManager.Clear, which raises ActiveDataCleared), the parser rewired to a new session - and it keeps precisely
+     * the thing a fresh open reads from disk: identity-overrides.txt and identity-priors.txt (roster, class and ownership
+     * lanes) plus what PlayerRegistry mirrors out of them, because the server did not change and this path re-initialises
+     * those stores only when it does.
+     *
+     * The consequence worth stating where the button lives: the past is unloaded, not destroyed. The file on disk is
+     * untouched, so opening it again - not in monitor mode - reads the night back.
+     */
+    internal void ClearAllFights()
+    {
+      var theFile = AppSettings.CurrentLogFile;
+
+      // Nothing open means nothing to clear; a log that moved or went away is not cleared into an error dialog either.
+      if (string.IsNullOrEmpty(theFile) || !File.Exists(theFile)) return;
+
+      Log.Info($"clear all: re-opening {Path.GetFileName(theFile)} as a monitor session (from end of file)");
+      OpenLogFile(theFile, 0);
+    }
+
     private void UpdateRecentFiles()
     {
       SetRecentVisible(recent1File, 0);

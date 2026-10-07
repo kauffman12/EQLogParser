@@ -584,6 +584,20 @@ namespace EQLogParser
 
     private void OverrideClearClick(object sender, RoutedEventArgs e) => ApplyOverride(null);
 
+    /*
+     * Legacy's Clear All. It is deliberately NOT a wipe of the rows: there is nothing to wipe under a projection, and rows
+     * taken out of the display come straight back on the next pass, which would read as a button that does nothing. What it
+     * does is the File / Open Monitor open over the same file (MainWindow.ClearAllFights) - facts, rows, parsed records and
+     * boards all go, the saved identity memory stays because it lives in files this path does not re-initialise, and the
+     * reader follows from end of file. "Take me back as if I never loaded this log file", which is also the state a fresh
+     * monitor open leaves, so the button needs no explanation of its own.
+     *
+     * Ordering that matters here: the click runs the re-open synchronously, so OnActiveChanged has already dropped the rows
+     * and reset the selection gate by the time this menu closes; CloseMenu then finds nothing pending and cannot announce a
+     * selection whose fights no longer exist.
+     */
+    private void ClearAllClick(object sender, RoutedEventArgs e) => MainActions.ClearAllFights();
+
     // Names of the selected fights (dividers select nothing), written as one batch.
     private void ApplyOverride(IdentityKind? kind)
     {
@@ -622,6 +636,10 @@ namespace EQLogParser
       }
 
       unselectAllItem.IsEnabled = fightGrid.SelectedItems.Count > 0;
+
+      // Clear All needs a session to re-open over. With no engine there is nothing loaded, and the menu item would be
+      // offering to unload an empty window (MainWindow.ClearAllFights guards the same thing for the file itself).
+      clearAllItem.IsEnabled = _session is not null;
       var hasCurrent = fightGrid.CurrentItem is DerivedFightRow { IsDivider: false };
       selectGroupItem.IsEnabled = hasCurrent && unsorted;
       unselectGroupItem.IsEnabled = hasCurrent && fightGrid.SelectedItems.Count > 0;

@@ -62,6 +62,7 @@ namespace EQLogParser
     internal static void AddAndCopyDamageParse(CombinedStats combined, List<PlayerStats> selected) => _mainWindow?.AddAndCopyDamageParse(combined, selected);
     internal static void AddAndCopyTankParse(CombinedStats combined, List<PlayerStats> selected) => _mainWindow?.AddAndCopyTankParse(combined, selected);
     internal static void CopyToEqClick(string label) => _mainWindow?.CopyToEqClick(label);
+    internal static void ClearAllFights() => _mainWindow?.ClearAllFights();
     internal static void CloseDamageOverlay(bool reopen) => _mainWindow?.CloseDamageOverlay(reopen);
     internal static List<Fight> GetFights(bool selected) => _mainWindow?.GetFights(selected);
 

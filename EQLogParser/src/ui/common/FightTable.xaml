@@ -107,10 +107,11 @@
       -->
       <syncfusion:SfDataGrid.ContextMenu>
         <!--
-          Icons and gestures ported from the legacy list's menu. Two legacy items are deliberately absent:
-          Clear All wipes the legacy fight store, and the derived list has no store - it is a projection of
-          the facts, so there is nothing to wipe; legacy's Refresh has no button either - re-deriving is
-          automatic (cadence, overrides, meter openings) and a selection already rebuilds the board on its own.
+          Icons and gestures ported from the legacy list's menu. One legacy item is deliberately absent: Refresh has no
+          button here, because re-deriving is automatic (cadence, overrides, meter openings) and a selection already
+          rebuilds the board on its own. Clear All came back, but NOT as a store wipe - there is no store under a
+          projection, so rows deleted would return on the next pass. It is File / Open Monitor over the same file
+          (MainWindow.ClearAllFights): nothing loaded, following from end of file, saved identity memory kept.
         -->
         <ContextMenu>
           <MenuItem InputGestureText="Ctrl+C" Header="Copy"
@@ -174,7 +175,19 @@
           <MenuItem x:Name="overrideClearItem" Header="Clear My Claim" Click="OverrideClearClick"
                     ToolTip="Take back your own Set as Player / Mercenary / Pet / NPC choice for the selected rows and let the rules answer again. (The count in the label is how many verdicts this server has saved.)">
             <MenuItem.Icon>
-              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Times" />
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Undo" />
+            </MenuItem.Icon>
+          </MenuItem>
+          <Separator/>
+          <!--
+            Legacy's Clear All, in the shape a projection can honour (see MainWindow.ClearAllFights for why wiping rows
+            is not a thing that exists here). Its own section, and no Times icon - the item above it takes that job back
+            from being this one's, because two Times icons in one menu is how "some weird clear" gets clicked.
+          -->
+          <MenuItem x:Name="clearAllItem" Header="Clear All" Click="ClearAllClick"
+                    ToolTip="Unload everything this session read and follow the same file from its end - the state a fresh Open Monitor leaves. Saved players, pets and verdicts stay; the log file itself is untouched, so opening it again reads the past back.">
+            <MenuItem.Icon>
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Regular_TrashAlt" />
             </MenuItem.Icon>
           </MenuItem>
         </ContextMenu>
