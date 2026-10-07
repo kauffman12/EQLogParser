@@ -3164,7 +3164,7 @@ the subsection below. Anything below *that* wants two-byte name ids, and that is
 
 #### Allocation traffic is not retained memory: the delegate on every line
 
-`gtp-improvements.md` #8 claims ~611 MB of delegate allocation over a 10,015,348-line capture, from `LogProcessor.DoPreProcess`
+A parsing-performance review claimed ~611 MB of delegate allocation over a 10,015,348-line capture, from `LogProcessor.DoPreProcess`
 passing `PlayerRegistry.Instance.AddMerc` as an argument. The claim was worth re-measuring rather than trusting, because the line
 passes **three** callbacks and only one of them can be at fault:
 
@@ -3196,7 +3196,7 @@ chapter, which is where measured-and-not-asserted numbers belong.
 Resolving an ambiguous spell abbreviation (`EQDataStore.FindPreviousCast`) asks `RecordsStore.GetCastsBySpellName` what that
 spell name cast recently. Until now the answer cost in proportion to the whole capture: it allocated the result list with
 capacity for the spell's **entire history** and then walked all of it looking for a handful of entries. Measured over
-Incogitable by `gtp-improvements.md` #6, and re-read here rather than taken on faith:
+Incogitable by the parsing-performance review, and re-read here rather than taken on faith:
 
 | | queries | entries visited | matches returned |
 |---|---:|---:|---:|
@@ -3793,10 +3793,10 @@ the `int`, the four two-byte fields, the two bytes — the same ten fields with 
 beta's 3.43 M before capacity is counted). Nothing was narrowed to get there: no time range, amount, participant index
 or modifier lost width, and the values round-trip verbatim (`HealFactCaptureTest`). Two things worth keeping in mind
 before this is called free. The CLR may reorder fields, so a struct size is a fact about this build rather than a
-promise — which is exactly why `AFactIsItsMeasuredSizeNotWishes` asserts 32 and would catch a future field inserted in
-the middle widening every heal by 8 with no reader behaving differently. And the saving **overlaps** any future chunked
-or compressed storage (gtp-improvements #1/#7): compressing a table that is already 20 % smaller buys less, so the two
-are not additive.
+promise — which is exactly why `AFactIsItsMeasuredSizeNotWishes` asserts the measured size (**24** since the packing
+that followed this chapter) and would catch a future field inserted in the middle widening every heal with no reader
+behaving differently. And the saving **overlaps** any future chunked or compressed storage: compressing a table that is
+already far smaller than the union layout buys less, so the two are not additive.
 
 One array was not merely wasteful, it was wrong. `DamageFactsByFight` is a **contiguous ordinal run** per fight — a
 consequence of the 64-bit spine being fight-major with time ascending inside it — so one array would force every heal

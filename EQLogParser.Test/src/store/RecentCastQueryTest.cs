@@ -7,11 +7,11 @@ namespace EQLogParser;
  * it resolves an abbreviation, and it is asked against a history that grows all night. It used to answer by allocating
  * a result list with capacity for the spell's ENTIRE history and walking every entry of it.
  *
- * Measured over Incogitable by gtp-improvements.md: 214,487 queries visited 149,232,044 entries to return 164,263
+ * Measured over Incogitable (figures in docs/DesignNotes.md): 214,487 queries visited 149,232,044 entries to return 164,263
  * matches — about 700 entries examined per match, the whole night searched for a question about eight seconds. The
  * bounded scan visits 376,345 and returns exactly the same matches (952 MiB capture: 53.7 M visited for ~235 K
- * matches; beta: 67.8 M for ~265 K). Read that as a removed scaling hazard, not as a headline speedup — the doc
- * recorded no proportional whole-load improvement and none is promised here.
+ * matches; beta: 67.8 M for ~265 K). Read that as a removed scaling hazard, not as a headline speedup — the
+ * measurement found no proportional whole-load improvement and none is promised here.
  *
  * What these tests pin is the half that a benchmark cannot see: WHICH casts come back. A scan that stops early is only
  * correct while the entries behind it are older, and this data comes from a text log, so the store tracks whether every

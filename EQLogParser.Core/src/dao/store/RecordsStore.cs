@@ -220,11 +220,11 @@ namespace EQLogParser
        * grows all night. The old shape paid for both halves of that: it allocated the result with capacity for
        * the spell's ENTIRE history, and it walked the entire history looking for a handful of recent entries.
        *
-       * Measured on Incogitable by gtp-improvements.md: 214,487 queries visited 149,232,044 entries and returned
+       * Measured on Incogitable (figures in docs/DesignNotes.md): 214,487 queries visited 149,232,044 entries and returned
        * 164,263 matches — about 700 entries examined per match. The same bound scan visits 376,345 and returns the
        * identical count; on the 952 MiB capture it was 53.7 M visited for ~235 K matches, on beta 67.8 M for ~265 K.
-       * That is a scaling hazard rather than a headline speedup (the doc recorded no proportional whole-load win, and
-       * none is promised here): a question about eight seconds should not cost in proportion to a night.
+       * That is a scaling hazard rather than a headline speedup (the measurement recorded no proportional whole-load
+       * win, and none is promised here): a question about eight seconds should not cost in proportion to a night.
        *
        * Two changes, one per half. The result list grows instead of being pre-sized to the history — measured 0.77
        * matches per query, so the old capacity was ~900× the answer. And the scan stops at the first entry older than
