@@ -260,9 +260,24 @@ public class NamesTableTest
       {
         var provenance = NamesTable.RowFrom(new ClassificationReport.Row { Name = "Ziggy", Kind = kind, Reason = source }).Provenance;
 
-        foreach (var file in new[] { ".txt", "players", "npcs", "priors", "overrides" })
-          Assert.IsFalse(provenance.Contains(file, StringComparison.OrdinalIgnoreCase),
-                         $"{kind}/{source} puts '{file}' in the hover: {provenance}");
+        /*
+         * What is forbidden is a FILE (or the seam's internal name), never a bare store stem. The first version of this sweep
+         * listed "players" and "npcs" and passed only until the vocabulary grew the sentences the evidence actually says —
+         * "Attacks NPCs", "Attacks Players", "Damaged Players" — which are the app's OWN nouns (the style law: Player, Pet,
+         * Mercenary, NPC, Spell, and never "mob" or "monster"). A stem cannot tell a filename from a person-word, so the
+         * check names files: the extension catches every one of them however it is phrased, and the stems with no ".txt"
+         * (identity-priors, identity-overrides, petmapping) are listed because the law is "do not point at a store an
+         * operator cannot open from this window", which a nameless reference violates just as loudly. "registryseed" is in
+         * the list because the comment above this loop has always demanded it and nothing asserted it: the seam's internal
+         * name is not an answer about a name — the hover says "From the Old Verified List" or "In the Pet Map as X's".
+         */
+        foreach (var forbidden in new[]
+                 {
+                   ".txt", "npcs.txt", "players.txt", "spells.txt", "identity-priors", "identity-overrides", "petmapping",
+                   "registryseed",
+                 })
+          Assert.IsFalse(provenance.Contains(forbidden, StringComparison.OrdinalIgnoreCase),
+                         $"{kind}/{source} puts '{forbidden}' in the hover: {provenance}");
       }
   }
 
@@ -331,7 +346,12 @@ public class NamesTableTest
     });
 
     Assert.AreEqual("Player", bard.Type);
-    Assert.AreEqual("Spell", bard.Why);
+    /*
+     * "Class Spell", which is what the cell says since the words were swept: R4's verdict means "this CAST a class rank",
+     * while an R21 row reading plain "Spell" means "its NAME is a spell". Both said "Spell" for opposite reasons, and two
+     * rows that mean opposite things in one word is the ambiguity the split removed — the tooltip names the actual cast.
+     */
+    Assert.AreEqual("Class Spell", bard.Why);
 
     /*
      * The cast is named in the proof LINE, not as a second labelled row: "Cast Boastful Bellow XLVII". The rank matters
@@ -384,7 +404,8 @@ public class NamesTableTest
       HasFacts = true,
     });
 
-    Assert.AreEqual("NPC List", npc.Why);
+    // "NPC DB" since npcs.txt was renamed on screen: an operator calls it the DB, and the hover says "In the NPC DB".
+    Assert.AreEqual("NPC DB", npc.Why);
     Assert.IsFalse(npc.Provenance.Contains("Healed by"),
                    "the crowd line belongs to a heal-based verdict only; printing it elsewhere rewrites this row's provenance");
   }
