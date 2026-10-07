@@ -8011,3 +8011,61 @@ To find out where the 4.4 s actually goes, the constructor is now sub-spanned �
 window declared in it), `mw.panes` (pet owners / verified players / verified pets), `mw.autoopen` (that monitor open, session
 bootstrap and all) and `mw.theme` (`ThemeConfig.SetTheme`). Whatever is left after subtracting them is the settings/visibility
 block between them, which should be the smallest term; if it ever is not, that is the finding.
+
+**What a load line means, field by field.** A load prints
+`load: 62% | queue 25000/25000 | 412k lines/s (batch avg 1188 l/batch) | gen0 +3 gen1 +1 | 901 MB | rss 1876 MB`:
+
+- **`queue N/<bound>`** — items waiting on the parse lane. At the bound, **parsing is the bottleneck** and the reader is
+  parked in `Add`; near empty, the reader/disk is. One number telling you which half to profile.
+- **`Nk lines/s`** is this window's lines over this window's seconds (see the cumulative-average trap above) and
+  **`batch avg`** is lines per handoff — it rides on `LogReader.HandedOverLines`, which exists as the load's own tally
+  (`Handed over N lines in M seconds.`), so the percent, the announce line and the rate all divide the same integer.
+- **`gen0 +3 gen1 +1`** are collected generations *inside this window*: gen1+ in a bulk load is allocation pressure worth
+  looking at — parsing is transient garbage by design, so it should be spending gen0 and nothing above it.
+- **lo/hi are private bytes** from `Process.HandleCount`-adjacent performance counters, the same ones `UiBeatMonitor`
+  prints on a stall; **rss** comes from /proc and prints 0 on Windows, which is expected.
+
+**A "stuck"/"not responding" thread is not always this app's doing — read the stack before believing the number.** A
+field log shows a 30-second gap between two `load:` lines *with no stall line in it*, then the reader continuing normally:
+if the process were handed 30 s of CPU in that window, our own monitor would have printed `UI STALL` and it did not. The
+operator's own observations describe the same class from the other side — VS reports **"This thread has been blocked for a
+long time"** on a stack with **nothing EQLogParser-shaped in it**, and the machine's stall is attributed to
+**antivirus and OneDrive scanning**; another is the laptop lid closed mid-session with the app left open (wall time passes,
+no thread runs). So the two halves of this chapter's law: a stall line means our thread stopped, and **a gap with no stall
+line means the machine stopped and we logged it anyway.**
+
+## Two memory trims: what the overlay costs per number is now ten times less (2026-11)
+
+Prompted by "live raid seems to use more RAM than the load does" — a claim the analysis could not support (docs →
+"What garbage a raid actually makes", where gen2 never ran and a cadence thread's worst slip under 36× traffic was
+1.4 ms), so the live case went looking for what actually allocates per second. Two things did, and both are fixed.
+
+**The overlay: ~5,400 bytes per number drawn → 543.** Measured through Core's own engine (`FctIngest.Accept` +
+`PruneExpired` at frame pace): idle aging allocates **nothing**, folding identical hits ~190 B (the "×N" text changed),
+and one spawned number ~5,400 B — against 1,621 B to parse an entire log line (docs → "What the FCT overlay costs per
+number on screen"). `FctPlacement` scored a 6×3 lattice of launch points and each candidate began with `hit.Clone()`:
+seventeen of eighteen thrown away, allocated on the render thread, and numbers live 1–3 s so they survive their gen0.
+Now two buffers owned per `FctIngest` (`FctTrialBench`): the work buffer is reset from the pristine row and scored, a
+winner's fields are frozen into a champion buffer while work moves on, and at the end the winner's geometry is copied back
+into the caller's row — which also makes **identity stable**, the thing `FctSkiaCanvas` keys per-hit Skia resources by.
+`Pin` writes in place for the same reason (its cloning wrapper had no caller left).
+
+Two tests hold it: `FctPlacementAllocationTest` budgets bytes per spawned number with a control loop proving
+`GetAllocatedBytesForCurrentThread` can see an allocation at all, and `FctHitStateCopyTest` stamps a distinct value into
+every instance field by reflection and refuses one that did not travel — in `Clone` **and** in `CopyFrom` against a buffer
+pre-dirtied with different values, so a field missing from the hand-written copy list cannot pass by keeping a stale one.
+279 existing FCT readability tests pass unchanged: the lattice, its jitter and its cost maths are untouched, only who owns
+the memory moved.
+
+**The reader's queue: 100,000 slots → 25,000, which is ~17 MB of a load's peak.** A `LogReaderItem` is a record struct
+(24 B unboxed in `ConcurrentQueue`'s segments), but the string it carries is what pays: at ~95 characters per EverQuest
+line (973 MB over 10.2 M lines) that is ~200 B of UTF-16 per slot, so the old bound held ~22 MB while the parse lane was
+the bottleneck anyway. Five `BatchSize` handoffs deep is enough slack to decouple the two lanes; the bound only ever
+matters when it is pinned, and pinning at 25,000 rather than 100,000 changes no throughput — a full queue means the parser
+is the limit, an empty one means the reader is, and neither cares how high the ceiling is. Live raid tailing leaves the
+queue nearly empty by itself, so this term belongs to opens.
+
+**What remains on the live-RAM list**, in order: the facts themselves (7.5 M rows × 32 B damage + 4.1 M × 32 B heal — the
+packing question), and a **live heap ledger** (one line every 30 s under `PerfReport=True`: working set, LOH, generation
+deltas with pause ms, facts/heals rows vs slots vs slack, name pool, FCT live hits) so a player's own raid log can say
+what grew and whether their stalls coincide with gen2. Neither is assumed; the ledger is what would decide them here.
