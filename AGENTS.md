@@ -356,7 +356,13 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   `RaidRosterStore`, `RecordsStore`) and identity memory is swapped only by `Init(serverName)` when the SERVER changes, which is why MainWindow's load
   order (overrides → priors → import → registry) stays where it is. The past is unloaded, not destroyed: opening the file again (not in monitor mode)
   reads the night back. Pinned by `ClearedSessionMemoryTest` (a clear keeps saved verdicts and the ledger standing under **either** payload; reload
-  restores them; one server's memory does not follow the app into another folder). Two neighbours in that menu were renamed while in there: *Clear Override (N saved)* is **Clear My Claim** (`Solid_Undo`), so the destructive item holds legacy's own `Regular_TrashAlt` and no two entries share a glyph.
+  restores them; one server's memory does not follow the app into another folder). The fight list now has **one** "Clear": Clear All. The mirror-era
+  *Clear Override (N saved)* item that sat there was deleted, not renamed (a first attempt to rename it to "Clear My Claim" was refused by the operator —
+  "why is there still a Clear My Claim?"), because the rule above says the Names pane's Type dropdown `Clear claim` is the only unset
+  **and the duplicate was weaker than the door it imitated**: the pane wrote `IdentityOverrideStore.Apply(names, null)` while the sanctioned
+  unset also drops the ledger row (`NamesTable` → `ClassificationCommands.ClearVerdict` + `IdentityPriorStore.Remove`), so the fight-list click left
+  a name coming back on the next pass wearing *"… in previous log"*. One verb, one door: **the fight list writes verdicts (batch, over the selection);
+  the identity pane un-writes them.**
 - **The cheap lane folds over the timeline INSTANCE the last full pass produced, on two clocks**: `ProjectionOnly` runs no rule book at all (measured:
   classification is 186-261 ms of a pass, projection of a live increment 0-5 ms), so `DeriveEngine` carries `_carriedTimeline` and hands that same object
   to `FightProjection.Project`. Carrying the instance is what makes `EntityTimeline.StateStamp()` come back unchanged, so the existing stamp gate keeps

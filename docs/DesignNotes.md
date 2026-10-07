@@ -8314,11 +8314,17 @@ and the failure mode of a stuck-down flag is *announcements never happen again*,
 the class of bug this whole pane keeps re-learning. `Reset()` exists for the two paths that drop every row (session change,
 wholesale snapshot): the ids a parked change named are gone with them.
 
-**Renamed while in there**: the menu's *Clear Override (N saved)* reads **Clear My Claim**, with a tooltip saying whose
-choice it takes back — same word as the Names dropdown's `Clear claim` entry. It was not undocumented, but it was the only
-"clear" in that menu next to the missing Clear All, which is how it got read as "some weird clear i have no idea what it
-does". The count in the label stays: it is the answer to "does this server have anything saved?", asked most often about a
-name that no longer has a row to click.
+**The other thing that left that menu, on a second report — and it should have gone the first time.** The pane also carried
+*Clear Override (N saved)*, the item the operator had called "some weird clear on the right-click that i have no idea what it does".
+My first move was to rename it *Clear My Claim*. That was wrong, and the follow-up — *"why is there still a Clear My Claim?"* — was the
+correction: the rule already written down (docs → "Identity has two writes and one unset") says the Type dropdown's **"Clear claim"**
+in the Player/NPC Identity pane is *the only unset*, "and by nothing else". A second door for one verb is what made it unrecognisable.
+
+Deleting it was not only tidier, it removed a real divergence: this pane's item called `IdentityOverrideStore.Apply(names, null)`, while
+the sanctioned unset (NamesTable → `ClassificationCommands.ClearVerdict`) **also** removes the ledger row (`IdentityPriorStore.Remove`).
+So clicking the fight list's version left the prior standing and the name came back on the next pass wearing *"… in previous log"* — a
+take-back that did not take back, sitting two rows under a Set verb that worked. One door now: **the fight list writes verdicts** (a misfiled
+mob is noticed here, batch over the selection), **the identity pane un-writes them**.
 
 **The follow-up question — "what about the right-click throttling?" — closed one real gap in that first fix.** The deferral
 was there and the settle window was too, but the pointer probe watched `Mouse.LeftButton` only. That is not enough on this grid:
@@ -8396,12 +8402,13 @@ history rather than from end of file — reads the night back. It is also the ap
 largest object the process owns (docs → "The slots a finished load stopped writing" measures 342 MB retained at EOF on the reference
 capture), which matters while the branch is still arguing about being slightly heavier than master.
 
-**Menu hygiene, learned the same afternoon.** Two entries in that menu were unreadable: *Clear Override (N saved)* — the only "clear"
-present next to the missing Clear All, hence *"some weird clear on the right-click that i have no idea what it does"* — is now
-**Clear My Claim**, matching the Names dropdown's own word, with a tooltip naming whose choice it takes back; and its icon moved from
-`Solid_Times` to `Solid_Undo`, leaving the destructive item legacy's own glyph (`Regular_TrashAlt`). The general rule: **one glyph per
-verb in a menu** — two Times icons is how a "clear" gets clicked by accident. Clear All sits in its own section at the end, and is
-enabled only when this pane has a live session (`_session is not null`), because "unload everything" over an empty window is nothing to do.
+**Menu hygiene, learned the same afternoon.** The report was *"it has some weird clear on the right-click that i have no idea what it
+does. it really should go back to clear all"* — one menu holding one incomprehensible "clear" while the Clear All operator used for a
+decade was gone. The answer is **Clear All returns; the other clear leaves** (see the paragraph above for why renaming it was the wrong first
+instinct), so the menu has exactly one item whose header begins with "Clear", and it is the big action, in its own section at the end. It is
+enabled only when this pane has a live session (`_session is not null`), because "unload everything" over an empty window is nothing to do. The
+glyph rule still holds as the reason this couldn't stay two items with better labels: **one glyph per verb** — two `Solid_Times` in one menu is how
+a destructive entry gets clicked by accident.
 
 **Ordering that is load-bearing at the click**: the re-open runs synchronously inside the menu item's `Click`, so by the time the context
 menu closes, `DeriveEngine.ActiveChanged` has already dropped this pane's rows and reset the selection gate (the previous section) — and

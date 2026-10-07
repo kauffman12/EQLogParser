@@ -596,8 +596,6 @@ namespace EQLogParser
 
     private void OverrideNpcClick(object sender, RoutedEventArgs e) => ApplyOverride(IdentityKind.Npc);
 
-    private void OverrideClearClick(object sender, RoutedEventArgs e) => ApplyOverride(null);
-
     /*
      * Legacy's Clear All. It is deliberately NOT a wipe of the rows: there is nothing to wipe under a projection, and rows
      * taken out of the display come straight back on the next pass, which would read as a button that does nothing. What it
@@ -612,8 +610,15 @@ namespace EQLogParser
      */
     private void ClearAllClick(object sender, RoutedEventArgs e) => MainActions.ClearAllFights();
 
-    // Names of the selected fights (dividers select nothing), written as one batch.
-    private void ApplyOverride(IdentityKind? kind)
+    /*
+     * Names of the selected fights (dividers select nothing), written as one batch. SET only: there is no clear here. Taking a
+     * verdict back lives behind the Type cell of the Player/NPC Identity pane - the app's ONE unset (NamesTable calls
+     * ClassificationCommands.ClearVerdict, and clears the ledger row with it, which this pane's old menu item did NOT: it wrote
+     * the override store only, so the name came back on the next pass wearing "in previous log". Two doors, two behaviours,
+     * one verb). This pane still WRITES verdicts because a fight row is where a misfiled mob is noticed; it no longer offers to
+     * un-write them.
+     */
+    private void ApplyOverride(IdentityKind kind)
     {
       var names = new List<string>();
       foreach (var fight in GetSelectedFights()) names.Add(fight.Name);
@@ -623,9 +628,7 @@ namespace EQLogParser
       _session?.RederiveAsync();
     }
 
-    // Greyed out unless the grid has a real fight selected; clearing is offered even with nothing selected,
-    // because "what did I save?" is asked most often right after a name stops appearing in the list at all
-    // (set as Pet and its row is gone by design, so there is nothing left to click).
+    // Greyed out unless the grid has a real fight selected - every item in this menu acts on the selection.
     private void GridContextMenuOpening(object sender, System.Windows.Controls.ContextMenuEventArgs e)
     {
       // Nothing is announced while the menu is up; whatever the opening itself selected waits for the close.
@@ -662,13 +665,6 @@ namespace EQLogParser
       overrideMercItem.IsEnabled = hasFight;
       overridePetItem.IsEnabled = hasFight;
       overrideNpcItem.IsEnabled = hasFight;
-
-      // How many verdicts are on file for this server, so "Clear" says whether it has anything to do - the
-      // question gets asked most often about a name that no longer has a row to click (set as Pet hides it by
-      // design), where the menu is the only place left that can answer.
-      var saved = IdentityOverrideStore.Instance.Count;
-      overrideClearItem.IsEnabled = saved > 0 || hasFight;
-      overrideClearItem.Header = saved > 0 ? $"Clear My Claim ({saved} saved)" : "Clear My Claim";
     }
 
     /*
