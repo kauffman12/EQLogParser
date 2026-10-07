@@ -7662,6 +7662,40 @@ separate executable rather than a thread pool inside the app.
 So the order is memory first, threads second: reserve sizing is shipped, and if the parse lane gets de-staticized (worth
 doing for testability regardless), a 2-worker load is roughly time-neutral on RAM against today's 4-worker dream.
 
+## What the FCT overlay costs per number on screen (2026-11)
+
+Asked for RAM during **active parsing** — a live raid with the overlay up — and measured over Core's own overlay engine
+(no WPF, no Skia: `FctIngest.Accept` + `PruneExpired`, driven at frame pace by a temporary probe, deleted once these
+figures landed; `FctAmbient.Reset()` between modes):
+
+| workload (30,000 render frames) | bytes per frame | meaning |
+|---|---|---|
+| idle — aging only | **0 B** | the per-frame pump allocates nothing at all |
+| folding an identical hit (~60/s) | ~190 B | the `×N` odometer text is rebuilt: `"1234 ×7"` is a new string |
+| one new number every 20th frame (~3/s, no folds, no drops) | ~283 B → **~5.4 KB per spawned number** | the spawn path |
+
+Two conclusions, one reassuring and one not. The pump is clean: an overlay showing nothing generates zero garbage, and a
+fold costs one small string — which it must, because the number on screen changed. But **a single spawned floating-text
+number allocates about 5.4 KB of managed memory**, more than parsing an entire log line (1,621 B), and this runs on the
+**UI thread**, because `FctSkiaCanvas.OnRendering` drains `FctManager` into `Accept`.
+
+The mechanism is visible in the code once you know where to look: `FctPlacement.Place` scores a lattice of
+`DepthSteps × LateralSteps = 6 × 3 = **18** candidates per number, and every candidate goes through `Pin`, whose first
+line is `hit.Clone()`. Seventeen of those eighteen objects are thrown away; what survives of the winner is a handful of
+coordinates. At twenty numbers a second that is ~0.1 MB/s of allocation, on the thread that paints, for text that lives
+1–3 s — long enough to survive a gen0 and be promoted, which is the pattern that produces occasional visible gen2 work in
+a program whose other steady-state rate is ~0.33 MB/s on a pool thread. It does not prove the player's stalls are GC —
+"steady raiding is not a GC problem" above still stands for the parse lane — but it names the one place in this app where
+the render thread allocates by the second, and it is pure waste by construction.
+
+What a fix wants: stop cloning the row to test a position. A trial needs geometry (origin, fall, tempo), not a copy of
+every field a row carries, so either score trials from a scratch state reused across the lattice, or compute the candidate
+geometry without materialising a row at all. If the scratch route is taken, `CopyFrom` must be proven against
+`MemberwiseClone` by a reflection test over every instance field — a hand-written field copy that forgets a field is a
+placement bug that no geometry test would notice — and `Place` returning "not necessarily the object passed in" has to
+become "the same object, re-geometried", which is better for the backends too (the overlay keys per-hit Skia resources by
+that identity).
+
 ## Where ingest spends its time, stage by stage
 
 The ablation chapter above localized the cost but stopped at "the parsers, plus ~3.7 s of everything else". That "everything
