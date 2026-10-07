@@ -150,7 +150,7 @@ namespace EQLogParser
 
       for (var i = 1; i <= 300; i++)
       {
-        heals.AddHeal(new HealFact(i, 1_000 + i, rune, niktaza, (uint)(i * 5), overTotal: 3,
+        heals.AddHeal(new HealFact(i, FixtureTime.BaseL + i, rune, niktaza, (uint)(i * 5), overTotal: 3,
                                    typeId: LabelTypes.Heal, flags: 0, modMask: 0, subIdx: HealFact.NoSpell));
       }
 

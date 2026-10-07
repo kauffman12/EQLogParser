@@ -33,7 +33,7 @@ namespace EQLogParser;
 [TestClass]
 public class UnrowedFactsTest
 {
-    private const double T0 = 1_000;
+    private const double T0 = FixtureTime.Base;
 
     private static DamageFactTable BuildFacts(params (string Atk, string Def, long Dmg, double T, byte Label)[] rows)
     {
@@ -277,7 +277,8 @@ public class UnrowedFactsTest
         var timeline = new EntityTimeline();
         timeline.SetIdentity("Illuminai", IdentityKind.Player, RuleStrength.Strong, "R3-presence");
         timeline.SetIdentity(SelfSpellName, IdentityKind.Pet, RuleStrength.Certain, "seed-petmap");
-        timeline.AddAffiliation(AffiliationKind.PetOfPlayer, SelfSpellName, 0, 2_000, RuleStrength.Certain, "seed-petmap", "Bithika");
+        timeline.AddAffiliation(AffiliationKind.PetOfPlayer, SelfSpellName, FixtureTime.Base, FixtureTime.Base + 2_000,
+          RuleStrength.Certain, "seed-petmap", "Bithika");
 
         // The index carries the timeline because that is how a materialized record learns AttackerOwner — the field
         // DamageStatsBuilder folds by, and therefore the difference between this damage landing on its owner (with the

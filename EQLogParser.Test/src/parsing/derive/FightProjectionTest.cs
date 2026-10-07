@@ -11,7 +11,7 @@ namespace EQLogParser;
 [TestClass]
 public class FightProjectionTest
 {
-    private const double T0 = 1_000;
+    private const double T0 = FixtureTime.Base;
 
     private static DamageFactTable BuildFacts(params (string Atk, string Def, uint Dmg, double T, byte Label)[] rows)
     {

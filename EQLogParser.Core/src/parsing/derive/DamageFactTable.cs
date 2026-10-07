@@ -128,9 +128,16 @@ namespace EQLogParser
     // the slain queue's flush-vs-enqueue decisions depend on
     public readonly int Seq;
 
-    // dotnet-epoch seconds (DateTime origin, year 0001) as the parser fires them — ~6.4e10 in the
-    // 2020s, so long is required; int overflowed silently and corrupted every timestamp
-    public readonly long TimeS;
+    /*
+     * The row's second, stored as seconds since 2000-01-01 (see FactTime) and READ BACK as the dotnet-epoch second it
+     * always was. The raw long was 6.3e10 in the 2020s and an int cast of it overflowed silently once, which is what the
+     * old comment on this line recorded — but the width that needs a long is the RAW epoch, not the value: rebased, the
+     * whole range 1931-2068 fits in four bytes, and this row is the most numerous thing the process keeps.
+     */
+    private readonly int _timeS;
+
+    /// <summary>dotnet-epoch seconds, exactly as every consumer has always read them. See FactTime for the storage.</summary>
+    public long TimeS => FactTime.ToEpochSeconds(_timeS);
     public readonly short AtkIdx;
     public readonly short DefIdx;
     public readonly uint Total;
@@ -149,7 +156,7 @@ namespace EQLogParser
     public DamageFact(int seq, long timeS, short atkIdx, short defIdx, uint total, byte typeId, byte flags, short modMask, ushort subIdx)
     {
       Seq = seq;
-      TimeS = timeS;
+      _timeS = FactTime.FromEpochSeconds(timeS);
       AtkIdx = atkIdx;
       DefIdx = defIdx;
       Total = total;

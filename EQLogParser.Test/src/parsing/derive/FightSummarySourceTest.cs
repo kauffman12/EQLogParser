@@ -22,7 +22,7 @@ namespace EQLogParser;
 [TestClass]
 public class FightSummarySourceTest
 {
-    private const double T0 = 1_000;
+    private const double T0 = FixtureTime.Base;
     private static string MiniFightPath => Path.Combine(AppContext.BaseDirectory, "mini-data", "derive", "mini-fight.txt");
 
     // Same fixture shape FightProjectionTest uses: facts by name/amount/second/label, table-ordinal order.

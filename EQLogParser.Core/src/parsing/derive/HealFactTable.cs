@@ -59,9 +59,15 @@ namespace EQLogParser
      * why HealFactCaptureTest asserts the size and this comment points at that assertion.
      */
 
-    // dotnet-epoch seconds as the parser fires them (~6.4e10 in the 2020s): long is required, an int overflowed
-    // silently and corrupted every timestamp (see DamageFact.TimeS).
-    public readonly long TimeS;
+    /*
+     * Seconds since 2000-01-01 (FactTime), read back as the dotnet-epoch second it always was — the same rebasing that
+     * took DamageFact from 32 bytes to 24. Field order still matters (widest first): with the clock narrowed to four
+     * bytes this struct has no eight-byte field left, which is why it lands on a multiple of four rather than eight.
+     */
+    private readonly int _timeS;
+
+    /// <summary>dotnet-epoch seconds, exactly as before the storage shrank. See FactTime.</summary>
+    public long TimeS => FactTime.ToEpochSeconds(_timeS);
 
     /*
      * What landed, and what the line asked for: "for 3461 (60581)" is Total 3461, OverTotal 60581, and the
@@ -98,7 +104,7 @@ namespace EQLogParser
       byte typeId, byte flags, short modMask, ushort subIdx)
     {
       Seq = seq;
-      TimeS = timeS;
+      _timeS = FactTime.FromEpochSeconds(timeS);
       HealerIdx = healerIdx;
       HealedIdx = healedIdx;
       Total = total;

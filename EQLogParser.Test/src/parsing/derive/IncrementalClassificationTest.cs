@@ -26,7 +26,7 @@ namespace EQLogParser;
 [TestClass]
 public class IncrementalClassificationTest
 {
-    private const double T0 = 1_000_000;
+    private const double T0 = FixtureTime.Base;
 
     // Fifteen verified casters: above R18's breadth gate (15) at full strength, and enough distinct healers
     // for R15's floor from any two of them. Names avoid every shape the rules special-case.

@@ -20,7 +20,7 @@ namespace EQLogParser;
 [TestClass]
 public class EntityTimelineDigestTest
 {
-    private const double T0 = 1_000;
+    private const double T0 = FixtureTime.Base;
 
     private static void Charming(EntityTimeline t, string mob, string charmer, double start, double end = double.PositiveInfinity)
       => t.AddAffiliation(AffiliationKind.PetOfPlayer, mob, start, end, RuleStrength.Strong, "R9-charm", charmer);

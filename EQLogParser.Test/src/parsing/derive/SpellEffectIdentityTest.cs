@@ -412,7 +412,7 @@ public class SpellEffectIdentityTest
 
     // Pass two, carried: the same capture continues and the spell lands in an attacker slot. Fresh store per pass - that is
     // the contract - with the SAME state, which is what makes this pass a carried one rather than a from-zero replay.
-    facts.AddFact(new DamageFact(seq++, 1_700_000_010L, facts.InternName(spell), facts.InternName("A gnoll"),
+    facts.AddFact(new DamageFact(seq++, FixtureTime.BaseL + 10, facts.InternName(spell), facts.InternName("A gnoll"),
                                  total: 18_724, typeId: 1, flags: 0, modMask: 0, subIdx: ushort.MaxValue));
 
     var carried = new EntityTimeline();

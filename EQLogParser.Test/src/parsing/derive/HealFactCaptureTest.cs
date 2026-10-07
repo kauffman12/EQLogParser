@@ -62,9 +62,13 @@ public class HealFactCaptureTest
     [TestMethod]
     public void AFactIsItsMeasuredSizeNotWishes()
     {
-        Assert.AreEqual(32, Unsafe.SizeOf<DamageFact>(), "damage facts are the most numerous thing the engine holds");
-        Assert.AreEqual(32, Unsafe.SizeOf<HealFact>(),
-          "ordered wide-to-narrow this row is 30 bytes of payload in a 32-byte struct; an int before the long made it 40");
+        Assert.AreEqual(24, Unsafe.SizeOf<DamageFact>(),
+          "damage facts are the most numerous thing the engine holds: 24 since the clock stopped carrying year 1 (FactTime)");
+        // 30 bytes of payload once the clock is four bytes rather than eight, and nothing wider than four remains: the
+        // struct aligns on 4, so it lands on 28 rather than a multiple of 8. (Before FactTime the lone long forced 32 —
+        // and before the wide-to-narrow ordering it was 40 for the same ten fields.)
+        Assert.AreEqual(28, Unsafe.SizeOf<HealFact>(),
+          "ordered wide-to-narrow this row is 26 bytes of payload in a 28-byte struct; the long clock made it 32");
 
         /*
          * The heal table's estimate is its own buffer at 32 B a fact. The damage table's EstimatedBytes covers
@@ -74,7 +78,7 @@ public class HealFactCaptureTest
          */
         var facts = new DamageFactTable(1_000);
         var heals = new HealFactTable(facts, 1_000);
-        Assert.AreEqual(32_000L, heals.EstimatedBytes, "32 B a heal fact, at capacity, no per-record allocation");
+        Assert.AreEqual(28_000L, heals.EstimatedBytes, "one heal fact's measured size, at capacity, no per-record allocation");
 
         /*
          * The estimate prices the BUFFER, not the row count — which is the honest statement for D2's memory

@@ -27,7 +27,7 @@ namespace EQLogParser;
 [TestClass]
 public class FightProjectionIncrementTest
 {
-    private const double T0 = 1_000;
+    private const double T0 = FixtureTime.Base;
 
     // A table that grows, with one sequence counter for the whole life of the test — the live case: same table object,
     // same name pool, ordinals only ever increasing.
