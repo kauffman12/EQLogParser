@@ -513,7 +513,17 @@ namespace EQLogParser
           if (!_firstDeriveLogged)
           {
             _firstDeriveLogged = true;
-            Log.Info($"derive: first pass - {snapshot.FactCount:N0} facts, {snapshot.Rows.Count} rows");
+            /*
+             * One line per session, and nothing about the packing guards unless one of them fired: they exist to catch a
+             * timestamp outside 1931-2068 or a heal mask/label that does not fit its narrowed byte, and every real capture
+             * measured so far answers zero. A non-zero number here is not noise to be ignored — it means the boards are
+             * being built from clamped values, which is exactly the kind of thing that otherwise gets read as a layout bug.
+             */
+            var guards = CombatCapture.FactGuardCount;
+            Log.Info(guards == 0
+              ? $"derive: first pass - {snapshot.FactCount:N0} facts, {snapshot.Rows.Count} rows"
+              : $"derive: first pass - {snapshot.FactCount:N0} facts, {snapshot.Rows.Count} rows | " +
+                $"{guards} fact value(s) did not fit their field (clock clamp or heal mask/label) - see FactTime/HealFact");
           }
 
           Derived?.Invoke(snapshot);

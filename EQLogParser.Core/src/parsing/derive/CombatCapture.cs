@@ -45,6 +45,26 @@ namespace EQLogParser
     {
       _facts = facts ?? throw new ArgumentNullException(nameof(facts));
       _heals = heals;
+
+      // One capture, one tally of the fact-packing guards (FactTime's clamp counter, HealFact's mask/label counters). They
+      // are process statics because a row is a struct with no session to hang them on, and a fresh capture is the point
+      // where "so far" becomes meaningless.
+      ResetFactGuards();
+    }
+
+    /*
+     * Everything that could go wrong in a row's narrowed fields: a timestamp outside 1931-2068 (clamped), a heal mask
+     * needing a bit the byte does not have (low byte kept), a 0xFF mask wearing the "no modifier text" sentinel, or a heal
+     * label that is neither Heal nor Hot. Zero for a real capture — and the first derive pass says the word when it is
+     * not, so an operator's own log carries the evidence rather than a screen of subtly wrong times being read as a layout bug.
+     */
+    internal static long FactGuardCount =>
+      FactTime.OutOfRange + HealFact.MasksBeyondByte + HealFact.MaskSentinelCollisions + HealFact.UnknownTypeLabels;
+
+    internal static void ResetFactGuards()
+    {
+      FactTime.ResetOutOfRange();
+      HealFact.ResetPackingCounters();
     }
 
     public IFactTable Facts => _facts;

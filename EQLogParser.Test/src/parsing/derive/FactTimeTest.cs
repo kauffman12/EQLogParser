@@ -103,6 +103,32 @@ public class FactTimeTest
     }
 
     [TestMethod]
+    public void TheFixturesNeverTripAPackingGuard()
+    {
+      /*
+       * The whole narrowing is justified by measurements on real traffic, so the fixtures carry the burden of proof too:
+       * parse what the suite ships and refuse any guard firing — a clamp (a fixture clock outside 1931-2068), a heal mask
+       * that lost a bit, or a heal label that was neither Heal nor Hot. A guard that fires in a fixture means the test data
+       * is being written lossy, and every assertion built on it is measuring the clamp.
+       */
+      // Every file here is asserted to exist: a renamed fixture is a bug to notice, not a case to skip silently — an
+      // assertion-free loop would report this test as coverage forever.
+      var checked_ = 0;
+      foreach (var file in new[] { "mini-fight.txt", "tank-fight.txt", "attempt-fight.txt", "heal-fight.txt" })
+      {
+        var path = Path.Combine(AppContext.BaseDirectory, "mini-data", "derive", file);
+        Assert.IsTrue(File.Exists(path), $"{file} is not where this test thinks it is — it was never checked");
+
+        var run = PipelineHarness.RunFileDerived(path);
+        Assert.IsTrue(run.Facts.FactCount > 0, $"{file} captured no facts");
+        Assert.AreEqual(0, CombatCapture.FactGuardCount, $"{file} needed a packing guard: values were clamped or truncated");
+        checked_++;
+      }
+
+      Assert.AreEqual(4, checked_, "the loop must have run over every fixture it lists");
+    }
+
+    [TestMethod]
     public void FixtureClocksAreInsideTheWindow()
     {
       /*

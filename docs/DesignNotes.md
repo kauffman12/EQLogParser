@@ -8148,6 +8148,16 @@ end to end without a new line of assertion.
 `IncrementalClassificationTest.CarriedPassMatchesAFullReplayOnRealLog` on the live capture — all executed, none skipped,
 all passing. 1,752 headless tests pass solution-wide with zero warnings.
 
+**The guards answer zero on real traffic — and say so when they don't.** Measured over two captures (a throwaway probe,
+deleted once it reported): `eqlog_Kizant_xegony-8-20-23.txt` — 3,635,724 facts, 140,270 heals → clock clamps **0**, masks
+beyond the byte **0**, sentinel collisions **0**, unknown heal labels **0**; `eqlog_Ikkydruid_thj.txt` (EMU) — 1,498,088
+facts, 22,703 heals → the same four zeros. They are not merely counters in a test build: `CombatCapture` resets them per
+capture and the session's first derive pass appends them to its one Info line (`… | N fact value(s) did not fit their field`)
+**only when N is non-zero**, so a normal log carries no extra text and a weird one carries the sentence that explains a
+board reading strangely, instead of the operator concluding the layout is broken. `FactTimeTest.TheFixturesNeverTripAPackingGuard`
+holds the same law over the four shipped fixtures — and asserts each file exists, because a loop that skips a missing
+fixture reports coverage forever while checking nothing.
+
 **Refused, with the reason**: dropping `Seq` (its array index already *is* its ordinal within a segment, worth another
 4 bytes a row) — it breaks the moment a session holds more than one spool segment, and cross-stream order is exactly what
 that field buys, so it belongs with the chunking design rather than before it. RangeSpike's `.spool` files are a dev
