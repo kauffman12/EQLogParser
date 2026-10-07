@@ -7624,3 +7624,50 @@ per the disposable-gate rule.
 
 What this does not touch: the ~1.25 M `HealRecord` objects that sit beside the heal table (the healing board's door is
 records by design), and the name/spell pools. The next real memory number has to come from one of those two.
+
+## Where ingest spends its time, stage by stage
+
+The ablation chapter above localized the cost but stopped at "the parsers, plus ~3.7 s of everything else". That "everything
+else" is now decomposed, and it was not a mystery bucket: **the biggest single line in `LogProcessor.DoPreProcess` after the
+damage parser is `lineData.Action.Split(' ')`**.
+
+Method (no profiler): sampled per-stage timers inside `DoPreProcess`, measuring one line in 32 so the probe itself costs
+nothing, run over the 467 MB capture by **`RangeSpike parse --cwd . --file F --out S`** (the headless ingest tool; it was
+unbuildable until the last commit and it reproduces the harness's fact counts exactly). The probe was reverted after the
+run — the numbers live here, not in the tree.
+
+| stage (per full file, scaled) | ms | calls | note |
+|---|---|---|---|
+| `line[27..]` + `ChatLineParser.ParseChatType` | ~0 | 4.7 M | cheap, and it is a per-line gate |
+| chat sink + `CheckQuickShare` | ~0 | 544 | almost nothing runs here on a combat log |
+| glued-double-line detect | 97 | 4.7 M | |
+| **`Action.Split(' ')`** | **1,861** | **4.71 M** | 29 % of the 6.5 s run |
+| `DamageLineParser.Process` | 1,960 | 4.71 M | matches the earlier direct-ParseLine ablation (2.17 s) |
+| `HealingLineParser.Process` | 163 | 1.18 M | |
+| `MiscLineParser.Process` | 150 | 1.18 M | |
+| `CastLineParser.Process` | 530 | 1.18 M | 0.45 µs on a line no combat parser wanted |
+| (unattributed) | ~1,200 | — | `PreLineParser.NeedProcessing`'s own interval was left open by the probe, plus reader overlap and GC/finalizer threads |
+
+**Read the split row carefully, because two measurements disagree on purpose.** In the pipeline it costs ~396 ns per line.
+An isolated hot loop of the identical call says **61 ns/call and 374 bytes allocated** (8-token sample lines; real capture
+actions run longer). So the split *itself* is not slow — what ingest pays for is that this one call **allocates about a
+third to a half of everything ingest allocates**: 374 B × 4.71 M ≈ **1.8 GB** (more with real-length actions) out of the
+~6.9 GB measured for the whole load, and gen-0 collections are what the extra ~335 ns per line is. Which also means the fix
+is the same whichever number you believe: stop materializing a `string[]` of every word for every line.
+
+That is not a small change, and it is exactly why it waits for its own decision rather than being half-done: `Split` feeds
+`DamageLineParser`, `HealingLineParser`, `MiscLineParser`, `CastLineParser` and `ParserUtil` (which compare `split[i]` to
+literals and slice word ranges), so a span/range-based tokenizer means touching all of them plus their fixtures at once. A
+lazy `Split` (materialize on first touch) is the cheap half-measure and buys little, since ~99.98 % of lines are dispatched
+and take the array anyway.
+
+Two cautions worth writing down because they cost time to learn:
+
+- **Instrumentation profiling is the wrong tool for this question.** A VS *instrumentation* run (51 GB of records in one
+  saved session) charges a fixed per-call cost to every method, which inflates precisely the small per-line helpers whose
+  relative cost we are trying to rank. Sampling (`CPU usage`, or `dotnet-trace --sample-rate`) is what measures this.
+- **A `.diagsession` cannot be read on Linux.** The container is a zip of `sc.user_aux.etl` (up to 63 GB uncompressed) and
+  VS's own `Instrumentation/*.dat`; nothing here decodes those, and the env-var EventPipe route (`DOTNET_EnableEventPipe=1`)
+  produces nettraces this SDK's `dotnet-trace` rejects mid-stream ("Invalid EventBlock header size"), while attach to a
+  `dotnet test` host is blocked. So for ingest questions the repo's own headless tool plus targeted timers is the working
+  path — which is why RangeSpike being unbuildable mattered.
