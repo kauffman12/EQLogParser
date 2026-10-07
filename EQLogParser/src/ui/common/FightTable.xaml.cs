@@ -32,10 +32,18 @@ namespace EQLogParser
      */
     internal event Action<IReadOnlyList<DerivedFight>> DerivedSelectionChanged;
 
-    // Selection settles on a short pause rather than per click, and much more cheaply than the 750 ms the
-    // legacy table waits: nothing is recomputed here, the click only says which fights are wanted. Long
-    // enough that dragging a range across a thousand rows fires once, short enough to feel immediate.
-    private const int SelectionSettleMs = 350;
+    /*
+     * Selection settles on a pause rather than per click: nothing is recomputed here, the click only says which fights are
+     * wanted, and what the announcement costs (MainWindow materialises one record per selected fact and runs three builders)
+     * is worth waiting a beat for. Long enough that dragging a range across a thousand rows fires once; short enough not to
+     * feel like a lag.
+     *
+     * 600 ms, chosen by the operator after the first field run with the gate in place. This started at 350 as my own guess -
+     * nothing measured it - and legacy's was 750. The number is deliberately inert: no other code computes off it, and the two
+     * things that actually prevent mid-gesture rebuilds (menu open, button down) are states, not durations, so moving this dial
+     * changes only how long a still selection waits before its boards are rebuilt.
+     */
+    private const int SelectionSettleMs = 600;
 
     private ObservableCollection<DerivedFightRow> _rows = [];
     private readonly DispatcherTimer _selectionTimer;

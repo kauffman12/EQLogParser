@@ -8330,12 +8330,14 @@ guaranteed to exist (a hidden docked pane still has its timer armed), and a thro
 does not look like an error, it looks like the stats froze, because `ShouldAnnounce()` returns false forever and the pane just keeps
 restarting its own timer.
 
-**Two dial choices deliberately NOT copied from legacy.** Its selection timer ran 750 ms at `DispatcherPriority.Send`; this one is
-350 ms at `Background`. Priority: a Send-priority tick competes with input and layout, which is the wrong place for "rebuild three boards
+**Two dial choices deliberately NOT copied from legacy.** Its selection timer ran 750 ms at `DispatcherPriority.Send`; this one runs
+**600 ms** (set on the operator's call after the first field run with the gate in place — it shipped at 350 ms, which was my own guess and
+never measured) at `Background`. Priority: a Send-priority tick competes with input and layout, which is the wrong place for "rebuild three boards
 over the whole capture"; Background parks it behind rendering, and since the pane re-arms while work is parked, a coarse priority costs
 latency and never correctness. Interval: 350 was chosen as "long enough that dragging across a thousand rows fires once, short enough to
-feel immediate", and both numbers are one constant (`SelectionSettleMs`) with no arithmetic anywhere else depending on them — if the field
-report comes back "still rebuilding while I select", the dial moves without touching the rule. Legacy's two `await Task.Delay(120)` calls
+feel immediate", and both are one constant (`SelectionSettleMs`) with no arithmetic anywhere else depending on them — which is exactly why
+the dial could move 350 → 600 later in the same day as a preference rather than as a measurement: the two things that prevent mid-gesture
+rebuilds (menu open, button down) are states, not durations. Legacy's two `await Task.Delay(120)` calls
 in its Set-Pet/Set-Player menu items are a different animal and were not ported: they waited for the context menu to close before removing
 a row from the grid it was attached to. Here an override goes through `RederiveAsync()` — asynchronous, and rows change on a later pass, so
 the grid is never mutated underneath a closing menu — which makes that delay's purpose moot rather than forgotten.
