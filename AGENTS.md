@@ -750,6 +750,21 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   from it and any threshold would be machine-specific. Same fixture, related law: **EQ writes `X joined the raid.`** (1,151 times
   across twelve captures; `has joined the raid.` **zero**, though the group line keeps its `has`) because the raid branch tests the
   whole prefix with a name check that refuses spaces — the tidier sentence enters the branch, fails the check and verifies nobody.
+- **The read loop never runs on the UI thread, and two halves make that true**: every `await` in `LogReader` is
+  `ConfigureAwait(false)` **and** MainWindow starts it with `Task.Run(...)`, because the first segment — which includes
+  `logProcessor.LinkTo`, where the parse lane's own task is born — runs before any await can move it. The old shape was a
+  dispatcher callback that read the file: `ReadLineAsync` suspends once per read buffer (147 KB ≈ 1,250 lines of EQ log), so
+  ~1,250 lines continued inline on the thread that paints the window and the minority that suspended posted their continuation
+  back anyway; with the handoff queue at its bound (100,000 items) a big open was mostly the UI thread **parked in `Add`**.
+  `LogReader` wants no affinity (no dispatcher, no WPF type, and `FileSystemWatcher` already drives this same code on pool
+  threads), so it takes none. Two follow-throughs: `StartAsync` walks away quietly when started on a cancelled/disposed reader
+  (a queued start can now lose the race to the next open, and a throw inside a fire-and-forget task is unobserved), and
+  `_chatSink.Init()` + `LogArchiveManager.QueueFileArchiveAsync` run on pool threads — both verified UI-free first. Load
+  diagnostics live with it: `load: read loop on thread N, sync context = …` once per open (pre-fix that names WPF's context),
+  and with `PerfJournal.Enabled` a `load: % | queue d/100000 | lines/s | gen | MB` line every ~2 s — **queue at the bound means the
+  parse lane is the bottleneck, near-empty means the reader/disk is**, which is the one question Linux cannot answer here. Pinned by
+  `LogReaderThreadTest` (Windows-only assembly): a `SynchronizationContext` that accepts posts and never runs them must still let a
+  whole file through. Docs: docs/DesignNotes.md → "The read loop was running on the UI thread".
 - **A recent-cast query may be bounded only by the store's own proof of order**: `RecordsStore.GetCastsBySpellName` answered
   "what did this ambiguous spell name cast recently" by allocating capacity for the spell's whole history and walking all of it
   (**149,232,044 entries visited across 214,487 queries** on Incogitable for 164,263 matches — ~700 examined per match; the bound

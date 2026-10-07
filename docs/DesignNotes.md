@@ -7804,3 +7804,74 @@ lanes; deleted once these numbers landed):
   `LogReader.HandleLine`. Larger retained-memory projects — duplicate healing storage, chunked/cold-compressed fact storage —
   are **trades of CPU for footprint**, so they come after parse-side allocation is trimmed, which is exactly the sequencing
   the improvement map argues for.
+
+## The read loop was running on the UI thread (2026-11)
+
+The symptom class this closes is *"opening last night's capture makes the numbers freeze"* — not slowly, for as long as a
+few hundred megabytes take to load. No surface was at fault: the meter, the fight list and the derive cadence all want the
+dispatcher, and the dispatcher was spending the whole load reading EQ's log file.
+
+**The mechanism is three code facts, and no profiler was needed to see it:**
+
+1. `MainWindow.OpenLogFile` does its work inside a `Dispatcher.Invoke(...)` body, and that body is where the reader was
+   started (`_ = _eqLogReader.StartAsync()`).
+2. Every `await` in `LogReader` used the default context capture, so WPF's `DispatcherSynchronizationContext` was captured
+   right there and every continuation came back to the dispatcher — the read itself, the timestamp reuse in `HandleLine`,
+   the batch append, and `FlushBatch`'s handoff.
+3. `ReadLineAsync` suspends only once per read buffer: `BufferSize = 147456` bytes against a reference capture whose lines
+   average ~117 B (467 MB / 3.99 M lines), so **about 1,250 lines per suspension**. Nearly every iteration therefore
+   continued inline on the UI thread — and the minority that did suspend posted their continuation straight back to it.
+
+The steady state of a big open was not a busy UI thread but a *parked* one: `FlushBatch` hands items to a bounded
+`BlockingCollection` (100,000 items, `QueueBound`), and the reader is limited by nothing except that queue — a sequential
+read outruns a parse lane that costs ~1.6 KB of allocation and a whole grammar per line. So for most of the load the UI
+thread was sitting in `Add`, waiting for the parser, unable to paint. (Which side is actually the limit on a given machine
+is a hardware question, and it is precisely what the new diagnostic line below answers rather than what this chapter
+asserts; a hard drive slow enough to make the reader the bottleneck would show it as a near-empty queue.)
+
+**The fix has two halves, and both are load-bearing.** `ConfigureAwait(false)` on all thirteen awaits makes every
+continuation context-free, which is the durable property — it also means `TriggerManager`'s blocking
+`StartAsync().GetAwaiter().GetResult()` call sites can no longer deadlock against a dispatcher that is waiting on them.
+`Task.Run(_eqLogReader.StartAsync)` at the call site moves the **first** segment, which no `ConfigureAwait` can relocate
+because it runs before the first await: that segment includes `logProcessor.LinkTo(...)`, whose own consuming task the
+processor starts inside it. The parse lane was never on the UI thread (`LinkTo` does its own `Task.Run`) — only the reader's
+side of the handshake was, and that is the side that blocks.
+
+Nothing in `LogReader` wants affinity: it touches no dispatcher, no WPF type, and the same code path already runs on pool
+threads every time a `FileSystemWatcher` event fires. Two consequences of leaving the UI thread were handled explicitly:
+
+- **Dispose-before-start became reachable.** With the start queued to the thread pool, opening log B can dispose reader A
+  before A's queued `StartAsync` ever ran; disposed means `logProcessor` is null and the collection is completed, which
+  threw inside an unobserved fire-and-forget task. `StartAsync` now walks away (with a `Debug` line) when it begins on a
+  cancelled or disposed reader instead of throwing where nobody looks.
+- **`LogArchiveManager.QueueFileArchiveAsync` and `_chatSink.Init()` now run on a pool thread.** Both were checked for UI
+  affinity before the move (neither file references a dispatcher type), and the archive path has always also been driven
+  from a zone line inside the reader loop, which was never the UI thread's own private work.
+
+**A load is now visible in the log it was invisible in.** `LogReader` writes one thread line per open —
+`load: read loop on thread 7, sync context = none` — which is the direct answer to "is my capture loading on the UI thread?"
+(pre-fix that line names WPF's synchronization context), plus a periodic progress line when `PerfJournal.Enabled`
+(settings.txt `PerfReport=True`), one per ~2 s of reading:
+
+```
+load: 43% | queue 100000/100000 | read 612,480 lines/s | gen +91/2/0 | allocated 5,204 MB
+```
+
+`queue 100000/100000` = the parse lane is the bottleneck and the reader is parked in `Add`; a queue near zero with the same
+elapsed time means the *reader* is the slow half (a disk problem, not a parser one). The generation deltas say whether
+collection work competes for cores during a load, which the "what garbage a raid actually makes" chapter above predicts is
+not where the time goes — if this line ever says otherwise, that is a new finding. `read` here is read rate, not parsed
+rate: by design the reader stays ahead of the consumer.
+
+**The property is pinned, not asserted in prose:** `EQLogParser.Wpf.Test/src/control/util/LogReaderThreadTest.cs` installs a
+`SynchronizationContext` that accepts posts and **never runs them**, starts the reader on that thread with no `Task.Run`
+wrapper, and requires the whole 20,000-line fixture to arrive plus zero posts to that context. One continuation that still
+wants its starting context stops the read and fails the test by name. That assembly is Windows-only — it builds here, but
+this test needs a Windows run, and the Windows A/B (open a 400 MB capture with `PerfReport=True`, before and after) is what
+turns "the mechanism is gone" into "the window stops freezing".
+
+**What this does not fix, stated so it is not re-discovered:** work already *posted* to the dispatcher during a load (FCT
+draw ticks, meter refreshes, `UpdateLoadingProgress`) still queues behind whatever else the thread does — this change stops
+the loader from being that work, it does not reorder the queue. The remaining large lever for weak hardware is unchanged and
+already measured: `Action.Split(' ')` in `LogProcessor` (29 % of ingest CPU, ~1.8 GB allocated), which needs the tokenizer
+change across all four parsers rather than a threading fix.
