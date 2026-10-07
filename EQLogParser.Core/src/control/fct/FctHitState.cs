@@ -183,6 +183,72 @@ namespace EQLogParser
      * read-only from here on, so a copy that shares the strings is enough to test a different launch position. Nothing that
      * owns a substrate resource is cloned — a trial never reaches a canvas, and only canvases cache per-hit resources.
      */
-    public FctHitState Clone() => (FctHitState)MemberwiseClone();
+    /*
+     * Field-by-field copy into an object that already exists, so a placement search can try eighteen launch points without
+     * allocating eighteen rows (see FctPlacement). `Clone` goes through this rather than `MemberwiseClone` so there is exactly
+     * ONE list of what "a copy" means — a second implementation is a field one of them forgets.
+     *
+     * That risk is not trusted to care: `FctHitStateCopyTest` sets a distinct sentinel in every instance field by reflection,
+     * copies, and refuses a field that did not travel (and one that travelled stale into a pre-dirtied target). A forgotten
+     * field here is a row drawn with somebody else's band or tempo, which no geometry test would notice.
+     */
+    internal FctHitState CopyFrom(FctHitState o)
+    {
+      Lane = o.Lane;
+      TrafficLane = o.TrafficLane;
+      Proc = o.Proc;
+      Periodic = o.Periodic;
+      Heal = o.Heal;
+      Special = o.Special;
+      IconAllowance = o.IconAllowance;
+      Style = o.Style;
+      Incoming = o.Incoming;
+
+      X0 = o.X0;
+      Y0 = o.Y0;
+      Rise = o.Rise;
+      Sway = o.Sway;
+      Bow = o.Bow;
+      HangRight = o.HangRight;
+      FallDist = o.FallDist;
+      MotionMs = o.MotionMs;
+
+      SideMin = o.SideMin;
+      SideMax = o.SideMax;
+      BandMinY = o.BandMinY;
+      BandMaxY = o.BandMaxY;
+
+      LifetimeMs = o.LifetimeMs;
+      FadeMs = o.FadeMs;
+      ValueFontSize = o.ValueFontSize;
+      SourceFontSize = o.SourceFontSize;
+      ValueArgb = o.ValueArgb;
+      SourceArgb = o.SourceArgb;
+      Blowout = o.Blowout;
+
+      OnConveyor = o.OnConveyor;
+      ConveyorLane = o.ConveyorLane;
+      ConveyorBirthPhase = o.ConveyorBirthPhase;
+      ConveyorQ = o.ConveyorQ;
+      ConveyorTravel = o.ConveyorTravel;
+      RailPress = o.RailPress;
+
+      SpawnMs = o.SpawnMs;
+      Value = o.Value;
+      MergeCount = o.MergeCount;
+
+      FormattedValue = o.FormattedValue;
+      Source = o.Source;
+      SourceLabel = o.SourceLabel;
+      FixedText = o.FixedText;
+      DisplayText = o.DisplayText;
+
+      ValueWidth = o.ValueWidth;
+      SourceWidth = o.SourceWidth;
+      TextDirty = o.TextDirty;
+      return this;
+    }
+
+    public FctHitState Clone() => new FctHitState().CopyFrom(this);
   }
 }

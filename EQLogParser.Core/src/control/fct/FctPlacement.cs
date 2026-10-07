@@ -94,17 +94,49 @@ namespace EQLogParser
     public const double LateralDriftWeight = 0.12;
 
     /*
-     * Returns the placed hit, which is not necessarily the one passed in: candidates are trials of the same hit, and the best
-     * is returned for the caller to add to its list. `hit` is returned untouched when there is nothing to dodge.
+     * Where a search keeps its trials. Each candidate used to begin with `hit.Clone()` — eighteen row states allocated per
+     * number shown, seventeen thrown away, and this runs on the render thread with the overlay animating (measured ~5.4 KB
+     * per spawned number; docs → "What the FCT overlay costs per number on screen"). A trial is a row's fields at a
+     * different origin, so two reusable buffers are enough: `Work` gets reset from the pristine row and scored, `Champion`
+     * freezes the best one seen so far while `Work` goes on to the next candidate, and at the end the winner's geometry is
+     * copied back into the row the caller handed us.
+     *
+     * Owned per FctIngest — one overlay, one bench — because Accept runs on that canvas's render thread and two windows
+     * (the overlay and the simulation preview) must not scribble on each other's trials.
      */
+    internal sealed class FctTrialBench
+    {
+      internal FctHitState Work;
+      internal FctHitState Champion;
+
+      /* Called when a row escapes the search: the object that survives is the caller's, so nothing here holds it. */
+      internal void Clear()
+      {
+        Champion = null;
+      }
+    }
+
+    /// <summary>Search without a bench: allocates its trials, which is fine for a caller that places one row (a test).</summary>
     internal static FctHitState Place(FctHitState hit, List<FctHitState> hits, double w, double h, Random rand)
-      => Place(hit, hits, FctStage.Bands(w, h), rand);
+      => Place(hit, hits, FctStage.Bands(w, h), rand, null);
+
+    /// <summary>See the benchless overload. Returns the SAME row that went in, re-geometried by whichever candidate won.</summary>
+    internal static FctHitState Place(FctHitState hit, List<FctHitState> hits, double w, double h, Random rand, FctTrialBench bench)
+      => Place(hit, hits, FctStage.Bands(w, h), rand, bench);
 
     /*
      * The search walks the candidate's own band and column territory: in split both are one lane, so a candidate can
      * never be proposed across the seam, and the overlap pass below never spends a sample on a number that cannot reach it.
      */
     internal static FctHitState Place(FctHitState hit, List<FctHitState> hits, FctStage stage, Random rand)
+      => Place(hit, hits, stage, rand, null);
+
+    /*
+     * The search itself. `hit` is never mutated while candidates are being scored (each trial is reset from it), and the
+     * winner's geometry is copied into it before returning, so the caller's row — and anything a backend will later key to
+     * that identity — is the object that ends up on screen. Without a bench this allocates two states; with one, nothing.
+     */
+    internal static FctHitState Place(FctHitState hit, List<FctHitState> hits, FctStage stage, Random rand, FctTrialBench bench)
     {
       if (hits.Count == 0 || stage.W <= 0 || stage.H <= 0)
       {
@@ -123,8 +155,14 @@ namespace EQLogParser
       var canonicalX = hit.X0;
       var canonicalY = hit.Y0;
 
-      var best = hit;
       var bestCost = Cost(hit, canonicalX, canonicalY, stage.W, stage.H, hits, 0);
+
+      /* The row's own launch point is the incumbent: a candidate has to beat it, not merely exist. There is no per-candidate
+         object to keep any more, so the champion buffer freezes the winner's fields while the work buffer moves on to the next
+         lattice point, and the winner is copied back into the caller's row at the end. */
+      var won = false;
+      var work = bench?.Work ?? new FctHitState();
+      FctHitState champ = bench?.Champion;
 
       /* The band this hit was given, walked from edge to edge. Band edges come from the layout's own reserve maths, so every
        * candidate below is inside a legal band before it is scored. */
@@ -139,20 +177,34 @@ namespace EQLogParser
         {
           var x = slot + ((col - ((LateralSteps - 1) / 2.0)) * xStep);
 
-          var trial = Pin(hit, stage, rand,
+          work.CopyFrom(hit);
+          Pin(work, stage, rand,
             x + (xStep * LatticeJitter * (rand.NextDouble() * 2 - 1)),
             y + ((depth / DepthSteps) * LatticeJitter * (rand.NextDouble() * 2 - 1)));
 
-          var cost = Cost(trial, canonicalX, canonicalY, stage.W, stage.H, hits, WideSearchCost);
+          var cost = Cost(work, canonicalX, canonicalY, stage.W, stage.H, hits, WideSearchCost);
           if (cost < bestCost)
           {
-            best = trial;
             bestCost = cost;
+            won = true;
+
+            // Before the next candidate overwrites it. Only the first win needs to create anything.
+            champ ??= new FctHitState();
+            champ.CopyFrom(work);
           }
         }
       }
 
-      return best;
+      if (bench is not null)
+      {
+        bench.Work = work;
+        bench.Champion = champ;
+      }
+
+      if (!won) return hit;   // the layout's own throw already sat in the best place of its lattice
+
+      hit.CopyFrom(champ);
+      return hit;
     }
 
     /*
@@ -165,19 +217,23 @@ namespace EQLogParser
      * reason. A rail trial asked to enter deep has a shorter flight; scoring it on the duration stamped for the
      * mouth would make it crawl, and every row behind it would overtake it in the sample — which is precisely how
      * depth entries were priced into certain collisions (cost 1.0) and pushed sideways. */
+    /*
+     * Stamps the row IN PLACE — the object the caller owns is the one that comes back. It used to clone first, which was
+     * correct while its only caller was a search trying eighteen variants; now that trials reuse a bench buffer (see
+     * FctTrialBench), a copy here would be garbage for the sake of a row that was going to move anyway.
+     */
     internal static FctHitState Pin(FctHitState hit, FctStage stage, Random rand, double x, double y)
     {
-      var trial = hit.Clone();
-      FctLayout.Spawn(trial, stage, rand, origin: (x, y));
-      FctLayout.ApplyFall(trial, stage);
-      if (FctMotionStyles.IsRail(trial.Style))
+      FctLayout.Spawn(hit, stage, rand, origin: (x, y));
+      FctLayout.ApplyFall(hit, stage);
+      if (FctMotionStyles.IsRail(hit.Style))
       {
         // the same stamp a finished row gets — live neighbours carry their final tempo, and scoring a trial on the
         // raw estimate would rate it against the traffic as if it moved at some other speed than it really will
-        FctIngest.FinalizeRailTempo(trial);
+        FctIngest.FinalizeRailTempo(hit);
       }
 
-      return trial;
+      return hit;
     }
 
     /*

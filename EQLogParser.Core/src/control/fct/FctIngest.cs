@@ -45,6 +45,11 @@ namespace EQLogParser
     private const double ProcSignificanceFrac = 0.5;
 
     private readonly FctLifeController _life = new();
+
+    /* Two row states reused by every placement search this engine runs (see FctPlacement.FctTrialBench): the eighteen
+       candidates per number used to allocate eighteen rows on the render thread. Per engine, because each overlay pumps its
+       own ingest from its own render thread and the simulation window must not share a bench with the real one. */
+    private readonly FctPlacement.FctTrialBench _bench = new();
     private readonly FctConveyor _conveyor = new();
     private readonly Random _rand;
 
@@ -502,7 +507,7 @@ namespace EQLogParser
          * that went in. Every rail is a conveyor by now, so what reaches this branch is choreography — freeze, spray,
          * fountain — which is thrown, lands where it lands, and asks nothing of its neighbours but room.
          */
-        hit = FctPlacement.Place(hit, hits, stage, _rand);
+        hit = FctPlacement.Place(hit, hits, stage, _rand, _bench);
       }
 
       FctMotion.RefreshText(hit);
