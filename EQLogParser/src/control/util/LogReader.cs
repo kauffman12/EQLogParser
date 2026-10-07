@@ -2,6 +2,7 @@ using log4net;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Text;
@@ -14,7 +15,15 @@ namespace EQLogParser
     : IDisposable
   {
     private const int BatchSize = 5000;
-    private readonly BlockingCollection<LogReaderItem> _lines = new(new ConcurrentQueue<LogReaderItem>(), 100000);
+    /*
+     * The bound is memory backpressure, and it is what a bulk open spends its life against: the reader runs far ahead of
+     * the parser (a capture reads at hundreds of MB/s against a parse lane an order of magnitude slower), so within a
+     * second this queue is full and every handoff parks the reader until the consumer drains. That behaviour is correct -
+     * unbounded would buffer a whole night of strings behind the parser - but it is also why WHO runs this loop matters:
+     * the thread that blocks in Add is the thread that cannot paint a window. See the note on StartAsync.
+     */
+    private const int QueueBound = 100_000;
+    private readonly BlockingCollection<LogReaderItem> _lines = new(new ConcurrentQueue<LogReaderItem>(), QueueBound);
     private readonly List<LogReaderItem> _batch = new(BatchSize);
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static ReadOnlySpan<char> LoadingMsg => "LOADING, PLEASE WAIT...";
@@ -28,6 +37,14 @@ namespace EQLogParser
     private long _currentPos;
     private long _nextUpdateThreshold;
     private double _lastParsedTime;
+
+    // Load diagnostics (PerfJournal.Enabled only): see NoteLoadProgress.
+    private readonly Stopwatch _loadWatch = new();
+    private long _diagLines;
+    private double _diagSeconds;
+    private int _diagGen0;
+    private int _diagGen1;
+    private int _diagGen2;
     private bool _fileDeleted;
     private bool _waiting = true;
     private bool _ready;
@@ -38,12 +55,34 @@ namespace EQLogParser
     public bool IsWaiting() => _waiting;
     public bool IsInValid() => _invalid;
 
-    /// <summary>
-    /// Starts the asynchronous log reading process.
-    /// </summary>
+    /*
+     * Who runs this loop matters as much as what it does, so both halves of the rule live here.
+     *
+     * Every await in this file is ConfigureAwait(false). Without that, a caller who starts the task on the UI thread - and
+     * MainWindow's open path IS inside a dispatcher callback - captures WPF's SynchronizationContext, and every
+     * continuation comes back to the dispatcher: the read, the timestamp reuse, the batch append and FlushBatch's Add all
+     * resume on the thread that paints the window. Reads only suspend once per ~144 KB buffer (about a thousand lines), so
+     * almost every iteration continued inline there, and when one did suspend its continuation was posted back anyway. The
+     * steady state of a big open was therefore: UI thread reading lines, then parked in Add against a full queue.
+     *
+     * Nothing in this class wants a thread affinity at all - no dispatcher, no WPF type, and FileSystemWatcher already
+     * drives the same code on pool threads - so it takes none. Callers should still start it off the UI thread (MainWindow
+     * uses Task.Run) because the FIRST segment runs before any await can move it.
+     */
     public async Task StartAsync()
     {
-      if (await WhenFileExistsAsync())
+      /*
+       * Started off the UI thread now, so this can arrive after the pane moved on: opening another log disposes the previous
+       * reader before its queued start runs, and by then the processor is gone and the queue is closed. Walk away quietly -
+       * the alternative is an ObjectDisposedException/NullReference inside a fire-and-forget task that nobody observes.
+       */
+      if (_disposedValue || _cts.IsCancellationRequested)
+      {
+        Log.Debug($"load: start skipped - the reader for {Path.GetFileName(FileName)} was closed before it began");
+        return;
+      }
+
+      if (await WhenFileExistsAsync().ConfigureAwait(false))
       {
         logProcessor.LinkTo(_lines);
         LogArchiveManager.QueueFileArchiveAsync(this);
@@ -51,7 +90,7 @@ namespace EQLogParser
 
       try
       {
-        await ReadFileAsync();
+        await ReadFileAsync().ConfigureAwait(false);
       }
       catch (Exception ex)
       {
@@ -59,7 +98,7 @@ namespace EQLogParser
       }
       finally
       {
-        await CleanupStreamsAsync();
+        await CleanupStreamsAsync().ConfigureAwait(false);
 
         if (_watcher != null)
         {
@@ -135,11 +174,17 @@ namespace EQLogParser
         SearchLinear(_reader, minDate);
 
         _ready = true;
+
+        // One line per open, and it is the answer to "is the load running on my UI thread?". Before this class was made
+        // context-free it named WPF's synchronization context here; the honest answer now is "none".
+        Log.Info($"load: read loop on thread {Environment.CurrentManagedThreadId}, sync context = "
+                 + $"{SynchronizationContext.Current?.GetType().Name ?? "none"}");
+
         _currentPos = _fs.Position;
         var bytesRead = _fs.Position;
 
         // date is now valid so read every line
-        while ((line = await _reader.ReadLineAsync(_cts.Token)) != null)
+        while ((line = await _reader.ReadLineAsync(_cts.Token).ConfigureAwait(false)) != null)
         {
           if (_cts.IsCancellationRequested)
           {
@@ -214,7 +259,7 @@ namespace EQLogParser
           if (_fileDeleted || _fs.Length < _currentPos)
           {
             _fileDeleted = false;
-            await ReOpenAsync();
+            await ReOpenAsync().ConfigureAwait(false);
             continue;
           }
 
@@ -224,7 +269,7 @@ namespace EQLogParser
             break;
           }
 
-          while ((line = await _reader.ReadLineAsync(_cts.Token)) != null)
+          while ((line = await _reader.ReadLineAsync(_cts.Token).ConfigureAwait(false)) != null)
           {
             HandleLine(line, ref previous, true);
           }
@@ -246,7 +291,7 @@ namespace EQLogParser
            * Deliberately not a Changed-event wake-up: EQ's own write buffering coalesces those notifications unpredictably, so an event
            * would have to be backed by this same poll anyway.
            */
-          await Task.Delay(200, _cts.Token);
+          await Task.Delay(200, _cts.Token).ConfigureAwait(false);
         }
         catch (TaskCanceledException)
         {
@@ -256,7 +301,7 @@ namespace EQLogParser
         catch (Exception)
         {
           FlushBatch();
-          await ReOpenAsync();
+          await ReOpenAsync().ConfigureAwait(false);
         }
       }
     }
@@ -306,11 +351,50 @@ namespace EQLogParser
     {
       if (_batch.Count == 0) return;
 
+      var flushed = _batch.Count;
       foreach (var item in _batch)
       {
         _lines.Add(item, _cts.Token);  // Blocks if queue full, but consumer keeps processing
       }
       _batch.Clear();
+
+      NoteLoadProgress(flushed);
+    }
+
+    /*
+     * What a big load is actually doing, one line every ~2 s, and only when PerfJournal.Enabled (settings.txt
+     * PerfReport=True) - a normal session writes nothing here. Chosen for the two questions that matter during an open:
+     *
+     *   queue 0/100000     - the reader is the slow half; nothing waits on the parse lane.
+     *   queue 100000/...   - the parse lane is the bottleneck and this thread is parked in Add. That is what used to
+     *                      freeze the window while a 400 MB capture loaded, and the queue depth is how you can see it
+     *                      afterwards from eqlogparser.log alone.
+     *
+     * The generation deltas say whether collection work competes for cores during the load (the measured figures in
+     * docs/DesignNotes.md say the garbage is small; if this line says otherwise, that is a finding). Lines/s here is READ
+     * rate, not parsed rate - the reader runs ahead of the parser by design.
+     */
+    private void NoteLoadProgress(int batchLines)
+    {
+      if (!PerfJournal.Enabled || batchLines == 0) return;
+
+      _diagLines += batchLines;
+      if (!_loadWatch.IsRunning) _loadWatch.Restart();
+      var seconds = _loadWatch.Elapsed.TotalSeconds;
+      var delta = seconds - _diagSeconds;
+      if (delta < 2.0) return;
+
+      var g0 = GC.CollectionCount(0);
+      var g1 = GC.CollectionCount(1);
+      var g2 = GC.CollectionCount(2);
+      Log.Info($"load: {GetProgress():0}% | queue {_lines.Count}/{QueueBound} | read {_diagLines / delta:N0} lines/s"
+               + $" | gen +{g0 - _diagGen0}/{g1 - _diagGen1}/{g2 - _diagGen2}"
+               + $" | allocated {GC.GetTotalAllocatedBytes(true) / 1_048_576:N0} MB");
+
+      _diagSeconds = seconds;
+      _diagGen0 = g0;
+      _diagGen1 = g1;
+      _diagGen2 = g2;
     }
 
     private void SearchLinear(StreamReader reader, DateTime minDate)
@@ -353,7 +437,7 @@ namespace EQLogParser
             return true;
           }
 
-          await Task.Delay(1000, _cts.Token);
+          await Task.Delay(1000, _cts.Token).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is TaskCanceledException or ObjectDisposedException)
         {
@@ -364,10 +448,10 @@ namespace EQLogParser
 
     private async Task ReOpenAsync()
     {
-      await CleanupStreamsAsync();
-      await Task.Delay(100);
+      await CleanupStreamsAsync().ConfigureAwait(false);
+      await Task.Delay(100).ConfigureAwait(false);
 
-      if (await WhenFileExistsAsync())
+      if (await WhenFileExistsAsync().ConfigureAwait(false))
       {
         _fileDeleted = false;
         _fs = new FileStream(
@@ -394,7 +478,7 @@ namespace EQLogParser
 
       if (_fs != null)
       {
-        await _fs.DisposeAsync();
+        await _fs.DisposeAsync().ConfigureAwait(false);
         _fs = null;
       }
     }

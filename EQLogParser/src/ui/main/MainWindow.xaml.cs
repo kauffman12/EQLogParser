@@ -1458,7 +1458,14 @@ namespace EQLogParser
             if (npcWindow?.Content is FightTable bandPane) bandPane.AllowsLoadBand = openedAutomatically;
 
             _eqLogReader = new LogReader(new LogProcessor(theFile, chatSink, new TriggerHookAdapter()), theFile, lastMins);
-            _ = _eqLogReader.StartAsync();
+            /*
+             * Start the read loop OFF this thread - and Task.Run is needed even though LogReader made all of its own
+             * awaits context-free, because the first segment runs on whoever called and everything here is already inside a
+             * dispatcher callback. A bulk open spends most of its life parked in the reader's full-queue Add: reading a
+             * 350 MB capture used to do that on the thread that paints this window, which is what made the numbers freeze
+             * while a big log loaded. The meter keeps its own dispatcher work - only who runs the reader changed.
+             */
+            _ = Task.Run(_eqLogReader.StartAsync);
             UpdateLoadingProgress();
           }, DispatcherPriority.Render);
         }
