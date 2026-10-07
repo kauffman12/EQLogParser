@@ -48,15 +48,12 @@ namespace EQLogParser
     public const byte LineDerivedFlagMask = FlagOwnerInLine;
 
     /*
-     * FIELD ORDER IS THE LAYOUT. Declaration order here is 32 bytes; the same ten fields in the order this
-     * struct shipped in are 40 — an `int` declared before the lone `long` costs four bytes of alignment pad at
-     * offset 4, and eight bytes of tail pad then push the row past 32. That is eight bytes on every heal the
-     * engine keeps (32 MB off a night that stores 4 M of them), so the rule for this struct is: widest field
-     * first, then the four-byte fields, then the two-byte ones, then the bytes.
-     *
-     * Nothing here narrows: no time range, amount, participant index or modifier was shortened to fit. The CLR
-     * is allowed to reorder fields, so the layout is a fact about this build rather than a promise — which is
-     * why HealFactCaptureTest asserts the size and this comment points at that assertion.
+     * FIELD ORDER IS THE LAYOUT: widest first, then the four-byte fields, then two-byte, then bytes. The same ten values
+     * in the order this struct once shipped in were 40 bytes (an int before the lone long opened a four-byte pad and eight
+     * bytes of tail), the clock's rebasing took that to 28 (FactTime), and packing the label into the flags byte plus the
+     * modifier mask into one byte — which measured heal traffic says is all it needs — lands it on **24**, matching a
+     * damage row. The CLR may reorder fields, so the layout is a fact about this build rather than a promise, and
+     * HealFactCaptureTest asserting the measured size is what makes a change in padding visible.
      */
 
     /*
@@ -89,16 +86,63 @@ namespace EQLogParser
     public readonly short HealerIdx;
     public readonly short HealedIdx;
 
-    // HealRecord.ModifiersMask as parsed (-1 when the line carried no modifier text). The healing board's
-    // filters read it, so a derived board needs it for the same reason damage does.
-    public readonly short ModMask;
-
     // Spell name index ("Heroic Renewal Rk. II"), which is what HealRecord.SubType holds and what
     // StatsUtil.CreateRecordKey builds its activity windows from.
     public readonly ushort SubIdx;
 
-    public readonly byte TypeId;    // LabelTypes.Heal or LabelTypes.Hot
-    public readonly byte Flags;
+    /*
+     * HealRecord.ModifiersMask, in one byte, read back as the short it always was.
+     *
+     * Measured reach, not a guess: across three captures a heal line's mask is only ever Twincast(1), Crit(2) and
+     * Lucky(4) — 0x7 ORed over 1.3 M heals on the 663 MB one ({-1, 1, 2, 3, 6, 7} distinct values), and an EMU capture
+     * writes plain 0 for all 22,703 of its heals because its line shape carries no modifier text at all. Everything the
+     * healing board filters on lives in those three bits; the bits above 255 (Slay, Doublebow, Flurry, Finishing) are
+     * melee/ranged vocabulary and never appeared on a heal.
+     *
+     * Two things keep it honest rather than lucky:
+     *  - `MasksBeyondByte` counts any mask that could not be stored verbatim, so the day a heal line carries a bit above
+     *    128 the answer is a logged counter and four bytes back on every heal, not a filter that quietly stopped firing.
+     *  - `MaskNone` (255) stands for the parser's −1 ("the line carried no modifier text"), because 0 IS a real value an
+     *    EMU log writes — so it cannot double as "none". A mask of literally 0xFF on a heal would read as none; that is
+     *    counted by `MaskSentinelCollisions` and was never observed.
+     */
+    private readonly byte _modMask;
+
+    /// <summary>The parser's −1 ("no modifier text"), distinct from a real mask of 0.</summary>
+    public const byte MaskNone = byte.MaxValue;
+
+    /// <summary>HealRecord.ModifiersMask as the healing board has always read it. See _modMask for the packing.</summary>
+    public short ModMask => _modMask == MaskNone ? LineModifiersParser.None : _modMask;
+
+
+    /*
+     * The label and the flags share one byte, because a heal row's type is exactly one bit wide: HealingLineParser can
+     * only ever produce LabelTypes.Heal (16) or LabelTypes.Hot (17), and `HitStatSplitTest` pins the arithmetic on those
+     * two words. Bit 8 carries it — not bit 2 or 4, which stay retired — so `Flags` hands back the flag bits with the
+     * label's bit hidden and FactsCarryOnlyWhatTheirOwnLinesSay keeps meaning what it says.
+     */
+    private const byte TypeBit = 8;
+    private readonly byte _labelAndFlags;
+
+    /// <summary>LabelTypes.Heal or LabelTypes.Hot, the only two a heal line can be.</summary>
+    public byte TypeId => (_labelAndFlags & TypeBit) != 0 ? LabelTypes.Hot : LabelTypes.Heal;
+
+    /// <summary>The fact flags, with the label's bit hidden. See FlagOwnerInLine and LineDerivedFlagMask.</summary>
+    public byte Flags => (byte)(_labelAndFlags & ~TypeBit);
+
+    /* Packing guards: counted rather than assumed. Zero means "this build never met a heal line that needed more than
+     * the byte it has", which is the assertion HealFactPackingTest makes and the number to look at if a healing filter
+     * is ever reported wrong. */
+    internal static long MasksBeyondByte;
+    internal static long MaskSentinelCollisions;
+    internal static long UnknownTypeLabels;
+
+    internal static void ResetPackingCounters()
+    {
+      MasksBeyondByte = 0;
+      MaskSentinelCollisions = 0;
+      UnknownTypeLabels = 0;
+    }
 
     public HealFact(int seq, long timeS, short healerIdx, short healedIdx, uint total, uint overTotal,
       byte typeId, byte flags, short modMask, ushort subIdx)
@@ -109,9 +153,29 @@ namespace EQLogParser
       HealedIdx = healedIdx;
       Total = total;
       OverTotal = overTotal;
-      TypeId = typeId;
-      Flags = flags;
-      ModMask = modMask;
+
+      // The label bit: Heal is the absence of it, Hot is its presence. Anything else is a type this stream cannot hold —
+      // counted rather than silently written as Heal, because that silent write is how a new label would vanish.
+      if (typeId != LabelTypes.Heal && typeId != LabelTypes.Hot) UnknownTypeLabels++;
+      _labelAndFlags = (byte)(flags | (typeId == LabelTypes.Hot ? TypeBit : 0));
+
+      // The mask's one byte, with both edges counted rather than wrapped (see _modMask).
+      if (modMask < 0)
+      {
+        if (modMask != LineModifiersParser.None) MasksBeyondByte++;   // only -1 means "no text"; anything else is a surprise
+        _modMask = MaskNone;
+      }
+      else if (modMask >= MaskNone)
+      {
+        // 0xFF and above: storable only by losing a bit, so store the low byte and say so.
+        if (modMask == MaskNone) MaskSentinelCollisions++; else MasksBeyondByte++;
+        _modMask = (byte)modMask;
+      }
+      else
+      {
+        _modMask = (byte)modMask;
+      }
+
       SubIdx = subIdx;
     }
 

@@ -72,7 +72,7 @@ public class FactTimeTest
 
       // And the row is still the size the memory pass bought: the narrow field is real, not a property over a long.
       Assert.AreEqual(24, Unsafe.SizeOf<DamageFact>());
-      Assert.AreEqual(28, Unsafe.SizeOf<HealFact>());
+      Assert.AreEqual(24, Unsafe.SizeOf<HealFact>(), "packed: same size as a damage row");
     }
 
     [TestMethod]

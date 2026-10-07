@@ -8069,3 +8069,86 @@ queue nearly empty by itself, so this term belongs to opens.
 packing question), and a **live heap ledger** (one line every 30 s under `PerfReport=True`: working set, LOH, generation
 deltas with pause ms, facts/heals rows vs slots vs slack, name pool, FCT live hits) so a player's own raid log can say
 what grew and whether their stalls coincide with gen2. Neither is assumed; the ledger is what would decide them here.
+
+## A fact row is 24 bytes: the clock, the vocabulary, and what a byte of mask needed (2026-11)
+
+Asked as "can we retain smaller facts — if there are only ~30 possible values, store them in a short". Half of that was
+already true and half of it was aimed at the wrong field, which is worth writing down because the answer changed what got
+built. The vocabularies were packed years ago: `HitLabel` is a byte (the sixteen words), the spell/modifier name is a
+ushort pool index, `Flags` is a byte with two live bits. What was actually fat was **the clock**: `TimeS` held the
+dotnet-epoch second itself — ~6.3e10 in the 2020s — and its comment recorded that an `int` cast of it had once overflowed
+silently and corrupted every timestamp. True of the raw value; pointless as a storage choice.
+
+| row | before | after | why |
+|---|---|---|---|
+| `DamageFact` | 32 B | **24 B** | the lone long (8) became an int (4); its 22-byte payload no longer pads to a multiple of 8 |
+| `HealFact` | 32 B → 28 B | **24 B** | same clock, then the label folded into the flags byte and the modifier mask into one byte |
+
+On the capture the operator loaded (~7.5 M damage + ~4.1 M heals) that is **~93 MB less retained** out of ~371 MB of row
+slots — a quarter of the biggest thing the process keeps, from two width changes and no semantic change anywhere.
+
+**The clock (`FactTime`, Core).** A row stores seconds-since-2000-01-01 and its `TimeS` property hands back the dotnet-epoch
+long it always handed back, so the base is known in exactly two functions and reaches no rule, window, digest or board:
+`FightProjection`'s identity hash, the charm windows, R7/R15's heal gates, every builder and both boards compare and
+subtract identical numbers. Auditing 57 read sites was therefore unnecessary; the audit was "does anything outside those two
+functions know the base", which grep answers. Range is 1931–2068 (int seconds around a 2000 base). Two edges got rules
+rather than casts:
+
+- **Unresolved time stays unresolved.** `BeginTime` that never resolved arrives as 0 dotnet-epoch seconds and used to be
+  stored as 0; it now round trips through a sentinel back to 0, because mapping it to a plausible 1931 date would be an
+  invention and `FightSummarySource`'s zero-window guards already own that case. NaN likewise never reaches a row as some year.
+- **Out-of-range clamps AND counts** (`FactTime.OutOfRange`). Wrapping is the original defect; an uncounted clamp is that
+  defect with better manners. Zero is asserted, not assumed.
+
+**The heal packing needed a measurement, not a guess.** Whether a modifier mask fits in a byte is entirely a question about
+what heal lines carry, so three captures were run and the masks histogrammed (probe deleted once it answered — a real-log
+gate is disposable, its numbers live here):
+
+| capture | heal mask values seen | OR of positives |
+|---|---|---|
+| `eqlog_Kizant_xegony-09-20-25.txt` (663 MB) | −1 ×906,591 · 2 ×185,895 · 6 ×185,526 · 3 ×3,858 · 7 ×3,834 · 1 ×2,687 | **0x7** |
+| `eqlog_Kizant_xegony-8-20-23.txt` | −1, 1, 2, 3, 6, 7 — same set | **0x7** |
+| `eqlog_Ikkydruid_thj.txt` (EMU/TSS) | **0 on all 22,703 heals** | 0x0 |
+
+So a heal mask is Twincast(1) | Crit(2) | Lucky(4) and nothing else, while the same field on **damage** reaches 0xFFF
+(Flurry 1024, Slay 256, Doublebow 512 appear by the hundred thousand) — which is why damage keeps its `short` and heal does
+not. Three rules came out of the table rather than from tidiness:
+
+- **The "no modifier text" sentinel cannot be 0**, because an EMU capture writes a real 0 on every heal. `MaskNone = 255`
+  stands for the parser's −1; a literally-0xFF mask would read as none and is counted (`MaskSentinelCollisions`), never observed.
+- **Everything up to 254 is stored verbatim**, not just what was seen — future content may be ordinary — and any mask that
+  needs a bit above the byte is **counted** (`MasksBeyondByte`) rather than truncated in silence. That counter is the signal
+  to put four bytes back, and the symptom it prevents is a healing filter quietly reading false while the board looks busy.
+- **The label is one bit, not a byte**: `HealingLineParser` produces only `Heal`(16) or `Hot`(17), so bit 8 of the flags
+  byte carries it and `Flags` hides that bit — bits 2/4 stay retired as the flag law demands, new fact flags start at 16, and
+  `FactsCarryOnlyWhatTheirOwnLinesSay` still means what it says. A third heal label would be counted
+  (`UnknownTypeLabels`) instead of being written as "Heal" and vanishing from every board.
+
+**Field order is still the layout, and the size test is what proved it.** With the mask byte declared *between* the shorts,
+the struct measured **28**, not 24: a one-byte field there opens a two-byte pad before `SubIdx`. The bytes go last. The CLR
+may reorder fields either way, which is why `AFactIsItsMeasuredSizeNotWishes` asserts the numbers rather than the intent —
+that assertion is also what caught this, in the same minute.
+
+**Fixtures had to stop using shorthand seconds.** Half a dozen test files clocked facts at `T0 = 1_000` — a number meant
+only ever to be subtracted from, never read as a date — and that falls outside 1931–2068, so every fact in such a fixture
+would clamp onto one instant: projection tests turned into tests of simultaneity that would keep passing. They take
+`FixtureTime.Base` (2025-01-01) now, one absolute affiliation window in `UnrowedFactsTest` moved with its file's clock, and
+`FactTimeTest.FixtureClocksAreInsideTheWindow` refuses a fixture base that needs clamping. That failure mode — *silently
+passing while measuring nothing* — is the reason to check ranges against test data before trusting a narrowing.
+
+**New tests**: `FactTimeTest` (base derived from `DateTime` rather than arithmetic, a real log stamp round-tripping through
+both row types, no-time and NaN, clamps counted, fixtures representable) and `HealFactPackingTest` (the measured reachable
+mask set, every value 0…254 verbatim, beyond-byte and sentinel both counted, label bit invisible to `Flags`, unknown label
+counted). Existing coverage did the rest for free: `HealFactCaptureTest` already compares captured heals against the parsed
+records field-for-field — including `Type`, `ModifiersMask` and the timestamp — so 34 fixture heals re-verified the packing
+end to end without a new line of assertion.
+
+**Verification beyond the suite (Linux, this box)**: `CaptureReproducibilityTest` twice over
+`eqlog_Kizant_xegony-8-20-23.txt` (495 MB) and once over the EMU capture `eqlog_Ikkydruid_thj.txt` with `EQLP_EMU=1`, and
+`IncrementalClassificationTest.CarriedPassMatchesAFullReplayOnRealLog` on the live capture — all executed, none skipped,
+all passing. 1,752 headless tests pass solution-wide with zero warnings.
+
+**Refused, with the reason**: dropping `Seq` (its array index already *is* its ordinal within a segment, worth another
+4 bytes a row) — it breaks the moment a session holds more than one spool segment, and cross-stream order is exactly what
+that field buys, so it belongs with the chunking design rather than before it. RangeSpike's `.spool` files are a dev
+artifact and must be regenerated after this change; nothing player-facing has ever persisted fact bytes.
