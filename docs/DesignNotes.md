@@ -7671,3 +7671,66 @@ Two cautions worth writing down because they cost time to learn:
   produces nettraces this SDK's `dotnet-trace` rejects mid-stream ("Invalid EventBlock header size"), while attach to a
   `dotnet test` host is blocked. So for ingest questions the repo's own headless tool plus targeted timers is the working
   path — which is why RangeSpike being unbuildable mattered.
+
+## The reader hands the parser one line at a time, and that handshake costs more than the parsers (2026-11)
+
+A Windows **sampling** export (`local/profiling/cpu.txt`, VS Functions view, whole-app session, PID total = 97,162 CPU
+samples) ranked the load for the first time across threads. Percentages are of *total process CPU for the session*, so
+they include startup, docking, grids and TTS — read them as "share of everything the app did", not "share of ingest":
+
+| where | self CPU |
+|---|---|
+| `BlockingCollection` handoff: `TryAddWithNoTimeValidation` 19.63 + `Add` 1.63 + `TryTake` 2.19 | **23.4 %** |
+| unattributed at the PID root (GC / JIT / native frames) | 25.4 % |
+| UI, startup, docking, grids, TTS (`MainWindow..ctor`, `TriggersView`, `SfDataGrid.set_ItemsSource`, Kokoro model load) | ~9.4 % |
+| string machinery: `String.Split` 4.16 + `SpanHelpers.IndexOf`/case-compare/`Substring`/`op_Equality` 3.44 | 7.6 % |
+| spell resolution: `EQDataStore.*` self 1.12 + LiteDB `Dictionary<uint, PagePosition>` 2.51 (+ `FindByLandsOn`, `SearchSpellPath`, `FindPreviousCast`) | ~3.6 % |
+| `DamageLineParser.ParseLine` self / all `HealingLineParser` self | 1.9 % / 1.0 % |
+| `CombatCapture.HandleDamage` + `HandleHeal` self | 0.79 % |
+
+Totals tell the same story from the other side: the consumer thread (`LogProcessor.LinkTo…AnonymousMethod__0`) is **31 %**
+of process CPU and the reader thread (`LogReader.ReadFileAsync`) **24.3 %** — of which ~21 points sit inside
+`FlushBatch → Add`. **The queue costs more CPU than all four parsers combined** (damage total 10.4 %, heal 5.1 %).
+
+**Mechanism.** `LogReader._lines` is a `BlockingCollection<LogReaderItem>(new ConcurrentQueue<LogReaderItem>(), 100000)`,
+and `BatchSize = 5000` already accumulates a `List<LogReaderItem>` — then `FlushBatch` throws the batch away and calls
+`Add` **once per line** (`EQLogParser/src/control/util/LogReader.cs:305-315`). During a bulk load the bound is reached, so
+every item costs a full semaphore handshake (spin, then park) on both sides. The bound itself is correct — it is the memory
+backpressure that keeps a 467 MB file from buffering all its strings behind the parser.
+
+**Measured in isolation** (4,500,000 items = the reference capture's line count; consumer work calibrated to ~2.3 µs/item,
+which is the real per-line ingest cost; `dotnet run -c Release`, many-core Linux box):
+
+| variant | wall | **total CPU** | cores busy | allocated |
+|---|---|---|---|---|
+| V1 today: per-item `Add`, cap 100k | 10.90 s | **21,460 ms** | 1.97 | **885 MB** |
+| V2 batch of 5000 as one `Add` (cap 40 batches) | 10.55 s | 10,721 ms | 1.02 | 108 MB |
+| V3 batch + `ArrayPool` reuse | 10.57 s | 10,688 ms | 1.01 | 0.4 MB |
+| V4 floor: same work, no queue at all | 10.53 s | 10,532 ms | 1.00 | 0 |
+
+Batching is **indistinguishable from having no queue**; the per-item handshake roughly doubles the CPU of identical work and
+allocates ~180 B/line. An uncontended `Add` into a never-full unbounded queue costs only **0.056 µs and 37.3 B**, which is
+what proves the cost lives in the full-queue wait rather than in enqueueing — matching the 19.6 % self CPU the profile puts
+on `TryAddWithNoTimeValidation`.
+
+**What this does and does not promise.** Wall time moves little on a many-core desktop (~3 % here) because the burning thread
+runs alongside the parser. The payoff is a **freed core** — derive and the UI stop competing with a reader that is spinning
+rather than reading — and **~780 MB less garbage per large capture**, i.e. GC pressure that otherwise pauses every thread,
+including the UI thread `UiBeatMonitor` watches. The 25.4 % unattributed root should be re-read after the change: if it
+shrinks, that is how much of it was queue garbage.
+
+**Standing decision.** The reader→parser seam does not hand off one item at a time. The bound stays (backpressure), but the
+element becomes a batch over pooled buffers, so the fix touches exactly the seam: `LogReader` (producer + `FlushBatch`),
+`ILogProcessor.LinkTo` and the consumer loop in `LogProcessor`, `TriggerProcessor.LinkTo`, and the two `TriggersTester`
+buffers with their `TriggerManager` signatures. Prefer one element type over a second API shape — triggers submit a
+single-item batch rather than keeping a per-item channel alive beside it.
+
+Two traps, both paid for:
+
+- **A benchmark of a bounded queue can deadlock.** A drainer written as `while (q.TryTake(out _)) { }` exits the moment the
+  queue looks empty; the producer's next `Add` then blocks with no consumer left and hangs forever — a probe of exactly this
+  seam sat deadlocked until killed. A contended-queue probe needs a consumer that never exits early (`GetConsumingEnumerable`
+  after `CompleteAdding`) or a timeout on the wait, not an unbounded `Add`.
+- **A stage-by-stage harness cannot see this at all.** The chapter above ("Where ingest spends its time, stage by stage")
+  calls parsers directly on one thread, so it measures no handoff; and conversely the profile's percentages mix in startup
+  and UI. Both are needed: neither one alone put the queue and the pipeline work in the same frame.
