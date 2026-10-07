@@ -16,7 +16,7 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
 - **Zero warnings is the bar, and it is counted, not hoped for**: `dotnet build EQLogParser.sln -p:EnableWindowsTargeting=true --no-incremental --nologo 2>&1 | grep -cE ": (warning|error) [A-Z]+[0-9]+"` prints **0** before a commit
   (`--no-incremental` is load-bearing: MSBuild reports diagnostics only for projects it recompiles, so counting after `dotnet test` prints 0 about
   assemblies it never rebuilt — that is how an MSTEST0017 in a new test file shipped past a "clean" local count; docs/CodingStandards.md → "Build Warnings") (match diagnostics, not words — MSBuild's summary always contains `0 Warning(s)`). Nine CS8632s shipped once because a file in Core (project `Nullable=disable`) wrote `string?` without opening `#nullable enable annotations`; the whole fleet is one pragma, and it is why each new warning dies in its own commit (docs/CodingStandards.md → "Build Warnings", "Nullable Reference Types"). Nothing in this repo suppresses a warning (`#pragma warning disable`, `<NoWarn>`) — fixing the cause is the rule.
-- Tests: `dotnet test EQLogParser.Test/EQLogParser.Test.csproj` is the non-WPF suite (**1,700 passed / 10 env-gated skips**, plain `net10.0`, 2026-11 — the two idle-retry decisions, the lane-expiry law, the re-announce stamp, the ten-line hover budget and the Spell rows' spell-database clause are in that count). `EQLogParser.Wpf.Test` targets `net10.0-windows` and only
+- Tests: `dotnet test EQLogParser.Test/EQLogParser.Test.csproj` is the non-WPF suite (**1,729 passed / 10 env-gated skips**, plain `net10.0`, 2026-11 — the trim-moves-no-ordinal law, the once-per-doubling watermark and the ungrowable-empty-array floor are in that count). `EQLogParser.Wpf.Test` targets `net10.0-windows` and only
   runs on Windows; its total belongs to a Windows run rather than being quoted here (a `[TestMethod]` grep counts data-driven variants and is not an executed count) — add it to the headless number instead of trusting arithmetic. A Windows run that *loses* `Sta.Run` bodies rather than failing them is the failure mode to watch.
 - **Real-log corpus layout (local/, gitignored)**: `local/logs/live/` holds live-format captures; `local/logs/emu/` holds EMU-server captures (THJ/TSS/Heroes Forge shapes) that need the app's `EnableEmuParsing` behaviour. The env-gated real-log tests run them via **`EQLP_EMU=1`**, which sets `AppSettings.IsEmuParsingEnabled` for the duration of a `PipelineHarness` run (restored after — the flag is process-global and live-format logs misparse with it on). Without it an EMU capture parses with DamageLineParser's live grammar and silently loses the `(Owner: X)` / `scores a critical hit! (N)` shapes, so a parity run over `emu/` without the flag measures nothing. Timestamps are the same `[DDD MMM dd HH:mm:ss yyyy]` shape in both directories.
 
@@ -704,6 +704,23 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   4,082** and **1,037 of 1,041**, every hidden row an article-shaped mob; reasoning in the same design-doc section. Pinned by
   `CharmRowProjectionTest` (`APetRowIsNotOnTheFightList`, `HidingAPetRowDoesNotDeleteItsDamage`,
   `WithHiddenPetsAddsPairedOrOverlappingRowsOnly`, `ACharmedRaidMemberStaysOnTheList`).
+- **A finished load hands its doubling slack back once per doubling, at the gate**: both fact tables grow by
+  `Array.Resize(×2)` and that law stays pinned (`HealFactCaptureTest` — extra growth steps are paid for on the parse thread,
+  where half of ingest time goes), so a capture holds up to 100 % more row slots than rows: measured **54.6 MB of the 397 MB
+  retained at EOF** on the 467 MB reference capture (2,286,368 facts in a 3,200,000-slot array; 1,247,984 heals in 1,600,000).
+  `CombatCapture.CompactRows()` reclaims it under `_gate` (the lock every append takes) from the pass that classified;
+  `RowArrays.TrimTo` is the shared mechanics with a **16-row floor**, because an empty array cannot grow — doubling 0 is 0 and
+  the next `AddFact` would index past the end. Three laws. (1) **Never twice inside one doubling**: a trim leaves capacity equal
+  to count, so the next fact doubles the buffer again and slack is instantly large; trimming per pass would copy the whole table
+  once per new fact — quadratic where doubling was amortized. Hence the `_factsAtLastCompact` watermark and the
+  `MinSlackToCompact` (4 MB) floor, pinned by `FactTableCompactionTest.TheCaptureTrimsOncePerDoublingAndNeverBetween`, whose
+  middle step asserts **0 bytes** for "one fact past a trim, slack large again" (verified: deleting the watermark fails exactly
+  that assert, nothing else). (2) **A shrink renumbers nothing**: `FightFactIndex` stores ordinals and the damage/tanking blocks
+  are contiguous runs, so rows keep their indices — asserted row-by-row, plus "a span taken *before* the trim still reads its
+  capture", which is why no reader-side lock exists (content identical, `_factCount` never moves down). (3) `EstimatedBytes`
+  shrinks with it, and that is the revisit trigger's input, so it now says what the session holds rather than what it once
+  reserved. Cost **34.9 ms** one-time, retained **397.2 → 342.6 MB (−13.8 %)**; numbers, the floor's reasoning and the
+  `-l "console;verbosity=detailed"` probe recipe: docs/DesignNotes.md → "The slots a finished load stopped writing".
 - **Healing is a second fact table, never extra columns on the damage one**: `HealFactTable` shares the damage table's name
   pool and its sequence counter (`IFactTable.NextSeq()`), and nothing else. One array of the union (42 B) sat **57 % full of
   zeros** at capacity — measured with a temporary probe, not estimated — because each side's tail fields are words the other's

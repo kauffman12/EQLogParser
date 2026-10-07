@@ -7574,3 +7574,53 @@ which is why its 2.29 M records cost nothing retained — the precedent is in th
 
 For reference, one measured fact about the tap that this ablation cannot separate: with the tap on, allocation grows 0.52 GB
 and gen-0 collections by ~13 over the same pipeline run. Both halves are cheap; neither is the wall.
+
+## The slots a finished load stopped writing
+
+A loaded capture holds between 0 % and 100 % more row slots than rows, because both fact tables grow by
+`Array.Resize(ref _facts, _facts.Length * 2)` and an array never shrinks on its own. Measured on the 467 MB reference
+capture at EOF: **2,286,368 damage facts in a 3,200,000-slot array = 27.5 MB of nothing** and **1,247,984 heals in
+1,600,000 slots = 10.2 MB**, i.e. **~38-55 MB of the 397 MB a session retains is address space reserved by the last
+doubling and never written** (the exact figure depends on where the final doubling landed relative to the row count; this
+run reported **54.6 MB** total slack, damage 28.7 + heal 25.9 — the damage array had doubled once more than my earlier
+estimate assumed).
+
+Growth-by-doubling stays exactly as it is and `HealFactCaptureTest` pins it: extra growth steps would be paid for on the
+parse thread, which is where half of ingest time actually goes (the ablation above), so making load cheaper in RAM by
+making it cost more wall is the wrong trade. What changed is that the slack gets handed back once the load stops growing.
+
+**The mechanics** (`RowArrays`, shared by both tables): `SlackOf<T>` and `TrimTo<T>`, which resize to the row count with a
+**floor of 16**. The floor is not tidiness — an empty array cannot grow, because doubling 0 is 0 and the next `AddFact`
+would index past the end; that is every log opened by mistake. `DamageFactTable.CompactToCount()` trims all five row
+arrays (facts, deaths, identities, taunts, evidences), `HealFactTable.CompactToCount()` its one.
+
+**The policy** (`CombatCapture.CompactRows`, called from `DeriveEngine` on a pass that classified): it runs **at the gate**,
+the same lock every fact append takes, so it can never resize underneath an append; and it runs **at most once per doubling
+of the capture** (`_factsAtLastCompact`), below a floor of `MinSlackToCompact` = 4 MB.
+
+The once-per-doubling rule is the one that matters, and its failure mode is invisible until it is expensive: after a trim,
+capacity equals count, so the very next fact doubles the buffer again and the slack is instantly large. A trim on every
+pass from there would copy the whole table once per new fact — **quadratic where doubling was amortized**, dressed up as a
+memory saving. Requiring a doubling's worth of new facts means each trim lands exactly where a doubling already copied
+those same bytes, which is also the only moment there is fresh slack to reclaim.
+
+**A shrink renumbers nothing, and that is what makes it safe to do while readers exist.** `FightFactIndex` stores ordinals
+into the fact array and the damage/tanking blocks are contiguous runs of them, so trimming keeps every row at its index; a
+reader holding a span taken before the trim reads the same rows out of the old array (identical content, and `_factCount`
+never moves down). That is why no reader-side lock was added: the operation is a shrink of a prefix-stable buffer, not a
+repack. `FactTableCompactionTest` asserts both halves row-by-row, including "a span taken before the trim still reads its
+capture", and the policy test's middle step asserts **0 bytes** for "one fact past a trim, slack large again" — deleting
+the watermark fails exactly that assertion (verified).
+
+Measured on the reference capture: retained **397.2 MB → 342.6 MB (−54.6 MB, −13.8 %)** for a one-time **34.9 ms** trim,
+row counts and row contents unchanged; a second ask releases 0 bytes. `EstimatedBytes` — the input to the old ~512 MB
+revisit trigger — now reports what the session actually holds rather than what it once reserved.
+
+Re-measure: temp `[TestClass]` that runs `PipelineHarness.RunFileDerived(log)`, prints `facts.SlackBytes`,
+`heals.SlackBytes`, retained bytes before/after `CompactToCount()`; run with
+`dotnet test -c Release --no-build -l "console;verbosity=detailed" --filter ...` (plain `dotnet test` swallows
+`Console.WriteLine`, which is how a first attempt at this looked like it had done nothing). Delete the probe afterwards,
+per the disposable-gate rule.
+
+What this does not touch: the ~1.25 M `HealRecord` objects that sit beside the heal table (the healing board's door is
+records by design), and the name/spell pools. The next real memory number has to come from one of those two.
