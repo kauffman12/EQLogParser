@@ -7525,3 +7525,52 @@ full ingest at master, and the faithful whole-application comparison has to be r
 both builds and read the process working set after EOF. A partial Core-only comparison (parser plus `RecordsStore`
 retention over the same lines) is runnable at both revisions but measures one slice of the pipeline, not the app, and a
 264-commit delta would attribute everything — the legacy engine's deletion included — to a single number.
+
+## Where ingest time and retained memory actually go, ablated at HEAD (2026-11)
+
+The perf-batch question ("are we closer to a faster load or a smaller footprint?") cannot be answered from the batch
+alone — it needs the shape of what is left. So one temporary probe ran the same 467 MB capture (`eqlog_Kizant_xegony-2.txt`,
+4,707,447 lines) through a ladder of ablations in Release, each reporting wall time, allocation volume and retained heap
+after EOF. The probe is deleted; recreate it as a `[TestMethod]` reading `ZZ_AB_LOG`/`ZZ_MODE` with these modes — that is
+the re-measure command, and the numbers below are worthless without it (they are one machine, one capture).
+
+| mode | wall | allocated | retained at EOF |
+|---|---|---|---|
+| read + timestamp only | 692 ms | 0.99 GB | 115 MB |
+| damage parser called directly (one loop) | 2,170 ms | 5.15 GB | 115 MB |
+| heal parser called directly | 1,952 ms | 4.85 GB | 143 MB |
+| both parsers direct, one loop | **3,123 ms** | 5.61 GB | 144 MB |
+| `LogProcessor` full pipeline, fact tap off | **6,797 ms** | 6.90 GB | 233 MB |
+| same with the fact tap on (= what a session holds) | **7,588 ms** | 7.42 GB | **397 MB** |
+
+**What that says about time.** The damage and heal parsers together are ~2.4 s net of the reader (and the two overlap when
+combined — 3.1 s for both, not 4.1). Everything else `LogProcessor` does on the way — pre-parse, the other line parsers
+(cast, loot, death, mez-break, resist, special, zoning), auxiliary record registration, and the queue handoff between the
+reader and the parser threads — is **~3.7 s, about half of ingest**. The fact tap is ~0.8 s (10 %). So a proposal to make
+loading faster now has to name which of those two halves it buys, and this instrument cannot split them: per-parser calls
+are not the same as the pipeline's per-line work order. Before choosing between "batch the handoff" (the improvement doc's
+one-third claim) and "optimize the remaining parsers", get function-level attribution — a sampling profile of exactly this
+ablation. Note where the obvious tooling died: `dotnet-trace collect --` profiles the `dotnet test` CLI, not the test host
+(the runner spawns it as a child), and attaching to `testhost` by pid fails; the two routes that do work are an in-process
+`EventPipeSession` started by the probe itself, or a standalone console harness with internal access.
+
+**What it says about memory.** Read the retained column as a stack:
+
+- **~115 MB is static data** — `EQDataStore`'s spell/npc/class tables, loaded by `EnsureDataStore` before a single log line
+  is read. It does not scale with capture size, and it is what a user with a small log pays too.
+- **+29 MB for the damage/heal parse itself**, and almost all of that is the heal side: **damage records are not retained**
+  (there is no `GetAllDamages()` — they are built, handed to consumers and dropped). Heals are kept: 1,245,427 `HealRecord`
+  objects in `RecordsStore`.
+- **+89 MB** for what only the pipeline produces (auxiliary records, registries, caches).
+- **+164 MB** for the fact capture, of which **107.7 MB is occupied rows** (damage 69.8 + heal 37.9 at their packed sizes) —
+  so roughly **56 MB is array capacity and table overhead**, a growth-policy question rather than a data question.
+
+The two live targets, in the order the numbers rank them: **(1)** the ~56 MB of fact-table capacity (chunked arrays or a
+better growth factor; no semantics change, measurable directly with this probe), and **(2)** the heal duplication — a
+1,243,469-row `HealFact` table *and* 1,245,427 `HealRecord` objects for the same events, where the healing board's door is
+records by design (docs/DesignNotes.md → "The healing board's derived door is a record seam"). Retiring the record copy is
+the largest single memory decision left and it is a plumbing change, not a packing one. Damage took that path years ago,
+which is why its 2.29 M records cost nothing retained — the precedent is in the table above.
+
+For reference, one measured fact about the tap that this ablation cannot separate: with the tap on, allocation grows 0.52 GB
+and gen-0 collections by ~13 over the same pipeline run. Both halves are cheap; neither is the wall.
