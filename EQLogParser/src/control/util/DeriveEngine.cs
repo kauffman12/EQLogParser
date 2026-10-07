@@ -454,6 +454,20 @@ namespace EQLogParser
           }
 
           /*
+           * The row arrays' doubling slack is handed back here, and on this lane only: a pass that classified is what runs when
+           * the capture stopped growing in bulk, which is exactly when the load's last Array.Resize leaves up to half its capacity
+           * written to nothing (measured 47 MB of a loaded session's 397 MB). CombatCapture.CompactRows owns the gate and the
+           * once-per-doubling rule that keeps a live tail from copying the table per fact. A resize that cannot allocate leaves
+           * the arrays as they were, so this can cost a session its memory and never its boards - hence its own catch instead of
+           * the pass's retry ladder.
+           */
+          if (classified is not null)
+          {
+            try { _capture.CompactRows(); }
+            catch (Exception ex) { Log.Debug("Could not trim row-array slack; the derived boards are unaffected", ex); }
+          }
+
+          /*
            * Did damage arrive since the last announcement, with something still live? Asked on the capture's own clock (its
            * newest event) rather than wall time: during a bulk load of an old log the middle of the file must not count as
            * activity worth opening a meter for, while its tail — which does — is exactly where a reader who reopened yesterday's

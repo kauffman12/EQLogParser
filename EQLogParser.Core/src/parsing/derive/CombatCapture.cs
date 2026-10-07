@@ -1,3 +1,6 @@
+using log4net;
+using System.Reflection;
+
 namespace EQLogParser
 {
   // The tap (D1): subscribes to the existing parser and registry events and appends immutable
@@ -14,6 +17,8 @@ namespace EQLogParser
   // so appends need no locking (same contract as DamageFactTable).
   internal sealed class CombatCapture
   {
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
+
     private const string OwnerToken = "Owner:";
 
     private readonly IFactTable _facts;
@@ -105,6 +110,45 @@ namespace EQLogParser
     public T DeriveQuiescent<T>(Func<T> derive)
     {
       lock (_gate) return derive();
+    }
+
+    /// <summary>How much slack is worth parking ingest for: below this, the copy costs more than the memory is worth.</summary>
+    internal const long MinSlackToCompact = 4L * 1024 * 1024;
+
+    // Facts the capture held at the last trim. See CompactRows for what it buys.
+    private int _factsAtLastCompact;
+
+    /*
+     * Hand back the row arrays' doubling slack: measured 47 MB of the 397 MB a loaded session retains (damage 29 + heal 18)
+     * is address space the last Array.Resize reserved and nothing ever wrote. Both tables grow by doubling - a law pinned on
+     * purpose, because extra growth steps would be paid for on the parse thread, which is where load time actually goes -
+     * so what costs nothing during a load is left stranded the moment the load stops growing.
+     *
+     * Two rules keep this from becoming the thing it exists to avoid. It runs AT THE GATE, the same lock every fact takes,
+     * so it can never resize underneath an append. And it runs at most once per DOUBLING of the capture: a trim leaves
+     * capacity equal to count, so the next fact doubles the array again, and trimming from every pass after that would copy
+     * the whole table once per new fact - quadratic where doubling was amortized. Asking for a doubling's worth of new facts
+     * first means each trim lands exactly where a doubling already copied those same bytes, which is also the only moment
+     * there is fresh slack to reclaim.
+     *
+     * Shrinking is safe under a reader that took Facts before: the new array holds the same rows at the same indices, so a
+     * stale span still reads the same facts and every ordinal FightFactIndex stores still names the same row.
+     */
+    internal long CompactRows()
+    {
+      lock (_gate)
+      {
+        if (_factsAtLastCompact > 0 && _facts.FactCount < (long)_factsAtLastCompact * 2) return 0L;
+        var slack = _facts.SlackBytes + (_heals?.SlackBytes ?? 0L);
+        if (slack < MinSlackToCompact) return 0L;
+
+        var freed = _facts.CompactToCount();
+        if (_heals is not null) freed += _heals.CompactToCount();
+        _factsAtLastCompact = _facts.FactCount;
+        Log.Debug($"capture: trimmed row-array slack - {freed / (1024 * 1024):N0} MB released " +
+                  $"({_facts.FactCount:N0} damage facts, {_heals?.HealCount ?? 0:N0} heals)");
+        return freed;
+      }
     }
 
     public void HandleChat(ChatType chat)

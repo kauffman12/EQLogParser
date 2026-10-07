@@ -311,6 +311,39 @@ namespace EQLogParser
     ReadOnlySpan<IdentityEvent> IdentityEvents { get; }
     ReadOnlySpan<TauntFact> Taunts { get; }
     ReadOnlySpan<EvidenceFact> Evidence { get; }
+
+    /// <summary>Allocated row-array bytes beyond what is stored. See CompactToCount.</summary>
+    long SlackBytes { get; }
+
+    /// <summary>Shrink every row array to its rows, returning the bytes released. Mechanics only - WHEN to ask is the
+    /// caller's policy (CombatCapture.CompactRows).</summary>
+    long CompactToCount();
+  }
+
+  /*
+   * The growth/collapse arithmetic shared by both row tables (DamageFactTable, HealFactTable).
+   *
+   * Both grow by doubling and both are asked to shrink to their rows when a load finishes, so the two rules that are easy
+   * to get wrong live here once: the FLOOR (an empty array cannot grow - doubling 0 is 0 and the next Add would index past
+   * the end) and the no-op guard (a table already at its count releases nothing, which is what makes asking again cheap).
+   */
+  internal static class RowArrays
+  {
+    private const int MinCapacity = 16;
+
+    /// <summary>Bytes a row array of this element type holds beyond the rows it stores.</summary>
+    internal static long SlackOf<T>(int capacity, int count) where T : struct
+      => (long)(capacity - count) * Marshal.SizeOf<T>();
+
+    /// <summary>Shrink to `count` rows (never below the floor), returning the bytes released. 0 when there is nothing to give.</summary>
+    internal static long TrimTo<T>(ref T[] rows, int count) where T : struct
+    {
+      var target = Math.Max(count, MinCapacity);
+      if (rows.Length <= target) return 0L;
+      var freed = (long)(rows.Length - target) * Marshal.SizeOf<T>();
+      Array.Resize(ref rows, target);
+      return freed;
+    }
   }
 
   // In-RAM implementation: preallocated buffers (capacity estimated from file size by the caller),
@@ -479,6 +512,36 @@ namespace EQLogParser
     }
 
     public string AuxOf(short idx) => idx < 0 ? null : _auxs[idx];
+
+    /*
+     * Bytes of row array that hold nothing. Growth doubles (AddFact and its siblings), so a capture that stopped growing
+     * holds between 0 and 100 % more slots than rows: measured on a 467 MB capture whose 2,285,746 damage facts sat in a
+     * 3,200,000-slot array, the damage table alone kept 29 MB of address space for nothing, and with the heal table's
+     * slack beside it ~47 MB of the 397 MB a loaded session holds was empty. CompactToCount hands it back; CombatCapture
+     * decides when (a trim per fact would turn doubling's amortized copy into a copy per fact).
+     */
+    public long SlackBytes => RowArrays.SlackOf<DamageFact>(_facts.Length, _factCount)
+                              + RowArrays.SlackOf<DeathFact>(_deaths.Length, _deathCount)
+                              + RowArrays.SlackOf<IdentityEvent>(_identities.Length, _identityCount)
+                              + RowArrays.SlackOf<TauntFact>(_taunts.Length, _tauntCount)
+                              + RowArrays.SlackOf<EvidenceFact>(_evidences.Length, _evidenceCount);
+
+    /*
+     * Reallocate every row array to exactly the rows it holds and return the bytes released.
+     *
+     * Safe against a reader that took Facts (or any other span) beforehand: the new array is the same rows in the same
+     * order at the same indices, so a stale span still reads the same facts, and every ordinal FightFactIndex stores
+     * still names the same row. That is also why this is a shrink rather than a repack - nothing here renumbers.
+     */
+    public long CompactToCount()
+    {
+      var freed = RowArrays.TrimTo(ref _facts, _factCount);
+      freed += RowArrays.TrimTo(ref _deaths, _deathCount);
+      freed += RowArrays.TrimTo(ref _identities, _identityCount);
+      freed += RowArrays.TrimTo(ref _taunts, _tauntCount);
+      freed += RowArrays.TrimTo(ref _evidences, _evidenceCount);
+      return freed;
+    }
 
     // Approximate in-RAM size of the fact buffers (for the D2 revisit trigger, ~512 MB).
     public long EstimatedBytes => (long)_facts.Length * Marshal.SizeOf<DamageFact>()
