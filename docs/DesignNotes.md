@@ -7758,3 +7758,49 @@ Two traps, both paid for:
 - **A stage-by-stage harness cannot see this at all.** The chapter above ("Where ingest spends its time, stage by stage")
   calls parsers directly on one thread, so it measures no handoff; and conversely the profile's percentages mix in startup
   and UI. Both are needed: neither one alone put the queue and the pipeline work in the same frame.
+
+## What garbage a raid actually makes, and what it does to a cadence thread (2026-11)
+
+The question worth answering for people on old hardware is not "how many bytes does a load allocate" but **"does collection
+ever stop a thread that has to keep a cadence — i.e. the UI thread mid-fight"**. Measured with a temporary probe (run over a
+90 MB slice and then over `eqlog_Kizant_xegony.txt`, pinned to **two cores** with `taskset -c 0,1` to model a weak laptop;
+real load through `PipelineHarness`, real `LogProcessor` consumer for the tail, real `ClassificationRules`/`FightProjection`
+lanes; deleted once these numbers landed):
+
+| measured | 90 MB slice | whole-session capture (3.99 M lines) |
+|---|---|---|
+| load | 2,135 ms | 6,386 ms |
+| facts / heals | 459,720 / 212,696 | 1,944,932 / 1,001,990 |
+| **allocated while loading** | 1,466 MB = **1,648 B/line** | 6,462 MB = **1,621 B/line** |
+| retained afterwards | — | ~233 MB |
+| FULL rule-book pass from zero | 147 ms / 4.2 MB | **413 ms / 18.7 MB** |
+| FULL pass carried (nothing new) | 76 ms / 0.1 MB | 204 ms / **0.1 MB** |
+| CHEAP lane (projection continuation) | 0 ms / 0 MB | 0 ms / 0 MB |
+| **cadence over 12 s of raid traffic, default GC** | p50 0.1 / p99 0.3 / **max 0.4 ms**, 0 hitches, gen0 1, gen2 0 | p50 0.1 / p99 0.3 / **max 1.4 ms**, 0 hitches, gen0 4, gen1 1, **gen2 0** |
+| same window, `SustainedLowLatency` | max 0.4 ms, 0 hitches | max 1.5 ms, 0 hitches, gen1 2 |
+
+**Standing conclusions.**
+
+- **Steady raiding is not a GC problem.** At ~200 lines/s the parse stream allocates ~0.33 MB/s; even driven **~36× harder**
+  (131–167 MB in 12 s) with 233 MB of session data live and only two cores, the worst slip on a 16 ms cadence thread was
+  **1.4 ms** and no collection ever reached gen2. Gen0 fires every ~3 s under that load and is invisible. So
+  `ServerGarbageCollection` / `SustainedLowLatency` have **nothing measured to fix** — SustainedLowLatency collected *more*
+  (167 vs 131 MB, gen1 ×2) for the same max slip. Do not add GC knobs; this confirms (and now instruments) the improvement
+  map's "do not prioritize more aggressive garbage collection".
+- **The derive lanes are cheap on memory.** A carried full pass allocates **0.1 MB** and a projection-only continuation
+  nothing at all; only the from-zero rule-book pass costs (18.7 MB / 413 ms at 2 M facts), and cadence already reserves that
+  for quiet moments. So "the derive pump freezes the UI" is not an allocation story.
+- **Which means a real mid-raid stall can only come from the UI thread's own work** — grid row rebuilds, cell strings, FCT
+  canvas work per pass — because **a blocking collection runs on whichever thread trips it**, and the parse/derive lanes
+  demonstrably don't trip anything expensive. That is the next measurement (allocation per `FightTable.OnDerived` / per
+  Names-pane census *on the UI thread*), not a claim to act on yet.
+- **1,621 B per parsed line is the number to attack**, and it is both a speed and an energy item on old hardware: 6.5 GB of
+  allocation for one capture is memory bandwidth and zeroing, whatever the collector charges afterwards. What is still open,
+  in cost order (verified against the code today, not from the improvement map's age): tokenization (`Split(' ')` per line —
+  the map measured ~5 GiB of 15.4 GiB on a 952 MiB capture; a heal-only fast path removed 1.4 GiB with little time change),
+  the eight-plus `[.. split]` **array copies** still in `CastLineParser` (pass the existing array where the helper is
+  read-only — audit mutation first), `ChatLineParser.ParseChatType`'s up-to-eight substring searches per line (one static
+  `SearchValues<string>`; nothing in the file uses `SearchValues` today), and the per-line `line[27..]` string slice in
+  `LogReader.HandleLine`. Larger retained-memory projects — duplicate healing storage, chunked/cold-compressed fact storage —
+  are **trades of CPU for footprint**, so they come after parse-side allocation is trimmed, which is exactly the sequencing
+  the improvement map argues for.
