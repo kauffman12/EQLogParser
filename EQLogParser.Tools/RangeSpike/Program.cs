@@ -112,9 +112,8 @@ internal static class Program
         DamageLineParser.ResetProcessState();
         PlayerRegistry.Instance.Clear();
         if (!string.IsNullOrEmpty(o.Seed)) SeedRegistry(o);
-        var fm = new FightManager();
-        FightManager.Instance = fm;
-        DamageLineParser.FightManager = fm;
+        // No legacy FightManager wiring: that engine is deleted. Deaths are recorded inline by
+        // DamageLineParser.UpdateSlain, so a headless run has no per-fight object to hand the parser.
 
         var facts = new DamageFactTable(1 << 16);
         var heals = new HealFactTable(facts, 1 << 14);
@@ -155,8 +154,6 @@ internal static class Program
             processor.Completion?.Wait();
         }
 
-        // Same end-of-file flush the harness does: a queued 'slain' needs one more timestamp to land.
-        if (!double.IsNaN(lastTs)) DamageLineParser.CheckSlainQueue(lastTs + 1);
         mirror.Stop();
         sw.Stop();
 
@@ -166,7 +163,8 @@ internal static class Program
         Console.WriteLine($"[spike] parse from={from} to={to} ms={sw.ElapsedMilliseconds:N0} lines={lines:N0} " +
                           $"damage={facts.FactCount:N0} heal={heals.HealCount:N0} death={facts.DeathCount:N0} " +
                           $"taunt={facts.TauntCount:N0} identity={facts.IdentityEventCount:N0} evidence={facts.EvidenceCount:N0} " +
-                          $"names={facts.InternedNames.Count:N0} peakRSS={p.PeakWorkingSet64 / (1024 * 1024):N0}MB out={o.Out}");
+                          $"names={facts.InternedNames.Count:N0} lastTs={lastTs:F0} " +
+                          $"peakRSS={p.PeakWorkingSet64 / (1024 * 1024):N0}MB out={o.Out}");
         return 0;
     }
 
