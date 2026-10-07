@@ -17,6 +17,8 @@ namespace EQLogParser
   {
     private Func<string, bool>? _originalIsValidClass;
 
+    public TestContext TestContext { get; set; } = null!;
+
     [TestInitialize]
     public void Setup()
     {
@@ -161,16 +163,26 @@ namespace EQLogParser
       }
       var perRead = (GC.GetAllocatedBytesForCurrentThread() - start) / (double)reads;
 
-      // Sensitivity control: a two-element array really does trip this threshold, so the assert above is not vacuous.
+      /*
+       * Sensitivity control: an array the size of the list this read used to copy really does trip the threshold below, so
+       * that assert is not vacuous. Two guards make the allocation real, and both are load-bearing because the first version
+       * of this loop — `var probe = new string[2]; kept += probe.Length;` — reported 0.0 bytes on one machine and 20 on
+       * another while measuring nothing: the length of a freshly allocated array is a constant, so folding it makes the
+       * object unobserved and the allocation elidable. Hence (a) the element count comes from an opaque read rather than a
+       * literal, and (b) every array is PUBLISHED into a sink array that outlives the loop, which is how the FCT probe does
+       * it. A control the optimizer can delete reads as "the probe is broken" instead of naming what it guards.
+       */
+      var boundaryCount = 2;
+      var sinks = new string[64][];
       var controlStart = GC.GetAllocatedBytesForCurrentThread();
-      var kept = 0;
       for (var i = 0; i < reads; i++)
       {
-        var probe = new string[2];
-        kept += probe.Length; // observed, so the JIT cannot elide the allocation it is here to measure
+        sinks[i & 63] = new string[Volatile.Read(ref boundaryCount)];
       }
       var perArray = (GC.GetAllocatedBytesForCurrentThread() - controlStart) / (double)reads;
-      Assert.AreEqual(2 * reads, kept);
+      Assert.AreEqual(2, sinks[0].Length);
+      GC.KeepAlive(sinks);
+      TestContext.WriteLine($"[class read] {perRead:F1} B per GetPlayerClass; control array {perArray:F1} B");
 
       Assert.IsTrue(perArray > 8, $"the probe cannot see a per-call allocation ({perArray:F1} bytes for an array it is meant to catch)");
       Assert.IsTrue(perRead < 8,

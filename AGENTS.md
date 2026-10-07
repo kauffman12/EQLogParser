@@ -63,10 +63,14 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   pairs and class sightings the parse makes) — all registered `uiThread: false`, because this store is filled by the parsing
   thread and drained by the builders, so naming either in a stall's "in progress" sends a reader to the wrong window.
   **`GetPlayerClass` reads inside the per-name lock**: it used to copy the class-boundary list out and binary-search it,
-  measured at **72 bytes per read** (a two-entry list, a per-name lock, and a sibling method that had always read in place),
-  on a call made once per row per rebuild — hundreds a second on a live raid, thousands on a select-all.
+  measured at **72 bytes per read** (a `ToArray()` of the boundaries plus an enumerator, on a call that made one per row per
+  rebuild — hundreds a second on a live raid, thousands on a select-all).
   `FrenzyClassTest.AReclassIsReadAtItsBoundaryWithoutAnArrayPerRead` asserts under 8 bytes a read **with a control loop that
-  proves the probe can see an allocation**, so restoring the copy fails by name rather than quietly printing 72. Why the
+  proves the probe can see an allocation**, so restoring the copy fails by name rather than quietly printing 72. **That control
+  has to escape**: it publishes every array into a sink that outlives the loop and takes the element count from `Volatile.Read`,
+  because a literal-length array whose only observed use is `probe.Length` folds to a constant and then allocates *nothing*
+  (measured 0.0 bytes on one machine, 20 on another, 40 once published) — an elidable control reads as "the probe is broken",
+  not as what it guards; `FctPlacementAllocationTest.TheProbeCanSeeAnAllocation` keeps its objects for the same reason. Why the
   counters exist: they are the evidence for or against flat name→id indexing — `reg.class` at 20k reads/s and microseconds
   says string keys are not the wall and that rewrite does not start; a worst case in milliseconds says it does. Cheap spans
   sort themselves off the printed table, which is also an answer. docs/DesignNotes.md → "Instrumenting the UI thread".

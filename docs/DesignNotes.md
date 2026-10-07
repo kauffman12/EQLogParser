@@ -7467,6 +7467,22 @@ on revert. The parser callbacks' own law (a registry opinion is a *verdict*, so 
 `LogProcessorIdentityCallbackTest`; the earlier `IsVerified*`-as-callback fix was `74d05c39`.
 
 
+**The one ownership question this section does not answer: does a pet's swing belong to its master?** On the fact, no — and
+that is not an oversight. `CombatCapture` writes `AttackerOwner` from the line and never substitutes it into `Attacker`, so a
+pet is its own name in the store; only a rollup folds (`FightSummarySource` keys the per-person column on `OwnerOf` while
+`GroupTotal`/`RaidTotal` stay sums over unmodified facts, which is why those two still agree to the last fact). Damage done to
+**another player's** pet is not damage done to that player either: meter and raid/raid-by-npc modes drop defender-side pets by
+design. Crediting a raider with her pet's swings is a product choice the boards already make; inventing credit for beating on
+someone else's pet would be padding.
+
+**And legacy folds far less than anyone assumed.** Measured over `tank-fight.txt`: the derived board lists 20 `+Pets` rows
+(575,999 facts) where legacy lists one row with 730, because `DamageStatsBuilder` folds only pairs its registry had *learned* —
+16 at that point in the file, from possessive damage lines and petmapping.txt — while R5-owner claims 2,214 owner names out of
+the pool before a board is ever built. The earlier claim in this file's review notes ("legacy already folds them, so there is no
+drift to explain") was wrong and is retracted: there is a difference, it favours the derived side, and it is the same gap the
+retired per-raider census measured at +0.54 % raid-wide. The lesson generalises: **"the other engine already does this" needs a
+look inside the builder's UpdatePetMapping-equivalent, never an inference from how the log reads.**
+
 ## A perf batch measured head to head: what five commits actually moved (2026-11)
 
 A reviewer asked what the last five commits improved, and the honest answer needed a measurement rather than five
