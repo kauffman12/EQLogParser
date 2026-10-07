@@ -1282,10 +1282,21 @@ namespace EQLogParser
           if (filePercent >= 100)
           {
             statusText.Foreground = Application.Current.Resources["EQGoodForegroundBrush"] as SolidColorBrush;
-            statusText.Text = "Monitoring Log";
+
+            /*
+             * Two different states reach 100 %, and only one of them has read a log. Following from end of file
+             * (`lastMins: 0` - the startup auto-monitor open) seeks straight to EOF, so progress is 100 % immediately with
+             * nothing handed over. Saying "Finished Loading Log File in 1 seconds" there is how an empty fight list starts
+             * looking like a bug: the reader did its job, it just had no history to read. Same status line either way
+             * because it IS monitoring now - only the parenthetical and the log line differ.
+             */
+            var followedFromEnd = _eqLogReader.HandedOverLines == 0;
+            statusText.Text = followedFromEnd ? "Monitoring Log (from end of file)" : "Monitoring Log";
 
             ConfigUtil.SetSetting("LastOpenedFile", AppSettings.CurrentLogFile);
-            Log.Info($"Finished Loading Log File in {seconds} seconds.");
+            Log.Info(followedFromEnd
+              ? "Monitoring from the end of the file - no history was read."
+              : $"Finished Loading Log File in {seconds} seconds.");
             MainActions.UpdateStatus("Monitoring Last Log");
 
             await Task.Delay(500);

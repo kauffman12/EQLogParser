@@ -38,10 +38,11 @@ namespace EQLogParser
     private long _nextUpdateThreshold;
     private double _lastParsedTime;
 
-    // Load diagnostics (PerfJournal.Enabled only): see NoteLoadProgress.
+    // Load diagnostics (PerfJournal.Enabled only): see NoteLoadProgress. The handed-over count itself is ungated, because
+    // MainWindow asks it (see HandedOverLines) - an increment per batch of 5,000 lines is not a cost worth gating.
     private readonly Stopwatch _loadWatch = new();
-    private long _diagLines;
-    private long _diagLinesLast;
+    private long _handedOver;
+    private long _handedOverLast;
     private double _diagSeconds;
     private int _diagGen0;
     private int _diagGen1;
@@ -54,6 +55,13 @@ namespace EQLogParser
     public string FileName { get; } = fileName;
     public IDisposable GetProcessor() => logProcessor;
     public bool IsWaiting() => _waiting;
+
+    /*
+     * Lines this reader has handed to the parser. `lastMins: 0` follows from end of file, so a monitor open over an old
+     * capture legitimately reads nothing and reaches "100 %" without a single line: that is the one case where this reads
+     * zero, and the open path words its announcement accordingly.
+     */
+    internal long HandedOverLines => _handedOver;
     public bool IsInValid() => _invalid;
 
     /*
@@ -389,7 +397,7 @@ namespace EQLogParser
     {
       if (!PerfJournal.Enabled || batchLines == 0) return;
 
-      _diagLines += batchLines;
+      _handedOver += batchLines;
       if (!_loadWatch.IsRunning) _loadWatch.Restart();
       var seconds = _loadWatch.Elapsed.TotalSeconds;
       var delta = seconds - _diagSeconds;
@@ -399,11 +407,11 @@ namespace EQLogParser
       var g1 = GC.CollectionCount(1);
       var g2 = GC.CollectionCount(2);
       Log.Info($"load: {GetProgress():0}% | queue {_lines.Count}/{QueueBound}"
-               + $" | read {(_diagLines - _diagLinesLast) / delta:N0} lines/s ({_diagLines:N0} handed over)"
+               + $" | read {(_handedOver - _handedOverLast) / delta:N0} lines/s ({_handedOver:N0} handed over)"
                + $" | gen +{g0 - _diagGen0}/{g1 - _diagGen1}/{g2 - _diagGen2}"
                + $" | allocated {GC.GetTotalAllocatedBytes(true) / 1_048_576:N0} MB");
 
-      _diagLinesLast = _diagLines;
+      _handedOverLast = _handedOver;
       _diagSeconds = seconds;
       _diagGen0 = g0;
       _diagGen1 = g1;
