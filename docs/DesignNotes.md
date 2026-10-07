@@ -7875,3 +7875,52 @@ draw ticks, meter refreshes, `UpdateLoadingProgress`) still queues behind whatev
 the loader from being that work, it does not reorder the queue. The remaining large lever for weak hardware is unchanged and
 already measured: `Action.Split(' ')` in `LogProcessor` (29 % of ingest CPU, ~1.8 GB allocated), which needs the tokenizer
 change across all four parsers rather than a threading fix.
+
+## The Windows field run: what a 951 MB load costs, and what it no longer costs (2026-11)
+
+The operator ran the reader-off-the-UI-thread build on the machine that reported the freezes, with `PerfReport=True` and
+`PerfStallMs=150`, over **`eqlog_Kizant_xegony-09-03-26.txt`** — whose local reference copy measures
+**997,656,755 bytes / 10,015,348 lines = 99.6 bytes per line**, so every figure below can be divided by a known denominator.
+
+**The load left the UI thread, and the monitor was watching while it happened.** Every open printed
+`load: read loop on thread N, sync context = none`, and across the whole ~20 s of reading there was **not one `UI STALL`
+line**, at a 150 ms threshold with the watchdog probing every 200 ms (`UiBeatMonitor.DefaultPollMs`) — dozens of probes, all
+of them landing on time. Before this change that window was exactly where the dispatcher sat parked in
+`BlockingCollection.Add`. "The mechanism is gone" is now a measured statement rather than a code-reading one.
+
+**The queue answered the question the number was asked for: `queue 99,982…99,998 / 100,000` for every single sample of the
+load.** The reader is capped by the parse lane on real hardware, not by the disk — ~48 MB/s (≈0.5 M lines/s over 99.6-byte
+lines) is consumer-side throughput, and it corroborates the container's stage table (≈720 k lines/s headless) as the right
+order of magnitude. Consequence: **the tokenizer (`Action.Split(' ')`, 29 % of ingest CPU and ~1.8 GB of the allocation) is
+the next thing to touch, and it is now justified by a Windows measurement** rather than by inference from a two-core Linux
+run. A near-empty queue would have meant the disk, and would have closed that plan; it did not happen.
+
+**Two independent cross-checks agree with the headless figures to within 2 %.** The line's `allocated` column —
+`GC.GetTotalAllocatedBytes`, process-wide — ended the load at **16,432 MB over ~10 M lines = 1,641 bytes per line**, against
+the measured **1,621–1,648 B/line** in "What garbage a raid actually makes". And the collector stayed out of the way:
+`gen +94…171/+25…66/+1…11` per 2 s window, i.e. gen-2 roughly once per window (eleven in the very first, while the parse
+lane warms up) — GC is still not what stops anything on this machine either.
+
+**A bug in my own instrumentation, recorded because two other columns caught it.** The first version divided the
+*cumulative* line count by the ~2 s window, so the field run printed a smooth twelvefold "acceleration", 359 k → 4.59 M
+lines/s, which is simply cumulative-over-constant. It was refused by arithmetic outside itself: 4.59 M lines/s at 99.6
+bytes/line is a 458 MB/s handoff that would have finished the file in two seconds, and the same line's `allocated` column
+divides back to 1,641 B/line. Rate is now this window's count over this window's seconds with the running total printed
+beside it, so a drift of this shape cannot be read as physics again.
+
+**Where the dead UI actually is on that machine: startup and first show, not ingest.** The same log gives
+`slow UI pass app.voices: 1181.1 ms`, a **4443 ms** `app.mainwindow` UI pass (which contains `ui.openlogfile 31 ms` — the
+open call itself is cheap) whose stall sample reports `cpu 2640 ms` of real work rather than a wait, and
+`app.firstshow: 766.2 ms`: about **6.4 seconds of frozen UI before a window is usable**, against zero during a 951 MB load.
+If the goal is "the app feels dead on this laptop", that path (window construction, docking/grid restore, voice model load)
+is the larger target now, and it is instrumented enough to be decomposed with the same lines.
+
+**Two log facts about opening, not yet explained and deliberately not acted on.** The capture shows two `Selected Log File`
+/ `capture: started` pairs seven seconds apart for the same file, three read loops (the third — `[11]`, with no
+`capture: started` of its own — is almost certainly a reader started by another pipeline component rather than by the open
+path), and an earlier open that produced **no `load:` line at all** while `Finished Loading Log File in 1 seconds.` was
+logged normally. The code fact that makes the last one plausible: `minBack == 0` seeks straight to EOF
+(`LogReader.ReadFileAsync`), which sets `_currentPos == _initSize`, so `GetProgress()` reports 100 % at once and the
+"finished/monitoring" announcement fires after having handed over nothing. For a live log that is correct behaviour; for an
+old file it is an empty window with a green "Finished". Confirmation from the operator decides whether that announcement
+gets fixed — nothing here should change on one ambiguous log.

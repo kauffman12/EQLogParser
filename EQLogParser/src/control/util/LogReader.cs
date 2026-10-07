@@ -41,6 +41,7 @@ namespace EQLogParser
     // Load diagnostics (PerfJournal.Enabled only): see NoteLoadProgress.
     private readonly Stopwatch _loadWatch = new();
     private long _diagLines;
+    private long _diagLinesLast;
     private double _diagSeconds;
     private int _diagGen0;
     private int _diagGen1;
@@ -373,6 +374,16 @@ namespace EQLogParser
      * The generation deltas say whether collection work competes for cores during the load (the measured figures in
      * docs/DesignNotes.md say the garbage is small; if this line says otherwise, that is a finding). Lines/s here is READ
      * rate, not parsed rate - the reader runs ahead of the parser by design.
+     *
+     * The rate is THIS window's count over THIS window's seconds, with the running total beside it. The first version
+     * divided the cumulative count by a constant window, and a field run over a 951 MB capture printed a beautiful
+     * twelvefold acceleration from 359k to 4.59 M lines/s - pure arithmetic, since cumulative/window is a straight line.
+     * Two independent checks caught it, and both are worth keeping: that capture (the local reference copy of
+     * `eqlog_Kizant_xegony-09-03-26.txt`) holds 10,015,348 lines in 997,656,755 bytes - 99.6 bytes a line, so 4.59 M
+     * lines/s would be a 458 MB/s handoff - and the same line's own `allocated` column ended at 16,432 MB over those
+     * 10 M lines, which is **1,641 bytes per line**, the figure the headless measurements reach independently (docs
+     * -> "what garbage a raid actually makes"). The honest number was ~0.5 M lines/s, ~48 MB/s, with the queue pinned:
+     * the parse lane capping the reader on real hardware, which is the whole point of asking for the line.
      */
     private void NoteLoadProgress(int batchLines)
     {
@@ -387,10 +398,12 @@ namespace EQLogParser
       var g0 = GC.CollectionCount(0);
       var g1 = GC.CollectionCount(1);
       var g2 = GC.CollectionCount(2);
-      Log.Info($"load: {GetProgress():0}% | queue {_lines.Count}/{QueueBound} | read {_diagLines / delta:N0} lines/s"
+      Log.Info($"load: {GetProgress():0}% | queue {_lines.Count}/{QueueBound}"
+               + $" | read {(_diagLines - _diagLinesLast) / delta:N0} lines/s ({_diagLines:N0} handed over)"
                + $" | gen +{g0 - _diagGen0}/{g1 - _diagGen1}/{g2 - _diagGen2}"
                + $" | allocated {GC.GetTotalAllocatedBytes(true) / 1_048_576:N0} MB");
 
+      _diagLinesLast = _diagLines;
       _diagSeconds = seconds;
       _diagGen0 = g0;
       _diagGen1 = g1;
