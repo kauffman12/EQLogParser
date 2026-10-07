@@ -412,11 +412,15 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   onPick)` fills **"Set <name> as ▸"** (Player/Pet/Mercenary/NPC) from `IdentityVocabulary.TypeOptions` — whose entries are now *named* records so a
   pane takes a subset instead of retyping words (`Spell` and "Clear claim" stay out of a blind cascade). Damage/healing/tanking summaries plus the
   fight list all use it; the summaries' **"Set as Verified Player"** is deleted (it wrote players.txt via `AddVerifiedPlayerByOperator` and greyed
-  itself out on anybody already placed, and its header printed the `"Unknown"` placeholder as a name). The header **names its subject** (`Set Frostmaw
-  as`, `Set 12 names as`) computed by the same helper that builds the batch; **nothing in this family greys out** (empty batches are refused by
-  `Write`; the Assign items' old `IsOneOfUs`/`IsOneOfUsOrMerc` questions still decide which owners the pet-of list offers); and `Write` = override
-  store applied once per batch + `IdentityPriorStore.Remove` per name + `RederiveAsync`, patching **no grid** (a verdict re-reads sides, rows and
-  `+Pets` folding — panes repaint from the result). **Assign ≠ Set**: "Assign <name> as Pet of ▸" maps pet→owner AND sets the kind, so it sits above
+  itself out on anybody already placed, and its header printed the `"Unknown"` placeholder as a name). **THE ONE-ROW LAW**: each pane passes
+  "the single selected name or null" (`SelectedItems.Count == 1` + a real row; group headers and inactivity dividers select nothing), `Present` heads it
+  `Set Frostmaw as` and **greys the cascade and both Assign items out when that is null** — zero rows has no subject, and a **multi-selection is refused too**
+  (the operator's rule: "multiple rows id rather not support multiple changes at once. force 1 selected row"; a verdict re-routes sides, rows and `+Pets`
+  folding for every name it covers and there is no undo — identity-overrides.txt keeps only the latest word). So do NOT re-widen these verbs into batches and
+  do not leave an unused list-taking write behind for someone to wire up: `Write(string?, kind)` refuses null, which is also why a stale enable state cannot
+  slip through. `Write` = `IdentityOverrideStore.Set` + `IdentityPriorStore.Remove` + `RederiveAsync`, patching **no grid** (a verdict re-reads sides, rows and
+  folding — panes repaint from the result). The Assign items' old `IsOneOfUs`/`IsOneOfUsOrMerc` questions did not vanish: they still decide which owners the
+  pet-of submenu offers. **Assign ≠ Set**: "Assign <name> as Pet of ▸" maps pet→owner AND sets the kind, so it sits above
   Set; Set is the kind alone for a name whose owner you cannot tell from there. Mercenary is offered by the cascade while `TypeOptionsFor` still trims
   it per row in the identity pane — stated difference over ONE vocabulary. **(3) One unset, and it is not here** (see the standing one-unset law):
   the deleted mirror-era "Clear Override" was removed, not renamed; **Clear All** is the last item, = `MainActions.ClearAllFights` →
@@ -424,9 +428,9 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   pets and verdicts kept because identity memory does not register with `LifecycleManager`; the log itself untouched). `LifecycleManagerTest` pins
   that a bare store reset raises no `ActiveDataCleared`; the raisers are this path and `LifecycleManager.Clear`. **(4) Refresh is back**, for facts
   landing *inside* already-selected rows while you read the damage summary: selection re-announces on id change / row edit / **content stamp** move, so
-  a plain announce correctly sees nothing to do — `RefreshClick` is `AnnounceSelection(force: true)`, enabled only with a selection (an empty one would
-  blank the boards). Tests: `FightTableSelectionProbeTest.SettleMenuBlocksRebuildWhileTheGestureHolds` (+ the right-button half),
-  `IdentityVerdictMenuTest` (Wpf assembly, words/order/idempotency, header shapes, each entry carrying its own `IdentityKind`),
+  a plain announce correctly sees nothing to do — `RefreshClick` is `AnnounceSelection(force: true)`, enabled with **any** selection size (one row or the whole list —
+  it writes nothing, and its use case is "the latest fights", plural) but never an empty one, which would blank the boards. Tests: `FightTableSelectionProbeTest.SettleMenuBlocksRebuildWhileTheGestureHolds` (+ the right-button half),
+  `IdentityVerdictMenuTest` (Wpf assembly, words/order/idempotency, the one-row enable law including children following a greyed parent, each entry carrying its own `IdentityKind`),
   `ClearedSessionMemoryTest`. Docs: docs/DesignNotes.md → "The fight list announces when the gesture ends", "What Clear All means when there is no
   store to wipe", "Say what a name is, from wherever you noticed it".
 - **The Names pane is current while open and silent while shut** (2026-11; it used to be "asked, never fed"): the census (a full classification pass) ran on

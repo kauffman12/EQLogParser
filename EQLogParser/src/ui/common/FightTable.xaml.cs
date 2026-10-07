@@ -609,16 +609,14 @@ namespace EQLogParser
     private void ClearAllClick(object sender, RoutedEventArgs e) => MainActions.ClearAllFights();
 
     /*
-     * Where the cascade's four picks land: the names of the selected fights (dividers select nothing), as ONE batch - ctrl-click twenty
-     * rows and say "pets". SET only: there is no clear here, because taking a verdict back lives behind the Type cell of the Player/NPC
-     * Identity pane, the app's ONE unset. This pane still writes them because a fight row is where a misfiled mob is noticed.
+     * Where the cascade's four picks land: the ONE selected fight's name (the menu is greyed unless exactly one row is selected, and the
+     * inactivity dividers name nothing). SET only: there is no clear here, because taking a verdict back lives behind the Type cell of the
+     * Player/NPC Identity pane, the app's ONE unset. This pane still writes them because a fight row is where a misfiled mob is noticed.
      */
     private void ApplyVerdict(IdentityKind kind)
     {
-      var names = new List<string>();
-      foreach (var fight in GetSelectedFights()) names.Add(fight.Name);
-
-      IdentityVerdictMenu.Write(names, kind);
+      var selected = GetSelectedFights();
+      IdentityVerdictMenu.Write(selected.Count == 1 ? selected[0].Name : null, kind);
     }
 
     /*
@@ -666,12 +664,14 @@ namespace EQLogParser
       selectGroupItem.IsEnabled = hasCurrent && unsorted;
       unselectGroupItem.IsEnabled = hasCurrent && fightGrid.SelectedItems.Count > 0;
 
-      // The cascade says which name it is about to write, and never greys out: a verb nobody can click is a verb nobody finds, and with
-      // nothing selected the pick writes an empty batch (IdentityVerdictMenu.Write refuses it) rather than doing something surprising.
-      IdentityVerdictMenu.Present(overrideSetItem, firstSelectedName, selected.Count);
+      // One fight row, or the cascade greys out (IdentityVerdictMenu.Present): the verdict is one judgement about one name somebody looked
+      // at, and a ctrl-click batch would rewrite kinds - and therefore board routing - across rows nobody inspected. Group selection stays
+      // useful for Copy and Refresh; it just cannot be an identity edit.
+      IdentityVerdictMenu.Present(overrideSetItem, selected.Count == 1 ? firstSelectedName : null);
 
-      // Refresh needs something selected - force-announcing an empty selection would blank the boards, which is not what a person
-      // pressing "refresh" means.
+      // Refresh takes ANY selection - one row or the whole list - because it changes nothing: it re-reads the boards over what is selected,
+      // and its whole use case is "the fights that are still going" (plural). Force-announcing an empty selection would blank the boards,
+      // which is not what a person pressing "refresh" means.
       refreshItem.IsEnabled = hasFight;
     }
 

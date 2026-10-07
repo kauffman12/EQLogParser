@@ -86,7 +86,7 @@ namespace EQLogParser
 
           // default before making check
           menuItemShowDeathLog.IsEnabled = false;
-          // The Assign item and the Set cascade stay enabled whatever is selected (see DamageSummary: a greyed verb is a verb nobody finds).
+          // The Assign item and the Set cascade are enabled per selection (DamageSummary says the law: exactly one row, or they grey out).
 
           if (dataGrid.SelectedItem is PlayerStats playerStats && dataGrid.SelectedItems.Count == 1)
           {
@@ -113,8 +113,10 @@ namespace EQLogParser
 
         menuItemSetPlayerClass.Header = $"Assign Default Class for {selectedName}";
 
-        var verdictNames = SelectedVerdictNames();
-        IdentityVerdictMenu.Present(menuItemSetKind, verdictNames.Count > 0 ? verdictNames[0] : null, verdictNames.Count);
+        // Exactly one selected row, or these verbs sleep (IdentityVerdictMenu.Present); the class-assign item follows it.
+        var verdictName = SelectedVerdictName();
+        menuItemSetPlayerClass.IsEnabled = verdictName != null;
+        IdentityVerdictMenu.Present(menuItemSetKind, verdictName);
       });
     }
 
@@ -123,21 +125,22 @@ namespace EQLogParser
     private void DataGridSelectionChanged(object sender, GridSelectionChangedEventArgs e) => DataGridSelectionChanged();
 
     /*
-     * The names the cascade would write: every selected player row (group headers select nothing), in row order, without duplicates —
-     * one helper for both the header's count and the write, so the number the menu shows is the number the click changes.
+     * The ONE name the identity verbs act on: exactly one selected player row (group headers select nothing), otherwise null — which is what
+     * greys the menu. Refusing a multi-selection is the operator's rule, not a missing feature: a verdict re-routes sides, rows and +Pets
+     * folding for every name it covers, so a ctrl-click block would rewrite routing across rows nobody inspected — and there is no undo,
+     * identity-overrides.txt keeps only the latest word. No batch path is kept "for later" either: an unreachable one drifts into reachable.
      */
-    private List<string> SelectedVerdictNames()
-    {
-      var names = new List<string>();
-      foreach (var item in dataGrid.SelectedItems)
-      {
-        if (item is PlayerStats stats && stats is not GroupEntry && !string.IsNullOrEmpty(stats.OrigName) && !names.Contains(stats.OrigName)) names.Add(stats.OrigName);
-      }
-      return names;
-    }
+    private string SelectedVerdictName()
+      => dataGrid.SelectedItems.Count == 1 && dataGrid.SelectedItem is PlayerStats stats && stats is not GroupEntry && !string.IsNullOrEmpty(stats.OrigName)
+        ? stats.OrigName
+        : null;
 
-    // The cascade's four picks: identity-overrides.txt + the ledger row dropped, then re-derived (IdentityVerdictMenu.Write).
-    private void ApplyVerdict(IdentityKind kind) => IdentityVerdictMenu.Write(SelectedVerdictNames(), kind);
+    /*
+     * The cascade's four picks (greyed unless exactly one row is selected). Written to identity-overrides.txt + the ledger row dropped, then
+     * re-derived (IdentityVerdictMenu.Write): a verdict is a new READING of the facts, so the grid repaints from the next pass rather than
+     * being patched here.
+     */
+    private void ApplyVerdict(IdentityKind kind) => IdentityVerdictMenu.Write(SelectedVerdictName(), kind);
 
     private void DataGridCopyContent(object sender, GridCopyPasteEventArgs e)
     {

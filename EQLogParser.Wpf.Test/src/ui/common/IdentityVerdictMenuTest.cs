@@ -42,36 +42,43 @@ public class IdentityVerdictMenuTest
     });
   }
 
+  /*
+   * The one-row law, both halves. `Present` receives "the single selected name or null" — every pane computes that itself (Count == 1 and a
+   * name), so what is pinned here is what a null/empty does to the menu: it goes OFF rather than offering to write something. Multi-selection
+   * refusal lives in those callers on purpose, because the refusal has to be computed from each grid's own selection; this class's job is to be
+   * unclickable once they say "no subject".
+   */
   [TestMethod]
-  public void TheHeaderSaysWhichNameTheClickWillWrite()
+  public void OnlyASingleSelectedNameEnablesTheVerb()
   {
     Sta.Run(() =>
     {
       var root = new MenuItem { Header = IdentityVerdictMenu.BaseHeader };
       IdentityVerdictMenu.Populate(root, _ => { });
 
-      // Nothing selected: the verb with no object. Not "Set Unknown as", which is what the panes used to print (their placeholder name
-      // leaked into a header) and reads like the application thinks there is a fighter called "Unknown".
-      IdentityVerdictMenu.Present(root, null, 0);
+      IdentityVerdictMenu.Present(root, "Frostmaw");
+      Assert.AreEqual("Set Frostmaw as", root.Header, "the header names the subject of the click");
+      Assert.IsTrue(root.IsEnabled);
+      Assert.IsTrue(Items(root).All(i => i.IsEnabled));
+
+      // Nothing selected: an action with no object, and it is off. (The old summaries printed their placeholder over a name — a fighter
+      // called "Unknown" on screen — which is the failure mode a null must not be allowed to reach.)
+      IdentityVerdictMenu.Present(root, null);
       Assert.AreEqual("Set as", root.Header);
+      Assert.IsFalse(root.IsEnabled, "no selection can do nothing");
 
-      IdentityVerdictMenu.Present(root, "Frostmaw", 1);
-      Assert.AreEqual("Set Frostmaw as", root.Header);
+      // A blank name is not a subject either (a row whose name never got written).
+      IdentityVerdictMenu.Present(root, string.Empty);
+      Assert.IsFalse(root.IsEnabled);
 
-      // A batch cannot be named by one row, and pretending otherwise is how a ctrl-click of twenty looked like a single-row edit.
-      IdentityVerdictMenu.Present(root, "Frostmaw", 12);
-      Assert.AreEqual("Set 12 names as", root.Header);
+      // Children carry their own IsEnabled, so a greyed parent must grey them too — otherwise the submenu still opens into live verbs.
+      Assert.IsTrue(Items(root).All(i => !i.IsEnabled), "a refused cascade refuses its four entries as well");
 
-      Assert.IsTrue(root.IsEnabled, "a greyed verb is a verb nobody finds; an empty batch is refused by the write instead");
-      Assert.IsTrue(Items(root).All(i => i.IsEnabled), "and that includes its four children");
+      IdentityVerdictMenu.Present(root, "Frostmaw");
+      Assert.IsTrue(root.IsEnabled, "and it comes back when a single row is selected again");
     });
   }
 
-  /*
-   * Each entry carries the kind the word claims. This is the seam between a menu and identity-overrides.txt: a child wired to the wrong
-   * IdentityKind would write a Pet for a click that said Player, save it, re-derive, and be believed — the same class of "two rules
-   * disagreeing about one dropdown" every other rule here is written against.
-   */
   [TestMethod]
   public void EachEntryWritesTheKindItsWordPromises()
     => Sta.Run(() =>

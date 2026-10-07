@@ -95,38 +95,42 @@ internal static class IdentityVerdictMenu
   };
 
   /*
-   * What the menu says and whether it answers right now. `selectedName` is null when nothing usable is selected; `count` is how many
-   * names the write would cover, so a batch is honest about itself ("Set 12 names as"). Enabled unconditionally by design (a greyed verb
-   * is a feature nobody finds) — with nothing selected the pick does nothing, which is what Present's caller relies on.
+   * What the menu says, and the one-row rule that decides whether it answers.
+   *
+   * `selectedName` is **the single name under selection, or null** — each pane computes it as exactly that. The item is enabled when and only
+   * when it is a name: nothing selected can do nothing (the old menu was greyed for the same reason and everybody understood it), and a
+   * MULTI-selection is refused too. That second half is deliberate and it is the operator's rule, not laziness: "what is this name?" is one
+   * judgement about one thing somebody looked at, while ctrl-clicking a block and overwriting the kind of twenty rows is a bulk format — the
+   * kind of edit that silently re-routes damage across the board (sides, `+Pets` folding, which names key rows) for rows the reader may not
+   * have inspected. Refusing is cheaper than undo, and undo does not exist: identity-overrides.txt keeps only the latest word.
+   *
+   * A greyed item is also the honest one where a batch would otherwise pick a name on the clicker's behalf — "Set 12 names as" hides which of
+   * the twelve it showed, and the write covers all of them.
    */
-  internal static void Present(MenuItem root, string? selectedName, int count)
+  internal static void Present(MenuItem root, string? selectedName)
   {
-    root.Header = count switch
-    {
-      <= 0 => BaseHeader,
-      1 => $"Set {selectedName} as",
-      _ => $"Set {count} names as",
-    };
+    var enabled = !string.IsNullOrEmpty(selectedName);
 
-    root.IsEnabled = true;
-    foreach (var child in root.Items.OfType<MenuItem>()) child.IsEnabled = true;
+    root.Header = enabled ? $"Set {selectedName} as" : BaseHeader;
+    root.IsEnabled = enabled;
+    foreach (var child in root.Items.OfType<MenuItem>()) child.IsEnabled = enabled;
   }
 
   /*
-   * The one write. Batch because the fight list selects with ctrl-click ("all of these are pets"), and it writes the file ONCE for the
-   * batch (IdentityOverrideStore.Apply) rather than once per name. Then the ledger row goes with it, exactly as NamesTable's Type cell does:
-   * the operator has now said what the name is, so this server's remembered opinion is stale, and a left-behind row shows up in the hover as
-   * "… in previous log" beside a verdict that replaced it.
+   * The one write, for ONE name — see Present for why the menus cannot ask for more. It is the same three steps NamesTable's Type cell does:
+   * the verdict into identity-overrides.txt (`Set`, Manual strength), this server's ledger row dropped with it (an operator has now said what
+   * the name is, so the remembered opinion is stale — and a left-behind row shows up in the hover as "… in previous log" beside the verdict that
+   * replaced it), then a re-derive.
    *
-   * No grid is patched here on purpose: an override is a new READING of the facts, and a reading changes which side a name's damage sits
-   * on, whether it keys a row at all and whose pet column it folds under — the re-derive answers all of that, the panes repaint from its result.
+   * No grid is patched here on purpose: an override is a new READING of the facts, and a reading changes which side a name's damage sits on,
+   * whether it keys a row at all and whose pet column it folds under — the re-derive answers all of that, the panes repaint from its result.
    */
-  internal static void Write(IReadOnlyList<string> names, IdentityKind kind)
+  internal static void Write(string? name, IdentityKind kind)
   {
-    if (names.Count == 0) return;
+    if (string.IsNullOrEmpty(name)) return;
 
-    IdentityOverrideStore.Instance.Apply(names, kind);
-    foreach (var name in names) IdentityPriorStore.Instance.Remove(name);
+    IdentityOverrideStore.Instance.Set(name, kind);
+    IdentityPriorStore.Instance.Remove(name);
 
     DeriveEngine.Active?.RederiveAsync();
   }

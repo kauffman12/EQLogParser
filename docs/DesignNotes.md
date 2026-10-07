@@ -8420,7 +8420,8 @@ which is the same class of bug as announcing one behind an open menu.
 > **In one breath:** one `IdentityVerdictMenu` builds the "**Set <name> as ▸**" cascade for four panes out of
 > `IdentityVocabulary.TypeOptions`, so the words, their order and their write cannot drift per grid; it replaces the damage/tanking/healing
 > summary's "Set as Verified Player" (a players.txt claim, greyed out on anybody already placed). The two **Assign** items stay and sit *above*
-> it — assign maps pet→owner *and* sets the kind, Set is the kind alone. Nothing in this family greys out. And **Refresh** is back on the fight
+> it — assign maps pet→owner *and* sets the kind, Set is the kind alone. **Exactly one selected row enables all of them** (zero or many greys the
+> whole family out: no subject, and a block-select would rewrite routing across names nobody inspected). Only **Refresh** takes any selection size, because it writes nothing. And **Refresh** is back on the fight
 > list for facts landing inside rows you already selected, where the selection's own id dedupe correctly sees nothing to do.
 
 **The drift this stopped.** One judgement — "this name is a pet" — was written three ways: the fight list had four flat rows (*Set as Player /
@@ -8441,13 +8442,21 @@ the panes already used), styled from `EQIconStyle` **only if an Application exis
 test host, where the MenuItem and its Kind are the whole contract.
 
 **Three laws of the cascade**, each pinned by `IdentityVerdictMenuTest` (Wpf assembly; `MenuItem` is a `FrameworkElement`, so through `Sta.Run`):
-- **The header names its subject**: `Set Frostmaw as`, or `Set 12 names as` for a ctrl-click batch — a plural cannot be dressed up as one name's
-  place — and plain `Set as` when nothing usable is selected. The count shown is computed by the same helper that produces the write
-  (`SelectedVerdictNames()` in each pane: selected player rows, group headers excluded, deduped in row order), so the number in the header *is* the
-  number the click changes. A count and a write derived from two different walks is how a menu lies.
-- **Nothing in this family greys out.** A verb nobody can click is a verb nobody finds; with nothing selected the batch is empty and `Write` refuses
-  it rather than guessing at a name. That covers the cascade *and* both Assign items (their old `IsOneOfUs` / `IsOneOfUsOrMerc` enable questions did
-  not disappear from the codebase — they still decide **which names appear in the owner list** the pet-of submenu offers).
+- **The header names its subject, and there is exactly one**: `Set Frostmaw as`, or the bare `Set as` while it is greyed out. It is handed the
+  single selected name (`SelectedVerdictName()` per pane: `SelectedItems.Count == 1` and a real player row — group headers select nothing), so the
+  words on the menu and the write behind them come from one read of the selection. The first version of this offered `Set 12 names as` for a
+  ctrl-click batch; that is gone, see the next bullet.
+- **One row, or the whole family greys out** (the operator's correction: *"no rows cant do anything. multiple rows id rather not support multiple
+  changes at once. force 1 selected row"*). Zero and many are both refusals, and the second half is the part worth its comment: an identity verdict
+  re-routes **sides**, **rows** and **`+Pets` folding** for every name it covers, so a block-select would rewrite board routing across rows nobody
+  inspected — and there is no undo, `identity-overrides.txt` keeps only the latest word per name. A greyed item is also more honest than a header
+  that shows one name of twelve while changing all of them. This covers the cascade **and** both Assign items; the panes compute "exactly one" from
+  their own selection and pass null otherwise, and `Write(null)` refuses, so a click cannot slip through a stale enable state either. What did NOT
+  disappear from the codebase are the old `IsOneOfUs` / `IsOneOfUsOrMerc` questions — they still decide **which names appear in the owner list** the
+  pet-of submenu offers. No batch path is kept "for later" either: `Write` takes one name, because an unreachable batch API drifts into being wired
+  up by whoever needs a loop.
+- **Refresh is the exception, and it earns it**: any selection size (one row or the whole list) enables it, because it writes nothing — it re-reads
+  the boards over what is selected, and its entire use case is *"the latest fights"*, plural.
 - **One write path.** `Write(names, kind)` = `IdentityOverrideStore.Instance.Apply` (ONE file write for a batch) + `IdentityPriorStore.Remove(name)`
   per name + `RederiveAsync`. The ledger half is not ceremony: the fight list's deleted "clear" wrote only the override store and the name came back
   on the next pass wearing "... in previous log". And **no grid is patched** — a verdict is a new *reading*, which changes which side a name's damage
@@ -8457,7 +8466,7 @@ test host, where the MenuItem and its Kind are the whole contract.
 **Assign versus Set is a real difference, and the menu order reads as advice.** **"Assign <name> as Pet of ▸"** calls
 `PlayerRegistry.AddPetToPlayer` — pet *and* owner mapping; use it when you know whose summon this is. **"Set <name> as ▸ Pet"** is the kind alone, for
 the name whose owner cannot be told from where you are sitting: at least say what it is. So Assign sits above Set in both panes that have it (damage,
-tanking; healing has only the class-assign item). Both are always clickable; the write guards do the refusing, not the menu.
+tanking; healing has only the class-assign item). Both follow the one-row law.
 
 **Mercenary is offered here while the identity pane still trims it.** `IdentityVocabulary.TypeOptionsFor` refuses Mercenary on a row that does not
 already read Mercenary (typing it onto a raider moves her number to a column nothing else fills) — and the cascade offers all four words on every row.

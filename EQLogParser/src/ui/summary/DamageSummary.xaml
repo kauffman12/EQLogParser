@@ -167,6 +167,10 @@
             wrote a players.txt row for a judgement the identity store answers (and which greys out on anybody the capture already
             placed, i.e. on almost everybody). The Assign items above it stay for the case where you know the owner: they map the pet
             AND set the kind; this one is the kind alone, for a name whose owner nobody can tell from here.
+
+            All three need EXACTLY ONE selected row (docs/DesignNotes.md → "Say what a name is, from wherever you noticed it"): with nothing
+            selected there is no subject, and a ctrl-click block would rewrite kinds — so sides, rows and +Pets folding — across names nobody
+            inspected. There is no undo for that, which is why the menu refuses instead of asking.
           -->
           <MenuItem x:Name="menuItemSetKind" Header="Set as"/>
           <Separator />
