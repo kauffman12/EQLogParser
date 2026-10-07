@@ -8162,3 +8162,117 @@ fixture reports coverage forever while checking nothing.
 4 bytes a row) — it breaks the moment a session holds more than one spool segment, and cross-stream order is exactly what
 that field buys, so it belongs with the chunking design rather than before it. RangeSpike's `.spool` files are a dev
 artifact and must be regenerated after this change; nothing player-facing has ever persisted fact bytes.
+
+## What NPC means here, and why a pet-proof line outranks `Targeted (NPC)` (2026-11)
+
+The word in this application is narrower than the client's. **NPC means none of player, pet or mercenary** — a
+hostile-shaped name with no ownership behind it. That is the definition the Names pane renders against, and it is now
+written at `IdentityKind.Npc` where the compiler can see it. The client's target frame is what muddied it:
+`Targeted (NPC)` asserts only *"not a player"*, and it prints those words for somebody's custom-named wolf exactly as
+it prints them for a skeleton. Reading the frame's word as the whole answer meant a name the app *knew* to be a summon
+sat in the identity column reading **NPC**, which by this app's own vocabulary denies that it is a pet.
+
+**R24-petslot** closes the gap with a fact a damage line states without saying it: some spells can only be aimed at a
+pet, so when one of them lands, the name in the defender slot is somebody's summon. The fixture line is verbatim from
+`eqlog_Incogitable_xegony.txt`:
+
+```
+[Sat Jan 04 16:25:05 2025] Wanabe hit Fred for 176000 points of unresistable damage by Elemental Conversion VI.
+```
+
+Fred is a shaman's wolf with a custom name. No line in that capture ever writes ``Wanabe`s pet``, so R5's possessive
+sweep cannot reach him; the target frame prints NPC for him. What settles it is the spell data: every rank of
+**Elemental Conversion** carries `Target = Pet2 (38)`, as do **Valiant/Relentless Symbiosis** (38) and **Warder's
+Gift** (14) — the game's own statement of what that damage can land on.
+
+**The trap in the lookup.** `IsPetSlotSpell` asks `GetSpellByName`, *not* the `GetDamagingSpellByName` the spell-
+feedback rule uses: Elemental Conversion's `Damaging` column is **0** in this build's spells.txt while the client
+wrote 176,000 points of damage for it. Only the target slot can be trusted at this seam. A rank this build does not
+ship answers null — silent, never guessed.
+
+### The census that makes the reading sound (and the one that doesn't)
+
+An earlier idea, "a spell whose `spells.txt` Target is Pet/Pet2 landed here, so this name is a pet", was **refused on
+measurement**: over Incogitable those 65 candidate names read Pet 26 / **Player 17 (including the raider Beorun)** /
+Npc 13 / Unknown 9. That measurement stands, and it is the *reading* that was wrong rather than the fact: the 2,125 DB
+rows with a pet target are mostly **beneficial** pet buffs (`Aegis of Calliav`, pet charms), whose names appear in heal
+and buff text beside raid members. Filtered to what a **damage line** can state, the recognizer agreed with every
+defender in both captures examined:
+
+| capture | damage facts on a pet-target spell | damage | defenders that were article-shaped mobs | defenders any `Targeted (Player)` frame named |
+|---|---|---|---|---|
+| eqlog_Incogitable_xegony.txt (3.57 M lines) | 14 | 2,157,395 | **0** | **0** |
+| eqlog_Kizant_xegony-01-06-24.txt (7.44 M lines) | 61 | 5,290,403 | **0** | **0** |
+
+The defenders are custom summon names: Fred, Joann, Puksuu, Magesrop, Stormbringer, Bofa, Wholewheat, Remini, Gasket.
+Spells involved: Elemental Conversion (30 and 13 hits), Valiant Symbiosis (17), Relentless Symbiosis (5), Warder's
+Gift XIV–XVI (9). Across the whole local corpus, Elemental Conversion alone prints 2–81 hit lines per capture
+(162,990 to 16,524,000 damage) in nine of them.
+
+**Retracted before anything else is quoted from this chapter**: a figure carried into the discussion that opened this
+work — `'Zeus'`, `Ammeren's Elemental Conversion`, 20,023,844 — exists in no local capture. `grep` finds the string
+`Ammeren's Elemental Conversion` nowhere; EC only ever appears in the shape above, with the *rank* in the spell slot
+and no possessive. The numbers here come from grep over `local/logs/` and from the pipeline, not from that row.
+
+### How the precedence actually works, since "Certain" was never the whole story
+
+`Targeted (NPC)` writes Npc at **Certain (100)**; R24 also claims **Certain**, with the same `effectiveFrom = −∞`.
+Conflicts in `EntityTimeline` resolve by `(strength, effectiveFrom)` and an exact tie falls to **insertion order**, so
+the claim is written *below* the target-frame ladder inside the evidence stage — the position is the rule, not a
+number. The general principle, which is what makes this more than a tie-break hack: **a frame verdict that asserts a
+negative ("not a player") may not outvote an uncontradicted positive claim.** The frame never says "this is not a
+pet"; it prints NPC for anything that is not a person.
+
+Three things still outrank it, and two of them are the reason the guard reads *every* assignment rather than the
+winning one:
+
+- a name this capture recorded as **Player or Mercenary anywhere in its claim list** refuses the sighting (not just
+  when that verdict won — illusion state writes `R1-conflict`, and the cost of getting this backwards is a raid member
+  filed behind a pet's name);
+- an operator's **R10** claim beats everything, as everywhere else;
+- the memory lanes keep their existing seat. `R24-` joins `RememberedRules`, but `RegistrySeed` still writes at
+  strength **8**, so "a ledger seed never changes an answer" and "memory is provenance-only" both survive this change:
+  a pair remembered from last night cannot outvote tonight's target frame, only tonight's own lines can.
+
+Cost note: the recognizer runs on **one damage line's spell slot** (a dictionary probe beside the existing eye check),
+never per fact and never inside the identity walk — the standing lesson that an `IdentityAt` in the fact loop costs
+0.2 s a pass does not have. Claims are pool-gated: 8 names on Incogitable, ~10 on Kizant-01-06-24.
+
+### Damage our own side earns nothing
+
+Asking what to *call* these names led straight to the second question, which was the one that mattered: **a meter must
+not pay a raider for a mechanic the raid chose to run.** Elemental Conversion is not output, it is the shaman burning
+their own wolf. The policy now, stated once in `FightProjection`: of everything that reads player-side on both ends,
+only a **charmed mob** keeps its damage — genuinely fought enemies the charm took off the target list, with measured
+totals behind that exemption. Friendly fire already dropped raider-on-raider and raider-on-mercenary; own pets were the
+last raid-side defender that earned, whether ownership came from R5's possessive sweep, R18's heal breadth,
+petmapping.txt or the new R24 sighting. That answers the stray-damage question in the same stroke: an accidental swing
+onto somebody's summon is not output either — on Incogitable Elemental Conversion is only 2.15 M of the 107.9 M that
+stopped earning.
+
+The fact is **captured and merely uncredited**; deleting it from the capture would be a different and wrong decision,
+and `OurPetTest`/`PetSlotSpellTest` assert both halves.
+
+**A/B over one real capture** (`eqlog_Incogitable_xegony.txt`, 1,901,078 facts, same binary shape, HEAD `93a5b0f5`):
+
+| | fight rows | Σ row damage | names reading Pet via R24 |
+|---|---|---|---|
+| before | 4,658 | 587,992,220,642 | 0 |
+| after | **4,646** | 588,634,152,459 (**+0.109 %**) | **8** |
+
+Reading the two deltas honestly: those 8 names opened **12 rows** as enemies before and key none now, so the raid's
+107,917,126 damage against them (10,123 facts) is off every board; while their own output — **41,353 facts,
+3,630,200,363** — moved from rows keyed on the pet's name to the raid's side, where any other proven pet's damage
+already landed. That second half is the real board movement, and it is the same law `+Pets` folding and R18 intervals
+implement; it arrives here for pets that were only ever provable through a spell's target slot.
+
+**What was deliberately not done.** No ownership is invented: the evidence row carries the pet's name, not a claimed
+master, so `OwnerOf` keeps coming from the possessive words and petmapping.txt (the R21 lesson — a rule may name what
+its line names and nothing more). And the beneficial half of the pet-target spell list (pet buffs, charms) is untouched:
+heal and buff lines claim no identity here, which is precisely the population that killed the earlier version of this idea.
+
+Tests: `PetSlotSpellTest` (the real line shape both directions, no credit and no row, a Player verdict refusing the
+sighting, the recognizer's false half), `OurPetTest.TheRaidSHitsOnTheirOwnPetEarnNoCreditAndKeyNoRow` (the policy for a
+pet proven by heal breadth instead), `IdentityVocabularyTest` (the words: cell *Pet Only Spell*, hover
+*Hit by a Pet-Only Spell*), and `CharmRowProjectionTest` unchanged — the charm exemption still credits, which is what
+its own assertions hold.
