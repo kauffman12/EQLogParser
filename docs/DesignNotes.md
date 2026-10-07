@@ -7625,6 +7625,43 @@ per the disposable-gate rule.
 What this does not touch: the ~1.25 M `HealRecord` objects that sit beside the heal table (the healing board's door is
 records by design), and the name/spell pools. The next real memory number has to come from one of those two.
 
+## The room a load reserves before it reads, and what parallelism would cost
+
+Two questions got measured on the same capture (`eqlog_Kizant_xegony-09-03-26.txt`, 998 MB, 10,015,348 lines), because
+"make loading faster" and "make loading use less memory" point at each other.
+
+**Reserve.** Both fact tables took their constructor defaults (65,536 / 16,384 slots) and doubled from there, so the
+load ended with 4,832,102 damage facts in 8,388,608 slots (268 MB for 155 MB of rows) and 2,670,809 heals in 4,194,304
+(134 MB for 85 MB): **~162 MB of address space reserved and never written**, plus roughly 480 MB of memcpy across the
+doublings that got there. `FactCapacity` now sizes both arrays from the file's length up front — one damage fact per
+~210 bytes, one heal per ~380, +15 %, clamped at 8.4 M / 4.2 M slots — which puts that capture at 175 MB + 97 MB of
+slots instead of 268 MB + 134 MB (**−131 MB**) and skips the copies. The densities come from two captures seven months
+apart (`eqlog_Kizant_xegony-2.txt` measures 1/204 B and 1/375 B, this one 1/206 B and 1/374 B), which is why a constant
+is trusted at all; the margin encodes which error is cheaper, since one fact past capacity *doubles*, so a 1 % miss
+costs 100 % more slots while an overshoot costs its overshoot and is handed back by `CompactRows` at end of file. The
+failure mode is honest and stated: an oddly chat-dominated gigabyte precommits ~175 MB it does not need, bounded by the
+clamp and reclaimed at EOF. A "last N minutes" open reads an unknown slice and therefore passes no hint.
+
+**Speed, and its price.** `EQLogParser.Tools/RangeSpike` (local, throwaway) re-measured at this commit:
+
+| run | wall | damage / heal facts | peak RSS |
+|---|---|---|---|
+| sequential, whole file | **15,712 ms** | 4,832,102 / 2,670,809 | 1,415 MB |
+| 4 shards in parallel | **6,982 ms** (includes four process starts) | 4,832,103 / 2,670,809 summed | ~600 MB each ≈ **2.4 GB** |
+
+Three things to read out of that. The sequential path is **36 % faster than the spike's original 24,726 ms** number
+still quoted elsewhere in these notes, and none of that came from the spike — it is the fact-bit deletion and the work
+around it, so old numbers should not be reused for planning. Four workers are worth ~2.3× here (and the spike measured
+3.7× at eight), but every worker carries its own fact tables: **parallel load trades memory for time on a project whose
+open complaint is memory.** Content parity across shards was near-exact — heals, deaths and taunts sum to the sequential
+counts exactly, damage by ±1 of 4.8 M (the delayed-critical boundary), which is the same shape the spike reported. Any
+in-app version still owes the harder work: the parse lane's statics (`DamageLineParser._previousAction`, the heal
+`RepeatStore`, `PlayerRegistry`, `ConfigUtil.PlayerName`) are process-global, which is exactly why the spike had to be a
+separate executable rather than a thread pool inside the app.
+
+So the order is memory first, threads second: reserve sizing is shipped, and if the parse lane gets de-staticized (worth
+doing for testability regardless), a 2-worker load is roughly time-neutral on RAM against today's 4-worker dream.
+
 ## Where ingest spends its time, stage by stage
 
 The ablation chapter above localized the cost but stopped at "the parsers, plus ~3.7 s of everything else". That "everything
