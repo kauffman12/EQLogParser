@@ -217,6 +217,14 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   from damage taken. And whoever counts a miss must not spend its modifier mask (`(Riposte)` rides on a line the parser called a miss): that guard lives
   in `UpdateDamageStats`, not in `LineModifiersParser`. `HitStatSplitTest` pins both, plus the heal arithmetic (`Extra` = ask − landed).
   Numbers and reasoning: docs/DesignNotes.md → "The eight bytes that were in every damage record for nothing".
+- **A field that carries a MAYBE may not charge every NO for it** (2026-11): `ReceivedSpell` initialized its candidate list
+  inline, so one `List<SpellData>` was allocated per buff line whether or not the spell name stood for several rows —
+  measured **656,686 `ReceivedSpell` against 762,549 lists** (the pair holds ~105 MB inclusive of backing arrays) in a heap
+  snapshot where ambiguity is the rare case. Now: null until **`AddAmbiguity`**, which only the parser's `Count > 1` branch
+  calls; readers ask **`HasAmbiguity`**; and the unambiguous answer is ONE shared empty list, asserted with `AreSame`
+  (`ReceivedSpellAmbiguityTest`) because `?? []` reads identically at every call site and puts the allocation back. Same
+  shape as `HealRecordSource` beside it: if a maybe costs an object, the no's must not pay for it.
+  docs/DesignNotes.md → "Where a large capture's bytes actually are".
 - **A record's kind is one byte, not a string and not a `StringCache` id**: `HitLabel : byte` holds the sixteen words a record can be (fourteen damage,
   two heal) and `HitLabels` pairs each with its `Labels` constant, so `record.Type` hands back the same interned literal as ever and every
   `record.Type == Labels.Melee` comparison still works. Four rules. (1) **Write the backing type**: a default enum is an `int`, and one extra byte puts a
@@ -852,9 +860,13 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   which is machine-specific): docs/DesignNotes.md → "A question about eight seconds must not read the whole night".
 - **The healing board's derived door is a record seam, not another Fight**: `HealingStatsBuilder` never reads a
   `Fight` — it takes `(time, HealRecord)` pairs and windows them itself against `AllRanges`, so the derivation reaches it
-  through `GenerateStatsOptions.Heals`, filled by `HealSummarySource.Materialize`. Four rules. (1) **null means "say
-  nothing about healing" (read the record store), a non-null EMPTY list means "there was none"** — inverting that is a
-  derived selection quietly keeping last click's grid. (2) The window is the selection's own `AllRanges`, because a heal
+  through `GenerateStatsOptions.Heals`, filled by `HealSummarySource.Materialize`. **RecordsStore holds no heal lane at
+  all** (deleted on measurement: 766,713 live `HealRecord` / 29.25 MB per session beside the same data as 32-byte rows);
+  the two readers left standing on that list — the builder's whole-capture arm and `DeathLogViewer`'s twenty-second
+  window — go through **`HealRecordSource`**, which materializes out of the same table via the same code and is wired by
+  `DeriveEngine.Start()` / taken down in `Dispose()` with the still-mine guard the identity seams use. Four rules. (1)
+  **null means "the whole open capture" (read the rows through `HealRecordSource`; no session reads empty), a non-null
+  EMPTY list means "there was none"** — inverting that is a derived selection quietly keeping last click's grid. (2) The window is the selection's own `AllRanges`, because a heal
   belongs to no fight (`HealFactTable` has no fight id, by design): a derived click means "every heal in this span",
   which is exactly what legacy does with the whole store. (3) The list must be **time ascending** — the builder locates
   its window with `FindIndex(first >= begin)` and walks forward, so an unordered input loses part of a segment without

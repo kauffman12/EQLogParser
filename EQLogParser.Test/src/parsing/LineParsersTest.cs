@@ -25,6 +25,7 @@ namespace EQLogParser
       EQDataStore.Instance = _dataStore;
 
       RecordsStore.Instance.Clear();
+      HealTap.Clear();
       PlayerRegistry.Instance.Clear();
 
       // The heal cache and its sighting history are process globals: without this, whichever test class got
@@ -39,6 +40,7 @@ namespace EQLogParser
       AdpsTracker.Instance.Clear();
       HealingLineParser.ClearCaches();
       RecordsStore.Instance.Clear();
+      HealTap.Clear();
       PlayerRegistry.Instance.Clear();
       _dataStore = null;
     }
@@ -54,7 +56,7 @@ namespace EQLogParser
       var ok = HealingLineParser.Process(Line("Fllint healed Foob for 11820 hit points by Blessing of the Ancients III.", 5));
       Assert.IsTrue(ok);
 
-      var heal = RecordsStore.Instance.GetAllHeals().Single().Item2;
+      var heal = HealTap.All().Single().Item2;
       Assert.AreEqual("Fllint", heal.Healer);
       Assert.AreEqual("Foob", heal.Healed);
       Assert.AreEqual(11820UL, heal.Total);
@@ -76,7 +78,7 @@ namespace EQLogParser
         "Bastion of Divinity Rk. II healed Xxuro over time for 6670 hit points by Bastion of Divinity Effect II.", 5));
 
       Assert.IsFalse(ok);
-      Assert.AreEqual(0, RecordsStore.Instance.GetAllHeals().Count());
+      Assert.AreEqual(0, HealTap.All().Count());
     }
 
     // The three glued-sentence shapes the punctuation branch exists for still find their healer.
@@ -90,7 +92,7 @@ namespace EQLogParser
       Assert.IsTrue(HealingLineParser.Process(Line(
         "Foob's promised interposition is fulfilled Foob healed himself for 44238 hit points by Promised Interposition Heal V. (Lucky Critical)", 7)));
 
-      var heals = RecordsStore.Instance.GetAllHeals().Select(h => h.Item2).ToList();
+      var heals = HealTap.All().Select(h => h.Item2).ToList();
       Assert.AreEqual(3, heals.Count);
       Assert.AreEqual("TestPlayer", heals[0].Healer, "the bang shape still hands the heal to the local player");
       Assert.AreEqual("Niktaza", heals[0].Healed);
@@ -105,7 +107,7 @@ namespace EQLogParser
       Assert.IsTrue(HealingLineParser.Process(Line(
         "Findawenye healed Piemastaj`s pet for 2823 (78079) hit points by Mending Splash Rk. III. (Critical)", 5)));
 
-      var heal = RecordsStore.Instance.GetAllHeals().Single().Item2;
+      var heal = HealTap.All().Single().Item2;
       Assert.AreEqual("Findawenye", heal.Healer);
       Assert.AreEqual("Mending Splash Rk. III", heal.SubType);
       Assert.AreEqual(2823UL, heal.Total);
@@ -124,13 +126,13 @@ namespace EQLogParser
       HealingLineParser.Process(Line(Text, 5));
       HealingLineParser.Process(Line(Text, 6));
 
-      var heals = RecordsStore.Instance.GetAllHeals().ToList();
+      var heals = HealTap.All().ToList();
       Assert.AreEqual(2, heals.Count);
       Assert.AreEqual(heals[0].Item2, heals[1].Item2);
       Assert.AreNotSame(heals[0].Item2, heals[1].Item2, "the second sighting is the one that pays for the entry");
 
       HealingLineParser.Process(Line(Text, 7));
-      var restated = RecordsStore.Instance.GetAllHeals().ToList();
+      var restated = HealTap.All().ToList();
       Assert.AreEqual(3, restated.Count);
       Assert.AreSame(restated[1].Item2, restated[2].Item2);
     }
@@ -142,7 +144,7 @@ namespace EQLogParser
       HealingLineParser.Process(Line("Fllint healed Foob for 11821 hit points by Blessing of the Ancients III.", 6));
       HealingLineParser.Process(Line("Fllint healed Foob for 11820 hit points by Cure of the Dead III.", 7));
 
-      var heals = RecordsStore.Instance.GetAllHeals().Select(h => h.Item2).ToList();
+      var heals = HealTap.All().Select(h => h.Item2).ToList();
       Assert.AreEqual(3, heals.Count);
       Assert.AreEqual(3, heals.Distinct().Count());
     }
@@ -153,7 +155,7 @@ namespace EQLogParser
       // a record keeps an id per name (HitRecord), so what comes back has to be the exact text the parser
       // settled on — here StringCache.GetOrAdd's title casing, unchanged from before records held ids
       HealingLineParser.Process(Line("Zezil healed Zezil for 100 hit points by healing MEND.", 5));
-      Assert.AreEqual("Healing MEND", RecordsStore.Instance.GetAllHeals().Single().Item2.SubType);
+      Assert.AreEqual("Healing MEND", HealTap.All().Single().Item2.SubType);
     }
 
     [TestMethod]
@@ -162,7 +164,7 @@ namespace EQLogParser
       var ok = HealingLineParser.Process(Line("Snowzz healed Malkatar over time for 8211 hit points by Roar of the Lion 6.", 5));
       Assert.IsTrue(ok);
 
-      var heal = RecordsStore.Instance.GetAllHeals().Single().Item2;
+      var heal = HealTap.All().Single().Item2;
       Assert.AreEqual(Labels.Hot, heal.Type);
       Assert.AreEqual("Malkatar", heal.Healed);
       Assert.AreEqual(8211UL, heal.Total);
@@ -175,7 +177,7 @@ namespace EQLogParser
       var ok = HealingLineParser.Process(Line("Findawenye healed Piemastaj`s pet for 2823 (78079) hit points by Mending Splash Rk. III.", 5));
       Assert.IsTrue(ok);
 
-      var heal = RecordsStore.Instance.GetAllHeals().Single().Item2;
+      var heal = HealTap.All().Single().Item2;
       Assert.AreEqual("Findawenye", heal.Healer);
       Assert.AreEqual(2823UL, heal.Total);
       Assert.AreEqual(78079UL, heal.OverTotal);
@@ -187,7 +189,7 @@ namespace EQLogParser
       var ok = HealingLineParser.Process(Line("Tolzol healed itself for 548 hit points.", 5));
       Assert.IsTrue(ok);
 
-      var heal = RecordsStore.Instance.GetAllHeals().Single().Item2;
+      var heal = HealTap.All().Single().Item2;
       // third-person pronouns normalize back to the actor, so a self-heal lands on the healer
       Assert.AreEqual("Tolzol", heal.Healer);
       Assert.AreEqual("Tolzol", heal.Healed);
@@ -199,7 +201,7 @@ namespace EQLogParser
     {
       var ok = HealingLineParser.Process(Line("Kizant crushes Sontalak for 126225 points of damage.", 5));
       Assert.IsFalse(ok);
-      Assert.AreEqual(0, RecordsStore.Instance.GetAllHeals().Count());
+      Assert.AreEqual(0, HealTap.All().Count());
     }
 
     #endregion

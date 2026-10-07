@@ -34,6 +34,7 @@ public class HealFactCaptureTest
         // ran first decides what "the same population" means (the trap LineParsersTest documents).
         HealingLineParser.ClearCaches();
         RecordsStore.Instance.Clear(false);
+        HealTap.Clear();
         PlayerRegistry.Instance.Clear();
     }
 
@@ -42,6 +43,7 @@ public class HealFactCaptureTest
     {
         HealingLineParser.ClearCaches();
         RecordsStore.Instance.Clear(false);
+        HealTap.Clear();
         PlayerRegistry.Instance.Clear();
     }
 
@@ -122,7 +124,7 @@ public class HealFactCaptureTest
     public void EveryStoredHealIsAHealFactAndBack()
     {
         var run = PipelineHarness.RunFileDerived(HealFixture);
-        var stored = RecordsStore.Instance.GetAllHeals().ToList();
+        var stored = HealTap.All().ToList();
 
         Assert.IsTrue(stored.Count > 0, "the fixture must produce healing at all, or this test proves nothing");
         Assert.AreEqual(stored.Count, run.HealFacts.HealCount,
@@ -359,7 +361,7 @@ public class HealFactCaptureTest
         // correct: wards already credit their owner.
         var ward = Parse("Steadman`s ward healed Broddy for 10250 hit points by Ancient Restoration XX.");
         Assert.IsTrue(ward);
-        var rec = RecordsStore.Instance.GetAllHeals().Last().Item2;
+        var rec = HealTap.All().Last().Item2;
         Assert.AreEqual("Steadman", rec.Healer, "a ward's healing belongs to the raider who cast it");
 
         /*
@@ -374,7 +376,7 @@ public class HealFactCaptureTest
 
     private static bool Parse(string action)
     {
-        var before = RecordsStore.Instance.GetAllHeals().Count();
+        var before = HealTap.All().Count();
         var ok = HealingLineParser.Process(new LineData
         {
             Action = action,
@@ -383,7 +385,7 @@ public class HealFactCaptureTest
             Split = action.Split(' '),
         });
 
-        Assert.AreEqual(ok ? before + 1 : before, RecordsStore.Instance.GetAllHeals().Count(),
+        Assert.AreEqual(ok ? before + 1 : before, HealTap.All().Count(),
             "a refused line must store nothing, or the ledger test would double-count it");
         return ok;
     }

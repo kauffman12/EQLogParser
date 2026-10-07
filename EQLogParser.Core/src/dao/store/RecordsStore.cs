@@ -14,7 +14,9 @@ namespace EQLogParser
     internal static RecordsStore Instance => Lazy.Value; // instance
     // records
     public const string DeathRecords = "DeathRecords";
-    public const string HealRecords = "HealRecords";
+    // No heal lane: the capture's heal fact table is the record list (see HealRecordSource). Keeping a second copy
+    // of every heal as live objects measured 766,713 HealRecord / 29.25 MB for two readers, one of which had already
+    // moved to materialized spans.
     public const string LootRecords = "LootRecords";
     public const string LootRecordsToAssign = "LootRecordsToAssign";
     public const string MezBreakRecords = "MezBreakRecords";
@@ -35,7 +37,6 @@ namespace EQLogParser
     private static readonly string[] TimedRecordTypes =
     [
       DeathRecords,
-      HealRecords,
       LootRecords,
       LootRecordsToAssign,
       MezBreakRecords,
@@ -60,7 +61,6 @@ namespace EQLogParser
     }
 
     internal void Add(DeathRecord record, double beginTime) => Add(DeathRecords, record, beginTime);
-    internal void Add(HealRecord record, double beginTime) => Add(HealRecords, record, beginTime);
     internal void Add(MezBreakRecord record, double beginTime) => Add(MezBreakRecords, record, beginTime);
     internal void Add(RandomRecord record, double beginTime) => Add(RandomRecords, record, beginTime);
     internal void Add(ResistRecord record, double beginTime) => Add(ResistRecords, record, beginTime);
@@ -68,7 +68,6 @@ namespace EQLogParser
     internal void Add(SpecialRecord record, double beginTime) => Add(SpecialRecords, record, beginTime);
     internal void Add(ZoneRecord record, double beginTime) => Add(ZoneRecords, record, beginTime);
     internal IEnumerable<(double, DeathRecord)> GetAllDeaths() => GetAll(DeathRecords).Select(r => (r.Item1, (DeathRecord)r.Item2));
-    internal IEnumerable<(double, HealRecord)> GetAllHeals() => GetAll(HealRecords).Select(r => (r.Item1, (HealRecord)r.Item2));
     internal IEnumerable<(double, LootRecord)> GetAllLoot() => GetAll(LootRecords).Select(r => (r.Item1, (LootRecord)r.Item2));
     internal IEnumerable<(double, MezBreakRecord)> GetAllMezBreaks() => GetAll(MezBreakRecords).Select(r => (r.Item1, (MezBreakRecord)r.Item2));
     internal IEnumerable<(double, RandomRecord)> GetAllRandoms() => GetAll(RandomRecords).Select(r => (r.Item1, (RandomRecord)r.Item2));
@@ -77,8 +76,6 @@ namespace EQLogParser
     internal IEnumerable<(double, ZoneRecord)> GetAllZoning() => GetAll(ZoneRecords).Select(r => (r.Item1, (ZoneRecord)r.Item2));
     internal IEnumerable<(double, DeathRecord)> GetDeathsDuring(double beginTime, double endTime) =>
       GetDuring(DeathRecords, beginTime, endTime).Select(r => (r.Item1, (DeathRecord)r.Item2));
-    internal IEnumerable<(double, HealRecord)> GetHealsDuring(double beginTime, double endTime) =>
-      GetDuring(HealRecords, beginTime, endTime).Select(r => (r.Item1, (HealRecord)r.Item2));
     internal IEnumerable<(double, IAction)> GetSpellsDuring(double beginTime, double endTime, bool reverse = false) =>
       GetDuring(SpellRecords, beginTime, endTime, reverse).Select(r => (r.Item1, (IAction)r.Item2));
 

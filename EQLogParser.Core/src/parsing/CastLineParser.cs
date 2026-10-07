@@ -271,7 +271,7 @@ namespace EQLogParser
         }
         else
         {
-          newSpell.Ambiguity.AddRange(result.SpellData);
+          newSpell.AddAmbiguity(result.SpellData);
         }
 
         RecordsStore.Instance.Add(newSpell, beginTime);

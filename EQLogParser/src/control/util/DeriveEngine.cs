@@ -254,6 +254,14 @@ namespace EQLogParser
        */
       IdentityLookup.LiveVerdict = _liveKindAt;
       IdentityLookup.LiveOwner = _liveOwner;
+
+      /*
+       * The other seam a closed session must not leave standing: the healing board's fallback and the death log's 20-second
+       * window read heal RECORDS, and records are no longer kept as objects anywhere (the capture's rows are the store —
+       * HealRecordSource). Wiring the table here is what makes "this capture" answer those two; Dispose takes it down with
+       * the same still-mine guard as the identity seams, because a new log can be open before an old engine is disposed.
+       */
+      HealRecordSource.Current = _heals;
       ActiveChanged?.Invoke();
       _quietTimer.Start();
     }
@@ -607,6 +615,7 @@ namespace EQLogParser
       // disposed, and blanking that one would send every identity question back to memory behind its owner's back.
       if (ReferenceEquals(IdentityLookup.LiveVerdict, _liveKindAt)) IdentityLookup.LiveVerdict = null;
       if (ReferenceEquals(IdentityLookup.LiveOwner, _liveOwner)) IdentityLookup.LiveOwner = null;
+      if (ReferenceEquals(HealRecordSource.Current, _heals)) HealRecordSource.Current = null;
       if (ReferenceEquals(Active, this))
       {
         Active = null;

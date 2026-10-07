@@ -7526,6 +7526,81 @@ both builds and read the process working set after EOF. A partial Core-only comp
 retention over the same lines) is runnable at both revisions but measures one slice of the pipeline, not the app, and a
 264-commit delta would attribute everything — the legacy engine's deletion included — to a single number.
 
+## Where a large capture's bytes actually are (2026-11)
+
+A heap snapshot beat an estimate. The ablation ladder above says what each *lane* costs when removed; it cannot say who
+*owns* the bytes that stay. So one snapshot of the running app on a large capture (object-type dump, retained sizes;
+`local/profiling/memory.txt`, local-only like the logs) was read type by type. Whole heap at that instant:
+**534,785,369 B across 3,816,804 objects**. Top owners:
+
+| retained | shallow | objects | owner |
+|---|---|---|---|
+| 266 MB | **183.4 MB** | 2 | `DamageFactTable` (122.3) + `HealFactTable` (61.1) arrays, plus LiteDB's `ArrayPool<Byte>` 15.3 and one `Dictionary+FastEntry<String,CastTimeRecord>[]` 10.9 |
+| ~105 MB | 76.2 MB | 1,419,098 | `ReceivedSpell` + the `List<SpellData>` each one owned (see trim #2) |
+| 37.4 MB | — | 65 | `Dictionary<String,Object>` — **unattributed**: no app type declares it, so a Syncfusion view cache is the leading candidate; needs Path to root before any action |
+| 29.3 MB | 29.3 MB | 766,713 | `HealRecord` (trim #1, gone) |
+| 21.8 MB | 21.8 MB | 1,061 | `List<Int32>` — the `FightFactIndex` ordinal lists, most of it doubling slack, all of it reclaimed if the damage table is ever memory-mapped |
+| 13.4 + 9.2 + ~7 MB | | | `StringCache` nodes/tables and the name pools (the price of interning: 66 bytes per name entry) |
+
+Three things this table says that an ablation cannot, and one it does not.
+
+**Trim #1 — a heal was stored twice, once as a row and once as an object.** `HealingLineParser` appended every record to
+the capture's heal fact table *and* registered it in `RecordsStore`, where it stayed for the life of the session:
+**766,713 live objects, 29.25 MB shallow**, holding pointers into strings the fact rows already interned. It was not a
+cache with a reader either — exactly two surfaces touched that list, and one of them (`HealingStatsBuilder`'s
+whole-capture arm) had already been given a materialized door. The lane is deleted; `HealRecordSource` (Core) now hands
+records back out of the rows through `HealSummarySource`, the same code the derived board uses, wired by
+`DeriveEngine.Start()` and taken down in `Dispose()` with the same still-mine guard as the identity seams. The word for
+`GenerateStatsOptions.Heals` changes with it: **null now means "the whole open capture", and no session reads empty** —
+a non-null EMPTY list still means "this selection healed nothing" and must never fall through. The ablation had already
+priced this at 29 MB, which is the one case where deleting a store beats trimming one.
+
+**Trim #2 — a maybe was paid for by every no.** `ReceivedSpell` initialized its candidate list inline, so every buff
+line allocated a `List<SpellData>` whether or not its spell name stood for several rows: **656,686 `ReceivedSpell`
+against 762,549 `List<SpellData>`** in the snapshot (list shells 16.6 MB shallow, plus one backing array per list —
+which is why the pair's inclusive total is ~105 MB, a strictly-better bound computed by walking `Type → field type →
+instance reference-count` rather than trusting an exclusive-children dump). The list is now null until
+`AddAmbiguity`, which the parser calls only in its `result.SpellData.Count > 1` branch; readers ask `HasAmbiguity`, and
+the unambiguous answer is one shared empty list — pinned with `AreSame`, because `?? []` reads identically and puts a
+list back on every buff line.
+
+**What the snapshot does NOT say: that the app leaks.** It was taken mid-load by three independent signs (fact arrays at
+capacity, i.e. zero slack when the compaction law guarantees up to 100 %; 766 k heals where the reference capture holds
+1.248 M; and 599 k live `DamageRecord` objects, which only exist between a parse and the next collection). And the gap
+between it and Task Manager is arithmetic, not a hidden store — see the next section.
+
+## Why Task Manager says 1.6 GB while the heap says 535 MB (2026-11)
+
+Same moment, same process: **working set 1.8 GB, private working set 1.6 GB**, against a managed snapshot of 535 MB and
+a GC heap reported as ~750 MB allocated. Four mechanisms, in the order they explain bytes:
+
+1. **Committed is not resident.** Task Manager's "Memory (active private)" counts pages the process *committed*; the
+   working set counts the subset Windows has actually kept in RAM. The committed figure is what must be believed for
+   OOM, and it includes every arena .NET reserved — including bytes that hold nothing yet.
+2. **Windows hands out zero pages, so a fresh array costs nothing until it is written.** This makes the dump's ordering
+   treacherous: `DamageFactTable`'s 122.3 MB counts *capacity*, and in a mid-load snapshot the untouched tail of the
+   doubling may not be resident at all — which under-counts the committed number rather than over-counting it. Same law
+   as the compaction work: capacity, not content, is what the file's size pre-secures (`FactCapacity` sizes both tables
+   from the capture's byte length).
+3. **Not everything in a process is managed.** In this snapshot's own top list: LiteDB's `ArrayPool<Byte>` (**15.3 MB**
+   across 17 arrays) and its `FastEntry[]` dictionaries, the `Dictionary<String,Object>` blocks (**37.4 MB**, owner not
+   yet named — a UI view cache is the leading candidate), Skia native surfaces, and WPF's unmanaged allocations. None of
+   these appear in a managed-object dump except by name.
+4. **Some of it is garbage that has not been collected yet.** Workstation GC frees only during an allocation pause on the
+   allocating thread, so the resident figure sits between "live" and "live + everything since the last collection". The
+   rate is measurable from this repo's own law — production allocated **5.97 GB per 38 min of live raid tail**, i.e.
+   about **160 MB of garbage a minute** while a board was open; a Server-GC process would return less, and an env check
+   (`COMPlus_gcServer` unset) is the first thing to confirm before assuming either.
+
+The actionable reading is therefore not "0.8 GB went missing" but: the managed floor is the fact tables (measured
+capacity 122.3 + 61.1 MB of arrays here; **397 → 342 MB retained at EOF** on the reference capture once slack is
+reclaimed), and a Windows-side re-measure should be taken **(a) at EOF with the damage summary open** rather than
+mid-load, and **(b)** as `dotnet-counters monitor --counters System` (`committed-memory`, `working-set`, `gen-2-gc-count`)
+plus Visual Studio's *dump → native heap / heap differences*, which is the only way to attribute the 37.4 MB of
+`Dictionary<String,Object>` and LiteDB's share. Until (a) and (b) are done, no number above should be quoted as "the
+app uses X".
+
+
 ## Where ingest time and retained memory actually go, ablated at HEAD (2026-11)
 
 The perf-batch question ("are we closer to a faster load or a smaller footprint?") cannot be answered from the batch

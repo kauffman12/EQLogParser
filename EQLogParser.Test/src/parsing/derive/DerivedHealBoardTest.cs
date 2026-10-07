@@ -5,8 +5,11 @@ namespace EQLogParser;
 /*
  * The healing board, fed from the capture instead of the record store.
  *
- * HealingStatsBuilder is the one board that never reads a Fight: it pulls `RecordsStore.GetAllHeals()` (a
- * (time, record) pair per heal), windows that list against GenerateStatsOptions.AllRanges and groups by healer.
+ * HealingStatsBuilder is the one board that never reads a Fight: it takes a (time, record) pair per heal, windows that
+ * list against GenerateStatsOptions.AllRanges and groups by healer. Where those pairs come from changed once — they
+ * used to be live objects the parse parked in RecordsStore, and are now read back out of the capture's heal rows
+ * (HealRecordSource) — but this file's shape did not: one arm supplies a ranged materialization, the other leaves the
+ * option unset and lets the builder read the whole capture through the same rows.
  * So a derived healing grid cannot be produced by materializing rows — it needs the records themselves, which is
  * what HealSummarySource builds from HealFactTable and GenerateStatsOptions.Heals carries. Capture fidelity is
  * already pinned elsewhere (HealFactCaptureTest: every stored heal is a fact and back); what this file holds is
@@ -34,7 +37,9 @@ public class DerivedHealBoardTest
     {
         HealingLineParser.ClearCaches();
         RecordsStore.Instance.Clear(false);
+        HealTap.Clear();
         PlayerRegistry.Instance.Clear();
+        HealRecordSource.Current = null;
     }
 
     [TestCleanup]
@@ -42,6 +47,7 @@ public class DerivedHealBoardTest
     {
         HealingLineParser.ClearCaches();
         RecordsStore.Instance.Clear(false);
+        HealTap.Clear();
         PlayerRegistry.Instance.Clear();
     }
 
@@ -85,7 +91,7 @@ public class DerivedHealBoardTest
         Assert.IsTrue(File.Exists(path), $"missing fixture: {path} (copied by the test project's Content items)");
 
         var run = PipelineHarness.RunFileDerived(path);
-        var stored = RecordsStore.Instance.GetAllHeals().ToList();
+        var stored = HealTap.All().ToList();
         var derived = HealSummarySource.Materialize(run.HealFacts, null);
 
         Assert.AreEqual(7, stored.Count, "the fixture writes seven heals");
@@ -124,11 +130,15 @@ public class DerivedHealBoardTest
     }
 
     [TestMethod]
-    public void TheDerivedHealingBoardReadsLikeTheStoreBuiltOne()
+    public void TheWholeCaptureArmAndTheRangedArmReadAlike()
     {
         var path = Path_(Fixture);
         var run = PipelineHarness.RunFileDerived(path);
         var range = Window(run.Facts.Facts.Length > 0 ? run.Facts.Facts[^1].TimeS : 0);
+
+        // The unset arm reads the capture through the seam DeriveEngine.Start() wires. With no session it reads nothing,
+        // which is the right answer for a closed log and not what this comparison is about.
+        HealRecordSource.Current = run.HealFacts;
 
         var rows = Rows(run);
         var legacy = BuildHeals(rows, range, null);
@@ -175,10 +185,10 @@ public class DerivedHealBoardTest
     /*
      * The seam's contract, which is the one place this could lie.
      *
-     * `Heals == null` means "say nothing about healing" and the board reads the record store; a non-null list — even
-     * an empty one — IS the input. Without that distinction a derived selection with no healing in it would keep
-     * displaying whatever the previous (legacy) click left on the grid, which is the exact bug class this whole path
-     * is about: two lists sharing one board and nobody knowing which one is on screen.
+     * `Heals == null` means "the whole open capture" and the board reads the heal rows; a non-null list — even an empty
+     * one — IS the input. Without that distinction a derived selection with no healing in it would keep displaying
+     * whatever the previous click left on the grid, which is the exact bug class this whole path is about: two lists
+     * sharing one board and nobody knowing which one is on screen.
      */
     [TestMethod]
     public void AnEmptyHealListIsTheBoardBeingToldThereWasNoHealing()
@@ -186,9 +196,10 @@ public class DerivedHealBoardTest
         var path = Path_(Fixture);
         var run = PipelineHarness.RunFileDerived(path);
         var range = Window(run.Facts.Facts.Length > 0 ? run.Facts.Facts[^1].TimeS : 0);
+        HealRecordSource.Current = run.HealFacts;
 
         Assert.AreEqual(3401L, BuildHeals(Rows(run), range, null)?.RaidStats.Total,
-            "null keeps the record store, which this fixture fills");
+            "null reads the whole capture, which this fixture fills");
 
         var cleared = BuildHeals(Rows(run), range, []);
         Assert.IsNotNull(cleared);

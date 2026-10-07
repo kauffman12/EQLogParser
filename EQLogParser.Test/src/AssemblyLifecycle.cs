@@ -16,6 +16,17 @@ namespace EQLogParser
   public static class AssemblyLifecycle
   {
     [AssemblyInitialize]
-    public static void Initialize(TestContext context) => ClassificationRules.FailFastStages = true;
+    public static void Initialize(TestContext context)
+    {
+      ClassificationRules.FailFastStages = true;
+
+      /*
+       * The heal parser's output is observed through its own event for the whole run (see HealRecordTap): heals are no
+       * longer duplicated into RecordsStore as live objects, so "what did the parse produce" needs a listener rather
+       * than a store read. Assembly-wide on purpose — a per-class attach fails open, i.e. a forgotten attach reads as
+       * an empty list and passes.
+       */
+      HealTap.Attach();
+    }
   }
 }

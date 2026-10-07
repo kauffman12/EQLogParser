@@ -193,10 +193,45 @@ namespace EQLogParser
 
   internal class ReceivedSpell : IAction
   {
+    /*
+     * The answer for "this buff line named exactly one spell". Read-only by agreement: the only writer is
+     * AddAmbiguity below, so no consumer can populate a buff that had nothing to be ambiguous about.
+     */
+    private static readonly List<SpellData> NoCandidates = [];
+
     public string Receiver { get; set; }
     public SpellData SpellData { get; set; }
     public bool IsWearOff { get; set; }
-    public List<SpellData> Ambiguity { get; } = [];
+
+    /*
+     * The spell rows this spell NAME stood for, when it stood for more than one. Null is the normal state and stays
+     * null: an inline initializer charged one List object (plus its backing array the moment anything was added) to
+     * every received-spell line. Measured on one capture's heap snapshot: 656,686 ReceivedSpell objects and 762,549
+     * List<SpellData> — some 60 MB of list shells for a field that means "this name was ambiguous", the overwhelming
+     * majority of them empty, because a buff line that matches one row of spells.txt has nothing to record.
+     *
+     * Two rules ride on this: readers ask HasAmbiguity before looking at the list (that is what the resolution path
+     * already did), and a COPY of a received spell — a wear-off, the second sighting of the same buff — arrives with
+     * no candidates at all, which is exactly what it was before; only the parse that resolved an ambiguous name
+     * supplies them.
+     */
+    private List<SpellData> _ambiguity;
+
+    /// <summary>The name resolved to more than one spell row. Ask this rather than counting a list.</summary>
+    public bool HasAmbiguity => _ambiguity is { Count: > 0 };
+
+    /// <summary>Candidates for an ambiguous name; the shared empty list when the name was not ambiguous.</summary>
+    public List<SpellData> Ambiguity => _ambiguity ?? NoCandidates;
+
+    /// <summary>The one writer. Nothing else may add to <see cref="Ambiguity"/>.</summary>
+    internal void AddAmbiguity(List<SpellData> candidates)
+    {
+      if (candidates is not { Count: > 0 }) return;
+      (_ambiguity ??= new List<SpellData>(candidates.Count)).AddRange(candidates);
+    }
+
+    /// <summary>How many rows the name stood for; 0 means one match and no list allocated.</summary>
+    internal int AmbiguityCount => _ambiguity?.Count ?? 0;
   }
 
 

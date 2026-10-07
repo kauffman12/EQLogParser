@@ -53,7 +53,9 @@ namespace EQLogParser
       // Scoped, not the whole store: a death click is a keystroke-scale action, and asking for every fight in
       // the capture (let alone materializing one per fact) is a full board's cost the 20-second window never used.
       var allFights = MainActions.GetFightsOverlapping(start, end + 1);
-      var allHeals = RecordsStore.Instance.GetHealsDuring(start, end + 1);
+      // Heal rows of the open capture, same window as everything else here: the record list this used to read no
+      // longer exists (HealRecordSource), and the rows answer the same question over the same seconds.
+      var allHeals = HealRecordSource.During(start, end + 1);
       var allSpells = RecordsStore.Instance.GetSpellsDuring(start, end + 1);
       var damages = new Dictionary<double, List<string>>();
       var heals = new Dictionary<double, List<string>>();

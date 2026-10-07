@@ -111,12 +111,16 @@ namespace EQLogParser
           if (_raidTotals.Ranges.TimeSegments.Count > 0)
           {
             /*
-             * The board's one source, and the seam the the derivation feeds: options.Heals is null for every caller
-             * that wants the captured record store, and a materialized (possibly empty) list when a derived fight
-             * selection is being summarized. Nothing else about this method differs between the two — same window,
-             * same HealingValidator filters, same grouping — which is what makes the two boards comparable.
+             * The board's one source, and the seam the derivation feeds: options.Heals is null for every caller that
+             * wants the whole open capture, and a materialized list when a derived fight selection is being summarized —
+             * where a NON-NULL BUT EMPTY list means "this selection healed nothing", and must not fall through to the
+             * whole capture (that inversion is how a selection ends up displaying somebody else's numbers). The null arm
+             * reads the capture's heal rows through
+             * HealRecordSource rather than a list of live records (see there: the store copy cost 29 MB for two
+             * readers). Nothing else about this method differs between the two — same window, same HealingValidator
+             * filters, same grouping — which is what makes the two boards comparable.
              */
-            var allHeals = options.Heals ?? RecordsStore.Instance.GetAllHeals().ToList();
+            var allHeals = options.Heals ?? HealRecordSource.All();
             // calculate totals first since it can modify the ranges
             _raidTotals.TotalSeconds = _raidTotals.MaxTime = _raidTotals.Ranges.GetTotal();
 

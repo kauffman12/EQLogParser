@@ -52,7 +52,15 @@ namespace EQLogParser
           if (ClassificationRules.EyeSummonOwnerInName(record.Healed) is null)
           {
             record = GetCachedHealRecord(record);
-            RecordsStore.Instance.Add(record, lineData.BeginTime);
+
+            /*
+             * No copy goes to RecordsStore any more. This record's permanent home is the capture's heal fact table
+             * (the tap beside this method appends the row), and HealRecordSource hands records back out of those rows
+             * to the two surfaces that used to read a live object list — measured at 766,713 HealRecord / 29.25 MB
+             * retained for the whole length of a session, on data already stored in 32-byte rows. The record itself
+             * stays allocated here because the FCT overlay and EventsHealProcessed want it NOW; it simply stops being
+             * remembered (docs/DesignNotes.md → "Where a large capture's bytes actually are").
+             */
 
             // hoisted so the event object is not built per heal when nothing is listening (FCT off)
             var healHandler = EventsHealProcessed;

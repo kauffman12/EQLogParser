@@ -182,11 +182,20 @@ namespace EQLogParser
       PlayerRegistry.Instance.AddMerc(victim); // healing stats only count heals landing on known player/pet/merc names
       try
       {
-        RecordsStore.Instance.Add(new HealRecord { Healer = healer1, Healed = victim, Total = 800, Type = "healing", SubType = "Holy Light" }, 1);
-        RecordsStore.Instance.Add(new HealRecord { Healer = healer1, Healed = victim, Total = 200, Type = "healing", SubType = "Flash Heal" }, 6);
-        RecordsStore.Instance.Add(new HealRecord { Healer = healer2, Healed = victim, Total = 300, Type = "healing", SubType = "Rejuvenation" }, 9);
+        /*
+         * A hand-built input list, which is what this test's three records always were. They used to travel as entries in
+         * RecordsStore and reach the builder through its null-fallback; heals are no longer stored as objects at all
+         * (Core → HealRecordSource reads them out of the capture's rows), so the seam is fed the way MainWindow's derived
+         * door feeds it. HealRecordSourceTest pins the fallback arm itself over parsed lines.
+         */
+        var heals = new List<(double, HealRecord)>
+        {
+          (1, new HealRecord { Healer = healer1, Healed = victim, Total = 800, Type = "healing", SubType = "Holy Light" }),
+          (6, new HealRecord { Healer = healer1, Healed = victim, Total = 200, Type = "healing", SubType = "Flash Heal" }),
+          (9, new HealRecord { Healer = healer2, Healed = victim, Total = 300, Type = "healing", SubType = "Rejuvenation" })
+        };
 
-        var options = new GenerateStatsOptions { AllRanges = Ranges((0, 60)) };
+        var options = new GenerateStatsOptions { AllRanges = Ranges((0, 60)), Heals = heals };
         options.Npcs.Add(MakeFight(4, "Gek", 0, 60));
         HealingStatsBuilder.Instance.BuildTotalStats(options);
         var combined = HealingStatsBuilder.Instance.GetLastStats()?.CombinedStats;
