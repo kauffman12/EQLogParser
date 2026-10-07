@@ -8414,3 +8414,62 @@ a destructive entry gets clicked by accident.
 menu closes, `DeriveEngine.ActiveChanged` has already dropped this pane's rows and reset the selection gate (the previous section) — and
 `CloseMenu()` finds nothing pending. Without that ordering, closing the menu would announce a selection whose fights no longer exist,
 which is the same class of bug as announcing one behind an open menu.
+
+## Say what a name is, from wherever you noticed it (2026-11)
+
+> **In one breath:** one `IdentityVerdictMenu` builds the "**Set <name> as ▸**" cascade for four panes out of
+> `IdentityVocabulary.TypeOptions`, so the words, their order and their write cannot drift per grid; it replaces the damage/tanking/healing
+> summary's "Set as Verified Player" (a players.txt claim, greyed out on anybody already placed). The two **Assign** items stay and sit *above*
+> it — assign maps pet→owner *and* sets the kind, Set is the kind alone. Nothing in this family greys out. And **Refresh** is back on the fight
+> list for facts landing inside rows you already selected, where the selection's own id dedupe correctly sees nothing to do.
+
+**The drift this stopped.** One judgement — "this name is a pet" — was written three ways: the fight list had four flat rows (*Set as Player /
+Mercenary / Pet / NPC*), the damage and tanking summaries had **"Set as Verified Player"**, and the healing summary had that same lone item. Flat
+rows could not say *which* name they meant; "Verified Player" reached for `PlayerRegistry.AddVerifiedPlayerByOperator` — a players.txt roster
+write — for a verdict the identity store answers, and it disabled itself on anybody this capture had already proved ours, which is to say on nearly
+everybody (`NamesTable`'s row, not a menu, has been the app's real answer since the identity pane shipped). A header printed over a placeholder was
+the other half: `menuItemSetAsPlayer.Header = $"Set {selectedName} as Verified Player"` with `selectedName` defaulting to `"Unknown"`, so the
+application put a fighter called "Unknown" on screen.
+
+**One builder, words from the vocabulary.** `IdentityVerdictMenu.Populate(root, onPick)` fills a `MenuItem` the markup positions — each pane keeps
+its own order — with **four** kinds taken from `IdentityVocabulary.TypeOptions`: `Spell` stays a rule's answer (it is not an operator's judgement
+about a fighter) and "Clear claim" needs a row's evidence to mean anything, plus the unset already has its one door. `TypeOptions` is now composed
+of *named* entries (`PlayerOption`, `PetOption`, …) rather than inline `new`s, so a pane wanting a subset reads the **same record** instead of
+retyping a string — "each word exactly once" now has objects behind it, one per word in the process. Filling is idempotent (`Items.Count > 0` ⇒
+return): a constructor is not the only thing that can call it, and eight children would render as a bug. Icons come with the words (the four glyphs
+the panes already used), styled from `EQIconStyle` **only if an Application exists** — that conditional is what lets a menu be built in a windowless
+test host, where the MenuItem and its Kind are the whole contract.
+
+**Three laws of the cascade**, each pinned by `IdentityVerdictMenuTest` (Wpf assembly; `MenuItem` is a `FrameworkElement`, so through `Sta.Run`):
+- **The header names its subject**: `Set Frostmaw as`, or `Set 12 names as` for a ctrl-click batch — a plural cannot be dressed up as one name's
+  place — and plain `Set as` when nothing usable is selected. The count shown is computed by the same helper that produces the write
+  (`SelectedVerdictNames()` in each pane: selected player rows, group headers excluded, deduped in row order), so the number in the header *is* the
+  number the click changes. A count and a write derived from two different walks is how a menu lies.
+- **Nothing in this family greys out.** A verb nobody can click is a verb nobody finds; with nothing selected the batch is empty and `Write` refuses
+  it rather than guessing at a name. That covers the cascade *and* both Assign items (their old `IsOneOfUs` / `IsOneOfUsOrMerc` enable questions did
+  not disappear from the codebase — they still decide **which names appear in the owner list** the pet-of submenu offers).
+- **One write path.** `Write(names, kind)` = `IdentityOverrideStore.Instance.Apply` (ONE file write for a batch) + `IdentityPriorStore.Remove(name)`
+  per name + `RederiveAsync`. The ledger half is not ceremony: the fight list's deleted "clear" wrote only the override store and the name came back
+  on the next pass wearing "... in previous log". And **no grid is patched** — a verdict is a new *reading*, which changes which side a name's damage
+  sits on, whether it keys a row at all, and whose `+Pets` column folds it; each pane repaints from the re-derive. That is the same law that kept the
+  old `ApplyOverride` away from rows, now written once instead of per pane.
+
+**Assign versus Set is a real difference, and the menu order reads as advice.** **"Assign <name> as Pet of ▸"** calls
+`PlayerRegistry.AddPetToPlayer` — pet *and* owner mapping; use it when you know whose summon this is. **"Set <name> as ▸ Pet"** is the kind alone, for
+the name whose owner cannot be told from where you are sitting: at least say what it is. So Assign sits above Set in both panes that have it (damage,
+tanking; healing has only the class-assign item). Both are always clickable; the write guards do the refusing, not the menu.
+
+**Mercenary is offered here while the identity pane still trims it.** `IdentityVocabulary.TypeOptionsFor` refuses Mercenary on a row that does not
+already read Mercenary (typing it onto a raider moves her number to a column nothing else fills) — and the cascade offers all four words on every row.
+That is a **stated** difference rather than a second vocabulary: the pane trims against the evidence attached to *that* row, while the cascade answers
+"what do you say this is?" about a name you are looking at, in the panes where the operator asked for the full four. Both read `TypeOptions`. If the
+trim is ever judged wrong it changes in one place.
+
+**Refresh, earned back for the reason it was written.** *"if you selected the latest fights and were viewing the damage summary and new data was still
+coming in and being added to those fights that you culd use refresh to redo the stats"*. It is **not** redundant with the automatic path, and the
+reason is the dedupe: `OnDerived` re-announces a selection when its ids change, when a selected row was edited or removed, or when the **content stamp**
+moves — and a fact arriving *inside* an already-selected fight changes no id, so a plain announce correctly concludes "nothing to do". `RefreshClick` is
+`AnnounceSelection(force: true)`: that same path with precisely that one check switched off, which re-materializes over the new row spans and rebuilds
+the boards beneath them (damage, healing, tanking — whatever the click feeds). Enabled when a fight is selected: force-announcing an **empty** selection
+would blank the boards, and nobody pressing "refresh" means that. A derive pass whose content stamp moved refreshes on its own — this menu item is "now",
+not "on the cadence".

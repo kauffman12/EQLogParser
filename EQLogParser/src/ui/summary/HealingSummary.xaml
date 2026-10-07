@@ -127,16 +127,17 @@
             </MenuItem>
           </MenuItem>
           <Separator />
-          <MenuItem x:Name="menuItemSetAsPlayer" IsEnabled="False" Header="Set as Verified Player" Click="SetAsPlayerClick">
+          <MenuItem x:Name="menuItemSetPlayerClass" Header="Assign Default Class for Unknown">
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_User" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem x:Name="menuItemSetPlayerClass" IsEnabled="False" Header="Assign Default Class for Unknown">
-            <MenuItem.Icon>
-              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_User" />
-            </MenuItem.Icon>
-          </MenuItem>
+          <!--
+            "Set <name> as ▸" — Pet / Player / Mercenary / NPC, filled in code by IdentityVerdictMenu so this pane, the other summaries and
+            the fight list show one vocabulary through one write path. It replaces "Set as Verified Player", which claimed a players.txt row
+            for a judgement the identity store answers, and greyed itself out on anybody this capture had already placed.
+          -->
+          <MenuItem x:Name="menuItemSetKind" Header="Set as"/>
           <Separator />
           <MenuItem x:Name="menuItemShowHealingTimeline" IsEnabled="False" Header="Healing Timeline" Click="DataGridHealingTimelineClick">
             <MenuItem.Icon>

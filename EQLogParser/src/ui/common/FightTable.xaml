@@ -103,15 +103,22 @@
       <!--
         R10 (docs/DesignNotes.md → "The name census: what the Names window reads, and what an override costs"): the rules are inference, and a name whose evidence never crosses a
         gate needs a human to say what it is. Applies to every selected row, saves per server, and re-derives -
-        see FightTable.ApplyOverride for why that is a re-read of the facts rather than an edit of the row.
+        see IdentityVerdictMenu.Write for why that is a re-read of the facts rather than an edit of the row.
       -->
       <syncfusion:SfDataGrid.ContextMenu>
         <!--
-          Icons and gestures ported from the legacy list's menu. One legacy item is deliberately absent: Refresh has no
-          button here, because re-deriving is automatic (cadence, overrides, meter openings) and a selection already
-          rebuilds the board on its own. Clear All came back, but NOT as a store wipe - there is no store under a
-          projection, so rows deleted would return on the next pass. It is File / Open Monitor over the same file
-          (MainWindow.ClearAllFights): nothing loaded, following from end of file, saved identity memory kept.
+          Icons and gestures ported from the legacy list's menu, with two legacy verbs earned back and the four identity rows merged:
+
+            - **Refresh** is here for the reason it was written: the still-going fights are selected, the damage summary is open, and the
+              raid keeps hitting things. New facts land INSIDE already-selected rows, so no id changes and the selection's own dedupe
+              correctly concludes there is nothing to do - RefreshClick's force flag is the whole verb. A derive pass that moves the row
+              content stamp already refreshes on its own; this item is "now", not "on the cadence".
+            - **Clear All** came back, but NOT as a store wipe - there is no store under a projection, so rows deleted would return on the
+              next pass. It is File / Open Monitor over the same file (MainWindow.ClearAllFights): nothing loaded, following from end of
+              file, saved identity memory kept.
+
+          What is NOT here: an identity unset. "Set <name> as" writes; taking a verdict back is the Type cell of the Player/NPC Identity
+          pane, the app's one unset - and this menu's old "clear" was deleted rather than renamed (docs/DesignNotes.md).
         -->
         <ContextMenu>
           <MenuItem InputGestureText="Ctrl+C" Header="Copy"
@@ -147,28 +154,23 @@
             </MenuItem.Icon>
           </MenuItem>
           <Separator/>
-          <MenuItem x:Name="overridePlayerItem" Header="Set as Player" Click="OverridePlayerClick"
-                    ToolTip="This name is a raid member (Manual strength: beats every rule, saved for this server)">
+          <!--
+            One cascade instead of four "Set as X" rows, built by IdentityVerdictMenu so this menu and the three summary panes show the
+            same words in the same order and write through the same door (the header becomes "Set <name> as" when the menu opens).
+            Four flat rows could not say which name they meant, and four rows is also how the summaries drifted to a different verb
+            ("Set as Verified Player") for the same judgement.
+          -->
+          <MenuItem x:Name="overrideSetItem" Header="Set as"/>
+          <Separator/>
+          <!--
+            Legacy's Refresh, back for its original reason: you selected the fights that are still going, you are reading the damage
+            summary, and the raid is still hitting things. The new facts land inside the rows already selected, so the selection stamp
+            can move without any id changing - and this re-runs the boards over them on demand instead of waiting for the next pass.
+          -->
+          <MenuItem x:Name="refreshItem" Header="Refresh" Click="RefreshClick"
+                    ToolTip="Rebuild the summary boards from what is selected right now, including damage that arrived since you last looked.">
             <MenuItem.Icon>
-              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_User" />
-            </MenuItem.Icon>
-          </MenuItem>
-          <MenuItem x:Name="overrideMercItem" Header="Set as Mercenary" Click="OverrideMercClick"
-                    ToolTip="Raid-side mercenary; stays its own entry on the board unless it is a pet of somebody">
-            <MenuItem.Icon>
-              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_ShieldAlt" />
-            </MenuItem.Icon>
-          </MenuItem>
-          <MenuItem x:Name="overridePetItem" Header="Set as Pet" Click="OverridePetClick"
-                    ToolTip="Raid-side summon: off the fight list, its damage counted with the raid's">
-            <MenuItem.Icon>
-              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Paw" />
-            </MenuItem.Icon>
-          </MenuItem>
-          <MenuItem x:Name="overrideNpcItem" Header="Set as NPC" Click="OverrideNpcClick"
-                    ToolTip="Hostile: this name gets its own fight row again">
-            <MenuItem.Icon>
-              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Skull" />
+              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_SyncAlt" />
             </MenuItem.Icon>
           </MenuItem>
           <Separator/>

@@ -398,6 +398,37 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   the file opened (`LogProcessor` holds it), so drink evidence and chat identity join at the next open while facts and heals flow from now.
   One line per session in eqlogparser.log - `capture: started (file)` at open, `derive: first pass - N facts, M rows`
   at the first pass - so a list that silently fails to fill is diagnosed by which of the two lines is missing.
+- **The fight list's right-click menu: one settle, one verdict cascade, one clear** (2026-11, from three field reports — "sometimes the stats
+  panel acts like it got two selections"; "some weird clear on the right click menu"; "i remember there used to be a refresh"). Four rules.
+  **(1) One announce per gesture.** The grid raises SelectedItemsChanged once per row on a drag, so `SelectionSettle` (Core) + one DispatcherTimer
+  collapse it; **600 ms** is the operator's chosen number after a field run, not a measurement (legacy used 750 while rebuilding in-process dicts;
+  the derived path re-materializes and rebuilds on the UI thread, which is why an old fix was to lengthen the window — do NOT lengthen it again for
+  flicker). What actually blocks a mid-gesture rebuild are **states**: `_settle.MenuOpen` (attached through `fightGrid.ContextService.ContextOpening/
+  ContextClosed`, because WPF raises no menu-open event on the grid and a click-through cannot leave it parked — the timer re-arms while parked) and
+  `_settle.ButtonHeld` (`PreviewRight/LeftMouseButtonDown/Up` + `LostMouseCapture` + an `IsMouseButtonDown` floor at announce time). **A drag selects
+  with either button**: SfDataGrid raises selection events for a right-drag (legacy's own Refresh-while-selecting behaviour is proof), and the first
+  version handled only the left, which was exactly one button short of the bug — so keep both. `UIElement.Preview*MouseUp` does not fire on release
+  outside the control, hence the capture-loss listener. **(2) The identity write is one cascade built once**: `IdentityVerdictMenu.Populate(root,
+  onPick)` fills **"Set <name> as ▸"** (Player/Pet/Mercenary/NPC) from `IdentityVocabulary.TypeOptions` — whose entries are now *named* records so a
+  pane takes a subset instead of retyping words (`Spell` and "Clear claim" stay out of a blind cascade). Damage/healing/tanking summaries plus the
+  fight list all use it; the summaries' **"Set as Verified Player"** is deleted (it wrote players.txt via `AddVerifiedPlayerByOperator` and greyed
+  itself out on anybody already placed, and its header printed the `"Unknown"` placeholder as a name). The header **names its subject** (`Set Frostmaw
+  as`, `Set 12 names as`) computed by the same helper that builds the batch; **nothing in this family greys out** (empty batches are refused by
+  `Write`; the Assign items' old `IsOneOfUs`/`IsOneOfUsOrMerc` questions still decide which owners the pet-of list offers); and `Write` = override
+  store applied once per batch + `IdentityPriorStore.Remove` per name + `RederiveAsync`, patching **no grid** (a verdict re-reads sides, rows and
+  `+Pets` folding — panes repaint from the result). **Assign ≠ Set**: "Assign <name> as Pet of ▸" maps pet→owner AND sets the kind, so it sits above
+  Set; Set is the kind alone for a name whose owner you cannot tell from there. Mercenary is offered by the cascade while `TypeOptionsFor` still trims
+  it per row in the identity pane — stated difference over ONE vocabulary. **(3) One unset, and it is not here** (see the standing one-unset law):
+  the deleted mirror-era "Clear Override" was removed, not renamed; **Clear All** is the last item, = `MainActions.ClearAllFights` →
+  `MainWindow.ClearAllFights()` → `OpenLogFile(CurrentLogFile, 0)` (Open Monitor over the same file: rows/facts/records/boards gone, saved players,
+  pets and verdicts kept because identity memory does not register with `LifecycleManager`; the log itself untouched). `LifecycleManagerTest` pins
+  that a bare store reset raises no `ActiveDataCleared`; the raisers are this path and `LifecycleManager.Clear`. **(4) Refresh is back**, for facts
+  landing *inside* already-selected rows while you read the damage summary: selection re-announces on id change / row edit / **content stamp** move, so
+  a plain announce correctly sees nothing to do — `RefreshClick` is `AnnounceSelection(force: true)`, enabled only with a selection (an empty one would
+  blank the boards). Tests: `FightTableSelectionProbeTest.SettleMenuBlocksRebuildWhileTheGestureHolds` (+ the right-button half),
+  `IdentityVerdictMenuTest` (Wpf assembly, words/order/idempotency, header shapes, each entry carrying its own `IdentityKind`),
+  `ClearedSessionMemoryTest`. Docs: docs/DesignNotes.md → "The fight list announces when the gesture ends", "What Clear All means when there is no
+  store to wipe", "Say what a name is, from wherever you noticed it".
 - **The Names pane is current while open and silent while shut** (2026-11; it used to be "asked, never fed"): the census (a full classification pass) ran on
   explicit doors plus a **Refresh** button, and never on `DeriveEngine.Derived` — the reasoning (auto-hide dock slides and tab switches each fired a rebuild, which
   reads as "the table keeps updating itself" while somebody tries to read 4,000 rows) was right about the cadence and wrong about the conclusion: what it bought was a

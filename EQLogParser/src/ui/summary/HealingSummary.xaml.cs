@@ -22,6 +22,9 @@ namespace EQLogParser
     {
       InitializeComponent();
 
+      // One builder for the four identity words, shared with the other summaries and the fight list (IdentityVerdictMenu).
+      IdentityVerdictMenu.Populate(menuItemSetKind, ApplyVerdict);
+
       var list = EQDataStore.Instance.GetClassList();
       list.Insert(0, Resource.ANY_CLASS);
       classesList.ItemsSource = list;
@@ -83,8 +86,7 @@ namespace EQLogParser
 
           // default before making check
           menuItemShowDeathLog.IsEnabled = false;
-          menuItemSetPlayerClass.IsEnabled = false;
-          menuItemSetAsPlayer.IsEnabled = false;
+          // The Assign item and the Set cascade stay enabled whatever is selected (see DamageSummary: a greyed verb is a verb nobody finds).
 
           if (dataGrid.SelectedItem is PlayerStats playerStats && dataGrid.SelectedItems.Count == 1)
           {
@@ -94,9 +96,6 @@ namespace EQLogParser
              * it is NOT replaced with the plain one either, which would have quietly treated mercs as players somewhere
              * nobody requested.
              */
-            menuItemSetPlayerClass.IsEnabled = IdentityLookup.IsOneOfUs(playerStats.OrigName);
-            menuItemSetAsPlayer.IsEnabled = !IdentityLookup.IsOneOfUs(playerStats.OrigName) &&
-            PlayerRegistry.IsPossiblePlayerName(playerStats.OrigName);
             menuItemShowDeathLog.IsEnabled = !string.IsNullOrEmpty(playerStats.Special) && playerStats.Special.Contains("X");
             selectedName = playerStats.OrigName;
           }
@@ -109,11 +108,13 @@ namespace EQLogParser
         {
           menuItemShowBreakdown.IsEnabled = copyOptions.IsEnabled =
           menuItemShowHealingLog.IsEnabled = menuItemShowSpellCounts.IsEnabled = copyHealParseToEQClick.IsEnabled =
-            menuItemSetPlayerClass.IsEnabled = menuItemSetAsPlayer.IsEnabled = menuItemShowSpellCasts.IsEnabled = menuItemShowHealingTimeline.IsEnabled = false;
+            menuItemShowSpellCasts.IsEnabled = menuItemShowHealingTimeline.IsEnabled = false;
         }
 
-        menuItemSetAsPlayer.Header = $"Set {selectedName} as Verified Player";
         menuItemSetPlayerClass.Header = $"Assign Default Class for {selectedName}";
+
+        var verdictNames = SelectedVerdictNames();
+        IdentityVerdictMenu.Present(menuItemSetKind, verdictNames.Count > 0 ? verdictNames[0] : null, verdictNames.Count);
       });
     }
 
@@ -121,14 +122,22 @@ namespace EQLogParser
     private void CopyTopHealsToEqClick(object sender, RoutedEventArgs e) => MainActions.CopyToEqClick(Labels.TopHealParse);
     private void DataGridSelectionChanged(object sender, GridSelectionChangedEventArgs e) => DataGridSelectionChanged();
 
-    private void SetAsPlayerClick(object sender, RoutedEventArgs e)
+    /*
+     * The names the cascade would write: every selected player row (group headers select nothing), in row order, without duplicates —
+     * one helper for both the header's count and the write, so the number the menu shows is the number the click changes.
+     */
+    private List<string> SelectedVerdictNames()
     {
-      if (dataGrid.SelectedItem is PlayerStats stats)
+      var names = new List<string>();
+      foreach (var item in dataGrid.SelectedItems)
       {
-        var name = stats.OrigName;
-        PlayerRegistry.Instance.AddVerifiedPlayerByOperator(name, DateUtil.ToDotNetSeconds(DateTime.Now));
+        if (item is PlayerStats stats && stats is not GroupEntry && !string.IsNullOrEmpty(stats.OrigName) && !names.Contains(stats.OrigName)) names.Add(stats.OrigName);
       }
+      return names;
     }
+
+    // The cascade's four picks: identity-overrides.txt + the ledger row dropped, then re-derived (IdentityVerdictMenu.Write).
+    private void ApplyVerdict(IdentityKind kind) => IdentityVerdictMenu.Write(SelectedVerdictNames(), kind);
 
     private void DataGridCopyContent(object sender, GridCopyPasteEventArgs e)
     {

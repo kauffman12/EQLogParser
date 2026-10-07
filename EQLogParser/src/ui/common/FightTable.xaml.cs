@@ -150,6 +150,11 @@ namespace EQLogParser
       fightGrid.Loaded += OnGridLoaded;
       Unloaded += (_, _) => ThemeConfig.EventsThemeChanged -= EventsThemeChanged;
 
+      // The identity cascade is filled here rather than declared four times in markup, so this pane and the three summary panes cannot
+      // drift about what the words are or what they write (IdentityVerdictMenu). Called before any menu can open; idempotent, because the
+      // WPF test host constructs this control too.
+      IdentityVerdictMenu.Populate(overrideSetItem, ApplyVerdict);
+
       ApplyFilter();
 
       // Legacy's search debounce, same interval: a name typed at fight speed arrives in a few hundred ms.
@@ -588,13 +593,6 @@ namespace EQLogParser
      * The selection outlives the re-derive (see OnDerived), so the sequence reads as "that row changed shape",
      * not "my click cleared the window".
      */
-    private void OverridePlayerClick(object sender, RoutedEventArgs e) => ApplyOverride(IdentityKind.Player);
-
-    private void OverrideMercClick(object sender, RoutedEventArgs e) => ApplyOverride(IdentityKind.Merc);
-
-    private void OverridePetClick(object sender, RoutedEventArgs e) => ApplyOverride(IdentityKind.Pet);
-
-    private void OverrideNpcClick(object sender, RoutedEventArgs e) => ApplyOverride(IdentityKind.Npc);
 
     /*
      * Legacy's Clear All. It is deliberately NOT a wipe of the rows: there is nothing to wipe under a projection, and rows
@@ -611,22 +609,26 @@ namespace EQLogParser
     private void ClearAllClick(object sender, RoutedEventArgs e) => MainActions.ClearAllFights();
 
     /*
-     * Names of the selected fights (dividers select nothing), written as one batch. SET only: there is no clear here. Taking a
-     * verdict back lives behind the Type cell of the Player/NPC Identity pane - the app's ONE unset (NamesTable calls
-     * ClassificationCommands.ClearVerdict, and clears the ledger row with it, which this pane's old menu item did NOT: it wrote
-     * the override store only, so the name came back on the next pass wearing "in previous log". Two doors, two behaviours,
-     * one verb). This pane still WRITES verdicts because a fight row is where a misfiled mob is noticed; it no longer offers to
-     * un-write them.
+     * Where the cascade's four picks land: the names of the selected fights (dividers select nothing), as ONE batch - ctrl-click twenty
+     * rows and say "pets". SET only: there is no clear here, because taking a verdict back lives behind the Type cell of the Player/NPC
+     * Identity pane, the app's ONE unset. This pane still writes them because a fight row is where a misfiled mob is noticed.
      */
-    private void ApplyOverride(IdentityKind kind)
+    private void ApplyVerdict(IdentityKind kind)
     {
       var names = new List<string>();
       foreach (var fight in GetSelectedFights()) names.Add(fight.Name);
-      if (names.Count == 0) return;
 
-      IdentityOverrideStore.Instance.Apply(names, kind);
-      _session?.RederiveAsync();
+      IdentityVerdictMenu.Write(names, kind);
     }
+
+    /*
+     * Legacy's Refresh, for the case it was added for: the fights still going are selected, the damage summary is open, and the raid keeps
+     * hitting things. New facts land INSIDE rows that are already selected, so no id changes - and AnnounceSelection dedupes on ids, so a
+     * plain announce correctly concludes "nothing to do". The force flag is the whole of this menu item: it re-runs the materialize-and-build
+     * pass over the current selection whatever the dedupe thinks. (A derive pass that moved the content stamp does this by itself; Refresh is
+     * for the operator who wants the answer now rather than on the cadence.)
+     */
+    private void RefreshClick(object sender, RoutedEventArgs e) => AnnounceSelection(force: true);
 
     // Greyed out unless the grid has a real fight selected - every item in this menu acts on the selection.
     private void GridContextMenuOpening(object sender, System.Windows.Controls.ContextMenuEventArgs e)
@@ -634,7 +636,10 @@ namespace EQLogParser
       // Nothing is announced while the menu is up; whatever the opening itself selected waits for the close.
       _settle.MenuOpen = true;
 
-      var hasFight = GetSelectedFights().Count > 0;
+      var selected = GetSelectedFights();
+      var hasFight = selected.Count > 0;
+      // The name the cascade's header will show (this project compiles with nullable annotations off, hence the explicit null).
+      string firstSelectedName = hasFight ? selected[0].Name : null;
 
       /*
        * The position-based selects walk _rows in section order and select by grid POSITION (SelectByShown). A user sort
@@ -661,10 +666,13 @@ namespace EQLogParser
       selectGroupItem.IsEnabled = hasCurrent && unsorted;
       unselectGroupItem.IsEnabled = hasCurrent && fightGrid.SelectedItems.Count > 0;
 
-      overridePlayerItem.IsEnabled = hasFight;
-      overrideMercItem.IsEnabled = hasFight;
-      overridePetItem.IsEnabled = hasFight;
-      overrideNpcItem.IsEnabled = hasFight;
+      // The cascade says which name it is about to write, and never greys out: a verb nobody can click is a verb nobody finds, and with
+      // nothing selected the pick writes an empty batch (IdentityVerdictMenu.Write refuses it) rather than doing something surprising.
+      IdentityVerdictMenu.Present(overrideSetItem, firstSelectedName, selected.Count);
+
+      // Refresh needs something selected - force-announcing an empty selection would blank the boards, which is not what a person
+      // pressing "refresh" means.
+      refreshItem.IsEnabled = hasFight;
     }
 
     /*

@@ -55,17 +55,24 @@ internal static class IdentityVocabulary
    * word appears EXACTLY ONCE: the retired menu listed NPC twice, and a dropdown with two entries for one answer is a bug
    * a person notices only after clicking.
    */
+  /*
+   * One entry per word, named, and `TypeOptions` composes them - so a pane that wants a subset (the "Set … as" cascade takes the four
+   * kinds and leaves "Spell"/"Clear claim" to the row-aware dropdown) reads the SAME record rather than retyping a string. The law that
+   * each word appears exactly once now has arithmetic behind it: there is one object per word in the process.
+   */
+  internal static readonly TypeOption PlayerOption = new("Player", IdentityKind.Player);
+  internal static readonly TypeOption PetOption = new("Pet", IdentityKind.Pet);
+  internal static readonly TypeOption MercOption = new("Mercenary", IdentityKind.Merc);
+  internal static readonly TypeOption NpcOption = new("NPC", IdentityKind.Npc);
+  // Spell is the answer the rules could reach and an operator could not write: a caster-less spell name sitting in a
+  // fighter's slot (docs/DesignNotes.md → "A name that equals a spell is not a spell row"). It claims no side, so choosing it
+  // neither credits nor vetoes anybody - which is why it is safe to offer on every overrulable row.
+  internal static readonly TypeOption SpellOption = new("Spell", IdentityKind.Spell);
+  internal static readonly TypeOption ClearClaimOption = new("Clear claim", IdentityKind.Unknown);
+
   internal static readonly TypeOption[] TypeOptions =
   [
-    new("Player", IdentityKind.Player),
-    new("Pet", IdentityKind.Pet),
-    new("Mercenary", IdentityKind.Merc),
-    new("NPC", IdentityKind.Npc),
-    // Spell is the answer the rules could reach and an operator could not write: a caster-less spell name sitting in a
-    // fighter's slot (docs/DesignNotes.md → "A name that equals a spell is not a spell row"). It claims no side, so choosing it
-    // neither credits nor vetoes anybody - which is why it is safe to offer on every overrulable row.
-    new("Spell", IdentityKind.Spell),
-    new("Clear claim", IdentityKind.Unknown),
+    PlayerOption, PetOption, MercOption, NpcOption, SpellOption, ClearClaimOption,
   ];
 
   /*

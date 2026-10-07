@@ -148,7 +148,7 @@
             </MenuItem>
           </MenuItem>
           <Separator />
-          <MenuItem x:Name="menuItemSetAsPet" IsEnabled="False" Header="Assign Unknown as Pet of" >
+          <MenuItem x:Name="menuItemSetAsPet" Header="Assign Unknown as Pet of" >
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Paw" />
             </MenuItem.Icon>
@@ -156,16 +156,19 @@
               <StackPanel x:Name="menuItemPetOptions" Margin="0" />
             </ScrollViewer>
           </MenuItem>
-          <MenuItem x:Name="menuItemSetAsPlayer" IsEnabled="False" Header="Set as Verified Player" Click="SetAsPlayerClick">
+          <MenuItem x:Name="menuItemSetPlayerClass" Header="Assign Default Class for Unknown">
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_User" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem x:Name="menuItemSetPlayerClass" IsEnabled="False" Header="Assign Default Class for Unknown">
-            <MenuItem.Icon>
-              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_User" />
-            </MenuItem.Icon>
-          </MenuItem>
+          <!--
+            "Set <name> as ▸" — Pet / Player / Mercenary / NPC, filled in code by IdentityVerdictMenu so this pane, the healing and
+            tanking summaries and the fight list show one vocabulary with one write path. It replaces "Set as Verified Player", which
+            wrote a players.txt row for a judgement the identity store answers (and which greys out on anybody the capture already
+            placed, i.e. on almost everybody). The Assign items above it stay for the case where you know the owner: they map the pet
+            AND set the kind; this one is the kind alone, for a name whose owner nobody can tell from here.
+          -->
+          <MenuItem x:Name="menuItemSetKind" Header="Set as"/>
           <Separator />
           <MenuItem x:Name="menuItemShowAdpsTimeline" IsEnabled="False" Header="ADPS Timeline" Click="DataGridAdpsTimelineClick">
             <MenuItem.Icon>

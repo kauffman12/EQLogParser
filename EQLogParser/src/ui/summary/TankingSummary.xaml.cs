@@ -28,6 +28,9 @@ namespace EQLogParser
     {
       InitializeComponent();
 
+      // One builder for the four identity words, shared with the other summaries and the fight list (IdentityVerdictMenu).
+      IdentityVerdictMenu.Populate(menuItemSetKind, ApplyVerdict);
+
       // if pets are shown
       showPets.IsChecked = _currentPetValue = ConfigUtil.IfSet("TankingSummaryShowPets", true);
 
@@ -121,25 +124,12 @@ namespace EQLogParser
             (dataGrid.SelectedItem as PlayerStats)?.MoreStats != null;
           menuItemShowDefensiveTimeline.IsEnabled = dataGrid.SelectedItems.Count is 1 or 2 && _currentGroupCount == 1;
 
-          // default before making check
           menuItemShowDeathLog.IsEnabled = false;
-          menuItemSetPlayerClass.IsEnabled = false;
-          menuItemSetAsPet.IsEnabled = false;
-          menuItemSetAsPlayer.IsEnabled = false;
+          // The two Assign items and the Set cascade stay enabled whatever is selected (DamageSummary says why: a greyed verb is a verb
+          // nobody finds, and both writes are one more click to undo).
 
           if (dataGrid.SelectedItem is PlayerStats playerStats && dataGrid.SelectedItems.Count == 1)
           {
-            /*
-             * Same three questions as DamageSummary, same seam (docs/DesignNotes.md → "The one seam that answers"):
-             * override, then what this capture watched, then memory. The two panes must not be able to disagree about
-             * whether the name under the cursor is one of ours — one said yes from players.txt while the other asked the
-             * rules and this grid's "Set as player" greyed out a raid member her own damage just proved.
-             */
-            menuItemSetPlayerClass.IsEnabled = IdentityLookup.IsOneOfUs(playerStats.OrigName);
-            menuItemSetAsPet.IsEnabled = playerStats.OrigName != Labels.Unk && playerStats.OrigName != Labels.Rs &&
-            !IdentityLookup.IsOneOfUsOrMerc(playerStats.OrigName);
-            menuItemSetAsPlayer.IsEnabled = !IdentityLookup.IsOneOfUs(playerStats.OrigName) &&
-            PlayerRegistry.IsPossiblePlayerName(playerStats.OrigName);
             selectedName = playerStats.OrigName;
             menuItemShowDeathLog.IsEnabled = !string.IsNullOrEmpty(playerStats.Special) && playerStats.Special.Contains('X');
           }
@@ -152,14 +142,16 @@ namespace EQLogParser
         else
         {
           menuItemShowHealingBreakdown.IsEnabled = menuItemShowTankingBreakdown.IsEnabled =
-          menuItemShowTankingLog.IsEnabled = menuItemSetAsPet.IsEnabled = menuItemSetAsPlayer.IsEnabled = menuItemShowSpellCounts.IsEnabled = copyTankingParseToEQClick.IsEnabled =
+          menuItemShowTankingLog.IsEnabled = menuItemShowSpellCounts.IsEnabled = copyTankingParseToEQClick.IsEnabled =
           copyOptions.IsEnabled = copyReceivedHealingParseToEQClick.IsEnabled = menuItemShowSpellCasts.IsEnabled = menuItemShowHitFreq.IsEnabled =
-          menuItemSetPlayerClass.IsEnabled = menuItemShowDefensiveTimeline.IsEnabled = false;
+          menuItemShowDefensiveTimeline.IsEnabled = false;
         }
 
         menuItemSetAsPet.Header = $"Assign {selectedName} as Pet of";
-        menuItemSetAsPlayer.Header = $"Set {selectedName} as Verified Player";
         menuItemSetPlayerClass.Header = $"Assign Default Class for {selectedName}";
+
+        var verdictNames = SelectedVerdictNames();
+        IdentityVerdictMenu.Present(menuItemSetKind, verdictNames.Count > 0 ? verdictNames[0] : null, verdictNames.Count);
       });
     }
 
@@ -190,14 +182,22 @@ namespace EQLogParser
       }
     }
 
-    private void SetAsPlayerClick(object sender, RoutedEventArgs e)
+    /*
+     * The names the cascade would write: every selected player row (group headers select nothing), in row order, without duplicates —
+     * one helper for both the header's count and the write, so the number the menu shows is the number the click changes.
+     */
+    private List<string> SelectedVerdictNames()
     {
-      if (dataGrid.SelectedItem is PlayerStats stats)
+      var names = new List<string>();
+      foreach (var item in dataGrid.SelectedItems)
       {
-        var name = stats.OrigName;
-        PlayerRegistry.Instance.AddVerifiedPlayerByOperator(name, DateUtil.ToDotNetSeconds(DateTime.Now));
+        if (item is PlayerStats stats && stats is not GroupEntry && !string.IsNullOrEmpty(stats.OrigName) && !names.Contains(stats.OrigName)) names.Add(stats.OrigName);
       }
+      return names;
     }
+
+    // The cascade's four picks: identity-overrides.txt + the ledger row dropped, then re-derived (IdentityVerdictMenu.Write).
+    private void ApplyVerdict(IdentityKind kind) => IdentityVerdictMenu.Write(SelectedVerdictNames(), kind);
 
     private void DataGridCopyContent(object sender, GridCopyPasteEventArgs e)
     {

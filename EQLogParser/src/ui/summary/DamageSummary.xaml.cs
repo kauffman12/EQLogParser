@@ -39,6 +39,10 @@ namespace EQLogParser
     {
       InitializeComponent();
 
+      // The four identity words come from one builder (IdentityVerdictMenu) rather than from markup, so the three summary panes and the
+      // fight list cannot drift about their spelling or their write.
+      IdentityVerdictMenu.Populate(menuItemSetKind, ApplyVerdict);
+
       _viewOptions = new ViewOptionRegistry();
       _viewOptions.AddOption(Labels.ByGroupOption, OnViewOptionChanged);
       _viewOptions.AddOption(Labels.PetPlayerOption, OnViewOptionChanged);
@@ -103,10 +107,8 @@ namespace EQLogParser
           // Copy/send options always available
           copyDamageParseToEQClick.IsEnabled = copyOptions.IsEnabled = true;
 
-          // Player-only options: disabled for group selections
-          menuItemSetPlayerClass.IsEnabled = false;
-          menuItemSetAsPet.IsEnabled = false;
-          menuItemSetAsPlayer.IsEnabled = false;
+          // Player-only options: disabled for group selections. The two Assign items and the Set cascade are NOT among them:
+          // they stay clickable whatever is selected (docs/DesignNotes.md → "Say what a name is, from wherever you noticed it").
           menuItemShowSpellCasts.IsEnabled = false;
           menuItemShowSpellCounts.IsEnabled = false;
           menuItemShowBreakdown.IsEnabled = false;
@@ -123,25 +125,6 @@ namespace EQLogParser
 
             if (dataGrid.SelectedItem is PlayerStats playerStats && dataGrid.SelectedItems.Count == 1)
             {
-              /*
-               * "Is this one of ours?" is the seam's question now (docs/DesignNotes.md → "The one seam that answers"): override,
-               * then what this capture watched, then memory. Two visible
-               * consequences, both intended: a raider the rules proved tonight gets her class menu even though she was
-               * never typed into players.txt, and "Set as Verified Player" goes grey for her because she is already
-               * ours — the item is for names nothing can place, not for names this log just did.
-               */
-              menuItemSetPlayerClass.IsEnabled = IdentityLookup.IsOneOfUs(playerStats.OrigName);
-
-              /*
-               * The negated PAIR question: "neither a player nor a mercenary". A merc is a combatant of ours without
-               * being one of us, and offering one as somebody's pet is wrong for the same reason it is wrong to offer a
-               * raid member — so this asks the second question rather than the first (IsOneOfUsOrMerc: why that is a
-               * named question instead of `!IsOneOfUs(x) && !IsMerc(x)` at every call site).
-               */
-              menuItemSetAsPet.IsEnabled = playerStats.OrigName != Labels.Unk && playerStats.OrigName != Labels.Rs &&
-              !IdentityLookup.IsOneOfUsOrMerc(playerStats.OrigName);
-              menuItemSetAsPlayer.IsEnabled = !IdentityLookup.IsOneOfUs(playerStats.OrigName) &&
-              PlayerRegistry.IsPossiblePlayerName(playerStats.OrigName);
               selectedName = playerStats.OrigName;
               menuItemShowDeathLog.IsEnabled = !string.IsNullOrEmpty(playerStats.Special) && playerStats.Special.Contains('X');
             }
@@ -154,14 +137,21 @@ namespace EQLogParser
         else
         {
           menuItemShowBreakdown.IsEnabled = menuItemShowDamageLog.IsEnabled =
-          menuItemSetAsPet.IsEnabled = menuItemSetAsPlayer.IsEnabled = menuItemShowSpellCounts.IsEnabled = menuItemShowHitFreq.IsEnabled = copyDamageParseToEQClick.IsEnabled =
-          copyOptions.IsEnabled = menuItemShowAdpsTimeline.IsEnabled = menuItemShowSpellCasts.IsEnabled = menuItemSetPlayerClass.IsEnabled =
+          menuItemShowSpellCounts.IsEnabled = menuItemShowHitFreq.IsEnabled = copyDamageParseToEQClick.IsEnabled =
+          copyOptions.IsEnabled = menuItemShowAdpsTimeline.IsEnabled = menuItemShowSpellCasts.IsEnabled =
           menuItemShowDeathLog.IsEnabled = false;
         }
 
+        /*
+         * The two Assign items name their subject the way they always did ("Unknown" being the generic wording when nothing usable is
+         * selected). The cascade says the same thing in its own shape, and counts a batch: ctrl-click twelve rows and the menu reads
+         * "Set 12 names as", which is the only honest header for a multi-selection.
+         */
         menuItemSetAsPet.Header = $"Assign {selectedName} as Pet of";
-        menuItemSetAsPlayer.Header = $"Set {selectedName} as Verified Player";
         menuItemSetPlayerClass.Header = $"Assign Default Class for {selectedName}";
+
+        var verdictNames = SelectedVerdictNames();
+        IdentityVerdictMenu.Present(menuItemSetKind, verdictNames.Count > 0 ? verdictNames[0] : null, verdictNames.Count);
       });
     }
 
@@ -193,14 +183,23 @@ namespace EQLogParser
       }
     }
 
-    private void SetAsPlayerClick(object sender, RoutedEventArgs e)
+    /*
+     * The names the cascade would write: every selected player row (group headers select nothing), in row order, without duplicates.
+     * One helper for both the header's count and the write, so the number the menu shows is the number the click changes.
+     */
+    private List<string> SelectedVerdictNames()
     {
-      if (dataGrid.SelectedItem is PlayerStats stats)
+      var names = new List<string>();
+      foreach (var item in dataGrid.SelectedItems)
       {
-        var name = stats.OrigName;
-        PlayerRegistry.Instance.AddVerifiedPlayerByOperator(name, DateUtil.ToDotNetSeconds(DateTime.Now));
+        if (item is PlayerStats stats && stats is not GroupEntry && !string.IsNullOrEmpty(stats.OrigName) && !names.Contains(stats.OrigName)) names.Add(stats.OrigName);
       }
+      return names;
     }
+
+    // The cascade's four picks. Written to identity-overrides.txt + the ledger row dropped, then re-derived (IdentityVerdictMenu.Write):
+    // a verdict is a new READING of the facts, so the grid repaints from the next pass rather than being patched here.
+    private void ApplyVerdict(IdentityKind kind) => IdentityVerdictMenu.Write(SelectedVerdictNames(), kind);
 
     private void ListSelectionChanged(object sender, SelectionChangedEventArgs e)
     {

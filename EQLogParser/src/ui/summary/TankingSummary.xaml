@@ -133,7 +133,7 @@
             </MenuItem>
           </MenuItem>
           <Separator />
-          <MenuItem x:Name="menuItemSetAsPet" IsEnabled="False" Header="Assign Unknown as Pet of" >
+          <MenuItem x:Name="menuItemSetAsPet" Header="Assign Unknown as Pet of" >
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="setPetIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Paw" />
             </MenuItem.Icon>
@@ -141,16 +141,21 @@
               <StackPanel x:Name="menuItemPetOptions" Margin="0" />
             </ScrollViewer>
           </MenuItem>
-          <MenuItem x:Name="menuItemSetAsPlayer" IsEnabled="False" Header="Set as Verified Player" Click="SetAsPlayerClick">
+          <MenuItem x:Name="menuItemSetPlayerClass" Header="Assign Default Class for Unknown">
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_User" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem x:Name="menuItemSetPlayerClass" IsEnabled="False" Header="Assign Default Class for Unknown">
-            <MenuItem.Icon>
-              <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_User" />
-            </MenuItem.Icon>
-          </MenuItem>
+          <!--
+            "Set <name> as ▸" — Pet / Player / Mercenary / NPC, filled in code by IdentityVerdictMenu so this pane, the other summaries and
+            the fight list show one vocabulary through one write path. It replaces "Set as Verified Player", which claimed a players.txt row
+            for a judgement the identity store answers, and greyed itself out on anybody this capture had already placed.
+
+            It sits BELOW the two Assign items on purpose: "Assign … as Pet of" is the richer verb — it maps the pet to its owner AND makes
+            it a pet — so when you know whose summon this is, that is the item to use. This one is for the name whose owner you cannot tell
+            from here: at least say what it is.
+          -->
+          <MenuItem x:Name="menuItemSetKind" Header="Set as"/>
           <Separator />
           <MenuItem x:Name="menuItemShowDefensiveTimeline" IsEnabled="False" Header="Defensive Timeline" Click="DataGridDefensiveTimelineClick">
             <MenuItem.Icon>
