@@ -7713,11 +7713,35 @@ allocates ~180 B/line. An uncontended `Add` into a never-full unbounded queue co
 what proves the cost lives in the full-queue wait rather than in enqueueing — matching the 19.6 % self CPU the profile puts
 on `TryAddWithNoTimeValidation`.
 
-**What this does and does not promise.** Wall time moves little on a many-core desktop (~3 % here) because the burning thread
-runs alongside the parser. The payoff is a **freed core** — derive and the UI stop competing with a reader that is spinning
-rather than reading — and **~780 MB less garbage per large capture**, i.e. GC pressure that otherwise pauses every thread,
-including the UI thread `UiBeatMonitor` watches. The 25.4 % unattributed root should be re-read after the change: if it
-shrinks, that is how much of it was queue garbage.
+**What this does and does not promise.** Wall time moves little — **~4 % of the reader+parser loop**, measured at every core
+count from 1 to 18 (`taskset -c 0`, `0,1`, `0,1,2,3`, unrestricted: 3.73→3.52, 3.65→3.52, 3.66→3.51, 3.65→3.51 s for
+1.5 M items). Scarce cores do *not* amplify it: on one core the producer's spin becomes an honest block instead of wasted
+CPU, so total CPU there is nearly equal while wall still gains only ~6 %. Note that this percentage is of **the ingest loop**,
+not of "opening a file": the reader (24.3 %) and parse thread (31 %) together are ~55 % of session CPU in the profile, with
+startup, docking, grids, TTS, derive and GC the rest, so expect low single digits against a whole open — and roughly nothing
+during live play, where an empty queue never reaches the bound and `Add` costs 0.056 µs.
+
+**The garbage is not the reason (a retraction).** The claim that ~880 MB less allocation per capture would relieve "GC
+pressure that pauses every thread" was written before it was measured, and it is false. Isolating allocation from handshake
+(same cheap batched handoff in every variant; only short-lived garbage per line varies; default **Workstation concurrent GC**
+— the app sets no `ServerGarbageCollection`; a second pass ran with ~400 MB retained live in the heap, i.e. a loaded session):
+
+| variant | wall | CPU | allocated | gen0 | gen1 | gen2 |
+|---|---|---|---|---|---|---|
+| no extra garbage | 3.51 s | 3,538 ms | 0 MB | 0 | 0 | 0 |
+| +200 B/line (= what today's queue allocates) | 3.52 s | 3,545 ms | 336 MB | **22** | **0–1** | **0** |
+| same, ~400 MB live set retained | 3.52 s | 3,547 ms | 336 MB | 22 | 0 | 0 |
+
+**0.2 % of wall — inside noise.** The generation counts are the explanation: it dies in gen0 with nothing promoted, so each
+collection costs microseconds and there were only ~22 for 336 MB. Short-lived, never-promoted garbage is nearly free to
+collect; *retained* growth (which gen2 must walk) is the expensive kind, and that is what `CompactRows` was about. Two
+consequences: **the 25.4 % unattributed root is not queue garbage** — cheap gen0 traffic cannot account for it — and the
+batch handoff must be sold on **CPU/heat/a freed core**, never on memory or GC pauses.
+
+Two measurement traps paid for here: a probe that allocates `new byte[200]` and only reads `a.Length` has its allocation
+elided by the JIT (0 collections, 0 bytes, "results" that mean nothing — make the size a runtime field and force an escape
+through a `MethodImpl(MethodImplOptions.NoInlining)` touch), and a `grep` filter on benchmark output that matches only some
+rows makes a live run look hung.
 
 **Standing decision.** The reader→parser seam does not hand off one item at a time. The bound stays (backpressure), but the
 element becomes a batch over pooled buffers, so the fix touches exactly the seam: `LogReader` (producer + `FlushBatch`),
