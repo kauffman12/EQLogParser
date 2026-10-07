@@ -36,6 +36,19 @@ namespace EQLogParser
     private readonly DispatcherTimer _saveTimer;
 
     /*
+     * One summary-board build at a time (see SummaryBuildGate for the three laws). Every announcement of a selection — a
+     * command, a menu closing, the settle timer, a derive pass whose content moved — used to spawn its own task here, and a
+     * whole-capture selection materializes in seconds, so "twice" meant two full record sets allocated at once and two
+     * builder runs serialized behind them, and on a live raid it meant one per pass without bound.
+     *
+     * `_statsFilterGeneration` is the third thing the builders read and the only one this window knows about: the six
+     * DamageValidator settings (assassinate, headshot, slay-undead, …) change the ANSWER without changing a fact or a
+     * verdict, so CheckComputeStats bumps this counter and a re-ask over identical rows is no longer "already built".
+     */
+    private readonly SummaryBuildGate _summaryGate = new(static work => Task.Run(work));
+    private long _statsFilterGeneration;
+
+    /*
      * The main window's periodic work, named for the heartbeat (PerfCounters, UiBeatMonitor). All three run on the UI thread and all
      * three are quiet suspects for a freeze somewhere else: settings.ini gets written from here every half minute (a file write is one
      * antivirus scan away from a second), stats are recomputed when a fight changes, and an open chart takes a data-point update at
@@ -794,6 +807,10 @@ namespace EQLogParser
 
     internal void CheckComputeStats()
     {
+      // A settings change that reaches the boards. Counted so a rebuild asked for over the SAME rows is not mistaken by the
+      // build gate for one that has already been done (SummaryBuildGate: the key holds every input, filters included).
+      _statsFilterGeneration++;
+
       if (_computeStatsTimer != null)
       {
         _computeStatsTimer.Stop();
@@ -841,55 +858,86 @@ namespace EQLogParser
       }
 
       /*
-       * Materializing allocates one record per selected fact, so it belongs on the worker with the build; the
-       * UI thread's part ends at "these fights". No single-flight guard here: BuildTotalStats serialises on its
-       * own lock, and the grid's settle timer upstream keeps a dragged range to one announcement.
+       * Materializing allocates one record per selected fact, so it belongs on the worker with the build; the UI thread's
+       * part ends at "these fights" plus the key that says what this answer is computed FROM — the rows, the capture's
+       * content stamp (facts + identity verdicts, owned by the pane because a pass is what moves it), the tanking board's
+       * damage-type filter and the validation generation. The gate drops a request whose key has already been built or is
+       * building, queues at most one newer one behind a run, and never lets two materializations overlap.
        */
-      _ = Task.Run(() =>
+      var contentStamp = npcWindow?.Content is FightTable stampPane ? stampPane.ContentStamp : 0L;
+      var key = SummaryKeyFor(selected, contentStamp, tankingDamageType);
+      var outcome = _summaryGate.Request(key, () => BuildBoards(session, selected, tankingDamageType));
+      if (outcome != SummaryBuildGate.Outcome.Started && Log.IsDebugEnabled)
       {
-        try
-        {
-          var input = session.BuildSummaryInput(selected);
+        Log.Debug($"summary build {outcome}: {selected.Count} fight(s), stamp {contentStamp}, filter gen {_statsFilterGeneration}"
+                  + " - the boards already have these inputs, or a build is finishing behind them");
+      }
+    }
 
-          GenerateStatsOptions damageStatsOptions = new();
-          damageStatsOptions.Npcs.AddRange(input.Fights);
-          damageStatsOptions.AllRanges = input.AllRanges;
-          damageStatsOptions.MinSeconds = 0;
+    /*
+     * Every input the three builders read, in one long. Order matters as much as content (a selection of rows 1,2 is the
+     * same question as 2,1 but the pane walks them in list order and so does this), and 0 is reserved for "never built" by
+     * SummaryBuildGate, so a computed 0 becomes 1.
+     *
+     * A hash means two different questions could collide and one would be skipped. At 64 bits over a session's few hundred
+     * announcements that is not a risk worth an exact key (the exact alternative is a string over up to thousands of ids,
+     * built per announcement, on the UI thread) — but it IS why the gate logs its two non-Started outcomes: a board that
+     * refuses to update while the pane says it announced is diagnosable from eqlogparser.log rather than argued about.
+     */
+    private long SummaryKeyFor(IReadOnlyList<DerivedFight> selected, long contentStamp, int tankingDamageType)
+    {
+      var hash = unchecked((contentStamp * 397) ^ (_statsFilterGeneration * 31) ^ tankingDamageType);
+      foreach (var fight in selected) hash = unchecked(hash * 17 + fight.Id);
+      return hash == 0 ? 1 : hash;
+    }
 
-          var records = input.Fights.Sum(static f => f.DamageBlocks.Sum(static b => b.Actions.Count));
-          var tankRecords = input.Fights.Sum(static f => f.TankingBlocks.Sum(static b => b.Actions.Count));
-          Log.Info($"Derived damage summary: {input.Fights.Count} fight(s), {records:N0} record(s), "
-                   + $"{tankRecords:N0} taken"
-                   + (input.WithoutDamage > 0 ? $", {input.WithoutDamage} selected fight(s) no facts at all" : string.Empty));
+    // The worker's half of one announcement: materialize, then feed all three boards off the SAME rows.
+    private void BuildBoards(DeriveEngine session, IReadOnlyList<DerivedFight> selected, int tankingDamageType)
+    {
+      try
+      {
+        var input = session.BuildSummaryInput(selected);
 
-          DamageStatsBuilder.Instance.BuildTotalStats(damageStatsOptions);
+        GenerateStatsOptions damageStatsOptions = new();
+        damageStatsOptions.Npcs.AddRange(input.Fights);
+        damageStatsOptions.AllRanges = input.AllRanges;
+        damageStatsOptions.MinSeconds = 0;
 
-          // Same rows, other direction: TankingStatsBuilder walks fight.TankingBlocks and takes each player's
-          // activity window from TankSegments, both of which the materializer fills off the same facts.
-          GenerateStatsOptions tankingStatsOptions = new();
-          tankingStatsOptions.Npcs.AddRange(input.Fights);
-          tankingStatsOptions.AllRanges = input.AllRanges;
-          tankingStatsOptions.MinSeconds = 0;
-          tankingStatsOptions.DamageType = tankingDamageType;
+        var records = input.Fights.Sum(static f => f.DamageBlocks.Sum(static b => b.Actions.Count));
+        var tankRecords = input.Fights.Sum(static f => f.TankingBlocks.Sum(static b => b.Actions.Count));
+        Log.Info($"Derived damage summary: {input.Fights.Count} fight(s), {records:N0} record(s), "
+                 + $"{tankRecords:N0} taken"
+                 + (input.WithoutDamage > 0 ? $", {input.WithoutDamage} selected fight(s) no facts at all" : string.Empty));
 
-          TankingStatsBuilder.Instance.BuildTotalStats(tankingStatsOptions);
+        DamageStatsBuilder.Instance.BuildTotalStats(damageStatsOptions);
 
-          // Healing: no Fight objects involved anywhere on this path. The window is the selection's, the records
-          // are the capture's, and the builder's own filters (AoE healing, swarm pets) run over them unchanged —
-          // so the healing tab stops being the one board that ignored which list was clicked.
-          GenerateStatsOptions healingStatsOptions = new();
-          healingStatsOptions.Npcs.AddRange(input.Fights);
-          healingStatsOptions.AllRanges = input.AllRanges;
-          healingStatsOptions.MinSeconds = 0;
-          healingStatsOptions.Heals = input.Heals;
+        // Same rows, other direction: TankingStatsBuilder walks fight.TankingBlocks and takes each player's
+        // activity window from TankSegments, both of which the materializer fills off the same facts.
+        GenerateStatsOptions tankingStatsOptions = new();
+        tankingStatsOptions.Npcs.AddRange(input.Fights);
+        tankingStatsOptions.AllRanges = input.AllRanges;
+        tankingStatsOptions.MinSeconds = 0;
+        tankingStatsOptions.DamageType = tankingDamageType;
 
-          HealingStatsBuilder.Instance.BuildTotalStats(healingStatsOptions);
-        }
-        catch (Exception ex)
-        {
-          Log.Error("Derived damage summary error", ex);
-        }
-      });
+        TankingStatsBuilder.Instance.BuildTotalStats(tankingStatsOptions);
+
+        // Healing: no Fight objects involved anywhere on this path. The window is the selection's, the records
+        // are the capture's, and the builder's own filters (AoE healing, swarm pets) run over them unchanged —
+        // so the healing tab stops being the one board that ignored which list was clicked.
+        GenerateStatsOptions healingStatsOptions = new();
+        healingStatsOptions.Npcs.AddRange(input.Fights);
+        healingStatsOptions.AllRanges = input.AllRanges;
+        healingStatsOptions.MinSeconds = 0;
+        healingStatsOptions.Heals = input.Heals;
+
+        HealingStatsBuilder.Instance.BuildTotalStats(healingStatsOptions);
+      }
+      catch (Exception ex)
+      {
+        // Logged here rather than left to the task: an announcement that threw must still return the gate to idle (its own
+        // finally does that), and the boards keep whatever they had — which is why a partial board beats no board.
+        Log.Error("Derived damage summary error", ex);
+      }
     }
 
     private void RestoreButtonUp(object sender, MouseButtonEventArgs e)

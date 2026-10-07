@@ -480,6 +480,13 @@ namespace EQLogParser
     internal bool SessionActive => _session != null;
 
     /*
+     * What the LAST derive pass produced, in one long (see SelectionStamp: captured facts folded with the identity digest).
+     * The board path needs it because "the same rows" is not "the same answer" — during a pull, re-asking over an unchanged
+     * selection IS a new question. internal for MainWindow, which keys its single-flight build gate on it.
+     */
+    internal long ContentStamp => _currentStamp;
+
+    /*
      * What this pane is holding right now. internal for the session-switch tests: ActiveChanged cannot be raised from
      * outside DeriveEngine and a real engine needs a file, so the seam those laws live behind is ClearForNewCapture.
      */

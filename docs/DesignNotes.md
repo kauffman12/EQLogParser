@@ -6934,6 +6934,53 @@ fight row — are averaged away at this size. Measuring those properly means fol
 instrument if someone wants the finer number (the 24-pass Kizant run is a first step toward that granularity, and it changed nothing
 about the verdict). The decision above does not depend on it: incremental updating wins whether the no-op share is 0 % or 40 %.
 
+### One build in flight: the same click asked twice, and both paid (2026-11)
+
+The pane-side stamp rule above decides **whether** to ask. It cannot decide **how much the asking costs**, and the field report
+that came back after it shipped was about cost: selecting all on a night's capture still built the stats twice. Announcements
+arrive from several places at once — the select command itself, the context menu releasing a parked change, the settle timer,
+and every derive pass whose content stamp moved — and `MainWindow` answered each one with its own `Task.Run`. Two announcements
+were therefore two materializations of the same rows, ~3.8 s each on a whole-capture selection (against ~30 ms for one mob).
+
+**The builders' own lock was never the guard.** `DamageStatsBuilder.BuildTotalStats` takes `lock (_lock)`, which serialises the
+*work*, but the materialization happens before that call: both tasks allocate their one-record-per-fact sets, and only then does
+one of them wait. So the old comment here ("no single-flight guard needed; BuildTotalStats serialises") bought neither bound:
+double the work, both record sets resident at once, and the grids ending up showing whichever build finished last. With a
+whole-capture selection left up during a live pull it was worse than twice — one full materialization per derive pass, forever,
+each writing its own `Derived damage summary:` line into the raid's log.
+
+**`SummaryBuildGate` (Core, scheduler injected) is the rule**, three laws in order:
+
+1. **Never two at once** — a request arriving mid-build is queued, not started.
+2. **Newest queued wins** — an older selection has been superseded; running it first only delays the answer while its records
+   sit on the heap (which is the same memory argument the fact-table compaction makes, one layer up).
+3. **Identical inputs are dropped, not throttled** — `SkippedSame` when the key equals what is building or was last built, which
+   is what a duplicated announcement becomes: zero work, no log line, no allocation.
+
+**The key carries every input the builders read**, and nothing else: the selected ids, the pane's `ContentStamp` (facts + identity
+verdicts — "the same rows" is NOT "the same answer" during a pull), the tanking board's damage-type filter read off the open window,
+and a **filter generation** bumped by `CheckComputeStats`. That last term exists because the six `DamageValidator` settings change
+the ANSWER without touching a fact or a verdict; without it a validation toggle would be "already built" and the board would sit
+showing numbers computed under the old filter — the mirror image of the staleness this section is about, which is why skipping on
+anything narrower than "every input" is not allowed here. It is also why the key is handed in by the caller: the gate must never
+guess at what counts as an input.
+
+**What it deliberately does not do** is merge two different questions. A select-all whose first announcement caught a partial
+selection, or a pull moving content under a whole-capture selection, still produces two builds — serialized, one per real change.
+That is the honest floor: the answer genuinely changed between the asks. Which of the cases happened is now answerable from the
+log rather than argued about: the gate writes `summary build Queued|SkippedSame: N fight(s), stamp …, filter gen …` at Debug, and
+a real build still writes its Info line with record counts — two Info lines and one Debug `Queued` is a real second question; one
+Info line where there used to be two is the duplication gone.
+
+**The delegate-shaped scheduler is load-bearing, and it caught a bug on the first run.** The gate's first version started the
+initial build *inline* (`start = () => Run(...)`, forgetting `schedule`) — with a test that only asserted "the work ran", that
+passes; the real behaviour would have been materializing a whole-capture selection **on the UI thread**, i.e. the freeze this
+whole performance line of work exists to remove. Because the tests control when a handed-out action runs (`ManualScheduler`),
+`IsRunning` immediately after `Request` was false and four assertions failed at once. Same reason the throw test exists: a runner
+left marked busy means every later request queues behind a build that never finishes, which reads as "the stats froze" — the
+`finally` returns the gate to idle exactly as the timer overlay's `_isRendering` does (`AThrowingBuildReturnsTheGateToIdle`,
+`AQueuedRequestIsStillRunAfterAFailedBuild`).
+
 ## A rank formulation is not a sentence end (2026-10)
 
 The operator's report was the alarming kind: rows called **"II"** and **"III"** in the identity list.
