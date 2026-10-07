@@ -9,23 +9,23 @@ namespace EQLogParser.Wpf.Test;
 /*
  * The loading band over the derived fight list (loadOverlay), and the one thing it is allowed to say.
  *
- * Bulk ingest parks both derive lanes by design, so during the load of a big capture this window shows NO rows.
- * The reading phase is announced by the application-wide status line at the top of the window - percent and
- * seconds off the same 500 ms pump - and a second copy inside the dock duplicates it, so the pump's sub-100 ticks
- * must leave this panel silent. What only this panel can say is the gap the top bar cannot: EOF has happened and
- * the first snapshot has not, "Building derived fight list..." over an indeterminate bar. The first snapshot takes
- * it down for the session and it stays down (real rows beat a bar).
+ * Bulk ingest parks both derive lanes by design, so during the load of a big capture this window shows NO rows. What it
+ * says while it has none is "Building derived fight list..." over an indeterminate bar, with the captured-fact count as
+ * the moving part - and it says it for EVERY open whose read has history in it, chosen by hand or not: the grid is empty
+ * because it is being built, and a pane that sits silent and blank reads as a broken feature (or, before the list blanked
+ * on a session change, as last night's raid). The file's own PERCENT stays out of here - the application-wide status line
+ * at the top of the window counts that off the same 500 ms pump, and a second copy in the dock duplicates it.
  *
- * The pane carries no status text at all: the top-right message section was removed on request, so a derive,
- * a selection or a failed pass has nothing to say there - DeriveEngine journals failures to eqlogparser.log
- * (repeating stack plus retry interval) and the boards answer a selection. What remains is only what a band can
- * own: the wait between EOF and the first snapshot.
+ * The one open that stays silent is a follow-from-end-of-file read (the startup auto-monitor, and Clear All): it hands
+ * over no lines, so it owes no first build, and an empty list with "Monitoring Log (from end of file)" up top is the
+ * correct answer rather than a wait. `linesRead` on ReportCaptureProgress is that whole distinction.
  *
- * And it belongs to an open nobody chose. `FightTable.AllowsLoadBand` is off unless MainWindow turns it on, which it
- * does only for the startup open the auto-monitor performs; through File / Recent Files the operator asked for the load
- * while looking at the status line that counts it, so the same EOF tick must leave this panel collapsed (see
- * AManuallyOpenedLogStaysSilent). Both directions are pinned because the flag defaults to silent: a future open path
- * that forgets to set it loses an announcement rather than gaining an overlay nobody wanted.
+ * The first snapshot takes the band down for good and it stays down for the session - real rows beat a bar, and a quiet
+ * stretch mid-file can legitimately complete a derive under 100 %.
+ *
+ * The pane carries no status text at all: the top-right message section was removed on request, so a derive, a selection
+ * or a failed pass has nothing to say there - DeriveEngine journals failures to eqlogparser.log (repeating stack plus
+ * retry interval) and the boards answer a selection. What remains is only what a band can own: why the list is empty.
  *
  * Same construction contract as FightTableStartupTest - STA thread because WPF will not build a
  * FrameworkElement on MTA, stubbed app-level StaticResources because the test host never loads App.xaml.
@@ -81,54 +81,64 @@ public sealed class FightTableLoadBandTest
   private static void Flush() => Dispatcher.CurrentDispatcher.Invoke(new Action(() => { }), DispatcherPriority.Normal);
 
   [TestMethod]
-  public void AReadingTickSaysNothingHere()
+  public void AnOpenWithHistorySaysWhyTheListIsEmpty()
   {
     Sta.Run(() =>
     {
       var table = new FightTable();
-      Assert.AreEqual(Visibility.Collapsed, table.loadOverlay.Visibility, "a fresh panel shows no band");
 
-      // Mid-file pump ticks: the application status line is the one that counts percent. This window stays out
-      // of the conversation - a duplicate progress report in the dock is what the user asked to have removed.
-      table.ReportCaptureProgress(35);
+      // A pump tick on a read that HAS handed lines over: the grid is empty because the first pass cannot run during a
+      // bulk load, and only this panel can say so. Whether the operator picked the file is nobody's business here - an
+      // open that was asked for is still an open whose list would otherwise sit blank with no explanation.
+      table.ReportCaptureProgress(120_000);
       Flush();
-      Assert.AreEqual(Visibility.Collapsed, table.loadOverlay.Visibility, "reading is announced at the top, not here");
-      Assert.AreEqual("", table.loadText.Text, "no headline is written for a phase this panel does not report");
+      Assert.AreEqual(Visibility.Visible, table.loadOverlay.Visibility, "reading a file with history raises the band");
+      StringAssert.Contains(table.loadText.Text, "Building");
+      Assert.IsTrue(table.loadBar.IsIndeterminate, "the wait for the first derive has no known length");
     });
   }
 
   [TestMethod]
-  public void AManuallyOpenedLogStaysSilent()
+  public void AFollowFromEndOpenStaysSilent()
   {
     Sta.Run(() =>
     {
       var table = new FightTable();
 
       /*
-       * The default IS the manual open: MainWindow raises AllowsLoadBand only for the automatic startup open. Same EOF
-       * tick as the next test, opposite outcome - the status line at the top of the application already counts a load
-       * the operator is watching after their own click.
+       * Clear All and the startup auto-monitor both re-open at end of file: zero lines handed over, so no first build is
+       * owed and the honest state is an empty list (the status line says "Monitoring Log (from end of file)"). A band here
+       * would sit saying "building" for the rest of the evening over a log that finished loading.
        */
-      table.ReportCaptureProgress(100);
+      table.ReportCaptureProgress(0);
       Flush();
-      Assert.AreEqual(Visibility.Collapsed, table.loadOverlay.Visibility, "a log you picked yourself gets no band");
-      Assert.AreEqual("", table.loadText.Text);
+      Assert.AreEqual(Visibility.Collapsed, table.loadOverlay.Visibility, "an open that read nothing owes no build");
+
+      // Later ticks of the same open - still nothing to build, because nothing was ever read.
+      table.ReportCaptureProgress(0);
+      Flush();
+      Assert.AreEqual(Visibility.Collapsed, table.loadOverlay.Visibility, "EOF with no history read is not a wait either");
+      Assert.AreEqual("", table.loadText.Text, "no headline is written for a phase this panel does not report");
     });
   }
 
   [TestMethod]
-  public void AEofTickRaisesTheBuildingBand()
+  public void LinesLandingLaterStartsTheAnnouncement()
   {
     Sta.Run(() =>
     {
-      var table = new FightTable { AllowsLoadBand = true };   // the startup open, which nobody asked for by hand
+      var table = new FightTable();
 
-      // EOF: reading is done but the list is not - only this panel can say so, over an indeterminate bar.
-      table.ReportCaptureProgress(100);
+      // The first pump tick of an open can precede the reader's first handover; the next one that finds lines turns the
+      // band up. "No history" is only ever a conclusion drawn from a session that has still read nothing AT all, which is
+      // why the flag is monotonic for the session rather than a reading of one tick.
+      table.ReportCaptureProgress(0);
       Flush();
-      Assert.AreEqual(Visibility.Visible, table.loadOverlay.Visibility, "EOF raises the building band");
-      StringAssert.Contains(table.loadText.Text, "Building");
-      Assert.IsTrue(table.loadBar.IsIndeterminate, "the wait for the first derive has no known length");
+      Assert.AreEqual(Visibility.Collapsed, table.loadOverlay.Visibility);
+
+      table.ReportCaptureProgress(5_000);
+      Flush();
+      Assert.AreEqual(Visibility.Visible, table.loadOverlay.Visibility, "lines did land: the build is owed after all");
     });
   }
 
@@ -137,8 +147,8 @@ public sealed class FightTableLoadBandTest
   {
     Sta.Run(() =>
     {
-      var table = new FightTable { AllowsLoadBand = true };
-      table.ReportCaptureProgress(100);
+      var table = new FightTable();
+      table.ReportCaptureProgress(120_000);
       Flush();
       Assert.AreEqual(Visibility.Visible, table.loadOverlay.Visibility);
 
@@ -146,8 +156,8 @@ public sealed class FightTableLoadBandTest
       Flush();
       Assert.AreEqual(Visibility.Collapsed, table.loadOverlay.Visibility, "rows beat the bar");
 
-      // A late pump tick - a tail running past 100 - must not resurrect the band for this session.
-      table.ReportCaptureProgress(100);
+      // A late pump tick with plenty more lines landed must not resurrect the band for this session.
+      table.ReportCaptureProgress(400_000);
       Flush();
       Assert.AreEqual(Visibility.Collapsed, table.loadOverlay.Visibility, "a settled session stays settled");
     });

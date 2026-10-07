@@ -428,6 +428,8 @@ namespace EQLogParser
 
             var snapshot = DerivedFightRows.Build(fights, timeline, CapturedTotal, _facts, damageIndex);
             snapshot.Heals = _heals;
+            // Every announcement says which capture it came from; see DerivedSnapshot.SessionId.
+            snapshot.SessionId = SessionId;
             return snapshot;
           });
           sw.Stop();
@@ -534,14 +536,20 @@ namespace EQLogParser
                 $"{guards} fact value(s) did not fit their field (clock clamp or heal mask/label) - see FactTime/HealFact");
           }
 
-          Derived?.Invoke(snapshot);
+          /*
+           * A disposed session announces nothing. Dispose stops the timer but does not join a pass already in flight, and a
+           * dying capture's rows arriving after the next log opened repaints the panel with the raid that was just cleared (or
+           * with nothing, when the new open is a follow-from-end that has no rows yet). The stamp on the snapshot is the second
+           * line of the same defence for a listener that would rather ask than trust the ordering.
+           */
+          if (!_disposed) Derived?.Invoke(snapshot);
 
           /*
            * After Derived, so a meter already on screen has repainted before one that is not decides to open itself; and in
            * its own try because an auto-open handler must never make the pass look like it failed (the catch below would
            * disable auto-derive over somebody else's exception).
            */
-          if (freshDamage)
+          if (freshDamage && !_disposed)
           {
             // Recorded whether or not anyone listened: the announcement's meaning is "newer than the last one we made", and a
             // meter that was open (and ignored this) must not make the NEXT pass look like news all over again.

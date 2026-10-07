@@ -87,10 +87,15 @@ namespace EQLogParser
      * Loading-band state (see loadOverlay in the XAML). `_loadBandSettled` is this session's "a snapshot has
      * landed" flag: the band goes down for good at the first Derived - a quiet stretch mid-file can legitimately
      * complete a derive under 100 %, and real rows beat a bar - and it comes back only with the next session.
+     * `_awaitingFirstRows` is the other half: it turns on once this open has actually handed lines over, because an
+     * open that read NOTHING (follow-from-end-of-file: the startup auto-monitor, and Clear All) has no first snapshot
+     * owed to it and an empty list there is the correct answer rather than a wait. Without it the band would sit over a
+     * monitored log saying "building" for the rest of the evening.
      * `_capturedFacts` rides in from the session's capture event to put a number on what the build is chewing
-     * through; reading itself is announced by the application-wide status line, not here (see ReportCaptureProgress).
+     * through; the file's own percent belongs to the application status line, not here (see ReportCaptureProgress).
      */
     private bool _loadBandSettled;
+    private bool _awaitingFirstRows;
     private long _capturedFacts;
 
     /*
@@ -212,30 +217,42 @@ namespace EQLogParser
 
     private void OnActiveChanged()
     {
-      Dispatcher.InvokeAsync(() =>
-      {
-        Detach();
-        Attach(DeriveEngine.Active);
-        if (DeriveEngine.Active is null)
-        {
-          _selectionTimer.Stop();
-          _settle.Reset();
-          _announcedIds = [];
+      Dispatcher.InvokeAsync(ClearForNewCapture);
+    }
 
-          // Nothing is announced, so nothing may be remembered as announced: a stamp left over from the log that just closed
-          // could otherwise match a new capture's first snapshot by arithmetic (fact totals restart at zero every session) and
-          // swallow an announcement that has never happened.
-          _announcedStamp = 0;
-          _rows.Clear();
-          SetLoadBand(null);
-        }
-        else
-        {
-          // A new session is a new load: the band may show again, and its counters start from nothing.
-          _loadBandSettled = false;
-          _capturedFacts = 0;
-        }
-      });
+    /*
+     * The session changed — either one ended or a new one started — so everything displayed here belongs to a capture
+     * that no longer answers. Blank the list on BOTH sides of that seam, not only when the engine went null:
+     *
+     *  - an open of a file with nothing derivable in it, and Clear All (which is a follow-from-end re-open of the same
+     *    file), never produce a snapshot with rows to overwrite what is showing, so "clear" used to leave last night's
+     *    raid in the grid indefinitely; and
+     *  - during a load of any file, the previous capture's rows were the thing on screen until the new one's first pass.
+     *
+     * The rows go immediately; what replaces them is announced by the band (see ReportCaptureProgress) once this open has
+     * proven it has history to build. internal for the WPF test — ActiveChanged itself cannot be raised from outside the
+     * engine, and a real engine needs a file.
+     */
+    internal void ClearForNewCapture()
+    {
+      Detach();
+      Attach(DeriveEngine.Active);
+
+      _selectionTimer.Stop();
+      _settle.Reset();
+      _announcedIds = [];
+
+      // Nothing is announced, so nothing may be remembered as announced: a stamp left over from the log that just closed
+      // could otherwise match a new capture's first snapshot by arithmetic (fact totals restart at zero every session) and
+      // swallow an announcement that has never happened.
+      _announcedStamp = 0;
+      _rows.Clear();
+
+      // A new session is a new load: the band may show again, its counters start from nothing, and nothing has been read yet.
+      SetLoadBand(null);
+      _loadBandSettled = false;
+      _awaitingFirstRows = false;
+      _capturedFacts = 0;
     }
 
     // Derivation completes on a background thread; rows swap on the dispatcher. Big logs derive
@@ -248,6 +265,11 @@ namespace EQLogParser
       Dispatcher.InvokeAsync(() =>
       {
         if (snapshot?.Rows == null) return;
+
+        // A pass belonging to a capture that is no longer open must not repaint this grid. Dispose does not join a pass
+        // already running, so the log just closed can announce after the new one started — and when the new open has no
+        // rows of its own yet (Clear All, an empty file) that late pass IS the content on screen forever.
+        if (!snapshot.FromLiveSession) return;
 
         _currentStamp = SelectionStamp(snapshot);
 
@@ -354,15 +376,6 @@ namespace EQLogParser
     }
 
     /*
-     * Whether THIS session's load may put the band up — and it is off unless somebody turns it on, because only one
-     * open path wants it. MainWindow sets it before the reader starts: true for the automatic startup open (the
-     * auto-monitor restoring the last log, where the fight list is empty and silent and nothing else says work has
-     * begun), false for every open the operator chose (File / Recent — the application status line counts percent and
-     * seconds off the same pump right then, so a panel over the grid duplicates it while they wait for their own click).
-     */
-    internal bool AllowsLoadBand { get; set; }
-
-    /*
      * Capture heartbeat (dispatcher thread already). The count used to replace the status line every tick, which
      * read as a terminal ticking past; it belongs on the loading band, next to the file progress that says when
      * the number will stop moving. With no band showing there is nothing to update - a settled list refreshes
@@ -375,32 +388,28 @@ namespace EQLogParser
     }
 
     /*
-     * The reader pump MainWindow drives every ~500 ms while a file is open (byte progress through the log). Called
-     * on the dispatcher; `percent` counts against the size the file had when reading began, so a growing live tail
-     * runs past 100 - >= 100 means "reading is done", which is the truth from the reader's side, and the panel then
-     * waits for the first snapshot on its own. The percent itself is NOT shown here - the application-wide status
-     * line counts it already, and a second copy in the dock duplicates it without adding anything.
+     * The reader pump MainWindow drives every ~500 ms while a file is open. Called on the dispatcher with what the reader
+     * has handed to the parser so far — which is the whole question this panel asks, and deliberately NOT the byte percent:
+     * the application-wide status line counts that off the same pump, and a second copy in the dock duplicates it. Lines
+     * landed is what distinguishes "a first build is owed" from "this open read no history, so an empty list is the answer"
+     * (follow-from-end-of-file: the startup auto-monitor and Clear All).
+     *
+     * So the band says one thing, for as long as this session has shown no rows and owes a first build: the list is empty
+     * because it is being made — with the captured-fact count under the bar as the moving part, which only this panel has.
      */
-    internal void ReportCaptureProgress(double percent)
+    internal void ReportCaptureProgress(long linesRead)
     {
       if (Dispatcher.CheckAccess() == false)
       {
-        Dispatcher.InvokeAsync(() => ReportCaptureProgress(percent));
+        Dispatcher.InvokeAsync(() => ReportCaptureProgress(linesRead));
         return;
       }
 
-      /*
-       * Two vetoes, in order: an open nobody asked to be announced (see AllowsLoadBand), and "rows already landed this
-       * session". There is no session gate beyond those: while the pump runs this window is either showing the band or
-       * docked-hidden (engine off), and a hidden band costs nothing.
-       */
-      if (!AllowsLoadBand || _loadBandSettled) return;
+      if (_loadBandSettled) return;   // rows landed this session: the list itself is the message
+      if (linesRead > 0) _awaitingFirstRows = true;   // monotonic for the session; a follow-from-end open never sets it
+      if (!_awaitingFirstRows) return;
 
-      // The reading phase says nothing HERE: the status line at the top of the application counts the same pump's
-      // percent (and seconds) already, and a second copy in the dock duplicates it. The one gap only this panel can
-      // speak of is EOF-to-first-snapshot - file done, rows still being built - so that is all the band shows.
-      if (percent >= 100.0)
-        SetLoadBand("Building derived fight list\u2026");
+      SetLoadBand("Building derived fight list\u2026");
     }
 
     // null takes the band down; UI thread. The bar is the XAML's own indeterminate one - the only phase this band
@@ -469,6 +478,12 @@ namespace EQLogParser
     // Whether this window has a live session behind it: the answer to "does the engine answer for this log at
     // all", which is what MainWindow asks before choosing who owns GetFights while both windows can exist.
     internal bool SessionActive => _session != null;
+
+    /*
+     * What this pane is holding right now. internal for the session-switch tests: ActiveChanged cannot be raised from
+     * outside DeriveEngine and a real engine needs a file, so the seam those laws live behind is ClearForNewCapture.
+     */
+    internal int RowCount => _rows.Count;
 
     /*
      * The fights behind this window in the legacy shape the older consumers read: MainWindow.GetFights feeds

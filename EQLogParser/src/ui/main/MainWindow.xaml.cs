@@ -241,14 +241,13 @@ namespace EQLogParser
       var previousFile = ConfigUtil.GetSetting("LastOpenedFile");
       if (enableAutoMonitorIcon.Visibility == Visibility.Visible && File.Exists(previousFile))
       {
-        // OpenLogFile with update status. `true` = the app opened this on its own, which is the one case where the
-        // fight list shows its loading band (see FightTable.AllowsLoadBand).
+        // OpenLogFile with update status.
         //
         // This runs INSIDE the window constructor, and it bootstraps a whole session (clear, engine start, identity
         // stores, reader) there - so it is measured separately rather than buried in app.mainwindow. `lastMins: 0` means
         // follow from end of file: an old last-opened file yields zero lines here, which is correct for a monitor but still
         // announces "Finished Loading Log File" to the log.
-        PerfCounters.Run(MwAutoOpenId, () => OpenLogFile(previousFile, 0, true));
+        PerfCounters.Run(MwAutoOpenId, () => OpenLogFile(previousFile, 0));
       }
 
       // workaround to set initial theme properly
@@ -1272,9 +1271,11 @@ namespace EQLogParser
           var filePercent = Math.Round(_eqLogReader.GetProgress());
 
           // The derived fight list has no rows of its own until the first snapshot (bulk ingest parks the derive
-          // lanes by design), so without this it would sit as a silent empty grid through the whole load. The
-          // band owns itself from here: EOF flips it to "building", the first snapshot takes it down.
-          if (npcWindow?.Content is FightTable pumpTable) pumpTable.ReportCaptureProgress(filePercent);
+          // lanes by design), so without this it would sit as a silent empty grid through the whole load. It gets the
+          // handover count rather than filePercent: the percent is THIS line's job (one copy per pump, at the top of the
+          // window), while the panel only needs to know whether a first build is owed at all — a follow-from-end open
+          // (Clear All, the startup auto-monitor) reads no history and its empty list is the correct answer.
+          if (npcWindow?.Content is FightTable pumpTable) pumpTable.ReportCaptureProgress(_eqLogReader.HandedOverLines);
 
           statusText.Text = filePercent < 100.0 ? $"Reading Log.. {filePercent}% in {seconds} seconds" : $"Additional Processing... {seconds} seconds";
           statusText.Foreground = Application.Current.Resources["EQWarnForegroundBrush"] as SolidColorBrush;
@@ -1392,12 +1393,7 @@ namespace EQLogParser
       classEditPopup.IsOpen = false;
     }
 
-    /*
-     * `openedAutomatically` distinguishes the startup open (auto-monitor restored the last log; nobody is looking at
-     * this window yet and no scan was asked for by hand) from an open through File / Recent Files. The only thing it
-     * changes is whether the fight list may raise its loading band over the grid for this session.
-     */
-    private void OpenLogFile(string previousFile, int lastMins, bool openedAutomatically = false)
+    private void OpenLogFile(string previousFile, int lastMins)
     {
       var openMark = PerfCounters.Begin(OpenLogId);
       try
@@ -1501,8 +1497,6 @@ namespace EQLogParser
             // missing from the log (session created) or that arrives without rows following it (derive stuck).
             Log.Info($"capture: started ({Path.GetFileName(theFile)})");
 
-            // Set before the reader starts so the first pump tick already knows whose open this is.
-            if (npcWindow?.Content is FightTable bandPane) bandPane.AllowsLoadBand = openedAutomatically;
 
             _eqLogReader = new LogReader(new LogProcessor(theFile, chatSink, new TriggerHookAdapter()), theFile, lastMins);
             /*

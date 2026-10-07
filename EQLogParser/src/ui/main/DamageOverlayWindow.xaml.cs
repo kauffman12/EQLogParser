@@ -277,6 +277,10 @@ namespace EQLogParser
      */
     private void OnDerived(DerivedSnapshot snapshot)
     {
+      // A pass from a capture that is no longer open must not wake this board (Dispose does not join a running pass);
+      // the repaint below would then read whichever session is current and paint a beat later than it should.
+      if (!snapshot.FromLiveSession) return;
+
       var dispatcher = Dispatcher;
       if (dispatcher.HasShutdownStarted || dispatcher.HasShutdownFinished) return;
 

@@ -216,7 +216,13 @@ namespace EQLogParser
      * name in the capture plus the heal stream (R15's caster count), which is enough to be felt if it ran at full rate.
      * Two seconds behind while the pane is open is invisible next to a list that never moved.
      */
-    private void EventsDerived(DerivedSnapshot _) => ThrottledRefresh();
+    private void EventsDerived(DerivedSnapshot snapshot)
+    {
+      // The census walks the capture this pane is following; a pass from one that is no longer open (Dispose does not
+      // join a running pass) must not repaint it with the previous log's names — DerivedSnapshot.SessionId.
+      if (!snapshot.FromLiveSession) return;
+      ThrottledRefresh();
+    }
 
     internal void ThrottledRefresh()
     {

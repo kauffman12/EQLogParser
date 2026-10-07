@@ -117,13 +117,32 @@ only a row that was alive when it happened, and a row with no death inside it ho
 The derived list wears legacy's face: **Initial Hit Time | HP | Name**, inactivity dividers in legacy's warning color,
 tooltips, selection restored across every re-derive by name+begin (`FightKey`, since projection renumbers). What it no
 longer says, on purpose (2026-10, from live feedback): no reading-progress duplication inside the dock — the
-application-wide status line owns percent-and-seconds; the band's one phrase is "Building derived fight list…" (EOF →
-first snapshot, default color, indeterminate). The top-right status line of that header is gone entirely (2026-10,
+application-wide status line owns percent-and-seconds; the band's one phrase is "Building derived fight list…" (default
+color, indeterminate bar, captured-fact count under it). Who clicked is not part of that decision: for as long as the open
+session has shown no rows AND has handed lines to the parser, the panel says its list is being built. An earlier rule made the
+band legal only on the startup auto-monitor open ("a chosen open is already counted by the status line"), and that reasoning
+survives only for the percent — an empty grid with nothing said about why reads as a broken feature, which is what the
+operator reported; so `FightTable.AllowsLoadBand` was deleted rather than inverted, and the veto moved to the one case where an
+empty list is genuinely correct: **a follow-from-end-of-file read** (startup auto-monitor, Clear All) hands over no history, so
+no first build is owed and the band stays down (`linesRead` on `ReportCaptureProgress` is that whole distinction). The top-right status line of that header is gone entirely (2026-10,
 on request - "no status messages in the top right"): no derive stats line, no override verdict, no placeholder, no
 failure text; a selection speaks through the boards it feeds and a failed pass only through eqlogparser.log. The meter
 opens at launch only if the capture's LAST moments hold a fight; its X closes the
 window but disables nothing — next damage brings the board back onto the same seconds (the start second is static for
 exactly this).
+
+**The list belongs to the capture that is open** (2026-11, from "clear all does nothing — it just leaves the fight list full of
+content", reported together with "opening a new file shows the old one while it loads" and "opening a file with no content just
+leaves the old list"). One cause, three symptoms: `Derived` is the only thing that ever replaces the fight rows, so (a) whenever no
+new pass is coming — an empty file, or Clear All's re-open at end of file, which reads no history — whatever was displayed
+became a permanent answer; and (b) `Dispose` **does not join a derive pass already running**, so the session belonging to the log you
+just closed announces itself a heartbeat after the new one opened and paints the dead capture back over the live pane. The fixes are
+therefore at the two seams rather than in the button: the pane blanks on **both sides** of `ActiveChanged` (`FightTable.ClearForNewCapture`,
+not just the engine-gone side), and every snapshot carries the id of the capture that made it (`DerivedSnapshot.SessionId`, stamped by the
+engine) with each subscriber — fight list, Names census, damage meter — asking `FromLiveSession` before it paints; a disposed engine
+raises nothing at all (its pass still finishes its own bookkeeping, it just cannot speak). Pinned by `FightTableSessionSwitchTest`, plus the
+engine's own silence in `FightTableLoadBandTest`'s companion reasoning: an unstamped snapshot keeps matching the current session so that
+hand-built fixtures stay usable while production, which always stamps, cannot.
 
 ### Lifecycle signals belong to PATHS, not stores
 
