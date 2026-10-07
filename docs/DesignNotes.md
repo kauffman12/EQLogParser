@@ -8320,6 +8320,26 @@ choice it takes back — same word as the Names dropdown's `Clear claim` entry. 
 does". The count in the label stays: it is the answer to "does this server have anything saved?", asked most often about a
 name that no longer has a row to click.
 
+**The follow-up question — "what about the right-click throttling?" — closed one real gap in that first fix.** The deferral
+was there and the settle window was too, but the pointer probe watched `Mouse.LeftButton` only. That is not enough on this grid:
+SfDataGrid selects on a **right-drag** as well as a left one, so "right-drag over six rows, then open the menu" could still land a
+tick inside the gesture and spend a materialization on a range mid-pull — the operator's original *"if you still held the button down
+it wouldnt do that"* is about the right button at least as much as the left. `FightTable.PointerIsDown()` now asks both, and the WPF-side
+test (`FightTableSelectionProbeTest`) pins the part that could fail invisibly: the probe runs inside the timer's tick with no window
+guaranteed to exist (a hidden docked pane still has its timer armed), and a throw — or an answer of "pressed" while nothing is pressed —
+does not look like an error, it looks like the stats froze, because `ShouldAnnounce()` returns false forever and the pane just keeps
+restarting its own timer.
+
+**Two dial choices deliberately NOT copied from legacy.** Its selection timer ran 750 ms at `DispatcherPriority.Send`; this one is
+350 ms at `Background`. Priority: a Send-priority tick competes with input and layout, which is the wrong place for "rebuild three boards
+over the whole capture"; Background parks it behind rendering, and since the pane re-arms while work is parked, a coarse priority costs
+latency and never correctness. Interval: 350 was chosen as "long enough that dragging across a thousand rows fires once, short enough to
+feel immediate", and both numbers are one constant (`SelectionSettleMs`) with no arithmetic anywhere else depending on them — if the field
+report comes back "still rebuilding while I select", the dial moves without touching the rule. Legacy's two `await Task.Delay(120)` calls
+in its Set-Pet/Set-Player menu items are a different animal and were not ported: they waited for the context menu to close before removing
+a row from the grid it was attached to. Here an override goes through `RederiveAsync()` — asynchronous, and rows change on a later pass, so
+the grid is never mutated underneath a closing menu — which makes that delay's purpose moot rather than forgotten.
+
 **Clear All is deliberately NOT restored yet, and the reason is a design question rather than an omission.** Legacy's
 button wiped `FightManager`'s store, and the derived list has no store to wipe — it is a projection of the fact tables, so
 every one of those rows comes straight back on the next pass, verdict move, or meter opening. The honest analogue is a

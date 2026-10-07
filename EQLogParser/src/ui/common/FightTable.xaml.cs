@@ -44,11 +44,17 @@ namespace EQLogParser
      * Whether a tick may announce, or whether something is still happening under the cursor. Two parked cases (see
      * SelectionSettle for the reasoning): the right-click menu is open - where SfDataGrid's own move of the current
      * cell to the clicked row would otherwise spend a full materialization before the user has chosen anything, and a
-     * Select All then spends a second one, which is what "it ends up doing two selections" was - and the left button
-     * is still down mid-drag. The pointer state is QUERIED at tick time, never latched from down/up events, so a lost
-     * button-up cannot wedge announcements off.
+     * Select All then spends a second one, which is what "it ends up doing two selections" was - and a mouse button still
+     * down mid-drag. The pointer state is QUERIED at tick time, never latched from down/up events, so a lost button-up
+     * cannot wedge announcements off. BOTH buttons count: SfDataGrid selects on a right-drag as well as a left one, and
+     * "right-drag to pick a range, then open the menu" is precisely the gesture this pane has to survive.
      */
-    private readonly SelectionSettle _settle = new(static () => System.Windows.Input.Mouse.LeftButton == System.Windows.Input.MouseButtonState.Pressed);
+    private readonly SelectionSettle _settle = new(PointerIsDown);
+
+    /// <summary>Any mouse button held over the app: a drag in progress parks a selection announcement.</summary>
+    internal static bool PointerIsDown() =>
+      System.Windows.Input.Mouse.LeftButton == System.Windows.Input.MouseButtonState.Pressed ||
+      System.Windows.Input.Mouse.RightButton == System.Windows.Input.MouseButtonState.Pressed;
 
     // What was last announced, as fight ids. Two jobs: a stale snapshot's rows cannot be re-announced as
     // if they were new, and a grid that re-raises SelectionChanged with the same selection (or with none,
