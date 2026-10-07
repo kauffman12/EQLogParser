@@ -3012,9 +3012,9 @@ only thing in the matrix that made the pump arrive late. "More aggressive" has n
 9.6 ms and not one of them was noticeable. Server GC buys the same interface for 50% more memory, so it does not ship.
 
 What is left is *when*, which the runtime cannot know and this program can: `GcTidyUp.Request` asks for one full, compacting collection at three
-moments a player is not asking the interface for anything — a log file finished loading (`MainWindow.UpdateLoadingProgress`), the fight list was
-cleared (`FightTable.ClearClick`, where the record cache and every parsed event drop together), and a stats rebuild finished (all three builders,
-after their locks rather than inside them). Two rules make it safe. **A request never collects on the caller's thread**: it waits 1.5 s (`SettleMs`)
+moments a player is not asking the interface for anything — a log file finished loading **having read something** (`MainWindow.UpdateLoadingProgress`),
+the fight list's Clear All dropped a whole capture (`MainWindow.ClearAllFights`), and a stats rebuild finished (all three builders, after their locks
+rather than inside them). Two rules make it safe. **A request never collects on the caller's thread**: it waits 1.5 s (`SettleMs`)
 so the trigger's own layout finishes, then collects on a pool thread. **And it is rate-limited** to one per `MinIntervalMs` (60 s), counted in
 `SuppressedCount`, because flapping a time filter five times is ordinary and five forced compactions would be worse than none — which is also why
 there is no timer here, since every forced collection promotes young survivors and a storm makes the heap bigger and the next unasked-for
@@ -3032,6 +3032,16 @@ more — and it would also take back a slot that belongs to somebody else now. P
 still ran its collection (two collections where one was asked for). This is what made `GcTidyUpTest` order-dependent — a stats builder finishing its work asks
 for a tidy 1.5 s hence, and in a suite that runs sequentially that timer goes off inside whichever test comes next.
 
+Two corrections to *when*, both 2026-11 and both about arming a collection into the wrong moment. **An open that read nothing asks for
+nothing.** Progress reaching 100 % means two different things: a file was read, or the open followed from end of file (`lastMins: 0` — the startup
+auto-monitor) and handed over zero lines. The second state used to request the same aggressive compacting pass, stopping every thread to reclaim
+allocations no parse ever made; the gate is `LogReader.LoadAllocatedGarbage(handedOverLines)`, pinned both directions by `LoadTidyTriggerTest`
+(Windows assembly), because the failure mode of getting it wrong is a hitch at startup that nobody can name. **Clear All asks for the capture it
+just dropped.** The trigger that lived on the legacy table's clear went away with that table, leaving the app's largest single deallocation — fact
+arrays, projected rows, boards and parsed records dying together while the process keeps running — untidied; `MainWindow.ClearAllFights` now asks
+before re-opening. It is asked *there* and deliberately not inside `CloseLogFile`, because a close is nearly always the first half of an open: a tidy
+armed there expires 1.5 s into a bulk read, which is a blocking compaction in the middle of loading a file *and* spends the 60 s rate limit doing it.
+Clear All is safe precisely because it re-opens from end of file — nothing allocates behind the collection.
 Same file, the tests' own waits: they used to be one condition, `TidyCount == n && Idle`, which cannot distinguish "this machine is slow at compacting" from
 "the tidy finished and never released its slot" — the second is a real bug (every later request refused forever), the first is arithmetic, since one pass costs
 **3,065 ms** on a 4.8 GB heap and a test host's heap is whatever the rest of the suite has been parsing. Five seconds was measured insufficient on Windows for

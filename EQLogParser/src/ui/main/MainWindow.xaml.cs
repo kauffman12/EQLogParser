@@ -1310,10 +1310,17 @@ namespace EQLogParser
               SubscribeOverlayFights();
             }, DispatcherPriority.DataBind);
 
-            // The parse is finished and its garbage is gone by definition: the split strings and per-line temporaries that make a load
-            // expensive for the collector. Asked for after the overlays have allocated their steady state, and collected on a pool thread,
-            // so the UI thread never sits inside a stop-the-world holding its own work.
-            GcTidyUp.Request("log loaded");
+            /*
+             * The parse is finished and its garbage is gone by definition: the split strings and per-line temporaries that make a load
+             * expensive for the collector. Asked for after the overlays have allocated their steady state, and collected on a pool thread,
+             * so the UI thread never sits inside a stop-the-world holding its own work.
+             *
+             * Only if a load happened. Following from end of file reaches 100 % without reading a line, and an aggressive compacting pass
+             * at that moment stops every thread to hand back startup allocations — there is no parse churn to reclaim, because none was
+             * created. The one verb that DOES drop a whole capture (Clear All) asks for its own tidy where it tears the session down
+             * (ClearAllFights), so skipping here leaves nothing untidied.
+             */
+            if (LogReader.LoadAllocatedGarbage(_eqLogReader.HandedOverLines)) GcTidyUp.Request("log loaded");
           }
           else
           {
@@ -1577,6 +1584,19 @@ namespace EQLogParser
       if (string.IsNullOrEmpty(theFile) || !File.Exists(theFile)) return;
 
       Log.Info($"clear all: re-opening {Path.GetFileName(theFile)} as a monitor session (from end of file)");
+
+      /*
+       * The capture about to die is the biggest thing this process holds — fact arrays, projected rows, boards, parsed records — and
+       * Clear All is the one verb that drops it while the app keeps running, which is where returned segments matter most: the next load
+       * lands in free space rather than in fragmentation. Asked BEFORE the re-open so what the collection can see is the dead session.
+       *
+       * Deliberately here and not inside CloseLogFile. A normal open closes the old session and immediately starts reading a new file,
+       * and a tidy armed at that instant would land 1.5 s into the bulk read — stopping the world in the middle of the load, and spending
+       * the rate limit on the worst possible moment. This path is safe because it re-opens from end of file: no read follows, so nothing
+       * else allocates while the collector is doing its job.
+       */
+      GcTidyUp.Request("log closed");
+
       OpenLogFile(theFile, 0);
     }
 

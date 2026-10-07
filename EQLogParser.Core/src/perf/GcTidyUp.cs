@@ -18,11 +18,20 @@ namespace EQLogParser
    *
    * What the heuristics do not know is what this program is doing. Three moments are worth asking anyway:
    *
-   *   **a log file finished loading** - the parse allocated gigabytes of short-lived text, which is most of a load's pause (measured on a
-   *      replay soak: 11.2 s stopped across the first minute while the heap went 624 to 2,997 MB), and the garbage is gone by definition;
-   *   **the fight list was cleared** - the record cache and every parsed event drop together, so this is when a compacting pass has the most
-   *      to return, and returned segments are the difference between a player's next log loading into free space or into fragmentation;
+   *   **a log file finished loading, having read something** (`MainWindow.UpdateLoadingProgress`) - the parse allocated gigabytes of short-lived
+   *      text, which is most of a load's pause (measured on a replay soak: 11.2 s stopped across the first minute while the heap went 624 to
+   *      2,997 MB), and the garbage is gone by definition. An open that followed a file from END of file reaches the same 100 % having read no
+   *      line, and asks for nothing: there is no parse churn to reclaim, so a compacting pass there would stop every thread for startup
+   *      allocations (`LogReader.LoadAllocatedGarbage`);
+   *   **the fight list's Clear All dropped a whole capture** (`MainWindow.ClearAllFights`) - fact arrays, projected rows, boards and parsed
+   *      records go together while the app keeps running, so this is when a compacting pass has the most to return, and returned segments are
+   *      the difference between a player's next log loading into free space or into fragmentation. It re-opens from end of file, which is what
+   *      makes the moment clean: nothing allocates behind the collection;
    *   **stats finished building** - a rebuild walks every record again and hands back a much smaller result.
+   *
+   * A plain log CLOSE is not one of them, and that is a rule rather than an oversight: closing is almost always the first half of opening
+   * another file, so a tidy armed there would expire 1.5 s into a bulk read - a blocking compaction in the middle of the load, spending the
+   * rate limit on the worst moment available. Ask where the quiet actually is.
    *
    * A collection stops every thread, so the only thing that matters about it is when it happens, and each of those is a moment the player
    * is not asking the interface for anything - PROVIDED the wait below is a wait for QUIET rather than a fixed nap. The stats rebuild is the

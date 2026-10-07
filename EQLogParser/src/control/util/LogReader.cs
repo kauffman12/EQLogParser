@@ -70,6 +70,16 @@ namespace EQLogParser
      * zero, and the open path words its announcement accordingly.
      */
     internal long HandedOverLines => _handedOver;
+
+    /*
+     * "Is there load garbage to hand back?" — the law behind which 100 % asks the collector for memory, stated here because it is a fact
+     * about what a reader did rather than about a status line. Two states reach 100 %: an open that read a file, and an open that followed
+     * from end of file (lastMins 0) having handed over nothing. Only the first allocated gigabytes of split strings and per-line
+     * temporaries — which is what makes a load expensive for the collector — so only the first is worth a blocking compacting pass.
+     * Static with the count as a parameter so the rule can be asserted without opening a file (MainWindowTidyTriggerTest).
+     */
+    internal static bool LoadAllocatedGarbage(long handedOverLines) => handedOverLines > 0;
+
     public bool IsInValid() => _invalid;
 
     /*
