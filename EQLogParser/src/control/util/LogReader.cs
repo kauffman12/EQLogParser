@@ -65,6 +65,24 @@ namespace EQLogParser
     public bool IsInValid() => _invalid;
 
     /*
+     * File length for whoever sizes buffers before a session starts (DeriveEngine, via FactCapacity). One stat call,
+     * and a file that vanished between the menu click and here answers 0 = "no hint" instead of throwing over a
+     * memory estimate.
+     */
+    internal static long FileSizeOrZero(string fileName)
+    {
+      try
+      {
+        return File.Exists(fileName) ? new FileInfo(fileName).Length : 0;
+      }
+      catch (Exception ex)
+      {
+        Log.Debug("File length unavailable", ex);
+        return 0;
+      }
+    }
+
+    /*
      * Who runs this loop matters as much as what it does, so both halves of the rule live here.
      *
      * Every await in this file is ConfigureAwait(false). Without that, a caller who starts the task on the UI thread - and

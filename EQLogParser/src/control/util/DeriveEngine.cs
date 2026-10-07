@@ -75,7 +75,12 @@ namespace EQLogParser
 
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
-    private readonly DamageFactTable _facts = new(100_000);
+    // What this class started its damage array with before file-size sizing existed; used when no hint arrives.
+    private const int UnhintedDamageSlots = 100_000;
+
+    // Sized per session from the file about to be read (see FactCapacity); unhinted, the fixed start above.
+    // Doubling still carries a live tail, whose length nobody knows.
+    private readonly DamageFactTable _facts;
 
     /*
      * Healing in its own table, sharing the damage table's interned names — see HealFact for why the streams
@@ -208,13 +213,20 @@ namespace EQLogParser
     private bool _firstDeriveLogged;
     private bool _disposed;
 
-    public DeriveEngine()
+    /*
+     * captureBytes: how many bytes of log this session expects to append facts from, used ONLY to size the row
+     * arrays (see FactCapacity). 0 means "no hint" and gives the tables their own defaults. A wrong hint cannot
+     * corrupt anything — growth still doubles — it can only be too big or too small, which is why a caller may
+     * estimate from a file length instead of waiting for certainty.
+     */
+    public DeriveEngine(long captureBytes = 0)
     {
       // A fresh capture gets the full rule book even if this app run already saw a stage retire over other data:
       // retirement protects one session's pass loop, it is not a verdict about every file the process will open.
       ClassificationRules.ResetRuleHealth();
 
-      _heals = new HealFactTable(_facts);
+      _facts = new DamageFactTable(captureBytes > 0 ? FactCapacity.DamageForBytes(captureBytes) : UnhintedDamageSlots);
+      _heals = new HealFactTable(_facts, FactCapacity.HealForBytes(captureBytes));
       _capture = new CombatCapture(_facts, _heals);
       ChatSink = new IdentityChatSink(_capture);
       _liveKindAt = LiveKindAt;

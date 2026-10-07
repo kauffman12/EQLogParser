@@ -1481,7 +1481,13 @@ namespace EQLogParser
             _engine?.Dispose();
             _engine = null;
             IChatSink chatSink = new ChatDbSink();
-            _engine = new DeriveEngine();
+            /*
+             * The engine sizes its fact arrays from this file when the whole of it will be read (see FactCapacity):
+             * a gigabyte capture used to arrive at 4.8 M damage facts sitting in 8.4 M slots, and a 1 % undershoot
+             * costs a full doubling, so an estimate beats starting at 100 K and growing there. A "last N minutes"
+             * open reads an unknown slice, so it gets no hint and the old growth behaviour.
+             */
+            _engine = new DeriveEngine(lastMins > 0 ? 0 : LogReader.FileSizeOrZero(theFile));
             _engine.Start();
             chatSink = new CompositeChatSink(chatSink, _engine.ChatSink);
             // One line per open: if the derived list ever silently fails to fill, this is the line that is
