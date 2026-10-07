@@ -40,6 +40,16 @@ namespace EQLogParser
     private ObservableCollection<DerivedFightRow> _rows = [];
     private readonly DispatcherTimer _selectionTimer;
 
+    /*
+     * Whether a tick may announce, or whether something is still happening under the cursor. Two parked cases (see
+     * SelectionSettle for the reasoning): the right-click menu is open - where SfDataGrid's own move of the current
+     * cell to the clicked row would otherwise spend a full materialization before the user has chosen anything, and a
+     * Select All then spends a second one, which is what "it ends up doing two selections" was - and the left button
+     * is still down mid-drag. The pointer state is QUERIED at tick time, never latched from down/up events, so a lost
+     * button-up cannot wedge announcements off.
+     */
+    private readonly SelectionSettle _settle = new(static () => System.Windows.Input.Mouse.LeftButton == System.Windows.Input.MouseButtonState.Pressed);
+
     // What was last announced, as fight ids. Two jobs: a stale snapshot's rows cannot be re-announced as
     // if they were new, and a grid that re-raises SelectionChanged with the same selection (or with none,
     // when an ItemsSource swap lands) must not clear stats nobody changed.
@@ -143,7 +153,8 @@ namespace EQLogParser
       _selectionTimer.Tick += (_, _) =>
       {
         _selectionTimer.Stop();
-        AnnounceSelection();
+        if (_settle.ShouldAnnounce()) AnnounceSelection();
+        else if (_settle.Pending) _selectionTimer.Start();   // still parked (menu open / button held): ask again
       };
 
       DeriveEngine.ActiveChanged += OnActiveChanged;
@@ -189,6 +200,7 @@ namespace EQLogParser
         if (DeriveEngine.Active is null)
         {
           _selectionTimer.Stop();
+          _settle.Reset();
           _announcedIds = [];
 
           // Nothing is announced, so nothing may be remembered as announced: a stamp left over from the log that just closed
@@ -307,6 +319,7 @@ namespace EQLogParser
         // came from the previous pass, and stays there until the next click - or until the selection below
         // comes back, which re-announces with THIS pass's numbers.
         _selectionTimer.Stop();
+        _settle.Reset();
         _announcedIds = [];
         _announcedStamp = 0;   // same reason as the session-change path: these rows are gone, so no content memory survives
 
@@ -413,7 +426,9 @@ namespace EQLogParser
 
     private void GridSelectionChanged(object sender, GridSelectionChangedEventArgs e)
     {
-      // Restart the pause on every click so a dragged range announces once, at the end.
+      // Restart the pause on every click so a dragged range announces once, at the end - and ask SelectionSettle
+      // whether "the end" has actually arrived (menu open or button down parks it; see that class).
+      _settle.Changed();
       _selectionTimer.Stop();
       _selectionTimer.Start();
     }
@@ -585,6 +600,9 @@ namespace EQLogParser
     // (set as Pet and its row is gone by design, so there is nothing left to click).
     private void GridContextMenuOpening(object sender, System.Windows.Controls.ContextMenuEventArgs e)
     {
+      // Nothing is announced while the menu is up; whatever the opening itself selected waits for the close.
+      _settle.MenuOpen = true;
+
       var hasFight = GetSelectedFights().Count > 0;
 
       /*
@@ -618,7 +636,18 @@ namespace EQLogParser
       // design), where the menu is the only place left that can answer.
       var saved = IdentityOverrideStore.Instance.Count;
       overrideClearItem.IsEnabled = saved > 0 || hasFight;
-      overrideClearItem.Header = saved > 0 ? $"Clear Override ({saved} saved)" : "Clear Override";
+      overrideClearItem.Header = saved > 0 ? $"Clear My Claim ({saved} saved)" : "Clear My Claim";
+    }
+
+    /*
+     * The menu is down. If a selection change parked behind it - the click that opened the menu, or the item that was
+     * chosen - announce it now, once (SelectionSettle.CloseMenu consumes the pending mark). Select All and friends
+     * also announce straight from their Click; this second call costs nothing when the ids already match, which is
+     * exactly what AnnounceSelection's dedupe is for.
+     */
+    private void GridContextMenuClosing(object sender, System.Windows.Controls.ContextMenuEventArgs e)
+    {
+      if (_settle.CloseMenu()) AnnounceSelection();
     }
 
     /*

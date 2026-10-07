@@ -77,6 +77,7 @@
                            RowHeight="{DynamicResource EQTableRowHeight}"
                            RowHeaderWidth="{DynamicResource EQTableExtendedRowHeaderWidth}"
                            RowStyle="{DynamicResource FightRowStyle}"
+                           ContextMenuClosing="GridContextMenuClosing"
                            ContextMenuOpening="GridContextMenuOpening"
                            SelectionChanged="GridSelectionChanged"
                            SelectionMode="Extended"
@@ -170,8 +171,8 @@
             </MenuItem.Icon>
           </MenuItem>
           <Separator/>
-          <MenuItem x:Name="overrideClearItem" Header="Clear Override" Click="OverrideClearClick"
-                    ToolTip="Forget what was saved and let the rules answer for this name">
+          <MenuItem x:Name="overrideClearItem" Header="Clear My Claim" Click="OverrideClearClick"
+                    ToolTip="Take back your own Set as Player / Mercenary / Pet / NPC choice for the selected rows and let the rules answer again. (The count in the label is how many verdicts this server has saved.)">
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Times" />
             </MenuItem.Icon>

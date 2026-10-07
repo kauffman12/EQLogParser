@@ -8276,3 +8276,61 @@ sighting, the recognizer's false half), `OurPetTest.TheRaidSHitsOnTheirOwnPetEar
 pet proven by heal breadth instead), `IdentityVocabularyTest` (the words: cell *Pet Only Spell*, hover
 *Hit by a Pet-Only Spell*), and `CharmRowProjectionTest` unchanged — the charm exemption still credits, which is what
 its own assertions hold.
+
+## The fight list announces when the gesture ends (2026-11)
+
+Reported from the field after the legacy table was deleted (`bf9318fb`): *"right click … immediately selects a row"*,
+*"if i click select all it ends up like doing two selections"*, and the memory of a guard that is gone — *"i had some checks
+in the old version where if you still held the button down it wouldnt do that"*. Both readings are correct, and the second
+one names the mechanism.
+
+**What the derived pane kept, and what it lost.** It kept the settle window (`SelectionSettleMs`, 350 ms against legacy's
+750) and the id dedupe in `AnnounceSelection`. What it lost is legacy's other half, which was never a timing question:
+
+```csharp
+// legacy FightTable.xaml.cs (bf9318fb^), inside the selection timer's Tick
+if (!rightClickMenu.IsOpen) { …; MainActions.FireFightSelectionChanged(selected); }
+else { _needSelectionChange = true; }              // and ContextMenuClosing announces it, once
+```
+
+**Why a 350 ms window does not cover this case: the menu does not stop timers.** A `ContextMenu` runs a nested dispatcher
+loop, and a `DispatcherTimer` keeps firing inside it. So opening the menu on a row — SfDataGrid moves its current cell to
+the row under the cursor, which raises `SelectionChanged` like any left click — announces **that one row** 350 ms later,
+while the operator is still reading the menu; choosing *Select All* then announces the whole list. Two announcements, two
+materializations, and a whole-capture selection is the multi-second kind (docs → "What makes a board go one pass stale"),
+which is exactly what "two selections" looks like from the outside. Legacy's flag was not decoration: **a context menu is
+part of the gesture**, so its selection change belongs to the end of the menu rather than to its own clock.
+
+**What is built now**: `SelectionSettle` (`EQLogParser.Core/src/ui/SelectionSettle.cs`), the rule with no dispatcher in it —
+the same reason `DeriveCadence` lives in Core: "is this tick allowed to announce" is testable, and a test that pumps a real
+timer cannot tell a deferral from a fire. The pane owns the timer and asks the gate on each tick: announce if nothing is in
+the way, keep pending and restart if the menu is open or the button is down; `ContextMenuClosing` (new handler) releases
+whatever parked, once.
+
+**The pointer state is queried, never latched.** The probe is `Mouse.LeftButton == MouseButtonState.Pressed` evaluated at
+tick time (`FightTable` passes it as a delegate), not a flag set on `MouseButtonDown` and cleared on `MouseButtonUp`. A
+latched pair needs a third place to be cleared — capture lost to a scroll, a popup stealing the up, a menu swallowing it —
+and the failure mode of a stuck-down flag is *announcements never happen again*, which reads as "the boards froze" and is
+the class of bug this whole pane keeps re-learning. `Reset()` exists for the two paths that drop every row (session change,
+wholesale snapshot): the ids a parked change named are gone with them.
+
+**Renamed while in there**: the menu's *Clear Override (N saved)* reads **Clear My Claim**, with a tooltip saying whose
+choice it takes back — same word as the Names dropdown's `Clear claim` entry. It was not undocumented, but it was the only
+"clear" in that menu next to the missing Clear All, which is how it got read as "some weird clear i have no idea what it
+does". The count in the label stays: it is the answer to "does this server have anything saved?", asked most often about a
+name that no longer has a row to click.
+
+**Clear All is deliberately NOT restored yet, and the reason is a design question rather than an omission.** Legacy's
+button wiped `FightManager`'s store, and the derived list has no store to wipe — it is a projection of the fact tables, so
+every one of those rows comes straight back on the next pass, verdict move, or meter opening. The honest analogue is a
+**row floor**: drop the carried rows and start both derive lanes from the current fact ordinal, so the list stays empty
+until new damage arrives and a full rebuild cannot resurrect what was cleared (facts themselves stay captured — healing and
+the summary builders still read them — which also means a clear is not undoable except by reopening the log). That touches
+`FightProjectionCache`, `ProjectionState`'s watermark, the carried `FightFactIndex`, `LiveFights` and the selection stamp, so
+it arrives as its own change with its own tests once the operator confirms which behaviour they meant.
+
+**Field numbers for this branch, one run on the operator's machine**: loading a large log went **24 s → 20 s**, and retained
+memory came out *slightly higher* than master. Not yet decomposed — the trims this branch does (`CompactRows`, the heal-table
+split, `HitLabel`) are all reductions, so the increase is expected to be the carry (`FightProjectionCache`'s rows plus the
+index blocks) rather than the capture; that question belongs to the same revisit as Clear All. Quoted as reported, not as a
+measurement protocol: one open, one machine, no journal attached.
