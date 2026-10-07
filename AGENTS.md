@@ -294,8 +294,9 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   (`FightProjection.DiedWhileCharmed`, with 1 s of slack because that death *is* the window's exclusive `T1`), leaving the fact on `CharmEndReason.Death`: one corpse
   must not hand out two kills, and the skip is what stops a pet dying in custody from dead-marking whichever same-named row happened to be open. Inside the window the
   mob's damage reaches the board as `AttackerOwner = OwnerOf(name, t)` (so `+Pets` folds an evening of charming one mob type under its charmer), an **ownerless**
-  window leaves that field null rather than picking a raider, and a flipped *defender* is exempt from the friendly-fire drop — deleting the raid's own stray swings
-  onto their pet would shrink their meter. Two measured laws: name spelling is settled by the case-insensitive entity keys (bullet
+  window leaves that field null rather than picking a raider, and a **charm-flipped** *defender* is the only thing exempt from the
+  friendly-fire drop: a charmed mob was being fought for real, while damage on our own summoned pet earns nothing at all (R5/R18/petmapping/R24
+  ownership alike — see docs/DesignNotes.md → "Damage our own side earns nothing"). Do not restore the older exemption that credited it. Two measured laws: name spelling is settled by the case-insensitive entity keys (bullet
   above) rather than by registering `A bone walker` beside `a bone walker` — with ordinal keys nothing flipped *silently* while
   `CharmWindowPolicy`'s own case-insensitive tables went on reporting credit, which is how the feature looked finished while doing
   nothing; and a charm closes only a row whose last fact sits inside `EventTailWindowS`, so another pull of the same name cannot be
@@ -548,7 +549,20 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   the frozen person words answer before any store via `PlayerRegistry.IsPersonWord`, and a live `Unknown` **falls through**
   instead of answering no. Tests: `RosterImportTest`, `IdentityLookupTest`, `IdentityPriorStoreTest`. Numbers and reasoning:
   docs/DesignNotes.md → "The one-time roster import", "A load is not a sighting".
-- **A spell effect is not a fighter (R21), and it takes THREE proofs to say so — and the kind it earns is `Spell`, not NPC**:
+- **NPC means none of player, pet, mercenary, and a positive pet claim outranks `Targeted (NPC)`** (2026-11): the frame's verdict asserts
+  only *"not a player"* — it prints NPC for a wolf named Fred exactly as for a skeleton — so it may not outvote an uncontradicted
+  **positive** claim. **R24-petslot**: when a damage line's spell carries `Target = Pet(14)/Pet2(38)` in the spell data, the DEFENDER is
+  somebody's summon (`Wanabe hit Fred for 176000 points of unresistable damage by Elemental Conversion VI.`) and reads **Pet**, not NPC.
+  Four laws. (1) Ask `GetSpellByName`, **not** `GetDamagingSpellByName` — every Elemental Conversion rank has `Damaging = 0` in spells.txt
+  while the client wrote 176,000 points for it; only the target slot is trustworthy here. (2) The reading is **damage lines only**: the same
+  spell rows across heal/buff text is the population that killed an earlier version of this idea (65 candidates reading Pet 26 / Player 17 /
+  Npc 13 — beneficial pet buffs), so buff and heal lines claim nothing. (3) Both claims are Certain at −∞, so the tie falls to **insertion
+  order** — the R24 loop sits *below* the target-frame ladder, and that position is the rule; a name holding a Player or Merc assignment
+  **anywhere** in its claim list refuses the sighting, R10 outranks everything, and `RegistrySeed` stays at strength 8 (a ledger seed never
+  changes an answer). (4) **No owner is invented** — the evidence names the pet, never the master; ownership still comes from the possessive
+  words and petmapping.txt. Paired policy in `FightProjection`: only a charm-flipped defender survives the friendly-fire drop. Census, A/B and
+  the retracted `'Zeus'` figure: docs/DesignNotes.md → "What NPC means here"; pinned by `PetSlotSpellTest`.
+
   `IdentityKind.Spell` (Core) is neither side. Three predicates were pinned to the NPC arm when it was added, because every board
   was measured under the old reading: `FightProjection.SideAt` (both branches), `EntityTimeline.IsRaidVictimAt` (`not Npc and not Pet`
   alone would have made an effect's name in a defender slot "one of us being beaten on" and silently widened the tank board) and
