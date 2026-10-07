@@ -7908,19 +7908,35 @@ bytes/line is a 458 MB/s handoff that would have finished the file in two second
 divides back to 1,641 B/line. Rate is now this window's count over this window's seconds with the running total printed
 beside it, so a drift of this shape cannot be read as physics again.
 
-**Where the dead UI actually is on that machine: startup and first show, not ingest.** The same log gives
-`slow UI pass app.voices: 1181.1 ms`, a **4443 ms** `app.mainwindow` UI pass (which contains `ui.openlogfile 31 ms` — the
-open call itself is cheap) whose stall sample reports `cpu 2640 ms` of real work rather than a wait, and
-`app.firstshow: 766.2 ms`: about **6.4 seconds of frozen UI before a window is usable**, against zero during a 951 MB load.
-If the goal is "the app feels dead on this laptop", that path (window construction, docking/grid restore, voice model load)
-is the larger target now, and it is instrumented enough to be decomposed with the same lines.
+**Where the dead UI actually is on that machine: window construction and first show, not ingest.** A **4443 ms**
+`app.mainwindow` pass (containing `ui.openlogfile 31 ms` — the open call itself is cheap) whose stall sample reports
+`cpu 2640 ms` of real work with only 4/19 samples waiting, plus `app.firstshow: 766.2 ms`, both bracketed by real
+`UI STALL` episodes: about **5.2 seconds of unusable thread before a window responds**, against zero during the 951 MB load.
 
-**Two log facts about opening, not yet explained and deliberately not acted on.** The capture shows two `Selected Log File`
-/ `capture: started` pairs seven seconds apart for the same file, three read loops (the third — `[11]`, with no
-`capture: started` of its own — is almost certainly a reader started by another pipeline component rather than by the open
-path), and an earlier open that produced **no `load:` line at all** while `Finished Loading Log File in 1 seconds.` was
-logged normally. The code fact that makes the last one plausible: `minBack == 0` seeks straight to EOF
-(`LogReader.ReadFileAsync`), which sets `_currentPos == _initSize`, so `GetProgress()` reports 100 % at once and the
-"finished/monitoring" announcement fires after having handed over nothing. For a live log that is correct behaviour; for an
-old file it is an empty window with a green "Finished". Confirmation from the operator decides whether that announcement
-gets fixed — nothing here should change on one ambiguous log.
+**A claim I made from this same log and had to take back.** It also carries `slow UI pass app.voices: 1181.1 ms`, and the
+first reading called that a third freeze. It is not one. `PerfJournal.SlowPass` fires on a span's **wall** duration, and the
+voice span wraps an `await` (`App.OnStartup` → `LoadVoicesSafe` → `AudioManager.LoadValidVoicesAsync`), so it measures time
+the startup *sequence* spent waiting — with the thread free. The log proves the thread was free: **no stall line anywhere in
+that 1.2 s**, while both `app.mainwindow` and `app.firstshow` are surrounded by them. So the neural voice load costs 1.2 s of
+splash latency (the window is shown only after it — `ShowMain` is awaited behind it), not 1.2 s of dead UI. The general law is
+worth keeping: **a slow-pass line is wall time; a stall line is thread time**, and only the second one means the interface
+stopped. Anything that compares the two has to know which it is holding.
+
+**The two opens and the third read loop: explained, and no bug in any of them.** The operator confirms they picked the
+file once. The first `Selected Log File` / `capture: started` pair is the **startup auto-monitor open**, and it happens
+*inside the window constructor* (`MainWindow` ctor → `OpenLogFile(previousFile, 0, true)`), which is why it sits inside the
+`app.mainwindow` span and why its cost was invisible as a separate term. Its `lastMins: 0` means follow-from-end-of-file, so
+on an old last-opened file it hands over **zero lines** — correct for a monitor (forward-only by construction), and the
+reason it printed no `load:` line at all. The third read loop (`[11]`, with no `capture: started` beside it) is the
+**trigger pipeline's own reader**: `TriggerManager.HandleBasicConfig` starts a `LogReader` over `AppSettings.CurrentLogFile`
+for the default trigger user, also at `minBack = 0`, so it too reads nothing.
+
+What does remain is a wording problem rather than a behaviour one: after reading zero lines the app still logs
+`Finished Loading Log File in 1 seconds.` and sets the status line to "Monitoring Log", which reads like a completed load of
+the file. `GetProgress()` says 100 % there because the seek-to-EOF puts `_currentPos == _initSize`; that is honest for
+"we are at the end of what we are following" and misleading for "we loaded your log".
+
+To find out where the 4.4 s actually goes, the constructor is now sub-spanned — `mw.xaml` (the XAML tree and every docked
+window declared in it), `mw.panes` (pet owners / verified players / verified pets), `mw.autoopen` (that monitor open, session
+bootstrap and all) and `mw.theme` (`ThemeConfig.SetTheme`). Whatever is left after subtracting them is the settings/visibility
+block between them, which should be the smallest term; if it ever is not, that is the finding.

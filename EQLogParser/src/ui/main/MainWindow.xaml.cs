@@ -55,6 +55,19 @@ namespace EQLogParser
      * and switching logs is something a player does mid-raid; the dialog gets its own name because the question "does a modal Win32 dialog
      * starve the beat?" has to be answered from evidence before anyone decides whether such a stall counts as one.
      */
+    /*
+     * The constructor's own pieces. A field run on a real machine reported `slow UI pass app.mainwindow: 4443.5 ms` with
+     * `cpu 2640 ms` of samples behind it, and the span covered the whole window - a huge XAML tree plus every docked
+     * window declared in it plus this class's setup - which is true-but-useless. These four name what a reader can act on,
+     * and whatever is left after subtracting them is the settings/visibility block between them: dozens of cached
+     * dictionary reads and property sets, expected to be the smallest term, so if the remainder ever dominates that IS the
+     * finding (docs/DesignNotes.md -> "The Windows field run").
+     */
+    private static readonly int MwXamlId = PerfCounters.Register("mw.xaml");
+    private static readonly int MwPanesId = PerfCounters.Register("mw.panes");
+    private static readonly int MwAutoOpenId = PerfCounters.Register("mw.autoopen");
+    private static readonly int MwThemeId = PerfCounters.Register("mw.theme");
+
     private static readonly int OpenLogId = PerfCounters.Register("ui.openlogfile");
     private static readonly int PickFileId = PerfCounters.Register("ui.pickfile");
 
@@ -74,7 +87,9 @@ namespace EQLogParser
 
     public MainWindow()
     {
-      InitializeComponent();
+      // The XAML tree: this window and every docked window declared inside it. Named because it is the prime suspect for
+      // the multi-second pass above, and a lambda is cheaper than guessing.
+      PerfCounters.Run(MwXamlId, () => InitializeComponent());
 
       // set main / themes
       MainActions.SetMainWindow(this);
@@ -206,9 +221,12 @@ namespace EQLogParser
       MainActions.AddDocumentWindows(dockSite);
 
       // populate windows that need data
-      MainActions.InitPetOwners(this, petMappingWindow);
-      MainActions.InitVerifiedPlayers(verifiedPlayersWindow, petMappingWindow);
-      MainActions.InitVerifiedPets(this, verifiedPetsWindow, petMappingWindow);
+      PerfCounters.Run(MwPanesId, () =>
+      {
+        MainActions.InitPetOwners(this, petMappingWindow);
+        MainActions.InitVerifiedPlayers(verifiedPlayersWindow, petMappingWindow);
+        MainActions.InitVerifiedPets(this, verifiedPetsWindow, petMappingWindow);
+      });
 
       // add notify icon
       // this attaches to state change events so do toward the end
@@ -225,12 +243,17 @@ namespace EQLogParser
       {
         // OpenLogFile with update status. `true` = the app opened this on its own, which is the one case where the
         // fight list shows its loading band (see FightTable.AllowsLoadBand).
-        OpenLogFile(previousFile, 0, true);
+        //
+        // This runs INSIDE the window constructor, and it bootstraps a whole session (clear, engine start, identity
+        // stores, reader) there - so it is measured separately rather than buried in app.mainwindow. `lastMins: 0` means
+        // follow from end of file: an old last-opened file yields zero lines here, which is correct for a monitor but still
+        // announces "Finished Loading Log File" to the log.
+        PerfCounters.Run(MwAutoOpenId, () => OpenLogFile(previousFile, 0, true));
       }
 
       // workaround to set initial theme properly
       MainActions.UpdateStatus("Setting " + ThemeConfig.CurrentTheme);
-      ThemeConfig.SetTheme();
+      PerfCounters.Run(MwThemeId, () => ThemeConfig.SetTheme());
     }
 
     private async void MainWindowOnLoaded(object sender, RoutedEventArgs args)
