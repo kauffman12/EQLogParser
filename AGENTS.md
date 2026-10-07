@@ -618,9 +618,10 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   to its mapping list would resize every other grid that maps those words.
 - **A fight is "still going" on the capture's clock, and one file answers all three meter questions**: the overlay's numbers moved to the
   derived engine first, which left it painting derived figures while `FightManager` still decided whether you ever saw them (open on launch,
-  close-for-real-when-hidden, open-yourself-on-a-pull). Those now go through **`DerivedMeter`** — the only reader of
-  `OverlayDamageFromMirror`, so "which engine is the meter reading" has one address and no legacy fallback anywhere on the path ("no session"
-  answers *false* - there is no second engine left on this path to consult) — over **`LiveFights`** (Core: a row is live when it is not `Dead` and its last activity in
+  close-for-real-when-hidden, open-yourself-on-a-pull). Those now go through **`DerivedMeter`** — three members and **no dial at all**: the
+  per-surface `OverlayDamageFromMirror` was folded into `EnableCombatMirror`, and that went out with the legacy engine (`e514ff6f`), so "which
+  engine is the meter reading" has exactly one address and nothing left to switch (a `settings.txt` still carrying either word stops being read;
+  "no session" answers *false* rather than falling back, because there is no second engine to fall back to) — over **`LiveFights`** (Core: a row is live when it is not `Dead` and its last activity in
   **either** direction window sits inside the gap). Three rules that must not be "simplified": (1) **now = the capture's newest event, never
   wall time**, because a log file is never rotated — measured spans between first and last damage fact inside one file: **329 h**
   (`eqlog_Kizant_xegony.txt`), **616 days** (Incogitable) — so a wall-clock rule is a rule about when the raid logged out, and it cannot see the
