@@ -126,7 +126,7 @@ public class FightProjectionIncrementTest
      * froze for five seconds and said the same thing".
      *
      * The license to ask the weaker question is the audit above (the walk's identity surface is seven calls, all functions of kind / interval /
-     * owner / charm-ness) plus `EntityAnswerStampTest` pinning each of those fields moves it. Anything that changes how a fact ROUTES still
+     * owner / charm-ness) plus the answer-stamp laws in `EntityTimelineDigestTest` pinning each kind of moved answer. Anything that changes how a fact ROUTES still
      * buys the full rebuild this used to always pay.
      */
     [TestMethod]
@@ -163,6 +163,47 @@ public class FightProjectionIncrementTest
         // Still the same engine either way: a continuation equals one full pass over everything.
         AssertSameRows(FightProjection.Build(log.Facts, timeline), rows,
           "continuing across a remembered conclusion equals a full projection");
+    }
+
+    /*
+     * The other half of that license, and the one NOT to buy back with a looser digest. A remembered verdict arrives at -infinity, so for a
+     * name this capture first placed partway through it creates an EARLIER independent reason — and `HasIndependentIdentity` is what decides
+     * whether a charmed name's row hides (`FightProjection` asks it before treating a Friendly interval as "this row is a pet"). The answer
+     * really moved, so the carry must refuse.
+     *
+     * This is not a theoretical case: replaying memory over eqlog_Incogitable_xegony.txt flips this one predicate for **7 of 1,649** names,
+     * while no name's resolved kind moves at all. A digest that folded only winners would carry those seven rows across the change.
+     */
+    [TestMethod]
+    public void ARememberedVerdictThatMakesAnEarlierReasonRefusesTheCarry()
+    {
+        var log = new Capture();
+        log.JoinedRaid("Zomm", 0);
+        log.Hit("Zomm", "A bone walker", 100, 0);
+
+        var timeline = new EntityTimeline();
+        timeline.SetIdentity("Zomm", IdentityKind.Player, RuleStrength.Certain, "R2-who");
+        timeline.SetIdentity("A bone walker", IdentityKind.Npc, RuleStrength.Strong, "R7-graph", 200d);
+
+        var cache = new FightProjection.FightProjectionCache();
+        var first = cache.Project(log.Facts, timeline);
+
+        Assert.IsFalse(timeline.HasIndependentIdentity("A bone walker", IdentityKind.Npc, 100d),
+            "setup: the capture's own reason for this name begins at second 200");
+
+        var answerBefore = timeline.AnswerStamp();
+        timeline.SetIdentity("A bone walker", IdentityKind.Npc, RuleStrength.Weak, "Prior:R7-graph", double.NegativeInfinity);
+
+        Assert.IsTrue(timeline.HasIndependentIdentity("A bone walker", IdentityKind.Npc, 100d),
+            "memory says the name has been the enemy all along, which is a different answer at second 100");
+        Assert.AreNotEqual(answerBefore, timeline.AnswerStamp(), "and the digest sees it even though kind, strength-loser and source are all innocent");
+
+        var rows = cache.Project(log.Facts, timeline);
+
+        Assert.IsFalse(cache.LastPassContinued,
+            "so this is not a restatement: the rows it would otherwise keep were projected over the older answer");
+        AssertSameRows(FightProjection.Build(log.Facts, timeline), rows,
+            "and refusing rebuilds correctly rather than differently");
     }
 
     /*

@@ -153,27 +153,45 @@ namespace EQLogParser
     private long _digest;
 
     /*
-     * A SECOND digest over the SAME insertions, computed without provenance: kind, effective time, interval bounds and owner -
-     * never `strength`, never `source`. `StateStamp()` answers "did the evidence change?"; this answers "would a board route a
-     * fact differently?", and the gap between those two questions is where a wasted rebuild lives (2026-10 field report,
+     * THE ANSWER digest. `StateStamp()` answers "did the evidence change?"; this answers "would a board route a fact
+     * differently?", and the gap between those two questions is where a wasted rebuild lives (2026-10 field report,
      * `EQLogParser.log`: select all right after a load, boards build, then clear and rebuild ~9 s later for a stamp that moved
      * while every figure stayed identical - 708 rows both times, the same 2,647,774 heals materialized both times).
      *
      * The mechanism that produced it: each Full pass rebuilds its timeline from scratch and seeds it from this application's own
-     * memory, and the FIRST pass writes that memory. So the second pass records claims the first never had - same kind, different
+     * memory, and the FIRST pass writes that memory. So the second pass records claims the first never had - same kind, a
      * `Prior:`-style source - and an evidence digest sees new tuples even though no name's answer moved.
      *
-     * Deliberately CONSERVATIVE in the safe direction: it ignores only provenance. A weaker extra claim of the same kind on a
-     * different span still moves this value (it might win somewhere) even though it happens to change nothing today, because the
-     * cost of moving too often is one rebuild and the cost of not moving when an answer changed is a board showing last pass's
-     * routing. Provenance still reaches the screens that show it - the identity pane rebuilds on every pass by itself.
+     * What it folds is NOT the stored tuples, which was the first attempt and is unsound: resolution reads `strength` and, among
+     * equal strength at equal time, ARRIVAL PRECEDENCE, so two states holding the same kinds at different strengths answer
+     * `IdentityAt` differently while a kind/time/charm tuple fold reported "unchanged" (a promoted Player/Certain over an existing
+     * Player/Weak moved no bit - pinned by `AStrengthPromotionThatChangesTheWinnerMovesTheAnswerStamp`). Folding every strength
+     * instead would put the ledger replay straight back into the digest, because the memory lane re-records what it already
+     * concluded at `RuleStrength.Weak` - which is exactly the pass this stamp exists to see through.
      *
-     * It is therefore a sum over DISTINCT answer tuples, held in `_answerTerms`, not a running sum of insertions: recording the same
-     * answer twice must contribute once, which is the whole point (`_digest` adds every insertion because there, a new tuple IS new
-     * information; here, two rules that reached the same conclusion are one conclusion). Summed rather than XOR'd for the reason
-     * `StateStamp` carries: one tuple can legitimately be recorded from two stores, and an XOR pair cancels to nothing.
+     * So a name contributes ONE term, recomputed from the answers the store actually hands out: `IdentityAt` at each of its own
+     * breakpoints and at +infinity, `IdentityWithSource` (which has its own tie rule), the earliest independent (non-charm) reason
+     * per kind; and on the affiliation side, at every interval boundary, `AffiliationAt`'s winner plus that winner's charm bit,
+     * `OwnerOf`, `IsOurPetAt` and `CharmStartAfter`. A claim nobody can read an answer out of - a provenance-only restatement, a
+     * weaker same-kind re-assertion - changes no term and moves nothing. A claim that promotes, competes, flips charm-ness or covers
+     * new seconds moves that name's term, and with it the sum.
+     *
+     * Kept as a SUM of one term per name (commutative) so the digest does not depend on which name was touched when - the seed
+     * walks `PlayerRegistry`, whose enumeration order shifts as the registry grows. It DOES now depend on arrival order where
+     * arrival order decides an answer, which is the honest direction: those two states really do read differently, and a reuse gate
+     * must not call them the same. Summed rather than XOR'd for the reason `StateStamp` carries: one name legitimately holds
+     * evidence in both stores, and an XOR pair cancels to nothing.
+     *
+     * Cost: recomputed only when an insertion survives the dedupe - once per distinct claim, never per fact - over that ONE name's
+     * list, which is a handful of entries; `ViewWalkLimit` takes the conservative branch (fold the size, so any change moves) on a
+     * name with pathological evidence rather than walking quadratically.
+     *
+     * Nothing else writes these two dictionaries: no removals, no in-place edits (grep for `.T1 =`/`.Strength =` finds none). If a
+     * removal or a revision API is ever added, it has to refresh these views too.
      */
-    private readonly HashSet<long> _answerTerms = [];
+    private const int ViewWalkLimit = 64;
+    private readonly Dictionary<string, long> _identityAnswers = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, long> _affiliationAnswers = new(StringComparer.OrdinalIgnoreCase);
     private long _answerDigest;
 
     // ---- evidence input ----
@@ -204,7 +222,7 @@ namespace EQLogParser
       // conflicts are resolved at read time by (strength, effectiveFrom) — nothing is silently dropped.
       InsertSortedByTime(list, new IdentityAssignment(kind, effectiveFrom, strength, source), static a => a.EffectiveFrom);
       _digest = unchecked(_digest + Term(0, name, (long)kind, strength, effectiveFrom, 0d, source, null));
-      FoldAnswer(Term(0, name, (long)kind, IsCharmClaim(source) ? 1 : 0, effectiveFrom, 0d, null, null));
+      RefreshAnswer(_identityAnswers, name, IdentityAnswerView(name, list));
     }
 
     public void AddAffiliation(AffiliationKind kind, string name, double t0, double t1, int strength, string source, string owner = null)
@@ -228,7 +246,7 @@ namespace EQLogParser
 
       InsertSortedByTime(list, new AffiliationInterval(kind, t0, t1, strength, source, owner), static a => a.T0);
       _digest = unchecked(_digest + Term(1, name, (long)kind, strength, t0, t1, source, owner));
-      FoldAnswer(Term(1, name, (long)kind, IsCharmClaim(source) ? 1 : 0, t0, t1, null, owner));
+      RefreshAnswer(_affiliationAnswers, name, AffiliationAnswerView(name, list));
     }
 
     // Lists stay small per name (distinct assignments only), so a back-to-front scan beats
@@ -531,27 +549,15 @@ namespace EQLogParser
     public IReadOnlyCollection<string> NamesWithIdentity() => _identity.Keys;
 
     /*
-     * "Did classification reach the same conclusions as last time?" The one user is the incremental fight projection
-     * (FightProjection.Continue — see DeriveEngine): rows carried across passes stay valid only while the classification
-     * they were projected over is unchanged, and every question the projection asks (IdentityAt, IsCharmedAt, IsOurPetAt,
-     * CharmStartAfter, HasIndependentIdentity, OwnerOf) reads these two dictionaries and nothing else.
+     * O(1) read of the answer digest described at the fields above: what this store's predicates would ANSWER, not a roll of what
+     * was stored.
      *
-     * It is an INCREMENTAL digest: every accepted insertion adds a term to `_digest` (see that field), so reading this
-     * costs O(1) instead of walking every name and entry — which was not academic, hashing 2,436 names on Incogitable
-     * measured ~250 ms per pass, more than the fold it was guarding (docs/DesignNotes.md → "A derive pass that starts where the last one stopped").
-     * The two mutators are the only writers and both drop re-assertions, so rules replaying the same evidence over and
-     * over leave it alone, which is precisely what lets a live refresh skip re-projection.
-     *
-     * So THE LAW stays, in the form that matters: these two stores are the whole state, and any THIRD store added here
-     * would be invisible to this stamp and let a stale row survive a verdict that should have moved it — silently, with
-     * plausible numbers. `EntityTimelineDigestTest` refuses a third dictionary appearing without this being told, and pins
-     * both directions of the version: new evidence moves it, the same evidence again does not.
+     * Used where a rebuild is expensive and correctness depends only on answers: the fight projection's carry
+     * (`FightProjectionCache`) and, through it, `FightTable.SelectionStamp` deciding whether selected boards went stale. Those
+     * consumers must not rebuild because this application remembered something they already knew (DesignNotes -> "A board goes stale
+     * on answers, not on provenance"), while a strength promotion, an arrival-precedence tie, a charm flip or a pet interval hidden
+     * under a Friendly window ARE answers and may never pass as provenance.
      */
-    /// <summary>
-    /// What a board would see, in O(1): like StateStamp but blind to provenance, so re-recording the same conclusion under a
-    /// different rule name does not read as new information. See `_answerDigest` for why the two questions are different.
-    /// Blind to RULE NAMES — never to charm-ness: `IsCharmClaim` is folded because three predicates route damage by that prefix.
-    /// </summary>
     public long AnswerStamp()
     {
       var hash = unchecked((long)14695981039346656037UL);
@@ -600,11 +606,138 @@ namespace EQLogParser
     private static bool IsCharmClaim(string source)
       => source is not null && source.StartsWith("R9-charm", StringComparison.Ordinal);
 
-    // One answer tuple, added to the sum exactly once however many rules reached it (`_answerDigest`).
-    private void FoldAnswer(long term)
+    /*
+     * Swap one name's contribution into the answer sum. Returning when the recomputed view equals the stored one IS the
+     * optimization: a restatement that changes no readable answer leaves the digest where it was, so a settle pass that only
+     * re-records yesterday's conclusions asks nothing downstream to rebuild.
+     */
+    private void RefreshAnswer(Dictionary<string, long> views, string name, long term)
     {
-      if (_answerTerms.Add(term)) _answerDigest = unchecked(_answerDigest + term);
+      if (views.TryGetValue(name, out var old))
+      {
+        if (old == term) return;
+      }
+      views[name] = term;
+      _answerDigest = unchecked(_answerDigest + term - old);
     }
+
+    /*
+     * Every answer this store gives for one name, hashed in a fixed order. Probing the PUBLIC predicates rather than re-walking
+     * the fields is deliberate: the fold must not become a second implementation of resolution, or the day a tie rule changes the
+     * digest quietly stops describing the answers it is supposed to gate.
+     */
+    private long IdentityAnswerView(string name, List<IdentityAssignment> list)
+    {
+      if (list.Count > ViewWalkLimit) return Term(0, name, list.Count, 0, double.NaN, 0d, null, null);
+
+      /*
+       * A SEGMENT walk, not a boundary walk: one entry per place where the resolved kind actually CHANGES, so two states that answer
+       * the same questions at different second counts hash the same. Folding every breakpoint would let a weaker duplicate claim move
+       * the digest for nothing - the same mistake in the other direction.
+       */
+      var h = ViewSeed;
+      var prevBreak = double.NaN;
+      IdentityKind? last = null;
+      foreach (var a in list)   // sorted by EffectiveFrom
+      {
+        var t = a.EffectiveFrom;
+        if (t == prevBreak) continue;
+        prevBreak = t;
+
+        var kind = IdentityAt(name, t);
+        if (last == kind) continue;   // same answer as the previous segment: nothing changed to fold
+        last = kind;
+        h = MixView(h, t.GetHashCode());
+        h = MixView(h, (long)kind);
+      }
+
+      /*
+       * The +infinity readers, each with its own tie rule: `IdentityAt` prefers the later arrival among equal strength and time,
+       * `IdentityWithSource` the first. Both reach boards and screens, so only probing both sees a precedence-driven change.
+       */
+      var tail = IdentityAt(name, double.PositiveInfinity);
+      h = MixView(h, (long)tail);
+      h = MixView(h, (long)IdentityWithSource(name, out _));
+
+      /*
+       * `HasIndependentIdentity` asks an EXISTS question over claims rather than "which kind won", so the winner walk above cannot
+       * see it: a name whose only NPC reason is a charm line gains an independent reason the moment any other rule speaks, and
+       * `FightProjection` lists or hides a row on exactly that. Its answer function is (kind, charm-ness) -> earliest effective time,
+       * so fold one slot per pair in a fixed order.
+       */
+      Span<double> firstIndependent = stackalloc double[IndependentSlots];
+      firstIndependent.Fill(double.PositiveInfinity);
+      foreach (var a in list)
+      {
+        var slot = IndependentSlot(a.Kind, IsCharmClaim(a.Source));
+        if (a.EffectiveFrom < firstIndependent[slot]) firstIndependent[slot] = a.EffectiveFrom;
+      }
+      for (var i = 0; i < firstIndependent.Length; i++) h = MixView(h, firstIndependent[i].GetHashCode());
+
+      return h;
+    }
+
+    /*
+     * The affiliation side, same idea and the same segment rule. Four readers walk that interval list four different ways - the
+     * strongest winner (`AffiliationAt`, whose SOURCE `IsCharmedAt` reads), the strongest winner AMONG intervals naming an owner
+     * (`OwnerOf`), an EXISTS over ownership intervals regardless of strength (`IsOurPetAt`), and the first charm start after a moment
+     * (`CharmStartAfter`) - so folding the winner alone would let a second charm window, or a pet interval sitting under a stronger
+     * Friendly one, leave this digest untouched while rows changed shape.
+     */
+    private long AffiliationAnswerView(string name, List<AffiliationInterval> list)
+    {
+      if (list.Count > ViewWalkLimit) return Term(1, name, list.Count, 0, double.NaN, double.NaN, null, null);
+
+      var bounds = new double[list.Count * 2];
+      var n = 0;
+      foreach (var iv in list)
+      {
+        bounds[n++] = iv.T0;
+        bounds[n++] = iv.T1;
+      }
+      Array.Sort(bounds, 0, n);
+
+      var h = ViewSeed;
+      long kind = -1, charm = -1, owner = 0, pet = -1, nextCharm = 0;
+      long lastKind = -999, lastCharm = -999, lastOwner = -999, lastPet = -999, lastNext = -999;
+      var emitted = false;
+      var prevBound = double.NaN;
+      for (var i = 0; i <= n; i++)
+      {
+        // The last step probes past every interval: that is where each reader falls back to its default.
+        var t = i < n ? bounds[i] : double.PositiveInfinity;
+        if (i < n && t == prevBound) continue;
+        prevBound = t;
+
+        kind = (long)AffiliationAt(name, t, out var source);
+        charm = IsCharmClaim(source) ? 1 : 0;
+        owner = OwnerOf(name, t) is { } named ? StringComparer.OrdinalIgnoreCase.GetHashCode(named) : 0;
+        pet = IsOurPetAt(name, t) ? 1 : 0;
+        nextCharm = double.IsNaN(CharmStartAfter(name, t)) ? 0 : CharmStartAfter(name, t).GetHashCode();
+
+        if (emitted && kind == lastKind && charm == lastCharm && owner == lastOwner && pet == lastPet && nextCharm == lastNext) continue;
+        emitted = true;
+        h = MixView(h, t.GetHashCode());
+        h = MixView(h, kind);
+        h = MixView(h, charm);
+        h = MixView(h, owner);
+        h = MixView(h, pet);
+        h = MixView(h, nextCharm);
+
+        lastKind = kind; lastCharm = charm; lastOwner = owner; lastPet = pet; lastNext = nextCharm;
+      }
+
+      return h;
+    }
+
+    // IdentityKind is a closed byte vocabulary, so a fixed slot per (kind, charm-ness) keeps this fold's order stable.
+    private const int IndependentSlots = 32;
+    private static int IndependentSlot(IdentityKind kind, bool charmed)
+      => (((int)kind) & 15) * 2 + (charmed ? 1 : 0);
+
+    // Same mix as `Term`, reachable from the views above (Term's own copy is a local function on purpose: hot insert path).
+    private const long ViewSeed = unchecked((long)14695981039346656037UL);
+    private static long MixView(long v, long x) => unchecked((v ^ x) * 1099511628211L);
 
     private static long Term(int storeKind, string name, long kind, int strength, double t0, double t1,
                              string source, string owner)

@@ -13,14 +13,19 @@ namespace EQLogParser;
  * motivated the change injected on every pass: each name's verdict re-recorded under the ledger's own spelling (`Prior:…`), same kind, which
  * is exactly what pass N+1 of a real session does when it seeds itself from the memory pass N wrote. That moves `StateStamp` (the old gate
  * rebuilt everything: measured 1,077 ms over 8,014,198 facts, and the fresh index threw away the per-row materialization cache the boards
- * read) and must NOT move `AnswerStamp`.
+ * read). Most of the time that moves no answer either — but not always, and the exception turned out to be a finding rather than a bug: see (3).
  *
- * Two things are asserted at every prefix:
+ * Three things are asserted at every prefix:
  *   1. the CONTINUED rows equal a from-zero `FightProjection.Build` over the same facts and the same timeline — field by field, so a
- *      divergence names the row and the column instead of two hashes; and
+ *      divergence names the row and the column instead of two hashes;
  *   2. each surviving row's ordinal run only ever GROWS at the end (`ARowRecordSetOnlyGrowsAtTheEnd`) — the property an additive board
  *      refresh would be built on: walk what is beyond the watermark, reuse what is not. If a fact ever changed rows or moved within a run,
- *      that design dies here rather than in a stale damage summary.
+ *      that design dies here rather than in a stale damage summary; and
+ *   3. a pass over state that has genuinely SETTLED — same facts, memory the previous pass already folded — CONTINUES, while the pass that first
+ *      APPLIES freshly written memory may rebuild. It has to: a remembered verdict enters at -infinity, which creates an earlier independent
+ *      reason for some names, and `HasIndependentIdentity` is what decides whether a charmed name's row hides. Measured on
+ *      eqlog_Incogitable_xegony.txt: 7 of 1,649 names answer that predicate differently once memory is replayed, while no name's resolved kind
+ *      moves at all. Carrying those passes would keep drawing rows projected over the older answer.
  *
  * Runs only when EQLP_PROJECTION_CARRY names a capture (`EQLP_PROJECTION_CARRY_PASSES=n`, default 5):
  *   EQLP_PROJECTION_CARRY=/abs/path/eqlog_Kizant_xegony-2.txt dotnet test --filter ProjectionCarryRealLog --logger "console;verbosity=detailed"
@@ -96,28 +101,46 @@ public class ProjectionCarryRealLogTest
         var settleSw = Stopwatch.StartNew();
         var settled = cache.Project(facts, timeline);
         settleSw.Stop();
+        var memoryRebuilt = !cache.LastPassContinued;   // read it now: the quiet pass below overwrites the flag
 
         AssertSameRows(reference, settled, $"prefix {k} settle pass ({reRecorded:N0} names re-remembered over unchanged facts)");
+
+        /*
+         * A second pass over EXACTLY the same state — same facts, and memory that is no longer new. THIS is the case that must continue from
+         * the watermark: it is the field report's tick, boards built and nothing arriving.
+         *
+         * The first settle pass above may rebuild, and the reason is measured rather than assumed: a remembered verdict enters at -infinity, so
+         * for a name whose evidence first named it mid-capture it creates an EARLIER independent reason — and `HasIndependentIdentity` is what
+         * the charm/pet hiding reads. Replaying memory over eqlog_Incogitable_xegony.txt flips that predicate for 7 of 1,649 names while no
+         * name's resolved kind moves at all. Refusing to carry those passes is the digest doing its job; carrying them would draw last pass's
+         * row shape. That rebuild happens once per remembered verdict, not once per tick, because this seeding runs on every pass from then on.
+         */
+        var quietSw = Stopwatch.StartNew();
+        var quiet = cache.Project(facts, timeline);
+        quietSw.Stop();
+
+        AssertSameRows(reference, quiet, $"prefix {k} quiet pass (same facts, same memory as the settle pass above)");
         if (reRecorded > 0)
         {
           Assert.IsTrue(cache.LastPassContinued,
-            $"prefix {k}: a pass whose only new information is this application's own memory of verdicts it already reached rebuilt everything " +
-            $"— the answer digest failed to ignore provenance, which is the whole cost the field report was about");
+            $"prefix {k}: a pass over facts AND memory that the previous pass already folded rebuilt everything — the answer digest is moving on " +
+            "something a projection cannot read, which is the cost the field report was about");
           if (k > 1) settleContinued++;
         }
 
         Console.WriteLine($"[carry] pass {k}: facts {facts.FactCount,9:N0} rows {rows.Count,5:N0} " +
                           $"| growth {(growthContinued ? "continued" : "rebuilt ")} {sw.ElapsedMilliseconds,6:N0} ms " +
-                          $"| settle over {reRecorded,4:N0} re-remembered names: {(cache.LastPassContinued ? "continued" : "REBUILT")} {settleSw.ElapsedMilliseconds,5:N0} ms");
+                          $"| memory arriving over {reRecorded,4:N0} names: {(memoryRebuilt ? "rebuilt " : "continued")} {settleSw.ElapsedMilliseconds,5:N0} ms " +
+                          $"| quiet tick: {(cache.LastPassContinued ? "continued" : "REBUILT")} {quietSw.ElapsedMilliseconds,5:N0} ms");
       }
 
-      Console.WriteLine($"[carry] {path}: growth passes continued {continuedPasses}/{passes}; settle passes (memory arriving over idle " +
-                        $"facts) continued {settleContinued}/{Math.Max(0, passes - 1)}; every pass equalled a full rebuild row for row");
+      Console.WriteLine($"[carry] {path}: growth passes continued {continuedPasses}/{passes}; quiet passes (same facts, same memory) " +
+                        $"continued {settleContinued}/{Math.Max(0, passes - 1)}; every pass equalled a full rebuild row for row");
 
-      // The growth passes are allowed to rebuild — new facts bring new answers. The settle passes are not: nothing routed differently.
+      // Growth passes may rebuild — new facts bring new answers. A quiet pass may not: nothing whatever changed.
       Assert.IsTrue(settleContinued >= Math.Max(1, passes - 1),
-        "a pass whose only new information is this application's own memory must continue from the watermark; rebuilding there is what cost " +
-        "1,077 ms of projection and the boards' 1.5 s of re-materialization in the field report");
+        "a pass over an unchanged capture and unchanged memory must continue from the watermark; rebuilding there is what cost 1,077 ms of " +
+        "projection and the boards' 1.5 s of re-materialization in the field report");
     }
     finally
     {
