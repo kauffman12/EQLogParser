@@ -1,0 +1,46 @@
+[Sun Apr 26 18:40:00 2026] Akira joined the raid.
+[Sun Apr 26 18:40:00 2026] Bryn joined the raid.
+[Sun Apr 26 18:40:00 2026] Corvyn joined the raid.
+[Sun Apr 26 18:40:00 2026] Vael joined the raid.
+[Sun Apr 26 18:40:01 2026] Akira slashes a training dummy for 1000 points of damage.
+[Sun Apr 26 18:40:01 2026] Akira slashes a training dummy for 2500 points of damage. (Critical)
+[Sun Apr 26 18:40:01 2026] Akira slashes a training dummy for 3000 points of damage. (Critical Flurry)
+[Sun Apr 26 18:40:02 2026] Akira slashes a training dummy for 1500 points of damage. (Rampage)
+[Sun Apr 26 18:40:02 2026] Akira tries to hit a training dummy, but a training dummy blocks!
+[Sun Apr 26 18:40:02 2026] Akira tries to hit a training dummy, but a training dummy dodges!
+[Sun Apr 26 18:40:03 2026] Akira misses a training dummy.
+[Sun Apr 26 18:40:03 2026] Akira`s pet bites a training dummy for 500 points of damage. (Critical)
+[Sun Apr 26 18:40:03 2026] Akira`s pet bites a training dummy for 250 points of damage.
+[Sun Apr 26 18:40:04 2026] Akira`s pet tries to hit a training dummy, but a training dummy parries!
+[Sun Apr 26 18:40:04 2026] Bryn begins casting Celestial Regeneration IX.
+[Sun Apr 26 18:40:04 2026] Bryn hit a training dummy for 2400 points of magic damage by Crush of Doom. (Critical)
+[Sun Apr 26 18:40:05 2026] Bryn hit a training dummy for 900 points of magic damage by Crush of Doom.
+[Sun Apr 26 18:40:05 2026] Bryn hit a training dummy for 1200 points of fire damage by Call of Flame Rk. XII.
+[Sun Apr 26 18:40:05 2026] Vael begins casting Spirit of the Wood XXXIV.
+[Sun Apr 26 18:40:05 2026] Vael bashes a training dummy for 650 points of damage.
+[Sun Apr 26 18:40:05 2026] Vael hit a training dummy for 780 points of magic damage by Crush of Doom.
+[Sun Apr 26 18:40:05 2026] Vael healed Akira over time for 450 (900) hit points by Spirit of the Wood XXXIV.
+[Sun Apr 26 18:40:06 2026] Bryn healed Akira for 1500 hit points by Celestial Regeneration IX.
+[Sun Apr 26 18:40:06 2026] Corvyn frenzies on a training dummy for 1100 points of damage. (Critical)
+[Sun Apr 26 18:40:06 2026] Corvyn slashes a training dummy for 700 points of damage.
+[Sun Apr 26 18:40:07 2026] Kuro has been charmed.
+[Sun Apr 26 18:40:07 2026] Kuro hits a training dummy for 800 points of damage.
+[Sun Apr 26 18:40:07 2026] Kuro hits a training dummy for 600 points of damage. (Flurry)
+[Sun Apr 26 18:40:08 2026] A training dummy slashes Akira for 900 points of damage.
+[Sun Apr 26 18:40:08 2026] A training dummy slams Bryn for 400 points of damage. (Critical)
+[Sun Apr 26 18:40:09 2026] Akira`s pet bites a training dummy for 300 points of damage.
+[Sun Apr 26 18:40:10 2026] A training dummy tries to hit Akira, but Akira ripostes!
+[Sun Apr 26 18:40:11 2026] Akira shoots a training dummy for 1300 points of damage.
+[Sun Apr 26 18:40:11 2026] Akira shoots a training dummy for 1300 points of damage. (Critical)
+[Sun Apr 26 18:40:12 2026] A training dummy misses Akira.
+[Sun Apr 26 18:40:12 2026] A training dummy tries to hit Bryn, but Bryn blocks!
+[Sun Apr 26 18:40:41 2026] Akira slashes a stone sentinel for 2000 points of damage.
+[Sun Apr 26 18:40:41 2026] Bryn hit a stone sentinel for 3300 points of magic damage by Crush of Doom. (Critical)
+[Sun Apr 26 18:40:42 2026] Akira`s pet bites a stone sentinel for 450 points of damage.
+[Sun Apr 26 18:40:42 2026] Corvyn frenzies on a stone sentinel for 1500 points of damage. (Strikethrough)
+[Sun Apr 26 18:40:43 2026] Kuro hits a stone sentinel for 550 points of damage.
+[Sun Apr 26 18:40:43 2026] A stone sentinel hits Akira for 1200 points of damage.
+[Sun Apr 26 18:40:44 2026] Vael healed Akira for 800 hit points by Spirit of the Wood XXXIV.
+[Sun Apr 26 18:40:44 2026] A stone sentinel is tormented by Bryn's frost for 1750 points of non-melee damage.
+[Sun Apr 26 18:40:44 2026] A training dummy is aflame, burning from Bryn's flame for 950 points of non-melee damage.
+[Sun Apr 26 18:40:45 2026] A stone sentinel falls in battle.

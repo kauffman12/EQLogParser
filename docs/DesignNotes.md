@@ -8696,3 +8696,73 @@ moves — and a fact arriving *inside* an already-selected fight changes no id, 
 the boards beneath them (damage, healing, tanking — whatever the click feeds). Enabled when a fight is selected: force-announcing an **empty** selection
 would blank the boards, and nobody pressing "refresh" means that. A derive pass whose content stamp moved refreshes on its own — this menu item is "now",
 not "on the cadence".
+
+## The damage board's golden, and what freezing it found (2026-11)
+
+**Why: refactor insurance, not coverage theatre.** The next move on `DamageStatsBuilder` is to stop computing the same
+thing three times — one record walk that fills per-name accumulators ("measure"), then arithmetic over those
+accumulators to make rows, groups, ranks and percentages ("present"). Done, a hide-a-row or pet-reassign edit re-runs
+*present* only (hundreds of rows) instead of re-walking 1.7 M outcomes, and the pane's time dials re-slice a retained
+pool they already own. That touches every number on the board, so the question *"does the Damage Summary still display
+the same thing?"* needs an answer that does not involve reading arithmetic: `EQLogParser.Test/src/control/builders/DamageBoardGoldenTest.cs`
+freezes the whole displayed board as text (`data/board/damage-board.txt` → `damage-board.golden.txt`) and re-generating
+the golden is deliberate, typed-out work (`EQLP_GOLDEN_WRITE=1`, then read the diff). A behaviour change now arrives as
+*"line 41: pctRaid=12.03 vs 11.98 on row Vael"*, not as a summary that looked about right.
+
+**What is frozen** (fixture grammar copied from real captures so each shape is the shape, not an idea of one): the raid
+line and every row across **three views** — `StatsList` (the top-level rows, where an aggregate `X +Pets` lives),
+`ExpandedStatsList` (the flat list a surface walks) and `Children` (each child's total and its share of *its own*
+parent) — plus every column the grid binds (Name/Class/Group/Total/Dps/Sdps/% Total/seconds/Hits/Max/Min/Best Sec/the
+averages and rate columns/Bane/Special), the `PlayerClasses` map, the **sub-stat rows** behind an expanded row (whose
+`Key` is exactly how Dd/DoT subtype keys get built, so a key change cannot hide), the event sequence
+(`StatsGenerationEvent` states with group counts, every `DataPointEvent` with the validator-approved chart point count —
+the chart's repaint signal can no longer vanish or double silently) and **three windows over one retained pool**
+(`0..6`, `3..9`, then widen back), which is what the pane's time choosers do: they re-slice groups the builder kept,
+they do not ask the capture again. Invariants run alongside so a diff has a meaning: raid Total = Σ displayed rows, an
+aggregate row = Σ its children, both lists ordered by Total desc, `% Total` accounts for 100 %, and Dps = Total / seconds.
+
+**Measured cost that motivates it** (`EQLP_DERIVE_COST=local/logs/live/eqlog_Incogitable_xegony.txt`, 1,901,078 facts /
+4,646 rows): materialize **704-831 ms** versus whole board **3,778-3,804 ms** over 1,720,467 outcomes — about
+**1.75 µs per outcome**, for what is "add a few counters". Small windows are 1-20 ms, so the enemy is the per-record
+constant, not complexity: ~5-8 case-insensitive string dictionary ops, 2-3 `lock` entries (`CreatePlayerStats`,
+`CreatePlayerSubStats`), one **linear `FirstOrDefault` scan of that player's own sub-stat list**, a `+Pets` string
+allocation, and the same 100-line `UpdateDamageStats` walk applied **two or three times per record** (actor, aggregate,
+sub-stat row). Identity is asked per record too (`IdentityLookup.IsPet(record.Attacker)`) although a night holds ~400
+distinct names — that memo table is also §7's "bound the builder lookups", one change serving two plans.
+
+**Five things freezing the board taught, all now visible as golden lines rather than as surprises mid-refactor.**
+1. **`Rank` is not the row's position.** `StatsList` and `ExpandedStatsList` are sorted independently and the rank loop
+   walks the *expanded* list, writing both lists by that index; a childless top-level row sits in both, so it ends up
+   carrying its expanded position — on the fixture **Vael is StatsList[4] with rank 6**. The grid binds no Rank column,
+   but `StatsFormatter` prints `p.Rank` for the overlay text (`PlayerRankFormat`), so this is user-visible there. Pinned
+   as-is: the refactor may fix it only by *naming* it in a diff.
+2. **A parent with children never appears in `ExpandedStatsList`.** The walk adds the children and not the aggregate, so
+   `Akira +Pets` lives only in `StatsList` + `Children`. Any code that walks one list and believes it is looking at the
+   board is wrong about half of it — which is why the golden snapshots all three views.
+3. **`CombinedStats.Children` is filled inside the same loop**, guarded by `if (combined.StatsList.Count > i)`: children
+   belonging to a top-level row past the expanded list's length are not added. Not observed losing anything on the
+   fixture (expanded ≥ top-level by construction) — recorded because it is a shape any rewrite must keep deliberate.
+4. **The raid line carries amounts and no counts**: `total=31280 dps=2085 secs=15` with `hits=0 max=0 critRate=0 …`,
+   because `_raidTotals` only ever gets `Total +=` plus `UpdateCalculations`; nobody applies the label switch to it.
+   Group headers reach those columns a different way (the pane merges member rows with `MergeStats`), so two surfaces
+   answer "how many hits" by two mechanisms and one of them prints blank.
+5. **Windowing lives in two places and one of them points at last build's data.** The selection door rebuilds
+   `_damageGroups` from the clicked rows, while the window branch of `ComputeDamageStats` throws that away and filters
+   **`_allDamageGroups`** — and `Reset()` promotes *whatever the previous build had* into `_allDamageGroups`. Today's
+   doors never collide (the dials call `RebuildTotalStats`, selections call `BuildTotalStats` with `-1/-1`), so this is
+   not a live bug; it is the trap for the feature we are building. A refresh that re-presents an edit must say **which
+   pool it reads**, or "the row you just hid" and "the seconds you just narrowed to" get computed from different
+   captures of reality.
+
+**Two grammar facts, pinned because they read like parser bugs otherwise.** `A stone sentinel is tormented by Bryn's
+frost for 1750 points of non-melee damage.` attributes to **Bryn** (a DoT tick landing on its owner's row), while the
+sibling shape `A training dummy is aflame, burning from Bryn's flame for 950 points of non-melee damage.` lands as
+**Unattributed Damage** — the placeholder name the capture left empty, kept on the board as its own row and never
+mistaken for a person. And an owner-less name gets no aggregate: `Kuro has been charmed.` with no line naming who
+charmed it leaves Kuro's swings on **`Kuro`**, never `Kuro +Pets`, because inventing a master is how one player's row
+gets split in half.
+
+**How to use it while refactoring.** Keep the golden byte-identical, or land the diff as its own commit with a sentence
+per changed line. The three windows are the part to watch: they are the only place the *retained pool* promise is
+tested, and the minimal-refresh design depends on that promise. Healing/tanking goldens are deliberately not here yet —
+same harness shape, one board at a time, so each golden is reviewed rather than generated.

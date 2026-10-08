@@ -1,0 +1,152 @@
+### full
+title	Combined (3): A training dummy in 15s, 31.28K Damage @2.08K	Combined (3): A training dummy in 15s
+raid	name=Totals	rank=0	orig=Totals	class=	group=0	top=True	total=31280	dps=2085	sdps=0	pctRaid=0	secs=15	hits=0	max=0	min=0	best=0	avg=0	avgCrit=0	avgLucky=0	critRate=0	luckRate=0	accRate=0	hitRate=0	bane=0	special=	|meleeHits=0	spellHits=0	meleeAttempts=0	miss=0	block=0	dodge=0	parry=0	riposte=0	absorb=0	invm=0	flurry=0	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=0
+uniqueClasses	Berserker,Cleric,Druid
+list	name=Akira +Pets	rank=1	orig=Akira	class=	group=1	top=True	total=14100	dps=1084	sdps=940	pctRaid=45.08	secs=13	hits=11	max=3000	min=250	best=6500	avg=1281	avgCrit=1825	avgLucky=0	critRate=36.36	luckRate=0	accRate=100	hitRate=78.57	bane=0	special=	|meleeHits=11	spellHits=0	meleeAttempts=14	miss=0	block=1	dodge=1	parry=1	riposte=0	absorb=0	invm=0	flurry=1	rampage=1	strike=0	twin=0	lucky=0	bows=2	maxPot=3000
+list	name=Bryn	rank=2	orig=Bryn	class=Cleric	group=2	top=True	total=9550	dps=1591	sdps=636	pctRaid=30.53	secs=6	hits=5	max=3300	min=900	best=3300	avg=1910	avgCrit=2850	avgLucky=0	critRate=40	luckRate=0	accRate=0	hitRate=0	bane=0	special=	|meleeHits=0	spellHits=4	meleeAttempts=0	miss=0	block=0	dodge=0	parry=0	riposte=0	absorb=0	invm=0	flurry=0	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=3300
+list	name=Corvyn	rank=3	orig=Corvyn	class=Berserker	group=0	top=True	total=3300	dps=1650	sdps=220	pctRaid=10.55	secs=2	hits=3	max=1500	min=700	best=1800	avg=1100	avgCrit=1100	avgLucky=0	critRate=33.33	luckRate=0	accRate=100	hitRate=100	bane=0	special=	|meleeHits=3	spellHits=0	meleeAttempts=3	miss=0	block=0	dodge=0	parry=0	riposte=0	absorb=0	invm=0	flurry=0	rampage=0	strike=1	twin=0	lucky=0	bows=0	maxPot=1500
+list	name=Kuro	rank=4	orig=Kuro	class=	group=0	top=True	total=1950	dps=975	sdps=130	pctRaid=6.23	secs=2	hits=3	max=800	min=550	best=1400	avg=650	avgCrit=0	avgLucky=0	critRate=0	luckRate=0	accRate=100	hitRate=100	bane=0	special=	|meleeHits=3	spellHits=0	meleeAttempts=3	miss=0	block=0	dodge=0	parry=0	riposte=0	absorb=0	invm=0	flurry=1	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=800
+list	name=Vael	rank=6	orig=Vael	class=Druid	group=0	top=True	total=1430	dps=1430	sdps=95	pctRaid=4.57	secs=1	hits=2	max=780	min=650	best=1430	avg=715	avgCrit=0	avgLucky=0	critRate=0	luckRate=0	accRate=100	hitRate=100	bane=0	special=	|meleeHits=1	spellHits=1	meleeAttempts=1	miss=0	block=0	dodge=0	parry=0	riposte=0	absorb=0	invm=0	flurry=0	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=780
+list	name=Unattributed Damage	rank=7	orig=Unattributed Damage	class=	group=0	top=True	total=950	dps=950	sdps=63	pctRaid=3.04	secs=1	hits=1	max=950	min=950	best=950	avg=950	avgCrit=0	avgLucky=0	critRate=0	luckRate=0	accRate=0	hitRate=0	bane=0	special=	|meleeHits=0	spellHits=0	meleeAttempts=0	miss=0	block=0	dodge=0	parry=0	riposte=0	absorb=0	invm=0	flurry=0	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=950
+child	parent=Akira +Pets	order=0	name=Akira	total=12600	shareOfParent=89.36
+child	parent=Akira +Pets	order=1	name=Akira`s pet	total=1500	shareOfParent=10.64
+flat-child	name=Akira	rank=1	orig=Akira	class=	group=1	top=False	total=12600	dps=1050	sdps=840	pctRaid=40.28	secs=12	hits=7	max=3000	min=1000	best=6500	avg=1800	avgCrit=2266	avgLucky=0	critRate=42.86	luckRate=0	accRate=100	hitRate=77.78	bane=0	special=	|meleeHits=7	spellHits=0	meleeAttempts=9	miss=0	block=1	dodge=1	parry=0	riposte=0	absorb=0	invm=0	flurry=1	rampage=1	strike=0	twin=0	lucky=0	bows=2	maxPot=3000
+  sub	owner=Akira	key=Hits	name=Hits	type=Block	total=0	hits=0	crit=0	dps=0	best=0	max=0	min=0
+  sub	owner=Akira	key=Shoots	name=Shoots	type=Melee	total=2600	hits=2	crit=1	dps=2600	best=2600	max=1300	min=1300
+  sub	owner=Akira	key=Slashes	name=Slashes	type=Melee	total=10000	hits=5	crit=2	dps=3333	best=10000	max=3000	min=1000
+flat	name=Bryn	rank=2	orig=Bryn	class=Cleric	group=2	top=True	total=9550	dps=1591	sdps=636	pctRaid=30.53	secs=6	hits=5	max=3300	min=900	best=3300	avg=1910	avgCrit=2850	avgLucky=0	critRate=40	luckRate=0	accRate=0	hitRate=0	bane=0	special=	|meleeHits=0	spellHits=4	meleeAttempts=0	miss=0	block=0	dodge=0	parry=0	riposte=0	absorb=0	invm=0	flurry=0	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=3300
+  sub	owner=Bryn	key=Damage Shield	name=Damage Shield	type=Damage Shield	total=1750	hits=1	crit=0	dps=1750	best=1750	max=1750	min=1750
+  sub	owner=Bryn	key=Direct Damage=Call of Flame Rk. XII	name=Call of Flame Rk. XII	type=Direct Damage	total=1200	hits=1	crit=0	dps=1200	best=1200	max=1200	min=1200
+  sub	owner=Bryn	key=Direct Damage=Crush of Doom	name=Crush of Doom	type=Direct Damage	total=6600	hits=3	crit=2	dps=2200	best=6600	max=3300	min=900
+flat	name=Corvyn	rank=3	orig=Corvyn	class=Berserker	group=0	top=True	total=3300	dps=1650	sdps=220	pctRaid=10.55	secs=2	hits=3	max=1500	min=700	best=1800	avg=1100	avgCrit=1100	avgLucky=0	critRate=33.33	luckRate=0	accRate=100	hitRate=100	bane=0	special=	|meleeHits=3	spellHits=0	meleeAttempts=3	miss=0	block=0	dodge=0	parry=0	riposte=0	absorb=0	invm=0	flurry=0	rampage=0	strike=1	twin=0	lucky=0	bows=0	maxPot=1500
+  sub	owner=Corvyn	key=Frenzies	name=Frenzies	type=Melee	total=2600	hits=2	crit=1	dps=1300	best=2600	max=1500	min=1100
+  sub	owner=Corvyn	key=Slashes	name=Slashes	type=Melee	total=700	hits=1	crit=0	dps=700	best=700	max=700	min=700
+flat	name=Kuro	rank=4	orig=Kuro	class=	group=0	top=True	total=1950	dps=975	sdps=130	pctRaid=6.23	secs=2	hits=3	max=800	min=550	best=1400	avg=650	avgCrit=0	avgLucky=0	critRate=0	luckRate=0	accRate=100	hitRate=100	bane=0	special=	|meleeHits=3	spellHits=0	meleeAttempts=3	miss=0	block=0	dodge=0	parry=0	riposte=0	absorb=0	invm=0	flurry=1	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=800
+  sub	owner=Kuro	key=Hits	name=Hits	type=Melee	total=1950	hits=3	crit=0	dps=975	best=1950	max=800	min=550
+flat-child	name=Akira`s pet	rank=5	orig=Akira`s pet	class=	group=0	top=False	total=1500	dps=187	sdps=100	pctRaid=4.8	secs=8	hits=4	max=500	min=250	best=750	avg=375	avgCrit=500	avgLucky=0	critRate=25	luckRate=0	accRate=100	hitRate=80	bane=0	special=	|meleeHits=4	spellHits=0	meleeAttempts=5	miss=0	block=0	dodge=0	parry=1	riposte=0	absorb=0	invm=0	flurry=0	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=500
+  sub	owner=Akira`s pet	key=Bites	name=Bites	type=Melee	total=1500	hits=4	crit=1	dps=187	best=1500	max=500	min=250
+  sub	owner=Akira`s pet	key=Hits	name=Hits	type=Parry	total=0	hits=0	crit=0	dps=0	best=0	max=0	min=0
+flat	name=Vael	rank=6	orig=Vael	class=Druid	group=0	top=True	total=1430	dps=1430	sdps=95	pctRaid=4.57	secs=1	hits=2	max=780	min=650	best=1430	avg=715	avgCrit=0	avgLucky=0	critRate=0	luckRate=0	accRate=100	hitRate=100	bane=0	special=	|meleeHits=1	spellHits=1	meleeAttempts=1	miss=0	block=0	dodge=0	parry=0	riposte=0	absorb=0	invm=0	flurry=0	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=780
+  sub	owner=Vael	key=Bashes	name=Bashes	type=Melee	total=650	hits=1	crit=0	dps=650	best=650	max=650	min=650
+  sub	owner=Vael	key=Direct Damage=Crush of Doom	name=Crush of Doom	type=Direct Damage	total=780	hits=1	crit=0	dps=780	best=780	max=780	min=780
+flat	name=Unattributed Damage	rank=7	orig=Unattributed Damage	class=	group=0	top=True	total=950	dps=950	sdps=63	pctRaid=3.04	secs=1	hits=1	max=950	min=950	best=950	avg=950	avgCrit=0	avgLucky=0	critRate=0	luckRate=0	accRate=0	hitRate=0	bane=0	special=	|meleeHits=0	spellHits=0	meleeAttempts=0	miss=0	block=0	dodge=0	parry=0	riposte=0	absorb=0	invm=0	flurry=0	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=950
+  sub	owner=Unattributed Damage	key=Damage Shield	name=Damage Shield	type=Damage Shield	total=950	hits=1	crit=0	dps=950	best=950	max=950	min=950
+class	Akira	
+class	Akira`s pet	
+class	Bryn	Cleric
+class	Corvyn	Berserker
+class	Kuro	
+class	Unattributed Damage	
+class	Vael	Druid
+
+states	Damage|STARTED|groups=0|uniqueGroups=0|limited=False ; Damage|COMPLETED|groups=2|uniqueGroups=1|limited=False
+datapoints	UPDATE|points=28|selected=0|selectedGroups=0
+### window-0-6
+title	Combined (3): A training dummy in 6s, 16.48K Damage @2.75K	Combined (3): A training dummy in 6s
+raid	name=Totals	rank=0	orig=Totals	class=	group=0	top=True	total=16480	dps=2746	sdps=0	pctRaid=0	secs=6	hits=0	max=0	min=0	best=0	avg=0	avgCrit=0	avgLucky=0	critRate=0	luckRate=0	accRate=0	hitRate=0	bane=0	special=	|meleeHits=0	spellHits=0	meleeAttempts=0	miss=0	block=0	dodge=0	parry=0	riposte=0	absorb=0	invm=0	flurry=0	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=0
+uniqueClasses	Berserker,Cleric,Druid
+list	name=Akira +Pets	rank=1	orig=Akira	class=	group=1	top=True	total=8750	dps=1458	sdps=1458	pctRaid=53.09	secs=6	hits=6	max=3000	min=250	best=6500	avg=1458	avgCrit=2000	avgLucky=0	critRate=50	luckRate=0	accRate=100	hitRate=66.67	bane=0	special=	|meleeHits=6	spellHits=0	meleeAttempts=9	miss=0	block=1	dodge=1	parry=1	riposte=0	absorb=0	invm=0	flurry=1	rampage=1	strike=0	twin=0	lucky=0	bows=0	maxPot=3000
+list	name=Bryn	rank=2	orig=Bryn	class=Cleric	group=2	top=True	total=4500	dps=2250	sdps=750	pctRaid=27.31	secs=2	hits=3	max=2400	min=900	best=2400	avg=1500	avgCrit=2400	avgLucky=0	critRate=33.33	luckRate=0	accRate=0	hitRate=0	bane=0	special=	|meleeHits=0	spellHits=3	meleeAttempts=0	miss=0	block=0	dodge=0	parry=0	riposte=0	absorb=0	invm=0	flurry=0	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=2400
+list	name=Corvyn	rank=3	orig=Corvyn	class=Berserker	group=0	top=True	total=1800	dps=1800	sdps=300	pctRaid=10.92	secs=1	hits=2	max=1100	min=700	best=1800	avg=900	avgCrit=1100	avgLucky=0	critRate=50	luckRate=0	accRate=100	hitRate=100	bane=0	special=	|meleeHits=2	spellHits=0	meleeAttempts=2	miss=0	block=0	dodge=0	parry=0	riposte=0	absorb=0	invm=0	flurry=0	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=1100
+list	name=Vael	rank=4	orig=Vael	class=Druid	group=0	top=True	total=1430	dps=1430	sdps=238	pctRaid=8.68	secs=1	hits=2	max=780	min=650	best=1430	avg=715	avgCrit=0	avgLucky=0	critRate=0	luckRate=0	accRate=100	hitRate=100	bane=0	special=	|meleeHits=1	spellHits=1	meleeAttempts=1	miss=0	block=0	dodge=0	parry=0	riposte=0	absorb=0	invm=0	flurry=0	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=780
+child	parent=Akira +Pets	order=0	name=Akira	total=8000	shareOfParent=91.43
+child	parent=Akira +Pets	order=1	name=Akira`s pet	total=750	shareOfParent=8.57
+flat-child	name=Akira	rank=1	orig=Akira	class=	group=1	top=False	total=8000	dps=1333	sdps=1333	pctRaid=48.54	secs=6	hits=4	max=3000	min=1000	best=6500	avg=2000	avgCrit=2750	avgLucky=0	critRate=50	luckRate=0	accRate=100	hitRate=66.67	bane=0	special=	|meleeHits=4	spellHits=0	meleeAttempts=6	miss=0	block=1	dodge=1	parry=0	riposte=0	absorb=0	invm=0	flurry=1	rampage=1	strike=0	twin=0	lucky=0	bows=0	maxPot=3000
+  sub	owner=Akira	key=Hits	name=Hits	type=Block	total=0	hits=0	crit=0	dps=0	best=0	max=0	min=0
+  sub	owner=Akira	key=Slashes	name=Slashes	type=Melee	total=8000	hits=4	crit=2	dps=4000	best=8000	max=3000	min=1000
+flat	name=Bryn	rank=2	orig=Bryn	class=Cleric	group=2	top=True	total=4500	dps=2250	sdps=750	pctRaid=27.31	secs=2	hits=3	max=2400	min=900	best=2400	avg=1500	avgCrit=2400	avgLucky=0	critRate=33.33	luckRate=0	accRate=0	hitRate=0	bane=0	special=	|meleeHits=0	spellHits=3	meleeAttempts=0	miss=0	block=0	dodge=0	parry=0	riposte=0	absorb=0	invm=0	flurry=0	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=2400
+  sub	owner=Bryn	key=Direct Damage=Call of Flame Rk. XII	name=Call of Flame Rk. XII	type=Direct Damage	total=1200	hits=1	crit=0	dps=1200	best=1200	max=1200	min=1200
+  sub	owner=Bryn	key=Direct Damage=Crush of Doom	name=Crush of Doom	type=Direct Damage	total=3300	hits=2	crit=1	dps=1650	best=3300	max=2400	min=900
+flat	name=Corvyn	rank=3	orig=Corvyn	class=Berserker	group=0	top=True	total=1800	dps=1800	sdps=300	pctRaid=10.92	secs=1	hits=2	max=1100	min=700	best=1800	avg=900	avgCrit=1100	avgLucky=0	critRate=50	luckRate=0	accRate=100	hitRate=100	bane=0	special=	|meleeHits=2	spellHits=0	meleeAttempts=2	miss=0	block=0	dodge=0	parry=0	riposte=0	absorb=0	invm=0	flurry=0	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=1100
+  sub	owner=Corvyn	key=Frenzies	name=Frenzies	type=Melee	total=1100	hits=1	crit=1	dps=1100	best=1100	max=1100	min=1100
+  sub	owner=Corvyn	key=Slashes	name=Slashes	type=Melee	total=700	hits=1	crit=0	dps=700	best=700	max=700	min=700
+flat	name=Vael	rank=4	orig=Vael	class=Druid	group=0	top=True	total=1430	dps=1430	sdps=238	pctRaid=8.68	secs=1	hits=2	max=780	min=650	best=1430	avg=715	avgCrit=0	avgLucky=0	critRate=0	luckRate=0	accRate=100	hitRate=100	bane=0	special=	|meleeHits=1	spellHits=1	meleeAttempts=1	miss=0	block=0	dodge=0	parry=0	riposte=0	absorb=0	invm=0	flurry=0	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=780
+  sub	owner=Vael	key=Bashes	name=Bashes	type=Melee	total=650	hits=1	crit=0	dps=650	best=650	max=650	min=650
+  sub	owner=Vael	key=Direct Damage=Crush of Doom	name=Crush of Doom	type=Direct Damage	total=780	hits=1	crit=0	dps=780	best=780	max=780	min=780
+flat-child	name=Akira`s pet	rank=5	orig=Akira`s pet	class=	group=0	top=False	total=750	dps=187	sdps=125	pctRaid=4.55	secs=4	hits=2	max=500	min=250	best=750	avg=375	avgCrit=500	avgLucky=0	critRate=50	luckRate=0	accRate=100	hitRate=66.67	bane=0	special=	|meleeHits=2	spellHits=0	meleeAttempts=3	miss=0	block=0	dodge=0	parry=1	riposte=0	absorb=0	invm=0	flurry=0	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=500
+  sub	owner=Akira`s pet	key=Bites	name=Bites	type=Melee	total=750	hits=2	crit=1	dps=187	best=750	max=500	min=250
+  sub	owner=Akira`s pet	key=Hits	name=Hits	type=Parry	total=0	hits=0	crit=0	dps=0	best=0	max=0	min=0
+class	Akira	
+class	Akira`s pet	
+class	Bryn	Cleric
+class	Corvyn	Berserker
+class	Vael	Druid
+
+states	Damage|STARTED|groups=0|uniqueGroups=0|limited=False ; Damage|COMPLETED|groups=1|uniqueGroups=1|limited=False
+datapoints	UPDATE|points=16|selected=0|selectedGroups=0
+### window-3-9
+title	Combined (3): A training dummy in 6s, 9.43K Damage @1.57K	Combined (3): A training dummy in 6s
+raid	name=Totals	rank=0	orig=Totals	class=	group=0	top=True	total=9430	dps=1571	sdps=0	pctRaid=0	secs=6	hits=0	max=0	min=0	best=0	avg=0	avgCrit=0	avgLucky=0	critRate=0	luckRate=0	accRate=0	hitRate=0	bane=0	special=	|meleeHits=0	spellHits=0	meleeAttempts=0	miss=0	block=0	dodge=0	parry=0	riposte=0	absorb=0	invm=0	flurry=0	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=0
+uniqueClasses	Berserker,Cleric,Druid
+list	name=Bryn	rank=1	orig=Bryn	class=Cleric	group=2	top=True	total=4500	dps=2250	sdps=750	pctRaid=47.72	secs=2	hits=3	max=2400	min=900	best=2400	avg=1500	avgCrit=2400	avgLucky=0	critRate=33.33	luckRate=0	accRate=0	hitRate=0	bane=0	special=	|meleeHits=0	spellHits=3	meleeAttempts=0	miss=0	block=0	dodge=0	parry=0	riposte=0	absorb=0	invm=0	flurry=0	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=2400
+list	name=Corvyn	rank=2	orig=Corvyn	class=Berserker	group=0	top=True	total=1800	dps=1800	sdps=300	pctRaid=19.09	secs=1	hits=2	max=1100	min=700	best=1800	avg=900	avgCrit=1100	avgLucky=0	critRate=50	luckRate=0	accRate=100	hitRate=100	bane=0	special=	|meleeHits=2	spellHits=0	meleeAttempts=2	miss=0	block=0	dodge=0	parry=0	riposte=0	absorb=0	invm=0	flurry=0	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=1100
+list	name=Vael	rank=3	orig=Vael	class=Druid	group=0	top=True	total=1430	dps=1430	sdps=238	pctRaid=15.16	secs=1	hits=2	max=780	min=650	best=1430	avg=715	avgCrit=0	avgLucky=0	critRate=0	luckRate=0	accRate=100	hitRate=100	bane=0	special=	|meleeHits=1	spellHits=1	meleeAttempts=1	miss=0	block=0	dodge=0	parry=0	riposte=0	absorb=0	invm=0	flurry=0	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=780
+list	name=Kuro	rank=4	orig=Kuro	class=	group=0	top=True	total=1400	dps=1400	sdps=233	pctRaid=14.85	secs=1	hits=2	max=800	min=600	best=1400	avg=700	avgCrit=0	avgLucky=0	critRate=0	luckRate=0	accRate=100	hitRate=100	bane=0	special=	|meleeHits=2	spellHits=0	meleeAttempts=2	miss=0	block=0	dodge=0	parry=0	riposte=0	absorb=0	invm=0	flurry=1	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=800
+list	name=Akira +Pets	rank=5	orig=Akira	class=	group=1	top=True	total=300	dps=50	sdps=50	pctRaid=3.18	secs=6	hits=1	max=300	min=300	best=300	avg=300	avgCrit=0	avgLucky=0	critRate=0	luckRate=0	accRate=100	hitRate=50	bane=0	special=	|meleeHits=1	spellHits=0	meleeAttempts=2	miss=0	block=0	dodge=0	parry=1	riposte=0	absorb=0	invm=0	flurry=0	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=300
+child	parent=Akira +Pets	order=0	name=Akira`s pet	total=300	shareOfParent=100
+flat	name=Bryn	rank=1	orig=Bryn	class=Cleric	group=2	top=True	total=4500	dps=2250	sdps=750	pctRaid=47.72	secs=2	hits=3	max=2400	min=900	best=2400	avg=1500	avgCrit=2400	avgLucky=0	critRate=33.33	luckRate=0	accRate=0	hitRate=0	bane=0	special=	|meleeHits=0	spellHits=3	meleeAttempts=0	miss=0	block=0	dodge=0	parry=0	riposte=0	absorb=0	invm=0	flurry=0	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=2400
+  sub	owner=Bryn	key=Direct Damage=Call of Flame Rk. XII	name=Call of Flame Rk. XII	type=Direct Damage	total=1200	hits=1	crit=0	dps=1200	best=1200	max=1200	min=1200
+  sub	owner=Bryn	key=Direct Damage=Crush of Doom	name=Crush of Doom	type=Direct Damage	total=3300	hits=2	crit=1	dps=1650	best=3300	max=2400	min=900
+flat	name=Corvyn	rank=2	orig=Corvyn	class=Berserker	group=0	top=True	total=1800	dps=1800	sdps=300	pctRaid=19.09	secs=1	hits=2	max=1100	min=700	best=1800	avg=900	avgCrit=1100	avgLucky=0	critRate=50	luckRate=0	accRate=100	hitRate=100	bane=0	special=	|meleeHits=2	spellHits=0	meleeAttempts=2	miss=0	block=0	dodge=0	parry=0	riposte=0	absorb=0	invm=0	flurry=0	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=1100
+  sub	owner=Corvyn	key=Frenzies	name=Frenzies	type=Melee	total=1100	hits=1	crit=1	dps=1100	best=1100	max=1100	min=1100
+  sub	owner=Corvyn	key=Slashes	name=Slashes	type=Melee	total=700	hits=1	crit=0	dps=700	best=700	max=700	min=700
+flat	name=Vael	rank=3	orig=Vael	class=Druid	group=0	top=True	total=1430	dps=1430	sdps=238	pctRaid=15.16	secs=1	hits=2	max=780	min=650	best=1430	avg=715	avgCrit=0	avgLucky=0	critRate=0	luckRate=0	accRate=100	hitRate=100	bane=0	special=	|meleeHits=1	spellHits=1	meleeAttempts=1	miss=0	block=0	dodge=0	parry=0	riposte=0	absorb=0	invm=0	flurry=0	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=780
+  sub	owner=Vael	key=Bashes	name=Bashes	type=Melee	total=650	hits=1	crit=0	dps=650	best=650	max=650	min=650
+  sub	owner=Vael	key=Direct Damage=Crush of Doom	name=Crush of Doom	type=Direct Damage	total=780	hits=1	crit=0	dps=780	best=780	max=780	min=780
+flat	name=Kuro	rank=4	orig=Kuro	class=	group=0	top=True	total=1400	dps=1400	sdps=233	pctRaid=14.85	secs=1	hits=2	max=800	min=600	best=1400	avg=700	avgCrit=0	avgLucky=0	critRate=0	luckRate=0	accRate=100	hitRate=100	bane=0	special=	|meleeHits=2	spellHits=0	meleeAttempts=2	miss=0	block=0	dodge=0	parry=0	riposte=0	absorb=0	invm=0	flurry=1	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=800
+  sub	owner=Kuro	key=Hits	name=Hits	type=Melee	total=1400	hits=2	crit=0	dps=1400	best=1400	max=800	min=600
+flat-child	name=Akira`s pet	rank=5	orig=Akira`s pet	class=	group=0	top=False	total=300	dps=50	sdps=50	pctRaid=3.18	secs=6	hits=1	max=300	min=300	best=300	avg=300	avgCrit=0	avgLucky=0	critRate=0	luckRate=0	accRate=100	hitRate=50	bane=0	special=	|meleeHits=1	spellHits=0	meleeAttempts=2	miss=0	block=0	dodge=0	parry=1	riposte=0	absorb=0	invm=0	flurry=0	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=300
+  sub	owner=Akira`s pet	key=Bites	name=Bites	type=Melee	total=300	hits=1	crit=0	dps=50	best=300	max=300	min=300
+  sub	owner=Akira`s pet	key=Hits	name=Hits	type=Parry	total=0	hits=0	crit=0	dps=0	best=0	max=0	min=0
+class	Akira	
+class	Akira`s pet	
+class	Bryn	Cleric
+class	Corvyn	Berserker
+class	Kuro	
+class	Vael	Druid
+
+states	Damage|STARTED|groups=0|uniqueGroups=0|limited=False ; Damage|COMPLETED|groups=1|uniqueGroups=1|limited=False
+datapoints	UPDATE|points=11|selected=0|selectedGroups=0
+### window-widened
+title	Combined (3): A training dummy in 15s, 31.28K Damage @2.08K	Combined (3): A training dummy in 15s
+raid	name=Totals	rank=0	orig=Totals	class=	group=0	top=True	total=31280	dps=2085	sdps=0	pctRaid=0	secs=15	hits=0	max=0	min=0	best=0	avg=0	avgCrit=0	avgLucky=0	critRate=0	luckRate=0	accRate=0	hitRate=0	bane=0	special=	|meleeHits=0	spellHits=0	meleeAttempts=0	miss=0	block=0	dodge=0	parry=0	riposte=0	absorb=0	invm=0	flurry=0	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=0
+uniqueClasses	Berserker,Cleric,Druid
+list	name=Akira +Pets	rank=1	orig=Akira	class=	group=1	top=True	total=14100	dps=1084	sdps=940	pctRaid=45.08	secs=13	hits=11	max=3000	min=250	best=6500	avg=1281	avgCrit=1825	avgLucky=0	critRate=36.36	luckRate=0	accRate=100	hitRate=78.57	bane=0	special=	|meleeHits=11	spellHits=0	meleeAttempts=14	miss=0	block=1	dodge=1	parry=1	riposte=0	absorb=0	invm=0	flurry=1	rampage=1	strike=0	twin=0	lucky=0	bows=2	maxPot=3000
+list	name=Bryn	rank=2	orig=Bryn	class=Cleric	group=2	top=True	total=9550	dps=1591	sdps=636	pctRaid=30.53	secs=6	hits=5	max=3300	min=900	best=3300	avg=1910	avgCrit=2850	avgLucky=0	critRate=40	luckRate=0	accRate=0	hitRate=0	bane=0	special=	|meleeHits=0	spellHits=4	meleeAttempts=0	miss=0	block=0	dodge=0	parry=0	riposte=0	absorb=0	invm=0	flurry=0	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=3300
+list	name=Corvyn	rank=3	orig=Corvyn	class=Berserker	group=0	top=True	total=3300	dps=1650	sdps=220	pctRaid=10.55	secs=2	hits=3	max=1500	min=700	best=1800	avg=1100	avgCrit=1100	avgLucky=0	critRate=33.33	luckRate=0	accRate=100	hitRate=100	bane=0	special=	|meleeHits=3	spellHits=0	meleeAttempts=3	miss=0	block=0	dodge=0	parry=0	riposte=0	absorb=0	invm=0	flurry=0	rampage=0	strike=1	twin=0	lucky=0	bows=0	maxPot=1500
+list	name=Kuro	rank=4	orig=Kuro	class=	group=0	top=True	total=1950	dps=975	sdps=130	pctRaid=6.23	secs=2	hits=3	max=800	min=550	best=1400	avg=650	avgCrit=0	avgLucky=0	critRate=0	luckRate=0	accRate=100	hitRate=100	bane=0	special=	|meleeHits=3	spellHits=0	meleeAttempts=3	miss=0	block=0	dodge=0	parry=0	riposte=0	absorb=0	invm=0	flurry=1	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=800
+list	name=Vael	rank=6	orig=Vael	class=Druid	group=0	top=True	total=1430	dps=1430	sdps=95	pctRaid=4.57	secs=1	hits=2	max=780	min=650	best=1430	avg=715	avgCrit=0	avgLucky=0	critRate=0	luckRate=0	accRate=100	hitRate=100	bane=0	special=	|meleeHits=1	spellHits=1	meleeAttempts=1	miss=0	block=0	dodge=0	parry=0	riposte=0	absorb=0	invm=0	flurry=0	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=780
+list	name=Unattributed Damage	rank=7	orig=Unattributed Damage	class=	group=0	top=True	total=950	dps=950	sdps=63	pctRaid=3.04	secs=1	hits=1	max=950	min=950	best=950	avg=950	avgCrit=0	avgLucky=0	critRate=0	luckRate=0	accRate=0	hitRate=0	bane=0	special=	|meleeHits=0	spellHits=0	meleeAttempts=0	miss=0	block=0	dodge=0	parry=0	riposte=0	absorb=0	invm=0	flurry=0	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=950
+child	parent=Akira +Pets	order=0	name=Akira	total=12600	shareOfParent=89.36
+child	parent=Akira +Pets	order=1	name=Akira`s pet	total=1500	shareOfParent=10.64
+flat-child	name=Akira	rank=1	orig=Akira	class=	group=1	top=False	total=12600	dps=969	sdps=840	pctRaid=40.28	secs=13	hits=7	max=3000	min=1000	best=6500	avg=1800	avgCrit=2266	avgLucky=0	critRate=42.86	luckRate=0	accRate=100	hitRate=77.78	bane=0	special=	|meleeHits=7	spellHits=0	meleeAttempts=9	miss=0	block=1	dodge=1	parry=0	riposte=0	absorb=0	invm=0	flurry=1	rampage=1	strike=0	twin=0	lucky=0	bows=2	maxPot=3000
+  sub	owner=Akira	key=Hits	name=Hits	type=Block	total=0	hits=0	crit=0	dps=0	best=0	max=0	min=0
+  sub	owner=Akira	key=Shoots	name=Shoots	type=Melee	total=2600	hits=2	crit=1	dps=2600	best=2600	max=1300	min=1300
+  sub	owner=Akira	key=Slashes	name=Slashes	type=Melee	total=10000	hits=5	crit=2	dps=3333	best=10000	max=3000	min=1000
+flat	name=Bryn	rank=2	orig=Bryn	class=Cleric	group=2	top=True	total=9550	dps=1591	sdps=636	pctRaid=30.53	secs=6	hits=5	max=3300	min=900	best=3300	avg=1910	avgCrit=2850	avgLucky=0	critRate=40	luckRate=0	accRate=0	hitRate=0	bane=0	special=	|meleeHits=0	spellHits=4	meleeAttempts=0	miss=0	block=0	dodge=0	parry=0	riposte=0	absorb=0	invm=0	flurry=0	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=3300
+  sub	owner=Bryn	key=Damage Shield	name=Damage Shield	type=Damage Shield	total=1750	hits=1	crit=0	dps=1750	best=1750	max=1750	min=1750
+  sub	owner=Bryn	key=Direct Damage=Call of Flame Rk. XII	name=Call of Flame Rk. XII	type=Direct Damage	total=1200	hits=1	crit=0	dps=1200	best=1200	max=1200	min=1200
+  sub	owner=Bryn	key=Direct Damage=Crush of Doom	name=Crush of Doom	type=Direct Damage	total=6600	hits=3	crit=2	dps=2200	best=6600	max=3300	min=900
+flat	name=Corvyn	rank=3	orig=Corvyn	class=Berserker	group=0	top=True	total=3300	dps=1650	sdps=220	pctRaid=10.55	secs=2	hits=3	max=1500	min=700	best=1800	avg=1100	avgCrit=1100	avgLucky=0	critRate=33.33	luckRate=0	accRate=100	hitRate=100	bane=0	special=	|meleeHits=3	spellHits=0	meleeAttempts=3	miss=0	block=0	dodge=0	parry=0	riposte=0	absorb=0	invm=0	flurry=0	rampage=0	strike=1	twin=0	lucky=0	bows=0	maxPot=1500
+  sub	owner=Corvyn	key=Frenzies	name=Frenzies	type=Melee	total=2600	hits=2	crit=1	dps=1300	best=2600	max=1500	min=1100
+  sub	owner=Corvyn	key=Slashes	name=Slashes	type=Melee	total=700	hits=1	crit=0	dps=700	best=700	max=700	min=700
+flat	name=Kuro	rank=4	orig=Kuro	class=	group=0	top=True	total=1950	dps=975	sdps=130	pctRaid=6.23	secs=2	hits=3	max=800	min=550	best=1400	avg=650	avgCrit=0	avgLucky=0	critRate=0	luckRate=0	accRate=100	hitRate=100	bane=0	special=	|meleeHits=3	spellHits=0	meleeAttempts=3	miss=0	block=0	dodge=0	parry=0	riposte=0	absorb=0	invm=0	flurry=1	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=800
+  sub	owner=Kuro	key=Hits	name=Hits	type=Melee	total=1950	hits=3	crit=0	dps=975	best=1950	max=800	min=550
+flat-child	name=Akira`s pet	rank=5	orig=Akira`s pet	class=	group=0	top=False	total=1500	dps=187	sdps=100	pctRaid=4.8	secs=8	hits=4	max=500	min=250	best=750	avg=375	avgCrit=500	avgLucky=0	critRate=25	luckRate=0	accRate=100	hitRate=80	bane=0	special=	|meleeHits=4	spellHits=0	meleeAttempts=5	miss=0	block=0	dodge=0	parry=1	riposte=0	absorb=0	invm=0	flurry=0	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=500
+  sub	owner=Akira`s pet	key=Bites	name=Bites	type=Melee	total=1500	hits=4	crit=1	dps=187	best=1500	max=500	min=250
+  sub	owner=Akira`s pet	key=Hits	name=Hits	type=Parry	total=0	hits=0	crit=0	dps=0	best=0	max=0	min=0
+flat	name=Vael	rank=6	orig=Vael	class=Druid	group=0	top=True	total=1430	dps=1430	sdps=95	pctRaid=4.57	secs=1	hits=2	max=780	min=650	best=1430	avg=715	avgCrit=0	avgLucky=0	critRate=0	luckRate=0	accRate=100	hitRate=100	bane=0	special=	|meleeHits=1	spellHits=1	meleeAttempts=1	miss=0	block=0	dodge=0	parry=0	riposte=0	absorb=0	invm=0	flurry=0	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=780
+  sub	owner=Vael	key=Bashes	name=Bashes	type=Melee	total=650	hits=1	crit=0	dps=650	best=650	max=650	min=650
+  sub	owner=Vael	key=Direct Damage=Crush of Doom	name=Crush of Doom	type=Direct Damage	total=780	hits=1	crit=0	dps=780	best=780	max=780	min=780
+flat	name=Unattributed Damage	rank=7	orig=Unattributed Damage	class=	group=0	top=True	total=950	dps=950	sdps=63	pctRaid=3.04	secs=1	hits=1	max=950	min=950	best=950	avg=950	avgCrit=0	avgLucky=0	critRate=0	luckRate=0	accRate=0	hitRate=0	bane=0	special=	|meleeHits=0	spellHits=0	meleeAttempts=0	miss=0	block=0	dodge=0	parry=0	riposte=0	absorb=0	invm=0	flurry=0	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=950
+  sub	owner=Unattributed Damage	key=Damage Shield	name=Damage Shield	type=Damage Shield	total=950	hits=1	crit=0	dps=950	best=950	max=950	min=950
+class	Akira	
+class	Akira`s pet	
+class	Bryn	Cleric
+class	Corvyn	Berserker
+class	Kuro	
+class	Unattributed Damage	
+class	Vael	Druid
+
+states	Damage|STARTED|groups=0|uniqueGroups=0|limited=False ; Damage|COMPLETED|groups=2|uniqueGroups=1|limited=False
+datapoints	UPDATE|points=28|selected=0|selectedGroups=0
