@@ -116,7 +116,16 @@ namespace EQLogParser
           _lastStatsEvent = null;
           _selected = [.. options.Npcs];
           _selected.Sort(static (a, b) => a.Id.CompareTo(b.Id));
-          _title = options?.Npcs.Count > 0 ? options.Npcs[0].Name : null;
+
+          /*
+           * The title comes from the SORTED selection, never from `options.Npcs[0]`. The sort above is the legacy law - a
+           * selection's fights are counted in time order, and row ids are handed out in the fight list's own display order
+           * (`published[i].Id = i + 1`), so the lowest id IS the first row of the list. Reading element zero of the caller's
+           * raw input instead made the title a property of however the grid happened to enumerate its selection: a whole-capture
+           * select-all then printed a different NPC every time (field report, `EQLogParser.log`: three select-alls over identical
+           * rows, three titles), while legacy printed the top row 100% of the time because its selection arrived in list order.
+           */
+          _title = _selected.Count > 0 ? _selected[0].Name : null;
 
           var healingValidator = new HealingValidator(
             AppSettings.IsAoEHealingEnabled, AppSettings.IsHealingSwarmPetsEnabled);

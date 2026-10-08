@@ -507,6 +507,15 @@ namespace EQLogParser
         if (item is DerivedFightRow { IsDivider: false } row && row.Fight is { } fight) selected.Add(fight);
       }
 
+      /*
+       * Order the grid's way is not an order at all: `SelectedItems` enumerates in whatever sequence the selection operation
+       * touched the rows, and a Ctrl+A over 708 rows produced a different first element on every gesture (measured in the field:
+       * same rows selected, different name in the boards' title line each time). The builders count a selection in TIME order -
+       * they re-sort by Id themselves for exactly that reason, since ids are handed out in the fight list's own display order
+       * (`published[i].Id = i + 1`) - so hand them that order here too: everything downstream (legacy's sort, the title line, and
+       * SummaryKeyFor, where a re-selection of the same set in another order should not read as a new question) gets one answer.
+       */
+      selected.Sort(static (a, b) => a.Id.CompareTo(b.Id));
       return selected;
     }
 
