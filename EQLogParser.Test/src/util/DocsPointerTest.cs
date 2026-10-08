@@ -62,6 +62,45 @@ public class DocsPointerTest
   }
 
   /*
+   * A heading appears at most once — the doc may not contain its own body twice.
+   *
+   * This is not tidiness. `docs/DesignNotes.md` grew from 9,053 lines to 15,610 in one commit because an edit script spliced text with
+   * `s[:start] + new + s[end:]` where the END anchor was a heading that occurs EARLIER in the file than the START anchor: the slice
+   * re-emitted the 6,544 lines between them, and every one of those sections then existed twice. The pointer check above could not see it,
+   * because its matching is deliberately loose — a citation resolves against ANY copy — so a doubled notes file passes every existing
+   * assertion while breaking the two things the document is for: searching ("where is the charm rule?" answers twice, in different places,
+   * and only one of them gets updated) and history reading (the stale copy still asserted `MaxOutcomes` stays 100,000 three commits after
+   * the ceiling became a budget). A slice cannot be prevented from doing this again; the doubled output can be caught on the way in.
+   */
+  [TestMethod]
+  public void DesignNotesHasNoRepeatedHeading()
+  {
+    var root = FindRepoRoot();
+    if (root is null) Assert.Inconclusive("docs/DesignNotes.md was not found above the test binaries.");
+
+    var lines = File.ReadAllLines(Path.Combine(root!, "docs", "DesignNotes.md"));
+    var where = new Dictionary<string, List<int>>(StringComparer.OrdinalIgnoreCase);
+
+    for (var i = 0; i < lines.Length; i++)
+    {
+      // Level 2 and deeper: `#` is the document's own title, and a heading's indentation is markup, not part of its name.
+      if (!lines[i].StartsWith("##", StringComparison.Ordinal)) continue;
+
+      var title = lines[i].Trim().ToLowerInvariant();
+      if (title.Length == 0) continue;
+      if (!where.TryGetValue(title, out var hits)) where[title] = hits = [];
+      hits.Add(i + 1);
+    }
+
+    var repeats = where.Where(static kv => kv.Value.Count > 1).ToList();
+    Assert.AreEqual(0,
+                    repeats.Count,
+                    $"{repeats.Count} heading(s) appear more than once in docs/DesignNotes.md, which is how a document silently grows "
+                    + "into two copies of itself (a splice whose end anchor matched an earlier heading re-emitted 6,544 lines this way).\n"
+                    + string.Join("\n", repeats.Select(kv => $"  x{kv.Value.Count} at lines {string.Join(", ", kv.Value)}: {kv.Key}")));
+  }
+
+  /*
    * The comparison key: four words, lower-cased. Four because two is enough for a coincidence ("A fight", "The name")
    * and six would fail on every paraphrase; paraphrasing is what these citations do.
    *
