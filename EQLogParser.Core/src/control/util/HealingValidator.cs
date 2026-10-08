@@ -17,6 +17,14 @@ namespace EQLogParser
       _swarmPetsEnabled = swarmPetsEnabled;
     }
 
+    /*
+     * Whether the group-AE / MGB counting in the full overload does anything: it is the ONLY writer of the spell-count and ignore
+     * collections callers hand in, and it runs solely when "Count AoE healing" is OFF. A caller that asks this once per build can skip
+     * allocating them per record — which is what HealingStatsBuilder does, after measuring a dictionary allocated per heal line
+     * (2.65 M of them over a farm night) for a setting most players never turn off.
+     */
+    internal bool TracksGroupAe => !_aoeEnabled;
+
     /// <summary>
     /// Validates if the heal record should be processed based on current settings.
     /// Note: AOE detection requires EQDataStore lookup which is app-specific.

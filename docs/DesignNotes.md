@@ -9053,6 +9053,45 @@ it further away. Pinned by `ASelectedRunningEncounterIsDeferredAndThenRuns`, `AW
 `ABiggerAskWaitsLongerThanASmallerOne`, `ADeferredAskLeavesTheClockWhereItWas`, `TheEstimatorSitsOnTheMeasuredBoards`; the surface-side design is
 docs/summary-refresh-notification.md §14.
 
+### The heal window's second pass: what was actually being paid for (2026-11)
+
+Healing was the biggest single phase in the app (`window ~2.7-3.2 s` of a whole-night build), and reading the loop found no arithmetic to
+optimize — four things being bought per heal LINE that nothing needed:
+
+- **A dictionary per record.** `currentSpellCounts = []` ran for every heal, and its history dictionary was rebuilt alongside it, all of it
+  serving only group-AE/MGB filtering, whose sole writer runs when **"Count AoE healing" is OFF**. A farm night (2,670,809 heals) allocated
+  ~2.7 M dictionaries to answer a question the setting said not to ask. Now `HealingValidator.TracksGroupAe` is asked once per build and those
+  collections exist only when the setting wants them. Same for pass 2's composite ignore-key STRING, which was built per record to query a map
+  that could only be empty.
+- **Two `ActionGroup`s per record.** Pass 1 wrapped each heal in its own group; pass 2 wrapped the survivors in a second one. The log writes one
+  heal per line and many lines per second, so those groups are one record wide — two objects plus two lists, 5.3 M of them. Pass 1 now hands over
+  the `(time, record)` pair and nothing else.
+- **Six `Parallel.ForEach` per selection segment** to merge dictionaries keyed by the healers active inside one second — a handful of entries each,
+  ~26,700 dispatches over a night whose selection holds 4,452 segments. Sequential.
+- **The registry asked who a name is, once per record.** `IsPetOrPlayerOrMerc` + `IsPossiblePlayerName` for 2.65 M records, over a few hundred distinct
+  names; memoized per build. A name the parse thread learned mid-build used to be counted from that moment and not before — an answer that depended on
+  thread timing — and the memo makes it one answer per pass, which is the reproducible direction.
+
+Measured on the two captures this work has been using (healing builder only; materialization excluded on both sides):
+
+| selection | Incogitable (403,500 heals) | `eqlog_Kizant_xegony-09-03-26.txt` (2,647,774 heals) |
+|---|---|---|
+| all rows | 649–720 ms → **385–400 ms** | 3,379–3,666 ms → **2,171–2,238 ms** |
+| biggest single row | 234–236 ms → **126–133 ms** | 312–692 ms → **187–308 ms** |
+| newest 20 rows (a live meter) | 1–2 ms → **1 ms** | 1–2 ms → **0 ms** |
+
+Roughly a third off the phase that was left standing, biggest win where there is most healing; a live-shaped selection was already single-digit.
+What remains in healing is the six time-segment maps per kept record (`StatsUtil.UpdateTimeSegments` × 6, ~16 M dictionary writes over a night) —
+that is item **B** ("one measurement per outcome, applied to N targets") and it is shared with the damage walk.
+
+**The law the restructure leans on, now pinned separately:** the passes stay two because a group-AE sighting late in a segment marks records
+EARLIER in the same cast as ignored, and pass 2 asks after all of pass 1 has answered — merging them into one loop would keep heals the current
+builder drops. `AGroupHealReachingSevenPeopleIsMarkedOnlyWhenAoeHealingIsOff` pins the reach-back (the second that crosses the threshold AND the
+seconds behind it), and `TheBoardDropsTheMarkedCastAndKeepsAnOrdinaryHeal` pins the end-to-end figures — seven people under one group cast leaves
+**0** on the board with AOE healing off and 700 with it on, six people leaves 600 either way, so a partial reach-back fails by name rather than
+reading as "a little less healing". The fixture spell is `Ancestral Aid VI` (spells.txt Target = Targetgroup(41), MGB set, negative damage); the
+golden board runs with AOE on, which is why this path needed its own tests.
+
 ## Instrumenting the UI thread
 
 Reported often, impossible to reproduce on demand: the combat numbers stop for a second or two in the middle of a raid, then carry on

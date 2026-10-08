@@ -166,8 +166,27 @@ namespace EQLogParser
             var cursor = 0;
 
             /*
-             * Phases named and timed like the other two boards (StatsBuildTrace.Stage).
+             * Two things this pass used to pay per heal LINE, on a setting most players never touch:
+             *
+             *   - `currentSpellCounts = []` allocated a fresh dictionary for every record (a farm night: 2,670,809 of them), and the
+             *     history dictionary it is filed into was rebuilt per record too. Both exist only to serve group-AE/MGB filtering, which
+             *     is the ONLY writer into them, and it runs only when "Count AoE healing" is OFF (`HealingValidator.TracksGroupAe`).
+             *   - pass 2 built a composite ignore-key STRING per record to ask a collection that could only be empty in that same case.
+             *
+             * They are now allocated once per segment, and only when the setting asks. Same rules, same order, nothing counted
+             * differently - just no garbage for a question nobody is asking (docs/DesignNotes.md -> "Where a board build's time actually goes").
              */
+            var tracksGroupAe = healingValidator.TracksGroupAe;
+
+            /*
+             * "Is the name being healed one of ours?" is three registry lookups plus a name-shape scan, and it was asked once per heal
+             * line - 2.65 M times over a farm night, for a few hundred distinct names. The answer cannot change inside one build (the
+             * roster is written between builds, not during a scan), so it is asked once per name. A name the registry learns WHILE this
+             * build runs used to be counted from that moment on and not before — an answer that depends on thread timing — and the memo
+             * makes it one answer for the whole pass, which is the reproducible direction.
+             */
+            var oursByName = new Dictionary<string, bool>();
+
             foreach (var segment in CollectionsMarshal.AsSpan(_raidTotals.Ranges.TimeSegments))
             {
               var beginTime = segment.BeginTime;
@@ -199,7 +218,80 @@ namespace EQLogParser
                 }
               }
 
-              var updatedHeals = new List<ActionGroup>();
+              /*
+               * Pass 1 keeps the records this segment accepts — as PAIRS. It used to wrap each one in its own `ActionGroup`, then wrap the
+               * survivors in a SECOND `ActionGroup` one loop later: two objects and two lists per heal line for a group that is one record
+               * wide, because the log writes one heal per line and per second gets many lines.
+               *
+               * The passes stay separate ON PURPOSE. A group-AE sighting late in a segment marks records EARLIER in the same second (same
+               * healer and spell) as ignored, and pass 2 asks that question after all of pass 1 has answered it. Merging the two loops would
+               * keep heals the current builder drops, so `kept` carries pass 1's order exactly.
+               */
+              List<(double Time, HealRecord Record)> kept = null;
+
+              Dictionary<string, HashSet<string>> currentSpellCounts = null;
+              Dictionary<double, Dictionary<string, HashSet<string>>> previousSpellCounts = null;
+              Dictionary<string, byte> ignoreRecords = null;
+              var currentTime = double.NaN;
+
+              // The cursor sits on the first heal this segment could still want; advancing it is the whole cost of moving between
+              // segments. A segment starting past the last heal leaves nothing to do, exactly as FindIndex returning -1 used to.
+              while (cursor < allHeals.Count && allHeals[cursor].Item1 < beginTime) cursor++;
+
+              for (var j = cursor; j < allHeals.Count && allHeals[j].Item1 <= endTime; j++)
+              {
+                var healTime = allHeals[j].Item1;
+                var record = allHeals[j].Item2;
+
+                if (tracksGroupAe)
+                {
+                  currentSpellCounts ??= [];
+                  previousSpellCounts ??= [];
+                  ignoreRecords ??= [];
+
+                  if (currentSpellCounts.Count > 0)
+                  {
+                    previousSpellCounts[currentTime] = currentSpellCounts;
+                  }
+
+                  currentTime = healTime;
+                  currentSpellCounts = [];
+
+                  foreach (var timeKey in previousSpellCounts.Keys)
+                  {
+                    if (previousSpellCounts.ContainsKey(timeKey))
+                    {
+                      if (!double.IsNaN(currentTime) && (currentTime - timeKey) > 7)
+                      {
+                        previousSpellCounts.Remove(timeKey);
+                      }
+                    }
+                  }
+                }
+
+                if (!CountedAsOurs(oursByName, record.Healed))
+                {
+                  continue;
+                }
+
+                // With the AE counting off, the short overload runs the same swarm-pet rule and writes nothing.
+                var accepted = tracksGroupAe
+                  ? healingValidator.IsValid(healTime, record, currentSpellCounts, previousSpellCounts, ignoreRecords)
+                  : healingValidator.IsValid(healTime, record, ignoreRecords);
+
+                if (accepted)
+                {
+                  (kept ??= []).Add((healTime, record));
+                }
+              }
+
+              if (kept is null)
+              {
+                // Nothing in this segment counted: no groups, no time-segment maps, no merge.
+                continue;
+              }
+
+              var updatedHeals = new List<ActionGroup>(kept.Count);
               var healedByHealerTimeSegments = new Dictionary<string, Dictionary<string, TimeSegment>>();
               var healedBySpellTimeSegments = new Dictionary<string, Dictionary<string, TimeSegment>>();
               var healedByHealerSpellsTimeSegments = new Dictionary<string, Dictionary<string, TimeSegment>>();
@@ -207,99 +299,47 @@ namespace EQLogParser
               var healerSpellTimeSegments = new Dictionary<string, Dictionary<string, TimeSegment>>();
               var healerHealedSpellTimeSegments = new Dictionary<string, Dictionary<string, TimeSegment>>();
 
-              var currentTime = double.NaN;
-              var currentSpellCounts = new Dictionary<string, HashSet<string>>();
-              var previousSpellCounts = new Dictionary<double, Dictionary<string, HashSet<string>>>();
-              var ignoreRecords = new Dictionary<string, byte>();
-              var filtered = new List<ActionGroup>();
-
-              // The cursor sits on the first heal this segment could still want; advancing it is the whole cost of
-              // moving between segments. A segment that starts past the last heal leaves `start == Count` and the
-              // body is skipped, exactly as FindIndex returning -1 used to.
-              while (cursor < allHeals.Count && allHeals[cursor].Item1 < beginTime) cursor++;
-              var start = cursor;
-              if (start < allHeals.Count)
+              /*
+               * Pass 2: turn the kept pairs into the groups the board reads, and file the time segments each pane asks for. Six maps per
+               * record because six questions are asked downstream (healer->healed, healer->spell, healer+healed->spell, and the same three
+               * transposed); the composite `healer|healed` key used to be concatenated TWICE per record — once is enough, and it is the only
+               * string this pass needs beyond the record's own.
+               */
+              foreach (var (healTime, record) in kept)
               {
-                for (var j = start; j < allHeals.Count; j++)
+                if (ignoreRecords is not null &&
+                  ignoreRecords.ContainsKey(healTime + "|" + record.Healer + "|" + record.SubType))
                 {
-                  // Ascending list: the first heal past this window ends it. Without the break every segment ran to
-                  // the end of the capture, which is the other half of the quadratic above.
-                  if (allHeals[j].Item1 > endTime) break;
-
-                  if (allHeals[j].Item1 >= beginTime && allHeals[j].Item1 <= endTime)
-                  {
-                    // copy
-                    var newBlock = new ActionGroup { BeginTime = allHeals[j].Item1 };
-                    filtered.Add(newBlock);
-
-                    if (currentSpellCounts.Count > 0)
-                    {
-                      previousSpellCounts[currentTime] = currentSpellCounts;
-                    }
-
-                    currentTime = allHeals[j].Item1;
-                    currentSpellCounts = [];
-
-                    foreach (var timeKey in previousSpellCounts.Keys)
-                    {
-                      if (previousSpellCounts.ContainsKey(timeKey))
-                      {
-                        if (!double.IsNaN(currentTime) && (currentTime - timeKey) > 7)
-                        {
-                          previousSpellCounts.Remove(timeKey);
-                        }
-                      }
-                    }
-
-                    if (PlayerRegistry.Instance.IsPetOrPlayerOrMerc(allHeals[j].Item2.Healed) ||
-                      PlayerRegistry.IsPossiblePlayerName(allHeals[j].Item2.Healed))
-                    {
-                      if (healingValidator.IsValid(allHeals[j].Item1, allHeals[j].Item2, currentSpellCounts, previousSpellCounts, ignoreRecords))
-                      {
-                        newBlock.Actions.Add(allHeals[j].Item2);
-                      }
-                    }
-                  }
+                  continue;
                 }
+
+                var updatedHeal = new ActionGroup { BeginTime = healTime };
+                updatedHeal.Actions.Add(record);
+                updatedHeals.Add(updatedHeal);
+
+                var spellNameKey = StatsUtil.CreateRecordKey(record.Type, record.SubType);
+                var healerHealedKey = record.Healer + "|" + record.Healed;
+
+                // store substats and substats2 which is based on the player that was healed
+                StatsUtil.UpdateTimeSegments(null, healedByHealerTimeSegments, record.Healer, record.Healed, healTime);
+                StatsUtil.UpdateTimeSegments(null, healedBySpellTimeSegments, spellNameKey, record.Healed, healTime);
+                StatsUtil.UpdateTimeSegments(null, healedByHealerSpellsTimeSegments, spellNameKey, healerHealedKey, healTime);
+                StatsUtil.UpdateTimeSegments(null, healerHealedTimeSegments, record.Healed, record.Healer, healTime);
+                StatsUtil.UpdateTimeSegments(null, healerSpellTimeSegments, spellNameKey, record.Healer, healTime);
+                StatsUtil.UpdateTimeSegments(null, healerHealedSpellTimeSegments, spellNameKey, healerHealedKey, healTime);
               }
 
-              foreach (var heal in CollectionsMarshal.AsSpan(filtered))
-              {
-                var updatedHeal = new ActionGroup { BeginTime = heal.BeginTime };
-                foreach (var action in heal.Actions)
-                {
-                  if (action is HealRecord record)
-                  {
-                    var ignoreKey = heal.BeginTime + "|" + record.Healer + "|" + record.SubType;
-                    if (!ignoreRecords.ContainsKey(ignoreKey))
-                    {
-                      updatedHeal.Actions.Add(record);
-                      // store substats and substats2 which is based on the player that was healed
-                      var spellNameKey = StatsUtil.CreateRecordKey(record.Type, record.SubType);
-                      StatsUtil.UpdateTimeSegments(null, healedByHealerTimeSegments, record.Healer, record.Healed, heal.BeginTime);
-                      StatsUtil.UpdateTimeSegments(null, healedBySpellTimeSegments, spellNameKey, record.Healed, heal.BeginTime);
-                      StatsUtil.UpdateTimeSegments(null, healedByHealerSpellsTimeSegments, spellNameKey, record.Healer + "|" + record.Healed, heal.BeginTime);
-                      StatsUtil.UpdateTimeSegments(null, healerHealedTimeSegments, record.Healed, record.Healer, heal.BeginTime);
-                      StatsUtil.UpdateTimeSegments(null, healerSpellTimeSegments, spellNameKey, record.Healer, heal.BeginTime);
-                      StatsUtil.UpdateTimeSegments(null, healerHealedSpellTimeSegments, spellNameKey, record.Healer + "|" + record.Healed, heal.BeginTime);
-                    }
-                  }
-                }
-
-                if (updatedHeal.Actions.Count > 0)
-                {
-                  updatedHeals.Add(updatedHeal);
-                }
-              }
-
-              // healedBy handled in populate healing for tank received healing
-              Parallel.ForEach(healedByHealerTimeSegments, kv => StatsUtil.AddSubTimeEntry(_healedByHealerTimeRanges, kv));
-              Parallel.ForEach(healedBySpellTimeSegments, kv => StatsUtil.AddSubTimeEntry(_healedBySpellTimeRanges, kv));
-              Parallel.ForEach(healedByHealerSpellsTimeSegments, kv => StatsUtil.AddSubTimeEntry(_healedByHealerSpellTimeRanges, kv));
-              // healer handled in compute for regular healing breakdown
-              Parallel.ForEach(healerHealedTimeSegments, kv => StatsUtil.AddSubTimeEntry(_healerHealedTimeRanges, kv));
-              Parallel.ForEach(healerSpellTimeSegments, kv => StatsUtil.AddSubTimeEntry(_healerSpellTimeRanges, kv));
-              Parallel.ForEach(healerHealedSpellTimeSegments, kv => StatsUtil.AddSubTimeEntry(_healerHealedSpellTimeRanges, kv));
+              /*
+               * Merged sequentially. These were `Parallel.ForEach` — SIX dispatches per selection segment, ~26,700 of them over a farm
+               * night whose selection holds 4,452 segments — to fan out dictionaries keyed by the healers active inside one second, i.e. a
+               * handful of entries each. The dispatch cost what the work never paid back.
+               */
+              foreach (var kv in healedByHealerTimeSegments) StatsUtil.AddSubTimeEntry(_healedByHealerTimeRanges, kv);
+              foreach (var kv in healedBySpellTimeSegments) StatsUtil.AddSubTimeEntry(_healedBySpellTimeRanges, kv);
+              foreach (var kv in healedByHealerSpellsTimeSegments) StatsUtil.AddSubTimeEntry(_healedByHealerSpellTimeRanges, kv);
+              foreach (var kv in healerHealedTimeSegments) StatsUtil.AddSubTimeEntry(_healerHealedTimeRanges, kv);
+              foreach (var kv in healerSpellTimeSegments) StatsUtil.AddSubTimeEntry(_healerSpellTimeRanges, kv);
+              foreach (var kv in healerHealedSpellTimeSegments) StatsUtil.AddSubTimeEntry(_healerHealedSpellTimeRanges, kv);
 
               if (updatedHeals.Count > 0)
               {
@@ -509,6 +549,22 @@ namespace EQLogParser
       // nothing to do
       EventsGenerationStatus?.Invoke(new StatsGenerationEvent { Type = Labels.HealParse, State = state });
       FireChartEvent("CLEAR");
+    }
+
+    /*
+     * The board's gate on who can be healed INTO a row: verified player, verified pet or mercenary, or a name that looks like a
+     * person. Memoized per build for the reason named at the call site — see there. A null/empty name is asked directly rather than
+     * cached, because there is nothing to key it under and the answer is always no anyway.
+     */
+    private static bool CountedAsOurs(Dictionary<string, bool> memo, string name)
+    {
+      if (string.IsNullOrEmpty(name)) return false;
+
+      if (memo.TryGetValue(name, out var cached)) return cached;
+
+      var ours = PlayerRegistry.Instance.IsPetOrPlayerOrMerc(name) || PlayerRegistry.IsPossiblePlayerName(name);
+      memo[name] = ours;
+      return ours;
     }
 
     private void ComputeHealingStats(GenerateStatsOptions options, in StatsBuildTrace.Handle trace)
