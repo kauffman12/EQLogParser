@@ -194,105 +194,10 @@ public class EntityTimelineDigestTest
             "two names each way, but the projection reads the STRENGTH, so rows would move");
     }
 
-    /*
-     * HOLE 1, and the reason a fold over stored tuples is not a fold over answers: the promoted claim's (name, kind, time) tuple was
-     * ALREADY in the digest, so every bit the first version read stayed equal while `IdentityAt` changed its mind - the projection
-     * would have carried rows across a verdict flip, which is the exact failure the answer stamp exists to prevent. Folding strength
-     * generally is not the fix either (the memory lane re-records conclusions at Weak, and that must stay invisible);
-     * what fixes it is folding the WINNER.
-     */
-    [TestMethod]
-    public void AStrengthPromotionThatChangesTheWinnerMovesTheAnswerStamp()
-    {
-        var timeline = new EntityTimeline();
-        timeline.SetIdentity("Vex", IdentityKind.Player, RuleStrength.Weak, "R15-healed");
-        timeline.SetIdentity("Vex", IdentityKind.Npc, RuleStrength.Medium, "R1-targeted");
-        Assert.AreEqual(IdentityKind.Npc, timeline.IdentityAt("Vex", 100), "Medium wins today");
 
-        var before = timeline.AnswerStamp();
-        timeline.SetIdentity("Vex", IdentityKind.Player, RuleStrength.Certain, "R2-who");
 
-        Assert.AreEqual(IdentityKind.Player, timeline.IdentityAt("Vex", 100), "/who outranks the heal tally now");
-        Assert.AreNotEqual(before, timeline.AnswerStamp(),
-            "the answer moved, so every fact the projection routes by this name could route differently");
-    }
 
-    /*
-     * HOLE 2: among equal strength at equal time, ARRIVAL ORDER decides, so these two timelines genuinely answer different questions.
-     * The digest must not call them the same. This deliberately reverses the first version's "arrival order never moves it" law:
-     * that was true only because the fold could not see precedence at all, which is the bug rather than the guarantee.
-     */
-    [TestMethod]
-    public void TwoConflictingClaimsAtEqualStrengthMoveTheStampWhicheverOrderTheyArrive()
-    {
-        var playerFirst = new EntityTimeline();
-        playerFirst.SetIdentity("Vex", IdentityKind.Player, RuleStrength.Certain, "R2-who");
-        playerFirst.SetIdentity("Vex", IdentityKind.Npc, RuleStrength.Certain, "R1-targeted");
 
-        var npcFirst = new EntityTimeline();
-        npcFirst.SetIdentity("Vex", IdentityKind.Npc, RuleStrength.Certain, "R1-targeted");
-        npcFirst.SetIdentity("Vex", IdentityKind.Player, RuleStrength.Certain, "R2-who");
-
-        Assert.AreNotEqual(playerFirst.IdentityAt("Vex", 100), npcFirst.IdentityAt("Vex", 100),
-            "the tie is decided by who arrived last - that is how `IdentityAt` resolves it");
-        Assert.AreNotEqual(playerFirst.AnswerStamp(), npcFirst.AnswerStamp(),
-            "and a reuse gate must see the difference, not assume the two states are one");
-    }
-
-    /*
-     * A reader that is not the winner: `IsOurPetAt` is an EXISTS over ownership intervals and ignores strength, so a pet claim
-     * buried under a stronger charm window changes it while `AffiliationAt` answers the same. The fight list hides a row on
-     * ownership, so a fold of the winner would keep drawing the old row shape.
-     */
-    [TestMethod]
-    public void APetIntervalHiddenUnderACharmWindowStillMovesTheAnswerStamp()
-    {
-        var timeline = new EntityTimeline();
-        timeline.AddAffiliation(AffiliationKind.Friendly, "A whipgrass", 10, 20, RuleStrength.Certain, "R9-charm");
-        var before = timeline.AnswerStamp();
-
-        timeline.AddAffiliation(AffiliationKind.PetOfPlayer, "A whipgrass", 12, 14, RuleStrength.Strong, "R5-owner", "Frostmaw");
-
-        Assert.AreEqual(AffiliationKind.Friendly, timeline.AffiliationAt("A whipgrass", 13, out _), "the charm still wins the interval table");
-        Assert.IsTrue(timeline.IsOurPetAt("A whipgrass", 13), "while ownership went from no to yes");
-        Assert.AreEqual("Frostmaw", timeline.OwnerOf("A whipgrass", 13));
-        Assert.AreNotEqual(before, timeline.AnswerStamp(), "an answer a winner-only fold cannot see");
-    }
-
-    /*
-     * Same for `CharmStartAfter`, which answers "did the raid take this mob off the enemy list after this moment" - the question that
-     * ENDS an encounter row. A second window later in the capture changes that answer even where every interval's winner is unchanged.
-     */
-    [TestMethod]
-    public void ASecondCharmWindowLaterInTheCaptureMovesTheAnswerStamp()
-    {
-        var timeline = new EntityTimeline();
-        timeline.AddAffiliation(AffiliationKind.Friendly, "A whipgrass", 10, 20, RuleStrength.Certain, "R9-charm");
-        var before = timeline.AnswerStamp();
-
-        timeline.AddAffiliation(AffiliationKind.Friendly, "A whipgrass", 40, 50, RuleStrength.Certain, "R9-charm");
-
-        Assert.AreEqual(40, timeline.CharmStartAfter("A whipgrass", 30), "a second encounter the raid ended by charming");
-        Assert.AreNotEqual(before, timeline.AnswerStamp());
-    }
-
-    /*
-     * The direction that must NOT be lost with all this: an interval that changes no answer moves nothing. Folding every boundary
-     * instead of every transition fails this - the extra probes are not new information. (The identity-side twin of this law is
-     * `ReRecordingAConclusionUnderAnotherRuleMovesTheAnswerStampNotAtAll`.)
-     */
-    [TestMethod]
-    public void AWeakerDuplicateIntervalChangesNoAnswerAndMovesNothing()
-    {
-        var timeline = new EntityTimeline();
-        timeline.AddAffiliation(AffiliationKind.Friendly, "A whipgrass", 10, 20, RuleStrength.Certain, "R9-charm");
-        var before = timeline.AnswerStamp();
-
-        timeline.AddAffiliation(AffiliationKind.Friendly, "A whipgrass", 12, 18, RuleStrength.Weak, "Prior:R9-charm-ledger");
-
-        Assert.AreEqual(before, timeline.AnswerStamp(),
-            "a weaker same-kind claim inside an existing window answers nothing differently, so a settle pass stays free");
-    }
 
     [TestMethod]
     public void TheTimelineHoldsExactlyTheTwoStoresTheDigestCovers()

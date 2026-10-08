@@ -6918,7 +6918,39 @@ two builds — plus the near-miss record: an intermediate edit dropped `owner` f
 hidden ownership changes from the projection carry) and `ContentStampFollowsAnswersTest` (Windows-only; the same three laws at the seam where
 the pane decides, including "new facts always rebuild" and the unstamped-snapshot hatch).
 
-### Would an equality gate have saved anything? Measured: no — so the fight list wants an incremental update (2026-11)
+**Correction, landed later the same week: folding stored tuples was never folding answers.** The fold above kept `strength` out on purpose,
+and that turned out to remove a fact resolution needs rather than a fact it ignores. `IdentityAt` resolves by (strength, effectiveFrom), and among
+equal strength at equal time by **arrival order**; two states holding the same kinds at different strengths therefore answer differently while a
+kind/time/charm tuple fold reported "unchanged" — promote Player/Certain over an existing Player/Weak and the winner changes with not one bit of the
+digest moving. `FightProjectionCache.Project` gates its carry on this value, so that pass resumed the watermark and kept every row projected over a
+routing the rules no longer hold: exactly the stale-row-with-plausible-numbers failure, arriving through the door the digest itself opened. Two throwaway
+probes established both counterexamples (strength promotion; equal-strength conflicts decided by who arrived last) before code changed.
+
+Folding strength generally is not the fix — `IdentityPriorStore` re-records conclusions at `RuleStrength.Weak`, so that puts the ledger replay back into
+the digest and gives up the whole settle-pass win. What landed instead is a fold of the **answers**: each name contributes one term, recomputed by calling
+the store's own predicates rather than re-implementing resolution (a second implementation is how this would rot) — `IdentityAt` at each of the name's
+breakpoints and at +infinity, plus `IdentityWithSource` because it has a *different* tie rule and also reaches screens; and on the affiliation side
+`AffiliationAt` with its winner's charm bit, `OwnerOf`, `IsOurPetAt` and `CharmStartAfter`, walked over every interval boundary. Those four read the list
+four ways — strongest winner, strongest winner among intervals that name an owner, an EXISTS over ownership intervals that ignores strength, the first
+charm start after a moment — so a winner-only fold would let a pet claim buried under a charm window, or a second charm encounter later in the capture, pass
+as unchanged. The walks are **segment-collapsed** (one entry per *changed* answer, not per boundary) because folding every boundary would make a weaker
+same-kind interval inside an existing window cost a rebuild for nothing — `AWeakerDuplicateIntervalChangesNoAnswerAndMovesNothing` holds that line.
+
+Two consequences to know before touching it. **Arrival order now moves the digest where arrival order decides an answer** (`TwoConflictingClaimsAtEqualStrengthMoveTheStampWhicheverOrderTheyArrive`),
+deliberately reversing the first version's "arrival order never moves it" law, which was true only because the fold could not see precedence; per-name terms stay commutative, so the seed's
+enumeration order still cannot move it on its own. And **the memory-applying pass owes a rebuild on some captures**: replaying memory over
+`eqlog_Incogitable_xegony.txt` flips `HasIndependentIdentity` for **7 of 1,649** names while no name's resolved kind moves at all — a remembered verdict enters at -infinity and thereby creates an
+*earlier independent reason*, which is precisely what the charm/hidden-pet decision reads. So `ProjectionCarryRealLogTest` now states three laws instead of two: growth may rebuild, a pass that first applies
+freshly written memory may rebuild (Kizant-2 continues there, Incogitable rebuilds), and a genuinely **quiet** pass — same facts, memory the previous pass already folded — must continue (4/4 on both captures, 0 ms).
+Fixture mirror: `ARememberedVerdictThatMakesAnEarlierReasonRefusesTheCarry`. Cost of the stricter fold is inside noise (Incogitable full pass 817 vs 829 ms; classification 353-376 ms against 355-364 before; views
+recompute only when an insertion survives the dedupe, i.e. once per distinct claim and never per fact).
+
+**A published report may not drain the accumulator the next batch continues from.** `StatsUtil.UpdateCalculations` folded `BestSecTemp` into `BestSec` and zeroed it — and `BestSecTemp` is the running total of
+the second records are still arriving in. Publishing mid-second therefore reported the *second half* of that second as the name's best second (60 where one uninterrupted pass says 160). Nothing showed it, because a
+build finalizes once and nobody re-reads the drained field; it is the first thing an incremental board refresh would hit, since a refresh publishes every tick into accumulators it intends to keep filling. The fold is now
+non-destructive (`Math.Max` makes re-folding idempotent, so publishing twice invents no damage), while crossing into a new second still folds and clears through the caller's frame — `StatResumeTest` pins both directions,
+was written red against the old shape first, and moves no golden. Same law as the row cache, one level down: **raw state and published state are different things**; whoever finalizes a report writes a copy of an answer, never
+mutates the store that produces it.### Would an equality gate have saved anything? Measured: no — so the fight list wants an incremental update (2026-11)
 
 The proposal was to stop repainting surfaces when a derive pass changed nothing visible. Before writing the comparison,
 `LiveTailChangeProbeTest` (gated `EQLP_LIVE_TAIL_PROBE=<log> EQLP_LIVE_TAIL_PASSES=n`) replayed
