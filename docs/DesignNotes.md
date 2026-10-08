@@ -9573,3 +9573,21 @@ the test cannot pass on inert code). `MergeStats` folds extrema by max, which is
 `BestSecTemp`: counting accumulates a running second into it, and a boundary step moves it into `BestSec` and zeroes it. So **only a cell
 whose scratch is drained may be cached** - snapshotting mid-second either loses that second or folds it twice. The drain already exists
 (`416f2879` made it non-destructive for the running build); what B adds is the requirement that a cell boundary be a drained one.
+
+### The fold exists, and it is proven against one uninterrupted count (2026-10)
+
+`StatsUtil.MergeStatsRecursive(to, from)` folds a partial row into another: `MergeStats` for the scalars, child rows reached through the
+model's own funnels (`SubStatOf` / `SubStat2Of` / `SubSubStatOf`) so keys and accelerators land exactly as a live walk leaves them, ranges
+by union, resists added per key, specials by union, deaths appended, nothing derived copied. The boundary step for best-second scratch moved
+out of `UpdateDamageStats` into `CloseBestSecond` — one definition, so a cell close cannot drift from the walk's.
+
+`RecursiveFoldEquivalenceTest` states the law Phase B stands on: counting A, closing, counting B and closing **must** equal counting A∪B as
+one row — swept across every numeric field of `PlayerStats`, not sampled, plus the child key set with its per-child totals (a row the grid
+expands differently is a different report even when Total agrees). Both directions were verified red first: skipping the child recursion
+fails the sweep, and making the drained-scratch guard permissive fails the refusal test. A fold test that cannot fail is not a gate — the two
+`MergeStats` holes this session found were single fields invisible to aggregate comparisons.
+
+What is still not covered by the fold, now as code rather than as a worry: what the walk **learns** while counting (pet mapping, per-frame
+history) is order-dependent inside a build, so the cell cache has to replay that learning over new records or take the full-build path; and
+`TotalSeconds` stays the caller's range union. Both are constraints 2 and 3 above, and the cache is the next piece — it now has a proven fold
+to sit on top of.

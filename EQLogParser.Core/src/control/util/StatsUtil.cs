@@ -404,8 +404,7 @@ namespace EQLogParser
 
         if (newFrame)
         {
-          stats.BestSec = Math.Max(stats.BestSec, stats.BestSecTemp);
-          stats.BestSecTemp = 0;
+          CloseBestSecond(stats);
         }
 
         stats.BestSecTemp += record.Total;
@@ -505,6 +504,22 @@ namespace EQLogParser
         to.RegularMeleeHits += from.RegularMeleeHits;
         to.TotalSeconds = Math.Max(to.TotalSeconds, from.TotalSeconds);
       }
+    }
+
+    /*
+     * The boundary step for best-second scratch, in one place: a running second is accumulated in `BestSecTemp` and moves into `BestSec`
+     * when the frame ends. Extracted from `UpdateDamageStats` so a cell cache can close its OWN boundary (a partial row must be drained
+     * before it is folded - see `MergeStatsRecursive`) without a second copy of the rule drifting away from the walk's.
+     */
+    internal static void CloseBestSecond(PlayerSubStats stats)
+    {
+      if (stats is null)
+      {
+        return;
+      }
+
+      stats.BestSec = Math.Max(stats.BestSec, stats.BestSecTemp);
+      stats.BestSecTemp = 0;
     }
 
     /*
