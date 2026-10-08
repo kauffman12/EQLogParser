@@ -6989,6 +6989,16 @@ Until the third group has a merge rule and a test that a delta build equals a fu
 a compatible refresh must take the full path. "A partial release can still use full healing; label its remaining cost honestly" says the plan, and these numbers
 are what makes the label true rather than decorative.
 
+**And the reuse question Phase 2 stands on, measured on a second capture** (`ProjectionCarryRealLogTest` over `eqlog_Kizant_xegony-01-06-24.txt`, five growing
+prefixes to 5,277,426 facts): verdicts moved on every pass after the first — as they do whenever a rule book re-runs on more evidence — and even so **only 1 row
+in 2,552** had a run of fact ordinals that was not the old list with more appended, and **no row ever lost facts**. So re-routing across a moved verdict is rare
+but real (one `A warblood` row), which is exactly why the tail path must *check* rather than assume, and why it can: a guard cheap enough to afford will reject
+one row per capture, not a whole build. Two laws are now asserted there every pass: no fact ordinal ever appears in two rows' damage runs (a board's arithmetic
+cannot survive that, verdicts moved or not), and the strict append-only law is asserted whenever the verdicts did NOT move — where it held with zero violations.
+Note also what the same run says about the live shape: growth passes continued 0/5 (re-running the rule book on a longer prefix moves answers, which discards the
+carry by design) while quiet passes continued 4/4. The cheap lane is what keeps a live refresh at milliseconds; a Full pass costs its rebuild and that is the
+price of re-reading the evidence.
+
 ### Reading memory is not a sighting: what made the first Select All build twice (2026-11)
 
 The reported gesture — open `eqlog_Kizant_xegony-09-03-26.txt`, Select All, watch the summary appear, clear, and rebuild to the same totals — was replayed

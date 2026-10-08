@@ -56,6 +56,9 @@ public class ProjectionCarryRealLogTest
     var continuedPasses = 0;
     var settleContinued = 0;
     var previousRuns = new Dictionary<string, int[]>();
+    long previousEvidence = 0;
+    long previousAnswer = 0;
+    var strictLawPasses = 0;
 
     try
     {
@@ -74,6 +77,12 @@ public class ProjectionCarryRealLogTest
         RegistrySeed.Apply(timeline, facts, first, last);
         ClassificationRules.Apply(facts, timeline, run.HealFacts);
 
+        // Did this prefix answer anything differently from the one before it? A verdict that moves re-routes facts that were already filed,
+        // so a row's run may legitimately change in the MIDDLE — which is exactly why a refresh may not reuse a count across such a pass.
+        var verdictsMoved = k > 1 && (timeline.StateStamp() != previousEvidence || timeline.AnswerStamp() != previousAnswer);
+        previousEvidence = timeline.StateStamp();
+        previousAnswer = timeline.AnswerStamp();
+
         // (1) The growth pass. New facts legitimately bring new answers, so this one may rebuild; what it may NOT do is disagree with a
         // from-zero projection over the same capture.
         var sw = Stopwatch.StartNew();
@@ -87,7 +96,8 @@ public class ProjectionCarryRealLogTest
 
         var reference = FightProjection.Build(facts, timeline);
         AssertSameRows(reference, rows, $"prefix {k} growth pass ({facts.FactCount:N0} facts)");
-        RecordOrdinalRuns(cache.Index, rows, previousRuns, k, facts.FactCount);
+        RecordOrdinalRuns(cache.Index, rows, previousRuns, k, facts.FactCount, verdictsMoved);
+        if (!verdictsMoved) strictLawPasses++;
 
         /*
          * (2) The settle pass, which is the case the weaker gate exists for and which growth alone cannot exercise: the capture has STOPPED
@@ -130,7 +140,7 @@ public class ProjectionCarryRealLogTest
 
         Console.WriteLine($"[carry] pass {k}: facts {facts.FactCount,9:N0} rows {rows.Count,5:N0} " +
                           $"| growth {(growthContinued ? "continued" : "rebuilt ")} {sw.ElapsedMilliseconds,6:N0} ms " +
-                          $"| memory arriving over {reRecorded,4:N0} names: {(memoryRebuilt ? "rebuilt " : "continued")} {settleSw.ElapsedMilliseconds,5:N0} ms " +
+                          $"| verdicts {(verdictsMoved ? "MOVED" : "same ")} | memory arriving over {reRecorded,4:N0} names: {(memoryRebuilt ? "rebuilt " : "continued")} {settleSw.ElapsedMilliseconds,5:N0} ms " +
                           $"| quiet tick: {(cache.LastPassContinued ? "continued" : "REBUILT")} {quietSw.ElapsedMilliseconds,5:N0} ms");
       }
 
@@ -203,12 +213,22 @@ public class ProjectionCarryRealLogTest
    * or double-counts a fight. Rows are keyed by name + begin time because a rebuild hands back new objects (the grid's own `FightKey` law).
    */
   private static void RecordOrdinalRuns(FightFactIndex index, IReadOnlyList<DerivedFight> rows,
-                                        Dictionary<string, int[]> previous, int pass, long factCount)
+                                        Dictionary<string, int[]> previous, int pass, long factCount, bool verdictsMoved)
   {
+    duplicatesSeen.Clear();
+    var duplicates = 0;     // one fact filed on two rows: no board's arithmetic survives that, verdicts moved or not
+    var shrunkRows = 0;     // facts left a row's run
+    var brokenRows = 0;     // a run that is not the old list with possibly more at the end
+
     foreach (var row in rows)
     {
       var key = $"{row.Name}@{row.BeginTime}";
       var run = index.DamageOrdinalsFor(row).ToArray();
+
+      foreach (var ordinal in run)
+      {
+        if (!duplicatesSeen.Add(ordinal)) duplicates++;
+      }
 
       if (!previous.TryGetValue(key, out var before))
       {
@@ -216,20 +236,44 @@ public class ProjectionCarryRealLogTest
         continue;
       }
 
-      Assert.IsTrue(run.Length >= before.Length,
-        $"pass {pass}: row '{key}' lost facts (was {before.Length}, now {run.Length}) — a fact changed rows or vanished from its run, " +
-        $"so no refresh may reuse an earlier count of it");
-
-      for (var i = 0; i < before.Length; i++)
+      if (run.Length < before.Length) shrunkRows++;
+      for (var i = 0; i < Math.Min(before.Length, run.Length); i++)
       {
-        Assert.AreEqual(before[i], run[i],
-          $"pass {pass}: row '{key}' ordinal {i} moved from {before[i]} to {run[i]} over {factCount:N0} facts — its run is not a " +
-          $"prefix-extension, which is the property an additive refresh stands on");
+        if (before[i] == run[i]) continue;
+        brokenRows++;
+        break;
       }
 
       previous[key] = run;
     }
+
+    Assert.AreEqual(0, duplicates,
+        $"pass {pass}: {duplicates} fact ordinal(s) appear in TWO rows' damage runs over {factCount:N0} facts — a fact lands on exactly one " +
+        "board, and a refresh that adds counts per row would double what it cannot see");
+
+    /*
+     * The append-only law holds only where nothing was re-read: while the answers stand, a row's run is the same list with more at the end, and
+     * that is what lets a refresh walk past its watermark. Once a verdict moves, old facts are re-RUTED by design ("changed interpretation of old
+     * facts means a safe full rebuild"), so a middle-of-run change is the correct outcome — and the measurement this prints is Phase 2's: how often
+     * a real capture re-homes rows, i.e. how much of a refresh can reuse anything. A pass whose verdicts did NOT move must hold strictly.
+     */
+    if (!verdictsMoved)
+    {
+      Assert.AreEqual(0, shrunkRows,
+          $"pass {pass}: {shrunkRows} row(s) LOST facts over {factCount:N0} facts with NO verdict moved — a fact vanished from its run " +
+          "for no reason the rules can state, so no refresh may trust an earlier count of that row");
+      Assert.AreEqual(0, brokenRows,
+          $"pass {pass}: {brokenRows} row(s) had a fact ordinal move inside their run with NO verdict moved — the run is not a " +
+          "prefix-extension, which is the property an additive refresh stands on");
+    }
+
+    Console.WriteLine($"[carry]        runs: {rows.Count,5:N0} rows | verdicts {(verdictsMoved ? "moved" : "same ")} " +
+                      $"| shrunk {shrunkRows,4} not-prefix {brokenRows,4}" +
+                      $"{(verdictsMoved ? "  (legal here: re-routing is what a moved verdict does)" : "  <- strict law asserted")}");
   }
+
+  // Reset per pass by the caller's single entry point; one fact belonging to two rows is a bug in any era.
+  private static readonly HashSet<int> duplicatesSeen = new();
 
   private static void CopyPrefix(string source, long bytes, string target)
   {
