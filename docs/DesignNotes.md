@@ -9647,3 +9647,46 @@ verified by the same field run that reads the ledger lines.
 
 And the standing caveat: **neither line has ever run on Windows.** The formatting is tested everywhere; what they say beside a real WPF session — where
 the gap lives — is what the next field run is for.
+
+### What a cached walk is allowed to carry, decided from the code (2026-10)
+
+Phase B's cell cache has to answer one question before it exists: **the walk learns things while it walks — can a partial walk's output be
+trusted?** Reading the builder rather than reasoning about it gives a small and asymmetric answer.
+
+**The walk's memory is two dictionaries, nothing else.** `DamageStatsBuilder._playerPets` and `_petToPlayer`, written by `UpdatePetMapping` and read
+at exactly one place — the line that decides which name a record accumulates onto:
+
+```csharp
+var player = !string.IsNullOrEmpty(record.AttackerOwner) ? record.AttackerOwner
+  : _petToPlayer.TryGetValue(record.Attacker, out var mapped) ? mapped : null;
+```
+
+The record's **own** ownership word wins whenever it exists; the learned map is only the fallback for records the capture never attributed. On the
+reference capture `AttackerOwner` rides **546,376 of 2,285,746** damage facts. That single expression splits the cache's problems in two:
+
+1. **Records that carry their owner word are order-free.** Their row key is a function of the record alone, so cells built from them may be carried
+   across passes and folded in any order. This is the large, safe majority of *pet-related* damage — which matters because `X +Pets` rows are exactly
+   the expensive ones caching exists for.
+2. **Owner-less records whose attacker gets learned as a pet mid-capture are order-dependent.** Whether such a record lands on `Pet` or on
+   `Owner +Pets` depends on what earlier records taught the walk — and the code carries a measured warning about getting this wrong in the other
+   direction (a single "Secondowner +Pets = 300" where the log said 100 to one owner and 200 to another).
+
+**Decision: carry the learning, do not fall back wholesale.** The cache carries `_petToPlayer`/`_playerPets` beside its cells — entries are per pet
+name (thousands), not per fact (millions), so carrying them costs nothing worth measuring — and **invalidates a name's cells when a *new* owner mapping
+for that name arrives**, rebuilding that name alone instead of the selection. A blanket "any segment that could teach something forces a full build" is
+the wrong default precisely because teaching happens on pets: it would disable caching on the rows where caching pays and keep it on the cheap ones.
+
+The measurement that flips this: over a large capture, count damage facts that (a) carry no owner word **and** (b) whose attacker name is later learned
+as a pet. If that is a large share of facts the invalidation path runs constantly and full builds are the honest answer; if it is small — which the
+546k/2.29M split suggests — carry-and-invalidate wins. It needs a gated probe, and `heap:` (**B11**) now prints per-stream rows and slack while such a
+probe runs, so the cost side of the experiment is visible too.
+
+**Two beliefs corrected on the way, both recorded so they do not come back:**
+
+- **"Replay the walk's per-frame history."** There is none. `PerFrame`, `DamageList` and `DamageBySecond` appear nowhere in either project (grep,
+  2026-10): the per-second bookkeeping an earlier plan listed as order-dependent learning is gone from the codebase, and a constraint copied from a dead
+  feature would have shaped the cache around a ghost. The walk's cross-record state is the two maps above, full stop.
+- **The healing side is not in this decision.** Its only cross-call state is the **ordinal cursor** law (a position, already pinned: it resets per build
+  and is valid only while the table instance is unchanged), which is a validity rule rather than learning — so carry-and-invalidate above is a damage-side
+  decision. Healing's cost sits in per-record window accumulation, which is what Phase A removed and what a cell cache would shorten by skipping whole
+  windows rather than by remembering names.
