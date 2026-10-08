@@ -634,7 +634,18 @@ namespace EQLogParser
     internal static long SelectionStamp(DerivedSnapshot snapshot)
     {
       var facts = snapshot.FactCount;
-      var verdicts = snapshot.Timeline is { } timeline ? timeline.StateStamp() : 0L;
+
+      /*
+       * The identity term is what a board would SEE (`AnswerStamp`), not what evidence the rule book holds (`StateStamp`). A Full
+       * pass reseeds its timeline from the memory the previous pass wrote, so the pass after a load legitimately carries evidence
+       * tuples nobody had yet - and with the evidence stamp in this term that reads as "content moved", forcing a whole-capture
+       * rebuild over identical rows (field report: boards built, cleared, and rebuilt about 9 s after a select-all). An unstamped
+       * snapshot - which is what a test hands the pane, since only DerivedFightRows.Build stamps - falls back to the evidence stamp
+       * rather than comparing two zeros, which would make every pass look identical to every other.
+       */
+      var verdicts = snapshot.AnswerStamp != 0 ? snapshot.AnswerStamp
+                   : snapshot.Timeline is { } timeline ? timeline.StateStamp()
+                   : 0L;
       return unchecked((facts * 397) ^ verdicts);
     }
 

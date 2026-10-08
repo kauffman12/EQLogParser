@@ -151,6 +151,16 @@ namespace EQLogParser
     public List<DerivedFightRow> Rows = [];
     public int FightCount;
     public long FactCount;
+
+    /*
+     * What a board would SEE in this pass, as opposed to what evidence the rules hold (`EntityTimeline.AnswerStamp`). The fight
+     * list compares this for "content moved under my selection", because the difference between the two questions is a wasted
+     * multi-second rebuild: each Full pass reseeds its timeline from memory the FIRST pass wrote, so the second pass legitimately
+     * holds new evidence tuples whose answers are identical - measured as a select-all whose boards built twice over byte-identical
+     * inputs (708 rows, 2,647,774 heals both times). Test-built snapshots carry 0, which means "no answer stamp was taken" and sends
+     * the reader back to the evidence stamp rather than silently comparing zeros.
+     */
+    internal long AnswerStamp;
     public double ElapsedMs;
     public DateTime DerivedAt;
 
@@ -187,6 +197,7 @@ namespace EQLogParser
     {
       var snapshot = new DerivedSnapshot
       {
+        AnswerStamp = timeline?.AnswerStamp() ?? 0L,
         FactCount = factCount,
         DerivedAt = DateTime.Now,
         Timeline = timeline,

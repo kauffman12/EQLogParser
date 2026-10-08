@@ -152,6 +152,30 @@ namespace EQLogParser
      */
     private long _digest;
 
+    /*
+     * A SECOND digest over the SAME insertions, computed without provenance: kind, effective time, interval bounds and owner -
+     * never `strength`, never `source`. `StateStamp()` answers "did the evidence change?"; this answers "would a board route a
+     * fact differently?", and the gap between those two questions is where a wasted rebuild lives (2026-10 field report,
+     * `EQLogParser.log`: select all right after a load, boards build, then clear and rebuild ~9 s later for a stamp that moved
+     * while every figure stayed identical - 708 rows both times, the same 2,647,774 heals materialized both times).
+     *
+     * The mechanism that produced it: each Full pass rebuilds its timeline from scratch and seeds it from this application's own
+     * memory, and the FIRST pass writes that memory. So the second pass records claims the first never had - same kind, different
+     * `Prior:`-style source - and an evidence digest sees new tuples even though no name's answer moved.
+     *
+     * Deliberately CONSERVATIVE in the safe direction: it ignores only provenance. A weaker extra claim of the same kind on a
+     * different span still moves this value (it might win somewhere) even though it happens to change nothing today, because the
+     * cost of moving too often is one rebuild and the cost of not moving when an answer changed is a board showing last pass's
+     * routing. Provenance still reaches the screens that show it - the identity pane rebuilds on every pass by itself.
+     *
+     * It is therefore a sum over DISTINCT answer tuples, held in `_answerTerms`, not a running sum of insertions: recording the same
+     * answer twice must contribute once, which is the whole point (`_digest` adds every insertion because there, a new tuple IS new
+     * information; here, two rules that reached the same conclusion are one conclusion). Summed rather than XOR'd for the reason
+     * `StateStamp` carries: one tuple can legitimately be recorded from two stores, and an XOR pair cancels to nothing.
+     */
+    private readonly HashSet<long> _answerTerms = [];
+    private long _answerDigest;
+
     // ---- evidence input ----
 
     public void SetIdentity(string name, IdentityKind kind, int strength, string source, double effectiveFrom = double.NegativeInfinity)
@@ -180,6 +204,7 @@ namespace EQLogParser
       // conflicts are resolved at read time by (strength, effectiveFrom) — nothing is silently dropped.
       InsertSortedByTime(list, new IdentityAssignment(kind, effectiveFrom, strength, source), static a => a.EffectiveFrom);
       _digest = unchecked(_digest + Term(0, name, (long)kind, strength, effectiveFrom, 0d, source, null));
+      FoldAnswer(Term(0, name, (long)kind, 0, effectiveFrom, 0d, null, null));
     }
 
     public void AddAffiliation(AffiliationKind kind, string name, double t0, double t1, int strength, string source, string owner = null)
@@ -203,6 +228,7 @@ namespace EQLogParser
 
       InsertSortedByTime(list, new AffiliationInterval(kind, t0, t1, strength, source, owner), static a => a.T0);
       _digest = unchecked(_digest + Term(1, name, (long)kind, strength, t0, t1, source, owner));
+      FoldAnswer(Term(1, name, (long)kind, 0, t0, t1, null, owner));
     }
 
     // Lists stay small per name (distinct assignments only), so a back-to-front scan beats
@@ -521,6 +547,21 @@ namespace EQLogParser
      * plausible numbers. `EntityTimelineDigestTest` refuses a third dictionary appearing without this being told, and pins
      * both directions of the version: new evidence moves it, the same evidence again does not.
      */
+    /// <summary>
+    /// What a board would see, in O(1): like StateStamp but blind to provenance, so re-recording the same conclusion under a
+    /// different rule name does not read as new information. See `_answerDigest` for why the two questions are different.
+    /// </summary>
+    public long AnswerStamp()
+    {
+      var hash = unchecked((long)14695981039346656037UL);
+
+      static long Mix2(long h, long v) => unchecked((h ^ v) * 1099511628211L);
+
+      hash = Mix2(hash, _answerDigest);
+      hash = Mix2(hash, _identity.Count);
+      return Mix2(hash, _affiliation.Count);
+    }
+
     public long StateStamp()
     {
       var hash = unchecked((long)14695981039346656037UL);   // FNV-1a offset basis (wraps past long.MaxValue)
@@ -537,6 +578,12 @@ namespace EQLogParser
      * (a `bone walker` and `A bone walker` are one entity, so recording either spelling must land on the same term);
      * sources hash ordinally because they are vocabulary words (`R9-charm`, a Labels constant), not names.
      */
+    // One answer tuple, added to the sum exactly once however many rules reached it (`_answerDigest`).
+    private void FoldAnswer(long term)
+    {
+      if (_answerTerms.Add(term)) _answerDigest = unchecked(_answerDigest + term);
+    }
+
     private static long Term(int storeKind, string name, long kind, int strength, double t0, double t1,
                              string source, string owner)
     {

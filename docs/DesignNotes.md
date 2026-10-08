@@ -6877,6 +6877,45 @@ Tests: `EQLogParser.Test/src/control/RowPatchTest.cs` (17 headless tests over a 
 `EQLogParser.Wpf.Test/src/control/util/DerivedFightRowPatchTest.cs` (key stability across two builds, per-cell notification counts, the
 divider-label law, a three-pass run holding its objects). The second needs Windows; the first carries the logic.
 
+### The stamp asks two different questions, and only one of them costs a rebuild (2026-10)
+
+The operator's log (`local/logs/EQLogParser.log`, Debug on) settled the open "double stats" report without a profiler:
+
+```
+12:09:47  derive: first pass - 8,014,197 facts, 741 rows     fight list: 741 row(s) painted
+12:09:55  board ask [SelectCommand] select all: 708 -> Started   → builds #2 #3 #4   boards.build 5,548 ms
+12:10:04  board ask [ContentMoved]   708 -> Started              → builds #5 #6 #7   boards.build 5,233 ms
+```
+
+Not a duplicated trigger (the `MenuClose` duplicate was swallowed by the dedupe), not a pane bypassing the gate: the file had finished
+reading at ~12:09:46, so **facts could not have moved** — and both builds materialized identical inputs (`npcs=697`, and exactly
+**2,647,774** heals both times). The identity term of `SelectionStamp` moved while nothing a board reads did, and 5.2 seconds plus a
+UI thread ~3.7 s late bought nothing. A minute later the same select-all built once, because by then the ledger was settled.
+
+Why a pass can move the evidence digest with **no answer behind it**: every Full pass rebuilds its timeline from scratch and seeds it
+from this application's own memory — and the first pass is what *writes* that memory (the prior store, the registry). The second pass
+therefore records claims the first never held, spelled `Prior:…`: same kind, different `source`, sometimes a different `strength`.
+`StateStamp` hashes provenance, so it moved. Correctly, as an evidence digest; wrongly, as the thing a board's staleness is keyed on.
+
+**Two digests now, over the same insertions.** `EntityTimeline.StateStamp()` keeps its meaning — the projection carry still buys a full
+rebuild whenever evidence changes, which is what it was built for. `EntityTimeline.AnswerStamp()` folds the *same* insertions with
+provenance erased: kind, effective time, interval bounds and owner; never `strength`, never `source`. It is a sum over **distinct answer
+tuples** (a `HashSet<long>` gates the fold), because two rules reaching the same conclusion are one conclusion — an additive running sum
+failed exactly this, and `ReRecordingAConclusionUnderAnotherRuleMovesTheAnswerStampNotAtAll` is the test that caught it. Still summed rather
+than XOR'd for the reason the evidence digest carries: a tuple legitimately recorded from both stores must not cancel to nothing. `FightTable.SelectionStamp`
+uses the answer term; `DerivedSnapshot.AnswerStamp` rides on the snapshot so no reader walks a timeline, and a hand-built (unstamped) snapshot falls
+back to the evidence digest instead of matching zero to zero — pinned, because that hatch is how this would silently stop rebuilding.
+
+It is conservative in the direction that costs a rebuild: only provenance is invisible. A weaker same-kind claim on a **new span** moves it
+(might win somewhere), and an ownership window that reaches further moves it (`AWindowThatReachesFurtherMovesTheAnswerStamp`: seconds that
+became somebody's pet are seconds of damage that changed rows). Provenance still reaches the surfaces that display it — the identity pane
+rebuilds from every pass on its own cadence, which is why erasing it from a board's staleness question loses nothing a person can read.
+
+Tests: `EntityAnswerStampTest` (headless Core: the two-digest split in both directions, charm and owner visibility, reproducibility across
+two builds — plus the near-miss record: an intermediate edit dropped `owner` from the *evidence* digest's affiliation term, which would have
+hidden ownership changes from the projection carry) and `ContentStampFollowsAnswersTest` (Windows-only; the same three laws at the seam where
+the pane decides, including "new facts always rebuild" and the unstamped-snapshot hatch).
+
 ### Would an equality gate have saved anything? Measured: no — so the fight list wants an incremental update (2026-11)
 
 The proposal was to stop repainting surfaces when a derive pass changed nothing visible. Before writing the comparison,
