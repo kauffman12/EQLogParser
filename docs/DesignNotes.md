@@ -9198,6 +9198,45 @@ fight's range separately; and, on the app side, the cost budget that already ref
 `MaxOutcomes` — a group-night select-all is far over that ceiling, so nothing rebuilds it 2×/second behind your back
 even though it would be legal to.
 
+### The projection carry asks the same weaker question, and the settle pass drops to 0 ms (2026-10)
+
+Fixing the boards' staleness was half of it. The same moved digest was also driving the *engine*: `FightProjectionCache` gated its carry on
+`StateStamp()`, so the settle pass in the field report printed **`(rebuilt)`** and re-walked all 8,014,198 facts (measured **1,077 ms**) to
+reach rows nobody could distinguish. Worse than its own cost: a rebuild replaces the `FightFactIndex`, and the index is what carries the
+**per-row materialization cache** (`FightFactIndex.SummaryFightFor`, the reason clicking the same row twice is free) — so the boards then
+re-materialized the 2,647,774 heals they had just materialized. That is the second half of the 5.2 s in the log: ~1.5 s of `boards.materialize`
+paying for records nobody had invalidated.
+
+The carry now gates on **`AnswerStamp()`**. The license is the audit above, and it is a real license rather than a hunch: what the projection
+walk reads about identity is seven calls — `IdentityAt`, `IsCharmedAt`, `CharmStartAfter`, `IsConfirmedRaidPersonAt`, `IsOurPetAt`,
+`IsRaidVictimAt`, `HasIndependentIdentity` — every one a function of (kind, interval bounds, owner, charm-ness), which is exactly the surface
+the answer digest folds. Strength and rule names are resolved into the winning kind *inside* those calls, so folding the winner is folding the
+input. Wrong the safe way is one extra pass; wrong the other way is rows kept forever under a routing the rules abandoned — so this gate is only
+as good as that fold, which `EntityAnswerStampTest` holds field by field (and which is why the charm-ness hole had to close first: with it open,
+this change would have widened the same bug into the engine itself).
+
+**Proven on a real capture, not argued.** `ProjectionCarryRealLogTest` (`EQLP_PROJECTION_CARRY=<log> [EQLP_PROJECTION_CARRY_PASSES=n]`) replays
+`eqlog_Kizant_xegony-2.txt` as growing prefixes and, at each one, runs the two passes that matter:
+
+```
+[carry] pass 1: facts 1,165,998 rows 182 | growth rebuilt 257 ms | settle over 190 re-remembered names: continued 0 ms
+[carry] pass 2: facts 2,285,746 rows 247 | growth rebuilt 506 ms | settle over 234 re-remembered names: continued 0 ms
+```
+
+The **growth** pass rebuilds, and that is correct — new facts bring genuinely new verdicts. The **settle** pass (facts idle, memory arriving:
+each name's verdict re-recorded under the ledger's spelling, same kind, deliberately weak) continues in **0 ms**, where the old gate paid a full
+re-walk. Both paths are then compared to a from-zero `FightProjection.Build` over the same facts and timeline, **row for row and field by field**
+(totals both directions, hit counts, both direction windows, dead/end-reason, pet/owned, group id), because "the carry is probably equivalent"
+is not something to ship on 2.3 M facts.
+
+**And the same run measures the law the next step needs.** Across prefixes, every surviving row's damage ordinal run was checked to be a
+*prefix-extension* of what it was — same ordinals in the same order, possibly longer, never re-homed or reordered (`ARowRecordSetOnlyGrowsAtTheEnd`
+semantics, asserted inside that test). Nothing violated it. That is the foundation of an **additive board refresh**: a summary could remember how
+far into each row's run it counted and walk only what arrived since, making a refresh cost what changed instead of what exists. What it will need
+besides the law: an invalidation rule (an answer move ends the additive path — which is now a cheap question to ask), a settings/selection change
+ending it too, and an equality test that building P1-then-appending-equals-building-P2 in one pass holds field by field on the actual builders.
+Not built yet; the measurement is what this section is for.
+
 ### A healing block is a second, not a line (2026-10)
 
 The pass-2 leftover of the section above: survivors were still wrapped **one `ActionGroup` per record**, each with its own `Actions` list

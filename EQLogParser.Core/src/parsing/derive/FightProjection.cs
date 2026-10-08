@@ -139,7 +139,7 @@ namespace EQLogParser
       internal int ThroughOrdinal;
       internal int ThroughDeath;
 
-      // The classification these rows were projected over (EntityTimeline.StateStamp).
+      // The answers these rows were routed under (EntityTimeline.AnswerStamp — see FightProjectionCache for why answers, not evidence).
       internal long Stamp = long.MinValue;
 
       private long _factWatermark;
@@ -217,11 +217,21 @@ namespace EQLogParser
      *   The FACTS still line up — the watermarks name the same facts they did last pass, so continuing means appending
      *   rather than re-walking. Rows carry names and totals rather than ordinals, but the index carries ordinals.
      *
-     *   The CLASSIFICATION is the same one these rows were projected under. Rows migrate when evidence arrives: a name
-     *   that turns out to be a raider loses its row to the mob it was fighting, a charm window re-attributes an evening,
-     *   an override moves a name across the board. So any change in the timeline stamps differently and buys a full
-     *   rebuild — which is precisely what every pass used to be, and remains the answer whenever anything about identity
-     *   moved.
+     *   The ANSWERS are the same ones these rows were projected under — `EntityTimeline.AnswerStamp()`, not `StateStamp()`. Rows migrate
+     *   when evidence arrives that changes a routing: a name that turns out to be a raider loses its row to the mob it was fighting, a charm
+     *   window re-attributes an evening, an override moves a name across the board. Provenance that changes nothing of the kind does not.
+     *
+     *   Why the weaker question is safe HERE and why it was not safe for the boards until today: what this fold may not be blind to is exactly
+     *   what the walk reads, and the walk's whole identity surface is seven calls — `IdentityAt`, `IsCharmedAt`, `CharmStartAfter`,
+     *   `IsConfirmedRaidPersonAt`, `IsOurPetAt`, `IsRaidVictimAt`, `HasIndependentIdentity` — each a function of (kind, interval bounds, owner)
+     *   plus charm-ness, all five of which `AnswerStamp` folds and all of which are pinned individually in `EntityAnswerStampTest`. Strength and
+     *   rule names are not read here: `IdentityAt`/`AffiliationAt` resolve those into the winning kind themselves. The audit is in
+     *   docs/DesignNotes.md → "The stamp asks two different questions"; a THIRD predicate reading anything else would make this gate wrong, and
+     *   wrong the expensive way — plausible rows kept forever — so an answer-relevant read must be added to the fold, not worked around.
+     *
+     *   What it buys, on the field report's own numbers: a pass whose only new information is what this application remembered used to re-walk
+     *   every fact (measured 1,077 ms at 8,014,198 facts) AND throw away the index — which discards the per-row materialization cache
+     *   (`FightFactIndex.SummaryFightFor`), so the boards re-materialized 2.6 M records they had just materialized (measured 1.5 s, twice).
      *
      * Being wrong the safe way is cheap (one extra full pass); being wrong the other way would show plausible numbers from
      * stale rows. FightProjectionIncrementTest asserts the two paths agree at every boundary a fixture can produce.
@@ -239,7 +249,7 @@ namespace EQLogParser
 
       public IReadOnlyList<DerivedFight> Project(DamageFactTable facts, EntityTimeline timeline)
       {
-        var stamp = timeline.StateStamp();
+        var stamp = timeline.AnswerStamp();
         var canContinue = _index is not null && _state.Stamp == stamp && _state.Covers(facts);
 
         _state.Stamp = stamp;

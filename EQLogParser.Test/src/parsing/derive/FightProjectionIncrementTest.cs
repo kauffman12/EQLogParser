@@ -115,6 +115,57 @@ public class FightProjectionIncrementTest
     }
 
     /*
+     * The pass that used to cost a re-walk of everything: this application remembering what it already concluded. Pass N+1 seeds its timeline
+     * from identity-priors.txt and this app's registry, so it records claims pass N never held — same kind, same effective time, spelled
+     * `Prior:…`. New EVIDENCE (`StateStamp` moves, correctly) and no new ANSWER, and the carry now asks about answers.
+     *
+     * What asking the wrong question cost, straight out of the field report (`EQLogParser.log`, 2026-10-08): the `(rebuilt)` pass re-walked
+     * 8,014,198 facts (1,077 ms) and replaced the index — discarding the per-row materialization cache (`FightFactIndex.SummaryFightFor`)
+     * with it — so the boards then re-materialized the 2,647,774 heals they had just materialized (1.5 s of that second 5.2 s build). A
+     * continuation is measured at 0–5 ms and keeps the cache alive, which is the difference between "the summary refreshed" and "the window
+     * froze for five seconds and said the same thing".
+     *
+     * The license to ask the weaker question is the audit above (the walk's identity surface is seven calls, all functions of kind / interval /
+     * owner / charm-ness) plus `EntityAnswerStampTest` pinning each of those fields moves it. Anything that changes how a fact ROUTES still
+     * buys the full rebuild this used to always pay.
+     */
+    [TestMethod]
+    public void ARememberedConclusionContinuesTheCarryRatherThanRewalkingEverything()
+    {
+        var log = new Capture();
+        log.JoinedRaid("Zomm", 0);
+        log.Hit("Zomm", "A bone walker", 100, 0);
+        var timeline = Classify(log.Facts);
+        var cache = new FightProjection.FightProjectionCache();
+
+        cache.Project(log.Facts, timeline);
+
+        log.Hit("Zomm", "A bone walker", 200, 5);
+
+        // Re-record what the rules already concluded, under the ledger's own spelling of the rule.
+        var kind = timeline.IdentityAt("Zomm", double.PositiveInfinity);
+        Assert.AreNotEqual(IdentityKind.Unknown, kind, "setup: the fixture must give this name a verdict to remember");
+
+        var evidenceBefore = timeline.StateStamp();
+        var answerBefore = timeline.AnswerStamp();
+        timeline.SetIdentity("Zomm", kind, RuleStrength.Weak, "Prior:R7-graph");
+
+        Assert.AreNotEqual(evidenceBefore, timeline.StateStamp(), "setup: the ledger's spelling is new evidence");
+        Assert.AreEqual(answerBefore, timeline.AnswerStamp(), "setup: and no new answer");
+
+        var rows = cache.Project(log.Facts, timeline);
+
+        Assert.IsTrue(cache.LastPassContinued,
+          "a pass that only re-remembered a conclusion must continue from its watermark — not re-walk the capture and replace the index, " +
+          "which throws away the per-row materialization cache the boards read");
+        Assert.AreEqual(300, rows.Single().DamageToOwner);
+
+        // Still the same engine either way: a continuation equals one full pass over everything.
+        AssertSameRows(FightProjection.Build(log.Facts, timeline), rows,
+          "continuing across a remembered conclusion equals a full projection");
+    }
+
+    /*
      * A summary board is materialized through the SAME index this cache carries (rows and index travel together on
      * purpose), so a cached materialization is only good while everything it read is where it was. It used to be keyed on the
      * row alone, which made the second click on an ongoing pull re-serve the first click's answer - measured: row 300 damage,
