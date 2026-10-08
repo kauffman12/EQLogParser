@@ -581,8 +581,9 @@ namespace EQLogParser
         {
           _unaskedDeclined = true;
           Log.Debug($"announce declined [{reason}]{(detail is null ? string.Empty : $" {detail}")}: {ids.Count} row(s), "
-                    + $"{outcomes:N0} outcomes over the unasked limit ({UnaskedRefresh.MaxOutcomes:N0}) — the report stays as it was "
-                    + "until a selection, a dial or Refresh asks for it");
+                    + $"~{UnaskedRefresh.EstimatedCostMs(outcomes):N0} ms estimated, needs {UnaskedRefresh.RequiredGapMs(outcomes):N0} ms "
+                    + "since the last unasked rebuild — the report stays as it was until that gap opens or a selection, a dial or "
+                    + "Refresh asks for it");
         }
 
         return;
