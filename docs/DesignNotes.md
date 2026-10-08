@@ -9503,3 +9503,27 @@ here, and two fewer passes over the name list at raid scale.
 
 Reproduce with the throwaway row-shape probe (same setup as `MeterBoardCostRealLogTest`: classify, index, project, then
 time boards over K rows taken from one size band, printing ms, µs/row and allocated MB per phase).
+
+### The merge primitive already exists, and it had two holes (2026-10)
+
+The damage summary's **Group View** already does the shape of work the delta phase needs: `StatsUtil.ResetPlayerStats(target)` →
+`MergeMemberRanges(members)` for the union of uptime → `StatsUtil.MergeStats(target, member)` per source → `CalculateRates` +
+`CalculatePercentOfRaid`. Two callers in production: Group View and Damage Breakdown. That sequence - reset, fold N sources, re-derive the
+rates - is what a cell-cache build looks like, so B builds on it rather than inventing it.
+
+Auditing it for the case B needs (folding two partial results of the *same* name) turned up two defects that ship today in group aggregates:
+
+- **`DoubleBowHits` was assigned, not added** (`to.X = from.X` among thirty `+=` lines). A five-member group printed a double-barb rate
+  computed from the last member's double-bows over all five members' bow swings - plausible-looking and wrong.
+- **`Invulnerable` was not merged at all**, so an aggregated row kept the first source's count and lost every later one. It is an outcome
+  like Blocks/Dodges/Parries, incremented per record, and simply absent from the list.
+
+Both fixed, and the law is now asserted field by field instead of sampled: `MergeStatsAccumulationTest` enumerates every writable `uint`
+counter on `Attempt`, merges two sources, and requires the sum for all but the three extrema (`Max`, `MaxPotentialHit`, `Min`). The sweep
+found the second defect on its first run, which is the argument for enumerating rather than spot-checking: an omitted counter and a
+mis-assigned one look identical from the grid, because both leave a believable number in the cell.
+
+What MergeStats does **not** fold - and what B still has to write - is everything nested: `SubStats`/`SubStats2` (per spell, per npc/pet),
+the frequency buckets, `Ranges` beyond the member union, resists, specials, deaths. Group View never needed those because its tree children
+are the members themselves, rendered from their own rows. So B = a recursive fold keyed by sub-stat `Key` + the (row × fight/segment) cell
+cache, measured against the bar in "How much a whole-row cache would actually save".

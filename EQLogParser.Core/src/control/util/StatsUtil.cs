@@ -461,6 +461,9 @@ namespace EQLogParser
         to.Dodges += from.Dodges;
         to.Misses += from.Misses;
         to.Parries += from.Parries;
+        // Present on a record like the other outcomes (`INVULNERABLE!` parses to a hit with its own label), listed beside Blocks/Dodges/
+        // Parries here - and then absent, so an aggregated row simply kept the first source's count and lost every later one.
+        to.Invulnerable += from.Invulnerable;
         to.MeleeAttempts += from.MeleeAttempts;
         to.MeleeHits += from.MeleeHits;
         to.Total += from.Total;
@@ -483,7 +486,11 @@ namespace EQLogParser
         to.CritHits += from.CritHits;
         to.NonTwincastCritHits += from.NonTwincastCritHits;
         to.NonTwincastLuckyHits += from.NonTwincastLuckyHits;
-        to.DoubleBowHits = from.DoubleBowHits;
+        // Accumulated like every sibling, not assigned: this primitive folds N sources into one row (the damage summary's Group View and
+        // the Damage Breakdown), and an assignment here left the aggregate holding ONLY the last source's value while `BowHits` below it
+        // summed - so a group of five rangers printed a double-barb rate computed from one member's double-bow count over all five
+        // members' bow swings. Plausible, wrong, and invisible: the percentage always looked like a percentage.
+        to.DoubleBowHits += from.DoubleBowHits;
         to.FinishingHits += from.FinishingHits;
         to.FlurryHits += from.FlurryHits;
         to.HeadHits += from.HeadHits;
