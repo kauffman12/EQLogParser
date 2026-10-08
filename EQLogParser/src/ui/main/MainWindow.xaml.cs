@@ -115,6 +115,14 @@ namespace EQLogParser
       // set main / themes
       MainActions.SetMainWindow(this);
 
+      /*
+       * An operator's pet->owner claim asks Core for the pass that routes it (PetAssignment: the pair becomes an ownership
+       * interval through RegistrySeed, and the fold happens where the boards are built, not in a click handler). The lambda
+       * asks `DeriveEngine.Active` at the moment of the click rather than closing over an engine: no session wired means no
+       * pass owed — the pair is simply saved for the next capture — and a dead session can never be reached through it.
+       */
+      PetAssignment.Reroute = () => DeriveEngine.Active?.RederiveAsync();
+
       // update titles
       versionText.Text = $"v{App.Version}";
 
@@ -1428,7 +1436,7 @@ namespace EQLogParser
       if (_currentEditMapping == null || _currentEditMapping.Owner == name)
         return;
 
-      PlayerRegistry.Instance.AddPetToPlayer(_currentEditMapping.Pet, name);
+      PetAssignment.Assign(_currentEditMapping.Pet, name);
       ownerEditPopup.IsOpen = false;
     }
 

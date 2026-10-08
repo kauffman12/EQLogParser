@@ -1,0 +1,7 @@
+[Sun Apr 26 18:42:00 2026] Beorun joined the raid.
+[Sun Apr 26 18:42:01 2026] Beorun slashes a groaning statue for 400 points of damage.
+[Sun Apr 26 18:42:02 2026] Picklepaw bites a groaning statue for 250 points of damage.
+[Sun Apr 26 18:42:03 2026] Beorun backstabs a groaning statue for 900 points of damage. (Critical)
+[Sun Apr 26 18:42:04 2026] Picklepaw bites a groaning statue for 200 points of damage.
+[Sun Apr 26 18:42:07 2026] A groaning statue slashes Beorun for 310 points of damage.
+[Sun Apr 26 18:42:09 2026] A groaning statue falls in battle.

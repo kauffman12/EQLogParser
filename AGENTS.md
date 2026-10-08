@@ -1216,3 +1216,32 @@ After completing work, verify:
 ## Important: Never Touch
 - `BackupUtil`
 - `MaterialDarkCustom`
+- **A refresh answers for itself; only a machine's refresh may decline, and it says so** (2026-11): an applied change is visible in
+  the place the operator is looking — the row that left the list is gone, a claimed summon reads `X +Pets` — because re-presenting a
+  pool the builder already holds costs **~10 ms for one row, 25–32 ms for a whole-capture selection**, and the boards' own door prints
+  `stats build #N … [SelectCommand]`. **There is therefore no toast/banner/progress state for an applied change** (the fight pane has no
+  status section at all), and the deferred notice design stays in `docs/summary-refresh-notification.md` as the alternative. What was
+  broken is the other direction: every derive-driven rebuild funnels through **one door**, `FightTable.AnnounceSelection`, on three
+  reason words (`ContentMoved`/`RowEdited` from the row patch, `SnapshotSwap` from a wholesale swap) and feeds all three boards; at two
+  passes a second, a whole-capture selection costs **~1.5 s** each time. So the cost gate is `UnaskedRefresh` (Core), called once, after
+  dedupe and before recording: **a hand's gesture (`SelectCommand`, `MenuClose`, `SettleTick`, `Manual`) builds at any size — law;** the
+  three pass-driven words may decline over `MaxOutcomes` = **100,000** (`DamageHits + TankHits`; ~1.3 µs per outcome measured, so
+  ~0.13 s — a noticeability line, not a requested budget: one pull sits under it, a 1.9 M night is 19× over), and **a refusal logs once per episode at Debug** naming reason/rows/size
+  (re-arming when a pass is allowed again) because a silent skip is how "the meter stopped updating" costs an afternoon. Five rules:
+  (1) **a decline must not record `_announcedIds`/`_announcedStamp`** — those mean "answered", and stamping them on a refusal makes the
+  next identical gesture dedupe against a board it never got; (2) the gate reads the **reason**, never the `force` flag: `ContentMoved`
+  and `RowEdited` arrive forced, so gating on force would decline nothing, and gating on "forced too" would decline Refresh; (3) new
+  `BoardReason` words are classified by `UnaskedRefreshTest.TheUnaskedDoorsAreExactlyThree`, which fails until the author picks
+  asked/unasked, because the default decides whether a select-all gets a build it cannot pay for; (4) never "make it cheaper" by
+  declining a click — that is the one inversion that breaks trust in a click; (5) an ownership claim is not a display edit:
+  `PetAssignment.Assign` (Core, one seam for the damage/tanking menus' *Assign … as Pet of* and the Pet Owners picker) writes the pair
+  **and asks for a full pass** through `Reroute` (wired once to `() => DeriveEngine.Active?.RederiveAsync()`), because only
+  `RegistrySeed` → `EntityTimeline.OwnerOf` → `FightSummarySource` moves a summon's facts under its person and with the digest panes
+  repaint from; it refuses a pair already in effect by asking **both** stores case-insensitively (petmapping's own keys are ordinal, so a
+  second spelling would mint a second owner for one pet). Because such a write lands only AFTER a pass — whose announce is `ContentMoved`,
+  i.e. declinable — every operator write also calls `UnaskedRefresh.OweGesture(phrase)`, and the fight list's announce consumes it as
+  `Manual`: **one slot, not a queue; consumed by the first announce after the write; owed only by the app's click doors (never by
+  `IdentityOverrideStore`/petmapping, which tests drive — a test's debt would spend a forced build in the next class); cleared on a capture
+  change** (`ClearForNewCapture`: last night's click cannot own this capture's first announce). A test summon's name must not be in `npcs.txt`: `Stormclaw` reads Npc at R6 and
+  its facts are mob-on-mob, so the fold never happens and the test measures a drop (that is why the fixture says `Picklepaw`).
+  Measurements: docs/DesignNotes.md → "A refresh that answers for itself", "Where a board build's time actually goes".
