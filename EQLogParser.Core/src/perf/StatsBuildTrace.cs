@@ -1,5 +1,6 @@
 #nullable enable annotations
 
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Reflection;
 using log4net;
@@ -35,6 +36,18 @@ internal static class StatsBuildTrace
   /// <summary>What an unlabelled caller shows as, in the log and in tests.</summary>
   internal const string UnlabelledDoor = "UNLABELLED";
 
+  /*
+   * Test-only: a summary builder that throws RETHROWS instead of being swallowed, so a defect inside a board build fails
+   * the run with its real stack rather than reading as "the raid did no damage". Off in production on purpose — one bad
+   * record must not cost a player their night, and eqlogparser.log keeps the stack either way. Same law and shape as
+   * ClassificationRules.FailFastStages; both test assemblies turn this on at assembly init.
+   *
+   * Why it exists: every builder wraps its body in `catch (Exception) { Log.Error(ex); }`, so a null reference inside a
+   * build is indistinguishable from an empty selection. That is how a hoisted line threw over an empty `options.AllRanges`
+   * for a whole test cycle with nothing but a missing NONPC event to show for it.
+   */
+  internal static bool FailFast;
+
   private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
   private static readonly object _sync = new();
@@ -45,7 +58,7 @@ internal static class StatsBuildTrace
   private static readonly List<(int Seq, string What, int ThreadId, long Mark, List<string>? Stages)> _inside = [];
 
   private static int _seq;
-  private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, string> _lastFinished = new();
+  private static readonly ConcurrentDictionary<string, string> _lastFinished = new();
   private static long _overlapBuilds;
   private static long _unlabelledBuilds;
 

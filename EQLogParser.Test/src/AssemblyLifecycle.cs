@@ -18,7 +18,8 @@ namespace EQLogParser
     [AssemblyInitialize]
     public static void Initialize(TestContext context)
     {
-      ClassificationRules.FailFastStages = true;
+            ClassificationRules.FailFastStages = true;
+      StatsBuildTrace.FailFast = true;   // a swallowed builder throw is an empty board: same law, one line (see StatsBuildersTest)
 
       /*
        * The heal parser's output is observed through its own event for the whole run (see HealRecordTap): heals are no

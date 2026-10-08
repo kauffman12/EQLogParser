@@ -15,7 +15,8 @@ namespace EQLogParser
     [AssemblyInitialize]
     public static void Initialize(TestContext context)
     {
-      ClassificationRules.FailFastStages = true;
+            ClassificationRules.FailFastStages = true;
+      StatsBuildTrace.FailFast = true;   // a swallowed builder throw is an empty board: same law, one line (see StatsBuildersTest)
 
       // Same registration as the app, from the same one line: with a real key in SyncFusionUtil.LicenseKey the test
       // process runs licensed exactly like the app; with the committed empty key it is a vendor no-op and the guard

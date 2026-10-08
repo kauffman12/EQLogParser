@@ -147,6 +147,49 @@ namespace EQLogParser
       Assert.AreEqual(30.0, combined.RaidStats.TotalSeconds, 0.001);
     }
 
+    /*
+     * The builder's error policy, pinned from both sides (StatsBuildTrace.FailFast). Every board build wraps its body in
+     * `catch (Exception) { Log.Error(ex); }`, which means "the raid did no damage" in production and "nothing to see" in a
+     * test — so a real defect passes quietly. One did: a line hoisted out of the per-fight loop threw over an empty
+     * `options.AllRanges` for a whole cycle, visible only as a missing NONPC event. Off = the build degrades; on (what both
+     * test assemblies set at init) = the throw reaches the run with its stack. Same pairing as FailFastStages.
+     */
+    [TestMethod]
+    public void ABuilderThrowDegradesInProductionAndFailsTheRunInTests()
+    {
+      var fight = MakeFight(91, "ErrorPolicy", 0, 10, Block(1, Hit(1, Name("ErrPolicy"), 10)));
+      var options = Options(fight);
+
+      // A null block in the selection: the grouping reads BeginTime off every one of them, so this throws inside the build.
+      fight.DamageBlocks.Add(null!);
+
+      StatsBuildTrace.FailFast = false;
+      try
+      {
+        DamageStatsBuilder.Instance.BuildTotalStats(options);
+      }
+      catch (Exception ex)
+      {
+        Assert.Fail($"with FailFast off a build degrades rather than throwing, but it threw {ex.GetType().Name}");
+      }
+
+      try
+      {
+        StatsBuildTrace.FailFast = true;
+        // The sort wraps whatever its comparer throws, so the outer type is the list's; the point is that the build's own
+        // failure arrives at all rather than becoming a blank grid (the inner exception is the NRE the log prints).
+        var thrown = Assert.Throws<InvalidOperationException>(() => DamageStatsBuilder.Instance.BuildTotalStats(options),
+          "with FailFast on, the same defect reaches the run instead of reading as an empty board");
+        Assert.IsInstanceOfType(thrown.InnerException, typeof(NullReferenceException),
+          "the builder's own throw is inside, which is what eqlogparser.log carries");
+      }
+      finally
+      {
+        // The assembly-wide setting, restored rather than lost: a test that leaves it off un-tests every builder after it.
+        StatsBuildTrace.FailFast = true;
+      }
+    }
+
     [TestMethod]
     public void BuildTotalStats_NoFires_ReportsNonpc()
     {

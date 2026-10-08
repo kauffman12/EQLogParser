@@ -330,6 +330,8 @@ namespace EQLogParser
         catch (Exception ex)
         {
           Log.Error(ex);
+          if (StatsBuildTrace.FailFast)
+            throw;   // tests: a swallowed builder throw is an empty board, not a failed run
         }
       }
     }
@@ -596,6 +598,8 @@ namespace EQLogParser
           catch (Exception ex)
           {
             Log.Error(ex);
+            if (StatsBuildTrace.FailFast)
+              throw;   // tests: a swallowed builder throw is an empty board, not a failed run
           }
         }
       }
