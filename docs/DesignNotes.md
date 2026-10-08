@@ -9161,10 +9161,12 @@ sharing one instance between rows (or between the three boards) would let a late
 
 Two further probes on the same phase, one of which bought a durable fact and one of which refuted my own plan:
 
-- **`TimeRange.GetTotal()` is exactly `Σ(EndTime − BeginTime + 1)` over its segments.** Replacing it with a plain loop
-  over `range.TimeSegments` and comparing both on every call over a real capture: **735 calls, 0 mismatches, 0.0 s
-  delta**. Worth keeping as knowledge (DPS seconds can be computed without Syncfusion at all), even though the swap
-  changed no timing — `GetTotal` was not the cost.
+- **`TimeRange.GetTotal()` is exactly `Σ(EndTime − BeginTime + 1)` over its segments** — verified, and uninteresting as
+  an optimization. `TimeRange` is our own class (`EQLogParser.Utils/src/TimeRange.cs`), not Syncfusion's, and `GetTotal`
+  is already a tight `CollectionsMarshal.AsSpan` sum with the tick rule living in `Add` (432ff83b) and the binary insert
+  in `Add` too (ddf9f323). Replacing it with the same sum by hand and comparing on every call over a real capture gave
+  **735 calls, 0 mismatches, 0.0 s delta** — a value-equivalence worth recording, and a timing non-event for exactly the
+  reason the operator gave: the seconds are already cached/cheap, so this avenue is spent. Reverted.
 - **The "shared assembly pass" idea is refuted, so it was not built.** Each board's assembly computes *that board's*
   numbers (its own `_raidTotals`, its own per-name ranges), and the parts genuinely common across boards — the class
   lookup, the shared iteration — were already shown not to cost anything. Three builders walking the same name list is
@@ -9173,10 +9175,14 @@ Two further probes on the same phase, one of which bought a durable fact and one
 What remains in that phase is attributed only as a block: duplicating the per-name range pair inside the loop moved it
 56 → 124 ms (so the pair *is* the phase), while making its `GetTotal` cheap did nothing and stubbing individual calls
 either changed nothing or broke invariants (stubbing the ranges makes `CalculateRates` divide by zero and throw into the
-builder's catch, which is slower than the work it removes — a measurement artifact, not a finding). **The next step here
-is a real profile of the builder in its own process**, not more stubbing: `dotnet-trace collect -- dotnet test …`
-records the launcher, never `testhost`, so it has to be a small console harness driving one `BuildTotalStats` over a
-real capture, sampled, with the frames read back. Until that exists, this stays "56 ms per board, block-attributed".
+builder's catch, which is slower than the work it removes — a measurement artifact, not a finding). The one clean
+observation available: only **~245 names per build** actually hold a range on this capture, so what costs is not "12k
+names × ranges" but the walk of the sub-stat lists of the names that *do* (`UpdateSubStat` over `SubStats` and
+`SubStats2`, calling `GetTotal` per sub-range) — and since those seconds are already cached where caching applies, the
+win is in not asking, not in answering faster. Naming it precisely wants **a real profile of the builder in its own
+process**: `dotnet-trace collect -- dotnet test …` records the launcher and never `testhost`, so it takes a small
+console harness driving one `BuildTotalStats` over a real capture, sampled, with the frames read back. Until that
+exists this stays "56 ms per board, block-attributed", and nothing further has been changed on guesswork.
 
 So the lever for group nights is not micro-tuning but **one assembly pass shared by the three boards** — assemble each
 name's display row once and hand it to damage, tanking and healing instead of walking the same 12k names three times.
