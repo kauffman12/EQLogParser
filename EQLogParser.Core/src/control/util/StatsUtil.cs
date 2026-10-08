@@ -507,6 +507,87 @@ namespace EQLogParser
       }
     }
 
+    /*
+     * Fold one PARTIAL row into another: the primitive a cell cache needs, where a refresh re-counts only what is new and hands the rest of
+     * the night over as accumulated rows (docs/incremental-summary-refresh.md -> Phase B; the measured case against row-granularity reuse is
+     * in DesignNotes -> "How much a whole-row cache would actually save").
+     *
+     * Three rules, each one there because the alternative is silent:
+     *
+     *   - **Children are reached through the model's own funnels** (`SubStatOf` / `SubStat2Of` / `SubSubStatOf`), never by inserting into a
+     *     list directly. That keeps the key rule (`CreateRecordKey`, where ("Spell","Foo") and ("Melee","Foo") are deliberately the SAME row)
+     *     and the per-list accelerator consistent with what a live walk would have produced. A folded row must be indistinguishable from a
+     *     counted one, or the fold becomes a second implementation of every future column.
+     *   - **Extrema fold, they do not replace** — `MergeStats` already takes Max/Min/BestSec that way; nothing below may overwrite them.
+     *   - **Nothing derived is copied.** Rates, Dps and percentages are finalize output; the caller runs finalize over the folded row, which
+     *     is exactly how Group View already orders reset -> fold -> `CalculateRates`.
+     *
+     * Requires drained best-second scratch on both sides. `BestSecTemp` holds a running second that a boundary step moves into `BestSec`, so
+     * folding an unfinished second would either lose it or count it twice - and a cell snapshot taken mid-second is exactly that. Rather than
+     * quietly ignoring the field, ask: an un-drained fold target fails here, by name, instead of printing a plausible best second.
+     *
+     * NOT covered, deliberately: `TotalSeconds` (a union of ranges the caller recomputes, as Group View does) and anything the walk LEARNS
+     * while counting - pet mapping and per-frame history are order-dependent inside a build, so a cell-based build must replay that learning
+     * over the new records or take the full-build path. See DesignNotes -> "The three preconditions behind the cell cache".
+     */
+    internal static void MergeStatsRecursive(PlayerSubStats to, PlayerSubStats from)
+    {
+      if (to is null || from is null)
+      {
+        return;
+      }
+
+      if (from.BestSecTemp != 0 || to.BestSecTemp != 0)
+      {
+        throw new InvalidOperationException($"MergeStatsRecursive needs drained best-second scratch on both rows ({to.Name}):"
+          + $" target={to.BestSecTemp}, source={from.BestSecTemp}. Close the running second before folding a partial row.");
+      }
+
+      MergeStats(to, from);
+
+      to.Ranges.Add(from.Ranges.TimeSegments);
+      to.AllRanges.Add(from.AllRanges.TimeSegments);
+
+      foreach (var child in from.SubSubStats)
+      {
+        MergeStatsRecursive(to.SubSubStatOf(child.Name, child.Type), child);
+      }
+
+      if (to is not PlayerStats target || from is not PlayerStats source)
+      {
+        return;
+      }
+
+      foreach (var child in source.SubStats)
+      {
+        MergeStatsRecursive(target.SubStatOf(child.Name, child.Type), child);
+      }
+
+      foreach (var child in source.SubStats2)
+      {
+        MergeStatsRecursive(target.SubStat2Of(child.Name, child.Type), child);
+      }
+
+      foreach (var special in source.Specials)
+      {
+        target.Specials.TryAdd(special.Key, special.Value);
+      }
+
+      foreach (var resist in source.ResistCounts)
+      {
+        var into = target.ResistCounts.GetOrAdd(resist.Key, _ => new ConcurrentDictionary<string, int>());
+        foreach (var count in resist.Value)
+        {
+          into.AddOrUpdate(count.Key, count.Value, (_, existing) => existing + count.Value);
+        }
+      }
+
+      foreach (var death in source.Deaths)
+      {
+        target.Deaths.Add(death);
+      }
+    }
+
     internal static void CalculateRates(PlayerSubStats stats, PlayerStats raidStats, PlayerStats subStats)
     {
       if (stats.Hits > 0)
