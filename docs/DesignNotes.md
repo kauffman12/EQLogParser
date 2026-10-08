@@ -9159,6 +9159,25 @@ which is what feeds Group View, the DPS log and the breakdown panes — plus `St
 That copy is where the damage board's 21.9 MB goes, and it exists because `TimeRange.Add` welds whatever it is handed:
 sharing one instance between rows (or between the three boards) would let a later merge widen a row someone is reading.
 
+Two further probes on the same phase, one of which bought a durable fact and one of which refuted my own plan:
+
+- **`TimeRange.GetTotal()` is exactly `Σ(EndTime − BeginTime + 1)` over its segments.** Replacing it with a plain loop
+  over `range.TimeSegments` and comparing both on every call over a real capture: **735 calls, 0 mismatches, 0.0 s
+  delta**. Worth keeping as knowledge (DPS seconds can be computed without Syncfusion at all), even though the swap
+  changed no timing — `GetTotal` was not the cost.
+- **The "shared assembly pass" idea is refuted, so it was not built.** Each board's assembly computes *that board's*
+  numbers (its own `_raidTotals`, its own per-name ranges), and the parts genuinely common across boards — the class
+  lookup, the shared iteration — were already shown not to cost anything. Three builders walking the same name list is
+  therefore not three copies of one job, and the ~110 ms I hoped to reclaim by unifying them does not exist.
+
+What remains in that phase is attributed only as a block: duplicating the per-name range pair inside the loop moved it
+56 → 124 ms (so the pair *is* the phase), while making its `GetTotal` cheap did nothing and stubbing individual calls
+either changed nothing or broke invariants (stubbing the ranges makes `CalculateRates` divide by zero and throw into the
+builder's catch, which is slower than the work it removes — a measurement artifact, not a finding). **The next step here
+is a real profile of the builder in its own process**, not more stubbing: `dotnet-trace collect -- dotnet test …`
+records the launcher, never `testhost`, so it has to be a small console harness driving one `BuildTotalStats` over a
+real capture, sampled, with the frames read back. Until that exists, this stays "56 ms per board, block-attributed".
+
 So the lever for group nights is not micro-tuning but **one assembly pass shared by the three boards** — assemble each
 name's display row once and hand it to damage, tanking and healing instead of walking the same 12k names three times.
 That is plumbing behind the builders: `Fight`, its blocks, its segments and each row's `Ranges` keep the shape every
