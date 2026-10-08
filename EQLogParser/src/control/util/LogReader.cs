@@ -11,7 +11,13 @@ using System.Threading.Tasks;
 
 namespace EQLogParser
 {
-  internal class LogReader(ILogProcessor logProcessor, string fileName, int minBack = 0)
+  /*
+   * `origin` is the door that started this reader, in the words of whoever opened it (see MainWindow.OpenLogFile). It
+   * exists because "which session is this read loop" was unanswerable: a Windows run left THREE `load: read loop #N`
+   * lines against TWO `capture: started` lines, so a leftover reader and a fresh one looked identical, and the ordinal
+   * alone could not say who created it. One word per construction, printed beside the file name.
+   */
+  internal class LogReader(ILogProcessor logProcessor, string fileName, int minBack = 0, string origin = "open")
     : IDisposable
   {
     private const int BatchSize = 5000;
@@ -233,7 +239,8 @@ namespace EQLogParser
         // each line belong to someone — which is also what tells a leftover reader from the one you just started.
         Log.Info($"load: read loop #{Interlocked.Increment(ref _readersStarted)} on thread "
                  + $"{Environment.CurrentManagedThreadId}, sync context = "
-                 + $"{SynchronizationContext.Current?.GetType().Name ?? "none"} | {Path.GetFileName(FileName)}");
+                 + $"{SynchronizationContext.Current?.GetType().Name ?? "none"} | {Path.GetFileName(FileName)}"
+                 + $" | {FactCapacity.ModeWord(minBack)} from {origin}");
 
         _currentPos = _fs.Position;
         var bytesRead = _fs.Position;

@@ -47,6 +47,34 @@ namespace EQLogParser
     internal const int DefaultDamageSlots = 65_536;
     internal const int DefaultHealSlots = 16_384;
 
+    /*
+     * WHICH doors get a hint at all — a different question from how big the hint should be, and the one that shipped
+     * wrong. A session's starting point arrives as `LogReader`'s three-state `minBack`: NEGATIVE reads the whole file
+     * from byte 0, POSITIVE reads back N seconds by timestamp, ZERO seeks straight to END OF FILE and follows from
+     * there — which is the startup auto-monitor, File / Open Monitor, and Clear All. Only the first of the three will
+     * ever hold this file's facts, so only the first is worth precommitting slots for.
+     *
+     * The zero used to fall on the hinted side of `lastMins > 0 ? 0 : FileSizeOrZero(theFile)`, and that call site's own
+     * comment describes "a last N minutes open" as the unhinted case without noticing that `0` is not "read everything", it
+     * is "read nothing". Measured on Windows with PerfReport=True over the 998 MB capture, a follow-from-end session
+     * printed `heap: ws=586.9 MB … facts rows=0 slack=127.0 MB heals rows=0 slack=69.1 MB | row arrays est=196.1 MB`:
+     * **196 MB of row slots reserved against zero facts**. Nothing hands it back either — `CombatCapture.CompactRows`
+     * runs from the pass that classified, and a capture that never grows schedules no pass at all, so an idle monitor
+     * holds a fifth of a gigabyte for the whole night. That is this app's DEFAULT overnight shape.
+     *
+     * A hinted-but-oversized open does have a way back (the load ends in quiet, a pass runs, the slack is trimmed), which
+     * is why over-reserving for `minBack > 0` was never written down as a bug — an unknown slice stays unhinted.
+     */
+    internal static long HintForOpen(int minBack, long fileBytes) => minBack < 0 ? fileBytes : 0L;
+
+    /// <summary>The word the log prints for how this session reads its file; see <see cref="HintForOpen"/>.</summary>
+    internal static string ModeWord(int minBack) => minBack switch
+    {
+      < 0 => "whole-file",
+      0 => "follow-end",
+      _ => $"last-{minBack / 60}min"
+    };
+
     /// <summary>Starting capacity for the damage table, or the table's own default when there is nothing to size from.</summary>
     internal static int DamageForBytes(long bytes) => For(bytes, BytesPerDamageFact, MarginPercent, DefaultDamageSlots, MaxDamageSlots);
 

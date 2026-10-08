@@ -75,6 +75,54 @@ namespace EQLogParser
       Assert.AreEqual(FactCapacity.DefaultDamageSlots, FactCapacity.DamageForBytes(4_096));
     }
 
+    /*
+     * The density law above only earns its keep on an open that will hold the file. `LogReader`'s `minBack` has THREE
+     * states — negative reads from byte 0, positive seeks back by timestamp, ZERO goes to end of file and follows — and
+     * the call site that fed this class used to test `lastMins > 0`, so the follow-from-end open (startup auto-monitor,
+     * File / Open Monitor, Clear All) got sized as if it were going to capture the whole gigabyte.
+     *
+     * Measured on Windows with PerfReport=True, one second after such an open:
+     * `heap: ws=586.9 MB … facts rows=0 slack=127.0 MB heals rows=0 slack=69.1 MB | row arrays est=196.1 MB`.
+     * And it is not a temporary: `CombatCapture.CompactRows` runs from the pass that classified, and a capture that never
+     * grows schedules no pass — so the reservation stands for the life of the session, which for a monitor is all night.
+     */
+    [TestMethod]
+    public void OnlyAWholeFileOpenIsSizedFromTheFile()
+    {
+      Assert.AreEqual(BigCaptureBytes, FactCapacity.HintForOpen(-1, BigCaptureBytes),
+        "a whole-file open reads every byte of this capture; that is the hint's whole purpose");
+
+      Assert.AreEqual(0L, FactCapacity.HintForOpen(0, BigCaptureBytes),
+        "minBack 0 seeks to end of file and captures no history — sizing it from the file reserves memory for facts that never arrive");
+      Assert.AreEqual(0L, FactCapacity.HintForOpen(900, BigCaptureBytes),
+        "a 'last N minutes' open reads an unknown slice: no hint, grow by doubling like before");
+
+      // The words these three states print, asserted because the log line is how a field run diagnoses a session.
+      Assert.AreEqual("whole-file", FactCapacity.ModeWord(-1));
+      Assert.AreEqual("follow-end", FactCapacity.ModeWord(0));
+      Assert.AreEqual("last-15min", FactCapacity.ModeWord(15 * 60), "the menu hands seconds, the word says minutes");
+    }
+
+    [TestMethod]
+    public void AMonitorOpenReservesNoRowArraysForFactsItWillNeverRead()
+    {
+      var monitorDamage = FactCapacity.DamageForBytes(FactCapacity.HintForOpen(0, BigCaptureBytes));
+      var monitorHeals = FactCapacity.HealForBytes(FactCapacity.HintForOpen(0, BigCaptureBytes));
+      var monitorBytes = (long)monitorDamage * System.Runtime.InteropServices.Marshal.SizeOf<DamageFact>()
+                       + (long)monitorHeals * System.Runtime.InteropServices.Marshal.SizeOf<HealFact>();
+
+      Assert.AreEqual(FactCapacity.DefaultDamageSlots, monitorDamage);
+      Assert.AreEqual(FactCapacity.DefaultHealSlots, monitorHeals);
+      Assert.IsTrue(monitorBytes < 3L * 1024 * 1024,
+        $"a follow-from-end open precommits {monitorBytes / (1024 * 1024):N1} MB of row slots; it reads no history");
+
+      // The size of the defect, in the units the field log printed: putting the old condition back fails HERE by name.
+      var wholeFileBytes = (long)FactCapacity.DamageForBytes(BigCaptureBytes) * System.Runtime.InteropServices.Marshal.SizeOf<DamageFact>()
+                         + (long)FactCapacity.HealForBytes(BigCaptureBytes) * System.Runtime.InteropServices.Marshal.SizeOf<HealFact>();
+      Assert.IsTrue(wholeFileBytes > 50 * monitorBytes,
+        $"whole-file reserves {wholeFileBytes / (1024 * 1024):N0} MB against a monitor's {monitorBytes / (1024 * 1024):N1} MB");
+    }
+
     [TestMethod]
     public void ABogusLengthCannotPrecommitTheMachine()
     {

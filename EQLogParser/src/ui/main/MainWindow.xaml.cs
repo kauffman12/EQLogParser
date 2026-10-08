@@ -276,7 +276,7 @@ namespace EQLogParser
         // stores, reader) there - so it is measured separately rather than buried in app.mainwindow. `lastMins: 0` means
         // follow from end of file: an old last-opened file yields zero lines here, which is correct for a monitor but still
         // announces "Finished Loading Log File" to the log.
-        PerfCounters.Run(MwAutoOpenId, () => OpenLogFile(previousFile, 0));
+        PerfCounters.Run(MwAutoOpenId, () => OpenLogFile(previousFile, 0, "startup auto-monitor"));
       }
 
       // workaround to set initial theme properly
@@ -1318,7 +1318,7 @@ namespace EQLogParser
           return;
         }
 
-        OpenLogFile(fileName, lastMin);
+        OpenLogFile(fileName, lastMin, "recent-file menu");
       }
     }
 
@@ -1455,7 +1455,12 @@ namespace EQLogParser
       classEditPopup.IsOpen = false;
     }
 
-    private void OpenLogFile(string previousFile, int lastMins)
+    /*
+     * `origin` names the door this open came through, and rides down into the reader's load line (see LogReader). The
+     * three doors behave differently enough that "an open happened" stopped being an answer: a PerfReport run showed a
+     * read loop with no session beside it, and a follow-from-end open holding 196 MB of row slots it could not fill.
+     */
+    private void OpenLogFile(string previousFile, int lastMins, string origin = "open")
     {
       var openMark = PerfCounters.Begin(OpenLogId);
       try
@@ -1549,18 +1554,29 @@ namespace EQLogParser
             /*
              * The engine sizes its fact arrays from this file when the whole of it will be read (see FactCapacity):
              * a gigabyte capture used to arrive at 4.8 M damage facts sitting in 8.4 M slots, and a 1 % undershoot
-             * costs a full doubling, so an estimate beats starting at 100 K and growing there. A "last N minutes"
-             * open reads an unknown slice, so it gets no hint and the old growth behaviour.
+             * costs a full doubling, so an estimate beats starting at 100 K and growing there.
+             *
+             * WHICH opens that is belongs to FactCapacity.HintForOpen now, because `lastMins` has three states and the
+             * middle one is the trap: negative reads the whole file, positive seeks back N seconds by timestamp, and ZERO
+             * — the auto-monitor, Open Monitor, Clear All — goes straight to end of file and captures nothing. The old
+             * two-way test put zero on the hinted side, and a PerfReport run printed the result for a 951 MB file:
+             * `facts rows=0 slack=127.0 MB … row arrays est=196.1 MB` — a fifth of a gigabyte reserved against no facts,
+             * with no route back, since compaction runs from the pass that classified and a capture that never grows
+             * schedules none. An idle monitor was the most expensive session this app had.
              */
-            _engine = new DeriveEngine(lastMins > 0 ? 0 : LogReader.FileSizeOrZero(theFile));
+            var hintBytes = FactCapacity.HintForOpen(lastMins, LogReader.FileSizeOrZero(theFile));
+            _engine = new DeriveEngine(hintBytes);
             _engine.Start();
             chatSink = new CompositeChatSink(chatSink, _engine.ChatSink);
             // One line per open: if the derived list ever silently fails to fill, this is the line that is
             // missing from the log (session created) or that arrives without rows following it (derive stuck).
-            Log.Info($"capture: started ({Path.GetFileName(theFile)})");
+            // Mode and door ride on this line because both were unanswerable from a log: which of the three ways of
+            // reading a file an open chose, and who asked. `sized-from` is the input to the capacity hint (0 means the
+            // tables start small and double), so "why is the working set this big on an idle monitor" reads off one line.
+            Log.Info($"capture: started ({Path.GetFileName(theFile)}) {FactCapacity.ModeWord(lastMins)}"
+                     + $" from {origin} | sized-from={hintBytes / (1024 * 1024):N0} MB");
 
-
-            _eqLogReader = new LogReader(new LogProcessor(theFile, chatSink, new TriggerHookAdapter()), theFile, lastMins);
+            _eqLogReader = new LogReader(new LogProcessor(theFile, chatSink, new TriggerHookAdapter()), theFile, lastMins, origin);
             /*
              * Start the read loop OFF this thread - and Task.Run is needed even though LogReader made all of its own
              * awaits context-free, because the first segment runs on whoever called and everything here is already inside a
@@ -1653,7 +1669,7 @@ namespace EQLogParser
        */
       GcTidyUp.Request("log closed");
 
-      OpenLogFile(theFile, 0);
+      OpenLogFile(theFile, 0, "clear all");
     }
 
     private void UpdateRecentFiles()
