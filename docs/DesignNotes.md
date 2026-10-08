@@ -9143,6 +9143,39 @@ both are per-record cost, which is exactly the argument above rather than an exc
 of damage, window the biggest single heal term), so no machine-specific effect explains it and micro-optimizing the inside of those loops
 is not on the table: the phase boundary is "count less", and counting less needs one of the two structural moves above first.
 
+### How much a whole-row cache would actually save, measured before building one (2026-10)
+
+The obvious alternative to merge was reuse at row granularity: hand the **untouched rows** over intact, rebuild only the rows the new facts
+belong to (from scratch — no merge), and let finalize redo rates, percent and ranking, which the census above already proved is free. No
+accumulator would be mutated, so the ownership problem goes away. It dies on an arithmetic question, answered by a gated probe
+(`RowReuseCeilingProbeTest`, `EQLP_REUSE_CEILING=<log>`): of the records a full recount walks, how many belong to a row that the new facts
+touch? A touched row pays its **whole history**, since it is rebuilt from scratch.
+
+Windows are taken **mid-capture**, because that is what a live refresh looks like. Anchoring on the newest fact was my first attempt and it
+lied: both reference captures end in a long idle stretch, so "the last 600 s" held three facts and reported a 98 % saving that would never
+be seen in play.
+
+```
+raid    eqlog_Kizant_xegony-09-03-26.txt  4,832,103 facts / 323 rows
+  5s window   tail  4,817 facts → 128 rows touched (39.6%) → walks 3,870,510 = 80.1%  saved ≈ 20%
+ 30s window   tail 25,919        → 134 rows touched (41.5%) → walks 3,902,576 = 80.8%  saved ≈ 19%
+group eqlog_Roper_thj.txt                4,356,144 facts / 1,739 rows
+  5s window   tail     61 facts →  12 rows touched ( 0.7%) → walks 2,768,973 = 63.6%  saved ≈ 36%
+ 30s window   tail    115        →  16 rows touched ( 0.9%) → walks 2,838,132 = 65.2%  saved ≈ 35%
+```
+
+**The rows that change are the rows with the most history.** Twelve touched names in the group capture own 63 % of every record in the file;
+in raid content a five-second window reaches 40 % of names, and those names are the raid members who were there all night. So rebuilding
+"only what changed" rebuilds most of the bytes, and it does it in *both* content shapes — the group case looks good by row count (0.7 % of
+rows touched!) and still walks two thirds of the records. The saving that is actually available on a live refresh is ~99 % (adding ~5 k facts
+to a 4.8 M recount), so row-granularity reuse leaves four fifths of it on the table in raid content.
+
+That is the quantitative version of the blocker above, and it says where the granularity has to be: **below the row** — a cache cell keyed
+by (row × fight/segment), so a touched row pays only its new window and not its night. Which is exactly why merge cannot be avoided: finer
+cells have to be combined into one displayed row. Any future design therefore has to beat this bar and should quote it — **if a proposal
+still walks ~80 % of the records on a 5-second raid refresh, it is not the win it looks like.** Meanwhile the cheapest real relief for the
+same pain needs no counting at all: keep the previous board on screen while a new one is built.
+
 ## A refresh that answers for itself: the cost budget on unasked passes (2026-11)
 
 The question this closes is *"when a row is added or removed, or a pet is claimed, how does the user know the refresh worked —
