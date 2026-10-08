@@ -611,12 +611,19 @@ namespace EQLogParser
 
       CalculatePercentOfRaid(stats, raidTotals);
 
-      // remaining amount
-      if (stats.BestSecTemp > 0)
-      {
-        stats.BestSec = Math.Max(stats.BestSec, stats.BestSecTemp);
-        stats.BestSecTemp = 0;
-      }
+      /*
+       * The running total for the second in progress, folded into the best. It is NOT zeroed here, and that is load-bearing rather than
+       * untidiness: this routine runs when a report goes OUT, and the accumulator it drains is the one the next batch of records still has to
+       * write into. Zeroing made a publish destructive — 100 damage published, 60 more arriving in the SAME second, and the name's best second
+       * came back as 60 where one uninterrupted pass says 160 (`StatResumeTest.APublishedReportLeavesTheCurrentSecondAbleToGrow`, red against
+       * the old shape). Nothing publishes twice per build today, so nothing but that test can see it; an incremental refresh publishes on every
+       * tick, which is why the accumulator and the published report have to be different things.
+       *
+       * Leaving it alone costs nothing: folding is `Math.Max`, so re-folding the same running total is idempotent, and the day the count moves to
+       * a new second the caller's frame (`newFrame`) folds and clears it exactly as before — which `ANewSecondAfterAPublishStartsFresh` pins from
+       * the other side, because "never drain" would be as wrong as "always drain".
+       */
+      if (stats.BestSecTemp > 0) stats.BestSec = Math.Max(stats.BestSec, stats.BestSecTemp);
 
       // handle sub stats
       if (stats is PlayerStats playerStats)
