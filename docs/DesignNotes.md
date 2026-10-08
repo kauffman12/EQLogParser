@@ -8786,3 +8786,47 @@ gets split in half.
 per changed line. The three windows are the part to watch: they are the only place the *retained pool* promise is
 tested, and the minimal-refresh design depends on that promise. Healing/tanking goldens are deliberately not here yet —
 same harness shape, one board at a time, so each golden is reviewed rather than generated.
+
+### Grouping by reference: the copy that cost more than the counting
+
+The phase split named one thing first (`groups 1196 ms` against `walk 822 ms`), and it was the duplication the
+feature conversation kept circling: `BuildTotalStatsCore` took the blocks the selection had just **materialized** —
+already `ActionGroup`s, already one per second of that fight — and copied every one of them into fresh ones, a list copy
+per second of the raid, before adding a single counter. The rewrite hands the block over **as the object it is**:
+
+```
+stats build #33 damage full : 914 ms | groups 106 ms  window 0 ms  walk 777 ms  present 32 ms
+whole board: 3,800 ms → ~2,700 ms on the same capture and the same three windows
+```
+
+`groups` went **1196 ms → ~105 ms** (11×) and the board with it (-29 %), with the golden byte-identical. Three things
+make sharing safe rather than lucky, and all three are why the golden could be trusted here:
+
+- **Nothing mutates a finished group's `Actions`.** The healing builder builds its own `ActionGroup`s; the timeline chart
+  and the validators only read. So a block belonging to a `Fight` row and a block inside `_damageGroups` are the same
+  object with one writer, not two writers and a race.
+- **Materialization already produced the shape the grouping wanted** — per-second blocks — so the copy bought nothing but
+  an ownership boundary nobody asked for. The allocation that remains is the one case that genuinely needs a new object:
+  two fights sharing a second (parallel mobs) become a single joined block, because the chart's per-second buckets assume
+  one entry per second.
+- **The `_allDamageGroups` pool now aliases the row data deliberately**, which is the precondition §7's
+  "retain what the last build kept" needs: a re-slice filters *lists of blocks*, not copies of records.
+
+It also closed a **drop** that the copying hid. After a group boundary flushed `newBlock`, a block whose second equalled
+the previous one went to `newBlock.LastOrDefault()` on an *empty* list — null — and its records vanished from the board
+while still updating pet mapping. Runs of equal seconds are peeled now, so every block lands somewhere.
+
+**A test caught the one regression this change made, and only barely.** Hoisting
+`_raidTotals.AllRanges.Add(options.AllRanges.TimeSegments)` out of the per-fight loop (it merged the same spans 4,452
+times for one merge's worth of meaning) moved it onto the path an **empty selection** takes, where `options.AllRanges` is
+null. The line threw, the builder's `catch (Exception ex) { Log.Error(…); }` swallowed it, and the only visible symptom
+was `BuildTotalStats_NoFires_ReportsNonpc` receiving `STARTED` instead of `NONPC`. That is the general failure mode of
+these three builders: **a swallowed throw looks exactly like an empty raid**, and every one of their exceptions reaches
+`eqlogparser.log` rather than a test. The fix is a null check; the lesson is that a builder seam needs the same
+`FailFastStages` treatment `ClassificationRules` got — tests rethrow, production degrades to an empty board with the
+stack in the log (docs/DesignNotes.md → "Stage death is silent in production and loud in tests").
+
+Measured per-record cost after this change (whole capture): walk ~780 ms / 1.72 M outcomes ≈ **450 ns per outcome**, still
+three dictionary-heavy calls deep — `CreatePlayerSubStats` locks a player's own sub-stat list and **scans it with a string
+compare per entry on every record**, identity is asked per record instead of per name, and the counter pass runs two or
+three times per record (actor, pet aggregate, sub-stat row). Those are the next three commits, in that order.

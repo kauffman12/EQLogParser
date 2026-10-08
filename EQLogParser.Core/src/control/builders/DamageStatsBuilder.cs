@@ -173,8 +173,19 @@ namespace EQLogParser
             }
 
             _raidTotals.Ranges.Add(new TimeSegment(fight.BeginDamageTime, fight.LastDamageTime));
-            _raidTotals.AllRanges.Add(options.AllRanges.TimeSegments);
             StatsUtil.UpdateRaidTimeRanges(fight.DamageSegments, fight.DamageSubSegments, _playerTimeRanges, _playerSubTimeRanges);
+          }
+
+          // Once for the whole selection rather than once per fight: merging is idempotent, so adding the same spans
+          // 4,452 times proved nothing and each proof cost a search. This is the raid row's "In-Raid %" denominator.
+          //
+          //
+          // The null check is load-bearing and a test found it: an empty selection carries no AllRanges at all, and this line
+          // used to sit inside the per-fight loop, where it never ran for nobody. Nothing would throw louder than a board that
+          // simply reports nothing — the catch below swallows what happens here.
+          if (options.AllRanges is not null)
+          {
+            _raidTotals.AllRanges.Add(options.AllRanges.TimeSegments);
           }
 
           damageBlocks.Sort((a, b) => a.BeginTime.CompareTo(b.BeginTime));
@@ -184,11 +195,25 @@ namespace EQLogParser
             _raidTotals.TotalSeconds = _raidTotals.MaxTime = _raidTotals.Ranges.GetTotal();
 
             var rangeIndex = 0;
-            double lastTime = 0;
             var newBlock = new List<ActionGroup>();
-            foreach (var block in CollectionsMarshal.AsSpan(damageBlocks))
+
+            /*
+             * Grouping by REFERENCE. The blocks handed here are `Fight.DamageBlocks` — already ActionGroups, already one per
+             * second of that fight — and copying every one of them (a fresh list of up to a few hundred record references per
+             * second of the raid) measured MORE expensive than counting them all: groups 1196 ms against walk 822 ms on the
+             * Incogitable capture. Nothing in the app mutates a finished group's Actions (the healing builder builds its own;
+             * the timeline chart and the validators only read), so a block that stands alone in its second joins the group as
+             * the object it already is, and a block is still built only where two fights really did share a second.
+             *
+             * That also closes a drop the copying hid: after a group boundary flushed `newBlock`, a block whose second equalled
+             * the previous one went to `newBlock.LastOrDefault()` on an EMPTY list — null, and its records vanished from the
+             * board while still updating pet mapping. Runs are peeled here instead, so every block lands somewhere.
+             */
+            for (var i = 0; i < damageBlocks.Count;)
             {
-              if (_raidTotals.Ranges.TimeSegments.Count > rangeIndex && block.BeginTime > _raidTotals.Ranges.TimeSegments[rangeIndex].EndTime)
+              var blockTime = damageBlocks[i].BeginTime;
+
+              if (_raidTotals.Ranges.TimeSegments.Count > rangeIndex && blockTime > _raidTotals.Ranges.TimeSegments[rangeIndex].EndTime)
               {
                 rangeIndex++;
                 if (newBlock.Count > 0)
@@ -199,24 +224,40 @@ namespace EQLogParser
                 newBlock = [];
               }
 
-              if (!lastTime.Equals(block.BeginTime))
+              if (i + 1 < damageBlocks.Count && damageBlocks[i + 1].BeginTime == blockTime)
               {
-                var copy = new ActionGroup();
-                copy.Actions.AddRange(block.Actions);
-                copy.BeginTime = block.BeginTime;
-                newBlock.Add(copy);
+                // Parallel fights: one entry per second is what the chart's buckets and the sub-stat keys assume, so this run
+                // becomes a single joined block. The only allocation left in this phase.
+                var joined = new ActionGroup { BeginTime = blockTime };
+                while (i < damageBlocks.Count && damageBlocks[i].BeginTime == blockTime)
+                {
+                  var run = damageBlocks[i++];
+                  joined.Actions.AddRange(run.Actions);
+
+                  foreach (var action in run.Actions)
+                  {
+                    if (action is DamageRecord record)
+                    {
+                      UpdatePetMapping(record);
+                    }
+                  }
+                }
+
+                newBlock.Add(joined);
               }
               else
               {
-                newBlock.LastOrDefault()?.Actions?.AddRange(block.Actions);
-              }
+                var single = damageBlocks[i++];
+                newBlock.Add(single);
 
-              // update pet mapping
-              foreach (var action in block.Actions.OfType<DamageRecord>())
-              {
-                UpdatePetMapping(action);
+                foreach (var action in single.Actions)
+                {
+                  if (action is DamageRecord record)
+                  {
+                    UpdatePetMapping(record);
+                  }
+                }
               }
-              lastTime = block.BeginTime;
             }
 
             _damageGroups.Add(newBlock);
