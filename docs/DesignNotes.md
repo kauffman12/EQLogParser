@@ -6952,6 +6952,43 @@ non-destructive (`Math.Max` makes re-folding idempotent, so publishing twice inv
 was written red against the old shape first, and moves no golden. Same law as the row cache, one level down: **raw state and published state are different things**; whoever finalizes a report writes a copy of an answer, never
 mutates the store that produces it.
 
+### What a whole-selection build spends its seconds on, by stage (2026-11)
+
+The same replay, one stage finer (`StatsBuildTrace`, `MeterBoardCostRealLogTest` over `eqlog_Kizant_xegony-09-03-26.txt`, 708 rows / 697 materialized fights /
+4,580,865 outcomes, repeated three times — the spread is ±40 ms so these are not one-run numbers):
+
+```
+damage   2,580 ms = groups 210 + window 0 + WALK 2,370 + totals 3 + present 0
+tanking     35 ms = groups   5 + window 0 + walk  28 + totals 2
+healing 1,380 ms = WINDOW 750 + walk 630 + totals 8          (2,647,774 heal records)
+materialize    ~1,150 ms full, ~550 ms with the per-row cache warm
+```
+
+Two conclusions, and both are load-bearing for what gets built next.
+
+**The cost is per-record model building, not arithmetic.** Everything downstream of the walk — totals, present, sorting 83 players — is free (3 ms and 0 ms).
+Inside the walk each damage record pays `damageValidator.IsValid`, a name lookup, `CheckNewFrame`, the pet-answer cache, `SubStatOf` (a dictionary keyed by
+subtype), **two to three** full `StatsUtil.UpdateDamageStats` passes (row stats, the `X +Pets` aggregate when there is one, and the sub-stat) and a frequency
+histogram insert; each heal record pays six `UpdateTimeSegments` nested-dictionary writes plus two composite-key concatenations (`Healer|Healed`,
+`Type|SubType`). So ~515 ns per damage record and ~290 ns per heal record is spent building the model, and it cannot be shaved into making a refresh fast:
+making that 30 % faster moves a 4 s build to 3 s. Only counting what is new does that. That is the argument for the delta phase, now measured rather than assumed.
+
+**Which means the delta phase IS a merge-semantics problem, and it needs an inventory before code.** Counting only the new records works if every accumulator
+either (a) is additive over records, or (b) can be merged from two partial results. So the work list is per accumulator, not per builder:
+
+- **additive now** — hit counters by kind (`Hits`, `MeleeAttempts`, `Misses`, `Blocks`, `Dodges`, `Parries`, `RiposteHits`, `Absorbs`, `Invulnerable`,
+  `SpellHits`, `BaneHits`), totals, crit counts. These carry over untouched.
+- **mergeable with a rule** — min/max style values (take the extreme of the two partials) and best-second: the non-destructive fold landed in `416f2879` means
+  publishing no longer drains `BestSecTemp`, which is precisely what makes a partial result mergeable — that change was groundwork for this.
+- **needs real merge semantics** — time segments and ranges (`TimeRange`/`TimeSegment` union, including the ≥6 s silence rule that already makes legacy drop
+  gaps), the crit/non-crit frequency histograms (count-map merge, and it is a memory question as much as a CPU one), and the owner/child trees (`childrenStats`,
+  `_playerPets`) where adding one pet record can create or rename an `X +Pets` row after the fact.
+- **derived at finalize** — specials, Dps, class rollups: recomputing those from accumulators is the cheap part (present = 0 ms), so they need no merge rule.
+
+Until the third group has a merge rule and a test that a delta build equals a full build field by field (including same-second best-second and range extension),
+a compatible refresh must take the full path. "A partial release can still use full healing; label its remaining cost honestly" says the plan, and these numbers
+are what makes the label true rather than decorative.
+
 ### Reading memory is not a sighting: what made the first Select All build twice (2026-11)
 
 The reported gesture — open `eqlog_Kizant_xegony-09-03-26.txt`, Select All, watch the summary appear, clear, and rebuild to the same totals — was replayed
