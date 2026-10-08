@@ -406,24 +406,20 @@ namespace EQLogParser
       return player;
     }
 
-    internal bool IsVerifiedPet(string name)
-    {
-      var found = false;
-      var isGameGenerated = false;
-
-      if (!string.IsNullOrEmpty(name))
-      {
-        found = _verifiedPets.ContainsKey(name);
-        isGameGenerated = !found && _gameGeneratedPets.ContainsKey(name);
-
-        if (isGameGenerated && !_petToPlayer.ContainsKey(name))
-        {
-          AddPetToPlayer(name, Labels.Unassigned);
-        }
-      }
-
-      return found || isGameGenerated;
-    }
+    /*
+     * A pure question — this used to WRITE. When a name stood in petnames.txt (the game's own pet-name list) and had no owner
+     * row, asking it minted one: `AddPetToPlayer(name, Labels.Unassigned)`. Nothing distinguished that row from a learned pair
+     * except the save path, which filters game-generated names out when writing petmapping.txt — so the row was ephemeral,
+     * yet `RegistrySeed` walks the pet map and files a Pet claim for whatever it finds there. Measured on
+     * eqlog_Kizant_xegony-09-03-26.txt: classify, build the healing board (which asks this question per name), classify again
+     * over an UNCHANGED capture, and one name answered `Pet` where the first pass said `Player · R15-healed`; that single move
+     * re-routed 8 damage-taken facts (308,103 points) and rebuilt every board a second time. So an unowned game-generated name
+     * still ANSWERS true here — that is what the list is for — but it earns no pet-map row. A pair enters `_petToPlayer` when
+     * something actually observes one: `AddVerifiedPet` (a line that named the pet) or the Pet Owners grid (an operator's word).
+     */
+    internal bool IsVerifiedPet(string name) =>
+      !string.IsNullOrEmpty(name)
+      && (_verifiedPets.ContainsKey(name) || _gameGeneratedPets.ContainsKey(name));
 
     internal void RemoveVerifiedPet(string name)
     {

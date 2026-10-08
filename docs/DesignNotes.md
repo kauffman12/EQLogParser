@@ -6950,7 +6950,50 @@ the second records are still arriving in. Publishing mid-second therefore report
 build finalizes once and nobody re-reads the drained field; it is the first thing an incremental board refresh would hit, since a refresh publishes every tick into accumulators it intends to keep filling. The fold is now
 non-destructive (`Math.Max` makes re-folding idempotent, so publishing twice invents no damage), while crossing into a new second still folds and clears through the caller's frame — `StatResumeTest` pins both directions,
 was written red against the old shape first, and moves no golden. Same law as the row cache, one level down: **raw state and published state are different things**; whoever finalizes a report writes a copy of an answer, never
-mutates the store that produces it.### Would an equality gate have saved anything? Measured: no — so the fight list wants an incremental update (2026-11)
+mutates the store that produces it.
+
+### Reading memory is not a sighting: what made the first Select All build twice (2026-11)
+
+The reported gesture — open `eqlog_Kizant_xegony-09-03-26.txt`, Select All, watch the summary appear, clear, and rebuild to the same totals — was replayed
+headlessly over that capture (parse → classify → project through one carried `FightProjectionCache` → build all three boards for all 708 rows with the option
+shape `MainWindow` fills, then classify again and rebuild). Two things came out of it, one reassuring and one not.
+
+**The carry is sound at scale.** A second projection over the same capture through the carried cache produced boards identical to a from-zero
+`FightProjection.Build` with its own index: 708 rows, 83 players, 4,660,915 damage records, 2,647,774 heal records, and every raid total matching
+(damage 1,647,427,860,296 · taken 8,881,361,124 · healing 10,765,681,782). Same facts, same verdicts ⇒ same boards, which is the law the digest gate buys.
+
+**One answer moved, and no fact had changed.** Classifying, then building the boards, then classifying again over an unchanged capture answered
+`Pet · RegistrySeed` for `Venartik` where the first pass had said `Player · R15-healed`. That single flip re-routed **8 damage-taken facts (308,103 points)**
+— 0.003 % of the tanking side, enough to move the content stamp, which is exactly what makes the pane re-announce and the grid blank for a second.
+
+The mechanism was a read that wrote. `PlayerRegistry.IsVerifiedPet` answered "is this a pet?" by ADDING an ownerless pair
+(`AddPetToPlayer(name, Labels.Unassigned)`) whenever the name stood in `petnames.txt`. Nothing distinguished that row from one a log line had earned except
+the save path, which filters game-generated names out when writing `petmapping.txt` — so the row never appeared anywhere a person could see it. But
+`RegistrySeed.ApplyPetMappings` walks the map every pass and files a Pet identity claim (strength 8) plus a Strong `PetOfPlayer` affiliation for each row it
+finds, and R15 does not re-claim a name the seed already placed. So the answer to "what IS this name?" depended on whether some surface had happened to ask
+about it first — and `HealingStatsBuilder` asks (`IsPetOrPlayerOrMerc`) about every name, once per build.
+
+Narrowing it took two controls: two rule passes **back to back** over the same capture agreed exactly (the rule book is cold), while a pass run **after the
+boards had been built** disagreed — so the state came from the stats path, not from classification. `IsVerifiedPet` was the only write reachable behind that
+read (`StatsUtil` and the builders touch the registry only to ask).
+
+**The fix: the predicate answers, it does not remember.** An unowned `petnames.txt` name still answers true — that is what a name list is for — but earns no
+pet-map row. A pair enters `_petToPlayer` when something observes one (`AddVerifiedPet`, from a line that named the pet) or an operator writes one (the Pet
+Owners grid). Measured after the change, six rounds of classify → whole-capture build over the same file hold **one** answer stamp and the projection carries
+in 0 ms every round; before it, round 2 moved both stamps and rebuilt (1,108 ms) — one convergence step that landed on the user as a second full build.
+Tests: `MemoryReadIsNotASightingTest` — the predicate leaves the map and its events alone, the raid-healed name survives being asked about (both verified red
+against the old shape), and an observed pet still earns its row.
+
+**This is also the standing explanation for the older note that two runs over one file give different row-name sets** (magnitudes equal, names shifting): a
+name's Pet-ness used to depend on traffic order rather than on the file. Compare boards per person, as that note says — but a name moving between Pet and
+Player should now have an evidence reason, not an ordering one.
+
+The whole-selection costs measured in the same runs are Phase 2's baseline (Linux, this machine, 4,832,103 facts / 2,670,809 heals loaded in ~24 s):
+classify ~0.9 s; full projection ~1.1 s, carried 0 ms; materialize **1.9 s full vs ~0.55 s cached**; damage board ~2.7 s over 4.66 M records;
+healing ~1.4 s over 2.65 M heal rows; tanking ~40 ms over 133 k. So a refresh's cost is dominated by counting records nobody asked about, which is the delta
+path's target — and the per-row materialization cache is already worth a 3.5× cut on the step before it.
+
+### Would an equality gate have saved anything? Measured: no — so the fight list wants an incremental update (2026-11)
 
 The proposal was to stop repainting surfaces when a derive pass changed nothing visible. Before writing the comparison,
 `LiveTailChangeProbeTest` (gated `EQLP_LIVE_TAIL_PROBE=<log> EQLP_LIVE_TAIL_PASSES=n`) replayed
