@@ -133,6 +133,17 @@ namespace EQLogParser
   }
 
 
+  /*
+   * The lookup index beside one sub-stat list (see StatsUtil.SubStatLookup). Internal, mutable and read by nothing but the
+   * helper that owns it: `ByKey` mirrors the list's published `Key`, and `NoName` holds the row whose Key is null — the
+   * record with no subtype, which the scan matched by null equality and a Dictionary cannot express.
+   */
+  internal sealed class SubStatIndex
+  {
+    internal Dictionary<string, PlayerSubStats> ByKey = [];
+    internal PlayerSubStats NoName;
+  }
+
   internal class PlayerSubStats : Attempt
   {
     public long BestSec { get; set; }
@@ -174,6 +185,13 @@ namespace EQLogParser
     public TimeRange Ranges { get; set; } = new();
     public TimeRange AllRanges { get; set; } = new();
     public List<PlayerSubStats> SubSubStats { get; } = [];
+
+    // Accelerator for SubSubStats, handed to StatsUtil.SubStatLookup by ref. Nothing else reads it: the published order and
+    // content stay the list's, and this class is the only door that adds to it (the per-record scan it replaced is the "why").
+    internal SubStatIndex SubSubStatsIndex;
+
+    /// <summary>This row's own sub-row for (subType, type), created on first sight and found in O(1) after that.</summary>
+    internal PlayerSubStats SubSubStatOf(string subType, string type) => StatsUtil.SubStatLookup(ref SubSubStatsIndex, SubSubStats, subType, type);
   }
 
 
@@ -197,6 +215,18 @@ namespace EQLogParser
     public ConcurrentDictionary<string, ConcurrentDictionary<string, int>> ResistCounts { get; } = new();
     public List<PlayerSubStats> SubStats { get; } = [];
     public List<PlayerSubStats> SubStats2 { get; } = [];
+
+    // Accelerators for the two published lists, handed to StatsUtil.SubStatLookup by ref and read by nothing else. They exist
+    // because finding a player's spell row used to mean locking that player's list and scanning it with a string compare per
+    // entry - on every record, so a raider with 60 keys paid up to 60 comparisons per swing.
+    internal SubStatIndex SubStatsIndex;
+    internal SubStatIndex SubStats2Index;
+
+    /// <summary>This player's row for (subType, type) in the primary breakdown ("what spells did damage").</summary>
+    internal PlayerSubStats SubStatOf(string subType, string type) => StatsUtil.SubStatLookup(ref SubStatsIndex, SubStats, subType, type);
+
+    /// <summary>The same for the secondary breakdown (the healing board's "who healed me" view).</summary>
+    internal PlayerSubStats SubStat2Of(string subType, string type) => StatsUtil.SubStatLookup(ref SubStats2Index, SubStats2, subType, type);
     public PlayerStats MoreStats { get; set; }
     public bool IsTopLevel { get; set; } = true;
     public string OrigName { get; set; }

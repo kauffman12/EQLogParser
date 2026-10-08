@@ -79,22 +79,44 @@ namespace EQLogParser
       };
     }
 
-    internal static PlayerSubStats CreatePlayerSubStats(ICollection<PlayerSubStats> individualStats, string subType, string type)
+    /*
+     * Find (or create) one row of a player's per-spell breakdown, in O(1).
+     *
+     * This used to `lock` the list and SCAN it with a string compare per entry, on EVERY record: a raider with 60 spell keys
+     * paid up to 60 comparisons per swing, which is where a large slice of the damage board's walk lived. The map that
+     * replaces the scan lives beside the list it indexes and is an ACCELERATOR only — the published order stays the list's,
+     * and nothing adds to these lists except through here (grep `.SubStats.Add`), so one insert per key is all a map ever
+     * sees. Callers reach it through PlayerStats.SubStatOf / SubStat2Of and PlayerSubStats.SubSubStatOf, which is what keeps
+     * a list from being paired with another list's map.
+     *
+     * Keyed by `CreateRecordKey`, i.e. exactly what the scan compared: NOT by the (type, subType) pair, tempting as that is.
+     * Two pairs can fold to one key — every non-DD/DoT type returns the subtype unchanged, so ("Spell", "Foo") and
+     * ("Melee", "Foo") are the SAME row today — and a board whose sub-stat rows split differently is a different report.
+     * The price kept is the one concatenation DD/DoT rows need; the price dropped is the scan.
+     */
+    internal static PlayerSubStats SubStatLookup(ref SubStatIndex index, ICollection<PlayerSubStats> individualStats, string subType, string type)
     {
       var key = CreateRecordKey(type, subType);
-      PlayerSubStats stats;
 
       lock (individualStats)
       {
-        stats = individualStats.FirstOrDefault(indStats => indStats.Key == key);
-        if (stats == null)
-        {
-          stats = new PlayerSubStats { ClassName = "", Name = StringCache.GetOrAdd(subType), Type = StringCache.GetOrAdd(type), Key = key };
-          individualStats.Add(stats);
-        }
-      }
+        index ??= new SubStatIndex();
 
-      return stats;
+        if (key is null)
+        {
+          if (index.NoName is not null) return index.NoName;
+        }
+        else if (index.ByKey.TryGetValue(key, out var known))
+        {
+          return known;
+        }
+
+        var stats = new PlayerSubStats { ClassName = "", Name = StringCache.GetOrAdd(subType), Type = StringCache.GetOrAdd(type), Key = key };
+        individualStats.Add(stats);
+
+        if (key is null) index.NoName = stats; else index.ByKey[key] = stats;
+        return stats;
+      }
     }
 
     internal static string CreateRecordKey(string type, string subType)

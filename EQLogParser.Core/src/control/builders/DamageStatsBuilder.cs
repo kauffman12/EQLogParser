@@ -367,6 +367,18 @@ namespace EQLogParser
 
             var lastTime = double.NaN;
             var prevPlayerTimes = new Dictionary<string, double>();
+
+            /*
+             * Identity is a question about a NAME; this walk was asking it per RECORD. A night holds a few hundred names and
+             * millions of records, and every answer walks override -> timeline -> ledger with its own counted span on top.
+             *
+             * One answer per name per build is also MORE self-consistent than the per-record answer was. Nothing this walk
+             * writes can change an answer (pet learnings go to PlayerRegistry, which KindAt deliberately does not consult),
+             * while a derive session swapped in under a running build used to be able to split one player's night across two
+             * different verdicts halfway through the board.
+             */
+            var petAnswers = new Dictionary<string, bool>();
+
             foreach (var group in CollectionsMarshal.AsSpan(_damageGroups))
             {
               foreach (var block in CollectionsMarshal.AsSpan(group))
@@ -389,7 +401,14 @@ namespace EQLogParser
                     }
                     else if (isValid)
                     {
-                      var isAttackerPet = IdentityLookup.IsPet(record.Attacker);
+                      // Per name, not per record (see petAnswers above). The empty-string stand-in keeps a record whose line
+                      // never named an attacker out of dictionary-key business; IsPet answers Unknown/false either way.
+                      var attackerKey = record.Attacker ?? string.Empty;
+                      if (!petAnswers.TryGetValue(attackerKey, out var isAttackerPet))
+                      {
+                        petAnswers[attackerKey] = isAttackerPet = IdentityLookup.IsPet(record.Attacker);
+                      }
+
                       var isNewFrame = StatsUtil.CheckNewFrame(prevPlayerTimes, stats.Name, block.BeginTime);
 
                       _raidTotals.Total += record.Total;
@@ -436,7 +455,7 @@ namespace EQLogParser
                         stats.IsTopLevel = false;
                       }
 
-                      var subStats = StatsUtil.CreatePlayerSubStats(stats.SubStats, record.SubType, record.Type);
+                      var subStats = stats.SubStatOf(record.SubType, record.Type);
                       var critHits = subStats.CritHits;
                       StatsUtil.UpdateDamageStats(subStats, record, false, isAttackerPet);
 

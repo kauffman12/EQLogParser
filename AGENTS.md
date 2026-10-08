@@ -403,6 +403,24 @@ because a refactor may only change one by naming it in a diff (docs/DesignNotes.
 expanded-list position rather than the row's own (and `StatsFormatter` prints it for the overlay); a parent with children never
 appears in `ExpandedStatsList` at all; the raid line carries amounts and no counts; and the window branch filters
 `_allDamageGroups`, which `Reset()` fills from the **previous** build — so a re-slice must always say which pool it reads.
+- **Sub-stat lookups are O(1) through an index beside the list, and its key is `CreateRecordKey`, not the pair** (2026-11):
+`PlayerStats.SubStatOf`/`SubStat2Of` and `PlayerSubStats.SubSubStatOf` are the ONLY doors that add to `SubStats`/`SubStats2`/
+`SubSubStats`; each keeps a `SubStatIndex` (`StatsUtil.SubStatLookup`) that mirrors the list's published `Key` so finding a
+player's spell row is one probe instead of the old lock-plus-linear string scan per record. Two laws: the map is keyed by
+`CreateRecordKey(type, subType)` because every non-DD/DoT type returns the subtype unchanged - `("Spell","Foo")` and
+`("Melee","Foo")` are ONE row today, and a pair key splits the board; and **a null key is legal** (a record with no subtype keeps
+`Key == null`, matched by the old `k.Key == key`), so that row lives in `SubStatIndex.NoName` - a `Dictionary` throws on null and
+four `StatsBuildersTest` cases found the ArgumentNullException. Indexes are internal fields handed over by `ref`, read by nothing
+else; the lists stay the published order. Identity is memoized per **name** per build in the damage walk (a night holds ~400 names,
+millions of records; pet learnings go to `PlayerRegistry`, which `KindAt` does not consult, so the answer cannot move mid-walk).
+Measured: walk 822 -> ~700 ms, whole board 3.8 s -> ~2.6 s after this and the grouping fix (docs/DesignNotes.md -> "The sub-stat
+index"). **Phase splits come from `StatsBuildTrace.Stage`, never from sampling** - a profiler attached to a single-threaded loop on
+Linux reads mostly idle pool threads and "Missing Symbol".
+- **Opening `#nullable enable annotations` in an `EQLogParser.Core` file is a public-visible change, not a local one** (2026-11):
+Core builds `Nullable=disable` and both test assemblies build `Nullable=enable`, so a file-level directive in Core turns every
+un-annotated reference type in that file from *oblivious* to *non-nullable* in the consumers' view - two unrelated heal tests
+surfaced as brand-new CS8601s when `StatsModel.cs` got the pragma for two new fields. Annotate narrowly (parameters, locals) or
+declare without `?`; add the directive only when the whole file is meant to hold the line (docs/CodingStandards.md -> "Nullable Reference Types").
 - **A repaint belongs to the capture that is open, and a session change blanks rather than waits** (2026-11, from "clear all does nothing - it just leaves the fight
   list full of content"). Two halves, both load-bearing. (1) `FightTable.ClearForNewCapture` runs on **both sides** of `DeriveEngine.ActiveChanged` — engine gone
   *and* new engine — because `Derived` is the only thing that ever replaces these rows, so on an open that produces no rows (empty file, Clear All's re-open from

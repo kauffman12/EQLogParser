@@ -260,7 +260,7 @@ namespace EQLogParser
                       var stats = StatsUtil.CreatePlayerStats(individualStats, record.Defender);
                       var isNewFrame = StatsUtil.CheckNewFrame(prevPlayerTimes, stats.Name, block.BeginTime);
                       StatsUtil.UpdateDamageStats(stats, record, isNewFrame);
-                      var subStats = StatsUtil.CreatePlayerSubStats(stats.SubStats, record.SubType, record.Type);
+                      var subStats = stats.SubStatOf(record.SubType, record.Type);
 
                       var critHits = subStats.CritHits;
                       StatsUtil.UpdateDamageStats(subStats, record, false);

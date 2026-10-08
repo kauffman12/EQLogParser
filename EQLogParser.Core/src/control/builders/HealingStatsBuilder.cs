@@ -372,14 +372,14 @@ namespace EQLogParser
                   var stats = StatsUtil.CreatePlayerStats(individualStats, record.Healed);
                   StatsUtil.UpdateHealStats(stats, record);
 
-                  var subStats2 = StatsUtil.CreatePlayerSubStats(stats.SubStats2, record.Healer, record.Type);
+                  var subStats2 = stats.SubStat2Of(record.Healer, record.Type);
                   StatsUtil.UpdateHealStats(subStats2, record);
 
                   var spellStatName = record.SubType ?? Labels.SelfHeal;
-                  var spellStats = StatsUtil.CreatePlayerSubStats(stats.SubStats, spellStatName, record.Type);
+                  var spellStats = stats.SubStatOf(spellStatName, record.Type);
                   StatsUtil.UpdateHealStats(spellStats, record);
 
-                  var subStats3 = StatsUtil.CreatePlayerSubStats(subStats2.SubSubStats, spellStatName, record.Healer + "|" + record.Healed);
+                  var subStats3 = subStats2.SubSubStatOf(spellStatName, record.Healer + "|" + record.Healed);
                   StatsUtil.UpdateHealStats(subStats3, record);
 
                   long value = 0;
@@ -520,14 +520,14 @@ namespace EQLogParser
                     StatsUtil.UpdateHealStats(stats, record);
 
                     var spellStatName = record.SubType ?? Labels.SelfHeal;
-                    var spellStats = StatsUtil.CreatePlayerSubStats(stats.SubStats, spellStatName, record.Type);
+                    var spellStats = stats.SubStatOf(spellStatName, record.Type);
                     StatsUtil.UpdateHealStats(spellStats, record);
 
                     var healedStatName = record.Healed;
-                    var healedStats = StatsUtil.CreatePlayerSubStats(stats.SubStats2, healedStatName, record.Type);
+                    var healedStats = stats.SubStat2Of(healedStatName, record.Type);
                     StatsUtil.UpdateHealStats(healedStats, record);
 
-                    var subStats3 = StatsUtil.CreatePlayerSubStats(healedStats.SubSubStats, spellStatName, record.Healer + "|" + record.Healed);
+                    var subStats3 = healedStats.SubSubStatOf(spellStatName, record.Healer + "|" + record.Healed);
                     StatsUtil.UpdateHealStats(subStats3, record);
                   }
                 }

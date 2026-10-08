@@ -8830,3 +8830,45 @@ Measured per-record cost after this change (whole capture): walk ~780 ms / 1.72 
 three dictionary-heavy calls deep — `CreatePlayerSubStats` locks a player's own sub-stat list and **scans it with a string
 compare per entry on every record**, identity is asked per record instead of per name, and the counter pass runs two or
 three times per record (actor, pet aggregate, sub-stat row). Those are the next three commits, in that order.
+
+### The sub-stat index, and why its key is not the obvious one
+
+`CreatePlayerSubStats` found a player's per-spell row by locking her own list and scanning it with a string compare per
+entry — **on every record**. A raider with 60 spell keys paid up to 60 comparisons per swing, and the walk asked twice
+(actor row, sub-stat row) plus a third time for folded pets. It is now O(1) through an index that sits *beside* the list it
+accelerates (`PlayerStats.SubStatOf` / `SubStat2Of`, `PlayerSubStats.SubSubStatOf` → `StatsUtil.SubStatLookup`), and the
+three methods are the only doors, so a list can never be paired with another list's map.
+
+Two rules came out of doing it wrong first:
+
+**(1) The index key is `CreateRecordKey(type, subType)` — what the scan compared — not the `(type, subType)` pair.** The
+pair looks strictly better (no concatenation at all for DD/DoT rows) and is wrong: every non-DD/DoT type returns the
+subtype *unchanged*, so `("Spell", "Foo")` and `("Melee", "Foo")` are the **same row today**. A board whose sub-stat rows
+split differently is a different report, and the golden is the only thing that would have said so.
+
+**(2) A null key is legal here, because it was legal to the scan.** A record with no subtype keeps `Key == null`, and
+`k.Key == key` matched null against null; `Dictionary` throws on a null key instead. Four tests in `StatsBuildersTest`
+went red with `ArgumentNullException` on the first version. The index therefore carries that row in its own slot
+(`SubStatIndex.NoName`) rather than inventing a sentinel string a real subtype could one day equal.
+
+Cost after this and the identity memo (same capture, three windows/run): walk **822 → ~700 ms** (756/644/693 measured),
+whole board **~2.7 s → ~2.6 s**. Less than the scan's share suggested, because the rest of the walk is what it is: two or
+three `UpdateDamageStats` passes per record, a validator, `CheckNewFrame`, `AddValue`, and the per-list `lock`s — none of
+them individually dominant. The **name-per-record identity memo** also made the answer self-consistent: nothing the walk
+writes can change an identity answer (pet learnings go to `PlayerRegistry`, which `KindAt` does not consult), while a
+derive session swapped in under a running build could previously split one player's night across two verdicts mid-board.
+
+**A sampling profiler was tried and did not settle it.** `dotnet-trace collect -p <testhost>` attaches fine (there is no
+`attach` verb in this version; `collect -p` *is* attach), but on a single-threaded loop the sample budget is mostly idle
+pool threads waiting (`Monitor.Wait`, semaphores), inlining buries the frames that matter under "Missing Symbol", and the
+honest reading was 2.8 % inclusive for `SubStatLookup` next to 10.7 % for `Monitor.Enter_Slowpath` with no way to attribute
+the latter. **On this project, phase splits come from named `StatsBuildTrace.Stage` stamps around real work, not from
+sampling** (docs/DesignNotes.md → "Name every door"). The throwaway harness used for the attempt was deleted with the
+measurement; a gated benchmark that prints a number stays, a loop that exists to be attached to does not.
+
+**A build-environment trap found on the way: do not open `#nullable enable annotations` on a Core model file.** Doing so
+in `StatsModel.cs` changed how the *test assembly* (which builds with `Nullable=enable`) sees Core's members — every
+un-annotated `string`/`TimeRange` property became explicitly non-nullable instead of oblivious, and two unrelated heal tests
+appeared as new CS8601 "possible null reference assignment" warnings. The rule is not "never annotate" (Core's derive files
+do, and correctly): it is that in Core — `Nullable=disable`, consumed by an `enable`d test assembly — a file-level
+annotations directive is a **public-visible change**, so the new fields were declared without `?` instead.
