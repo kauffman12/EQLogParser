@@ -9667,18 +9667,45 @@ reference capture `AttackerOwner` rides **546,376 of 2,285,746** damage facts. T
 1. **Records that carry their owner word are order-free.** Their row key is a function of the record alone, so cells built from them may be carried
    across passes and folded in any order. This is the large, safe majority of *pet-related* damage — which matters because `X +Pets` rows are exactly
    the expensive ones caching exists for.
-2. **Owner-less records whose attacker gets learned as a pet mid-capture are order-dependent.** Whether such a record lands on `Pet` or on
-   `Owner +Pets` depends on what earlier records taught the walk — and the code carries a measured warning about getting this wrong in the other
-   direction (a single "Secondowner +Pets = 300" where the log said 100 to one owner and 200 to another).
+2. **Owner-less records are placed by the maps, so a selection that contains no teaching record answers differently.** What the maps know is not a
+   function of where in the walk a record sits: `UpdatePetMapping` runs during the **grouping pass**, which sweeps every block of the selection before
+   `ComputeDamageStats` counts anything, so within one build the maps are complete before placement and **record order cannot move damage**. That was
+   discovered by a test written to prove the opposite (`CarriedOwnershipTest.OrderInsideOneBuildDoesNotMoveDamageBecauseLearningIsAPrePass`: claim
+   first or claim last, the board is `Reisil +Pets = 150` either way). The dependence that IS real is on **selection content**: drop every line that
+   names an owner — a meter window whose start scrolled past them, a subset of rows, a cached cell built for a narrower question — and the same record
+   lands on the pet's own name. Nothing throws; a line of the board simply changes hands.
 
-**Decision: carry the learning, do not fall back wholesale.** The cache carries `_petToPlayer`/`_playerPets` beside its cells — entries are per pet
-name (thousands), not per fact (millions), so carrying them costs nothing worth measuring — and **invalidates a name's cells when a *new* owner mapping
-for that name arrives**, rebuilding that name alone instead of the selection. A blanket "any segment that could teach something forces a full build" is
-the wrong default precisely because teaching happens on pets: it would disable caching on the rows where caching pays and keep it on the cheap ones.
+That distinction decides what a cell carries. Not "what my prefix had learned by then" (a question the live walk never asks, because its maps are already
+complete), but **the selection's maps, computed once and stamped with the selection** — a couple hundred entries on a full raid night. Cell identity is
+therefore `(chunk × selection stamp × answer stamp × filter settings)`, and the answer stamp stays load-bearing for the one thing neither rule covers: a
+charm window learned late re-attributes facts *inside its own interval*, which changes a record's owner without changing any record's position.
 
-The measurement that flips this: over a large capture, count damage facts that (a) carry no owner word **and** (b) whose attacker name is later learned
-as a pet. If that is a large share of facts the invalidation path runs constantly and full builds are the honest answer; if it is small — which the
-546k/2.29M split suggests — carry-and-invalidate wins. It needs a gated probe, and `heap:` (**B11**) now prints per-stream rows and slack while such a
+**Decision: carry the learning, do not fall back wholesale.** The cache carries `_petToPlayer`/`_playerPets` beside its cells — entries are per name
+(hundreds), not per fact (millions), so carrying them costs nothing worth measuring. The first version of this decision said "and invalidate a name's
+cells when a new owner mapping for that name arrives"; the pre-pass finding below makes that machinery unnecessary *inside* a build — the maps are
+computed once for the selection before anything is counted, so a cell's placement answer comes from the selection-level maps it is stamped with, and a
+selection or answer change invalidates wholesale by stamp rather than per name. A blanket "any segment that could teach something forces a full build" is
+still the wrong default, for the same reason: teaching happens on pets, which are the rows caching pays for.
+
+**That measurement, run (three captures, `PetLearningProbeTest`, materialized records in the builder's own block order):**
+
+| capture | shape | records | own owner word | folded by `_petToPlayer` | attacker is a known OWNER | placement would move | names | learning events |
+|---|---|---|---|---|---|---|---|---|
+| eqlog_Incogitable_xegony.txt | raid | 1,477,200 | 305,929 (20.71 %) | **0** | 458,414 (31.03 %) | **115,101 (7.79 %)** | 64 | 107 pets / 97 owners |
+| eqlog_Kizant_xegony-2.txt | raid | 2,205,422 | 662,560 (30.04 %) | **0** | 963,890 (43.71 %) | **25,323 (1.15 %)** | 30 | 38 / 33 |
+| eqlog_Roper_thj.txt (`EQLP_EMU=1`) | group | 3,526,067 | 1,589,123 (45.07 %) | **312,944 (8.88 %)** | 885,975 (25.13 %) | **364 (0.010 %)** | 5 | 30 / 4 |
+
+Three findings, in descending order of usefulness:
+
+- **The fallback map is not dead weight — in group content it carries 8.9 % of every record** (312,944 on Roper) while raid content leans entirely on the
+  record's own word (0 there, because a derived pet record already carries its owner from the line or the charm window). A cache that ignored the maps
+  would move nearly a tenth of a group night onto pets' own names. Run without `EQLP_EMU=1` the same capture reported ~0 owner words and nothing folded:
+  the flag law caught this one too.
+- **Placement churn is small in every shape** (0.010 %–7.79 %, ≤ 64 names), so carrying-and-stamping costs a handful of rebuilds per night rather than
+  constantly. The probe now ASSERTS bars on those numbers rather than printing them.
+- **`_playerPets` — "this name is an owner" — is the big learned state, not pet ownership**: 25–44 % of records have an attacker who is a known owner, and
+  that membership is what folds an owner's own swings into `X +Pets`. Any design that reasons only about pets-and-owners misses the population that
+  actually moves rows. It needs a gated probe, and `heap:` (**B11**) now prints per-stream rows and slack while such a
 probe runs, so the cost side of the experiment is visible too.
 
 **Two beliefs corrected on the way, both recorded so they do not come back:**
