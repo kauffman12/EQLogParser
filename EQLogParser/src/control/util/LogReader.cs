@@ -40,6 +40,11 @@ namespace EQLogParser
     private CancellationTokenSource _cts = new();
     private StreamReader _reader;
     private FileStream _fs;
+
+    /// <summary>How many read loops this process has started. Only ever used to number the load line, so two sessions' worth of them can
+    /// be told apart (see StartAsync).</summary>
+    private static int _readersStarted;
+
     private FileSystemWatcher _watcher;
     private long _initSize;
     private long _currentPos;
@@ -222,8 +227,13 @@ namespace EQLogParser
 
         // One line per open, and it is the answer to "is the load running on my UI thread?". Before this class was made
         // context-free it named WPF's synchronization context here; the honest answer now is "none".
-        Log.Info($"load: read loop on thread {Environment.CurrentManagedThreadId}, sync context = "
-                 + $"{SynchronizationContext.Current?.GetType().Name ?? "none"}");
+        //
+        // It names WHICH reader too, because that was the other unanswerable question: closing one log and opening another leaves two of
+        // these lines in one file, and "four lines for two sessions" reads as a reader that will not stop. An ordinal plus the file makes
+        // each line belong to someone — which is also what tells a leftover reader from the one you just started.
+        Log.Info($"load: read loop #{Interlocked.Increment(ref _readersStarted)} on thread "
+                 + $"{Environment.CurrentManagedThreadId}, sync context = "
+                 + $"{SynchronizationContext.Current?.GetType().Name ?? "none"} | {Path.GetFileName(FileName)}");
 
         _currentPos = _fs.Position;
         var bytesRead = _fs.Position;

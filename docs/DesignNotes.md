@@ -9591,3 +9591,59 @@ What is still not covered by the fold, now as code rather than as a worry: what 
 history) is order-dependent inside a build, so the cell cache has to replay that learning over new records or take the full-build path; and
 `TotalSeconds` stays the caller's range union. Both are constraints 2 and 3 above, and the cache is the next piece — it now has a proven fold
 to sit on top of.
+
+### What a session is holding, printed (2026-10)
+
+*"~330 MB of a 419 MB heap is not rows."* That sentence came out of the first Windows field run as an **inference** — a dotnet-gcdump taken by hand,
+compared against the numbers the log did print. Every memory item after that had to be argued about rather than measured, because the process never
+said what it was holding. So now it does.
+
+`HeapLedger` (Core/src/perf) prints one line every `IntervalSeconds = 30` while `PerfJournal.Enabled` is on:
+
+```
+heap: ws=399.8 MB heap=338.0 MB pause 12.5 ms | gc 4/1/0 | facts rows=2,286,368 slack=27.8 MB heals rows=1,247,984 slack=10.8 MB | names=2,436 | row arrays est=342.4 MB | over 30s
+```
+
+**It lives in Core for the reason `PerfGap` does**, and that reason is a shipped bug rather than taste: wording kept app-side can only be tested by the
+Windows-only assembly, which builds everywhere and executes on one machine — the exact shape that let a format string ship against an assertion nobody
+had run (PerfGap's own comment names that failure). So `Format` is arithmetic over numbers it is handed, and `Collect` is the only place that touches
+the collector or the live tables; both are asserted by `HeapLedgerTest`, which runs on Linux.
+
+Three shape decisions:
+
+- **Rows AND slack, never one number.** Both fact tables grow by doubling, so slots run ahead of rows until `CompactRows` reclaims them once per
+  doubling: "the capture is big" and "the capture reserved more than it wrote" are two findings with two different fixes. The line prints `rows=` and
+  `slack=` per stream instead of a single heap figure, because the second sentence is the one that was missing while **B2** (stop keeping two copies of
+  what happened) was being argued. It reuses the tables' existing `SlackBytes`/`EstimatedBytes`; the only new API is `EstimatedBytes` on `IFactTable`,
+  which `DamageFactTable` already implemented.
+- **The cadence rides the derive pump** (`DeriveEngine.QuietTick`) rather than owning a timer: the ledger needs the capture anyway, and the pump is
+  already gated, per-session, and where the fact counts live. `MaybeLog` returns on one bool when the journal is off — that is its whole cost in normal
+  play. A new capture calls `Reset()` so its first line carries this session's sizes instead of last night's deltas.
+- **The first sample prints immediately** with zero deltas: the sizes are the point, and somebody who turned `PerfReport` on should not wait half a
+  minute for them. "over 0s" says plainly that nothing is being averaged.
+
+Two bugs its own tests caught before it shipped, which is the reason the tests exist:
+
+1. **A missing flag meant one line every 100 ms.** Moving the cadence check into a `Due()` helper left `_havePrevious = true` behind in the code it
+   replaced, so nothing ever marked "we have sampled" — with `PerfReport=True` the pump would have written a heap line forty times a second into the
+   file that also carries the raid's errors. `LineCount`, asserted twice in one instant, is what saw it. A feature whose only symptom is log volume is
+   exactly the kind shipped by someone who never turns it on. Publish order matters as well: `_lastMs` is written *before* the flag, so a concurrent
+   tick can never see "sampled, at second zero".
+2. **A floored-negative gap printed `-0.0 MB`.** Counters read across threads can come back smaller than the baseline, and rounding −4,096 bytes to one
+   decimal gives `slack=-0.0 MB`, which in a trend line reads as "memory was returned". Every count and byte field floors at zero inside `Format`, and
+   the test asserts **no hyphen appears anywhere in the line** — an assertion on the string, because the string is what the reader sees.
+
+**What it deliberately does not carry**: the per-store object counts (record objects, cast entries, materialized summaries) the backlog row asked for.
+`RecordsStore` has no cheap count accessor, and adding counters to the store that **B2** proposes to shrink is backwards — its cost is already visible as
+the gap between `row arrays est=` and `ws=`, which ranks B2 today and will *verify* it (the reading to watch: after a heal-record removal step that gap
+narrows while `row arrays est=` stands still).
+
+**Also shipped in this pass (B10)**: the load line names which reader it belongs to —
+`load: read loop #3 on thread 24, sync context = none | eqlog_Kizant_xegony-09-03-26.txt`. Four such lines for two sessions was §1.7's unanswerable
+question; the ordinal increments per read loop *started*, so four lines means four loops (not one line printed twice), and the file name says which
+capture each belongs to. A leftover reader from a closed log is now visible as itself. It carries no `follow=` word yet: if four distinct ordinals appear
+again, the next question is which code path asked, and that flag is the small change that answers it. No test — one log sentence in a WPF-side class,
+verified by the same field run that reads the ledger lines.
+
+And the standing caveat: **neither line has ever run on Windows.** The formatting is tested everywhere; what they say beside a real WPF session — where
+the gap lives — is what the next field run is for.

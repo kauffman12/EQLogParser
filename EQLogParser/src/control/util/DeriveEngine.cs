@@ -246,6 +246,10 @@ namespace EQLogParser
       _capture.Start();
       Active = this;
 
+      // A new capture starts its own memory trend: the ledger's first line after this prints this session's sizes with zero deltas rather
+      // than last night's growth. Only ever writes when PerfReport is on.
+      HeapLedger.Reset();
+
       /*
        * The seam IdentityLookup asks when it wants to know what THIS capture decided about a name (docs: the roster stops
        * answering a question about evidence). Wiring it here rather than in Core is the dependency direction: Core owns
@@ -815,6 +819,10 @@ namespace EQLogParser
     private void QuietTick(object sender, EventArgs e)
     {
       if (_disposed) return;
+
+      // The heap ledger rides the pump rather than owning a timer of its own (it needs the capture anyway), and returns immediately
+      // unless PerfReport is on and the interval elapsed — so an ordinary session pays one bool here.
+      HeapLedger.MaybeLog(_capture);
 
       var count = CapturedTotal;
 
