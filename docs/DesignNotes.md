@@ -9547,3 +9547,29 @@ Agreed shape, grounded in what the code already guarantees rather than in a new 
    hit rate is slower than no cache and harder to read. Quote the bar from the measurement section when tuning it.
 5. **Proof order.** Recursive fold + its equivalence tests first (fold(A,B) == count over A∪B, over the existing board goldens), cache second.
    A wrong fold is silent and plausible - the same reason `MergeStatsAccumulationTest` enumerates counters rather than sampling.
+
+### The three preconditions behind the cell cache, checked before building it (2026-10)
+
+Before writing a recursive fold, three assumptions in B's design were tested rather than trusted. `CellFoldPreconditionsTest` keeps them
+true; two of the three turned out to carry constraints B has to honour.
+
+**1. Child rows are never shared between owners - folding cannot reach another row. SAFE.** `SubStatLookup` is the only insertion path into a
+child list and it MINTS the row when a key is new, so the same spell name under two owners is two objects. (The interned values are the
+*names*; the instances are per owner.) An assertion now holds it: one lookup per owner returns the same instance, across two owners it must
+not, and writing one's `Total` cannot appear on the other. If a future change ever hands one instance to both a player row and the `X +Pets`
+aggregate, a cached cell would become cross-row corruption visible only on pet-heavy nights - which is a test failure now, not a bug report.
+
+**2. The walk's side effects are builder-local, but two of them are ORDER-DEPENDENT inside one build. CONSTRAINT.** Per record the loop also
+runs `UpdatePetMapping` (feeding `_playerPets` / `_petToPlayer`) and `CheckNewFrame` against a per-build previous-times scratch. Neither
+touches the identity registry - building boards does not write memory, which was worth re-confirming after `IsVerifiedPet` turned out to.
+But both learn *as they go*: pet-map pairs learned at record 400 change which owner aggregate records 401-900 fold into. A cached cell that
+skips records skips the learning too, so a cell-based build must either replay the learning over the new records alone (cheap, monotone) or
+fall back to a full build when a record introduces a mapping the cached build never saw. Silently reusing cells here would move damage
+between an owner row and its pet row depending on cache hit rate - the exact "answer depends on how it was computed" class.
+
+**3. Finalize is a projection for rates, but best-second carries state in a scratch field. CONSTRAINT.** `CalculateRates` neither counts
+again nor drifts: counters are untouched across two calls and the second call is a no-op (asserted, including that it derived something, so
+the test cannot pass on inert code). `MergeStats` folds extrema by max, which is what lets a cell's best second be reused as-is. The catch is
+`BestSecTemp`: counting accumulates a running second into it, and a boundary step moves it into `BestSec` and zeroes it. So **only a cell
+whose scratch is drained may be cached** - snapshotting mid-second either loses that second or folds it twice. The drain already exists
+(`416f2879` made it non-destructive for the running build); what B adds is the requirement that a cell boundary be a drained one.
