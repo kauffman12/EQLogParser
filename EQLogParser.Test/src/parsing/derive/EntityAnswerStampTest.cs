@@ -88,19 +88,86 @@ public class EntityAnswerStampTest
       "an owned window changes whose row the mob's damage lands on; that is an answer, not a footnote");
   }
 
+  /*
+   * A window remembered by another rule, where "another rule" is NOT a charm sighting: an ownership interval written as a static
+   * statement of allegiance. Same owner, same seconds, same kind — every board question reads the same word, so the answer stamp holds
+   * while the evidence digest moves. (The charm case is the exception and lives in `ALedgerReplayOfACharmClaimMovesTheAnswerStamp`: three
+   * predicates recognize a charm by its `R9-charm` prefix, so the ledger's spelling of one changes what they answer.)
+   */
   [TestMethod]
-  public void TheSameWindowReRecordedUnderAnotherSourceLeavesTheAnswerStamp()
+  public void TheSameWindowReRecordedUnderANonCharmSourceLeavesTheAnswerStamp()
   {
     var t = new EntityTimeline();
-    Charming(t, "an imbued whipgrass", "Zomm", T0 + 30);
+    t.AddAffiliation(AffiliationKind.PetOfPlayer, "an imbued whipgrass", T0 + 30, double.PositiveInfinity,
+                     RuleStrength.Strong, "R18-healed-pet", "Zomm");
 
     var evidenceBefore = t.StateStamp();
     var answerBefore = t.AnswerStamp();
 
-    Charming(t, "an imbued whipgrass", "Zomm", T0 + 30, strength: RuleStrength.Certain, source: "Prior:R9-charm");
+    t.AddAffiliation(AffiliationKind.PetOfPlayer, "an imbued whipgrass", T0 + 30, double.PositiveInfinity,
+                     RuleStrength.Certain, "Prior:R18-healed-pet", "Zomm");
 
     Assert.AreNotEqual(evidenceBefore, t.StateStamp(), "the ledger's spelling of the rule is new evidence");
-    Assert.AreEqual(answerBefore, t.AnswerStamp(), "and the same owner over the same seconds is the same routing");
+    Assert.AreEqual(answerBefore, t.AnswerStamp(), "same kind, seconds and owner over a non-charm claim is the same routing");
+  }
+
+  /*
+   * The hole this file exists to close. `IdentityPriorStore.RememberedRules` carries `"R9-"`, so a later pass replays a remembered charm as
+   * `Prior:R9-charm` — and `IsCharmedAt`, `CharmStartAfter`, `IsConfirmedRaidPersonAt` and `HasIndependentIdentity` all test
+   * `Source.StartsWith("R9-charm")`, so the replayed one answers FALSE. Same owner, same seconds, same kind as the claim already on file: a
+   * digest that folded only kind/bounds/owner would call this "the same answer" and let the boards keep routing the mob's damage into a
+   * hidden pet row after the rules stopped calling it a charm. The first assertion is the answer changing; the second ties that change to a
+   * predicate, so this test cannot quietly become a hash-diff exercise.
+   */
+  [TestMethod]
+  public void ALedgerReplayOfACharmClaimMovesTheAnswerStamp()
+  {
+    var t = new EntityTimeline();
+
+    // What R9 actually writes: the target as an NPC at charm strength, plus the Friendly window that flips its side (CharmWindows.Apply).
+    t.SetIdentity("an imbued whipgrass", IdentityKind.Npc, RuleStrength.Certain, "R9-charm");
+    t.AddAffiliation(AffiliationKind.Friendly, "an imbued whipgrass", T0 + 30, T0 + 90, RuleStrength.Certain, "R9-charm", "Zomm");
+
+    Assert.IsTrue(t.IsCharmedAt("an imbued whipgrass", T0 + 40), "setup: inside the window this name is ours (the side flip)");
+    Assert.IsFalse(t.HasIndependentIdentity("an imbued whipgrass", IdentityKind.Npc, double.PositiveInfinity),
+      "setup: its only NPC reason IS the charm line — the projection's hidden-pet case");
+
+    var answerBefore = t.AnswerStamp();
+
+    // The ledger's spelling of the same rule, replayed by a later pass (`RememberedRules` carries "R9-").
+    t.SetIdentity("an imbued whipgrass", IdentityKind.Npc, RuleStrength.Strong, "Prior:R9-charm");
+
+    Assert.AreNotEqual(answerBefore, t.AnswerStamp(),
+      "a non-charm NPC reason for the same name is a routing answer (hidden pet row → listed mob row), not provenance bookkeeping");
+    Assert.IsTrue(t.HasIndependentIdentity("an imbued whipgrass", IdentityKind.Npc, double.PositiveInfinity),
+      "and that is what the predicate now answers, which is why the stamp had to move");
+
+    // Same law on the affiliation store: a Friendly interval these predicates will not call a charm.
+    var windowAnswerBefore = t.AnswerStamp();
+    t.AddAffiliation(AffiliationKind.Friendly, "an imbued whipgrass", T0 + 200, T0 + 260, RuleStrength.Certain, "Prior:R9-charm", "Zomm");
+
+    Assert.AreNotEqual(windowAnswerBefore, t.AnswerStamp(),
+      "allegiance that is not a charm flip is a different answer to SideAt/CharmStartAfter, over the same owner and bounds");
+  }
+
+  /*
+   * The identity-store half of the same law: a rule other than R9 giving the SAME kind at the SAME effective time. `IdentityAt` still
+   * answers Npc — nothing about the winning word changed — while `HasIndependentIdentity` flips, and that predicate is what decides whether
+   * the name's damage folds under a charmer or keys its own row.
+   */
+  [TestMethod]
+  public void ASecondNonCharmClaimOfTheSameKindMovesTheAnswerStamp()
+  {
+    var t = new EntityTimeline();
+    t.SetIdentity("Fenken", IdentityKind.Npc, RuleStrength.Certain, "R9-charm");
+
+    Assert.IsFalse(t.HasIndependentIdentity("Fenken", IdentityKind.Npc, double.PositiveInfinity));
+    var answerBefore = t.AnswerStamp();
+
+    t.SetIdentity("Fenken", IdentityKind.Npc, RuleStrength.Weak, "R14-article");
+
+    Assert.AreEqual(IdentityKind.Npc, t.IdentityAt("Fenken", double.PositiveInfinity), "the winning word never changed");
+    Assert.AreNotEqual(answerBefore, t.AnswerStamp(), "but the projection's charm decision did");
   }
 
   /*

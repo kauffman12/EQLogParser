@@ -204,7 +204,7 @@ namespace EQLogParser
       // conflicts are resolved at read time by (strength, effectiveFrom) — nothing is silently dropped.
       InsertSortedByTime(list, new IdentityAssignment(kind, effectiveFrom, strength, source), static a => a.EffectiveFrom);
       _digest = unchecked(_digest + Term(0, name, (long)kind, strength, effectiveFrom, 0d, source, null));
-      FoldAnswer(Term(0, name, (long)kind, 0, effectiveFrom, 0d, null, null));
+      FoldAnswer(Term(0, name, (long)kind, IsCharmClaim(source) ? 1 : 0, effectiveFrom, 0d, null, null));
     }
 
     public void AddAffiliation(AffiliationKind kind, string name, double t0, double t1, int strength, string source, string owner = null)
@@ -228,7 +228,7 @@ namespace EQLogParser
 
       InsertSortedByTime(list, new AffiliationInterval(kind, t0, t1, strength, source, owner), static a => a.T0);
       _digest = unchecked(_digest + Term(1, name, (long)kind, strength, t0, t1, source, owner));
-      FoldAnswer(Term(1, name, (long)kind, 0, t0, t1, null, owner));
+      FoldAnswer(Term(1, name, (long)kind, IsCharmClaim(source) ? 1 : 0, t0, t1, null, owner));
     }
 
     // Lists stay small per name (distinct assignments only), so a back-to-front scan beats
@@ -550,6 +550,7 @@ namespace EQLogParser
     /// <summary>
     /// What a board would see, in O(1): like StateStamp but blind to provenance, so re-recording the same conclusion under a
     /// different rule name does not read as new information. See `_answerDigest` for why the two questions are different.
+    /// Blind to RULE NAMES — never to charm-ness: `IsCharmClaim` is folded because three predicates route damage by that prefix.
     /// </summary>
     public long AnswerStamp()
     {
@@ -578,6 +579,27 @@ namespace EQLogParser
      * (a `bone walker` and `A bone walker` are one entity, so recording either spelling must land on the same term);
      * sources hash ordinally because they are vocabulary words (`R9-charm`, a Labels constant), not names.
      */
+    /*
+     * The ONE piece of provenance that is an ANSWER rather than a footnote.
+     *
+     * `AnswerStamp` erases rule names because no board question reads them — except this one. Three predicates recognize a charm sighting
+     * by its source prefix, and every one of them routes damage:
+     *   `HasIndependentIdentity` (FightProjection's charm/pet decision: a name whose only NPC reason IS the charm line becomes a hidden
+     *    `RaidPet` row whose damage folds under its charmer — up to 90 M on one capture),
+     *   `IsCharmedAt` / `CharmStartAfter` (the side flip for the window's duration, and which death counts as the kill), and
+     *   `IsConfirmedRaidPersonAt`.
+     * So "was this claim a charm" is part of what a board would route, and it is folded — as one bit, still not the source string.
+     *
+     * The mirror image matters more than the bit itself: `IdentityPriorStore.RememberedRules` contains `"R9-"`, so a later pass replays a
+     * remembered charm under the ledger's spelling, `Prior:R9-charm`, which these same predicates read as NOT a charm (they test `StartsWith`).
+     * That is not cosmetic bookkeeping — it is a name gaining a non-charm NPC reason, which turns a hidden pet row back into a listed one.
+     * A digest blind to this would skip the rebuild and keep drawing the old routing: the stale-row-with-plausible-numbers failure this whole
+     * stamp exists to avoid, arriving through the door the stamp itself opened. Mirroring `StartsWith` exactly is therefore load-bearing: the
+     * digest moves whenever the predicates' own answer can move, and no more often than that.
+     */
+    private static bool IsCharmClaim(string source)
+      => source is not null && source.StartsWith("R9-charm", StringComparison.Ordinal);
+
     // One answer tuple, added to the sum exactly once however many rules reached it (`_answerDigest`).
     private void FoldAnswer(long term)
     {
