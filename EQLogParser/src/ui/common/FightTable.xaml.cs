@@ -110,6 +110,14 @@ namespace EQLogParser
      */
     private bool _loadBandSettled;
     private bool _awaitingFirstRows;
+
+    /*
+     * One Info line per capture, written the first time this session's rows reach the grid. The open and the first derive
+     * pass already announce themselves (`capture: started`, `derive: first pass`); what was missing on the other side is the
+     * moment the READER could have clicked something, which is the timestamp every "the stats built three times when I
+     * clicked once" report needs in order to be read at all.
+     */
+    private bool _sessionPainted;
     private long _capturedFacts;
 
     /*
@@ -270,6 +278,7 @@ namespace EQLogParser
       SetLoadBand(null);
       _loadBandSettled = false;
       _awaitingFirstRows = false;
+      _sessionPainted = false;
       _capturedFacts = 0;
     }
 
@@ -295,6 +304,12 @@ namespace EQLogParser
         // the reader pump is still under 100 %: real rows beat a progress bar, and for this session they win.
         _loadBandSettled = true;
         SetLoadBand(null);
+
+        if (!_sessionPainted)
+        {
+          _sessionPainted = true;
+          Log.Info($"fight list: {snapshot.Rows.Count} row(s) painted - this capture is on screen");
+        }
 
         /*
          * Patch first, rebuild only when the patch cannot be honest about it (RowPatch: a re-sort, a duplicate key, or more than

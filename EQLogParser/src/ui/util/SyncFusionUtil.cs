@@ -180,14 +180,14 @@ namespace EQLogParser
           }
           catch (Exception ex)
           {
-            Log.Debug(ex);
+            Log.Debug("Docking state operation failed", ex);
           }
 
           disposable.Dispose();
         }
         catch (Exception e)
         {
-          Log.Debug(e);
+          Log.Debug("Docking window toggle failed", e);
         }
       }
       else if (window?.Content is IDocumentContent doc)

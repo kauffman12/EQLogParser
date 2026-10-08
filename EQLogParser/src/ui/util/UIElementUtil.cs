@@ -220,7 +220,7 @@ namespace EQLogParser
         catch (ArgumentException e)
         {
           // certain fonts cause WPF 4 to throw an exception when the FamilyNames property is accessed; ignore them
-          Log.Debug(e);
+          Log.Debug("Cell popup could not be opened", e);
         }
       }
 

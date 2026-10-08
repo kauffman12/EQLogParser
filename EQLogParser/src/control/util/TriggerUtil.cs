@@ -790,7 +790,7 @@ namespace EQLogParser
       }
       catch (Exception e)
       {
-        Log.Debug(e);
+        Log.Debug("Trigger import step failed", e);
       }
 
       return watcher;
@@ -845,7 +845,7 @@ namespace EQLogParser
         }
         catch (Exception e)
         {
-          Log.Debug(e);
+          Log.Debug("Trigger import step failed", e);
         }
       });
     }

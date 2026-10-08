@@ -1449,7 +1449,6 @@ namespace EQLogParser
           }
           catch (Exception)
           {
-            // Log.Debug("Bad Trigger?", ex);
           }
         }
       }

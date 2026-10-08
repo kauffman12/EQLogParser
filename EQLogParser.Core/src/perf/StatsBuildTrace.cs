@@ -151,7 +151,95 @@ internal static class StatsBuildTrace
     // walk/present split for the record) reads it instead of re-timing the builder from outside. Keyed by builder,
     // because one overlay refresh builds three boards and "the last line" would be whichever finished last.
     _lastFinished[handle.Builder] = line;
-    Log.Info(line);
+
+    /*
+     * Every build's full line is a Debug line, and the DOOR changes are what reach Info. This printed at Info once per
+     * board per build, which on a live pull (a selected encounter refreshing at the derive cadence, three boards, plus the
+     * panes' own doors) is several lines a second - thousands in a raid night, all of them restating the same door. The
+     * question the lines answer is "WHICH door built this, and did it change", so that is what the log shows by default:
+     * one Info line when a builder starts answering to a different door, plus one every EchoIntervalSeconds with the count
+     * of what was suppressed in between. Nothing is lost - Debug still carries every build - and an ordinary log stops
+     * being a metric stream nobody reads.
+     */
+    var word = DoorWord(handle.Door);
+    var state = _echoes.GetOrAdd(handle.Builder, static _ => new EchoState());
+    var now = Stopwatch.GetTimestamp();
+    bool echo;
+    int suppressed;
+
+    lock (state)
+    {
+      var stale = (now - state.EchoedAtTicks) * SecondsPerTick >= EchoIntervalSeconds;
+      echo = word != state.LastDoor || stale;
+      suppressed = state.Suppressed;
+
+      if (echo)
+      {
+        state.LastDoor = word;
+        state.EchoedAtTicks = now;
+        state.Suppressed = 0;
+      }
+      else
+      {
+        state.Suppressed++;
+      }
+    }
+
+    if (echo)
+    {
+      Log.Info(suppressed > 0 ? $"{line} | +{suppressed} earlier build(s) of this door logged at Debug only"
+                              : line);
+      Log.Debug($"trace echo [{handle.Builder}] door '{word}'");
+    }
+    else
+    {
+      Log.Debug(line);
+    }
+  }
+
+  /// <summary>How often a repeating door re-asserts itself at Info when nothing else changes. Tests set this to 0.</summary>
+  internal static double EchoIntervalSeconds = 10;
+
+  private static readonly double SecondsPerTick = 1.0 / Stopwatch.Frequency;
+
+  private sealed class EchoState
+  {
+    internal string? LastDoor;
+    internal long EchoedAtTicks;
+    internal int Suppressed;
+  }
+
+  private static readonly ConcurrentDictionary<string, EchoState> _echoes = new();
+
+  /// <summary>The door word last written at Info for that builder, or null if it has not echoed yet.</summary>
+  internal static string? LastEchoOf(string builder)
+  {
+    if (!_echoes.TryGetValue(builder, out var state)) return null;
+    lock (state) { return state.LastDoor; }
+  }
+
+  /// <summary>Builds of the same door held back at Debug since that builder's last Info echo.</summary>
+  internal static int SuppressedSinceEcho(string builder)
+  {
+    if (!_echoes.TryGetValue(builder, out var state)) return 0;
+    lock (state) { return state.Suppressed; }
+  }
+
+  /*
+   * The identity of a door, stripped of the numbers that legitimately move between builds of it: `derived [SelectCommand]
+   * stamp 7 fights 3` and `derived [SelectCommand] stamp 9 fights 4` are ONE door asked twice. A bracketed reason is the
+   * vocabulary this app uses (BoardReason words, pane labels), so the text through the first `]` is the door; anything
+   * else falls back to its leading word rather than treating a whole sentence as a key.
+   */
+  private static string DoorWord(string? door)
+  {
+    if (string.IsNullOrEmpty(door)) return UnlabelledDoor;
+
+    var close = door.IndexOf(']');
+    if (close > 0) return door.Substring(0, close + 1).Trim();
+
+    var space = door.IndexOf(' ');
+    return (space > 0 ? door.Substring(0, space) : door).Trim();
   }
 
   /// <summary>The most recent finished line for that board ("damage", "healing", …), or null before its first build.</summary>

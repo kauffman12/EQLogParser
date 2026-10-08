@@ -911,7 +911,10 @@ namespace EQLogParser
 
         var records = input.Fights.Sum(static f => f.DamageBlocks.Sum(static b => b.Actions.Count));
         var tankRecords = input.Fights.Sum(static f => f.TankingBlocks.Sum(static b => b.Actions.Count));
-        Log.Info($"Derived damage summary [{request.Reason}]: {input.Fights.Count} fight(s), {records:N0} record(s), "
+        // Debug, not Info: `board ask [reason] -> outcome` above already tells the story at the level a player's log
+        // keeps, and this restates the same event with counters. It stays because those counters are what a Debug run
+        // reads when a board's numbers look wrong (how many records reached the builders, how long materialize took).
+        Log.Debug($"Derived damage summary [{request.Reason}]: {input.Fights.Count} fight(s), {records:N0} record(s), "
                  + $"{tankRecords:N0} taken"
                  + (input.WithoutDamage > 0 ? $", {input.WithoutDamage} selected fight(s) no facts at all" : string.Empty)
                  + $" | materialized in {materializeMs:F0} ms, waited {waitedMs:F0} ms behind any earlier build");

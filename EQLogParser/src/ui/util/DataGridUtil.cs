@@ -350,7 +350,7 @@ namespace EQLogParser
       }
       catch (Exception ex)
       {
-        Log.Debug(ex);
+        Log.Debug("Column width refresh failed", ex);
       }
     }
 
@@ -373,7 +373,7 @@ namespace EQLogParser
       }
       catch (Exception ex)
       {
-        Log.Debug(ex);
+        Log.Debug("Column width refresh failed", ex);
       }
     }
 
@@ -392,7 +392,7 @@ namespace EQLogParser
       }
       catch (Exception ex)
       {
-        Log.Debug(ex);
+        Log.Debug("Column width refresh failed", ex);
       }
     }
 
