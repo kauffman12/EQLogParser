@@ -554,6 +554,14 @@ namespace EQLogParser
               }
             }
 
+            /*
+             * A diagnostic split inside what used to be one "present" number: the loop above walks EVERY name on the board -
+             * mobs included, 12k of them on a group night - copying each name's time ranges and asking the registry for a
+             * class, while everything below is O(players) summary arithmetic. They scale differently, so they get separate
+             * words ("totals" = per-name assembly, "present" = combined stats and events).
+             */
+            StatsBuildTrace.Stage(trace, "totals");
+
             var combined = new CombinedStats
             {
               RaidStats = _raidTotals,

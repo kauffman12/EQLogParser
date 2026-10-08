@@ -9120,10 +9120,12 @@ Two things that table says, both against expectation:
   (40 B inside its list's array), so there is no per-record object to allocate. What remains is the per-record and
   per-row work itself: reading facts that sit scattered through a 70 MB array, `OwnerOf`, `SubTypeOf`,
   `StatsUtil.UpdateTimeSegments`, and building one `Fight` per row with its handful of collections.
-- **The boards allocate 54 MB to answer that selection** — the per-player × per-target stat rows and their
-  time-segment machinery, paid again per merge. The damage board's `present` phase grows with row count (**≈4.6 µs per
-  row**) because it walks each player's accumulated per-sub **time ranges**, and a group night gives every one of the
-  handful of players a range per fight.
+- **The boards allocate 54 MB to answer that selection**, and about a fifth of their combined time goes into the phase
+  that used to print as `present`. That label was a misreading on my part: `StatsBuildTrace.Stage(name)` reports the
+  elapsed milliseconds *since the previous mark* under the **new** name, so what came out as `present` was the per-name
+  assembly loop above it. All three builders now split that phase with its own word (`totals`), and measured over these
+  same 12,088 names they print **56 / 57 / 55 ms** — one group-night select-all spends ~168 ms in **three builders each
+  assembling the same name rows**, ~4.6 µs per name.
 
 The per-record/per-row split comes out of comparing shapes: that capture's **largest single row (418,915 outcomes on
 Incogitable) materializes at ~0.2 µs per record**, while the small rows run at **~1.2 µs per record** — so the small-row
@@ -9140,6 +9142,29 @@ the boards' 54 MB of garbage, i.e. merging per-segment time ranges into per-play
 fight's range separately; and, on the app side, the cost budget that already refuses *unasked* rebuilds over
 `MaxOutcomes` — a group-night select-all is far over that ceiling, so nothing rebuilds it 2×/second behind your back
 even though it would be legal to.
+
+### What the 4.6 µs per name is (and is not), measured
+
+Two plausible culprits were tested and **refuted**, written down so nobody spends an afternoon on them again:
+
+- **`StatsUtil.FilterTimeRange` rebuilding a player's range per sub-stat.** An identity fast path ("every segment
+  already inside the bounds → hand back the same `TimeRange`, no copy") changed *nothing*: derived boards run with no
+  window (`window -1..-1`, both bounds NaN), and the function already returns its input when both bounds are NaN. It
+  only matters for time-windowed panes, where it is not on the hot path. Reverted rather than shipped on theory.
+- **`PlayerRegistry.GetPlayerClass` per name.** Stubbed to `null` and re-measured: still 56 ms. Consistent with
+  `reg.class` being an allocation-free read; a mob-heavy board pays it 12k times and it is not the wall.
+
+What remains in that loop is `stats.Ranges = new TimeRange(range.TimeSegments)` — one copied range per display row,
+which is what feeds Group View, the DPS log and the breakdown panes — plus `StatsUtil.UpdateCalculations` arithmetic.
+That copy is where the damage board's 21.9 MB goes, and it exists because `TimeRange.Add` welds whatever it is handed:
+sharing one instance between rows (or between the three boards) would let a later merge widen a row someone is reading.
+
+So the lever for group nights is not micro-tuning but **one assembly pass shared by the three boards** — assemble each
+name's display row once and hand it to damage, tanking and healing instead of walking the same 12k names three times.
+That is plumbing behind the builders: `Fight`, its blocks, its segments and each row's `Ranges` keep the shape every
+surface reads them in (the operator's standing condition on this line of work — "as long as we're not changing how we
+can access the fight data for the dps log and damage breakdown and everything else"). Worth ~110 ms of the 742 measured
+here, and two fewer passes over the name list at raid scale.
 
 Reproduce with the throwaway row-shape probe (same setup as `MeterBoardCostRealLogTest`: classify, index, project, then
 time boards over K rows taken from one size band, printing ms, µs/row and allocated MB per phase).

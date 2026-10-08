@@ -635,6 +635,13 @@ namespace EQLogParser
               }
             }
 
+            /*
+             * Same diagnostic split as DamageStatsBuilder: the loop above touches EVERY name on the board (mobs included),
+             * copying each name's time ranges and asking the registry for a class, while what follows is O(players) summary
+             * arithmetic. They scale differently - 12k names on a group night cost ~55 ms here as well.
+             */
+            StatsBuildTrace.Stage(trace, "totals");
+
             var combined = new CombinedStats
             {
               RaidStats = _raidTotals,
