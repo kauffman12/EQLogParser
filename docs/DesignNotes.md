@@ -9091,3 +9091,55 @@ seconds behind it), and `TheBoardDropsTheMarkedCastAndKeepsAnOrdinaryHeal` pins 
 **0** on the board with AOE healing off and 700 with it on, six people leaves 600 either way, so a partial reach-back fails by name rather than
 reading as "a little less healing". The fixture spell is `Ancestral Aid VI` (spells.txt Target = Targetgroup(41), MGB set, negative damage); the
 golden board runs with AOE on, which is why this path needed its own tests.
+
+## Why a long night of small fights costs what it costs (2026-11)
+
+Asked why stats building used to crawl when many fight rows were selected, **"not all raids … a lot of rows that had
+a little bit of data like from group content"**. Every capture the earlier work measured was the opposite shape — a
+farm night or a raid where one scan dominates — so the row-shaped cost had never been put on a scale. Measured on
+`local/logs/emu/eqlog_Bulron_thj.txt` (148 MB, THJ group content: **12,099 rows / 293,322 outcomes / 25,455 heals**,
+averaging 24 outcomes per row; the same file's largest single row holds 1.4k).
+
+**The cost is linear in rows, at roughly 62–78 microseconds per row** — flat from K = 250 to K = 12,099 (whole-board
+time: 19 / 34 / 67 / 157 / 705 / 758 ms). So there is no superlinearity to hunt; what there is, is a *constant* that is
+big relative to the data: selecting the whole list of a group night costs **758 ms to answer 293k outcomes**, which a
+raid night spends four times over on twenty times the work.
+
+Where those milliseconds are (K = 12,099, best of two):
+
+| part | time | allocated |
+|---|---|---|
+| materialize (`FightSummarySource.Build` + heal rows) | 352 ms | **2.4 MB** |
+| damage board | 187 ms | 21.9 MB |
+| tanking board | 125 ms | 14.0 MB |
+| healing board | 77 ms | 18.3 MB |
+
+Two things that table says, both against expectation:
+
+- **Materialize is CPU-bound, not allocation-bound** — 293k records for 2.4 MB, because `DamageRecord` is a *struct*
+  (40 B inside its list's array), so there is no per-record object to allocate. What remains is the per-record and
+  per-row work itself: reading facts that sit scattered through a 70 MB array, `OwnerOf`, `SubTypeOf`,
+  `StatsUtil.UpdateTimeSegments`, and building one `Fight` per row with its handful of collections.
+- **The boards allocate 54 MB to answer that selection** — the per-player × per-target stat rows and their
+  time-segment machinery, paid again per merge. The damage board's `present` phase grows with row count (**≈4.6 µs per
+  row**) because it walks each player's accumulated per-sub **time ranges**, and a group night gives every one of the
+  handful of players a range per fight.
+
+The per-record/per-row split comes out of comparing shapes: that capture's **largest single row (418,915 outcomes on
+Incogitable) materializes at ~0.2 µs per record**, while the small rows run at **~1.2 µs per record** — so the small-row
+case is dominated by what a *row* costs, not by what a record costs.
+
+**Fixed with the measurement**: the damage loop used to build `record.Attacker + "++" + record.SubType` for **every**
+record, unconditionally, to key the three per-spell boards (`DdDamage`/`DoTDamage`/`ProcDamage`) that a melee swing can
+never reach. The key is now built inside those branches — one string per Dd/DoT/Proc record instead of one per outcome
+(on this capture, 293k strings per build disappear). Board output is identical, goldens included.
+
+**What is left, in measured order**: materialize's per-row work (the `Fight` object and its collections, the gated
+ordinal lookups, the `AllRanges` merge — the thing to make cheaper if group nights must answer faster than ~10k rows/s);
+the boards' 54 MB of garbage, i.e. merging per-segment time ranges into per-player ones instead of accumulating every
+fight's range separately; and, on the app side, the cost budget that already refuses *unasked* rebuilds over
+`MaxOutcomes` — a group-night select-all is far over that ceiling, so nothing rebuilds it 2×/second behind your back
+even though it would be legal to.
+
+Reproduce with the throwaway row-shape probe (same setup as `MeterBoardCostRealLogTest`: classify, index, project, then
+time boards over K rows taken from one size band, printing ms, µs/row and allocated MB per phase).

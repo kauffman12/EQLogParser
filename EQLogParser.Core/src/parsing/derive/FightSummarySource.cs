@@ -375,29 +375,41 @@ namespace EQLogParser
          * words are Labels' vocabulary (RecordFrom hands back LabelTypes.LabelOf), so Dd/Dot/Proc arrive without a
          * re-map, and a miss never reaches the switch because a miss is not any of these three words.
          */
-        var spellKey = record.Attacker + "++" + record.SubType;
+        /*
+         * The per-spell boards read these dictionaries off the same Fight (SpellDamageStatsViewer): fill them with
+         * FightManager's own live-parse shape - same key, same switch, same Count/Max/Total arithmetic. The kind
+         * words are Labels' vocabulary (RecordFrom hands back LabelTypes.LabelOf), so Dd/Dot/Proc arrive without a
+         * re-map, and a miss never reaches the switch because a miss is not any of these three words.
+         *
+         * The key is built INSIDE the branches that use it. A melee record cannot appear in a spell board, and this
+         * loop runs on every record of the selection: hoisting the concatenation cost one string per swing for the
+         * two words that need it (on a group night, 12k rows of mostly melee = 293k strings per build).
+         */
         SpellDamageStats stats = null;
         switch (record.Type)
         {
           case Labels.Dd:
-            if (!summary.DdDamage.TryGetValue(spellKey, out stats))
+            var ddKey = record.Attacker + "++" + record.SubType;
+            if (!summary.DdDamage.TryGetValue(ddKey, out stats))
             {
               stats = new SpellDamageStats { Caster = record.Attacker, Spell = record.SubType };
-              summary.DdDamage[spellKey] = stats;
+              summary.DdDamage[ddKey] = stats;
             }
             break;
           case Labels.Dot:
-            if (!summary.DoTDamage.TryGetValue(spellKey, out stats))
+            var dotKey = record.Attacker + "++" + record.SubType;
+            if (!summary.DoTDamage.TryGetValue(dotKey, out stats))
             {
               stats = new SpellDamageStats { Caster = record.Attacker, Spell = record.SubType };
-              summary.DoTDamage[spellKey] = stats;
+              summary.DoTDamage[dotKey] = stats;
             }
             break;
           case Labels.Proc:
-            if (!summary.ProcDamage.TryGetValue(spellKey, out stats))
+            var procKey = record.Attacker + "++" + record.SubType;
+            if (!summary.ProcDamage.TryGetValue(procKey, out stats))
             {
               stats = new SpellDamageStats { Caster = record.Attacker, Spell = record.SubType };
-              summary.ProcDamage[spellKey] = stats;
+              summary.ProcDamage[procKey] = stats;
             }
             break;
         }
