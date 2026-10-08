@@ -111,8 +111,16 @@ namespace EQLogParser
             }
 
             _raidTotals.Ranges.Add(new TimeSegment(fight.BeginTankingTime, fight.LastTankingTime));
-            _raidTotals.AllRanges.Add(options.AllRanges.TimeSegments);
             StatsUtil.UpdateRaidTimeRanges(fight.TankSegments, fight.TankSubSegments, _playerTimeRanges, _playerSubTimeRanges);
+          }
+
+          // Once for the whole selection instead of once per fight (the damage board carried the same line): merging is
+          // idempotent, so adding the same spans again proved nothing and each proof cost a search - on a whole-capture
+          // selection that is 4,452 searches through a growing list. Null-guarded for an empty selection, which carries
+          // no AllRanges at all.
+          if (options.AllRanges is not null)
+          {
+            _raidTotals.AllRanges.Add(options.AllRanges.TimeSegments);
           }
 
           damageBlocks.Sort((a, b) => a.BeginTime.CompareTo(b.BeginTime));
@@ -122,11 +130,12 @@ namespace EQLogParser
             _raidTotals.TotalSeconds = _raidTotals.MaxTime = _raidTotals.Ranges.GetTotal();
 
             var rangeIndex = 0;
-            double lastTime = 0;
             var newBlock = new List<ActionGroup>();
-            foreach (var block in CollectionsMarshal.AsSpan(damageBlocks))
+            for (var i = 0; i < damageBlocks.Count;)
             {
-              if (_raidTotals.Ranges.TimeSegments.Count > rangeIndex && block.BeginTime > _raidTotals.Ranges.TimeSegments[rangeIndex].EndTime)
+              var blockTime = damageBlocks[i].BeginTime;
+
+              if (_raidTotals.Ranges.TimeSegments.Count > rangeIndex && blockTime > _raidTotals.Ranges.TimeSegments[rangeIndex].EndTime)
               {
                 rangeIndex++;
                 if (newBlock.Count > 0)
@@ -137,19 +146,26 @@ namespace EQLogParser
                 newBlock = [];
               }
 
-              if (!lastTime.Equals(block.BeginTime))
+              if (i + 1 < damageBlocks.Count && damageBlocks[i + 1].BeginTime == blockTime)
               {
-                var copy = new ActionGroup();
-                copy.Actions.AddRange(block.Actions);
-                copy.BeginTime = block.BeginTime;
-                newBlock.Add(copy);
+                // Parallel fights: one entry per second is what the chart's buckets assume, so this run becomes a single
+                // joined block. The only allocation left in this phase.
+                var joined = new ActionGroup { BeginTime = blockTime };
+                while (i < damageBlocks.Count && damageBlocks[i].BeginTime == blockTime)
+                {
+                  joined.Actions.AddRange(damageBlocks[i++].Actions);
+                }
+
+                newBlock.Add(joined);
               }
               else
               {
-                newBlock.LastOrDefault()?.Actions?.AddRange(block.Actions);
+                // Grouped by REFERENCE, as on the damage board: these are `Fight.TankingBlocks`, already one ActionGroup
+                // per second of that fight, and copying each one (a fresh list of record references per second of being
+                // beaten on) measured as the whole cost of this phase - `groups 1068 ms` against `walk 30 ms` on a
+                // whole-capture selection. Nothing mutates a finished group's Actions.
+                newBlock.Add(damageBlocks[i++]);
               }
-
-              lastTime = block.BeginTime;
             }
 
             _tankingGroups.Add(newBlock);
