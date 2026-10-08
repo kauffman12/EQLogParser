@@ -9109,6 +9109,40 @@ each remaining second buys.
 on every board, with or without them. Every law in this chapter was found by measuring the largest window the pane can be handed —
 which is also the window an operator gets from Select All, and the one a "just refresh it" feature would otherwise re-pay per click.
 
+### What a damage row's state actually is, which is why the delta phase does not start with `Merge` (2026-10)
+
+Starting the delta phase meant writing merge for "the accumulator", so the first act was to read what one is. It is
+`PlayerStats : PlayerSubStats : Attempt` — **and that object is the board**: it implements `INotifyPropertyChanged` and builders hand
+their instances straight to the pane. Inside it: ~30 plain counters plus `Min`/`Max`/`MaxPotentialHit` (additive, with min/max rules);
+`Ranges`/`AllRanges`; two nested child forests (`SubStats` per spell, `SubStats2` per npc/pet), each a full `PlayerSubStats` with its
+own ranges and frequency buckets; `ResistCounts` (dict of dict of int), `Specials` (a set), `Deaths` (an event list); two index
+accelerators that must stay consistent with the lists they index; and ~15 scalars that are **not** accumulators (`Avg`, `CritRate`,
+`Dps`, `Percent`, the rate family) which a merge would have to *recompute*, never add.
+
+That kills both naive shapes of "count only what is new". **Carrying the state forward mutates a published board**, because the row on
+screen and the accumulator are the same object; **cloning it to extend it** costs a deep copy of that forest per row per refresh, which
+for the many-rows-little-data capture — group content, the shape that decides whether this feature is worth anything — is the same order
+as simply walking those rows again. So a real delta path needs one of two structural moves, each with a permanent price: a **parallel
+mergeable accumulator** that gets projected into the display model at finalize (every future column then exists twice, in step), or
+**accumulation moved out of the model entirely**, which touches every board in the app. Neither is a PR, and neither should be started
+between other jobs — it needs its own design pass against the goldens that already exist.
+
+What the phase does *not* need is queueing: `SummaryBuildGate` already runs one build at a time with newest-question-wins on the queued
+one, so live churn cannot stack work — it can only make each change cost a full recount. The field numbers say the phantom triggers are
+gone and what is left is that single honest cost (`eqlog_Kizant_xegony-09-03-26.txt`, Windows, one Select All of 708 rows produced exactly
+one build per board, no `ContentMoved` follow-up):
+
+```
+damage   1,884 ms = groups 280 + window 2 + WALK 1,579 + totals 21 + present 2
+tanking     52 ms = groups  14 + window 1 + walk    35 + totals  2
+healing 1,442 ms = WINDOW 954 + walk 475 + totals 12   (2,647,774 heals)
+```
+
+Healing's two stages are now one accumulation pass and one re-window pass over the heal list — neither is a redundant scan any more, so
+both are per-record cost, which is exactly the argument above rather than an exception to it. Same shape as the Linux census (walk ~85 %
+of damage, window the biggest single heal term), so no machine-specific effect explains it and micro-optimizing the inside of those loops
+is not on the table: the phase boundary is "count less", and counting less needs one of the two structural moves above first.
+
 ## A refresh that answers for itself: the cost budget on unasked passes (2026-11)
 
 The question this closes is *"when a row is added or removed, or a pet is claimed, how does the user know the refresh worked —
