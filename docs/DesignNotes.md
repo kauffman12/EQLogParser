@@ -8872,3 +8872,62 @@ un-annotated `string`/`TimeRange` property became explicitly non-nullable instea
 appeared as new CS8601 "possible null reference assignment" warnings. The rule is not "never annotate" (Core's derive files
 do, and correctly): it is that in Core — `Nullable=disable`, consumed by an `enable`d test assembly — a file-level
 annotations directive is a **public-visible change**, so the new fields were declared without `?` instead.
+
+## Where a board build's time actually goes (2026-11)
+
+Three boards, one set of laws, and the phase table that says so. Measured on `local/logs/live/eqlog_Incogitable_xegony.txt`
+(1,901,078 damage facts, 403,740 heals, 4,646 rows) through a **whole-capture selection** — 4,452 fights, 1,720,467 outcomes,
+414 players — via `EQLP_DERIVE_COST=<log>` (`MeterBoardCostRealLogTest`), which prints each board's `StatsBuildTrace.Stage`
+phases beside its totals. Three passes, ranges shown because that is what repetition gave:
+
+| phase | start of this work | now |
+|---|---|---|
+| materialize (facts → records) | 704-831 ms | **606-696 ms** |
+| damage: groups | 1196 ms | **108-154 ms** |
+| damage: window | ~400 ms | **0 ms** (hoisted out of the per-name lock) |
+| damage: walk | 822 ms | **667-744 ms** |
+| damage: present | ~35 ms | **32 ms** |
+| tanking: groups | 1068 ms | **5-10 ms** |
+| tanking: whole build | 1105 ms | **~50 ms** |
+| healing: window | **2756-2945 ms** | **475-515 ms** |
+| healing: whole build | ~2.9 s | **~0.65 s** |
+| **whole board (3 boards)** | **~3.8 s** | **~1.5 s** |
+
+**Law: group by reference, not by copy.** `Fight.DamageBlocks` / `Fight.TankingBlocks` *are* `ActionGroup`s — one per second of
+that fight — and both summary builders were copying every one of them into a fresh `ActionGroup` with a fresh record-reference
+list before counting. On the damage board that copying cost more than the counting did (`groups 1196 ms` against `walk 822 ms`);
+on tanking it was essentially the entire build (`groups 1068 ms` against `walk 30 ms`). An unshared block now joins the group as
+the object it already is, and only *parallel* fights landing in the same second still join into one block, because the chart's
+buckets and the sub-stat keys assume one entry per second. Nothing in the app mutates a finished group's `Actions` (healing builds
+its own; the timeline chart and the validators read).
+
+**The copy was hiding a drop.** Both builders merged a same-second neighbour with `newBlock.LastOrDefault()?.Actions?.AddRange(…)`,
+which is `null` right after a group boundary flushed `newBlock` — so a block whose second equalled the previous one's added its
+records to nothing. They still updated pet mapping and still counted toward `_raidTotals` on damage, so the board silently lost a
+player's numbers in a way no aggregate test could see. Runs of equal seconds are peeled explicitly now, so every block lands
+somewhere. This is why the goldens exist before the optimizations rather than after.
+
+**Law: one cursor per window.** The selection's `TimeRange` segments are ascending and merged (`TimeRange.Add`), and both the
+materialized record list and the heal list are time ascending by law. The healing builder nonetheless ran
+`allHeals.FindIndex(0, h => h.Item1 >= beginTime)` **per segment** and then scanned to the **end of the list** (the per-record test
+was an `if`, never a stop). A whole-capture selection offers one segment per fight — 4,452 — over 403,740 heals: the capture was
+re-scanned 4,452 times for 2.9 s of "windowing". A cursor carried forward plus a `break` at the segment's end is one pass. Same
+shape as damage's `window` phase, which was doing an exact-match scan per name per segment **inside a per-name lock** (and mutating
+the list it enumerated); hoisting that decision to one sorted-range array per build made it 0 ms and stopped the enumeration bug.
+
+**Law: the raid's own ranges are added once.** `_raidTotals.AllRanges.Add(options.AllRanges.TimeSegments)` sat inside the
+per-fight loop on both grids, so a whole-capture selection merged the same spans into a growing list 4,452 times — idempotent work,
+each proof costing a search. Out of the loop, null-guarded: an empty selection carries no `AllRanges` at all, and this line used to
+be unreachable for nobody on the damage board (the catch swallows whatever goes wrong, so an empty board is the only symptom).
+
+**`UpdateDamageStats` is not the problem, and that was measured rather than assumed.** A micro-probe (`dotnet run -c Release`,
+1 M iterations) put it at **36 ns and 0 allocated bytes per call** — as cheap as incrementing fields on a fresh object. So the
+remaining `walk` time is not arithmetic to be shaved inside that method; it is *how many times the same records get walked*: the
+damage board walks its blocks two or three times (once for the raid row, once or twice more for owner-folded pet rows), tanking and
+healing walk their own, and materialization walks the fact tables before any of that. The restructure that follows from this is one
+measurement per outcome applied to N targets, not a faster `stats.Hits++`. Numbers first, though: see the phase table above for what
+each remaining second buys.
+
+**Two of these fixes are invisible until a whole capture is selected.** A 5-minute selection (8 rows, 1,245 outcomes) reads 1-10 ms
+on every board, with or without them. Every law in this chapter was found by measuring the largest window the pane can be handed —
+which is also the window an operator gets from Select All, and the one a "just refresh it" feature would otherwise re-pay per click.
