@@ -9012,3 +9012,42 @@ pane's early returns, which answer "should this pane be doing anything at all", 
 fourth condition re-derives it into the wrong branch. (2) The reason word is load-bearing: `ContentMoved` and `RowEdited` arrive
 `force: true`, so a budget written as "skip only non-forced announces" would decline nothing at all, and one written as "skip forced
 announces too, whatever the reason" would decline Refresh. The gate reads the reason, not the flag.
+
+### The same boards on the biggest local capture, before and after (2026-11)
+
+Incogitable (344 MB) is where the builder work was designed, and its shape flattered some of it: 4,646 rows over **414 players**,
+so a change that stops copying per-row-per-player blocks looks enormous there. `eqlog_Kizant_xegony-09-03-26.txt` (998 MB — the
+largest capture on this machine) is the opposite shape and the honest check: **708 rows, 4,580,865 outcomes, 2,670,809 heal facts,
+83 players** — one long farm night of short fights rather than thousands of encounters.
+
+A/B over one binary per revision (base = `5597aaa2`, the tracing commit: phase names in, none of the four perf commits; HEAD = the
+cost budget). Same machine, worst-of-two iterations per row, `MeterBoardCostRealLogTest` plus a temporary selection probe (run once,
+deleted afterwards — docs/DesignNotes.md → "A gated real-log test is disposable"):
+
+| what was selected | outcomes | base total | now | change |
+|---|---|---|---|---|
+| newest 20 rows (what a live meter actually holds) | 3,255 | 119 ms | **124 ms** | unchanged — nothing to win at this size |
+| the single largest encounter (`Tallongast, The Egg`) | 280,690 | 956 ms | **807 ms** | −16 % |
+| three largest | 729,548 | 1,999 ms | **1,951 ms** | ~noise |
+| ten largest | 2,078,713 | 5,563 ms | **4,935 ms** | −11 % |
+| **all 708 rows (select-all)** | 4,580,865 | 11,481 ms | **9,760 ms** | **−15 %** |
+
+Phase by phase on select-all: damage+tanking **4,441 → 3,844 ms**, healing **5,859 → 4,274 ms** (its own split now reads
+`window ~2.7-3.2 s / walk ~0.65 s / present 8 ms`), materialize unchanged at **~1.2-1.6 s** (never touched), tanking's half a
+**48 → 39 ms**. So the shape of the remaining cost is now stated rather than guessed: the two full scans — the damage walk over
+4.58 M outcomes and the heal window/materialization over 2.65 M heals — are ~90 % of a whole-night build, and the per-player
+plumbing that the Incogitable work removed was most of what was left. A/B on healing is where the win concentrates here
+(−38 % on one encounter, −27 % on the night), which is consistent with what that fix was: one cursor for the window instead of a
+`FindIndex` per segment.
+
+**What this capture says about `UnaskedRefresh.MaxOutcomes`.** The threshold sits **below one big encounter**: the largest row here
+is 280,690 outcomes (2.8× over 100k), and its full refresh costs ~0.8 s — not invisible. A live-tail selection (newest 20 rows) is
+3,255 outcomes at ~0.12 s and keeps refreshing on its own exactly as intended, and this file's last eight hours hold **one row / three
+outcomes** (it ends quiet), so the meter's own path costs single-digit milliseconds on it anyway. But an operator who selects a big
+encounter and lets it run would today get: base = one ~0.8 s rebuild per pass at ~2 passes/s, i.e. a permanently busy UI lane; now =
+one build on the click and then nothing until Refresh. Both are defensible, neither is obviously right, and **the honest reading is that
+a binary decline is the wrong shape for what the data shows** — cost is continuous, so the answer should be a throttle whose interval
+scales with the estimate (e.g. allow an unasked rebuild when its estimated cost stays under some share of the time since the last one:
+small boards keep refreshing immediately, a whole night refreshes every few seconds instead of never). That is the next measurement, not
+a conclusion: written here so the threshold's calibration is on record as *measured against one capture family and questioned by another*,
+rather than as settled. Until anyone acts, `MaxOutcomes` stays 100,000 — a number that errs toward never blocking the thread.
