@@ -389,6 +389,20 @@ announce is logged at Debug instead of swallowed — "three asks arrived" and "o
 different stamps on one door = content genuinely moved and the rebuild was owed. **The first-click-after-load triple is still an open question**
 (the load-time `TimeChanged` → hourglass → options chain is the leading suspect and is written up as a hypothesis, not a measurement, in
 docs/DesignNotes.md → "Name every door") — which is why this commit changes log lines and no behaviour.
+- **The damage board is frozen as a golden, and it reports its own phases** (2026-11): `DamageBoardGoldenTest` freezes what the
+Damage Summary displays — every grid column for the raid line and every row, across all three views (`StatsList`,
+`ExpandedStatsList`, `Children` with each child's share of its parent), the sub-stat `Key`s (the only thing that sees a Dd/DoT key
+change), `PlayerClasses`, the event sequence with validator-approved chart point counts, and **three windows over one retained
+pool** — against `EQLogParser.Test/data/board/damage-board.golden.txt`. Regenerate with `EQLP_GOLDEN_WRITE=1` and read the diff;
+a change to `DamageStatsBuilder`/`StatsUtil` arithmetic lands green against it or not at all. Each build now names its phases on
+the trace line (`StatsBuildTrace.Stage`) — on Incogitable's whole capture: **`groups 1196 ms window 0 ms walk 822 ms present 34 ms`**
+inside a 2.0 s damage build of a 3.8 s board. Those four numbers are the plan: copying the selection's blocks costs **more than
+counting them** (the retained pool should BE the materialized blocks, not a copy of them), and `present` is already ~30 ms, which
+is what makes "this row was hidden / this pet moved" a re-present rather than a record walk. Four oddities the golden pins as-is,
+because a refactor may only change one by naming it in a diff (docs/DesignNotes.md → "The damage board's golden"): `Rank` is the
+expanded-list position rather than the row's own (and `StatsFormatter` prints it for the overlay); a parent with children never
+appears in `ExpandedStatsList` at all; the raid line carries amounts and no counts; and the window branch filters
+`_allDamageGroups`, which `Reset()` fills from the **previous** build — so a re-slice must always say which pool it reads.
 - **A repaint belongs to the capture that is open, and a session change blanks rather than waits** (2026-11, from "clear all does nothing - it just leaves the fight
   list full of content"). Two halves, both load-bearing. (1) `FightTable.ClearForNewCapture` runs on **both sides** of `DeriveEngine.ActiveChanged` — engine gone
   *and* new engine — because `Derived` is the only thing that ever replaces these rows, so on an open that produces no rows (empty file, Clear All's re-open from

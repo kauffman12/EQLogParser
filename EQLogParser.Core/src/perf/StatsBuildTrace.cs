@@ -40,9 +40,12 @@ internal static class StatsBuildTrace
   private static readonly object _sync = new();
   // What is inside Begin..End right now, with the thread that owns it: HealingStatsBuilder.RebuildTotalStats calls
   // BuildTotalStats on the SAME thread while holding its lock, and that nesting is one door, not two colliding.
-  private static readonly List<(int Seq, string What, int ThreadId)> _inside = [];
+  // `Mark` is where the last closed stage ended, so Stage() can report each phase on its own; `Stages` collects them
+  // for the finished line. A build is a handful of phases, so this is a list of a few entries per in-flight build.
+  private static readonly List<(int Seq, string What, int ThreadId, long Mark, List<string>? Stages)> _inside = [];
 
   private static int _seq;
+  private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, string> _lastFinished = new();
   private static long _overlapBuilds;
   private static long _unlabelledBuilds;
 
@@ -86,7 +89,7 @@ internal static class StatsBuildTrace
       {
         if (_inside[i].ThreadId != threadId) overlappedWith++;
       }
-      _inside.Add((seq, $"{builder} {kind}", threadId));
+      _inside.Add((seq, $"{builder} {kind}", threadId, Stopwatch.GetTimestamp(), null));
     }
 
     if (!labelled)
@@ -116,16 +119,53 @@ internal static class StatsBuildTrace
     var ms = PerfCounters.ElapsedMs(handle.StartTicks);
     var seq = handle.Seq;
 
+    List<string>? stages;
     lock (_sync)
     {
+      var i = _inside.FindIndex(e => e.Seq == seq);
+      stages = i < 0 ? null : _inside[i].Stages;
       _inside.RemoveAll(e => e.Seq == seq);
     }
 
     RecordSpan(handle.Builder, ms);
 
-    Log.Info($"stats build #{handle.Seq} {handle.Builder,-8} {handle.Kind,-7}: {ms:F0} ms | from {handle.Door}"
+    var line = $"stats build #{handle.Seq} {handle.Builder,-8} {handle.Kind,-7}: {ms:F0} ms | from {handle.Door}"
+             + (stages is { Count: > 0 } ? " | " + string.Join(" ", stages) : string.Empty)
              + (string.IsNullOrWhiteSpace(detail) ? string.Empty : $" | {detail}")
-             + (handle.OverlappedWith > 0 ? $" | started over {handle.OverlappedWith} other build(s)" : string.Empty));
+             + (handle.OverlappedWith > 0 ? $" | started over {handle.OverlappedWith} other build(s)" : string.Empty);
+
+    // The line itself is the contract, so a surface that wants to report a build's cost (a gated benchmark printing the
+    // walk/present split for the record) reads it instead of re-timing the builder from outside. Keyed by builder,
+    // because one overlay refresh builds three boards and "the last line" would be whichever finished last.
+    _lastFinished[handle.Builder] = line;
+    Log.Info(line);
+  }
+
+  /// <summary>The most recent finished line for that board ("damage", "healing", …), or null before its first build.</summary>
+  internal static string? LastFinishedLineOf(string builder) => _lastFinished.TryGetValue(builder, out var line) ? line : null;
+
+  /*
+   * Close one phase of a build and name it on the finished line: `walk 2810 ms present 940 ms`.
+   *
+   * This exists for the measure-then-present restructure. "The damage board takes four seconds" is not actionable;
+   * "the record walk is 2.8 s and everything downstream is 0.9 s" says exactly what a per-name accumulator buys and
+   * what it does not, and it is the number that decides whether a minimal refresh (re-present only) can ever be
+   * milliseconds. Phases are relative to the previous Stage call, so they add up toward the build's total without
+   * anyone having to subtract; a build with no stages printed simply never called this.
+   */
+  internal static void Stage(in Handle handle, string name)
+  {
+    var now = Stopwatch.GetTimestamp();
+    var seq = handle.Seq;
+    lock (_sync)
+    {
+      var i = _inside.FindIndex(e => e.Seq == seq);
+      if (i < 0) return;   // closed (or never opened): a stage after End is a bug in the caller, not a log line
+
+      var entry = _inside[i];
+      (entry.Stages ??= []).Add($"{name} {PerfCounters.ElapsedMs(entry.Mark):F0} ms");
+      _inside[i] = (entry.Seq, entry.What, entry.ThreadId, now, entry.Stages);
+    }
   }
 
   /// <summary>Elapsed milliseconds for a tick stamp taken earlier (MainWindow times its materialization with this too).</summary>

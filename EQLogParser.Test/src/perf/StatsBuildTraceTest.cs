@@ -29,6 +29,29 @@ public sealed class StatsBuildTraceTest
     Assert.AreEqual(before + 1, StatsBuildTrace.TotalBuilds);
   }
 
+  /*
+   * The phase split, reported. "The damage board takes four seconds" is not actionable; "walk 2810 ms present 940 ms"
+   * says what a per-name accumulator buys and what it does not — the number that decides whether an edit refresh can
+   * ever be milliseconds (it re-runs `present` alone). Pinned here so the builder cannot lose the reporting quietly.
+   */
+  [TestMethod]
+  public void PhasesAreReportedOnTheFinishedLine()
+  {
+    var handle = StatsBuildTrace.Begin("damage", "phase test");
+    StatsBuildTrace.Stage(handle, "walk");
+    StatsBuildTrace.Stage(handle, "present");
+
+    // A stage after End belongs to no build: it must not throw and must not land on anybody's line.
+    StatsBuildTrace.End(handle, "npcs=1");
+    StatsBuildTrace.Stage(handle, "late");
+
+    var line = StatsBuildTrace.LastFinishedLineOf("damage");
+    Assert.IsNotNull(line);
+    StringAssert.Contains(line, "walk ", "the record walk names its own cost");
+    StringAssert.Contains(line, "present ", "the arithmetic over the rows names its own cost");
+    Assert.IsFalse(line.Contains("late"), "a stage opened after the build closed is not reported as part of it");
+  }
+
   [TestMethod]
   public void ADoorThatDoesNotNameItselfIsCounted()
   {

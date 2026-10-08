@@ -96,7 +96,7 @@ namespace EQLogParser
       var trace = StatsBuildTrace.Begin("damage", options.Source, "re-slice");
       try
       {
-        RebuildTotalStatsCore(options, reset);
+        RebuildTotalStatsCore(options, reset, trace);
       }
       finally
       {
@@ -104,7 +104,7 @@ namespace EQLogParser
       }
     }
 
-    private void RebuildTotalStatsCore(GenerateStatsOptions options, bool reset)
+    private void RebuildTotalStatsCore(GenerateStatsOptions options, bool reset, in StatsBuildTrace.Handle trace)
     {
       var built = false;
 
@@ -120,7 +120,7 @@ namespace EQLogParser
           if (_damageGroups.Count > 0)
           {
             FireNewStatsEvent();
-            ComputeDamageStats(options);
+            ComputeDamageStats(options, trace);
             built = true;
           }
         }
@@ -139,7 +139,7 @@ namespace EQLogParser
       var trace = StatsBuildTrace.Begin("damage", options.Source);
       try
       {
-        BuildTotalStatsCore(options);
+        BuildTotalStatsCore(options, trace);
       }
       finally
       {
@@ -147,7 +147,7 @@ namespace EQLogParser
       }
     }
 
-    private void BuildTotalStatsCore(GenerateStatsOptions options)
+    private void BuildTotalStatsCore(GenerateStatsOptions options, in StatsBuildTrace.Handle trace)
     {
       lock (_lock)
       {
@@ -220,7 +220,11 @@ namespace EQLogParser
             }
 
             _damageGroups.Add(newBlock);
-            ComputeDamageStats(options);
+
+            // The regrouping above copied every block of the selection; the walk below counts them. Named apart because
+            // a measure/present restructure spends these two very differently (docs/DesignNotes.md -> "The damage board's golden").
+            StatsBuildTrace.Stage(trace, "groups");
+            ComputeDamageStats(options, trace);
           }
           else if (_selected == null || _selected.Count == 0)
           {
@@ -259,7 +263,7 @@ namespace EQLogParser
       }
     }
 
-    private void ComputeDamageStats(GenerateStatsOptions options)
+    private void ComputeDamageStats(GenerateStatsOptions options, in StatsBuildTrace.Handle trace)
     {
       lock (_lock)
       {
@@ -315,6 +319,8 @@ namespace EQLogParser
               _raidTotals.MinTime = 0;
               _raidTotals.TotalSeconds = _raidTotals.MaxTime;
             }
+
+            StatsBuildTrace.Stage(trace, "window");
 
             var lastTime = double.NaN;
             var prevPlayerTimes = new Dictionary<string, double>();
@@ -404,6 +410,8 @@ namespace EQLogParser
                 lastTime = block.BeginTime;
               }
             }
+
+            StatsBuildTrace.Stage(trace, "walk");
 
             _raidTotals.Dps = (long)Math.Round(_raidTotals.Total / _raidTotals.TotalSeconds, 2);
             StatsUtil.PopulateSpecials(_raidTotals, true);
@@ -519,6 +527,10 @@ namespace EQLogParser
                 }
               }
             }
+
+            // Everything from here down is arithmetic and lists over what survived the walk: O(names on the board), not
+            // O(records). It is the half a "one row changed" refresh would run on its own.
+            StatsBuildTrace.Stage(trace, "present");
 
             // generating new stats
             var genEvent = new StatsGenerationEvent

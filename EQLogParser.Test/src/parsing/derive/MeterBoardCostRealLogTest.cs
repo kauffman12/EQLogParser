@@ -53,6 +53,10 @@ public class MeterBoardCostRealLogTest
                 var built = DerivedTotals.ForOverlay(windowed, index, facts, run.HealFacts, fromT, last);
                 board.Stop();
 
+                // The builder's own phase split (StatsBuildTrace): walk = counting records, present = arithmetic over
+                // the rows. A measure/present restructure moves work out of the first and makes the second refreshable alone.
+                Console.WriteLine($"[cost]   board line: {StatsBuildTrace.LastFinishedLineOf("damage") ?? "(no trace line)"}");
+
                 Console.WriteLine($"[cost] {label,8}: {windowed.Count,5} rows / {hits,9:N0} outcomes -> materialize {materialize.ElapsedMilliseconds,6} ms, "
                                   + $"whole board {board.ElapsedMilliseconds,6} ms ({built?.DamageStats?.StatsList?.Count ?? -1} players, "
                                   + $"{input.Fights.Count} fights)");

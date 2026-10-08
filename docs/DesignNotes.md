@@ -8722,13 +8722,33 @@ they do not ask the capture again. Invariants run alongside so a diff has a mean
 aggregate row = Σ its children, both lists ordered by Total desc, `% Total` accounts for 100 %, and Dps = Total / seconds.
 
 **Measured cost that motivates it** (`EQLP_DERIVE_COST=local/logs/live/eqlog_Incogitable_xegony.txt`, 1,901,078 facts /
-4,646 rows): materialize **704-831 ms** versus whole board **3,778-3,804 ms** over 1,720,467 outcomes — about
-**1.75 µs per outcome**, for what is "add a few counters". Small windows are 1-20 ms, so the enemy is the per-record
-constant, not complexity: ~5-8 case-insensitive string dictionary ops, 2-3 `lock` entries (`CreatePlayerStats`,
-`CreatePlayerSubStats`), one **linear `FirstOrDefault` scan of that player's own sub-stat list**, a `+Pets` string
-allocation, and the same 100-line `UpdateDamageStats` walk applied **two or three times per record** (actor, aggregate,
-sub-stat row). Identity is asked per record too (`IdentityLookup.IsPet(record.Attacker)`) although a night holds ~400
-distinct names — that memo table is also §7's "bound the builder lookups", one change serving two plans.
+4,646 rows): materialize **704-831 ms** versus whole board **3,729-3,840 ms** over 1,720,467 outcomes — about
+**1.75 µs per outcome**, for what is "add a few counters"; small windows are 1-20 ms, so the enemy is the per-record
+constant, not complexity. Splitting the build into named phases (`StatsBuildTrace.Stage`, printed on the same line) says
+where it goes — on the whole capture, one damage build:
+
+```
+stats build #31 damage full : 2052 ms | from damage meter overlay |
+    groups 1196 ms  window 0 ms  walk 822 ms  present 34 ms | npcs=4452
+```
+
+Three facts fall out of that line. **(1) The copying is bigger than the counting.** `groups` — `BuildTotalStatsCore`
+copying every block of the selection into its own `ActionGroup`s (`new ActionGroup(); copy.Actions.AddRange(…)`, a list
+copy per second, plus `damageBlocks.AddRange` over 4,452 fights and a sort, plus an `OfType<DamageRecord>()` per block
+for pet mapping) — costs **1.2 s against the walk's 0.8 s**, on top of the 0.7 s materialization that produced those
+same blocks in the first place. Three passes over the same references where one could do, and this is the "filtering we
+want to undo": the retained pool should BE the materialized blocks, not a copy of them. **(2) `present` is 34 ms.** The
+arithmetic over surviving rows — totals, rates, ranks, children, %, the combined object — is already milliseconds,
+which is the number that makes "hide this row / reassign this pet" an instant refresh instead of a rebuild: it re-runs
+this phase and never touches a record. **(3) Damage is 2.0 s of the 3.8 s**, so the healing and tanking builders carry
+the other ~1.8 s with the same shape of work (they call `UpdateHealStats`/`UpdateDamageStats`, `UpdateTimeSegments` and
+`CreatePlayerSubStats` on their own copies of the pattern).
+
+Inside the walk itself, per record: ~5-8 case-insensitive string dictionary ops, 2-3 `lock` entries
+(`CreatePlayerStats`, `CreatePlayerSubStats`), one **linear `FirstOrDefault` scan of that player's own sub-stat list**,
+a `+Pets` string allocation, and the same 100-line `UpdateDamageStats` applied **two or three times per record** (actor,
+aggregate, sub-stat row). Identity is asked per record too (`IdentityLookup.IsPet(record.Attacker)`) although a night
+holds ~400 distinct names — that memo table is also §7's "bound the builder lookups", one change serving two plans.
 
 **Five things freezing the board taught, all now visible as golden lines rather than as surprises mid-refactor.**
 1. **`Rank` is not the row's position.** `StatsList` and `ExpandedStatsList` are sorted independently and the rank loop
