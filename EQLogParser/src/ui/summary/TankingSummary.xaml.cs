@@ -75,7 +75,7 @@ namespace EQLogParser
         else if (prog.Icon == EFontAwesomeIcon.Solid_HourglassEnd)
         {
           prog.Visibility = Visibility.Hidden;
-          EventsTankingSummaryOptionsChanged();
+          EventsTankingSummaryOptionsChanged("hourglass after time change");
           _selectionTimer.Stop();
         }
       };
@@ -410,7 +410,13 @@ namespace EQLogParser
 
         if (needRequery)
         {
-          var tankingOptions = new GenerateStatsOptions { DamageType = DamageType, MaxSeconds = (long)maxTimeChooser.Value, MinSeconds = (long)minTimeChooser.Value };
+          var tankingOptions = new GenerateStatsOptions
+          {
+            Source = "tank pane damage type changed",
+            DamageType = DamageType,
+            MaxSeconds = (long)maxTimeChooser.Value,
+            MinSeconds = (long)minTimeChooser.Value
+          };
           _ = Task.Run(() => TankingStatsBuilder.Instance.RebuildTotalStats(tankingOptions)).ContinueWith(t =>
             Log.Error("Problem building tanking stats", t.Exception), TaskContinuationOptions.OnlyOnFaulted);
         }
@@ -437,10 +443,17 @@ namespace EQLogParser
       });
     }
 
-    private void EventsTankingSummaryOptionsChanged()
+    /*
+     * This pane's own door into the tanking builder — like the other summary panes it bypasses MainWindow's single-flight gate, so it
+     * names itself for StatsBuildTrace. `source` separates the three ways it happens: a time-window dial, this pane being shown for the
+     * first time, and the hourglass timer finishing (which runs by itself at startup, because setting the saved values moves the min/max
+     * dependency properties — the reason a board can fill twice in the second after a fight list click and never again afterwards).
+     */
+    private void EventsTankingSummaryOptionsChanged(string source = "options")
     {
       var statOptions = new GenerateStatsOptions
       {
+        Source = $"tank pane {source}",
         MinSeconds = (long)minTimeChooser.Value,
         MaxSeconds = ((long)maxTimeChooser.Value > 0) ? (long)maxTimeChooser.Value : -1,
         DamageType = DamageType
@@ -462,7 +475,7 @@ namespace EQLogParser
         CombatEvents.ActiveDataCleared += EventsClearedActiveData;
         MainActions.EventsChartOpened += EventsChartOpened;
         MainActions.EventsTankingSelectionChanged += EventsTankingSelectionChanged;
-        EventsTankingSummaryOptionsChanged();
+        EventsTankingSummaryOptionsChanged("pane shown");
         _ready = true;
       }
     }

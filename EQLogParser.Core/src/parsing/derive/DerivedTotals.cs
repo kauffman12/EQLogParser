@@ -86,14 +86,16 @@ internal static class DerivedTotals
 
     CombinedStats? damage = null;
     var damageScope = new DamageStatsBuilder();
-    var damageOptions = new GenerateStatsOptions { AllRanges = input.AllRanges, MinSeconds = 0 };
+    // Named for StatsBuildTrace: this scope runs per meter refresh on a pool thread, so its lines must not read as UNLABELLED
+    // duplicates of the fight list's builds (they are separate builder instances and never touch the panes' grids).
+    var damageOptions = new GenerateStatsOptions { Source = "damage meter overlay", AllRanges = input.AllRanges, MinSeconds = 0 };
     damageOptions.Npcs.AddRange(input.Fights);
     damageScope.EventsGenerationStatus += generated => damage = generated.CombinedStats;
     damageScope.BuildTotalStats(damageOptions);
 
     CombinedStats? tanking = null;
     var tankScope = new TankingStatsBuilder();
-    var tankingOptions = new GenerateStatsOptions { AllRanges = input.AllRanges, MinSeconds = 0 };
+    var tankingOptions = new GenerateStatsOptions { Source = "damage meter overlay", AllRanges = input.AllRanges, MinSeconds = 0 };
     tankingOptions.Npcs.AddRange(input.Fights);
     tankScope.EventsGenerationStatus += generated => tanking = generated.CombinedStats;
     tankScope.BuildTotalStats(tankingOptions);
@@ -119,6 +121,7 @@ internal static class DerivedTotals
     var input = FightSummarySource.Build(rows, index, facts, fromT, toT);
     var options = new GenerateStatsOptions
     {
+      Source = "derived totals query",
       AllRanges = input.AllRanges,
       // An empty heal list means "this scope healed nothing", not "say nothing about healing" — see the note on
       // GenerateStatsOptions.Heals. Passing null here would leave a refresh showing the previous scope's numbers.

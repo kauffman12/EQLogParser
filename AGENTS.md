@@ -368,6 +368,22 @@ the timer overlay's `_isRendering`. What the gate does NOT do is merge two genui
 first announcement saw a partial selection, or a pull moving content under a whole-capture selection, still builds twice —
 serialized, once each, and `Log.Debug("summary build Queued|SkippedSame: …")` next to the `Derived damage summary:` Info lines
 says which happened.
+- **Every door into the boards names itself, and overlap warns** (2026-11): a board can be produced by the fight list's selection
+(through `MainWindow` and `SummaryBuildGate`) **and** by each summary pane's own triggers — a time-window or damage-type dial, a toolbar
+view option, the pane being shown for the first time (`ContentLoaded`), a pane being hidden, an open chart with nothing to draw, the damage
+meter's per-refresh `DerivedTotals` scopes — and **none of those go through the gate**. So "select all built it three times" is a sentence about
+doors: `GenerateStatsOptions.Source` carries the door in the caller's own words on EVERY `GenerateStatsOptions`, `StatsBuildTrace` numbers each
+build process-wide and prints `stats build #7 damage full 3410 ms | from derived [SelectCommand] …`, and a call site that leaves `Source` null
+prints **UNLABELLED** and warns — an anonymous pass over two million records is exactly what gets defended as "probably necessary". Two laws
+inside the trace: **nesting on one thread is not overlap** (`HealingStatsBuilder.RebuildTotalStats` calls `BuildTotalStats` under its own lock;
+warning on ordinary work is how a real warning stops being read — pinned both directions) and **an unclosed handle hides the next overlap**, so
+builders wrap their bodies in try/finally via traced wrappers rather than instrumenting inside the `lock`. On the pane side an announce carries
+`BoardReason` (eight words: SelectCommand, MenuClose, SettleTick, SnapshotSwap, RowEdited, ContentMoved, Settings, Manual) and a **deduped**
+announce is logged at Debug instead of swallowed — "three asks arrived" and "one ask, three builds" look identical from the grid. Read
+`grep -E "board ask|stats build"` around one click: same door twice = duplicated trigger; different doors with a pane among them = the bypass;
+different stamps on one door = content genuinely moved and the rebuild was owed. **The first-click-after-load triple is still an open question**
+(the load-time `TimeChanged` → hourglass → options chain is the leading suspect and is written up as a hypothesis, not a measurement, in
+docs/DesignNotes.md → "Name every door") — which is why this commit changes log lines and no behaviour.
 - **A repaint belongs to the capture that is open, and a session change blanks rather than waits** (2026-11, from "clear all does nothing - it just leaves the fight
   list full of content"). Two halves, both load-bearing. (1) `FightTable.ClearForNewCapture` runs on **both sides** of `DeriveEngine.ActiveChanged` — engine gone
   *and* new engine — because `Derived` is the only thing that ever replaces these rows, so on an open that produces no rows (empty file, Clear All's re-open from

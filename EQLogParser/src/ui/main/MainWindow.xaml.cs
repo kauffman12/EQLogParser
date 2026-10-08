@@ -4,6 +4,7 @@ using Microsoft.Win32;
 using Syncfusion.Windows.Tools.Controls;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Dynamic;
 using System.Globalization;
 using System.IO;
@@ -57,6 +58,15 @@ namespace EQLogParser
      */
     private static readonly int SaveId = PerfCounters.Register("ui.configSave");
     private static readonly int ComputeStatsId = PerfCounters.Register("ui.computeStats");
+
+    /*
+     * The board build and the materialization inside it, both `uiThread: false`: they run on a pool thread, so naming them in a stall's
+     * "in progress" would send a reader to the wrong window — but a UI freeze that happens while one of them is running is exactly the
+     * correlation worth having (builders raise their grid updates back onto the dispatcher), and StatsBuildTrace's per-builder spans
+     * (stats.damage / stats.tanking / stats.healing) line up against these two.
+     */
+    private static readonly int BoardBuildId = PerfCounters.Register("boards.build", false);
+    private static readonly int BoardMaterializeId = PerfCounters.Register("boards.materialize", false);
     private static readonly int ChartUpdateId = PerfCounters.Register("chart.update");
 
     /* How many times a redraw request arrived while one was already waiting to run; see QueueChartUpdate. */
@@ -824,7 +834,7 @@ namespace EQLogParser
       // the exact path a click takes, so a settings change can never build boards from a different world than the
       // one the list is pointing at. No capture, no selection, nothing to rebuild.
       if (npcWindow?.Content is FightTable table && table.SessionActive)
-        DerivedSelectionChanged(table.GetSelectedFights());
+        DerivedSelectionChanged(new BoardRequest(table.GetSelectedFights(), table.ContentStamp, BoardReason.Settings, "compute stats timer"));
     }
 
     /*
@@ -841,7 +851,7 @@ namespace EQLogParser
      * An empty selection still reaches the builders: zero npcs is how they are told to clear their boards, which
      * is what the legacy list does with an empty selection too.
      */
-    private void DerivedSelectionChanged(IReadOnlyList<DerivedFight> selected)
+    private void DerivedSelectionChanged(BoardRequest request)
     {
       var session = _engine;
       if (session is null) return;
@@ -864,14 +874,19 @@ namespace EQLogParser
        * damage-type filter and the validation generation. The gate drops a request whose key has already been built or is
        * building, queues at most one newer one behind a run, and never lets two materializations overlap.
        */
-      var contentStamp = npcWindow?.Content is FightTable stampPane ? stampPane.ContentStamp : 0L;
-      var key = SummaryKeyFor(selected, contentStamp, tankingDamageType);
-      var outcome = _summaryGate.Request(key, () => BuildBoards(session, selected, tankingDamageType));
-      if (outcome != SummaryBuildGate.Outcome.Started && Log.IsDebugEnabled)
-      {
-        Log.Debug($"summary build {outcome}: {selected.Count} fight(s), stamp {contentStamp}, filter gen {_statsFilterGeneration}"
-                  + " - the boards already have these inputs, or a build is finishing behind them");
-      }
+      var key = SummaryKeyFor(request.Fights, request.ContentStamp, tankingDamageType);
+      var askedAt = Stopwatch.GetTimestamp();
+      var outcome = _summaryGate.Request(key, () => BuildBoards(session, request, tankingDamageType, askedAt));
+
+      /*
+       * One line per ask, whatever the gate decided, because "the damage grid filled three times" is a question about DOORS and this is
+       * the only place that sees both the door (which the pane names) and what the single-flight rule made of it. Info rather than Debug:
+       * asks are one-per-gesture, not per frame, and a player reporting multiple builds should not have to know how to turn Debug on.
+       * Asks from the panes' own doors do NOT come through here — they call the builders directly, and StatsBuildTrace is what names them.
+       */
+      Log.Info($"board ask [{request.Reason}]{(request.Detail is null ? string.Empty : $" {request.Detail}")}"
+               + $": {request.Fights.Count} fight(s), stamp {request.ContentStamp}, filter gen {_statsFilterGeneration}, tank type {tankingDamageType}"
+               + $" -> {outcome}");
     }
 
     /*
@@ -891,29 +906,48 @@ namespace EQLogParser
       return hash == 0 ? 1 : hash;
     }
 
-    // The worker's half of one announcement: materialize, then feed all three boards off the SAME rows.
-    private void BuildBoards(DeriveEngine session, IReadOnlyList<DerivedFight> selected, int tankingDamageType)
+    /*
+     * The worker's half of one announcement: materialize, then feed all three boards off the SAME rows. `askedAt` is the moment the
+     * pane asked, so the line shows how long this build waited behind another one — "waited 3400 ms" IS the single-flight rule working,
+     * and a triple would read as three lines that each waited on something.
+     */
+    private void BuildBoards(DeriveEngine session, BoardRequest request, int tankingDamageType, long askedAt)
     {
+      var buildSpan = PerfCounters.Begin(BoardBuildId);
+      var waitedMs = StatsBuildTrace.ElapsedSince(askedAt);
+
+      /*
+       * The door label every builder prints (StatsBuildTrace). It carries the reason and the content stamp so two lines can be compared:
+       * identical labels twice in a row means one door asked twice; different reasons mean two gestures, and different stamps mean the
+       * capture genuinely moved under the selection.
+       */
+      var door = $"derived [{request.Reason}]"
+                 + (request.Detail is null ? string.Empty : $" {request.Detail}")
+                 + $" stamp {request.ContentStamp} fights {request.Fights.Count}";
+
       try
       {
-        var input = session.BuildSummaryInput(selected);
+        var materializeSpan = PerfCounters.Begin(BoardMaterializeId);
+        var input = session.BuildSummaryInput(request.Fights);
+        var materializeMs = PerfCounters.End(materializeSpan);
 
-        GenerateStatsOptions damageStatsOptions = new();
+        GenerateStatsOptions damageStatsOptions = new() { Source = door };
         damageStatsOptions.Npcs.AddRange(input.Fights);
         damageStatsOptions.AllRanges = input.AllRanges;
         damageStatsOptions.MinSeconds = 0;
 
         var records = input.Fights.Sum(static f => f.DamageBlocks.Sum(static b => b.Actions.Count));
         var tankRecords = input.Fights.Sum(static f => f.TankingBlocks.Sum(static b => b.Actions.Count));
-        Log.Info($"Derived damage summary: {input.Fights.Count} fight(s), {records:N0} record(s), "
+        Log.Info($"Derived damage summary [{request.Reason}]: {input.Fights.Count} fight(s), {records:N0} record(s), "
                  + $"{tankRecords:N0} taken"
-                 + (input.WithoutDamage > 0 ? $", {input.WithoutDamage} selected fight(s) no facts at all" : string.Empty));
+                 + (input.WithoutDamage > 0 ? $", {input.WithoutDamage} selected fight(s) no facts at all" : string.Empty)
+                 + $" | materialized in {materializeMs:F0} ms, waited {waitedMs:F0} ms behind any earlier build");
 
         DamageStatsBuilder.Instance.BuildTotalStats(damageStatsOptions);
 
         // Same rows, other direction: TankingStatsBuilder walks fight.TankingBlocks and takes each player's
         // activity window from TankSegments, both of which the materializer fills off the same facts.
-        GenerateStatsOptions tankingStatsOptions = new();
+        GenerateStatsOptions tankingStatsOptions = new() { Source = door };
         tankingStatsOptions.Npcs.AddRange(input.Fights);
         tankingStatsOptions.AllRanges = input.AllRanges;
         tankingStatsOptions.MinSeconds = 0;
@@ -924,7 +958,7 @@ namespace EQLogParser
         // Healing: no Fight objects involved anywhere on this path. The window is the selection's, the records
         // are the capture's, and the builder's own filters (AoE healing, swarm pets) run over them unchanged —
         // so the healing tab stops being the one board that ignored which list was clicked.
-        GenerateStatsOptions healingStatsOptions = new();
+        GenerateStatsOptions healingStatsOptions = new() { Source = door };
         healingStatsOptions.Npcs.AddRange(input.Fights);
         healingStatsOptions.AllRanges = input.AllRanges;
         healingStatsOptions.MinSeconds = 0;
@@ -937,6 +971,10 @@ namespace EQLogParser
         // Logged here rather than left to the task: an announcement that threw must still return the gate to idle (its own
         // finally does that), and the boards keep whatever they had — which is why a partial board beats no board.
         Log.Error("Derived damage summary error", ex);
+      }
+      finally
+      {
+        PerfCounters.End(buildSpan);
       }
     }
 

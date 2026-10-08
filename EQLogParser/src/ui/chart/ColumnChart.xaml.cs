@@ -373,7 +373,9 @@ namespace EQLogParser
         }
         else
         {
-          Task.Run(() => StatsManager.RebuildTotalStats(new GenerateStatsOptions()));
+          // This pane's own door into the damage builder; it names itself for StatsBuildTrace because every board can be
+          // asked for by more than one place, and only the fight list's door goes through the single-flight gate.
+          Task.Run(() => StatsManager.RebuildTotalStats(new GenerateStatsOptions { Source = "chart opened, no prior build" }));
         }
 
         _ready = true;

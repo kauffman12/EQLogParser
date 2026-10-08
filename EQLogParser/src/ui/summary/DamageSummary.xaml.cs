@@ -76,7 +76,7 @@ namespace EQLogParser
         else if (prog.Icon == EFontAwesomeIcon.Solid_HourglassEnd)
         {
           prog.Visibility = Visibility.Hidden;
-          EventsDamageSummaryOptionsChanged();
+          EventsDamageSummaryOptionsChanged("hourglass after time change");
           _selectionTimer.Stop();
         }
       };
@@ -479,10 +479,17 @@ namespace EQLogParser
       _groupEntries?.Clear();
     }
 
+    /*
+     * This pane's own door into the damage builder — separate from the fight list's selection, and it bypasses MainWindow's single-flight
+     * gate entirely, which is why "the grid filled three times" was invisible until each door had a name. `option` says who asked: a view
+     * dial from the toolbar, this pane being shown for the first time, or the hourglass timer finishing after a time-window change (which
+     * fires on startup by itself, because setting the saved min/max values moves the dependency properties). StatsBuildTrace prints it.
+     */
     private void EventsDamageSummaryOptionsChanged(string option = null)
     {
       var statOptions = new GenerateStatsOptions
       {
+        Source = $"damage pane options [{option ?? "time window"}]",
         MinSeconds = (long)minTimeChooser.Value,
         MaxSeconds = ((long)maxTimeChooser.Value > 0) ? (long)maxTimeChooser.Value : -1
       };
@@ -962,7 +969,7 @@ namespace EQLogParser
         }
         else
         {
-          EventsDamageSummaryOptionsChanged();
+          EventsDamageSummaryOptionsChanged("pane shown, no prior build");
         }
 
         _ready = true;
@@ -986,7 +993,8 @@ namespace EQLogParser
 
       if ((long)minTimeChooser.Value != 0 || (long)maxTimeChooser.Value != (long)maxTimeChooser.MaxValue)
       {
-        DamageStatsBuilder.Instance.RebuildTotalStats(new GenerateStatsOptions(), true);
+        DamageStatsBuilder.Instance.RebuildTotalStats(
+          new GenerateStatsOptions { Source = "damage pane hidden (time window was narrowed)" }, true);
       }
 
       _ready = false;

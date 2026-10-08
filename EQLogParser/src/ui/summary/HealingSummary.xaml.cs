@@ -53,7 +53,7 @@ namespace EQLogParser
         else if (prog.Icon == EFontAwesomeIcon.Solid_HourglassEnd)
         {
           prog.Visibility = Visibility.Hidden;
-          EventsHealingSummaryOptionsChanged();
+          EventsHealingSummaryOptionsChanged("hourglass after time change");
           _selectionTimer.Stop();
         }
       };
@@ -308,10 +308,17 @@ namespace EQLogParser
       });
     }
 
+    /*
+     * This pane's own door into the healing builder, bypassing MainWindow's single-flight gate like the other summary panes'
+     * (see StatsBuildTrace: the label is what makes a duplicated build attributable). Note what a rebuild WITHOUT options.Heals means:
+     * the whole record store, not the clicked selection — so when this line names a door, the healing board on screen stopped describing
+     * the selection. That trade is legacy's and unchanged here; the label only makes it visible.
+     */
     private void EventsHealingSummaryOptionsChanged(string option = null)
     {
       var statOptions = new GenerateStatsOptions
       {
+        Source = $"healing pane options [{option ?? "time window"}]",
         MinSeconds = (long)minTimeChooser.Value,
         MaxSeconds = ((long)maxTimeChooser.Value > 0) ? (long)maxTimeChooser.Value : -1
       };
@@ -331,7 +338,7 @@ namespace EQLogParser
         CombatEvents.ActiveDataCleared += EventsClearedActiveData;
         MainActions.EventsChartOpened += EventsChartOpened;
         MainActions.EventsHealingSummaryOptionsChanged += EventsHealingSummaryOptionsChanged;
-        EventsHealingSummaryOptionsChanged();
+        EventsHealingSummaryOptionsChanged("pane shown");
         _ready = true;
       }
     }
@@ -344,7 +351,8 @@ namespace EQLogParser
       ClearData();
 
       // healing always rebuilds and doesn't have a simple way to reset to all data
-      _ = Task.Run(() => HealingStatsBuilder.Instance.RebuildTotalStats(new GenerateStatsOptions())).ContinueWith(t =>
+      _ = Task.Run(() => HealingStatsBuilder.Instance.RebuildTotalStats(
+        new GenerateStatsOptions { Source = "healing pane hidden" })).ContinueWith(t =>
         Log.Error("Problem building healing stats", t.Exception), TaskContinuationOptions.OnlyOnFaulted);
       _ready = false;
     }

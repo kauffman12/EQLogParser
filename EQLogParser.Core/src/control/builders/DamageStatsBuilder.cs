@@ -87,7 +87,24 @@ namespace EQLogParser
       }
     }
 
+    /*
+     * Traced wrapper: every build of this board gets a line naming its door and its cost (see StatsBuildTrace). The body below is
+     * unchanged apart from the name — re-slicing the groups already in hand, which is what the panes' own dials ask for.
+     */
     internal void RebuildTotalStats(GenerateStatsOptions options, bool reset = false)
+    {
+      var trace = StatsBuildTrace.Begin("damage", options.Source, "re-slice");
+      try
+      {
+        RebuildTotalStatsCore(options, reset);
+      }
+      finally
+      {
+        StatsBuildTrace.End(trace, $"window {options.MinSeconds}..{options.MaxSeconds} reset={reset}");
+      }
+    }
+
+    private void RebuildTotalStatsCore(GenerateStatsOptions options, bool reset)
     {
       var built = false;
 
@@ -116,7 +133,21 @@ namespace EQLogParser
       }
     }
 
+    // Traced wrapper (see StatsBuildTrace): the door label comes in on the options, the cost and the record count go out on the line.
     internal void BuildTotalStats(GenerateStatsOptions options)
+    {
+      var trace = StatsBuildTrace.Begin("damage", options.Source);
+      try
+      {
+        BuildTotalStatsCore(options);
+      }
+      finally
+      {
+        StatsBuildTrace.End(trace, $"npcs={options.Npcs.Count} window {options.MinSeconds}..{options.MaxSeconds}");
+      }
+    }
+
+    private void BuildTotalStatsCore(GenerateStatsOptions options)
     {
       lock (_lock)
       {

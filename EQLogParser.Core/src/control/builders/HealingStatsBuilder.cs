@@ -81,7 +81,30 @@ namespace EQLogParser
       }
     }
 
+    /*
+     * Traced wrapper (see StatsBuildTrace). RebuildTotalStats needs none of its own: it delegates here on the same thread with the
+     * same options, so the door label rides along and one line covers both — tracing the nesting would print a build twice and warn
+     * about an overlap that is really one caller.
+     *
+     * The detail names where the records came from, which is the difference between "this board describes the clicked selection"
+     * and "this board describes every heal in the record store": options.Heals null means the store.
+     */
     internal void BuildTotalStats(GenerateStatsOptions options)
+    {
+      var trace = StatsBuildTrace.Begin("healing", options.Source);
+      try
+      {
+        BuildTotalStatsCore(options);
+      }
+      finally
+      {
+        StatsBuildTrace.End(trace, options.Heals is null
+          ? $"records from the store (window {options.MinSeconds}..{options.MaxSeconds})"
+          : $"{options.Heals.Count:N0} materialized heal(s), window {options.MinSeconds}..{options.MaxSeconds}");
+      }
+    }
+
+    private void BuildTotalStatsCore(GenerateStatsOptions options)
     {
       lock (_lock)
       {

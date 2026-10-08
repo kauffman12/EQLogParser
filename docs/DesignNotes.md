@@ -6981,6 +6981,47 @@ left marked busy means every later request queues behind a build that never fini
 `finally` returns the gate to idle exactly as the timer overlay's `_isRendering` does (`AThrowingBuildReturnsTheGateToIdle`,
 `AQueuedRequestIsStillRunAfterAFailedBuild`).
 
+
+### Name every door: which build was which (2026-11)
+
+The gate went in and the report came back unchanged, then sharper: load a large capture, select all **immediately**, and the damage
+grid fills three times; do the same click a minute later and it fills once. Restart the app, open the same file, select all first —
+three again. That pattern is not the gate failing. It is a sentence about **doors**:
+
+- the fight list's selection → `MainWindow.DerivedSelectionChanged` → materialize → three builders (the only path through the gate);
+- each summary pane's own triggers → that pane calling its builder directly, on its own `Task.Run`, bypassing the gate: a time-window
+  dial, a damage-type change, a view-option change from the toolbar, the pane being shown for the first time (`ContentLoaded` with no
+  prior build), and a pane being hidden with a narrowed window;
+- an open chart asking for a rebuild when it has nothing to draw;
+- the damage meter's own throwaway builder scopes (`DerivedTotals.ForOverlay`, per refresh) — separate builder instances that never touch
+  the panes' grids, but real seconds each.
+
+One of those is a candidate for the first-click pattern and needs naming before it can be believed: at startup the saved min/max time
+values are assigned to the panes' dependency properties, `TimeChanged` fires like any user dial, and its hourglass timer calls the pane's
+options handler ~1.5 s later — a rebuild nobody asked for, on the first show of the board, never again after that. **This is a hypothesis,
+not a measurement.** It fits "three times once, then fine" and it fits no other report; it is written here as pending until the log says so,
+which is now possible because every door names itself:
+
+- `GenerateStatsOptions.Source` carries the door, in the caller's own words; a call site that leaves it null prints **UNLABELLED** and
+  warns, so an anonymous pass over two million records cannot be defended as "probably necessary".
+- `StatsBuildTrace` numbers every build process-wide, times it, prints `stats build #7 damage full 3410 ms | from derived [SelectCommand] …`,
+  and **warns when a build starts while another is inside** — naming the other one. Nesting on the same thread does not count: healing's
+  `RebuildTotalStats` calls `BuildTotalStats` under its own lock, and calling that an overlap would put a warning on ordinary work, which is
+  how a real one stops being read (`StatsBuildTraceTest` pins both directions).
+- The pane says why it announced, through `BoardRequest.Reason` — `SelectCommand`, `MenuClose`, `SettleTick`, `SnapshotSwap`, `RowEdited`,
+  `ContentMoved`, `Settings`, `Manual` — and `FightTable` logs a deduped announce at Debug rather than swallowing it, because "three asks
+  arrived" and "one ask, three builds" look identical from the grid.
+- `MainWindow` logs one Info per ask with what the gate decided: `board ask [SettleTick] … -> Started|Queued|SkippedSame`.
+
+Read three lines like that together and the triple is self-diagnosing: **same door twice** → a duplicated trigger; **different doors, one of
+them a pane** → the panes bypassing the single-flight rule (they still do); **different stamps on the same door** → the capture genuinely moved
+under the selection, which is the case that must rebuild. The recipe is `grep -E "board ask|stats build" eqlogparser.log` over the seconds
+around one click.
+
+The honest scope of this chapter: the trace changes no behaviour except log lines. Whether the fix is a fourth law on the gate, labelling the
+panes' doors as children of the selection they re-slice, or removing the load-time `TimeChanged` trigger, is decided by the next three lines of
+log rather than by argument — which is the entire reason it was built in this order.
+
 ## A rank formulation is not a sentence end (2026-10)
 
 The operator's report was the alarming kind: rows called **"II"** and **"III"** in the identity list.
@@ -8645,7 +8686,7 @@ trim is ever judged wrong it changes in one place.
 coming in and being added to those fights that you culd use refresh to redo the stats"*. It is **not** redundant with the automatic path, and the
 reason is the dedupe: `OnDerived` re-announces a selection when its ids change, when a selected row was edited or removed, or when the **content stamp**
 moves — and a fact arriving *inside* an already-selected fight changes no id, so a plain announce correctly concludes "nothing to do". `RefreshClick` is
-`AnnounceSelection(force: true)`: that same path with precisely that one check switched off, which re-materializes over the new row spans and rebuilds
+`AnnounceSelection(BoardReason.Manual, "refresh button", force: true)`: that same path with precisely that one check switched off, which re-materializes over the new row spans and rebuilds
 the boards beneath them (damage, healing, tanking — whatever the click feeds). Enabled when a fight is selected: force-announcing an **empty** selection
 would blank the boards, and nobody pressing "refresh" means that. A derive pass whose content stamp moved refreshes on its own — this menu item is "now",
 not "on the cadence".

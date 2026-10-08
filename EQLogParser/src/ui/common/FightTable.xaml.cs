@@ -1,6 +1,8 @@
+using log4net;
 using Syncfusion.UI.Xaml.Grid;
 using Syncfusion.UI.Xaml.ScrollAxis;
 using System;
+using System.Reflection;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -30,7 +32,9 @@ namespace EQLogParser
      * One-way on purpose: the grid says WHICH fights, and MainWindow decides what a board is. Nothing can push
      * a selection back into the grid, so no viewer can ever make the list disagree with itself.
      */
-    internal event Action<IReadOnlyList<DerivedFight>> DerivedSelectionChanged;
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
+
+    internal event Action<BoardRequest> DerivedSelectionChanged;
 
     /*
      * Selection settles on a pause rather than per click: nothing is recomputed here, the click only says which fights are
@@ -177,7 +181,7 @@ namespace EQLogParser
       _selectionTimer.Tick += (_, _) =>
       {
         _selectionTimer.Stop();
-        if (_settle.ShouldAnnounce()) AnnounceSelection();
+        if (_settle.ShouldAnnounce()) AnnounceSelection(BoardReason.SettleTick);
         else if (_settle.Pending) _selectionTimer.Start();   // still parked (menu open / button held): ask again
       };
 
@@ -329,7 +333,9 @@ namespace EQLogParser
                         (contentMoved ||
                          patch.Updates.Any(u => selected.Contains(u.Existing)) ||
                          patch.Removals.Any(selected.Contains));
-          if (touched) AnnounceSelection(force: true);
+          // Named by which signal fired, because the two mean different things to a reader of the log: content moved means the
+          // numbers changed under a selection nobody touched; RowEdited means the row itself was rewritten or taken away.
+          if (touched) AnnounceSelection(contentMoved ? BoardReason.ContentMoved : BoardReason.RowEdited, force: true);
           return;
         }
 
@@ -370,7 +376,7 @@ namespace EQLogParser
         if (restorable)
         {
           RestoreSelection(keep);
-          AnnounceSelection();
+          AnnounceSelection(BoardReason.SnapshotSwap);
         }
       });
     }
@@ -511,17 +517,30 @@ namespace EQLogParser
      * The dedup stays for everything else — an ItemsSource swap landing and the settle timer firing both announce the same selection,
      * and only the first may materialize (see OnDerived's wholesale path, which clears _announcedIds before the swap on purpose).
      */
-    private void AnnounceSelection(bool force = false)
+    private void AnnounceSelection(BoardReason reason, string detail = null, bool force = false)
     {
       var selected = GetSelectedFights();
       var ids = new List<int>(selected.Count);
       foreach (var fight in selected) ids.Add(fight.Id);
 
-      if (!force && SameIds(ids, _announcedIds)) return;
+      if (!force && SameIds(ids, _announcedIds))
+      {
+        /*
+         * The dedupe is where a duplicated door disappears, and "disappears" is exactly why it needs a line: the pane announces from
+         * five places, and when a board fills three times the reader has to know whether three asks arrived or one did and something
+         * else built twice. Debug rather than Info — this can fire on every pass of a live raid — but it names the reason, so a run
+         * with Debug on shows the whole announce pattern without a single rebuild being guessed at.
+         */
+        Log.Debug($"announce skipped [{reason}]{(detail is null ? string.Empty : $" {detail}")}: already announced "
+                  + $"{ids.Count} row(s) at stamp {_currentStamp}");
+        return;
+      }
 
       _announcedIds = ids;
       _announcedStamp = _currentStamp;
-      DerivedSelectionChanged?.Invoke(selected);
+      Log.Debug($"announce [{reason}]{(detail is null ? string.Empty : $" {detail}")}: {ids.Count} row(s), stamp {_currentStamp}"
+                + (force ? " (forced)" : string.Empty));
+      DerivedSelectionChanged?.Invoke(new BoardRequest(selected, _currentStamp, reason, detail));
     }
 
     /*
@@ -648,7 +667,7 @@ namespace EQLogParser
      * pass over the current selection whatever the dedupe thinks. (A derive pass that moved the content stamp does this by itself; Refresh is
      * for the operator who wants the answer now rather than on the cadence.)
      */
-    private void RefreshClick(object sender, RoutedEventArgs e) => AnnounceSelection(force: true);
+    private void RefreshClick(object sender, RoutedEventArgs e) => AnnounceSelection(BoardReason.Manual, "refresh button", force: true);
 
     // Greyed out unless the grid has a real fight selected - every item in this menu acts on the selection.
     private void GridContextMenuOpening(object sender, System.Windows.Controls.ContextMenuEventArgs e)
@@ -705,7 +724,7 @@ namespace EQLogParser
      */
     private void GridContextMenuClosing(object sender, System.Windows.Controls.ContextMenuEventArgs e)
     {
-      if (_settle.CloseMenu()) AnnounceSelection();
+      if (_settle.CloseMenu()) AnnounceSelection(BoardReason.MenuClose);
     }
 
     /*
@@ -890,13 +909,13 @@ namespace EQLogParser
     private void SelectAllClick(object sender, RoutedEventArgs e)
     {
       SelectShownRuns(row => row.Fight is not null);
-      AnnounceSelection();
+      AnnounceSelection(BoardReason.SelectCommand, "select all");
     }
 
     private void UnselectAllClick(object sender, RoutedEventArgs e)
     {
       fightGrid.SelectedItems.Clear();
-      AnnounceSelection();
+      AnnounceSelection(BoardReason.SelectCommand, "unselect all");
     }
 
     private void SelectGroupClick(object sender, RoutedEventArgs e) => SelectGroup(true);
@@ -940,7 +959,7 @@ namespace EQLogParser
         foreach (var row in remove) fightGrid.SelectedItems.Remove(row);
       }
 
-      AnnounceSelection();
+      AnnounceSelection(BoardReason.SelectCommand, add ? "select group" : "unselect group");
     }
 
     /*

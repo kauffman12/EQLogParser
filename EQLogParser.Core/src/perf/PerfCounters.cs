@@ -184,6 +184,12 @@ namespace EQLogParser
     }
 
     /*
+     * Milliseconds between an earlier Stopwatch.GetTimestamp() and now, for work timed outside a span — StatsBuildTrace holds the
+     * start tick across a builder call and closes it in a finally, which is not a shape Begin/End (one object in and out) fits.
+     */
+    internal static double ElapsedMs(long startTicks) => (Stopwatch.GetTimestamp() - startTicks) * TicksToMs;
+
+    /*
      * Records a duration that was measured somewhere a span cannot be wrapped: the audio engine times its own synthesis on a thread inside
      * another assembly, and a Begin/End pair cannot straddle an await in a library that knows nothing about this one. Same accounting as End,
      * without the timestamps - which means the caller owns the clock, and a negative duration (a clock read out of order) is dropped rather

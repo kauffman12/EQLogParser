@@ -36,7 +36,21 @@ namespace EQLogParser
 
     private void ClearedByActiveData() => CombatEvents.ActiveDataCleared += (_) => Reset();
 
+    // Traced wrapper (see StatsBuildTrace): re-slicing the groups in hand, which is what this pane's own dials ask for.
     internal void RebuildTotalStats(GenerateStatsOptions options)
+    {
+      var trace = StatsBuildTrace.Begin("tanking", options.Source, "re-slice");
+      try
+      {
+        RebuildTotalStatsCore(options);
+      }
+      finally
+      {
+        StatsBuildTrace.End(trace, $"window {options.MinSeconds}..{options.MaxSeconds} type {options.DamageType}");
+      }
+    }
+
+    private void RebuildTotalStatsCore(GenerateStatsOptions options)
     {
       var built = false;
 
@@ -57,7 +71,21 @@ namespace EQLogParser
       }
     }
 
+    // Traced wrapper (see StatsBuildTrace).
     internal void BuildTotalStats(GenerateStatsOptions options)
+    {
+      var trace = StatsBuildTrace.Begin("tanking", options.Source);
+      try
+      {
+        BuildTotalStatsCore(options);
+      }
+      finally
+      {
+        StatsBuildTrace.End(trace, $"npcs={options.Npcs.Count} type {options.DamageType}");
+      }
+    }
+
+    private void BuildTotalStatsCore(GenerateStatsOptions options)
     {
       lock (_lock)
       {

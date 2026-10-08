@@ -51,6 +51,15 @@ namespace EQLogParser
      * instead of quietly going on showing last click's numbers from a store this path is meant to bypass.
      */
     public List<(double, HealRecord)> Heals { get; set; }
+
+    /*
+     * WHO asked for this build, in the caller's own words. StatsBuildTrace prints it on the build's log line and warns when it is
+     * missing: a board can be produced from several doors (the derived fight selection, each summary pane's own time/damage-type
+     * dials, a pane being shown or hidden, an open chart) and only one of them goes through the single-flight gate, so "the stats
+     * built three times" is a sentence about doors. A label may carry whatever identifies the request — the announce reason, the
+     * content stamp, the fight count — because a duplicate is only recognisable as one if the two lines can be compared.
+     */
+    public string Source { get; set; }
   }
 
 
