@@ -579,6 +579,10 @@ namespace EQLogParser
      */
     private void Reconcile()
     {
+      // Same debt IdentityVerdictMenu.Write records: the census below repaints from its own classification, but the fight list and
+      // the boards need the pass — and that pass must not be declined as if it were traffic (UnaskedRefresh).
+      UnaskedRefresh.OweGesture("identity edit");
+
       DeriveEngine.Active?.RederiveAsync();
       Refresh();
     }

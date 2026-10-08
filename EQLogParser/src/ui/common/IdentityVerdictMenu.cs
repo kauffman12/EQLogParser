@@ -132,6 +132,10 @@ internal static class IdentityVerdictMenu
     IdentityOverrideStore.Instance.Set(name, kind);
     IdentityPriorStore.Instance.Remove(name);
 
+    // A verdict changes which row a name's damage sits on, and that shows up only after the pass — so this click owns that pass's
+    // announce rather than letting a whole-capture selection's budget decline it (UnaskedRefresh).
+    UnaskedRefresh.OweGesture($"verdict {name} = {kind}");
+
     DeriveEngine.Active?.RederiveAsync();
   }
 }

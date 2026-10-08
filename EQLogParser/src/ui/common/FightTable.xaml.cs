@@ -88,6 +88,16 @@ namespace EQLogParser
     private long _currentStamp;
 
     /*
+     * One line per declined-unasked-rebuild episode, not one per derive pass. A live raid hands out passes about twice a
+     * second and every one of them re-asks the same question this pane already answered "no" to, so the repeat is silent;
+     * the first refusal of an episode prints (see UnaskedRefresh for why a big selection's report stops following the pass),
+     * and any announced build ends the episode. Without the flag the operator's question — "why did the numbers stop moving?"
+     * — would be answered by nothing at all except a Debug line they never see; with it, eqlogparser.log says which stamp was
+     * refused, at what size, and that a gesture or Refresh is the door.
+     */
+    private bool _unaskedDeclined;
+
+    /*
      * Loading-band state (see loadOverlay in the XAML). `_loadBandSettled` is this session's "a snapshot has
      * landed" flag: the band goes down for good at the first Derived - a quiet stretch mid-file can legitimately
      * complete a derive under 100 %, and real rows beat a bar - and it comes back only with the next session.
@@ -245,6 +255,10 @@ namespace EQLogParser
       _selectionTimer.Stop();
       _settle.Reset();
       _announcedIds = [];
+
+      // A write made against the log that just closed has nothing left to land in: its rows are gone, and a debt carried across
+      // would spend this capture's first announce on the previous night's click.
+      UnaskedRefresh.ClearGesture();
 
       // Nothing is announced, so nothing may be remembered as announced: a stamp left over from the log that just closed
       // could otherwise match a new capture's first snapshot by arithmetic (fact totals restart at zero every session) and
@@ -536,6 +550,45 @@ namespace EQLogParser
         return;
       }
 
+      /*
+       * An operator write whose result only exists after a pass (a pet claimed, a verdict written) owns the announce that pass
+       * produces, so it is re-labelled as what it was: a gesture. Without this, claiming a summon under a whole-capture selection
+       * would be declined by the budget below — the write asked for the pass, the patch announced ContentMoved, and the operator's
+       * deliberate act would be swallowed by a policy written for traffic. Consumed here, on the first announce after the write: an
+       * operator who selects something else in the meantime still gets their claim on screen, just riding that ask.
+       */
+      if (UnaskedRefresh.TryConsumeGesture(out var gesture))
+      {
+        reason = BoardReason.Manual;
+        force = true;
+        detail = gesture;
+      }
+
+      /*
+       * The cost gate on rebuilds nobody asked for. A derive pass drives three of the reason words (ContentMoved, RowEdited,
+       * SnapshotSwap), and on a large selection one of them is a second-plus rebuild landing under the reader's eyes, twice a
+       * second while a raid runs; below the limit the same pass keeps a pull's boards live exactly as it always has. The number
+       * and the reasoning are Core's (UnaskedRefresh), so the boundary is testable without a dispatcher.
+       *
+       * A refusal deliberately does NOT record _announcedIds/_announcedStamp: those two say "this question was ANSWERED", and
+       * recording a decline would make the next identical gesture dedupe against a board it never got. The pass keeps asking
+       * (its announce is forced, so nothing suppresses it) and keeps being told no, cheaply: counting hits over the selection
+       * is O(rows), and rows are what a selection holds.
+       */
+      if (!UnaskedRefresh.Allows(reason, selected, out var outcomes))
+      {
+        if (!_unaskedDeclined)
+        {
+          _unaskedDeclined = true;
+          Log.Debug($"announce declined [{reason}]{(detail is null ? string.Empty : $" {detail}")}: {ids.Count} row(s), "
+                    + $"{outcomes:N0} outcomes over the unasked limit ({UnaskedRefresh.MaxOutcomes:N0}) — the report stays as it was "
+                    + "until a selection, a dial or Refresh asks for it");
+        }
+
+        return;
+      }
+
+      _unaskedDeclined = false;
       _announcedIds = ids;
       _announcedStamp = _currentStamp;
       Log.Debug($"announce [{reason}]{(detail is null ? string.Empty : $" {detail}")}: {ids.Count} row(s), stamp {_currentStamp}"

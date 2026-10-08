@@ -8931,3 +8931,84 @@ each remaining second buys.
 **Two of these fixes are invisible until a whole capture is selected.** A 5-minute selection (8 rows, 1,245 outcomes) reads 1-10 ms
 on every board, with or without them. Every law in this chapter was found by measuring the largest window the pane can be handed —
 which is also the window an operator gets from Select All, and the one a "just refresh it" feature would otherwise re-pay per click.
+
+## A refresh that answers for itself: the cost budget on unasked passes (2026-11)
+
+The question this closes is *"when a row is added or removed, or a pet is claimed, how does the user know the refresh worked —
+is there some type of notification?"* (asked while `docs/summary-refresh-notification.md` still proposed a toast). Two
+measurements settled it: what an applied change already prints, and what a refresh nobody asked for costs.
+
+**An applied change already says so, in the place your eyes are.** A row that leaves the list disappears on the pass that removed
+it; a claimed summon appears under its person as `X +Pets`. Re-presenting a pool the builder already holds is **~10 ms for one row,
+25–32 ms for a whole-capture selection** (`MeterBoardCostRealLogTest`, Incogitable: 4,646 rows, 1,723,855 outcomes, 414 players),
+the boards' own door prints `stats build #N damage full 3410 ms | from derived [SelectCommand] ...` (`StatsBuildTrace`,
+docs/DesignNotes.md → "Name every door"), and the status line prints the summary's title with its totals. The claim a change makes
+is about rows, and it lands inside one frame — that *is* the notification. A toast beside it reports an event already on screen.
+
+**What was not true is the opposite fear: the refresh nobody asked for.** Every derive-driven rebuild funnels through one door —
+`FightTable.AnnounceSelection` — on three reason words: `ContentMoved` and `RowEdited` from the row patch (new facts landing inside
+selected rows; a row rewritten or removed), and `SnapshotSwap` when the wholesale path swaps the list. That door feeds all three
+boards. At the quiet-time cadence of **two passes a second**, a whole-capture selection costs **~1.5 s** to produce (pre-optimization:
+**~3.8 s**), so one person reading a full-night board was scheduling thousands of full builds on the thread that paints the meter —
+while the same budget applied uniformly meant a small edit waited behind the big selection's cost.
+
+**The seam is the ASKER, not the size** (`UnaskedRefresh`, Core; `BoardReason` already carries the word on every announce):
+
+| reason | who opens it | over 100k outcomes |
+|---|---|---|
+| `SelectCommand`, `MenuClose`, `SettleTick`, `Manual` | a hand (select/group-select, the menu closing, the settle timer, Refresh) | **builds anyway** — law |
+| `ContentMoved`, `RowEdited`, `SnapshotSwap` | a derive pass rewrote, removed or replaced what is selected | declined, and it says so once |
+
+A user gesture is never declined at any size — if the operator paid for a build with a click, cost is the product's problem, not
+something to skip on their behalf. Only a door a machine opens may say "not at this time". The limit is **100,000 outcomes**
+(`DamageHits + TankHits` summed: a row's work is what it holds in either direction, and taken-only rows cost a walk too). It is a
+**noticeability** threshold, not a budget someone requested: the measured unit cost on the reference capture is ~1.3 µs per outcome
+(4,646 rows / 1,723,855 outcomes ≈ 0.7-0.8 s materialize + ~1.5 s build), so 100,000 outcomes is **~0.13 s** — under that, a rebuild
+is not visible; over it, it is a second-plus landing on the grid a person is reading, twice a second. One pull of fighting sits under
+it; a whole night (1.9 M) is 19× over. **A refusal logs once per episode at Debug** naming reason, row count and size — *"the report stays as it
+was until a selection, a dial or Refresh asks for it"* — because a silent skip is how "the meter stopped updating" costs an afternoon;
+it re-arms when a pass is allowed again, so a declining board prints one line, not one per pass.
+
+**A refusal does not record the announcement.** `_announcedIds`/`_announcedStamp` mean "this question was ANSWERED"; writing them on
+a decline would make the next identical gesture dedupe against a board it never received — the stale-board bug wearing the budget's
+clothes. So the pass keeps asking (its announce is `force: true`) and keeps being refused cheaply: counting hits over the selection is
+O(rows), and rows are what a selection holds.
+
+**An ownership claim goes through one seam and asks for the pass** (`PetAssignment`, Core). Three doors used to write
+`PlayerRegistry.AddPetToPlayer` directly (damage summary's `Assign … as Pet of`, tanking summary's, the Pet Owners window), which
+persists petmapping.txt, raises its list event — and reaches no board until something else rebuilds one. The pair has to travel
+through a FULL pass: `RegistrySeed.ApplyPetMappings` writes it as an OWNERSHIP interval (Strong, over all time),
+`FightSummarySource` stamps a fact's `AttackerOwner` from `EntityTimeline.OwnerOf`, and only then does the damage board fold the
+summon; the timeline digest moves with it, which is one of the two terms `SelectionStamp` folds — so a "same rows" announce cannot
+swallow the change (`PetAssignmentTest.TheAssignedSummonFoldsUnderItsPersonOnTheNextPass` pins the fold and the stamp together). The
+fixture's summon is named `Picklepaw`, invented: the first choice, `Stormclaw`, is in the shipped `npcs.txt`, so it reads Npc at R6 and
+its facts are mob-on-mob — they never reach the row, and the test would have measured a drop instead of a fold. The no-op guard asks
+**both** stores: `IdentityLookup.OwnerOf` (the chain the fold reads) and, case-insensitively, petmapping's own rows, because that
+store's keys are **ordinal** — operator data kept as written — so a second spelling of one summon would give it two owners depending on
+which line spelled it which way. `Reroute` is an `Action` the app wires at startup (`() => DeriveEngine.Active?.RederiveAsync()`), not
+a captured engine: no session means no pass owed, and a dead session can never be reached through the seam.
+
+**What was deliberately not built.** No toast, no banner, no progress state (the fight pane's top-right status section is gone for
+good — see "The fight list announces when the gesture ends"); no new settings key ("was the last refresh worth it?" has one answer per
+machine, which is what `PerfReport` is for); no cancellation of a build already running. The alternative design — a corner notice with
+a settled/busy distinction, its reasons, laws and test plan — stays in `docs/summary-refresh-notification.md` as a working document, so
+if a silent refresh ever needs a visible answer the decisions (no sound, the meter exempt, a decline never shown as a notice) are
+written down once rather than re-litigated.
+
+**An operator write that only lands on a pass owns that pass's announce** (`UnaskedRefresh.OweGesture`, Core, one slot). The hole:
+claiming a pet or writing a verdict is a click, but the announce it causes is not — the write asks for a pass, the pass patches the
+grid, and the patch announces `ContentMoved`/`RowEdited`, which a whole-capture selection declines. Left alone, the budget written to
+keep *traffic* off the reading surface would swallow the operator's own deliberate act, and "did my click do anything?" would have no
+answer until Refresh. So the write records a debt naming itself (`pet claim Picklepaw -> Beorun`, `verdict X = Pet`, `identity edit`)
+and `FightTable.AnnounceSelection` consumes it — re-labelling that announce `Manual` so the policy cannot refuse it. Three properties:
+one slot, not a queue (several writes before the next pass are one gesture); consumed by the FIRST announce after the write, whatever
+reason it carries (an operator who selects another row meanwhile still gets the claim on screen, riding that ask); and owed only by the
+app's operator doors — **not** by `IdentityOverrideStore`/petmapping underneath them, because tests and imports drive those too and a
+debt minted in a test would spend a forced build in whichever class runs next. A capture change clears it: rows from the log that just
+closed cannot be rebuilt by this one's pass (`ClearForNewCapture`).
+
+**Two traps in a budget like this.** (1) It belongs at the top of the announce door, after dedupe and before recording — not beside the
+pane's early returns, which answer "should this pane be doing anything at all", a different question; put it there and whoever adds the
+fourth condition re-derives it into the wrong branch. (2) The reason word is load-bearing: `ContentMoved` and `RowEdited` arrive
+`force: true`, so a budget written as "skip only non-forced announces" would decline nothing at all, and one written as "skip forced
+announces too, whatever the reason" would decline Refresh. The gate reads the reason, not the flag.
