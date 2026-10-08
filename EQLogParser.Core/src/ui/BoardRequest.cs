@@ -3,7 +3,7 @@
 namespace EQLogParser;
 
 /*
- * WHY the summary boards were asked for. A board can be asked for by eight different events and they cost seconds apiece on a
+ * WHY the summary boards were asked for. A board can be asked for by seven different events and they cost seconds apiece on a
  * large capture, so "the damage grid filled three times" is only answerable if every ask carries its own name (see StatsBuildTrace,
  * which prints this on the build's log line). The words are also a closed list on purpose: an announcement that cannot say which of
  * these it is has no business being anonymous in the log — that is how a duplicated door survives a review.
@@ -27,9 +27,6 @@ internal enum BoardReason
 
   /// <summary>Facts or identity verdicts moved since this selection was last built — the same rows answer differently now.</summary>
   ContentMoved,
-
-  /// <summary>The damage-validation dials (or anything else on MainWindow's compute-stats timer) changed what the builders filter.</summary>
-  Settings,
 
   /// <summary>The Refresh button: rebuild whatever is on screen, no questions asked.</summary>
   Manual,

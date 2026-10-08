@@ -33,7 +33,6 @@ namespace EQLogParser
     private DateTime _startLoadTime;
     private DamageOverlayWindow _damageOverlay;
     private FctOverlayWindow _fctOverlay;
-    private DispatcherTimer _computeStatsTimer;
     private readonly DispatcherTimer _saveTimer;
 
     /*
@@ -42,22 +41,21 @@ namespace EQLogParser
      * whole-capture selection materializes in seconds, so "twice" meant two full record sets allocated at once and two
      * builder runs serialized behind them, and on a live raid it meant one per pass without bound.
      *
-     * `_statsFilterGeneration` is the third thing the builders read and the only one this window knows about: the six
-     * DamageValidator settings (assassinate, headshot, slay-undead, …) change the ANSWER without changing a fact or a
-     * verdict, so CheckComputeStats bumps this counter and a re-ask over identical rows is no longer "already built".
+     * The key holds only what this window can name: the rows, the capture's content stamp (owned by the pane) and the tanking
+     * board's damage-type filter. The six DamageValidator settings change the answer without moving any of those — they are read
+     * fresh out of AppSettings by every build, and their door is the pane's own rebuild, not this gate. An identity event (a pet
+     * pair learned) was wired into a generation bump here until 2026-11 measurement showed it rebuilt all three boards to
+     * byte-identical totals behind one select-all — no derived board reads those stores (docs/DesignNotes.md -> "Name every door").
      */
     private readonly SummaryBuildGate _summaryGate = new(static work => Task.Run(work));
-    private long _statsFilterGeneration;
 
     /*
-     * The main window's periodic work, named for the heartbeat (PerfCounters, UiBeatMonitor). All three run on the UI thread and all
-     * three are quiet suspects for a freeze somewhere else: settings.ini gets written from here every half minute (a file write is one
-     * antivirus scan away from a second), stats are recomputed when a fight changes, and an open chart takes a data-point update at
-     * whatever rate the parser produces them. A stall line that names one of these is a different conversation from one that names
-     * nothing.
+     * The main window's periodic work, named for the heartbeat (PerfCounters, UiBeatMonitor). Both run on the UI thread and both are
+     * quiet suspects for a freeze somewhere else: settings.ini gets written from here every half minute (a file write is one
+     * antivirus scan away from a second), and an open chart takes a data-point update at whatever rate the parser produces them.
+     * A stall line that names one of these is a different conversation from one that names nothing.
      */
     private static readonly int SaveId = PerfCounters.Register("ui.configSave");
-    private static readonly int ComputeStatsId = PerfCounters.Register("ui.computeStats");
 
     /*
      * The board build and the materialization inside it, both `uiThread: false`: they run on a pool thread, so naming them in a stall's
@@ -246,7 +244,7 @@ namespace EQLogParser
       // populate windows that need data
       PerfCounters.Run(MwPanesId, () =>
       {
-        MainActions.InitPetOwners(this, petMappingWindow);
+        MainActions.InitPetOwners(petMappingWindow);
         MainActions.InitVerifiedPlayers(verifiedPlayersWindow, petMappingWindow);
         MainActions.InitVerifiedPets(this, verifiedPetsWindow, petMappingWindow);
       });
@@ -314,9 +312,7 @@ namespace EQLogParser
         MainActions.EventsDamageSelectionChanged += DamageSummarySelectionChanged;
         MainActions.EventsHealingSelectionChanged += HealingSummarySelectionChanged;
         MainActions.EventsTankingSelectionChanged += TankingSummarySelectionChanged;
-        MainActions.EventsFightSelectionChanged += (_) => ComputeStats();
         ThemeConfig.EventsThemeChanged += _ => DataGridUtil.RefreshTableColumns(petMappingGrid);
-        _computeStatsTimer = UiUtil.CreateTimer(ComputeStatsTick, 500, false);
 
         // give some time for dock state to load
         await Task.Delay(250);
@@ -673,15 +669,6 @@ namespace EQLogParser
       }
     }
 
-    private void ComputeStatsTick(object sender, EventArgs e)
-    {
-      if (!_isStarting)
-      {
-        PerfCounters.Run(ComputeStatsId, ComputeStats);
-        _computeStatsTimer.Stop();
-      }
-    }
-
     private async void SystemEventsPowerModeChanged(object sender, PowerModeChangedEventArgs e)
     {
       switch (e.Mode)
@@ -815,28 +802,6 @@ namespace EQLogParser
       });
     }
 
-    internal void CheckComputeStats()
-    {
-      // A settings change that reaches the boards. Counted so a rebuild asked for over the SAME rows is not mistaken by the
-      // build gate for one that has already been done (SummaryBuildGate: the key holds every input, filters included).
-      _statsFilterGeneration++;
-
-      if (_computeStatsTimer != null)
-      {
-        _computeStatsTimer.Stop();
-        _computeStatsTimer.Start();
-      }
-    }
-
-    private void ComputeStats()
-    {
-      // The timer's rebuild (damage validation toggles, load settling) re-announces the CURRENT selection through
-      // the exact path a click takes, so a settings change can never build boards from a different world than the
-      // one the list is pointing at. No capture, no selection, nothing to rebuild.
-      if (npcWindow?.Content is FightTable table && table.SessionActive)
-        DerivedSelectionChanged(new BoardRequest(table.GetSelectedFights(), table.ContentStamp, BoardReason.Settings, "compute stats timer"));
-    }
-
     /*
      * The board path, from the ONLY fight list: the builders get ordinary Fight objects whose blocks were rebuilt
      * from captured facts, so no summary has to know anything new. Damage and tanking are both fed here, off the
@@ -870,8 +835,8 @@ namespace EQLogParser
       /*
        * Materializing allocates one record per selected fact, so it belongs on the worker with the build; the UI thread's
        * part ends at "these fights" plus the key that says what this answer is computed FROM — the rows, the capture's
-       * content stamp (facts + identity verdicts, owned by the pane because a pass is what moves it), the tanking board's
-       * damage-type filter and the validation generation. The gate drops a request whose key has already been built or is
+       * content stamp (facts + identity verdicts, owned by the pane because a pass is what moves it) and the tanking board's
+       * damage-type filter. The gate drops a request whose key has already been built or is
        * building, queues at most one newer one behind a run, and never lets two materializations overlap.
        */
       var key = SummaryKeyFor(request.Fights, request.ContentStamp, tankingDamageType);
@@ -885,7 +850,7 @@ namespace EQLogParser
        * Asks from the panes' own doors do NOT come through here — they call the builders directly, and StatsBuildTrace is what names them.
        */
       Log.Info($"board ask [{request.Reason}]{(request.Detail is null ? string.Empty : $" {request.Detail}")}"
-               + $": {request.Fights.Count} fight(s), stamp {request.ContentStamp}, filter gen {_statsFilterGeneration}, tank type {tankingDamageType}"
+               + $": {request.Fights.Count} fight(s), stamp {request.ContentStamp}, tank type {tankingDamageType}"
                + $" -> {outcome}");
     }
 
@@ -901,7 +866,7 @@ namespace EQLogParser
      */
     private long SummaryKeyFor(IReadOnlyList<DerivedFight> selected, long contentStamp, int tankingDamageType)
     {
-      var hash = unchecked((contentStamp * 397) ^ (_statsFilterGeneration * 31) ^ tankingDamageType);
+      var hash = unchecked((contentStamp * 397) ^ tankingDamageType);
       foreach (var fight in selected) hash = unchecked(hash * 17 + fight.Id);
       return hash == 0 ? 1 : hash;
     }

@@ -192,8 +192,11 @@ namespace EQLogParser
     }
 
     // should already run on the UI thread
-    internal static void InitPetOwners(MainWindow main, ContentControl petMappingWindow)
+    internal static void InitPetOwners(ContentControl petMappingWindow)
     {
+      /* A learned pair updates the list and nothing else. No derived board reads this store - ownership folds off the line's
+         own possessive word (FightSummarySource.OwnerOf) - so asking for a stats rebuild over it answers identically: measured
+         as a full three-board rebuild to byte-identical totals behind one select-all (docs/DesignNotes.md -> "Name every door"). */
       PlayerRegistry.Instance.EventsNewPetMapping += async (mapping) =>
       {
         await UiUtil.InvokeAsync(() =>
@@ -201,8 +204,6 @@ namespace EQLogParser
           InsertPetMapping(mapping);
           DockingManager.SetHeader(petMappingWindow, $"{PetOwnersTitle} ({PetPlayersView.Count})");
         }, DispatcherPriority.DataBind);
-
-        main.CheckComputeStats();
       };
     }
 
@@ -252,7 +253,8 @@ namespace EQLogParser
               DockingManager.SetHeader(petMappingWindow, $"{PetOwnersTitle} ({PetPlayersView.Count})");
             }
 
-            _mainWindow?.CheckComputeStats();
+            // No stats re-ask: the builders read neither this list nor the registry. Whatever identity-side effect a removal has
+            // arrives through the next derive pass, which moves the content stamp and re-announces on its own.
           }
         }, DispatcherPriority.DataBind);
       };
@@ -286,7 +288,7 @@ namespace EQLogParser
               DockingManager.SetHeader(petMappingWindow, $"{PetOwnersTitle} ({PetPlayersView.Count})");
             }
 
-            main.CheckComputeStats();
+            // No stats re-ask: the builders read neither this list nor the registry (see EventsRemoveVerifiedPlayer above).
           }
         }, DispatcherPriority.DataBind);
       };

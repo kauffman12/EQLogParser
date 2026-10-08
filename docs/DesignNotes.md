@@ -2594,7 +2594,7 @@ the prefix is also how a stall line reads: `in progress meter.loadstats 812 ms` 
 | `ui.openlogfile`, `ui.pickfile` | span | opening a log file (restore at startup included), and the modal file dialog inside it |
 | `fct.dropLane`, `fct.dropConveyor`, `fct.dropStale`, `fct.dropCeiling` | count | numbers that never reached the screen, split by cause; their lifetime sum is still the `fct.drop` level |
 | `ui.configSave` | span | `ConfigUtil.Save()` — writing `settings.txt` from the main window's half-minute timer |
-| `ui.computeStats`, `ui.fightTable`, `chart.update` | span | stats recompute, the fights grid's row insertion, one data point into an open chart |
+| `ui.fightTable`, `chart.update` | span | the fights grid's row insertion, one data point into an open chart |
 | `chart.clear`, `chart.walk`, `chart.rolling`, `chart.pick`, `chart.reset`, `chart.series`, `chart.refresh` | span | the phases inside one line-chart redraw — emptying the aggregates, walking the records, the 5 s rolling window, choosing which lines to show, emptying the chart control, building its series, handing them over. See *A chart redraw is phases too* |
 | `chart.rendergap` | span | what the framework took with the chart after the series were handed to it: a callback posted at `ContextIdle`, so the gap is layout and render (and anything else queued behind it), which is work outside this codebase |
 | `chart.column` | span | one page of the players-vs-top-performer chart, which is hand-made WPF elements — a rectangle, labels and a tooltip per column — rebuilt on a 250 ms timer while that window is open |
@@ -6958,17 +6958,23 @@ each writing its own `Derived damage summary:` line into the raid's log.
    is what a duplicated announcement becomes: zero work, no log line, no allocation.
 
 **The key carries every input the builders read**, and nothing else: the selected ids, the pane's `ContentStamp` (facts + identity
-verdicts — "the same rows" is NOT "the same answer" during a pull), the tanking board's damage-type filter read off the open window,
-and a **filter generation** bumped by `CheckComputeStats`. That last term exists because the six `DamageValidator` settings change
-the ANSWER without touching a fact or a verdict; without it a validation toggle would be "already built" and the board would sit
-showing numbers computed under the old filter — the mirror image of the staleness this section is about, which is why skipping on
-anything narrower than "every input" is not allowed here. It is also why the key is handed in by the caller: the gate must never
-guess at what counts as an input.
+verdicts — "the same rows" is NOT "the same answer" during a pull) and the tanking board's damage-type filter read off the open
+window. A **filter generation** was the fourth term, bumped by `CheckComputeStats`, supposed to stand for the six `DamageValidator`
+settings — but nothing wired those dials to it. The only callers were identity events (a pet pair learned, a verified player or pet
+removed), and none of them changes what a derived board reads: ownership folds off the line's own possessive word
+(`FightSummarySource.OwnerOf`), and whatever such an event does have on identity arrives through the next derive pass, which moves
+the content stamp and announces itself as `ContentMoved`. Measured 2026-11 on an 8,014,197-fact capture: a select-all immediately
+after load produced THREE full builds — the click (stamp X), the timer's ask (stamp X again, only the generation moved; both read
+`4,660,915 record(s), 130,689 taken`), and the owed content-moved build (one late fact). So the generation, its 500 ms timer, the
+dead `EventsFightSelectionChanged` subscription feeding it, and the `Settings` word are deleted: the six dials read fresh out of
+`AppSettings` on every build, and their door is the pane's own direct rebuild. What survives is the rule that skipping on anything
+narrower than "every input" is not allowed here — which is also why the key is handed in by the caller: the gate must never guess at
+what counts as an input.
 
 **What it deliberately does not do** is merge two different questions. A select-all whose first announcement caught a partial
 selection, or a pull moving content under a whole-capture selection, still produces two builds — serialized, one per real change.
 That is the honest floor: the answer genuinely changed between the asks. Which of the cases happened is now answerable from the
-log rather than argued about: the gate writes `summary build Queued|SkippedSame: N fight(s), stamp …, filter gen …` at Debug, and
+log rather than argued about: the gate writes `summary build Queued|SkippedSame: N fight(s), stamp …` at Debug, and
 a real build still writes its Info line with record counts — two Info lines and one Debug `Queued` is a real second question; one
 Info line where there used to be two is the duplication gone.
 

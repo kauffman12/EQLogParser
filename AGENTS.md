@@ -357,10 +357,15 @@ not started, because the builders' own `lock` serialised the *work* while both t
 sets (double work plus a memory spike, and whichever finished last won the grids); (2) only the newest queued request survives
 — an older selection has been superseded and its records are the thing holding memory down; (3) a request whose key equals what
 is building or was last built is `SkippedSame` — zero work, which is what a duplicated announcement becomes. **The key is every
-input the builders read**: the selected ids, the pane's `ContentStamp` (facts + verdicts — "same rows" is NOT "same answer"),
-the tanking board's damage-type filter, and `_statsFilterGeneration`, bumped by `CheckComputeStats` because the six
-DamageValidator settings change the answer without touching a fact or a verdict; skipping on anything narrower leaves a board a
-pass stale. Never wrap `_summaryGate.Request(...)` in another `Task.Run` — the gate hands work to its own scheduler, and that
+input the builders read**: the selected ids, the pane's `ContentStamp` (facts + verdicts — "same rows" is NOT "same answer")
+and the tanking board's damage-type filter — and nothing else. The six DamageValidator settings change the answer without touching
+a fact or a verdict too, but they are read fresh out of AppSettings on every build and their door is the pane's own direct rebuild,
+so no generation rides in the key. One did until 2026-11 (`_statsFilterGeneration`, bumped by `CheckComputeStats`), and its only
+callers were identity events — a pet pair learned, a verified player or pet removed — that no derived board reads: ownership folds
+off the line's own possessive word, so each bump spent a full three-board rebuild on byte-identical totals behind one select-all
+(the measurement is in docs/DesignNotes.md → "Name every door"). The timer, the dead `EventsFightSelectionChanged` subscription
+feeding it and the `BoardReason.Settings` word are gone with it. Skipping on anything narrower than every input still leaves a
+board a pass stale, which is why the key stays caller-built. Never wrap `_summaryGate.Request(...)` in another `Task.Run` — the gate hands work to its own scheduler, and that
 indirection is load-bearing: the first version started the build *inline*, which would have materialized a whole-capture
 select-all on the UI thread, and only `SummaryBuildGateTest` (which controls when a handed-out action runs) could see the
 difference. A throwing build returns the gate to idle (`finally`) — a latched runner reads as "the stats froze", the same law as
