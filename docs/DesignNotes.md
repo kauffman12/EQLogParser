@@ -9196,6 +9196,33 @@ fight's range separately; and, on the app side, the cost budget that already ref
 `MaxOutcomes` — a group-night select-all is far over that ceiling, so nothing rebuilds it 2×/second behind your back
 even though it would be legal to.
 
+### A healing block is a second, not a line (2026-10)
+
+The pass-2 leftover of the section above: survivors were still wrapped **one `ActionGroup` per record**, each with its own `Actions` list
+(backing array allocated on first Add). On the capture the field report came from, that is what the healing board's retained pool was:
+
+| one block per line | one block per second | delta |
+|---|---|---|
+| build **2,238 ms** | build **1,409 ms** | **−37 %** |
+| `window` phase **1,513 ms** | `window` **738 ms** | **−51 %** |
+| allocated **766 MB** | allocated **503 MB** | **−263 MB per build** |
+| **2,643,370** blocks | **10,153** blocks | **−263× objects**, same 2,643,370 actions |
+
+(`eqlog_Kizant_xegony-09-03-26.txt`, whole-capture select-all — 707 rows, 2,645,372 materialized heals living in **10,153 distinct seconds**; the
+2,002-record difference between materialized and pooled is the healing validator's own filters, identical on both sides.)
+
+Bundling is invisible to every reader because of what a block *is* to them: `RecordGroupCollection` stamps each chart point with the **block's**
+`BeginTime`, this builder's re-window pass filters on the block's `BeginTime`, and the rollups walk block → actions. **A `HealRecord` carries no
+time of its own** (`HitRecord` has total/mask/type/subtype only) — the block is its second. So the soundness rule is not "group whatever you
+like" but: a block holds records of one exact second, in order, and nothing is dropped or doubled. That is what `HealingBlockShapeTest` pins —
+including the check that fails on the old shape (`ABlockIsExactlyOneSecond`: *"a second was split across two blocks"*), the per-second census
+(a block may not claim more records at a second than the capture healed then — the silent failure mode of a wrong merge, since it would move heals
+to a foreign moment rather than throw), and pool-sum-equals-board-total.
+
+The healing golden did **not** move by one byte, which is the other half of the proof: the `groups=` count it freezes is the **segment** count
+(one per fight row), a level of that nesting this never touched. Recorded because it reads like a contradiction otherwise — "2.6 M groups" and
+"groups=2" are both true, at different depths of `List<List<ActionGroup>>`.
+
 ### What the 4.6 µs per name is (and is not), measured
 
 Two plausible culprits were tested and **refuted**, written down so nobody spends an afternoon on them again:

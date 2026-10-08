@@ -1,3 +1,9 @@
+/*
+ * Annotations only: this project compiles with nullable disabled, and this file annotates (a block slot that may not be open yet,
+ * a spell-count map that exists only when the AE setting asks for one). One line, no behaviour; docs/CodingStandards.md → Nullable Reference Types.
+ */
+#nullable enable annotations
+
 using log4net;
 using System.Collections.Concurrent;
 using System.Globalization;
@@ -300,7 +306,17 @@ namespace EQLogParser
                 continue;
               }
 
-              var updatedHeals = new List<ActionGroup>(kept.Count);
+              /*
+               * One BLOCK per SECOND, not one per record. The old shape allocated an `ActionGroup` (plus the backing array its
+               * `Actions` list needed on first Add) for every heal line: 2,647,774 of them on a whole-capture select-all over a night's
+               * capture, all retained until the next build. Nothing downstream reads a block as one-record-wide — every consumer walks
+               * segment → block → `block.BeginTime` filter → actions (`RecordGroupCollection` for the chart, this file's re-window pass,
+               * the board's own rollup), so bundling records that share a second keeps the time each action is reported at, its order,
+               * and the action stream itself identical. That is why the healing golden does not move by one byte: the `groups=` count it
+               * freezes is the SEGMENT count, which this never touched.
+               */
+              var updatedHeals = new List<ActionGroup>();
+              ActionGroup? openBlock = null;
               var healedByHealerTimeSegments = new Dictionary<string, Dictionary<string, TimeSegment>>();
               var healedBySpellTimeSegments = new Dictionary<string, Dictionary<string, TimeSegment>>();
               var healedByHealerSpellsTimeSegments = new Dictionary<string, Dictionary<string, TimeSegment>>();
@@ -322,9 +338,14 @@ namespace EQLogParser
                   continue;
                 }
 
-                var updatedHeal = new ActionGroup { BeginTime = healTime };
-                updatedHeal.Actions.Add(record);
-                updatedHeals.Add(updatedHeal);
+                // `kept` is time ascending (the cursor scan), so equal seconds are consecutive: one comparison decides the block.
+                if (openBlock is null || openBlock.BeginTime != healTime)
+                {
+                  openBlock = new ActionGroup { BeginTime = healTime };
+                  updatedHeals.Add(openBlock);
+                }
+
+                openBlock.Actions.Add(record);
 
                 var spellNameKey = StatsUtil.CreateRecordKey(record.Type, record.SubType);
                 var healerHealedKey = record.Healer + "|" + record.Healed;
