@@ -9527,3 +9527,23 @@ What MergeStats does **not** fold - and what B still has to write - is everythin
 the frequency buckets, `Ranges` beyond the member union, resists, specials, deaths. Group View never needed those because its tree children
 are the members themselves, rendered from their own rows. So B = a recursive fold keyed by sub-stat `Key` + the (row × fight/segment) cell
 cache, measured against the bar in "How much a whole-row cache would actually save".
+
+### How B gets built: the cell cache and the recursive fold (design, 2026-10)
+
+Agreed shape, grounded in what the code already guarantees rather than in a new abstraction:
+
+1. **Fold first, cache second.** `StatsUtil.MergeStats` folds scalars today; B needs its recursive counterpart - fold two sources by walking
+   child lists keyed on `Key`. The invariant that makes this tractable is already enforced: one insert per key, and nothing adds to these
+   lists except through the single funnel (grep `.SubStats.Add`), so a child list is a map, not an arbitrary sequence. `MergeStats` keeps its
+   current job and gets a sibling that recurses into `SubStats`/`SubStats2` plus the frequency buckets; resists/specials/deaths fold by set
+   union and event-list append. Rates are never merged - the existing `CalculateRates` / `CalculatePercentOfRaid` run after the fold, exactly
+   as Group View already orders them.
+2. **Cell key = (row × fight/segment), never row alone.** Measured above: row-granularity reuse still walks ~80 % of records on a 5-second
+   raid refresh because a touched row pays its whole night. A cell must be small enough that the live tail lands in a handful of them.
+3. **Identity, same discipline as `FightMaterializationCache`.** A cell may be reused only with proof: same fight, same ordinal window, same
+   answer stamp - and it is handed over only as an input to the fold, never as the published row, so nothing on screen is ever mutated
+   (the failure that kills naive carry-forward).
+4. **Fallback is a rule, not a hope.** If touched cells cross a threshold of records, do the plain full build: a half-cached build with a bad
+   hit rate is slower than no cache and harder to read. Quote the bar from the measurement section when tuning it.
+5. **Proof order.** Recursive fold + its equivalence tests first (fold(A,B) == count over A∪B, over the existing board goldens), cache second.
+   A wrong fold is silent and plausible - the same reason `MergeStatsAccumulationTest` enumerates counters rather than sampling.
