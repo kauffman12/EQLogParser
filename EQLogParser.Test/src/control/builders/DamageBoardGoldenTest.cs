@@ -101,7 +101,7 @@ public class DamageBoardGoldenTest
         PlayerRegistry.Instance.Clear();
     }
 
-    private static string FixturePath(string name) => System.IO.Path.Combine(AppContext.BaseDirectory, "mini-data", "board", name);
+
 
     // The production door for a click: classify, project the rows, stamp sections, materialize. Same sequence
     // DerivedHealBoardTest uses, so this golden sits on the same input the app's select-all hands the builder.
@@ -124,7 +124,7 @@ public class DamageBoardGoldenTest
     [TestMethod]
     public void DamageBoard_FullBuild_MatchesGolden()
     {
-        var run = PipelineHarness.RunFileDerived(FixturePath(Fixture));
+        var run = PipelineHarness.RunFileDerived(BoardGolden.FixturePath(Fixture));
         var rows = Rows(run);
         Assert.IsTrue(rows.Count >= 2, "fixture should produce at least two fight rows (two mobs, one life each)");
 
@@ -159,7 +159,7 @@ public class DamageBoardGoldenTest
             Assert.IsNotNull(full, "the full build produced no board");
 
             Snapshot(snapshot, "full", full);
-            SnapshotEvents(snapshot, states, dataPoints);
+            BoardGolden.SnapshotEvents(snapshot, states, dataPoints);
 
             // Invariants first: they say what a diff MEANS even if the golden itself is replaced wholesale.
             AssertInvariants(full);
@@ -201,27 +201,27 @@ public class DamageBoardGoldenTest
             var narrow = new GenerateStatsOptions { AllRanges = all, MinSeconds = 0, MaxSeconds = 6, Source = "golden window 0..6" };
             builder.RebuildTotalStats(narrow, reset: true);
             Snapshot(snapshot, "window-0-6", builder.GetLastStats()?.CombinedStats);
-            SnapshotEvents(snapshot, states, dataPoints);
+            BoardGolden.SnapshotEvents(snapshot, states, dataPoints);
 
             states.Clear();
             dataPoints.Clear();
             var middle = new GenerateStatsOptions { AllRanges = all, MinSeconds = 3, MaxSeconds = 9, Source = "golden window 3..9" };
             builder.RebuildTotalStats(middle, reset: true);
             Snapshot(snapshot, "window-3-9", builder.GetLastStats()?.CombinedStats);
-            SnapshotEvents(snapshot, states, dataPoints);
+            BoardGolden.SnapshotEvents(snapshot, states, dataPoints);
 
             states.Clear();
             dataPoints.Clear();
             var wide = new GenerateStatsOptions { AllRanges = all, MinSeconds = -1, MaxSeconds = -1, Source = "golden widen back" };
             builder.RebuildTotalStats(wide, reset: true);
             Snapshot(snapshot, "window-widened", builder.GetLastStats()?.CombinedStats);
-            SnapshotEvents(snapshot, states, dataPoints);
+            BoardGolden.SnapshotEvents(snapshot, states, dataPoints);
 
             // Widening from the retained pool must land back on the whole-capture answer.
             Assert.AreEqual(full.RaidStats.Total, builder.GetLastStats()!.CombinedStats!.RaidStats.Total,
                 "the retained pool has to still hold everything after being re-sliced narrower");
 
-            CompareOrWrite(snapshot.ToString());
+            BoardGolden.CompareOrWrite(GoldenFile, ActualFile, "damage", snapshot.ToString());
         }
         finally
         {
@@ -230,17 +230,10 @@ public class DamageBoardGoldenTest
 
             // Whatever failed, leave the board this run produced next to the golden: a structural assertion that
             // trips should still tell the reader what the row actually said.
-            File.WriteAllText(FixturePath(ActualFile), snapshot.ToString());
+            File.WriteAllText(BoardGolden.FixturePath(ActualFile), snapshot.ToString());
         }
     }
 
-    private static void IsSortedByTotal(List<PlayerStats> list, string label)
-    {
-        for (var i = 1; i < list.Count; i++)
-        {
-            Assert.IsTrue(list[i - 1].Total >= list[i].Total, $"{label} is not ordered by Total at index {i}");
-        }
-    }
 
     // A name can live in any of the three views (aggregate rows only in StatsList, children in all of them), so a
     // lookup for an assertion asks all three rather than silently returning null on a row that exists.
@@ -264,8 +257,8 @@ public class DamageBoardGoldenTest
         Assert.AreEqual(stats.RaidStats.Total, top.Sum(s => s.Total), "the raid line is the sum of the displayed rows");
 
         // Display order IS total-descending in both lists; that is what the grid binds.
-        IsSortedByTotal(stats.StatsList, "StatsList");
-        IsSortedByTotal(stats.ExpandedStatsList, "ExpandedStatsList");
+        BoardGolden.IsSortedByTotal(stats.StatsList, "StatsList");
+        BoardGolden.IsSortedByTotal(stats.ExpandedStatsList, "ExpandedStatsList");
 
         /*
          * Rank is assigned by ONE walk of the expanded list (which interleaves pet children with the rows), so a
@@ -310,7 +303,7 @@ public class DamageBoardGoldenTest
         }
 
         sb.Append("title\t").Append(stats.FullTitle).Append('\t').Append(stats.ShortTitle).Append('\n');
-        sb.Append(StatsLine("raid", stats.RaidStats)).Append('\n');
+        sb.Append(BoardGolden.StatsLine("raid", stats.RaidStats)).Append('\n');
         sb.Append("uniqueClasses\t").Append(string.Join(",", stats.UniqueClasses.OrderBy(c => c, StringComparer.Ordinal))).Append('\n');
 
         /*
@@ -322,7 +315,7 @@ public class DamageBoardGoldenTest
          */
         foreach (var row in stats.StatsList)
         {
-            sb.Append(StatsLine("list", row)).Append('\n');
+            sb.Append(BoardGolden.StatsLine("list", row)).Append('\n');
         }
 
         foreach (var (parent, children) in stats.Children.OrderBy(k => k.Key, StringComparer.Ordinal))
@@ -335,7 +328,7 @@ public class DamageBoardGoldenTest
                   .Append("\torder=").Append(i)
                   .Append("\tname=").Append(child.Name)
                   .Append("\ttotal=").Append(child.Total)
-                  .Append("\tshareOfParent=").Append(F(parentTotal == 0 ? 0 : 100.0 * child.Total / parentTotal))
+                  .Append("\tshareOfParent=").Append(BoardGolden.F(parentTotal == 0 ? 0 : 100.0 * child.Total / parentTotal))
                   .Append('\n');
             }
         }
@@ -343,24 +336,13 @@ public class DamageBoardGoldenTest
         foreach (var row in stats.ExpandedStatsList)
         {
             var tag = row.IsTopLevel ? "flat" : "flat-child";
-            sb.Append(StatsLine(tag, row)).Append('\n');
+            sb.Append(BoardGolden.StatsLine(tag, row)).Append('\n');
 
             // Sub-stat rows are the expanded spell/melee breakdown: the key IS the display grouping, so a change in
             // how Dd/Dot keys get built must show here.
             foreach (var sub in row.SubStats.OrderBy(s => s.Key, StringComparer.Ordinal))
             {
-                sb.Append("  sub\towner=").Append(row.Name)
-                  .Append("\tkey=").Append(sub.Key)
-                  .Append("\tname=").Append(sub.Name)
-                  .Append("\ttype=").Append(sub.Type)
-                  .Append("\ttotal=").Append(sub.Total)
-                  .Append("\thits=").Append(sub.Hits)
-                  .Append("\tcrit=").Append(sub.CritHits)
-                  .Append("\tdps=").Append(sub.Dps)
-                  .Append("\tbest=").Append(sub.BestSec)
-                  .Append("\tmax=").Append(sub.Max)
-                  .Append("\tmin=").Append(sub.Min)
-                  .Append('\n');
+                sb.Append(BoardGolden.SubLine("sub", row.Name, sub)).Append('\n');
             }
         }
 
@@ -372,80 +354,9 @@ public class DamageBoardGoldenTest
         sb.Append('\n');
     }
 
-    private static void SnapshotEvents(StringBuilder sb, List<string> states, List<string> dataPoints)
-    {
-        sb.Append("states\t").Append(string.Join(" ; ", states)).Append('\n');
-        sb.Append("datapoints\t").Append(string.Join(" ; ", dataPoints)).Append('\n');
-    }
 
     /*
      * Every column the Damage Summary grid binds (its MappingNames), plus the structural flags behind the tree.
      * Floats are rounded to what the grid shows, so a formatter change cannot make this golden churn.
      */
-    private static string StatsLine(string tag, PlayerStats s) =>
-        $"{tag}\tname={s.Name}" +
-        $"\trank={s.Rank}" +
-        $"\torig={s.OrigName}" +
-        $"\tclass={s.ClassName}" +
-        $"\tgroup={s.AssignedGroup}" +
-        $"\ttop={s.IsTopLevel}" +
-        $"\ttotal={s.Total}" +
-        $"\tdps={s.Dps}" +
-        $"\tsdps={s.Sdps}" +
-        $"\tpctRaid={F(s.PercentOfRaid)}" +
-        $"\tsecs={F(s.TotalSeconds)}" +
-        $"\thits={s.Hits}" +
-        $"\tmax={s.Max}" +
-        $"\tmin={s.Min}" +
-        $"\tbest={s.BestSec}" +
-        $"\tavg={s.Avg}" +
-        $"\tavgCrit={s.AvgCrit}" +
-        $"\tavgLucky={s.AvgLucky}" +
-        $"\tcritRate={F(s.CritRate)}" +
-        $"\tluckRate={F(s.LuckRate)}" +
-        $"\taccRate={F(s.MeleeAccRate)}" +
-        $"\thitRate={F(s.MeleeHitRate)}" +
-        $"\tbane={s.BaneHits}" +
-        $"\tspecial={s.Special}" +
-        // Not columns, but the arithmetic they are built from: a rate that silently stops summing is caught here
-        // rather than by eyeballing a grid.
-        $"\t|meleeHits={s.MeleeHits}\tspellHits={s.SpellHits}\tmeleeAttempts={s.MeleeAttempts}" +
-        $"\tmiss={s.Misses}\tblock={s.Blocks}\tdodge={s.Dodges}\tparry={s.Parries}\triposte={s.RiposteHits}" +
-        $"\tabsorb={s.Absorbs}\tinvm={s.Invulnerable}\tflurry={s.FlurryHits}\trampage={s.RampageHits}" +
-        $"\tstrike={s.StrikethroughHits}\ttwin={s.TwincastHits}\tlucky={s.LuckyHits}\tbows={s.BowHits}" +
-        $"\tmaxPot={s.MaxPotentialHit}";
-
-    private static string F(double v) => Math.Round(v, 2).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
-
-    /*
-     * Golden compare with an explicit write mode (see the header). On a mismatch the message names the line numbers
-     * and prints the first differences, because "360 lines differ" is not actionable and "line 41: pctRaid=12.03 vs
-     * 11.98 on row Vael" is.
-     */
-    private static void CompareOrWrite(string actual)
-    {
-        var goldenPath = FixturePath(GoldenFile);
-        var actualPath = FixturePath(ActualFile);
-
-        if (Environment.GetEnvironmentVariable("EQLP_GOLDEN_WRITE") == "1" || !File.Exists(goldenPath))
-        {
-            Assert.Inconclusive($"golden written to {actualPath} — copy it to {goldenPath} after reading the diff");
-        }
-
-        var expected = File.ReadAllText(goldenPath).Replace("\r\n", "\n");
-        var got = actual.Replace("\r\n", "\n");
-        if (expected == got) return;
-
-        var a = expected.Split('\n');
-        var b = got.Split('\n');
-        var diffs = new List<string>();
-        for (var i = 0; i < Math.Max(a.Length, b.Length) && diffs.Count < 12; i++)
-        {
-            var left = i < a.Length ? a[i] : "<missing>";
-            var right = i < b.Length ? b[i] : "<missing>";
-            if (left != right) diffs.Add($"line {i + 1}:\n  golden: {left}\n  actual: {right}");
-        }
-
-        Assert.Fail($"damage board differs from the golden ({a.Length} vs {b.Length} lines)\n{string.Join("\n", diffs)}");
-    }
 }

@@ -42,7 +42,7 @@ namespace EQLogParser
       var trace = StatsBuildTrace.Begin("tanking", options.Source, "re-slice");
       try
       {
-        RebuildTotalStatsCore(options);
+        RebuildTotalStatsCore(options, trace);
       }
       finally
       {
@@ -50,7 +50,7 @@ namespace EQLogParser
       }
     }
 
-    private void RebuildTotalStatsCore(GenerateStatsOptions options)
+    private void RebuildTotalStatsCore(GenerateStatsOptions options, in StatsBuildTrace.Handle trace)
     {
       var built = false;
 
@@ -59,7 +59,7 @@ namespace EQLogParser
         if (_tankingGroups.Count > 0)
         {
           FireNewStatsEvent();
-          ComputeTankingStats(options);
+          ComputeTankingStats(options, trace);
           built = true;
         }
       }
@@ -77,7 +77,7 @@ namespace EQLogParser
       var trace = StatsBuildTrace.Begin("tanking", options.Source);
       try
       {
-        BuildTotalStatsCore(options);
+        BuildTotalStatsCore(options, trace);
       }
       finally
       {
@@ -85,7 +85,7 @@ namespace EQLogParser
       }
     }
 
-    private void BuildTotalStatsCore(GenerateStatsOptions options)
+    private void BuildTotalStatsCore(GenerateStatsOptions options, in StatsBuildTrace.Handle trace)
     {
       lock (_lock)
       {
@@ -98,6 +98,8 @@ namespace EQLogParser
           _selected.Sort(static (a, b) => a.Id.CompareTo(b.Id));
           _title = options?.Npcs.Count > 0 ? options.Npcs[0].Name : null;
 
+          // Phases named and timed the way DamageStatsBuilder's are (StatsBuildTrace.Stage): which half of a tanking
+          // rebuild costs, separately from materialization.
           var damageBlocks = new List<ActionGroup>();
           foreach (var fight in CollectionsMarshal.AsSpan(_selected))
           {
@@ -151,7 +153,8 @@ namespace EQLogParser
             }
 
             _tankingGroups.Add(newBlock);
-            ComputeTankingStats(options);
+            StatsBuildTrace.Stage(trace, "groups");
+            ComputeTankingStats(options, trace);
           }
           else if (_selected == null || _selected.Count == 0)
           {
@@ -193,7 +196,7 @@ namespace EQLogParser
       }
     }
 
-    private void ComputeTankingStats(GenerateStatsOptions options)
+    private void ComputeTankingStats(GenerateStatsOptions options, in StatsBuildTrace.Handle trace)
     {
       lock (_lock)
       {
@@ -244,6 +247,8 @@ namespace EQLogParser
               _raidTotals.TotalSeconds = _raidTotals.MaxTime;
             }
 
+            StatsBuildTrace.Stage(trace, "window");
+
             var lastTime = double.NaN;
             var prevPlayerTimes = new Dictionary<string, double>();
             foreach (var group in CollectionsMarshal.AsSpan(_tankingGroups))
@@ -278,6 +283,8 @@ namespace EQLogParser
                 lastTime = block.BeginTime;
               }
             }
+
+            StatsBuildTrace.Stage(trace, "walk");
 
             _raidTotals.Dps = (long)Math.Round(_raidTotals.Total / _raidTotals.TotalSeconds, 2);
             StatsUtil.PopulateSpecials(_raidTotals);
@@ -348,6 +355,7 @@ namespace EQLogParser
             genEvent.UniqueGroupCount = _tankingGroupIds.Count;
             EventsGenerationStatus?.Invoke(genEvent);
             FireChartEvent("UPDATE", options.DamageType);
+            StatsBuildTrace.Stage(trace, "present");
           }
           catch (Exception ex)
           {

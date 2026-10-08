@@ -55,7 +55,26 @@ public class MeterBoardCostRealLogTest
 
                 // The builder's own phase split (StatsBuildTrace): walk = counting records, present = arithmetic over
                 // the rows. A measure/present restructure moves work out of the first and makes the second refreshable alone.
-                Console.WriteLine($"[cost]   board line: {StatsBuildTrace.LastFinishedLineOf("damage") ?? "(no trace line)"}");
+                Console.WriteLine($"[cost]   damage : {StatsBuildTrace.LastFinishedLineOf("damage") ?? "(no trace line)"}");
+                Console.WriteLine($"[cost]   tanking: {StatsBuildTrace.LastFinishedLineOf("tanking") ?? "(no trace line)"}");
+
+                // Healing on the same selection, the way the healing pane gets it (windowed by the rows' own span — a heal
+                // belongs to no fight), so its phases are comparable to the other two boards'.
+                var healBoard = Stopwatch.StartNew();
+                CombinedStats? healed = null;
+                var healScope = new HealingStatsBuilder();
+                var healOptions = new GenerateStatsOptions
+                {
+                    Source = "cost probe",
+                    AllRanges = input.AllRanges,
+                    Heals = HealSummarySource.Materialize(run.HealFacts, input.AllRanges),
+                };
+                healOptions.Npcs.AddRange(input.Fights);
+                healScope.EventsGenerationStatus += generated => healed = generated.CombinedStats;
+                healScope.BuildTotalStats(healOptions);
+                healBoard.Stop();
+                Console.WriteLine($"[cost]   healing: {StatsBuildTrace.LastFinishedLineOf("healing") ?? "(no trace line)"} "
+                                  + $"| board {healBoard.ElapsedMilliseconds} ms, {healed?.StatsList?.Count ?? -1} healers");
 
                 Console.WriteLine($"[cost] {label,8}: {windowed.Count,5} rows / {hits,9:N0} outcomes -> materialize {materialize.ElapsedMilliseconds,6} ms, "
                                   + $"whole board {board.ElapsedMilliseconds,6} ms ({built?.DamageStats?.StatsList?.Count ?? -1} players, "

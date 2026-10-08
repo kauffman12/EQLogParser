@@ -1,0 +1,94 @@
+### full
+title	Combined (6): A training dummy in 10s, 16.08K Tanked @1.61K	Combined (6): A training dummy in 10s
+raid	name=Totals	rank=0	orig=Totals	class=	group=0	top=True	total=16082	dps=1608	sdps=0	pctRaid=0	secs=10	hits=0	max=0	min=0	best=0	avg=0	avgCrit=0	avgLucky=0	critRate=0	luckRate=0	accRate=0	hitRate=0	bane=0	special=	|meleeHits=0	spellHits=0	meleeAttempts=0	miss=0	block=0	dodge=0	parry=0	riposte=0	absorb=0	invm=0	flurry=0	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=0	rampRate=0	extra=0
+uniqueClasses	
+list	name=Bryn	rank=1	orig=Bryn	class=	group=0	top=True	total=8177	dps=2044	sdps=817	pctRaid=50.85	secs=4	hits=3	max=5555	min=400	best=5555	avg=2725	avgCrit=400	avgLucky=0	critRate=33.33	luckRate=0	accRate=100	hitRate=75	bane=0	special=	|meleeHits=3	spellHits=0	meleeAttempts=4	miss=0	block=1	dodge=0	parry=0	riposte=0	absorb=0	invm=0	flurry=0	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=5555	rampRate=0	extra=0
+  sub	owner=Bryn	key=Claws	name=Claws	type=Melee	total=7777	hits=2	crit=0	dps=3888	best=7777	max=5555	min=2222
+  sub	owner=Bryn	key=Hits	name=Hits	type=Block	total=0	hits=0	crit=0	dps=0	best=0	max=0	min=0
+  sub	owner=Bryn	key=Slams	name=Slams	type=Melee	total=400	hits=1	crit=1	dps=400	best=400	max=400	min=400
+list	name=Akira	rank=2	orig=Akira	class=	group=0	top=True	total=7905	dps=790	sdps=790	pctRaid=49.15	secs=10	hits=6	max=4444	min=100	best=4444	avg=1317	avgCrit=0	avgLucky=0	critRate=0	luckRate=0	accRate=83.33	hitRate=71.43	bane=0	special=	|meleeHits=5	spellHits=0	meleeAttempts=7	miss=0	block=0	dodge=1	parry=0	riposte=1	absorb=0	invm=0	flurry=0	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=4444	rampRate=0	extra=0
+  sub	owner=Akira	key=Crushes	name=Crushes	type=Melee	total=2111	hits=2	crit=0	dps=1055	best=2111	max=1111	min=1000
+  sub	owner=Akira	key=Damage Shield	name=Damage Shield	type=Damage Shield	total=350	hits=1	crit=0	dps=350	best=350	max=350	min=350
+  sub	owner=Akira	key=Hits	name=Hits	type=Riposte	total=0	hits=0	crit=0	dps=0	best=0	max=0	min=0
+  sub	owner=Akira	key=Mauls	name=Mauls	type=Melee	total=4544	hits=2	crit=0	dps=2272	best=4544	max=4444	min=100
+  sub	owner=Akira	key=Slashes	name=Slashes	type=Melee	total=900	hits=1	crit=0	dps=900	best=900	max=900	min=900
+list	name=Corvyn	rank=3	orig=Corvyn	class=	group=0	top=True	total=0	dps=0	sdps=0	pctRaid=0	secs=1	hits=0	max=0	min=0	best=0	avg=0	avgCrit=0	avgLucky=0	critRate=0	luckRate=0	accRate=0	hitRate=0	bane=0	special=	|meleeHits=0	spellHits=0	meleeAttempts=1	miss=0	block=0	dodge=0	parry=0	riposte=0	absorb=0	invm=1	flurry=0	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=0	rampRate=0	extra=0
+  sub	owner=Corvyn	key=Hits	name=Hits	type=Invulnerable	total=0	hits=0	crit=0	dps=0	best=0	max=0	min=0
+class	Akira	
+class	Bryn	
+class	Corvyn	
+
+states	Tanking|STARTED|groups=0|uniqueGroups=0|limited=False ; Tanking|COMPLETED|groups=3|uniqueGroups=1|limited=False
+datapoints	UPDATE|points=13|selected=0
+### type-melee
+title	Combined (6): A training dummy in 10s, 15.73K Tanked @1.57K	Combined (6): A training dummy in 10s
+raid	name=Totals	rank=0	orig=Totals	class=	group=0	top=True	total=15732	dps=1573	sdps=0	pctRaid=0	secs=10	hits=0	max=0	min=0	best=0	avg=0	avgCrit=0	avgLucky=0	critRate=0	luckRate=0	accRate=0	hitRate=0	bane=0	special=	|meleeHits=0	spellHits=0	meleeAttempts=0	miss=0	block=0	dodge=0	parry=0	riposte=0	absorb=0	invm=0	flurry=0	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=0	rampRate=0	extra=0
+uniqueClasses	
+list	name=Bryn	rank=1	orig=Bryn	class=	group=0	top=True	total=8177	dps=2044	sdps=817	pctRaid=51.98	secs=4	hits=3	max=5555	min=400	best=5555	avg=2725	avgCrit=400	avgLucky=0	critRate=33.33	luckRate=0	accRate=100	hitRate=75	bane=0	special=	|meleeHits=3	spellHits=0	meleeAttempts=4	miss=0	block=1	dodge=0	parry=0	riposte=0	absorb=0	invm=0	flurry=0	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=5555	rampRate=0	extra=0
+  sub	owner=Bryn	key=Claws	name=Claws	type=Melee	total=7777	hits=2	crit=0	dps=3888	best=7777	max=5555	min=2222
+  sub	owner=Bryn	key=Hits	name=Hits	type=Block	total=0	hits=0	crit=0	dps=0	best=0	max=0	min=0
+  sub	owner=Bryn	key=Slams	name=Slams	type=Melee	total=400	hits=1	crit=1	dps=400	best=400	max=400	min=400
+list	name=Akira	rank=2	orig=Akira	class=	group=0	top=True	total=7555	dps=755	sdps=755	pctRaid=48.02	secs=10	hits=5	max=4444	min=100	best=4444	avg=1511	avgCrit=0	avgLucky=0	critRate=0	luckRate=0	accRate=83.33	hitRate=71.43	bane=0	special=	|meleeHits=5	spellHits=0	meleeAttempts=7	miss=0	block=0	dodge=1	parry=0	riposte=1	absorb=0	invm=0	flurry=0	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=4444	rampRate=0	extra=0
+  sub	owner=Akira	key=Crushes	name=Crushes	type=Melee	total=2111	hits=2	crit=0	dps=1055	best=2111	max=1111	min=1000
+  sub	owner=Akira	key=Hits	name=Hits	type=Riposte	total=0	hits=0	crit=0	dps=0	best=0	max=0	min=0
+  sub	owner=Akira	key=Mauls	name=Mauls	type=Melee	total=4544	hits=2	crit=0	dps=2272	best=4544	max=4444	min=100
+  sub	owner=Akira	key=Slashes	name=Slashes	type=Melee	total=900	hits=1	crit=0	dps=900	best=900	max=900	min=900
+list	name=Corvyn	rank=3	orig=Corvyn	class=	group=0	top=True	total=0	dps=0	sdps=0	pctRaid=0	secs=1	hits=0	max=0	min=0	best=0	avg=0	avgCrit=0	avgLucky=0	critRate=0	luckRate=0	accRate=0	hitRate=0	bane=0	special=	|meleeHits=0	spellHits=0	meleeAttempts=1	miss=0	block=0	dodge=0	parry=0	riposte=0	absorb=0	invm=1	flurry=0	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=0	rampRate=0	extra=0
+  sub	owner=Corvyn	key=Hits	name=Hits	type=Invulnerable	total=0	hits=0	crit=0	dps=0	best=0	max=0	min=0
+class	Akira	
+class	Bryn	
+class	Corvyn	
+
+states	Tanking|STARTED|groups=0|uniqueGroups=0|limited=False ; Tanking|COMPLETED|groups=3|uniqueGroups=1|limited=False
+datapoints	UPDATE|points=12|selected=0
+### type-spell
+title	Combined (6): A training dummy in 10s, 350 Tanked @35	Combined (6): A training dummy in 10s
+raid	name=Totals	rank=0	orig=Totals	class=	group=0	top=True	total=350	dps=35	sdps=0	pctRaid=0	secs=10	hits=0	max=0	min=0	best=0	avg=0	avgCrit=0	avgLucky=0	critRate=0	luckRate=0	accRate=0	hitRate=0	bane=0	special=	|meleeHits=0	spellHits=0	meleeAttempts=0	miss=0	block=0	dodge=0	parry=0	riposte=0	absorb=0	invm=0	flurry=0	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=0	rampRate=0	extra=0
+uniqueClasses	
+list	name=Akira	rank=1	orig=Akira	class=	group=0	top=True	total=350	dps=35	sdps=35	pctRaid=100	secs=10	hits=1	max=350	min=350	best=350	avg=350	avgCrit=0	avgLucky=0	critRate=0	luckRate=0	accRate=0	hitRate=0	bane=0	special=	|meleeHits=0	spellHits=0	meleeAttempts=0	miss=0	block=0	dodge=0	parry=0	riposte=0	absorb=0	invm=0	flurry=0	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=350	rampRate=0	extra=0
+  sub	owner=Akira	key=Damage Shield	name=Damage Shield	type=Damage Shield	total=350	hits=1	crit=0	dps=350	best=350	max=350	min=350
+class	Akira	
+
+states	Tanking|STARTED|groups=0|uniqueGroups=0|limited=False ; Tanking|COMPLETED|groups=3|uniqueGroups=1|limited=False
+datapoints	UPDATE|points=1|selected=0
+### window-0-6
+title	Combined (6): A training dummy in 6s, 1.65K Tanked @275	Combined (6): A training dummy in 6s
+raid	name=Totals	rank=0	orig=Totals	class=	group=0	top=True	total=1650	dps=275	sdps=0	pctRaid=0	secs=6	hits=0	max=0	min=0	best=0	avg=0	avgCrit=0	avgLucky=0	critRate=0	luckRate=0	accRate=0	hitRate=0	bane=0	special=	|meleeHits=0	spellHits=0	meleeAttempts=0	miss=0	block=0	dodge=0	parry=0	riposte=0	absorb=0	invm=0	flurry=0	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=0	rampRate=0	extra=0
+uniqueClasses	
+list	name=Akira	rank=1	orig=Akira	class=	group=0	top=True	total=1250	dps=208	sdps=208	pctRaid=75.76	secs=6	hits=2	max=900	min=350	best=900	avg=625	avgCrit=0	avgLucky=0	critRate=0	luckRate=0	accRate=50	hitRate=33.33	bane=0	special=	|meleeHits=1	spellHits=0	meleeAttempts=3	miss=0	block=0	dodge=1	parry=0	riposte=1	absorb=0	invm=0	flurry=0	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=900	rampRate=0	extra=0
+  sub	owner=Akira	key=Damage Shield	name=Damage Shield	type=Damage Shield	total=350	hits=1	crit=0	dps=350	best=350	max=350	min=350
+  sub	owner=Akira	key=Hits	name=Hits	type=Riposte	total=0	hits=0	crit=0	dps=0	best=0	max=0	min=0
+  sub	owner=Akira	key=Slashes	name=Slashes	type=Melee	total=900	hits=1	crit=0	dps=900	best=900	max=900	min=900
+list	name=Bryn	rank=2	orig=Bryn	class=	group=0	top=True	total=400	dps=200	sdps=66	pctRaid=24.24	secs=2	hits=1	max=400	min=400	best=400	avg=400	avgCrit=400	avgLucky=0	critRate=100	luckRate=0	accRate=100	hitRate=50	bane=0	special=	|meleeHits=1	spellHits=0	meleeAttempts=2	miss=0	block=1	dodge=0	parry=0	riposte=0	absorb=0	invm=0	flurry=0	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=400	rampRate=0	extra=0
+  sub	owner=Bryn	key=Hits	name=Hits	type=Block	total=0	hits=0	crit=0	dps=0	best=0	max=0	min=0
+  sub	owner=Bryn	key=Slams	name=Slams	type=Melee	total=400	hits=1	crit=1	dps=400	best=400	max=400	min=400
+list	name=Corvyn	rank=3	orig=Corvyn	class=	group=0	top=True	total=0	dps=0	sdps=0	pctRaid=0	secs=1	hits=0	max=0	min=0	best=0	avg=0	avgCrit=0	avgLucky=0	critRate=0	luckRate=0	accRate=0	hitRate=0	bane=0	special=	|meleeHits=0	spellHits=0	meleeAttempts=1	miss=0	block=0	dodge=0	parry=0	riposte=0	absorb=0	invm=1	flurry=0	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=0	rampRate=0	extra=0
+  sub	owner=Corvyn	key=Hits	name=Hits	type=Invulnerable	total=0	hits=0	crit=0	dps=0	best=0	max=0	min=0
+class	Akira	
+class	Bryn	
+class	Corvyn	
+
+states	Tanking|STARTED|groups=0|uniqueGroups=0|limited=False ; Tanking|COMPLETED|groups=1|uniqueGroups=1|limited=False
+datapoints	UPDATE|points=7|selected=0
+### window-widened
+title	Combined (6): A training dummy in 10s, 16.08K Tanked @1.61K	Combined (6): A training dummy in 10s
+raid	name=Totals	rank=0	orig=Totals	class=	group=0	top=True	total=16082	dps=1608	sdps=0	pctRaid=0	secs=10	hits=0	max=0	min=0	best=0	avg=0	avgCrit=0	avgLucky=0	critRate=0	luckRate=0	accRate=0	hitRate=0	bane=0	special=	|meleeHits=0	spellHits=0	meleeAttempts=0	miss=0	block=0	dodge=0	parry=0	riposte=0	absorb=0	invm=0	flurry=0	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=0	rampRate=0	extra=0
+uniqueClasses	
+list	name=Bryn	rank=1	orig=Bryn	class=	group=0	top=True	total=8177	dps=2044	sdps=817	pctRaid=50.85	secs=4	hits=3	max=5555	min=400	best=5555	avg=2725	avgCrit=400	avgLucky=0	critRate=33.33	luckRate=0	accRate=100	hitRate=75	bane=0	special=	|meleeHits=3	spellHits=0	meleeAttempts=4	miss=0	block=1	dodge=0	parry=0	riposte=0	absorb=0	invm=0	flurry=0	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=5555	rampRate=0	extra=0
+  sub	owner=Bryn	key=Claws	name=Claws	type=Melee	total=7777	hits=2	crit=0	dps=3888	best=7777	max=5555	min=2222
+  sub	owner=Bryn	key=Hits	name=Hits	type=Block	total=0	hits=0	crit=0	dps=0	best=0	max=0	min=0
+  sub	owner=Bryn	key=Slams	name=Slams	type=Melee	total=400	hits=1	crit=1	dps=400	best=400	max=400	min=400
+list	name=Akira	rank=2	orig=Akira	class=	group=0	top=True	total=7905	dps=790	sdps=790	pctRaid=49.15	secs=10	hits=6	max=4444	min=100	best=4444	avg=1317	avgCrit=0	avgLucky=0	critRate=0	luckRate=0	accRate=83.33	hitRate=71.43	bane=0	special=	|meleeHits=5	spellHits=0	meleeAttempts=7	miss=0	block=0	dodge=1	parry=0	riposte=1	absorb=0	invm=0	flurry=0	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=4444	rampRate=0	extra=0
+  sub	owner=Akira	key=Crushes	name=Crushes	type=Melee	total=2111	hits=2	crit=0	dps=1055	best=2111	max=1111	min=1000
+  sub	owner=Akira	key=Damage Shield	name=Damage Shield	type=Damage Shield	total=350	hits=1	crit=0	dps=350	best=350	max=350	min=350
+  sub	owner=Akira	key=Hits	name=Hits	type=Riposte	total=0	hits=0	crit=0	dps=0	best=0	max=0	min=0
+  sub	owner=Akira	key=Mauls	name=Mauls	type=Melee	total=4544	hits=2	crit=0	dps=2272	best=4544	max=4444	min=100
+  sub	owner=Akira	key=Slashes	name=Slashes	type=Melee	total=900	hits=1	crit=0	dps=900	best=900	max=900	min=900
+list	name=Corvyn	rank=3	orig=Corvyn	class=	group=0	top=True	total=0	dps=0	sdps=0	pctRaid=0	secs=1	hits=0	max=0	min=0	best=0	avg=0	avgCrit=0	avgLucky=0	critRate=0	luckRate=0	accRate=0	hitRate=0	bane=0	special=	|meleeHits=0	spellHits=0	meleeAttempts=1	miss=0	block=0	dodge=0	parry=0	riposte=0	absorb=0	invm=1	flurry=0	rampage=0	strike=0	twin=0	lucky=0	bows=0	maxPot=0	rampRate=0	extra=0
+  sub	owner=Corvyn	key=Hits	name=Hits	type=Invulnerable	total=0	hits=0	crit=0	dps=0	best=0	max=0	min=0
+class	Akira	
+class	Bryn	
+class	Corvyn	
+
+states	Tanking|STARTED|groups=0|uniqueGroups=0|limited=False ; Tanking|COMPLETED|groups=3|uniqueGroups=1|limited=False
+datapoints	UPDATE|points=13|selected=0

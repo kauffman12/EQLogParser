@@ -1,0 +1,31 @@
+[Sun Apr 26 18:40:00 2026] Akira joined the raid.
+[Sun Apr 26 18:40:00 2026] Bryn joined the raid.
+[Sun Apr 26 18:40:00 2026] Marek joined the raid.
+[Sun Apr 26 18:40:00 2026] Tolzol joined the raid.
+[Sun Apr 26 18:40:00 2026] Ysolde joined the raid.
+[Sun Apr 26 18:40:01 2026] Akira slashes a training dummy for 1000 points of damage.
+[Sun Apr 26 18:40:01 2026] Akira`s pet bites a training dummy for 500 points of damage.
+[Sun Apr 26 18:40:01 2026] a training dummy joins the fight.
+[Sun Apr 26 18:40:02 2026] Bryn slams a training dummy for 800 points of damage.
+[Sun Apr 26 18:40:02 2026] Ysolde healed Akira for 1500 hit points by Celestial Regeneration IX.
+[Sun Apr 26 18:40:02 2026] Ysolde healed Bryn for 900 hit points by Celestial Regeneration IX.
+[Sun Apr 26 18:40:03 2026] Akira slashes a training dummy for 950 points of damage.
+[Sun Apr 26 18:40:03 2026] Marek healed Akira for 2200 hit points by Heal.
+[Sun Apr 26 18:40:03 2026] Ysolde healed Akira over time for 450 (900) hit points by Spirit of the Wood XXXIV.
+[Sun Apr 26 18:40:04 2026] Bryn backstabs a training dummy for 1400 points of damage. (Critical)
+[Sun Apr 26 18:40:04 2026] Marek healed Marek for 300 hit points.
+[Sun Apr 26 18:40:04 2026] Tolzol healed Akira`s pet for 500 hit points by Minor Healing.
+[Sun Apr 26 18:40:05 2026] Akira slashes a training dummy for 700 points of damage.
+[Sun Apr 26 18:40:05 2026] Tolzol healed Vael for 700 hit points by Healing Rain.
+[Sun Apr 26 18:40:05 2026] a training dummy slashes Akira for 900 points of damage.
+[Sun Apr 26 18:40:06 2026] Akira`s pet bites a training dummy for 300 points of damage.
+[Sun Apr 26 18:40:06 2026] Tolzol healed a training dummy for 400 hit points by Minor Healing.
+[Sun Apr 26 18:40:06 2026] Ysolde healed Corvyn for 1200 hit points by Celestial Regeneration IX.
+[Sun Apr 26 18:40:40 2026] Akira slashes a stone sentinel for 2000 points of damage.
+[Sun Apr 26 18:40:40 2026] Marek healed Akira for 1800 hit points by Heal.
+[Sun Apr 26 18:40:41 2026] Akira slashes a stone sentinel for 1100 points of damage.
+[Sun Apr 26 18:40:41 2026] Ysolde healed Bryn over time for 600 (600) hit points by Spirit of the Wood XXXIV.
+[Sun Apr 26 18:40:41 2026] a stone sentinel hits Bryn for 1200 points of damage.
+[Sun Apr 26 18:40:42 2026] Bryn slams a stone sentinel for 600 points of damage.
+[Sun Apr 26 18:40:42 2026] Tolzol healed Akira for 350 hit points by Minor Healing.
+[Sun Apr 26 18:40:43 2026] a stone sentinel falls in battle.

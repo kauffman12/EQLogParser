@@ -1,0 +1,24 @@
+[Sun Apr 26 18:40:00 2026] Akira joined the raid.
+[Sun Apr 26 18:40:00 2026] Bryn joined the raid.
+[Sun Apr 26 18:40:00 2026] Corvyn joined the raid.
+[Sun Apr 26 18:40:01 2026] a training dummy slashes Akira for 900 points of damage.
+[Sun Apr 26 18:40:01 2026] a training dummy slams Bryn for 400 points of damage. (Critical)
+[Sun Apr 26 18:40:02 2026] a training dummy tries to hit Akira, but Akira ripostes!
+[Sun Apr 26 18:40:02 2026] a training dummy tries to hit Bryn, but Bryn blocks!
+[Sun Apr 26 18:40:03 2026] a training dummy tries to hit Akira, but Akira dodges!
+[Sun Apr 26 18:40:03 2026] a training dummy misses Bryn.
+[Sun Apr 26 18:40:04 2026] a training dummy hits Corvyn for 1200 points of magic damage by Crush of Doom.
+[Sun Apr 26 18:40:04 2026] a training dummy tries to hit Corvyn, but Corvyn is INVULNERABLE!
+[Sun Apr 26 18:40:05 2026] a training dummy bites Akira`s pet for 300 points of damage.
+[Sun Apr 26 18:40:05 2026] Corvyn slashes a training dummy for 700 points of damage.
+[Sun Apr 26 18:40:06 2026] Akira is aflame, burning from Bryn's flame for 350 points of non-melee damage.
+[Sun Apr 26 18:40:46 2026] a stone sentinel crushes Akira for 1111 points of damage.
+[Sun Apr 26 18:40:46 2026] a rattling skeleton claws Bryn for 2222 points of damage.
+[Sun Apr 26 18:40:47 2026] a stone sentinel crushes Akira for 1000 points of damage.
+[Sun Apr 26 18:40:47 2026] Akira slashes a stone sentinel for 2000 points of damage.
+[Sun Apr 26 18:40:48 2026] a rattling skeleton falls in battle.
+[Sun Apr 26 18:40:48 2026] a stone sentinel falls in battle.
+[Sun Apr 26 18:42:20 2026] a cave bear mauls Akira for 4444 points of damage.
+[Sun Apr 26 18:42:20 2026] a furious vine claws Bryn for 5555 points of damage.
+[Sun Apr 26 18:42:21 2026] a cave bear mauls Akira for 100 points of damage.
+[Sun Apr 26 18:42:21 2026] a furious vine lashes Corvyn for 100 points of magic damage by Hobble of Spirits Snare VI.

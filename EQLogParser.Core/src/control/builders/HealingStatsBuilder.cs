@@ -94,7 +94,7 @@ namespace EQLogParser
       var trace = StatsBuildTrace.Begin("healing", options.Source);
       try
       {
-        BuildTotalStatsCore(options);
+        BuildTotalStatsCore(options, trace);
       }
       finally
       {
@@ -104,7 +104,7 @@ namespace EQLogParser
       }
     }
 
-    private void BuildTotalStatsCore(GenerateStatsOptions options)
+    private void BuildTotalStatsCore(GenerateStatsOptions options, in StatsBuildTrace.Handle trace)
     {
       lock (_lock)
       {
@@ -156,6 +156,18 @@ namespace EQLogParser
               _raidTotals.MinTime = options.MinSeconds;
             }
 
+            /*
+             * One cursor for every segment. The selection's segments are ascending and merged (`TimeRange.Add`), the heal
+             * list is time ascending by law, so a scan that restarts at index 0 for each segment — which is what
+             * `FindIndex(0, …)` did — walked the capture once PER SEGMENT: 4,452 segments over 403,740 heals measured
+             * 2,756 ms of a 2,945 ms healing build. The cursor carries forward instead, and the inner loop stops at the
+             * segment's end rather than at the end of the list.
+             */
+            var cursor = 0;
+
+            /*
+             * Phases named and timed like the other two boards (StatsBuildTrace.Stage).
+             */
             foreach (var segment in CollectionsMarshal.AsSpan(_raidTotals.Ranges.TimeSegments))
             {
               var beginTime = segment.BeginTime;
@@ -201,15 +213,19 @@ namespace EQLogParser
               var ignoreRecords = new Dictionary<string, byte>();
               var filtered = new List<ActionGroup>();
 
-              // start at 0 — FindIndex treats the argument as a 0-based index, so starting at 1
-              // silently dropped the first heal record of every full stats build. No "start < Count"
-              // guard is needed either: FindIndex returns -1 for an empty list and start > -1 below
-              // already handles that case.
-              var start = allHeals.FindIndex(0, special => special.Item1 >= beginTime);
-              if (start > -1)
+              // The cursor sits on the first heal this segment could still want; advancing it is the whole cost of
+              // moving between segments. A segment that starts past the last heal leaves `start == Count` and the
+              // body is skipped, exactly as FindIndex returning -1 used to.
+              while (cursor < allHeals.Count && allHeals[cursor].Item1 < beginTime) cursor++;
+              var start = cursor;
+              if (start < allHeals.Count)
               {
                 for (var j = start; j < allHeals.Count; j++)
                 {
+                  // Ascending list: the first heal past this window ends it. Without the break every segment ran to
+                  // the end of the capture, which is the other half of the quadratic above.
+                  if (allHeals[j].Item1 > endTime) break;
+
                   if (allHeals[j].Item1 >= beginTime && allHeals[j].Item1 <= endTime)
                   {
                     // copy
@@ -291,6 +307,8 @@ namespace EQLogParser
               }
             }
 
+            StatsBuildTrace.Stage(trace, "window");
+
             if (double.IsNaN(_raidTotals.MaxBeginTime) && double.IsNaN(_raidTotals.MinBeginTime))
             {
               // save for use by populate healing but only on initial build
@@ -300,7 +318,7 @@ namespace EQLogParser
               _allHealedByHealerSpellTimeRanges = _healedByHealerSpellTimeRanges;
             }
 
-            ComputeHealingStats(options);
+            ComputeHealingStats(options, trace);
           }
           else if (_selected == null || _selected.Count == 0)
           {
@@ -493,7 +511,7 @@ namespace EQLogParser
       FireChartEvent("CLEAR");
     }
 
-    private void ComputeHealingStats(GenerateStatsOptions options)
+    private void ComputeHealingStats(GenerateStatsOptions options, in StatsBuildTrace.Handle trace)
     {
       lock (_lock)
       {
@@ -535,6 +553,8 @@ namespace EQLogParser
                 lastTime = block.BeginTime;
               }
             }
+
+            StatsBuildTrace.Stage(trace, "walk");
 
             _raidTotals.Dps = (long)Math.Round(_raidTotals.Total / _raidTotals.TotalSeconds, 2);
             StatsUtil.PopulateSpecials(_raidTotals);
@@ -594,6 +614,7 @@ namespace EQLogParser
             EventsGenerationStatus?.Invoke(genEvent);
             _lastStatsEvent = genEvent;
             FireChartEvent("UPDATE");
+            StatsBuildTrace.Stage(trace, "present");
           }
           catch (Exception ex)
           {
