@@ -448,6 +448,24 @@ Core builds `Nullable=disable` and both test assemblies build `Nullable=enable`,
 un-annotated reference type in that file from *oblivious* to *non-nullable* in the consumers' view - two unrelated heal tests
 surfaced as brand-new CS8601s when `StatsModel.cs` got the pragma for two new fields. Annotate narrowly (parameters, locals) or
 declare without `?`; add the directive only when the whole file is meant to hold the line (docs/CodingStandards.md -> "Nullable Reference Types").
+- **A chart event names the build behind it, and a repeat question is dropped** (2026-11, from two 4.6 M-record chart passes behind one set of
+  clicks): every `DataPointEvent` carries `DataGeneration` — the trace sequence of the stats build that produced the records its iterator walks
+  (each builder stamps on entry to `BuildTotalStatsCore`/`RebuildTotalStatsCore`, **before any early exit**) — and `LineChart` drops an `"UPDATE"`
+  whose whole question matches the one it just answered: generation + selection + group selection + `_currentViewOption` + top count, compared
+  **after** `AutoSelectViewOption` because the option is part of the question, not of the answer. Four laws. (1) **A build always restamps**, so
+  changed content can never be mistaken for what is on screen. (2) **`-1` means "walk it"**: an unstamped event describes unknown content and is
+  never skippable, so a door that forgets to stamp costs milliseconds rather than showing a stale chart. (3) **The healing builder clears the
+  stamp only in its full throw-away** (`ActiveDataCleared`), never in the per-build `Reset()` — the build stamps above that call, so clearing it
+  there re-zeroes the number the build just wrote: safe, useless, and invisible except as a chart that never skips (that is exactly how this was
+  first written, and `ChartDataGenerationTest` is what caught it). (4) **The record filter lives in the view option's own `ShouldSkipRecord`, not
+  in settings** — the six `DamageValidator` toggles belong to the board builders, and a change there *is* a build, so no settings term belongs in
+  the key. What ignoring this costs, measured on a field run: two `DamageChart UPDATE` passes over **4,660,915** records (walk = 97 % of each)
+  drawing the identical 5 lines / 36,163 points, **1,589 ms** and **1,107 ms**, with no stats build between them. Do **not** replace this with
+  cache-the-aggregates: `UpdateRemaining` and `GetTimeRanges` consume state produced *during* the walk, so hydration needs proofs about no-ops over
+  already-complete series — dropping the pass removes 100 % of it instead of 97 % of its walk. A skip logs `chart.update skipped` and marks its own
+  trace line `duplicate of the pass already drawn - nothing re-walked`, so the door is provable from a log file alone. docs/DesignNotes.md →
+  "The same question twice, asked by two doors"; stamp laws pinned headlessly by `ChartDataGenerationTest`, chart-side decision belongs in
+  `EQLogParser.Wpf.Test` when a host can construct a chart.
 - **A repaint belongs to the capture that is open, and a session change blanks rather than waits** (2026-11, from "clear all does nothing - it just leaves the fight
   list full of content"). Two halves, both load-bearing. (1) `FightTable.ClearForNewCapture` runs on **both sides** of `DeriveEngine.ActiveChanged` — engine gone
   *and* new engine — because `Derived` is the only thing that ever replaces these rows, so on an open that produces no rows (empty file, Clear All's re-open from
