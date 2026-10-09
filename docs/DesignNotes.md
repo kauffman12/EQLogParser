@@ -160,28 +160,33 @@ are documented in those runs, not smoothed over). Identity questions are asked o
 (`ClassificationRules.Apply`) — the same census on a seeded one lied by ×350 and spawned two wrong documents before it
 was caught. Real-log tests report what they find instead of asserting constants that match accidents; absolute counts
 go before equalities; findings need **several captures** before any of them becomes a rule. The suites run
-`DoNotParallelize`; on Linux the plain suite (~1,560 tests) runs everything except WPF/Skia surfaces — Windows is the
-only place `EQLogParser.Wpf.Test` executes, so its laws must also be readable from code.
+`DoNotParallelize`; on Linux the plain suite (**1,933 passed / 15 env-gated skips** as of `9b8069bf`) runs everything except WPF/Skia
+surfaces — Windows is the only place `EQLogParser.Wpf.Test` executes, so its laws must also be readable from code.
 
-### What is left (the deletion queue, in order)
+### What the legacy queue became, and what is actually left (2026-10-09)
 
-Done and measured: fight list, all three boards, the meter — each fully behind `EnableCombatMirror`, no fallback to
-legacy anywhere on those paths (no session answers *false*; it does not consult the old pipeline — fallbacks
-hide errors). Remaining, from the working map (`docs/legacy-replacement-map.md`, untracked — the queue is mirrored here so this file is the durable home):
+**The deletion finished.** `FightManager`, `DamageOverlayStatsBuilder`, the legacy fight table, the parser's `FM` feed and the whole parity
+scaffolding are deleted (`5d45d866`; final numbers on paper → "The legacy engine is deleted: final parity numbers, kept on paper"), and so is the
+`EnableCombatMirror` dial — a `settings.txt` still carrying that word simply stops being read. The three items this queue held after the boards and
+the meter moved are closed too: `EventViewer.IsLifetimeNpc` no longer exists, and **parse-time accumulation ended** — `StatsUtil.UpdateDamageStats`
+and `UpdateHealStats` are now called only from the three builders (`DamageStatsBuilder`, `TankingStatsBuilder`, `HealingStatsBuilder`), never from a
+parse seam. The identity panes went the same way on 2026-10-09 (`9b8069bf`), including their per-sighting event pumps.
 
-1. **`EventViewer.IsLifetimeNpc` → timeline** — one consumer of one call; same question the Names window already answers.
-2. **The product call: flip `EnableCombatMirror` default-on**, burn it in, then delete `DamageOverlayStatsBuilder`.
-   This is judgment, not code — and it is the hinge that lets the legacy `FightTable` go next.
-3. **Line viewers onto the fact tables** (`HitLogViewer`, damage/heal/tank grids, per-name lifetimes) — *the main real
-   work left*. The facts hold the rows; what they lack is readers (and per-name lifetime materialization).
-4. **Stop parse-time accumulation** (`StatsUtil.UpdateDamageStats/UpdateHealStats` per line, then `RecordsStore`, then
-   `FightManager`/`Fight`/`BattleRow`) — only possible after 3, because the viewers still read those stores.
+So there is one structural item left, and it is a reader problem rather than an engine problem:
 
-Open costs stated honestly: classification's remaining ~250 ms floor is a per-rule watermark problem (R9 charm 83 ms,
-R18 67, R15 54 on Incogitable) that rebuilds anyway whenever a rule finds something — so only a 3 s→1 s Full-pass floor
-is still at stake there; the `Wpf.Test` assembly has never executed anywhere (Linux builds it, cannot run it); and the
-GINA `{counter}` semantics question (local working doc `docs/counter-variable-issue.md`) is an open user-facing decision, unrelated to
-the derivation.
+1. **The line viewers still read `RecordsStore`'s per-event records** (`HitLogViewer`, the damage/tank/heal grids opened from a summary, per-name
+   lifetimes). The fact tables already hold those rows; what they lack is readers, plus per-name lifetime materialization. This is backlog **B2** —
+   keeping two copies of what happened is the largest retained item on a big capture (~656 MB heap − ~183 MB row arrays ≈ 472 MB, printed by `heap:` /
+   `row arrays est=`), and it is retired door by door with the heap ledger read between steps, never in one commit. Healing's sixth map is the one
+   duplicate that measured **not** free → "A duplicate store that is NOT a free delete".
+
+Open costs, stated honestly so nobody inherits them as surprises: classification keeps a ~250 ms floor *when a rule finds something* (R9 charm 83 ms,
+R18 67, R15 54 on Incogitable) — a carried quiet pass is ~2 ms, so what remains at stake there is only the 3 s → 1 s Full-pass floor; a superseded board
+build is not cancelled (B4's open half); `EQLogParser.Wpf.Test` has never been executed by the machine this file is maintained on, only compiled; and the
+GINA `{counter}` semantics question (local working doc `docs/counter-variable-issue.md`) is an open **product** decision, unrelated to the derivation.
+
+For the performance and refresh backlog as a whole — what is shipped, what is open in measured order, and what is decided against — see
+"Where we stand: performance, and the refresh nobody asked for".
 
 ### Standing decisions — reopen only with a decision, not a refactor
 
@@ -4677,9 +4682,10 @@ is why only one event (`EventsClearedActiveData`, `180ff710`) had to move before
   in the workstream whose behavior `dotnet test` on Linux cannot observe.
 - **The 0.06–0.11 % residue**: raid-side swings onto a name the seed calls a pet whose ownership interval does not answer
   `IsOurPetAt` at that second. Belongs to seed interval consistency; do not widen a gate exemption to hide it.
-- Remaining legacy readers stay in the working map's (`docs/legacy-replacement-map.md`, untracked) order: overlay → `EventViewer`'s `IsLifetimeNpc` →
-  `LineChart`'s `FightTimeout` constant → `FightTable` → parse-time stat accumulation (`HitRecord`/`RecordsStore` last,
-  until the line viewers read fact tables). Roster files never go away.
+- Remaining legacy readers, as this section stood then: overlay → `EventViewer`'s `IsLifetimeNpc` → `LineChart`'s `FightTimeout` constant →
+  `FightTable` → parse-time stat accumulation. **All of it has since happened** (`5d45d866` deleted the engine, the dial and the scaffolding); what is
+  still true is the last clause — `HitRecord`/`RecordsStore` outlive the engine because the **line viewers** still read them, which is backlog B2.
+  Roster files never go away (and since 2026-10-09 only as inputs: neither `players.txt` nor `petmapping.txt` has a writer).
 
 ## A meter reset is a window, not a different set of rows
 
@@ -10572,3 +10578,107 @@ the same number or the panel jumps under the cursor on switch).
 **One test changed shape rather than being dropped.** `MemoryReadIsNotASightingTest` asserted through `EventsNewPetMapping` that a *read*
 of memory announced nothing. The channel is gone, so that clause went with it and the stronger assertion is what remains: an invented pair
 would appear in `GetPetMappings()`, which is exactly what `RegistrySeed` walks to decide Pet-ness. An event was the echo; the row is the sound.
+
+## Where we stand: performance, and the refresh nobody asked for (2026-10-09)
+
+An orientation chapter on purpose, and deliberately short. Every figure quoted here belongs to a section named at the end of
+its paragraph; `docs/perf-memory-status.md` (ids **B**/**C**) and `docs/incremental-summary-refresh.md` (**Phase B**) remain the
+working backlog, with the measurements behind them. This page exists so a fresh session can tell **done** from **open** from
+**decided against** without re-deriving all three — the most expensive kind of work in this repository has been re-measuring a
+thing that was already measured and refused.
+
+### What a board build costs, and what came off the bill
+
+A/B over one binary per revision on `eqlog_Kizant_xegony-09-03-26.txt` (998 MB, 708 rows, **4,580,865** outcomes, 2,670,809 heal
+facts — the honest shape; Incogitable's 414 players flattered work that removes per-row-per-player copying): **select-all
+11,481 → 9,760 ms**, the single largest encounter 956 → 807 ms, healing **−27 %** over a night (one cursor for the window instead
+of a `FindIndex` per segment), and the newest-20 rows a live meter holds unchanged at ~124 ms — nothing to win at that size. The
+residual shape is two full scans: the damage walk and the heal window plus materialization, ~90 % of a whole-night build.
+→ "Where a board build's time actually goes", "The same boards on the biggest local capture, before and after".
+
+Two costs came off because **nobody asked for them**: the hit-frequency dictionaries (a `Dictionary<long,int>` keyed by raw damage
+amount is not a histogram — near-unique keys, 1,879,130 inserts per build, **201.8 → 159.6 MB allocated**, ~72 MB retained for a
+window most nights never open; counted on first read for **1.8 ms** instead) and the chart's repeat question (an `UPDATE` that asks
+what the chart already answered is dropped, and a line chart being fed data no longer animates). → "A histogram nobody asked for",
+"The same question twice, asked by two doors", "What a chart pass is actually made of".
+
+### Live refresh: two clocks, one budget, no notice
+
+**The derive cadence** answers *which pass is due*, not merely whether one is: nothing new ⇒ `None`; the captured count still for
+`QuietSeconds` ⇒ **Full**; growth ≥ 25,000 facts/s ⇒ `None` (both lanes park — a load ends in quiet); else full clock, else cheap
+clock. The pump is 100 ms; every threshold is a duration or a rate so the rule does not depend on how often it is asked. The cheap
+lane folds over the timeline instance the last full pass produced: projection of a live increment **0–5 ms**, classification of a
+full pass **186–261 ms**, and a carried quiet classification **~2 ms** against ~380 ms from zero.
+→ "Quiescence is a completion detector" (AGENTS), "A derive pass that starts where the last one stopped", "The projection carry asks
+the same weaker question".
+
+**One board build in flight, newest question wins, identical inputs dropped** (`SummaryBuildGate`), behind a selection that announces
+**once per gesture** (`SelectionSettle`, 600 ms, menu-open and button-held states) and a staleness stamp of *facts + answers*
+(`ContentStamp` = fact total folded with `EntityTimeline.AnswerStamp()` — "same rows" is not "same answer"). Every build numbers
+itself and says who asked (`stats build #7 damage full 3410 ms/147.4 MB | from derived [SelectCommand] …`).
+
+**The cost gate on passes nobody asked for** (`UnaskedRefresh`): a hand's gesture builds at any size — that is the law, and it keeps
+cost off the click path; the three pass-driven reasons pay a budget priced from counted outcomes (120 ms fixed + 2.0 µs each,
+deliberately above the measured 0.87–1.35), spending 25 % of the wall time since the last unasked rebuild. **≤ 3,000 outcomes is
+free** (a live pull refreshes on every pass, 0.124 s); one selected running encounter waits ~2.2 s; a whole night ~61 s — deferred,
+never refused forever. An operator write lends its gesture to the pass it asks for (a pet claim must not be declined by a policy
+written for traffic). **No toast was built** and none is planned: an applied change is already visible where the operator is looking,
+and the trace line says in milliseconds what a build did. A notice re-opens only if (1) a build routinely takes long enough that the
+reader leaves and comes back, (2) a *decline* needs to be seen rather than logged, or (3) two doors start fighting over one board —
+then grep `board ask` / `stats build` around one click before designing anything. → "A refresh that answers for itself", "The fight
+list announces when the gesture ends".
+
+**What that leaves on the table, stated plainly:** a superseded build is not cancelled — it runs to completion holding its full
+materialized record set (measured ~527 MB for a whole-capture ask), because cancelling means threading a token through `Materialize`
+and `BuildTotalStats`, which is where the cost actually sits. That is backlog **B4**'s open half, not a mystery.
+
+### Open, in the order the measurements put them
+
+1. **The cell cache (Phase B 1c)** — the only known way to make a live refresh cost less than a whole recount. The primitive is
+   proven (`StatsUtil.MergeStatsRecursive`, `RecursiveFoldEquivalenceTest`), the three preconditions are executable
+   (`CellFoldPreconditionsTest`), and the ownership question is measured: cells carry the **selection's** pet↔owner maps because
+   learning is a pre-pass, not per-record state. The bar it must clear is written down: **whole-row reuse saved only ~20 % on a raid
+   refresh**, because the rows that change are the heavy ones — a proposal that still walks most of the records is not a win. Its
+   memory law is just as binding, and visible now: a cache that raises `ws=` faster than it shortens a build has failed.
+   → "How B gets built", "The three preconditions behind the cell cache", "What a cached walk is allowed to carry".
+2. **Phases 2–3 (a mergeable accumulator) need a structural decision, not code**: the accumulator *is* the display model today
+   (`PlayerStats : PlayerSubStats : Attempt`, bound live by the grid, with child forests and finalize-only scalars). Either every
+   future column exists twice, or every board changes. That is its own design pass against the goldens.
+   → "What a damage row's state actually is, which is why the delta phase does not start with `Merge`".
+3. **B2 — stop keeping two copies of what happened** (`RecordsStore`'s per-event records vs the fact tables): the largest retained
+   item on a big capture (~656 MB heap − ~183 MB row arrays ≈ **472 MB**, printed rather than inferred by `heap:` / `row arrays est=`).
+   Doors are migrated one at a time, measuring `ws=` against `row arrays est=` between steps. Healing's sixth map is the one duplicate
+   that is **not** free — it is measured and deliberately left alone. → "What 951 MB actually retains", "A duplicate store that is NOT a free delete".
+4. **Cost items with a named number and no fix yet**: the chart's second full pass (1,885 ms against its own 300 ms budget on a
+   select-all); voice-pack init on the UI thread (**1,028 ms of every launch**, `app.voices`); a stall line that cannot report its
+   closed children and a beat cadence fixed at 20 s; four diagnostics lines per derive where one would do; the overlay's remaining
+   ~543 B per number; parser tokenization (spans over `Split`, allocation *traffic*, unproven speed); the trigger lane reading the file
+   a second time; chunked storage + compression (**A1**, demoted by the field runs — rows are ~85 MB of a 419 MB heap); bounding the
+   materialized-summary cache (**B1**). All of them, with their catches: `docs/perf-memory-status.md` §3.
+5. **One symptom still unnamed**: select-all immediately after a load fills the grids three times; the same click a minute later fills
+   once. The doors are now individually named in the log, which is what makes it answerable; the cause is a hypothesis, not a
+   measurement. → "Name every door: which build was which".
+
+### Decided against — bring a new measurement, not a re-argument
+
+GC tuning / compact-after-load (collection never reaches gen2 at raid rates); bigger read buffers (more pinned memory, not less work);
+naive parallel parsing of one file; a timestamp *parser* rewrite (storage was the change); narrowing per-line fields to fight short-term
+pressure; a refresh toast, banner or progress state; bucketing or rounding hit amounts (laziness may move **when** work happens, never
+**what** the answer is); whole-row caching as "the" win; the 75 ms tail poll (cut and given back — with folding on a 0.5 s floor it bought
+nothing). → "Non-goals" in `docs/perf-memory-status.md`, "A histogram nobody asked for", "How much a whole-row cache would actually save".
+
+### The working documents under `docs/`, and what each still owes
+
+Only `DesignNotes.md`, `CodingStandards.md`, `ReleaseChecklist.md` and `TtsPacks.md` are in git. A local working document earns its keep
+by holding something this file cannot yet carry — an open decision, a backlog with ids, or knowledge about the world outside this
+repository. When its durable half has moved here, it is deleted rather than archived: a stale plan is worse than no plan, because the
+next reader cannot tell a closed question from an unasked one. Current dispositions:
+
+| document | state | why |
+|---|---|---|
+| `perf-memory-status.md` | **live** | the B/C backlog with measured opportunity and the catch on each row; nothing here duplicates it |
+| `incremental-summary-refresh.md` | **live** | Phase B's entry point, the row-granularity bar, the structural blocker |
+| `roster-import-plan.md` | **live (mostly landed)** | identity-memory work remaining: class reads through `IdentityLookup`, the write-site twin census, the `"You"` audit, the invariant test |
+| `counter-variable-issue.md` | **open — needs a product decision** | GINA `{counter}` semantics; not a code question |
+| `NagFctReference.md` | **keep as reference** | notes on someone else's implementation; not reconstructible from our tree |
+| `summary-refresh-notification.md` | **deferred design only** | §14 records what shipped instead of the notice; §2–§9 are the toast design kept for the day one of the three re-open conditions becomes true |

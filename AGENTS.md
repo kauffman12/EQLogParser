@@ -6,7 +6,12 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
 - **Follow Coding Standards** read and follow the standards under docs/CodingStandards.md
 - **File structure**: Prefer small files and atomic commits.
 - **Git**: Commit with detailed messages, but **never push to remote**. Pushing is the user's call.
-- **Docs: exactly three are maintained in git** — `docs/DesignNotes.md`, `docs/CodingStandards.md`, `docs/ReleaseChecklist.md` (the `.gitignore` whitelist). Everything else under `docs/` is a local working document for discussions (`combat-mirror-design.md`, `legacy-replacement-map.md`, `TtsPacks.md`, `NagFctReference.md`, `counter-variable-issue.md`, …): never `git add` one, and never assume such a reference resolves in a fresh clone — durable decisions belong in `DesignNotes.md`, which now carries the orientation chapter ("The parsing direction") and the deletion queue the working map holds.
+- **Docs: four are maintained in git** — `docs/DesignNotes.md`, `docs/CodingStandards.md`, `docs/ReleaseChecklist.md` and `docs/TtsPacks.md` (the exact
+  `.gitignore` whitelist). Everything else under `docs/` is a local working document for discussion (`perf-memory-status.md` and
+  `incremental-summary-refresh.md` are the live backlogs; `NagFctReference.md` is notes on someone else's implementation; `counter-variable-issue.md` is an
+  open product decision): never `git add` one, never assume such a reference resolves in a fresh clone, and **delete one rather than archive it once its
+  durable half is in `DesignNotes.md`** — a stale plan reads like an open question. Durable decisions belong in `DesignNotes.md`, whose orientation chapter
+  ("The parsing direction") now also carries "Where we stand: performance, and the refresh nobody asked for" and the closure of the legacy deletion queue.
 - **Searching**: All files are under the current directoy. 
 - **Do not** add heavy dependencies without explicit user approval.
 
@@ -423,12 +428,15 @@ says which happened.
 view option, the pane being shown for the first time (`ContentLoaded`), a pane being hidden, an open chart with nothing to draw, the damage
 meter's per-refresh `DerivedTotals` scopes — and **none of those go through the gate**. So "select all built it three times" is a sentence about
 doors: `GenerateStatsOptions.Source` carries the door in the caller's own words on EVERY `GenerateStatsOptions`, `StatsBuildTrace` numbers each
-build process-wide and prints `stats build #7 damage full 3410 ms | from derived [SelectCommand] …`, and a call site that leaves `Source` null
+build process-wide and prints `stats build #7 damage full: 3410 ms | from derived [SelectCommand] | 159.6 MB allocated | …` (bytes beside
+milliseconds since `d1da38c3`, which is what made a 72 MB histogram findable in one grep instead of one gcdump), and a call site that leaves `Source` null
 prints **UNLABELLED** and warns — an anonymous pass over two million records is exactly what gets defended as "probably necessary". Two laws
 inside the trace: **nesting on one thread is not overlap** (`HealingStatsBuilder.RebuildTotalStats` calls `BuildTotalStats` under its own lock;
 warning on ordinary work is how a real warning stops being read — pinned both directions) and **an unclosed handle hides the next overlap**, so
 builders wrap their bodies in try/finally via traced wrappers rather than instrumenting inside the `lock`. On the pane side an announce carries
-`BoardReason` (eight words: SelectCommand, MenuClose, SettleTick, SnapshotSwap, RowEdited, ContentMoved, Settings, Manual) and a **deduped**
+`BoardReason` (**seven** words: SelectCommand, MenuClose, SettleTick, SnapshotSwap, RowEdited, ContentMoved, Manual — `Settings` was deleted with
+  the stats-filter generation it named, because a dial whose six positions are re-read from `AppSettings` on every build does not own a door; the
+  panes' own dials still rebuild directly and that bypass is what the trace exists to show) and a **deduped**
 announce is logged at Debug instead of swallowed — "three asks arrived" and "one ask, three builds" look identical from the grid. Read
 `grep -E "board ask|stats build"` around one click: same door twice = duplicated trigger; different doors with a pane among them = the bypass;
 different stamps on one door = content genuinely moved and the rebuild was owed. **The first-click-after-load triple is still an open question**
