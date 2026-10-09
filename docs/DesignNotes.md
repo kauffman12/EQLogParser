@@ -10667,6 +10667,56 @@ pressure; a refresh toast, banner or progress state; bucketing or rounding hit a
 **what** the answer is); whole-row caching as "the" win; the 75 ms tail poll (cut and given back — with folding on a 0.5 s floor it bought
 nothing). → "Non-goals" in `docs/perf-memory-status.md`, "A histogram nobody asked for", "How much a whole-row cache would actually save".
 
+### Clear claim forgets everything — which is what makes it the repair (2026-10-09)
+
+Two Windows-only tests went red long after the commit that changed the behaviour, which is itself the lesson: `d5344014`
+("a manual verdict forgets everything this app believed about the name, then asserts the operator's word") rewrote what a
+verdict *is*, and only an `EQLogParser.Wpf.Test` assertion that had been written against the old semantics noticed weeks later.
+Reproduced headlessly (`ClassificationReport` and `PlayerRegistry` are Core, so the state is observable without WPF):
+
+```
+after add:            roster=Ghosty          (AddVerifiedPlayer)
+after npc verdict:    roster=                (ApplyVerdict → Forget → ForgetName evicts it)
+row after npc:        kind=Npc opVerdict=True legacy=False
+row after take-back:  NULL                   (no override, no ledger row, no registry claim → nothing to list)
+verdict-then-roster:  legacy=False disagree=False
+roster-then-verdict:  legacy=True  disagree=True
+```
+
+**The law, as it now stands.** Every write through `ClassificationCommands.ApplyVerdict` — *every kind, including the Unknown
+one that means "take my claim back"* — runs `Forget` first: `IdentityPriorStore.Remove(name)` deletes the **whole ledger row**
+(the remembered verdict, the roster's `Ours` bit, the `Class` that rode with it, the pet-owner `Owner` column) and saves it to
+disk immediately; `PlayerRegistry.ForgetName` evicts verified player, verified pet, the pet-map row, merc, game-generated name
+and the action flag. Then, and only then, the new word is written — except for Unknown, which writes nothing at all. There is no
+undo and nothing underneath to fall back to.
+
+**Why that erasure is a feature and not a hole.** `players.txt` has no writer since `05439925`, and the importer
+(`RosterImport.ImportPlayersFileOnce`) returns early whenever `IdentityPriorStore.HasRosterRows` — *"does this server folder have
+any row with `Ours=true`?"*. So a curated file cannot refill a name the operator just disowned: **Clear claim is the one door that
+repairs a name legacy got wrong**, and it works precisely because nothing re-imports behind it. A name comes back only by being
+watched — raid joins, casts, heals — or by hand-editing `identity-priors.txt`. Two consequences of the gate are worth knowing
+because neither was designed: forget 1 of 209 roster names and the file stays shut (no resurrection), but forget the folder's
+**last** roster row and `HasRosterRows` flips false, so the next log open re-imports players.txt wholesale. And hand-restoring
+the file does nothing while any roster row survives — exactly when someone would try it.
+
+**What the pane may therefore say.** A take-back on a name whose only claim was memory takes it **off the list** (this is the same
+rule `MergeRows` already implements for a census that lost a name: leave, don't ghost it). The selection restore tolerates it —
+`FindRow` answers null and the grid simply has nothing selected. What stays on the list because it *has* facts reads Unknown and
+hovers as exactly `Nothing Identified It`, with no rider of any kind: no "claim taken back", no "not in this log", no filename.
+
+**Two honest edges.** `Row.IsDisagreement` (`LegacySaysPlayer && Kind is Npc or Spell`) can no longer be produced by a single
+click — the verdict deletes the roster claim that would have been contradicted. It lights when memory refills *after* the verdict,
+which is the case actually worth knowing (a raider you called NPC last week whom tonight's capture re-verifies), so that ordering
+is now how the test builds it. And `ForgetName` deliberately does **not** clear `_defaultPlayerClass` / `_activePlayerClass`: the
+Class column can still show a class for the rest of the session after the durable row (class included) is gone. Evicting the
+learned class windows would blank the class of a raider whose cast lines are still in the open capture — a different harm than the
+one the operator asked for, and cheaper to live with than to "fix".
+
+Tests: `TakingAClaimBackTakesTheLegacyMemoryWithIt` (eviction + departure from the list), `AnUnplacedNameHoversAsTheBareAbsence`
+(the absence wording reaches the pane unadorned; Type reads `Unknown`, Why reads `Not Placed` — the absence word lives in the Why
+column, not the Type cell), `AContradictedRosterIsKnownOnTheRowAndSaidNowhere` (both orderings). Vocabulary and words stay in Core:
+`IdentityVocabularyTest`.
+
 ### The working documents under `docs/`, and what each still owes
 
 Only `DesignNotes.md`, `CodingStandards.md`, `ReleaseChecklist.md` and `TtsPacks.md` are in git. A local working document earns its keep
@@ -10684,5 +10734,6 @@ engine deleted in `5d45d866`), `batch-parsing-plan.md` (a two-pass pipeline that
 | `incremental-summary-refresh.md` | **live** | Phase B's entry point, the row-granularity bar, the structural blocker |
 | `roster-import-plan.md` | **live (mostly landed)** | identity-memory work remaining: class reads through `IdentityLookup`, the write-site twin census, the `"You"` audit, the invariant test |
 | `counter-variable-issue.md` | **open — needs a product decision** | GINA `{counter}` semantics; not a code question |
+| `combat-mirror-design.md` | **archaeology, status corrected 2026-10-09** | Phases 0–4 shipped, legacy engine + `EnableCombatMirror` deleted; kept for the rule-catalog arguments that still run — DesignNotes outranks it wherever they disagree |
 | `NagFctReference.md` | **keep as reference** | notes on someone else's implementation; not reconstructible from our tree |
 | `summary-refresh-notification.md` | **deferred design only** | §14 records what shipped instead of the notice; §2–§9 are the toast design kept for the day one of the three re-open conditions becomes true |

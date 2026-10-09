@@ -567,7 +567,8 @@ declare without `?`; add the directive only when the whole file is meant to hold
   *Clear Override (N saved)* item that sat there was deleted, not renamed (a first attempt to rename it to "Clear My Claim" was refused by the operator —
   "why is there still a Clear My Claim?"), because the rule above says the Names pane's Type dropdown `Clear claim` is the only unset
   **and the duplicate was weaker than the door it imitated**: the pane wrote `IdentityOverrideStore.Apply(names, null)` while the sanctioned
-  unset also drops the ledger row (`NamesTable` → `ClassificationCommands.ClearVerdict` + `IdentityPriorStore.Remove`), so the fight-list click left
+  unset also forgets the whole ledger row (`NamesTable` → `ClassificationCommands.ApplyVerdict(name, Unknown)`, whose first step is
+  `Forget` = `IdentityPriorStore.Remove` + `PlayerRegistry.ForgetName`), so the fight-list click left
   a name coming back on the next pass wearing *"… in previous log"*. One verb, one door: **the fight list writes verdicts (batch, over the selection);
   the identity pane un-writes them.**
 - **The cheap lane folds over the timeline INSTANCE the last full pass produced, on two clocks**: `ProjectionOnly` runs no rule book at all (measured:
@@ -801,12 +802,30 @@ declare without `?`; add the directive only when the whole file is meant to hold
   from itself by punctuation. Every recognizer takes BOTH (`Labels.IsUnassignedOwner`), and every display goes through `PetOwnership.DisplayOf`, which answers
   `No Owner` for either wording and for no entry at all. Nothing may write the legacy text; a test asserts the current word carries no `.txt`
   (`PetOwnershipTest`). docs/DesignNotes.md → "petmapping.txt is a feed now".
-- **Identity has two writes and one unset — and no veto.** `ClassificationCommands` is the whole vocabulary: `SetVerdict`
+- **Identity has two writes and one unset — and no veto.** `ClassificationCommands` is the whole vocabulary: `ApplyVerdict`
   (Player / Pet / Merc / NPC into `identity-overrides.txt` — the name it ships under; the pre-release spelling
   `mirror-overrides.txt` never reached an installed build, so nothing reads it and no migration code exists) and
-  `ClearVerdict`, which the Type dropdown's **"Clear claim"**
+  `ApplyVerdict(name, IdentityKind.Unknown)`, which the Type dropdown's **"Clear claim"**
   calls. That entry is the *only* unset, so "isn't there already an option to clear the name?" is answered by the same
-  five words in that dropdown (plus `Remove` on the roster) and by nothing else. **Nothing writes or reads a `players.txt`
+  five words in that dropdown (plus `Remove` on the roster) and by nothing else.
+
+**Both verbs FORGET before they assert, and the unset forgets without asserting** (`d5344014`, and the reason a Windows-only
+test pair went red weeks later): `Forget` = `IdentityPriorStore.Remove` — the **whole ledger row**: remembered verdict, the
+roster's "one of ours" bit, the class that rode with it, the pet-owner column — plus `PlayerRegistry.ForgetName` (verified
+player, verified pet, pet map, merc, game-generated name, action flag). So **"Clear claim" is not a way back to what memory
+said**: after it the name reads Unknown until this capture's own lines re-earn it, and **a name whose only claim on the list was
+memory leaves the list** (`TakingAClaimBackTakesTheLegacyMemoryWithIt`). That erasure is exactly why it is the repair door for a
+name legacy mis-named — `players.txt` has no writer and its importer refuses any folder whose ledger already carries roster rows
+(`IdentityPriorStore.HasRosterRows`), so an inherited belief cannot re-import itself behind the operator's back; the only route to
+a name's past is a capture that watches it act again. Three consequences, all pinned or named: **`Row.IsDisagreement` is
+unreachable from a single click** (the verdict deletes the very roster claim it would contradict — the flag lights when memory
+refills *after* the verdict, which is what `AContradictedRosterIsKnownOnTheRowAndSaidNowhere` now builds by ordering); no surface
+may offer "restore what was there", because after a write there is nothing to restore; and `ForgetName` deliberately leaves
+`_defaultPlayerClass`/`_activePlayerClass` alone, so the Class column can still show tonight's learned class for the rest of the
+session even though the durable row (class included) is gone — evicting the *learned windows* would blank the class of a raider
+whose 10,000 cast lines are still in the open capture, which is a different harm from the one the operator asked for.
+
+**Nothing writes or reads a `players.txt`
   `!Name` rejection any more.** That tombstone arrived 2026-09-28 16:05 (`9de0f230`) and its sole door — Verified Players'
   ✕, meaning the write inside `RemoveVerifiedPlayer` — lost its menu entry **76 minutes later** (`3b92e096`), three days
   after the newest tag `2.4.1`; no installed build could ever have made one, so it is deleted rather than parked and there
@@ -953,7 +972,7 @@ declare without `?`; add the directive only when the whole file is meant to hold
   Type and Class each carry a pencil that opens a `ComboBox` in a popup over the clicked cell (`UiElementUtil.OpenCellPopup`, the same helper DamageSummary's Group cell calls - joined, not re-written, because its
   cell placement, sizing, focus-back and close hook are the parts the operator meant by "i put a lot of work into getting that working well"). Four laws: the option list shows
   **its own row's** vocabulary, not the whole one (`NameRow.TypeChoices` ← `IdentityVocabulary.TypeOptionsFor`; the five answers exist in `IdentityVocabulary.TypeOptions`, each written exactly once, "Clear claim" carrying
-  `IdentityKind.Unknown` because that is what `ClassificationCommands.ClearVerdict` writes); the combo **preselects the row's current verdict** so the handler can
+  `IdentityKind.Unknown` because that is what `ClassificationCommands.ApplyVerdict(name, Unknown)` writes); the combo **preselects the row's current verdict** so the handler can
   refuse a click that changes nothing (a no-op must not spend a derive pass or rewrite identity-overrides.txt); a cell edit edits its cell — batching lives in the
   fight grids' menu alone now, this pane has no buttons at all; and **the class pencil appears only on a `Player` row** (`NameRow.ClassEditable`) because `SetDefaultPlayerClass` verifies
   the name AND writes players.txt — an icon on an NPC row is exactly the pollution this window exists to catch, and Pet/Merc rows have nothing to persist. Any write
@@ -970,7 +989,8 @@ declare without `?`; add the directive only when the whole file is meant to hold
   and a wrong verdict on a real person then could not be taken back from this window at all, the one failure mode every other rule here exists to avoid. A behaviour verdict (graph, heals, /who, chat, a cast) is somebody ACTING, so it stays
   correctable even when the word doubles as a spell. The same measurement refused a parser "fix": `Boom!` keeps its bang because spells.txt carries both `Boom` (13031) and `Boom!` (54752), and "is this string a spell NAME?" must consult
   `_spellsNameDb` only — abbreviations legitimately carry punctuation. Docs/DesignNotes.md → "A name that equals a spell is not a spell row". And
-  **"Clear claim" removes the ledger entry too** (`IdentityPriorStore.Remove` beside `ClassificationCommands.ClearVerdict`), or the row comes straight back on the next pass wearing
+  **"Clear claim" forgets the ledger entry and every registry claim too** (`ApplyVerdict`'s own `Forget` step, not a later
+  `IdentityPriorStore.Remove` someone might forget to pair with it), or the row comes straight back on the next pass wearing
   *"… in previous log"*, which is the opposite of what the click looked like it did. Any write
   here (dropdown **or** band icon) goes through `Reconcile()` = `RederiveAsync()` + `Refresh()`, like `FightTable.ApplyOverride` always did: the census is right on its
   own, but every other surface reads the LAST derive's snapshot. And `BuildNameCensus` classifies with a **throwaway** `ClassificationState` — it builds its own

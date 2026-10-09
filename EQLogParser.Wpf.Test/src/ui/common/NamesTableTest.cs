@@ -20,7 +20,8 @@ namespace EQLogParser.Wpf.Test;
  * IdentityVocabularyTest (EQLogParser.Test), including the corpus check that no rule code reaches the screen. What is
  * pinned here is the part only this file owns: which LINES a row's tooltip gets, since each one tells a person whether to
  * ACT. A verdict resting on their own click needs no correction; one resting on an older log might; a claim that was taken
- * back says only "Nothing Identified It", because that absence is the whole of it; and NOTHING names a file any more —
+ * back leaves the list when memory was the only claim on the name (that removal is the repair tool — see
+ * "TakingAClaimBackTakesTheLegacyMemoryWithIt"); and NOTHING names a file any more —
  * players.txt used to ride behind the proof as a second verdict from a source the operator cannot open from here, which
  * read as a contradiction nobody had explained on rows the rules had merely classified. The pane's own shape is pinned too: the column order, and the fact that a row which offers
  * no pencil still reserves its width (PlaceholderVisibilityConverter), so the words in the column line up.
@@ -95,25 +96,56 @@ public class NamesTableTest
     Assert.AreEqual(IdentityKind.Npc, row.Kind);
   }
 
-  /* A claim the operator took back keeps its row (the roster still lists the name) and says nothing beyond the absence.
-   * This test used to pin a "Claim taken back" sentence for the players.txt `!Name` refusal; that veto was unreachable in
-   * every shipped build - see PlayerRegistry.RemoveVerifiedPlayer - and an invented explanation of a state nobody can
-   * reach is worse than the plain "Nothing Identified It" this state already answers with. */
+  /*
+   * "Clear claim" forgets FIRST and writes nothing after — and that is the whole of its use.
+   *
+   * Every verdict write starts at `ClassificationCommands.Forget`, including the Unknown one that means "take my claim
+   * back": the ledger row goes (the remembered verdict, the roster's "one of ours" bit, the class that rode with it, the
+   * pet-owner column) and so does every registry claim - verified player, verified pet, pet map, merc. Measured here:
+   * adding a verified player then writing NPC leaves `GetVerifiedPlayers()` WITHOUT the name, and withdrawing the claim
+   * afterwards leaves nothing to list at all, because there is no memory and no capture left to list it from.
+   *
+   * That is deliberate and it is the reason this is the one door that fixes a name legacy got wrong (2026-10-09):
+   * `players.txt` has no writer, and its importer refuses to run over a folder whose ledger already carries roster rows
+   * (`IdentityPriorStore.HasRosterRows`), so a bad inherited belief does not get re-imported behind the operator's back -
+   * it has to be re-earned by this capture's own lines. A name that keeps facts stays on the list at Unknown; a name whose
+   * only claim was memory leaves. docs/DesignNotes.md → "Clear claim forgets everything, which is what makes it the repair".
+   */
   [TestMethod]
-  public void AClaimTakenBackSaysNothingIdentifiedIt()
+  public void TakingAClaimBackTakesTheLegacyMemoryWithIt()
   {
     PlayerRegistry.Instance.AddVerifiedPlayer("Ghosty", DateUtil.ToDotNetSeconds(DateTime.Now));
     ClassificationCommands.ApplyVerdict("Ghosty", IdentityKind.Npc);
-    Assert.IsTrue(CensusWithoutACapture().Find("Ghosty")!.IsOperatorVerdict, "control: the claim was never written");
+
+    Assert.IsTrue(CensusWithoutACapture().Find("Ghosty")!.IsOperatorVerdict, "control: the claim was written");
+    Assert.IsFalse(PlayerRegistry.Instance.GetVerifiedPlayers().Contains("Ghosty"),
+                   "the verdict is what evicts the roster row - an asserted belief replaces the memory rather than stacking on it");
 
     ClassificationCommands.ApplyVerdict("Ghosty", IdentityKind.Unknown);
-    var row = NamesTable.RowFrom(CensusWithoutACapture().Find("Ghosty")!);
+
+    Assert.IsNull(CensusWithoutACapture().Find("Ghosty"),
+                  "claim withdrawn, memory forgotten, no capture to answer from: nothing is left to list, and that removal is the point");
+  }
+
+  /*
+   * The other half of a take-back: a name this capture DOES know stays on the list, reads Unknown, and hovers as the bare
+   * absence - one line, no invented explanation. (This used to be pinned through the players.txt `!Name` refusal, a veto no
+   * shipped build could ever write; see `PlayerRegistry.RemoveVerifiedPlayer`. The word itself belongs to Core
+   * (`IdentityVocabularyTest`); what is pinned here is that the pane appends nothing to it.)
+   */
+  [TestMethod]
+  public void AnUnplacedNameHoversAsTheBareAbsence()
+  {
+    var row = NamesTable.RowFrom(new ClassificationReport.Row
+    { Name = "Whisper", Kind = IdentityKind.Unknown, HasFacts = true });
 
     Assert.AreEqual(IdentityKind.Unknown, row.Kind);
-    StringAssert.Contains(row.Provenance, "Nothing Identified It");
-    Assert.IsFalse(row.Provenance.Contains("You Chose"),
-                   "a taken-back claim still reads like the operator's answer - the two need different actions");
-    Assert.IsFalse(row.Provenance.Contains("\n"), $"an absence should hover as one line, got: {row.Provenance}");
+    // The Type cell says the kind and the WHY column carries the absence ("Not Placed"): the words are Core's
+    // (IdentityVocabulary.TypeWord / WhyWord) and what is pinned here is that this pane passes them through with nothing added.
+    Assert.AreEqual("Unknown", row.Type);
+    Assert.AreEqual("Not Placed", row.Why, "the column that answers 'why' answers it with the word for nothing");
+    Assert.AreEqual("Nothing Identified It", row.Provenance,
+                    $"no rider of any kind behind an absence, got: {row.Provenance}");
   }
 
   [TestMethod]
@@ -140,17 +172,27 @@ public class NamesTableTest
   }
 
   /*
-   * A verified raider overridden to NPC is exactly the state in which a player's damage leaves the board. The row knows it
+   * A roster raider whose name reads NPC is exactly the state in which a player's damage leaves the board. The row knows it
    * (`Row.IsDisagreement`) and says nothing about it: the header strip that used to print a whole-capture count was removed
-   * on request, so the pane carries no number, and a badge on the row would paint half the list — the hover answers only
-   * the question asked, which for this name is "you said so".
+   * on request, so the pane carries no number, and a badge on the row would paint half the list — the hover answers only the
+   * question asked, which for this name is "you said so".
+   *
+   * THE ORDERING IS THE LAW THIS TEST HAD TO LEARN. A single click cannot produce the contradiction any more, because the
+   * verdict's own `Forget` deletes the roster claim that would be contradicted (measured: verdict-then-nothing reads
+   * `LegacySaysPlayer=false`). The state is reached when memory refills AFTER the verdict — tonight's capture re-verifying
+   * someone the operator called NPC last week — which is the case actually worth knowing about, so that is how the row is
+   * built here. Both directions are asserted: writing the roster first and the verdict second produces no disagreement at all.
    */
   [TestMethod]
   public void AContradictedRosterIsKnownOnTheRowAndSaidNowhere()
   {
-    PlayerRegistry.Instance.AddVerifiedPlayer("Berta", 1_700_000_000);
+    // Verdict over a name memory has not heard of yet: nothing contradicts it. Forgetting first is why.
     ClassificationCommands.ApplyVerdict("Berta", IdentityKind.Npc);
+    Assert.IsFalse(CensusWithoutACapture().Find("Berta")!.IsDisagreement,
+                   "the verdict took the roster claim with it, so there is nothing left to disagree with");
 
+    // Memory comes back afterwards — a re-verified raider under a standing NPC verdict. Now the row knows.
+    PlayerRegistry.Instance.AddVerifiedPlayer("Berta", 1_700_000_000);
     var census = CensusWithoutACapture();
     var row = NamesTable.RowFrom(census.Find("Berta")!);
 
@@ -158,6 +200,7 @@ public class NamesTableTest
                   "the row stopped knowing that the roster and the verdict contradict each other");
     Assert.AreEqual("You Chose NPC", row.Provenance,
                     $"the hover states the operator's own claim and appends nothing: {row.Provenance}");
+    Assert.IsFalse(row.Provenance.Contains("\n"), $"a disagreement is not a tooltip section, got: {row.Provenance}");
   }
 
   /*
