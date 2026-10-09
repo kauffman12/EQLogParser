@@ -63,6 +63,28 @@ public class HeapLedgerTest
     Assert.IsTrue(line.Contains("over 0s", StringComparison.Ordinal) || line.Contains("over 30s", StringComparison.Ordinal), line);
   }
 
+  /*
+   * "Not rows" is a subtraction, and a subtraction is not an answer. The first Windows field run printed `heap=655.8 MB`
+   * beside `row arrays est=183.4 MB` — ~472 MB held somewhere the line could not name — so the ledger now prints the two
+   * retained stores on that side of it: the cast history and the timed records, both of which grow with the capture.
+   * They ride on EVERY line, zeros included, because a grep for `casts=` has to work on the whole run, and a term that is
+   * absent half the time cannot be trended.
+   */
+  [TestMethod]
+  public void TheKeptRecordsRideTheLineSoNotRowsBecomesASubtraction()
+  {
+    var s = new HeapLedger.LedgerStats(30, 655_800_000, 655_800_000, 0, 0, 0, 0,
+      FactRows: 4_832_103, FactSlackBytes: 0, HealRows: 2_670_809, HealSlackBytes: 0,
+      Names: 410, EstimatedBytes: 192_721_000, CastEntries: 164_263, TimedRecords: 656_686);
+
+    var line = HeapLedger.Format(s);
+    StringAssert.Contains(line, "kept casts=164,263", line);
+    StringAssert.Contains(line, "timed records=656,686", line);
+
+    var bare = HeapLedger.Format(new HeapLedger.LedgerStats(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0));
+    StringAssert.Contains(bare, "kept casts=0 timed records=0", bare);
+  }
+
   [TestMethod]
   public void TheFirstSampleOfACaptureIsDueRightAwayAndEveryAskAfterItWaitsTheInterval()
   {

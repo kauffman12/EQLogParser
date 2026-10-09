@@ -43,9 +43,21 @@ namespace EQLogParser
      */
     internal readonly record struct LedgerStats(double Seconds, long WorkingSetBytes, long HeapBytes, double PauseMs,
       int Gen0, int Gen1, int Gen2, long FactRows, long FactSlackBytes, long HealRows, long HealSlackBytes,
-      int Names, long EstimatedBytes)
+      int Names, long EstimatedBytes, long CastEntries = 0, long TimedRecords = 0)
     {
     }
+
+    /*
+     * What the parse keeps OUTSIDE the two row arrays, handed in by whoever owns the session.
+     *
+     * The first Windows field run settled that rows are not the heap (`heap=655.8 MB` against `row arrays est=183.4 MB`)
+     * — but "not rows" is still a subtraction rather than an answer. These are the two stores on that side of it which
+     * grow with the capture and are reachable for nothing: the cast history (one entry per resolved cast, keyed by spell
+     * name — what answers "which rank did this ambiguous name cast") and the timed records (a ReceivedSpell per buff
+     * line, plus deaths/resists/loot). Both counts are kept on ADD inside RecordsStore: walking them from a diagnostics
+     * line would mean taking the parse lane's own locks across hundreds of thousands of rows.
+     */
+    internal readonly record struct Extras(long CastEntries, long TimedRecords);
 
     /*
      * One line, key=value, no prose: it lands in a file a person greps while a raid is running. Bytes print as MB because the numbers are
@@ -58,6 +70,7 @@ namespace EQLogParser
         + $" | facts rows={Math.Max(0, s.FactRows):N0} slack={Mb(Math.Max(0, s.FactSlackBytes)):F1} MB"
         + $" heals rows={Math.Max(0, s.HealRows):N0} slack={Mb(Math.Max(0, s.HealSlackBytes)):F1} MB"
         + $" | names={s.Names:N0} | row arrays est={Mb(s.EstimatedBytes):F1} MB"
+        + $" | kept casts={Math.Max(0, s.CastEntries):N0} timed records={Math.Max(0, s.TimedRecords):N0}"
         + $" | over {Math.Max(0, s.Seconds):F0}s");
 
     /*
@@ -65,7 +78,8 @@ namespace EQLogParser
      * than skipping the line: a line of zeros during a bulk load is information ("nothing captured yet"), while no line at all cannot be
      * told apart from "the ledger never ran".
      */
-    internal static LedgerStats Collect(CombatCapture capture, in PerfGc.Reading from, in PerfGc.Reading to, double seconds)
+    internal static LedgerStats Collect(CombatCapture capture, in PerfGc.Reading from, in PerfGc.Reading to, double seconds,
+      in Extras extras = default)
     {
       var factRows = 0L;
       var factSlack = 0L;
@@ -91,7 +105,8 @@ namespace EQLogParser
 
       return new LedgerStats(seconds, to.WorkingSetBytes, to.HeapBytes, PerfGc.WindowPauseMs(from, to),
         Math.Max(0, to.Gen0 - from.Gen0), Math.Max(0, to.Gen1 - from.Gen1), Math.Max(0, to.Gen2 - from.Gen2),
-        factRows, factSlack, healRows, healSlack, names, estimated);
+        factRows, factSlack, healRows, healSlack, names, estimated,
+        Math.Max(0, extras.CastEntries), Math.Max(0, extras.TimedRecords));
     }
 
     private static long _lastMs;
@@ -103,7 +118,7 @@ namespace EQLogParser
      * The cadence owner's call: cheap when off (one volatile read), and it never throws — a diagnostics line that can take the parse or a
      * derive pass down with it is worse than no line, so anything unexpected just means "no line this time".
      */
-    internal static void MaybeLog(CombatCapture capture)
+    internal static void MaybeLog(CombatCapture capture, in Extras extras = default)
     {
       if (!PerfJournal.Enabled)
       {
@@ -122,13 +137,13 @@ namespace EQLogParser
 
         /*
          * The first sample of a capture prints with zero deltas rather than waiting out the interval: its value is the SIZES (working set,
-         * rows, slack), and a person who turned PerfReport on wants to see them as soon as the load settles. A delta needs two readings, so
+         * rows, slack, kept records), and a person who turned PerfReport on wants to see them as soon as the load settles. A delta needs two readings, so
          * "from" is "now" the first time and every counter in that line reads zero — which is honest, not a missing number.
          */
         var from = _havePrevious ? _previous : now;
         var seconds = _havePrevious ? (nowMs - _lastMs) / 1000.0 : 0;
 
-        var line = Format(Collect(capture, from, now, seconds));
+        var line = Format(Collect(capture, from, now, seconds, extras));
         _previous = now;
         Volatile.Write(ref _lastMs, nowMs);
 

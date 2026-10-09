@@ -821,8 +821,11 @@ namespace EQLogParser
       if (_disposed) return;
 
       // The heap ledger rides the pump rather than owning a timer of its own (it needs the capture anyway), and returns immediately
-      // unless PerfReport is on and the interval elapsed — so an ordinary session pays one bool here.
-      HeapLedger.MaybeLog(_capture);
+      // unless PerfReport is on and the interval elapsed — so an ordinary session pays one bool here. The two store counts are plain
+      // volatile reads, which is why they are taken before the gate rather than behind it: a caller must not have to know whether the
+      // journal is on, and a heap line that asks for a walk of the parse lane's tables would be worse than no line.
+      HeapLedger.MaybeLog(_capture, new HeapLedger.Extras(
+        RecordsStore.Instance.CastEntryCount, RecordsStore.Instance.TimedRecordCount));
 
       var count = CapturedTotal;
 

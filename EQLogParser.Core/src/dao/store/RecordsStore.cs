@@ -34,6 +34,15 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<string, CastHistory> _spellNameIndex = new();
     private readonly Timer _eventTimer;
 
+    /*
+     * Running totals of what this store holds, for the heap ledger (`HeapLedger.Extras`). They are counted on ADD rather
+     * than summed on demand because summing means walking every group under the same locks the parse lane adds through —
+     * a buff-heavy night writes hundreds of thousands of ReceivedSpell rows — while an increment costs nothing on a path
+     * that already takes the lock. Both describe the OPEN capture, so both are zeroed by Clear.
+     */
+    private long _timedRecords;
+    private long _castEntries;
+
     private static readonly string[] TimedRecordTypes =
     [
       DeathRecords,
@@ -116,7 +125,16 @@ namespace EQLogParser
       {
         _npcSpellStatsDict.Clear();
       }
+
+      Volatile.Write(ref _timedRecords, 0);
+      Volatile.Write(ref _castEntries, 0);
     }
+
+    /// <summary>Timed records held for this capture (buffs, deaths, resists, loot…). See the counters above.</summary>
+    internal long TimedRecordCount => Volatile.Read(ref _timedRecords);
+
+    /// <summary>Cast-history entries held for this capture — one per resolved cast, not per spell name.</summary>
+    internal long CastEntryCount => Volatile.Read(ref _castEntries);
 
     internal void Add(LootRecord record, double beginTime)
     {
@@ -189,6 +207,7 @@ namespace EQLogParser
         lock (history)
         {
           history.Add(cached);
+          Interlocked.Increment(ref _castEntries);
         }
       }
     }
@@ -312,6 +331,7 @@ namespace EQLogParser
       }
 
       Add(list, record, beginTime);
+      Interlocked.Increment(ref _timedRecords);
       _recordNeedsEvent[type] = true;
     }
 

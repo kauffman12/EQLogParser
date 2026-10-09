@@ -43,6 +43,32 @@ public sealed class RecentCastQueryTest
     private static void AddCast(string spell, string caster, double atSeconds) =>
         RecordsStore.Instance.Add(Cast(spell, caster), atSeconds);
 
+    /*
+     * The two counters the heap ledger prints (`heap: … | kept casts=N timed records=N`). They exist because the first
+     * Windows field run proved rows are not the heap — `heap=655.8 MB` beside `row arrays est=183.4 MB` — and "not rows"
+     * is still only a subtraction. Counted on ADD rather than summed from the ledger, so the assertion that matters here is
+     * that the numbers describe what the store RETAINS: one cast entry per cast (per name, not per query), one timed record
+     * per stored record, and both zero after Clear, because a counter that survives a session change prints last night's
+     * raid beside tonight's working set.
+     */
+    [TestMethod]
+    public void TheHeapLedgerCountersFollowWhatTheStoreKeeps()
+    {
+        var store = RecordsStore.Instance;
+        Assert.AreEqual(0, store.CastEntryCount, "Setup cleared the store");
+        Assert.AreEqual(0, store.TimedRecordCount);
+
+        AddCast("Chokidin", "Bithika", T0);
+        AddCast("Chokidin", "Reisil", T0 + 1);
+
+        Assert.AreEqual(2, store.CastEntryCount, "one entry per cast — two casts of one name are two entries");
+        Assert.AreEqual(2, store.TimedRecordCount, "each cast also lands in the timed spell records");
+
+        store.Clear(false);
+        Assert.AreEqual(0, store.CastEntryCount, "a counter that outlives Clear describes a capture nobody has open");
+        Assert.AreEqual(0, store.TimedRecordCount);
+    }
+
     [TestMethod]
     public void ARecentCastQueryReturnsTheWindowNewestFirst()
     {
