@@ -2,6 +2,8 @@ using System.Collections.Concurrent;
 using System.Collections.Frozen;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.Reflection;
+using log4net;
 
 /*
  * Annotations only, no null-flow analysis (the project builds with Nullable=disable): TryReadRosterLine answers with an
@@ -17,6 +19,8 @@ namespace EQLogParser
     Justification = "Singleton owned by LifecycleManager; the save timer is stopped in Shutdown(). See class comment.")]
   class PlayerRegistry : ILifecycle
   {
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
+
     internal event Action<PetMapping> EventsNewPetMapping;
     internal event Action<string> EventsNewVerifiedPet;
     internal event Action<string> EventsNewVerifiedPlayer;
@@ -95,7 +99,17 @@ namespace EQLogParser
     private readonly TimeSpan _saveInterval = TimeSpan.FromSeconds(30);
     private readonly object _lock = new();
     private volatile bool _petMappingUpdated;
-    private volatile bool _playersUpdated;
+
+    /*
+     * MEMBERSHIP HAS NO FILE OF ITS OWN ANY MORE (2026-10-09). players.txt used to be rewritten from here every 30 seconds; the
+     * roster now lives in identity-priors.txt's roster lane, which models the same statement (the name, the dotnet-epoch second
+     * this application last saw it) plus the class players.txt had nowhere to put. This flag says "membership rows were added or
+     * taken away since the last flush", so Save's timer still batches a night of sightings into ONE file write.
+     *
+     * Registry lock -> ledger gate is the ONLY nesting order in this class (Init reads the ledger's lanes under _lock; the ledger
+     * never calls back here — StaleDays is a constant). Flip that order and the flush deadlocks against a busy parse thread.
+     */
+    private volatile bool _rosterDirty;
 
     private PlayerRegistry()
     {
@@ -156,7 +170,7 @@ namespace EQLogParser
           _petSeenAt.Clear();
           _verifiedPlayers.Clear();
           _mercs.Clear();
-          _playersUpdated = false;
+          _rosterDirty = false;
           _petMappingUpdated = false;
         }
       }
@@ -230,7 +244,12 @@ namespace EQLogParser
 
           if (_verifiedPlayers.TryRemove(name, out _))
           {
-            _playersUpdated = true;
+            /*
+             * The name is a pet now, so it comes off the roster — which since 2026-10-09 means the LEDGER's membership bit rather
+             * than a row of players.txt. It stays an eviction, not a veto: a later capture that meets this name as a raider is free
+             * to put it back, and a remembered VERDICT on that ledger row is a different statement and survives.
+             */
+            ForgetInLedger(name);
           }
 
           if (IsPossiblePetName(name) && !_petToPlayer.ContainsKey(name))
@@ -244,7 +263,7 @@ namespace EQLogParser
 
           if (_verifiedPets.TryAdd(name, 1) && !init)
           {
-            _playersUpdated = true;
+            // _verifiedPets is session memory (Init clears it, a log refills it); the roster write above is the durable half.
             needEvent = true;
           }
         }
@@ -276,7 +295,9 @@ namespace EQLogParser
           if (playerTime > lastTime)
           {
             _verifiedPlayers[name] = playerTime;
-            _playersUpdated = true;
+
+            // Gated on !init inside, because a LOAD is not a sighting: stamping on a load is how petmapping.txt aged its whole file out.
+            RememberInLedger(name, playerTime, loading: init);
           }
         }
         else
@@ -287,7 +308,7 @@ namespace EQLogParser
           if (!init)
           {
             needPlayerEvent = true;
-            _playersUpdated = true;
+            RememberInLedger(name, playerTime, loading: init);
           }
         }
 
@@ -297,22 +318,61 @@ namespace EQLogParser
         {
           TryRemovePetMappingNoLock(name);
 
-          if (!init)
-          {
-            _playersUpdated = true;
-            needPetEvent = true;
-          }
+          // The roster write above already said the durable part (this name is one of ours); the pet list is session memory.
+          if (!init) needPetEvent = true;
         }
 
-        // also remove from merc list if it was there
+        // also remove from merc list if it was there — session memory; the roster write above is what says the durable part
         if (_mercs.TryRemove(name, out _))
         {
-          if (!init) _playersUpdated = true;
         }
       }
 
       if (needPlayerEvent) EventsNewVerifiedPlayer?.Invoke(name);
       if (needPetEvent) EventsRemoveVerifiedPet?.Invoke(name);
+    }
+
+    /*
+     * "This application called this name one of ours at <capture second>" — the statement players.txt used to hold, now carried by
+     * identity-priors.txt's roster lane together with the class column that file had nowhere to put. persist:false because a parse
+     * pass confirms names on thousands of lines, and Save's timer flushes the batch exactly as it used to rewrite the whole roster.
+     *
+     * `loading` swallows the write, which is the law this class keeps repeating: A LOAD IS NOT A SIGHTING. Re-stamping at startup is
+     * how AddPetToPlayer once aged 96.6 % of petmapping.txt out in one session; the roster lane moves a stamp FORWARD only, so a
+     * replayed old backup can raise an old second but a start-up cannot.
+     *
+     * The server guard is not paranoia. IdentityPriorStore files every row under the server name IT holds, and during a log switch the
+     * ledger can still be answering for the previous folder — writing tonight's names there is exactly the "one folder quietly acquires
+     * another's roster" hazard RosterImport refuses. A skipped write costs nothing: memory already has the name, and the registry
+     * re-seeds from the right ledger the moment the switch completes.
+     */
+    private void RememberInLedger(string name, double playerTimeS, bool loading)
+    {
+      if (loading) return;
+
+      var ledger = IdentityPriorStore.Instance;
+      if (!string.Equals(ledger.ServerName, ConfigUtil.ServerName, StringComparison.OrdinalIgnoreCase))
+      {
+        Log.Debug($"roster sighting skipped for '{name}': the ledger still answers for '{ledger.ServerName}'");
+        return;
+      }
+
+      ledger.RememberRoster(name, (long)Math.Max(0, playerTimeS), GetDefaultPlayerClass(name), persist: false);
+      _rosterDirty = true;
+    }
+
+    /*
+     * The other direction: membership taken away — an operator's eviction, or a name that turned out to be somebody's pet. Only the
+     * bit and its class leave; a rule's remembered VERDICT on the same row and a pet mapping are separate statements and survive (see
+     * IdentityPriorStore.ForgetRoster). Same batching, same server guard as the write.
+     */
+    private void ForgetInLedger(string name)
+    {
+      var ledger = IdentityPriorStore.Instance;
+      if (!string.Equals(ledger.ServerName, ConfigUtil.ServerName, StringComparison.OrdinalIgnoreCase)) return;
+
+      ledger.ForgetRoster(name, persist: false);
+      _rosterDirty = true;
     }
 
     /*
@@ -463,7 +523,7 @@ namespace EQLogParser
          * instead of merely silencing a guess.
          */
         _verifiedPlayers.TryRemove(name, out _);
-        _playersUpdated = true;
+        ForgetInLedger(name);
       }
 
       EventsRemoveVerifiedPlayer?.Invoke(name);
@@ -524,10 +584,8 @@ namespace EQLogParser
         _petSeenAt.Clear();
         _verifiedPlayers.Clear();
         _mercs.Clear();
-        _playersUpdated = false;
+        _rosterDirty = false;
         _petMappingUpdated = false;
-
-        var saved = ConfigUtil.ReadPlayers();
 
         /*
          * The operator's own character is a player by definition, so this one name is not allowed to be in shadow:
@@ -540,29 +598,13 @@ namespace EQLogParser
           AddVerifiedPlayer(ConfigUtil.PlayerName, DateUtil.ToDotNetSeconds(DateTime.Now), true);
         }
 
-        foreach (var player in saved)
-        {
-          /*
-           * A leading '!' is IGNORED as input, not honoured as a verdict: the file is hand-editable and '!' is the shape a
-           * person reaches for to cross something out, so a line wearing it must not come back as a player named "!Foo".
-           * It carries no meaning beyond that - nothing consults it, and "this name is not one of ours" is an affirmative
-           * claim that belongs on the identity override (Set as NPC). The permanent rejection this line used to implement
-           * was deleted: no shipped build could write one (docs/DesignNotes.md → "A veto nobody could switch on").
-           */
-          if (TryReadRosterLine(player, out var name, out var seenAtS, out var className))
-          {
-            // Hand-edited files may carry the literal "You"; it means whoever is playing now. (The old code
-            // assigned to the ForEach parameter here, which was then never read - a foreach variable cannot be
-            // reassigned, so the remap happens on `name`, where it does something.)
-            if ("You".Equals(name, StringComparison.OrdinalIgnoreCase))
-            {
-              name = ConfigUtil.PlayerName;
-            }
-
-            AddVerifiedPlayer(name, seenAtS, true);
-            SetDefaultPlayerClass(name, className, true);
-          }
-        }
+        /*
+         * players.txt used to be read here as live input. It is not: the roster lane below is the memory, and the ONE reader of the
+         * file is now RosterImport.ImportPlayersFileOnce — which runs before this method at log open, so a folder's curated list is
+         * already in the ledger (identical stamps, no re-ageing) when these lines seed. Deleting a server's identity-priors.txt
+         * therefore brings its players.txt back to life, which is the rollback path; nothing else re-reads the file, and nothing
+         * writes it. docs/DesignNotes.md → "players.txt is a feed now".
+         */
 
         var mapping = ConfigUtil.ReadPetMapping();
         foreach (var key in mapping.Keys)
@@ -726,52 +768,29 @@ namespace EQLogParser
       return true;
     }
 
+    /*
+     * The 30-second write, and the one run at log close / shutdown. Two things leave this class now: pet mappings to
+     * petmapping.txt, and membership as ONE batched flush into identity-priors.txt's roster lane.
+     *
+     * players.txt is not written any more (2026-10-09). Its rows were exactly what the roster lane models — the name, the
+     * dotnet-epoch second this application last saw it, and (which the file had nowhere to put) a class — so maintaining both
+     * meant two memories of one fact, free to disagree silently, with whichever loaded last winning. The old file stays on disk
+     * untouched as the import's source: an input read at most once per folder and never edited. That is what "freeze the feed"
+     * buys — nothing this build concludes can strand a name the curated file got wrong, because the ledger (with its own 200-day
+     * expiry) is the memory from here on. docs/DesignNotes.md → "players.txt is a feed now".
+     */
     internal void Save()
     {
-      List<string> playerList = null;
       List<KeyValuePair<string, string>> petList = null;
       var serverName = ConfigUtil.ServerName;
+      var flushRoster = false;
 
       lock (_lock)
       {
-        if (_playersUpdated)
+        if (_rosterDirty)
         {
-          playerList = [];
-          var now = DateTime.Now;
-
-          /*
-           * Written sorted because this file is hand-edited: a stable order is what makes it diffable, and an
-           * operator who cannot see what changed cannot audit the classifier that wrote it.
-           */
-          foreach (var kv in _verifiedPlayers.OrderBy(k => k.Key, StringComparer.OrdinalIgnoreCase))
-          {
-            if (string.IsNullOrEmpty(kv.Key) || !IsPossiblePlayerName(kv.Key) ||
-              "You".Equals(kv.Key, StringComparison.OrdinalIgnoreCase))
-            {
-              continue;
-            }
-
-            /*
-             * A row with no time is a statement rather than an observation - hand-typed, or an owner seeded from
-             * petmapping.txt - so it has no age to expire. Only evidence-dated rows retire.
-             *
-             * The expiry used to be the entire rule (kv.Value != 0 && seen recently), which deleted every
-             * hand-typed name on the next save AND reached into _petToPlayer to drop its pet mapping with it:
-             * Init() loads plain names at time 0, so one newly learned name was enough to cost an operator both
-             * their curated entries and their ownership rows, silently.
-             */
-            if (kv.Value != 0 && (now - DateUtil.FromDotNetSeconds(kv.Value)).TotalDays >= StaleDays)
-            {
-              continue;
-            }
-
-            var hasClass = _defaultPlayerClass.TryGetValue(kv.Key, out var className);
-            playerList.Add(kv.Value == 0 && !hasClass
-              ? kv.Key
-              : kv.Key + "=" + Math.Round(kv.Value) + (hasClass ? "," + className : ""));
-          }
-
-          _playersUpdated = false;
+          flushRoster = true;
+          _rosterDirty = false;
         }
 
         if (_petMappingUpdated)
@@ -785,9 +804,9 @@ namespace EQLogParser
           {
             var seenAt = _petSeenAt.TryGetValue(kv.Key, out var stamped) ? stamped : 0d;
 
-            // Same law as the player rows above: an un-dated row is a statement and stays; a sighting older than the
-            // dial means the pet has not been in any log this application read, and its row leaves with it. That is
-            // what makes the file stop carrying every summon from the last four years.
+            // An un-dated row is a statement and stays; a sighting older than the dial means the pet has not been in any log this
+            // application read, and its row leaves with it. That is what makes the file stop carrying every summon of the last
+            // four years. (The roster's own ageing runs on the same dial, inside the ledger: one number ages every memory here.)
             if (seenAt != 0 && (now - DateUtil.FromDotNetSeconds(seenAt)).TotalDays >= StaleDays)
               continue;
 
@@ -801,9 +820,13 @@ namespace EQLogParser
         _saveTimer?.Change(_saveInterval, _saveInterval);
       }
 
-      if (playerList != null)
+      /*
+       * Outside the lock: the ledger takes its own gate and writes its own file, and it applies the roster's expiry (StaleDays
+       * against the wall clock) itself. This class no longer decides who stays on the roster — it reports sightings.
+       */
+      if (flushRoster)
       {
-        ConfigUtil.SavePlayers(playerList, serverName);
+        IdentityPriorStore.Instance.FlushChanges();
       }
 
       if (petList != null)

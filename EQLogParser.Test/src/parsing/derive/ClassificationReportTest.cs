@@ -199,7 +199,7 @@ public class ClassificationReportTest
     // A pet whose owner the roster knows: verified-but-not-a-player is exactly the shape players.txt holds (pet
     // owners), so it starts out NOT a disagreement and only becomes one when somebody puts an NPC stamp on it.
     var name = Census().Rows.First(r => r.Kind == IdentityKind.Pet).Name;
-    PlayerRegistry.Instance.AddVerifiedPlayerByOperator(name, DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+    PlayerRegistry.Instance.AddVerifiedPlayerByOperator(name, (long)DateUtil.ToDotNetSeconds(DateTime.Now));
     Assert.IsFalse(Census().Find(name)!.IsDisagreement, "a verified pet read as a disagreement before any override");
 
     ClassificationCommands.ApplyVerdict(name, IdentityKind.Npc);
@@ -236,7 +236,7 @@ public class ClassificationReportTest
     // writes a file — it asks what the census reports while the roster holds the contradicting answer.
     var name = Census().Rows.First(r => r.Kind == IdentityKind.Npc).Name;
 
-    PlayerRegistry.Instance.AddVerifiedPlayerByOperator(name, DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+    PlayerRegistry.Instance.AddVerifiedPlayerByOperator(name, (long)DateUtil.ToDotNetSeconds(DateTime.Now));
 
     var row = Census().Find(name)!;
     Assert.IsFalse(row.IsOperatorVerdict, "fixture: nothing was clicked here — the classifier is the one disagreeing");
@@ -271,17 +271,34 @@ public class ClassificationReportTest
                     "control: this fixture is no longer cold, so the warm half proves nothing");
 
     ConfigUtil.ServerName = "Warm Test";
+
+    /*
+     * Two things moved under this test on 2026-10-09 and it still asks the same question. What this app SAVES is no longer
+     * players.txt but identity-priors.txt's roster lane (so the ledger has to be loaded onto the server being warmed, exactly as
+     * MainWindow does at log open), and a saved name now reaches the census as a PLAYER by testimony — R25-roster — rather than
+     * sitting Unknown behind a strength-8 registry seed. The reload path is unchanged: write, save, re-Init, read the census.
+     */
+    IdentityPriorStore.Instance.Init("Warm Test");
     PlayerRegistry.Instance.Init();
     PlayerRegistry.Instance.AddVerifiedPlayerByOperator(name, DateUtil.ToDotNetSeconds(DateTime.Now));
     PlayerRegistry.Instance.Save();
     PlayerRegistry.Instance.Init();
 
-    var row = Census().Find(name)!;
-    Assert.AreEqual(IdentityKind.Player, row.Kind, "a name serialized to players.txt did not come back as a player");
-    Assert.AreEqual("RegistrySeed", row.Reason, "it reached Player by some route other than the saved roster");
-    Assert.IsTrue(row.LegacySaysPlayer);
-    Assert.IsFalse(row.TypedEntry, "an entry with an evidence timestamp loaded as hand-typed");
-    Assert.IsFalse(row.IsDisagreement);
+    var warmed = Census().Find(name)!;
+    Assert.AreEqual(IdentityKind.Player, warmed.Kind, "a name this app saved did not come back as a player");
+    /*
+     * The SEED is what this fixture shows rather than R25's testimony: the roster speaks only for a capture whose server its folder
+     * answers for (ClassificationRules.ApplySavedRoster), and the census here runs under the fixture capture's own name. R25's word is
+     * pinned in RosterMemoryClaimTest; what this test owns is that a name THIS APP SAVED comes back as a Player at all — now by way of
+     * identity-priors.txt instead of the frozen players.txt.
+     */
+    Assert.AreEqual("RegistrySeed", warmed.Reason, "it reached Player by some route other than the saved roster");
+    Assert.IsTrue(warmed.LegacySaysPlayer);
+    Assert.IsFalse(warmed.TypedEntry, "an entry with an evidence timestamp loaded as hand-typed");
+    Assert.IsFalse(warmed.IsDisagreement);
+
+    // The ledger is process state and this test invented a server: leave no rows behind for another fixture to find.
+    IdentityPriorStore.Instance.Init("warm-test-cleanup-" + Guid.NewGuid().ToString("N"));
   }
 
   /*
@@ -335,7 +352,7 @@ public class ClassificationReportTest
     // The busiest attacker in the fixture is a raid member this cold run cannot place (no target line, no roster).
     var busiest = BusiestAttacker();
 
-    PlayerRegistry.Instance.AddVerifiedPlayerByOperator(busiest, DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+    PlayerRegistry.Instance.AddVerifiedPlayerByOperator(busiest, (long)DateUtil.ToDotNetSeconds(DateTime.Now));
     var report = Census();
 
     /*

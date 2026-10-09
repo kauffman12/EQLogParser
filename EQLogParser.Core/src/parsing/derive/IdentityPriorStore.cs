@@ -738,6 +738,15 @@ namespace EQLogParser
       List<KeyValuePair<string, string>> lines;
       lock (_gate)
       {
+        /*
+         * Membership is aged on the way OUT, not only at load. This file is the roster's only home now (players.txt stopped being
+         * written 2026-10-09), and the writer that used to age it was PlayerRegistry's own save timer — so a flush applies StaleDays
+         * against the wall clock BEFORE serializing, and an expired name leaves the FILE instead of sitting in it unread.
+         * PruneRosterLocked takes the membership and its class off while a witnessed verdict underneath survives, and it is silent
+         * about nothing: the line it logs is the only notice an operator gets that the list shrank.
+         */
+        PruneRosterLocked();
+
         lines = new List<KeyValuePair<string, string>>(_byName.Count);
         foreach (var (name, prior) in _byName)
         {

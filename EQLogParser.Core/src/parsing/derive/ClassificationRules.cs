@@ -233,6 +233,14 @@ namespace EQLogParser
                  () => outcome.OurPets.AddRange(ApplyHealedPetIntervals(facts, heals, timeline,
                                                                         [.. charms.Select(w => w.Name)], state)));
 
+      /*
+       * R25 LAST, after the graph and after R18, and that position IS the rule: this application's own saved roster must not feed
+       * the inference stages that read what a defender IS (docs/DesignNotes.md → "players.txt is a feed now"). Running it here
+       * still outweighs inference — Strong beats Medium — so a silent regular lands on our side, while nothing this capture watched
+       * happening gets overwritten by a list curated over years.
+       */
+      RunStage("R25 saved roster", outcome, () => ApplySavedRoster(facts, timeline, state));
+
       return outcome;
     }
 
@@ -650,6 +658,65 @@ namespace EQLogParser
       timeline.AddAffiliation(kind, name, t0, t1, strength, source, owner);
       var claim = new TimelineClaim(true, name, (int)kind, strength, source, t0, t1, owner);
       if (state.EvidenceClaimed.Add(claim)) state.EvidenceClaims.Add(claim);
+    }
+
+    /*
+     * R25-ROSTER: "this application called this name one of ours", heard once per capture and heard LAST.
+     *
+     * WHY IT EXISTS. players.txt used to be a live file this program rewrote every 30 seconds from whatever the parsers recognised.
+     * That ended 2026-10-09: the roster now lives in identity-priors.txt's roster lane (same statement plus the class the file had
+     * nowhere to put), the old file is read at most once per folder by RosterImport and never written, and a name this application
+     * has carried for years deserves to be BELIEVED rather than kept as a bit only the You-mapping consults. The operator's words
+     * when freezing the file: treat it "as strongly as things like the class spell cast" — so it testifies at RuleStrength.Strong,
+     * the same tier as joining a raid, guild speech, taking a drink, casting a class family.
+     *
+     * THREE REFUSALS, each one keeping a decade of curated names from becoming a permanent wrong answer.
+     *
+     *   Only a name NOTHING PLACED. A capture that watched this name get targeted as an NPC, or swing at the raid, or wear an
+     *     article keeps its own verdict: the roster fills shadows, it does not overwrite sightings. That is also what makes the rule
+     *     safe to run at Strong — its whole population is names whose alternative is Unknown (the measured cold misses: names that
+     *     live only in tells, achievement pings and buff lines).
+     *   POOL GATED. A name no combat line of THIS capture used gets no timeline entry — the same law R21's cast-name feed learned
+     *     on, for the same measured reason: a curated list runs to ~900 names, a night fights a fraction of them, and claiming the
+     *     rest would add hundreds of rows to a window about fighters while moving StateStamp() over verdicts no board reads.
+     *   ANOTHER SERVER'S LEDGER NEVER SPEAKS. The store is one process-wide object holding whichever folder was opened; mid-switch
+     *     it can still answer for the previous server, and claiming those names as tonight's raiders is the cross-folder leak every
+     *     other writer here refuses (RosterImport, PlayerRegistry.RememberInLedger).
+     *
+     * It is deliberately absent from IdentityPriorStore.WorthRemembering: a restatement of membership is not something "a later log
+     * might not answer again", and recording it would let the roster's word come back tomorrow as if a rule had observed it.
+     */
+    private static void ApplySavedRoster(IFactTable facts, EntityTimeline timeline, ClassificationState state)
+    {
+      var ledger = IdentityPriorStore.Instance;
+
+      // Cold process (no ledger loaded) or a server that never saved a roster: nothing to say, and saying it cheaply matters because this runs on every full pass.
+      if (!ledger.HasRosterRows) return;
+
+      /*
+       * Another server's ledger never speaks — and neither does one nobody can attribute. Written as "both sides carry a name and
+       * they match" rather than as an inequality between the two strings: ConfigUtil.ServerName is NULL until a log is opened while
+       * the store keeps an empty string, those two print identically and are not Equal, so a bare `!=` here silently refuses in one
+       * direction and — inverted — silently grants testimony to a folder the capture does not belong to. Production sets the
+       * capture's server at log open, before any pass runs.
+       */
+      var captureServer = ConfigUtil.ServerName;
+      if (string.IsNullOrEmpty(ledger.ServerName) || string.IsNullOrEmpty(captureServer)) return;
+      if (!string.Equals(ledger.ServerName, captureServer, StringComparison.OrdinalIgnoreCase)) return;
+
+      foreach (var entry in ledger.RosterEntries())
+      {
+        var name = entry.Key;
+
+        if (facts.NameIndexOf(name) < 0) continue;
+
+        // Ask the ANSWER, not the claim list: a name any rule already placed — at any strength — is a name this capture spoke about.
+        if (timeline.IdentityAt(name, double.PositiveInfinity) is not IdentityKind.Unknown) continue;
+
+        // Effective from -∞ like every other evidence claim. The ledger's own stamp is dotnet-epoch seconds, a DIFFERENT clock from
+        // the capture's, and mixing them into a timeline position would put the claim centuries in its own future.
+        Claim(timeline, state, name, IdentityKind.Player, RuleStrength.Strong, "R25-roster", double.NegativeInfinity);
+      }
     }
 
     private static void ApplyOwnershipFlags(IFactTable facts, EntityTimeline timeline, ClassificationState state)

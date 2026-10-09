@@ -19,11 +19,12 @@ namespace EQLogParser
    * class it was seen casting. The ledger gained that lane a commit ago (`RememberRoster`); this class is what fills it,
    * so the retirement of players.txt is a change of READER rather than a day the raid list has to be retyped.
    *
-   * WHAT IT MOVES IS MEMBERSHIP, NOT A VERDICT. Every row is written through RememberRoster, which sets the roster bit
-   * and leaves Kind/Reason/Sightings alone — so an old file of nine hundred names cannot outvote tonight's rules pass on
-   * what any of them ARE, and a name on the list for a decade is still allowed to be called Npc by every capture
-   * (IdentityLookup reads that as two true statements, not a contradiction). `Record` can never write this lane; the
-   * importer is the only path from a file into it.
+   * WHAT IT MOVES IS MEMBERSHIP. Every row is written through RememberRoster, which sets the roster bit and leaves
+   * Kind/Reason/Sightings alone — the import never invents a verdict about what a name IS, and a name on the list for a decade is
+   * still allowed to be called Npc by this capture's own evidence. What membership DOES buy is a voice: the roster lane testifies in
+   * the rules pass as R25-roster (Player at behaviour strength, heard AFTER the inference stages so yesterday's conclusions never
+   * feed today's graph), which is what "treat the curated list as seriously as a class-spell cast" asked for. `Record` can still
+   * never write this lane, and R25 is deliberately absent from RememberedRules: a restatement of membership is not memory.
    *
    * THE PET SIDE IS `ImportPetMapOnce`, beside this one. It used to be true that ownership needed no import — while
    * petmapping.txt was still a live file there was nowhere else for the pairs to be, and copying them would have put one
@@ -43,11 +44,13 @@ namespace EQLogParser
    *     old backup cannot age out an active player, and running the whole import twice changes nothing — which is what
    *     makes a run that dies halfway harmless: start it again and the rows land where they were going anyway.
    *
-   *   The SOURCE FILE IS LEFT ALONE. players.txt is still the live roster and still written on close until the commit
-   *     that retires it; archiving it here would leave an operator with `players.imported.txt` AND a fresh players.txt by
-   *     the end of the same session, i.e. two files that look like one migration and one rollback and are actually both
-   *     in-flight. The rename belongs to that retirement commit, beside the deletion of the code that writes the file
-   *     (docs/DesignNotes.md → "The one-time roster import").
+   *   The SOURCE FILE IS LEFT ALONE — and it now stays alone forever. The retirement commit (2026-10-09) deleted the code that
+   *     wrote players.txt, so this import is the file's ONLY reader: read once per folder, never written, never renamed. The
+   *     archive-to-players.imported.txt step that used to be planned for that commit was dropped rather than done, because a
+   *     renamed file breaks the one rollback anyone needs (delete identity-priors.txt and the curated list imports again), and an
+   *     unread file the operator did not move is a worse surprise than an inert one they can still read. Both writers of the old
+   *     grammar are gone: PlayerRegistry no longer loads it, so no reader can drift from this one.
+   *     (docs/DesignNotes.md → "players.txt is a feed now").
    */
   internal static class RosterImport
   {

@@ -16,7 +16,7 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
 - **Zero warnings is the bar, and it is counted, not hoped for**: `dotnet build EQLogParser.sln -p:EnableWindowsTargeting=true --no-incremental --nologo 2>&1 | grep -cE ": (warning|error) [A-Z]+[0-9]+"` prints **0** before a commit
   (`--no-incremental` is load-bearing: MSBuild reports diagnostics only for projects it recompiles, so counting after `dotnet test` prints 0 about
   assemblies it never rebuilt — that is how an MSTEST0017 in a new test file shipped past a "clean" local count; docs/CodingStandards.md → "Build Warnings") (match diagnostics, not words — MSBuild's summary always contains `0 Warning(s)`). Nine CS8632s shipped once because a file in Core (project `Nullable=disable`) wrote `string?` without opening `#nullable enable annotations`; the whole fleet is one pragma, and it is why each new warning dies in its own commit (docs/CodingStandards.md → "Build Warnings", "Nullable Reference Types"). Nothing in this repo suppresses a warning (`#pragma warning disable`, `<NoWarn>`) — fixing the cause is the rule.
-- Tests: `dotnet test EQLogParser.Test/EQLogParser.Test.csproj` is the non-WPF suite (**1,908 passed / 15 env-gated skips**, plain `net10.0`, 2026-11 — the trim-moves-no-ordinal law, the once-per-doubling watermark and the ungrowable-empty-array floor are in that count). `EQLogParser.Wpf.Test` targets `net10.0-windows` and only
+- Tests: `dotnet test EQLogParser.Test/EQLogParser.Test.csproj` is the non-WPF suite (**1,917 passed / 15 env-gated skips**, plain `net10.0`, 2026-11 — the trim-moves-no-ordinal law, the once-per-doubling watermark and the ungrowable-empty-array floor are in that count). `EQLogParser.Wpf.Test` targets `net10.0-windows` and only
   runs on Windows; its total belongs to a Windows run rather than being quoted here (a `[TestMethod]` grep counts data-driven variants and is not an executed count) — add it to the headless number instead of trusting arithmetic. A Windows run that *loses* `Sta.Run` bodies rather than failing them is the failure mode to watch.
 - **Real-log corpus layout (local/, gitignored)**: `local/logs/live/` holds live-format captures; `local/logs/emu/` holds EMU-server captures (THJ/TSS/Heroes Forge shapes) that need the app's `EnableEmuParsing` behaviour. The env-gated real-log tests run them via **`EQLP_EMU=1`**, which sets `AppSettings.IsEmuParsingEnabled` for the duration of a `PipelineHarness` run (restored after — the flag is process-global and live-format logs misparse with it on). Without it an EMU capture parses with DamageLineParser's live grammar and silently loses the `(Owner: X)` / `scores a critical hit! (N)` shapes, so a parity run over `emu/` without the flag measures nothing. Timestamps are the same `[DDD MMM dd HH:mm:ss yyyy]` shape in both directories.
 
@@ -776,8 +776,8 @@ declare without `?`; add the directive only when the whole file is meant to hold
   raider" are two statements (`RemovingAPlayerKeepsItsPetMapping`); and a permanent "not one of ours" would arrive as a
   sixth dropdown word over `Set as NPC` — an assertion the rules can weigh — never as a silence that refuses evidence.
   Reasoning: docs/DesignNotes.md → "A veto nobody could switch on".
-- **Roster memory is the ledger's second lane; one import fills it, and `players.txt` stays live until the commit that stops
-  writing it.** `identity-priors.txt` carries per name both the rule verdict *and* "this application called this name one of
+- **Roster memory is the ledger's second lane; one import filled it, and `players.txt` has NO WRITER any more** (2026-10-09 —
+  docs/DesignNotes.md → "players.txt is a feed now"). `identity-priors.txt` carries per name both the rule verdict *and* "this application called this name one of
   ours" (`Ours`, plus the class it was seen casting) under the provenance word `Imported` — the code inside the file, which the
   Names pane renders as **Saved Roster** / *On the Saved Player Roster* (codes stay machine words; only what a person reads changed). Membership is **not** a verdict:
   Kind stays `Unknown`, `Record` can neither set nor upgrade the bit (a name on the list for a decade may be called Npc by
@@ -789,11 +789,13 @@ declare without `?`; add the directive only when the whole file is meant to hold
   restart every name's 200-day clock on the day it was copied), batches through ONE `FlushChanges()` instead of rewriting the
   ledger per row, **refuses a folder the loaded ledger does not answer for**, and **leaves the source file where it is** (its
   rename to `players.imported.txt` waits for the commit that deletes the writing code — archiving while the registry still
-  saves it leaves a stale archive and a live file of the same names inside one session). **The load order in MainWindow's
+  saves it leaves a stale archive and a live file of the same names inside one session) — and with the writer deleted, an edit to that
+  file now reaches nothing: removal is the 200-day dial and `ForgetRoster`, never a silent second import path. **The load order in MainWindow's
   per-server block is overrides → priors → import → `PlayerRegistry.Init`, and it is not cosmetic**: `IdentityPriorStore.Save()`
   files every row under the server name *it* holds, and the registry used to load first, so a switch would have written one
   server's raid into another folder (the same guard is re-checked inside the import and inside the seed). `PlayerRegistry.Init()`
-  then seeds from that lane after players.txt/petmapping.txt with `init: true` everywhere — **"a load is not a sighting"** is
+  then seeds from that lane after petmapping.txt (`players.txt` left that list with its writer — an already-imported folder reads nothing
+  from it) with `init: true` everywhere — **"a load is not a sighting"** is
   the law over all three files (`AddPetToPlayer` once ended with `AddVerifiedPet(pet)`, stamping **96.6 %** of petmapping.txt
   every startup so nothing could ever expire). `TryReadRosterLine` is the ONE reader of `Name[=<ticks>[,Class]]` — Init and
   the importer cannot drift about which lines are names — and the importer deliberately does **not** apply
@@ -803,8 +805,33 @@ declare without `?`; add the directive only when the whole file is meant to hold
   with its own file. Ask "is this one of ours?" through **`IdentityLookup.IsOneOfUs(name[, t])`** — operator override → the
   open session's timeline → memory (the roster lane and `PlayerRegistry`, its in-memory mirror) — never a store of its own;
   the frozen person words answer before any store via `PlayerRegistry.IsPersonWord`, and a live `Unknown` **falls through**
-  instead of answering no. Tests: `RosterImportTest`, `IdentityLookupTest`, `IdentityPriorStoreTest`. Numbers and reasoning:
-  docs/DesignNotes.md → "The one-time roster import", "A load is not a sighting".
+  instead of answering no — and `PlayerRegistry`'s roster state (`_verifiedPlayers`, still its own concurrent map for O(1) answers) is now a
+  **write-through mirror of that lane, not a store**: `Init` clears it and rebuilds it from `IdentityPriorStore.RosterEntries()` (players.txt
+  left `Init` with its writer), every addition calls `RememberInLedger` (a load passes `loading: true` and stamps nothing), a removal calls
+  `ForgetInLedger`, an operator class edit calls `SetRosterClass`, and the 30-second flush is `IdentityPriorStore.FlushChanges()` behind one
+  `_rosterDirty` bit. **`SaveRosterFile` and `ConfigUtil.SavePlayers` are deleted**, so `you=` auto, R17's drink, R19's eye,
+  `AddVerifiedPlayerByOperator` and an operator assigning a pet owner all reach the ledger through that mirror; the `you=` line records
+  membership and **still never a veto** (a name with no mapped character is refused).
+- **The file lost its writer, so the ledger's save path carries its expiry and its clock.** `IdentityPriorStore.Save` calls
+  `PruneRosterLocked` before serializing (the writer that used to age membership was players.txt's own 30-second flush): `StaleDays` forgets
+  on load **and** on flush, so an expired name leaves the FILE rather than sitting in it unread. **Every stamp in `identity-priors.txt` is
+  .NET-epoch seconds** — `DateUtil.ToDotNetSeconds(DateTime.Now)`, the reader every writer uses — so a fixture stamping
+  `DateTimeOffset.UtcNow.ToUnixTimeSeconds()` writes January 1970 and an expired roster row does not throw, it just stops being one of ours.
+  **A "same folder?" guard reads "both sides carry a name and they match", never `a != b`**: `ConfigUtil.ServerName` is a plain field that
+  is **null** until a log opens while the store keeps an empty string, and those two print identically without being `Equal` (this exact
+  comparison silently granted testimony across folders once; `PlayerRegistry.RememberInLedger` carries the shape for the same reason).
+- **R25-roster: the list testifies last, Strong, and only in the dark.** `ClassificationRules.ApplySavedRoster` claims Player at
+  `RuleStrength.Strong` (the tier of joining a raid, guild speech, a drink, a class-family cast — the operator asked for it "as strongly as
+  things like the class spell cast") under its own code, with three refusals: **only a name nothing placed** (it asks `IdentityAt(name, +∞)`,
+  the ANSWER rather than the claim list — the roster fills shadows, it never overwrites a sighting, and that is what makes Strong safe);
+  **only names in this capture's pool** (`facts.NameIndexOf`, which never interns — a curated list of hundreds must not add rows to a window
+  about fighters or move `StateStamp()`); **only the folder the capture belongs to**. It runs **after R7**, because memory may not feed
+  inference: an attacker concluded hostile from what this app remembered about its victim is "a guess that survives only because it was
+  written down". Absent from `WorthRemembering` (a restatement of membership is not something a later log might not answer again). The cell
+  reads **Roster Member** while the `Imported` provenance lane keeps **Saved Roster** — one word may not stand for two claims, and the
+  difference (membership vs membership *plus a vote*) is exactly what the Type column shows. Tests: `RosterMemoryClaimTest`,
+  `RosterImportTest`, `IdentityLookupTest`, `PlayerRegistryPersistenceTest`, `IdentityVocabularyTest`. Numbers and reasoning:
+  docs/DesignNotes.md → "players.txt is a feed now", "The one-time roster import", "A load is not a sighting".
 - **NPC means none of player, pet, mercenary, and a positive pet claim outranks `Targeted (NPC)`** (2026-11): the frame's verdict asserts
   only *"not a player"* — it prints NPC for a wolf named Fred exactly as for a skeleton — so it may not outvote an uncontradicted
   **positive** claim. **R24-petslot**: when a damage line's spell carries `Target = Pet(14)/Pet2(38)` in the spell data, the DEFENDER is

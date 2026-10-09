@@ -244,17 +244,6 @@ namespace EQLogParser
     }
 
     // pass server name to avoid issue where it was changed before save completes
-    internal static void SavePlayers(List<string> list, string serverName)
-    {
-      if (string.IsNullOrEmpty(serverName) || string.IsNullOrEmpty(ConfigDir))
-        return;
-
-      var playerDir = Path.Combine(ConfigDir ?? "", serverName);
-      Directory.CreateDirectory(playerDir);
-      SaveList(Path.Combine(playerDir, PlayersFile), list);
-    }
-
-    // pass server name to avoid issue where it was changed before save completes
     internal static void SavePetMapping(List<KeyValuePair<string, string>> list, string serverName)
     {
       if (string.IsNullOrEmpty(serverName) || string.IsNullOrEmpty(ConfigDir))

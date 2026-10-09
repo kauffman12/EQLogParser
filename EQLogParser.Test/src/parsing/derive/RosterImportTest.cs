@@ -149,7 +149,12 @@ public class RosterImportTest
   [TestMethod]
   public void AJunkLineIsRefusedAndTheGoodRowsStillArrive()
   {
-    WritePlayersFile(["Unknown", "!!Goruuk", string.Empty, "   ", "Goruuk", "Akini, Xanathan=123"]);
+    /*
+     * "=0" is the hand-typed shape: a statement nobody ever saw do anything, which no dial retires. A NONZERO stamp is an observation
+     * and ages — PlayerRegistryPersistenceTest pins that — so the 123 this fixture used to carry (January 1970) was expired membership
+     * that the next flush correctly threw away once Save() aged the roster lane itself.
+     */
+    WritePlayersFile(["Unknown", "!!Goruuk", string.Empty, "   ", "Goruuk", "Akini, Xanathan=0"]);
 
     var result = RosterImport.ImportPlayersFileOnce(Server);
 

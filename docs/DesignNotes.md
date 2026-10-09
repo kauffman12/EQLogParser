@@ -10351,3 +10351,90 @@ bool (Type and Class popups each close on their own gesture), `Abandon()` on cap
 log never paints over the one that is open. Same family as `FightTable`'s `_settle.MenuOpen`: **a gesture in progress blocks
 presentation work, and the block must be released exactly once** — a latched hold is the "the pane stopped updating" bug again, hence
 the tests for stray closes, intermediate closes and abandon-then-live-again.
+
+## players.txt is a feed now
+
+2026-10-09. The file stopped being written, and its value moved into the rules. The operator's question came from running the app
+with every classification file deleted: *"I decided to test without any existing classification... but when I started running in data
+somehow it created and added to the players.txt. I thought we only did the one time import and stopped using that file?"* — they were
+right about the plan, and the plan had a hole in it.
+
+**What was actually true before this commit.** `RosterImport` read players.txt once per folder into `identity-priors.txt`'s roster
+lane, as designed; but `PlayerRegistry.Init` still loaded that same file into `_verifiedPlayers`, `SaveRosterFile` still rewrote it on
+a 30-second timer and at log close, and every recognition path (`AddVerifiedPlayer`, the `you=` line, R17's drink, R19's eye, an
+operator assigning a pet owner) still wrote INTO the in-memory copy that those timers serialized. So a capture that saw a name loot a
+body produced a players.txt row — the file was being maintained as live storage beside a ledger that already held the same statement
+plus the class the file had nowhere to put. Redundant storage that keeps being maintained is exactly what two sources of truth start
+as.
+
+**The two answers the operator chose**, in their own shape: *"I think I prefer 2. Basically if I'm making a manual decision I'd like to
+remove all previous knowledge and accept what I'm saying"* (that part landed in the previous commit — see "A manual verdict deletes the
+name from every memory it can reach"), and on the roster: weigh it *"as strongly as things like the class spell cast, then if it ends up
+being the wrong classification it would just not work, which is better than if there's a problem with what it's doing players would be
+stuck with it."* That sentence is the whole design: **believe the list, but never let it outvote a sighting** — an old file that cannot
+be argued with must at least be unable to strand a name.
+
+### R25-roster: the list testifies, last and only in the dark
+
+`ClassificationRules.ApplySavedRoster` is the pass's final stage. For a name on this application's roster it claims **Player at
+`RuleStrength.Strong`** — the tier of joining a raid, guild speech, taking a drink, casting a class family — under its own code, so
+the hover says which list spoke. Three refusals, each one load-bearing:
+
+- **Only a name NOTHING PLACED.** The stage asks `IdentityAt(name, +∞)` — the *answer*, not the claim list — and skips anything a rule
+  already put somewhere. A curated list may fill shadows; it may not overwrite something this capture watched. This is what makes
+  Strong safe: the whole population is names whose alternative was Unknown (the measured cold misses — names living only in tells,
+  achievement pings and buff lines, where 107 of 136 roster misses have no evidence of any kind).
+- **Pool gated.** `facts.NameIndexOf(name) >= 0`, a lookup that never interns. A curated list runs to hundreds of names and a night
+  fights a fraction of them; claiming the rest would add rows to a window about fighters and move `StateStamp()` on every first-time
+  sighting, buying a full rebuild over verdicts no board reads. The same law R21's cast-name feed learned on, for the same reason.
+- **Another server's ledger never speaks** — and see the guard shape below, because this one nearly silently did the opposite.
+
+It runs *after* R7 on purpose: memory must not feed inference. If the roster spoke first, an attacker that hit a saved name would be
+concluded hostile out of this application's own list rather than out of the capture — "a guess that survives only because it was
+written down". It is absent from `WorthRemembering` for the same reason in the other direction: a restatement of membership is not
+something "a later log might not answer again", and recording it would let the list's word come back tomorrow wearing a rule's.
+
+The cell reads **Roster Member** while the ledger's provenance lane keeps reading **Saved Roster**, because `EveryRuleWordHasAWordWorthPrinting`
+refuses one word standing for two claims — and the two claims differ precisely in the thing the Type column shows: one is membership,
+the other is membership *plus a vote*.
+
+### The registry's roster map is now a write-through mirror; the ledger is the store
+
+`PlayerRegistry._verifiedPlayers` keeps its shape — a concurrent dictionary answering `IsVerifiedPlayer`/`GetVerifiedPlayers` in a lookup,
+which the parse paths and the Verified Players grid bind to — but it stopped being a store of its own. `Init` clears it and rebuilds it from
+`IdentityPriorStore.RosterEntries()`; every addition calls `RememberInLedger` (with `loading: true` on a load, which stamps nothing); a
+removal calls `ForgetInLedger`; an operator's class edit goes to `SetRosterClass`. The 30-second tick now has one thing to flush —
+`IdentityPriorStore.FlushChanges()` behind a single `_rosterDirty` bit. Every writer keeps membership and class on the same ledger row:
+
+- the `you=` line records membership for the real name (`persist: false`, flushed by the periodic save) and **still never records a
+  veto** — that law survived from the day `!You` poisoned the identity list;
+- an operator assigning a pet owner records *the owner* as roster (not the pet — `AddPetToPlayer` says nothing about what the summoned
+  thing is);
+- `SaveRosterFile()`, its timer and its log-close call are **deleted**, along with `ConfigUtil.SavePlayers`. The file has no writer.
+
+`PruneRosterLocked` moved onto the save path (`IdentityPriorStore.Save`), because the writer that used to age membership was
+players.txt's own 30-second flush and that writer is gone: a flush now ages against `PlayerRegistry.StaleDays` (200) before serializing,
+so an expired name leaves the FILE rather than sitting in it unread. Init still prunes on load, so membership ages while nobody is
+looking too.
+
+### Two traps this moved onto the surface
+
+**The ledger's clock is .NET-epoch seconds, not Unix.** Every stamp in that file is `DateUtil.ToDotNetSeconds(DateTime.Now)` — what
+`AddVerifiedPlayerByOperator`, the roster import and `Record` all write, and what the prune compares against. Five fixtures stamped
+`DateTimeOffset.UtcNow.ToUnixTimeSeconds()` instead; in the store's eyes those rows were dated January 1970, and once a flush aged the
+roster lane they started *disappearing* — not as an error, but as a name that quietly stops being one of ours. A stamp is a claim about
+a clock, and this file has exactly one.
+
+**`ConfigUtil.ServerName` is a plain field that is null until a log opens, while `IdentityPriorStore` keeps an empty string.** They print
+identically and are not `Equal`. The "same folder?" guard in the rule is therefore written as *"both sides carry a name and they match"*
+rather than as `a != b`, which silently refuses testimony in one direction and — inverted — silently grants it to a folder the capture
+does not belong to. (`PlayerRegistry.RememberInLedger` carries the same shape for the same reason.)
+
+### What an operator can still do with players.txt
+
+Nothing, from here on: the import is once-per-folder and those folders already carry their roster rows, so an edit to the old file does
+not reach the app. Removal is what the 200-day dial and `ForgetRoster` are for; a hand-edit reaching a live ledger would be a *second*
+import path, and two paths into one list is what this commit removed. If that becomes wanted it arrives as an explicit action over a
+named file — never as a silent reload of a file the app no longer owns. What is NOT in doubt: deleting players.txt changes nothing for a
+folder already imported, and the `players.imported.txt` archive rename is still not performed, because the file on disk is now inert
+history rather than a store mid-migration.

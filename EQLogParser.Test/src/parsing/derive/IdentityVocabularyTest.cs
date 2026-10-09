@@ -57,6 +57,13 @@ public class IdentityVocabularyTest
     "R24-petslot",
 
     /*
+     * This application's own saved roster, testifying as a rule (R25). It is the one claim in the book that comes from memory
+     * rather than from the capture, which is why it runs LAST and only over names nothing placed
+     * (docs/DesignNotes.md -> "players.txt is a feed now").
+     */
+    "R25-roster",
+
+    /*
      * Not a rule, and it cannot come out of a fixture: PipelineHarness clears PlayerRegistry, so nothing in any test
      * seeds from it. That blind spot is how "RegistrySeed" was printable as a verdict word — the corpus guard below walks
      * real rows from a COLD registry and never sees it. It belongs in this list so the vocabulary tests hold it: a row

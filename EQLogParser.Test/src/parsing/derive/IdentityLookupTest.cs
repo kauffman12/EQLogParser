@@ -59,9 +59,13 @@ public class IdentityLookupTest
     try { if (Directory.Exists(_root)) Directory.Delete(_root, true); } catch (IOException) { }
   }
 
-  // Now, in the ledger's own clock: the roster retires against the wall clock, so a roster row written by a test is
-  // "seen this second" and cannot be aged out by whatever the machine's clock says.
-  private static long NowS() => ((DateTimeOffset) DateTime.UtcNow).ToUnixTimeSeconds();
+  /*
+   * Now, in the ledger's OWN clock. `PruneRosterLocked` ages membership against DateUtil.ToDotNetSeconds(DateTime.Now) — the same
+   * reader every production writer uses (PlayerRegistry.AddVerifiedPlayerByOperator and the roster import) — so a fixture stamping
+   * Unix seconds is a row from 1970 in the store's eyes, which expired membership throws away on the next flush. That is how the
+   * epoch mismatch reads: not as an error, but as a name that quietly stops being one of ours.
+   */
+  private static long NowS() => (long)DateUtil.ToDotNetSeconds(DateTime.Now);
 
   private static void Watch(string name, IdentityKind kind) =>
     IdentityLookup.LiveVerdict = (n, _) => string.Equals(n, name, StringComparison.OrdinalIgnoreCase) ? kind : IdentityKind.Unknown;
@@ -79,7 +83,7 @@ public class IdentityLookupTest
   {
     var timeline = new EntityTimeline();
     timeline.SetIdentity(name, kind, RuleStrength.Certain, "R7-graph");
-    IdentityPriorStore.Instance.Record(timeline, [name], ((DateTimeOffset) DateTime.UtcNow).ToUnixTimeSeconds());
+    IdentityPriorStore.Instance.Record(timeline, [name], NowS());
   }
 
   [TestMethod]

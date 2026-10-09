@@ -232,6 +232,13 @@ internal static class IdentityVocabulary
     ["R7-graph"] = 60, ["R7-side"] = 60,
     ["R6-npcdb"] = 50, ["R14-shape"] = 50, ["R16-comma"] = 50, ["R23-loot"] = 50,
     ["R21-spellshape"] = 50, ["R21-spellcast"] = 50, ["R21-spelleffect"] = 50,
+    /*
+     * R25-roster sits with the memory lanes rather than with the behaviour rules its STRENGTH matches, and the two axes are
+     * deliberately not the same number: strength says how much this claim outweighs other claims about what a name IS, rank says how
+     * much weight a ten-line hover gives it — and "we wrote this name down years ago" is the weakest thing this application can say
+     * about a name, even when it is the only thing it can say. Where a capture has its own proof, that line goes first.
+     */
+    ["R25-roster"] = 20,
     ["RegistrySeed"] = 20, [IdentityPriorStore.RosterReason] = 20, [IdentityPriorStore.OwnerReason] = 20,
   };
 
@@ -332,6 +339,13 @@ internal static class IdentityVocabulary
     // pet and the claim that it was ever a pet.
     if (code == IdentityPriorStore.OwnerReason)
       return "On the Saved Pet Map";
+
+    /*
+     * R25: the roster lane speaking as a RULE rather than riding along as provenance — same source, same sentence, because the
+     * honest description of the proof did not change when it gained a vote (docs/DesignNotes.md → "players.txt is a feed now").
+     */
+    if (code == "R25-roster")
+      return "On the Saved Player Roster";
 
     var text = code switch
     {
@@ -546,6 +560,13 @@ internal static class IdentityVocabulary
      * "Imported" echoing as "Imported" would read as a bug report rather than as where the name came from.
      */
     [IdentityPriorStore.RosterReason] = "Saved Roster",
+
+    /*
+     * R25: the roster lane speaking with a VOTE. It cannot read "Saved Roster" like the `Imported` provenance row beside it — that
+     * word already stands for membership alone, and EveryRuleWordHasAWordWorthPrinting refuses one cell standing for two claims (a
+     * reader comparing rows would lose the difference this cell exists to show: here the list also DECIDED the Type column).
+     */
+    ["R25-roster"] = "Roster Member",
 
     /*
      * The ledger's ownership lane, and the same argument as the row above: no fixture writes it, so the corpus run beside
