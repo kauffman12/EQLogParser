@@ -9717,3 +9717,98 @@ probe runs, so the cost side of the experiment is visible too.
   and is valid only while the table instance is unchanged), which is a validity rule rather than learning — so carry-and-invalidate above is a damage-side
   decision. Healing's cost sits in per-record window accumulation, which is what Phase A removed and what a cell cache would shorten by skipping whole
   windows rather than by remembering names.
+
+## A capacity hint belongs to the door that reads, and the door that read nothing was holding 196 MB (2026-10)
+
+The second Windows field run (`PerfReport=True`, `PerfEnabled=True`, capture `eqlog_Kizant_xegony-09-03-26.txt`) printed one
+line one second after startup that decided a whole piece of work:
+
+```
+heap: ws=586.9 MB heap=358.3 MB pause 0.0 ms | gc 0/0/0 | facts rows=0 slack=127.0 MB heals rows=0 slack=69.1 MB
+      | names=0 | row arrays est=196.1 MB | over 0s
+```
+
+**Zero facts captured, 196 MB of row slots reserved.** The heap ledger (**B11**) existed for exactly one day at that point and
+this is the bug it was built to make visible: nothing about it could have been found by reading the code, because the code
+that reserved the memory reads as an optimization.
+
+`MainWindow.OpenLogFile` sized a session's fact arrays with `lastMins > 0 ? 0 : LogReader.FileSizeOrZero(theFile)`, and its own
+comment explained that a "last N minutes" open reads an unknown slice so it gets no hint. The comment is right about `FactCapacity`
+and wrong about the world: `LogReader`'s `minBack` has **three** states, and the value falling into the hinted branch was the one
+that reads nothing at all.
+
+| `minBack` | what `ReadFileAsync` does | who uses it | hint before | hint now |
+|---|---|---|---|---|
+| `< 0` (menu default `-1`) | reads from byte 0 | recent-file menu | file size ✓ | file size |
+| `> 0` (`minutes × 60`) | seeks back by timestamp, unknown slice | "last N minutes" items | none ✓ | none |
+| `0` | **`_fs.Seek(0, SeekOrigin.End)`** and follows | startup auto-monitor, File / Open Monitor, Clear All | **file size ✗** | **none** |
+
+And the reservation is not transient. `CombatCapture.CompactRows` — the once-per-doubling trim that handed 54 MB back at EOF in
+the same run — runs *from the pass that classified*, and a capture that never grows schedules no pass: `DeriveCadence` answers
+`None` when nothing new arrived since the last pass of either lane. So an idle monitor session, which is what this app looks
+like overnight, held ~196 MB to store nothing, on the theory that it was going to read a gigabyte.
+
+`FactCapacity.HintForOpen(minBack, fileBytes)` is the decision now (Core, so it is testable at all three states), with
+`FactCapacity.ModeWord(minBack)` printing which of the three an open chose — `whole-file`, `follow-end`, `last-15min`. Two tests
+hold both directions: `OnlyAWholeFileOpenIsSizedFromTheFile` (including the words, because the log line is how a field run
+diagnoses a session) and `AMonitorOpenReservesNoRowArraysForFactsItWillNeverRead`, which asserts the monitor's reservation under
+3 MB **and** that the whole-file reservation is more than 50× it — so restoring the old condition fails by name rather than
+quietly printing 196 again. A whole-file open's hint is unchanged byte-for-byte, still held by the two-capture density tests.
+
+The law this leaves behind is narrower than "estimates are bad": **a hint may only be sized from the bytes this session will
+actually append facts from.** Being wrong is allowed (growth still doubles, and overshoot is reclaimed at quiet time); being
+about a different open than the one you are sizing is not, because the modes are three and a two-way test silently picks the
+worst one.
+
+## What 951 MB actually retains, printed rather than inferred (2026-10)
+
+The same run, at rest after the load:
+
+```
+heap: ws=1242.7 MB heap=655.8 MB pause 4278.4 ms | gc 1376/365/12 | facts rows=4,832,103 slack=0.0 MB
+      heals rows=2,670,809 slack=0.0 MB | names=410 | row arrays est=183.4 MB | over 30s
+```
+
+- **`slack=0.0` on both streams** — the trim ran at EOF, as designed (`gc.tidy log loaded` had just taken heap 1,218.8 → 655.8 MB,
+  and its own `STOP-THE-WORLD 609 ms` line named itself and attributed 562 of those 609 ms: instrumentation confessing is better
+  than a mystery freeze).
+- **Rows are 183 MB of a 656 MB heap.** §"The Windows field run" wrote "~330 MB is not rows" as an inference from a gcdump; on this
+  (bigger) capture the gap is ~472 MB, and a subtraction still is not an answer. So `RecordsStore` grew two counters and the heap
+  line grew one term: **`kept casts=N timed records=N`**. The counters ride `Interlocked.Increment` on the paths that already lock
+  (cast index, timed-record add) and are zeroed by `Clear`, because both describe the *open* capture — a counter surviving a session
+  change would print last night's raid beside tonight's working set. `TheHeapLedgerCountersFollowWhatTheStoreKeeps` pins one entry
+  per cast rather than per name, and zeroes after Clear. This **reverses** the note written when the ledger shipped ("inventing
+  counters on a store that is itself the B2 target is backwards"): the reversal is honest — B2 cannot be *planned* without knowing
+  whether its 472 MB is cast history or timed records, and two increments on existing lock paths is the cheapest possible way to ask.
+- **`ws=` is not `heap=`.** After returning 563 MB of heap the working set stayed at ~1,240 MB: freed inside the process, not yet
+  taken back by the OS. Read `heap=` for what the code retains; `ws=` only for what the machine feels. Two compactions that move
+  neither are normal and mean nothing went wrong.
+
+**One announce per gesture, confirmed.** Select All printed one `board ask [SelectCommand] select all: 708 fight(s), stamp … ->
+Started`, followed by exactly three builds — `#2 damage full 1921 ms`, `#3 tanking full 54 ms`, `#4 healing full 1434 ms` — and
+`boards.build 4867 ms`. The only other damage build in the run was `#1 damage re-slice: 1 ms | from damage pane options [pane
+shown, no prior build]`, which is a pane being shown before any rows existed. That line is the *Name every door* law doing its
+job: without `Source` on the options this would have read as "the phantom second build came back", which was a defect we believed
+fixed. **B4's remaining half is unchanged**: an in-flight build is not aborted by a newer question — coalescing shipped, cancellation did not.
+
+**What one click costs, ranked (this is the cell-cache tuning input, Phase B):** `boards.materialize 1452 ms` → damage
+`walk 1620 / groups 275 / totals 22 / window 2 / present 1` → healing `window 934 / walk 485 / totals 14` over **2,647,774**
+materialized heals → tanking `54 ms`. So the damage **walk** is the whale (a cache attacks exactly this), healing's `window`
+stage is second and it is *accumulation, not searching* — B5's finding reproduced at a fifth of the scale — and materializing
+is third. Live-tail chunk sizes are still unmeasured (this capture had no live traffic to tail), so the reuse gate stays a
+threshold nobody has tuned rather than a number with evidence.
+
+**And then the chart.** `chart.update 1885 ms | DamageChart UPDATE | walked 4,660,915 records -> 5 lines, 36,163 points |
+budget 300 ms` — **6.1× its own budget**, to produce five series, running on the UI thread directly after the 4,867 ms of boards.
+One select-all is therefore ~6.7 s of frozen window and the chart is its last third. It already carries a budget concept, so the
+shape of the fix is agreed in principle (bucket-aggregate alongside the walk the boards already do, or cache bucket series under
+the same `cells == plain walk` assertion any cache gets); it is filed as **B13** rather than done here because it is its own
+surface and this session's shared-path changes were already three deep.
+
+**Read loops: three, sessions: two.** The ordinal shipped with the first run's question answered — `#1` beside the auto-open's
+`capture: started`, `#3` beside the hand open — but `#2` arrived 1.8 s after `#1` with **no session lines near it**, which is the
+same shape §"The Windows field run" refused to explain. An ordinal says *how many*, not *who asked*, so both lines now carry the
+door: `OpenLogFile(file, lastMins, origin)` threads a word from each caller (`startup auto-monitor`, `recent-file menu`,
+`clear all`) into `capture: started (…) follow-end from startup auto-monitor | sized-from=0 MB` and into
+`load: read loop #2 … | <file> | follow-end from <door>`. If a future run prints a loop whose origin nobody recognizes, the
+word is the whole answer; if it prints two loops from one door, that door is the bug — and either way nobody has to guess again.

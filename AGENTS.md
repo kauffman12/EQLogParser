@@ -887,6 +887,23 @@ declare without `?`; add the directive only when the whole file is meant to hold
   shrinks with it, and that is the revisit trigger's input, so it now says what the session holds rather than what it once
   reserved. Cost **34.9 ms** one-time, retained **397.2 → 342.6 MB (−13.8 %)**; numbers, the floor's reasoning and the
   `-l "console;verbosity=detailed"` probe recipe: docs/DesignNotes.md → "The slots a finished load stopped writing".
+- **A capacity hint belongs to the door that reads, and `minBack` has THREE states** (2026-10, found by the heap ledger's first
+  field run): `LogReader`'s `minBack` is negative = read from byte 0, positive = seek back N **seconds** by timestamp,
+  **zero = `Seek(0, End)` and follow — auto-monitor, File / Open Monitor, Clear All**. `MainWindow.OpenLogFile` sized the session's
+  fact arrays with `lastMins > 0 ? 0 : FileSizeOrZero(theFile)`, so the one mode that captures nothing precommitted the whole file:
+  **`facts rows=0 … row arrays est=196.1 MB`** on an idle monitor, and nothing hands it back — `CompactRows` runs from the pass that
+  classified and `DeriveCadence` answers `None` when no facts arrive, so an overnight idle session held ~196 MB to store nothing (it
+  was the app's most memory-hungry session while doing nothing). Now `FactCapacity.HintForOpen(minBack, fileBytes)` hints only
+  `minBack < 0`, and `ModeWord` prints `whole-file`/`follow-end`/`last-15min` on `capture: started (…) from <door> | sized-from=N MB`
+  (the door word rides down into `load: read loop #N … | <file> | <mode> from <door>` because a run showed three loops beside two
+  sessions and an ordinal cannot say who asked). Two tests hold both directions, one asserting the monitor's reservation under 3 MB
+  **and** the whole-file one >50× it, so restoring the old condition fails by name; a whole-file open's hint is unchanged. The law:
+  **a hint may only be sized from bytes this session will append facts from** — being wrong is fine (doubling still works, quiet
+  compaction reclaims overshoot), being about another open than the one you are sizing silently picks the worst of three modes.
+  The same run printed the B2 prize (`heap=655.8 MB` vs `row arrays est=183.4 MB`) so `heap:` now also carries
+  `kept casts=N timed records=N` from two `RecordsStore` counters kept on add; and remember **`ws=` is not `heap=`** — a tidy returned
+  563 MB of heap while the working set stayed ~590 MB higher, pages the OS has not taken back. docs/DesignNotes.md → "A capacity hint
+  belongs to the door that reads" / "What 951 MB actually retains, printed rather than inferred".
 - **Healing is a second fact table, never extra columns on the damage one**: `HealFactTable` shares the damage table's name
   pool and its sequence counter (`IFactTable.NextSeq()`), and nothing else. One array of the union (42 B) sat **57 % full of
   zeros** at capacity — measured with a temporary probe, not estimated — because each side's tail fields are words the other's
