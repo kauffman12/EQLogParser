@@ -1228,6 +1228,8 @@ internal static class NagUtil
           triggerData.VariableActions = [];
           triggerData.EndTimerClearVariables = null;
           triggerData.RepeatedResetTime = 0.75; // model default — no counter on this node
+          triggerData.RepeatedResetSlides = false; // with the window restored, its anchor policy is restored too: a node that never counted
+          // has no NAG idle semantics to inherit, and leaving the flag set would leave this row answering differently from its neighbours.
         }
 
         // Assign the pattern for this phrase
@@ -2112,6 +2114,11 @@ internal static class NagUtil
     if (repeatedResetTime > 0)
     {
       triggerData.RepeatedResetTime = repeatedResetTime;
+
+      // A node that carried a NAG counter duration ALSO carries its anchor policy, and NAG's is the sliding one: the same field the comment
+      // above documents as an "idle-reset window" is only idle if each match moves the deadline. An EQLP-native trigger keeps the fixed
+      // default (its files predate the choice); an imported one imports the semantics it was written under, not just the number.
+      triggerData.RepeatedResetSlides = true;
     }
 
     return new ParsedActions

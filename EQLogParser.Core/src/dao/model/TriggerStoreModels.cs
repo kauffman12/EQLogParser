@@ -96,6 +96,11 @@ namespace EQLogParser
     public bool TimerNameDynamic { get; set; } = true;
     public string Comments { get; set; }
     public double RepeatedResetTime { get; set; } = 0.75;
+    // Does the reset window above slide with each match? True: every fire pushes the deadline out another RepeatedResetTime seconds, so
+    // traffic that keeps arriving keeps counting and only a gap LONGER than the window restarts at 1 - how GINA counted, and what NAG calls
+    // an idle-reset window. False pins the window to the first match of the epoch, which is how counting has always worked here, so the
+    // default leaves every existing trigger answering exactly what it answered before this existed. Rule: RepeatedWindowRule.
+    public bool RepeatedResetSlides { get; set; }
     public double DurationSeconds { get; set; } = 0.2;
     public bool EnableTimer { get; set; }
     public int TimerType { get; set; }

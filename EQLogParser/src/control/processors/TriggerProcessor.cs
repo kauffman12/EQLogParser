@@ -1762,16 +1762,21 @@ namespace EQLogParser
           {
             if (displayTimes.TryGetValue(displayValue, out var repeatedData))
             {
-              var diff = (beginTicks - repeatedData.CountTicks) / TimeSpan.TicksPerSecond;
-              if (diff > wrapper.TriggerData.RepeatedResetTime)
-              {
-                repeatedData.Count = 1;
-                repeatedData.CountTicks = beginTicks;
-              }
-              else
-              {
-                repeatedData.Count++;
-              }
+              /*
+               * One step of the repeat window, decided in Core where a test can pin it without a window (`RepeatedWindowRule`). The two
+               * policies differ by one assignment and nothing else: FIXED pins the deadline to the first fire of the epoch (how EQLP always
+               * counted, so existing triggers are untouched), SLIDING moves it on every fire, which is how GINA counted and what makes a
+               * window an idle timeout - a grind that fires every few seconds then counts upward forever instead of restarting once per hour.
+               *
+               * Whatever this chooses applies to everything the method serves, because they share it by design: {counter}, {repeated}, repeated
+               * timer names, repeated speech, and EndEarlyRepeatedCount, which reads the counter store rather than keeping its own. A trigger
+               * that wants one policy for `{counter}` and another for the rest would need this split per store; the checkbox is per trigger.
+               */
+              var step = RepeatedWindowRule.Next(repeatedData.Count, repeatedData.CountTicks, beginTicks,
+                wrapper.TriggerData.RepeatedResetTime, wrapper.TriggerData.RepeatedResetSlides);
+
+              repeatedData.Count = step.Count;
+              repeatedData.CountTicks = step.AnchorTicks;
 
               repeatedCount = repeatedData.Count;
             }

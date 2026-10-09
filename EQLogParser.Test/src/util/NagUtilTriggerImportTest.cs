@@ -377,6 +377,9 @@ namespace EQLogParser
       Assert.HasCount(1, nodes);
       Assert.IsFalse(nodes[0].TriggerData.EnableTimer, "NAG counters do not create a visible timer");
       Assert.AreEqual(300.0, nodes[0].TriggerData.RepeatedResetTime);
+      // The window comes with its anchor policy: NAG's field is documented above as an IDLE reset, and "idle" is only true if each match
+      // moves the deadline. Carrying the number alone would import a counter that restarts once per window while the player keeps counting.
+      Assert.IsTrue(nodes[0].TriggerData.RepeatedResetSlides, "an imported idle-reset window slides; see RepeatedWindowRule");
       Assert.AreEqual("Physical", nodes[0].TriggerData.TextToDisplay);
       var step = nodes[0].TriggerData.VariableActions.FirstOrDefault();
       Assert.IsNotNull(step);
@@ -2566,8 +2569,9 @@ namespace EQLogParser
       var counterNode = nodes[0];
       // NAG counters are invisible tallies — the import must NOT create a visible timer.
       Assert.IsFalse(counterNode.TriggerData.EnableTimer, "NAG counters have no visible timer component");
-      // The NAG duration is an idle-reset window, mapped to RepeatedResetTime (not DurationSeconds)
+      // The NAG duration is an idle-reset window, mapped to RepeatedResetTime (not DurationSeconds) - and the sliding anchor comes with it.
       Assert.AreEqual(300.0, counterNode.TriggerData.RepeatedResetTime);
+      Assert.IsTrue(counterNode.TriggerData.RepeatedResetSlides, "the counter node imports NAG's idle (sliding) anchor");
       Assert.AreEqual("Physical", counterNode.TriggerData.TextToDisplay);
       // ConvertColor converts #RRGGBB → #AARRGGBB (FF = full opacity) for EQLP format
       Assert.AreEqual("#FFb71c1c", counterNode.TriggerData.ActiveColor);
@@ -2588,6 +2592,9 @@ namespace EQLogParser
 
       // Reset phrase trigger (from "^Your bones are no longer brittle.")
       var resetNode = nodes[1];
+      // A phrase node that carries no counter of its own is restored to the model defaults (window AND anchor), so it does not inherit an
+      // idle policy it has nothing to apply: the flag belongs to the trigger that counts, not to the capture that emitted it.
+      Assert.IsFalse(resetNode.TriggerData.RepeatedResetSlides, "a node with no counter has no sliding window to inherit");
       Assert.Contains("Counter Reset", resetNode.Name, $"Reset trigger name should contain 'Counter Reset': {resetNode.Name}");
       Assert.AreEqual("^Your bones are no longer brittle\\.", resetNode.TriggerData.Pattern);
       Assert.IsTrue(resetNode.TriggerData.UseRegex);

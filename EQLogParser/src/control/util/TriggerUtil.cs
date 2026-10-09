@@ -310,6 +310,7 @@ namespace EQLogParser
         toTrigger.ResetDurationSeconds = fromTrigger.ResetDurationSeconds;
         toTrigger.Priority = fromTrigger.Priority;
         toTrigger.RepeatedResetTime = fromTrigger.RepeatedResetTime;
+        toTrigger.RepeatedResetSlides = fromTrigger.RepeatedResetSlides;
         toTrigger.LockoutTime = fromTrigger.LockoutTime;
         toTrigger.EnableTimer = fromTrigger.EnableTimer;
         toTrigger.SelectedOverlays = fromTrigger.SelectedOverlays is { Count: > 0 } srcOverlays
