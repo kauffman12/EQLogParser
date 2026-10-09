@@ -201,7 +201,11 @@ namespace EQLogParser
        * Selecting rows in the fight list rebuilds the DAMAGE summary from the engine's own facts. One board
        * on purpose (see FightTable.DerivedSelectionChanged).
        */
-      if (npcWindow?.Content is FightTable fightTable) fightTable.DerivedSelectionChanged += DerivedSelectionChanged;
+      if (npcWindow?.Content is FightTable fightTable)
+      {
+        fightTable.DerivedSelectionChanged += DerivedSelectionChanged;
+        _fightPane = fightTable;
+      }
 
       // upgrade
       if (ConfigUtil.IfSet("TriggersWatchForGINA"))
@@ -824,10 +828,22 @@ namespace EQLogParser
      * An empty selection still reaches the builders: zero npcs is how they are told to clear their boards, which
      * is what the legacy list does with an empty selection too.
      */
+    /// <summary>
+    /// The fight list pane as a plain reference, so the board build can ask it to watch its rows. Getting it means reading
+    /// <c>npcWindow.Content</c>, and that is a DependencyObject read: the same law the tanking filter below obeys — nothing
+    /// on the summary gate's worker thread walks the dock site. Assign ON THE UI THREAD only. (The first version read
+    /// <c>.Content</c> inside the build, threw InvalidOperationException there, and NO board shipped — "selection worked but
+    /// nothing ever built".)
+    /// </summary>
+    private FightTable _fightPane;
+
     private void DerivedSelectionChanged(BoardRequest request)
     {
       var session = _engine;
       if (session is null) return;
+
+      // Re-read the pane while still on the UI thread: another open could have replaced it.
+      if (npcWindow?.Content is FightTable pane) _fightPane = pane;
 
       /*
        * Read the tanking board's NPC filter off the open window BEFORE leaving the UI thread - the dock site is
@@ -888,6 +904,7 @@ namespace EQLogParser
     {
       var buildSpan = PerfCounters.Begin(BoardBuildId);
       var waitedMs = StatsBuildTrace.ElapsedSince(askedAt);
+      SummaryInput input = null;
 
       /*
        * The door label every builder prints (StatsBuildTrace). It carries the reason and the content stamp so two lines can be compared:
@@ -901,43 +918,8 @@ namespace EQLogParser
       try
       {
         var materializeSpan = PerfCounters.Begin(BoardMaterializeId);
-        var input = session.BuildSummaryInput(request.Fights);
+        input = session.BuildSummaryInput(request.Fights);
         var materializeMs = PerfCounters.End(materializeSpan);
-
-        /*
-         * What this build put on screen, so a later derive pass can ask the ONLY question that entitles it to rebuild them: did any of
-         * these names change what it IS? New damage never qualifies (the operator's rule, 2026-10-08 - "id rather it be like a snapshot of
-         * what was selected at the time except for the pet changes or player turning npc"), and IdentityWatch measures why the scope has to
-         * be names rather than the identity digest: replaying a capture as growing prefixes moved the digest on 6 of 6 passes while flipping
-         * ZERO verdicts, every move being a name seen for the first time. Digest-gating would have rebuilt once per pass and looked exactly
-         * like the flicker this replaces.
-         *
-         * The walk is over records this build already materialized (one field read plus a hash-set add each; ~50 ms on a whole-capture
-         * select-all that costs seconds anyway, and builds are now rare by design). The set is deliberately a little wider than the grid's
-         * own rows: a name involved in the selection flipping is worth a rebuild even if the grid folds it under `X +Pets`.
-         */
-        if (npcWindow?.Content is FightTable watchPane)
-        {
-          var involved = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-          foreach (var fight in input.Fights)
-          {
-            if (!string.IsNullOrEmpty(fight.Name)) involved.Add(fight.Name);
-
-            foreach (var block in fight.DamageBlocks)
-              foreach (var action in block.Actions)
-                if (action is DamageRecord damage && !string.IsNullOrEmpty(damage.Attacker)) involved.Add(damage.Attacker);
-
-            foreach (var block in fight.TankingBlocks)
-              foreach (var action in block.Actions)
-                if (action is DamageRecord taken && !string.IsNullOrEmpty(taken.Attacker)) involved.Add(taken.Attacker);
-          }
-
-          // Healers too: the healing board lists names no damage board necessarily showed.
-          foreach (var (_, heal) in input.Heals)
-            if (!string.IsNullOrEmpty(heal.Healer)) involved.Add(heal.Healer);
-
-          watchPane.WatchBoardNames([.. involved]);
-        }
 
         GenerateStatsOptions damageStatsOptions = new() { Source = door };
         damageStatsOptions.Npcs.AddRange(input.Fights);
@@ -987,7 +969,59 @@ namespace EQLogParser
       {
         PerfCounters.End(buildSpan);
       }
+
+      // Watching happens AFTER the boards, under its own guard: it only decides whether a later derive tick is worth
+      // announcing, so losing it must cost that and nothing else. It used to sit first inside the try above, where one
+      // throw of its own — a dock-site read from this worker thread — silently took every board with it.
+      WatchBoardNames(input);
     }
+
+    /// <summary>
+    /// Tell the fight list which names this build put on screen, so a later derive pass can ask the ONLY question that
+    /// entitles it to rebuild them: did any of these names change what it IS? New damage never qualifies (the operator's
+    /// rule, 2026-10-08 — "id rather it be like a snapshot of what was selected at the time except for the pet changes or
+    /// player turning npc"), and IdentityWatch measured why the scope is names rather than the identity digest: replaying a
+    /// capture as growing prefixes moved the digest on 6 of 6 passes while flipping ZERO verdicts, every move being a name
+    /// seen for the first time — digest-gating would rebuild once per pass and look exactly like the flicker this replaces.
+    /// </summary>
+    /// <remarks>
+    /// The walk covers records this build already materialized (one field read plus a hash-set add each; ~50 ms on a
+    /// whole-capture select-all that costs seconds anyway, and builds are rare by design). The set is deliberately wider than
+    /// the grid's own rows: a name involved in a selection flipping is worth a rebuild even if the grid folds it under
+    /// `X +Pets`. The pane comes from <see cref="_fightPane"/>, captured on the UI thread — this runs on the summary gate's
+    /// worker, where no window may be touched, and its own guard keeps a lost watch from costing a board.
+    /// </remarks>
+    private void WatchBoardNames(SummaryInput input)
+    {
+      if (input is null) return;
+      try
+      {
+        var involved = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var fight in input.Fights)
+        {
+          if (!string.IsNullOrEmpty(fight.Name)) involved.Add(fight.Name);
+
+          foreach (var block in fight.DamageBlocks)
+            foreach (var action in block.Actions)
+              if (action is DamageRecord damage && !string.IsNullOrEmpty(damage.Attacker)) involved.Add(damage.Attacker);
+
+          foreach (var block in fight.TankingBlocks)
+            foreach (var action in block.Actions)
+              if (action is DamageRecord taken && !string.IsNullOrEmpty(taken.Attacker)) involved.Add(taken.Attacker);
+        }
+
+        // Healers too: the healing board lists names no damage board necessarily showed.
+        foreach (var (_, heal) in input.Heals)
+          if (!string.IsNullOrEmpty(heal.Healer)) involved.Add(heal.Healer);
+
+        _fightPane?.WatchBoardNames([.. involved]);
+      }
+      catch (Exception ex)
+      {
+        Log.Debug($"board watch capture skipped: {ex.Message}");
+      }
+    }
+
 
     private void RestoreButtonUp(object sender, MouseButtonEventArgs e)
     {

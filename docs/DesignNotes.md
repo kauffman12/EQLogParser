@@ -10222,3 +10222,35 @@ exists for high-frequency data — mutate the row objects while updates accumula
 `FightTable` already does this in-house with `RowPatch` (patch cells, keep row objects, preserve selection), so the board has two viable
 routes; the tree/grouped panes are the harder case because group rows re-aggregate. This is a Windows-verified change — it needs a real run
 to tell "no blink" from "stale cell" — and it is deliberately NOT attempted blind here.
+
+## A swallowed exception in the board build, and why "selection worked but nothing happened" was total
+
+Reported 2026-10-09 after a live tail of `eqlog_Kizant_xegony.txt` under logsim: clicking fights in the derived list selected rows
+(and the log showed the asks) but no summary ever filled. The log carried the cause plainly, six times:
+
+```
+board ask [SettleTick]: 1 fight(s), stamp 3849286386084577965, tank type 0 -> Started
+ERROR MainWindow - Derived damage summary error
+System.InvalidOperationException: The calling thread cannot access this object because a different thread owns it.
+   at System.Windows.Controls.ContentControl.get_Content()
+   at EQLogParser.MainWindow.BuildBoards(...) :line 919
+```
+
+Line 919 was the watch capture written hours earlier: `if (npcWindow?.Content is FightTable watchPane)`, sitting two lines under a
+comment in the very method that says *"the dock site is not something a worker task may walk"*. `BuildBoards` runs on the summary
+gate's worker task, and `ContentControl.Content` is a DependencyObject read, so it threw **at the top of the build, before
+`DamageStatsBuilder.BuildTotalStats`** — every door (SettleTick, SelectCommand, Refresh) died the same way, and the outer `catch` that
+exists to keep the gate idle swallowed it into one ERROR line. The failure was total because the ordering was wrong as well as the
+thread: an optimization for a *later* announce stood in front of the *current* board.
+
+Two rules follow, both now in AGENTS.md. **(1) A UI-thread value enters the build as plain data captured on the UI thread.** The
+method already did this for the tanking filter (`tankingDamageType`, read before `Task.Run`); the pane now travels the same way as
+`_fightPane`, assigned only from UI-thread code (the `OpenLogFile` wiring and `DerivedSelectionChanged`). **(2) Optional work goes
+after the builders, under its own guard** — `WatchBoardNames(input)` runs once all three boards are built, with a `try/catch` that logs
+at Debug, because losing the watch costs at most one later announce while losing the build costs the screen.
+
+Worth keeping the shape of the log as a debugging lesson: the asks and the error were both there, but the ERROR carried no "so what".
+The first question for any future "the boards look dead" report is therefore `grep -c "Derived damage summary error"` — and since
+MainWindow cannot be constructed in the headless suite (and the WPF assembly cannot run here), this class of bug has no test net; the
+ordering and the field are what stand in for one. No threshold, retry or status text was added: the pane shows no status by standing
+rule, and a board that always ships is the fix.
