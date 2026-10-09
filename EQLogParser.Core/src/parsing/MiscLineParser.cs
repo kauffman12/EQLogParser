@@ -273,7 +273,15 @@ namespace EQLogParser
                     }
                     else
                     {
-                      attacker = ConfigUtil.PlayerName;
+                      /*
+                       * "your" is the local player, and ConfigUtil.PlayerName is null until MainWindow picks a file (and in
+                       * any headless run). A null in this field is not read as "unknown" downstream: StatsUtil.PopulateSpecials
+                       * keys a ConcurrentDictionary on it, so ONE `X resisted your Spell!` line with no Player Name set threw
+                       * out of every damage and healing board build for the rest of the session — the panes silently kept
+                       * whatever they last showed, which is what a frozen board looks like. An unnamed actor gets the word the
+                       * parser already uses for that (ParserUtil.IsUnattributedName), never a hole.
+                       */
+                      attacker = string.IsNullOrEmpty(ConfigUtil.PlayerName) ? Labels.Unk : ConfigUtil.PlayerName;
                       spell = ParserUtil.JoinWords(split, i + 2, split.Length - i - 2).TrimEnd('!');
                     }
                     var record = new ResistRecord { Attacker = StringCache.GetOrAdd(attacker), Defender = StringCache.GetOrAdd(npc), Spell = StringCache.GetOrAdd(spell) };

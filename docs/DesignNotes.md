@@ -10254,3 +10254,30 @@ The first question for any future "the boards look dead" report is therefore `gr
 MainWindow cannot be constructed in the headless suite (and the WPF assembly cannot run here), this class of bug has no test net; the
 ordering and the field are what stand in for one. No threshold, retry or status text was added: the pane shows no status by standing
 rule, and a board that always ships is the fix.
+
+## One mob resisting your spell stopped every board from updating
+
+**The symptom is a frozen pane, not an exception on screen.** `StatsUtil.PopulateSpecials` folds the stored resists into
+per-player counts and keys a `ConcurrentDictionary` on `ResistRecord.Attacker` (and the inner map on `.Spell`). A
+`ConcurrentDictionary` *throws* on a null key — and `PopulateSpecials` runs inside the damage board build, whose caller
+(`MainWindow.BuildBoards`) catches, logs `Derived damage summary error` and leaves the panes showing what they last painted.
+So one bad record is not one missing count: it is every damage and healing build for the rest of the session.
+
+**Where the null came from**: `MiscLineParser`'s `resisted` branch handles `[Sun Sep 13 18:54:26 2026] A corrupted egg
+resisted your Force of Flame XXI!` by assigning `attacker = ConfigUtil.PlayerName` — and that static is **null until
+MainWindow picks a file** (and in every headless run; `PlayerRegistry` already carries a comment saying so). The record was
+stored with a null caster and no parser runs over it again.
+
+**Measured**: on a 700 k-line slice of a real raid, exactly **1** resist record existed and it was that shape — one was
+enough. The board build died before its `totals`/`present` stages, i.e. a capture's first "resisted your spell" line ends
+the board refreshes for the session, silently.
+
+**Both ends got fixed, deliberately.** The producer no longer mints a hole: an unnamed local player becomes `Labels.Unk`,
+which `ParserUtil.IsUnattributedName` already recognizes as "not an entity" (`LineParsersTest.Process_Resist_YourSpellWithNoPlayerNameStillNamesAnActor`).
+The reader also skips a null/empty caster or spell, because a store **restored from an older session** still carries records
+written before this fix — no parser will ever clean them, and a guard that only covers future data would keep throwing on
+last night's file (`ResistPopulationTest`, both directions: the hole contributes nothing and the NEXT record still counts).
+
+**The general law**: any field a dictionary keys on is non-null by contract, checked at the producer *and* at the reader when
+the data can be old. And in this app a caught build exception is indistinguishable from "nothing happened" — which is why the
+`Derived damage summary error` line is the first thing to grep when a pane looks stale.

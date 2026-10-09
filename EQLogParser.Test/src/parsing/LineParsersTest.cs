@@ -348,6 +348,45 @@ namespace EQLogParser
     }
 
     [TestMethod]
+    public void Process_Resist_YourSpellNamesTheLocalPlayer()
+    {
+      Assert.IsTrue(MiscLineParser.Process(Line("A corrupted egg resisted your Force of Flame XXI!", 5)));
+
+      var resist = RecordsStore.Instance.GetAllResists().Single().Item2;
+      Assert.AreEqual("TestPlayer", resist.Attacker);
+      Assert.AreEqual("A corrupted egg", resist.Defender);
+      Assert.AreEqual("Force of Flame XXI", resist.Spell);
+    }
+
+    [TestMethod]
+    public void Process_Resist_YourSpellWithNoPlayerNameStillNamesAnActor()
+    {
+      /*
+       * ConfigUtil.PlayerName is empty before MainWindow picks a file, and in any headless run. The `your` branch of
+       * the resist case used to hand that null straight to ResistRecord.Attacker, which StatsUtil.PopulateSpecials then
+       * tried to use as a ConcurrentDictionary key: one mob resisting your spell threw out of EVERY damage and healing
+       * board build for the rest of the session, so the panes quietly kept showing whatever they last painted.
+       */
+      ConfigUtil.PlayerName = "";
+      try
+      {
+        Assert.IsTrue(MiscLineParser.Process(Line("A corrupted egg resisted your Force of Flame XXI!", 5)));
+
+        var resist = RecordsStore.Instance.GetAllResists().Single().Item2;
+        Assert.IsNotNull(resist.Attacker, "an unnamed local player is an UNKNOWN actor, never a hole in a record");
+        Assert.AreEqual(Labels.Unk, resist.Attacker);
+        Assert.IsTrue(ParserUtil.IsUnattributedName(resist.Attacker),
+            "the placeholder has to be the word the rest of the parser already refuses to read as an entity, not a new one");
+        Assert.AreEqual("A corrupted egg", resist.Defender, "the resisting mob is still named, and its resist stats still count");
+        Assert.AreEqual("Force of Flame XXI", resist.Spell);
+      }
+      finally
+      {
+        ConfigUtil.PlayerName = "TestPlayer";
+      }
+    }
+
+    [TestMethod]
     public void Process_DieRoll_RrecordsRolledRange()
     {
       var ok = MiscLineParser.Process(Line("**A Magic Die is rolled by Kizant. It could have been any number from 1 to 1000, but this time it turned up a 11.", 5));

@@ -842,20 +842,30 @@ namespace EQLogParser
             {
               if (allResists[j].Item1 >= offsetBegin && allResists[j].Item1 <= offsetEnd)
               {
+                var resist = allResists[j].Item2;
                 resistStart = j;
-                if (!raidStats.ResistCounts.TryGetValue(allResists[j].Item2.Attacker, out var perPlayer))
+
+                /*
+                 * A resist with no caster or no spell cannot key these maps: ConcurrentDictionary throws on a null key,
+                 * and that throw took the WHOLE board build down — see MiscLineParser's `resisted` branch, where a blank
+                 * Player Name used to mint exactly that record. The parser no longer writes one, but a store restored from
+                 * an older session still holds them, so the reader refuses rather than trusting what it was handed.
+                 */
+                if (string.IsNullOrEmpty(resist.Attacker) || string.IsNullOrEmpty(resist.Spell)) continue;
+
+                if (!raidStats.ResistCounts.TryGetValue(resist.Attacker, out var perPlayer))
                 {
                   perPlayer = new ConcurrentDictionary<string, int>();
-                  raidStats.ResistCounts[allResists[j].Item2.Attacker] = perPlayer;
+                  raidStats.ResistCounts[resist.Attacker] = perPlayer;
                 }
 
-                if (perPlayer.TryGetValue(allResists[j].Item2.Spell, out var currentCount))
+                if (perPlayer.TryGetValue(resist.Spell, out var currentCount))
                 {
-                  perPlayer[allResists[j].Item2.Spell] = currentCount + 1;
+                  perPlayer[resist.Spell] = currentCount + 1;
                 }
                 else
                 {
-                  perPlayer[allResists[j].Item2.Spell] = 1;
+                  perPlayer[resist.Spell] = 1;
                 }
               }
             }
