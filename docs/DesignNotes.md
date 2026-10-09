@@ -10329,3 +10329,25 @@ case now has its own test (`ARuleThatDemotesANameTheRosterClaimsStillFlags`).
 **Still open (decision 1)**: a name told NPC can leave a `Name +Pets` row behind — ``Name`s pet`` damage folds on the LINE's
 possessive word regardless of what the owner now reads (Jondolar: raid total correctly −1,386,760,156 while an 8,582,650
 `Jondolar +Pets` row stayed). That is a separate question — whether an NPC's summons belong on a raid board at all.
+
+## A live pane must not repaint out from under an open editor
+
+Field report (2026-10-09): *"after changing a player to NPC from the damage summary I wasn't able to change the type or reset claim
+in the identity window. I'd select an option from the dropdown and nothing happened."* Two panes, one mechanism:
+
+1. The Names window **follows the derive** (a pass every ~2 s while a log grows), and writing a verdict from the damage summary
+   forces a pass *immediately* — so a census lands within a second of that click.
+2. A census merge replaces each row's cells via the collection indexer (`MergeRows`, deliberately: Clear+Add used to cost the
+   selection and the order). Replacing the item under an open popup replaces the visual cell the popup is anchored to.
+3. WPF closes a popup whose placement target dies. `UiElementUtil.OpenCellPopup`'s `onClosed` hook then runs
+   `_typeEditRow = null` — and the click already on its way reaches `TypeSelectionChanged` with no subject, which returns quietly.
+
+The pane had already anticipated half of this: `Apply` re-points `_typeEditRow`/`_classEditRow` by name after a merge. That saves
+the *preselect*, not the *gesture* — the popup is gone before the re-point matters, and a guard that reads "no row" cannot tell a
+misclick from a stolen one. So the pane now holds repaints while an editor is open (`EditorHold`, Core): `AcceptCensus` either
+paints or hands the census to the hold, and the newest held one runs on the last close. Newest-wins (an older census describes a
+capture that already moved on — chaining it would paint the stale answer last, depending on thread timing), counting rather than a
+bool (Type and Class popups each close on their own gesture), `Abandon()` on capture change/hide so a census belonging to a closed
+log never paints over the one that is open. Same family as `FightTable`'s `_settle.MenuOpen`: **a gesture in progress blocks
+presentation work, and the block must be released exactly once** — a latched hold is the "the pane stopped updating" bug again, hence
+the tests for stray closes, intermediate closes and abandon-then-live-again.

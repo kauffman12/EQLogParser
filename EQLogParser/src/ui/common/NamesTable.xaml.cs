@@ -112,6 +112,9 @@ namespace EQLogParser
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
     private readonly ObservableCollection<NameRow> _rows = [];
+
+    /// <summary>The list itself, so a test can see whether a census actually landed rather than being held behind an open editor.</summary>
+    internal ObservableCollection<NameRow> RowsForTest => _rows;
     private int _refreshInFlight;
 
     // The engine this pane follows, and the floor between automatic rebuilds (see EventsDerived). An explicit Refresh()
@@ -123,6 +126,15 @@ namespace EQLogParser
     // Which row's dropdown is open. One at a time by construction (StaysOpen=False), cleared when the popup closes.
     private NameRow? _typeEditRow;
     private NameRow? _classEditRow;
+
+    /*
+     * While a cell editor (the Type or Class popup) is open, NO census lands: the pane follows the derive, a verdict written from
+     * another pane forces a pass immediately, and merging rows tears out the very cell the popup is anchored to — WPF closes the
+     * popup, its close hook clears the row being edited, and the click already on its way writes nothing (2026-10-09: "after
+     * changing a player to NPC from the damage summary i wasnt able to change the type or reset claim in the identity window").
+     * The newest deferred census paints when the gesture ends.
+     */
+    internal readonly EditorHold Editors = new();
 
     /*
      * Whether the next census re-ranks the list or merges into the order already on screen. Set when the pane becomes
@@ -200,6 +212,10 @@ namespace EQLogParser
 
     private void UnfollowSession()
     {
+      // Hidden (or the session moved): drop any repaint waiting behind an editor, and the hold itself, so a close that never came
+      // cannot leave the pane one pass short when it is shown again.
+      Editors.Abandon();
+
       if (_followed is null) return;
       _followed.Derived -= EventsDerived;
       _followed = null;
@@ -238,6 +254,8 @@ namespace EQLogParser
      */
     private void ClearRows()
     {
+      // The capture this pane was reading is gone, so a census queued behind an open editor describes a log nobody is looking at.
+      Editors.Abandon();
       _rankOnApply = true;
       _rows.Clear();
     }
@@ -412,6 +430,21 @@ namespace EQLogParser
     {
       if (census is null) return;
 
+      // An EMPTY census still lands: "this capture has no names" clears the list, and dropping it would keep last night's rows.
+      AcceptCensus(census.Rows);
+    }
+
+    /// <summary>A census arriving from the derive: fold it in now, or hold it until the open cell editor closes. True when it painted.</summary>
+    internal bool AcceptCensus(IReadOnlyList<ClassificationReport.Row> rows)
+    {
+      if (Editors.Defer(() => MergeInto(rows))) return false;
+
+      MergeInto(rows);
+      return true;
+    }
+
+    private void MergeInto(IReadOnlyList<ClassificationReport.Row> rows)
+    {
       /*
        * The selection is a row OBJECT, and MergeRows replaces rows rather than mutating them, so it has to be handed back
        * by NAME: the instance it pointed at is gone even though the line on screen never moved. An open dropdown's row is
@@ -420,7 +453,7 @@ namespace EQLogParser
        */
       var selectedName = (namesGrid.SelectedItem as NameRow)?.Name;
 
-      MergeRows(_rows, census.Rows, _rankOnApply);
+      MergeRows(_rows, rows, _rankOnApply);
       _rankOnApply = false;
 
       if (selectedName is not null) namesGrid.SelectedItem = FindRow(selectedName);
@@ -490,6 +523,7 @@ namespace EQLogParser
       if (sender is not ImageAwesome icon || icon.DataContext is not NameRow row) return;
       if (UiElementUtil.FindGridCell(icon) is not { } cell) return;
 
+      Editors.Open();
       _typeEditRow = row;
 
       // This row's own list — the kinds its name can still be (IdentityVocabulary.TypeOptionsFor).
@@ -505,6 +539,9 @@ namespace EQLogParser
       {
         _typeEditRow = null;
         typeEditComboBox.SelectedItem = null;
+
+        // The gesture is over — whether the click finished it or WPF closed the popup: let the census land, including the one it queued.
+        Editors.Close();
       });
     }
 
@@ -544,6 +581,7 @@ namespace EQLogParser
       if (sender is not ImageAwesome icon || icon.DataContext is not NameRow row || !row.ClassEditable) return;
       if (UiElementUtil.FindGridCell(icon) is not { } cell) return;
 
+      Editors.Open();
       _classEditRow = row;
       classEditComboBox.SelectedItem = (object?)row.PlayerClass ?? "";   // ClassList's first entry is the blank
 
@@ -551,6 +589,7 @@ namespace EQLogParser
       {
         _classEditRow = null;
         classEditComboBox.SelectedItem = null;
+        Editors.Close();
       });
     }
 

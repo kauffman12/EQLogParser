@@ -242,6 +242,45 @@ public class NamesTableTest
                               "navigating to the pane is when the ranking arrives — held still while read, current when reopened");
   }
 
+  /*
+   * The pane follows the derive, so a census arrives every couple of seconds — and one lands IMMEDIATELY after a verdict written
+   * from another pane, which is when the reader is most likely to be mid-click in this window's Type cell. Merging rows replaces the
+   * cell the popup is anchored to, WPF closes the popup, its close hook clears "which row am I editing", and the click writes nothing:
+   * the field report was a dropdown that stopped responding (2026-10-09). So a census waits for the gesture, and the newest one paints
+   * when it ends. Constructed inside Sta.Run like every other UIElement here.
+   */
+  [TestMethod]
+  public void ACensusWaitsForAnOpenCellEditorRatherThanYankingTheRowOutFromUnderIt()
+  {
+    Sta.Run(() =>
+    {
+      var pane = new NamesTable();
+
+      Assert.IsTrue(pane.AcceptCensus([CensusRow("Ann"), CensusRow("Bob")]), "nothing is open: the census lands as it always did");
+      Assert.AreEqual(2, pane.RowsForTest.Count);
+
+      // The Type pencil was clicked on a row…
+      pane.Editors.Open();
+
+      Assert.IsFalse(pane.AcceptCensus([CensusRow("Ann"), CensusRow("Bob"), CensusRow("Cy")]),
+          "an open editor holds the repaint instead of rebuilding the cell under the popup");
+      Assert.AreEqual(2, pane.RowsForTest.Count, "the list did not move while the gesture held");
+
+      // A second pass arrives before the click finishes: the older census is stale data and is dropped, not chained.
+      Assert.IsFalse(pane.AcceptCensus([CensusRow("Ann")]), "newest wins — an older census describes a capture that moved on");
+
+      pane.Editors.Close();
+
+      Assert.AreEqual(1, pane.RowsForTest.Count,
+          "the gesture ended and the NEWEST census painted; the held-then-superseded one never ran");
+      Assert.AreEqual("Ann", pane.RowsForTest[0].Name);
+
+      // And the pane is live again: a later pass paints straight through with no editor open.
+      Assert.IsTrue(pane.AcceptCensus([CensusRow("Dee"), CensusRow("Elle")]), "the hold is not latched");
+      Assert.AreEqual(2, pane.RowsForTest.Count);
+    });
+  }
+
   private static ClassificationReport.Row CensusRow(string name, IdentityKind kind = IdentityKind.Unknown, string reason = "")
     => new() { Name = name, Kind = kind, Reason = reason };
 
