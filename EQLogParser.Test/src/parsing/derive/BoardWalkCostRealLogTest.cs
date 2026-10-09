@@ -79,6 +79,88 @@ public class BoardWalkCostRealLogTest
                               + $"= {sweptBytes / (double)Math.Max(1, seen):N1} B/record | {perName.Count} names, sum {sum:N0}");
         }
 
+        /*
+         * (1b) Anatomy of the per-record cost. The field log says an open chart spends ~330 ns per record in its walk, which is far too slow for
+         * "a few dictionary lookups" unless the NUMBER of structures maintained is what costs. Measured rather than argued, because the two
+         * candidate fixes are opposite: if time tracks aggregate count, the answer is to compute less per record (or share the board's totals);
+         * if it tracks enumeration, the answer is to walk fewer records (row-blocks instead of the whole store). The line between them is what a
+         * "one pass feeds board and chart" decision hinges on, and no Windows run is needed to see it.
+         */
+        for (var pass = 1; pass <= 2; pass++)
+        {
+            var one = new Dictionary<string, List<double>>();
+            var two = new Dictionary<string, List<double>>();
+            var fourA = new Dictionary<string, List<double>>();
+            var fourB = new Dictionary<string, List<double>>();
+            var fourC = new Dictionary<string, List<double>>();
+            var hasPets = new Dictionary<string, HashSet<string>>();
+
+            var bare = Stopwatch.StartNew();
+            long counted = 0;
+            foreach (var point in new DamageGroupCollection(groups))
+            {
+                counted++;
+            }
+
+            bare.Stop();
+
+            var oneDict = Stopwatch.StartNew();
+            foreach (var point in new DamageGroupCollection(groups))
+            {
+                Accumulate(one, point.PlayerName ?? point.Name, point.Total);
+            }
+
+            oneDict.Stop();
+
+            var twoDicts = Stopwatch.StartNew();
+            foreach (var point in new DamageGroupCollection(groups))
+            {
+                var name = point.PlayerName ?? point.Name;
+                Accumulate(two, name, point.Total);
+                Accumulate(one, name, point.Total);
+            }
+
+            twoDicts.Stop();
+
+            // The shape LineChart.Aggregate keeps: four per-name series plus the pet-pair set, each gated by "does this name count here".
+            var fourDicts = Stopwatch.StartNew();
+            foreach (var point in new DamageGroupCollection(groups))
+            {
+                var totalName = point.Name;
+                var playerName = point.PlayerName ?? point.Name;
+                Accumulate(fourA, totalName, point.Total);
+                Accumulate(fourB, playerName, point.Total);
+                Accumulate(fourC, totalName, point.Total);
+                Accumulate(two, playerName, point.Total);
+                if (!hasPets.TryGetValue(totalName, out var pets))
+                {
+                    pets = [];
+                    hasPets[totalName] = pets;
+                }
+
+                pets.Add(playerName);
+            }
+
+            fourDicts.Stop();
+
+            static void Accumulate(Dictionary<string, List<double>> map, string name, double amount)
+            {
+                if (!map.TryGetValue(name, out var series))
+                {
+                    series = [];
+                    map[name] = series;
+                }
+
+                series.Add(amount);
+            }
+
+            Console.WriteLine($"[walk] pass {pass} per-record anatomy over {counted:N0}: enumerate {NsPer(bare, counted)} "
+                              + $"| 1 series {NsPer(oneDict, counted)} | 2 series {NsPer(twoDicts, counted)} "
+                              + $"| 4 series + pet set {NsPer(fourDicts, counted)} (chart walk measured at ~330 ns/rec in the field)");
+        }
+
+        static string NsPer(Stopwatch w, long n) => $"{w.Elapsed.TotalMilliseconds * 1_000_000 / Math.Max(1, n):N0} ns/rec";
+
         for (var pass = 1; pass <= 2; pass++)
         {
             // (2) The real board, through the door MainWindow uses: stages and per-stage allocation come from StatsBuildTrace.

@@ -9989,3 +9989,39 @@ whether the door is real rather than requiring a profiler.
 
 **What it buys**: the *second* (and third…) UPDATE behind one set of clicks costs ~0 ms instead of 1.1–1.6 s on a night-sized capture. It does
 not make the first pass faster — that is still the per-record hashing discussed under "Allocation traffic is not retained memory".
+
+## What a chart pass is actually made of (and why "compute less per record" is not the lever)
+
+B13 removed the duplicate chart passes. One pass per build remains — ~1.5 s over a night's Select All — and the two candidate cures are
+opposite: maintain *less per record*, or walk *fewer records*. The difference matters, because one of them is weeks of surgery on the board
+builders and the other is a few lines in the chart. So the question was measured rather than argued, in the gated cost probe
+(`EQLP_BOARD_WALK=local/logs/live/eqlog_Kizant_xegony-09-03-26.txt dotnet test --filter BoardWalkCost --logger "console;verbosity=detailed"`,
+the operator's own capture: 4,832,103 facts → 697 fights → **4,660,915 damage records**):
+
+| what the loop does, per record | ns/record | over 4.66 M |
+|---|---|---|
+| enumerate the `DamageGroupCollection` (nothing else) | **83** | 390 ms |
+| + one name-keyed series | 102 | 475 ms |
+| + two name-keyed series | 117 | 545 ms |
+| + four series and the pet-pair set (the chart's shape) | **152** | 700 ms |
+| the real `DamageChart` walk, from the field log | **~330** | 1,540 ms |
+
+Three readings, in decreasing order of usefulness:
+
+1. **The number of aggregates is worth ~20 ns a record each.** Going from four series to two buys ~80 ms out of 1,540. Every proposal of the
+   form "the chart keeps too many dictionaries" lives in that ~5 % band and should be measured against it before anyone writes it.
+2. **Roughly half a million records' worth of time (≈ 180 ns/rec, 55 %) is neither enumeration nor aggregate-count** — it is what the real walk
+   does per record that the mimic does not: resolving a name's *time bucket* (name → second → segment) and its crit/hit/twincast accounting. The
+   chart draws **36,163 points from 4.66 M records**, so the loop spends most of its life turning millions of events into tens of thousands of
+   buckets. Fewer, wider buckets is therefore the lever — not fewer dictionaries, and not a lighter per-record body.
+3. **Enumeration is 83 ns/rec × two walks.** The board walks the same records moments before the chart (field log: `stats build #4 damage full
+   2935 ms`, of which `walk 2428 ms`, then `chart.update … walk 1540 ms`): ~4 s of walking one selection, with a shared ~390 ms enumeration cost
+   paid twice and the per-record bookkeeping done twice over in different shapes. A single pass feeding both is the only change that addresses the
+   *first* pass at the scale people feel — and it is also the one that puts chart bucketing inside `DamageStatsBuilder`, where the golden board
+   tests live. It should not start without the numbers above being re-taken on a live session, since a live tail walks far less per refresh.
+
+Context from the same run, because these probes are also where the board's shape gets re-checked: materialize 1,250 ms; damage board 2,576 ms /
+201.8 MB (`groups 208 ms/53.7 MB`, `walk 2364 ms/147.3 MB`); tanking board 41 ms; healing board 1,431 ms / 145.5 MB over 2,647,774 heals
+(**148 B per heal** traced end-to-end, `window 681 ms` still the fat stage after the key-memoization pass); the hit-frequency histograms build
+**1,879,130 entries (~72 MB retained)** and are read by exactly one chart (`HitFreqChart`) — that is a candidate for "build it when that chart is
+open", which is the same principle as this section: stop computing what the surface on screen does not use.
