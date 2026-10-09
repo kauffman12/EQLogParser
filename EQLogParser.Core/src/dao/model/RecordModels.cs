@@ -78,6 +78,19 @@ namespace EQLogParser
 
   internal class DataPointEvent
   {
+    /*
+     * WHICH CONTENT this event's iterator walks: the sequence number of the stats build that produced it (StatsBuildTrace gives
+     * every build a unique, increasing number). A chart that has already aggregated generation N can reuse those aggregates when
+     * another UPDATE arrives carrying N again — which is not hypothetical: a summary pane fires "UPDATE" on its own interactions
+     * (selecting rows, changing a view option), and each such fire re-walked the whole night. Measured on the field run: two
+     * `DamageChart UPDATE` passes over 4,660,915 records producing identical output (5 lines, 36,163 points), 1,589 ms and
+     * 1,107 ms, with no stats build between them.
+     *
+     * -1 means "unstamped": the content is not tied to a known build and must be walked. Builders stamp at build time, so a build
+     * always invalidates; only a fire BETWEEN builds can reuse. That asymmetry is the safety of the whole scheme.
+     */
+    public long DataGeneration { get; set; } = -1;
+
     public string Action { get; set; }
     public RecordGroupCollection Iterator { get; set; }
     public List<PlayerStats> Selected { get; } = [];

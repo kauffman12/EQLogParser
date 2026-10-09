@@ -52,6 +52,7 @@ namespace EQLogParser
 
     private void RebuildTotalStatsCore(GenerateStatsOptions options, in StatsBuildTrace.Handle trace)
     {
+      ChartDataGeneration = trace.Seq;
       var built = false;
 
       lock (_lock)
@@ -87,6 +88,7 @@ namespace EQLogParser
 
     private void BuildTotalStatsCore(GenerateStatsOptions options, in StatsBuildTrace.Handle trace)
     {
+      ChartDataGeneration = trace.Seq;
       lock (_lock)
       {
         try
@@ -199,6 +201,14 @@ namespace EQLogParser
       }
     }
 
+    /*
+     * B13: the content generation this builder's groups currently hold -- the trace sequence of the build that wrote them (-1 until a
+     * build has run). Stamped on every chart event so a chart can tell "new data to aggregate" from "the same question again"; see
+     * DataPointEvent.DataGeneration. A build ALWAYS restamps (that is what makes reuse safe), and this builder's groups are written only
+     * inside builds -- the one exception clears them and resets this to -1 with them.
+     */
+    internal long ChartDataGeneration { get; private set; } = -1;
+
     internal void FireChartEvent(string action, int damageType, List<PlayerStats> selected = null, bool reset = false)
     {
       lock (_lock)
@@ -210,7 +220,7 @@ namespace EQLogParser
         }
 
         // send update
-        var de = new DataPointEvent { Action = action, Iterator = new TankGroupCollection(_tankingGroups, damageType) };
+        var de = new DataPointEvent { Action = action, DataGeneration = ChartDataGeneration, Iterator = new TankGroupCollection(_tankingGroups, damageType) };
 
         if (selected is not null)
         {

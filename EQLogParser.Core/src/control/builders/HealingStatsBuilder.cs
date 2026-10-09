@@ -119,6 +119,7 @@ namespace EQLogParser
 
     private void BuildTotalStatsCore(GenerateStatsOptions options, in StatsBuildTrace.Handle trace)
     {
+      ChartDataGeneration = trace.Seq;
       lock (_lock)
       {
         try
@@ -618,12 +619,20 @@ namespace EQLogParser
       StatsUtil.UpdateCalculations(stats, raidTotals);
     }
 
+    /*
+     * B13: the content generation this builder's groups currently hold -- the trace sequence of the build that wrote them (-1 until a
+     * build has run). Stamped on every chart event so a chart can tell "new data to aggregate" from "the same question again"; see
+     * DataPointEvent.DataGeneration. A build ALWAYS restamps (that is what makes reuse safe), and this builder's groups are written only
+     * inside builds -- the one exception clears them and resets this to -1 with them.
+     */
+    internal long ChartDataGeneration { get; private set; } = -1;
+
     internal void FireChartEvent(string action, List<PlayerStats> selected = null)
     {
       lock (_lock)
       {
         // send update
-        var de = new DataPointEvent { Action = action, Iterator = new HealGroupCollection(_healingGroups) };
+        var de = new DataPointEvent { Action = action, DataGeneration = ChartDataGeneration, Iterator = new HealGroupCollection(_healingGroups) };
 
         if (selected != null)
         {
@@ -808,6 +817,12 @@ namespace EQLogParser
     {
       if (clear)
       {
+        /*
+         * Only a full throw-away erases the generation. A build starts by clearing these same groups and refilling them, and it stamped its
+         * own generation on entry -- resetting here would put it back to "unstamped" every time and the chart would never be allowed to reuse
+         * anything (which is safe, but silently throws the whole optimization away).
+         */
+        ChartDataGeneration = -1;
         _allHealingGroups = null;
         _allHealedByHealerTimeRanges = null;
         _allHealedBySpellTimeRanges = null;

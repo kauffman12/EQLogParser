@@ -9944,3 +9944,48 @@ is *not* implemented here, because two things make it more than a flag: the char
 flag and rebuild once before reading; and that window's X hides rather than closes, so any "chart is open" state has to follow the
 `DamageOverlayWindow` discipline or the memory comes back and nobody can see why. It belongs with B2's lesson — *a store keeps what a door reads* —
 applied one level up, to a board.
+
+## The same question twice, asked by two doors (B13)
+
+A field run over a whole night (`PerfReport=True`) showed the most expensive thing that happens *after* a Select All:
+
+```
+chart.update 1589 ms | DamageChart UPDATE | walked 4660915 records -> 5 lines, 36163 points | plots 17
+   walk 1540 ms (97 %) ...
+chart.update 1107 ms | DamageChart UPDATE | walked 4660915 records -> 5 lines, 36163 points | plots 14
+   walk 1078 ms (97 %)
+```
+
+Two passes over 4,660,915 records drawing the **identical** answer — same lines, same points — with **no stats build between them**, and the
+second one slow enough to stall the UI by itself. The reason is that a chart can be filled from two kinds of door: a board build (which
+changes the records) and a summary pane's own interaction (`DamageSummary`, `HealingSummary`, `TankingSummary` each fire `"UPDATE"` when rows
+are selected or a view option moves). The panes say *UPDATE*, which means "re-aggregate every record", when what they mean is "the drawing
+may need this selection". Legacy had the same shape and the same cost; nobody had counted it because nothing printed `walked N records` before.
+
+**The fix is a stamp, not a cache.** Every `DataPointEvent` now carries `DataGeneration`: the trace sequence number of the build that produced
+the records it walks (`DamageStatsBuilder.ChartDataGeneration` and siblings, stamped on entry to every build core, before any early exit). A
+chart that already drew generation N drops an UPDATE whose *whole question* is the one it answered — generation, selection, group selection,
+view option, top count — and logs `chart.update skipped`. Three properties make that safe rather than clever:
+
+- **A build always restamps**, so changed content can never be mistaken for what is on screen. Stamping on entry (rather than at the end)
+  means even a build that exits early burns the number.
+- **`-1` means "walk it".** An unstamped event describes unknown content and is never skippable, so any path that does not go through a build
+  costs milliseconds rather than showing something stale. The healing builder resets to `-1` only on its full throw-away
+  (`CombatEvents.ActiveDataCleared`), **not** in the per-build `Reset()` — putting it there would clear the stamp the build just wrote, which is
+  the safe-but-dead variant of this optimization that silently does nothing.
+- **Nothing else enters the walk.** The record filter is the chart view option's own `ShouldSkipRecord`, which the key carries as
+  `_currentViewOption`; the six `DamageValidator` toggles belong to the board builders, and a change there *is* a build. Dropdown moves redraw
+  through `ListSelectionChanged` from aggregates already held, so a skipped UPDATE can only have been asking to redraw what is on screen — and
+  the view option is resolved (`AutoSelectViewOption`) **before** the comparison, because it is part of the question, not part of the answer.
+
+The alternative — cache the walk's aggregates per generation and hydrate them — was rejected unread: `UpdateRemaining` and
+`GetTimeRanges` take `lastTimes`/range state produced *during* the walk, so hydration means proving those functions are no-ops over
+already-complete series. Dropping the duplicate pass is both smaller and removes 100 % of its cost instead of 97 %.
+
+Pinned headlessly by `ChartDataGenerationTest`: a build always restamps (three builds, three different generations), events fired between
+builds carry the same generation as the build that wrote them, and a default `DataPointEvent` carries `-1`. The chart-side decision is WPF and
+belongs to `EQLogParser.Wpf.Test`; the completion line carries `duplicate of the pass already drawn - nothing re-walked`, so a run shows
+whether the door is real rather than requiring a profiler.
+
+**What it buys**: the *second* (and third…) UPDATE behind one set of clicks costs ~0 ms instead of 1.1–1.6 s on a night-sized capture. It does
+not make the first pass faster — that is still the per-record hashing discussed under "Allocation traffic is not retained memory".

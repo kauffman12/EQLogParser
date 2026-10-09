@@ -7,6 +7,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows;
+using System.Text;
 using System.Windows.Controls;
 using System.Windows.Threading;
 
@@ -147,6 +148,52 @@ namespace EQLogParser
       Reset();
     }
 
+    /*
+     * What the LAST applied UPDATE answered, so that a second UPDATE asking the same question is dropped rather than re-walking the night.
+     *
+     * The key holds everything that pass reads: the generation the builder stamped (WHICH records), the selection and group selection
+     * (which rows to draw), and the view option and top count this control currently holds (how to draw them, including which records the
+     * view option's own ShouldSkipRecord filters out). Nothing else enters the walk: the six DamageValidator toggles belong to the BOARD
+     * builders, and a change there is a build, which restamps the generation. Anything else moves -- a new build, another selection, a
+     * dropdown -- and the pass runs exactly as it always has. Dropdown moves also redraw on their own through ListSelectionChanged, from the
+     * aggregates already in hand, so a skipped UPDATE can only ever have been asking to redraw what is on screen.
+     */
+    private string _lastUpdateKey;
+
+    /* True while the chart holds the aggregates that key describes: with no data behind it, there is nothing to skip on. */
+    private bool _hasAppliedData;
+
+    /* Set when a pass was dropped as a duplicate, so the completion line says why it drew nothing. */
+    private bool _skippedDuplicate;
+
+    private string UpdateKeyFor(DataPointEvent e)
+    {
+      var sb = new StringBuilder();
+      sb.Append(e.DataGeneration).Append('|')
+        .Append(_currentViewOption).Append('|')
+        .Append(_currentTopCount);
+
+      if (e.Selected is { Count: > 0 })
+      {
+        sb.Append("|p");
+        foreach (var p in e.Selected)
+        {
+          sb.Append(':').Append(p.Name);
+        }
+      }
+
+      if (e.SelectedGroups is { Count: > 0 })
+      {
+        sb.Append("|g");
+        foreach (var g in e.SelectedGroups)
+        {
+          sb.Append(':').Append(g.Name);
+        }
+      }
+
+      return sb.ToString();
+    }
+
     internal void HandleUpdateEvent(DataPointEvent e)
     {
       PerfCounters.Note(UpdatesId);
@@ -158,6 +205,7 @@ namespace EQLogParser
       _trace = trace;
       _traceWalked = 0;
       _tracePlots = 0;
+      _skippedDuplicate = false;
       _plotLines = 0;
       _plotPoints = 0;
 
@@ -167,12 +215,36 @@ namespace EQLogParser
         {
           case "CLEAR":
             Clear();
+            _lastUpdateKey = null;
+            _hasAppliedData = false;
             break;
           case "UPDATE":
-            Clear();
+            /*
+             * The expensive door. A summary pane fires "UPDATE" on its OWN interactions -- selecting rows, changing a view option -- so one
+             * set of clicks can ask the same question several times over the same records: measured on a field run, two `DamageChart UPDATE`
+             * passes over 4,660,915 records drawing the identical answer (5 lines, 36,163 points), 1,589 ms and 1,107 ms, with no stats build
+             * between them. An unstamped event (generation < 0) is never skipped: unknown content always walks.
+             */
+            // The view option is resolved FIRST because it belongs to the question: a pass that auto-selects an option draws with it, so two
+            // events must be compared on the option they would both end up using. Changing it redraws through ListSelectionChanged anyway --
+            // from the aggregates already in hand -- so resolving it before a possible skip cannot leave the screen showing something else.
             _selectedGroups = e.SelectedGroups;
             AutoSelectViewOption(e.SelectedGroups, e.Selected);
-            AddDataPoints(e.Iterator, e.Selected);
+
+            var key = e.DataGeneration >= 0 ? UpdateKeyFor(e) : null;
+            if (key is not null && _hasAppliedData && key == _lastUpdateKey)
+            {
+              _skippedDuplicate = true;
+              Log.Info($"chart.update skipped: {GetType().Name} was asked the question it just answered "
+                       + $"(data generation {e.DataGeneration}, nothing rebuilt since)");
+            }
+            else
+            {
+              Clear();
+              AddDataPoints(e.Iterator, e.Selected);
+              _lastUpdateKey = key;
+              _hasAppliedData = true;
+            }
             break;
           case "SELECT":
             _selectedGroups = e.SelectedGroups;
@@ -192,7 +264,8 @@ namespace EQLogParser
         if (outer is null)
         {
           trace.Complete(SlowUpdateMs,
-            $"{GetType().Name} {action} | walked {_traceWalked} records -> {_plotLines} lines, {_plotPoints} points | plots {_tracePlots}");
+            $"{GetType().Name} {action} | walked {_traceWalked} records -> {_plotLines} lines, {_plotPoints} points | plots {_tracePlots}"
+            + (_skippedDuplicate ? " | duplicate of the pass already drawn - nothing re-walked" : ""));
         }
         else
         {
