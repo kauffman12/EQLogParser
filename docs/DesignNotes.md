@@ -10071,3 +10071,34 @@ dictionaries mid-walk, which would return the milliseconds and the megabytes for
 
 The cost probe changed shape too: it surveys `RawHitTotals` rather than touching the dictionaries, because asking for a dictionary is what builds it — an
 eager probe of a lazy store measures its own observation and would have reported this whole change as absent.
+
+## A duplicate store that is NOT a free delete (healing's sixth map)
+
+While looking at what the healing `window` stage allocates, one line stood out: of the six `UpdateTimeSegments` calls per heal, two pass
+**identical arguments** —
+
+```csharp
+StatsUtil.UpdateTimeSegments(null, healedByHealerSpellsTimeSegments, spellNameKey, healerHealedKey, healTime);   // → _healedByHealerSpellTimeRanges
+StatsUtil.UpdateTimeSegments(null, healerHealedSpellTimeSegments,    spellNameKey, healerHealedKey, healTime);   // → _healerHealedSpellTimeRanges
+```
+
+Both end up keyed composite → spell, so the two persistent stores hold the same content. Measured cost of one of them (same capture, filling it
+temporarily switched off): healing build **1,431 ms → 1,360 ms**, allocation **145.5 MB → 129.8 MB**, `window` stage **681 ms/132.4 MB →
+594 ms/118.3 MB** — call it **~71 ms and ~16 MB per build**, plus one of six persistent dictionaries retained afterwards.
+
+It is *not* implemented, for a reason worth writing down: the two stores have **different lifetimes**, and only one of them is aliased into a
+snapshot. `_healedByHealerSpellTimeRanges` is cleared by `Reset()` on every build; `_allHealedByHealerSpellTimeRanges` is pointed at it **only on the
+initial build** (the `double.IsNaN(_raidTotals.MaxBeginTime)` gate) and set null on the clear paths. `PopulateHealing` — the "who healed me" board —
+reads the *snapshot*, while `ComputeHealingStats` reads the *current* one. Making them one object means the populate path starts reading whatever the
+last slider rebuild left behind, which is a change to what a pane reports, not to how fast it reports it.
+
+The existing golden (`HealingBoardGoldenTest`) freezes a rich sequence — full build, no-swarm-pets rebuild, `PopulateHealing`, slider re-window, widen,
+build-without-a-list — but it calls `PopulateHealing` **before** the re-window, so it cannot see exactly this divergence. So the prerequisite is not a
+refactor, it is a test: **populate → re-window → populate again**, frozen, over the same pool. If the second populate must repeat the first (the snapshot
+reading says yes; the current-store reading says "narrower"), the stores cannot merge and this note is the answer. If nobody can say which is right from
+the pane's own behaviour, that is a product question, and ~71 ms is not worth buying it with.
+
+**The probe lesson from this one is reusable**: the first attempt gated the skip with `Environment.GetEnvironmentVariable(...)` *inside* the per-record
+loop, which measured the healing build getting **worse** (window 681 → 850 ms, allocation 132 → 179 MB) — an environment lookup is not a field read, and
+2.6 million of them cost several times the work being skipped. A probe that cannot distinguish its own instrumentation from its subject reports the
+opposite conclusion. Any per-record gate must be a `static readonly bool` resolved once.
