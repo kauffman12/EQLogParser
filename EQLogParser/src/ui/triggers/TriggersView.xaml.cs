@@ -134,7 +134,7 @@ namespace EQLogParser
       AddEditorInstance(new RangeEditor(typeof(long), 1, 99999), "TimesToLoop");
       // The window and its anchor policy share a row, the way a pattern shares one with "Use Regex": a number that changes meaning without
       // saying so is how this one was reported ("it jumps back to 1 even though matches have been arriving continuously").
-      AddEditorInstance(new RepeatedResetEditor(), "RepeatedResetTime");
+      AddEditorInstance(new RepeatedResetEditor(OnEditorSiblingChanged), "RepeatedResetTime");
       AddEditorInstance(new RangeEditor(typeof(double), 0, 99999), "LockoutTime");
       AddEditorInstance(new DurationEditor(2), "DurationTimeSpan");
       AddEditorInstance(new RangeEditor(typeof(long), 1, 99999), "FadeDelay");
@@ -606,17 +606,52 @@ namespace EQLogParser
       loopingTimerItem.Visibility = timerType == 4 ? Visibility.Visible : Visibility.Collapsed;
     }
 
+    /*
+     * Everything that decides whether an edited trigger may be saved, in ONE place because two doors need the answer: the grid's own
+     * ValueChanged event, and an editor whose control writes a SIBLING property (RepeatedResetEditor's "Sliding Reset"), which the grid
+     * never sees. Two copies of these rules would drift, and a Save button enabled over an invalid pattern is how a broken trigger gets
+     * written to the file - the regex/condition helpers also repaint their editors red, so both doors keep that side effect identical.
+     */
+    private bool IsTriggerSaveValid(TriggerPropertyModel trigger)
+    {
+      var isValid = TriggerUtil.TestRegexProperty(trigger.UseRegex, trigger.Pattern, _patternEditor);
+      isValid = isValid && TriggerUtil.TestRegexProperty(trigger.PreviousUseRegex, trigger.PreviousPattern, _previousPatternEditor);
+      isValid = isValid && TriggerUtil.TestRegexProperty(trigger.EndUseRegex, trigger.EndEarlyPattern, _endEarlyPatternEditor);
+      isValid = isValid && TriggerUtil.TestRegexProperty(trigger.EndUseRegex2, trigger.EndEarlyPattern2, _endEarlyPattern2Editor);
+      isValid = isValid && TriggerUtil.TestRegexProperty(trigger.EndUseRegex3, trigger.EndEarlyPattern3, _endEarlyPattern3Editor);
+      isValid = isValid && TriggerUtil.TestConditionProperty(trigger.MatchVariableCondition, _conditionEditor);
+
+      // make sure there is a pattern
+      return isValid && !string.IsNullOrEmpty(trigger.Pattern?.Trim());
+    }
+
+    /*
+     * "There is unsaved work in the pane", said by a control that lives INSIDE an editor cell.
+     *
+     * A PropertyGrid raises ValueChanged for the property its row tracks. A checkbox bound to a sibling of that property - here
+     * Trigger.RepeatedResetSlides beside RepeatedResetTime, exactly as PatternEditor's box sits beside Pattern - writes through to the model
+     * and the grid notices nothing: Save stayed greyed, so the choice lived until the pane closed and then silently vanished. That is a whole
+     * feature delivered looking finished, which is why this exists.
+     *
+     * PatternEditor gets away with it by nudging its pattern text through a transient space to force the row's own event. A numeric box cannot
+     * be nudged without writing a number nobody typed (and a 0.76 that snaps back to 0.75 would also fire the real setter twice against the
+     * window's own bounds), so this editor is simply told what dirty means and the pane decides validity through the same helper its event uses.
+     */
+    private void OnEditorSiblingChanged()
+    {
+      if (generalPropertyGrid.SelectedObject is TriggerPropertyModel trigger)
+      {
+        saveButton.IsEnabled = IsTriggerSaveValid(trigger);
+        cancelButton.IsEnabled = true;
+      }
+    }
+
     private void ValueChanged(object sender, ValueChangedEventArgs args)
     {
       if (args.Property.SelectedObject is TriggerPropertyModel trigger)
       {
         var triggerChange = true;
-        var isValid = TriggerUtil.TestRegexProperty(trigger.UseRegex, trigger.Pattern, _patternEditor);
-        isValid = isValid && TriggerUtil.TestRegexProperty(trigger.PreviousUseRegex, trigger.PreviousPattern, _previousPatternEditor);
-        isValid = isValid && TriggerUtil.TestRegexProperty(trigger.EndUseRegex, trigger.EndEarlyPattern, _endEarlyPatternEditor);
-        isValid = isValid && TriggerUtil.TestRegexProperty(trigger.EndUseRegex2, trigger.EndEarlyPattern2, _endEarlyPattern2Editor);
-        isValid = isValid && TriggerUtil.TestRegexProperty(trigger.EndUseRegex3, trigger.EndEarlyPattern3, _endEarlyPattern3Editor);
-        isValid = isValid && TriggerUtil.TestConditionProperty(trigger.MatchVariableCondition, _conditionEditor);
+        var isValid = IsTriggerSaveValid(trigger);
 
         if (args.Property.Name == patternItem.PropertyName || args.Property.Name == previousPatternItem.PropertyName)
         {
@@ -685,12 +720,6 @@ namespace EQLogParser
         else if (args.Property.Name == "DurationTimeSpan" && timerDurationItem.Visibility == Visibility.Collapsed)
         {
           triggerChange = false;
-        }
-
-        // make sure there is a pattern
-        if (string.IsNullOrEmpty(trigger.Pattern?.Trim()))
-        {
-          isValid = false;
         }
 
         if (triggerChange)

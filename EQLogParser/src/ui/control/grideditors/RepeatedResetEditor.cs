@@ -1,5 +1,6 @@
 using Syncfusion.Windows.PropertyGrid;
 using Syncfusion.Windows.Shared;
+using System;
 using System.ComponentModel;
 using System.Reflection;
 using System.Windows;
@@ -25,6 +26,12 @@ namespace EQLogParser
     private DoubleTextBox _theDoubleTextBox;
     private CheckBox _theCheckBox;
     private Grid _grid;
+    private readonly Action _onSiblingChanged;
+
+    public RepeatedResetEditor(Action onSiblingChanged)
+    {
+      _onSiblingChanged = onSiblingChanged;
+    }
 
     public void SetForeground(string foreground)
     {
@@ -91,10 +98,28 @@ namespace EQLogParser
       };
 
       _theCheckBox.SetValue(Grid.ColumnProperty, 1);
+      _theCheckBox.Checked += TheCheckBoxToggled;
+      _theCheckBox.Unchecked += TheCheckBoxToggled;
 
       _grid.Children.Add(_theDoubleTextBox);
       _grid.Children.Add(_theCheckBox);
       return _grid;
+    }
+
+    /*
+     * Telling the pane there is unsaved work. The checkbox's binding writes RepeatedResetSlides - a sibling of the property this row tracks -
+     * so the grid raises no ValueChanged and Save would never enable; see TriggersView.OnEditorSiblingChanged for why this does not nudge the
+     * number the way PatternEditor nudges its text.
+     *
+     * The CustomCheckBoxTemplate contains its own ToggleButton-ish visual with no Content, which surfaces as OriginalSource on a real click;
+     * PatternEditor ignores those, and so does this, or one click counts twice.
+     */
+    private void TheCheckBoxToggled(object sender, RoutedEventArgs e)
+    {
+      if (e.OriginalSource is CheckBox box && box.Content != null)
+      {
+        _onSiblingChanged?.Invoke();
+      }
     }
 
     public override bool ShouldPropertyGridTryToHandleKeyDown(Key key)
@@ -113,6 +138,8 @@ namespace EQLogParser
 
       if (_theCheckBox != null)
       {
+        _theCheckBox.Checked -= TheCheckBoxToggled;
+        _theCheckBox.Unchecked -= TheCheckBoxToggled;
         BindingOperations.ClearAllBindings(_theCheckBox);
         _theCheckBox = null;
       }
