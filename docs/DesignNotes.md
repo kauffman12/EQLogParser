@@ -10624,6 +10624,42 @@ the same number or the panel jumps under the cursor on switch).
 of memory announced nothing. The channel is gone, so that clause went with it and the stronger assertion is what remains: an invented pair
 would appear in `GetPetMappings()`, which is exactly what `RegistrySeed` walks to decide Pet-ness. An event was the echo; the row is the sound.
 
+## A repeat window slides only if its trigger says so (2026-10-09)
+
+A long-time GINA user ported an Exp-tracking trigger — match `^You gain (party )?experience`, reset 3600 s, name carries `[{counter}]` — and
+reported the count "jumps back to 1 even though matches have been arriving continuously". They were right, and the cause was not a bug in the
+usual sense: **both engines count matches against a window, and differ by exactly one assignment.** GINA's `TriggerFilter.IsMatch` ends with
+`LastMatched = DateTime.Now` unconditionally, so every fire pushes the deadline out another duration (a *sliding* window, which is what makes it
+an idle timeout); EQLP wrote its anchor only inside the reset branch, pinning the window to the FIRST fire of the epoch — so an hour of grinding
+restarts once per hour, forever. Same field, opposite feel. The decompiled reference and the trace are in `docs/counter-variable-issue.md`.
+
+**The user decides, per trigger.** A checkbox sits beside the number — "Sliding Reset" — built as `RepeatedResetEditor` in the same shape
+`PatternEditor` uses for a pattern and its "Use Regex" box (stretching value column + fixed 110 px checkbox column, so the two checkboxes line up
+down the form), binding to the *sibling* property on `info.SelectedObject` rather than to the row's own `Value`. Default is **unchecked = fixed**,
+so every trigger file that exists today means what it meant yesterday; JSON serialization means no format version and no migration (absent = false
+= old behaviour). The description spells out both states and names everything the window drives, because a control that silently changes what a
+neighbouring number means is exactly the complaint this started with.
+
+**The decision lives in Core, not in the processor** — `RepeatedWindowRule.Next(count, anchor, fireAt, resetAfterSeconds, slides)`. Not for purity:
+the app project is Windows-only for tests, and a boundary rule nobody can execute is not a rule (same reason as `ChartUpdateQuestion`,
+`UnaskedRefresh`, `HeapLedger.Format`). The comparison stays `elapsed > resetAfterSeconds` on whole truncated seconds — GINA compared fractions,
+and moving boundary times nobody complained about is not part of shipping an option.
+
+**Two consequences worth stating because they are invisible from the checkbox.** (1) `UpdateRepeatedTimes` serves `{counter}`, `{repeated}`,
+repeated timer names, repeated speech AND `EndEarlyRepeatedCount`, so one trigger has **one** anchor policy for all of them; splitting it per store
+is a different feature with its own UI, and must not arrive as a side effect. (2) **An import carries its anchor with its number**: NAG's counter
+duration is documented in `NagUtil` as an "idle-reset window", and idle is only true if matches move the deadline — so an imported counter node gets
+`slides = true`, while a phrase node that carries no counter is restored to both model defaults (the flag belongs to whatever counts, not to the
+capture that emitted it).
+
+**The test discipline: assert WHICH fire starts epoch N+1.** Both policies increment per match, so any test written as "the count went up" passes on
+a rule that never resets anything — which is how this behaviour survived unnoticed. `RepeatedWindowRuleTest` replays streams and names the fire
+indices: three hours of grinding every five minutes reaches 36 with zero restarts while sliding; the same stream under fixed restarts at exactly fires
+13 and 26 (**not** 12/25, which sit precisely on the boundary — the strict `>` is load-bearing); two hours of grinding followed by 40 quiet minutes
+*continues* while sliding and *restarts* when fixed, same stream, opposite answers; a gap longer than the window ends the epoch either way (the reset
+is not what the option changes — only the anchor is); plus the anchor as a fact rather than inferred from a count, and a zero-second window meaning
+"no accumulation across seconds" rather than "never reset".
+
 ## Where we stand: performance, and the refresh nobody asked for (2026-10-09)
 
 An orientation chapter on purpose, and deliberately short. Every figure quoted here belongs to a section named at the end of
@@ -10791,7 +10827,7 @@ engine deleted in `5d45d866`), `batch-parsing-plan.md` (a two-pass pipeline that
 | `perf-memory-status.md` | **live** | the B/C backlog with measured opportunity and the catch on each row; nothing here duplicates it |
 | `incremental-summary-refresh.md` | **live** | Phase B's entry point, the row-granularity bar, the structural blocker |
 | `roster-import-plan.md` | **live (mostly landed)** | identity-memory work remaining: class reads through `IdentityLookup`, the write-site twin census, the `"You"` audit, the invariant test |
-| `counter-variable-issue.md` | **open — needs a product decision** | GINA `{counter}` semantics; not a code question |
+| `counter-variable-issue.md` | **resolved 2026-10-09 — the report and the decompiled reference stay useful** | decided as a per-trigger checkbox (sliding = GINA); rule in `RepeatedWindowRule`, law in "A repeat window slides only if its trigger says so" |
 | `combat-mirror-design.md` | **archaeology, status corrected 2026-10-09** | Phases 0–4 shipped, legacy engine + `EnableCombatMirror` deleted; kept for the rule-catalog arguments that still run — DesignNotes outranks it wherever they disagree |
 | `NagFctReference.md` | **keep as reference** | notes on someone else's implementation; not reconstructible from our tree |
 | `summary-refresh-notification.md` | **deferred design only** | §14 records what shipped instead of the notice; §2–§9 are the toast design kept for the day one of the three re-open conditions becomes true |

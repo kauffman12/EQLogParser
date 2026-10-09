@@ -132,7 +132,9 @@ namespace EQLogParser
       AddEditorInstance(new RangeEditor(typeof(long), 0, 99999), "EndEarlyRepeatedCount");
       AddEditorInstance(new RangeEditor(typeof(long), 0, 99999), "WarningSeconds");
       AddEditorInstance(new RangeEditor(typeof(long), 1, 99999), "TimesToLoop");
-      AddEditorInstance(new RangeEditor(typeof(double), 0, 99999), "RepeatedResetTime");
+      // The window and its anchor policy share a row, the way a pattern shares one with "Use Regex": a number that changes meaning without
+      // saying so is how this one was reported ("it jumps back to 1 even though matches have been arriving continuously").
+      AddEditorInstance(new RepeatedResetEditor(), "RepeatedResetTime");
       AddEditorInstance(new RangeEditor(typeof(double), 0, 99999), "LockoutTime");
       AddEditorInstance(new DurationEditor(2), "DurationTimeSpan");
       AddEditorInstance(new RangeEditor(typeof(long), 1, 99999), "FadeDelay");

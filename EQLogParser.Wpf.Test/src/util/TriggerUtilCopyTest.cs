@@ -62,6 +62,7 @@ namespace EQLogParser.Wpf.Test
         VoiceRate = -10,
         Volume = 7,
         RepeatedResetTime = 1.25,
+        RepeatedResetSlides = true, // non-default on purpose: an equality against a default false would pass while the copy dropped it
         VariableActions = [
           new VariableAction { ActionType = 0, DataType = 0, VariableName = "myVar", Value = "hello" },
           new VariableAction { ActionType = 1, DataType = 0, VariableName = "clearMe" }
@@ -125,6 +126,7 @@ namespace EQLogParser.Wpf.Test
       Assert.AreEqual(source.VoiceRate, dest.VoiceRate);
       Assert.AreEqual(source.Volume, dest.Volume);
       Assert.AreEqual(source.RepeatedResetTime, dest.RepeatedResetTime);
+      Assert.IsTrue(dest.RepeatedResetSlides, "a copied trigger that counted on idle must still count on idle - the anchor policy travels with the window");
       Assert.AreEqual(source.EndEarlyRepeatedCount, dest.EndEarlyRepeatedCount);
       Assert.AreEqual(source.WorstEvalTime, dest.WorstEvalTime);
     }
