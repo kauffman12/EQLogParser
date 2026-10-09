@@ -109,7 +109,7 @@ public class NamesTableTest
    * `players.txt` has no writer, and its importer refuses to run over a folder whose ledger already carries roster rows
    * (`IdentityPriorStore.HasRosterRows`), so a bad inherited belief does not get re-imported behind the operator's back -
    * it has to be re-earned by this capture's own lines. A name that keeps facts stays on the list at Unknown; a name whose
-   * only claim was memory leaves. docs/DesignNotes.md → "Clear claim forgets everything, which is what makes it the repair".
+   * only claim was memory leaves. docs/DesignNotes.md → "Clear claim forgets everything — which is what makes it the repair".
    */
   [TestMethod]
   public void TakingAClaimBackTakesTheLegacyMemoryWithIt()
