@@ -10719,6 +10719,12 @@ Class column can still show a class for the rest of the session after the durabl
 learned class windows would blank the class of a raider whose cast lines are still in the open capture — a different harm than the
 one the operator asked for, and cheaper to live with than to "fix".
 
+The two field reports that started this ("changed a player to an NPC and it refreshed and they were removed, but then i reselected
+fights and they came back as if they were a player"; "tried changing one of the players to be someone's pet … they stayed listed as a
+player") are answered by the forget-then-assert order above: the stale claim that reappeared was the registry answer a later seam still
+read. `TempOverrideProbeTest` walked that seam before/after a write on real captures; with the law pinned here and in AGENTS it was deleted
+rather than left as an uncited gate (docs/CodingStandards.md → DesignNotes pointers; AGENTS → "A gated real-log test is disposable").
+
 Tests: `TakingAClaimBackTakesTheLegacyMemoryWithIt` (eviction + departure from the list), `AnUnplacedNameHoversAsTheBareAbsence`
 (the absence wording reaches the pane unadorned; Type reads `Unknown`, Why reads `Not Placed` — the absence word lives in the Why
 column, not the Type cell), `AContradictedRosterIsKnownOnTheRowAndSaidNowhere` (both orderings). Vocabulary and words stay in Core:

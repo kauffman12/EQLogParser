@@ -21,7 +21,7 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
 - **Zero warnings is the bar, and it is counted, not hoped for**: `dotnet build EQLogParser.sln -p:EnableWindowsTargeting=true --no-incremental --nologo 2>&1 | grep -cE ": (warning|error) [A-Z]+[0-9]+"` prints **0** before a commit
   (`--no-incremental` is load-bearing: MSBuild reports diagnostics only for projects it recompiles, so counting after `dotnet test` prints 0 about
   assemblies it never rebuilt — that is how an MSTEST0017 in a new test file shipped past a "clean" local count; docs/CodingStandards.md → "Build Warnings") (match diagnostics, not words — MSBuild's summary always contains `0 Warning(s)`). Nine CS8632s shipped once because a file in Core (project `Nullable=disable`) wrote `string?` without opening `#nullable enable annotations`; the whole fleet is one pragma, and it is why each new warning dies in its own commit (docs/CodingStandards.md → "Build Warnings", "Nullable Reference Types"). Nothing in this repo suppresses a warning (`#pragma warning disable`, `<NoWarn>`) — fixing the cause is the rule.
-- Tests: `dotnet test EQLogParser.Test/EQLogParser.Test.csproj` is the non-WPF suite (**1,933 passed / 15 env-gated skips**, plain `net10.0`, 2026-11 — the trim-moves-no-ordinal law, the once-per-doubling watermark and the ungrowable-empty-array floor are in that count). `EQLogParser.Wpf.Test` targets `net10.0-windows` and only
+- Tests: `dotnet test EQLogParser.Test/EQLogParser.Test.csproj` is the non-WPF suite (**1,933 passed / 14 env-gated skips**, plain `net10.0`, 2026-10-09 — the trim-moves-no-ordinal law, the once-per-doubling watermark and the ungrowable-empty-array floor are in that count). `EQLogParser.Wpf.Test` targets `net10.0-windows` and only
   runs on Windows; its total belongs to a Windows run rather than being quoted here (a `[TestMethod]` grep counts data-driven variants and is not an executed count) — add it to the headless number instead of trusting arithmetic. A Windows run that *loses* `Sta.Run` bodies rather than failing them is the failure mode to watch.
 - **Real-log corpus layout (local/, gitignored)**: `local/logs/live/` holds live-format captures; `local/logs/emu/` holds EMU-server captures (THJ/TSS/Heroes Forge shapes) that need the app's `EnableEmuParsing` behaviour. The env-gated real-log tests run them via **`EQLP_EMU=1`**, which sets `AppSettings.IsEmuParsingEnabled` for the duration of a `PipelineHarness` run (restored after — the flag is process-global and live-format logs misparse with it on). Without it an EMU capture parses with DamageLineParser's live grammar and silently loses the `(Owner: X)` / `scores a critical hit! (N)` shapes, so a parity run over `emu/` without the flag measures nothing. Timestamps are the same `[DDD MMM dd HH:mm:ss yyyy]` shape in both directories.
 
@@ -298,9 +298,11 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   2,270,292 damage facts — only the heal stream interns those names, and the **identity list is the one surface that shows a parser bug
   in a heal line**, so a row with no reason printed is parser evidence, not a classification gap. Such a line is now refused whole (like its
   rank-free sibling, which has never been stored); crediting caster-less heals onto the spell's own name would move the healing board and is
-  its own decision. Two related measured standings: **the Type cell reading `NPC` for a spell is known-wrong and open** (all 34 rank-shaped
-  attacker names in that capture read `Spell` as reason with every one of their 590 hits on an NPC — adding `IdentityKind.Spell` touches
-  25 `IdentityKind.Npc` sites, several of them board-routing predicates, so it arrives with a real-capture board diff, not as an enum add);
+  its own decision. Two related measured standings: **the Type cell reading `NPC` for a spell name is CLOSED — it needed a kind, not a word**
+  (all 34 rank-shaped attacker names in that capture read `Spell` as *reason* while the cell said NPC, every one of their 590 hits landing
+  on an NPC; `IdentityKind.Spell` shipped with exactly the real-capture board diff this note demanded — 57 rows moved Npc→Spell on
+  `eqlog_Kizant_xegony-2.txt` with fight rows and every magnitude identical, three NPC-arm predicates moved with it (`FightProjection.SideAt`,
+  `EntityTimeline.IsRaidVictimAt`, R7's defender switch), and the dropdown offers Spell as a verdict an operator can write — see "The Spell kind");
   and **a ledger seed never changes an answer** (17 / 18 / 77 names answered from the seed on three captures, **0** disagreeing with the
   capture's own evidence; a deliberately wrong roster entry still loses to `R6-npcdb`, `R1-target` and `R14-shape`) — what memory costs is
   the *reason word*, so "weak seeds block R7/R15" closed as provenance-only and re-opening those gates needs new measurement, not the old
@@ -1413,11 +1415,16 @@ npcs.txt; it is the *only* evidence for **6** names (Incogitable) and **4** (Kiz
   Keep a gated test only when something must be *asserted* on real data no fixture can reach: `LiveFightsRealLogTest`
   (a row live at its own last activity), `IncrementalClassificationTest`/`DeriveIncrementBenchmarkTest` (carried pass ==
   full replay, plus the projection/classification split named as the re-measure command), `UnrowedFactsTest`,
-  `MeterBoardCostRealLogTest`/`RealLogBenchTest` (named cost probes) and `LiveTailChangeProbeTest`
+  `MeterBoardCostRealLogTest`/`RealLogBenchTest` (named cost probes), `LiveTailChangeProbeTest`
   (`EQLP_LIVE_TAIL_PROBE` — replays a capture as growing prefixes and prints which rows a pass actually changes; its answer
-  killed the equality-gate proposal and is in DesignNotes). Deleted on those terms:
-  `RegistryRebuildTest` (phase exit gate satisfied, recall figures recorded in DesignNotes) and `HitByNpcCensusTest`
-  (premise dead with the rule it proposed) — so a comment or doc that cites a deleted census is a bug to fix, not a
+  killed the equality-gate proposal and is in DesignNotes), and the two gates the cell cache rests on: **`PetLearningProbeTest`**
+  (`EQLP_PET_LEARN` — replays `DamageStatsBuilder`'s OWN pet-placement rule over materialized records and asserts the ceilings behind
+  "what a cached walk may carry": order-dependent placement, how many names would churn, map sizes) and **`RowReuseCeilingProbeTest`**
+  (`EQLP_REUSE_CEILING` — what a WHOLE-ROW cache could save at best; its ~20 % answer is the bar any cell cache must clear). Both assert on
+  real captures no fixture reaches, and DesignNotes cites each by name where its number is used. Deleted on those terms:
+  `RegistryRebuildTest` (phase exit gate satisfied, recall figures recorded in DesignNotes), `HitByNpcCensusTest`
+  (premise dead with the rule it proposed) and `TempOverrideProbeTest` (self-labelled "delete after reading"; its two field reports are
+  answered by the forget-then-assert verdict law — see "Clear claim forgets everything" — and its gate was cited by no document at all) — so a comment or doc that cites a deleted census is a bug to fix, not a
   reference to preserve. Before deleting anything here, run it: a one-off measurement is worth more executed twice
   than argued about (docs/DesignNotes.md → "What a capture proves with empty memory").
 - **Identical input gives identical output inside one process, and it is asserted** (2026-11; this replaces the
