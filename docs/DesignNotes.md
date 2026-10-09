@@ -10637,8 +10637,9 @@ restarts once per hour, forever. Same field, opposite feel. The decompiled refer
 `PatternEditor` uses for a pattern and its "Use Regex" box (stretching value column + fixed 110 px checkbox column, so the two checkboxes line up
 down the form), binding to the *sibling* property on `info.SelectedObject` rather than to the row's own `Value`. Default is **unchecked = fixed**,
 so every trigger file that exists today means what it meant yesterday; JSON serialization means no format version and no migration (absent = false
-= old behaviour). The description spells out both states and names everything the window drives, because a control that silently changes what a
-neighbouring number means is exactly the complaint this started with.
+= old behaviour). Its description is the shipped sentence plus one line — *"If Sliding Reset is checked, each match delays the reset until that many seconds
+after the most recent match."* — because a first attempt spelled out both states and everything the window drives and read like documentation
+wedged into a form field. The full semantics belong here and in the tests; on screen, one sentence names the effect and nothing else.
 
 **The decision lives in Core, not in the processor** — `RepeatedWindowRule.Next(count, anchor, fireAt, resetAfterSeconds, slides)`. Not for purity:
 the app project is Windows-only for tests, and a boundary rule nobody can execute is not a rule (same reason as `ChartUpdateQuestion`,
