@@ -9852,3 +9852,65 @@ it did not remove the optimization.
   [SelectCommand] select all` → builds **#2 damage 1,982 ms (walk 1,691 / groups 265)**, **#3 tanking 57 ms**, **#4 healing 1,483 ms
   (window 980 / walk 491)**, `boards.build 5,006 ms`, build **#1** still the 1 ms pane-shown re-slice, and **`chart.update 1,931 ms |
   walked 4,660,915 records -> 5 lines … budget 300 ms`** — B13 reproduced exactly (walk 1,884 vs 1,838 ms).
+
+## What a board build allocates, and the distribution nobody opens (2026-10)
+
+The chapter before this one settled where a click's **time** goes. This one settles where its **bytes** go, because the two questions
+turned out to have unrelated answers — and because answering it needed a new term on an existing line rather than a memory dump.
+
+`StatsBuildTrace` now prints allocated bytes beside milliseconds for every stage of every build:
+
+```
+stats build #1 damage full : 2657 ms | … | groups 223 ms/53.7 MB window 2 ms walk 2430 ms/345.8 MB totals 9 ms/0.8 MB present 1 ms
+```
+
+`GC.GetTotalAllocatedBytes` is asked once per stage boundary — a handful of times per build — and stages under half a megabyte keep no term,
+so an ordinary line does not grow noise. "The board takes 2.6 s" and "the board takes 400 MB" are different defects: the first wants fewer
+operations, the second wants fewer objects, and only the second explains why a UI-thread pause outlives the pass that caused it (this is the
+same gen0-on-the-painting-thread effect the field runs measured as `pause … ms/30 s`).
+
+Measured headlessly over `eqlog_Kizant_xegony-09-03-26.txt` — the very capture the field log came from — with `BoardWalkCostRealLogTest`
+(`EQLP_BOARD_WALK=<log>`): 4,832,103 facts → 708 rows → 697 fights materialized into **4,660,915 damage + 133,784 taken records**, i.e. the
+`Select All` an operator actually performs.
+
+| | before | after | what changed |
+|---|---|---|---|
+| chart-shaped walk of the record seam | **960 MB (216 B/record)** | **0 B** | one reused `RecordWrapper` + one reused `DataPoint`; identity answered per name instead of per record |
+| damage board `walk` stage | **345.8 MB (74 B/record)** | **147.3 MB** | `"X +Pets"` and the DD/DoT sub-stat key composed once per name/pair instead of per record |
+| whole damage build | **400.3 MB** | **201.9 MB (−50 %)** | both of the above |
+| damage board wall time | 2,667 / 2,587 ms | 2,659 / 2,553 ms | **nothing** — see below |
+
+**Removing an allocation did not remove time, and that is the finding, not a footnote.** The walk is still ~500 ns/record because per record it
+hashes names through about a dozen dictionary lookups (`individualStats`, `topLevelStats`, `childrenStats`, the sub-stat index, plus three counter
+updates). That is the per-name accumulator's problem — the plan called 1c — and it is why a byte-hunt was worth doing separately rather than as
+part of it: the bytes are charged to gen0 collections on the painting thread even when the milliseconds look fine.
+
+Three laws came out of the code changes, all asserted.
+
+**(1) A walk hands out ONE `DataPoint`, so consumers aggregate in their loop body and retain nothing.** The reuse is what kills 960 MB; its price
+is aliasing, so the reset lives in the walk itself (`ClearTo`), not in the subclasses — a field nobody writes would otherwise carry the *previous*
+record into the next one, which is a wrong value that looks plausible rather than one that throws. `RecordGroupCollectionTest` sweeps the DTO by
+reflection and asserts every field outside the six a damage walk writes stays default on every record, so a new `DataPoint` property is covered the
+day somebody adds it. The same test pins that one instance really is handed out (`AreSame`) — that is the contract, not an implementation detail —
+and an allocation probe with a **control loop whose objects escape**, because an elidable control reads as a broken probe rather than as what it
+guards (`FrenzyClassTest` learned that first).
+
+**(2) Identity is answered per name and re-asked by each fresh walk.** `IdentityLookup.OwnerOf` took 4.6 M questions a night to produce 69 answers,
+and since the lookup carries no time argument one walk had one answer anyway — memoizing changes nothing observable while deleting the lookups. The
+memo sits on the collection instance, never on the type: a walk started after an owner is learned must re-ask, or a pet's fold and a mid-night charm
+would freeze at whatever the first pass believed.
+
+**(3) A composed row key is built once per name/pair, but `CreateRecordKey` stays the only definition of a row.** `"X +Pets"`, `"healer|healed"` and
+the DD/DoT `"type=subtype"` key are memoized beside the builders that need them. The sub-stat index gained a **pair lane** (`ByPair`) keyed by the
+`(type, subtype)` a caller already holds, so a repeat sighting never builds the key string at all — and it cannot drift from the rule, because an
+entry enters `ByPair` *only by way of* the existing `ByKey` lookup, so the deliberate folding (("Melee","Foo") and ("Spell","Foo") are one row today)
+still happens in one place. Its lifetime is the row list's, which is why it hangs off `SubStatIndex` instead of a global.
+
+**What is left is named rather than guessed.** Of the walk's remaining 147 MB: `Attempt.CritFreqValues` / `NonCritFreqValues` — the hit-distribution
+histograms — account for **1,879,130 dictionary entries across 2,478 rows (~72 MB retained)** in a single build. The only reader in the entire
+codebase is `HitFreqChart`, opened from a toolbar button on the Damage and Tanking summaries and closed nearly always. Every meter refresh and every
+click therefore builds, retains and later frees a distribution nobody asked for. The gate is obvious (fill it only while that window is open) and it
+is *not* implemented here, because two things make it more than a flag: the chart reads stats that already exist, so its own open path must set the
+flag and rebuild once before reading; and that window's X hides rather than closes, so any "chart is open" state has to follow the
+`DamageOverlayWindow` discipline or the memory comes back and nobody can see why. It belongs with B2's lesson — *a store keeps what a door reads* —
+applied one level up, to a board.

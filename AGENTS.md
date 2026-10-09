@@ -389,6 +389,26 @@ announce is logged at Debug instead of swallowed — "three asks arrived" and "o
 different stamps on one door = content genuinely moved and the rebuild was owed. **The first-click-after-load triple is still an open question**
 (the load-time `TimeChanged` → hourglass → options chain is the leading suspect and is written up as a hypothesis, not a measurement, in
 docs/DesignNotes.md → "Name every door") — which is why this commit changes log lines and no behaviour.
+- **A record walk hands out ONE `DataPoint`, and a row key is composed once per NAME, never per record** (2026-10; the numbers and the reasoning are
+  docs/DesignNotes.md → "What a board build allocates, and the distribution nobody opens"). A whole-capture `Select All` is 4.66 M damage records, and the seams that turned those records into
+  rows used to allocate their way through: `RecordGroupCollection` built a `RecordWrapper` + a `DataPoint` per record (960 MB of garbage per
+  chart-shaped walk) and asked `IdentityLookup.OwnerOf` per record; `DamageStatsBuilder` concatenated `"X +Pets"` per pet swing, and the DD/DoT
+  sub-stat key was concatenated by `CreateRecordKey` for every dot tick. Four rules now hold there. **(1)** The walk reuses one wrapper and one
+  point, so **a consumer aggregates in its own loop body and retains nothing** — no `.ToList()`, no LINQ over a walk (`LineChart.AddDataPoints`
+  is the only consumer class and it copies into its own aggregates); the reset lives in the walk (`ClearTo`), not in subclasses, because one field
+  nobody writes would otherwise carry the previous record into the next. **(2)** Identity questions are per-name: the owner lookup is memoized on
+  the collection (69 names in a night that holds 4.6 M records — and the lookup takes no time argument, so one walk had one answer anyway), and a
+  *fresh* walk re-asks, which is what keeps a mid-night charm or a new pet pair from being frozen by an earlier pass. **(3)** Composed row keys are
+  memoized (`DamageStatsBuilder._petRowNames`, `HealingStatsBuilder._healerHealedKeys`) and `SubStatIndex` gained a **pair lane** (`ByPair`) keyed by the
+  `(type, subtype)` the caller already holds — the pair lane is an accelerator only: entries enter it *by way of* `ByKey`, so the folding rule
+  (("Melee","Foo") and ("Spell","Foo") are one row) cannot drift, and a new sub-stat shape must keep arriving through `SubStatLookup`. **(4)** Every stage of
+  every build now prints its **allocated bytes beside its milliseconds** (`walk 2422 ms/147.4 MB`) — asked per stage boundary, never per record — because
+  "the board costs 2.6 s and 400 MB" is two different bugs and only the second one shows up as a UI pause that outlives the pass.
+  Equivalence is asserted by the golden boards (damage/heal/tank) plus `RecursiveFoldEquivalenceTest`; the seam's own laws are `RecordGroupCollectionTest`,
+  including an allocation probe **with a control loop that escapes** (same reason as `FrenzyClassTest`: an elidable control reads as a broken probe).
+  **What this did NOT buy: time.** The walk is still ~500 ns/record because it looks names up in dictionaries about a dozen times per record — that is the
+  per-name accumulator of **1c**, not an allocation problem. The largest remaining byte-bag is named and un-actioned: the hit-distribution histograms
+  (`Attempt.CritFreqValues`/`NonCritFreqValues`, 1.88 M entries / ~72 MB per build) that only `HitFreqChart` reads — see B15 before widening anything.
 - **The damage board is frozen as a golden, and it reports its own phases** (2026-11): `DamageBoardGoldenTest` freezes what the
 Damage Summary displays — every grid column for the raid line and every row, across all three views (`StatsList`,
 `ExpandedStatsList`, `Children` with each child's share of its parent), the sub-stat `Key`s (the only thing that sees a Dd/DoT key
