@@ -16,6 +16,12 @@ namespace EQLogParser
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private readonly DispatcherTimer _selectionTimer;
+
+    /*
+     * "Calculating HPS..." and the emptied grid, shown only if the build is still running when a short delay expires -- see DeferredBusyState for
+     * why showing them at t=0 is a promise the dispatcher cannot keep.
+     */
+    private readonly DeferredBusyState _busyState = new();
     private bool _ready;
 
     public HealingSummary()
@@ -197,11 +203,17 @@ namespace EQLogParser
     {
       Dispatcher.InvokeAsync(() =>
       {
+        // Any state of a build ends the promise made by the one before it; STARTED makes a new one, on its own delay.
+        _busyState.Cancel();
+
         switch (e.State)
         {
           case "STARTED":
-            title.Content = "Calculating HPS...";
-            dataGrid.ItemsSource = NoResultsList;
+            _busyState.Arm(() =>
+            {
+              title.Content = "Calculating HPS...";
+              dataGrid.ItemsSource = NoResultsList;
+            });
             break;
           case "COMPLETED":
             CurrentStats = e.CombinedStats;

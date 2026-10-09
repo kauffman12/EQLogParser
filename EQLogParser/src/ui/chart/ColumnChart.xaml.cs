@@ -27,6 +27,13 @@ namespace EQLogParser
     private readonly List<ColumnData> _columns = [];
     private readonly List<string> _selectedClasses = [];
     private readonly DispatcherTimer _refresh;
+
+    /*
+     * "Loading..." and an emptied chart, shown only if the build is still running when a short delay expires -- see DeferredBusyState. The chart
+     * is the slowest of these surfaces to redraw (a select-all walks four million records), so it is also the one where a stale chart staying up
+     * for the first 150 ms reads as normal rather than as broken.
+     */
+    private readonly DeferredBusyState _busyState = new();
     private bool _ready;
 
     // ✅ Derived types override these:
@@ -80,6 +87,9 @@ namespace EQLogParser
     {
       Dispatcher.InvokeAsync(async () =>
       {
+        // Any state of a build ends the promise made by the one before it; STARTED makes a new one, on its own delay.
+        _busyState.Cancel();
+
         switch (e.State)
         {
           case "COMPLETED":
@@ -94,8 +104,11 @@ namespace EQLogParser
             }
             break;
           case "STARTED":
-            titleLabel.Content = "Loading...";
-            Reset();
+            _busyState.Arm(() =>
+            {
+              titleLabel.Content = "Loading...";
+              Reset();
+            });
             break;
           case "NONPC":
           case "NODATA":

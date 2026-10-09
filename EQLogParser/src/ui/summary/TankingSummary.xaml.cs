@@ -22,6 +22,12 @@ namespace EQLogParser
     private bool _currentPetValue;
     private int _currentGroupCount;
     private readonly DispatcherTimer _selectionTimer;
+
+    /*
+     * "Calculating Tanking DPS..." and the emptied grid, shown only if the build is still running when a short delay expires -- see
+     * DeferredBusyState. Cancelling happens for every event type this pane listens to, including the healing pass that repaints it afterwards.
+     */
+    private readonly DeferredBusyState _busyState = new();
     private bool _ready;
 
     public TankingSummary()
@@ -269,6 +275,9 @@ namespace EQLogParser
     {
       Dispatcher.InvokeAsync(() =>
       {
+        // Any state of a build ends the promise made by the one before it; STARTED makes a new one, on its own delay.
+        _busyState.Cancel();
+
         if (e.Type == Labels.HealParse && e.State == "COMPLETED")
         {
           if (CurrentStats != null)
@@ -292,8 +301,11 @@ namespace EQLogParser
           switch (e.State)
           {
             case "STARTED":
-              title.Content = "Calculating Tanking DPS...";
-              dataGrid.ItemsSource = NoResultsList;
+              _busyState.Arm(() =>
+              {
+                title.Content = "Calculating Tanking DPS...";
+                dataGrid.ItemsSource = NoResultsList;
+              });
               break;
             case "COMPLETED":
               CurrentStats = e.CombinedStats;

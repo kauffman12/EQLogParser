@@ -24,6 +24,13 @@ namespace EQLogParser
     private static readonly List<string> NoRostersList = ["No Rosters Found"];
     private readonly ComboBoxItem _selectRosterItem = new() { Content = "Select Roster", Tag = "" };
     private readonly DispatcherTimer _selectionTimer;
+
+    /*
+     * "Calculating DPS..." and the emptied grid, shown only if the build is still running when a short delay expires. Showing them the instant
+     * a build starts cannot work: the answer is posted at the same dispatcher priority as the busy state, so on a fast build or a congested UI
+     * thread the clear is filled back in before it ever reaches the screen. See DeferredBusyState.
+     */
+    private readonly DeferredBusyState _busyState = new();
     private int _currentGroupCount;
     private readonly ViewOptionRegistry _viewOptions;
     private bool _ready;
@@ -707,11 +714,17 @@ namespace EQLogParser
     {
       Dispatcher.InvokeAsync(() =>
       {
+        // Any state of a build ends the promise made by the one before it; STARTED makes a new one, on its own delay.
+        _busyState.Cancel();
+
         switch (e.State)
         {
           case "STARTED":
-            title.Content = "Calculating DPS...";
-            dataGrid.ItemsSource = NoResultsList;
+            _busyState.Arm(() =>
+            {
+              title.Content = "Calculating DPS...";
+              dataGrid.ItemsSource = NoResultsList;
+            });
             break;
           case "COMPLETED":
             CurrentStats = e.CombinedStats;

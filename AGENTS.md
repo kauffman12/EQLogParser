@@ -1509,3 +1509,22 @@ After completing work, verify:
   wrap the mark in "did any editable property actually differ", never add another ungated `MarkDirty`. The question is asserted
   headless (`SlidingResetDirtyStateTest`, plain assembly: two plain values on a model, no WPF), because a test can reach a
   question but not a click — constructing `TriggersView` needs the whole trigger DB.
+- **A busy state may not compete with its own answer** (2026-11): the three summary panes and `ColumnChart` used to clear their
+  grid and write *Calculating DPS…* on `StatsGenerationEvent "STARTED"`, which the builders raise **on the pool thread** (the gate
+  is `new SummaryBuildGate(static work => Task.Run(work))`) and each pane takes with `Dispatcher.InvokeAsync` — default priority
+  **Normal (9)** — exactly like the COMPLETED event that refills the same grid. A cleared grid is an invalidation, painted at
+  **Render (7)**, so any answer queued before that pass runs first: one fight rebuilds in **2 ms**, fifteen in **~50 ms**, and a
+  select-all completion can land behind a `chart.update` of 1,250 ms, all measured in `EQLogParser.log`. Symptom: stale rows go
+  straight to new rows with no busy state, "once in a while" (slow builds won their frame). So the state is **earned**:
+  `DeferredBusyState` (src/ui/util) arms a one-shot timer on STARTED and touches nothing; only a build still running after
+  after **`ShowAfterMs`**, which IS `PerfJournal.SlowPassMs` (150 ms) — so "worth telling the user" stays ONE number — writes the
+  text and empties the grid, from
+  that tick where nothing can outrun it any more. **Every event cancels first**, STARTED included (which re-arms): the bug this
+  shape invites is a late tick blanking a table already showing real rows. Do not "fix" the race by posting COMPLETED below Render
+  (that starves results behind animation) and do not restore the immediate clear — it strobes three tables plus the chart on every
+  settle tick of a live raid to announce work that finished inside the frame it took to say so; during the delay the previous table
+  stays up, wrong by milliseconds and readable. For busy states whose work DOES block the UI thread the sibling idiom is
+  `await Dispatcher.Yield(DispatcherPriority.Render)` (`DamageSummary.GroupSelectionChanged`) — a Render yield sits behind the very
+  paint it asked for. `DeferredBusyStateTest` (Wpf.Test) pumps a real dispatcher, because a `DispatcherTimer` only ticks while
+  something pumps: inside-delay shows nothing, past-delay shows exactly once (not per interval), newest request wins, cancel leaves
+  nothing armed.

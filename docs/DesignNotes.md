@@ -2932,6 +2932,34 @@ nothing of ours running: the same event as a multi-second stall at a fifth of th
 run a raid at 150 ms — the log would fill with passes no player felt — but a measurement session that leaves the default will never see the
 probe fire except on a freeze, and freezes are the rare half of this.
 
+### A busy state may not compete with its own answer
+
+"Once in a while the summary table isn't given a chance to clear and go back to *Calculating DPS...*" — measured against
+`EQLogParser.log`, the report was accurate and the mechanism is priority arithmetic. The summary panes and the chart learn a
+build started through `StatsGenerationEvent "STARTED"`, raised by the builders on the pool thread (`_summaryGate` runs
+`Task.Run`) and handed to the pane with `Dispatcher.InvokeAsync(...)` — whose default is **Normal (9)**. So is the
+COMPLETED event that fills the grid back in. A cleared grid is only an *invalidation*: the pixels need the render pass, at
+**Render (7)**, and a Normal item already in the queue outranks it. A build that answers before that pass gets there — one
+fight rebuilds in **2 ms**, fifteen in **~50 ms**, per the same log — or any build whose answer lands while the UI thread is
+behind a `chart.update` of **1,250 ms** and a garbage collection, paints stale rows straight into new rows. Slower builds
+won their frame, which is why this read as flaky instead of broken.
+
+The fix is not to chase the paint. `DeferredBusyState` (src/ui/util) makes the busy state something a build *earns*: on
+STARTED the pane arms a one-shot timer (`ShowAfterMs`, which IS `PerfJournal.SlowPassMs` — 150 ms — so "this took long enough to
+be worth telling somebody" is answered once, by a constant a log line and an interface cannot drift apart on) and touches nothing
+else; only a build still running when it expires
+writes "Calculating DPS..." and empties its grid — and from that tick the promise holds trivially, because the state change
+and its paint now sit ahead of a completion that has not happened. Every event cancels first, including STARTED (which arms
+again), so the one bug this shape can have — a late tick blanking a table already showing real rows — is closed by the same
+call that makes re-selecting cheap. The old behaviour on a fast build was worse than invisible: whenever it *did* paint, a
+select-then-settle sequence strobed three tables and a chart through an empty state to announce work that finished inside
+the frame it took to say so. During those 150 ms the previous table stays up, wrong by milliseconds and readable.
+
+`Dispatcher.Yield(DispatcherPriority.Render)` (`DamageSummary.GroupSelectionChanged`) is the sibling idiom for the case where
+the blocking work follows on the UI thread — a yield at Render sits behind the render pass it just asked for, which is exactly
+what makes the busy state visible there. It cannot help here, because nothing on this path blocks the UI thread; the answer
+does not have to wait for anything except the queue it was posted into.
+
 ### What a clean run looks like, because it is worth knowing one
 
 A 21 minute replay soak with `PerfStallMs=200` — FCT, trigger log, meter and four overlays open, the same raid log played twice — produced
