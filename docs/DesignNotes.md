@@ -10102,3 +10102,64 @@ the pane's own behaviour, that is a product question, and ~71 ms is not worth bu
 loop, which measured the healing build getting **worse** (window 681 → 850 ms, allocation 132 → 179 MB) — an environment lookup is not a field read, and
 2.6 million of them cost several times the work being skipped. A probe that cannot distinguish its own instrumentation from its subject reports the
 opposite conclusion. Any per-record gate must be a `static readonly bool` resolved once.
+
+## The capture moved; my selection did not (live tail, 2026-10-08)
+
+The first run with a **growing** log (`logsim` replaying into the monitored file, FCT off, meter + overlays open) answered the
+question every number in this file up to now could not: what a derive pass costs when the capture never stops. It also produced the
+operator's clearest bug report of the year, from the pane rather than the log:
+
+> i selected a few of the active mobs … the table also flashed a good amount like it had to do full refreshes … then i picked a
+> fight that is already closed and the npc is dead. and it still did a lot of full damage summary refreshes where the whole table
+> could clear and reload even though the total damage, the player list and the damage in the rows … never changed.
+
+`grep -oE "board ask \[[A-Za-z]+\]"` over that session: **75 `ContentMoved`, 3 SelectCommand, 1 SnapshotSwap, 1 SettleTick** — 157
+stats builds (`from derived [ContentMoved]`) behind **one selected row**, at roughly one per second, for a fight whose facts had not
+moved in minutes. The design intent in "What makes a board go one pass stale" was right (a verdict can change what identical facts
+MEAN, so row diffs and object identity are both blind to it), but the trigger used was the **capture-wide** stamp — captured fact
+count folded with the identity digest — and during a tail that moves on *every* pass because some other mob somewhere swung.
+
+**The fix is to ask about the selection, not the log.** `SelectedFingerprint` (Core) hashes what the boards under the selected rows
+actually display — Id, DamageTotal, DamageByOwner, DamageToOwner, TankTotal, the span and both direction ends, Dead/CharmedOwned/RaidPet
+— in O(selected), summed commutatively so two rows trading places is not a new question. The stamp's two terms were pulled apart
+(`FightTable.VerdictStamp` + the fact count) because they move on different clocks: identity rarely, facts constantly. A
+`ContentMoved` announce now needs `WorthRebuild(verdictsMoved, fingerprintNow, fingerprintThen)`, and a skip records nothing, so
+Refresh still forces a pass. What survives unchanged is the part that mattered: **a moved verdict rebuilds over identical rows**
+(charm taking a mob off the enemy list, an evening of output re-folding into `X +Pets`) — that term no row can see.
+
+Two directions had to be pinned, and the second one caught a bug in the fix itself. Too eager is the shipped defect (facts on other
+rows must not move it). Too lazy is worse: a change inside a selected row that fails to move it leaves stale figures on screen
+*permanently*, so every displayed field has its own case in `SelectedFingerprintTest`. The first version accumulated linearly
+(`h * 65599 + value`), and `OneRowsGainNeverCancelsAnotherRowsLoss` — row A +500, row B −500, same total — produced identical
+fingerprints. Every field now goes through a Murmur3 finalizer before joining its row's hash. NaN direction windows fold as zero, or
+"this direction never happened" would hash differently from pass to pass and rebuild forever.
+
+### The bigger number in the same log, and it is not the boards
+
+The 20 s perf lines during the tail: `chart.rendergap n=60 avg 426.9 max 542.1` and `n=72 avg 452.1 max 1028.9 ms`, against
+`chart.update avg 2.4–6.4 ms` and `chart.walk avg 1–4.4 ms` on a plot of **5 lines / 137 points**. `chart.rendergap` is posted at
+ContextIdle, so it is not our data pass — it is the UI thread being busy with what the framework does after we hand it series. At
+~3.6 chart updates a second that is roughly **1.5 s of UI work per second of wall time**, and the symptom is exactly what the monitor
+printed: ~1 stall per second (`beat ran ~500 ms late`, max 4,110 ms), each with `in progress nothing`, because the block sits inside
+WPF/Syncfusion layout+render where no span of ours reaches. Board builds, by contrast, were `stats.damage n=63 avg 19.5 max 39.4 ms`
+— a rounding error next to it. (Also visible: two doors ~1 Hz each — selection plus the meter's `DerivedTotals` — overlapping often
+enough for StatsBuildTrace's nesting warning, which is honest reporting rather than a bug.)
+
+`FastLineSeries` objects are rebuilt on every update in `LineChart.BuildCollection`, and Syncfusion animates a series by default;
+nothing in this application ever asked for a tween. They now set `EnableAnimation = false`. **This one is a hypothesis with a
+measurement attached, not a proven win**: it needs Windows to see whether the 400 ms was the storyboard or the axis/layout pass. The
+signature of success on the next live tail is `chart.rendergap` avg dropping from ~430 ms toward tens of ms, and the ~1 stall/s going
+with it. If the gap stays high, the fix is not faster rendering but **fewer redraws**: a ~1 s floor on chart updates with one trailing
+coalesced pass (the newest data always lands, just not 3.6 times a second), and fixed axis ranges so an unchanged window stops recomputing.
+
+Re-measure either finding with:
+
+```
+grep -oE "board ask \[[A-Za-z]+\]" EQLogParser.log | sort | uniq -c
+grep -E "chart\.rendergap|UI STALL" EQLogParser.log | tail -40
+grep -E "UI perf" EQLogParser.log | tail -3   # read chart.rendergap, chart.update, stats.damage, stalls, heap/ws/alloc
+```
+
+One thing the tail answered for free: memory grew "at a decent rate but better than it used to", with `heap 760–770 MB / ws ~1.58 GB`
+and ~120 MB/s allocation while replaying at many times live speed, GC paused ~6 %. FCT and the meter were fine (`fct.paint avg 1.3–1.5 ms`,
+backlog 12, drops mostly superseded rows). The remaining UI cost is the chart's, not the parse's.

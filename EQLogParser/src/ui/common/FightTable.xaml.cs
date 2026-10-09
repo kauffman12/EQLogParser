@@ -83,9 +83,22 @@ namespace EQLogParser
      */
     private long _announcedStamp;
 
+    /*
+     * The two TERMS behind the announced stamp, kept apart because they move on different clocks and only one of them can change what
+     * THIS selection shows: `_announcedVerdicts` (identity moved — rare, and invisible to any row) and `_announcedFingerprint` (the
+     * selected rows' own figures). The capture-wide stamp says "something in the log moved"; a live tail moves it every pass, and boards
+     * rebuilt on that alone made a dead mob's damage summary clear and reload once per pass over identical numbers (SelectedFingerprint;
+     * 157 of them in one field session). Announcing records all three.
+     */
+    private long _announcedVerdicts;
+    private long _announcedFingerprint;
+
     // The stamp of the newest snapshot this pane has been handed (the one _rows came from). Announcing records it, so
     // "what did the board get built from?" stays answerable while a pass is in flight.
     private long _currentStamp;
+
+    // The identity term of `_currentStamp` on its own — see the field above for why the two are kept apart.
+    private long _currentVerdicts;
 
     /*
      * One line per declined-unasked-rebuild episode, not one per derive pass. A live raid hands out passes about twice a
@@ -298,6 +311,7 @@ namespace EQLogParser
         // rows of its own yet (Clear All, an empty file) that late pass IS the content on screen forever.
         if (!snapshot.FromLiveSession) return;
 
+        _currentVerdicts = VerdictStamp(snapshot);
         _currentStamp = SelectionStamp(snapshot);
 
         // Whatever the band was saying, the list itself is now the answer - including the mid-load case where
@@ -613,9 +627,27 @@ namespace EQLogParser
         return;
       }
 
+      /*
+       * "Content moved" means the CAPTURE moved, and on a running log it moves every pass. Whether that can change the boards under THIS
+       * selection is a different question, answered in O(selected): the rows' own figures (SelectedFingerprint) plus the identity term,
+       * which no row can see. Facts landing anywhere else — every other mob in the raid, every heal, every miss — describe the same
+       * numbers here, and re-presenting them is what the operator saw as the table "doing full refreshes for no reason". Like a declined
+       * announce, this records nothing: the answer on screen is still current, and Refresh stays able to force one.
+       */
+      var fingerprint = SelectedFingerprint.Of(selected);
+      if (reason == BoardReason.ContentMoved &&
+          !SelectedFingerprint.WorthRebuild(_currentVerdicts != _announcedVerdicts, fingerprint, _announcedFingerprint))
+      {
+        Log.Debug($"announce skipped [{reason}]{(detail is null ? string.Empty : $" {detail}")}: the capture moved to stamp "
+                  + $"{_currentStamp} but the {ids.Count} selected row(s) and every verdict read identically");
+        return;
+      }
+
       _unaskedDeclined = false;
       _announcedIds = ids;
       _announcedStamp = _currentStamp;
+      _announcedVerdicts = _currentVerdicts;
+      _announcedFingerprint = fingerprint;
       Log.Debug($"announce [{reason}]{(detail is null ? string.Empty : $" {detail}")}: {ids.Count} row(s), stamp {_currentStamp}"
                 + (force ? " (forced)" : string.Empty));
       DerivedSelectionChanged?.Invoke(new BoardRequest(selected, _currentStamp, reason, detail));
@@ -631,10 +663,16 @@ namespace EQLogParser
      * spent redrawing the same figures. A hand-built snapshot with no timeline answers 0, which simply leaves the stamp at
      * whatever the last real pass recorded.
      */
-    internal static long SelectionStamp(DerivedSnapshot snapshot)
-    {
-      var facts = snapshot.FactCount;
+    internal static long SelectionStamp(DerivedSnapshot snapshot) => unchecked((snapshot.FactCount * 397) ^ VerdictStamp(snapshot));
 
+    /*
+     * The identity half of SelectionStamp on its own: it moves when a verdict moves (an override, a charm window, a rank the rules could
+     * not see last pass and can now) even though no fact arrived — the ONE thing a selected row's own figures cannot show. FightTable keeps
+     * it apart from the fact count because a live tail moves the count every pass and nothing moves this until the rule book changes its
+     * mind (see SelectedFingerprint).
+     */
+    internal static long VerdictStamp(DerivedSnapshot snapshot)
+    {
       /*
        * The identity term is what a board would SEE (`AnswerStamp`), not what evidence the rule book holds (`StateStamp`). A Full
        * pass reseeds its timeline from the memory the previous pass wrote, so the pass after a load legitimately carries evidence
@@ -646,7 +684,7 @@ namespace EQLogParser
       var verdicts = snapshot.AnswerStamp != 0 ? snapshot.AnswerStamp
                    : snapshot.Timeline is { } timeline ? timeline.StateStamp()
                    : 0L;
-      return unchecked((facts * 397) ^ verdicts);
+      return verdicts;
     }
 
     private static bool SameIds(List<int> a, List<int> b)
