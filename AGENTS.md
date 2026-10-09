@@ -894,9 +894,16 @@ declare without `?`; add the directive only when the whole file is meant to hold
   **`facts rows=0 … row arrays est=196.1 MB`** on an idle monitor, and nothing hands it back — `CompactRows` runs from the pass that
   classified and `DeriveCadence` answers `None` when no facts arrive, so an overnight idle session held ~196 MB to store nothing (it
   was the app's most memory-hungry session while doing nothing). Now `FactCapacity.HintForOpen(minBack, fileBytes)` hints only
-  `minBack < 0`, and `ModeWord` prints `whole-file`/`follow-end`/`last-15min` on `capture: started (…) from <door> | sized-from=N MB`
-  (the door word rides down into `load: read loop #N … | <file> | <mode> from <door>` because a run showed three loops beside two
-  sessions and an ordinal cannot say who asked). Two tests hold both directions, one asserting the monitor's reservation under 3 MB
+  `minBack < 0`, and `ModeWord` prints `whole-file`/`follow-end`/`last-15min` on `capture: started (…) from <door> | sized-from=N MB`.
+  The door word rides into `load: read loop #N … | <file> | <mode> from <door>` and answered the two-session/three-loop question
+  immediately: **the extra reader is `TriggerManager`'s** (one per enabled character, or one over `AppSettings.CurrentLogFile` in basic
+  mode, each with its own `TriggerProcessor` and follow-from-end cursor) — nothing double-counts, because the engine taps only MainWindow's
+  `LogProcessor`, but **a live tail reads and tokenizes the log twice** and advanced mode multiplies that per character. `origin` now has
+  **no default value**: naming your door is compile-time, not a logging convention (`from open` = someone forgot). Measured after the fix:
+  idle monitor `row arrays est=2.7 MB` (was 196.1) with `heap=168.8 MB`, while a hand whole-file open still reserves 951 MB's worth — and
+  **a select-all costs ~+527 MB of live heap peak** (`heap 656 → 1,183 MB`, `ws 1,766 MB`, `pause 4,948 ms/30 s`) because one build
+  materializes 4.66 M damage + 2.65 M heal records before it accumulates anything: the Phase-B chunk cache is a peak-memory item as well
+  as a walk-time one, and so is B4's unfinished cancellation half. Two tests hold both directions, one asserting the monitor's reservation under 3 MB
   **and** the whole-file one >50× it, so restoring the old condition fails by name; a whole-file open's hint is unchanged. The law:
   **a hint may only be sized from bytes this session will append facts from** — being wrong is fine (doubling still works, quiet
   compaction reclaims overshoot), being about another open than the one you are sizing silently picks the worst of three modes.

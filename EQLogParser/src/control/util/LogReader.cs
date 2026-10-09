@@ -12,12 +12,14 @@ using System.Threading.Tasks;
 namespace EQLogParser
 {
   /*
-   * `origin` is the door that started this reader, in the words of whoever opened it (see MainWindow.OpenLogFile). It
-   * exists because "which session is this read loop" was unanswerable: a Windows run left THREE `load: read loop #N`
-   * lines against TWO `capture: started` lines, so a leftover reader and a fresh one looked identical, and the ordinal
-   * alone could not say who created it. One word per construction, printed beside the file name.
+   * `origin` is the door that started this reader, in the words of whoever opened it. There is deliberately **no default**:
+   * naming oneself is the whole point, and an optional parameter is how a fourth lane ends up printing an anonymous line.
+   * It exists because "which session is this read loop" was unanswerable — a Windows run left three `load: read loop #N`
+   * lines against two `capture: started` lines — and the word answered it on its first outing: the extra loop was not the
+   * main window at all but **the trigger lane's own reader over the same file** (`TriggerManager` keeps a reader per
+   * enabled character, or one over `AppSettings.CurrentLogFile` in basic mode). One word per construction, beside the file name.
    */
-  internal class LogReader(ILogProcessor logProcessor, string fileName, int minBack = 0, string origin = "open")
+  internal class LogReader(ILogProcessor logProcessor, string fileName, string origin, int minBack = 0)
     : IDisposable
   {
     private const int BatchSize = 5000;

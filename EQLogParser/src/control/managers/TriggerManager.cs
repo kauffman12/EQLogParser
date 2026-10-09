@@ -277,7 +277,10 @@ namespace EQLogParser
             var processor = new TriggerProcessor(character.Id, character.Name, playerName, character.Voice, character.VoiceRate,
               character.CustomVolume, character.ActiveColor, character.IdleColor, character.ResetColor, character.FontColor);
             await processor.StartAsync();
-            var reader = new LogReader(processor, character.FilePath);
+            // Named door: this is a SECOND reader over the same log the main window parses, one per enabled character, with its
+            // own TriggerProcessor and its own follow-from-end cursor. It is why a field run showed three read loops beside two
+            // sessions; it is also why a live tail costs double the reading and tokenizing work (see docs/DesignNotes.md).
+            var reader = new LogReader(processor, character.FilePath, origin: $"triggers character {character.Name}");
             _logReaders.Add(reader);
             _ = reader.StartAsync();
           }
@@ -315,7 +318,9 @@ namespace EQLogParser
           var processor = new TriggerProcessor(TriggerStateDB.DefaultUser, TriggerStateDB.DefaultUser, ConfigUtil.PlayerName, config.Voice,
             config.VoiceRate, -1, null, null, null, null);
           await processor.StartAsync();
-          var reader = new LogReader(processor, currentFile);
+          // Basic mode watches the file the main window already reads — see the per-character construction above for why this
+          // lane exists separately and what it costs.
+          var reader = new LogReader(processor, currentFile, origin: "triggers (basic mode)");
           _logReaders.Add(reader);
           _ = reader.StartAsync();
           MainActions.ShowTriggersEnabled(true);

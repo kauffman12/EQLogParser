@@ -94,7 +94,7 @@ namespace EQLogParser.Wpf.Test
         SynchronizationContext.SetSynchronizationContext(context);
 
         // minBack in years, not minutes: the reader seeks to that date, and this capture is dated 2025-10-01.
-        var reader = new LogReader(processor, file, minBack: 60 * 24 * 365 * 10);
+        var reader = new LogReader(processor, file, minBack: 60 * 24 * 365 * 10, origin: "test");
         var running = reader.StartAsync();
         Assert.IsFalse(running.IsCompleted, "a static file still ends in the monitor loop; it must not have finished already");
 

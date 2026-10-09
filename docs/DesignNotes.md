@@ -9805,10 +9805,50 @@ shape of the fix is agreed in principle (bucket-aggregate alongside the walk the
 the same `cells == plain walk` assertion any cache gets); it is filed as **B13** rather than done here because it is its own
 surface and this session's shared-path changes were already three deep.
 
-**Read loops: three, sessions: two.** The ordinal shipped with the first run's question answered — `#1` beside the auto-open's
-`capture: started`, `#3` beside the hand open — but `#2` arrived 1.8 s after `#1` with **no session lines near it**, which is the
-same shape §"The Windows field run" refused to explain. An ordinal says *how many*, not *who asked*, so both lines now carry the
-door: `OpenLogFile(file, lastMins, origin)` threads a word from each caller (`startup auto-monitor`, `recent-file menu`,
-`clear all`) into `capture: started (…) follow-end from startup auto-monitor | sized-from=0 MB` and into
-`load: read loop #2 … | <file> | follow-end from <door>`. If a future run prints a loop whose origin nobody recognizes, the
-word is the whole answer; if it prints two loops from one door, that door is the bug — and either way nobody has to guess again.
+**Read loops: three, sessions: two — and the door word answered it on its first outing.** The ordinal shipped with the first run's
+question still open: `#1` beside the auto-open's `capture: started`, `#3` beside the hand open, and `#2` arriving ~1.5 s after `#1`
+with **no session lines near it**. Naming the door turned that into one grep:
+
+```
+load: read loop #2 on thread 8, sync context = none | eqlog_Kizant_xegony-09-03-26.txt | follow-end from open
+```
+
+`from open` is the *default*, which means the construction is not `MainWindow.OpenLogFile` at all. It is **`TriggerManager`**: the
+trigger lane keeps readers of its own — one per enabled character over that character's log file in advanced mode, or one over
+`AppSettings.CurrentLogFile` in basic mode — each with its own `TriggerProcessor` and its own follow-from-end cursor (`minBack`
+defaulting to 0, hence `follow-end`). Nothing is double-counted: the derive engine taps only the main window's `LogProcessor`, which
+is why facts were identical across runs (8,014,197 in both). But it is a real cost worth stating plainly — **a live tail reads and
+tokenizes the log file twice**, once per lane, and advanced mode multiplies that by enabled characters. Two follow-ups landed: both
+constructions now pass an origin (`triggers (basic mode)`, `triggers character <name>`), and **`origin` lost its default value** so a
+future lane cannot print an anonymous line — the door-naming rule is now enforced at compile time rather than by a log convention.
+
+## Re-running the same capture after the fix: the idle session, and what one click costs in *memory* (2026-10)
+
+Same machine, same 951 MiB capture, ~32 minutes later. The startup open is the fixed path:
+
+```
+capture: started (eqlog_Kizant_xegony-09-03-26.txt) follow-end from startup auto-monitor | sized-from=0 MB
+heap: ws=591.2 MB heap=168.8 MB … facts rows=0 slack=2.3 MB heals rows=0 slack=0.4 MB | names=0
+      | row arrays est=2.7 MB | kept casts=0 timed records=0 | over 0s
+```
+
+- **`row arrays est=` went 196.1 MB → 2.7 MB on an idle monitor**, and managed heap at that moment is **168.8 MB** (it was 358.3).
+  The hand open still says `whole-file from recent-file menu | sized-from=951 MB` and reserves as it should — the fix moved memory,
+it did not remove the optimization.
+- `ws=591.2 MB` beside `heap=168.8 MB` is the other half of that lesson: a *fresh* process, nothing captured, still shows ~420 MB of
+  working set over its managed heap (Skia/Syncfusion/native plus pages the collector has not returned). Any working-set number read
+  without its `heap=` beside it is not evidence about this codebase.
+- The new store terms came back with real shapes at rest: **`kept casts=397,206 timed records=1,165,836`** for a night of 4.83 M damage
+  facts. So B2's ~470 MB question now has its two candidate populations counted side by side rather than inferred — and note the ratio:
+  roughly **one cast-history entry per 12 damage facts, one timed record per 4**, which is what makes them worth a look at all.
+- **The part nobody had priced: a select-all's *peak*.** Heap was 656 MB at rest in the previous run; during this click the ledger caught
+  **`heap=1183.1 MB`, `ws=1766.5 MB`, `pause 4948.5 ms … over 30s`** — roughly **+527 MB of live heap for one gesture**, ~490 ms of GC
+  pause per second of wall time while it lasts. That is the materialized record set (4.66 M damage records + 2.65 M heals) plus the
+  builders' sub-stat trees, held alive together because one build materializes everything before it accumulates anything. So the chunk
+  cache (Phase B) is **not only a latency item**: resumable chunks let each chunk's records die before the next chunk allocates, which
+  attacks the peak as well as the 1,691 ms walk — and the same argument is what makes B4's unfinished cancellation half matter (an
+  aborted build should release its records, not finish holding them).
+- Everything else reproduced within noise: `app.voices` **1,011.7 ms** (third measurement of ~1 s on the UI thread), one `board ask
+  [SelectCommand] select all` → builds **#2 damage 1,982 ms (walk 1,691 / groups 265)**, **#3 tanking 57 ms**, **#4 healing 1,483 ms
+  (window 980 / walk 491)**, `boards.build 5,006 ms`, build **#1** still the 1 ms pane-shown re-slice, and **`chart.update 1,931 ms |
+  walked 4,660,915 records -> 5 lines … budget 300 ms`** — B13 reproduced exactly (walk 1,884 vs 1,838 ms).
