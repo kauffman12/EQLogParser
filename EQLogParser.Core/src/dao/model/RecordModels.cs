@@ -191,11 +191,6 @@ namespace EQLogParser
   }
 
 
-  internal class PlayerClassMapping
-  {
-    public string Player { get; set; }
-    public string ClassName { get; set; }
-  }
 
 
   internal class ZoneRecord : IAction

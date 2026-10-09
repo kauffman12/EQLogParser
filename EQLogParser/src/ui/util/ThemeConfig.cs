@@ -273,17 +273,15 @@ namespace EQLogParser
       Application.Current.Resources["EQCheckBoxScale"] = 0.9 + ((CurrentFontSize - 10) * 0.06);
       SyncFusionUtil.SetDesiredWidth("EQFightWindowWidth", 220 + (14.0 * CurrentFontSize), _mainWindow.npcWindow);
       /*
-       * The right-hand identity strip holds Pet Owners and Player/NPC Identity as ONE tabbed panel, so both panes are given
-       * the same number — a shared panel whose two tabs want different widths jumps under the cursor when you switch. The
-       * value is the identity grid's own column arithmetic (NamesTable.DesiredPaneWidth) rather than a constant written
-       * beside the dock markup: too narrow and the Why column sits behind a horizontal scrollbar in a pane that cannot be
-       * widened past the strip, and the number would have to be re-derived by hand every time a column changes. Pet Owners
-       * gets roomier than it was (its Owner column fills the space), which is what sharing a panel with a wider table costs.
+       * The right-hand identity strip: Player/NPC Identity, alone since the Pet Owners pane was retired (2026-10-09). The width is
+       * still asked of the grid itself (NamesTable.DesiredPaneWidth) rather than written beside the dock markup, because too narrow
+       * puts the Why column behind a horizontal scrollbar in a pane that cannot be widened past the strip, and a constant would have
+       * to be re-derived by hand every time a column changes — which is exactly what just happened (the Owner column made it wider).
+       *
+       * The law outlives the second pane: if anything ever joins this strip it takes the SAME number, or the panel jumps under the
+       * cursor on every tab switch.
        */
-      var identityStrip = NamesTable.DesiredPaneWidth();
-      SyncFusionUtil.SetDesiredWidth("EQIdentityStripWidth", identityStrip, _mainWindow.petMappingWindow);
-      SyncFusionUtil.SetDesiredWidth("EQIdentityStripWidth", identityStrip, _mainWindow.namesWindow);
-      SyncFusionUtil.SetDesiredWidth("EQPlayersWindowWidth", 180 + (10.0 * CurrentFontSize), _mainWindow.verifiedPlayersWindow);
+      SyncFusionUtil.SetDesiredWidth("EQIdentityStripWidth", NamesTable.DesiredPaneWidth(), _mainWindow.namesWindow);
       SyncFusionUtil.SetDesiredHeight("EQParseWindowHeight", 10.0 * (CurrentFontSize + 2), _mainWindow.playerParseTextWindow);
     }
 

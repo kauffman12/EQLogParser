@@ -10519,3 +10519,56 @@ negated person test; it is the words that name nobody.
 **What was NOT re-opened.** R26-savedpet (an ownership record voting Pet at Strong) landed with the freeze, and R25's roster claim is
 unrelated to this column: setting an owner here writes the pair, records the OWNER as roster (as every assignment path has since the roster
 freeze), and says nothing about what the summoned name is. Nothing in this change touches verdicts.
+
+## The three identity panes are gone: one census, no event pump
+
+2026-10-09, in the same sitting as the Owner column, on the operator's own reasoning: *"yeah delete the three. we dont need them
+anymore and populating them dynamically was always a performance issue. this new approach seems better."* Verified Players, Verified
+Pets and Pet Owners went — the first two were already empty shells whose only purpose was to absorb stale `dockSite.xml` names; the
+third still had a grid, a pencil and a menu item.
+
+**What "populating them dynamically" cost.** Three `ObservableCollection`s lived in `MainActions` as **copies of identity state**, and
+each registry sighting posted to the UI thread to insert one row in sorted position:
+`EventsNewVerifiedPlayer`/`EventsNewVerifiedPet`/`EventsRemove*`/`EventsNewPetMapping` → `UiUtil.InsertNameIntoSortedList` (a
+`BinarySearch` over a `ToList()` copy of the collection, per sighting) → `DockingManager.SetHeader($"… ({view.Count})")`. A raid night
+learning names and pet pairs writes hundreds of those claims, so a capture paid a dispatcher post plus a list copy per claim to maintain
+grids that were usually closed. Two bulk fills (`LoadVerified`, `LoadPetOwners`) ran at log open over the whole union of the ledger lanes
+and the session store, and a clear at close.
+
+**Why the copies could not be repaired into being correct.** They were lists of *names*, while identity is now a per-name **answer with a
+provenance and a timestamp**: a verdict moves when the capture changes (charm, R7, an operator's `Set as`, an expired prior), and nothing
+in that pump knows about moves — only about sightings. That is the same defect class as "a read of memory must not create memory": a store
+maintained by whichever event arrived last disagrees with the rulebook that reads the lines. Player/NPC Identity's census is built from the
+derive, so it cannot drift, and it already carries the Type, the Class **and now the Owner** column.
+
+**What left.** `MainActions.{VerifiedPlayersView, VerifiedPetsView, PetPlayersView}` and their `EnableCollectionSynchronization` locks;
+`Clear`, `InitPetOwners`, `InitVerifiedPlayers`, `InitVerifiedPets`, `LoadVerified`, `LoadPetOwners`, `InsertPetMapping`;
+`UiUtil.InsertNameIntoSortedList`, `InsertPetMappingIntoSortedList`, `TheSortableNameComparer` and both comparer classes (the `dynamic`/
+`ExpandoObject` rows are why those panes could not be typed or tested); MainWindow's owner/class cell popups and their four handlers, plus
+`RemovePlayerMouseDown`/`RemovePetMouseDown`; the "Pet Owners" menu item; `ThemeConfig`'s Pet Owners width line.
+
+**Two events went with their only listener** — `PlayerRegistry.EventsNewPetMapping` and `EventsUpdateDefaultPlayerClass`, along with
+`PlayerClassMapping`. A channel nobody subscribes to is not a future API, it is an allocation on the parse path: raising the first one
+built a `PetMapping` per learned pair **forever**, for a grid that no longer exists. Four events stay, and they are not UI plumbing:
+`EventsNewVerifiedPlayer`/`EventsNewVerifiedPet` and the two removals are what `CombatCapture` turns into `IdentityEvent`s.
+
+**What stayed, and why each one is not laziness.**
+
+- **The name-only stubs.** `LoadDockState` throws on a window a saved layout names and this app cannot find, and MainWindow's catch calls
+  `ResetState()` — which would wipe the operator's entire arrangement. So `petMappingWindow`, `verifiedPlayersWindow` and
+  `verifiedPetsWindow` remain as empty, hidden `ContentControl`s (the `mirrorFightWindow` precedent), with no menu item and nothing in
+  them, and `SetState(…, Hidden)` is re-applied at load so a saved AutoHidden tab cannot resurrect an empty pane beside the identity strip.
+- **`MainActions.ClassList`.** Game data rather than identity state, and every class dropdown reads it — Player/NPC Identity's cell editor
+  included. It used to be filled inside `InitVerifiedPlayers`, so that initialization is now `InitClassList()`, called at the same point in
+  the startup span (which is why the pane reads it when a pencil opens rather than binding a list that fills later).
+- **`IdentityLookup.OurPeopleNames()`** — the one answer to "who is one of ours" (durable roster lane ∪ this session's store). The Owner
+  dropdown reads it, which is what keeps the picker and the verdicts beside it from disagreeing. Its sibling `OurPetOwners()` — built only
+  to list pairs for the retired grid — is deleted, because "whose pet is this?" already has exactly one answer in `OwnerOf`.
+
+**The strip is one pane now.** Pet Owners and Player/NPC Identity shared the right-hand panel, which produced the "one width for both tabs"
+law; the law survives its second pane (ThemeConfig still asks `NamesTable.DesiredPaneWidth()`, and anything that ever joins the strip takes
+the same number or the panel jumps under the cursor on switch).
+
+**One test changed shape rather than being dropped.** `MemoryReadIsNotASightingTest` asserted through `EventsNewPetMapping` that a *read*
+of memory announced nothing. The channel is gone, so that clause went with it and the stronger assertion is what remains: an invented pair
+would appear in `GetPetMappings()`, which is exactly what `RegistrySeed` walks to decide Pet-ness. An event was the echo; the row is the sound.

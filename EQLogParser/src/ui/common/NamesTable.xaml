@@ -10,7 +10,7 @@
              d:DesignHeight="450" d:DesignWidth="900">
   <!-- ONE CHILD, THE GRID. No header row: the dock tab over this pane already says "Player/NPC Identity", and this
        window lives in a narrow slide-out strip on the right where 30 vertical pixels belong to rows, not to repeating the
-       tab. Pet Owners is the model — grid, column headers, done. -->
+       grid, column headers, done — the shape every retired pane beside it also had. -->
   <Grid>
     <Grid.Resources>
       <!-- Hidden rather than Collapsed: a row that offers no pencil still reserves its width, so the words in the Type
@@ -92,16 +92,15 @@
 
         What this window used to carry and still does not: Damage/Healing belong on a damage board, not on an identity list; Notes
         held sentences that were mostly empty and, where they were not, are now the WHY cell's tooltip — see ProvenanceFor. Owner
-        came BACK on 2026-10-09 (see the column below) now that the Pet Owners window is a frozen shell with nothing to edit.
+        came BACK on 2026-10-09 (see the column below), and the Pet Owners window it was deferred to is gone with its file frozen.
       -->
       <syncfusion:SfDataGrid.Columns>
         <syncfusion:GridTextColumn HeaderText="Name" MappingName="Name" Width="150"/>
 
         <!--
-          Type: the verdict word and the pencil that overrules it, in the shape the Pet Owners mapping grid already uses
-          (MainWindow's ownerEditPopup) - click the icon, the combo opens over the cell, picking writes. One dropdown
-          instead of five menu items means the whole vocabulary (including "clear my claim") is visible at once instead of
-          having to be remembered.
+          Type: the verdict word and the pencil that overrules it - click the icon, the combo opens over the cell, picking
+          writes. One dropdown instead of five menu items means the whole vocabulary (including "clear my claim") is visible at
+          once instead of having to be remembered.
         -->
         <syncfusion:GridTemplateColumn HeaderText="Type" MappingName="Type" Width="90">
           <syncfusion:GridTemplateColumn.CellTemplate>
@@ -188,11 +187,9 @@
     </syncfusion:SfDataGrid>
 
     <!--
-      The two dropdowns, declared once and re-pointed at whichever cell was clicked (UiElementUtil.OpenCellPopup sizes
-      them to the cell and opens the list). Same markup shape as MainWindow's ownerEditPopup/classEditPopup pair - the
-      Pet Owners edit - and the class list is MainActions.ClassList, the same source those popups and the menus read.
-      The type list is wired in code-behind (IdentityVocabulary.TypeOptions) because its entries are internal records; the
-      word shows via DisplayMemberPath and the verdict travels as SelectedValue.
+      The class list is MainActions.ClassList, the same source the summary panes' menus read. The type list is wired in
+      code-behind (IdentityVocabulary.TypeOptions) because its entries are internal records; the word shows via
+      DisplayMemberPath and the verdict travels as SelectedValue.
     -->
     <Popup x:Name="typeEditPopup" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade" Placement="Mouse">
       <!-- Wired in the constructor rather than x:Static: the entries are IdentityVocabulary.TypeOption records, and that
@@ -211,9 +208,10 @@
                 Style="{DynamicResource EQComboBoxStyle}" />
     </Popup>
     <!--
-      The owner list is built per click in code-behind (PetOwnership.Choices over the players this application knows), not declared here:
-      it is a live question — "whose summon can this be, right now" — and its last entry is the take-back. Plain strings, so no
-      DisplayMemberPath.
+      The three cell dropdowns (Type, Class, Owner) are each ONE popup reused by every row, opened by the pencil's click and
+      re-pointed at that cell by UiElementUtil.OpenCellPopup. The owner list is built per click in code-behind
+      (PetOwnership.Choices over the players this application knows) rather than declared here: it is a live question — "whose summon
+      can this be, right now" — and its last entry is the take-back. Plain strings, so no DisplayMemberPath.
     -->
     <Popup x:Name="ownerEditPopup" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade" Placement="Mouse">
       <ComboBox x:Name="ownerEditComboBox"

@@ -6,7 +6,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-using System.Dynamic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -37,27 +36,17 @@ namespace EQLogParser
     internal static event Action<PlayerStatsSelectionChangedEventArgs> EventsTankingSelectionChanged;
     internal static readonly HttpClient TheHttpClient = new();
 
-    private const string PetsListTitle = "Verified Pets";
-    private const string PlayerListTitle = "Verified Players";
-    private const string PetOwnersTitle = "Pet Owners";
-    public static readonly ObservableCollection<dynamic> VerifiedPlayersView = [];
-    public static readonly ObservableCollection<dynamic> VerifiedPetsView = [];
+    /*
+     * The class list every class dropdown offers — here, in Player/NPC Identity's cell editor, and in the summary panes' menus.
+     * It is a plain List that is FILLED ONCE at startup (InitClassList) and then only read: the collections this file used to
+     * carry beside it (Verified Players, Verified Pets, Pet Owners) were UI-side copies of identity state, sorted one insert per
+     * registry sighting on the UI thread, and they went stale the moment a verdict moved. The identity pane's census is the list now.
+     */
     public static readonly List<string> ClassList = [];
-    public static readonly ObservableCollection<PetMapping> PetPlayersView = [];
-    private static readonly object VerifiedPlayersViewLock = new();
-    private static readonly object VerifiedPetsViewLock = new();
-    private static readonly object PetPlayersViewLock = new();
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly JsonSerializerOptions DiscordSerializationOptions = new() { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
     private static bool _isDone;
     private static MainWindow _mainWindow;
-
-    static MainActions()
-    {
-      BindingOperations.EnableCollectionSynchronization(VerifiedPlayersView, VerifiedPlayersViewLock);
-      BindingOperations.EnableCollectionSynchronization(VerifiedPetsView, VerifiedPetsViewLock);
-      BindingOperations.EnableCollectionSynchronization(PetPlayersView, PetPlayersViewLock);
-    }
 
     internal static void AddAndCopyDamageParse(CombinedStats combined, List<PlayerStats> selected) => _mainWindow?.AddAndCopyDamageParse(combined, selected);
     internal static void AddAndCopyTankParse(CombinedStats combined, List<PlayerStats> selected) => _mainWindow?.AddAndCopyTankParse(combined, selected);
@@ -174,152 +163,24 @@ namespace EQLogParser
       }
     }
 
-    // ---- Player / Pet UI helpers ----
-
-    // should already run on the UI thread
-    internal static void Clear(ContentControl petsWindow, ContentControl playersWindow, ContentControl petMappingWindow)
-    {
-      PetPlayersView.Clear();
-      VerifiedPetsView.Clear();
-      VerifiedPlayersView.Clear();
-
-      var entry = new ExpandoObject() as dynamic;
-      entry.Name = Labels.Unassigned;
-      VerifiedPlayersView.Add(entry);
-      DockingManager.SetHeader(petsWindow, $"{PetsListTitle} ({VerifiedPetsView.Count})");
-      DockingManager.SetHeader(playersWindow, $"{PlayerListTitle} ({VerifiedPlayersView.Count})");
-      DockingManager.SetHeader(petMappingWindow, $"{PetOwnersTitle} ({PetPlayersView.Count})");
-    }
-
-    // should already run on the UI thread
-    internal static void InitPetOwners(ContentControl petMappingWindow)
-    {
-      /* A learned pair updates the list and nothing else. No derived board reads this store - ownership folds off the line's
-         own possessive word (FightSummarySource.OwnerOf) - so asking for a stats rebuild over it answers identically: measured
-         as a full three-board rebuild to byte-identical totals behind one select-all (docs/DesignNotes.md -> "Name every door"). */
-      PlayerRegistry.Instance.EventsNewPetMapping += async (mapping) =>
-      {
-        await UiUtil.InvokeAsync(() =>
-        {
-          InsertPetMapping(mapping);
-          DockingManager.SetHeader(petMappingWindow, $"{PetOwnersTitle} ({PetPlayersView.Count})");
-        }, DispatcherPriority.DataBind);
-      };
-    }
-
-    // should already run on the UI thread
-    internal static void InitVerifiedPlayers(ContentControl playersWindow, ContentControl petMappingWindow)
+    /*
+     * The Player/Pet UI helper region is gone (2026-10-09): it was six methods whose only job was keeping three window-side
+     * COPIES of identity state in sorted order — Verified Players, Verified Pets and Pet Owners — one Dispatcher post per registry
+     * sighting (`EventsNewVerifiedPlayer`/`EventsNewVerifiedPet`/`EventsNewPetMapping`, each inserting into a sorted
+     * ObservableCollection and rewriting its dock header), plus two bulk fills at log open and a clear at close. The panes are
+     * retired shells now, and the state they copied is answered in one place: Player/NPC Identity's census (which the derive
+     * rebuilds, so it cannot go stale) carries the verdict, the class AND the owner column.
+     *
+     * What survived, and why: `ClassList` below (game data, not identity state); `PlayerRegistry.EventsNewVerifiedPlayer`,
+     * `EventsNewVerifiedPet` and the two removal events (the derivation subscribes — CombatCapture turns a sighting into an
+     * IdentityEvent — so they are not UI plumbing); and `EventsNewPetMapping`'s declaration is DELETED with its only subscriber,
+     * because nothing else listens for a learned pair.
+     */
+    internal static void InitClassList()
     {
       ClassList.Clear();
       ClassList.Add("");
       ClassList.AddRange(EQDataStore.Instance.GetClassList());
-      PlayerRegistry.Instance.EventsNewVerifiedPlayer += async (name) =>
-      {
-        await UiUtil.InvokeAsync(() =>
-        {
-          UiUtil.InsertNameIntoSortedList(name, VerifiedPlayersView, true);
-          DockingManager.SetHeader(playersWindow, $"{PlayerListTitle} ({VerifiedPlayersView.Count})");
-        }, DispatcherPriority.DataBind);
-      };
-
-      PlayerRegistry.Instance.EventsUpdateDefaultPlayerClass += async (mapping) =>
-      {
-        await UiUtil.InvokeAsync(() =>
-        {
-          var entry = new ExpandoObject() as dynamic;
-          entry.Name = mapping.Player;
-          int index = VerifiedPlayersView.ToList().BinarySearch(entry, UiUtil.TheSortableNameComparer);
-          if (index >= 0)
-          {
-            VerifiedPlayersView[index].PlayerClass = mapping.ClassName;
-          }
-        }, DispatcherPriority.DataBind);
-      };
-
-      PlayerRegistry.Instance.EventsRemoveVerifiedPlayer += async (name) =>
-      {
-        await UiUtil.InvokeAsync(() =>
-        {
-          var found = VerifiedPlayersView.FirstOrDefault(item => item.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
-          if (found != null)
-          {
-            VerifiedPlayersView.Remove(found);
-            DockingManager.SetHeader(playersWindow, $"{PlayerListTitle} ({VerifiedPlayersView.Count})");
-
-            var existing = PetPlayersView.FirstOrDefault(item => item.Owner.Equals(name, StringComparison.OrdinalIgnoreCase));
-            if (existing != null)
-            {
-              PetPlayersView.Remove(existing);
-              DockingManager.SetHeader(petMappingWindow, $"{PetOwnersTitle} ({PetPlayersView.Count})");
-            }
-
-            // No stats re-ask: the builders read neither this list nor the registry. Whatever identity-side effect a removal has
-            // arrives through the next derive pass, which moves the content stamp and re-announces on its own.
-          }
-        }, DispatcherPriority.DataBind);
-      };
-    }
-
-    internal static void InitVerifiedPets(MainWindow main, ContentControl petsWindow, ContentControl petMappingWindow)
-    {
-      PlayerRegistry.Instance.EventsNewVerifiedPet += (name) => main.Dispatcher.InvokeAsync(async () =>
-      {
-        await UiUtil.InvokeAsync(() =>
-        {
-          UiUtil.InsertNameIntoSortedList(name, VerifiedPetsView);
-          DockingManager.SetHeader(petsWindow, $"{PetsListTitle} ({VerifiedPetsView.Count})");
-        }, DispatcherPriority.DataBind);
-      });
-
-      PlayerRegistry.Instance.EventsRemoveVerifiedPet += async (name) =>
-      {
-        await UiUtil.InvokeAsync(() =>
-        {
-          var found = VerifiedPetsView.FirstOrDefault(item => item.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
-          if (found != null)
-          {
-            VerifiedPetsView.Remove(found);
-            DockingManager.SetHeader(petsWindow, $"{PetsListTitle} ({VerifiedPetsView.Count})");
-
-            var existing = PetPlayersView.FirstOrDefault(item => item.Pet.Equals(name, StringComparison.OrdinalIgnoreCase));
-            if (existing != null)
-            {
-              PetPlayersView.Remove(existing);
-              DockingManager.SetHeader(petMappingWindow, $"{PetOwnersTitle} ({PetPlayersView.Count})");
-            }
-
-            // No stats re-ask: the builders read neither this list nor the registry (see EventsRemoveVerifiedPlayer above).
-          }
-        }, DispatcherPriority.DataBind);
-      };
-    }
-
-    // keep this on UI thread
-    internal static void LoadVerified(ContentControl playersWindow, ContentControl petsWindow, List<string> players, List<string> pets)
-    {
-      UpdateWindow(VerifiedPlayersView, playersWindow, players, PlayerListTitle, true);
-      UpdateWindow(VerifiedPetsView, petsWindow, pets, PetsListTitle, false);
-
-      static void UpdateWindow(ObservableCollection<dynamic> view, ContentControl window, List<string> names, string title, bool isPlayer)
-      {
-        foreach (var name in names)
-        {
-          UiUtil.InsertNameIntoSortedList(name, view, isPlayer);
-        }
-
-        DockingManager.SetHeader(window, $"{title} ({view.Count})");
-      }
-    }
-
-    // keep this on UI thread
-    internal static void LoadPetOwners(ContentControl petMappingWindow, List<PetMapping> mappings)
-    {
-      foreach (var mapping in mappings)
-      {
-        InsertPetMapping(mapping);
-      }
-
-      DockingManager.SetHeader(petMappingWindow, $"{PetOwnersTitle} ({PetPlayersView.Count})");
     }
 
     internal static void FireDamageSummaryOptionsChanged(string option) => EventsDamageSummaryOptionsChanged?.Invoke(option);
@@ -661,23 +522,6 @@ namespace EQLogParser
       if (fileAppender is not null)
       {
         OpenFileWithDefault("\"" + fileAppender.File + "\"");
-      }
-    }
-
-    private static void InsertPetMapping(PetMapping mapping)
-    {
-      var existing = PetPlayersView.FirstOrDefault(item => item.Pet.Equals(mapping.Pet, StringComparison.OrdinalIgnoreCase));
-      if (existing != null)
-      {
-        if (existing.Owner != mapping.Owner)
-        {
-          PetPlayersView.Remove(existing);
-          UiUtil.InsertPetMappingIntoSortedList(mapping, PetPlayersView);
-        }
-      }
-      else
-      {
-        UiUtil.InsertPetMappingIntoSortedList(mapping, PetPlayersView);
       }
     }
   }

@@ -13,13 +13,15 @@ namespace EQLogParser;
  * The ONE write behind "this summon belongs to that raider", whoever asked.
  *
  * Three DOORS make that claim, all of them a hand: the damage summary's and tanking summary's `Assign <name> as Pet of ▸` items
- * (picked from the board the operator is reading) and the Pet Owners window's owner picker. Chat deliberately stays off this path:
+ * (picked from the board the operator is reading) and the Owner cell in Player/NPC Identity (picked where the name is read — this seam
+ * replaced the Pet Owners window's picker when that pane was retired on 2026-10-09, so there is still exactly one way to make the claim).
+ * Chat deliberately stays off this path:
  * `ChatDB` reads `"Stormclaw says, 'My leader is Beorun.'"` straight into `PlayerRegistry`, and that is right — it is evidence
  * arriving by the hundred during a pull, not an act somebody performed, and no announce is owed for it.
  *
  * All three used to be a bare
- * `PlayerRegistry.AddPetToPlayer`, which persists petmapping.txt, raises `EventsNewPetMapping` for the list — and stops there:
- * the pair reaches no board until some unrelated event happens to rebuild one. They now go through
+ * `PlayerRegistry.AddPetToPlayer`, which wrote the pair down — and stopped there: the claim reached no board until some unrelated event
+ * happened to rebuild one (and it refused, in silence, any name the parser had already verified as a player). They now go through
  * `ClassificationCommands.ApplyVerdict`, which forgets every earlier claim about that name, asserts Kind = Pet, and writes the
  * pair — the eviction being what makes the write land at all (see `Assign`).
  *
@@ -44,7 +46,7 @@ internal static class PetAssignment
   /*
    * The app's door back into its own derive loop, wired once at startup (Core cannot know about `DeriveEngine`). Left null,
    * an assignment is still a fact for next time: the pair is saved and the next session's seed picks it up — which is exactly
-   * what happens when an operator fills the Pet Owners window before opening a log.
+   * what happens if a pair is written while no session is running.
    */
   internal static Action? Reroute { get; set; }
 

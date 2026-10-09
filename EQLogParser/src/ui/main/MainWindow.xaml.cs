@@ -5,7 +5,6 @@ using Syncfusion.Windows.Tools.Controls;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Dynamic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -92,8 +91,6 @@ namespace EQLogParser
     private static readonly int OpenLogId = PerfCounters.Register("ui.openlogfile");
     private static readonly int PickFileId = PerfCounters.Register("ui.pickfile");
 
-    private PetMapping _currentEditMapping;
-    private dynamic _currentEditPlayerClass;
     private LogReader _eqLogReader;
     private DeriveEngine _engine;
     private readonly List<bool> _logWindows = [];
@@ -253,13 +250,13 @@ namespace EQLogParser
       _activeWindow = ConfigUtil.GetSetting("ActiveWindow");
       MainActions.AddDocumentWindows(dockSite);
 
-      // populate windows that need data
-      PerfCounters.Run(MwPanesId, () =>
-      {
-        MainActions.InitPetOwners(petMappingWindow);
-        MainActions.InitVerifiedPlayers(verifiedPlayersWindow, petMappingWindow);
-        MainActions.InitVerifiedPets(this, verifiedPetsWindow, petMappingWindow);
-      });
+      /*
+       * One thing is left to populate at startup: the class list. It used to sit inside `InitVerifiedPlayers`, which also wired
+       * the three retired panes' live-event pumps (a registry sighting posted onto the UI thread to insert one name into a sorted
+       * ObservableCollection, per sighting). Those windows are gone — the identity pane reads the same facts out of the derive —
+       * but `MainActions.ClassList` outlives them: it is what every class dropdown offers, here and in Player/NPC Identity.
+       */
+      PerfCounters.Run(MwPanesId, MainActions.InitClassList);
 
       // add notify icon
       // this attaches to state change events so do toward the end
@@ -316,6 +313,13 @@ namespace EQLogParser
          */
         DockingManager.SetState(npcWindow, DockState.Dock);
         DockingManager.SetState(mirrorFightWindow, DockState.Hidden);
+
+        /*
+         * Same law for Pet Owners, which is a name-only stub from 2026-10-09 (the markup explains why the shell stays): a saved
+         * layout that had it auto-hidden on the right would otherwise slide an empty tab out beside Player/NPC Identity forever,
+         * and no menu item exists to close it. Hiding at load is what makes the absorb-the-stale-name trick safe.
+         */
+        DockingManager.SetState(petMappingWindow, DockState.Hidden);
         MigrateIdentityPaneIntoRightStrip();
 
         DamageStatsBuilder.Instance.EventsUpdateDataPoint += data => QueueChartUpdate(damageChartIcon, data);
@@ -324,7 +328,6 @@ namespace EQLogParser
         MainActions.EventsDamageSelectionChanged += DamageSummarySelectionChanged;
         MainActions.EventsHealingSelectionChanged += HealingSummarySelectionChanged;
         MainActions.EventsTankingSelectionChanged += TankingSummarySelectionChanged;
-        ThemeConfig.EventsThemeChanged += _ => DataGridUtil.RefreshTableColumns(petMappingGrid);
 
         // give some time for dock state to load
         await Task.Delay(250);
@@ -1234,7 +1237,8 @@ namespace EQLogParser
      * open when it was last looked at.
      */
     /*
-     * The same door as "Pet Owners" directly below it - ToggleWindow, so the two panes sharing the right-hand strip answer
+     * ToggleWindow, not SetState: a pane with a declared side belongs to its edge, and the util decides the state (see
+     * SyncFusionUtil.ShowStateFor). The right-hand strip holds this pane alone since Pet Owners was retired.
      * their menu items identically. SetState(Dock) used to sit here, which is not a show/hide at all: it pulled the pane out
      * of its strip into the middle of the layout, so a menu item people press to PEEK at a list relocated it.
      *
@@ -1250,7 +1254,7 @@ namespace EQLogParser
     /*
      * One-time repair of a saved layout for the identity pane.
      *
-     * Player/NPC Identity moved out of the fight list's tab group into the right-hand strip beside Pet Owners. A dockSite.xml
+     * Player/NPC Identity moved out of the fight list's tab group into the right-hand strip. A dockSite.xml
      * written before that says "tabbed with npcWindow", and an operator would keep getting the OLD arrangement with no way
      * to notice the new one exists - so the saved state is corrected once, then left alone: anyone who moves the pane after
      * this build starts keeps their choice, because nothing here runs twice. Options / Reset Window State stays the escape
@@ -1463,67 +1467,6 @@ namespace EQLogParser
       }, DispatcherPriority.DataBind);
     }
 
-    private void OwnerEditMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
-    {
-      if (sender is not ImageAwesome ia || ia.DataContext is not PetMapping mapping)
-        return;
-
-      var cell = UiElementUtil.FindGridCell(ia);
-      if (cell is null)
-        return;
-
-      _currentEditMapping = mapping;
-      // value is the string, item is the expand-o object
-      ownerEditComboBox.SelectedValue = mapping.Owner;
-      UiElementUtil.OpenCellPopup(ownerEditPopup, ownerEditComboBox, cell, () =>
-      {
-        _currentEditPlayerClass = null;
-        classEditComboBox?.SetValue(ComboBox.SelectedValueProperty, null);
-      });
-    }
-
-    private void ClassEditMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
-    {
-      if (sender is not ImageAwesome ia || ia.DataContext is not ExpandoObject obj)
-        return;
-
-      var cell = UiElementUtil.FindGridCell(ia);
-      if (cell is null)
-        return;
-
-      _currentEditPlayerClass = obj;
-      classEditComboBox.SelectedItem = _currentEditPlayerClass.PlayerClass;
-      UiElementUtil.OpenCellPopup(classEditPopup, classEditComboBox, cell, () =>
-      {
-        _currentEditMapping = null;
-        ownerEditComboBox?.SetValue(ComboBox.SelectedValueProperty, null);
-      });
-    }
-
-    private void OwnerSelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-      if (sender is not ComboBox combo || combo.SelectedValue is not string name || string.IsNullOrEmpty(name))
-        return;
-
-      if (_currentEditMapping == null || _currentEditMapping.Owner == name)
-        return;
-
-      PetAssignment.Assign(_currentEditMapping.Pet, name);
-      ownerEditPopup.IsOpen = false;
-    }
-
-    private void ClassSelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-      if (sender is not ComboBox combo || combo.SelectedValue is not string className || string.IsNullOrEmpty(className))
-        return;
-
-      if (_currentEditPlayerClass == null || _currentEditPlayerClass.PlayerClass == className)
-        return;
-
-      PlayerRegistry.Instance.SetDefaultPlayerClass(_currentEditPlayerClass.Name, className);
-      classEditPopup.IsOpen = false;
-    }
-
     /*
      * `origin` names the door this open came through, and rides down into the reader's load line (see LogReader). The
      * three doors behave differently enough that "an open happened" stopped being an answer: a PerfReport run showed a
@@ -1598,15 +1541,14 @@ namespace EQLogParser
               // ledger holds membership, class and ownership for this folder, and PlayerRegistry below is a mirror of it.
               RosterImport.ImportPetMapOnce(server);
 
-              // update pet/player windows all at once
+              /*
+               * The registry comes up as a mirror of that ledger: roster membership, class, and the pet→owner pairs. Nothing here
+               * pushes those into window-side collections any more. The three lists this call used to feed (Verified Players, Verified
+               * Pets, Pet Owners) each held a COPY of identity state, sorted on the UI thread as the parse learned names, and each was
+               * stale the moment a verdict moved; Player/NPC Identity reads the derive's own census, and an owner rides in its Owner
+               * column (IdentityLookup is still the single answer to "who is one of ours" — it just has no copies underneath it now).
+               */
               PlayerRegistry.Instance.Init();
-              // The owner picker (and the collections behind it) read the durable roster lane UNION this session's store,
-              // so the list of "who is one of ours" has one answer (IdentityLookup.OurPeopleNames: why the store alone stopped being it).
-              MainActions.LoadVerified(verifiedPlayersWindow, verifiedPetsWindow, IdentityLookup.OurPeopleNames(),
-                PlayerRegistry.Instance.GetVerifiedPets());
-              // The pair list comes from the ledger lane UNION the store (IdentityLookup.OurPetOwners: the same source OwnerOf
-              // consults, so the grid and the boards cannot disagree about whose pet a name is).
-              MainActions.LoadPetOwners(petMappingWindow, [.. IdentityLookup.OurPetOwners().Select(kv => new PetMapping(kv.Key, kv.Value))]);
             }
 
             _recentFiles.Remove(theFile);
@@ -1675,11 +1617,10 @@ namespace EQLogParser
     {
       try
       {
-        if (changed)
-        {
-          MainActions.Clear(verifiedPetsWindow, verifiedPlayersWindow, petMappingWindow);
-        }
-
+        /*
+         * There is no window-side list to blank on a log change any more (the three retired panes' collections are deleted), so the
+         * fan-out to the grids is all this path needs: `LifecycleManager.Clear` is still the ONLY raiser of ActiveDataCleared.
+         */
         LifecycleManager.Clear(changed);
         var closedFile = AppSettings.CurrentLogFile;
         AppSettings.CurrentLogFile = null;
@@ -1810,22 +1751,6 @@ namespace EQLogParser
       }
     }
 
-    private void RemovePetMouseDown(object sender, MouseButtonEventArgs e)
-    {
-      if (sender is not ImageAwesome ia || ia.DataContext is not ExpandoObject sortable)
-        return;
-
-      PlayerRegistry.Instance.RemoveVerifiedPet(((dynamic)sortable).Name);
-    }
-
-    private void RemovePlayerMouseDown(object sender, MouseButtonEventArgs e)
-    {
-      if (sender is not ImageAwesome ia || ia.DataContext is not ExpandoObject sortable)
-        return;
-
-      PlayerRegistry.Instance.RemoveVerifiedPlayer(((dynamic)sortable).Name);
-    }
-
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "It's a callback function")]
     private void DockSiteDockStateChanging(FrameworkElement sender, DockStateChangingEventArgs e)
     {
@@ -1899,7 +1824,6 @@ namespace EQLogParser
       _saveTimer?.Stop();
       _eqLogReader?.Dispose();
       _notifyIcon?.Dispose();
-      petMappingGrid?.Dispose();
       SystemEvents.PowerModeChanged -= SystemEventsPowerModeChanged;
 
       // restore from backup will use explicit mode

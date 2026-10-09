@@ -74,7 +74,7 @@ namespace EQLogParser
      * "Pet Owners" while its group showed something else made it disappear. "Not visible" is what the operator means.
      *
      * COME BACK THE WAY IT WENT AWAY. The Document/Dock ladder in ShowStateFor is for windows that live in the middle of the
-     * layout; a pane whose markup says SideInDockedMode=Right (the identity strip: Pet Owners, Player/NPC Identity) has to
+     * layout; a pane whose markup says SideInDockedMode=Right (the identity strip: Player/NPC Identity) has to
      * return auto-hidden, because SetState(Dock) on it yanks the pane out of its strip and drops it over the tables - the
      * exact relocation an operator never asked for and cannot undo from this menu.
      */

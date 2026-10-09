@@ -21,12 +21,20 @@ namespace EQLogParser
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
-    internal event Action<PetMapping> EventsNewPetMapping;
+    /*
+     * Four events, and every one of them exists because the DERIVATION listens: CombatCapture turns a sighting into an
+     * IdentityEvent (`EventsNewVerifiedPlayer`/`EventsNewVerifiedPet`), and a removal takes the name out of the live set the same
+     * way. They are NOT ui plumbing, whatever the panes once did with them.
+     *
+     * Two more used to be declared here and went with their only subscriber on 2026-10-09, when the Verified Players / Verified
+     * Pets / Pet Owners windows were retired: `EventsNewPetMapping` (a learned pair posted to the UI thread to insert one row into
+     * a sorted grid, per sighting) and `EventsUpdateDefaultPlayerClass` (the same for one class cell). A channel with no listener
+     * is not a future-proof API; it is an allocation on the parse path.
+     */
     internal event Action<string> EventsNewVerifiedPet;
     internal event Action<string> EventsNewVerifiedPlayer;
     internal event Action<string> EventsRemoveVerifiedPet;
     internal event Action<string> EventsRemoveVerifiedPlayer;
-    internal event Action<PlayerClassMapping> EventsUpdateDefaultPlayerClass;
 
     // singleton
     internal static PlayerRegistry Instance { get; } = new();
@@ -185,11 +193,9 @@ namespace EQLogParser
       // Load is not a sighting, and it is not traffic either: Init() replays every stored pair through here.
       if (!init) PerfCounters.Note(WriteId);
 
-      var needEvent = false;
-
       lock (_lock)
       {
-        needEvent = AddPetToPlayerNoLock(pet, player, init);
+        AddPetToPlayerNoLock(pet, player, init);
       }
 
       /*
@@ -198,11 +204,6 @@ namespace EQLogParser
        * the aging dial could never expire anything while the file looked freshly stamped.
        */
       AddVerifiedPet(pet, init);
-
-      if (needEvent)
-      {
-        EventsNewPetMapping?.Invoke(new PetMapping(pet, player));
-      }
     }
 
     internal void AddMerc(string name)
@@ -220,8 +221,6 @@ namespace EQLogParser
         return;
 
       var needEvent = false;
-      var petMappingEvent = false;
-      var petMapping = default(PetMapping);
 
       /*
        * A sighting refreshes the row's clock — including for a pet this application already knew, which is the case that matters:
@@ -246,11 +245,11 @@ namespace EQLogParser
             ForgetInLedger(name);
           }
 
+          // An unmapped summon still needs a row to own: the placeholder owner is what "we know it is a pet, not whose" looks
+          // like in the store, and Names' Owner column prints it as `No Owner` (Labels.LegacyUnassigned reads the same way).
           if (IsPossiblePetName(name) && !_petToPlayer.ContainsKey(name))
           {
-            petMappingEvent = AddPetToPlayerNoLock(name, Labels.Unassigned, init);
-            if (petMappingEvent)
-              petMapping = new PetMapping(name, Labels.Unassigned);
+            AddPetToPlayerNoLock(name, Labels.Unassigned, init);
           }
 
           _takenPetOrPlayerAction.TryRemove(name, out _);
@@ -263,7 +262,6 @@ namespace EQLogParser
         }
       }
 
-      if (petMappingEvent) EventsNewPetMapping?.Invoke(petMapping);
       if (needEvent) EventsNewVerifiedPet?.Invoke(name);
     }
 
@@ -614,7 +612,8 @@ namespace EQLogParser
            * `RosterImport.ImportPetMapOnce` lifts petmapping.txt into the lane at log open (once per folder, stamps carried
            * verbatim) and NOTHING writes that file again, so these lines are where every pair — a decade of operator edits
            * included — enters the session. The pairs still land in `_petToPlayer`, which stays the parse's live mirror: the
-           * ingest checks read it mid-line, and `EventsNewPetMapping` still fires for whatever is learned tonight.
+           * ingest checks read it mid-line. Nothing announces a learned pair to the UI any more: Pet Owners is gone and the
+           * identity pane's Owner column reads this mirror through the census.
            *
            * A pet whose ledger owner is not otherwise known also lands in the player list, exactly as the file loop above
            * does: an owner is a person by construction, and +Pets folding and the You-mapping both ask that list.
@@ -876,8 +875,6 @@ namespace EQLogParser
       var clear = string.IsNullOrEmpty(className);
       if (!clear && !CombatRecordLookup.IsValidClassName(className)) return;
 
-      var needEvent = false;
-
       lock (_lock)
       {
         // A blank selection means "no default any more" — remove it, never store an empty word the readers must re-filter.
@@ -895,11 +892,8 @@ namespace EQLogParser
            * still comes back next launch, without the file it used to be written into.
            */
           IdentityPriorStore.Instance.SetRosterClass(name, clear ? null : className);
-          needEvent = true;
         }
       }
-
-      if (needEvent) EventsUpdateDefaultPlayerClass?.Invoke(new PlayerClassMapping { Player = name, ClassName = clear ? string.Empty : className });
     }
 
     internal static bool IsPossiblePlayerName(string part, int stop = -1)

@@ -25,9 +25,7 @@ namespace EQLogParser
   internal static class UiUtil
   {
     internal static readonly SolidColorBrush DefaultBrush = new(Colors.Gray);
-    internal static readonly SortableNameComparer TheSortableNameComparer = new();
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
-    private static readonly SortablePetMappingComparer TheSortablePetMappingComparer = new();
     private static readonly ConcurrentDictionary<string, SolidColorBrush> BrushCache = new();
 
     static UiUtil()
@@ -64,47 +62,12 @@ namespace EQLogParser
       return timer;
     }
 
-    internal static dynamic InsertNameIntoSortedList(string name, ObservableCollection<object> collection, bool isPlayer = false)
-    {
-      var entry = new ExpandoObject() as dynamic;
-      entry.Name = name;
-
-      bool hasSentinel = collection.Count > 0 &&
-        ((dynamic)collection[0])?.Name is string first && Labels.IsUnassignedOwner(first);
-
-      var searchStart = hasSentinel ? 1 : 0;
-      var searchList = collection.Skip(searchStart).ToList();
-      var index = searchList.BinarySearch(entry, TheSortableNameComparer);
-
-      if (index < 0)
-      {
-        collection.Insert(searchStart + ~index, entry);
-      }
-      else
-      {
-        entry = collection[searchStart + index];
-      }
-
-      if (isPlayer)
-      {
-        entry.PlayerClass = PlayerRegistry.Instance.GetDefaultPlayerClass(name);
-      }
-
-      return entry;
-    }
-
-    internal static void InsertPetMappingIntoSortedList(PetMapping mapping, ObservableCollection<PetMapping> collection)
-    {
-      var index = collection.ToList().BinarySearch(mapping, TheSortablePetMappingComparer);
-      if (index < 0)
-      {
-        collection.Insert(~index, mapping);
-      }
-      else
-      {
-        collection.Insert(index, mapping);
-      }
-    }
+    /*
+     * InsertNameIntoSortedList and InsertPetMappingIntoSortedList are deleted (2026-10-09) with the three windows that used them:
+     * sorted ObservableCollection inserts of dynamic rows, one per registry sighting, to keep the retired Verified Players / Verified
+     * Pets / Pet Owners grids in order. `ExpandoObject as dynamic` was also why those panes could not be typed or tested. The identity
+     * pane's census replaces all three lists and reads typed rows straight out of the derive.
+     */
 
     internal static void UpdateObservable<T>(IEnumerable<T> source, ObservableCollection<T> dest)
     {
@@ -248,21 +211,6 @@ namespace EQLogParser
       }
     }
 
-    private class SortablePetMappingComparer : IComparer<PetMapping>
-    {
-      public int Compare(PetMapping x, PetMapping y)
-      {
-        return string.CompareOrdinal(x?.Pet, y?.Pet);
-      }
-    }
-
-    internal class SortableNameComparer : IComparer<object>
-    {
-      public int Compare(object x, object y)
-      {
-        return string.CompareOrdinal(((dynamic)x)?.Name, ((dynamic)y)?.Name);
-      }
-    }
 
   }
 }

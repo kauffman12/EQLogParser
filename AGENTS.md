@@ -660,7 +660,7 @@ declare without `?`; add the directive only when the whole file is meant to hold
   VI" and one flat substring test let the pet's spell name itself in a Player row's tooltip; never by widening the claim source, since `StateStamp` hashes
   sources and `IdentityPriorStore` persists them — `CensusCastProofTest`) and the lines no column can carry — "You chose NPC" / "Claim taken back"
   are the only way to tell a row an operator wrote from one the rules inferred (`ProvenanceFor`, pinned by `NamesTableTest`, Windows-only). **No status line and no
-  header**: the pane is the grid alone — the shape Pet Owners has, because the dock tab already says "Player/NPC Identity" — so nothing on screen prints the census
+  header**: the pane is the grid alone, because the dock tab over it already says "Player/NPC Identity" — so nothing on screen prints the census
   counters that survive (`TotalNames`/`UnresolvedInCapture`/the five kind counts are computed and tested with no surface — the whole-capture `Disagreements` count went out with its header, since "counted but invisible" is not a reason to compute); see the docking law below.
 - **An outcome word decides; a tag never un-happens it, and a name never carries the sentence's period** (2026-11, both measured on
   `eqlog_Kizant_xegony-2.txt`). (1) `riposte!`/`ripostes!` had an extra guard, `"(Strikethrough)" != split[^1]`, that made the parser
@@ -716,16 +716,16 @@ declare without `?`; add the directive only when the whole file is meant to hold
   the one tooltip string the pane already kept — nothing allocates for a single-claim row. Tests: `EvidenceLinesTest`,
   `IdentityVocabularyTest`, (Windows) `NamesTableTest.ExtraEvidenceRidesBelowTheProofLineInTheHover`.
   Reasoning and measured fixtures: docs/DesignNotes.md → "The cell carries the judgement, the hover carries the reasons".
-- **The two identity panes share one right-hand strip** (2026-11): Player/NPC Identity sits with Pet Owners (`State="AutoHidden"`, `SideInDockedMode="Right"`) instead of
+- **The identity strip holds ONE pane, and its width law outlived the second pane** (2026-11; Pet Owners left the strip on 2026-10-09 — see the bullet below): Player/NPC Identity sits at `State="AutoHidden"`, `SideInDockedMode="Right"` instead of
   tabbing with the fight list — and it is `AutoHidden`, never `Float`, because a floated window is a separate OS window that **cannot** share a tab strip, so "floating +
-  tabbed together" has exactly one reading. Three laws ride on that. (1) **One width for both tabs**, from
+  tabbed together" has exactly one reading. Three laws ride on that. (1) **One width for the whole strip, asked of the grid**, from
   `NamesTable.DesiredPaneWidth()` (its five columns + row header + scrollbar — **≈ 720 px at 12 pt**, the fourth of them being Owner; the Type term is `TypeColumnWidth()`, sized from the longest word that column can ever print, not a theme bucket) fed to `EQIdentityStripWidth` by `ThemeConfig`: a panel whose two tabs
-  want different widths jumps on every switch, and a strip narrower than the table hides the Why column behind a horizontal scrollbar in a pane that cannot be widened past
-  the panel — never replace the call with a constant. (2) **Markup loses to `dockSite.xml`**, so moving a pane means repairing the saved layout once:
-  `MainWindow.MigrateIdentityPaneIntoRightStrip()` runs after `LoadDockState` beside the standing `npcWindow`/`mirrorFightWindow` fixups, is gated by the
+  want different widths jumps on every switch (the old Pet Owners tab is why the rule exists, and **anything that ever joins this strip takes the same number**), while a strip
+  narrower than the table hides the Why column behind a horizontal scrollbar in a pane that cannot be widened past the panel — never replace the call with a constant. (2) **Markup loses to `dockSite.xml`**, so moving a pane means repairing the saved layout once:
+  `MainWindow.MigrateIdentityPaneIntoRightStrip()` runs after `LoadDockState` beside the standing `npcWindow`/retired-pane fixups, is gated by the
   `IdentityStripMigrated` config flag (someone who moves it later keeps their choice; Reset Window State stays the escape hatch) and is wrapped in `try`/`Log.Debug` because
-  a throw on this path costs the main window. (3) **A menu item shows or hides, it never relocates**: `MenuItemNamesClick` calls `SyncFusionUtil.ToggleWindow` like the
-  "Pet Owners" item beside it; the old `SetState(namesWindow, Dock)` pulled the pane out of its strip into the middle of the layout.
+  a throw on this path costs the main window. (3) **A menu item shows or hides, it never relocates**: `MenuItemNamesClick` calls `SyncFusionUtil.ToggleWindow`;
+  the old `SetState(namesWindow, Dock)` pulled the pane out of its strip into the middle of the layout.
   **The rule is enforced inside `ToggleWindow` now, because that ladder was the violator**: showing asks
   `SyncFusionUtil.ShowStateFor`, which consults the window's own declared `SideInDockedMode` FIRST — an edge returns
   `AutoHidden`, and only a window with no side earns Document/Dock/Float (`DockingPaneToggleTest`, Windows-only: attached
@@ -734,6 +734,23 @@ declare without `?`; add the directive only when the whole file is meant to hold
   either, and under `state == Hidden` alone its menu item used to HIDE it. Two companions from the same handler: it starts no
   census of its own (`IsVisibleChanged`/`FollowSession` rebuilds on show; forcing `Refresh()` as well cost two classification
   passes per click), and `SetSideInDockedMode` BEFORE `SetState` is what makes two auto-hidden panes share one strip.
+- **A window-side COPY of identity state is banned; a retired window leaves a name-only stub** (2026-10-09, from deleting Verified
+  Players, Verified Pets and Pet Owners — *"we dont need them anymore and populating them dynamically was always a performance issue"*).
+  The three held `ObservableCollection`s of names in `MainActions`, maintained by the registry's own events: one `Dispatcher` post plus a
+  sorted insert (a `ToList()` copy + `BinarySearch`) per sighting, per pane, keeping grids nobody had open in order — plus two bulk fills at
+  log open. They were also **uncorrectable by construction**: identity is a per-name answer with provenance and a timestamp that MOVES (charm,
+  R7, an operator's `Set as`, an expired prior), while an event pump sees only sightings — the same defect class as "a read of memory must not
+  create memory". Player/NPC Identity's census comes from the derive, so it cannot drift, and it carries Type, Class **and Owner**. Two rules for
+  whoever adds a pane next. **(1) No window keeps its own list of who/what a name is**: follow `DeriveEngine.Derived`, or read
+  `IdentityLookup`/`ClassificationReport` when asked — which is why the Owner dropdown is built per pencil click. **(2) Deleting a window means
+  deleting its CONTENT, not its NAME**: `LoadDockState` throws on a window a saved `dockSite.xml` names and MainWindow's catch calls
+  `ResetState()`, wiping the operator's whole arrangement — so `petMappingWindow`, `verifiedPlayersWindow`, `verifiedPetsWindow` and
+  `mirrorFightWindow` stay as empty hidden `ContentControl`s with no menu item, and `SetState(…, Hidden)` is re-applied at load so a saved
+  AutoHidden tab cannot resurrect an empty pane beside the strip. **And when the last subscriber of a registry event goes, delete the event**:
+  `EventsNewPetMapping` and `EventsUpdateDefaultPlayerClass` (with `PlayerClassMapping`) left with their panes — building a `PetMapping` per
+  learned pair forever for a dead grid is an allocation on the parse path, not an API. The four events that stay are Core plumbing
+  (`CombatCapture` turns them into `IdentityEvent`s), and `MainActions.ClassList` survives as game data filled once by `InitClassList` (read when a
+  pencil opens, not bound from markup). docs/DesignNotes.md → "The three identity panes are gone: one census, no event pump".
 - **Identity WORDS live in `IdentityVocabulary` (Core), its coverage is asserted twice, and each tooltip LINE is one short phrase**: the Why column used to print `R15-healed` /
   `Prior:R7-graph` at 256 px — the rule book's private vocabulary rendered where a person reads instead of greps. `WhyWord` maps each code to two words (`Healed`, `Chat`,
   `Who`, `Class Spell`, `Owner in Pet Name`, `NPC DB`, `Chosen`, `Spell`, `Legacy`…) — the cell stays short and the HOVER names the store (*From the Old Verified List* for players.txt, *In the Pet Map as X’s*); **says the same word for a borrowed verdict as for a local one** (`Prior:R7-graph` → *Attacks NPC*;
@@ -866,7 +883,7 @@ declare without `?`; add the directive only when the whole file is meant to hold
   `IdentityPriorStore`'s `Owner` column already held the same pair. Both are gone: `ConfigUtil.SavePetMapping` is deleted (not parked),
   `Init` seeds `_petToPlayer` from `IdentityPriorStore.PetEntries()` alone, and every learned pair writes the lane through
   `RememberPet(..., persist:false)` with the 30-second tick's single `FlushChanges()` doing the IO. **The in-memory map stays** — the
-  ingest reads it mid-line and `EventsNewPetMapping` still fires — but it is a mirror, not a second store. `_petSeenAt` died with the
+  ingest reads it mid-line — but it is a mirror, not a second store (the event that used to announce a learned pair, `EventsNewPetMapping`, was deleted with its last subscriber). `_petSeenAt` died with the
   writer; ageing runs on the lane's `SeenAtS`, and `TouchPetStampNoLock` is what keeps "we saw this summon tonight" a separate act from
   "this pair exists" (a mapped pet whose clock never moves is retired while it walks into the log nightly). **A load is still not a
   sighting**: `init:true` everywhere, stamps carried verbatim. Two consequences to know: the ledger prunes what it flushes, so a mapping
@@ -925,7 +942,7 @@ declare without `?`; add the directive only when the whole file is meant to hold
   the grammar guard, the memory correction) and `IdentityVocabularyTest` (the words and the one-line law).
 - **A verdict is edited in its own cell; a context menu hides verbs** (2026-11): the Names grid has **no** ContextMenu at all — right-drag is how a person grabs a
   block of rows out of a long table, and this pane's menu carried its one most-important verb (*clear my claim*) invisibly while offering two identical NPC lines.
-  Type and Class each carry a pencil that opens a `ComboBox` in a popup over the clicked cell (`UiElementUtil.OpenCellPopup`, the same helper MainWindow's Pet Owners edit and DamageSummary's Group cell call - joined, not re-written, because its
+  Type and Class each carry a pencil that opens a `ComboBox` in a popup over the clicked cell (`UiElementUtil.OpenCellPopup`, the same helper DamageSummary's Group cell calls - joined, not re-written, because its
   cell placement, sizing, focus-back and close hook are the parts the operator meant by "i put a lot of work into getting that working well"). Four laws: the option list shows
   **its own row's** vocabulary, not the whole one (`NameRow.TypeChoices` ← `IdentityVocabulary.TypeOptionsFor`; the five answers exist in `IdentityVocabulary.TypeOptions`, each written exactly once, "Clear claim" carrying
   `IdentityKind.Unknown` because that is what `ClassificationCommands.ClearVerdict` writes); the combo **preselects the row's current verdict** so the handler can
@@ -1430,7 +1447,8 @@ After completing work, verify:
   `BoardReason` words are classified by `UnaskedRefreshTest.TheUnaskedDoorsAreExactlyThree`, which fails until the author picks
   asked/unasked, because the default decides whether a select-all gets a build it cannot pay for; (4) never "make it cheaper" by
   declining a click — that is the one inversion that breaks trust in a click; (5) an ownership claim is not a display edit:
-  `PetAssignment.Assign` (Core, one seam for the damage/tanking menus' *Assign … as Pet of* and the Pet Owners picker) writes the pair
+  `PetAssignment.Assign` (Core, one seam for the damage/tanking menus' *Assign … as Pet of* **and** the identity pane's Owner cell — an owner is set,
+  never typed into a file, and it goes through this seam so the eviction, the Kind, the roster record, the Info line and the pass cannot be forgotten) writes the pair
   **and asks for a full pass** through `Reroute` (wired once to `() => DeriveEngine.Active?.RederiveAsync()`), because only
   `RegistrySeed` → `EntityTimeline.OwnerOf` → `FightSummarySource` moves a summon's facts under its person and with the digest panes
   repaint from; it refuses a pair already in effect by asking **both** stores case-insensitively (petmapping's own keys are ordinal, so a

@@ -23,11 +23,11 @@ using EQLogParser;
 namespace EQLogParser
 {
   /*
-   * The Player/NPC Identity window (menu name; class still NamesTable): every name in the capture, what it was called, and WHY. It replaces the two hand-maintained verdict
-   * panes (Verified Players / Verified Pets), which could show what somebody typed but never what the classifier
-   * concluded - so a wrong verdict had no surface to be noticed on, only a meter that looked odd. Pet Owners keeps
-   * its own window: it curates the persistent owner pairs (petmapping.txt) across logs, which is a different job
-   * from reporting what one capture's evidence says.
+   * The Player/NPC Identity window (menu name; class still NamesTable): every name in the capture, what it was called, and WHY.
+   * It replaces all three of the panes this application used to keep identity state in - Verified Players, Verified Pets (which could
+   * show what somebody typed but never what the classifier concluded, so a wrong verdict had no surface to be noticed on) and Pet
+   * Owners, whose window outlived its own file: petmapping.txt froze into the ledger's ownership lane on 2026-10-09, a pair became a
+   * COLUMN of this table, and what was left of that pane was a second list of pairs held in order by an event pump.
    *
    * Two things this deliberately is not:
    *
@@ -43,8 +43,8 @@ namespace EQLogParser
    *     closing the window loses nothing and a file edited by hand still wins on the next open.
    *
    * HOW A NAME IS CORRECTED: the pencil in its own cell. Type opens the whole verdict list (Player / Pet / Mercenary /
-   * NPC / Clear claim) and Class opens the class list, both through UiElementUtil.OpenCellPopup - the click-the-icon-then-
-   * pick popup MainWindow's Pet Owners edit and DamageSummary's Group cell already call, so this pane joins them instead
+   * NPC / Clear claim), Class opens the class list and Owner the people a summon can belong to, all three through
+   * UiElementUtil.OpenCellPopup - the click-the-icon-then-pick popup DamageSummary's Group cell already calls, so this pane joins it instead
    * of hand-rolling a Popup (placement, sizing, focus-back and the close hook are in that helper). There is no context
    * menu on this grid at all: right-drag and right-click
    * are how a person grabs a block of rows out of a long table, and a menu drawn over that gesture hid the one verb
@@ -643,7 +643,9 @@ namespace EQLogParser
 
       // PetOwnership.Choices already ends with "No Owner" and drops the placeholders, so the current answer is always in the list —
       // including a row that reads "No Owner", which opens with that entry selected rather than blank.
-      ownerEditComboBox.ItemsSource = PetOwnership.Choices(row.Owner, PlayerRegistry.Instance.GetVerifiedPlayers());
+      // IdentityLookup is the one answer to "who is one of ours" (durable roster lane UNION this session's store), so the picker
+      // and the verdicts beside it cannot disagree about who can own a summon.
+      ownerEditComboBox.ItemsSource = PetOwnership.Choices(row.Owner, IdentityLookup.OurPeopleNames());
       ownerEditComboBox.SelectedItem = row.Owner;
 
       UiElementUtil.OpenCellPopup(ownerEditPopup, ownerEditComboBox, cell, () =>
@@ -664,8 +666,18 @@ namespace EQLogParser
       // The click that opened the popup, and a pick of what the cell already says: both write nothing.
       if (string.Equals(owner, row.Owner, StringComparison.OrdinalIgnoreCase)) return;
 
+      /*
+       * Setting an owner goes through the SAME seam the summary panes' `Assign … as Pet of` uses — `PetAssignment.Assign` — rather than
+       * poking `PlayerRegistry.AddPetToPlayer`: that call refuses to reassign a name the parser verified as a player (which is exactly what
+       * an operator contradicts), leaves the KIND alone, and logs nothing. The seam forgets every earlier claim, asserts Pet, writes the
+       * pair, records the owner as roster, refuses a pair already in effect by asking BOTH stores case-insensitively, and asks for the pass
+       * that folds the summon's facts under its person (`+Pets`).
+       *
+       * The take-back has no verdict to assert — "not whose I know" is not a Kind — so it goes straight to the store, which takes the pair
+       * out of the live map AND the ledger's ownership lane while leaving the Pet verdict standing.
+       */
       if (PetOwnership.IsClear(owner)) PlayerRegistry.Instance.ForgetPetMapping(row.Name);
-      else PlayerRegistry.Instance.AddPetToPlayer(row.Name, owner);
+      else PetAssignment.Assign(row.Name, owner);
 
       Reconcile();
       ownerEditPopup.IsOpen = false;

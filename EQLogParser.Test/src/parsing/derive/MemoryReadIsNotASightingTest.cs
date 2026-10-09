@@ -41,7 +41,12 @@ public class MemoryReadIsNotASightingTest
 
     /*
      * The predicate itself: still answers yes for a name on the game's pet list, and leaves nothing behind — no pet-map row, no
-     * mapping event. Before the fix this call wrote `Venartik -> Unassigned`, which is a claim about a summon nobody named.
+     * owner. Before the fix this call wrote `Venartik -> Unassigned`, which is a claim about a summon nobody named.
+     *
+     * This used to assert one more thing through `PlayerRegistry.EventsNewPetMapping`: that a read announced no learned pair. That
+     * channel is DELETED (2026-10-09, with the Pet Owners window that was its only subscriber), so the assertion is gone too — and
+     * nothing weaker replaces it. What holds the law is the row itself: an invented pair shows up in `GetPetMappings`, which is what
+     * `RegistrySeed` walks and what therefore decides whether a name becomes Pet on the next pass. An event was the echo; this is the sound.
      */
     [TestMethod]
     public void AskingWhetherAGameGeneratedNameIsAPetWritesNothing()
@@ -49,27 +54,16 @@ public class MemoryReadIsNotASightingTest
         GameGeneratedPets()[GamePetName] = 1;
 
         var before = PlayerRegistry.Instance.GetPetMappings().Count;
-        var eventsFired = 0;
-        void OnMapping(PetMapping _) => eventsFired++;
-        PlayerRegistry.Instance.EventsNewPetMapping += OnMapping;
 
-        try
-        {
-            Assert.IsTrue(PlayerRegistry.Instance.IsVerifiedPet(GamePetName),
-                "a name on the game's pet list stopped answering the question — the ANSWER is what the list is for");
-            Assert.IsTrue(PlayerRegistry.Instance.IsPetOrPlayerOrMerc(GamePetName), "the combined question changed shape");
+        Assert.IsTrue(PlayerRegistry.Instance.IsVerifiedPet(GamePetName),
+            "a name on the game's pet list stopped answering the question — the ANSWER is what the list is for");
+        Assert.IsTrue(PlayerRegistry.Instance.IsPetOrPlayerOrMerc(GamePetName), "the combined question changed shape");
 
-            Assert.IsNull(PlayerRegistry.Instance.GetPlayerFromPet(GamePetName),
-                "asking invented an owner (even an unassigned one) for a name no line named");
-            Assert.IsFalse(PlayerRegistry.Instance.GetPetMappings().Any(m => string.Equals(m.Pet, GamePetName, StringComparison.OrdinalIgnoreCase)),
-                "asking added a row to the pet map, which RegistrySeed files as a Pet claim");
-            Assert.AreEqual(before, PlayerRegistry.Instance.GetPetMappings().Count, "the pet map grew from a read");
-            Assert.AreEqual(0, eventsFired, "a read announced a learned pair");
-        }
-        finally
-        {
-            PlayerRegistry.Instance.EventsNewPetMapping -= OnMapping;
-        }
+        Assert.IsNull(PlayerRegistry.Instance.GetPlayerFromPet(GamePetName),
+            "asking invented an owner (even an unassigned one) for a name no line named");
+        Assert.IsFalse(PlayerRegistry.Instance.GetPetMappings().Any(m => string.Equals(m.Pet, GamePetName, StringComparison.OrdinalIgnoreCase)),
+            "asking added a row to the pet map, which RegistrySeed files as a Pet claim");
+        Assert.AreEqual(before, PlayerRegistry.Instance.GetPetMappings().Count, "the pet map grew from a read");
     }
 
     /*
