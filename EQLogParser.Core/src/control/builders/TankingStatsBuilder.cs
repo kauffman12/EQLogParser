@@ -308,8 +308,8 @@ namespace EQLogParser
                       // don't count misses/dodges or where no damage was done
                       if (record.Total > 0)
                       {
-                        var values = subStats.CritHits > critHits ? subStats.CritFreqValues : subStats.NonCritFreqValues;
-                        AddValue(values, record.Total, 1);
+                        // The histogram is not built here: the walk keeps the amount and Attempt turns the list into counts when HitFreqChart asks.
+                        subStats.RecordHitTotal(record.Total, isCrit: subStats.CritHits > critHits);
                       }
                     }
                   }
@@ -408,13 +408,6 @@ namespace EQLogParser
         }
       }
 
-      static void AddValue(Dictionary<long, int> dict, long key, int amount)
-      {
-        if (!dict.TryAdd(key, amount))
-        {
-          dict[key] += amount;
-        }
-      }
     }
 
     private void FireNewStatsEvent()

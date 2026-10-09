@@ -180,20 +180,42 @@ public class BoardWalkCostRealLogTest
             if (pass == 2)
             {
                 /* The hit-distribution histograms: filled per sub-stat row on EVERY build, read by exactly one window (HitFreqChart). */
-                long histEntries = 0, histRows = 0;
-                foreach (var row in built?.ExpandedStatsList ?? [])
+                // Raw amounts, NOT the dictionaries: asking for a dictionary is what builds it, so an eager probe would measure its own
+                // observation and report the old eager design as if it were still there.
+                long rawAmounts = 0, rowsWithRaw = 0, statRows = 0;
+                void Survey(Attempt row)
                 {
-                    histEntries += row.CritFreqValues.Count + row.NonCritFreqValues.Count;
-                    histRows++;
-                    foreach (var sub in row.SubStats)
-                    {
-                        histEntries += sub.CritFreqValues.Count + sub.NonCritFreqValues.Count;
-                        histRows++;
-                    }
+                    statRows++;
+                    rawAmounts += row.RawHitTotals;
+                    if (row.HoldsRawHitTotals) rowsWithRaw++;
                 }
 
-                Console.WriteLine($"[walk] pass {pass} hit-frequency histograms: {histEntries:N0} entries over {histRows:N0} rows "
-                                  + $"(~{histEntries * 40.0 / 1048576.0:N0} MB of dictionary retained) | read only by HitFreqChart");
+                foreach (var row in built?.ExpandedStatsList ?? [])
+                {
+                    Survey(row);
+                    foreach (var sub in row.SubStats) Survey(sub);
+                }
+
+                Console.WriteLine($"[walk] pass {pass} hit-frequency: {rawAmounts:N0} raw amounts held over {rowsWithRaw:N0}/{statRows:N0} rows "
+                                  + $"(~{rawAmounts * 8.0 / 1048576.0:N0} MB of lists, retained until asked) | histograms built on demand only");
+
+                // What opening the chart costs now: one raid member's rows, materialized from their raw amounts.
+                var openChart = Stopwatch.StartNew();
+                long entries = 0;
+                foreach (var row in built?.ExpandedStatsList ?? [])
+                {
+                    entries += row.CritFreqValues.Count + row.NonCritFreqValues.Count;
+                    foreach (var sub in row.SubStats)
+                    {
+                        entries += sub.CritFreqValues.Count + sub.NonCritFreqValues.Count;
+                    }
+
+                    break; // one row: the realistic door
+                }
+
+                openChart.Stop();
+                Console.WriteLine($"[walk] pass {pass} opening Hit Frequency for one row: {openChart.Elapsed.TotalMilliseconds:N1} ms "
+                                  + $"-> {entries:N0} distinct amounts (the whole board used to cost 1,879,130 entries / ~72 MB)");
             }
             var boardBytes = GC.GetTotalAllocatedBytes(precise: true) - allocated0;
 
