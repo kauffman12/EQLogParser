@@ -457,7 +457,7 @@ namespace EQLogParser
                       var player = !string.IsNullOrEmpty(record.AttackerOwner) ? record.AttackerOwner
                         : _petToPlayer.TryGetValue(record.Attacker, out var mapped) ? mapped : null;
 
-                      if ((player is null && !_playerPets.ContainsKey(record.Attacker)) || player == Labels.Unassigned)
+                      if ((player is null && !_playerPets.ContainsKey(record.Attacker)) || Labels.IsUnassignedOwner(player))
                       {
                         topLevelStats[record.Attacker] = stats;
                         stats.IsTopLevel = true;
@@ -699,7 +699,7 @@ namespace EQLogParser
       // The owner the record itself carries wins; the untimed lookup is the fallback for records that carry none (see the
       // fold in ComputeDamageStats, which does the same and is where an untimed answer would move damage to the wrong person).
       var petName = !string.IsNullOrEmpty(damage.AttackerOwner) ? damage.AttackerOwner : IdentityLookup.OwnerOf(damage.Attacker);
-      if ((!string.IsNullOrEmpty(petName) && petName != Labels.Unassigned))
+      if (!string.IsNullOrEmpty(petName) && !Labels.IsUnassignedOwner(petName))
       {
         if (!_playerPets.TryGetValue(petName, out var mapping))
         {

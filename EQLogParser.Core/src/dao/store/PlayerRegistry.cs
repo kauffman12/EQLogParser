@@ -126,7 +126,7 @@ namespace EQLogParser
      * lists above for why they can never be rebuilt from evidence.
      */
     internal static bool IsPersonWord(string name) =>
-      !string.IsNullOrEmpty(name) && (name == Labels.Unassigned || SecondPerson.Contains(name) || ThirdPerson.Contains(name));
+      !string.IsNullOrEmpty(name) && (Labels.IsUnassignedOwner(name) || SecondPerson.Contains(name) || ThirdPerson.Contains(name));
 
     internal bool IsVerifiedPlayer(string name) => IsPersonWord(name) || _verifiedPlayers.ContainsKey(name);
     internal bool IsPetOrPlayerOrMerc(string name) => !string.IsNullOrEmpty(name) && (IsVerifiedPlayer(name) || IsVerifiedPet(name) || IsMerc(name));
@@ -988,6 +988,22 @@ namespace EQLogParser
     }
 
     private void SaveTimerTick(object state) => Save();
+
+    /*
+     * Take the owner off one name and nothing else: "I do not know whose summon this is" is a different act from "this is not a pet"
+     * (which is what `Clear claim` on the Type column says) and from "stop remembering this name at all" (ForgetName). The live pair and
+     * the ledger's Owner column both go; `_verifiedPets` stays, because the name was seen fighting as a summon this session whatever its
+     * owner turns out to be. No event fires — ownership folds off the line's own possessive word, so no board subscribes to this store.
+     */
+    internal void ForgetPetMapping(string name)
+    {
+      if (string.IsNullOrEmpty(name)) return;
+
+      lock (_lock)
+      {
+        TryRemovePetMappingNoLock(name);
+      }
+    }
 
     private bool TryRemovePetMappingNoLock(string name)
     {

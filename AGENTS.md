@@ -16,7 +16,7 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
 - **Zero warnings is the bar, and it is counted, not hoped for**: `dotnet build EQLogParser.sln -p:EnableWindowsTargeting=true --no-incremental --nologo 2>&1 | grep -cE ": (warning|error) [A-Z]+[0-9]+"` prints **0** before a commit
   (`--no-incremental` is load-bearing: MSBuild reports diagnostics only for projects it recompiles, so counting after `dotnet test` prints 0 about
   assemblies it never rebuilt — that is how an MSTEST0017 in a new test file shipped past a "clean" local count; docs/CodingStandards.md → "Build Warnings") (match diagnostics, not words — MSBuild's summary always contains `0 Warning(s)`). Nine CS8632s shipped once because a file in Core (project `Nullable=disable`) wrote `string?` without opening `#nullable enable annotations`; the whole fleet is one pragma, and it is why each new warning dies in its own commit (docs/CodingStandards.md → "Build Warnings", "Nullable Reference Types"). Nothing in this repo suppresses a warning (`#pragma warning disable`, `<NoWarn>`) — fixing the cause is the rule.
-- Tests: `dotnet test EQLogParser.Test/EQLogParser.Test.csproj` is the non-WPF suite (**1,923 passed / 15 env-gated skips**, plain `net10.0`, 2026-11 — the trim-moves-no-ordinal law, the once-per-doubling watermark and the ungrowable-empty-array floor are in that count). `EQLogParser.Wpf.Test` targets `net10.0-windows` and only
+- Tests: `dotnet test EQLogParser.Test/EQLogParser.Test.csproj` is the non-WPF suite (**1,933 passed / 15 env-gated skips**, plain `net10.0`, 2026-11 — the trim-moves-no-ordinal law, the once-per-doubling watermark and the ungrowable-empty-array floor are in that count). `EQLogParser.Wpf.Test` targets `net10.0-windows` and only
   runs on Windows; its total belongs to a Windows run rather than being quoted here (a `[TestMethod]` grep counts data-driven variants and is not an executed count) — add it to the headless number instead of trusting arithmetic. A Windows run that *loses* `Sta.Run` bodies rather than failing them is the failure mode to watch.
 - **Real-log corpus layout (local/, gitignored)**: `local/logs/live/` holds live-format captures; `local/logs/emu/` holds EMU-server captures (THJ/TSS/Heroes Forge shapes) that need the app's `EnableEmuParsing` behaviour. The env-gated real-log tests run them via **`EQLP_EMU=1`**, which sets `AppSettings.IsEmuParsingEnabled` for the duration of a `PipelineHarness` run (restored after — the flag is process-global and live-format logs misparse with it on). Without it an EMU capture parses with DamageLineParser's live grammar and silently loses the `(Owner: X)` / `scores a critical hit! (N)` shapes, so a parity run over `emu/` without the flag measures nothing. Timestamps are the same `[DDD MMM dd HH:mm:ss yyyy]` shape in both directories.
 
@@ -645,9 +645,17 @@ declare without `?`; add the directive only when the whole file is meant to hold
   second under their cursor (Clear+Add cost both the order and the selection, and rows are ranked by evidence, which moves). Because rows are replaced rather than
   mutated, **the selection and an open popup are handed back by NAME** (`FindRow`): the instance is gone even though the line never moved, and a Type cell that opens with
   a blank preselect reads as a classifier bug instead of a refresh bug. Pinned by `ARefreshKeepsEveryRowWhereTheReaderLeftIt`,
-  `ANameTheCensusDropsLeavesTheList`, `OpeningTheTabAgainReRanksTheList` (Windows-only assembly, but no WPF is constructed). Four columns sorted by name (Name | Type | Why | Class): Damage/Healing left because an identity list must not rank
-  names by output (`ClassificationReport` still totals them — that is its own row order), and Owner left because `PlayerRegistry` answers it and the Pet Owners
-  window lists the same pairs. Two things moved to the **Why cell's tooltip** instead of being deleted: the cast a spell verdict rests on
+  `ANameTheCensusDropsLeavesTheList`, `OpeningTheTabAgainReRanksTheList` (Windows-only assembly, but no WPF is constructed). Five columns sorted by name (Name | Type | Class | Owner | Why): Damage/Healing left because an identity list must not rank
+  names by output (`ClassificationReport` still totals them — that is its own row order). **Owner came back on 2026-10-09**, and its deletion law
+  ("Pet Owners lists the same pairs") died with that pane's write side when `petmapping.txt` froze: an identity list that could neither show nor
+  correct a summon's owner left no door at all except a file nothing reads. The cell prints `No Owner`, never blank (a blank reads as a classifier bug;
+  "nobody said whose" is an answer), and only a row that READS Pet gets the pencil — `PetOwnership.CanEditOwner` decides the icon AND re-guards the
+  write, because typing an owner onto a raider asserts two facts from one cell (that is the fight grid's `Assign … as Pet of`). The dropdown's last entry
+  **"No Owner"** un-maps while KEEPING the Pet verdict (`ForgetPetMapping` → `IdentityPriorStore.ForgetPet`) — "I don't know whose" ≠ "not a pet", and wiping
+  the name stays Type's `Clear claim`. Candidates are this app's roster, deduped by name, placeholders dropped **and reflexive forms dropped**
+  (`yourself`/`himself`/…), but **"You" is offered**: `IsPersonWord` keeps it as a person for exactly that reason, and reusing that test as the refusal set cut
+  off the operator's own character. List is built per click, never per census row (the mapping runs over every name twice a second). Candidates and wording are
+  Core (`PetOwnership`), pinned by `PetOwnershipTest`; docs/DesignNotes.md → "petmapping.txt is a feed now". Two things moved to the **Why cell's tooltip** instead of being deleted: the cast a spell verdict rests on
   (`ClassificationReport.Row.ReasonDetail` — taken per **gate**, not per caster, because "Hobble of Spirits VI" is a prefix of the pet's "Hobble of Spirits Snare
   VI" and one flat substring test let the pet's spell name itself in a Player row's tooltip; never by widening the claim source, since `StateStamp` hashes
   sources and `IdentityPriorStore` persists them — `CensusCastProofTest`) and the lines no column can carry — "You chose NPC" / "Claim taken back"
@@ -711,7 +719,7 @@ declare without `?`; add the directive only when the whole file is meant to hold
 - **The two identity panes share one right-hand strip** (2026-11): Player/NPC Identity sits with Pet Owners (`State="AutoHidden"`, `SideInDockedMode="Right"`) instead of
   tabbing with the fight list — and it is `AutoHidden`, never `Float`, because a floated window is a separate OS window that **cannot** share a tab strip, so "floating +
   tabbed together" has exactly one reading. Three laws ride on that. (1) **One width for both tabs**, from
-  `NamesTable.DesiredPaneWidth()` (its four columns + row header + scrollbar — **≈ 568 px at 12 pt**; the Type term is `TypeColumnWidth()`, sized from the longest word that column can ever print, not a theme bucket) fed to `EQIdentityStripWidth` by `ThemeConfig`: a panel whose two tabs
+  `NamesTable.DesiredPaneWidth()` (its five columns + row header + scrollbar — **≈ 720 px at 12 pt**, the fourth of them being Owner; the Type term is `TypeColumnWidth()`, sized from the longest word that column can ever print, not a theme bucket) fed to `EQIdentityStripWidth` by `ThemeConfig`: a panel whose two tabs
   want different widths jumps on every switch, and a strip narrower than the table hides the Why column behind a horizontal scrollbar in a pane that cannot be widened past
   the panel — never replace the call with a constant. (2) **Markup loses to `dockSite.xml`**, so moving a pane means repairing the saved layout once:
   `MainWindow.MigrateIdentityPaneIntoRightStrip()` runs after `LoadDockState` beside the standing `npcWindow`/`mirrorFightWindow` fixups, is gated by the
@@ -761,6 +769,13 @@ declare without `?`; add the directive only when the whole file is meant to hold
   takes the action WITHOUT its `[timestamp]`, and a stamped line yields garbage (that is how nine billion already-captured points looked
   lost; docs/DesignNotes.md → "Damage the capture never saw, and damage it invented").
 
+- **The word for an unmapped owner is `No Owner`, and the old text is read-only memory.** (2026-10-09) `Labels.Unassigned` was `"Unknown Pet Owner"` —
+  a filename leaking into the application's own vocabulary, and it printed in the Pet Owners grid. It is now `"No Owner"` (dropdown + cell), with
+  `Labels.LegacyUnassigned = "Unknown Pet Owner"` kept for **reading only**: a frozen `petmapping.txt` cannot be edited, identity is keyed by NAME, and
+  `RosterImport` hands stored owner text to `AddPetToPlayer`, so two live strings would give one pet two owners — the same class of bug as a name differing
+  from itself by punctuation. Every recognizer takes BOTH (`Labels.IsUnassignedOwner`), and every display goes through `PetOwnership.DisplayOf`, which answers
+  `No Owner` for either wording and for no entry at all. Nothing may write the legacy text; a test asserts the current word carries no `.txt`
+  (`PetOwnershipTest`). docs/DesignNotes.md → "petmapping.txt is a feed now".
 - **Identity has two writes and one unset — and no veto.** `ClassificationCommands` is the whole vocabulary: `SetVerdict`
   (Player / Pet / Merc / NPC into `identity-overrides.txt` — the name it ships under; the pre-release spelling
   `mirror-overrides.txt` never reached an installed build, so nothing reads it and no migration code exists) and

@@ -70,7 +70,7 @@ namespace EQLogParser
       entry.Name = name;
 
       bool hasSentinel = collection.Count > 0 &&
-        ((dynamic)collection[0])?.Name == Labels.Unassigned;
+        ((dynamic)collection[0])?.Name is string first && Labels.IsUnassignedOwner(first);
 
       var searchStart = hasSentinel ? 1 : 0;
       var searchList = collection.Skip(searchStart).ToList();

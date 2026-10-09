@@ -568,7 +568,7 @@ namespace EQLogParser
 
     public SpellData GetSpellByAbbrv(string abbrv)
     {
-      if (!string.IsNullOrEmpty(abbrv) && abbrv != Labels.Unassigned && _spellsAbbrvDb.TryGetValue(abbrv, out var value))
+      if (!string.IsNullOrEmpty(abbrv) && !Labels.IsUnassignedOwner(abbrv) && _spellsAbbrvDb.TryGetValue(abbrv, out var value))
       {
         return value;
       }

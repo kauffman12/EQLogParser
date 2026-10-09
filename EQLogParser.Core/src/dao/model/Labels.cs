@@ -1,3 +1,4 @@
+#nullable enable annotations
 namespace EQLogParser
 {
   internal static class Labels
@@ -32,7 +33,25 @@ namespace EQLogParser
     public const string Riposte = "Riposte";
     public const string AllOption = "Uncategorized";
     public const string ByGroupOption = "Group View";
-    public const string Unassigned = "Unknown Pet Owner";
+    /*
+     * The owner slot of a summon nobody was ever named for. It is a SENTINEL rather than a name — the boards ask "is this a real
+     * owner?" before folding damage onto a person, the roster refuses it as a curated row, and the Pet Owners dropdown lists it as an
+     * entry — so what it SAYS is UI wording, and the wording changed (2026-10-09) on the operator's request: "it used something in
+     * Labels for unknown owner. i would prefer if it were changed to just say No Owner."
+     *
+     * The old phrase is not retired data: identity-priors.txt and petmapping.txt rows already on disk carry it, so asking the question
+     * with `==` would give a stored placeholder a second life as a person called "Unknown Pet Owner". Ask IsUnassignedOwner instead.
+     */
+    public const string Unassigned = "No Owner";
+
+    /// <summary>The wording this sentinel carried before 2026-10-09. Files hold it; nothing writes it.</summary>
+    internal const string LegacyUnassigned = "Unknown Pet Owner";
+
+    /// <summary>Is this owner text the "nobody was ever named" placeholder — in either wording a file can hold?</summary>
+    internal static bool IsUnassignedOwner(string? owner) =>
+      !string.IsNullOrEmpty(owner)
+      && (Unassigned.Equals(owner, StringComparison.OrdinalIgnoreCase)
+          || LegacyUnassigned.Equals(owner, StringComparison.OrdinalIgnoreCase));
     public const string Unk = "Unknown";
     public const string UnkSpell = "Unknown Spell";
     public const string ReceivedHealParse = "Received Healing";

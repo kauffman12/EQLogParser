@@ -81,7 +81,7 @@ internal static class RegistrySeed
       // An unowned row of the grid is the operator saying "this is a summon" without saying whose. That half is
       // still worth what R18 buys - the name stops being the enemy's - but writing "Unassigned" into Owner would
       // hand its damage to a raider who does not exist.
-      var knownOwner = !string.Equals(owner, Labels.Unassigned, StringComparison.OrdinalIgnoreCase);
+      var knownOwner = !Labels.IsUnassignedOwner(owner);
       timeline.AddAffiliation(AffiliationKind.PetOfPlayer, pet, double.NegativeInfinity, double.PositiveInfinity,
                               RuleStrength.Strong, knownOwner ? $"RegistrySeed:{owner}" : "RegistrySeed",
                               knownOwner ? owner : null);

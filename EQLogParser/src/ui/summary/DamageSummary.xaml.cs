@@ -788,7 +788,7 @@ namespace EQLogParser
           if (isPet)
           {
             var ownerName = IdentityLookup.OwnerOf(name);
-            if (!string.IsNullOrEmpty(ownerName) && ownerName != Labels.Unassigned)
+            if (!string.IsNullOrEmpty(ownerName) && !Labels.IsUnassignedOwner(ownerName))
             {
               var owner = CurrentStats?.ExpandedStatsList.FirstOrDefault(s => s.Name == ownerName);
               if (owner != null)

@@ -11,10 +11,10 @@ namespace EQLogParser.Wpf.Test;
  * element is constructed, so no Sta.Run - because the interesting part is which short line the WHY tooltip composes and
  * which rows get an edit icon, not how SfDataGrid paints them.
  *
- * The grid shows four columns in one order — Name, Type, Class, Why: the two you can edit sit together after the name and
- * the read-only explanation goes last. Two things an older layout carried are deliberately absent and so are not asserted
- * here: Damage/Healing (an identity list should not rank names by output) and Owner (the Pet Owners window lists the same
- * PlayerRegistry pairs).
+ * The grid shows five columns in one order — Name, Type, Class, Owner, Why: the cells you edit sit together after the name and the
+ * read-only explanation goes last. Damage/Healing stay absent on purpose (an identity list should not rank names by output). Owner came
+ * BACK in 2026-10-09: it was removed because "Pet Owners lists the same pairs", and that argument died with Pet Owners' write side when
+ * petmapping.txt froze — see NamesTable's column comment and docs/DesignNotes.md → "petmapping.txt is a feed now".
  *
  * The WORDS themselves - "Chosen" for R10-manual, "Healed" for R15-healed, the dropdown's five entries - are asserted in
  * IdentityVocabularyTest (EQLogParser.Test), including the corpus check that no rule code reaches the screen. What is
@@ -338,12 +338,13 @@ public class NamesTableTest
   }
 
   /*
-   * Name, Type, Class, Why. The order is the interaction: Name identifies, the next two are the cells that answer with a
+   * Name, Type, Class, Owner, Why. The order is the interaction: Name identifies, the next cells are the ones that answer with a
    * click, and WHY is the read-only sentence that explains them — which used to sit between the two things you edit.
+   * Owner joined on 2026-10-09 when petmapping.txt froze and this window became the only door left to an owner (docs/DesignNotes.md).
    * Read inside Sta.Run like every DependencyObject (the grid's Columns belong to the thread that built them).
    */
   [TestMethod]
-  public void TheColumnsGoNameTypeClassWhy()
+  public void TheColumnsGoNameTypeClassOwnerWhy()
   {
     EnsurePaneResources();
 
@@ -353,8 +354,31 @@ public class NamesTableTest
       foreach (var column in new NamesTable().namesGrid.Columns) order.Add(column.MappingName ?? string.Empty);
     });
 
-    CollectionAssert.AreEqual(new[] { "Name", "Type", "PlayerClass", "Why" }, order,
+    CollectionAssert.AreEqual(new[] { "Name", "Type", "PlayerClass", "Owner", "Why" }, order,
                               $"column order changed: {string.Join(", ", order)}");
+  }
+
+  /*
+   * A Pet row with nobody on it still answers "No Owner", and only a Pet row gets the pencil (PetOwnership.CanEditOwner): typing an owner
+   * onto a raider asserts two things from one cell, which is what the fight grids' "Assign … as Pet of" is for. The write path and this
+   * icon read the same recognizer, so an icon cannot exist where the guard would refuse.
+   */
+  [TestMethod]
+  public void OnlyAPetRowCarriesAnOwnerPencilAndNobodySaysNothing()
+  {
+    var pet = NamesTable.RowFrom(new ClassificationReport.Row { Name = "Ziggy", Kind = IdentityKind.Pet });
+    var raider = NamesTable.RowFrom(new ClassificationReport.Row { Name = "Beorun", Kind = IdentityKind.Player });
+
+    Assert.AreEqual("No Owner", pet.Owner, "a pet with no owner printed an empty cell");
+    Assert.IsTrue(pet.OwnerEditable);
+    Assert.IsFalse(raider.OwnerEditable, "an owner pencil appeared on a raider");
+
+    var mapped = NamesTable.RowFrom(new ClassificationReport.Row { Name = "Ziggy", Kind = IdentityKind.Pet, PetOwner = "Beorun" });
+    Assert.AreEqual("Beorun", mapped.Owner);
+
+    // A file from before the wording changed holds the old placeholder; the cell must not print it beside the new word.
+    var legacy = NamesTable.RowFrom(new ClassificationReport.Row { Name = "Ziggy", Kind = IdentityKind.Pet, PetOwner = Labels.LegacyUnassigned });
+    Assert.AreEqual(Labels.Unassigned, legacy.Owner);
   }
 
   // The two app-level StaticResource keys this pane's markup needs, stubbed for a headless test host — same shape as

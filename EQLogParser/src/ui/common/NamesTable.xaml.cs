@@ -91,6 +91,17 @@ namespace EQLogParser
       public bool ClassEditable => Kind == IdentityKind.Player;
 
       /*
+       * Who owns this summon, as the cell shows it — "No Owner" when nothing claims one (NameRow.Owner keeps that word rather than an
+       * empty string, because an empty cell reads as a classifier bug while "nobody said whose" is a real answer). The row's KIND decides
+       * whether the pencil is drawn; this string never does (PetOwnership.CanEditOwner).
+       */
+      public string Owner { get; init; } = Labels.Unassigned;
+
+      /// <summary>Only a row that reads Pet gets the owner pencil: typing an owner onto a raider asserts two things from one cell,
+      /// which is what the fight grids' "Assign … as Pet of" menu is for. Core decides, so the write guard cannot disagree.</summary>
+      public bool OwnerEditable => PetOwnership.CanEditOwner(Kind);
+
+      /*
        * Whether this row may be overruled at all — false where the name itself decides (a summon whose spelling carries its
        * owner, a spell effect), so the pencil is not drawn rather than offering three wrong answers beside the one right
        * one. ClassificationReport.Row passes it through; IdentityVocabulary.CanOverrule is the rule.
@@ -126,6 +137,7 @@ namespace EQLogParser
     // Which row's dropdown is open. One at a time by construction (StaysOpen=False), cleared when the popup closes.
     private NameRow? _typeEditRow;
     private NameRow? _classEditRow;
+    private NameRow? _ownerEditRow;
 
     /*
      * While a cell editor (the Type or Class popup) is open, NO census lands: the pane follows the derive, a verdict written from
@@ -304,6 +316,9 @@ namespace EQLogParser
       Type = row.TypeDisplay.Length > 0 ? row.TypeDisplay : IdentityVocabulary.TypeWord(row.Kind),
       Why = IdentityVocabulary.WhyWord(row.Reason, row.Kind),
       PlayerClass = row.Class,
+      // The cell word only — NOT the dropdown. The owner list is a live question ("whose summon can this be right now") and this
+      // mapping runs for every name in the census, twice a second on a live raid, so it builds no lists; the pencil asks when clicked.
+      Owner = PetOwnership.DisplayOf(row.PetOwner),
       Kind = row.Kind,
       Overrulable = row.Overrulable,
       TypeChoices = IdentityVocabulary.TypeOptionsFor(row.Name, row.Kind, row.Reason),
@@ -380,7 +395,8 @@ namespace EQLogParser
       var iconAllowance = fontSize + 16;                       // EQIconStyle square + the 8+8 margins
       var columns = ThemeConfig.CurrentNameWidth
                   + TypeColumnWidth() + iconAllowance                                               // Type + its pencil
-                  + 2 * (ThemeConfig.CurrentMediumWidth + ThemeConfig.CurrentShortestWidth);         // Class and Why
+                  + 2 * (ThemeConfig.CurrentMediumWidth + ThemeConfig.CurrentShortestWidth)          // Class and Why
+                  + ThemeConfig.CurrentMediumWidth + ThemeConfig.CurrentShortestWidth + iconAllowance; // Owner + its pencil
       var rowHeader = Application.Current.Resources["EQTableRowHeaderWidth"] is double w ? w : 32.0;  // ShowRowHeader="True"
       return columns + rowHeader + 18;                        // 18: the vertical scrollbar that comes with a long list
     }
@@ -418,6 +434,7 @@ namespace EQLogParser
           "Type" => TypeColumnWidth() + iconAllowance,
           "Why" => ThemeConfig.CurrentMediumWidth + ThemeConfig.CurrentShortestWidth,
           "PlayerClass" => ThemeConfig.CurrentMediumWidth + ThemeConfig.CurrentShortestWidth,
+          "Owner" => ThemeConfig.CurrentMediumWidth + ThemeConfig.CurrentShortestWidth + iconAllowance,
           _ => 0.0,
         };
         if (width > 0) column.Width = width;
@@ -608,6 +625,50 @@ namespace EQLogParser
       PlayerRegistry.Instance.SetDefaultPlayerClass(row.Name, className);
       Reconcile();
       classEditPopup.IsOpen = false;
+    }
+
+    /*
+     * The Owner dropdown, same shape as the other two pencils. What differs is only what a pick MEANS: an owner is not a verdict about
+     * this name but a pair (this summon belongs to that person), so it writes the ownership lane and nothing else — the row's Type stays
+     * Pet, its class stays whatever it was. And the last entry takes the pair back without touching the kind, because "I do not know
+     * whose this is" is not "this is not a pet" (PetOwnership.IsClear).
+     */
+    private void OwnerEditMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+      if (sender is not ImageAwesome icon || icon.DataContext is not NameRow row || !row.OwnerEditable) return;
+      if (UiElementUtil.FindGridCell(icon) is not { } cell) return;
+
+      Editors.Open();
+      _ownerEditRow = row;
+
+      // PetOwnership.Choices already ends with "No Owner" and drops the placeholders, so the current answer is always in the list —
+      // including a row that reads "No Owner", which opens with that entry selected rather than blank.
+      ownerEditComboBox.ItemsSource = PetOwnership.Choices(row.Owner, PlayerRegistry.Instance.GetVerifiedPlayers());
+      ownerEditComboBox.SelectedItem = row.Owner;
+
+      UiElementUtil.OpenCellPopup(ownerEditPopup, ownerEditComboBox, cell, () =>
+      {
+        _ownerEditRow = null;
+        ownerEditComboBox.SelectedItem = null;
+        Editors.Close();
+      });
+    }
+
+    private void OwnerSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+      if (sender is not ComboBox combo || combo.SelectedItem is not string owner) return;
+
+      var row = _ownerEditRow;
+      if (row is null || !row.OwnerEditable) return;
+
+      // The click that opened the popup, and a pick of what the cell already says: both write nothing.
+      if (string.Equals(owner, row.Owner, StringComparison.OrdinalIgnoreCase)) return;
+
+      if (PetOwnership.IsClear(owner)) PlayerRegistry.Instance.ForgetPetMapping(row.Name);
+      else PlayerRegistry.Instance.AddPetToPlayer(row.Name, owner);
+
+      Reconcile();
+      ownerEditPopup.IsOpen = false;
     }
 
     /*

@@ -10477,3 +10477,45 @@ import that carried it instead of surviving until some later write — stricter 
 mappings at all*, because the import's gate is "does this folder's lane already have owner rows"; deleting `identity-priors.txt` remains
 the documented way to make a folder re-read its frozen feeds. Both files keep their bytes either way — the tests assert that as file
 contents, in both directions: a folder that has `petmapping.txt` never sees it edited, and a folder that never had one never grows one.
+
+### The Owner column came back, with a take-back and one word for "nobody"
+
+The same request that froze the file asked for its table to move: *"the pet owner ones, so i can manually set/change/remove them.
+also change `Unknown Pet Owner.txt` to be just a `No Owner` dropdown."* The column had been deleted from Names and Identities on the
+grounds that "Pet Owners lists the same pairs", and that argument expired with Pet Owners' write side: with `petmapping.txt` frozen,
+an identity list that could neither show nor correct an owner left no door at all except a file nothing reads. Five columns now —
+Name, Type, Class, Owner, Why — and the two cells this pane owns are still the ones you click.
+
+**Three entries, three different acts, one word each.** Setting an owner writes the pair (`AddPetToPlayer`, which lands in the ledger's
+ownership lane); **"No Owner"** takes the pair back through `ForgetPetMapping` → `IdentityPriorStore.ForgetPet` and leaves the row's
+`Pet` verdict standing, because "I do not know whose this is" is not "this is not a pet"; and wiping the name entirely stays the Type
+cell's `Clear claim`, unchanged. The second half is what the old pane never had — picking was its only verb — and it is also what makes
+the first honest: an operator can be wrong here twice and correctable both times.
+
+**`No Owner` replaced `Unknown Pet Owner.txt`, and it is read as well as written.** The old text leaked a filename into the application's
+own vocabulary, which is why `Labels` now carries two constants: `Unassigned = "No Owner"` (what the dropdown shows, what the cell prints)
+and `LegacyUnassigned = "Unknown Pet Owner"` — kept for READING only, with the note that no code may write it. Kept rather than dropped
+because a frozen `petmapping.txt` cannot be edited, and a file row whose owner is the old text must not outlive the word: the one
+guarantee here is *"no matter which of the two a row holds, this cell reads `No Owner` and this dropdown entry recognizes it"*
+(`PetOwnership.DisplayOf`, pinned from both directions including the row that has no entry at all). Since `RosterImport` passes stored
+owner text through `AddPetToPlayer`, and identity is keyed by NAME, leaving both strings live would have given one pet two owner values —
+the same class of bug as a name differing from itself by punctuation.
+
+**The guard lives in Core (`PetOwnership`), because an icon and a write must not judge separately.** `CanEditOwner(kind)` answers true for
+`Pet` alone: typing an owner onto a raider asserts two facts from one cell, which is what the fight grids' *Assign … as Pet of* item is for
+and why that item stays there. `NamesTable.NameRow.OwnerEditable` and `OwnerSelectionChanged` both consult it, in the pane's existing
+discipline (`TypeChoices` decides the menu AND the write re-checks it). The candidate list is the roster this application knows, deduped
+case-insensitively (identity is keyed by NAME — two spellings of one master is two entries for one person), with `No Owner` last; the list
+is built **per pencil click**, not per census row, because this mapping runs over every name twice a second on a live raid.
+
+**Two things the candidate list refuses, and one it does not.** Placeholder owners (either wording, plus `Unknown`) never appear — a row
+whose owner was "unassigned" must not offer that as somebody who can own a summon. Neither do reflexive forms: `yourself`, `your`,
+`himself`, `herself`, `itself` are what a combat line writes when a pet healed its own master, and they entered the old map through exactly
+that path. What IS still offered is **"You"**, which looks like the same family and is not: `PlayerRegistry.IsPersonWord` keeps "you" as a
+person on purpose, because the local player has always been allowed to be an owner (`Fluffy=You`, resolved to the character being played) —
+and the first version of this guard used `IsPersonWord` as its refusal set and cut off the operator's own character. A refusal list is not a
+negated person test; it is the words that name nobody.
+
+**What was NOT re-opened.** R26-savedpet (an ownership record voting Pet at Strong) landed with the freeze, and R25's roster claim is
+unrelated to this column: setting an owner here writes the pair, records the OWNER as roster (as every assignment path has since the roster
+freeze), and says nothing about what the summoned name is. Nothing in this change touches verdicts.

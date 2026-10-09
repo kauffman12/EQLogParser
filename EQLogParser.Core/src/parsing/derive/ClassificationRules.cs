@@ -765,7 +765,7 @@ namespace EQLogParser
         // An owner nobody was ever named for is not a mapping, it is a hole in one.
         var owner = entry.Value.Owner;
         if (string.IsNullOrEmpty(owner)
-            || Labels.Unassigned.Equals(owner, StringComparison.OrdinalIgnoreCase)
+            || Labels.IsUnassignedOwner(owner)
             || Labels.Unk.Equals(owner, StringComparison.OrdinalIgnoreCase)) continue;
 
         if (facts.NameIndexOf(pet) < 0) continue;

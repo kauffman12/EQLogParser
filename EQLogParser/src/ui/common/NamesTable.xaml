@@ -87,13 +87,12 @@
         sizes these from the same theme-scaled variables every other table reads (ApplyColumnWidths, re-run when the
         theme changes), because ThemeConfig cannot answer anything until after this markup has been loaded.
 
-        Four columns in a fixed order — Name, Type, Class, Why: the two you can edit sit together right after the name,
+        Five columns in a fixed order — Name, Type, Class, Owner, Why: the cells you can edit sit together right after the name,
         and WHY is the read-only explanation, so it goes last instead of between the things you click.
 
-        Four columns, and the ones this window used to carry are gone on purpose. Damage/Healing belong on a damage
-        board, not on an identity list; Owner is the Pet Owners window's own table (both read PlayerRegistry, so this
-        was a second copy of the same pairs); Notes held sentences that were mostly empty and, where they were not, are
-        now the WHY cell's tooltip — see ProvenanceFor.
+        What this window used to carry and still does not: Damage/Healing belong on a damage board, not on an identity list; Notes
+        held sentences that were mostly empty and, where they were not, are now the WHY cell's tooltip — see ProvenanceFor. Owner
+        came BACK on 2026-10-09 (see the column below) now that the Pet Owners window is a frozen shell with nothing to edit.
       -->
       <syncfusion:SfDataGrid.Columns>
         <syncfusion:GridTextColumn HeaderText="Name" MappingName="Name" Width="150"/>
@@ -147,6 +146,30 @@
           </syncfusion:GridTemplateColumn.CellTemplate>
         </syncfusion:GridTemplateColumn>
         <!--
+          Owner, and the same pencil again — but only on a row that READS Pet (NameRow.OwnerEditable → PetOwnership.CanEditOwner).
+          This column came back on 2026-10-09: it used to be absent because "the Pet Owners window lists the same pairs", and that
+          reasoning died with the window's write side — petmapping.txt is frozen (docs/DesignNotes.md → "petmapping.txt is a feed now"),
+          so an identity list that could not show or correct an owner left the operator no door at all except a file the app no longer reads.
+
+          Three things this cell says, and one it never says. It shows WHO the summon belongs to; the pencil writes one name; the last
+          entry in the dropdown is "No Owner", which forgets the pair and KEEPS the Pet verdict ("I do not know whose this is" is not
+          "this is not a pet" — taking everything back is the Type cell's "Clear claim"). What never appears here is the old placeholder
+          wording: rows written before the change hold "Unknown Pet Owner", and `PetOwnership.DisplayOf` answers "No Owner" for that, for
+          the new word, and for no mapping at all — an empty cell reads as a classifier bug, while "nobody said whose" is a real answer.
+        -->
+        <syncfusion:GridTemplateColumn HeaderText="Owner" MappingName="Owner" Width="130">
+          <syncfusion:GridTemplateColumn.CellTemplate>
+            <DataTemplate>
+              <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                <fa:ImageAwesome Margin="8,1,4,0" Style="{StaticResource EQIconStyle}" Icon="Regular_Edit" Cursor="Hand"
+                                 Visibility="{Binding OwnerEditable, Converter={StaticResource PlaceholderVisibilityConverter}}"
+                                 MouseLeftButtonUp="OwnerEditMouseLeftButtonUp" ToolTip="Choose who this summon belongs to"/>
+                <TextBlock VerticalAlignment="Center" Text="{Binding Owner}"/>
+              </StackPanel>
+            </DataTemplate>
+          </syncfusion:GridTemplateColumn.CellTemplate>
+        </syncfusion:GridTemplateColumn>
+        <!--
           The whole point of the window: which rule read what, in TWO WORDS ("Who", "Chat", "Cast", "Healed", "Owner in
           Name" - see WhyWord), with the details demoted to the tooltip. It used to print the rule code ("R15-healed") at
           256 px - wider than the Class column and part of 771 px of fixed startup pixels across the four - to read a
@@ -185,6 +208,17 @@
                 HorizontalContentAlignment="Stretch"
                 ItemsSource="{x:Static local:MainActions.ClassList}"
                 SelectionChanged="ClassSelectionChanged"
+                Style="{DynamicResource EQComboBoxStyle}" />
+    </Popup>
+    <!--
+      The owner list is built per click in code-behind (PetOwnership.Choices over the players this application knows), not declared here:
+      it is a live question — "whose summon can this be, right now" — and its last entry is the take-back. Plain strings, so no
+      DisplayMemberPath.
+    -->
+    <Popup x:Name="ownerEditPopup" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade" Placement="Mouse">
+      <ComboBox x:Name="ownerEditComboBox"
+                HorizontalContentAlignment="Stretch"
+                SelectionChanged="OwnerSelectionChanged"
                 Style="{DynamicResource EQComboBoxStyle}" />
     </Popup>
   </Grid>
