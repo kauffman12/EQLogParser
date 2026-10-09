@@ -10832,3 +10832,45 @@ engine deleted in `5d45d866`), `batch-parsing-plan.md` (a two-pass pipeline that
 | `combat-mirror-design.md` | **archaeology, status corrected 2026-10-09** | Phases 0–4 shipped, legacy engine + `EnableCombatMirror` deleted; kept for the rule-catalog arguments that still run — DesignNotes outranks it wherever they disagree |
 | `NagFctReference.md` | **keep as reference** | notes on someone else's implementation; not reconstructible from our tree |
 | `summary-refresh-notification.md` | **deferred design only** | §14 records what shipped instead of the notice; §2–§9 are the toast design kept for the day one of the three re-open conditions becomes true |
+
+## The ledger counts dotnet seconds, so a stale row is a run-order question (2026-10-09)
+
+`ClassificationReportTest.ANameKnownOnlyFromOlderLogsIsStillOnTheList` failed on a Windows run and had passed on a Linux
+run of the same tree — same code, one assert (`row` was null: the ledger-only name never reached the census list). The
+census side is innocent: `ClassificationReport.Build` lists prior-only names straight off `IdentityPriorStore.All()`, so
+the row was missing from the STORE by the time it was read.
+
+**The unit.** `IdentityPriorStore`'s `SeenAtS` is *dotnet* seconds — the number
+`DateUtil.ToDotNetSeconds(DateTime.Now)` returns (seconds since `0001-01-01`, ≈ 63,927,000,000 in October 2026), which is
+also the unit every fact's `TimeS` carries and the unit `PlayerRegistry` stamps `players.txt` rows with. It is **not**
+Unix seconds. So a hand-typed constant like `1_700_000_000` — which reads "November 2023" to anyone thinking in epochs —
+is about five thousand years in the past here, and `4_000_000_000` is not "the future" either.
+
+**The expiry.** `PruneLocked` retires a verdict row when it sits more than 90 days behind **the newest stamp the store
+itself holds**, deliberately rather than against the wall clock (replaying a two-year-old backup must not age an active
+raid out — see `StaleVerdictsExpireAgainstTheNewestSighting`, which still passes). The consequence is the one that bit the
+test: an ancient-stamped row is *harmless alone* and **doomed the moment anything contemporary shares the ledger**,
+because its neighbour becomes the newest sighting. Whether a given test's remembered row survives is therefore partly a
+question about what the process-global singleton held when it ran — different run order, different platform, different
+outcome. Nothing raced and no file was shared; the assert simply read whatever the previous class had left.
+
+**The two rules this leaves behind**, both for anyone writing a ledger test:
+
+1. **Stamp through `DateUtil`**, never a hand-typed epoch. A stamp is a fact about this application's clock, not a
+   readable date you may choose freely.
+2. **Load a folder of your own on the way IN, not only on the way out.** `ClassificationReportTest` emptied both stores
+   in `[TestCleanup]` and inherited whatever the previous class left in `[TestInitialize]`; its Setup now Inits the prior
+   store too, so what it remembers is judged against its own ledger.
+
+Pinned by `AStampFromTheWrongClockIsRetiredByAContemporaryNeighbour`, which records a Unix-shaped row alone (it stays),
+then a dotnet-stamped one beside it (the ancient row is gone) — the assertion fails in the direction that would mean
+either the unit or the expiry is different from what this page says.
+
+**Standing, unfixed, and honestly unmeasured**: the same law reads the other way for a clock that runs *ahead*. A row
+stamped more than 90 days past everything else moves the window forward with it and retires every verdict behind it,
+silently — the poison row stays put while the lane beside it empties. No capture in `local/logs` has been measured doing
+that (all stamps land within a normal range), so this is written down rather than fixed: guarding it would need the
+reference clamped to the wall clock, which is exactly the change that must not be made casually — an early version of it
+compared dotnet-second stamps against `DateTimeOffset.UtcNow.ToUnixTimeSeconds()`, i.e. two different units, and switched
+the verdict expiry off entirely on every real row. Any future guard has to clamp within this unit and say so in
+`StaleVerdictsExpireAgainstTheNewestSighting`.

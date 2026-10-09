@@ -267,6 +267,37 @@ public class IdentityPriorStoreTest
   }
 
   /*
+   * THE UNIT THIS FILE COUNTS IN, pinned because its absence cost a census test a row on one machine and not another.
+   * SeenAtS is DOTNET seconds (DateUtil.ToDotNetSeconds — the same number every fact's TimeS carries), so today reads
+   * about 63.9e9 here. A Unix-shaped constant like 1_700_000_000 is therefore not "2023": it is some five thousand
+   * years behind, and the expiry just above (90 days behind the NEWEST sighting in the store) retires it as soon as
+   * anything contemporary shares the ledger — alone, the same row sits there forever.
+   *
+   * That makes "is my remembered row still in the store" partly a question about what ELSE the process-global singleton
+   * holds, i.e. about which test class ran before. Two rules follow, and both are load-bearing for anyone writing a
+   * ledger test: stamp through DateUtil (never a hand-typed epoch), and load a folder of your own BEFORE you remember
+   * into it — see ClassificationReportTest, whose Setup now Inits on the way in as well as out. The whole reading is in
+   * docs/DesignNotes.md → "The ledger counts dotnet seconds".
+   */
+  [TestMethod]
+  public void AStampFromTheWrongClockIsRetiredByAContemporaryNeighbour()
+  {
+    var store = IdentityPriorStore.Instance;
+    var witnessed = new EntityTimeline();
+    witnessed.SetIdentity("Unixshaped", IdentityKind.Npc, RuleStrength.Medium, "R7-graph");
+    witnessed.SetIdentity("Contemporary", IdentityKind.Npc, RuleStrength.Medium, "R7-graph");
+
+    store.Record(witnessed, ["Unixshaped"], 1_700_000_000);     // a plausible date in the wrong unit
+    Assert.IsTrue(store.TryGet("Unixshaped", out _), "a row was retired with nothing beside it to retire it");
+
+    store.Record(witnessed, ["Contemporary"], NowS());
+    Assert.IsFalse(store.TryGet("Unixshaped", out _),
+                   "a stale-by-five-millennia row outlived a contemporary sighting, so the expiry above is not what "
+                 + "removed the census test's row and this file's unit is not the one it looks like");
+    Assert.IsTrue(store.TryGet("Contemporary", out _));
+  }
+
+  /*
    * The gate, and the reason the file stays small. A verdict whose input the program owns forever - npcs.txt, whether
    * the name takes an article or carries a title, the word "pet" inside a summon's name, this session's own character -
    * is re-derivable in any capture that mentions the name, so writing it down buys a row and no knowledge while costing

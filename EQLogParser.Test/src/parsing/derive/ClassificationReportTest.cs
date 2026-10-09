@@ -16,8 +16,10 @@ namespace EQLogParser;
  *     capture regardless of fight selection, so it must not inherit a selected-fights filter.
  *
  * ConfigUtil.ConfigDir/ServerName/PlayerName and both stores are process state, so they are parked in a temp folder
- * per test and emptied on the way out (assembly does not parallelize; see PlayerRegistryPersistenceTest for the same
- * pattern and why).
+ * per test, emptied on the way IN and out (assembly does not parallelize; see PlayerRegistryPersistenceTest for the
+ * same pattern and why). Emptying on the way in is not symmetry for its own sake: these tests REMEMBER into the shared
+ * ledger, so whatever the class before them left standing is inside that store's expiry window, and a row older than
+ * 90 days relative to the newest one there is retired on the next write — which reads back as "the census lost my row".
  */
 [TestClass]
 public class ClassificationReportTest
@@ -48,6 +50,7 @@ public class ClassificationReportTest
     // emptying what that parse taught the process-wide registry, then loads an override file of its own.
     PlayerRegistry.Instance.Clear();
     IdentityOverrideStore.Instance.Init("Census Test");
+    IdentityPriorStore.Instance.Init("Census Test");
   }
 
   [TestCleanup]
@@ -67,6 +70,18 @@ public class ClassificationReportTest
   // The reference capture other derive tests use: several raiders, mobs on both sides and one heal line, which is
   // enough to exercise every column without a second parse per test.
   private static string FixturePath => Path.Combine(AppContext.BaseDirectory, "mini-data", "derive", "mini-fight.txt");
+
+  private const long DayS = 24 * 60 * 60;
+
+  /*
+   * The stamp a remembered capture carries, in the unit this store actually counts (dotnet seconds — today reads about
+   * 63.9e9). A hand-typed constant is the trap: 1_700_000_000 reads like "2023" and is in fact some five thousand years
+   * stale here, so the verdict expiry (90 days behind the NEWEST stamp the store holds) retires it as soon as a
+   * contemporary row shares the ledger — which is whether-the-row-survives becomes a question about run order.
+   * AStampFromTheWrongClockIsRetiredByAContemporaryNeighbour pins that behaviour at the store itself; these tests just
+   * decline to be the row that shifts a neighbour's ground.
+   */
+  private static long NowS() => (long)DateUtil.ToDotNetSeconds(DateTime.Now);
 
   private static PipelineHarness.DeriveRunResult Capture()
   {
@@ -421,7 +436,7 @@ public class ClassificationReportTest
     var ledger = IdentityPriorStore.Instance;
     var remembered = new EntityTimeline();
     remembered.SetIdentity(silent, IdentityKind.Npc, RuleStrength.Medium, "R7-graph");
-    ledger.Record(remembered, [silent], 1_700_000_000);
+    ledger.Record(remembered, [silent], NowS());
 
     var after = Census(ledger);
     Assert.IsTrue(after.Find(silent)!.IsPrior);
@@ -446,8 +461,8 @@ public class ClassificationReportTest
     var ledger = IdentityPriorStore.Instance;
     var remembered = new EntityTimeline();
     remembered.SetIdentity("Rememb", IdentityKind.Npc, RuleStrength.Medium, "R7-graph");
-    ledger.Record(remembered, ["Rememb"], 1_700_000_000);
-    ledger.Record(remembered, ["Rememb"], 1_800_000_000);
+    ledger.Record(remembered, ["Rememb"], NowS() - DayS);
+    ledger.Record(remembered, ["Rememb"], NowS());
 
     var row = Census(ledger).Find("Rememb");
 
@@ -469,7 +484,7 @@ public class ClassificationReportTest
     var remembered = new EntityTimeline();
     remembered.SetIdentity(silent, IdentityKind.Npc, RuleStrength.Medium, "R7-graph");
     remembered.SetIdentity(placed, IdentityKind.Player, RuleStrength.Certain, "R1-target");
-    ledger.Record(remembered, [silent, placed], 1_700_000_000);
+    ledger.Record(remembered, [silent, placed], NowS());
 
     var borrowed = Census(ledger).Find(silent)!;
     Assert.AreEqual(IdentityKind.Npc, borrowed.Kind, "the ledger did not fill the gap");
@@ -499,7 +514,7 @@ public class ClassificationReportTest
     var ledger = IdentityPriorStore.Instance;
     var remembered = new EntityTimeline();
     remembered.SetIdentity("Zzquietname", IdentityKind.Npc, RuleStrength.Medium, "R7-graph");
-    ledger.Record(remembered, ["Zzquietname"], 1_700_000_000);
+    ledger.Record(remembered, ["Zzquietname"], NowS());
 
     ClassificationCommands.ApplyVerdict("Zzquietname", IdentityKind.Merc);
 
