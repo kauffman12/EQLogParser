@@ -55,7 +55,16 @@ internal static class StatsBuildTrace
   // BuildTotalStats on the SAME thread while holding its lock, and that nesting is one door, not two colliding.
   // `Mark` is where the last closed stage ended, so Stage() can report each phase on its own; `Stages` collects them
   // for the finished line. A build is a handful of phases, so this is a list of a few entries per in-flight build.
-  private static readonly List<(int Seq, string What, int ThreadId, long Mark, List<string>? Stages)> _inside = [];
+  /*
+   * `MarkAlloc` carries `GC.GetTotalAllocatedBytes` at the last boundary, so each stage reports the bytes it allocated next to
+   * the milliseconds it spent: `walk 2436 ms/398.1 MB`. A board that costs two seconds and allocates nothing is a different
+   * problem from one that costs two seconds and 400 MB (the first wants fewer operations, the second wants fewer objects, and
+   * only the second explains a UI-thread pause that outlives the pass itself). Asked once per stage boundary, not per record.
+   */
+  private static readonly List<(int Seq, string What, int ThreadId, long Mark, long MarkAlloc, List<string>? Stages)> _inside = [];
+
+  /* A stage under half a megabyte is not worth a term on the line; over it, where the bytes are is the question being asked. */
+  private const long StageAllocTermBytes = 512 * 1024;
 
   private static int _seq;
   private static readonly ConcurrentDictionary<string, string> _lastFinished = new();
@@ -67,7 +76,7 @@ internal static class StatsBuildTrace
   private static readonly int HealingSpan = PerfCounters.Register("stats.healing", false);
 
   /// <summary>One build in progress. Obtain from Begin, close with End (in a finally — an unclosed handle hides the next overlap).</summary>
-  internal readonly record struct Handle(int Seq, string Builder, string Door, string Kind, long StartTicks, int OverlappedWith);
+  internal readonly record struct Handle(int Seq, string Builder, string Door, string Kind, long StartTicks, long StartAlloc, int OverlappedWith);
 
   /// <summary>Builds started since process start.</summary>
   internal static int TotalBuilds => Volatile.Read(ref _seq);
@@ -96,13 +105,17 @@ internal static class StatsBuildTrace
 
     var threadId = Environment.CurrentManagedThreadId;
     var overlappedWith = 0;
+    long startTicks;
+    long startAlloc;
     lock (_sync)
     {
       for (var i = 0; i < _inside.Count; i++)
       {
         if (_inside[i].ThreadId != threadId) overlappedWith++;
       }
-      _inside.Add((seq, $"{builder} {kind}", threadId, Stopwatch.GetTimestamp(), null));
+      startTicks = Stopwatch.GetTimestamp();
+      startAlloc = GC.GetTotalAllocatedBytes();
+      _inside.Add((seq, $"{builder} {kind}", threadId, startTicks, startAlloc, null));
     }
 
     if (!labelled)
@@ -123,7 +136,7 @@ internal static class StatsBuildTrace
       Log.Warn($"stats build #{seq} {builder} {kind} started while {overlappedWith} other stats build(s) were running: {others}");
     }
 
-    return new Handle(seq, builder, labelled ? door! : UnlabelledDoor, kind, Stopwatch.GetTimestamp(), overlappedWith);
+    return new Handle(seq, builder, labelled ? door! : UnlabelledDoor, kind, startTicks, startAlloc, overlappedWith);
   }
 
   /// <summary>Close a build and write its line. `detail` is whatever the caller can say cheaply about the inputs.</summary>
@@ -142,7 +155,10 @@ internal static class StatsBuildTrace
 
     RecordSpan(handle.Builder, ms);
 
+    var totalAlloc = GC.GetTotalAllocatedBytes() - handle.StartAlloc;
+
     var line = $"stats build #{handle.Seq} {handle.Builder,-8} {handle.Kind,-7}: {ms:F0} ms | from {handle.Door}"
+             + $" | {Mb(totalAlloc)} allocated"
              + (stages is { Count: > 0 } ? " | " + string.Join(" ", stages) : string.Empty)
              + (string.IsNullOrWhiteSpace(detail) ? string.Empty : $" | {detail}")
              + (handle.OverlappedWith > 0 ? $" | started over {handle.OverlappedWith} other build(s)" : string.Empty);
@@ -264,13 +280,18 @@ internal static class StatsBuildTrace
       if (i < 0) return;   // closed (or never opened): a stage after End is a bug in the caller, not a log line
 
       var entry = _inside[i];
-      (entry.Stages ??= []).Add($"{name} {PerfCounters.ElapsedMs(entry.Mark):F0} ms");
-      _inside[i] = (entry.Seq, entry.What, entry.ThreadId, now, entry.Stages);
+      var allocNow = GC.GetTotalAllocatedBytes();
+      var stageAlloc = allocNow - entry.MarkAlloc;
+      (entry.Stages ??= []).Add($"{name} {PerfCounters.ElapsedMs(entry.Mark):F0} ms"
+                                + (stageAlloc >= StageAllocTermBytes ? $"/{Mb(stageAlloc)}" : string.Empty));
+      _inside[i] = (entry.Seq, entry.What, entry.ThreadId, now, allocNow, entry.Stages);
     }
   }
 
   /// <summary>Elapsed milliseconds for a tick stamp taken earlier (MainWindow times its materialization with this too).</summary>
   internal static double ElapsedSince(long startTicks) => PerfCounters.ElapsedMs(startTicks);
+
+  private static string Mb(long bytes) => $"{bytes / 1048576.0:F1} MB";
 
   private static void RecordSpan(string builder, double ms)
   {
