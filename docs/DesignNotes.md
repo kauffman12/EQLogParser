@@ -9854,6 +9854,36 @@ it did not remove the optimization.
   walked 4,660,915 records -> 5 lines … budget 300 ms`** — B13 reproduced exactly (walk 1,884 vs 1,838 ms).
 
 ## What a board build allocates, and the distribution nobody opens (2026-10)
+### The healing board's `window` stage: two per-record copies, not strings
+
+The Windows field run named the healing build as the biggest single stage in the app (`healing full 1434 ms | 468.7 MB | window
+815 ms/350.0 MB`). Measured headlessly over `eqlog_Kizant_xegony-09-03-26.txt` with the same trace, before and after on one
+machine: **traced build 238.8 → 145.5 MB**, **`window` 225.8 → 132.4 MB**, wall time **flat** (701 → 708 ms), per heal including
+materialization **185 B → 148 B**.
+
+Two allocators, both structural:
+
+- **Pass 1 copied every accepted heal.** `List<(double, HealRecord)>` is 24 bytes per record — 63 MB per select-all before growth
+  copies. It exists only so pass 2 can skip what pass 1 rejected, and *usually nothing is rejected*: the accepted records are then a
+  contiguous run of the source, which pass 2 walks directly at **zero** allocation. The first rejection opens an index list seeded
+  with that run (nothing before it can have been rejected — that is what "first" means) and from then on costs 4 bytes per record
+  instead of 24. Pass order is untouched: a group-AE sighting late in a segment still marks earlier records in the same second, so
+  pass 2 still asks its question after all of pass 1 has answered.
+- **Six time-segment maps per fight segment.** `StatsUtil.AddTimeEntry` COPIES every entry it merges (`new TimeSegment(...)` in both
+  branches, with a comment there saying so), so those maps retain nothing and can be reused: `Clear()` between segments instead of
+  six fresh dictionaries and their growth arrays 4,452 times. One busy raid fight sizes them; every quieter segment after costs nothing.
+
+**What did NOT matter, and how it was caught**: the plan said "one concatenated `healer|healed` key per record" — but
+`HealerHealedKey` had memoized on `_healerHealedKeys` for some time already, so that part of the diagnosis was wrong. A local memo
+was written for it, measured, and removed: identical numbers with it gone (132.7 → 132.4 MB). The lesson is the same one this file
+keeps re-learning — measure the shape before writing the rule; a plausible allocation story is not a measurement, and the A/B is
+what tells you your fix fixed nothing. `HealingWindowKeyTest` now pins the EXISTING memo instead: 30,000 heals over 60 pairs must
+build exactly **60** key strings (verified to have teeth — restoring the per-record concat fails it at 30,000).
+
+Both branches of pass 1 — everything accepted, and rejections present (the no-swarm-pets setting drops pet heals, which is where the
+index list gets seeded) — are covered byte-for-byte by `HealingBoardGoldenTest`.
+
+
 
 The chapter before this one settled where a click's **time** goes. This one settles where its **bytes** go, because the two questions
 turned out to have unrelated answers — and because answering it needed a new term on an existing line rather than a memory dump.

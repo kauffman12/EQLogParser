@@ -404,6 +404,13 @@ docs/DesignNotes.md → "Name every door") — which is why this commit changes 
   (("Melee","Foo") and ("Spell","Foo") are one row) cannot drift, and a new sub-stat shape must keep arriving through `SubStatLookup`. **(4)** Every stage of
   every build now prints its **allocated bytes beside its milliseconds** (`walk 2422 ms/147.4 MB`) — asked per stage boundary, never per record — because
   "the board costs 2.6 s and 400 MB" is two different bugs and only the second one shows up as a UI pause that outlives the pass.
+  **(5)** In the healing build, a per-record COPY is the same bug class as a per-record string: pass 1 used to hand every accepted heal
+  to a `List<(double, HealRecord)>` (24 B each) so pass 2 could skip the rejected ones; when nothing is rejected — the usual case — pass 2
+  walks the source range directly at zero allocation, and only a rejection opens a 4-byte index list seeded with what came before it. Six
+  per-segment maps are reused the same way (`AddTimeEntry` copies on merge, so they retain nothing). **Allocation buys memory, not
+  milliseconds** — this one removed 39 % of the healing build's bytes and 0 ms — and the diagnosis half-failed in the instructive way:
+  the `healer|healed` concat it blamed was already memoized (`HealerHealedKey`/`_healerHealedKeys`), which only an A/B could see, so
+  `HealingWindowKeyTest` pins the memo that exists (60 keys for 30,000 heals) rather than one being invented.
   Equivalence is asserted by the golden boards (damage/heal/tank) plus `RecursiveFoldEquivalenceTest`; the seam's own laws are `RecordGroupCollectionTest`,
   including an allocation probe **with a control loop that escapes** (same reason as `FrenzyClassTest`: an elidable control reads as a broken probe).
   **What this did NOT buy: time.** The walk is still ~500 ns/record because it looks names up in dictionaries about a dozen times per record — that is the

@@ -132,6 +132,24 @@ public class BoardWalkCostRealLogTest
                           + $"{(GC.GetTotalAllocatedBytes(precise: true) - tankAlloc0) / 1024.0 / 1024.0:N1} MB allocated | "
                           + $"{StatsBuildTrace.LastFinishedLineOf("tanking")}");
 
+        // The healing board's `window` stage: the field run named it the single largest stage in the app
+        // (`healing full 1434 ms | 468.7 MB | window 815 ms/350.0 MB`), and bytes-per-heal is the number that moves when the
+        // per-record key concatenation and the per-segment working sets go away. Same traced shape as production prints.
+        var healAlloc0 = GC.GetTotalAllocatedBytes(precise: true);
+        var healBoard = Stopwatch.StartNew();
+        var heals = HealSummarySource.Materialize(run.HealFacts, input.AllRanges);
+        var healBuilder = new HealingStatsBuilder();
+        var healOptions = new GenerateStatsOptions { Source = "cost probe healing", AllRanges = input.AllRanges, Heals = heals };
+        healBuilder.BuildTotalStats(healOptions);
+        healBoard.Stop();
+        var healBytes = GC.GetTotalAllocatedBytes(precise: true) - healAlloc0;
+        // The ms/MB here include the heal materialization (the per-heal bytes want the same denominator as the heal count on
+        // the same line); the traced line after the pipe is the builder's own accounting, stage by stage.
+        Console.WriteLine($"[walk] healing board: {healBoard.ElapsedMilliseconds:N0} ms incl. materialize, "
+                          + $"{healBytes / 1024.0 / 1024.0:N1} MB | {heals.Count:N0} heals -> "
+                          + $"{(heals.Count == 0 ? 0 : healBytes / heals.Count):N0} B per heal | "
+                          + $"{StatsBuildTrace.LastFinishedLineOf("healing")}");
+
         Console.WriteLine($"[walk] gen0={GC.CollectionCount(0)} gen1={GC.CollectionCount(1)} gen2={GC.CollectionCount(2)} "
                           + $"| heap now {GC.GetTotalMemory(false) / 1024.0 / 1024.0:N0} MB");
     }

@@ -209,6 +209,22 @@ namespace EQLogParser
              */
             var oursByName = new Dictionary<string, bool>();
 
+            /*
+             * The six maps below are the SEGMENT's working set: pass 2 fills them and the bottom of each iteration empties them into the
+             * build's own `_xTimeRanges`. They live OUTSIDE the segment loop because `StatsUtil.AddTimeEntry` COPIES every entry it merges
+             * (`new TimeSegment(...)` in both branches, with a comment there saying so), so nothing downstream holds a reference to them --
+             * allocating six fresh dictionaries per fight segment was 4,452 x 6 dictionaries and their growth arrays over a farm night, for
+             * content dropped seconds later. `Clear()` keeps capacity: one busy raid fight sizes them once.
+             */
+            Dictionary<string, Dictionary<string, TimeSegment>>
+              healedByHealerTimeSegments = [], healedBySpellTimeSegments = [], healedByHealerSpellsTimeSegments = [],
+              healerHealedTimeSegments = [], healerSpellTimeSegments = [], healerHealedSpellTimeSegments = [];
+
+            // Witness for `HealingWindowKeyTest`: this build's key-memo misses. Reset per build; incremented on a MISS only (see
+            // HealerHealedKey), where the string is actually built -- the memo itself is `_healerHealedKeys`, which has existed here
+            // a while and is the reason a night's 2.65 M heal lines do not cost 2.65 M key strings.
+            PairKeyBuilds = 0;
+
             foreach (var segment in CollectionsMarshal.AsSpan(_raidTotals.Ranges.TimeSegments))
             {
               var beginTime = segment.BeginTime;
@@ -249,7 +265,18 @@ namespace EQLogParser
                * healer and spell) as ignored, and pass 2 asks that question after all of pass 1 has answered it. Merging the two loops would
                * keep heals the current builder drops, so `kept` carries pass 1's order exactly.
                */
-              List<(double Time, HealRecord Record)> kept = null;
+              /*
+               * WHAT pass 1 remembers, and why it is indices rather than the pairs. The pairs cost 24 bytes per accepted heal (63 MB per
+               * night's select-all) plus the arrays their growth copies through, for a list that exists only so pass 2 can skip what pass 1
+               * rejected. So: while nothing has been rejected there is NOTHING to remember -- the accepted records are a contiguous run of
+               * the source, and pass 2 walks `[segStart..segEnd]` directly at zero allocation. The first rejection opens the index list and
+               * seeds it with that run (which is exactly what was accepted before it, because no earlier rejection exists), and from then on
+               * the list costs 4 bytes per record instead of 24.
+               */
+              List<int>? keptIndices = null;
+              var segStart = -1;
+              var segEnd = -1;
+
 
               Dictionary<string, HashSet<string>> currentSpellCounts = null;
               Dictionary<double, Dictionary<string, HashSet<string>>> previousSpellCounts = null;
@@ -264,6 +291,9 @@ namespace EQLogParser
               {
                 var healTime = allHeals[j].Item1;
                 var record = allHeals[j].Item2;
+
+                if (segStart < 0) segStart = j;
+                segEnd = j;
 
                 if (tracksGroupAe)
                 {
@@ -293,6 +323,7 @@ namespace EQLogParser
 
                 if (!CountedAsOurs(oursByName, record.Healed))
                 {
+                  Drop(j);
                   continue;
                 }
 
@@ -303,15 +334,37 @@ namespace EQLogParser
 
                 if (accepted)
                 {
-                  (kept ??= []).Add((healTime, record));
+                  keptIndices?.Add(j);
+                }
+                else
+                {
+                  Drop(j);
+                }
+
+                // Local, and it runs on the rejection path only: the first one turns the contiguous run accepted so far into the
+                // index list (nothing before it can have been rejected -- that is what "the first one" means), so the surviving
+                // order stays exactly `kept`'s. After that, appending accepted indices is the whole job.
+                void Drop(int at)
+                {
+                  if (keptIndices is null)
+                  {
+                    keptIndices = [];
+                    for (var k = segStart; k < at; k++)
+                    {
+                      keptIndices.Add(k);
+                    }
+                  }
                 }
               }
 
-              if (kept is null)
+              if (keptIndices is null ? segStart < 0 : keptIndices.Count == 0)
               {
-                // Nothing in this segment counted: no groups, no time-segment maps, no merge.
+                // Nothing in this segment counted: no groups, no time-segment maps, no merge. Same guard as when this list held
+                // the pairs -- an empty selection means the segment contributes nothing at all.
                 continue;
               }
+
+              var filtered = keptIndices is not null;
 
               /*
                * One BLOCK per SECOND, not one per record. The old shape allocated an `ActionGroup` (plus the backing array its
@@ -324,12 +377,13 @@ namespace EQLogParser
                */
               var updatedHeals = new List<ActionGroup>();
               ActionGroup? openBlock = null;
-              var healedByHealerTimeSegments = new Dictionary<string, Dictionary<string, TimeSegment>>();
-              var healedBySpellTimeSegments = new Dictionary<string, Dictionary<string, TimeSegment>>();
-              var healedByHealerSpellsTimeSegments = new Dictionary<string, Dictionary<string, TimeSegment>>();
-              var healerHealedTimeSegments = new Dictionary<string, Dictionary<string, TimeSegment>>();
-              var healerSpellTimeSegments = new Dictionary<string, Dictionary<string, TimeSegment>>();
-              var healerHealedSpellTimeSegments = new Dictionary<string, Dictionary<string, TimeSegment>>();
+
+              healedByHealerTimeSegments.Clear();
+              healedBySpellTimeSegments.Clear();
+              healedByHealerSpellsTimeSegments.Clear();
+              healerHealedTimeSegments.Clear();
+              healerSpellTimeSegments.Clear();
+              healerHealedSpellTimeSegments.Clear();
 
               /*
                * Pass 2: turn the kept pairs into the groups the board reads, and file the time segments each pane asks for. Six maps per
@@ -337,8 +391,13 @@ namespace EQLogParser
                * transposed); the composite `healer|healed` key used to be concatenated TWICE per record — once is enough, and it is the only
                * string this pass needs beyond the record's own.
                */
-              foreach (var (healTime, record) in kept)
+              var walkCount = filtered ? keptIndices!.Count : segEnd - segStart + 1;
+              for (var m = 0; m < walkCount; m++)
               {
+                var sourceIndex = filtered ? keptIndices![m] : segStart + m;
+                var healTime = allHeals[sourceIndex].Item1;
+                var record = allHeals[sourceIndex].Item2;
+
                 if (ignoreRecords is not null &&
                   ignoreRecords.ContainsKey(healTime + "|" + record.Healer + "|" + record.SubType))
                 {
@@ -593,6 +652,14 @@ namespace EQLogParser
      * person. Memoized per build for the reason named at the call site — see there. A null/empty name is asked directly rather than
      * cached, because there is nothing to key it under and the answer is always no anyway.
      */
+    /*
+     * How many times the LAST build had to BUILD a `healer|healed` key because the memo had not seen that pair. This is the
+     * law's witness: it must be pair-sized (one per distinct healer/healed pair in the capture), never heal-sized. A number
+     * approaching the record count means the per-record concatenation -- 2,647,774 strings over a night's select-all -- came
+     * back; `HealingWindowKeyTest` reads it. Incremented once per MISS, so it costs a hot loop nothing.
+     */
+    internal long PairKeyBuilds { get; private set; }
+
     private static bool CountedAsOurs(Dictionary<string, bool> memo, string name)
     {
       if (string.IsNullOrEmpty(name)) return false;
@@ -729,7 +796,11 @@ namespace EQLogParser
     /* The pair's "healer|healed" key, from the memo: exactly the string the concatenation produced, built once. */
     private string HealerHealedKey(string healer, string healed)
     {
-      if (!_healerHealedKeys.TryGetValue((healer, healed), out var key)) _healerHealedKeys[(healer, healed)] = key = healer + "|" + healed;
+      if (!_healerHealedKeys.TryGetValue((healer, healed), out var key))
+      {
+        _healerHealedKeys[(healer, healed)] = key = healer + "|" + healed;
+        PairKeyBuilds++;
+      }
       return key;
     }
 
