@@ -44,6 +44,50 @@ public class LiveTailChangeProbeTest
         "Dead", "EndReason", "CharmedOwned", "GroupId", "LastDamageTime", "LastTankingTime",
     ];
 
+    /*
+     * Identity churn per pass — the number behind a product rule. The operator's ask (2026-10-08): boards must NOT move because new
+     * damage arrived; they SHOULD move when a classification changed (a pet learned, a raider charmed). "Then refresh on verdict changes"
+     * is only cheap if the rule book actually settles; if it re-decides names every pass of a live capture, a verdict-gated rebuild is the
+     * same flicker wearing a better word. So count, per prefix: how many names answered differently than last prefix, and which way.
+     */
+    private static (int Names, int Changed, long AnswerStamp, List<string> Examples) IdentityOf(EntityTimeline timeline)
+    {
+        var examples = new List<string>();
+        var changed = 0;
+        var names = 0;
+        _prevNewlyPlaced = 0;
+        foreach (var name in timeline.NamesWithIdentity().OrderBy(x => x, StringComparer.Ordinal).ToArray())
+        {
+            names++;
+            var kind = timeline.Identity(name);
+            if (!_prevIdentity.TryGetValue(name, out var was))
+            {
+                // A name this pass sees for the first time. Boards already on screen list fixed names, so a NEW placement cannot
+                // change what they show - and this probe measured that almost all per-pass identity churn is exactly this.
+                changed++;
+                _prevNewlyPlaced++;
+                _prevIdentity[name] = kind;
+                continue;
+            }
+
+            if (was != kind)
+            {
+                changed++;
+                if (examples.Count < 6) examples.Add($"{was}>{kind} {name}");
+                _prevIdentity[name] = kind;
+            }
+        }
+
+        // The stamp a gate would actually hold in production. AnswerStamp() is stamped by DerivedFightRows.Build, which this probe
+        // does not call (a hand-built timeline answers 0), so measure the evidence digest instead and name it here as what it is.
+        return (names, changed, timeline.StateStamp(), examples);
+    }
+
+    private static readonly Dictionary<string, IdentityKind> _prevIdentity = new(StringComparer.OrdinalIgnoreCase);
+
+    // Names placed for the first time this pass (not counted as flips - see IdentityOf).
+    private static int _prevNewlyPlaced;
+
     [TestMethod]
     public void Probe_WhatEachLiveTailPassActuallyChanges()
     {
@@ -71,6 +115,10 @@ public class LiveTailChangeProbeTest
         contentMs = digestMs = compareMs = passMs = 0;
         var digestMissed = 0;
         var digestExtra = 0;
+        _prevIdentity.Clear();
+        var prevAnswerStamp = 0L;
+        var answerStampMoves = 0;
+        var identityChanges = new List<int>();
 
         Console.WriteLine($"[tail] {Path.GetFileName(path)} replayed as {passes} growing prefixes " +
                           $"({new FileInfo(path).Length / 1_048_576:N0} MB)");
@@ -88,6 +136,7 @@ public class LiveTailChangeProbeTest
             File.Delete(prefix);
 
             var visible = rows.Count(r => !r.RaidPet);
+            var ident = IdentityOf(run.Timeline);
 
             var c1 = Stopwatch.StartNew();
             var content = ContentOf(rows);
@@ -114,9 +163,11 @@ public class LiveTailChangeProbeTest
             {
                 Console.WriteLine($"[tail] pass {k,2}: facts {run.Facts.FactCount,9:N0} visible rows {visible,5:N0}" +
                   $" | first pass | parse+project {sw.ElapsedMilliseconds,5:N0} ms" +
-                  $" | content {c1.ElapsedMilliseconds,3} ms, digest {c2.ElapsedMilliseconds,3} ms{controlNote}");
+                  $" | content {c1.ElapsedMilliseconds,3} ms, digest {c2.ElapsedMilliseconds,3} ms" +
+                  $" | identity: {ident.Names:N0} names placed{controlNote}");
                 prevContent = content;
                 prevDigest = digest;
+                prevAnswerStamp = ident.AnswerStamp;
                 continue;
             }
 
@@ -136,10 +187,16 @@ public class LiveTailChangeProbeTest
               $" | vs previous: changed {diff.Changed,5} added {diff.Added,4} removed {diff.Removed,3}" +
               $" => {(contentChanged ? "CHANGED" : "NO-OP")} (digest said {(digestChanged ? "changed" : "same")})" +
               $" | parse+project {sw.ElapsedMilliseconds,5:N0} ms | content {c1.ElapsedMilliseconds,3} ms," +
-              $" digest {c2.ElapsedMilliseconds,3} ms, compare {cw.ElapsedMilliseconds,3} ms{controlNote}");
+              $" digest {c2.ElapsedMilliseconds,3} ms, compare {cw.ElapsedMilliseconds,3} ms" +
+              $" | identity: {ident.Names:N0} names, RE-DECIDED {ident.Changed - _prevNewlyPlaced,4}" +
+              $" (of which NEWLY PLACED {_prevNewlyPlaced,4})" +
+              (ident.Examples.Count > 0 ? " e.g. " + string.Join(", ", ident.Examples) : string.Empty) + controlNote);
+            identityChanges.Add(ident.Changed);
+            if (ident.AnswerStamp != prevAnswerStamp) answerStampMoves++;
 
             prevContent = content;
             prevDigest = digest;
+            prevAnswerStamp = ident.AnswerStamp;
         }
 
         var compared = passes - 1;
@@ -163,6 +220,14 @@ public class LiveTailChangeProbeTest
                 Console.WriteLine($"[tail]     {pair.Value,7:N0} x {pair.Key}");
         }
 
+        var identQuiet = identityChanges.Count(c => c == 0);
+        Console.WriteLine($"[tail] IDENTITY verdict: identity digest moved {answerStampMoves} of {compared} pass(es);" +
+                          $" passes where NO name changed: {identQuiet}" +
+                          (identityChanges.Count > 0
+                            ? $"; names re-decided per pass: median {identityChanges.OrderBy(x => x).ToList()[identityChanges.Count / 2]:N0}," +
+                              $" max {identityChanges.Max():N0}; LAST THREE passes: " +
+                              string.Join(", ", identityChanges.TakeLast(3))
+                            : string.Empty));
         Console.WriteLine($"[tail] COST of deciding: mean pass {passMs / passes:0.#} ms; per decision:" +
                           $" cheap digest {digestMs / (double)passes:0.##} ms, deep content build {contentMs / (double)passes:0.##} ms," +
                           $" compare {compareMs / (double)Math.Max(1, compared):0.##} ms");

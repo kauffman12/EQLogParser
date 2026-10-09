@@ -84,21 +84,21 @@ namespace EQLogParser
     private long _announcedStamp;
 
     /*
-     * The two TERMS behind the announced stamp, kept apart because they move on different clocks and only one of them can change what
-     * THIS selection shows: `_announcedVerdicts` (identity moved — rare, and invisible to any row) and `_announcedFingerprint` (the
-     * selected rows' own figures). The capture-wide stamp says "something in the log moved"; a live tail moves it every pass, and boards
-     * rebuilt on that alone made a dead mob's damage summary clear and reload once per pass over identical numbers (SelectedFingerprint;
-     * 157 of them in one field session). Announcing records all three.
+     * What the boards on screen are watching: the identity answer for every name they display, plus the selected rows' own names. A derive
+     * pass re-announces only when one of those changed WHAT IT IS (Unknown→Pet, Player→Npc under a charm, an operator taking a claim back) —
+     * never because damage arrived. The operator's rule (2026-10-08): "id rather it be like a snapshot of what was selected at the time
+     * except for the pet changes or player turning npc". IdentityWatch holds the measurement behind the scope.
      */
-    private long _announcedVerdicts;
-    private long _announcedFingerprint;
+    private readonly IdentityWatch _watch = new();
+
+    // The timeline behind `_rows`, kept so the watch can be read on a later pass without waiting for a request. Null until the session paints.
+    private EntityTimeline _currentTimeline;
 
     // The stamp of the newest snapshot this pane has been handed (the one _rows came from). Announcing records it, so
     // "what did the board get built from?" stays answerable while a pass is in flight.
     private long _currentStamp;
 
-    // The identity term of `_currentStamp` on its own — see the field above for why the two are kept apart.
-    private long _currentVerdicts;
+
 
     /*
      * One line per declined-unasked-rebuild episode, not one per derive pass. A live raid hands out passes about twice a
@@ -285,6 +285,8 @@ namespace EQLogParser
       // could otherwise match a new capture's first snapshot by arithmetic (fact totals restart at zero every session) and
       // swallow an announcement that has never happened.
       _announcedStamp = 0;
+      _watch.Clear();
+      _currentTimeline = null;
       _rows.Clear();
 
       // A new session is a new load: the band may show again, its counters start from nothing, and nothing has been read yet.
@@ -311,7 +313,7 @@ namespace EQLogParser
         // rows of its own yet (Clear All, an empty file) that late pass IS the content on screen forever.
         if (!snapshot.FromLiveSession) return;
 
-        _currentVerdicts = VerdictStamp(snapshot);
+        _currentTimeline = snapshot.Timeline;
         _currentStamp = SelectionStamp(snapshot);
 
         // Whatever the band was saying, the list itself is now the answer - including the mid-load case where
@@ -372,13 +374,15 @@ namespace EQLogParser
            * the same facts now split between `X +Pets` and the mob, and damage/tanking routing followed. That is invisible to
            * SameDisplayAs and to object identity alike; the stamp is exactly its two causes (newly captured facts, moved verdicts).
            */
-          var touched = selected.Count > 0 &&
-                        (contentMoved ||
-                         patch.Updates.Any(u => selected.Contains(u.Existing)) ||
-                         patch.Removals.Any(selected.Contains));
-          // Named by which signal fired, because the two mean different things to a reader of the log: content moved means the
-          // numbers changed under a selection nobody touched; RowEdited means the row itself was rewritten or taken away.
-          if (touched) AnnounceSelection(contentMoved ? BoardReason.ContentMoved : BoardReason.RowEdited, force: true);
+          /*
+           * A row whose NUMBERS this pass updated is not a board that owes a rebuild (see AnnounceSelection: a selection is a snapshot
+           * unless a name changed what it is). What still announces on its own is a selected row being TAKEN AWAY - the row the boards were
+           * built from no longer exists, which is a structural fact no watch can see - and anything at all moving under the selection, which
+           * AnnounceSelection filters by identity before it spends a build.
+           */
+          var removedSelected = patch.Removals.Any(selected.Contains);
+          var touched = selected.Count > 0 && (removedSelected || contentMoved);
+          if (touched) AnnounceSelection(removedSelected ? BoardReason.RowEdited : BoardReason.ContentMoved, force: true);
           return;
         }
 
@@ -545,6 +549,13 @@ namespace EQLogParser
     internal long ContentStamp => _currentStamp;
 
     /*
+     * Called by whoever BUILT the boards (MainWindow, at the end of a summary build) with the names that build put on screen. Two owners by
+     * design - the builder knows the displayed names, this pane knows the selection - and IdentityWatch keeps their slots apart so neither
+     * writes a table the other is reading.
+     */
+    internal void WatchBoardNames(IReadOnlyList<string> names) => _watch.CaptureBoard(_currentTimeline, names);
+
+    /*
      * What this pane is holding right now. internal for the session-switch tests: ActiveChanged cannot be raised from
      * outside DeriveEngine and a real engine needs a file, so the seam those laws live behind is ClearForNewCapture.
      */
@@ -634,20 +645,44 @@ namespace EQLogParser
        * numbers here, and re-presenting them is what the operator saw as the table "doing full refreshes for no reason". Like a declined
        * announce, this records nothing: the answer on screen is still current, and Refresh stays able to force one.
        */
-      var fingerprint = SelectedFingerprint.Of(selected);
-      if (reason == BoardReason.ContentMoved &&
-          !SelectedFingerprint.WorthRebuild(_currentVerdicts != _announcedVerdicts, fingerprint, _announcedFingerprint))
+      /*
+       * A derive pass is not news to a board somebody is reading. New damage lands on rows nobody selected, in fights nobody is looking at,
+       * and rebuilding to redraw identical figures is the "the whole table cleared and reloaded for no reason" reported twice from the field —
+       * and asked, explicitly, to stop: a selection is a SNAPSHOT unless a name changed what it IS. So the only thing a pass may announce on
+       * is a changed identity answer for a displayed or selected name (IdentityWatch) — exactly "the pet changes or player turning npc" — and
+       * that costs one dictionary lookup per name already on screen.
+       *
+       * A hand-built snapshot (what a test hands the pane: only DerivedFightRows.Build stamps) carries no timeline, and there the older
+       * behaviour stands, because nothing can tell. An empty watch answers "nothing changed" on purpose: that is what makes a quiet tail cheap.
+       */
+      if (reason is BoardReason.ContentMoved or BoardReason.SnapshotSwap && _currentTimeline is { } watched)
       {
-        Log.Debug($"announce skipped [{reason}]{(detail is null ? string.Empty : $" {detail}")}: the capture moved to stamp "
-                  + $"{_currentStamp} but the {ids.Count} selected row(s) and every verdict read identically");
-        return;
+        var moved = _watch.FirstChanged(watched);
+        if (moved is null)
+        {
+          Log.Debug($"announce skipped [{reason}]{(detail is null ? string.Empty : $" {detail}")}: the capture moved to stamp "
+                    + $"{_currentStamp} but no displayed name changed what it is ({ids.Count} row(s), {_watch.Count} name(s) watched)");
+          return;
+        }
+
+        Log.Debug($"announce [{reason}]{(detail is null ? string.Empty : $" {detail}")}: identity moved - {moved}");
       }
 
       _unaskedDeclined = false;
       _announcedIds = ids;
       _announcedStamp = _currentStamp;
-      _announcedVerdicts = _currentVerdicts;
-      _announcedFingerprint = fingerprint;
+
+      /*
+       * Work is on its way, so re-shoot the watch against what is ABOUT to be displayed. Deliberately AFTER the check above: capturing first
+       * would compare the selection against itself and no charm could ever reach a board. Selected names join here (UI thread, O(rows))
+       * because a row can change routing on its own account even when every name listed under it keeps its answer.
+       */
+      if (_currentTimeline is { } fresh)
+      {
+        var names = new List<string>(selected.Count);
+        foreach (var fight in selected) names.Add(fight.Name);
+        _watch.CaptureSelection(fresh, names);
+      }
       Log.Debug($"announce [{reason}]{(detail is null ? string.Empty : $" {detail}")}: {ids.Count} row(s), stamp {_currentStamp}"
                 + (force ? " (forced)" : string.Empty));
       DerivedSelectionChanged?.Invoke(new BoardRequest(selected, _currentStamp, reason, detail));

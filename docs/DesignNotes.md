@@ -10163,3 +10163,62 @@ grep -E "UI perf" EQLogParser.log | tail -3   # read chart.rendergap, chart.upda
 One thing the tail answered for free: memory grew "at a decent rate but better than it used to", with `heap 760–770 MB / ws ~1.58 GB`
 and ~120 MB/s allocation while replaying at many times live speed, GC paused ~6 %. FCT and the meter were fine (`fct.paint avg 1.3–1.5 ms`,
 backlog 12, drops mostly superseded rows). The remaining UI cost is the chart's, not the parse's.
+
+## Snapshot unless a name changed what it is (2026-10-08)
+
+The previous section fixed the *width* of the trigger (capture-wide → selection-scoped). The operator then rejected the premise:
+
+> remember i really dont want updates happening dynamically because new damage came in either. id rather it be like a snapshot of what
+> was selected at the time except for the pet changes or player turning npc, etc. like classification changes that matter. not new damage.
+> although if a classification related update requires getting the latest data and that includes new damage i guess thats fine … if we
+> could do it quickly and didnt need the whole table to redraw/blink.
+
+That is a product rule, not a tuning knob: **damage is not news to a board you are reading; a verdict is.** So the rebuild trigger stopped
+being numeric altogether.
+
+### The measurement that decided the shape
+
+`EQLP_LIVE_TAIL_PROBE=local/logs/live/eqlog_Incogitable_xegony.txt EQLP_LIVE_TAIL_PASSES=7` (the probe now reports identity churn as
+well as row churn; run from the repo root — the gate needs an absolute path, and a relative one fails with "points at nothing"):
+
+| pass | facts | visible rows | rows touched vs previous | names placed | verdict **flips** | newly placed |
+|---|---|---|---|---|---|---|
+| 2 | 252 k | 1,048 | 310 | 199 | **0** | 58 |
+| 3 | 927 k | 1,332 | 294 | 251 | **0** | 52 |
+| 4 | 1.01 M | 1,349 | 26 | 255 | **0** | 4 |
+| 5 | 1.50 M | 3,018 | 1,709 | 475 | **0** | 220 |
+| 6 | 1.64 M | 3,641 | 662 | 519 | **0** | 44 |
+| 7 | 1.90 M | 4,835 | 1,233 | 628 | **0** | 109 |
+
+**Identity digest: moved 6 of 6 passes. Verdict flips among already-placed names: zero.** Every digest move was the rule book meeting a
+name for the first time. That killed two designs at once:
+
+- gating on `SelectionStamp`/`AnswerStamp` would rebuild **every pass** and look exactly like the flicker being fixed;
+- the selection-scoped `SelectedFingerprint` written hours earlier was also wrong in kind — its remaining half was "my rows' numbers
+  moved", which is precisely what must not fire. It is deleted, with its tests; the reason is this table, so nobody re-derives it.
+
+### What fires now
+
+`IdentityWatch` (Core) holds the identity answer for two sets: the names a build **displayed** (captured by `MainWindow.BuildBoards`, which
+knows them: each selected fight's own name, every damage/tanking record's attacker, every heal's healer — a field read and a hash-set add
+over records the build already materialized, ~50 ms on a select-all that costs seconds) and the **selected rows'** names (captured by the
+pane at announce time, so a charm re-routing the row you are looking at reaches its boards even if no listed attacker changed answer). Two
+slots, two threads — the builder runs on the summary gate's pool thread and the pane on the UI thread, so neither is allowed to mutate what
+the other enumerates; each swaps a whole dictionary reference instead.
+
+`ContentMoved` and `SnapshotSwap` pass through this gate. `RowEdited` survives only as "a selected row was **removed**" — the subject of the
+boards stopped existing, which no name-watch can see. An operator write still lands (the gesture token re-labels the announce as `Manual`
+before the gate), Refresh still forces, and a snapshot with no timeline (what a test builds by hand) keeps always rebuilding because nothing
+can tell. Cost per pass is one dictionary lookup per displayed name; `IdentityWatchTest.AWholeCapturesWorthOfNamesStaysCheap` holds 20 passes
+over 2,400 names under 200 ms and proves a single flip out of those 2,400 is still seen.
+
+### Still open: the blink itself
+
+Refusing unentitled rebuilds removes almost all of the flashing, but a build that *is* entitled (a real classification change mid-pull)
+still presents by swapping `ItemsSource` — the whole grid clears and reloads. The operator's own suggestion is the right one, and Syncfusion
+advertises exactly this: SfDataGrid's **accumulator service** (`RegisterDataObjectAccumulatorService`, then `Start/StopAccumulatingUpdates`)
+exists for high-frequency data — mutate the row objects while updates accumulate, flush once, and only the changed cells repaint; plain
+`INotifyPropertyChanged` on long-lived row objects plus `View.Refresh()` for sort/filter order is the simpler half of the same idea.
+`FightTable` already does this in-house with `RowPatch` (patch cells, keep row objects, preserve selection), so the board has two viable
+routes; the tree/grouped panes are the harder case because group rows re-aggregate. This is a Windows-verified change — it needs a real run
+to tell "no blink" from "stale cell" — and it is deliberately NOT attempted blind here.

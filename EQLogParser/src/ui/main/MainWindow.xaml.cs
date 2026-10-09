@@ -904,6 +904,41 @@ namespace EQLogParser
         var input = session.BuildSummaryInput(request.Fights);
         var materializeMs = PerfCounters.End(materializeSpan);
 
+        /*
+         * What this build put on screen, so a later derive pass can ask the ONLY question that entitles it to rebuild them: did any of
+         * these names change what it IS? New damage never qualifies (the operator's rule, 2026-10-08 - "id rather it be like a snapshot of
+         * what was selected at the time except for the pet changes or player turning npc"), and IdentityWatch measures why the scope has to
+         * be names rather than the identity digest: replaying a capture as growing prefixes moved the digest on 6 of 6 passes while flipping
+         * ZERO verdicts, every move being a name seen for the first time. Digest-gating would have rebuilt once per pass and looked exactly
+         * like the flicker this replaces.
+         *
+         * The walk is over records this build already materialized (one field read plus a hash-set add each; ~50 ms on a whole-capture
+         * select-all that costs seconds anyway, and builds are now rare by design). The set is deliberately a little wider than the grid's
+         * own rows: a name involved in the selection flipping is worth a rebuild even if the grid folds it under `X +Pets`.
+         */
+        if (npcWindow?.Content is FightTable watchPane)
+        {
+          var involved = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+          foreach (var fight in input.Fights)
+          {
+            if (!string.IsNullOrEmpty(fight.Name)) involved.Add(fight.Name);
+
+            foreach (var block in fight.DamageBlocks)
+              foreach (var action in block.Actions)
+                if (action is DamageRecord damage && !string.IsNullOrEmpty(damage.Attacker)) involved.Add(damage.Attacker);
+
+            foreach (var block in fight.TankingBlocks)
+              foreach (var action in block.Actions)
+                if (action is DamageRecord taken && !string.IsNullOrEmpty(taken.Attacker)) involved.Add(taken.Attacker);
+          }
+
+          // Healers too: the healing board lists names no damage board necessarily showed.
+          foreach (var (_, heal) in input.Heals)
+            if (!string.IsNullOrEmpty(heal.Healer)) involved.Add(heal.Healer);
+
+          watchPane.WatchBoardNames([.. involved]);
+        }
+
         GenerateStatsOptions damageStatsOptions = new() { Source = door };
         damageStatsOptions.Npcs.AddRange(input.Fights);
         damageStatsOptions.AllRanges = input.AllRanges;
