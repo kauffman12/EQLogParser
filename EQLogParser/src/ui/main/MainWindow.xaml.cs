@@ -1423,11 +1423,14 @@ namespace EQLogParser
              * Two different states reach 100 %, and only one of them has read a log. Following from end of file
              * (`lastMins: 0` - the startup auto-monitor open) seeks straight to EOF, so progress is 100 % immediately with
              * nothing handed over. Saying "Finished Loading Log File in 1 seconds" there is how an empty fight list starts
-             * looking like a bug: the reader did its job, it just had no history to read. Same status line either way
-             * because it IS monitoring now - only the parenthetical and the log line differ.
+             * looking like a bug: the reader did its job, it just had no history to read. ONE phrase either way: both
+             * states are "monitoring now", and the parenthetical this used to append said nothing an operator could act
+             * on (removed 2026-10-09 on request - nobody could say where it came from, which is the same finding). Where
+             * the two states genuinely differ still shows in eqlogparser.log and in the tidy decision below, which is
+             * where a distinction earns its keep.
              */
             var followedFromEnd = _eqLogReader.HandedOverLines == 0;
-            statusText.Text = followedFromEnd ? "Monitoring Log (from end of file)" : "Monitoring Log";
+            statusText.Text = "Monitoring Log";
 
             ConfigUtil.SetSetting("LastOpenedFile", AppSettings.CurrentLogFile);
             Log.Info(followedFromEnd

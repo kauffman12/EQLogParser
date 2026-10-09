@@ -599,7 +599,9 @@ declare without `?`; add the directive only when the whole file is meant to hold
   build**. Whether the operator chose the open is irrelevant (`AllowsLoadBand` is deleted, along with the "an open nobody asked for" rule it carried: a silent
   empty grid reads as broken whoever clicked); what decides is **whether the read handed anything over**, which `ReportCaptureProgress(linesRead)` learns
   from the reader (the byte percent left this panel entirely - it belongs to the status line and nowhere else) — a **follow-from-end-of-file open (startup auto-monitor, Clear All) reads no history, owes no build, and stays silent** because an empty list
-  with "Monitoring Log (from end of file)" up top is the correct answer, not a wait (`AFollowFromEndOpenStaysSilent`). The file's **percent is never repeated in
+  with "Monitoring Log" up top is the correct answer, not a wait (`AFollowFromEndOpenStaysSilent`); **the status line says
+  that one phrase for both kinds of open** — the "(from end of file)" parenthetical was removed 2026-10-09 because it was
+  unread and unasked-for, and the two states stay distinguished in `eqlogparser.log` and by `LogReader.LoadAllocatedGarbage`. The file's **percent is never repeated in
   the dock** — the application-wide status line counts that pump already; the band's moving part is the captured-fact count, which only this panel has. The session's first snapshot takes the band down for good - legacy filled rows
   per parsed line, the projection cannot (a cheap lane during bulk steals the ingest gate, reverted on measurement). The pane's top-right status section is
   gone entirely (removed on request - no status messages there at all): no derive stats line, no override verdict, no placeholder, no failure text; a

@@ -17,7 +17,7 @@ namespace EQLogParser.Wpf.Test;
  * at the top of the window counts that off the same 500 ms pump, and a second copy in the dock duplicates it.
  *
  * The one open that stays silent is a follow-from-end-of-file read (the startup auto-monitor, and Clear All): it hands
- * over no lines, so it owes no first build, and an empty list with "Monitoring Log (from end of file)" up top is the
+ * over no lines, so it owes no first build, and an empty list with "Monitoring Log" up top is the
  * correct answer rather than a wait. `linesRead` on ReportCaptureProgress is that whole distinction.
  *
  * The first snapshot takes the band down for good and it stays down for the session - real rows beat a bar, and a quiet
@@ -107,7 +107,7 @@ public sealed class FightTableLoadBandTest
 
       /*
        * Clear All and the startup auto-monitor both re-open at end of file: zero lines handed over, so no first build is
-       * owed and the honest state is an empty list (the status line says "Monitoring Log (from end of file)"). A band here
+       * owed and the honest state is an empty list (one status phrase, "Monitoring Log", for both kinds of open). A band here
        * would sit saying "building" for the rest of the evening over a log that finished loading.
        */
       table.ReportCaptureProgress(0);
