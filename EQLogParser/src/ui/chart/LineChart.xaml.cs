@@ -654,6 +654,14 @@ namespace EQLogParser
           YBindingPath = yPath,
           ItemsSource = value,
           ShowTooltip = false,
+          /*
+           * Nobody ever asked for a tween, and the default one is not free: during a live tail the chart's own data pass measured 2-6 ms
+           * while the framework took **404-1,029 ms** (avg 427) with what it was handed, 3.6 times a second — chart.rendergap is posted at
+           * ContextIdle, so that number IS the UI thread being busy (field log 2026-10-08: ~1 stall per second, beat delay max 547 ms,
+           * for a plot of 5 lines and 137 points). Series are rebuilt on every update here, so the animation was replayed from scratch
+           * each time. A chart whose numbers move is the one thing you do NOT want sliding into place twice a second.
+           */
+          EnableAnimation = false,
         };
 
         collection.Add(series);
