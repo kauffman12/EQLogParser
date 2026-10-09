@@ -26,6 +26,13 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> _healerHealedTimeRanges = new();
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> _healerSpellTimeRanges = new();
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> _healerHealedSpellTimeRanges = new();
+
+    /*
+     * "healer|healed" — the key the "who healed whom" breakdown is filed under — composed once per PAIR per build instead of
+     * once per heal record. Same law as DamageStatsBuilder's pet-row memo: a night has hundreds of healer/healed pairs and
+     * millions of heals, so a concatenation in the walk is garbage by the megabyte for a string the walk already knew.
+     */
+    private readonly Dictionary<(string Healer, string Healed), string> _healerHealedKeys = [];
     private readonly List<List<ActionGroup>> _healingGroups = [];
     private ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> _allHealedByHealerTimeRanges;
     private ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> _allHealedBySpellTimeRanges;
@@ -348,7 +355,7 @@ namespace EQLogParser
                 openBlock.Actions.Add(record);
 
                 var spellNameKey = StatsUtil.CreateRecordKey(record.Type, record.SubType);
-                var healerHealedKey = record.Healer + "|" + record.Healed;
+                var healerHealedKey = HealerHealedKey(record.Healer, record.Healed);
 
                 // store substats and substats2 which is based on the player that was healed
                 StatsUtil.UpdateTimeSegments(null, healedByHealerTimeSegments, record.Healer, record.Healed, healTime);
@@ -467,7 +474,7 @@ namespace EQLogParser
                   var spellStats = stats.SubStatOf(spellStatName, record.Type);
                   StatsUtil.UpdateHealStats(spellStats, record);
 
-                  var subStats3 = subStats2.SubSubStatOf(spellStatName, record.Healer + "|" + record.Healed);
+                  var subStats3 = subStats2.SubSubStatOf(spellStatName, HealerHealedKey(record.Healer, record.Healed));
                   StatsUtil.UpdateHealStats(subStats3, record);
 
                   long value = 0;
@@ -631,7 +638,7 @@ namespace EQLogParser
                     var healedStats = stats.SubStat2Of(healedStatName, record.Type);
                     StatsUtil.UpdateHealStats(healedStats, record);
 
-                    var subStats3 = healedStats.SubSubStatOf(spellStatName, record.Healer + "|" + record.Healed);
+                    var subStats3 = healedStats.SubSubStatOf(spellStatName, HealerHealedKey(record.Healer, record.Healed));
                     StatsUtil.UpdateHealStats(subStats3, record);
                   }
                 }
@@ -719,6 +726,13 @@ namespace EQLogParser
       }
     }
 
+    /* The pair's "healer|healed" key, from the memo: exactly the string the concatenation produced, built once. */
+    private string HealerHealedKey(string healer, string healed)
+    {
+      if (!_healerHealedKeys.TryGetValue((healer, healed), out var key)) _healerHealedKeys[(healer, healed)] = key = healer + "|" + healed;
+      return key;
+    }
+
     private void Reset(bool clear = false)
     {
       if (clear)
@@ -735,6 +749,7 @@ namespace EQLogParser
       _healerHealedTimeRanges.Clear();
       _healerSpellTimeRanges.Clear();
       _healerHealedSpellTimeRanges.Clear();
+      _healerHealedKeys.Clear();
       _healingGroups.Clear();
       _raidTotals = StatsUtil.CreatePlayerStats(Labels.RaidTotals);
       _selected = null;

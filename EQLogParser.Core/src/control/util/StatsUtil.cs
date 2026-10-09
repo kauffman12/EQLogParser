@@ -96,27 +96,41 @@ namespace EQLogParser
      */
     internal static PlayerSubStats SubStatLookup(ref SubStatIndex index, ICollection<PlayerSubStats> individualStats, string subType, string type)
     {
-      var key = CreateRecordKey(type, subType);
-
       lock (individualStats)
       {
         index ??= new SubStatIndex();
 
+        /*
+         * The pair the caller already holds is tried first, so a repeat sighting never pays for the key string. This is not a second
+         * rule about which row a record belongs to: entries land here only as the result of the key lookup below, so folding pairs
+         * (("Melee","Foo") and ("Spell","Foo") are one row today) happens exactly where it always did.
+         */
+        var pair = (type, subType);
+        if (index.ByPair is not null && index.ByPair.TryGetValue(pair, out var fast)) return fast;
+
+        var key = CreateRecordKey(type, subType);
+
+        PlayerSubStats row;
         if (key is null)
         {
-          if (index.NoName is not null) return index.NoName;
+          row = index.NoName ??= NewRow(individualStats, subType, type, key);
         }
-        else if (index.ByKey.TryGetValue(key, out var known))
+        else if (!index.ByKey.TryGetValue(key, out row))
         {
-          return known;
+          row = NewRow(individualStats, subType, type, key);
+          index.ByKey[key] = row;
         }
 
-        var stats = new PlayerSubStats { ClassName = "", Name = StringCache.GetOrAdd(subType), Type = StringCache.GetOrAdd(type), Key = key };
-        individualStats.Add(stats);
-
-        if (key is null) index.NoName = stats; else index.ByKey[key] = stats;
-        return stats;
+        (index.ByPair ??= [])[(type, subType)] = row;
+        return row;
       }
+    }
+
+    private static PlayerSubStats NewRow(ICollection<PlayerSubStats> individualStats, string subType, string type, string key)
+    {
+      var stats = new PlayerSubStats { ClassName = "", Name = StringCache.GetOrAdd(subType), Type = StringCache.GetOrAdd(type), Key = key };
+      individualStats.Add(stats);
+      return stats;
     }
 
     internal static string CreateRecordKey(string type, string subType)

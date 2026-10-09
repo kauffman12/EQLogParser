@@ -142,6 +142,15 @@ namespace EQLogParser
   {
     internal Dictionary<string, PlayerSubStats> ByKey = [];
     internal PlayerSubStats NoName;
+
+    /*
+     * The rows this list already has, reachable by the (type, subtype) PAIR a caller holds, so the row's key string never gets
+     * built again: `CreateRecordKey` concatenates for DD/DoT rows, which meant one new string per RECORD to find a row among the
+     * dozens a player has. Both halves of the pair come from `Labels` constants or StringCache, so this is a second index over
+     * the same answer rather than a different rule — and it can never disagree with ByKey, because every entry here was placed by
+     * going through ByKey once (see StatsUtil.SubStatLookup). Empty until a list is asked twice for the same pair.
+     */
+    internal Dictionary<(string Type, string SubType), PlayerSubStats> ByPair;
   }
 
   internal class PlayerSubStats : Attempt

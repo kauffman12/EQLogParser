@@ -18,8 +18,18 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<string, int> _playerGroupAssignments = new();
     private readonly ConcurrentDictionary<string, TimeRange> _playerTimeRanges = new();
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> _playerSubTimeRanges = new();
+
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, byte>> _playerPets = new();
     private readonly ConcurrentDictionary<string, string> _petToPlayer = new();
+
+    /*
+     * "X +Pets" built once per NAME per build instead of once per RECORD. The walk folded every pet's output onto its owner by
+     * concatenating the row name for each swing — a fresh string millions of times a night (measured: 74 bytes allocated per
+     * record in the walk stage, most of it this suffix and the DD/DoT sub-stat key). The value is exactly what the expression
+     * produced, so no board number can move; only the number of strings built does. Cleared with the build like the maps beside it.
+     */
+    private readonly Dictionary<string, string> _petRowNames = [];
+
     private List<List<ActionGroup>> _allDamageGroups;
     private List<List<ActionGroup>> _damageGroups = [];
     private PlayerStats _raidTotals;
@@ -403,7 +413,7 @@ namespace EQLogParser
                     {
                       stats.BaneHits++;
 
-                      if (individualStats.TryGetValue(stats.OrigName + " +Pets", out var temp))
+                      if (individualStats.TryGetValue(PetRowName(stats.OrigName), out var temp))
                       {
                         temp.BaneHits++;
                       }
@@ -445,7 +455,7 @@ namespace EQLogParser
                       else
                       {
                         var origName = player ?? record.Attacker;
-                        var aggregateName = origName + " +Pets";
+                        var aggregateName = PetRowName(origName);
                         isNewFrame = StatsUtil.CheckNewFrame(prevPlayerTimes, aggregateName, block.BeginTime);
 
                         var aggregatePlayerStats = StatsUtil.CreatePlayerStats(individualStats, aggregateName, origName);
@@ -659,11 +669,19 @@ namespace EQLogParser
       FireChartEvent("CLEAR");
     }
 
+    /* "X +Pets" for this build, from the memo beside the field. Same string the concatenation would have produced. */
+    private string PetRowName(string owner)
+    {
+      if (!_petRowNames.TryGetValue(owner, out var row)) _petRowNames[owner] = row = owner + " +Pets";
+      return row;
+    }
+
     private void Reset()
     {
       _allDamageGroups = _damageGroups;
       _damageGroups.Clear();
       _damageGroupIds.Clear();
+      _petRowNames.Clear();
       _raidTotals = StatsUtil.CreatePlayerStats(Labels.RaidTotals);
       _playerPets.Clear();
       _petToPlayer.Clear();
