@@ -9939,11 +9939,13 @@ still happens in one place. Its lifetime is the row list's, which is why it hang
 **What is left is named rather than guessed.** Of the walk's remaining 147 MB: `Attempt.CritFreqValues` / `NonCritFreqValues` — the hit-distribution
 histograms — account for **1,879,130 dictionary entries across 2,478 rows (~72 MB retained)** in a single build. The only reader in the entire
 codebase is `HitFreqChart`, opened from a toolbar button on the Damage and Tanking summaries and closed nearly always. Every meter refresh and every
-click therefore builds, retains and later frees a distribution nobody asked for. The gate is obvious (fill it only while that window is open) and it
-is *not* implemented here, because two things make it more than a flag: the chart reads stats that already exist, so its own open path must set the
-flag and rebuild once before reading; and that window's X hides rather than closes, so any "chart is open" state has to follow the
-`DamageOverlayWindow` discipline or the memory comes back and nobody can see why. It belongs with B2's lesson — *a store keeps what a door reads* —
-applied one level up, to a board.
+click therefore builds, retains and later frees a distribution nobody asked for. What was written here at the time — "the gate is obvious (fill it only
+while that window is open), but the chart reads stats that already exist, so its own open path must set the flag and rebuild once before reading; and
+that window's X hides rather than closes, so any 'chart is open' state has to follow the `DamageOverlayWindow` discipline" — was the right instinct
+about a **flag**, and the flag was never built. The shape that shipped instead sidesteps both problems: keep what a record can cheaply leave behind (the
+amount) and compute the distribution when the chart reads it, so no open-state is tracked, nothing has to rebuild, and an X that hides rather than
+closes is irrelevant. See "A histogram nobody asked for" below. It remains an instance of B2's lesson — *a store keeps what a door reads* — applied one
+level up, to a board.
 
 ## The same question twice, asked by two doors (B13)
 
@@ -10023,5 +10025,49 @@ Three readings, in decreasing order of usefulness:
 Context from the same run, because these probes are also where the board's shape gets re-checked: materialize 1,250 ms; damage board 2,576 ms /
 201.8 MB (`groups 208 ms/53.7 MB`, `walk 2364 ms/147.3 MB`); tanking board 41 ms; healing board 1,431 ms / 145.5 MB over 2,647,774 heals
 (**148 B per heal** traced end-to-end, `window 681 ms` still the fat stage after the key-memoization pass); the hit-frequency histograms build
-**1,879,130 entries (~72 MB retained)** and are read by exactly one chart (`HitFreqChart`) — that is a candidate for "build it when that chart is
-open", which is the same principle as this section: stop computing what the surface on screen does not use.
+**1,879,130 entries (~72 MB retained)** and are read by exactly one chart (`HitFreqChart`) — the same principle as this section, "stop computing what the
+surface on screen does not use", and it was taken up on the spot: see "A histogram nobody asked for" below.
+
+## A histogram nobody asked for
+
+The candidate above measured bigger than expected. Running `EQLP_BOARD_WALK` twice over the operator's capture — once as shipped, once with the
+hit-frequency fill temporarily skipped inside the damage walk:
+
+| whole-capture damage build | as shipped (eager) | histogram skipped (the ceiling) |
+|---|---|---|
+| total | 2,576 ms | **2,249 ms** (−327 ms, −13 %) |
+| `walk` stage | 2,364 ms | 2,044 ms |
+| allocated by the build | 201.8 MB | **57.5 MB** (−144 MB, −71 %) |
+| retained afterwards | 1,879,130 dictionary entries ≈ 72 MB | 0 |
+
+Two findings. First, a `Dictionary<long,int>` keyed by **raw damage amount** is not a histogram: hits are near-unique numbers, so the 2,478 stat rows
+averaged ~758 keys each and every damaging record paid a hash insert plus its share of the rehashes — that is where 327 ms of a "bookkeeping" stage was
+living, in the one structure nobody opened. Second, both readers of those dictionaries live in `HitFreqChart`, so the cost served a window most sessions
+never show.
+
+Skipping it outright is not available: the chart opens whenever the operator clicks, and a distribution cannot be produced later from data that was
+thrown away. So `Attempt` keeps what a record can cheaply leave behind —
+
+- **per damaging record: one list append** (`RecordHitTotal`, ~2 ns instead of ~70), crit versus non-crit decided by exactly the rule the eager code used;
+- **on first read: turn the list into counts, then release the list** (holding both would cost more than the version this replaced);
+- **the materialized dictionary is assign-once**, because `HitFreqChart` reads `.Keys` on one line and indexes with it on the next — a dictionary
+  swapped between those lines throws inside somebody's chart.
+
+Measured after, same capture: damage build **2,364 ms** (−212), allocated **159.6 MB** (−42 MB), and what is retained for the histogram is **~34 MB of
+lists instead of ~72 MB of dictionaries** — until asked. **Opening Hit Frequency for one raid member costs 1.8 ms** against a 2.4 s board build, which
+is the whole argument for making it lazy rather than a dial, a setting or an open-window flag: there is no state to get wrong, so an X that hides instead
+of closing (the `DamageOverlayWindow` law) simply does not matter here, and a chart left open across builds reads its own rows' amounts, which is why the
+answer cannot go stale.
+
+The remaining distance to the ceiling (≈100 ms, ≈125 MB) is the raw lists themselves. Closing it would mean retaining nothing and re-walking one player's
+blocks when the chart opens — which needs `HitFreqChart` to reach materialized records, a door that does not exist yet. It is B13-shaped work: fewer
+records walked, not lighter per-record work.
+
+**Refused along the way: bucketing or rounding the amounts.** Collapsing 1.88 M keys to a few thousand would have cost nothing per record and saved nearly
+all of it, and it is wrong for this window specifically — the chart's subject *is* individual hit amounts (a 1-point pull, a resisted rank, the shape of a
+cast's variance). Laziness may move **when** work happens; it may not change **what** the answer is. Pinned by `HitFrequencyLazinessTest`, including the
+assertion that a real board build leaves **every** row uncounted: the invisible regression here is some future sort, export or debug dump reading those
+dictionaries mid-walk, which would return the milliseconds and the megabytes forever while every chart on screen still looked perfectly correct.
+
+The cost probe changed shape too: it surveys `RawHitTotals` rather than touching the dictionaries, because asking for a dictionary is what builds it — an
+eager probe of a lazy store measures its own observation and would have reported this whole change as absent.

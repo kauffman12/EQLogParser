@@ -448,6 +448,21 @@ Core builds `Nullable=disable` and both test assemblies build `Nullable=enable`,
 un-annotated reference type in that file from *oblivious* to *non-nullable* in the consumers' view - two unrelated heal tests
 surfaced as brand-new CS8601s when `StatsModel.cs` got the pragma for two new fields. Annotate narrowly (parameters, locals) or
 declare without `?`; add the directive only when the whole file is meant to hold the line (docs/CodingStandards.md -> "Nullable Reference Types").
+- **A histogram is counted when the chart asks, never during a build** (2026-11): `Attempt` keeps raw damage amounts (`RecordHitTotal`, one list append
+  per damaging record) and materializes `CritFreqValues`/`NonCritFreqValues` on first read, then releases the list. The eager version measured **327 ms
+  (13 %) of a whole-capture damage build, 144 MB of its 202 MB allocation, ~72 MB retained** — a dictionary keyed by raw hit amounts (1.88 M entries: hits
+  are near-unique, so it was never a histogram) whose only two readers live in `HitFreqChart`, a window most sessions never open. Three laws. (1) **The
+  distribution is identical count for count** — bucketing/rounding/sampling would be cheaper and was refused: that chart's subject *is* individual hit
+  amounts, so laziness may move when work happens, never what the answer is. (2) **A materialized dictionary is assign-once** — `HitFreqChart` reads `.Keys`
+  then indexes with it on the next line, so a swap mid-read throws inside the chart; and reading releases the raw list (keeping both costs more than eager
+  did). (3) **Nothing in a build may read those dictionaries**: the regression is invisible — a future sort, export or debug dump touching them mid-walk
+  returns the milliseconds and megabytes forever while every chart still looks right — so `HitFrequencyLazinessTest.ABoardBuildLeavesEveryRowUncounted`
+  walks every row of a real build and refuses it. Opening the chart costs **1.8 ms** for one raid member (measured against a 2.4 s build), which is why
+  there is no dial, no setting and no "is the window open" flag — that last one also sidesteps the X-hides-rather-than-closes discipline entirely, since no
+  open-state exists to leak. Probe note: cost probes must survey `RawHitTotals`, never the dictionaries — asking is what builds, so an eager probe measures
+  its own observation. Remaining ceiling (≈100 ms, ≈125 MB) needs `HitFreqChart` to reach materialized records so amounts need not be retained at all. Same
+  principle as the chart repeat-question law below: **stop computing what the surface on screen does not use.** docs/DesignNotes.md →
+  "A histogram nobody asked for".
 - **A chart event names the build behind it, and a repeat question is dropped** (2026-11, from two 4.6 M-record chart passes behind one set of
   clicks): every `DataPointEvent` carries `DataGeneration` — the trace sequence of the stats build that produced the records its iterator walks
   (each builder stamps on entry to `BuildTotalStatsCore`/`RebuildTotalStatsCore`, **before any early exit**) — and `LineChart` drops an `"UPDATE"`
