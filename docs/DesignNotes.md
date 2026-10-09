@@ -9598,6 +9598,51 @@ history) is order-dependent inside a build, so the cell cache has to replay that
 `TotalSeconds` stays the caller's range union. Both are constraints 2 and 3 above, and the cache is the next piece — it now has a proven fold
 to sit on top of.
 
+### What the cell cache has to buy at two boundaries, read from the code before building it (2026-10-09)
+
+Phase B is one bullet in a working doc and three chapters here. Reading the two classes it would change
+(`FightSummarySource`, `DamageStatsBuilder`) turns it into **two layers with different risk, and one measurement that decides whether the
+second exists at all**. Recorded before code so nobody builds half of it and discovers the other half later.
+
+**Layer 1 — append-only materialization per row.** `SummaryFightFor` already has the identity discipline Phase B needs: an entry is reused
+while every input `BuildFight` read still matches its stamps (two ordinal-run lengths, taunt count, bounds, `Dead`, `GroupId`), and it hands
+back **the same `Fight` object**, so an unchanged row costs nothing. What it cannot do today is *grow cheaply*: the moment a live row's
+`damageCount` moves, `BuildFight` walks that row's ordinals from zero and allocates every block and every `DamageRecord` again — that is the
+606–696 ms materialize term in the phase table, paid per touched row per pass. Appending is sound because the tables are append-only and a
+row's ordinals are contiguous: **the proof of an unchanged block is its ordinal prefix**, never a content hash (hashing a block's records
+costs what skipping them was for). This layer changes no counting semantics — the same facts in the same blocks — which is why it can be
+proved against the existing goldens rather than needing new equivalence machinery.
+
+**Layer 2 — per-row cells folded instead of recounted.** `MergeStatsRecursive` is proven (`RecursiveFoldEquivalenceTest`: A, close, B,
+close == A∪B swept field-by-field), so a partial row can legally become an input to the next pass. Two boundaries decide whether it pays:
+
+1. **The publish boundary.** `PlayerStats` *is* the display model (~15 derived scalars, two index accelerators, two child forests), and B's
+   own rule 3 forbids publishing a carried cell — so each pass must produce fresh rows by folding `cell ⊕ fresh tail` into a new tree. That
+   cost is proportional to **child keys** (rows × tens of spells/npc keys), not to records, which is the whole appeal: ~414 raid players
+   against 1.7 M outcomes. The shape where it may not pay is the one the earlier clone analysis named — group content, many rows with little
+   data each — so **measure fold-at-publish before writing layer 2**, on both a raid capture and a group capture. If the fold is the same
+   order as the walk for group shapes, stop at layer 1 and keep walking. A cache whose win exists only on the shape that already feels fast
+   is not a feature.
+2. **The retention boundary.** Today `_summaries` holds materialized Fights only for rows somebody clicked; they are garbage once the row is
+   deselected. A cell store, or blocks kept for append, naturally wants to keep prior state for **every row of the last selection** — which
+   retains a second full representation of the capture, exactly the object class B2 exists to delete (millions of record objects) and what
+   B1 says is already over budget. Law: **reuse lives on the live tail** — open rows and rows closed inside this session's window, with a hard
+   entry/record cap and the existing wholesale drop when `StateStamp` moves. Converting CPU into that much RAM is a bad trade the phase table
+   cannot see, because the table measures milliseconds.
+
+**Invalidation is four stamps, already available, not a new protocol:** the six `DamageValidator` flags + the npc filter + the time window
+(the `GenerateStatsOptions` inputs), the ownership maps' content (`_petToPlayer`/`_playerPets`, per the carry-and-stamp decision above),
+`EntityTimeline.StateStamp()` (a charm learned late re-attributes facts *inside its own interval*), and the fact-table instance/session.
+
+**Fallback stays a rule, not a hope** (B's rule 4): if the rows a pass must rebuild carry more than a threshold share of the selection's
+records, take the plain full build — measure the threshold on the same capture as the phase table rather than picking a number that sounds
+safe. And **the gate that says whether any of this earned its complexity**: extend `EQLP_LIVE_TAIL_PROBE` to print reused vs recounted records
+per pass, exactly like the `stats build #N … walked=…` lines did for Phase A. If reuse is not a large majority on a live tail, layer 2 is deleted.
+
+**Order of work, decided:** layer 1 first (safe, goldens-only, removes the materialize term from every live refresh), then the fold-at-publish
+measurement, then layer 2 only if that number clears the group-content shape. B13's chart second pass wants the same chunk boundaries and is
+designed against the same probe, so it follows rather than arriving beside it.
+
 ### What a session is holding, printed (2026-10)
 
 *"~330 MB of a 419 MB heap is not rows."* That sentence came out of the first Windows field run as an **inference** — a dotnet-gcdump taken by hand,
