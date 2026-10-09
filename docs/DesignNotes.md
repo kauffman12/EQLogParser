@@ -10704,10 +10704,17 @@ rule `MergeRows` already implements for a census that lost a name: leave, don't 
 `FindRow` answers null and the grid simply has nothing selected. What stays on the list because it *has* facts reads Unknown and
 hovers as exactly `Nothing Identified It`, with no rider of any kind: no "claim taken back", no "not in this log", no filename.
 
+The third failure mode this exposes is structural: an assertion about identity semantics that lives **only** in the
+Windows assembly goes red invisibly, because `dotnet test` on the cross-platform project says nothing about it and a
+cross-compile cannot evaluate it either. New laws about what a verdict *does* belong in `EQLogParser.Test` (ClassificationReport,
+PlayerRegistry and IdentityVocabulary are all Core — reachable without WPF); the Windows pair here is deliberately about cell
+words, column order and tooltip lines. The probe that produced the block above was exactly such a headless test; it answered the
+question and was deleted per "a gated real-log test is disposable", and the two Windows assertions now carry the shipped law.
+
 **Two honest edges.** `Row.IsDisagreement` (`LegacySaysPlayer && Kind is Npc or Spell`) can no longer be produced by a single
 click — the verdict deletes the roster claim that would have been contradicted. It lights when memory refills *after* the verdict,
 which is the case actually worth knowing (a raider you called NPC last week whom tonight's capture re-verifies), so that ordering
-is now how the test builds it. And `ForgetName` deliberately does **not** clear `_defaultPlayerClass` / `_activePlayerClass`: the
+is now how the test builds it — asserted in both directions, since the negative half IS the new law. And `ForgetName` deliberately does **not** clear `_defaultPlayerClass` / `_activePlayerClass`: the
 Class column can still show a class for the rest of the session after the durable row (class included) is gone. Evicting the
 learned class windows would blank the class of a raider whose cast lines are still in the open capture — a different harm than the
 one the operator asked for, and cheaper to live with than to "fix".
