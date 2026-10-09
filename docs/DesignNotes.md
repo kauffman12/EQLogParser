@@ -510,6 +510,38 @@ clickable while not installed because clicking them is how they get downloaded, 
 caught having no voices. `GetEngineDescription` in the dialog says so in words too — the Windows voices come from the
 OS, which is why a Wine or Linux session usually has none.
 
+### An engine may not exist yet, and every reader says so
+
+The speech engine is built on the thread pool from `AudioManager`'s constructor, because a Kokoro session over the 156 MB graph takes seconds
+and the constructor runs on whatever thread touched `Instance` first. Until it lands, `_tts` is null. That was survivable for one reason only:
+startup awaited `LoadValidVoicesAsync` before showing the main window, so *ordering* was the whole safety story — no window, no dropdown, no
+registered player, therefore no call that could arrive early.
+
+Ordering is now backed by a type, `TtsReadiness`, so the wait can move without an audit of every `_tts` dereference. Three laws, each pinned by
+`TtsReadinessTest` (Wpf assembly — constructing `AudioManager` would open this machine's audio devices, which is why the gate is tested directly):
+
+- **The signal always fires, including when nothing was built.** A callout parked on a build that already gave up waits for the life of the
+  process; a build that failed says "no speech" and releases everybody. `Complete` runs from a `finally`, same law as every other span handle
+  and the render loop's `_isRendering`: a gate left "still building" is a permanent silence with no line in the log.
+- **Releasing is not the same as being able to speak.** `ReadyAsync` carries no verdict; `HasEngine` is read *after* waiting. An engine can
+  arrive later than the attempt that failed — the operator picks a runtime in the TTS window after the automatic choice came back empty — and a
+  gate whose first answer was final would keep that machine mute until restart. `HasEngine` is monotonic for the same reason.
+- **Reading state never blocks.** Four synchronous readers (voice list, default voice, display name, spoken name) are called during layout and
+  would put inference on the UI thread to save themselves; each falls back — no list, no default, a name shown as itself — all shapes the callers
+  already handle for an engine that has no voices. `GetActiveEngine` answers with what the session is *configured* to speak with, which is also
+  why a switch asks the engine itself (`_tts?.Name`) whether it is "already speaking it": with nothing speaking, nothing may claim that, and that
+  is the only way a machine whose first build failed can install an engine from the picker.
+
+Where waiting belongs: **`SynthesizeCachedAsync` is the one choke point** — every word that becomes voice goes through it, so one await there
+covers speech, preview and WAV export alike. Recorded-file callouts never come through it, which is the point: a trigger that plays a .wav should
+sound while a model loads. A switch waits too (`SwitchEngineAsync`), because switching is retire-and-swap and would otherwise build a second
+engine alongside the one still being created, then throw the first away.
+
+What this does **not** yet change: startup still awaits `LoadValidVoicesAsync` before the window appears, so in a build today none of the
+fallbacks above is reachable. They exist so that taking that wait off the critical path is one commit rather than an audit — including
+`ReapplyRequestedVoices`, which hands an engine the players that registered while it did not exist (the same handover a switch performs, for the
+engine that arrived last instead of next).
+
 ### What installs and what downloads
 
 The installer carries the app plus two small assemblies that `EQLogParser.Audio.dll` is compiled against
@@ -2595,7 +2627,8 @@ the prefix is also how a stall line reads: `in progress meter.loadstats 812 ms` 
 | `trig.logGrid` | span | the refresh `TriggersLogView` asks its grid for; nearly free when the grid already sorts by time |
 | `trig.logReset` | count | whole-collection invalidations reaching that grid. Each one tells WPF nothing can be done incrementally, so a bound grid rebuilds and re-sorts itself whether or not anything asked |
 | `trig.logBatch`, `trig.logEntry` | count | trigger-log appends in the window and the entries inside them (**off the UI thread**): how often any bound grid must reload, and how many rows it has to sort |
-| `app.voices`, `app.triggerdb`, `app.mainwindow`, `app.triggmgr`, `app.firstshow` | span | the startup phases that run on the UI thread: voice load, trigger database, main window construction, trigger manager, first `Show` |
+| `app.triggerdb`, `app.mainwindow`, `app.triggmgr`, `app.firstshow` | span | the startup phases that run on the UI thread: trigger database, main window construction, trigger manager, first `Show` |
+| `app.voices` | span | waiting for the speech engine at startup, registered **off** the UI thread: the wait is an await while the build runs on the pool, so naming it in a stall's "in progress" points a reader at a thread that was never busy. It stays open so the audio assembly's own spans still hang under a phase name |
 | `ui.openlogfile`, `ui.pickfile` | span | opening a log file (restore at startup included), and the modal file dialog inside it |
 | `fct.dropLane`, `fct.dropConveyor`, `fct.dropStale`, `fct.dropCeiling` | count | numbers that never reached the screen, split by cause; their lifetime sum is still the `fct.drop` level |
 | `ui.configSave` | span | `ConfigUtil.Save()` — writing `settings.txt` from the main window's half-minute timer |
@@ -2682,8 +2715,10 @@ Two consequences worth knowing before reading a startup log:
 - `app.firstshow` ends at the call that queues the first layout, not at the pixels. A stall naming `nothing` immediately after it closed is
   the main window's first paint, which is framework work between operations; instrumenting the render pass itself is the next step if the
   evidence says so rather than the guess being made now.
-- A span held open across an `await` (the voice load, the trigger manager) reads as running while the thread is idle at the await point. That
-  costs nothing here: a beat posted at `Render` runs the moment the thread is free, so if it was late, the thread really was inside that phase.
+- A span held open across an `await` reads as running while the thread is idle at the await point. Where the wait *is* the thread's own work
+  that costs nothing — a beat posted at `Render` runs the moment the thread is free, so if it was late, the thread really was inside that phase.
+  Where it is not, the span lies by omission: `app.voices` is ~1 s of waiting on a thread pool engine build, so it registers `uiThread: false`
+  and keeps out of "in progress", while remaining the parent its inner spans are attributed to.
 
 The file dialog has its own name for a reason too. Whether a modal Win32 dialog starves the beat is a question about WPF's dispatcher, not a
 fact anybody should assert; `ui.pickfile` names it as the occupant if it does, and if it never appears in a stall line after a season of use

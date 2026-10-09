@@ -82,16 +82,21 @@ namespace EQLogParser.Audio
      * lock sees whoever is actually speaking; anything about to call into it holds _engineLock first, except synthesis
      * and warm-up, which run under _synthGate for exactly as long as a switch holds it.
      *
-     * It is null only while _engineReady is out: startup awaits LoadValidVoicesAsync before the main window shows, and
-     * players register and voice dropdowns open only after it, so no engine call can land in that window.
+     *
+     * Null until the constructor's build publishes it, which is the moment _ready releases. Anything that needs an
+     * engine either waits for that or answers for its absence: lists and display names fall back to what is on screen,
+     * a bind or warm-up is "nothing to prepare", synthesis waits. What may not happen is a dereference of it, because
+     * "this machine has no usable speech runtime" is a state the subsystem lives in, not a crash -- and an open log can
+     * now reach these calls while the build is still out.
      */
     private volatile ITtsEngine _tts;
 
-    /*
-     * The build of the engine the session starts with, running on the thread pool from the constructor. The one point
-     * that waits for it is LoadValidVoicesAsync; see the comment above _tts for why nothing else can get there first.
+    /**
+     * The one answer to "is there an engine yet": awaited by whatever speaks or lists voices, and completed from the
+     * constructor's build in a finally so that it fires however that build ended. See TtsReadiness for why a Task
+     * field plus a bool would be the wrong shape for it.
      */
-    private readonly Task _engineReady;
+    private readonly TtsReadiness _ready = new();
 
     /*
      * What the host asked each player to speak with. The engine decides whether it can honor that name, and this is
@@ -148,13 +153,18 @@ namespace EQLogParser.Audio
 
       /*
        * Built on the thread pool: a Kokoro session over the 156 MB graph takes seconds, and this constructor runs on
-       * whatever thread touches Instance first - the UI thread at startup. It does not take the synthesis gate: nothing
-       * can synthesize while it is out (players register only after LoadValidVoicesAsync returns, which startup awaits
-       * before showing the main window), and a fire-and-forget task must not be left holding the gate if the app
-       * closes before it finishes.
+       * whatever thread touches Instance first - the UI thread at startup. It does not take the synthesis gate, because
+       * a fire-and-forget task must not be left holding the gate if the app closes before it finishes. Whoever needs
+       * the engine waits on _ready rather than on this task, so nothing here has to finish before a window exists.
        */
-      _engineReady = Task.Run(() =>
+      Task.Run(() =>
       {
+        // Set only when an engine reached _tts. The finally below tells everyone waiting which of the two happened;
+        // "nothing was built" is an answer they need too, because the alternative is waiting for it forever.
+        var built = false;
+
+        try
+        {
         /*
          * One decision about ONNX Runtime before either engine can make it by accident: EQLP's own onnxruntime.dll is
          * mapped here so that it holds the module name for this process, whichever engine gets built first. Both packs
@@ -162,37 +172,49 @@ namespace EQLogParser.Audio
          * the process, so the choice has to be made once and early. On this thread and not in the constructor: mapping
          * a 12MB runtime is not work for the UI thread at startup.
          */
-        TtsPackManager.PreferMatchingOnnxRuntime();
+          TtsPackManager.PreferMatchingOnnxRuntime();
 
-        ITtsEngine engine;
+          ITtsEngine engine;
 
-        try
-        {
-          engine = TtsEngineFactory.Create(_preferredEngine);
-        }
-        catch (Exception ex)
-        {
-          // The factory guards every engine itself and is not expected to throw, but a null here would reach every
-          // caller of Instance, so the last resort is the engine that needs nothing on disk.
-          Log.Error("Unable to create the TTS engine", ex);
-          engine = new WindowsTtsEngine();
-        }
+          try
+          {
+            engine = TtsEngineFactory.Create(_preferredEngine);
+          }
+          catch (Exception ex)
+          {
+            // The factory guards every engine itself and is not expected to throw, but a null here would reach every
+            // caller of Instance, so the last resort is the engine that needs nothing on disk.
+            Log.Error("Unable to create the TTS engine", ex);
+            engine = new WindowsTtsEngine();
+          }
 
-        if (_disposed)
-        {
-          // The app closed while the build was out; there is no session left for this engine to speak for.
-          engine.Dispose();
-          return;
-        }
+          if (_disposed)
+          {
+            // The app closed while the build was out; there is no session left for this engine to speak for.
+            engine.Dispose();
+            return;
+          }
 
-        _tts = engine;
+          _tts = engine;
+          built = true;
 
         /*
          * Named for every engine, Windows included. This used to log only the neural engines on the reasoning that the boring default needs
          * no announcement, which left a log line that meant two different things: "kokoro" and "nothing at all". Which engine is speaking is
-         * the first question in any report about speech stopping, and the Windows path is exactly where SAPI lives.
-         */
-        Log.Info($"Using {engine.Name.ToLowerInvariant()}-tts");
+           * the first question in any report about speech stopping, and the Windows path is exactly where SAPI lives.
+           */
+          Log.Info($"Using {engine.Name.ToLowerInvariant()}-tts");
+        }
+        catch (Exception ex)
+        {
+          // An exception that escaped the build used to leave no trace at all in a fire-and-forget task: no engine, no
+          // speech for the rest of the evening, nothing in the log about it.
+          Log.Error("The TTS engine build did not finish", ex);
+        }
+        finally
+        {
+          _ready.Complete(built);
+        }
       });
     }
 
@@ -236,8 +258,12 @@ namespace EQLogParser.Audio
       _ => TtsPackManager.ResolveRoot(engine) is not null
     };
 
-    /// <summary>The engine actually in use for this running session.</summary>
-    public string GetActiveEngine() => _tts.Name;
+    /*
+     * The engine actually in use for this running session -- or, while the first build is still out, what this session
+     * is set to speak with. Reported rather than blocked because a caller here is drawing a screen: the answer changes
+     * when an engine that was not there arrives, and only if it never arrives was the guess wrong.
+     */
+    public string GetActiveEngine() => _tts?.Name ?? _preferredEngine;
 
     /// <summary>Switches the speech engine without a restart; only engines whose runtime pack is installed can be
     /// selected. Returns false when the switch did not happen, leaving the current engine speaking.</summary>
@@ -248,6 +274,13 @@ namespace EQLogParser.Audio
         return false;
       }
 
+      /*
+       * Waits for the engine this session started with before replacing it. A switch is a retire-and-swap: it would
+       * build a second engine alongside the one still being created, then throw the first away -- seconds of inference
+       * for nothing, and two engines mapping the same native runtime.
+       */
+      await _ready.ReadyAsync.ConfigureAwait(false);
+
       var wanted = TtsEngineFactory.Normalize(engine);
 
       if (string.IsNullOrEmpty(wanted))
@@ -255,11 +288,22 @@ namespace EQLogParser.Audio
         return false;
       }
 
-      // Already speaking it, or nothing on disk to speak it with. Reported as "no switch" either way; the picker tells
-      // those two apart from what it can see on disk.
-      if (string.Equals(wanted, GetActiveEngine(), StringComparison.OrdinalIgnoreCase) || !EngineIsAvailable(wanted))
+      // Nothing on disk to speak it with is a no-switch; the picker tells that apart from a failure by what it can see.
+      if (!EngineIsAvailable(wanted))
       {
-        return string.Equals(wanted, GetActiveEngine(), StringComparison.OrdinalIgnoreCase);
+        return false;
+      }
+
+      /*
+       * Already speaking it. Asked of the engine itself rather than of GetActiveEngine, which answers with the
+       * configured engine while none exists yet: "you are already speaking kokoro" would be false there, and it is also
+       * the only way a machine whose first build failed can install an engine from this window.
+       */
+      var active = _tts?.Name;
+
+      if (active is not null && string.Equals(wanted, active, StringComparison.OrdinalIgnoreCase))
+      {
+        return true;
       }
 
       var (switched, voices) = await SwitchUnderGateAsync(wanted).ConfigureAwait(false);
@@ -311,7 +355,7 @@ namespace EQLogParser.Audio
 
         if (next is null)
         {
-          Log.Debug($"Unable to switch the TTS engine to {wanted}; staying on {previous.Name}.");
+          Log.Debug($"Unable to switch the TTS engine to {wanted}; staying on {previous?.Name ?? "nothing"}.");
           return (false, voices);
         }
 
@@ -324,14 +368,11 @@ namespace EQLogParser.Audio
           // success and then deliver silence; the current engine keeps the microphone.
           if (next.GetVoices().Count == 0)
           {
-            Log.Debug($"{wanted} has no usable voices; staying on {previous.Name}.");
+            Log.Debug($"{wanted} has no usable voices; staying on {previous?.Name ?? "nothing"}.");
             return (false, voices);
           }
 
-          foreach (var requested in _requestedVoices)
-          {
-            next.SetVoice(requested.Key, requested.Value);
-          }
+          BindAllRequestedVoices(next);
         }
         catch (Exception ex)
         {
@@ -407,14 +448,27 @@ namespace EQLogParser.Audio
     /*
      * Proves the engine that started the session. Takes the synthesis gate because proving voices is engine lifecycle
      * work, the same as the creation and release a switch performs; nothing may speak with an engine while it runs,
-     * and this must not run against an engine somebody else has already retired. Also the single point that waits for
-     * the constructor's thread pool build of that engine.
+     * and this must not run against an engine somebody else has already retired. Also the one point that waits for the
+     * constructor's build of that engine, and the place that says out loud when a machine has no speech at all instead
+     * of waiting forever for an engine that is never coming.
      */
     public async Task LoadValidVoicesAsync()
     {
-      await _engineReady.ConfigureAwait(false);
+      await _ready.ReadyAsync.ConfigureAwait(false);
 
       var engine = _tts;
+
+      if (engine is null)
+      {
+        // Either nothing could be built or the session was already closing. Both mean "no voices to prove", and the
+        // warning belongs to a live session, where the user's only evidence would otherwise be silence.
+        if (!_disposed)
+        {
+          Log.Warn("No TTS engine is running. Callouts stay silent until an engine is enabled on the TTS Engine screen.");
+        }
+
+        return;
+      }
 
       await _synthGate.WaitAsync().ConfigureAwait(false);
 
@@ -435,11 +489,53 @@ namespace EQLogParser.Audio
         Log.Warn($"{engine.Name} TTS has no usable voices on this machine. Callouts stay silent until an engine is " +
           "enabled on the TTS Engine screen.");
       }
+
+      /*
+       * The engine exists and has proved its voices now, so anything a player asked for while it did not exist can be
+       * bound. Unreachable while startup still waits here before showing a window; it is what lets that wait go.
+       */
+      ReapplyRequestedVoices();
     }
 
+    /*
+     * Gives an engine the voices players asked for before it existed -- the same handover a switch performs, for the
+     * engine that arrived last instead of next. Warm-up follows: an engine that appeared in the middle of a raid
+     * leaving would otherwise keep every one of those voices cold, and the first callout says so.
+     */
+    private void ReapplyRequestedVoices()
+    {
+      var engine = _tts;
+
+      if (engine is null || _requestedVoices.IsEmpty)
+      {
+        return;
+      }
+
+      lock (_engineLock)
+      {
+        BindAllRequestedVoices(engine);
+      }
+
+      foreach (var voice in _requestedVoices.Values.Distinct(StringComparer.OrdinalIgnoreCase))
+      {
+        WarmUpVoice(voice);
+      }
+    }
+
+    /*
+     * The four questions a screen asks about voices. None of them waits for an engine: the answers come from a grid or
+     * a dropdown during layout, and inference on the UI thread is not what a display name is worth. Each falls back to
+     * the least wrong value -- no list, no default, a name shown as itself -- all of which the callers already handle
+     * for a machine whose engine has no voices at all.
+     */
     public List<string> GetVoiceList()
     {
       var engine = _tts;
+
+      if (engine is null)
+      {
+        return [];
+      }
 
       lock (_engineLock)
       {
@@ -451,6 +547,11 @@ namespace EQLogParser.Audio
     {
       var engine = _tts;
 
+      if (engine is null)
+      {
+        return string.Empty;
+      }
+
       lock (_engineLock)
       {
         return engine.GetDefaultVoice();
@@ -461,6 +562,11 @@ namespace EQLogParser.Audio
     {
       var engine = _tts;
 
+      if (engine is null)
+      {
+        return voice;
+      }
+
       lock (_engineLock)
       {
         return engine.GetVoiceDisplayName(voice);
@@ -470,6 +576,11 @@ namespace EQLogParser.Audio
     public string GetVoiceSpokenName(string voice)
     {
       var engine = _tts;
+
+      if (engine is null)
+      {
+        return voice;
+      }
 
       lock (_engineLock)
       {
@@ -514,9 +625,29 @@ namespace EQLogParser.Audio
     {
       var engine = _tts;
 
+      if (engine is null)
+      {
+        // The request itself is already recorded in _requestedVoices by the caller, so this is a delay rather than a
+        // loss: ReapplyRequestedVoices binds everything outstanding the moment an engine exists.
+        return;
+      }
+
       lock (_engineLock)
       {
         engine.SetVoice(id, voice);
+      }
+    }
+
+    /*
+     * Hands every requested voice to an engine. Locked by whoever needs it: during a switch the new engine is not
+     * reachable by anybody else yet and needs no lock; a live one does. One copy because "what a new engine has to be
+     * told" must not exist twice and drift.
+     */
+    private void BindAllRequestedVoices(ITtsEngine engine)
+    {
+      foreach (var requested in _requestedVoices)
+      {
+        engine.SetVoice(requested.Key, requested.Value);
       }
     }
 
@@ -537,6 +668,13 @@ namespace EQLogParser.Audio
       }
 
       var engine = _tts;
+
+      if (engine is null)
+      {
+        // Nothing to prepare with. Whoever binds the voices when an engine arrives queues the warm-up again.
+        return;
+      }
+
       var target = string.IsNullOrEmpty(voice) ? SpokenVoice(engine, null) : voice;
 
       if (string.IsNullOrEmpty(target))
@@ -634,9 +772,19 @@ namespace EQLogParser.Audio
 
           try
           {
-            // The engine may have changed since this was queued. Warm what is speaking now rather than what was
-            // selected then; an engine handed a voice it does not have falls back to its own default.
-            await _tts.WarmUpVoiceAsync(item.Voice).ConfigureAwait(false);
+            /*
+             * The engine may have changed since this was queued. Warm what is speaking now rather than what was
+             * selected then; an engine handed a voice it does not have falls back to its own default. None speaking
+             * yet leaves the item unprepared -- binding voices on arrival queues it again.
+             */
+            var warming = _tts;
+
+            if (warming is null)
+            {
+              break;
+            }
+
+            await warming.WarmUpVoiceAsync(item.Voice).ConfigureAwait(false);
             prepared = true;
           }
           catch (Exception ex)
@@ -726,9 +874,12 @@ namespace EQLogParser.Audio
           // swap: see BindVoice for why engine state is only ever touched under _engineLock
           var engine = _tts;
 
-          lock (_engineLock)
+          if (engine is not null)
           {
-            engine.RemoveVoice(id);
+            lock (_engineLock)
+            {
+              engine.RemoveVoice(id);
+            }
           }
         }
 
@@ -995,7 +1146,23 @@ namespace EQLogParser.Audio
     private async Task<(byte[] pcm, int sampleRate)> SynthesizeCachedAsync(string playerId, string voice, string text,
       Func<ITtsEngine, string, Task<(byte[] pcm, int sampleRate)>> synthesize)
     {
+      /*
+       * The one place text becomes voice, and therefore the one place that has to wait for an engine. A callout whose
+       * words cannot be spoken yet waits here rather than speaking half of nothing; a callout that plays a recorded
+       * file never comes through, so sound-file triggers are not held up by a model loading.
+       *
+       * An already completed signal costs nothing: awaiting it runs on, in place.
+       */
+      await _ready.ReadyAsync.ConfigureAwait(false);
+
       var probedEngine = _tts;
+
+      if (probedEngine is null)
+      {
+        // No engine, so no speech and nothing to cache. The caller's own "no audio" path reports it.
+        return (null, 0);
+      }
+
       var probedVoice = _cache is null ? null : RequestedVoice(probedEngine, playerId, voice);
       var probe = _cache is null ? null : BuildCacheKey(probedEngine.Name, probedVoice, text);
 

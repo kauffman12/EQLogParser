@@ -39,7 +39,14 @@ namespace EQLogParser
      * reader can act on - the voice load, the trigger database opened on this thread, the main window's construction, the trigger manager,
      * and the first Show. They are registered as fields so a span can be opened before the phase it measures and closed after it throws.
      */
-    private static readonly int VoicesId = PerfCounters.Register("app.voices");
+    /*
+     * Registered off the UI thread although it sits on the startup critical path, because what it measures is an await rather than blocked
+     * work: the engine build runs on the thread pool inside EQLogParser.Audio and this thread is idle while it runs. A stall line names what
+     * was in progress next to frames that were starved of the UI thread by something else, and "app.voices" there would send a reader to wait
+     * on a thread that was never busy. The span is still worth having open: PerfCounters.ResolveParent walks the stack, so the engine creation
+     * inside AudioManager is attributed to it, which keeps a launch cost readable instead of an anonymous gap in the table.
+     */
+    private static readonly int VoicesId = PerfCounters.Register("app.voices", uiThread: false);
 
     /*
      * Speech costs are measured inside EQLogParser.Audio, which references no counter code at all, so they arrive through AudioManager.PerfSink
