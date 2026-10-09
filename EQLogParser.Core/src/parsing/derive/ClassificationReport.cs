@@ -735,14 +735,53 @@ namespace EQLogParser
    */
   internal static class ClassificationCommands
   {
-    /// <summary>"That is a player / pet / merc / NPC." Writes the verdict that outranks every rule.</summary>
-    public static void SetVerdict(IdentityOverrideStore overrides, string name, IdentityKind kind) =>
-      overrides.Set(name, kind);
+    /*
+     * The ONE door for "this is what that name is", from every surface: the Names window's Type cell, the fight grid's and the
+     * summary panes' Set-as cascade, and the Assign-as-pet items (which now come through here too instead of writing a pet-map row
+     * alone). Two halves, in this order, and THE ORDER IS THE RULE:
+     *
+     *   1. FORGET — an operator decision replaces everything this application believed about the name (2026-10-09: "if im making
+     *      a manual decision id like to remove all previous knowledge and accept what im saying"). The ledger row (its verdict, its
+     *      "one of ours" roster bit, the class it carried) and every registry claim: verified player (players.txt), verified pet,
+     *      mercenary, game-generated name, the took-an-action flag, and the pet-map row (petmapping.txt). A verdict that only ADDS a
+     *      claim leaves those answers standing underneath, and several of them are read by seams that never ask the override — which
+     *      is the field report this replaces: "changed a player to an NPC and they kept behaving like a player".
+     *   2. ASSERT — the override (R10-manual) is Certain and applied after the rule book on every pass, so it outranks what the rules
+     *      conclude AND what they learn afterwards; the operator's word is not a tie-breaker new evidence can outvote. Forgetting
+     *      first is also what makes the pet case work at all: AddPetToPlayerNoLock refuses to reassign a VERIFIED PLAYER, and a name
+     *      the parser verified as a player is exactly the population an operator assigns, so that menu write used to land nowhere.
+     *
+     * IdentityKind.Unknown means "take my claim back": forget, remove the override, let this capture's own lines answer again. A click
+     * that changes nothing writes nothing — evicting in order to re-say the same thing would cost a roster row for free.
+     */
+    public static bool ApplyVerdict(string? name, IdentityKind kind, string? petOf = null)
+    {
+      if (string.IsNullOrWhiteSpace(name)) return false;
+      var n = name!;
 
-    /// <summary>"I was wrong, let the rules answer again." The rules' own conclusion comes back on the next derive;
-    /// a roster entry learned from loot lines is NOT deleted by this — it takes a verdict of the other kind, or the
-    /// roster's own removal, which lives on PlayerRegistry.</summary>
-    public static void ClearVerdict(IdentityOverrideStore overrides, string name) => overrides.Remove(name);
+      if (IdentityOverrideStore.Instance.TryGet(n, out var existing) && existing == kind
+          && (kind != IdentityKind.Pet || string.Equals(IdentityLookup.OwnerOf(n), petOf, StringComparison.OrdinalIgnoreCase)))
+        return false;
+
+      Forget(n);
+
+      if (kind == IdentityKind.Unknown) IdentityOverrideStore.Instance.Remove(n);
+      else IdentityOverrideStore.Instance.Set(n, kind);
+
+      // The owner is the operator's claim too, and it lands on the pair — never invented: no petOf means "a pet of nobody I know".
+      if (kind == IdentityKind.Pet && !string.IsNullOrWhiteSpace(petOf)) PlayerRegistry.Instance.AddPetToPlayer(n, petOf!);
+
+      return true;
+    }
+
+    /// <summary>Drop every memory this application holds about a name: the ledger row and the registry's own claims. Writes no verdict.</summary>
+    public static void Forget(string name)
+    {
+      if (string.IsNullOrEmpty(name)) return;
+
+      IdentityPriorStore.Instance.Remove(name);
+      PlayerRegistry.Instance.ForgetName(name);
+    }
 
     /// <summary>"Forget what this server's older logs concluded about this name." Removes the ledger row only —
     /// verdicts, roster membership and pet mappings are separate files and stay as they are. With no entry left the

@@ -530,9 +530,10 @@ namespace EQLogParser
        * prior as well — this capture's answer now outranks it, and IdentityPriorStore.Recall stops offering it, so the
        * "... in previous log" tooltip cannot survive the override that replaced it.
        */
-      if (option.Kind == IdentityKind.Unknown) ClassificationCommands.ClearVerdict(IdentityOverrideStore.Instance, row.Name);
-      else ClassificationCommands.SetVerdict(IdentityOverrideStore.Instance, row.Name, option.Kind);
-      IdentityPriorStore.Instance.Remove(row.Name);
+      // One call, both halves: FORGET what this app believed (ledger row included) then ASSERT the operator's word.
+      // The eviction is not a bonus — a verdict that only adds a claim leaves players.txt and petmapping.txt answering
+      // underneath it, which is how a name kept behaving like a player after being told NPC.
+      ClassificationCommands.ApplyVerdict(row.Name, option.Kind);
 
       Reconcile();
       typeEditPopup.IsOpen = false;

@@ -19,7 +19,9 @@ namespace EQLogParser;
  *
  * All three used to be a bare
  * `PlayerRegistry.AddPetToPlayer`, which persists petmapping.txt, raises `EventsNewPetMapping` for the list — and stops there:
- * the pair reaches no board until some unrelated event happens to rebuild one.
+ * the pair reaches no board until some unrelated event happens to rebuild one. They now go through
+ * `ClassificationCommands.ApplyVerdict`, which forgets every earlier claim about that name, asserts Kind = Pet, and writes the
+ * pair — the eviction being what makes the write land at all (see `Assign`).
  *
  * A re-derive is what makes it land, not a grid patch. An ownership claim decides WHICH ROW a fact belongs to:
  * `RegistrySeed.ApplyPetMappings` writes the pair as an OWNERSHIP interval (Strong, over all time), and `FightSummarySource`
@@ -53,7 +55,14 @@ internal static class PetAssignment
 
     if (AlreadyClaimed(pet!, owner!)) return false;
 
-    PlayerRegistry.Instance.AddPetToPlayer(pet!, owner!);
+    /*
+     * The same door a Set-as-NPC uses (ClassificationCommands.ApplyVerdict), and that is the whole fix: FORGET what this
+     * application believed about `pet`, then assert Kind = Pet and write the pair. Going straight to AddPetToPlayer used to be a
+     * silent no-op for exactly the names an operator assigns — AddPetToPlayerNoLock refuses to reassign a VERIFIED PLAYER, and a
+     * summon the parser verified as a player (it cast spells, it took heals) is precisely what "this is somebody's pet" is said
+     * ABOUT. It also left the kind alone, so the name kept its own row on every board.
+     */
+    ClassificationCommands.ApplyVerdict(pet, IdentityKind.Pet, owner);
 
     // Which claim was made, in the file that carries the raid: a pair appearing in petmapping.txt with no line beside it is
     // the kind of thing that needs a name-shaped explanation later. Debug would be the wrong level — this is an operator act,

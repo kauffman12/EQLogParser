@@ -112,13 +112,13 @@ public class IdentityLookupTest
   [TestMethod]
   public void TheOperatorEndsTheKindQuestionInBothDirections()
   {
-    ClassificationCommands.SetVerdict(IdentityOverrideStore.Instance, "Betebeatz", IdentityKind.Npc);
+    ClassificationCommands.ApplyVerdict("Betebeatz", IdentityKind.Npc);
     Watch("Betebeatz", IdentityKind.Player);
 
     Assert.AreEqual(IdentityKind.Npc, IdentityLookup.KindAt("Betebeatz"), "a verdict is an answer, not a hint");
     Assert.IsFalse(IdentityLookup.IsPlayer("Betebeatz"));
 
-    ClassificationCommands.ClearVerdict(IdentityOverrideStore.Instance, "Betebeatz");
+    ClassificationCommands.ApplyVerdict("Betebeatz", IdentityKind.Unknown);
     Assert.IsTrue(IdentityLookup.IsPlayer("Betebeatz"), "the unset has to give the question back to the capture");
   }
 

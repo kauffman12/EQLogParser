@@ -469,6 +469,49 @@ namespace EQLogParser
       EventsRemoveVerifiedPlayer?.Invoke(name);
     }
 
+    /*
+     * Forget everything this registry believes about ONE name. The operator's manual verdict means "what I am telling you
+     * replaces what you worked out" (2026-10-09), and that knowledge sits in six places: the verified-player list (which is
+     * players.txt), the verified-pet list, the game-generated pet names, the mercenary set, the "took a player or pet action"
+     * flag, and the pet map with its own aging stamp (petmapping.txt). Leaving any one of them standing is how a verdict looks
+     * like it did nothing — the case that made this necessary is concrete: AddPetToPlayerNoLock refuses to make a VERIFIED
+     * PLAYER somebody's pet, and a name listed as a player is exactly what an operator assigns ("this thing on my damage board
+     * is Atvar's summon"), so the menu's write landed nowhere at all.
+     *
+     * Two lanes are deliberately untouched. Class keeps its own record and its own verb (the Class cell): class answers a
+     * different question, and one operator decision silently cancelling another nobody was asked about is worse than a stale
+     * cell — especially the hand-typed default. And "X is the owner of Fluffy" says nothing about what X IS, so pairs where
+     * this name is the OWNER stay; only the pair that claims THIS name is a pet leaves.
+     *
+     * Keys go through the same normalization the Add paths used (StringCache interns and capitalizes the first letter), plus
+     * the raw form, because a hand-edited file can arrive either way — a forget that misses by case is a verdict that did not.
+     */
+    internal void ForgetName(string name)
+    {
+      if (string.IsNullOrEmpty(name)) return;
+
+      RemoveVerifiedPlayer(name);
+      RemoveVerifiedPet(name);          // takes the pet-map row for the same name with it
+
+      var capitalized = TextUtils.CapitalizeFirst(name);
+      lock (_lock)
+      {
+        _gameGeneratedPets.TryRemove(capitalized, out _);
+        _mercs.TryRemove(capitalized, out _);
+        _takenPetOrPlayerAction.TryRemove(capitalized, out _);
+
+        foreach (var key in new[] { capitalized, name })
+        {
+          _verifiedPlayers.TryRemove(key, out _);
+          _verifiedPets.TryRemove(key, out _);
+          _mercs.TryRemove(key, out _);
+          _takenPetOrPlayerAction.TryRemove(key, out _);
+          _petSeenAt.TryRemove(key, out _);
+          TryRemovePetMappingNoLock(key);   // marks petmapping.txt dirty when a row left
+        }
+      }
+    }
+
     internal void Init()
     {
       lock (_lock)

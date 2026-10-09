@@ -74,7 +74,7 @@ public class NamesTableTest
   [TestMethod]
   public void AVerdictTheOperatorGaveSaysSo()
   {
-    ClassificationCommands.SetVerdict(IdentityOverrideStore.Instance, "Nicky", IdentityKind.Npc);
+    ClassificationCommands.ApplyVerdict("Nicky", IdentityKind.Npc);
 
     var row = NamesTable.RowFrom(CensusWithoutACapture().Find("Nicky")!);
 
@@ -103,10 +103,10 @@ public class NamesTableTest
   public void AClaimTakenBackSaysNothingIdentifiedIt()
   {
     PlayerRegistry.Instance.AddVerifiedPlayer("Ghosty", DateUtil.ToDotNetSeconds(DateTime.Now));
-    ClassificationCommands.SetVerdict(IdentityOverrideStore.Instance, "Ghosty", IdentityKind.Npc);
+    ClassificationCommands.ApplyVerdict("Ghosty", IdentityKind.Npc);
     Assert.IsTrue(CensusWithoutACapture().Find("Ghosty")!.IsOperatorVerdict, "control: the claim was never written");
 
-    ClassificationCommands.ClearVerdict(IdentityOverrideStore.Instance, "Ghosty");
+    ClassificationCommands.ApplyVerdict("Ghosty", IdentityKind.Unknown);
     var row = NamesTable.RowFrom(CensusWithoutACapture().Find("Ghosty")!);
 
     Assert.AreEqual(IdentityKind.Unknown, row.Kind);
@@ -149,7 +149,7 @@ public class NamesTableTest
   public void AContradictedRosterIsKnownOnTheRowAndSaidNowhere()
   {
     PlayerRegistry.Instance.AddVerifiedPlayer("Berta", 1_700_000_000);
-    ClassificationCommands.SetVerdict(IdentityOverrideStore.Instance, "Berta", IdentityKind.Npc);
+    ClassificationCommands.ApplyVerdict("Berta", IdentityKind.Npc);
 
     var census = CensusWithoutACapture();
     var row = NamesTable.RowFrom(census.Find("Berta")!);
@@ -441,9 +441,9 @@ public class NamesTableTest
     Assert.AreEqual(0, census.UnresolvedInCapture);
 
     // Every command has to survive being asked with nothing selected and nothing open.
-    ClassificationCommands.SetVerdict(IdentityOverrideStore.Instance, "Nobody", IdentityKind.Npc);
+    ClassificationCommands.ApplyVerdict("Nobody", IdentityKind.Npc);
     ClassificationCommands.ClearPrior(IdentityPriorStore.Instance, "Nobody");
-    ClassificationCommands.ClearVerdict(IdentityOverrideStore.Instance, "Nobody");
+    ClassificationCommands.ApplyVerdict("Nobody", IdentityKind.Unknown);
   }
 
   /*

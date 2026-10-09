@@ -50,7 +50,7 @@ internal static class IdentityVocabulary
    * Everything a Type cell offers, in one list — the whole identity vocabulary at a glance, which is what the old
    * right-click menu could not do (five items had to be remembered, and "take my claim back" was not even among them).
    *
-   * "Clear claim" carries IdentityKind.Unknown because that is exactly what ClassificationCommands.ClearVerdict means —
+   * "Clear claim" carries IdentityKind.Unknown because that is exactly what ClassificationCommands.ApplyVerdict(…, Unknown) means —
    * remove the operator's row (and this server's memory of the name) and let this capture's own rules show through. Each
    * word appears EXACTLY ONCE: the retired menu listed NPC twice, and a dropdown with two entries for one answer is a bug
    * a person notices only after clicking.

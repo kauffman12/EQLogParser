@@ -202,23 +202,52 @@ public class ClassificationReportTest
     PlayerRegistry.Instance.AddVerifiedPlayerByOperator(name, DateTimeOffset.UtcNow.ToUnixTimeSeconds());
     Assert.IsFalse(Census().Find(name)!.IsDisagreement, "a verified pet read as a disagreement before any override");
 
-    ClassificationCommands.SetVerdict(IdentityOverrideStore.Instance, name, IdentityKind.Npc);
+    ClassificationCommands.ApplyVerdict(name, IdentityKind.Npc);
     var overridden = Census().Find(name)!;
     Assert.IsTrue(overridden.IsOperatorVerdict, "the census did not say the verdict was the operator's");
     Assert.AreEqual(IdentityKind.Npc, overridden.Kind, "an override that outranks nothing is not an override");
-    Assert.IsTrue(overridden.IsDisagreement, "a demoted name on the roster is exactly what this column is for");
 
-    ClassificationCommands.ClearVerdict(IdentityOverrideStore.Instance, name);
+    /*
+     * NOT a disagreement any more — and that is the new law, not a lost assertion (2026-10-09: a manual decision removes
+     * previous knowledge). The roster's contradicting answer was evicted with the click, so there is nothing left for the row
+     * to disagree WITH; painting a contradiction the operator just resolved would make the column mean "something happened"
+     * instead of "somebody should look". What the flag is for survives in the companion test below: RULES that demote a name
+     * the roster still claims.
+     */
+    Assert.IsFalse(overridden.IsDisagreement,
+        "the operator's word took the roster's answer with it, so this row now reads NPC · Override and nothing contradicts it");
+    Assert.IsFalse(PlayerRegistry.Instance.IsVerifiedPlayer(name), "…because the roster entry is gone rather than overruled");
+
+    ClassificationCommands.ApplyVerdict(name, IdentityKind.Unknown);
     var reverted = Census().Find(name)!;
     Assert.IsFalse(reverted.IsOperatorVerdict, "reverting left the operator's mark on the row");
     Assert.AreEqual(IdentityKind.Pet, reverted.Kind, "the rules' own answer did not come back after a revert");
+  }
+
+  /*
+   * The disagreement column's real job, kept on purpose: the RULES demoting a name the roster still claims is the audit signal
+   * an operator acts on (a raider pushed to the enemy column loses her damage on the flip). An operator verdict no longer feeds
+   * it — see AnOverrideReadsBackAsTheOperatorsOwnVerdict — so this shape needs its own fixture rather than inheriting coverage.
+   */
+  [TestMethod]
+  public void ARuleThatDemotesANameTheRosterClaimsStillFlags()
+  {
+    // The registry takes any name (its IsPossiblePlayerName gate runs at SAVE, on the way to players.txt), and this test never
+    // writes a file — it asks what the census reports while the roster holds the contradicting answer.
+    var name = Census().Rows.First(r => r.Kind == IdentityKind.Npc).Name;
+
+    PlayerRegistry.Instance.AddVerifiedPlayerByOperator(name, DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+
+    var row = Census().Find(name)!;
+    Assert.IsFalse(row.IsOperatorVerdict, "fixture: nothing was clicked here — the classifier is the one disagreeing");
+    Assert.IsTrue(row.IsDisagreement, "players.txt says one of ours, the rules say NPC: that is the row this column exists for");
   }
 
   [TestMethod]
   public void AVerdictSurvivesTheFileItWasWrittenTo()
   {
     var name = Census().Rows.First(r => r.Kind == IdentityKind.Npc).Name;
-    ClassificationCommands.SetVerdict(IdentityOverrideStore.Instance, name, IdentityKind.Merc);
+    ClassificationCommands.ApplyVerdict(name, IdentityKind.Merc);
 
     // Re-read from disk the way a fresh window on a reopened log would.
     IdentityOverrideStore.Instance.Init("Census Test");
@@ -455,7 +484,7 @@ public class ClassificationReportTest
     remembered.SetIdentity("Zzquietname", IdentityKind.Npc, RuleStrength.Medium, "R7-graph");
     ledger.Record(remembered, ["Zzquietname"], 1_700_000_000);
 
-    ClassificationCommands.SetVerdict(IdentityOverrideStore.Instance, "Zzquietname", IdentityKind.Merc);
+    ClassificationCommands.ApplyVerdict("Zzquietname", IdentityKind.Merc);
 
     var row = Census(ledger).Find("Zzquietname")!;
     Assert.AreEqual(IdentityKind.Merc, row.Kind);
@@ -474,7 +503,7 @@ public class ClassificationReportTest
     var name = BusiestAttacker();
     var rosterBefore = PlayerRegistry.Instance.GetVerifiedPlayers();
 
-    ClassificationCommands.SetVerdict(IdentityOverrideStore.Instance, name, IdentityKind.Npc);
+    ClassificationCommands.ApplyVerdict(name, IdentityKind.Npc);
 
     CollectionAssert.AreEquivalent(rosterBefore, PlayerRegistry.Instance.GetVerifiedPlayers(),
       "\"this is an NPC\" moved the roster as well as the verdict");

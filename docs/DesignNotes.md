@@ -10281,3 +10281,51 @@ last night's file (`ResistPopulationTest`, both directions: the hole contributes
 **The general law**: any field a dictionary keys on is non-null by contract, checked at the producer *and* at the reader when
 the data can be old. And in this app a caught build exception is indistinguishable from "nothing happened" — which is why the
 `Derived damage summary error` line is the first thing to grep when a pane looks stale.
+
+## An operator's word replaces what this application believed
+
+The request (2026-10-09): *"if im making a manual decision id like to remove all previous knowledge and accept what im
+saying. then of course new knowledge could be built later … my rule would override."* Two halves — **FORGET**, then
+**ASSERT** — and the app only ever did the second one, which is why "Set as NPC" looked half-done and "Assign as Pet of"
+looked broken.
+
+**Why "just add the override" was not enough.** `identity-overrides.txt` outranks every rule *inside the timeline*, but the
+timeline is not the only thing that answers questions about a name. `PlayerRegistry` keeps six claims that several seams read
+directly — verified player (the row in players.txt), verified pet, game-generated pet name, mercenary, "took a player or pet
+action", and the pet-map row with its aging stamp (petmapping.txt) — plus `IdentityPriorStore`'s row for the name (its verdict,
+its `Ours` roster bit, its class). A name told NPC while players.txt still claimed it kept answering "one of ours" through
+whatever path never asked the override.
+
+**And the pet case was a hard refusal, not a delay.** `PlayerRegistry.AddPetToPlayerNoLock` will not reassign a **verified
+player** into somebody's pet (`… && !IsVerifiedPlayer(pet)`) — and the names an operator assigns are exactly that population:
+a summon the parser verified as a player because it cast spells and took heals. The refusal returned `false`, no caller looked
+at it, and the click did nothing at all. Measured on a live capture before the fix: assigned name still `kind=Player`,
+`EntityTimeline.OwnerOf` empty, its own row on the damage board at **406,455** — identical before and after the click.
+
+**The door now** (`ClassificationCommands.ApplyVerdict(name, kind, petOf)`): forget the ledger row + all six registry claims,
+then write the override (and, for a pet with an owner named, the pair). Forgetting first is load-bearing twice over: it removes
+the answers that would otherwise be read underneath, and it removes the verified-player entry so `AddPetToPlayer` accepts the
+pair. Order asserted by behaviour, not by review. The override itself is Certain and applied after the rule book every pass, so
+it outranks what the rules conclude *and* what they learn afterwards — "my rule would override" is a strength fact, and
+`OperatorVerdictForgetsTest.TheManualWordOutranksKnowledgeLearnedAfterIt` pins it by re-learning the name after the verdict.
+
+**Measured after** (same capture, same probe): `Assign Trelania as Pet of Sancus` → `kind=Pet · R10-manual`,
+`ownerOf=Sancus` (a Strong, all-time ownership interval from `RegistrySeed.ApplyPetMappings`), the materialized records carry
+`AttackerOwner=Sancus`, and the board goes **60 rows → 59** with the raid total **identical** at 135,359,019,953 — the damage did
+not vanish, it moved under its person, which is what `+Pets` means. Taking the claim back (`ApplyVerdict(name, Unknown)`)
+restored `kind=Player · R4-spell`, empty owner, and the 406,455 row. `Set <registry-verified name> as NPC` now removes its board
+row entirely (`nameRows 1 → 0`, class map drops it); before, the row stayed behind.
+
+**Two lanes deliberately not forgotten.** *Class* answers a different question and has its own verb (the Class cell), so one
+click cancelling a hand-typed class default would be an operator decision silently undoing another. And *"Fluffy belongs to X"*
+is a claim about Fluffy, not about what X is — pairs where this name is the OWNER survive, because the old cascade threw those
+away and made operators retype them (standing law: `RemovingAPlayerKeepsItsPetMapping`).
+
+**A no-op writes nothing**: same override word and same owner means no eviction and no file write — forgetting in order to
+re-say the same thing would cost a roster row for free. Consequence worth knowing: an operator NPC verdict on a name the roster
+claimed also removes the `IsDisagreement` flag for that row (there is nothing left to contradict), which is why the rules-demoting-a-roster-name
+case now has its own test (`ARuleThatDemotesANameTheRosterClaimsStillFlags`).
+
+**Still open (decision 1)**: a name told NPC can leave a `Name +Pets` row behind — ``Name`s pet`` damage folds on the LINE's
+possessive word regardless of what the owner now reads (Jondolar: raid total correctly −1,386,760,156 while an 8,582,650
+`Jondolar +Pets` row stayed). That is a separate question — whether an NPC's summons belong on a raid board at all.

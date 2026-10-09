@@ -129,8 +129,10 @@ internal static class IdentityVerdictMenu
   {
     if (string.IsNullOrEmpty(name)) return;
 
-    IdentityOverrideStore.Instance.Set(name, kind);
-    IdentityPriorStore.Instance.Remove(name);
+    // One door, both halves: FORGET (ledger row, verified player/pet, mercenary, action flag, the pet-map row) then ASSERT
+    // the override. A verdict that only wrote identity-overrides.txt left players.txt and petmapping.txt answering underneath
+    // it — the seam that reports "they kept behaving like a player after I said NPC" (ClassificationCommands.ApplyVerdict).
+    ClassificationCommands.ApplyVerdict(name, kind);
 
     // A verdict changes which row a name's damage sits on, and that shows up only after the pass — so this click owns that pass's
     // announce rather than letting a whole-capture selection's budget decline it (UnaskedRefresh).
