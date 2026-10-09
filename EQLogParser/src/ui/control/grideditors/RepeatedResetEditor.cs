@@ -107,9 +107,13 @@ namespace EQLogParser
     }
 
     /*
-     * Telling the pane there is unsaved work. The checkbox's binding writes RepeatedResetSlides - a sibling of the property this row tracks -
-     * so the grid raises no ValueChanged and Save would never enable; see TriggersView.OnEditorSiblingChanged for why this does not nudge the
-     * number the way PatternEditor nudges its text.
+     * Telling the pane THE BOX MOVED. The checkbox's binding writes RepeatedResetSlides - a sibling of the property this row tracks - so the grid
+     * raises no ValueChanged and Save would never enable; see TriggersView.OnEditorSiblingChanged for why this does not nudge the number the way
+     * PatternEditor nudges its text.
+     *
+     * The pane, not this handler, decides whether a move is unsaved work, and that split must not be collapsed here: a row being attached to a
+     * newly selected trigger pushes the stored value into this box, which arrives as a Checked event with no click behind it. Reporting only the
+     * move keeps that a fact rather than an edit.
      *
      * The CustomCheckBoxTemplate contains its own ToggleButton-ish visual with no Content, which surfaces as OriginalSource on a real click;
      * PatternEditor ignores those, and so does this, or one click counts twice.

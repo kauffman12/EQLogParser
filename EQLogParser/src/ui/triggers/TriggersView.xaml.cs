@@ -636,15 +636,33 @@ namespace EQLogParser
      * PatternEditor gets away with it by nudging its pattern text through a transient space to force the row's own event. A numeric box cannot
      * be nudged without writing a number nobody typed (and a 0.76 that snaps back to 0.75 would also fire the real setter twice against the
      * window's own bounds), so this editor is simply told what dirty means and the pane decides validity through the same helper its event uses.
+     *
+     * What it is told is "the box moved", not "something changed", and that difference is the whole method. Every other door in this pane asks
+     * the second question before waking Save - ValueChanged compares the brush properties against trigger.Node.TriggerData, the last saved value -
+     * and this one must too, because a checkbox cannot tell a click from a load: selecting or refreshing a row pushes the STORED value into a box
+     * that had none, which raises Checked about work nobody did. Without the comparison Save lit up for every trigger clicked.
      */
     private void OnEditorSiblingChanged()
     {
-      if (generalPropertyGrid.SelectedObject is TriggerPropertyModel trigger)
+      if (generalPropertyGrid.SelectedObject is not TriggerPropertyModel trigger || !SlidingResetUnsaved(trigger))
       {
-        saveButton.IsEnabled = IsTriggerSaveValid(trigger);
-        cancelButton.IsEnabled = true;
+        return;
       }
+
+      saveButton.IsEnabled = IsTriggerSaveValid(trigger);
+      cancelButton.IsEnabled = true;
     }
+
+    /*
+     * "Is there unsaved work in the sliding reset box?" Answered against trigger.Node.TriggerData, the last saved value - the same baseline
+     * ValueChanged uses for the brush properties.
+     *
+     * The word UNSAVED is the point of the name: the sign is what broke once (asking the opposite question re-lights Save on every click on a
+     * trigger), and it is its own method because a test can reach a question but not a click - constructing TriggersView needs the whole pane,
+     * while this compares two plain values on the model the pane already holds.
+     */
+    internal static bool SlidingResetUnsaved(TriggerPropertyModel trigger) =>
+      trigger.RepeatedResetSlides != trigger.Node.TriggerData.RepeatedResetSlides;
 
     private void ValueChanged(object sender, ValueChangedEventArgs args)
     {

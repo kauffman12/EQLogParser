@@ -1496,3 +1496,16 @@ After completing work, verify:
   change** (`ClearForNewCapture`: last night's click cannot own this capture's first announce). A test summon's name must not be in `npcs.txt`: `Stormclaw` reads Npc at R6 and
   its facts are mob-on-mob, so the fold never happens and the test measures a drop (that is why the fixture says `Picklepaw`).
   Measurements: docs/DesignNotes.md → "A refresh that answers for itself", "Where a board build's time actually goes".
+- **A checkbox cannot tell a click from a load — ask the model, never the widget** (2026-11): Trigger Manager's *Sliding Reset*
+  box lit up Save on **every trigger clicked**, because its `Checked` handler marked the pane dirty and the binding raises that
+  event when a newly selected row pushes its STORED value into the box. Every other door in that pane already answers "is there
+  unsaved work?" by comparing against `trigger.Node.TriggerData` (the last saved row) — `ValueChanged` does it for the brush
+  properties, `PatternEditor` for the text — so the fix is not a new cleverness but the same second question:
+  `TriggersView.SlidingResetUnsaved(trigger)` compares `RepeatedResetSlides` against that row, and `OnEditorSiblingChanged`
+  returns untouched when nothing moved. The editor keeps signalling *the box moved* (it must keep nudging the row for
+  `RepeatedResetMode` too, or switching away from Sliding leaves a live reset running the old pattern while Save stays grey);
+  **the pane owns the dirty decision**, because a handler of a widget event cannot know whether a human produced it.
+  `TriggerPropertyGridAdapter.Coalesce` is the standing place for any future door that marks dirty from a raw editor event —
+  wrap the mark in "did any editable property actually differ", never add another ungated `MarkDirty`. The question is asserted
+  headless (`SlidingResetDirtyStateTest`, plain assembly: two plain values on a model, no WPF), because a test can reach a
+  question but not a click — constructing `TriggersView` needs the whole trigger DB.
