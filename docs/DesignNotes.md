@@ -10672,7 +10672,11 @@ nothing). → "Non-goals" in `docs/perf-memory-status.md`, "A histogram nobody a
 Only `DesignNotes.md`, `CodingStandards.md`, `ReleaseChecklist.md` and `TtsPacks.md` are in git. A local working document earns its keep
 by holding something this file cannot yet carry — an open decision, a backlog with ids, or knowledge about the world outside this
 repository. When its durable half has moved here, it is deleted rather than archived: a stale plan is worse than no plan, because the
-next reader cannot tell a closed question from an unasked one. Current dispositions:
+next reader cannot tell a closed question from an unasked one. **Five were deleted on 2026-10-09** under that rule — `ClassificationReview.md`
+(a review of a branch state, findings all closed, and it cited a summary file that had itself been deleted), `legacy-replacement-map.md` (a map of the
+engine deleted in `5d45d866`), `batch-parsing-plan.md` (a two-pass pipeline that was never built; its successor is the shipped one),
+`combat-text-overlay-design.md` (the original FCT brief, whose recommended presets were later removed) and
+`incremental-summary-refresh-review1.md` (its findings now carried, with dispositions, in `docs/incremental-summary-refresh.md` §0). Current dispositions:
 
 | document | state | why |
 |---|---|---|
