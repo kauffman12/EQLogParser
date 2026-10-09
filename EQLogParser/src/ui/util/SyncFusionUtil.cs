@@ -92,6 +92,9 @@ namespace EQLogParser
           }
           else
           {
+            // Which shape a click chose, per window: docking placement is invisible in the log, and this is the one door that
+            // moves a window at all. Rare (a menu click) and it names itself, so it can stay at Info.
+            Log.Info($"dock: {name} shown as {showState}");
             DockingManager.SetState(control, showState);
             dockSite.ActivateWindow(name);
           }
@@ -113,15 +116,20 @@ namespace EQLogParser
      * relocate", and it reads only attached properties, so a test can ask it about a ContentControl without building a
      * docking layout (which needs a realized DockingManager and therefore a live window).
      *
-     * A side wins over every other shape: SideInDockedMode is what the markup says about where this window belongs, and an
-     * edge belongs to a strip whose tabs slide out. Only a window with no side - one that docks in the middle - earns
-     * Document/Dock/Float.
+     * A STRIP PANE comes back auto-hidden, and a strip pane is a window that declares BOTH an edge side and that it cannot be
+     * a document - which is exactly how the XAML writes the identity strip (SideInDockedMode="Right" plus CanDocument="False",
+     * every one of them). The side alone is NOT that declaration: SideInDockedMode is also a property the docking layout itself
+     * reports, so a window last sitting against an edge when the layout was saved comes back from dockSite.xml wearing that side,
+     * and a chart asked "open in the tab container" would slide out of a strip instead. Document-ness answers first because it is
+     * the one property here that only markup sets: AddDocument says true for the middle windows, CanDocument="False" marks the
+     * strips, nothing else touches either.
      */
     internal static DockState ShowStateFor(ContentControl window)
     {
+      var canDocument = DockingManager.GetCanDocument(window);
       var side = DockingManager.GetSideInDockedMode(window);
-      if (side is DockSide.Left or DockSide.Right or DockSide.Top or DockSide.Bottom) return DockState.AutoHidden;
-      if (DockingManager.GetCanDocument(window)) return DockState.Document;
+      if (!canDocument && side is DockSide.Left or DockSide.Right or DockSide.Top or DockSide.Bottom) return DockState.AutoHidden;
+      if (canDocument) return DockState.Document;
       if (DockingManager.GetCanDock(window)) return DockState.Dock;
       if (DockingManager.GetCanFloat(window)) return DockState.Float;
 
@@ -230,6 +238,14 @@ namespace EQLogParser
       var control = new ContentControl { Name = name };
       control.Content = Activator.CreateInstance(type);
       DockingManager.SetHeader(control, title);
+      // Say out loud what the next two lines mean. This is every window the app opens at runtime - the charts, timelines, hit
+      // frequency and death log from the summary toolbars, and the whole AddDocument fleet - and it asks for Document while
+      // turning CanDock OFF. Left unstated, document-ness is whatever the control defaults to, so both halves of "open this
+      // window" could miss: SetState here can be coerced away from a shape the window has no permission for, and a later menu
+      // show falls through CanDock to Float. The field report was charts opening as separate popup windows and one docked on
+      // the left instead of in the tab container. CanDocument is the property markup answers truthfully about (the XAML panes
+      // set it False), unlike SideInDockedMode, which a restored layout rewrites - see ShowStateFor.
+      DockingManager.SetCanDocument(control, true);
       DockingManager.SetState(control, DockState.Document);
       DockingManager.SetCanDock(control, false);
       dockSite.Children.Add(control);

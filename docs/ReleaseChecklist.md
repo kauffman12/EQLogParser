@@ -85,3 +85,11 @@ Two behaviours depend on state a headless test cannot build; both have shipped b
 - [ ] **Restart with an OLD `dockSite.xml`.** Launch on a layout saved by a previous build: the window state must survive. The
   retired Verified Players / Verified Pets windows are empty hidden shells for exactly this reason — `LoadDockState` throws on a
   name it cannot resolve and the catch calls `ResetState()`, which wipes every pane, size and position.
+- [ ] **Charts open as tabs in the main container.** Reported from a Windows run (one opened as an undocked popup, one docked on
+  the left): open DPS Trends / Healing Trends from the View menu **and** a Hit Frequency or ADPS Timeline from a summary toolbar —
+  each must land in the tab container, not floating, not against an edge. Fix: the runtime-opened windows now declare
+  `CanDocument=true` beside the `SetState(Document)`/`CanDock=false` they already asked for, and `ShowStateFor` consults document-ness
+  *before* `SideInDockedMode` (the side getter does not return what markup set — a `Tabbed` pane reads back as an edge — so it cannot
+  decide the shape of a document). `eqlogparser.log` prints `dock: <window> shown as Document` for every menu-opened window; toolbar
+  windows have no line (different door, `SyncFusionUtil.OpenWindow`). If one still opens wrong, record WHICH window and whether
+  **Reset Window State** (drops `dockSite.xml`) changes it — that separates the code path from a saved layout.

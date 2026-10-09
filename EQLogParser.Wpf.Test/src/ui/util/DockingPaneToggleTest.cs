@@ -20,21 +20,62 @@ namespace EQLogParser;
 [TestClass]
 public class DockingPaneToggleTest
 {
+  /*
+   * The identity strip in markup: SideInDockedMode="Right" PLUS CanDocument="False" — every one of the strip's panes is written
+   * that way, and it is the PAIR that says "this window belongs to a strip". Panes are dockable (that is what let the old ladder
+   * grab them and drop them over the tables), so neither property alone is the declaration.
+   */
   [TestMethod]
-  public void APaneOnAnEdgeComesBackAutoHidden()
+  public void APaneOnAnEdgeThatCannotBeADocumentComesBackAutoHidden()
   {
     Sta.Run(() =>
     {
-      // The identity strip in markup: SideInDockedMode="Right", and the panes are dockable (that is what let the old
-      // ladder grab them). The side has to win, or showing Pet Owners / Player-NPC Identity moves it off the edge.
-      Assert.AreEqual(DockState.AutoHidden, SyncFusionUtil.ShowStateFor(MakePane(DockSide.Right)),
-                      "a right-hand pane was handed back a docking state: the menu item moves the window it opens");
-
       foreach (var side in new[] { DockSide.Left, DockSide.Right, DockSide.Top, DockSide.Bottom })
       {
-        Assert.AreEqual(DockState.AutoHidden, SyncFusionUtil.ShowStateFor(MakePane(side, document: true)),
-                        $"an edge pane ({side}) was handed back a state other than AutoHidden — documentable or not");
+        Assert.AreEqual(DockState.AutoHidden, SyncFusionUtil.ShowStateFor(MakePane(side)),
+                        $"a strip pane ({side}) was handed back a state other than AutoHidden — showing it moves it off the edge");
       }
+    });
+  }
+
+  /*
+   * THE CHART REGRESSION, reported from a Windows run: "the charts open in strange places — they used to open in the main tab
+   * container, but one opened as an undocked popup and one docked on the left".
+   *
+   * The side property is NOT a trustworthy declaration of where a window belongs, and this assembly already knew it (see the note
+   * below: a pane set to Tabbed reads back as an edge from the vendor's getter). `AddDocument` creates every chart with
+   * SideInDockedMode=Tabbed, so a rule that asks the side FIRST hands charts whatever the coercion says — a strip on some edge —
+   * and a window that does not affirm it can be a document falls through CanDock (which AddDocument's own _CreateControl turns
+   * off) to Float. Asking document-ness first is the fix: the two properties markup controls are the two the getter answers
+   * truthfully about, and the side only decides for windows that cannot be documents at all.
+   */
+  [TestMethod]
+  public void AWindowThatCanBeADocumentComesBackAsADocumentWhateverSideItWears()
+  {
+    Sta.Run(() =>
+    {
+      foreach (var side in new[] { DockSide.Left, DockSide.Right, DockSide.Top, DockSide.Bottom, DockSide.Tabbed })
+      {
+        var chart = MakePane(side, document: true, dock: false, canFloat: true);
+        Assert.AreEqual(DockState.Document, SyncFusionUtil.ShowStateFor(chart),
+                        $"a document-capable window wearing side {side} was not handed back Document — the menu opens it outside " +
+                        "the tab container (float or a strip), which is the reported regression");
+      }
+    });
+  }
+
+  /*
+   * Nothing showable answers Hidden rather than somewhere arbitrary: with no document, dock or float permission the caller logs a
+   * warning instead of inventing a place for the window.
+   */
+  [TestMethod]
+  public void AWindowWithNoShowableStateIsReportedRatherThanPlaced()
+  {
+    Sta.Run(() =>
+    {
+      var stuck = MakePane(DockSide.None);
+      Assert.AreEqual(DockState.Hidden, SyncFusionUtil.ShowStateFor(stuck),
+                      "a window with nothing to show was handed a state anyway: ToggleWindow would place it somewhere arbitrary");
     });
   }
 
@@ -50,6 +91,11 @@ public class DockingPaneToggleTest
    * restart"), it is green on real vendor values, and ShowStateFor's edge branch is what prevents the relocation.
    */
 
+  /*
+   * Built as the XAML builds it: a strip pane is an edge with CanDocument=False (the default here), and the tests that want the
+   * other shape pass document:true. CanDock/CanFloat are off by default so a test states which permission it is about — the one
+   * thing a window must NOT have to earn its own shape back.
+   */
   private static ContentControl MakePane(DockSide side, bool document = false, bool dock = false, bool canFloat = false)
   {
     var pane = new ContentControl();
