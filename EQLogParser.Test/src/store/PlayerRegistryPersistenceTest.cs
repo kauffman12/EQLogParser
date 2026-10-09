@@ -92,6 +92,7 @@ public class PlayerRegistryPersistenceTest
   {
     IdentityPriorStore.Instance.Init(Server);
     RosterImport.ImportPlayersFileOnce(Server);
+    RosterImport.ImportPetMapOnce(Server);   // MainWindow's real open order: both frozen feeds land in the ledger, then the registry seeds
     PlayerRegistry.Instance.Init();
   }
 
@@ -298,79 +299,132 @@ public class PlayerRegistryPersistenceTest
    * clean, and a row that predates the stamp format is never deleted for something it cannot have.
    */
 
+  /*
+   * Since 2026-10-09 the pet side of that freeze is the roster side: petmapping.txt is read once per folder into the ledger's
+   * OWNERSHIP lane and never written again, so what used to be asserted about file lines is now asserted about lane rows. The three
+   * laws survived the move intact — dead weight leaves, a row nobody observed is never judged for an age it cannot have, and a
+   * sighting restarts a clock — and two new ones arrived with the freeze: the file's bytes never change, and a folder that never had
+   * one does not grow one.
+   */
+
   [TestMethod]
-  public void APetUnseenForStaleDaysLeavesTheFile()
+  public void NothingThisProgramDoesRewritesPetMappingTxt()
   {
-    WritePetMappingFile([$"Ghrahb=Ziggy|{StampDaysAgo(PlayerRegistry.StaleDays + 5)}"]);
-    PlayerRegistry.Instance.Init();
+    /*
+     * The freeze as bytes, both directions — the same pair of asserts players.txt has, because the same bug shape applies: a store
+     * this program rewrites is a store an operator cannot correct. Everything a session concludes goes to identity-priors.txt.
+     */
+    var stamped = Math.Round(DateUtil.ToDotNetSeconds(DateTime.Now.AddDays(-2)));
+    WritePetMappingFile(["# hand curated, do not touch", $"Fluffy={stamped}", "Squirticus=" + Labels.Unassigned]);
+    var before = File.ReadAllLines(PetMappingFilePath);
 
-    Assert.IsTrue(PlayerRegistry.Instance.GetPetMappings().Any(m => m.Pet == "Ghrahb" && m.Owner == "Ziggy"),
-      "control: the row did not load (it is dropped at SAVE, not at load, like a stale roster row)");
-
-    // A save only writes the mapping file when something changed, so change something.
-    PlayerRegistry.Instance.AddPetToPlayer("Bubbles", "Ziggy");
+    OpenLogFolder();
+    PlayerRegistry.Instance.AddVerifiedPlayer("Newbie", DateUtil.ToDotNetSeconds(DateTime.Now));
+    PlayerRegistry.Instance.AddPetToPlayer("Fluffy", "Ziggy");      // re-assigning an existing pair
+    PlayerRegistry.Instance.AddPetToPlayer("Bobo", "Newbie");        // learning a new one
+    PlayerRegistry.Instance.ForgetName("Squirticus");                // taking one back
+    PlayerRegistry.Instance.Save();
+    OpenLogFolder();
+    PlayerRegistry.Instance.AddPetToPlayer("Late", "Newbie");
     PlayerRegistry.Instance.Save();
 
-    var saved = ReadPetMappingFile();
-    Assert.IsFalse(saved.Any(l => l.Contains("Ghrahb", StringComparison.Ordinal)),
-      $"a pet not sighted for {PlayerRegistry.StaleDays} days stayed in the file; file = [{string.Join(" | ", saved)}]");
-    Assert.IsTrue(saved.Any(l => l.StartsWith("Bubbles=", StringComparison.Ordinal)),
-      $"the save that dropped the stale row skipped the new one too; file = [{string.Join(" | ", saved)}]");
+    var after = File.ReadAllLines(PetMappingFilePath);
+    CollectionAssert.AreEqual(before, after,
+      "petmapping.txt was edited; the file is a frozen feed now — read once per folder, never written");
+
+    // ...and the learning landed somewhere. If this fails while the assert above passes, memory went nowhere.
+    Assert.IsTrue(IdentityPriorStore.Instance.TryGetOwner("Fluffy", out var fluffy) && fluffy == "Ziggy",
+      "a re-assigned pair did not reach the ledger's ownership lane");
+    Assert.IsTrue(IdentityPriorStore.Instance.TryGetOwner("Late", out var late) && late == "Newbie",
+      "a pair learned after the reload did not reach the ledger either");
+    Assert.IsFalse(IdentityPriorStore.Instance.TryGetOwner("Squirticus"),
+      "the taken-back mapping came back; a removal is an eviction, not a suggestion");
+
+    var freshFolder = Path.Combine(_tempDir, "NeverHadPets");
+    Directory.CreateDirectory(freshFolder);
+    ConfigUtil.ServerName = "NeverHadPets";
+    IdentityPriorStore.Instance.Init("NeverHadPets");
+    RosterImport.ImportPetMapOnce("NeverHadPets");
+    PlayerRegistry.Instance.Init();
+    PlayerRegistry.Instance.AddPetToPlayer("Somename", "Newbie");
+    PlayerRegistry.Instance.Save();
+
+    Assert.IsFalse(File.Exists(Path.Combine(freshFolder, "petmapping.txt")),
+      "a session invented a petmapping.txt in a folder that never had one");
+
+    ConfigUtil.ServerName = Server;
   }
 
   [TestMethod]
-  public void APetRowCarryingNoStampIsAStatementAndStays()
+  public void APetUnseenForStaleDaysHasNoMappingWhileRecentOnesStay()
   {
     /*
-     * Two kinds of row have no stamp: one an operator typed into the file, and one written by a build that predates the
-     * format. Neither can be judged for an age it never recorded — this is exactly the law that stopped Save() from
-     * deleting curated player rows, applied to the pet file.
+     * Dead weight still leaves, and the lane is where it lives now. One difference from the frozen-file era is worth naming: the
+     * ledger prunes what it flushes, so a mapping already past the dial dies with the import that carried it rather than waiting for
+     * some later write — stricter by one flush, and nobody has to open a log twice to find out their map is stale.
      */
-    WritePetMappingFile(["Fluffy=Ziggy"]);
-    PlayerRegistry.Instance.Init();
+    WritePetMappingFile([$"Ghrahb=Ziggy|{StampDaysAgo(PlayerRegistry.StaleDays + 5)}", $"Fluffy=Ziggy|{StampDaysAgo(1)}"]);
+    OpenLogFolder();
 
+    Assert.IsFalse(IdentityPriorStore.Instance.TryGetOwner("Ghrahb"),
+      $"a pet not sighted for {PlayerRegistry.StaleDays} days kept its mapping");
+    Assert.IsTrue(IdentityPriorStore.Instance.TryGetOwner("Fluffy", out _),
+      "the mapping that aged out took a recent one with it");
+    Assert.IsFalse(PlayerRegistry.Instance.GetPetMappings().Any(m => m.Pet == "Ghrahb"),
+      "the expired row still reached this session's live map");
+    Assert.IsTrue(PlayerRegistry.Instance.GetPetMappings().Any(m => m.Pet == "Fluffy"),
+      "the recent row did not reach this session's live map");
+
+    // And it stays out: the import's once-per-folder gate holds while the ledger carries mappings at all, so ageing is not quietly
+    // undone by the frozen file beside it. (Delete identity-priors.txt and the operator's file comes back — that is the rollback.)
     PlayerRegistry.Instance.AddPetToPlayer("Bubbles", "Ziggy");
     PlayerRegistry.Instance.Save();
+    OpenLogFolder();
 
-    var saved = ReadPetMappingFile();
-    Assert.IsTrue(saved.Any(l => l.StartsWith("Fluffy=Ziggy", StringComparison.Ordinal)),
-      $"an un-stamped row was retired; file = [{string.Join(" | ", saved)}]");
-    Assert.IsFalse(saved.Any(l => l.Contains('|') && l.StartsWith("Fluffy", StringComparison.Ordinal)),
-      $"a stamp was invented for a row nobody observed; file = [{string.Join(" | ", saved)}]");
+    Assert.IsFalse(PlayerRegistry.Instance.GetPetMappings().Any(m => m.Pet == "Ghrahb"),
+      "the aged-out mapping came back from the frozen file on the next open");
   }
 
   [TestMethod]
   public void ASightingRefreshesTheStampAndTheOwnerTextStaysClean()
   {
-    // A row whose stored stamp is stale, sighted again today: it must survive, and reappear stamped.
-    WritePetMappingFile([$"Ghrahb=Ziggy|{StampDaysAgo(PlayerRegistry.StaleDays + 5)}"]);
-    PlayerRegistry.Instance.Init();
+    /*
+     * A mapping whose stamp is old-but-alive (StaleDays - 30: inside the dial, so it loads), sighted again today. It must survive and
+     * reappear stamped, because a row that never moves its clock is a row that leaves on the next flush no matter how often the pet
+     * walks into the log. A row ALREADY past the dial is a different case and belongs to the test above.
+     */
+    var oldStamp = StampDaysAsLong(PlayerRegistry.StaleDays - 30);
+    WritePetMappingFile([$"Ghrahb=Ziggy|{oldStamp}"]);
+    OpenLogFolder();
+
+    Assert.IsTrue(IdentityPriorStore.Instance.TryGetOwner("Ghrahb", out var loaded) && loaded == "Ziggy",
+      "control: a mapping inside the dial did not load");
 
     // What a capture does with a possessive line: the pair is already known, and the pet is sighted anyway.
     PlayerRegistry.Instance.AddVerifiedPet("Ghrahb");
     PlayerRegistry.Instance.AddPetToPlayer("Bubbles", "Ziggy");
     PlayerRegistry.Instance.Save();
 
-    var saved = ReadPetMappingFile();
-    var ghrahb = saved.FirstOrDefault(l => l.StartsWith("Ghrahb=", StringComparison.Ordinal));
-    Assert.IsNotNull(ghrahb, $"a pet sighted today still aged out; file = [{string.Join(" | ", saved)}]");
+    Assert.IsTrue(IdentityPriorStore.Instance.TryGetOwner("Ghrahb", out var sighted),
+      "a pet sighted today still aged out");
 
-    var owner = ghrahb[(ghrahb.IndexOf('=') + 1)..];
-    Assert.IsTrue(owner.Contains('|'), "the surviving row lost its stamp, so it can never age");
-    Assert.AreEqual("Ziggy", owner[..owner.IndexOf('|')], "the stamp leaked into the owner text");
+    // The stamp is a column, never part of the value: an owner that printed "Ziggy|6389..." would reach +Pets folding and every grid.
+    Assert.AreEqual("Ziggy", sighted, "the stamp leaked into the owner text");
 
+    var seenAtS = IdentityPriorStore.Instance.PetEntries().Where(e => e.Key == "Ghrahb").Select(e => e.Value.SeenAtS).Single();
+    Assert.IsTrue(seenAtS > oldStamp,
+      "the sighting did not move the row's clock forward, so the next prune takes it anyway");
     Assert.IsTrue(PlayerRegistry.Instance.GetPetMappings().Any(m => m.Pet == "Ghrahb" && m.Owner == "Ziggy"),
-      "the in-memory mapping carries a stamp the UI would print");
+      "the in-memory mapping carries something the UI would print");
   }
 
   [TestMethod]
   public void OneDialAgesBothMemories()
   {
     /*
-     * StaleDays is one number for everything this class remembers, and both halves have to answer to it in the same save: a
-     * player forgotten while their pet is still remembered is not a rule anybody chose. The player half now means the LEDGER's
-     * roster lane (the file it used to live in is frozen), so this test is also the proof that the freeze did not quietly drop the
-     * expiry along with the writer.
+     * StaleDays is one number for every memory this application keeps, and both lanes have to answer to it in the same flush: a
+     * player forgotten while their pet is still remembered is not a rule anybody chose. Both halves live in identity-priors.txt now,
+     * which makes this the proof that freezing the two files did not quietly drop the expiry along with the writers.
      */
     var tooOld = Math.Round(DateUtil.ToDotNetSeconds(DateTime.Now.AddDays(-(PlayerRegistry.StaleDays + 5))));
     WritePlayersFile([$"Goruuk={tooOld}"]);
@@ -382,14 +436,22 @@ public class PlayerRegistryPersistenceTest
     PlayerRegistry.Instance.Save();
 
     Assert.IsFalse(IdentityPriorStore.Instance.TryGetRoster("Goruuk"),
-      "the roster row survived the dial (the ledger is where that row lives now)");
-    Assert.IsFalse(ReadPetMappingFile().Any(l => l.Contains("Ghrahb", StringComparison.Ordinal)),
-      "the pet row survived the same dial");
+      "the roster row survived the dial");
+    Assert.IsFalse(IdentityPriorStore.Instance.TryGetOwner("Ghrahb"),
+      "the pet mapping survived the same dial");
+
+    // Neither file paid for it: the bytes are what the operator left.
+    Assert.AreEqual($"Goruuk={tooOld}", File.ReadAllLines(PlayersFilePath).Single(),
+      "aging a roster name edited its frozen feed");
+    Assert.AreEqual($"Ghrahb=Goruuk|{StampDaysAgo(PlayerRegistry.StaleDays + 5)}", File.ReadAllLines(PetMappingFilePath).Single(),
+      "aging a pet mapping edited its frozen feed");
   }
 
   // ---- helpers -----------------------------------------------------------------------------------------------
 
   private static string StampDaysAgo(int days) => Math.Round(DateUtil.ToDotNetSeconds(DateTime.Now.AddDays(-days))).ToString();
+
+  private static long StampDaysAsLong(int days) => (long)Math.Round(DateUtil.ToDotNetSeconds(DateTime.Now.AddDays(-days)));
 
   private string PetMappingFilePath => Path.Combine(_tempDir, Server, "petmapping.txt");
 

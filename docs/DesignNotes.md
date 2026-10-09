@@ -10438,3 +10438,42 @@ import path, and two paths into one list is what this commit removed. If that be
 named file — never as a silent reload of a file the app no longer owns. What is NOT in doubt: deleting players.txt changes nothing for a
 folder already imported, and the `players.imported.txt` archive rename is still not performed, because the file on disk is now inert
 history rather than a store mid-migration.
+
+## petmapping.txt is a feed now
+
+2026-10-09, the day after the roster freeze, from the request that also asked for an Owner column in Names and Identities:
+*"the old pet mapping should be as strong as the ones we decide by spell cast or whatever... I assume we at least remove everything
+from the old definitions."* The file had already lost its writer-role in the sense that `RosterImport.ImportPetMapOnce` copies it into
+the ledger's ownership lane once per folder — but `PlayerRegistry.Init` still read it directly as live input **and** `Save()` still
+rewrote it on a 30-second timer. Two memories of one pair, seeded in two orders, with whichever wrote last winning: the exact shape the
+roster freeze removed, still standing next to it.
+
+**What left, and what replaced it.**
+
+- `PlayerRegistry.Save` no longer serializes `_petToPlayer`; neither does log close, neither does the timer. `ConfigUtil.SavePetMapping`
+  is deleted, not parked — `petmapping.txt` has one reader now (`ImportPetMapOnce`) and zero writers.
+- `PlayerRegistry.Init` seeds its live map from `IdentityPriorStore.PetEntries()` alone. The in-memory `_petToPlayer` stays (the ingest
+  reads it mid-line, `EventsNewPetMapping` still fires) but it is a **mirror of the lane**, not a second store.
+- Every pair the app learns writes the lane instead: `AddPetToPlayerNoLock` calls `RememberPet(..., persist:false)` and the 30-second
+  tick's single `FlushChanges()` batches a night of sightings into one write. A removal takes the owner column with it (`ForgetPet`),
+  leaving any verdict or roster bit on that name — different statements, same row discipline as everywhere else in the ledger.
+- `_petSeenAt` died with the writer. Ageing runs on the lane's `SeenAtS`, and `TouchPetStampNoLock` is what keeps "we saw this summon
+  tonight" a separate act from "this pair exists": a pet already on the map still has to have its clock moved or the 200-day dial retires
+  a mapping for a pet that walks into the log every night. A load still moves nothing ("a load is not a sighting", the law that once
+  aged 96.6 % of this file's rows out in one startup).
+
+**R26-savedpet: where the operator's trust actually lives.** A mapping alone says nothing about what a name *IS* — ownership is not
+identity, which is why `RegistrySeed` sits at strength 8 and why imported pairs used to leave an unengaged pet Unplaced. The request was
+to trust them like behaviour, so the claim arrives as a rule at **Strong** (the tier R7/R9/R15/R17/R19 live in), running last beside R25
+so it cannot feed the inference stages, and Unknown-only: *ask the answer, not the claim list*, so any name this capture placed keeps that
+verdict. Two refusals keep it honest — placeholder owners (`Labels.Unassigned` "Unknown Pet Owner", `Labels.Unk`) are data for the meter
+but nobody's word about identity, and a lane name no combat line used never enters the pool (same `NameIndexOf` gate as R25). It is
+deliberately absent from `WorthRemembering`: restating an import as a witnessed verdict would let old file data come back tomorrow wearing
+the costume of something observed.
+
+**Two behaviour differences worth knowing.** (1) The ledger prunes what it flushes, so a mapping already past the dial dies with the
+import that carried it instead of surviving until some later write — stricter by one flush, and pinned as such
+(`APetUnseenForStaleDaysHasNoMappingWhileRecentOnesStay`). (2) An aged-out mapping stays out across reopens *while the ledger carries any
+mappings at all*, because the import's gate is "does this folder's lane already have owner rows"; deleting `identity-priors.txt` remains
+the documented way to make a folder re-read its frozen feeds. Both files keep their bytes either way — the tests assert that as file
+contents, in both directions: a folder that has `petmapping.txt` never sees it edited, and a folder that never had one never grows one.

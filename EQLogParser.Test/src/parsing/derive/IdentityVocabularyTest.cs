@@ -62,6 +62,7 @@ public class IdentityVocabularyTest
      * (docs/DesignNotes.md -> "players.txt is a feed now").
      */
     "R25-roster",
+    "R26-savedpet",
 
     /*
      * Not a rule, and it cannot come out of a fixture: PipelineHarness clears PlayerRegistry, so nothing in any test

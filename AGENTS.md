@@ -16,7 +16,7 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
 - **Zero warnings is the bar, and it is counted, not hoped for**: `dotnet build EQLogParser.sln -p:EnableWindowsTargeting=true --no-incremental --nologo 2>&1 | grep -cE ": (warning|error) [A-Z]+[0-9]+"` prints **0** before a commit
   (`--no-incremental` is load-bearing: MSBuild reports diagnostics only for projects it recompiles, so counting after `dotnet test` prints 0 about
   assemblies it never rebuilt — that is how an MSTEST0017 in a new test file shipped past a "clean" local count; docs/CodingStandards.md → "Build Warnings") (match diagnostics, not words — MSBuild's summary always contains `0 Warning(s)`). Nine CS8632s shipped once because a file in Core (project `Nullable=disable`) wrote `string?` without opening `#nullable enable annotations`; the whole fleet is one pragma, and it is why each new warning dies in its own commit (docs/CodingStandards.md → "Build Warnings", "Nullable Reference Types"). Nothing in this repo suppresses a warning (`#pragma warning disable`, `<NoWarn>`) — fixing the cause is the rule.
-- Tests: `dotnet test EQLogParser.Test/EQLogParser.Test.csproj` is the non-WPF suite (**1,917 passed / 15 env-gated skips**, plain `net10.0`, 2026-11 — the trim-moves-no-ordinal law, the once-per-doubling watermark and the ungrowable-empty-array floor are in that count). `EQLogParser.Wpf.Test` targets `net10.0-windows` and only
+- Tests: `dotnet test EQLogParser.Test/EQLogParser.Test.csproj` is the non-WPF suite (**1,923 passed / 15 env-gated skips**, plain `net10.0`, 2026-11 — the trim-moves-no-ordinal law, the once-per-doubling watermark and the ungrowable-empty-array floor are in that count). `EQLogParser.Wpf.Test` targets `net10.0-windows` and only
   runs on Windows; its total belongs to a Windows run rather than being quoted here (a `[TestMethod]` grep counts data-driven variants and is not an executed count) — add it to the headless number instead of trusting arithmetic. A Windows run that *loses* `Sta.Run` bodies rather than failing them is the failure mode to watch.
 - **Real-log corpus layout (local/, gitignored)**: `local/logs/live/` holds live-format captures; `local/logs/emu/` holds EMU-server captures (THJ/TSS/Heroes Forge shapes) that need the app's `EnableEmuParsing` behaviour. The env-gated real-log tests run them via **`EQLP_EMU=1`**, which sets `AppSettings.IsEmuParsingEnabled` for the duration of a `PipelineHarness` run (restored after — the flag is process-global and live-format logs misparse with it on). Without it an EMU capture parses with DamageLineParser's live grammar and silently loses the `(Owner: X)` / `scores a critical hit! (N)` shapes, so a parity run over `emu/` without the flag measures nothing. Timestamps are the same `[DDD MMM dd HH:mm:ss yyyy]` shape in both directories.
 
@@ -845,6 +845,31 @@ declare without `?`; add the directive only when the whole file is meant to hold
   changes an answer). (4) **No owner is invented** — the evidence names the pet, never the master; ownership still comes from the possessive
   words and petmapping.txt. Paired policy in `FightProjection`: only a charm-flipped defender survives the friendly-fire drop. Census, A/B and
   the retracted `'Zeus'` figure: docs/DesignNotes.md → "What NPC means here"; pinned by `PetSlotSpellTest`.
+
+- **petmapping.txt is a feed now: one ownership lane, and R26 gives it a vote** (2026-10-09). The freeze that removed players.txt's
+  writer left its twin standing — `PlayerRegistry.Init` read petmapping.txt as live input **and** `Save()` rewrote it every 30 s while
+  `IdentityPriorStore`'s `Owner` column already held the same pair. Both are gone: `ConfigUtil.SavePetMapping` is deleted (not parked),
+  `Init` seeds `_petToPlayer` from `IdentityPriorStore.PetEntries()` alone, and every learned pair writes the lane through
+  `RememberPet(..., persist:false)` with the 30-second tick's single `FlushChanges()` doing the IO. **The in-memory map stays** — the
+  ingest reads it mid-line and `EventsNewPetMapping` still fires — but it is a mirror, not a second store. `_petSeenAt` died with the
+  writer; ageing runs on the lane's `SeenAtS`, and `TouchPetStampNoLock` is what keeps "we saw this summon tonight" a separate act from
+  "this pair exists" (a mapped pet whose clock never moves is retired while it walks into the log nightly). **A load is still not a
+  sighting**: `init:true` everywhere, stamps carried verbatim. Two consequences to know: the ledger prunes what it flushes, so a mapping
+  already past `StaleDays` dies with the import that carried it (stricter by one flush than the file era, and pinned as such); and an
+  aged-out pair stays out across reopens **while the lane carries any mapping at all**, because the import's gate is per-folder
+  (`HasOwnerRows`) — deleting identity-priors.txt remains the only way to make a folder re-read its frozen feeds. Asserted as bytes in
+  both directions (`NothingThisProgramDoesRewritesPetMappingTxt`: a folder that has one never sees it edited, a folder that never had one
+  never grows one).
+  **R26-savedpet** is where "trust the old map like a spell cast" lives: a lane pair claims its pet name **Pet at Strong**, running
+  last beside R25 so it cannot feed inference stages. Four refusals, each pinned by `SavedPetOwnerClaimTest` — Unknown-only (**ask the
+  ANSWER, not the claim list**, so nothing this capture watched is outvoted), pool-gated (`NameIndexOf`, never interns: a summon no combat
+  line used gets no row and does not move `StateStamp`), **placeholder owners claim nothing** (`Labels.Unassigned` "Unknown Pet Owner"
+  and `Labels.Unk` are meter data and person-words, nobody's word about identity), and a foreign folder's ledger is silent (the
+  null-vs-empty `ServerName` trap: write it as "both sides carry a name and they match"). It invents no owner — folding still reads
+  `PlayerRegistry`/the possessive words — and it is deliberately absent from `WorthRemembering`, because restating an import as a
+  witnessed verdict would let old file data return next week wearing the costume of a sighting. **Any test that drives this must call
+  BOTH imports in MainWindow's order** (`IdentityPriorStore.Init` → `ImportPlayersFileOnce` → `ImportPetMapOnce` → `PlayerRegistry.Init`);
+  a fixture that imports only the roster loads an empty pet map and every assertion below it vacuums up into "control: nothing loaded".
 
   `IdentityKind.Spell` (Core) is neither side. Three predicates were pinned to the NPC arm when it was added, because every board
   was measured under the old reading: `FightProjection.SideAt` (both branches), `EntityTimeline.IsRaidVictimAt` (`not Npc and not Pet`

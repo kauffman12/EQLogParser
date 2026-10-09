@@ -86,7 +86,6 @@ namespace EQLogParser
      */
     private static readonly double SessionStamp = DateUtil.ToDotNetSeconds(DateTime.Now);
 
-    private readonly ConcurrentDictionary<string, double> _petSeenAt = new();
 
     private readonly ConcurrentDictionary<string, string> _petToPlayer = new();
     private readonly ConcurrentDictionary<string, ActivePlayerClass> _activePlayerClass = new(StringComparer.OrdinalIgnoreCase);
@@ -98,7 +97,6 @@ namespace EQLogParser
     private readonly Timer _saveTimer;
     private readonly TimeSpan _saveInterval = TimeSpan.FromSeconds(30);
     private readonly object _lock = new();
-    private volatile bool _petMappingUpdated;
 
     /*
      * MEMBERSHIP HAS NO FILE OF ITS OWN ANY MORE (2026-10-09). players.txt used to be rewritten from here every 30 seconds; the
@@ -106,10 +104,12 @@ namespace EQLogParser
      * this application last saw it) plus the class players.txt had nowhere to put. This flag says "membership rows were added or
      * taken away since the last flush", so Save's timer still batches a night of sightings into ONE file write.
      *
-     * Registry lock -> ledger gate is the ONLY nesting order in this class (Init reads the ledger's lanes under _lock; the ledger
-     * never calls back here — StaleDays is a constant). Flip that order and the flush deadlocks against a busy parse thread.
+     * ONE flag for both lanes, because one file carries them: membership (`Ours`) and ownership (`Owner`) are columns of the same
+     * ledger row, and the ledger writes that row itself. Registry lock -> ledger gate is the ONLY nesting order in this class (Init
+     * reads the ledger's lanes under _lock; the ledger never calls back here — StaleDays is a constant). Flip that order and the
+     * flush deadlocks against a busy parse thread.
      */
-    private volatile bool _rosterDirty;
+    private volatile bool _ledgerDirty;
 
     private PlayerRegistry()
     {
@@ -167,11 +167,9 @@ namespace EQLogParser
           _activePlayerClass.Clear();
           _takenPetOrPlayerAction.Clear();
           _verifiedPets.Clear();
-          _petSeenAt.Clear();
           _verifiedPlayers.Clear();
           _mercs.Clear();
-          _rosterDirty = false;
-          _petMappingUpdated = false;
+          _ledgerDirty = false;
         }
       }
     }
@@ -226,15 +224,11 @@ namespace EQLogParser
       var petMapping = default(PetMapping);
 
       /*
-       * A sighting refreshes the row's clock — including for a pet already known, which is the case that matters: the
-       * mapping loaded from petmapping.txt at Init and the pet walked back into the log. Without this the row would age
-       * out while being seen every night. The compare is what keeps it off the hot path: after the first sighting in a
-       * session there is nothing left to write.
+       * A sighting refreshes the row's clock — including for a pet this application already knew, which is the case that matters:
+       * the mapping that came in from memory whose summon walked back into tonight's log. The clock lives on the LEDGER row now
+       * (`RememberPet` moves `SeenAtS` forward and never back), so there is no per-name stamp left to keep here.
        */
-      if (!init && (!_petSeenAt.TryGetValue(name, out var lastSeen) || lastSeen < SessionStamp))
-      {
-        _petSeenAt[name] = SessionStamp;
-      }
+      if (!init) TouchPetStampNoLock(name);
 
       lock (_lock)
       {
@@ -358,7 +352,7 @@ namespace EQLogParser
       }
 
       ledger.RememberRoster(name, (long)Math.Max(0, playerTimeS), GetDefaultPlayerClass(name), persist: false);
-      _rosterDirty = true;
+      _ledgerDirty = true;
     }
 
     /*
@@ -372,7 +366,7 @@ namespace EQLogParser
       if (!string.Equals(ledger.ServerName, ConfigUtil.ServerName, StringComparison.OrdinalIgnoreCase)) return;
 
       ledger.ForgetRoster(name, persist: false);
-      _rosterDirty = true;
+      _ledgerDirty = true;
     }
 
     /*
@@ -566,8 +560,7 @@ namespace EQLogParser
           _verifiedPets.TryRemove(key, out _);
           _mercs.TryRemove(key, out _);
           _takenPetOrPlayerAction.TryRemove(key, out _);
-          _petSeenAt.TryRemove(key, out _);
-          TryRemovePetMappingNoLock(key);   // marks petmapping.txt dirty when a row left
+          TryRemovePetMappingNoLock(key);   // takes the ledger's owner column with it
         }
       }
     }
@@ -581,11 +574,9 @@ namespace EQLogParser
         _activePlayerClass.Clear();
         _takenPetOrPlayerAction.Clear();
         _verifiedPets.Clear();
-        _petSeenAt.Clear();
         _verifiedPlayers.Clear();
         _mercs.Clear();
-        _rosterDirty = false;
-        _petMappingUpdated = false;
+        _ledgerDirty = false;
 
         /*
          * The operator's own character is a player by definition, so this one name is not allowed to be in shadow:
@@ -606,34 +597,6 @@ namespace EQLogParser
          * writes it. docs/DesignNotes.md → "players.txt is a feed now".
          */
 
-        var mapping = ConfigUtil.ReadPetMapping();
-        foreach (var key in mapping.Keys)
-        {
-          if (!mapping.TryGetValue(key, out var ownerValue) || "You".Equals(key, StringComparison.OrdinalIgnoreCase))
-            continue;
-
-          /*
-           * One grammar for both readers of this file — see TryReadPetMapLine (it also lifts the sighting stamp off the
-           * tail so nothing downstream ever has to know it exists).
-           */
-          if (!TryReadPetMapLine(key, ownerValue, out var owner, out var seenAtS)) continue;
-          if (seenAtS > 0) _petSeenAt[key] = seenAtS;
-
-          if ("You".Equals(owner, StringComparison.OrdinalIgnoreCase))
-          {
-            owner = ConfigUtil.PlayerName;
-          }
-
-          // An owner is a person by construction: +Pets folding and the You-mapping both ask the player list.
-          if (!_verifiedPlayers.ContainsKey(owner))
-          {
-            AddVerifiedPlayer(owner, 0d, true);
-          }
-
-          AddVerifiedPet(key, true);
-          AddPetToPlayer(key, owner, true);
-        }
-
         /*
          * The ledger's roster lane is the durable half of this list (identity-priors.txt holds membership plus the class a
          * name was seen casting, which players.txt has nowhere to put). Seeding from it costs nothing while both files
@@ -647,10 +610,11 @@ namespace EQLogParser
         if (string.Equals(ledger.ServerName, ConfigUtil.ServerName, StringComparison.OrdinalIgnoreCase))
         {
           /*
-           * The ownership lane first, and for the same reason as the roster lane below: identity-priors.txt is what keeps
-           * this data after petmapping.txt stops being read. `RosterImport.ImportPetMapOnce` fills the lane from that file
-           * at the same moment, so while both exist this seed adds nothing — the pairs are already loaded above — and it is
-           * the whole memory on the day the file is gone.
+           * The ownership lane first, and it is no longer a warm-up beside a file this class also reads — it is the only input.
+           * `RosterImport.ImportPetMapOnce` lifts petmapping.txt into the lane at log open (once per folder, stamps carried
+           * verbatim) and NOTHING writes that file again, so these lines are where every pair — a decade of operator edits
+           * included — enters the session. The pairs still land in `_petToPlayer`, which stays the parse's live mirror: the
+           * ingest checks read it mid-line, and `EventsNewPetMapping` still fires for whatever is learned tonight.
            *
            * A pet whose ledger owner is not otherwise known also lands in the player list, exactly as the file loop above
            * does: an owner is a person by construction, and +Pets folding and the You-mapping both ask that list.
@@ -667,9 +631,7 @@ namespace EQLogParser
             if (!_verifiedPlayers.ContainsKey(owner!)) AddVerifiedPlayer(owner!, 0d, true);
             AddVerifiedPet(pet, true);
             AddPetToPlayer(pet, owner!, true);
-
-            // The lane's stamp is this app's sighting of the pet; carry it so an old mapping still ages on its own clock.
-            if (entry.Value.SeenAtS > 0 && !_petSeenAt.ContainsKey(pet)) _petSeenAt[pet] = entry.Value.SeenAtS;
+            // A load is not a sighting: the lane's own stamp rides on the row, and nothing here moves it forward.
           }
 
           foreach (var entry in ledger.RosterEntries())
@@ -686,15 +648,14 @@ namespace EQLogParser
             SetDefaultPlayerClass(name, entry.Value.Class, true);
           }
         }
-
-        _petMappingUpdated = false;
       }
     }
 
     /*
-     * The petmapping.txt grammar, ONE copy: `<pet>=<owner>[|<dotnet seconds>]`. Init loads through it and RosterImport
-     * carries the same pairs into the ledger's ownership lane, so the two readers cannot disagree about which rows are
-     * mappings — a pet one reader adopts and the other refuses is a pet whose owner folds on one board and not the other.
+     * The petmapping.txt grammar, ONE copy: `<pet>=<owner>[|<dotnet seconds>]`. `RosterImport.ImportPetMapOnce` is its only reader
+     * now that the file is frozen, and it stays a shared helper rather than being folded into the import so a future "re-read this
+     * folder's map" verb cannot invent a second grammar for the same lines. The shape of the old disagreement is still worth
+     * stating: a pet one reader adopts and the other refuses is a pet whose owner folds on one board and not the other.
      *
      * The stamp tail belongs to THIS application ("when did we last see this name in a log"), not to the owner's name, and
      * it is stripped here so nothing downstream — the Pet Owners grid, +Pets folding, the meters — ever has to know it
@@ -769,51 +730,27 @@ namespace EQLogParser
     }
 
     /*
-     * The 30-second write, and the one run at log close / shutdown. Two things leave this class now: pet mappings to
-     * petmapping.txt, and membership as ONE batched flush into identity-priors.txt's roster lane.
+     * The 30-second write, and the one run at log close / shutdown. ONE thing leaves this class now: a single batched flush into
+     * identity-priors.txt, whose lanes hold membership (`Ours`) and ownership (`Owner`) side by side.
      *
-     * players.txt is not written any more (2026-10-09). Its rows were exactly what the roster lane models — the name, the
-     * dotnet-epoch second this application last saw it, and (which the file had nowhere to put) a class — so maintaining both
-     * meant two memories of one fact, free to disagree silently, with whichever loaded last winning. The old file stays on disk
-     * untouched as the import's source: an input read at most once per folder and never edited. That is what "freeze the feed"
-     * buys — nothing this build concludes can strand a name the curated file got wrong, because the ledger (with its own 200-day
-     * expiry) is the memory from here on. docs/DesignNotes.md → "players.txt is a feed now".
+     * Neither old file is written any more. players.txt stopped on 2026-10-09; petmapping.txt followed the same day for the same
+     * reason — its rows are exactly what a ledger row already models (the pet name, its owner in the `Owner` column, and the
+     * dotnet-epoch second this application last saw it), so keeping both meant two memories of one fact, free to disagree silently,
+     * with whichever loaded last winning. Both files stay on disk untouched as their importer's source: read at most once per folder,
+     * never edited, never rewritten by a conclusion this build reached. That is what freezing the feeds buys — nothing the rules
+     * decide can strand a name the curated file got wrong, because the ledger (ageing on one dial, `StaleDays`) is the memory from
+     * here on. docs/DesignNotes.md → "players.txt is a feed now", "petmapping.txt is a feed now".
      */
     internal void Save()
     {
-      List<KeyValuePair<string, string>> petList = null;
-      var serverName = ConfigUtil.ServerName;
-      var flushRoster = false;
+      var flushMemory = false;
 
       lock (_lock)
       {
-        if (_rosterDirty)
+        if (_ledgerDirty)
         {
-          flushRoster = true;
-          _rosterDirty = false;
-        }
-
-        if (_petMappingUpdated)
-        {
-          // no generated or unassigned pets but allow for warders
-          var filtered = _petToPlayer.Where(kv => !_gameGeneratedPets.ContainsKey(kv.Key) && IsPossiblePetName(kv.Key));
-          var now = DateTime.Now;
-
-          petList = [];
-          foreach (var kv in filtered)
-          {
-            var seenAt = _petSeenAt.TryGetValue(kv.Key, out var stamped) ? stamped : 0d;
-
-            // An un-dated row is a statement and stays; a sighting older than the dial means the pet has not been in any log this
-            // application read, and its row leaves with it. That is what makes the file stop carrying every summon of the last
-            // four years. (The roster's own ageing runs on the same dial, inside the ledger: one number ages every memory here.)
-            if (seenAt != 0 && (now - DateUtil.FromDotNetSeconds(seenAt)).TotalDays >= StaleDays)
-              continue;
-
-            petList.Add(new KeyValuePair<string, string>(kv.Key, seenAt == 0 ? kv.Value : $"{kv.Value}|{Math.Round(seenAt)}"));
-          }
-
-          _petMappingUpdated = false;
+          flushMemory = true;
+          _ledgerDirty = false;
         }
 
         // if method is called manually then restart the timer
@@ -821,18 +758,11 @@ namespace EQLogParser
       }
 
       /*
-       * Outside the lock: the ledger takes its own gate and writes its own file, and it applies the roster's expiry (StaleDays
-       * against the wall clock) itself. This class no longer decides who stays on the roster — it reports sightings.
+       * Outside the lock: the ledger takes its own gate and writes its own file, and it applies the expiry (StaleDays against the wall
+       * clock) to BOTH of its lanes itself — including dropping a pet's owner column when that summon has not been in any log this
+       * application read. This class no longer decides who stays in memory; it reports sightings.
        */
-      if (flushRoster)
-      {
-        IdentityPriorStore.Instance.FlushChanges();
-      }
-
-      if (petList != null)
-      {
-        ConfigUtil.SavePetMapping(petList, serverName);
-      }
+      if (flushMemory) IdentityPriorStore.Instance.FlushChanges();
     }
 
     internal void SetActivePlayerClass(string name, string className, byte confidence, double beginTime)
@@ -1063,11 +993,27 @@ namespace EQLogParser
     {
       if (!string.IsNullOrEmpty(name) && _petToPlayer.TryRemove(name, out _))
       {
-        _petMappingUpdated = true;
+        // The durable half goes with it. A verdict or roster bit on the same name is a different statement and stays.
+        IdentityPriorStore.Instance.ForgetPet(name, persist: false);
+        _ledgerDirty = true;
         return true;
       }
 
       return false;
+    }
+
+    /*
+     * "This summon appeared in a line tonight" is NOT the same claim as "this pair exists": a pet that is already mapped still has
+     * to have its clock moved, or the 200-day dial ages out a mapping for a pet that walks into the log every night. `RememberPet`
+     * moves `SeenAtS` forward and never back, so replaying an old backup cannot rewind it (docs/DesignNotes.md → "A load is not a
+     * sighting"). Cheap by construction: a name with no live pair writes nothing.
+     */
+    private void TouchPetStampNoLock(string pet)
+    {
+      if (string.IsNullOrEmpty(pet) || !_petToPlayer.TryGetValue(pet, out var owner)) return;
+
+      IdentityPriorStore.Instance.RememberPet(pet, owner, (long)SessionStamp, persist: false);
+      _ledgerDirty = true;
     }
 
     private bool AddPetToPlayerNoLock(string pet, string player, bool init = false)
@@ -1081,10 +1027,15 @@ namespace EQLogParser
 
         if (!init)
         {
-          // Learning a pair — or re-assigning one in the Pet Owners grid — is a sighting, and it restarts the row's
-          // clock. That is how an operator's edit keeps a pet that would otherwise have aged out of the file.
-          _petSeenAt[pet] = SessionStamp;
-          _petMappingUpdated = true;
+          /*
+           * The pair is written ONCE, into the ledger's ownership lane: identity-priors.txt carries it as a column of the pet's own
+           * row, so membership, verdict and owner live in one file instead of two memories of one fact. `SeenAtS` moves forward —
+           * which is how an operator's edit keeps a mapping that would otherwise have aged out, exactly as on the old file.
+           * `persist: false` because the 30-second tick batches a night of sightings into one write; operator verbs flush through
+           * their own door.
+           */
+          IdentityPriorStore.Instance.RememberPet(pet, player, (long)SessionStamp, persist: false);
+          _ledgerDirty = true;
         }
 
         return !init;

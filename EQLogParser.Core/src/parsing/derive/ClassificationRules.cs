@@ -241,6 +241,9 @@ namespace EQLogParser
        */
       RunStage("R25 saved roster", outcome, () => ApplySavedRoster(facts, timeline, state));
 
+      // Same last position and the same reason: this application's own remembered pet pairs must not feed the inference stages.
+      RunStage("R26 saved pet owner", outcome, () => ApplySavedPetOwners(facts, timeline, state));
+
       return outcome;
     }
 
@@ -716,6 +719,61 @@ namespace EQLogParser
         // Effective from -∞ like every other evidence claim. The ledger's own stamp is dotnet-epoch seconds, a DIFFERENT clock from
         // the capture's, and mixing them into a timeline position would put the claim centuries in its own future.
         Claim(timeline, state, name, IdentityKind.Player, RuleStrength.Strong, "R25-roster", double.NegativeInfinity);
+      }
+    }
+
+    /*
+     * R26-savedpet: a name this application has an OWNERSHIP record for is one of the raid's summons.
+     *
+     * What it replaces. petmapping.txt used to be live input: PlayerRegistry read the file at log open and RegistrySeed filed every
+     * pair from that map, so "Fluffy belongs to Ziggy" reached the board as Pet at strength 8 — weak enough that any sighting still
+     * outvoted it (the law "a ledger seed never changes an answer", measured: 0 disagreements on three captures). The file is frozen
+     * now (docs/DesignNotes.md → "petmapping.txt is a feed now"), and a seed alone would leave every imported pet UNPLACED in a
+     * capture that merely watched it heal: the pair says who owns it, and no rule reads ownership as identity. So the claim arrives as
+     * a rule, at Strong — the tier a behaviour claim lives at, which is how the operator's old act was trusted.
+     *
+     * Four laws, each one a way this could quietly damage a board:
+     *   Unknown only   asks the ANSWER (`IdentityAt`), not the claim list, so a name this capture placed — as a raider, as an NPC, as
+     *                  anything — keeps that verdict. An operator's edit is re-stating an old day; tonight's log is testimony about
+     *                  tonight.
+     *   pool-gated     `NameIndexOf` never interns: claiming a name no combat line used would add rows to a window about fighters and
+     *                  move StateStamp on every pass (the same measured refusal as R25).
+     *   no placeholders the owner column also holds the unassigned marker (`Labels.Unassigned`, "Unknown Pet Owner") and `Labels.Unk`,
+     *                  which say nobody was ever named. Those rows are still real pets to the meter, but they are not an operator's
+     *                  word about identity, and the placeholder is a person-word that must never be treated as a claim.
+     *   same folder    an old server's pairs do not testify about this one (the null-vs-empty ServerName trap is written out in R25).
+     *
+     * NOT remembered (`WorthRemembering` omits it, like R25): this stage restates what the file already holds, and recording that as a
+     * witnessed verdict would let an import come back tomorrow wearing the costume of something observed. It invents no owner either —
+     * `FightProjection.OwnerOf` and `+Pets` folding keep reading ownership through `PlayerRegistry`, which `Init` seeds from this lane.
+     */
+    private static void ApplySavedPetOwners(IFactTable facts, EntityTimeline timeline, ClassificationState state)
+    {
+      var ledger = IdentityPriorStore.Instance;
+
+      // Cold process, or a folder with no mappings: nothing to say, and saying it cheaply matters because this runs on every full pass.
+      if (!ledger.HasOwnerRows) return;
+
+      var captureServer = ConfigUtil.ServerName;
+      if (string.IsNullOrEmpty(ledger.ServerName) || string.IsNullOrEmpty(captureServer)) return;
+      if (!string.Equals(ledger.ServerName, captureServer, StringComparison.OrdinalIgnoreCase)) return;
+
+      foreach (var entry in ledger.PetEntries())
+      {
+        var pet = entry.Key;
+
+        // An owner nobody was ever named for is not a mapping, it is a hole in one.
+        var owner = entry.Value.Owner;
+        if (string.IsNullOrEmpty(owner)
+            || Labels.Unassigned.Equals(owner, StringComparison.OrdinalIgnoreCase)
+            || Labels.Unk.Equals(owner, StringComparison.OrdinalIgnoreCase)) continue;
+
+        if (facts.NameIndexOf(pet) < 0) continue;
+
+        // Ask the ANSWER, not the claim list: a name any rule already placed — at any strength — is a name this capture spoke about.
+        if (timeline.IdentityAt(pet, double.PositiveInfinity) is not IdentityKind.Unknown) continue;
+
+        Claim(timeline, state, pet, IdentityKind.Pet, RuleStrength.Strong, "R26-savedpet", double.NegativeInfinity);
       }
     }
 

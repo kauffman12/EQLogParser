@@ -238,7 +238,7 @@ internal static class IdentityVocabulary
      * much weight a ten-line hover gives it — and "we wrote this name down years ago" is the weakest thing this application can say
      * about a name, even when it is the only thing it can say. Where a capture has its own proof, that line goes first.
      */
-    ["R25-roster"] = 20,
+    ["R25-roster"] = 20, ["R26-savedpet"] = 20,
     ["RegistrySeed"] = 20, [IdentityPriorStore.RosterReason] = 20, [IdentityPriorStore.OwnerReason] = 20,
   };
 
@@ -346,6 +346,13 @@ internal static class IdentityVocabulary
      */
     if (code == "R25-roster")
       return "On the Saved Player Roster";
+
+    /*
+     * R26: the ownership lane speaking with a VOTE (docs/DesignNotes.md → "petmapping.txt is a feed now"). The OwnerReason row below
+     * already owns the phrase "On the Saved Pet Map" for provenance alone; this one says the same place decided the Type column too.
+     */
+    if (code == "R26-savedpet")
+      return "In This Program's Pet Map";
 
     var text = code switch
     {
@@ -574,6 +581,12 @@ internal static class IdentityVocabulary
      * file; the filename itself never appears on screen (docs/DesignNotes.md -> "What this application remembers").
      */
     [IdentityPriorStore.OwnerReason] = "Pet Map",
+
+    /*
+     * R26: the ownership lane with a vote. It cannot read "Pet Map" like the provenance row beside it — one cell standing for two
+     * claims loses the difference the cell exists to show (asserted by EveryRuleWordHasAWordWorthPrinting).
+     */
+    ["R26-savedpet"] = "Saved Pet",
 
     // Two spellings the files themselves carry, kept mapped because they are already on disk:
     //   "Override" — what IdentityOverrideStore.LoadAll hands back as a row's source.

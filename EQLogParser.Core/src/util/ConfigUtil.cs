@@ -243,17 +243,6 @@ namespace EQLogParser
       SaveProperties(Path.Combine(overrideDir, IdentityOverridesFileName), list);
     }
 
-    // pass server name to avoid issue where it was changed before save completes
-    internal static void SavePetMapping(List<KeyValuePair<string, string>> list, string serverName)
-    {
-      if (string.IsNullOrEmpty(serverName) || string.IsNullOrEmpty(ConfigDir))
-        return;
-
-      var petDir = Path.Combine(ConfigDir ?? "", serverName);
-      Directory.CreateDirectory(petDir);
-      SaveProperties(Path.Combine(petDir, PetMappingFile), list);
-    }
-
     internal static void Save()
     {
       if (_settingsUpdated)
