@@ -458,6 +458,30 @@ announce is logged at Debug instead of swallowed — "three asks arrived" and "o
 different stamps on one door = content genuinely moved and the rebuild was owed. **The first-click-after-load triple is still an open question**
 (the load-time `TimeChanged` → hourglass → options chain is the leading suspect and is written up as a hypothesis, not a measurement, in
 docs/DesignNotes.md → "Name every door") — which is why this commit changes log lines and no behaviour.
+
+- **Three boards, three workers above one measured frame of sibling work — and the saving is `sum − max`, never ×3** (2026-11):
+  `MainWindow.BuildBoards` built damage, tanking and healing in a line although they share no state (own lock, own traced handle, own
+  events, own rows). Above `BoardFanout.MinOutcomes = 50_000` they run side by side (`EQLogParser.Core/src/ui/BoardFanout.cs`):
+  whole farm-night selection **4,074 → 2,615 ms** build wall, **×1.32 end-to-end**; Incogitable ×1.29 / **×1.07**, because materialize
+  (634 + 2,163 ms there) is untouched and materialize stays serial BY DEPENDENCY — the heal list is windowed by the damage side's
+  `AllRanges`. Quote the end-to-end number, never the build wall. Four laws: **(1)** the decision reads
+  `UnaskedRefresh.OutcomeCount` (the meter the refresh budget prices with) but shares none of its constants — "may this build run" and
+  "how many workers may it use" are different questions; **50,000 is where the boards that are NOT the straggler are worth one frame**
+  (measured 18 ms at 36,235 outcomes, 125 ms at 389,552), and it shipped at 500,000 on a harness that ran every serial round before every
+  fanned one — a warm-order artifact that hid >100 ms on every medium click, so move this constant only with alternating-shape
+  measurements; **(2)** **each worker re-asks whether its capture is still open before touching a builder** (the abandonment law needed one
+  check after materialize in the serial world and needs three here), **each carries its own try/catch** — the one deliberate behaviour
+  change, since serially a damage throw suppressed tanking AND healing, so now one bad record costs one grid (`grep "Derived damage summary
+  error"` still finds it, with the board named) — and **`RunParallel` waits for all of them**, because the gate's "one build in flight"
+  ends when it returns and a straggler is a second overlapping build holding its input on the heap; **(3)** worker count is fixed at three:
+  no `ProcessorCount` branch, no settings key — the win held from 18 cores to 2 because these walks are memory-latency bound, and damage is
+  always the straggler, so a fourth worker buys nothing; **(4)** one materialized selection is handed to all three builders, and a build may
+  **never add to a `TimeRange` it adopted** (`TimeRange.Add(list)` adopts the segment objects, so an add welds seconds inside what two
+  siblings are reading). `ParallelBoardEquivalenceTest` compares the goldens' own row rendering serial-vs-fanned over ONE shared
+  `SummaryInput` and re-reads that input's **shape** (span count, per-row block/record counts) after every round — an inserted span moved
+  no compared column and was caught only by shape, which is why both assertions exist. Numbers, the A/B table and the two probe traps
+  (`WorstWall = 0` swallows a sub-millisecond sample; a newest-second time window is not a small selection): docs/DesignNotes.md →
+  "Three boards, three workers".
 - **A record walk hands out ONE `DataPoint`, and a row key is composed once per NAME, never per record** (2026-10; the numbers and the reasoning are
   docs/DesignNotes.md → "What a board build allocates, and the distribution nobody opens"). A whole-capture `Select All` is 4.66 M damage records, and the seams that turned those records into
   rows used to allocate their way through: `RecordGroupCollection` built a `RecordWrapper` + a `DataPoint` per record (960 MB of garbage per

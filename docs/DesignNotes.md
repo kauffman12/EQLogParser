@@ -11083,3 +11083,61 @@ because it was not merely unused but wrong if anyone had used it: its index only
 answers Enemy under an interval that already ended, which is exactly why `AffiliationAt` re-walks. Finding them was a zero-reference
 scan (declaration name counted across the whole corpus, tests, xaml and Tools), so the list is complete for what this branch added;
 everything else it printed predates the branch.
+
+## Three boards, three workers: what fan-out buys, and what it cannot (2026-11)
+
+`MainWindow.BuildBoards` materialized a selection and then built damage, tanking and healing **in a line**. The three calls share no
+state — own lock, own traced handle, own events, own output rows — so the line was never a dependency; it was an accident of the method
+body. They now run on three workers above a measured threshold (`EQLogParser.Core/src/ui/BoardFanout.cs`), and the shape of the win is
+worth knowing before anyone proposes a fourth worker or in-board chunking:
+
+**The saving is `sum(boards) − max(boards)`, never ×3.** Fanned out, the wall becomes the slowest board, and damage is always the
+straggler on the reference captures (healing runs ≈ 0.34 µs per outcome, tanking is noise). Measured on the shipped path, four cores,
+shapes alternating, worst-of-two:
+
+| selection | outcomes | serial build wall | fanned wall | end-to-end ask |
+|---|---|---|---|---|
+| whole farm night (699 rows) | 4,580,874 | 4,074 ms | 2,615 ms | **×1.32** |
+| 100 rows | 717,190 | 592 ms | 398 ms | ×1.28 |
+| 36k-outcome selection | 36,235 | 60 ms | 42 ms | ×1.15 |
+| Incogitable, whole capture | 1,720,467 | 1,105 ms | 854 ms | **×1.07** |
+
+Quote the **end-to-end** column to a user: materialize (`BuildSummaryInput`, 1,422 + 577 ms on the farm night; 634 + 2,163 ms on
+Incogitable) is untouched by any of this, and on Incogitable it is the bigger term — which is why its ratio is ×1.07 with a healthy
+×1.29 build win inside it. Materialize stays serial by dependency, not by laziness: the heal list is windowed by the damage side's
+`AllRanges`.
+
+**Four laws, all in Core so they are testable without a window.** (1) `Decide(outcomes)` reads `UnaskedRefresh.OutcomeCount` — the same
+meter the refresh budget prices with — so the two can never hold different ideas of how big a selection is, while their constants stay
+separate because "may this build run" and "how many workers may it use" are different questions. (2) **Every worker re-asks whether its
+capture is still open before touching a builder**: the standing abandonment law (a build that outlived its log must return *before*
+painting, since `Dispose` drops the snapshot and a dropped snapshot reads as "clear every board") needed one check after materialize in
+the serial world and needs three here, because two workers can start after a capture change. (3) **A board that throws costs that board
+and nothing else** — THE one deliberate behaviour change: serially a damage throw suppressed tanking AND healing; now one bad record
+costs one grid, logging the same `Derived damage summary error` anchor with the board named. (4) **RunParallel waits for every worker**,
+because `SummaryBuildGate`'s "one build in flight" ends when it returns — a straggler would be a second overlapping build holding its
+input on the heap. Nothing about the gate, the charts' repeat-question drop or the deferred-busy state changed: fan-out happens INSIDE
+one request's work action.
+
+**The threshold is `MinOutcomes = 50_000`, and it moved once on measurement.** It shipped at 500,000 on a phase-0 probe whose anchor
+read "466k outcomes saves 40 ms". That anchor was an artifact: the harness ran every serial round first and every fanned one second, so
+the second shape inherited a JIT-warm, page-fault-free process — which inflates small wins and hides real ones. Measured fairly,
+389,552 outcomes saves **125 ms** and 36,235 saves **18 ms**, so the constant sits where the boards that are not the straggler are worth
+about one frame, and a 500k constant was leaving over a tenth of a second on every medium-sized click. Below it the path is today's code
+in today's order (a one-row ask builds in ~1 ms: nothing to win, no reason to schedule). Worker count is fixed at three — no
+`ProcessorCount` branch and no settings key — because the win held from 18 cores down to 2: these walks are memory-latency bound.
+
+**What keeps the shared input honest**: `FightSummarySource.Build` hands ONE materialized selection to all three boards, and the only
+place a build touches a shared object is `TimeRange.Add(options.AllRanges.TimeSegments)`, which ADOPTS the segment objects it is given —
+so the invariant fan-out depends on is that **no build ever adds to a range it adopted** (true today; adding would weld seconds into an
+object two siblings are reading). `ParallelBoardEquivalenceTest` pins the answer equality across shapes with the goldens' own row
+rendering, and re-reads the shared input's *shape* (span count, per-row block/record counts, heal count) after every round: a probe that
+inserted a span into `options.AllRanges` from inside the damage build moved **no compared column** on the fixtures and was caught only by
+span count, which is why that second assertion exists. Allocation measured identical in both shapes at every size; the app-level `ws=`
+reading of the memory condition still belongs to a Windows session with `PerfReport=True`.
+
+Two probe-side traps that cost an hour each, recorded so they are not re-paid: a `worst-of-N` accumulator starting at `WorstWall = 0`
+records nothing for a sub-millisecond build and reads as "the fanned board answered zero"; and a TIME window anchored at a capture's
+newest second is not a small selection — on the farm night the newest 3,600 seconds hold **one row with three outcomes** (the raid sits
+hours earlier, one long-lived row owns the tail), so selections are made by ROW count, which is both the shape a click makes and the
+shape `Decide` prices. Re-measure recipe: `docs/improve-stat-building.md` §12 (harness deleted after reading, per the gated-test law).
