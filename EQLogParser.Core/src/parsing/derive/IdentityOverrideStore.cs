@@ -86,11 +86,11 @@ namespace EQLogParser
     public void Remove(string name) => Apply([name], null);
 
     /*
-     * One write for a whole selection: the grid lets a user ctrl-click twenty rows and say "all of these are
-     * pets", and saving after each name would rewrite the file twenty times for one decision - and leave a
-     * half-applied file on disk if the second write failed.
+     * Set/Remove's shared write: memory first, then ONE file rewrite. No door offers a multi-name verdict any more (the one-row law in
+     * IdentityVerdictMenu refuses a ctrl-clicked block, because a verdict re-routes sides, rows and +Pets folding with no undo), so this is
+     * not an API — making it private is what keeps someone from wiring the refused gesture back up.
      */
-    public void Apply(IReadOnlyCollection<string> names, IdentityKind? kind)
+    private void Apply(IReadOnlyCollection<string> names, IdentityKind? kind)
     {
       if (names is not { Count: > 0 }) return;
 

@@ -11030,8 +11030,11 @@ handler, then hidden by `RecalcOverlay`: never before a **500 ms floor** (under 
 the click was heard — this is the *inverse* of `DeferredBusyState`, which delays showing for the same reason from the other
 side), then at the first of **the pass landing** (`EventsDerived`, signalled before its 2 s census throttle, because the click
 owed its answer as soon as the pass ran) and a **5 s hard cap** — a bulk load parks both derive lanes, and a label that waits on
-a pass that may not come for minutes would read as a frozen row. A census replacing the row mid-flight is harmless: fresh
-instances start unlabelled. Pinned by `RecalcOverlayTest` (floor / pass / cap / monotonicity over plain longs) and, in
+a pass that may not come for minutes would read as a frozen row. Three things the label had to be told (2026-11, all three found by
+reading this paragraph against the code): a census pass **replaces the row instance** every ~2 s while it rests unlabelled, so
+`MergeInto` restamps the row found by name or the notice vanishes mid-flight; the state is ONE name, so a second click first takes
+the previous row's word off (nothing else could); and a pass landing **inside** the floor armed nothing, so the answer sat under the
+label until the 5 s cap — the remaining floor now gets its own one-shot, armed once and only while the floor is unpaid. Pinned by `RecalcOverlayTest` (floor / pass / cap / monotonicity over plain longs) and, in
 `EQLogParser.Wpf.Test`, `RecalcOverlayRowWordTest`.
 
 **What did not change.** The verb is still forget-then-the-capture-answers, so the memory-vs-evidence table from when `Reset`
@@ -11042,3 +11045,40 @@ sees the click happen, waits for the word to come down, and knows which case the
 **Honesty note.** The Wpf assembly builds here (zero warnings, `--no-incremental`) but its tests run only on Windows; the
 NamesTable wiring — the icon, the label lifecycle, the blank-open owner list — is pinned in `EQLogParser.Wpf.Test` and needs a
 Windows run to count as measured.
+
+## A board belongs to the capture that asked (2026-11)
+
+A review of this branch asked which capture a queued board build answers to. The answer used to be "whatever is on screen when it
+finishes", and two failures fell out of that, both cheap to state and neither visible in a fixture:
+
+**The gate's key had no session in it.** Rows + content stamp + tank filter collided across captures — trivially so with an empty
+selection, since a capture that has just opened has no ids and its first stamp is the same question the closed one last asked. The
+gate answers that with `SkippedSame`, so the new session's boards stayed blank until something else moved; `SummaryBuildGate.Reset`
+existed and was called by nobody, so `_doneKey` outlived every log. Fix: `DeriveEngine.SessionId` is mixed into the key last (so no
+other session fact can collide with it), which makes the memory session-scoped **without** resetting at open — a Reset would let an
+abandoned build's materialization overlap the new session's, and "never two materializations at once" is the one law this gate exists
+to keep. Pinned by `BoardKeyTest` (Wpf): determinism, the cross-capture difference with nothing selected, every builder input moving
+the key, and never hashing to the reserved 0.
+
+**A build from a closed capture did not merely paint stale numbers — it blanked the boards.** `DeriveEngine.Dispose` drops the
+snapshot, and `BuildSummaryInput` reads a null snapshot as *"clear every board"* (that is what an empty selection means, on purpose:
+a non-null empty list says "there was none", null would let the healing tab keep last click's grid). So a request queued behind a long
+build, whose log then closed — Clear All blanks deliberately, then this landed behind it — emptied all three grids of the capture now
+open. `MainWindow.BuildBoards` therefore asks whether its session is still the one owned, at entry and again after materializing (where
+the queue actually waits), and returns without touching a builder, logging the gesture it dropped. The session number travels as plain
+data in a UI-thread-written field read with `Volatile`, same law as `_fightPane` and the tanking filter: nothing on the gate's worker
+walks a window.
+
+**A deferred busy state belongs to the surface, not just to the build.** `DeferredBusyState` cancels on every build event but not on
+the two paths that are not build events — hiding a pane and clearing the capture — so an armed tick outlived both and woke a hidden
+table (or a cleared one) to "Calculating DPS…" over a grid no build would ever fill: the stale-promise failure this class exists to
+prevent, arriving from the other direction. Four surfaces, hide + clear each (damage/healing/tanking summaries, column chart). It is
+not folded into `ClearData()`/`Reset()`, which also run on option changes — swallowing a legitimately-earned notice for a build that is
+genuinely slow is worse than eight explicit one-liners.
+
+**Five doors nothing ever called**, all of them from this branch's identity work: two row-count properties and a damage-side ordinal
+count no surface prints (`FightSummarySource`), `CharmWindows.OwnerAt`, and `EntityTimeline.AffiliationCursor` — the last worth naming,
+because it was not merely unused but wrong if anyone had used it: its index only walks forward, so a second query at an earlier second
+answers Enemy under an interval that already ended, which is exactly why `AffiliationAt` re-walks. Finding them was a zero-reference
+scan (declaration name counted across the whole corpus, tests, xaml and Tools), so the list is complete for what this branch added;
+everything else it printed predates the branch.

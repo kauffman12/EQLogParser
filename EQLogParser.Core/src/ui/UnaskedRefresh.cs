@@ -12,7 +12,7 @@ namespace EQLogParser;
  * Two facts, from the field report and from the stopwatch:
  *
  *   - A displayed board is a report somebody is reading. Figures moving on their own were the complaint; the cost was
- *     never the first half of it (docs/summary-refresh-notification.md §0). An operator who clicked something is a
+ *     never the first half of it. An operator who clicked something is a
  *     different case — that is an ask, and it already rebuilds today.
  *   - Cost scales with outcomes, not rows: on the reference capture a five-minute selection (8 rows / 1,245 outcomes)
  *     rebuilds all three boards in 2-21 ms, while a whole-capture selection (4,646 rows / 1,720,467 outcomes) costs

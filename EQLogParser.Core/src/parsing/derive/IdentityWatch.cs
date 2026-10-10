@@ -44,7 +44,15 @@ internal sealed class IdentityWatch
     _selection = Empty();
   }
 
-  /// <summary>What the NAMES on the built boards currently are. Called by whoever built them, from the names it displayed.</summary>
+  /*
+   * What the NAMES on the built boards currently are: called at the end of a build, from the names it displayed.
+   *
+   * Two limits, both deliberate. The timeline handed in can be one pass NEWER than the snapshot the boards were built from, and that cannot
+   * strand a board: a flip already visible here is already in the baseline, and anything that changed content moved the pane's content stamp,
+   * which announces on its own — the watch is one trigger among several, not the freshness rule. And it watches KIND only: an owner change
+   * rides on an AffiliationInterval, which moves AnswerStamp() and therefore the stamp gate, so adding ownership here would fire on the same
+   * events the stamp already fires on (docs/DesignNotes.md → "Snapshot unless a name changed what it is").
+   */
   internal void CaptureBoard(EntityTimeline timeline, IReadOnlyList<string> names) => _board = AnswersFor(timeline, names);
 
   /*

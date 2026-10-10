@@ -5,7 +5,7 @@ using EQLogParser;
 namespace EQLogParser;
 
 /*
- * The three preconditions the cell cache (docs/incremental-summary-refresh.md, Phase B) stands on, made executable before any of it is built.
+ * The three preconditions a future cell cache stands on, made executable before any of it is built.
  * Each one was an assumption in the design; two of them turned out to have teeth.
  *
  *   1. FOLDING MUST NOT REACH SOMEBODY ELSE'S ROW. Child rows are minted per (owner list, key) at one funnel, so folding a copy can never

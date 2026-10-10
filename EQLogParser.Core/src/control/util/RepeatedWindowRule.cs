@@ -5,7 +5,7 @@ namespace EQLogParser;
 /*
  * One step of a repeat window: given what the counter holds and where its deadline is anchored, decide what THIS fire makes of it.
  *
- * Two anchor policies exist, and the whole difference between them is one assignment (docs/counter-variable-issue.md):
+ * Two anchor policies exist, and the whole difference between them is one assignment:
  *
  *   fixed   — the anchor stays where the epoch started, so counting restarts every `resetAfterSeconds` no matter how often the
  *             trigger fires. This is how EQLP has always counted, so it stays the default: an existing trigger file means the same

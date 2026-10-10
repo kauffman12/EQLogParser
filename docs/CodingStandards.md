@@ -113,11 +113,10 @@ The setter enables test injection. Consumers access the singleton via `ClassName
 
 ## Interface Design
 
-Split large interfaces by responsibility:
-- `IDataManager` — static spell/NPC/class data (lookup methods)
-- `IFightManager` — runtime fight state (active fights, overlays, ADPS)
-
-Each interface has only the methods relevant to its responsibility. Classes that need both inject both interfaces.
+Split an interface by responsibility, and keep one when it earns its keep: the app's seams are `IAudioManager`/`ITtsEngine`
+(engine behind a host-facing contract) and `IFactTable` (the damage and heal captures share a sequence across two shapes). Both of
+the interfaces this section used as its example — `IDataManager` and `IFightManager` — were deleted with the legacy engine, which is
+the other half of the rule: an interface whose implementations are all gone is documentation for a program that no longer exists.
 
 ## Error Handling & User Communication
 

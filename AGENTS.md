@@ -12,7 +12,11 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   open product decision): never `git add` one, never assume such a reference resolves in a fresh clone, and **delete one rather than archive it once its
   durable half is in `DesignNotes.md`** — a stale plan reads like an open question. Durable decisions belong in `DesignNotes.md`, whose orientation chapter
   ("The parsing direction") now also carries "Where we stand: performance, and the refresh nobody asked for" and the closure of the legacy deletion queue.
-- **Searching**: All files are under the current directoy. 
+- **Searching**: All files are under the current directoy.
+- **A comment may not cite what a fresh clone cannot read**: no `docs/<working-note>.md` outside the four whitelisted documents, and no type or UI verb that no longer
+  exists. Both rotted here (comments described a `Reset` dropdown entry the calculator had replaced, an `Owner` column described as absent after it came back, and six
+  citations of untracked working notes). When a name in a comment has zero declarations (`rg -c '\bTypeName\b'`) the comment is fiction; when the file it cites is not
+  in `git ls-files`, the pointer resolves only on this machine. Durable half goes to `docs/DesignNotes.md`, the rest of the sentence goes away.
 - **Do not** add heavy dependencies without explicit user approval.
 
 ## Build Environment (Linux, this machine)
@@ -412,7 +416,13 @@ is building or was last built is `SkippedSame` — zero work, which is what a du
 input the builders read**: the selected ids, the pane's `ContentStamp` (facts + verdicts — "same rows" is NOT "same answer")
 and the tanking board's damage-type filter — and nothing else. The six DamageValidator settings change the answer without touching
 a fact or a verdict too, but they are read fresh out of AppSettings on every build and their door is the pane's own direct rebuild,
-so no generation rides in the key. One did until 2026-11 (`_statsFilterGeneration`, bumped by `CheckComputeStats`), and its only
+so no generation rides in the key — but **the CAPTURE does** (2026-11): `DeriveEngine.SessionId` is mixed into the key last, because
+rows+stamp+filter collide across logs and an empty selection over two captures is that exact case (`SkippedSame` answered to a fresh
+session's first ask and its boards stayed blank; `SummaryBuildGate.Reset` was dead code). Do not "fix" this by resetting the gate at open: that lets an
+abandoned build materialize alongside the new session's. Its companion is result-side — **a build whose session was disposed returns before
+painting**, because `Dispose` drops the snapshot and `BuildSummaryInput` reads a null snapshot as "clear every board", so a queued build from a
+closed log *blanks* the capture now open (Clear All blanks on purpose, then this arrived behind it). The session id rides in as plain UI-thread data read with
+`Volatile`, same law as `_fightPane`. One board build in flight still means ONE materialization. One did until 2026-11 (`_statsFilterGeneration`, bumped by `CheckComputeStats`), and its only
 callers were identity events — a pet pair learned, a verified player or pet removed — that no derived board reads: ownership folds
 off the line's own possessive word, so each bump spent a full three-board rebuild on byte-identical totals behind one select-all
 (the measurement is in docs/DesignNotes.md → "Name every door"). The timer, the dead `EventsFightSelectionChanged` subscription
@@ -571,8 +581,9 @@ declare without `?`; add the directive only when the whole file is meant to hold
   **and the duplicate was weaker than the door it imitated**: the pane wrote `IdentityOverrideStore.Apply(names, null)` while the sanctioned
   unset also forgets the whole ledger row (`NamesTable` → `ClassificationCommands.ApplyVerdict(name, Unknown)`, whose first step is
   `Forget` = `IdentityPriorStore.Remove` + `PlayerRegistry.ForgetName`), so the fight-list click left
-  a name coming back on the next pass wearing *"… in previous log"*. One verb, one door: **the fight list writes verdicts (batch, over the selection);
-  the identity pane un-writes them.**
+  a name coming back on the next pass wearing *"… in previous log"*. One verb, one door: **the fight grid sets what a name IS, one selected row at a time;
+  the identity pane's calculator un-writes it.** `IdentityOverrideStore`'s multi-name write is **private** for that reason — the ctrl-clicked-block gesture was
+  refused by measurement (a verdict re-routes sides, rows and `+Pets` folding with no undo), and leaving a plural door is how someone rewires it.
 - **The cheap lane folds over the timeline INSTANCE the last full pass produced, on two clocks**: `ProjectionOnly` runs no rule book at all (measured:
   classification is 186-261 ms of a pass, projection of a live increment 0-5 ms), so `DeriveEngine` carries `_carriedTimeline` and hands that same object
   to `FightProjection.Project`. Carrying the instance is what makes `EntityTimeline.StateStamp()` come back unchanged, so the existing stamp gate keeps
@@ -1567,7 +1578,9 @@ After completing work, verify:
   shape invites is a late tick blanking a table already showing real rows. Do not "fix" the race by posting COMPLETED below Render
   (that starves results behind animation) and do not restore the immediate clear — it strobes three tables plus the chart on every
   settle tick of a live raid to announce work that finished inside the frame it took to say so; during the delay the previous table
-  stays up, wrong by milliseconds and readable. For busy states whose work DOES block the UI thread the sibling idiom is
+  stays up, wrong by milliseconds and readable. Hiding a pane and clearing the capture cancel it too (2026-11): both blank the surface for a reason no build answers, and an armed tick
+survived them to wake a hidden or cleared table with "Calculating DPS…" forever. It is NOT folded into `ClearData()`/`Reset()` — those also run on
+option changes, and swallowing a notice the build earned is worse than one explicit `Cancel` per blanking path. For busy states whose work DOES block the UI thread the sibling idiom is
   `await Dispatcher.Yield(DispatcherPriority.Render)` (`DamageSummary.GroupSelectionChanged`) — a Render yield sits behind the very
   paint it asked for. `DeferredBusyStateTest` (Wpf.Test) pumps a real dispatcher, because a `DispatcherTimer` only ticks while
   something pumps: inside-delay shows nothing, past-delay shows exactly once (not per interval), newest request wins, cancel leaves

@@ -10,7 +10,7 @@ namespace EQLogParserTest
    * resumed count would be wrong rather than merely unimplemented, so this is the law the resume is built on, not a note about the future.
    *
    * Written against the uninterrupted pass rather than a hand-computed number, which is the actual requirement: publish → count → publish equals
-   * count → publish on every field the report reads. See docs/incremental-summary-refresh.md §3.3.
+   * count → publish on every field the report reads.
    */
   [TestClass]
   public sealed class StatResumeTest

@@ -5,35 +5,28 @@ namespace EQLogParser;
 /*
  * One summary-board build at a time, and requests that arrive while one is running COLLAPSE into the newest.
  *
- * The expensive door in this application is not the parse, it is a click: materializing a selection allocates one record
- * per selected fact, and a whole-capture select-all measures in seconds (~3.8 s against ~30 ms for one mob; docs →
- * "What makes a board go one pass stale"). Announcements come from several places at once — the command that changed the
- * selection, the menu closing, the settle timer, every derive pass whose content stamp moved — and until now each one
- * spawned its own worker task. Two announcements therefore meant TWO materializations of the same rows: both allocated
- * their full record sets before the builders' own lock serialised them, which is a memory spike on top of double the work,
- * with the grids ending up showing whichever build happened to finish last. "Select all builds the stats twice" is that,
- * and on a live raid with a whole-capture selection it was worse than twice — one per pass, forever.
+ * The expensive door here is a click, not the parse: materializing a selection allocates one record per selected fact, and a
+ * whole-capture select-all measures in seconds (~3.8 s against ~30 ms for one mob). Announcements come from several doors at
+ * once — selection command, menu close, settle timer, every derive pass whose content stamp moved — so without this gate two
+ * announcements meant two full materializations of the same rows, serialized by the builders' lock only AFTER both had allocated,
+ * with the grids showing whichever finished last. (docs/DesignNotes.md → "What makes a board go one pass stale".)
  *
- * Three laws, in order of who benefits:
+ * Three laws:
  *
- *   1. **Never two at once.** A request that arrives while one runs is queued, not started; the runner drains at most one
- *      follow-up and re-asks, so a burst of announcements costs one extra build rather than N.
- *   2. **Only the newest queued request survives — including when the newest one costs nothing.** A request answered by what already
-      ran (or is running) also DROPS whatever was queued: keeping it would paint an abandoned selection over the grid afterwards.
-      An older selection has already been superseded by a newer click; running
- *      it first would only delay the answer that matters (and its records are the ones holding memory down).
- *   3. **A request whose INPUTS match a build that ran to completion (or is running) is dropped.** A build that threw answered
-      nothing and is not remembered, because the builders catch their own failures and leave the grids showing last night's
-      numbers: remembering the attempt would drop every later retry of that same selection forever. The key carries everything the builders
- *      read — which rows, what the capture has produced (the pane's content stamp: facts + identity verdicts), and which
- *      filters/validation settings the app is on — so "same key" means "the answer is already computed". This is what turns a
- *      duplicated announcement into zero work rather than one second copy. Skipping on anything narrower (ids alone, say)
- *      would leave a board a pass stale, which is the failure mode this pane has been corrected for repeatedly; the key is
- *      therefore handed in by the caller and the gate never guesses at it.
+ *   1. **Never two at once.** A request arriving mid-build is queued, not started; the runner drains at most one follow-up, so
+ *      a burst costs one extra build rather than N.
+ *   2. **Only the newest queued request survives — including when the newest one is free.** A request that something already ran
+ *      (or running) answers also DROPS whatever waits: keeping it would paint an abandoned selection over the grid afterwards.
+ *   3. **A request whose INPUTS match a build that completed (or is running) is dropped.** The key carries everything the builders
+ *      read — rows, content stamp, filters, and which capture the question came from — so "same key" means "already computed".
+ *      Anything narrower leaves a board a pass stale. The caller builds the key; the gate never guesses at it.
  *
- * Like SelectionSettle and DeriveCadence, this is the rule without the dispatcher in it: the scheduler arrives as a delegate,
- * so a test can run the whole state machine inline (including "the work throws", which must not wedge the gate shut — a latched
- * runner means no board ever updates again, which reads as "the stats froze").
+ * A build that THREW answered nothing and is not remembered: the builders catch their own failures and leave the grids showing
+ * what they had, so remembering the attempt would drop every later retry of that selection forever. Dedupe on what was computed,
+ * not on what was attempted.
+ *
+ * Like SelectionSettle and DeriveCadence, this is the rule without the dispatcher in it — the scheduler arrives as a delegate, so
+ * tests run the whole state machine inline, including "the work throws" (a latched runner reads as "the stats froze").
  */
 internal sealed class SummaryBuildGate(Action<Action> schedule)
 {
@@ -81,14 +74,12 @@ internal sealed class SummaryBuildGate(Action<Action> schedule)
       if (key == _runningKey || key == _doneKey)
       {
         /*
-         * Free answer - AND the queued one goes with it. Law 2 is "the newest request survives", and this IS the newest request:
-         * something that already ran (or is running) answers it, so a waiting entry describes a selection the operator has walked away
-         * from. Without this half, select-A → drag-to-B → click-back-on-A ended with B's boards painted over A's grid a second later -
-         * "the stats panel shows somebody else's fight", and no gesture short of another click got rid of it.
+         * A free answer drops the queue too (law 2): this IS the newest request, so anything waiting describes a selection the
+         * operator walked away from. Without it, select-A → drag-to-B → click-back-on-A ended with B's boards painted over A's grid,
+         * and no gesture short of another click removed it.
          *
-         * The case this does NOT cover is a DIFFERENT build already in flight when the matching request arrives (A done → B running →
-         * select A): nothing can un-start B, so B still paints last over a grid that answers A. That needs a result-side staleness
-         * check on the board pipeline rather than a scheduler change - named as such in gpt-review-1.md #3.
+         * NOT covered here: a DIFFERENT build already in flight (A done → B running → select A). Nothing un-starts B, so the answer is
+         * result-side — MainWindow.BuildBoards abandons a build whose capture is no longer the one open.
          */
         if (_pending is { } queued && queued.Key != key)
         {

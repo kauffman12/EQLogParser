@@ -60,11 +60,10 @@ namespace EQLogParser
      * is read, and edited by picking from a list whose entries are verdicts rather than free text. A cell with no pencil
      * still reserves its width (PlaceholderVisibilityConverter), so the two columns do not go ragged where the exceptions are.
      *
-     * Two things it no longer carries:
-     *
-     *   - Damage/Healing: this is an identity list, and the numbers invited reading a name's importance off its output
-     *     instead of off the damage board (the census still totals them internally — that is its row order).
-     *   - Owner: PlayerRegistry answers it, which is exactly what the Pet Owners window lists. Two panes over one file.
+     * What this grid does not carry: Damage/Healing — an identity list, and the numbers invited reading a name's importance off its
+     * output instead of off the damage board (the census still totals them internally — that is its row order). OWNER sits here since
+     * 2026-10-09: the separate Pet Owners window is deleted, and an identity list that could neither show nor correct a summon's owner
+     * left no door at all.
      *
      * TYPE is the word the grid shows for `ClassificationReport.Row.Kind`; the enum keeps its name (381 places under
      * parsing/derive read IdentityKind), but "Kind" as a header made people look for a mob/npc KIND, so the column says
@@ -394,11 +393,12 @@ namespace EQLogParser
     internal static string ProvenanceFor(ClassificationReport.Row row)
     {
       /*
-       * ONE line, always, and no newline anywhere in this method — the hover answers "why does it say That", and a four-line
-       * form makes the eye work for the one clause that matters (docs/DesignNotes.md → "The Names window: four columns, dropdowns in two of them").
+       * The hover's HEAD line: one short clause, and no newline anywhere in this method. Anything else rides BELOW it, appended by
+       * ProvenanceFor from Row.OtherEvidence (docs/DesignNotes.md → "The cell carries the judgement, the hover carries the reasons");
+       * the head alone answers "why does it say That", and a four-line head makes the eye work for the one clause that matters.
        *
        * The proof clause is whatever the deciding rule can say, and NOTHING where no rule says anything - which is the
-       * same state the dropdown words "Reset": taking a verdict back leaves the name unclaimed rather than
+       * same state the calculator click takes a name back to: unclaimed, rather than
        * inventing an answer for the hover to explain. One clause, no separators: every rider that ever joined this string
        * (the roster's opinion, "not in this log", the file names) explained something the reader had not asked about.
        */
@@ -609,7 +609,7 @@ namespace EQLogParser
       // Preselect what the row already says, so the list opens on the current verdict — and so the guard in
       // TypeSelectionChanged can tell "the click that opened this" from "a different answer", which is the difference
       // between refreshing a window and rewriting identity-overrides.txt for nothing. An unplaced name selects nothing:
-      // "Reset" is an action, not what the row currently is.
+      // and this list cannot hold the take-back as a VALUE (no entry writes Unknown): that verb is the calculator in the Name column.
       typeEditComboBox.SelectedValue = row.Kind == IdentityKind.Unknown ? null : row.Kind;
 
       UiElementUtil.OpenCellPopup(typeEditPopup, typeEditComboBox, cell, () =>
@@ -644,13 +644,13 @@ namespace EQLogParser
       if (!row.TypeChoices.Contains(option)) { Refuse(DoorType, $"{option.Word} is not in the list this popup was opened with for {row.Name}"); return; }
 
       /*
-       * "Reset" takes back EVERYTHING this window remembers about the name, not only the line in
+       * The calculator click takes back EVERYTHING this window remembers about the name, not only the line in
        * identity-overrides.txt: without the ledger entry going too, the row comes straight back on the next derive wearing
        * its remembered verdict, which is the opposite of what the click looks like it did. Setting a verdict drops the
        * prior as well — this capture's answer now outranks it, and IdentityPriorStore.Recall stops offering it, so the
        * "... in previous log" tooltip cannot survive the override that replaced it.
        *
-       * What it does NOT do is erase the answer, which is why the entry is called Reset and not something about clearing (2026-11). This
+       * What it does NOT do is erase the answer — the word is RECALCULATE, not "clear", for exactly that reason. This
        * capture's own lines are re-read by the next pass and they are untouched by forgetting: a name npcs.txt places, a ``X`s pet`` name,
        * a defender a pet-target spell hit, a name the raid healed twenty times over - all of those come back, same kind, same Why word.
        * Only memory-fed rows visibly move. An operator who wants to overrule what the capture says picks the KIND (Manual strength outranks
@@ -893,7 +893,8 @@ namespace EQLogParser
      * The three controls that used to sit right of the caption are gone, and their verbs with them rather than hidden:
      *
      *   "Refresh"       — the window follows the derive while it is visible (FollowSession), so nothing needs asking.
-     *   "Not a player"  — DelVerdict plus a re-derive, which the Type cell's "Reset" does on the row it is drawn on.
+     *   "Not a player"  — DelVerdict plus a re-derive: the Type cell answers with a verdict and the Name column's calculator takes
+     *                     one back, both drawn on the row they apply to.
      *                     Nothing in this app writes a players.txt `!Name` veto and nothing reads one: that machinery
      *                     arrived seven hours before the only window that could set it lost its menu entry, three days
      *                     after the last release, so no shipped build ever had a door to it (see

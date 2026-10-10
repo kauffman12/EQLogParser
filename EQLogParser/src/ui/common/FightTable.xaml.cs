@@ -640,7 +640,7 @@ namespace EQLogParser
 
       /*
        * "Content moved" means the CAPTURE moved, and on a running log it moves every pass. Whether that can change the boards under THIS
-       * selection is a different question, answered in O(selected): the rows' own figures (SelectedFingerprint) plus the identity term,
+       * selection is a different question, answered in O(selected): the rows' own figures plus the identity term,
        * which no row can see. Facts landing anywhere else — every other mob in the raid, every heal, every miss — describe the same
        * numbers here, and re-presenting them is what the operator saw as the table "doing full refreshes for no reason". Like a declined
        * announce, this records nothing: the answer on screen is still current, and Refresh stays able to force one.
@@ -704,7 +704,8 @@ namespace EQLogParser
      * The identity half of SelectionStamp on its own: it moves when a verdict moves (an override, a charm window, a rank the rules could
      * not see last pass and can now) even though no fact arrived — the ONE thing a selected row's own figures cannot show. FightTable keeps
      * it apart from the fact count because a live tail moves the count every pass and nothing moves this until the rule book changes its
-     * mind (see SelectedFingerprint).
+     * mind. (A fingerprint over the selected rows' figures was built, measured and deleted: replaying a capture as growing prefixes
+     * moved it constantly while flipping no verdict — see docs/DesignNotes.md → "Snapshot unless a name changed what it is".)
      */
     internal static long VerdictStamp(DerivedSnapshot snapshot)
     {

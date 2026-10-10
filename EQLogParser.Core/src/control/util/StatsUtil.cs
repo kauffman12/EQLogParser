@@ -538,8 +538,8 @@ namespace EQLogParser
 
     /*
      * Fold one PARTIAL row into another: the primitive a cell cache needs, where a refresh re-counts only what is new and hands the rest of
-     * the night over as accumulated rows (docs/incremental-summary-refresh.md -> Phase B; the measured case against row-granularity reuse is
-     * in DesignNotes -> "How much a whole-row cache would actually save").
+     * the night over as accumulated rows (the design notes are a local working document, not in git; the durable half — the measured case
+     * against row-granularity reuse — is docs/DesignNotes.md -> "How much a whole-row cache would actually save").
      *
      * Three rules, each one there because the alternative is silent:
      *

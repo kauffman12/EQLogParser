@@ -10,7 +10,7 @@ namespace EQLogParser;
 /*
  * The anchor policy of a repeat window, in the one place that decides it (EQLogParser.Core/src/control/util/RepeatedWindowRule.cs).
  *
- * Two policies, one assignment apart (docs/counter-variable-issue.md): FIXED leaves the deadline where the epoch started, so an Exp trigger
+ * Two policies, one assignment apart: FIXED leaves the deadline where the epoch started, so an Exp trigger
  * with a 3600 s window restarts once per hour no matter how much it fires; SLIDING moves the deadline on every fire - GINA's
  * `LastMatched = DateTime.Now`, unconditionally - so a grind counts upward forever and only quiet LONGER than the window ends the epoch.
  * A field report from a GINA user called the fixed one "unexpected", which is fair: it is not what the same number meant in the program
