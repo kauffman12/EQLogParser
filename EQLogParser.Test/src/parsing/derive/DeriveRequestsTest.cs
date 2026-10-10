@@ -81,6 +81,75 @@ public class DeriveRequestsTest
      * the same failure with a busier clock. The engine simply never calls ServedThrough for ProjectionOnly; this pins that the
      * debt is still standing after a fold's worth of traffic.
      */
+    /*
+     * Paying a debt may not take out a new one. The engine's follow-up hop runs a pass for the owed request; if that hop stamped the
+     * ledger on its way in, the ledger would look owed again while it worked, and - because the pump re-asks from its own watermarks -
+     * the pair would repeat for as long as each pass outran one tick. Measured in a field run: every `rebuilt 608-940 ms` line was
+     * followed in the same millisecond by `continued 46-72 ms` over an unchanged capture, and that extra pass is precisely this debt,
+     * manufactured by an asker that had nothing new to say (docs/DesignNotes.md → "A derive pass that starts where the last one stopped").
+     */
+    [TestMethod]
+    public void ACascadePaysItsDebtWithoutTakingOutAnother()
+    {
+        var requests = new DeriveRequests();
+
+        var boundA = requests.StartBound();   // a pass is running; nobody has asked for this one's answer
+        requests.Arrive();                    // the operator's write lands mid-pass - a real debt
+        requests.ServedThrough(boundA);       // that pass answers only what existed at its start
+        Assert.IsTrue(requests.IsOwed, "a gesture mid-pass is owed its own pass");
+
+        var boundB = requests.StartBound();   // the cascade: no Arrive, it is paying, not asking
+        requests.ServedThrough(boundB);
+
+        Assert.IsFalse(requests.IsOwed,
+            "the pass that paid the debt leaves nothing behind — a cascade that stamps here would leave every pass owing its successor");
+    }
+
+    /*
+     * The doubling, stated as arithmetic because the engine itself cannot run outside WPF. A full pass costs 600-940 ms on a large
+     * capture and the pump ticks every 100 ms, so SEVEN ticks find the rule book still owed while one pass is running (its watermarks are
+     * written when it finishes). When such a tick stamps the ledger - which is what the pump did, coming through the same door an
+     * operator's click uses - the finished pass settles only its own start bound and then finds itself "owed", so it runs a SECOND
+     * expensive lane over facts nobody added to. Requests collapse into one another (counted, not queued), so this is exactly one extra
+     * pass per pass rather than one per tick - which is why the field log shows tidy pairs: `940 ms (rebuilt)` then `70 ms (continued)`,
+     * same millisecond, same captured count, on every single line including load-end passes with no operator action anywhere near them.
+     *
+     * What matters is not the count but what the second pass ANSWERED: nothing. Not one gesture was outstanding.
+     */
+    [TestMethod]
+    public void AStampedPumpAskDoublesEveryExpensivePass()
+    {
+        const int passMs = 900;      // a measured full pass over a 6.9 M-fact capture
+        const int tickMs = 100;      // DeriveEngine.TimerIntervalMs
+        var passes = 0;
+
+        var old = new DeriveRequests();
+        var bound = old.StartBound();                  // the pump's expensive pass begins (it stamped, then met "not busy")
+        passes++;
+        for (var tick = 0; tick < passMs / tickMs; tick++) old.Arrive();   // the pump re-asks while it runs; no click among them
+        old.ServedThrough(bound);
+        if (old.IsOwed) { var cascadeBound = old.StartBound(); passes++; old.ServedThrough(cascadeBound); }
+
+        Assert.AreEqual(2, passes,
+            "a pump that stamps turns every expensive pass into two — the measured pair, one re-walk of the night for nothing");
+        // There is no gesture in this ledger to answer: the ONLY stamps above are pump ticks. That is the whole finding — the
+        // extra re-walk of the night settled a debt that nobody had.
+
+        // The fixed shape: the pump's un-honoured ask costs one tick. Its memory is the two watermarks, so the next tick re-asks
+        // and nothing is lost; between ticks a hundred asks cost a hundred comparisons.
+        var now = new DeriveRequests();
+        var passesNow = 0;
+        for (var tick = 0; tick < 100; tick++)
+        {
+            if (!now.IsOwed) continue;
+            var b = now.StartBound();
+            passesNow++;
+            now.ServedThrough(b);
+        }
+
+        Assert.AreEqual(0, passesNow, "a pump that re-asks from the watermarks leaves no debt behind — 100 ticks cost zero passes");
+    }
+
     [TestMethod]
     public void ACheapPassSettlesNothing()
     {

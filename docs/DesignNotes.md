@@ -5114,6 +5114,50 @@ not before the floor, the first pass does not wait for silence, a bulk load is l
 scales with measured cost (floor/middle/ceiling/NaN), and the ceiling stays under `FightManager.FightTimeout`. The
 session's feeding of the rule and the meter's open-nudge sit in the WPF assembly, so they build here and run on Windows.
 
+## Every expensive pass had a twin, and the twin answered nobody (2026-11)
+
+A field run over `eqlog_Kizant_xegony-10-06-26.txt` (6,917,6xx captured facts) read like this on **every single line**, including the
+first pass at the end of a load and the passes with no operator action anywhere near them:
+
+```
+14:34:43,692  Derive done: 511 fights, 940 ms (rebuilt)
+14:34:43,692  Derive starting over 6,917,650 captured facts
+14:34:43,764  Derive done: 511 fights, 70 ms (continued)
+```
+
+Same millisecond, same worker thread, **same captured count** — so the second pass folded a capture that had not moved by one fact. It is
+not a cheap lane sneaking in either: `DeriveCadence` cannot ask for a pass whose watermarks are already current, and no operator click sat
+in front of the load-end pair. The producer was the request ledger.
+
+**The mechanism.** `DeriveRequests` exists to stop a re-derive from evaporating: the session runs one pass at a time, so an identity write
+that arrives mid-pass used to meet the busy flag and vanish, and on an idle log nothing else ever asks again. A request is therefore stamped
+*before* the busy test, and a finished pass settles only what existed when it **started** — which is exactly what makes a mid-pass override
+still owed. The bug is *who was allowed to stamp*: the derive pump dispatched through that same public door, so each of its ticks — 100 ms
+apart, against a pass that costs 600-940 ms, i.e. **seven asks per pass** — stamped the ledger on its way to meeting the busy flag. The
+finished pass settled its own bound, found itself "owed", and paid with a second expensive lane whose entire content was `DerivedFightRows.Build`
+re-run over rows it had just built (the 46-72 ms `continued` line). Because requests are counted rather than queued, the seven collapse into
+one, which is why the log shows tidy pairs instead of triples — and why the doubling survived every shape of session.
+
+**The fix is one boundary, not a new protocol:** only a **gesture** records a debt. `RederiveAsync` (the door a click opens: an identity
+write, a meter being opened) stamps; `StartPass` — used by `QuietTick`, by the failure ladder and by the cascade itself — runs a pass and
+stamps nothing. Nothing is lost by dropping an un-honoured pump ask, because the pump's memory was never that ledger: `DeriveCadence.Decide`
+re-reads `count != lastClassifiedCount` every tick until it is paid, so a busy ask costs **one 100 ms tick** instead of a re-walk of the
+night. An un-honoured *gesture* still costs forever, which is why it keeps its stamp.
+
+Two corollaries that came out of reading the pairs:
+
+- **Paying a debt may not take one out.** The cascade calls `StartPass`; had it gone on arriving, each cascade would leave the next pass
+  looking owed for the reason this one ran.
+- **The ~10 s passes over a capture that looked idle are real work, not this bug.** Those lines increment the captured count by one fact
+  apiece (a monitor tail), and one new fact moved a verdict → `StateStamp()` moved → the projection rebuilt over 6.9 M facts (that is the
+  600 ms, per the carry chapter). Sparse-but-learning is the designed cost of "never show a stale row"; it is a *different* question from
+  the doubled pair and was measured rather than swept in.
+
+Pinned by `DeriveRequestsTest.ACascadePaysItsDebtWithoutTakingOutAnother` and `DeriveRequestsTest.AStampedPumpAskDoublesEveryExpensivePass`
+(the old shape: one extra pass per expensive pass, with no gesture anywhere in the ledger to answer for it) and
+`DeriveCadenceTest.ASettledCaptureCannotBeWokenByItsOwnAsking` (a capture both lanes have read answers `None` on a hundred consecutive asks,
+which is what makes an unstamped pump ask free to drop). The engine itself is WPF-only, so the ledger and the rule carry the laws here.
+
 ## A derive pass that starts where the last one stopped (2026-10)
 
 "How often derivation re-runs" above settled *when* a pass runs; this is about what a pass costs, because the two

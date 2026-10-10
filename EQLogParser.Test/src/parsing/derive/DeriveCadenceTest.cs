@@ -71,6 +71,26 @@ public class DeriveCadenceTest
     }
 
     /*
+     * Idle is a FIXED POINT, not a moment: once both watermarks name the captured count, a hundred consecutive asks must all answer
+     * None. This is what makes the pump's ask cheap enough to never record as a debt (DeriveRequests counts gestures only) — the rule
+     * re-reads its own watermarks every tick and cannot manufacture work out of having asked, so an ask that meets a busy flag costs one
+     * tick rather than a second expensive lane over unchanged facts (the doubled pass a field log showed on every line:
+     * `940 ms (rebuilt)` then `70 ms (continued)`, twice per pass, forever).
+     */
+    [TestMethod]
+    public void ASettledCaptureCannotBeWokenByItsOwnAsking()
+    {
+        for (var tick = 0; tick < 100; tick++)
+        {
+            // The state a finished pass leaves behind: both lanes up to date, clocks running, no ingest.
+            var asked = DeriveCadence.Decide(Derived, Derived, Derived, quietSeconds: 0.1 + tick * 0.1,
+                                            factsPerSecond: 0, sinceAnyPassS: tick * 0.1,
+                                            sinceFullPassS: tick * 0.1, lastFullPassSeconds: 0.65);
+            Assert.AreEqual(DeriveKind.None, asked, $"tick {tick}: a capture both lanes have already read owes nothing");
+        }
+    }
+
+    /*
      * The bug this rule exists for: a raid in progress. Damage arrives every fraction of a second for the whole
      * encounter, so the count NEVER holds still, and a rule that only fires on quiet leaves one snapshot up until
      * somebody presses Re-derive.

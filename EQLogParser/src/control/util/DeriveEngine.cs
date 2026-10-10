@@ -359,6 +359,24 @@ namespace EQLogParser
     // identity override (which has to re-run classification before the ruled name can move anywhere).
     public void RederiveAsync() => RederiveAsync(DeriveKind.Full);
 
+    /*
+     * THE GESTURE DOOR - somebody's click. Only a gesture records a debt in `_requests`, and this is the ONLY place that does.
+     *
+     * The pump used to come through here too, and that is where every pass bought a free twin. A field run over
+     * `eqlog_Kizant_xegony-10-06-26.txt` shows it on every single line: `Derive done: 511 fights, 940 ms (rebuilt)` immediately
+     * followed - same millisecond, same worker, same captured count - by `Derive starting over 6,917,650` and
+     * `Derive done: 511 fights, 70 ms (continued)`. Not one of those pairs had a click in front of it; several had no operator
+     * action at all. The mechanism: a full pass takes 600-940 ms, the pump ticks every 100 ms, and a tick that found the rule book
+     * still owed simply asked again - met the busy flag, but had already stamped `_requests.Arrive()` on its way to meeting it. The
+     * finished pass settled only what existed at ITS start, so the pump's own mid-pass ask looked exactly like an operator's, and the
+     * cascade in the finally paid it with a second expensive lane over facts that had not moved (the 46-72 ms "continued" line IS the
+     * re-run of `DerivedFightRows.Build` over every row, twice a pass, forever).
+     *
+     * The pump does not need to ask for leave in words it cannot tell apart from a click: its debt is ALREADY stated, as
+     * `count != lastClassifiedCount`, and `DeriveCadence.Decide` re-reads that every tick until it is paid. A dropped pump ask costs
+     * one tick (100 ms) and no correctness; a gesture ask must never be dropped, because on an idle log nothing else ever asks again.
+     * That asymmetry is the whole boundary between this method and `StartPass`.
+     */
     public void RederiveAsync(DeriveKind kind)
     {
       if (_disposed) return;
@@ -369,6 +387,17 @@ namespace EQLogParser
        * every half-second refresh look like an operator's correction). The owed request is paid off in this task's finally.
        */
       if (kind == DeriveKind.Full) _requests.Arrive();
+      StartPass(kind);
+    }
+
+    /*
+     * Run a pass if none is running; asks nothing of the debt ledger. Callers are the pump (`QuietTick`), the failure ladder, and a
+     * gesture that has already recorded itself above. Never call this for something a person did - the recording is what keeps their
+     * click alive across a busy session.
+     */
+    private void StartPass(DeriveKind kind)
+    {
+      if (_disposed) return;
       if (Interlocked.Exchange(ref _deriveInFlight, 1) == 1) return;
 
       // What existed when THIS pass started is what it answers; anything later is still owed when it finishes.
@@ -603,10 +632,15 @@ namespace EQLogParser
            * Nothing happens on a failed pass. The debt stays visible to the next pass that finishes, and the retry ladder owns
            * the pacing after a throw - an immediate cascade over poison would be a loop with a log in it.
            */
+          /*
+           * A real debt - a gesture that landed while this pass was working - still gets its one hop, and `StartPass` rather than
+           * `RederiveAsync` because paying a debt must not create one: arriving here would re-stamp the ledger every cascade and
+           * leave the next pass looking owed for the same reason this one ran.
+           */
           if (succeeded)
           {
             if (kind == DeriveKind.Full) _requests.ServedThrough(requestBound);
-            if (_requests.IsOwed) RederiveAsync(DeriveKind.Full);
+            if (_requests.IsOwed) StartPass(DeriveKind.Full);
           }
         }
       });
@@ -875,7 +909,9 @@ namespace EQLogParser
         if (decision == FailureRetry.Retry)
         {
           if (factsPerSecond <= 0d) _quietFailureRetries++;
-          RederiveAsync(DeriveKind.Full);
+          // Not a gesture: the debt this retry pays is already on the books (a failed pass settles nothing), so it asks for
+          // a pass rather than another entry in the ledger.
+          StartPass(DeriveKind.Full);
           return;
         }
       }
@@ -884,7 +920,8 @@ namespace EQLogParser
                                             _sinceFactChange.Elapsed.TotalSeconds,
                                             factsPerSecond, _sinceAnyPass.Elapsed.TotalSeconds,
                                             _sinceFullPass.Elapsed.TotalSeconds, _lastFullPassSeconds);
-      if (kind != DeriveKind.None) RederiveAsync(kind);
+      // The pump asks for a PASS, never for a debt (see RederiveAsync for what that distinction was worth in ms per pass).
+      if (kind != DeriveKind.None) StartPass(kind);
     }
 
     /*

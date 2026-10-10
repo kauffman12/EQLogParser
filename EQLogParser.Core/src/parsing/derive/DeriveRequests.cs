@@ -28,6 +28,15 @@ namespace EQLogParser
    *
    * Requests are counted, not stored: they carry no payload (a Full pass re-reads the world), so a queue would suggest the
    * twelfth click in a row says something the first one did not.
+   *
+   * WHO MAY STAMP, and this is not a stylistic rule. Only a GESTURE does - an operator's write, a meter being opened. The derive pump
+   * does not, because it already has a memory: `DeriveCadence.Decide` compares the captured count against what each lane last read and
+   * asks again on the next tick until that is paid. When the pump came through the same door as a click, its mid-pass asks were counted
+   * as requests - and a full pass takes 600-940 ms on a large capture while the pump ticks every 100 ms, so every pass left roughly one
+   * fabricated ask per tick of its own duration for the cascade to pay. A field run showed the result on every line: `Derive done: 511
+   * fights, 940 ms (rebuilt)` and then, same millisecond and same captured count, another pass reading `70 ms (continued)`. Dropping an
+   * un-honoured pump ask costs one tick; dropping an un-honoured gesture is the bug this type was written for. That asymmetry is the whole
+   * boundary - see DeriveEngine's RederiveAsync (the gesture door, stamps) and StartPass (everywhere else, does not).
    */
   internal sealed class DeriveRequests
   {
