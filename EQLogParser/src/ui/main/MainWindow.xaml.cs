@@ -908,9 +908,19 @@ namespace EQLogParser
     }
 
     /*
+     * Whether the capture this build was asked for is still the one on screen. Reads an int the UI thread writes, with Volatile.Read:
+     * the plain-data form of the law that a worker may not walk the dock site or touch `_engine`, and the question every board worker
+     * asks before it starts (BoardFanout's law 1) as well as the two checks this method makes on its own thread.
+     */
+    private bool SessionStillOpen(DeriveEngine session) => session.SessionId == Volatile.Read(ref _engineSessionId);
+
+    /*
      * The worker's half of one announcement: materialize, then feed all three boards off the SAME rows. `askedAt` is the moment the
      * pane asked, so the line shows how long this build waited behind another one — "waited 3400 ms" IS the single-flight rule working,
      * and a triple would read as three lines that each waited on something.
+     *
+     * Below `BoardFanout.MinOutcomes` the three builds run here in today's order; above it they run side by side (see BoardFanout for
+     * what makes that safe and for the one behaviour change it carries: a throwing board no longer takes the other two with it).
      */
     private void BuildBoards(DeriveEngine session, BoardRequest request, int tankingDamageType, long askedAt)
     {
@@ -924,7 +934,7 @@ namespace EQLogParser
        * blank the boards of whatever opened next — including Clear All's own fresh session. Newest question wins: the gate
        * never un-STARTS work, so it stops before painting instead. `_engineSessionId` is written on the UI thread only.
        */
-      if (session.SessionId != Volatile.Read(ref _engineSessionId))
+      if (!SessionStillOpen(session))
       {
         Log.Debug($"board build abandoned [{request.Reason}]: capture {session.SessionId} closed while this was queued");
         return;
@@ -945,16 +955,42 @@ namespace EQLogParser
         input = session.BuildSummaryInput(request.Fights);
         var materializeMs = PerfCounters.End(materializeSpan);
 
-        GenerateStatsOptions damageStatsOptions = new() { Source = door };
-        damageStatsOptions.Npcs.AddRange(input.Fights);
-        damageStatsOptions.AllRanges = input.AllRanges;
-        damageStatsOptions.MinSeconds = 0;
-
-        if (session.SessionId != Volatile.Read(ref _engineSessionId))
+        if (!SessionStillOpen(session))
         {
           Log.Debug($"board build abandoned [{request.Reason}]: capture closed while this materialized");
           return;
         }
+
+        /*
+         * The three option objects are built up front because they may be handed to three workers: each board gets its OWN options
+         * (builders write nothing into them but the healing builder's own rebuild door), and all three carry ONE trace group so the
+         * siblings of this request never warn about each other (StatsBuildTrace rule 2). Building them before damage runs instead of
+         * between builds is what makes "three boards, one question" the same object graph either way; nothing observable moves, since
+         * an options object is a bag of references this method fills from `input` and no builder reads another's.
+         */
+        var buildGroup = StatsBuildTrace.NextGroupId();
+
+        GenerateStatsOptions damageStatsOptions = new() { Source = door, BuildGroup = buildGroup };
+        damageStatsOptions.Npcs.AddRange(input.Fights);
+        damageStatsOptions.AllRanges = input.AllRanges;
+        damageStatsOptions.MinSeconds = 0;
+
+        // Same rows, other direction: TankingStatsBuilder walks fight.TankingBlocks and takes each player's
+        // activity window from TankSegments, both of which the materializer fills off the same facts.
+        GenerateStatsOptions tankingStatsOptions = new() { Source = door, BuildGroup = buildGroup };
+        tankingStatsOptions.Npcs.AddRange(input.Fights);
+        tankingStatsOptions.AllRanges = input.AllRanges;
+        tankingStatsOptions.MinSeconds = 0;
+        tankingStatsOptions.DamageType = tankingDamageType;
+
+        // Healing: no Fight objects involved anywhere on this path. The window is the selection's, the records
+        // are the capture's, and the builder's own filters (AoE healing, swarm pets) run over them unchanged —
+        // so the healing tab stops being the one board that ignored which list was clicked.
+        GenerateStatsOptions healingStatsOptions = new() { Source = door, BuildGroup = buildGroup };
+        healingStatsOptions.Npcs.AddRange(input.Fights);
+        healingStatsOptions.AllRanges = input.AllRanges;
+        healingStatsOptions.MinSeconds = 0;
+        healingStatsOptions.Heals = input.Heals;
 
         var records = input.Fights.Sum(static f => f.DamageBlocks.Sum(static b => b.Actions.Count));
         var tankRecords = input.Fights.Sum(static f => f.TankingBlocks.Sum(static b => b.Actions.Count));
@@ -966,28 +1002,44 @@ namespace EQLogParser
                  + (input.WithoutDamage > 0 ? $", {input.WithoutDamage} selected fight(s) no facts at all" : string.Empty)
                  + $" | materialized in {materializeMs:F0} ms, waited {waitedMs:F0} ms behind any earlier build");
 
-        DamageStatsBuilder.Instance.BuildTotalStats(damageStatsOptions);
-
-        // Same rows, other direction: TankingStatsBuilder walks fight.TankingBlocks and takes each player's
-        // activity window from TankSegments, both of which the materializer fills off the same facts.
-        GenerateStatsOptions tankingStatsOptions = new() { Source = door };
-        tankingStatsOptions.Npcs.AddRange(input.Fights);
-        tankingStatsOptions.AllRanges = input.AllRanges;
-        tankingStatsOptions.MinSeconds = 0;
-        tankingStatsOptions.DamageType = tankingDamageType;
-
-        TankingStatsBuilder.Instance.BuildTotalStats(tankingStatsOptions);
-
-        // Healing: no Fight objects involved anywhere on this path. The window is the selection's, the records
-        // are the capture's, and the builder's own filters (AoE healing, swarm pets) run over them unchanged —
-        // so the healing tab stops being the one board that ignored which list was clicked.
-        GenerateStatsOptions healingStatsOptions = new() { Source = door };
-        healingStatsOptions.Npcs.AddRange(input.Fights);
-        healingStatsOptions.AllRanges = input.AllRanges;
-        healingStatsOptions.MinSeconds = 0;
-        healingStatsOptions.Heals = input.Heals;
-
-        HealingStatsBuilder.Instance.BuildTotalStats(healingStatsOptions);
+        /*
+         * Serial or fanned out — the boards are the SAME three calls over the SAME options either way; what changes is how many
+         * workers carry them (docs/improve-stat-building §4, numbers in §0). The threshold is measured: below ~500k outcomes the
+         * whole build is tens of milliseconds and three thread starts are the finding, above it a farm-night select-all saves
+         * hundreds of ms to seconds and a live capture's periodic re-run of a held big selection stops spending its wall time in a
+         * line. The decision reads `UnaskedRefresh.OutcomeCount` — the same meter the refresh budget prices a build with — so the two
+         * can never drift apart into different ideas of how big this selection is.
+         *
+         * Fanning out happens INSIDE this one request's work action: the gate still has one build in flight, still drops duplicates
+         * and still keeps only the newest queued question, so there is never a second materialization running (that is the regression
+         * the gate exists to refuse). Below the constant the path is today's code, in today's order.
+         */
+        var outcomes = UnaskedRefresh.OutcomeCount(request.Fights);
+        if (BoardFanout.Decide(outcomes) == BoardFanoutMode.Parallel)
+        {
+          /*
+           * Each worker re-asks whether this capture is still open before it starts (a capture change can land after this method's own
+           * check and before a worker is scheduled — the abandonment law says a build that outlived its log must return BEFORE painting,
+           * since a dropped snapshot reads to `BuildSummaryInput` as "clear every board"), and each carries its own failure. That second
+           * half is the one deliberate behaviour change here: serially a damage throw suppressed tanking AND healing; fanned out, one bad
+           * record costs one grid. "A partial board beats no board," per board — see BoardFanout's law 2.
+           */
+          Log.Debug($"board fan-out [{request.Reason}]: {outcomes:N0} outcomes over three workers");
+          BoardFanout.RunParallel([
+            new("damage", request.Reason.ToString(), () => SessionStillOpen(session),
+                () => DamageStatsBuilder.Instance.BuildTotalStats(damageStatsOptions)),
+            new("tanking", request.Reason.ToString(), () => SessionStillOpen(session),
+                () => TankingStatsBuilder.Instance.BuildTotalStats(tankingStatsOptions)),
+            new("healing", request.Reason.ToString(), () => SessionStillOpen(session),
+                () => HealingStatsBuilder.Instance.BuildTotalStats(healingStatsOptions))
+          ]);
+        }
+        else
+        {
+          DamageStatsBuilder.Instance.BuildTotalStats(damageStatsOptions);
+          TankingStatsBuilder.Instance.BuildTotalStats(tankingStatsOptions);
+          HealingStatsBuilder.Instance.BuildTotalStats(healingStatsOptions);
+        }
       }
       catch (Exception ex)
       {
