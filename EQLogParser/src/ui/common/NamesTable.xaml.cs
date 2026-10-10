@@ -192,6 +192,7 @@ namespace EQLogParser
     private long _recalcStartTick;
     private bool _recalcPassLanded;
     private System.Windows.Threading.DispatcherTimer? _recalcHardCap;
+    private System.Windows.Threading.DispatcherTimer? _recalcFloor;
 
     public NamesTable()
     {
@@ -527,6 +528,14 @@ namespace EQLogParser
        * genuine edit as "you picked what it already says". A write that goes out by name is harmless; a refusal is not.
        */
       if (_ownerEditRow is not null) _ownerEditRow = FindRow(_ownerEditRow.Name);
+
+      /*
+       * The take-back's "Recalculating…" label rides on the row INSTANCE, which this merge replaced, while the state behind it
+       * is keyed by NAME. Restamped here, the notice lasts what RecalcOverlay decided (floor, then pass-or-cap) instead of
+       * vanishing at the first census pass that happened to land mid-flight — a click that stops announcing itself before its
+       * answer arrived is the failure the floor exists to prevent.
+       */
+      if (_recalcName is not null) FindRow(_recalcName)?.Recalculating = true;
     }
 
     /*
@@ -811,6 +820,11 @@ namespace EQLogParser
       if (sender is not ImageAwesome icon || icon.DataContext is not NameRow row) return;
 
       var name = row.Name;
+
+      // One take-back at a time: state is a single name, so a second click would leave the first row labelled forever —
+      // nothing else can take it off once this field points somewhere else.
+      if (_recalcName is not null) FindRow(_recalcName)?.Recalculating = false;
+
       _recalcName = name;
       _recalcStartTick = Environment.TickCount64;
       _recalcPassLanded = false;
@@ -821,6 +835,8 @@ namespace EQLogParser
       Reconcile();
 
       // The cap is the other half of RecalcOverlay.ShouldHide: a pass parked behind a bulk load may not hold the row hostage.
+      _recalcFloor?.Stop();
+      _recalcFloor = null;
       _recalcHardCap?.Stop();
       _recalcHardCap = null;
       var remaining = Math.Max(0, RecalcOverlay.HardCapMs - (Environment.TickCount64 - _recalcStartTick));
@@ -837,20 +853,40 @@ namespace EQLogParser
     }
 
     /*
-     * When the label comes down is RecalcOverlay's law: never before the floor (an answer identical to what was on screen must
-     * still show that the click was heard), then at the first of the pass landing and the cap. The census may have replaced the row
-     * by then — a fresh instance carries no label, so there is nothing to un-latch on it.
+     * When the label comes down is RecalcOverlay's law: never before the floor, then at the first of pass-landed and cap.
+     * A pass can land inside the floor — the pane's own census was just forced by this click — so declining is not terminal:
+     * the remaining floor gets a timer, or the answer would sit under the label until the 5 s cap.
      */
     private void TryHideRecalc()
     {
       if (_recalcName is null) return;
-      if (!RecalcOverlay.ShouldHide(_recalcStartTick, Environment.TickCount64, _recalcPassLanded)) return;
+      if (!RecalcOverlay.ShouldHide(_recalcStartTick, Environment.TickCount64, _recalcPassLanded))
+      {
+        // Armed once, and only while the floor is still unpaid — re-arming at its own tick would spin.
+        if (_recalcFloor is null && Environment.TickCount64 - _recalcStartTick < RecalcOverlay.MinVisibleMs)
+        {
+          var waitMs = Math.Max(1, RecalcOverlay.MinVisibleMs - (Environment.TickCount64 - _recalcStartTick));
+          _recalcFloor = new System.Windows.Threading.DispatcherTimer(
+                           TimeSpan.FromMilliseconds(waitMs), System.Windows.Threading.DispatcherPriority.Background,
+                           OnRecalcFloorTick, Dispatcher);
+        }
+        return;
+      }
 
       var name = _recalcName;
       _recalcName = null;
       _recalcHardCap?.Stop();
       _recalcHardCap = null;
+      _recalcFloor?.Stop();
+      _recalcFloor = null;
       FindRow(name)?.Recalculating = false;
+    }
+
+    private void OnRecalcFloorTick(object? sender, EventArgs e)
+    {
+      _recalcFloor?.Stop();
+      _recalcFloor = null;
+      TryHideRecalc();
     }
 
     /*
