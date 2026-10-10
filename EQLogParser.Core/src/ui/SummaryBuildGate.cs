@@ -18,7 +18,9 @@ namespace EQLogParser;
  *
  *   1. **Never two at once.** A request that arrives while one runs is queued, not started; the runner drains at most one
  *      follow-up and re-asks, so a burst of announcements costs one extra build rather than N.
- *   2. **Only the newest queued request survives.** An older selection has already been superseded by a newer click; running
+ *   2. **Only the newest queued request survives — including when the newest one costs nothing.** A request answered by what already
+      ran (or is running) also DROPS whatever was queued: keeping it would paint an abandoned selection over the grid afterwards.
+      An older selection has already been superseded by a newer click; running
  *      it first would only delay the answer that matters (and its records are the ones holding memory down).
  *   3. **A request whose INPUTS match a build that ran to completion (or is running) is dropped.** A build that threw answered
       nothing and is not remembered, because the builders catch their own failures and leave the grids showing last night's
@@ -78,6 +80,22 @@ internal sealed class SummaryBuildGate(Action<Action> schedule)
     {
       if (key == _runningKey || key == _doneKey)
       {
+        /*
+         * Free answer - AND the queued one goes with it. Law 2 is "the newest request survives", and this IS the newest request:
+         * something that already ran (or is running) answers it, so a waiting entry describes a selection the operator has walked away
+         * from. Without this half, select-A → drag-to-B → click-back-on-A ended with B's boards painted over A's grid a second later -
+         * "the stats panel shows somebody else's fight", and no gesture short of another click got rid of it.
+         *
+         * The case this does NOT cover is a DIFFERENT build already in flight when the matching request arrives (A done → B running →
+         * select A): nothing can un-start B, so B still paints last over a grid that answers A. That needs a result-side staleness
+         * check on the board pipeline rather than a scheduler change - named as such in gpt-review-1.md #3.
+         */
+        if (_pending is { } queued && queued.Key != key)
+        {
+          _pending = null;
+          Interlocked.Increment(ref _collapsed);
+        }
+
         Interlocked.Increment(ref _collapsed);
         outcome = Outcome.SkippedSame;
       }

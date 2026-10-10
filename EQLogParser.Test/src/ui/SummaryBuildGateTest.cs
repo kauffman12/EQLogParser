@@ -192,4 +192,44 @@ public sealed class SummaryBuildGateTest
     scheduler.Drain();
     Assert.AreEqual(2, builds, "a build that finished still answers the same question without working");
   }
+
+  [TestMethod]
+  public void WalkingBackToTheSelectionBeingBuiltCancelsTheAbandonedOne()
+  {
+    /*
+     * The sequence behind "the stats panel shows somebody else's fight": select A, drag to B, click back on A. A answers the newest
+     * question for free, but until now the queued B stayed behind it and painted its boards over A's grid a second later - so the
+     * newest request won at ARRIVAL time and lost at completion time. Law 2 covers free answers too.
+     */
+    var (gate, scheduler, built) = Fixture();
+
+    Assert.AreEqual(SummaryBuildGate.Outcome.Started, gate.Request(10, () => built.Add(10)));
+    Assert.AreEqual(SummaryBuildGate.Outcome.Queued, gate.Request(20, () => built.Add(20)));
+    Assert.AreEqual(SummaryBuildGate.Outcome.SkippedSame, gate.Request(10, () => built.Add(10)),
+      "the build in flight already answers the selection the operator walked back to");
+
+    scheduler.Drain();
+    CollectionAssert.AreEqual(new[] { 10L }, built,
+      "the abandoned selection may not build after the one on screen - newest wins, including when the newest is free");
+  }
+
+  [TestMethod]
+  public void WalkingBackToTheSelectionJustBuiltCancelsWhatWasQueuedBehindAnother()
+  {
+    var (gate, scheduler, built) = Fixture();
+
+    gate.Request(10, () => built.Add(10));
+    scheduler.Drain();                                                          // A answered; _doneKey = 10
+    Assert.AreEqual(SummaryBuildGate.Outcome.Started, gate.Request(20, () => built.Add(20)));
+    Assert.AreEqual(SummaryBuildGate.Outcome.Queued, gate.Request(30, () => built.Add(30)));
+
+    Assert.AreEqual(SummaryBuildGate.Outcome.SkippedSame, gate.Request(10, () => built.Add(10)));
+
+    scheduler.Drain();
+    /*
+     * C is dropped - it is superseded and unstarted. B already began and the scheduler cannot un-start a build; that half of the
+     * hazard (B painting last over a grid that answers A) belongs to the board pipeline's result-side staleness check, not here.
+     */
+    CollectionAssert.AreEqual(new[] { 10L, 20L }, built, "queued work for abandoned selections goes away; running work does not");
+  }
 }
