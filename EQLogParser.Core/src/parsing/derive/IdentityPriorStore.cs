@@ -111,8 +111,17 @@ namespace EQLogParser
      */
     internal void FlushChanges() => Save();
 
+    /*
+     * Counts how many times this store has been (re)loaded - one bump per log open, and per test fixture. It exists so a caller that
+     * asks a LOAD-SCOPED question once ("did this folder's legacy files already move in?") can tell a second ask inside the same load
+     * from a fresh load of the same folder: the answer must be stable while an open is in progress, because the roster import writes
+     * the very ledger whose existence the pet-map import is about to check. See LegacyPlayerImport.ClaimMigration.
+     */
+    internal long LoadGeneration { get; private set; }
+
     public void Init(string serverName)
     {
+      LoadGeneration++;
       var loaded = new Dictionary<string, Prior>(StringComparer.OrdinalIgnoreCase);
       var dropped = 0;                       // rows the gate below refused, see the log line at the end
       var roster = 0;                        // rows carrying the roster bit, whatever else they hold

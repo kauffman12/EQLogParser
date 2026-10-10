@@ -5,7 +5,7 @@ namespace EQLogParser;
  * frozen feed into it.
  *
  * The old version of this class tested a roster file the application rewrote every 30 seconds. That writer is deleted, which is
- * the whole subject now: the curated file is read at most once per folder (by RosterImport, before the registry loads) and never
+ * the whole subject now: the curated file is read at most once per folder (by LegacyPlayerImport, before the registry loads) and never
  * edited again, while membership lives in the ledger's roster lane — the same statement (name, the dotnet-epoch second this app
  * last saw it) plus the class players.txt had nowhere to put. The operator's reasoning for a freeze rather than a live input:
  * "there's no way to change it anymore, so if there's a problem with what it's doing players would be stuck with it".
@@ -91,8 +91,8 @@ public class PlayerRegistryPersistenceTest
   private void OpenLogFolder()
   {
     IdentityPriorStore.Instance.Init(Server);
-    RosterImport.ImportPlayersFileOnce(Server);
-    RosterImport.ImportPetMapOnce(Server);   // MainWindow's real open order: both frozen feeds land in the ledger, then the registry seeds
+    LegacyPlayerImport.ImportPlayersFileOnce(Server);
+    LegacyPlayerImport.ImportPetMapOnce(Server);   // MainWindow's real open order: both frozen feeds land in the ledger, then the registry seeds
     PlayerRegistry.Instance.Init();
   }
 
@@ -154,7 +154,7 @@ public class PlayerRegistryPersistenceTest
     Directory.CreateDirectory(freshFolder);
     ConfigUtil.ServerName = "NeverHadOne";
     IdentityPriorStore.Instance.Init("NeverHadOne");
-    RosterImport.ImportPlayersFileOnce("NeverHadOne");
+    LegacyPlayerImport.ImportPlayersFileOnce("NeverHadOne");
     PlayerRegistry.Instance.Init();
     PlayerRegistry.Instance.AddVerifiedPlayer("Somename", DateUtil.ToDotNetSeconds(DateTime.Now));
     PlayerRegistry.Instance.Save();
@@ -344,7 +344,7 @@ public class PlayerRegistryPersistenceTest
     Directory.CreateDirectory(freshFolder);
     ConfigUtil.ServerName = "NeverHadPets";
     IdentityPriorStore.Instance.Init("NeverHadPets");
-    RosterImport.ImportPetMapOnce("NeverHadPets");
+    LegacyPlayerImport.ImportPetMapOnce("NeverHadPets");
     PlayerRegistry.Instance.Init();
     PlayerRegistry.Instance.AddPetToPlayer("Somename", "Newbie");
     PlayerRegistry.Instance.Save();

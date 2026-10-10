@@ -806,7 +806,7 @@ declare without `?`; add the directive only when the whole file is meant to hold
   a filename leaking into the application's own vocabulary, and it printed in the Pet Owners grid. It is now `"No Owner"` (the cell; the dropdown entry
   went with the calculator change — see the identity bullet below), with
   `Labels.LegacyUnassigned = "Unknown Pet Owner"` kept for **reading only**: a frozen `petmapping.txt` cannot be edited, identity is keyed by NAME, and
-  `RosterImport` hands stored owner text to `AddPetToPlayer`, so two live strings would give one pet two owners — the same class of bug as a name differing
+  `LegacyPlayerImport` hands stored owner text to `AddPetToPlayer`, so two live strings would give one pet two owners — the same class of bug as a name differing
   from itself by punctuation. Every recognizer takes BOTH (`Labels.IsUnassignedOwner`), and every display goes through `PetOwnership.DisplayOf`, which answers
   `No Owner` for either wording and for no entry at all. Nothing may write the legacy text; a test asserts the current word carries no `.txt`
   (`PetOwnershipTest`). docs/DesignNotes.md → "petmapping.txt is a feed now".
@@ -870,7 +870,7 @@ moves); the capture's own windows survive even it, because they are this log's e
   Kind stays `Unknown`, `Record` can neither set nor upgrade the bit (a name on the list for a decade may be called Npc by
   every pass), and roster rows are exempt from the rule lane's 90-day and `MaxEntries` pruning — they age on the single dial
   `PlayerRegistry.StaleDays` = **200** against `DateTime.Now`, and `SeenAtS <= 0` is a statement that never retires.
-  `RosterImport.ImportPlayersFileOnce(server)` runs at log open **once per folder**, gated on "does this ledger already carry
+  `LegacyPlayerImport.ImportPlayersFileOnce(server)` runs at log open **once per folder**, gated on "does this ledger already carry
   roster rows" rather than a marker file — so an edited or restored players.txt is **not** re-imported, and the call costs
   one `File.Exists` afterwards. It writes **no stamps of its own** (the file's ticks survive verbatim; stamping today would
   restart every name's 200-day clock on the day it was copied), batches through ONE `FlushChanges()` instead of rewriting the

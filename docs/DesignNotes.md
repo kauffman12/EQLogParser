@@ -6486,7 +6486,7 @@ out for her - that item is for names nothing can place.
 
 ### The one-time roster import: membership moves, and nothing else does (built 2026-11)
 
-`RosterImport.ImportPlayersFileOnce(server)` runs at log open, from `MainWindow`'s per-server block, in the order the
+`LegacyPlayerImport.ImportPlayersFileOnce(server)` runs at log open, from `MainWindow`'s per-server block, in the order the
 stores are read: `identity-overrides.txt`, then `identity-priors.txt`, then the import, then `PlayerRegistry.Init()`. It
 writes the ledger's roster lane and nothing else - no verdict, no override, no second dictionary.
 
@@ -10500,7 +10500,7 @@ with every classification file deleted: *"I decided to test without any existing
 somehow it created and added to the players.txt. I thought we only did the one time import and stopped using that file?"* — they were
 right about the plan, and the plan had a hole in it.
 
-**What was actually true before this commit.** `RosterImport` read players.txt once per folder into `identity-priors.txt`'s roster
+**What was actually true before this commit.** `LegacyPlayerImport` read players.txt once per folder into `identity-priors.txt`'s roster
 lane, as designed; but `PlayerRegistry.Init` still loaded that same file into `_verifiedPlayers`, `SaveRosterFile` still rewrote it on
 a 30-second timer and at log close, and every recognition path (`AddVerifiedPlayer`, the `you=` line, R17's drink, R19's eye, an
 operator assigning a pet owner) still wrote INTO the in-memory copy that those timers serialized. So a capture that saw a name loot a
@@ -10584,7 +10584,7 @@ history rather than a store mid-migration.
 
 2026-10-09, the day after the roster freeze, from the request that also asked for an Owner column in Names and Identities:
 *"the old pet mapping should be as strong as the ones we decide by spell cast or whatever... I assume we at least remove everything
-from the old definitions."* The file had already lost its writer-role in the sense that `RosterImport.ImportPetMapOnce` copies it into
+from the old definitions."* The file had already lost its writer-role in the sense that `LegacyPlayerImport.ImportPetMapOnce` copies it into
 the ledger's ownership lane once per folder — but `PlayerRegistry.Init` still read it directly as live input **and** `Save()` still
 rewrote it on a 30-second timer. Two memories of one pair, seeded in two orders, with whichever wrote last winning: the exact shape the
 roster freeze removed, still standing next to it.
@@ -10638,7 +10638,7 @@ own vocabulary, which is why `Labels` now carries two constants: `Unassigned = "
 and `LegacyUnassigned = "Unknown Pet Owner"` — kept for READING only, with the note that no code may write it. Kept rather than dropped
 because a frozen `petmapping.txt` cannot be edited, and a file row whose owner is the old text must not outlive the word: the one
 guarantee here is *"no matter which of the two a row holds, this cell reads `No Owner` and this dropdown entry recognizes it"*
-(`PetOwnership.DisplayOf`, pinned from both directions including the row that has no entry at all). Since `RosterImport` passes stored
+(`PetOwnership.DisplayOf`, pinned from both directions including the row that has no entry at all). Since `LegacyPlayerImport` passes stored
 owner text through `AddPetToPlayer`, and identity is keyed by NAME, leaving both strings live would have given one pet two owner values —
 the same class of bug as a name differing from itself by punctuation.
 
@@ -10877,7 +10877,7 @@ and the action flag. Then, and only then, the new word is written — except for
 undo and nothing underneath to fall back to.
 
 **Why that erasure is a feature and not a hole.** `players.txt` has no writer since `05439925`, and the importer
-(`RosterImport.ImportPlayersFileOnce`) returns early whenever `IdentityPriorStore.HasRosterRows` — *"does this server folder have
+(`LegacyPlayerImport.ImportPlayersFileOnce`) returns early whenever `IdentityPriorStore.HasRosterRows` — *"does this server folder have
 any row with `Ours=true`?"*. So a curated file cannot refill a name the operator just disowned: **Clear claim is the one door that
 repairs a name legacy got wrong**, and it works precisely because nothing re-imports behind it. A name comes back only by being
 watched — raid joins, casts, heals — or by hand-editing `identity-priors.txt`. Two consequences of the gate are worth knowing

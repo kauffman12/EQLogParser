@@ -335,7 +335,7 @@ namespace EQLogParser
      *
      * The server guard is not paranoia. IdentityPriorStore files every row under the server name IT holds, and during a log switch the
      * ledger can still be answering for the previous folder — writing tonight's names there is exactly the "one folder quietly acquires
-     * another's roster" hazard RosterImport refuses. A skipped write costs nothing: memory already has the name, and the registry
+     * another's roster" hazard LegacyPlayerImport refuses. A skipped write costs nothing: memory already has the name, and the registry
      * re-seeds from the right ledger the moment the switch completes.
      */
     private void RememberInLedger(string name, double playerTimeS, bool loading)
@@ -611,7 +611,7 @@ namespace EQLogParser
 
         /*
          * players.txt used to be read here as live input. It is not: the roster lane below is the memory, and the ONE reader of the
-         * file is now RosterImport.ImportPlayersFileOnce — which runs before this method at log open, so a folder's curated list is
+         * file is now LegacyPlayerImport.ImportPlayersFileOnce — which runs before this method at log open, so a folder's curated list is
          * already in the ledger (identical stamps, no re-ageing) when these lines seed. Deleting a server's identity-priors.txt
          * therefore brings its players.txt back to life, which is the rollback path; nothing else re-reads the file, and nothing
          * writes it. docs/DesignNotes.md → "players.txt is a feed now".
@@ -631,7 +631,7 @@ namespace EQLogParser
         {
           /*
            * The ownership lane first, and it is no longer a warm-up beside a file this class also reads — it is the only input.
-           * `RosterImport.ImportPetMapOnce` lifts petmapping.txt into the lane at log open (once per folder, stamps carried
+           * `LegacyPlayerImport.ImportPetMapOnce` lifts petmapping.txt into the lane at log open (once per folder, stamps carried
            * verbatim) and NOTHING writes that file again, so these lines are where every pair — a decade of operator edits
            * included — enters the session. The pairs still land in `_petToPlayer`, which stays the parse's live mirror: the
            * ingest checks read it mid-line. Nothing announces a learned pair to the UI any more: Pet Owners is gone and the
@@ -683,7 +683,7 @@ namespace EQLogParser
     }
 
     /*
-     * The petmapping.txt grammar, ONE copy: `<pet>=<owner>[|<dotnet seconds>]`. `RosterImport.ImportPetMapOnce` is its only reader
+     * The petmapping.txt grammar, ONE copy: `<pet>=<owner>[|<dotnet seconds>]`. `LegacyPlayerImport.ImportPetMapOnce` is its only reader
      * now that the file is frozen, and it stays a shared helper rather than being folded into the import so a future "re-read this
      * folder's map" verb cannot invent a second grammar for the same lines. The shape of the old disagreement is still worth
      * stating: a pet one reader adopts and the other refuses is a pet whose owner folds on one board and not the other.
@@ -717,7 +717,7 @@ namespace EQLogParser
     }
 
     /*
-     * The players.txt grammar, ONE copy: `Name[=<dotnet seconds>[,<Class>]]`. Init loads through it and RosterImport
+     * The players.txt grammar, ONE copy: `Name[=<dotnet seconds>[,<Class>]]`. Init loads through it and LegacyPlayerImport
      * carries the same file into the ledger, so the two readers cannot drift into disagreeing about which lines are names
      * (a name one reader sees and the other refuses is a name on half the memory).
      *
@@ -756,7 +756,7 @@ namespace EQLogParser
 
       // Deliberately NOT IsPossiblePlayerName: that gate wants letters only, and a curated file legitimately holds
       // names it fails ("Akini, Xanathan"). Refusing such a row at LOAD is how a curated list disappears silently - the
-      // bug this class's header is full of. A caller may tighten further on its own reasons; RosterImport does.
+      // bug this class's header is full of. A caller may tighten further on its own reasons; LegacyPlayerImport does.
       return true;
     }
 

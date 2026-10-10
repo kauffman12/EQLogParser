@@ -668,7 +668,7 @@ namespace EQLogParser
      *
      * WHY IT EXISTS. players.txt used to be a live file this program rewrote every 30 seconds from whatever the parsers recognised.
      * That ended 2026-10-09: the roster now lives in identity-priors.txt's roster lane (same statement plus the class the file had
-     * nowhere to put), the old file is read at most once per folder by RosterImport and never written, and a name this application
+     * nowhere to put), the old file is read at most once per folder by LegacyPlayerImport and never written, and a name this application
      * has carried for years deserves to be BELIEVED rather than kept as a bit only the You-mapping consults. The operator's words
      * when freezing the file: treat it "as strongly as things like the class spell cast" — so it testifies at RuleStrength.Strong,
      * the same tier as joining a raid, guild speech, taking a drink, casting a class family.
@@ -684,7 +684,7 @@ namespace EQLogParser
      *     rest would add hundreds of rows to a window about fighters while moving StateStamp() over verdicts no board reads.
      *   ANOTHER SERVER'S LEDGER NEVER SPEAKS. The store is one process-wide object holding whichever folder was opened; mid-switch
      *     it can still answer for the previous server, and claiming those names as tonight's raiders is the cross-folder leak every
-     *     other writer here refuses (RosterImport, PlayerRegistry.RememberInLedger).
+     *     other writer here refuses (LegacyPlayerImport, PlayerRegistry.RememberInLedger).
      *
      * It is deliberately absent from IdentityPriorStore.WorthRemembering: a restatement of membership is not something "a later log
      * might not answer again", and recording it would let the roster's word come back tomorrow as if a rule had observed it.

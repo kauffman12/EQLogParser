@@ -3,7 +3,7 @@ using EQLogParser;
 namespace EQLogParser;
 
 /*
- * The one-time move of players.txt into the roster lane of identity-priors.txt (RosterImport). What these tests hold is
+ * The one-time move of players.txt into the roster lane of identity-priors.txt (LegacyPlayerImport). What these tests hold is
  * the part a reader cannot see from the code being obviously right: that a migration which runs at log open must not
  * damage either the file it reads or the memory the app is starting up with.
  *
@@ -85,7 +85,7 @@ public class RosterImportTest
     var ticks = Math.Round(DateUtil.ToDotNetSeconds(DateTime.Now.AddDays(-30)));
     WritePlayersFile([$"Kilsa={ticks},Cleric", "Betebeatz"]);
 
-    var result = RosterImport.ImportPlayersFileOnce(Server);
+    var result = LegacyPlayerImport.ImportPlayersFileOnce(Server);
 
     Assert.AreEqual(2, result.Applied, $"a row was not carried; file = [{string.Join(" | ", ReadPlayersFile())}]");
     Assert.AreEqual(1, result.WithClass);
@@ -121,7 +121,7 @@ public class RosterImportTest
   public void TheImportRunsOncePerServerFolder()
   {
     WritePlayersFile(["Kilsa"]);
-    Assert.AreEqual(1, RosterImport.ImportPlayersFileOnce(Server).Applied, "the first run carried nothing");
+    Assert.AreEqual(1, LegacyPlayerImport.ImportPlayersFileOnce(Server).Applied, "the first run carried nothing");
 
     /*
      * A name added to players.txt afterwards is NOT picked up. That is deliberate: the gate is "has this folder's roster
@@ -129,7 +129,7 @@ public class RosterImportTest
      * behind the operator's back, for no gain now that the ledger is the durable list.
      */
     WritePlayersFile(["Kilsa", "Newperson"]);
-    var second = RosterImport.ImportPlayersFileOnce(Server);
+    var second = LegacyPlayerImport.ImportPlayersFileOnce(Server);
 
     Assert.AreEqual(0, second.Applied, $"the import ran twice; result = {second}");
     Assert.IsFalse(IdentityPriorStore.Instance.TryGetRoster("Newperson"), "a second import carried a new name anyway");
@@ -139,7 +139,7 @@ public class RosterImportTest
   public void AFolderWithNoRosterFileLeavesNothingBehind()
   {
     // The ordinary case for every server from here on: no players.txt, so nothing to carry and nothing to say.
-    var result = RosterImport.ImportPlayersFileOnce(Server);
+    var result = LegacyPlayerImport.ImportPlayersFileOnce(Server);
 
     Assert.IsFalse(result.DidWork);
     Assert.AreEqual(0, result.Refused);
@@ -156,7 +156,7 @@ public class RosterImportTest
      */
     WritePlayersFile(["Unknown", "!!Goruuk", string.Empty, "   ", "Goruuk", "Akini, Xanathan=0"]);
 
-    var result = RosterImport.ImportPlayersFileOnce(Server);
+    var result = LegacyPlayerImport.ImportPlayersFileOnce(Server);
 
     // The unknown marker is a placeholder somebody's editor wrote, '!' is a hand crossing a line out, and blank lines are
     // not refusals - they are nothing. The two usable rows still land, so one bad line cannot cost an operator their list.
@@ -178,7 +178,7 @@ public class RosterImportTest
     // A hand-edited file may carry the literal "You"; it means whoever is playing now, same reading PlayerRegistry gives.
     WritePlayersFile(["You"]);
 
-    Assert.AreEqual(1, RosterImport.ImportPlayersFileOnce(Server).Applied);
+    Assert.AreEqual(1, LegacyPlayerImport.ImportPlayersFileOnce(Server).Applied);
 
     Assert.IsTrue(IdentityPriorStore.Instance.TryGetRoster("Melodyn"), "\"You\" was not remapped to the local character");
     Assert.IsFalse(IdentityPriorStore.Instance.TryGetRoster("You"),
@@ -192,7 +192,7 @@ public class RosterImportTest
     ConfigUtil.PlayerName = "";
     WritePlayersFile(["You", "Goruuk"]);
 
-    var result = RosterImport.ImportPlayersFileOnce(Server);
+    var result = LegacyPlayerImport.ImportPlayersFileOnce(Server);
 
     Assert.AreEqual(1, result.Applied, $"the ordinary row did not survive the empty PlayerName; got {result}");
     Assert.AreEqual(1, result.Refused);
@@ -210,7 +210,7 @@ public class RosterImportTest
      */
     WritePlayersFile(["Goruuk"], "Otherserver");
 
-    var result = RosterImport.ImportPlayersFileOnce("Otherserver");
+    var result = LegacyPlayerImport.ImportPlayersFileOnce("Otherserver");
 
     Assert.AreEqual(0, result.Applied, "an import wrote into a ledger that answers for a different server");
     Assert.IsFalse(IdentityPriorStore.Instance.HasRosterRows, "the other folder's names landed in this ledger");
@@ -250,7 +250,7 @@ public class RosterImportTest
      * so the row has to leave the file too - exactly what RemoveVerifiedPlayer does when an operator clicks it.
      */
     WritePlayersFile(["Goruuk"]);
-    Assert.AreEqual(1, RosterImport.ImportPlayersFileOnce(Server).Applied);
+    Assert.AreEqual(1, LegacyPlayerImport.ImportPlayersFileOnce(Server).Applied);
 
     IdentityPriorStore.Instance.ForgetRoster("Goruuk");
     WritePlayersFile([]);
@@ -270,7 +270,7 @@ public class RosterImportTest
     var stamp = Math.Round(DateUtil.ToDotNetSeconds(DateTime.Now.AddDays(-10)));
     WritePetMapFile([$"Fluffy=Ziggy|{stamp:0}", $"Bub={Labels.Unassigned}"]);
 
-    var result = RosterImport.ImportPetMapOnce(Server);
+    var result = LegacyPlayerImport.ImportPetMapOnce(Server);
     Assert.AreEqual(2, result.Applied, $"a pair was not carried; file = [{string.Join(" | ", ReadPetMapFile())}]");
 
     Assert.IsTrue(IdentityPriorStore.Instance.TryGetOwner("Fluffy", out var owner));
@@ -291,13 +291,13 @@ public class RosterImportTest
   {
     WritePetMapFile(["Fluffy=Ziggy"]);
 
-    Assert.IsTrue(RosterImport.ImportPetMapOnce(Server).DidWork);
-    Assert.IsFalse(RosterImport.ImportPetMapOnce(Server).DidWork, "the lane's own contents are the record that this ran");
+    Assert.IsTrue(LegacyPlayerImport.ImportPetMapOnce(Server).DidWork);
+    Assert.IsFalse(LegacyPlayerImport.ImportPetMapOnce(Server).DidWork, "the lane's own contents are the record that this ran");
 
     // A hand-restored petmapping.txt afterwards is not re-imported: the ledger is the durable map from here, and a second
     // pass could only resurrect pairs an operator had since removed.
     WritePetMapFile(["Fluffy=Ziggy", "Squirrel=Ditto"]);
-    Assert.IsFalse(RosterImport.ImportPetMapOnce(Server).DidWork);
+    Assert.IsFalse(LegacyPlayerImport.ImportPetMapOnce(Server).DidWork);
     Assert.IsFalse(IdentityPriorStore.Instance.TryGetOwner("Squirrel"));
   }
 
@@ -306,7 +306,7 @@ public class RosterImportTest
   {
     WritePetMapFile(["Fluffy=Ziggy"], "Other Server");
 
-    var result = RosterImport.ImportPetMapOnce("Other Server");
+    var result = LegacyPlayerImport.ImportPetMapOnce("Other Server");
 
     Assert.AreEqual(0, result.Applied);
     Assert.IsFalse(IdentityPriorStore.Instance.HasOwnerRows);
@@ -318,14 +318,14 @@ public class RosterImportTest
   {
     WritePetMapFile(["Fluffy=you"]);
 
-    Assert.AreEqual(1, RosterImport.ImportPetMapOnce(Server).Applied);
+    Assert.AreEqual(1, LegacyPlayerImport.ImportPetMapOnce(Server).Applied);
     Assert.IsTrue(IdentityPriorStore.Instance.TryGetOwner("Fluffy", out var owner));
     Assert.AreEqual("Melodyn", owner, "the hand-edited You row did not resolve to the local character");
 
     // With no character open there is nobody to mean, so the row is refused rather than mapping a pet to the word "you".
     ConfigUtil.PlayerName = "";
     WritePetMapFile(["Squirrel=You"], "Other Server");
-    Assert.AreEqual(0, RosterImport.ImportPetMapOnce("Other Server").Applied);
+    Assert.AreEqual(0, LegacyPlayerImport.ImportPetMapOnce("Other Server").Applied);
   }
 
   [TestMethod]
@@ -340,7 +340,7 @@ public class RosterImportTest
      */
     WritePetMapFile([$"Bub={Labels.Unassigned}"]);
 
-    Assert.AreEqual(1, RosterImport.ImportPetMapOnce(Server).Applied);
+    Assert.AreEqual(1, LegacyPlayerImport.ImportPetMapOnce(Server).Applied);
     Assert.IsTrue(IdentityPriorStore.Instance.TryGetOwner("Bub", out var owner));
     Assert.AreEqual(Labels.Unassigned, owner);
   }
@@ -348,12 +348,64 @@ public class RosterImportTest
   [TestMethod]
   public void AnEmptyOrMissingPetMapCostsNothingAndSaysNothing()
   {
-    Assert.IsFalse(RosterImport.ImportPetMapOnce(Server).DidWork, "no file, nothing to carry");
+    Assert.IsFalse(LegacyPlayerImport.ImportPetMapOnce(Server).DidWork, "no file, nothing to carry");
     Assert.IsFalse(IdentityPriorStore.Instance.HasOwnerRows);
 
     WritePetMapFile([]);
-    Assert.IsFalse(RosterImport.ImportPetMapOnce(Server).DidWork);
+    Assert.IsFalse(LegacyPlayerImport.ImportPetMapOnce(Server).DidWork);
     Assert.AreEqual(0, IdentityPriorStore.Instance.Count);
+  }
+
+  [TestMethod]
+  public void TakingBackTheLastImportedNameDoesNotReopenPlayersTxt()
+  {
+    /*
+     * The durability question, in the shape an operator produces it: import, then take a name back (the Names pane's calculator), then
+     * keep playing. The gate used to be "does the lane still carry rows", so forgetting the LAST imported name made the folder look
+     * never-migrated and players.txt - which sits in the folder, unread but present - walked every one of its names back in,
+     * including the ones just removed. The marker is the LEDGER FILE, which nothing here deletes and which Save writes emptied as
+     * happily as full: emptiness is a value, not an absence.
+     */
+    WritePlayersFile(["Kilsa"]);
+    Assert.AreEqual(1, LegacyPlayerImport.ImportPlayersFileOnce(Server).Applied, "the first run carried nothing");
+
+    IdentityPriorStore.Instance.ForgetRoster("Kilsa", persist: true);
+    Assert.IsFalse(IdentityPriorStore.Instance.HasRosterRows, "the fixture did not empty the lane");
+    Assert.IsTrue(File.Exists(LedgerPath), "an emptied ledger vanished from disk - a taken-back name must not delete the folder's memory");
+
+    IdentityPriorStore.Instance.Init(Server);
+    PlayerRegistry.Instance.Init();
+
+    var reopened = LegacyPlayerImport.ImportPlayersFileOnce(Server);
+    Assert.AreEqual(0, reopened.Applied, $"the legacy file walked back in after its last row was taken back: {reopened}");
+    Assert.IsFalse(IdentityPriorStore.Instance.TryGetRoster("Kilsa"), "a name the operator removed came back from players.txt");
+  }
+
+  [TestMethod]
+  public void OneOpenImportsBothLegacyFilesRatherThanTheFirstCancellingTheSecond()
+  {
+    /*
+     * The hazard the load-scoped marker exists to prevent. MainWindow calls ImportPlayersFileOnce then ImportPetMapOnce, and the first
+     * flushes the ledger it just filled - so a gate that re-reads "does identity-priors.txt exist?" per lane would have the players
+     * import establish the marker and cancel the pet half of the same migration. Pairs would land on the floor with both lanes'
+     * own tests still green, since each one looks correct in isolation.
+     */
+    WritePlayersFile(["Kilsa"]);
+    WritePetMapFile(["Picklepaw=Sancus"]);
+
+    Assert.AreEqual(1, LegacyPlayerImport.ImportPlayersFileOnce(Server).Applied, "the players import did not run");
+    Assert.IsTrue(File.Exists(LedgerPath), "the players import flushed - the very fact the pet lane must not mistake for 'migrated'");
+
+    var pets = LegacyPlayerImport.ImportPetMapOnce(Server);
+    Assert.AreEqual(1, pets.Applied, $"the pet-map half was cancelled by the players import: {pets}");
+
+    /*
+     * Read the LANE rather than PlayerRegistry's live mirror: the mirror is process state that other fixtures clear and re-seed, so an
+     * assertion against it passes or fails depending on run order (this one did). The ledger row is what the migration owns.
+     */
+    Assert.IsTrue(IdentityPriorStore.Instance.TryGet("Picklepaw", out var carried), "the pair never reached the ownership lane");
+    Assert.IsTrue("Sancus".Equals(carried.Owner, StringComparison.OrdinalIgnoreCase),
+      $"the pair reached the lane under somebody else: owner = [{carried.Owner}]");
   }
 
   private string LedgerPath => Path.Combine(_tempDir, Server, "identity-priors.txt");

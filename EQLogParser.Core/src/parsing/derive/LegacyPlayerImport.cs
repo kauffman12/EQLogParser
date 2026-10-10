@@ -35,9 +35,17 @@ namespace EQLogParser
    *
    * THREE LAWS OF THE RUN:
    *
-   *   It runs ONCE per folder — gated on the ledger already carrying roster rows, not on a marker file. A marker would
-   *     answer "did we run?" while saying nothing about whether anything arrived; the roster bit is the same fact with
-   *     the same lifetime as the data it describes, and it survives an operator deleting the archive by hand.
+   *   It runs ONCE per folder, and THE MARKER IS THE LEDGER FILE ITSELF - not a side file, and not "does the lane still have
+   *     rows". Row presence was the first gate and it is not a durability record: rows are data, and data can be taken back. An
+   *     operator's calculator click (Recalculate) removes a name and the stale-days prune ages names out on flush, so when the LAST
+   *     imported row left the file the legacy file walked back in and re-imported every name it holds - including the ones just
+   *     removed. Nothing here deletes identity-priors.txt and Save writes it emptied as happily as full, so its EXISTENCE is the
+   *     stable fact: emptiness is a value, not an absence. Escape hatch for re-reading the legacy files stays what it was -
+   *     delete identity-priors.txt.
+   *
+   *   THE MARKER IS READ ONCE PER LOAD and both imports answer from that one reading (see ClaimMigration): ImportPlayersFileOnce
+   *     flushes the ledger it just filled, and ImportPetMapOnce runs immediately after it in the same open - asking the file twice
+   *     would let the first import establish the marker and silently cancel the second.
    *
    *   It writes NO stamps of its own. The `=ticks` a row carries is the last time this program saw that name; rows
    *     without one are statements and stay undated forever. RememberRoster moves a stamp FORWARD only, so importing an
@@ -52,7 +60,7 @@ namespace EQLogParser
    *     grammar are gone: PlayerRegistry no longer loads it, so no reader can drift from this one.
    *     (docs/DesignNotes.md → "players.txt is a feed now").
    */
-  internal static class RosterImport
+  internal static class LegacyPlayerImport
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
@@ -62,6 +70,42 @@ namespace EQLogParser
       internal bool DidWork => Applied > 0;
 
       public override string ToString() => $"{Applied} names ({WithClass} with a class, {Refused} lines refused)";
+    }
+
+    /*
+     * The once-per-folder question, answered from ONE reading of the marker per load.
+     *
+     * Two clocks are involved and they disagree on purpose. "Was this folder migrated?" is durable - identity-priors.txt exists (or
+     * already holds rows, for a folder whose save never reached disk) - and it must stay true whatever an operator deletes
+     * afterwards. "Has THIS load already done the import?" is per-open, because the marker cannot be re-read after the first import
+     * wrote the file: ImportPlayersFileOnce fills the ledger and flushes it, and if ImportPetMapOnce then asked the file, the roster
+     * half would have cancelled the pet half. So each lane claims the load once, and the durable answer is captured before either of
+     * them can write.
+     *
+     * Keyed on IdentityPriorStore.LoadGeneration, which every log open (and every test fixture) bumps: open folder A, switch to B,
+     * come back to A, and the marker is read again from disk rather than remembered from a stale load.
+     */
+    private static long _markerGeneration = -1;
+    private static bool _migratedAtLoad;
+    private static bool _playersLaneClaimed;
+    private static bool _petMapLaneClaimed;
+
+    /// <summary>true = this folder is already migrated (or this load already ran this lane): do not read the legacy file.</summary>
+    private static bool ClaimMigration(string serverName, IdentityPriorStore ledger, ref bool laneClaimed)
+    {
+      if (_markerGeneration != ledger.LoadGeneration)
+      {
+        _markerGeneration = ledger.LoadGeneration;
+        _migratedAtLoad = ConfigUtil.ServerFileExists(ConfigUtil.IdentityPriorFile, serverName)
+                          || ledger.HasRosterRows || ledger.HasOwnerRows;
+        _playersLaneClaimed = false;
+        _petMapLaneClaimed = false;
+      }
+
+      if (_migratedAtLoad || laneClaimed) return true;
+
+      laneClaimed = true;
+      return false;
     }
 
     /// <summary>The migration for the server this app is currently pointed at.</summary>
@@ -82,11 +126,12 @@ namespace EQLogParser
        * Two refusals that are easy to get wrong and silent either way. WRONG FOLDER first: the ledger files whatever it is
        * told under the server name IT holds, and MainWindow loads the registry before the ledger on a switch — writing
        * here while it still answers for the previous server would move one server's raid into another's file. And
-       * ALREADY CARRIED: the roster lane is the record that this ran, which is why re-running is free rather than merely
-       * harmless (a hand-restored players.txt is not a reason to import again).
+       * ALREADY MIGRATED: the ledger file's existence is the record that this ran, which is why re-running costs one File.Exists -
+       * and why it stays refused after an operator removes every name the import carried (a hand-restored players.txt is not a
+       * reason to import again either).
        */
       if (!string.Equals(ledger.ServerName, serverName, StringComparison.OrdinalIgnoreCase)) return default;
-      if (ledger.HasRosterRows) return default;
+      if (ClaimMigration(serverName, ledger, ref _playersLaneClaimed)) return default;
 
       // Absent and empty are different answers, and only this one distinguishes them: no file means this folder never
       // had a roster, so there is nothing to carry and NOTHING TO LOG. An empty file falls through and says so below.
@@ -174,10 +219,11 @@ namespace EQLogParser
       var ledger = IdentityPriorStore.Instance;
 
       // Wrong folder and already-carried, both silent, both for the reasons spelled out in ImportPlayersFileOnce: the
-      // ledger files what it is given under the server name IT holds, and the lane's own contents are the record that
-      // this ran. Hand-restoring petmapping.txt is not a reason to import again — the ledger is the durable map now.
+      // ledger files what it is given under the server name IT holds, and the marker question is answered once per load so this lane
+      // still runs in the open where the players import just wrote the ledger. Hand-restoring petmapping.txt is not a reason to
+      // import again — the ledger is the durable map now.
       if (!string.Equals(ledger.ServerName, serverName, StringComparison.OrdinalIgnoreCase)) return default;
-      if (ledger.HasOwnerRows) return default;
+      if (ClaimMigration(serverName, ledger, ref _petMapLaneClaimed)) return default;
 
       if (!ConfigUtil.ServerFileExists(ConfigUtil.PetMappingFile, serverName)) return default;
 

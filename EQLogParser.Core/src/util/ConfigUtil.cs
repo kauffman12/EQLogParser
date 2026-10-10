@@ -17,9 +17,9 @@ namespace EQLogParser
 
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static readonly ConcurrentDictionary<string, string> ApplicationSettings = new();
-    // Internal, not private: RosterImport reads players.txt and has to name the file rather than keep a second spelling
+    // Internal, not private: LegacyPlayerImport reads players.txt and has to name the file rather than keep a second spelling
     // of it (two constants for one file is how a migration ends up pointed at nothing).
-    // Internal, not private: RosterImport migrates this file into the ledger's ownership lane and has to name it rather
+    // Internal, not private: LegacyPlayerImport migrates this file into the ledger's ownership lane and has to name it rather
     // than keep a second spelling of it (same reason as PlayersFile below).
     internal const string PetMappingFile = "petmapping.txt";
     // players.imported.txt is where this file goes on the day it stops being read. NOT renamed by the importer that
@@ -35,7 +35,12 @@ namespace EQLogParser
      * carried while the derived engine was called "the combat mirror" never reached an installed build, so there is
      * nothing to read under it - this file arrives with the branch. */
     private const string IdentityOverridesFileName = "identity-overrides.txt";
-    private const string IdentityPriorFile = "identity-priors.txt";
+    /*
+     * INTERNAL because its existence is a FACT SOMEBODY ASKS ABOUT, not an implementation detail: the one-time imports of
+     * players.txt/petmapping.txt gate on "has this folder's ledger been created yet", which is the durable answer to "did we migrate
+     * here?" - rows are data and data can be taken back, the file is not. See LegacyPlayerImport's marker law.
+     */
+    internal const string IdentityPriorFile = "identity-priors.txt";
     private static string _archiveDir;
     private static string _settingsFile;
     private static string _triggersDbFile;
@@ -160,7 +165,7 @@ namespace EQLogParser
 
     /*
      * The petmapping.txt pairs of ONE named server folder. The folder is a parameter for the same reason players.txt's is:
-     * RosterImport runs at the instant the app has switched servers, and "which file did we read" has to be answerable
+     * LegacyPlayerImport runs at the instant the app has switched servers, and "which file did we read" has to be answerable
      * regardless of what ConfigUtil.ServerName happens to hold by the time the reader returns.
      */
     internal static Dictionary<string, string> ReadPetMapping(string serverName)
@@ -174,7 +179,7 @@ namespace EQLogParser
 
     /*
      * The players.txt lines of ONE named server folder. A folder name is a parameter here rather than read from
-     * ServerName because RosterImport runs at the moment the app has just switched servers, and "which file did we
+     * ServerName because LegacyPlayerImport runs at the moment the app has just switched servers, and "which file did we
      * just read?" must not depend on a global that another path may still be holding.
      */
     internal static List<string> ReadPlayers(string serverName) =>

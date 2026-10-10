@@ -1534,15 +1534,15 @@ namespace EQLogParser
               IdentityOverrideStore.Instance.Init(server);
               IdentityPriorStore.Instance.Init(server);
 
-              // players.txt -> the ledger's roster lane, once per server folder (RosterImport: why once, and why the
+              // players.txt -> the ledger's roster lane, once per server folder (LegacyPlayerImport: why once, and why the
               // source file is left where it is). Runs before PlayerRegistry.Init so that the registry's memory comes up
               // carrying this folder's roster whether or not the file still exists.
-              RosterImport.ImportPlayersFileOnce(server);
+              LegacyPlayerImport.ImportPlayersFileOnce(server);
 
               // petmapping.txt -> the ledger's ownership lane, once per server folder (same gate, same reasons; see
-              // RosterImport). Both migrations sit here so the two legacy files retire on one seam: after this line the
+              // LegacyPlayerImport). Both migrations sit here so the two legacy files retire on one seam: after this line the
               // ledger holds membership, class and ownership for this folder, and PlayerRegistry below is a mirror of it.
-              RosterImport.ImportPetMapOnce(server);
+              LegacyPlayerImport.ImportPetMapOnce(server);
 
               /*
                * The registry comes up as a mirror of that ledger: roster membership, class, and the pet→owner pairs. Nothing here
