@@ -1534,9 +1534,15 @@ After completing work, verify:
   reason words (`ContentMoved`/`RowEdited` from the row patch, `SnapshotSwap` from a wholesale swap) and feeds all three boards; at two
   passes a second, a whole-capture selection costs **~1.5 s** each time. So the cost gate is `UnaskedRefresh` (Core), called once, after
   dedupe and before recording: **a hand's gesture (`SelectCommand`, `MenuClose`, `SettleTick`, `Manual`) builds at any size — law;** the
-  three pass-driven words may decline over `MaxOutcomes` = **100,000** (`DamageHits + TankHits`; ~1.3 µs per outcome measured, so
-  ~0.13 s — a noticeability line, not a requested budget: one pull sits under it, a 1.9 M night is 19× over), and **a refusal logs once per episode at Debug** naming reason/rows/size
-  (re-arming when a pass is allowed again) because a silent skip is how "the meter stopped updating" costs an afternoon. Five rules:
+  three pass-driven words are **priced, not capped**: an ask costs `FixedCostMs` (120) + `MicrosecondsPerOutcome` (2.0 µs ×
+  `DamageHits + TankHits` — the rate deliberately sits *above* the measured 0.87–1.35 µs because heals are not in that count) and may run
+  only when it is ≤ **25 % of the wall time since this lane's last accepted unasked rebuild**, so a pull's board refreshes every pass, a
+  running encounter every few seconds, a whole night about once a minute; ≤ **3,000 outcomes is free** and the first ask of a session
+  always passes. A constant was tried first (`MaxOutcomes = 100,000`, the file still documents why it died: it sat either on top of the
+  live-pull case that must keep refreshing or below a selected running boss, and where it sat it acted as a cliff — a quiet
+  whole-capture selection was *never* refreshed). **A deferral logs once per episode at Debug** naming reason/rows/size (re-arming when a
+  pass is allowed again) because a silent skip is how "the meter stopped updating" costs an afternoon. Nothing is refused forever — a
+  deferral is only ever LATER, never never — and a gesture still jumps the budget entirely. Five rules:
   (1) **a decline must not record `_announcedIds`/`_announcedStamp`** — those mean "answered", and stamping them on a refusal makes the
   next identical gesture dedupe against a board it never got; (2) the gate reads the **reason**, never the `force` flag: `ContentMoved`
   and `RowEdited` arrive forced, so gating on force would decline nothing, and gating on "forced too" would decline Refresh; (3) new
