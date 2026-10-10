@@ -450,9 +450,16 @@ namespace EQLogParser
      */
     private void NoteLoadProgress(int batchLines)
     {
-      if (!PerfJournal.Enabled || batchLines == 0) return;
-
+      /*
+       * The count accrues whether or not anybody is watching, because it answers a PRODUCT question after the load, not a perf one:
+       * LoadAllocatedGarbage decides the load-complete log line, whether the fight list's loading band may show, and whether the
+       * post-load GC tidy runs at all. The line below it is the only thing PerfJournal should gate - an earlier shape put this
+       * increment under that guard, which left every normal session (no PerfReport=True) reporting "the read handed nothing over"
+       * after a whole-file open: no band over an empty-looking grid, a wrong log line, and no GC pass.
+       */
       _handedOver += batchLines;
+
+      if (!PerfJournal.Enabled || batchLines == 0) return;
       if (!_loadWatch.IsRunning) _loadWatch.Restart();
       var seconds = _loadWatch.Elapsed.TotalSeconds;
       var delta = seconds - _diagSeconds;
