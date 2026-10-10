@@ -651,6 +651,8 @@ namespace EQLogParser
 
     private void EventsClearedActiveData(bool cleared)
     {
+      _busyState.Cancel();   // a cleared capture has no build left to announce
+
       if (cleared && _viewOptions?.GetSelectedOptionName() == Labels.ByGroupOption)
       {
         CleanupGroupTracking();
@@ -991,6 +993,7 @@ namespace EQLogParser
 
     public void HideContent()
     {
+      _busyState.Cancel();   // a hidden pane must not wake to "Calculating DPS..." on nobody's screen
       DamageStatsBuilder.Instance.EventsGenerationStatus -= EventsGenerationStatus;
       CombatEvents.ActiveDataCleared -= EventsClearedActiveData;
       MainActions.EventsDamageSummaryOptionsChanged -= EventsDamageSummaryOptionsChanged;

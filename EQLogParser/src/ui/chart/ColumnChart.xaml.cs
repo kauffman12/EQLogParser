@@ -56,7 +56,11 @@ namespace EQLogParser
     }
 
     private void RefreshTimerTick(object sender, EventArgs e) => DisplayPage();
-    private void EventsClearedActiveData(bool cleared) => Reset();
+    private void EventsClearedActiveData(bool cleared)
+    {
+      _busyState.Cancel();   // a cleared capture has no build left to announce
+      Reset();
+    }
     private async void CreateImageClick(object sender, RoutedEventArgs e) => await UiElementUtil.CreateImage(Dispatcher, mainGrid, titleLabel);
     private void ClassPreviewMouseDown(object sender, EventArgs e) => SharedControls.ClassPreviewMouseDown(classesList, sender);
 
@@ -397,6 +401,7 @@ namespace EQLogParser
 
     public void HideContent()
     {
+      _busyState.Cancel();   // a hidden chart must not wake to "Loading..." on nobody's screen
       SizeChanged -= ContentSizeChanged;
       ThemeConfig.EventsThemeChanged -= EventsThemeChanged;
       CombatEvents.ActiveDataCleared -= EventsClearedActiveData;

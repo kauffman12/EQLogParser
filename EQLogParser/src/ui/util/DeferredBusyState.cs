@@ -61,6 +61,11 @@ namespace EQLogParser
      * Called for EVERY state of a build's event stream, STARTED included (which arms again immediately after), because
      * the danger is an armed timer whose answer already arrived: a late tick would then blank a table that is showing
      * real rows. Cancelling first makes each event replace the last request rather than queue behind it.
+     *
+     * The same reason covers the two paths that are NOT build events: hiding a pane and clearing the capture. Both empty
+     * the surface for a reason no build will answer, so both cancel — otherwise the tick fires later at a table nobody is
+     * looking at (and, after a hide, at whatever is on screen when it is shown again: blank grid plus "Calculating DPS..."
+     * over an answer that never comes).
      */
     internal void Cancel()
     {

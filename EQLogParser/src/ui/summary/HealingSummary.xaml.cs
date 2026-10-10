@@ -190,7 +190,11 @@ namespace EQLogParser
       }
     }
 
-    private void EventsClearedActiveData(bool cleared) => ClearData();
+    private void EventsClearedActiveData(bool cleared)
+    {
+      _busyState.Cancel();   // a cleared capture has no build left to announce
+      ClearData();
+    }
 
     private void ClearData()
     {
@@ -357,6 +361,7 @@ namespace EQLogParser
 
     public void HideContent()
     {
+      _busyState.Cancel();   // a hidden pane must not wake to "Calculating HPS..." on nobody's screen
       HealingStatsBuilder.Instance.EventsGenerationStatus -= EventsGenerationStatus;
       CombatEvents.ActiveDataCleared -= EventsClearedActiveData;
       MainActions.EventsChartOpened -= EventsChartOpened;
