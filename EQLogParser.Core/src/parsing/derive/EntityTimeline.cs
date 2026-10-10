@@ -542,10 +542,6 @@ namespace EQLogParser
       => AffiliationAt(name, t, out var source) == AffiliationKind.Friendly
          && source is not null && source.StartsWith("R9-charm", StringComparison.Ordinal);
 
-    // One cursor per name over a time-ordered fact stream — the pointer sweep §6 asks for.
-    // Yields AffiliationAt without re-walking from the start each call.
-    public AffiliationCursor OpenAffiliationCursor(string name) => new(this, name);
-
     public IReadOnlyCollection<string> NamesWithIdentity() => _identity.Keys;
 
     /*
@@ -754,44 +750,6 @@ namespace EQLogParser
       h = Mix(h, t1.GetHashCode());
       h = Mix(h, source?.GetHashCode(StringComparison.Ordinal) ?? 0);
       return Mix(h, owner is null ? 0 : StringComparer.OrdinalIgnoreCase.GetHashCode(owner));
-    }
-
-    internal sealed class AffiliationCursor
-    {
-      private readonly EntityTimeline _timeline;
-      private List<AffiliationInterval> _intervals;
-      private int _index;
-
-      internal AffiliationCursor(EntityTimeline timeline, string name)
-      {
-        _timeline = timeline;
-        timeline._affiliation.TryGetValue(name, out _intervals);
-      }
-
-      public AffiliationKind At(double t)
-      {
-        var list = _intervals;
-        if (list is null || list.Count == 0) return AffiliationKind.Enemy;
-
-        while (_index < list.Count && list[_index].T0 <= t)
-        {
-          // advance past intervals that ended before t, but remember the strongest live one
-          _index++;
-        }
-
-        // walk back over intervals containing t (few in practice: one charm window per name)
-        var best = AffiliationKind.Enemy;
-        var bestStrength = int.MinValue;
-        for (var i = _index - 1; i >= 0 && list[i].T0 <= t; i--)
-        {
-          if (t < list[i].T1 && list[i].Strength >= bestStrength)
-          {
-            best = list[i].Kind;
-            bestStrength = list[i].Strength;
-          }
-        }
-        return best;
-      }
     }
   }
 }

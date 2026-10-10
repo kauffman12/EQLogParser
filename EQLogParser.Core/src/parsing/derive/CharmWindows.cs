@@ -38,14 +38,6 @@ namespace EQLogParser
 
     public bool Owned => !string.IsNullOrEmpty(Owner);
 
-    // Who held it at t — the segment that had begun and not yet ended. Null means "friendly, but no
-    // charmer was identified", which is the honest answer for a log with no cast text in it.
-    public string OwnerAt(double t)
-    {
-      for (var i = Segments.Count - 1; i >= 0; i--)
-        if (Segments[i].FromS <= t && t < Segments[i].ToS) return Segments[i].Owner;
-      return null;
-    }
   }
 
   /*

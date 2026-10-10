@@ -117,9 +117,6 @@ namespace EQLogParser
     // Captured, real, and belonging to no board — see OnFact. DamageFactCount + TankingFactCount + this = the
     // facts that reached a row.
     public long UnroutedFactCount { get; private set; }
-    public int FightsWithDamage => _damageOrdinals.Count;
-    public int FightsWithTanking => _tankingOrdinals.Count;
-
 
     // Four bytes of ordinal per captured fact: on a 5.3 M-fact log where roughly three quarters are
     // player-side, that is ~16 MB held for the life of the snapshot. It buys selection-time materializing
@@ -205,12 +202,6 @@ namespace EQLogParser
     internal IReadOnlyList<int> DamageOrdinalsFor(DerivedFight fight)
     {
       lock (_gate) return _damageOrdinals.TryGetValue(fight, out var ordinals) ? ordinals : [];
-    }
-
-    /// <summary>Count-only answer; see TankingOrdinalCount for why a count has its own door.</summary>
-    internal int DamageOrdinalCount(DerivedFight fight)
-    {
-      lock (_gate) return _damageOrdinals.TryGetValue(fight, out var ordinals) ? ordinals.Count : 0;
     }
 
     /*
