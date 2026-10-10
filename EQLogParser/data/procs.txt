@@ -704,9 +704,15 @@ Yowling at the Moon
 Al`ele's Vindication Effect
 Al`ele's Vindication Effect II
 Al`ele's Vindication Effect III
+Al`ele's Vindication Effect VI Azia
+Al`ele's Vindication Effect VI Beza
+Al`ele's Vindication Effect VI Caza
 Al`ele's Vindictiveness
 Al`ele's Vindictiveness II
 Al`ele's Vindictiveness III
+Al`ele's Vindictiveness VI Azia
+Al`ele's Vindictiveness VI Beza
+Al`ele's Vindictiveness VI Caza
 Ikatiar's Vindication Effect I
 Ikatiar's Vindication Effect II
 Ikatiar's Vindication Effect III
@@ -1122,6 +1128,9 @@ Anticipated Healing V Caza
 Anticipated Healing VI Azia
 Anticipated Healing VI Beza
 Anticipated Healing VI Caza
+Anticipated Healing VII Azia
+Anticipated Healing VII Beza
+Anticipated Healing VII Caza
 
 # Cleric Infusion
 Avowed Infusion
@@ -1157,6 +1166,9 @@ Erud's Healing Touch
 Erud's Healing Touch Rk. II
 Erud's Healing Touch Rk. III
 Erud's Retort Effect
+Erud's Retort Effect X Azia
+Erud's Retort Effect X Beza
+Erud's Retort Effect X Caza
 Erud's Retort Effect Rk. II
 Erud's Retort Effect Rk. III
 Fintar's Retort Effect
@@ -1525,6 +1537,9 @@ Arboreal Infusion III
 Arboreal Infusion II Azia
 Arboreal Infusion II Beza
 Arboreal Infusion II Caza
+Arboreal Infusion III Azia
+Arboreal Infusion III Beza
+Arboreal Infusion III Caza
 
 # Druid Mysterious Ways
 Mending Enigma
@@ -1542,6 +1557,9 @@ Mending Mystery III
 Mending Mystery VI Azia
 Mending Mystery VI Beza
 Mending Mystery VI Caza
+Mending Mystery VII Azia
+Mending Mystery VII Beza
+Mending Mystery VII Caza
 
 # Druid Oaken Guard
 Beastsnag Guard Parry
@@ -2877,6 +2895,9 @@ Bestow Undeath Strike X Caza
 Burning Poison
 Burning Poison II
 Burning Poison III
+Burning Poison IV Azia
+Burning Poison IV Beza
+Burning Poison IV Caza
 Burning Toxin
 Burning Toxin II
 Burning Toxin III
@@ -3028,6 +3049,9 @@ Confluent Illumination III
 Harmonious Illumination
 Harmonious Illumination II
 Harmonious Illumination III
+Harmonious Illumination VI Azia
+Harmonious Illumination VI Beza
+Harmonious Illumination VI Caza
 Paradoxical Illumination
 Paradoxical Illumination II
 Paradoxical Illumination III
@@ -3137,6 +3161,9 @@ Penitent Mending V Caza
 Penitent Mending VI Azia
 Penitent Mending VI Beza
 Penitent Mending VI Caza
+Penitent Mending VII Azia
+Penitent Mending VII Beza
+Penitent Mending VII Caza
 Penitent Reward
 Penitent Reward II
 Penitent Reward III
@@ -3152,6 +3179,9 @@ Penitent Reward V Caza
 Penitent Reward VI Azia
 Penitent Reward VI Beza
 Penitent Reward VI Caza
+Penitent Reward VII Azia
+Penitent Reward VII Beza
+Penitent Reward VII Caza
 
 # Paladin Oathbound
 Oathbound Bulwark I
@@ -4049,6 +4079,9 @@ Spiritual Restitution III Caza
 Spiritual Restitution IV Azia
 Spiritual Restitution IV Beza
 Spiritual Restitution IV Caza
+Spiritual Restitution V Azia
+Spiritual Restitution V Beza
+Spiritual Restitution V Caza
 
 # Shaman Spirit
 Cougar Maw
@@ -4070,6 +4103,9 @@ Manul Maw
 Manul Maw II
 Manul Maw III
 Panther Maw
+Panther Maw XVI Azia
+Panther Maw XVI Beza
+Panther Maw XVI Caza
 Puma Maw
 Sabretooth Maw
 Sabretooth Maw II
@@ -4203,6 +4239,9 @@ Disruptive Recourse IV Caza
 Disruptive Recourse V Azia
 Disruptive Recourse V Beza
 Disruptive Recourse V Caza
+Disruptive Recourse VI Azia
+Disruptive Recourse VI Beza
+Disruptive Recourse VI Caza
 Expansive Distraction
 Expansive Distraction II
 Expansive Distraction III
@@ -4215,6 +4254,9 @@ Expansive Distraction IV Caza
 Expansive Distraction V Azia
 Expansive Distraction V Beza
 Expansive Distraction V Caza
+Expansive Distraction VI Azia
+Expansive Distraction VI Beza
+Expansive Distraction VI Caza
 Precise Disruption
 Precise Disruption II
 Precise Disruption III
@@ -4227,6 +4269,9 @@ Precise Disruption IV Caza
 Precise Disruption V Azia
 Precise Disruption V Beza
 Precise Disruption V Caza
+Precise Disruption VI Azia
+Precise Disruption VI Beza
+Precise Disruption VI Caza
 
 # SK Focused Bites
 Ragged Bite of Agony I
@@ -4382,9 +4427,15 @@ Incensive Reward III
 Insolent Agitation I
 Insolent Agitation II
 Insolent Agitation III
+Insolent Agitation VII Azia
+Insolent Agitation VII Beza
+Insolent Agitation VII Caza
 Insolent Reward
 Insolent Reward II
 Insolent Reward III
+Insolent Reward VII Azia
+Insolent Reward VII Beza
+Insolent Reward VII Caza
 
 # SK Kill Shot procs Face of Impenitence
 Impenitence
@@ -4662,6 +4713,9 @@ Expansive Discord IV Caza
 Expansive Discord V Azia
 Expansive Discord V Beza
 Expansive Discord V Caza
+Expansive Discord VI Azia
+Expansive Discord VI Beza
+Expansive Discord VI Caza
 Expansive Disharmony
 Expansive Disharmony II
 Expansive Disharmony III
@@ -4688,6 +4742,9 @@ Precise Discord IV Caza
 Precise Discord V Azia
 Precise Discord V Beza
 Precise Discord V Caza
+Precise Discord VI Azia
+Precise Discord VI Beza
+Precise Discord VI Caza
 Precise Disharmony
 Precise Disharmony II
 Precise Disharmony III
