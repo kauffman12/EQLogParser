@@ -71,7 +71,7 @@ namespace EQLogParser
     private static long _lastRequestMs;
     private static int _epoch;
 
-    /* Collections performed, for tests and for a heartbeat that wants to know whether the tidy ever ran at all. */
+    /* Collections performed: did the tidy ever run at all — the question a test asks of a fire-and-forget request. */
     internal static int TidyCount => Volatile.Read(ref _tidyCount);
 
     /* Requests swallowed by the interval or by an already-running tidy. */
@@ -198,15 +198,10 @@ namespace EQLogParser
      */
     internal static string TidyNow(string reason)
     {
-      var before = PerfGc.Sample();
+      var beforeHeap = GC.GetTotalMemory(forceFullCollection: false);
+      var beforeWorkingSet = Environment.WorkingSet;
+      var beforeGen2 = GC.CollectionCount(2);
       var watch = Stopwatch.StartNew();
-
-      /*
-       * Announced before the call, not after it: a beat gap caused by this collection is classified while the collection runs, and the runtime publishes
-       * the count and the pause only once every thread is going again. Without this note the watchdog reads "no collection in that gap" and blames a
-       * profiler - which is what happened at 11:53:34, this line's own gen2 printing 794 ms stopped in the same millisecond.
-       */
-      PerfGc.NoteStopStart(reason);
 
       try
       {
@@ -219,16 +214,22 @@ namespace EQLogParser
       }
       finally
       {
-        PerfGc.NoteStopEnd();
         Volatile.Write(ref _lastTidyMs, Environment.TickCount64);
         Interlocked.Increment(ref _tidyCount);
       }
 
-      var after = PerfGc.Sample();
-      var line = $"gc.tidy {reason}: heap {Mb(before.HeapBytes)} to {Mb(after.HeapBytes)} MB, working set {Mb(before.WorkingSetBytes)} to {Mb(after.WorkingSetBytes)} MB, " +
-        $"gen2 +{Math.Max(0, after.Gen2 - before.Gen2)}, stopped {PerfGc.WindowPauseMs(before, after):0} ms, wall {watch.Elapsed.TotalMilliseconds:0} ms";
+      /*
+       * Wall time only, and at Debug. What used to be reported alongside - the collector's own pause accounting and a heartbeat
+       * that classified this collection against the UI-thread gap it caused - went with the perf-counter layer; the runtime
+       * publishes those numbers only once every thread is running again, so without a watchdog reading them they described
+       * nothing anybody could compare them to. The line stays because the heap delta is the answer to "did asking work", and
+       * TidyNow returns it for the same reason.
+       */
+      var line = $"gc.tidy {reason}: heap {Mb(beforeHeap)} to {Mb(GC.GetTotalMemory(forceFullCollection: false))} MB, " +
+        $"working set {Mb(beforeWorkingSet)} to {Mb(Environment.WorkingSet)} MB, " +
+        $"gen2 +{Math.Max(0, GC.CollectionCount(2) - beforeGen2)}, wall {watch.Elapsed.TotalMilliseconds:0} ms";
 
-      PerfJournal.Note(line);
+      Log.Debug(line);
       return line;
     }
 

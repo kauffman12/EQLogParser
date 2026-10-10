@@ -1,5 +1,7 @@
+using log4net;
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
@@ -43,6 +45,8 @@ namespace EQLogParser
    */
   public partial class FctOverlayWindow : Window
   {
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
+
     /* Which edges a resize drag pulls on. The XAML bands name themselves with Tag so the grip stays visible in the markup and
      * the arithmetic lives here once, instead of eight copies of nearly the same handler. */
     [Flags]
@@ -58,27 +62,6 @@ namespace EQLogParser
     /* The renderer and its counters are the same object now that there is one backend. */
     private readonly FctSkiaCanvas _canvas;
     private readonly List<FctHitCommand> _pending = [];
-
-    /*
-     * What this window reports to the heartbeat (PerfCounters, UiBeatMonitor). "feed" is the drain plus everything the canvas does with
-     * what it drained — parse, gates, placement — which is where a raid burst lands if it costs more than a frame; "queue" and "drop"
-     * are the two ends of backpressure read together: a queue full while the overlay paints at 60 fps is a different problem from an
-     * empty queue behind a UI thread that stopped answering, and the log cannot tell those apart without both numbers on the page.
-     *
-     * "droplive", "dropqueued" and "backlog" say what those losses mean, because a nonzero drop count on its own looks like a bug and usually is not one:
-     * an overlay refuses a number rather than draw it on top of another, and refuses while covered by a browser cost nothing but the allocation. "droplive"
-     * is the part refused with frames arriving (text somebody could have read), "dropqueued" is the part that never left FctManager's queue, and "backlog"
-     * is how close a lane's queue came to the cap that refused it — which is what decides between more room and looking elsewhere. All three are levels on
-     * purpose: the per-window cause counters share four slots with the trigger counts, and in a measured session they were pushed off nine windows in thirty-three.
-     */
-    private static readonly int FeedId = PerfCounters.Register("fct.feed");
-    private static readonly int QueueId = PerfCounters.Register("fct.queue");
-    private static readonly int DropId = PerfCounters.Register("fct.drop");
-    private static readonly int DropLiveId = PerfCounters.Register("fct.dropLive");
-    private static readonly int DropQueuedId = PerfCounters.Register("fct.dropQueued");
-    private static readonly int BacklogId = PerfCounters.Register("fct.backlog");
-    private static readonly int DropMaxId = PerfCounters.Register("fct.dropMax");
-    private static readonly int DropCritId = PerfCounters.Register("fct.dropCrit");
 
     /* The last refused-record the overlay named in the log, and when. See OnCanvasFrame. */
     private string _lastWorstDrop = "";
@@ -290,8 +273,6 @@ namespace EQLogParser
        counted. An overlay nobody sees must not parse or raster either. */
     private void OnVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
     {
-      /* Tells the watchdog which windows are up, because half of attributing a stall is knowing what could have caused it. */
-      UiBeatMonitor.NoteSurface("fct", (bool)e.NewValue);
 
       if ((bool)e.NewValue)
       {
@@ -464,37 +445,19 @@ namespace EQLogParser
      */
     private void OnCanvasFrame(double now)
     {
-      /* Timed rather than counted: this is the one place per-record work happens on the UI thread, so its worst frame is the number
-         that says whether a burst of numbers was ever the reason the interface paused. try/finally for the same reason as every other
-         span here — a pass that ends in an exception would otherwise keep claiming the next stall. */
-      var mark = PerfCounters.Begin(FeedId);
+      /* The one place per-record work happens on the UI thread: a raid burst that costs more than a frame lands here. */
+      _manager.DrainTo(_pending);
 
-      try
+      foreach (var cmd in _pending)
       {
-        _manager.DrainTo(_pending);
-
-        foreach (var cmd in _pending)
-        {
-          _canvas.AddHit(cmd.Lane, cmd.Value, cmd.Source, cmd.Crit, minor: false, periodic: cmd.Periodic, valueText: cmd.ValueText,
-            proc: cmd.Proc, row: cmd.Row, special: cmd.Special);
-        }
-
-        _pending.Clear();
+        _canvas.AddHit(cmd.Lane, cmd.Value, cmd.Source, cmd.Crit, minor: false, periodic: cmd.Periodic, valueText: cmd.ValueText,
+          proc: cmd.Proc, row: cmd.Row, special: cmd.Special);
       }
-      finally
-      {
-        PerfCounters.End(mark);
-        PerfCounters.Gauge(QueueId, _manager.PendingCount);
-        PerfCounters.Gauge(DropId, _canvas.DroppedCount + _manager.DroppedCount);
-        PerfCounters.Gauge(DropLiveId, _canvas.DroppedLiveCount);
-        PerfCounters.Gauge(DropQueuedId, _manager.DroppedCount);
-        PerfCounters.Gauge(BacklogId, _canvas.PeakBacklog);
-        PerfCounters.Gauge(DropMaxId, _canvas.MaxDroppedValue);
-        PerfCounters.Gauge(DropCritId, _canvas.DroppedCritCount);
-      }
+
+      _pending.Clear();
 
       /*
-       * Say what the biggest refusal actually was, saying it no more than once per advance. A measured session printed fct.dropMax: 3200300,
+       * Say what the biggest refusal actually was, saying it no more than once per advance. A measured session recorded a refusal of 3,200,300,
        * and an integer that large cannot be acted on — no cast in this game does that damage, so either a line is parsed into a number it should not
        * be or some lane is being fed the wrong figure, and which one it is lives in the ability name rather than the value. The text changes only when
        * the session record falls; the seconds gate keeps a stream of ever-larger junk from turning the log into itself.
@@ -504,7 +467,7 @@ namespace EQLogParser
       {
         _lastWorstDrop = worstDrop;
         _lastWorstDropMs = now;
-        PerfJournal.Note($"FCT refused its largest number yet: {worstDrop}");
+        Log.Debug($"fct overlay: refused its largest number yet - {worstDrop}");
       }
 
       if (now - _lastStatsMs < 500)

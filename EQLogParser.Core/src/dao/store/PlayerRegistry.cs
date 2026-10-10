@@ -39,27 +39,6 @@ namespace EQLogParser
     // singleton
     internal static PlayerRegistry Instance { get; } = new();
 
-    /*
-     * Two numbers, asked so that a decision can be made with them rather than about them (PerfCounters: handles come from
-     * field initializers, so no name lookup and no lock in the measured path; both are `uiThread: false` because this store
-     * is filled by the parsing thread and drained by the stats builders — neither is the UI thread, and naming either in a
-     * stall's "in progress" would send a reader to the wrong window).
-     *
-     *   reg.class  — timed: count, average and worst of GetPlayerClass, the read every board row pays for its Class column.
-     *                This is the number that decides whether names need flat ids. A live raid printing 20,000 reads/s at a
-     *                few microseconds says string-keyed lookups are not the wall and "flat name -> id" (weeks of work,
-     *                tens of MB) is not worth starting; a worst-case in milliseconds says it is.
-     *   reg.write  — counted: write calls the parse makes (a verified-player claim, a pet pair, a class sighting). Volume
-     *                here is what a possessive line costs — one `X`s pet` line asks for a claim AND a mapping, and a capture
-     *                holds half a million of them.
-     *
-     * Neither reaches eqlogparser.log unless the operator asked: PerfJournal.Enabled gates the heartbeat that prints them
-     * (docs/DesignNotes.md → "Instrumenting the UI thread"). Cheap spans sort themselves out of the table when they are
-     * cheap, which is also an answer.
-     */
-    private static readonly int ClassReadId = PerfCounters.Register("reg.class", uiThread: false);
-    private static readonly int WriteId = PerfCounters.Register("reg.write", uiThread: false);
-
     // Icon file names — resolved to BitmapImage by the UI layer via GetPlayerIconPath()
     // Only used for default/fallback icon resolution in the core layer
     internal const string UnkIconName = "Unk.png";
@@ -190,9 +169,6 @@ namespace EQLogParser
 
     internal void AddPetToPlayer(string pet, string player, bool init = false)
     {
-      // Load is not a sighting, and it is not traffic either: Init() replays every stored pair through here.
-      if (!init) PerfCounters.Note(WriteId);
-
       lock (_lock)
       {
         AddPetToPlayerNoLock(pet, player, init);
@@ -269,8 +245,6 @@ namespace EQLogParser
     {
       if (string.IsNullOrEmpty(name))
         return;
-
-      if (!init) PerfCounters.Note(WriteId);
 
       var needPlayerEvent = false;
       var needPetEvent = false;
@@ -418,31 +392,23 @@ namespace EQLogParser
      */
     internal string GetPlayerClass(string name, double t)
     {
-      var mark = PerfCounters.Begin(ClassReadId);
-      try
-      {
-        if (string.IsNullOrEmpty(name) || !_activePlayerClass.TryGetValue(name, out var active))
-          return GetDefaultPlayerClass(name);
+      if (string.IsNullOrEmpty(name) || !_activePlayerClass.TryGetValue(name, out var active))
+        return GetDefaultPlayerClass(name);
 
-        lock (active)
+      lock (active)
+      {
+        var records = active.Records;
+        if (records.Count == 0)
         {
-          var records = active.Records;
-          if (records.Count == 0)
-          {
-            return GetDefaultPlayerClass(name);
-          }
-
-          // first index where BeginTime > t
-          var idx = UpperBoundByBeginTime(records, t);
-
-          return idx == 0
-            ? records[0].ClassName     // nothing started at or before t, so the next boundary is the answer
-            : records[idx - 1].ClassName; // last boundary at or before t
+          return GetDefaultPlayerClass(name);
         }
-      }
-      finally
-      {
-        PerfCounters.End(mark);
+
+        // first index where BeginTime > t
+        var idx = UpperBoundByBeginTime(records, t);
+
+        return idx == 0
+          ? records[0].ClassName     // nothing started at or before t, so the next boundary is the answer
+          : records[idx - 1].ClassName; // last boundary at or before t
       }
     }
 
@@ -800,12 +766,6 @@ namespace EQLogParser
     {
       if (string.IsNullOrEmpty(name) || !CombatRecordLookup.IsValidClassName(className) || confidence is < 1 or > 2)
         return;
-
-      /*
-       * Counted per call rather than per committed boundary: what costs is the ask (a frenzy line arrives ~85,000 times in a
-       * night and every one of them takes this name's lock to conclude "still a berserker"), not the rare insert.
-       */
-      PerfCounters.Note(WriteId);
 
       var active = _activePlayerClass.GetOrAdd(name, _ => new ActivePlayerClass());
 

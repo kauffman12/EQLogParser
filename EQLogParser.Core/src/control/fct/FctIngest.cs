@@ -77,7 +77,7 @@ namespace EQLogParser
      * How many of those losses happened while the canvas was still being handed frames. This is the split that decides whether a drop report
      * is a bug: a refusal with a live pump under it is a number that never reached a screen somebody could have been looking at, while a refusal
      * while nothing was painting cost an allocation and nothing else — the row could not have been read in either case, and every overlay throws
-     * overflow away rather than draw two numbers on top of each other. Read beside "fct.drop", whose total it is part of.
+     * overflow away rather than draw two numbers on top of each other. Read beside DroppedCount, whose total this is part of.
      */
     public int DroppedLiveCount { get; private set; }
 
@@ -103,15 +103,6 @@ namespace EQLogParser
 
     /* Environment.TickCount64 of the last frame the host was handed; 0 means never, which is not fresh (an overlay that has never painted loses nothing). */
     private long _lastPumpMs;
-
-    /*
-     * The same losses as counted perf entries. The overlay already gauges their sum as a lifetime level ("fct.drop"), which answers "does this
-     * build lose numbers at all" but not "which pull lost them", and the settings panel that shows DroppedCount is only read after somebody
-     * thinks to open it. Split by cause here: a lane with no slot is the stage too small for the fight, a refused conveyor enrol is the feed
-     * outrunning its mouth. Counts are per window, so an overload stands out in its own window instead of hiding inside a total.
-     */
-    private static readonly int DropLaneId = PerfCounters.Register("fct.dropLane");
-    private static readonly int DropConveyorId = PerfCounters.Register("fct.dropConveyor");
 
     /*
      * Numbers below this are never drawn — the MSBT "damage threshold" dial, offered in the settings panel. It is a
@@ -431,7 +422,7 @@ namespace EQLogParser
         var taken = PickEvictionTarget(hits, pooled, incoming, Significance(value, 1, proc));
         if (taken is null)
         {
-          CountDrop(DropLaneId, value, crit, fixedText ?? source);
+          CountDrop(value, crit, fixedText ?? source);
           return null;
         }
 
@@ -491,7 +482,7 @@ namespace EQLogParser
 
         if (!_conveyor.Enrol(hit, stage, now))
         {
-          CountDrop(DropConveyorId, value, crit, fixedText ?? source);
+          CountDrop(value, crit, fixedText ?? source);
           return null;
         }
 
@@ -521,7 +512,7 @@ namespace EQLogParser
      */
     public void ResetConveyor() => _conveyor.Reset();
 
-    /* How full the deepest lane queue has been, for the heartbeat. */
+    /* How full the deepest lane queue has been all session: whether a refusal was the cap or something else. */
     public int PeakBacklog => _conveyor.PeakWaiting;
 
     /*
@@ -571,13 +562,12 @@ namespace EQLogParser
      * some second rail scheme.
      */
     /*
-     * One place a refusal is accounted for, whichever door turned the number away: the lifetime total the settings panel shows, the
-     * per-window counter the heartbeat names, and — when the host was painting — the half of the total that could have been seen.
+     * One place a refusal is accounted for, whichever door turned the number away: the lifetime total the settings panel shows and —
+     * when the host was painting — the half of the total that could have been seen.
      */
-    private void CountDrop(int counterId, double value, bool crit, string name)
+    private void CountDrop(double value, bool crit, string name)
     {
       DroppedCount++;
-      PerfCounters.Note(counterId);
 
       if (value > MaxDroppedValue)
       {

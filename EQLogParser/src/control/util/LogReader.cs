@@ -59,15 +59,10 @@ namespace EQLogParser
     private long _nextUpdateThreshold;
     private double _lastParsedTime;
 
-    // Load diagnostics (PerfJournal.Enabled only): see NoteLoadProgress. The handed-over count itself is ungated, because
-    // MainWindow asks it (see HandedOverLines) - an increment per batch of 5,000 lines is not a cost worth gating.
-    private readonly Stopwatch _loadWatch = new();
+    /* Lines handed to the parse lane. Ungated because it answers a PRODUCT question: MainWindow asks it (HandedOverLines) to
+       decide the load-complete line, whether the fight list's loading band may show, and whether the post-load GC tidy runs.
+       An increment per batch of 5,000 lines is not a cost worth thinking about. */
     private long _handedOver;
-    private long _handedOverLast;
-    private double _diagSeconds;
-    private int _diagGen0;
-    private int _diagGen1;
-    private int _diagGen2;
     private bool _fileDeleted;
     private bool _waiting = true;
     private bool _ready;
@@ -423,62 +418,8 @@ namespace EQLogParser
       }
       _batch.Clear();
 
-      NoteLoadProgress(flushed);
-    }
-
-    /*
-     * What a big load is actually doing, one line every ~2 s, and only when PerfJournal.Enabled (settings.txt
-     * PerfReport=True) - a normal session writes nothing here. Chosen for the two questions that matter during an open:
-     *
-     *   queue 0/25000      - the reader is the slow half; nothing waits on the parse lane.
-     *   queue 25000/...    - the parse lane is the bottleneck and this thread is parked in Add. That is what used to
-     *                      freeze the window while a 400 MB capture loaded, and the queue depth is how you can see it
-     *                      afterwards from eqlogparser.log alone.
-     *
-     * The generation deltas say whether collection work competes for cores during the load (the measured figures in
-     * docs/DesignNotes.md say the garbage is small; if this line says otherwise, that is a finding). Lines/s here is READ
-     * rate, not parsed rate - the reader runs ahead of the parser by design.
-     *
-     * The rate is THIS window's count over THIS window's seconds, with the running total beside it. The first version
-     * divided the cumulative count by a constant window, and a field run over a 951 MB capture printed a beautiful
-     * twelvefold acceleration from 359k to 4.59 M lines/s - pure arithmetic, since cumulative/window is a straight line.
-     * Two independent checks caught it, and both are worth keeping: that capture (the local reference copy of
-     * `eqlog_Kizant_xegony-09-03-26.txt`) holds 10,015,348 lines in 997,656,755 bytes - 99.6 bytes a line, so 4.59 M
-     * lines/s would be a 458 MB/s handoff - and the same line's own `allocated` column ended at 16,432 MB over those
-     * 10 M lines, which is **1,641 bytes per line**, the figure the headless measurements reach independently (docs
-     * -> "what garbage a raid actually makes"). The honest number was ~0.5 M lines/s, ~48 MB/s, with the queue pinned:
-     * the parse lane capping the reader on real hardware, which is the whole point of asking for the line.
-     */
-    private void NoteLoadProgress(int batchLines)
-    {
-      /*
-       * The count accrues whether or not anybody is watching, because it answers a PRODUCT question after the load, not a perf one:
-       * LoadAllocatedGarbage decides the load-complete log line, whether the fight list's loading band may show, and whether the
-       * post-load GC tidy runs at all. The line below it is the only thing PerfJournal should gate - an earlier shape put this
-       * increment under that guard, which left every normal session (no PerfReport=True) reporting "the read handed nothing over"
-       * after a whole-file open: no band over an empty-looking grid, a wrong log line, and no GC pass.
-       */
-      _handedOver += batchLines;
-
-      if (!PerfJournal.Enabled || batchLines == 0) return;
-      if (!_loadWatch.IsRunning) _loadWatch.Restart();
-      var seconds = _loadWatch.Elapsed.TotalSeconds;
-      var delta = seconds - _diagSeconds;
-      if (delta < 2.0) return;
-
-      var g0 = GC.CollectionCount(0);
-      var g1 = GC.CollectionCount(1);
-      var g2 = GC.CollectionCount(2);
-      Log.Info($"load: {GetProgress():0}% | queue {_lines.Count}/{QueueBound}"
-               + $" | read {(_handedOver - _handedOverLast) / delta:N0} lines/s ({_handedOver:N0} handed over)"
-               + $" | gen +{g0 - _diagGen0}/{g1 - _diagGen1}/{g2 - _diagGen2}"
-               + $" | allocated {GC.GetTotalAllocatedBytes(true) / 1_048_576:N0} MB");
-
-      _handedOverLast = _handedOver;
-      _diagSeconds = seconds;
-      _diagGen0 = g0;
-      _diagGen1 = g1;
-      _diagGen2 = g2;
+      // Counted here rather than at the batch site because this is the one place that knows how many lines crossed.
+      _handedOver += flushed;
     }
 
     private void SearchLinear(StreamReader reader, DateTime minDate)

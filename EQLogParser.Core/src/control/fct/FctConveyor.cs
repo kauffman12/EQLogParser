@@ -62,7 +62,7 @@ namespace EQLogParser
     public const int BacklogCap = 12;
 
     /*
-     * The deepest a lane's queue has been all session, read by the heartbeat as "fct.backlog". It says how much room a refusal
+     * The deepest a lane's queue has been all session. It says how much room a refusal
      * needed: at BacklogCap the door is shut and the number is lost, so a peak of exactly 12 means the cap was the limit and
      * raising it (or shortening row lifetime) is what would have taken the traffic, while a peak of 4 with refusals elsewhere
      * says the queue was not the problem. Lifetime high-water on purpose — a tuning question is asked long after the pull.

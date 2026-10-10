@@ -1,7 +1,9 @@
+using log4net;
 using SkiaSharp;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Media;
@@ -21,6 +23,7 @@ namespace EQLogParser
    */
   internal class FctSkiaCanvas : FrameworkElement
   {
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
     // re-read DPI about once a second: per-monitor scaling changes neither the size nor any event we get
     private const double DpiCheckMs = 1000;
@@ -144,17 +147,6 @@ namespace EQLogParser
      */
     private double _statPaintMsSum, _statPaintMsMax;
     private int _statPaintCount;
-
-    /*
-     * Named spans and counters reported by the heartbeat (PerfCounters, UiBeatMonitor). The point is attribution, not profiling: when
-     * the watchdog says the UI thread stopped for a second and a half, these are the names it can print for "what was in there", and
-     * fct.paint is the one that decides whether the overlay was the cause of somebody else's freeze or its victim.
-     */
-    private static readonly int PumpId = PerfCounters.Register("fct.pump");
-    private static readonly int PaintId = PerfCounters.Register("fct.paint");
-    private static readonly int BakeId = PerfCounters.Register("fct.bake");
-    private static readonly int SurfaceId = PerfCounters.Register("fct.surface");
-    private static readonly int HitsId = PerfCounters.Register("fct.hits");
 
     private Stopwatch _clock;
     private bool _dirty;
@@ -450,10 +442,10 @@ namespace EQLogParser
       _dirty = true;
     }
 
-    /* Timed as one span, the two early-outs included: a paint that was asked for and could not run is still a frame the layout missed. */
+    /* Timed as one number, the two early-outs included: a paint that was asked for and could not run is still a frame the layout missed. */
     protected override void OnRender(DrawingContext dc)
     {
-      var mark = PerfCounters.Begin(PaintId);
+      var start = Stopwatch.GetTimestamp();
 
       try
       {
@@ -461,7 +453,7 @@ namespace EQLogParser
       }
       finally
       {
-        var ms = PerfCounters.End(mark);
+        var ms = ElapsedMs(start);
         _statPaintMsSum += ms;
         _statPaintCount++;
 
@@ -471,6 +463,9 @@ namespace EQLogParser
         }
       }
     }
+
+    /* The canvas's own clock arithmetic — the paint/pump numbers the simulation window prints are measured here and nowhere else. */
+    private static double ElapsedMs(long startTicks) => (Stopwatch.GetTimestamp() - startTicks) * 1000.0 / Stopwatch.Frequency;
 
     private void Paint(DrawingContext dc)
     {
@@ -554,10 +549,7 @@ namespace EQLogParser
        * spacing, so measuring only the frames it likes would make it blind to exactly the displays it exists for. */
       var shouldPaint = _pacer.Tick(now);
 
-      /* Every tick, before the early-outs, so the level the heartbeat prints is current even while the overlay sits idle. */
-      PerfCounters.Gauge(HitsId, _hits.Count);
-
-      /* Same reason: a refusal in the ingest has to be able to ask whether frames were arriving when it happened, and a tick that
+      /* Every tick, before the early-outs: a refusal in the ingest has to be able to ask whether frames were arriving when it happened, and a tick that
          painted nothing is still proof the compositor was handing this window work. */
       _ingest.NotePump();
 
@@ -583,11 +575,10 @@ namespace EQLogParser
       }
 
       /*
-       * The pump is the work a render tick does that is not rasterizing; it gets its own name so a slow prune or demo step arrives in
-       * the heartbeat as itself instead of as an unexplained gap. try/finally because a pass left marked "running" by an exception
-       * would keep naming itself in every stall line after it, which is worse than not having measured it at all.
+       * The pump is the work a render tick does that is not rasterizing, and it is what LastFrameMs reports - a slow prune or demo step
+       * shows up there rather than hiding inside "the paint was expensive".
        */
-      var mark = PerfCounters.Begin(PumpId);
+      var start = Stopwatch.GetTimestamp();
 
       try
       {
@@ -616,7 +607,7 @@ namespace EQLogParser
       }
       finally
       {
-        LastFrameMs = PerfCounters.End(mark);
+        LastFrameMs = ElapsedMs(start);
       }
 
       /*
@@ -912,14 +903,12 @@ namespace EQLogParser
       _pixelCopy = new byte[w * h * 4];
       _pixelHandle = GCHandle.Alloc(_pixelCopy, GCHandleType.Pinned);
 
-      PerfCounters.Note(SurfaceId);
-
       /*
        * One line per reallocation — a resize or a DPI change, which is rare enough to print every time. It is the size of the frame's
        * memset and of both copies stated in one place: on a 3840 x 2160 overlay that buffer is 33 MB touched every frame, three buffers
        * counting toward the working set, and a plausible cause of a hitch nobody can otherwise see from the outside.
        */
-      PerfJournal.Note($"FCT render surface {w} x {h} px, {(double)w * h * 4 / (1024 * 1024):0.0} MB copy buffer");
+      Log.Debug($"fct canvas: render surface {w} x {h} px, {(double)w * h * 4 / (1024 * 1024):0.0} MB copy buffer");
 
       return true;
     }
@@ -987,7 +976,6 @@ namespace EQLogParser
 
           /* Counted, not timed: a bake is a blur of a label into its own surface, it happens once per distinct crit string rather
              than per frame, and what matters about it is how many the fight asked for. */
-          PerfCounters.Note(BakeId);
         }
       }
 

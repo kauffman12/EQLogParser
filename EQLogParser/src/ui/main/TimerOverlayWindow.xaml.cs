@@ -17,17 +17,6 @@ namespace EQLogParser
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
-    /*
-     * This overlay's spans on the heartbeat (PerfCounters, UiBeatMonitor). The panel redraws from a 75 ms loop for as long as any timer is
-     * live, rewriting the text and progress of every bar in an AllowsTransparency window, and a second pass rebuilds the visual tree when
-     * what is firing changes. Both are UI-thread work of exactly the kind that can take the combat numbers down with it, so both belong on
-     * the log line where those numbers are reported — until now this window was the largest thing a player can open during a raid with no
-     * number against its name.
-     */
-    private static readonly int TimerBarId = PerfCounters.Register("trig.timerBar");
-    private static readonly int TimerTickId = PerfCounters.Register("trig.timerTick");
-    private static readonly int TimerBarsId = PerfCounters.Register("trig.timerBars");
-
     private const long TopTimeout = TimeSpan.TicksPerSecond * 2;
     private readonly bool _preview;
     private readonly SemaphoreSlim _renderSemaphore = new(1, 1);
@@ -63,11 +52,6 @@ namespace EQLogParser
       InitializeComponent();
 
       _node = node;
-
-      /* Reported as open while on screen, so a stall line saying "open fct+meter+tmr:…" is a different investigation from one where the
-         timers were never up. Named per trigger node because several of these can be open at once. */
-      var surface = TextOverlayWindow.SurfaceName(_node, "tmr");
-      IsVisibleChanged += (_, e) => UiBeatMonitor.NoteSurface(surface, (bool)e.NewValue);
 
       _preview = previews != null;
       _previewWindows = previews;
@@ -766,7 +750,7 @@ namespace EQLogParser
 
     private async Task RenderTimerBarsAsync(List<TimerBarModel> models)
     {
-      await Dispatcher.InvokeAsync(() => PerfCounters.Run(TimerBarId, () => DrawTimerBars(models)));
+      await Dispatcher.InvokeAsync(() => DrawTimerBars(models));
     }
 
     /*
@@ -862,7 +846,6 @@ namespace EQLogParser
       }
 
       /* The pool this overlay is carrying, so the two costs above can be read per bar rather than in the abstract. */
-      PerfCounters.Gauge(TimerBarsId, content.Children.Count);
     }
 
     private async Task ShortTickAsync()
@@ -881,7 +864,7 @@ namespace EQLogParser
         _renderSemaphore.Release();
       }
 
-      await Dispatcher.InvokeAsync(() => PerfCounters.Run(TimerTickId, () => DrawTimerTick(currentTicks, tempIdleList)));
+      await Dispatcher.InvokeAsync(() => DrawTimerTick(currentTicks, tempIdleList));
     }
 
     /*

@@ -429,7 +429,7 @@ namespace EQLogParser
     }
 
     /*
-     * Capture heartbeat (dispatcher thread already). The count used to replace the status line every tick, which
+     * The loading band's tick (dispatcher thread already). The count used to replace the status line every tick, which
      * read as a terminal ticking past; it belongs on the loading band, next to the file progress that says when
      * the number will stop moving. With no band showing there is nothing to update - a settled list refreshes
      * through OnDerived, which is the message.

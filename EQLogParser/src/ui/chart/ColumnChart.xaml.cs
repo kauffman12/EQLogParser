@@ -17,13 +17,6 @@ namespace EQLogParser
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
-    /*
-     * This chart is built out of hand-made WPF elements - a Rectangle, labels and a tooltip per column - every time the page changes, and a
-     * timer fires it while the window is open, so it is a UI-thread cost no chart.update span ever saw. One span for the whole redraw: if it
-     * ever tops the heartbeat it gets phases the way LineChart did, rather than being guessed at now.
-     */
-    private static readonly int ColumnPageId = PerfCounters.Register("chart.column");
-
     private readonly List<ColumnData> _columns = [];
     private readonly List<string> _selectedClasses = [];
     private readonly DispatcherTimer _refresh;
@@ -185,7 +178,9 @@ namespace EQLogParser
       });
     }
 
-    private void DisplayPage() => PerfCounters.Run(ColumnPageId, ShowColumns);
+    /* Hand-made WPF elements - a Rectangle, labels and a tooltip per column - rebuilt every time the page changes, on a timer while the
+       window is open. It is a UI-thread cost by construction, which is why the page is only rebuilt when something moved. */
+    private void DisplayPage() => ShowColumns();
 
     private void ShowColumns()
     {

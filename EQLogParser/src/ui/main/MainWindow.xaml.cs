@@ -49,47 +49,10 @@ namespace EQLogParser
     private readonly SummaryBuildGate _summaryGate = new(static work => Task.Run(work));
 
     /*
-     * The main window's periodic work, named for the heartbeat (PerfCounters, UiBeatMonitor). Both run on the UI thread and both are
-     * quiet suspects for a freeze somewhere else: settings.ini gets written from here every half minute (a file write is one
-     * antivirus scan away from a second), and an open chart takes a data-point update at whatever rate the parser produces them.
-     * A stall line that names one of these is a different conversation from one that names nothing.
-     */
-    private static readonly int SaveId = PerfCounters.Register("ui.configSave");
-
-    /*
-     * The board build and the materialization inside it, both `uiThread: false`: they run on a pool thread, so naming them in a stall's
-     * "in progress" would send a reader to the wrong window — but a UI freeze that happens while one of them is running is exactly the
-     * correlation worth having (builders raise their grid updates back onto the dispatcher), and StatsBuildTrace's per-builder spans
-     * (stats.damage / stats.tanking / stats.healing) line up against these two.
-     */
-    private static readonly int BoardBuildId = PerfCounters.Register("boards.build", false);
-    private static readonly int BoardMaterializeId = PerfCounters.Register("boards.materialize", false);
-    private static readonly int ChartUpdateId = PerfCounters.Register("chart.update");
-
-    /* How many times a redraw request arrived while one was already waiting to run; see QueueChartUpdate. */
-    private static readonly int ChartBacklogId = PerfCounters.Register("chart.backlog");
-    private int _chartUpdatesWaiting;
-
-    /*
      * Opening a log file, and the file dialog inside it. A measured session caught 1.6 s of blocked UI thread right after a load finished,
      * and switching logs is something a player does mid-raid; the dialog gets its own name because the question "does a modal Win32 dialog
      * starve the beat?" has to be answered from evidence before anyone decides whether such a stall counts as one.
      */
-    /*
-     * The constructor's own pieces. A field run on a real machine reported `slow UI pass app.mainwindow: 4443.5 ms` with
-     * `cpu 2640 ms` of samples behind it, and the span covered the whole window - a huge XAML tree plus every docked
-     * window declared in it plus this class's setup - which is true-but-useless. These four name what a reader can act on,
-     * and whatever is left after subtracting them is the settings/visibility block between them: dozens of cached
-     * dictionary reads and property sets, expected to be the smallest term, so if the remainder ever dominates that IS the
-     * finding (docs/DesignNotes.md -> "The Windows field run").
-     */
-    private static readonly int MwXamlId = PerfCounters.Register("mw.xaml");
-    private static readonly int MwPanesId = PerfCounters.Register("mw.panes");
-    private static readonly int MwAutoOpenId = PerfCounters.Register("mw.autoopen");
-    private static readonly int MwThemeId = PerfCounters.Register("mw.theme");
-
-    private static readonly int OpenLogId = PerfCounters.Register("ui.openlogfile");
-    private static readonly int PickFileId = PerfCounters.Register("ui.pickfile");
 
     private LogReader _eqLogReader;
     private DeriveEngine _engine;
@@ -108,9 +71,8 @@ namespace EQLogParser
 
     public MainWindow()
     {
-      // The XAML tree: this window and every docked window declared inside it. Named because it is the prime suspect for
-      // the multi-second pass above, and a lambda is cheaper than guessing.
-      PerfCounters.Run(MwXamlId, () => InitializeComponent());
+      // The XAML tree: this window and every docked window declared inside it - the biggest thing startup builds.
+      InitializeComponent();
 
       // set main / themes
       MainActions.SetMainWindow(this);
@@ -259,7 +221,7 @@ namespace EQLogParser
        * ObservableCollection, per sighting). Those windows are gone — the identity pane reads the same facts out of the derive —
        * but `MainActions.ClassList` outlives them: it is what every class dropdown offers, here and in Player/NPC Identity.
        */
-      PerfCounters.Run(MwPanesId, MainActions.InitClassList);
+      MainActions.InitClassList();
 
       // add notify icon
       // this attaches to state change events so do toward the end
@@ -274,18 +236,15 @@ namespace EQLogParser
       var previousFile = ConfigUtil.GetSetting("LastOpenedFile");
       if (enableAutoMonitorIcon.Visibility == Visibility.Visible && File.Exists(previousFile))
       {
-        // OpenLogFile with update status.
-        //
         // This runs INSIDE the window constructor, and it bootstraps a whole session (clear, engine start, identity
-        // stores, reader) there - so it is measured separately rather than buried in app.mainwindow. `lastMins: 0` means
-        // follow from end of file: an old last-opened file yields zero lines here, which is correct for a monitor but still
-        // announces "Finished Loading Log File" to the log.
-        PerfCounters.Run(MwAutoOpenId, () => OpenLogFile(previousFile, 0, "startup auto-monitor"));
+        // stores, reader) there. `lastMins: 0` means follow from end of file: an old last-opened file yields zero lines
+        // here, which is correct for a monitor but still announces "Finished Loading Log File" to the log.
+        OpenLogFile(previousFile, 0, "startup auto-monitor");
       }
 
       // workaround to set initial theme properly
       MainActions.UpdateStatus("Setting " + ThemeConfig.CurrentTheme);
-      PerfCounters.Run(MwThemeId, () => ThemeConfig.SetTheme());
+      ThemeConfig.SetTheme();
     }
 
     private async void MainWindowOnLoaded(object sender, RoutedEventArgs args)
@@ -681,9 +640,8 @@ namespace EQLogParser
       // save once loaded but also if backup isnt trying to shutdown
       if (!_isStarting && Application.Current.ShutdownMode != ShutdownMode.OnExplicitShutdown)
       {
-        /* Timed because it writes settings.ini to disk on the UI thread, once a half minute — which is close enough to "every so often"
-           to be worth ruling in or out by measurement rather than by argument. */
-        PerfCounters.Run(SaveId, ConfigUtil.Save);
+        /* Writes settings.ini from the UI thread, once a half minute. */
+        ConfigUtil.Save();
       }
     }
 
@@ -779,45 +737,25 @@ namespace EQLogParser
     }
 
     /*
-     * A data point event arrives on a builder's thread and its redraw runs on the UI thread, so rebuilds that land close together queue full
-     * redraws behind each other - three builders can ask for three. Counting how often a request found one already waiting is the only way to
-     * see that shape afterwards: it is what one merged redraw would take away, and nothing else in the log distinguishes "each redraw is too
-     * slow" from "too many redraws were asked for".
-     */
-    /*
-     * The icon is handed over as an object and its Tag is read inside the dispatched callback, not here. Reading a property of that control
-     * from this thread throws - `InvalidOperationException: the calling thread cannot access this object` - because the event arrives on a
-     * stats builder's thread, and this shape is not incidental: the lambdas that used to sit here wrapped the whole `icon.Tag as string`
-     * expression inside InvokeAsync precisely so the read happened on the UI thread. Measuring how many redraws queue up cannot be allowed to
-     * move a property read across threads to do it.
+     * A data point event arrives on a builder's thread and its redraw runs on the UI thread, so rebuilds that land close together queue
+     * full redraws behind each other - three builders can ask for three.
+     *
+     * The icon is handed over as an object and its Tag is read INSIDE the dispatched callback, never here. Reading a property of that
+     * control from this thread throws `InvalidOperationException: the calling thread cannot access this object`, because the event arrives
+     * on a stats builder's thread. Whatever else changes at this seam, the `icon.Tag as string` read stays on the UI side of the hand-off.
      */
     private void QueueChartUpdate(FrameworkElement icon, DataPointEvent e)
     {
-      if (Interlocked.Increment(ref _chartUpdatesWaiting) > 1)
-      {
-        PerfCounters.Note(ChartBacklogId);
-      }
-
-      /* The count is released by the redraw itself; a callback the dispatcher never ran means the application was closing anyway. */
-      Dispatcher.InvokeAsync(() =>
-      {
-        Interlocked.Decrement(ref _chartUpdatesWaiting);
-        HandleChartUpdate(icon.Tag as string, e);
-      });
+      Dispatcher.InvokeAsync(() => HandleChartUpdate(icon.Tag as string, e));
     }
 
     private void HandleChartUpdate(string key, DataPointEvent e)
     {
-      /* One span per data point rather than one counter: an open chart is the only other thing in this application that redraws
-         continuously during a fight, and how much a single update costs decides whether it can starve an overlay. */
-      PerfCounters.Run(ChartUpdateId, () =>
+      if (SyncFusionUtil.GetOpenWindows(dockSite).TryGetValue(key, out var value) &&
+        value.Content is LineChart chart)
       {
-        if (SyncFusionUtil.GetOpenWindows(dockSite).TryGetValue(key, out var value) &&
-          value.Content is LineChart chart)
-        {
-          chart.HandleUpdateEvent(e);
-        }
-      });
+        chart.HandleUpdateEvent(e);
+      }
     }
 
     /*
@@ -924,7 +862,6 @@ namespace EQLogParser
      */
     private void BuildBoards(DeriveEngine session, BoardRequest request, int tankingDamageType, long askedAt)
     {
-      var buildSpan = PerfCounters.Begin(BoardBuildId);
       var waitedMs = StatsBuildTrace.ElapsedSince(askedAt);
       SummaryInput input = null;
 
@@ -951,9 +888,9 @@ namespace EQLogParser
 
       try
       {
-        var materializeSpan = PerfCounters.Begin(BoardMaterializeId);
+        var materializeWatch = Stopwatch.StartNew();
         input = session.BuildSummaryInput(request.Fights);
-        var materializeMs = PerfCounters.End(materializeSpan);
+        materializeWatch.Stop();
 
         if (!SessionStillOpen(session))
         {
@@ -1000,7 +937,7 @@ namespace EQLogParser
         Log.Debug($"Derived damage summary [{request.Reason}]: {input.Fights.Count} fight(s), {records:N0} record(s), "
                  + $"{tankRecords:N0} taken"
                  + (input.WithoutDamage > 0 ? $", {input.WithoutDamage} selected fight(s) no facts at all" : string.Empty)
-                 + $" | materialized in {materializeMs:F0} ms, waited {waitedMs:F0} ms behind any earlier build");
+                 + $" | materialized in {materializeWatch.Elapsed.TotalMilliseconds:F0} ms, waited {waitedMs:F0} ms behind any earlier build");
 
         /*
          * Serial or fanned out — the boards are the SAME three calls over the SAME options either way; what changes is how many
@@ -1046,10 +983,6 @@ namespace EQLogParser
         // Logged here rather than left to the task: an announcement that threw must still return the gate to idle (its own
         // finally does that), and the boards keep whatever they had — which is why a partial board beats no board.
         Log.Error("Derived damage summary error", ex);
-      }
-      finally
-      {
-        PerfCounters.End(buildSpan);
       }
 
       // Watching happens AFTER the boards, under its own guard: it only decides whether a later derive tick is worth
@@ -1560,7 +1493,6 @@ namespace EQLogParser
      */
     private void OpenLogFile(string previousFile, int lastMins, string origin = "open")
     {
-      var openMark = PerfCounters.Begin(OpenLogId);
       try
       {
         string theFile = null;
@@ -1578,10 +1510,7 @@ namespace EQLogParser
             .Select(FileDialogUtil.ResolveDirectory).FirstOrDefault(dir => dir != null);
 
           // Cancel and failure both come back as "no file", so there is nothing here that can end the app.
-          PerfCounters.Run(PickFileId, () =>
-          {
-            theFile = FileDialogUtil.PickFile(this, start, "log file", "eqlog_Player_server|*.txt;*.gz;*.log");
-          });
+          theFile = FileDialogUtil.PickFile(this, start, "log file", "eqlog_Player_server|*.txt;*.gz;*.log");
         }
 
         if (!string.IsNullOrEmpty(theFile))
@@ -1692,10 +1621,6 @@ namespace EQLogParser
         // format problem, which meant the unexpected failures were exactly the ones that reached the user; the
         // dispatcher handler would only have caught them again, with less context in the log.
         Log.Error("Problem Opening Log File", e);
-      }
-      finally
-      {
-        PerfCounters.End(openMark);
       }
     }
 

@@ -138,7 +138,7 @@ namespace EQLogParser
      * DeriveEngine, the only production producer.
      *
      * Dispose does not join a derive pass that is already running, so the session belonging to the log you just closed
-     * can hand its rows to every listener a heartbeat AFTER the new one opened. A panel that repaints on `Derived`
+     * can hand its rows to every listener a moment AFTER the new one opened. A panel that repaints on `Derived`
      * without asking who sent it therefore shows the dead capture over the live one — which is what "Clear All leaves the
      * list full" and "the old raid stays up while the new file loads" turned out to be. A test-built snapshot carries 0
      * and is treated as belonging to whatever session is current; production stamps every one.

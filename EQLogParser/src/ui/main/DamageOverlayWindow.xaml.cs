@@ -87,23 +87,10 @@ namespace EQLogParser
     private string _savedHighlightColor;
     private DamageOverlayToolbarWindow _toolbarWindow;
 
-    /*
-     * This window's two spans on the heartbeat (PerfCounters, UiBeatMonitor). They are reported separately because they run on different
-     * threads and fail for different reasons: "build" is the stats rebuild under StatsLock on a pool thread, which goes long when the log
-     * reader is holding that lock, while "loadstats" is this window rewriting every bar on the UI thread — the one of the two that can
-     * stop the combat numbers, and the reason the meter is instrumented at all.
-     */
-    private static readonly int BuildId = PerfCounters.Register("meter.build", uiThread: false);
-    private static readonly int LoadStatsId = PerfCounters.Register("meter.loadstats");
-
     internal DamageOverlayWindow(bool preview = false, bool reset = false)
     {
       ThemeConfig.SetCurrentTheme(this);
       InitializeComponent();
-
-      /* Every stall line says which windows were open, because the meter's once-a-second rebuild is a standing suspect for an overlay
-         that froze and recovered by itself — and it keeps rebuilding whether or not anyone can see it. */
-      IsVisibleChanged += (_, e) => UiBeatMonitor.NoteSurface("meter", (bool)e.NewValue);
 
       _preview = preview;
 
@@ -525,8 +512,6 @@ namespace EQLogParser
 
       _lastUpdateTask = Task.Run(() =>
       {
-        var buildMark = PerfCounters.Begin(BuildId);
-
         try
         {
           lock (StatsLock)
@@ -552,10 +537,6 @@ namespace EQLogParser
         {
           // ignore for now
         }
-        finally
-        {
-          PerfCounters.End(buildMark);
-        }
       });
 
       await _lastUpdateTask;
@@ -569,24 +550,15 @@ namespace EQLogParser
           _lastTopTicks = currentTicks;
         }
 
-        /* One span over both lists: the player sees "the meter redrew", and the two calls are the same work on two panels. */
-        var loadMark = PerfCounters.Begin(LoadStatsId);
-
-        try
+        /* Both lists in one pass: the player sees "the meter redrew", and the two calls are the same work on two panels. */
+        if (damageOverlayStats.DamageStats is not null)
         {
-          if (damageOverlayStats.DamageStats is not null)
-          {
-            LoadStats(damageContent.Children, damageOverlayStats.DamageStats);
-          }
-
-          if (damageOverlayStats.TankStats is not null)
-          {
-            LoadStats(tankContent.Children, damageOverlayStats.TankStats);
-          }
+          LoadStats(damageContent.Children, damageOverlayStats.DamageStats);
         }
-        finally
+
+        if (damageOverlayStats.TankStats is not null)
         {
-          PerfCounters.End(loadMark);
+          LoadStats(tankContent.Children, damageOverlayStats.TankStats);
         }
 
         if (Visibility != Visibility.Visible)

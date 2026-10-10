@@ -39,14 +39,14 @@ namespace EQLogParser
 
       StringAssert.StartsWith(line, "gc.tidy unit test");
 
-      /* The tidy also has to leave itself on the register: a gap classified while it runs cannot see it in the GC counters, and would blame the machine. */
-      var stop = PerfGc.ReadStop();
-      Assert.AreEqual("unit test", stop.Reason, $"the collection that just ran should be nameable as ours (register said '{stop.Reason}')");
-      Assert.IsTrue(stop.Finished, "a finished tidy carries a duration so the gap line can quote how much of itself it was");
+      /*
+       * The line is the whole contract now that the heartbeat is gone: TidyNow returns it so a caller (or a test) can see what the
+       * collection did without parsing a log file. What it must still name is the two sizes and the wall cost - "did asking work".
+       */
       StringAssert.Contains(line, "heap ");
       StringAssert.Contains(line, "working set ");
       StringAssert.Contains(line, "gen2 +");
-      StringAssert.Contains(line, "stopped ");
+      StringAssert.Contains(line, "wall ");
       Assert.IsFalse(line.Contains("NaN") || line.Contains("Infinity"), $"a tidy line full of arithmetic trouble: {line}");
     }
 
@@ -210,7 +210,7 @@ namespace EQLogParser
     {
       Assert.IsTrue(WaitUntil(() => GcTidyUp.TidyCount >= expected),
         $"no collection after {WaitBudgetMs} ms: count {GcTidyUp.TidyCount} of {expected}, suppressed {GcTidyUp.SuppressedCount}, " +
-        $"slot idle {GcTidyUp.Idle}, heap {PerfGc.Sample().HeapBytes / (1024.0 * 1024):0} MB - a big heap means this machine is slow, not this code");
+        $"slot idle {GcTidyUp.Idle}, heap {GC.GetTotalMemory(forceFullCollection: false) / (1024.0 * 1024):0} MB - a big heap means this machine is slow, not this code");
     }
 
     /* "It happened and never handed the slot back", which is the bug: every later request would be refused forever by a tidy that stopped answering. */
@@ -218,7 +218,7 @@ namespace EQLogParser
     {
       Assert.IsTrue(WaitUntil(() => GcTidyUp.Idle),
         $"a tidy is still holding the slot after {WaitBudgetMs} ms, so every request after it is refused forever: " +
-        $"{GcTidyUp.TidyCount} collected, heap {PerfGc.Sample().HeapBytes / (1024.0 * 1024):0} MB");
+        $"{GcTidyUp.TidyCount} collected, heap {GC.GetTotalMemory(forceFullCollection: false) / (1024.0 * 1024):0} MB");
     }
 
     private static bool WaitUntil(Func<bool> condition)

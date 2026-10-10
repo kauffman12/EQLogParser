@@ -2533,7 +2533,20 @@ breaker, players/pets killed read as a will or a plain death, named pets shorten
 and `PlayerRegistry.IsVerifiedPlayer` answers the player question behind a settable seam. Nothing subscribes at
 startup; whoever builds the real feed takes it from there.
 
-## Instrumenting the UI thread
+## Instrumenting the UI thread (and why it is gone)
+
+> **Status: deleted 2026-11, executed in one pass.** Everything this chapter describes — `UiBeatMonitor` and its thread probe,
+> `PerfCounters`, `PerfGc`, `PerfGap`, `PerfBreakdown`, `HeapLedger`, the ~50 `Register` sites in frame and parse paths — is out of the tree.
+> It answered its questions (the numbers below are those answers) and then spent a field session printing a heartbeat that diagnosed nothing while
+> sitting in the file that also carries a player's game-data errors, which is exactly the ageing this chapter's own last section warned about.
+> What remains of "how do I find a freeze": the Debug line each expensive pass prints with its own milliseconds and allocated bytes —
+> `StatsBuildTrace` (`stats build #N … | 159.6 MB allocated`), `board ask [reason]`, `derive pass`, `load:` — plus `GcTidyUp`'s own result line, now
+> written through the ordinary logger at Debug (`gc.tidy …`). `grep -E "stats build|board ask|derive pass|load:|gc.tidy"` over a session run with
+> `Debug=True` is the whole workflow (the words are `stats build #N`, `board ask [reason]`, `chart.update skipped`, `load: read loop`, `derive: first pass`,
+> `gc.tidy`). `PerfJournal.Enabled` survives as the gate on that residual perf chatter (`PerfReport=True`, or `Debug`).
+> The laws that outlived the instruments are in AGENTS.md — notably that **`GetPlayerClass` reads inside its per-name lock without allocating**, and
+> that its measured cost (~20k reads/s at microseconds) is why **flat name→id indexing does not start**. Read the rest of this chapter as a measurement
+> record, not as an architecture: none of it is live code.
 
 Reported often, impossible to reproduce on demand: the combat numbers stop for a second or two in the middle of a raid, then carry on
 without a restart. That shape is not a leak and not a crash — it is somebody occupying the application's one UI thread, and this
@@ -2926,7 +2939,8 @@ So each observation takes a fresh Process, reads state, reason and CPU inside it
 of an episode, and `AThreadCreatedAfterTheFirstLookIsStillFound` is there to keep it that way. The symptoms of getting this wrong were exactly
 the misleading kind: the id was correct, the thread was alive and readable, and the only wrong answer came from the reader's own stale copy.
 
-The threshold that opens an episode is settable — `PerfStallMs` in `AppData\config\settings.txt`, default 1000 ms, floor 100 ms — because one second is the
+The threshold that opens an episode was settable — `PerfStallMs` in `AppData\config\settings.txt`, default 1000 ms, floor 100 ms (the key stopped being read
+when the watchdog was deleted in 2026-11; a settings.txt still carrying it is inert) — because one second is the
 right number for reporting and the wrong one for measuring. A first run with every surface open showed beat delays of 90 to 235 ms with
 nothing of ours running: the same event as a multi-second stall at a fifth of the size, and easiest to catch while it is small. Nobody should
 run a raid at 150 ms — the log would fill with passes no player felt — but a measurement session that leaves the default will never see the
@@ -3442,26 +3456,32 @@ by more than 31 ms, so loading costs memory rather than responsiveness — heap 
 surface open. After that the longest beat delay in nine and a half minutes was 31 ms. Whatever the reported freezes are, they are not any
 pass this code measures, which is why the probe above is the next instrument rather than another span.
 
-### Instrumenting something new
+### Measuring something new (the rule after the deletion)
 
-Register a handle in a field initializer, wrap the work in `Begin`/`End` inside a `finally`, and use `PerfCounters.Run` where a
-try/finally would be noise. Two rules: a pass left marked running by an exception keeps naming itself in every stall line afterwards, so
-the `finally` is not optional (`AFaultedPassStopsNamingItself` holds the seam honest); and add the name to this section, because a stall
-line that points at a span nobody can find in the docs is a dead end.
+**Do not add an instrument.** A pass that may be slow prints its own line with its own milliseconds and allocated bytes — that is what
+`StatsBuildTrace` does for the three boards, and it is the pattern to copy if a surface has no number yet: ask at the stage boundary, never per
+record, and hand the line back to the caller so a test can assert it. Something genuinely one-off gets a *temporary* probe in the shape this repo
+already uses for measurement — a gated real-log test (`EQLP_*`) that prints and is **deleted once it has answered**, its numbers moving here. An
+always-on counter layer is what this chapter's subject became; that is the thing that was removed.
 
-An event raised by a builder arrives on that builder's thread, so anything measured there must not read a property of a UI element before
-handing work to the dispatcher. Pass the element over and read it inside the callback; the reference crosses threads safely, its properties do
-not.
+Two laws from the instrument era are behaviour rather than instrumentation, and both still hold:
 
-When the thing being measured is a pipeline rather than a pass — several steps whose split decides which one to fix — use `PerfBreakdown`
-rather than registering half a dozen spans by hand: it names them as a set, keeps them sequential, prints the phase breakdown with the sizes,
-and hands its line back to the caller instead of only logging it, because a rule nobody can assert is a rule that quietly changes.
+- An event raised by a builder arrives on that builder's thread, so nothing on that path may read a property of a UI element before handing work to
+  the dispatcher. Pass the element over and read it inside the callback; the reference crosses threads safely, its properties do not.
+- A hand-off that must land after a paint goes at `Render` (WPF's 7) and never below it — see `DeferredBusyState` and the chart render-gap notes above.
 
 ### Taking the instruments back out
 
 This much measuring was borrowed to answer specific questions, and none of it is what the application is for. When the questions stop arriving, delete it as one
 pass rather than letting it age into scenery — a heartbeat nobody reads still costs a `GC.GetGCMemoryInfo()` every twenty seconds and still teaches a new
 reader that this is how the codebase writes logs.
+
+**It happened: 2026-11, one pass, ~2,300 lines and 22 files** (the deletion plus its tests), roughly in the order written below. Three deviations were
+judgements made while executing rather than foretold here, so they are recorded as such: `HeapLedger` went too — including the two `RecordsStore`
+counters kept solely to print inside it (`TimedRecordCount`, `CastEntryCount`), whose Interlocked increments sat on the parse path for a dead line;
+`StatsBuildTrace` stayed, because it is a *report* rather than an always-on counter and its sequence number stamps `ChartDataGeneration`, which is how
+the chart drops "the same question twice" (deleting it would need that number re-homed, not removed); and `PerfJournal` stayed as the single gate on the
+perf lines that remain, while the tidy's own report moved to the ordinary logger.
 
 What goes, in the order that leaves the tree compiling:
 
@@ -3474,7 +3494,8 @@ What goes, in the order that leaves the tree compiling:
    a museum.
 3. What stays: **`GcTidyUp` is not an instrument, it is a feature** (it hands gigabytes back at three chosen moments), so `PerfJournal` stays alive for its
    one line — move that to the ordinary logger if deleting `PerfJournal` with the rest. Likewise `FctFramePacer` paces the display and `FctIngest`'s
-   drop counters answer "did the overlay have room", which is a product decision, not a measurement.
+   drop counters answer "did the overlay have room", which is a product decision, not a measurement — and with them `FctConveyor.PeakWaiting`,
+   `DroppedLiveCount` and `MaxDroppedValue`, kept because a cap question is asked long after the pull and each costs one watermark in a loop that exists anyway.
 4. What stays as knowledge: this section, the heap dump, and the two sentences worth remembering from the whole exercise — that a stop-the-world stops the
    watchdog so `beat delay` cannot see it, and that allocation during a parse (not rendering) is what stops this interface.
 
@@ -8434,7 +8455,8 @@ The operator ran the reader-off-the-UI-thread build on the machine that reported
 
 **The load left the UI thread, and the monitor was watching while it happened.** Every open printed
 `load: read loop on thread N, sync context = none`, and across the whole ~20 s of reading there was **not one `UI STALL`
-line**, at a 150 ms threshold with the watchdog probing every 200 ms (`UiBeatMonitor.DefaultPollMs`) — dozens of probes, all
+line**, at a 150 ms threshold with the watchdog probing every 200 ms (that watchdog is since deleted; see §"Instrumenting the UI thread (and why it is
+ gone)" for the decision and what replaced it) — dozens of probes, all
 of them landing on time. Before this change that window was exactly where the dispatcher sat parked in
 `BlockingCollection.Add`. "The mechanism is gone" is now a measured statement rather than a code-reading one.
 
@@ -8501,8 +8523,7 @@ block between them, which should be the smallest term; if it ever is not, that i
   (`Handed over N lines in M seconds.`), so the percent, the announce line and the rate all divide the same integer.
 - **`gen0 +3 gen1 +1`** are collected generations *inside this window*: gen1+ in a bulk load is allocation pressure worth
   looking at — parsing is transient garbage by design, so it should be spending gen0 and nothing above it.
-- **lo/hi are private bytes** from `Process.HandleCount`-adjacent performance counters, the same ones `UiBeatMonitor`
-  prints on a stall; **rss** comes from /proc and prints 0 on Windows, which is expected.
+- **lo/hi are private bytes** from process performance counters; **rss** comes from /proc and prints 0 on Windows, which is expected.
 
 **A "stuck"/"not responding" thread is not always this app's doing — read the stack before believing the number.** A
 field log shows a 30-second gap between two `load:` lines *with no stall line in it*, then the reader continuing normally:
@@ -9781,7 +9802,10 @@ designed against the same probe, so it follows rather than arriving beside it.
 compared against the numbers the log did print. Every memory item after that had to be argued about rather than measured, because the process never
 said what it was holding. So now it does.
 
-`HeapLedger` (Core/src/perf) prints one line every `IntervalSeconds = 30` while `PerfJournal.Enabled` is on:
+**(The ledger itself is deleted — 2026-11, see §"Instrumenting the UI thread (and why it is gone)". What follows is kept because the memory work after it
+ cites its numbers; the line and its format string are no longer in the tree.)**
+
+`HeapLedger` (Core/src/perf) printed one line every `IntervalSeconds = 30` while `PerfJournal.Enabled` was on:
 
 ```
 heap: ws=399.8 MB heap=338.0 MB pause 12.5 ms | gc 4/1/0 | facts rows=2,286,368 slack=27.8 MB heals rows=1,247,984 slack=10.8 MB | names=2,436 | row arrays est=342.4 MB | over 30s
@@ -9963,6 +9987,9 @@ heap: ws=1242.7 MB heap=655.8 MB pause 4278.4 ms | gc 1376/365/12 | facts rows=4
   per cast rather than per name, and zeroes after Clear. This **reverses** the note written when the ledger shipped ("inventing
   counters on a store that is itself the B2 target is backwards"): the reversal is honest — B2 cannot be *planned* without knowing
   whether its 472 MB is cast history or timed records, and two increments on existing lock paths is the cheapest possible way to ask.
+  **Both counters and that `kept casts=N timed records=N` term are gone now** (2026-11, with `HeapLedger` itself): once the line stopped printing they were
+  parse-path work answering a question nobody was asking — the same law that deleted an event pump for three closed grids. What they answered stays recorded
+  here; asking it again means a temporary probe, not a restored counter.
 - **`ws=` is not `heap=`.** After returning 563 MB of heap the working set stayed at ~1,240 MB: freed inside the process, not yet
   taken back by the OS. Read `heap=` for what the code retains; `ws=` only for what the machine feels. Two compactions that move
   neither are normal and mean nothing went wrong.
@@ -10801,7 +10828,7 @@ wedged into a form field. The full semantics belong here and in the tests; on sc
 
 **The decision lives in Core, not in the processor** — `RepeatedWindowRule.Next(count, anchor, fireAt, resetAfterSeconds, slides)`. Not for purity:
 the app project is Windows-only for tests, and a boundary rule nobody can execute is not a rule (same reason as `ChartUpdateQuestion`,
-`UnaskedRefresh`, `HeapLedger.Format`). The comparison stays `elapsed > resetAfterSeconds` on whole truncated seconds — GINA compared fractions,
+`UnaskedRefresh`, `StatsBuildTrace.Stage`). The comparison stays `elapsed > resetAfterSeconds` on whole truncated seconds — GINA compared fractions,
 and moving boundary times nobody complained about is not part of shipping an option.
 
 **Two consequences worth stating because they are invisible from the checkbox.** (1) `UpdateRepeatedTimes` serves `{counter}`, `{repeated}`,

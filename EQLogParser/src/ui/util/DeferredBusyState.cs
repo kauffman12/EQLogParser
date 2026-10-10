@@ -28,11 +28,12 @@ namespace EQLogParser
     /*
      * Long enough that a pane which answers inside it never shows a busy state at all — one frame at 60 Hz is 17 ms, so
      * anything under this was going to be invisible anyway — and short enough that the wait past it is what a person
-     * starts to call frozen. Derived from PerfJournal.SlowPassMs rather than repeated here: "this took long enough to be
-     * worth telling somebody about" is one question, and the log line and the interface should not get to disagree about
-     * its answer as the two thresholds drift apart.
+     * starts to call frozen. It was `PerfJournal.SlowPassMs` while that existed - one number for "this took long enough to be
+     * worth telling somebody about", shared by the log and the interface - and it keeps the same value now that the journal is
+     * gone, because the reasoning that picked 150 ms still holds: one frame at 60 Hz is 17 ms, so anything shorter was never
+     * going to be seen, and a person reading a table that is milliseconds stale is reading the right answer.
      */
-    internal const int ShowAfterMs = (int)PerfJournal.SlowPassMs;
+    internal const int ShowAfterMs = 150;
 
     private readonly DispatcherTimer _timer;
     private Action _show;

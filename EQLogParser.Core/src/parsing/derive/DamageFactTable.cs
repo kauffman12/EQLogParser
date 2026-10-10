@@ -323,8 +323,8 @@ namespace EQLogParser
     /// <summary>Allocated row-array bytes beyond what is stored. See CompactToCount.</summary>
     long SlackBytes { get; }
 
-    /// <summary>Row-array bytes as allocated (slots, not rows) — the number HeapLedger prints beside SlackBytes so "the capture is big"
-    /// and "the capture reserved more than it wrote" stay two separate sentences.</summary>
+    /// <summary>Row-array bytes as allocated (slots, not rows) — kept beside SlackBytes so "the capture is big"
+    /// and "the capture reserved more than it wrote" stay two separate questions.</summary>
     long EstimatedBytes { get; }
 
     /// <summary>Shrink every row array to its rows, returning the bytes released. Mechanics only - WHEN to ask is the

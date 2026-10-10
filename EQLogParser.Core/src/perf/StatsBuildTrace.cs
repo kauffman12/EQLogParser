@@ -34,9 +34,10 @@ namespace EQLogParser;
  *      A caller that passes no group is issued its own fresh one, which keeps every existing door foreign to every other exactly as
  *      before: with no fan-out in play the warning surface is bit-for-bit what it was, and a pane's own dial rebuild landing under a
  *      fanned-out selection still warns — that collision is the defect this warning exists for.
- *   3. **Costs reach the heartbeat.** Each builder's span is registered `uiThread: false` (it runs on a pool thread; naming it in
- *      "in progress" would send a reader to the wrong window) so the perf table lists it and a UI stall can be compared against
- *      a build happening at the same moment.
+ *   3. **Cost reaches this line, and only this line.** The heartbeat/perf-counter layer this used to also feed is gone, so a build's
+ *      milliseconds and bytes exist in exactly one place: the Debug line below (and `LastFinishedLineOf` for a caller that wants to
+ *      report it). A stopwatch and `GC.GetTotalAllocatedBytes` are the whole measurement — nothing else in the application times a
+ *      board build.
  */
 internal static class StatsBuildTrace
 {
@@ -84,10 +85,6 @@ internal static class StatsBuildTrace
   private static readonly ConcurrentDictionary<string, string> _lastFinished = new();
   private static long _overlapBuilds;
   private static long _unlabelledBuilds;
-
-  private static readonly int DamageSpan = PerfCounters.Register("stats.damage", false);
-  private static readonly int TankingSpan = PerfCounters.Register("stats.tanking", false);
-  private static readonly int HealingSpan = PerfCounters.Register("stats.healing", false);
 
   /// <summary>One build in progress. Obtain from Begin, close with End (in a finally — an unclosed handle hides the next overlap).</summary>
   internal readonly record struct Handle(int Seq, string Builder, string Door, string Kind, long StartTicks, long StartAlloc, int OverlappedWith, int Group);
@@ -168,7 +165,7 @@ internal static class StatsBuildTrace
   /// <summary>Close a build and write its line. `detail` is whatever the caller can say cheaply about the inputs.</summary>
   internal static void End(in Handle handle, string? detail = null)
   {
-    var ms = PerfCounters.ElapsedMs(handle.StartTicks);
+    var ms = ElapsedMs(handle.StartTicks);
     var seq = handle.Seq;
 
     List<string>? stages;
@@ -178,8 +175,6 @@ internal static class StatsBuildTrace
       stages = i < 0 ? null : _inside[i].Stages;
       _inside.RemoveAll(e => e.Seq == seq);
     }
-
-    RecordSpan(handle.Builder, ms);
 
     var totalAlloc = GC.GetTotalAllocatedBytes() - handle.StartAlloc;
 
@@ -231,25 +226,18 @@ internal static class StatsBuildTrace
       var entry = _inside[i];
       var allocNow = GC.GetTotalAllocatedBytes();
       var stageAlloc = allocNow - entry.MarkAlloc;
-      (entry.Stages ??= []).Add($"{name} {PerfCounters.ElapsedMs(entry.Mark):F0} ms"
+      (entry.Stages ??= []).Add($"{name} {ElapsedMs(entry.Mark):F0} ms"
                                 + (stageAlloc >= StageAllocTermBytes ? $"/{Mb(stageAlloc)}" : string.Empty));
       _inside[i] = (entry.Seq, entry.What, entry.ThreadId, entry.Group, now, allocNow, entry.Stages);
     }
   }
 
   /// <summary>Elapsed milliseconds for a tick stamp taken earlier (MainWindow times its materialization with this too).</summary>
-  internal static double ElapsedSince(long startTicks) => PerfCounters.ElapsedMs(startTicks);
+  internal static double ElapsedSince(long startTicks) => ElapsedMs(startTicks);
+
+  /* The only clock here: whatever Stopwatch.GetTimestamp stamped, against the same frequency. */
+  private static double ElapsedMs(long startTicks)
+    => (Stopwatch.GetTimestamp() - startTicks) * 1000.0 / Stopwatch.Frequency;
 
   private static string Mb(long bytes) => $"{bytes / 1048576.0:F1} MB";
-
-  private static void RecordSpan(string builder, double ms)
-  {
-    switch (builder)
-    {
-      case "damage": PerfCounters.Record(DamageSpan, ms); break;
-      case "tanking": PerfCounters.Record(TankingSpan, ms); break;
-      case "healing": PerfCounters.Record(HealingSpan, ms); break;
-      default: break;   // a trace name with no heartbeat row is fine; the log line is the contract
-    }
-  }
 }

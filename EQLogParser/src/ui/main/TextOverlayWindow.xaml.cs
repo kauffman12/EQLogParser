@@ -25,13 +25,6 @@ namespace EQLogParser
     private readonly object _bufferLock = new();
     private readonly bool _streamerMode;
 
-    /*
-     * This overlay's span on the heartbeat (PerfCounters, UiBeatMonitor). It redraws on a 150 ms timer whether or not anything changed,
-     * rewriting TextBlocks inside an AllowsTransparency window — the kind of work that asks WPF to recomposite and can take the combat
-     * numbers down with it, so its cost belongs on the same log line as theirs.
-     */
-    private static readonly int RenderId = PerfCounters.Register("text.render");
-
     private TriggerNode _node;
     private Dictionary<string, Window> _previewWindows;
     private long _lastTopTimeStamp;
@@ -48,15 +41,6 @@ namespace EQLogParser
     {
       InitializeComponent();
       _node = node;
-
-      /*
-       * Named per trigger because several of these can be open at once, and the beat line has to say which. The name comes from the overlay
-       * as a player sees it rather than from its database id: a stall line reading "text29d9e8ff-ac7b-…" names nothing anybody recognises,
-       * and that id is what a reader would have to cross-reference in the trigger tree while the freeze is still on screen. Captured now
-       * because _node is replaced later by UpdateFields, which would strand the first name open forever.
-       */
-      var surface = SurfaceName(_node);
-      IsVisibleChanged += (_, e) => UiBeatMonitor.NoteSurface(surface, (bool)e.NewValue);
 
       _preview = previews != null;
       _previewWindows = previews;
@@ -125,24 +109,6 @@ namespace EQLogParser
       }
     }
 
-    /*
-     * The overlay as a player knows it, made safe for a line that joins surfaces with + and fields with |. The first characters of the id
-     * stay on so two overlays sharing a title are still two names, and a node with no readable title falls back to the id alone.
-     *
-     * The prefix is a parameter because the timer overlay labels itself by this same rule (TimerOverlayWindow), and a stall line has to
-     * say which kind of overlay was on screen — one naming rule between them, not two that drift.
-     */
-    internal static string SurfaceName(TriggerNode node, string prefix = "text") =>
-      node is null ? $"{prefix}:none" : SurfaceName(node.Name, node.Id, prefix);
-
-    private static string SurfaceName(string name, string id, string prefix)
-    {
-      var title = string.Concat((name ?? string.Empty).Where(char.IsLetterOrDigit).Take(16));
-      var shortId = id is { Length: > 4 } ? id[..4] : id;
-
-      return title.Length > 0 ? $"{prefix}:{title}-{shortId}" : $"{prefix}:{shortId}";
-    }
-
     private void CloseClick(object sender, RoutedEventArgs e) => Close();
 
     private async void DoTick(object state)
@@ -163,19 +129,9 @@ namespace EQLogParser
               _lastTopTimeStamp = now;
             }
 
-            /* Timed around the redraw only: that is the part that could starve another window on this thread, while the rest of the tick
-               is a window-manager call and a deferred visibility change. */
-            var mark = PerfCounters.Begin(RenderId);
-            bool drew;
-
-            try
-            {
-              drew = Render(now);
-            }
-            finally
-            {
-              PerfCounters.End(mark);
-            }
+            /* The redraw is the part of this tick that could starve another window on this thread; the rest is a window-manager call and a
+               deferred visibility change. */
+            var drew = Render(now);
 
             // if nothing rendered then stop and hide window
             if (drew is false)

@@ -56,33 +56,29 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   `EQLogParser.Test/src/control/fct` reset them through `FctAmbient.Reset()` via `[TestInitialize]`, and both test assemblies declare
   `[assembly: DoNotParallelize]`. Anything new that touches that engine must keep both, or state from one test leaks into another
   (a leaked speed dial was measured moving a row's spine 74 px — a real assertion failing on a machine that ran the same code).
-- **UI-thread instrumentation**: "the numbers froze for a second" is answered by `UiBeatMonitor` (app) over `PerfCounters`/`PerfGc`/
-  `PerfJournal` (`EQLogParser.Core/src/perf`), and every instrumented span is listed in docs/DesignNotes.md → "Instrumenting the UI
-  thread". A span takes its handle from one `Register` call in a field initializer (no name lookups, no locks in frame paths) and closes
-  in a `finally`: a pass left marked running by an exception keeps naming itself in every later stall line. **None of it reaches the log unless asked**:
-  `PerfJournal.Enabled` is the single gate on everything this writes and is off unless settings.txt says `PerfReport=True` (or `Debug`, which implies it) — and then
-  `App` does not start the monitor at all, so normal use puts no perf lines in a player's log. Anything asserting journal behaviour sets that flag and restores it in
-  a `finally`. `UiBeatMonitorTest` pumps a
-  real dispatcher with short thresholds and relies on `[assembly: DoNotParallelize]` like the notes above, and the priorities it queues at
-  are load-bearing — beats go out at `Render` (WPF's 7), so a test's pump check belongs between that and the work under test, never at
-  `Normal` (9), or it wins the race against the late beat and the stall goes unmeasured. Numbers and reasoning: docs/DesignNotes.md.
-- **A board-row read does not allocate, and what the registry costs is a readable number** (2026-11): three names ride the
-  heartbeat — `reg.class` (one `PlayerRegistry.GetPlayerClass`, the lookup every stats builder pays per player row for its
-  Class column), `reg.identity` (one walk of the override → this capture → memory chain) and `reg.write` (the claims, pet
-  pairs and class sightings the parse makes) — all registered `uiThread: false`, because this store is filled by the parsing
-  thread and drained by the builders, so naming either in a stall's "in progress" sends a reader to the wrong window.
-  **`GetPlayerClass` reads inside the per-name lock**: it used to copy the class-boundary list out and binary-search it,
-  measured at **72 bytes per read** (a `ToArray()` of the boundaries plus an enumerator, on a call that made one per row per
-  rebuild — hundreds a second on a live raid, thousands on a select-all).
+- **There is no UI-thread profiler in this application, and that is a measured decision, not an absence** (2026-11): the span/heartbeat
+  layer (`UiBeatMonitor`, `PerfCounters`, `PerfGc`, `PerfGap`, `HeapLedger`, `PerfBreakdown`, `UiThreadProbe`) was deleted after a field session
+  showed its output diagnosing nothing while its own once-per-20-seconds line and per-frame counters sat in the file that carries a raid. What answers
+  "the numbers froze for a second" now is the **Debug line each expensive pass already prints with its own milliseconds and bytes**
+  (`StatsBuildTrace`, one file left in `EQLogParser.Core/src/perf`): `grep -Ei "stats build|board ask|chart\.update|load:|derive |gc\.tidy"` over a session where
+  `Debug=True` names the door and the cost. Do NOT re-add an always-on monitor, a span registry, or a second timing channel; if a specific freeze needs
+  measuring, instrument that one path temporarily and delete it with its measurement, the way a gated real-log probe is deleted (see "A gated real-log test is
+  disposable"). Two laws survive the deletion because they are about *behaviour*, not the tool: **`PerfJournal.Enabled`** is still the gate on the residual
+  perf chatter and is off unless settings.txt says `PerfReport=True` (`Debug` implies it) — anything asserting journal behaviour sets it and restores it in a
+  `finally`; and a **UI-thread handoff** rule that outlived the probe (`Dispatcher.Yield` at `Render`, never below it, and nothing timed wrapped around a
+  `finally`-less span). Numbers, the A/B of what each layer cost to run, and what was kept: docs/DesignNotes.md → "Instrumenting the UI thread (and why it is gone)".
+- **A board-row read does not allocate** (2026-11): **`PlayerRegistry.GetPlayerClass` reads inside the per-name lock** — the lookup every stats
+  builder pays per player row for its Class column. It used to copy the class-boundary list out and binary-search it, measured at **72 bytes per read**
+  (a `ToArray()` of the boundaries plus an enumerator, on a call that made one per row per rebuild — hundreds a second on a live raid, thousands on a select-all).
   `FrenzyClassTest.AReclassIsReadAtItsBoundaryWithoutAnArrayPerRead` asserts under 8 bytes a read **with a control loop that
   proves the probe can see an allocation**, so restoring the copy fails by name rather than quietly printing 72. **That control
   has to escape**: it publishes every array into a sink that outlives the loop and takes the element count from `Volatile.Read`,
   because a literal-length array whose only observed use is `probe.Length` folds to a constant and then allocates *nothing*
   (measured 0.0 bytes on one machine, 20 on another, 40 once published) — an elidable control reads as "the probe is broken",
-  not as what it guards; `FctPlacementAllocationTest.TheProbeCanSeeAnAllocation` keeps its objects for the same reason. Why the
-  counters exist: they are the evidence for or against flat name→id indexing — `reg.class` at 20k reads/s and microseconds
-  says string keys are not the wall and that rewrite does not start; a worst case in milliseconds says it does. Cheap spans
-  sort themselves off the printed table, which is also an answer. docs/DesignNotes.md → "Instrumenting the UI thread".
+  not as what it guards; `FctPlacementAllocationTest.TheProbeCanSeeAnAllocation` keeps its objects for the same reason. The standing answer
+  about this store that the deleted counters produced, and the reason no rewrite follows from it: **~20k class reads a second at microseconds means
+  string-keyed lookups are not the wall and flat name→id indexing (weeks of work, tens of MB) does not start.** docs/DesignNotes.md →
+  "Instrumenting the UI thread (and why it is gone)".
 - **`EQLogParser.Wpf.Test` runs MTA**: MSTest hands a test method an MTA thread, and WPF will not construct a `FrameworkElement` on one —
   its constructor asks that thread for its `InputManager` and throws before any of our code runs. So any test that news up a `UIElement`
   (`FctSkiaCanvas`, a window, a control) goes through `Sta.Run(...)` (`EQLogParser.Wpf.Test/src/Sta.cs`), which claims a thread as STA, runs
