@@ -161,4 +161,35 @@ public sealed class SummaryBuildGateTest
     Assert.IsTrue(secondRan, "a debt owed to a newer selection is paid whatever the failed build did");
     Assert.IsFalse(gate.IsRunning);
   }
+
+  [TestMethod]
+  public void AFailedBuildIsNotRememberedAsAnAnswer()
+  {
+    /*
+     * The quiet half of the same failure. Production's board build CATCHES ("Derived damage summary error": the panes keep showing
+     * whatever they showed before), so a failed pass can look to the gate like a finished one - and `_doneKey` is precisely the thing
+     * that makes an identical later ask free. Marking the attempt as an answer meant one failed select-all poisoned that selection:
+     * clicking away and back, or pressing Refresh on the same rows with nothing else moved, was answered "already built" while the
+     * grids still held stale numbers, and no later gesture could get them back short of changing a filter.
+     *
+     * Dedupe on what was computed, never on what was attempted.
+     */
+    var scheduler = new ManualScheduler();
+    var gate = new SummaryBuildGate(scheduler.Schedule);
+    var builds = 0;
+
+    Assert.AreEqual(SummaryBuildGate.Outcome.Started, gate.Request(10, () => { builds++; throw new InvalidOperationException("builder died"); }));
+    try { scheduler.Drain(); } catch (InvalidOperationException) { }
+    Assert.AreEqual(1, builds);
+
+    Assert.AreEqual(SummaryBuildGate.Outcome.Started, gate.Request(10, () => builds++),
+      "the same selection after a failure is owed its boards - the failed pass produced no answer to duplicate");
+    scheduler.Drain();
+    Assert.AreEqual(2, builds, "the retry builds rather than being skipped as already answered");
+
+    // The law on the other side still holds: what COMPLETED answers an identical ask for free.
+    Assert.AreEqual(SummaryBuildGate.Outcome.SkippedSame, gate.Request(10, () => builds++));
+    scheduler.Drain();
+    Assert.AreEqual(2, builds, "a build that finished still answers the same question without working");
+  }
 }

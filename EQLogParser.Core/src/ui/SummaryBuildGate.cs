@@ -20,7 +20,9 @@ namespace EQLogParser;
  *      follow-up and re-asks, so a burst of announcements costs one extra build rather than N.
  *   2. **Only the newest queued request survives.** An older selection has already been superseded by a newer click; running
  *      it first would only delay the answer that matters (and its records are the ones holding memory down).
- *   3. **A request whose INPUTS match a build that ran (or is running) is dropped.** The key carries everything the builders
+ *   3. **A request whose INPUTS match a build that ran to completion (or is running) is dropped.** A build that threw answered
+      nothing and is not remembered, because the builders catch their own failures and leave the grids showing last night's
+      numbers: remembering the attempt would drop every later retry of that same selection forever. The key carries everything the builders
  *      read — which rows, what the capture has produced (the pane's content stamp: facts + identity verdicts), and which
  *      filters/validation settings the app is on — so "same key" means "the answer is already computed". This is what turns a
  *      duplicated announcement into zero work rather than one second copy. Skipping on anything narrower (ids alone, say)
@@ -100,19 +102,28 @@ internal sealed class SummaryBuildGate(Action<Action> schedule)
 
   private void Run(long key, Action work)
   {
+    var answered = false;
     try
     {
       work();
+      answered = true;
     }
     finally
     {
       // A throw must return the runner to idle: a latch left here means every later request queues behind a build that
       // will never finish, and the boards stop updating for the rest of the session.
+      //
+      // But a build that threw answered NOTHING, so it may not be remembered as an answer either. `_doneKey` is what makes an
+      // identical later ask free - and the callers' builders swallow their own exceptions (a board build catches, logs
+      // "Derived damage summary error", and leaves the panes showing their previous figures), so a failure arrives here as a
+      // normal return of the CALL but not of the question. Marking it done meant: one failed select-all, then every later click
+      // that returns to that same selection - a second later or ten minutes later, with nothing else having moved - is dropped as
+      // already answered and the boards never come back. Law: dedupe on what was COMPUTED, not on what was attempted.
       (long Key, Action Work)? next = null;
       lock (_sync)
       {
         _runningKey = NoKey;
-        _doneKey = key;
+        if (answered) _doneKey = key;
         if (_pending is { } p)
         {
           _pending = null;
