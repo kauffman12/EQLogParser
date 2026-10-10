@@ -94,6 +94,16 @@ namespace EQLogParser
     private readonly Dictionary<string, Prior> _byName = new(StringComparer.OrdinalIgnoreCase);
     private string _serverName = string.Empty;
 
+    /*
+     * One save at a time, in the order the snapshots were taken. `_gate` covers the DATA (serializing under it is what keeps a torn
+     * row out of the file) and must not be held across file IO, so writes are ordered beside it: two flushes racing - the 30 second
+     * tick and an importer's FlushChanges at log open - would otherwise let whichever finished last win, which can be the OLDER
+     * snapshot sitting on top of the newer one.
+     */
+    // A plain monitor rather than a SemaphoreSlim: same serialization, and a singleton holding a disposable would trip CA1001 -
+    // suppressing it is not an option in this repo, and implementing Dispose on a process-lifetime store would be a lie.
+    private readonly object _writeGate = new();
+
     /// <summary>Loads the ledger for the current ConfigUtil.ServerName.</summary>
     public void Init() => Init(ConfigUtil.ServerName);
 
@@ -745,6 +755,7 @@ namespace EQLogParser
       if (string.IsNullOrEmpty(_serverName)) return;   // nowhere to put it; keep the session's memory
 
       List<KeyValuePair<string, string>> lines;
+      string destination;
       lock (_gate)
       {
         /*
@@ -755,6 +766,10 @@ namespace EQLogParser
          * about nothing: the line it logs is the only notice an operator gets that the list shrank.
          */
         PruneRosterLocked();
+
+        // The destination is captured WITH the data (see Save's tail): reading `_serverName` after the lock releases can pair this
+        // folder's rows with the folder a log switch moved the store to, which is one raid landing in another server's file.
+        destination = _serverName;
 
         lines = new List<KeyValuePair<string, string>>(_byName.Count);
         foreach (var (name, prior) in _byName)
@@ -770,7 +785,14 @@ namespace EQLogParser
             + (owner.Length > 0 ? $"|{owner}" : string.Empty)));
         }
       }
-      ConfigUtil.SaveIdentityPriors(lines, _serverName);
+      if (string.IsNullOrEmpty(destination)) return;   // nowhere to put it; keep the session's memory
+
+      /*
+       * Snapshot and destination travel together, and the write itself runs alone. Both halves are the same hazard: a save that read
+       * one folder's rows and wrote them under whatever `ConfigUtil.ServerName` says by then is a cross-folder write, and two saves
+       * in flight have no defined order at the filesystem.
+       */
+      lock (_writeGate) ConfigUtil.SaveIdentityPriors(lines, destination);
     }
   }
 }
