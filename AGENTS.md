@@ -462,9 +462,11 @@ docs/DesignNotes.md → "Name every door") — which is why this commit changes 
 - **Three boards, three workers above one measured frame of sibling work — and the saving is `sum − max`, never ×3** (2026-11):
   `MainWindow.BuildBoards` built damage, tanking and healing in a line although they share no state (own lock, own traced handle, own
   events, own rows). Above `BoardFanout.MinOutcomes = 50_000` they run side by side (`EQLogParser.Core/src/ui/BoardFanout.cs`):
-  whole farm-night selection **4,074 → 2,615 ms** build wall, **×1.32 end-to-end**; Incogitable ×1.29 / **×1.07**, because materialize
-  (634 + 2,163 ms there) is untouched and materialize stays serial BY DEPENDENCY — the heal list is windowed by the damage side's
-  `AllRanges`. Quote the end-to-end number, never the build wall. Four laws: **(1)** the decision reads
+  whole farm-night selection **4,074 → 2,615 ms** build wall, **×1.32 end-to-end**; Incogitable ×1.29 / **×1.07** — that pair was
+  measured while materialize dominated the ask there (634 ms damage + 2,163 ms heals) and materialize stays serial BY DEPENDENCY, the heal
+  list being windowed by the damage side's `AllRanges`. **The heal half has since become 33 ms** (next bullet), so those end-to-end ratios
+  predate a 65× cut to a term in their own denominator and must be re-taken before being quoted; the build-wall figures stand alone.
+  Quote the end-to-end number, never the build wall. Four laws: **(1)** the decision reads
   `UnaskedRefresh.OutcomeCount` (the meter the refresh budget prices with) but shares none of its constants — "may this build run" and
   "how many workers may it use" are different questions; **50,000 is where the boards that are NOT the straggler are worth one frame**
   (measured 18 ms at 36,235 outcomes, 125 ms at 389,552), and it shipped at 500,000 on a harness that ran every serial round before every
@@ -482,6 +484,24 @@ docs/DesignNotes.md → "Name every door") — which is why this commit changes 
   no compared column and was caught only by shape, which is why both assertions exist. Numbers, the A/B table and the two probe traps
   (`WorstWall = 0` swallows a sub-millisecond sample; a newest-second time window is not a small selection): docs/DesignNotes.md →
   "Three boards, three workers".
+- **A window is searched, never walked — and a slow thing that scales with the wrong variable is invisible until someone measures the
+  capture where that variable is big** (2026-11): `HealSummarySource.Materialize` cost **2,159 ms** on Incogitable, twice the whole
+  three-board build beside it, while building every record with the filter removed costs **34 ms**. The window test asked "is this second in
+  one of these spans?" by scanning from span zero, and a night has **2,653** spans — `rows × spans / 2`, growing with SECTIONS (the farm
+  night: 2.67 M heals, **109** spans, a merely untidy 528 ms). Both fixes were laws already written down: `TimeRange` keeps its spans **sorted
+  and disjoint** through `Add(TimeSegment)` alone — so containment is `TimeRange.Contains`, a halving, and it lives on `TimeRange` because a
+  bare `List<TimeSegment>` cannot tell a caller the law was obeyed — and heal rows **ascend**, so the join is walked: enter at the first row
+  that can be inside (halve the clock), carry a span cursor forward, leave past the last span. **2,159 → 33 ms** whole-capture,
+  **152 → 0 ms** at 100 rows; farm night **528 → 239** and **120 → 23**, both landing on their own allocation floor, which is what says
+  nothing further in this function can go lower. **`IHealFactTable.AscendingTime` is the precondition and the store answers it** (`CastHistory`'s
+  `AscendingTime` shape: set at the first backwards append, never restored) — a halving over unordered rows silently drops rows, so an
+  unordered store pays a full walk with the halved span test; it is on the *interface* because the D2 spooled store must answer honestly rather
+  than inherit an optimisation it cannot support (times verified ascending, zero backwards rows, on both captures). `HealWindowWalkTest` pins
+  fast-walk == naive-scan over randomized layouts, both edges inclusive, left/right-of-capture empty, **null window = whole capture vs empty
+  `TimeRange` = nothing**, two runs split by a hole, and the retiring; `TimeRangeTest` holds `Contains` against the linear question with every
+  edge and gap probed. `TimeRange.TimeCheck` (last-N-minutes export) had the same per-line scan and asks `Contains` now. Probe traps: an empty
+  `TimeRange` holds zero spans, so it is NOT a worst case; and a fixture clock outside `FactTime`'s 1931–2068 window **clamps**, folding every
+  row onto one timestamp so window tests pass by matching everything. docs/DesignNotes.md → "A window is searched, never walked".
 - **A record walk hands out ONE `DataPoint`, and a row key is composed once per NAME, never per record** (2026-10; the numbers and the reasoning are
   docs/DesignNotes.md → "What a board build allocates, and the distribution nobody opens"). A whole-capture `Select All` is 4.66 M damage records, and the seams that turned those records into
   rows used to allocate their way through: `RecordGroupCollection` built a `RecordWrapper` + a `DataPoint` per record (960 MB of garbage per

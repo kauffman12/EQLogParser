@@ -11141,3 +11141,54 @@ records nothing for a sub-millisecond build and reads as "the fanned board answe
 newest second is not a small selection — on the farm night the newest 3,600 seconds hold **one row with three outcomes** (the raid sits
 hours earlier, one long-lived row owns the tail), so selections are made by ROW count, which is both the shape a click makes and the
 shape `Decide` prices. Re-measure recipe: `docs/improve-stat-building.md` §12 (harness deleted after reading, per the gated-test law).
+
+## A window is searched, never walked (2026-11)
+
+The fan-out next door bought ×1.3 on a whole-capture selection. The call that runs **before** those three boards bought **×65** for
+doing nothing but asking a question the wrong way — and it was the single largest number left in one gesture.
+
+`HealSummarySource.Materialize` turns the capture's heal rows into the `(time, HealRecord)` pairs `HealingStatsBuilder` consumes,
+filtered to the selection's `AllRanges`. On `eqlog_Incogitable_xegony.txt` that cost **2,159 ms**, while building every record in the
+capture with the filter removed entirely costs **34 ms**. The walk was never the cost. The window test asked *"is this second inside one
+of these spans?"* by scanning the span list from span zero — and a whole night has **2,653** spans, so every one of 420,110 heal rows
+paid ~1,300 comparisons. Cost is `rows × spans / 2`: it grows with the number of *sections* in a capture, which is exactly when a reader
+has most reason to click. On the farm-night capture (2.67 M heals but only **109** spans) the same code read as merely untidy — 528 ms —
+which is how this survived every file tried before this one. A slow thing that scales with the wrong variable is invisible until someone
+measures a capture where the other variable is big.
+
+Two laws already in this codebase were the fix, unused:
+
+- **`TimeRange` keeps its span list sorted and disjoint** — every fill path goes through `Add(TimeSegment)`, whose own halving search
+  depends on it, and the header says building the list by touching `TimeSegments` directly breaks `GetTotal()` for the same reason. So
+  containment is a halving: `TimeRange.Contains(double)`. It lives on `TimeRange` rather than at the call site precisely because a bare
+  `List<TimeSegment>` cannot tell a caller whether the law was obeyed.
+- **Heal rows ascend** by ingest sequence (this store's own header rule, and the reason nothing sorts). So the join is *walked*: enter at
+  the first row that can be inside (a halving on the clock), carry a span cursor forward, leave past the last span. `O(rows in range + spans)`.
+
+After, same pinned four cores, worst-of-3: whole-capture window **2,159 → 33 ms** (its allocation floor is 35 ms, so the span test is
+now free), a first-100-rows selection **152 → 0 ms**; farm night **528 → 239 ms** (again its own floor) and **120 → 23 ms**. The floor
+number is the point of the table: it says what remains is `RecordFrom` over the rows actually in the window — records the builder needs —
+and no further cleverness in this function can go below it.
+
+**The fast path's precondition belongs to the store: `IHealFactTable.AscendingTime`.** A halving over rows that are not ordered returns a
+window with rows missing and throws nothing, so the table answers the ordering question itself: set at the first append that goes
+backwards, never restored (an unordered store is a property of the data this session was handed). Unordered ⇒ full walk with the halved
+span test — slower and correct, never faster and short. This is `CastHistory.AscendingTime` beside `GetCastsBySpellName`, and it is on the
+*interface* because the spooled store D2 proposes must answer honestly rather than by inheriting an optimisation it cannot support. Heal
+times were verified ascending with **zero** backwards rows on both captures, so today's captures take the fast path and the fallback is
+for the shape a restore can produce, not for a hypothetical.
+
+Pinned in `HealWindowWalkTest`: the fast walk must equal a naive linear scan over 40 randomized layouts (same rows, same order), both
+span edges inclusive with the second beside each edge excluded, a window wholly left or right of the capture empty rather than everything,
+`null` window = whole capture vs empty `TimeRange` = nothing (the two no's the healing door has always distinguished), two runs separated
+by a hole so a cursor that cannot advance is caught, and one backwards append retiring the fast path with the answer unchanged. Plus
+`TimeRangeTest`: `Contains` against the linear question over randomly built ranges — which also exercises the sorted-and-disjoint law it
+rests on — probing every edge and gap, and asserting a read rewrites nothing.
+
+Same shape left behind in one other door and fixed beside it: `TimeRange.TimeCheck`'s per-line `foreach` over spans (the
+last-N-minutes export) asks `Contains` now, so that path is no longer O(lines × spans) either.
+
+Probe-side traps worth the recording: my first "worst case" window was an **empty** `TimeRange`, which holds zero spans and is therefore
+instantly trivial — a worst case needs many spans that never match; and a fixture clock outside `FactTime`'s representable window
+(1931–2068) **clamps**, folding every row onto one timestamp so window tests pass by matching everything. Re-measure recipe:
+`docs/improve-stat-building.md` §13 (harness deleted after reading, per the gated-test law).
