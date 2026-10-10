@@ -29,8 +29,9 @@ internal enum BoardFanoutMode
  * docs/improve-stat-building §0): `MainWindow.BuildBoards` materializes a selection and then builds damage, tanking and healing in
  * a LINE. The boards share no state — each has its own lock, its own traced handle, its own events, its own output rows — so the
  * line is not a dependency, it is an accident of the method body. Measured on 4 cores over the 998 MB farm night, the build wall
- * goes 3,899 ms → 2,518 ms (×1.55) and the end-to-end ask ×1.31; on Incogitable ×1.39 / ×1.09, because there materialize is the
- * bigger term and fan-out does not touch it. The win holds from 18 cores down to 2 (the walks are memory-latency bound), which is
+ * goes 4,074 ms → 2,615 ms (×1.56) and the end-to-end ask ×1.32; on Incogitable ×1.29 / ×1.07, because there materialize is the
+ * bigger term and fan-out does not touch it. The saving is capped by the slowest board (see the crossover below), which is why the
+ * fan-out's ratio settles near 1.5 rather than 3 on a memory-bound walk. The win holds from 18 cores down to 2 (the walks are memory-latency bound), which is
  * why there is no core-count branch: three workers, always, above the threshold.
  *
  * Three laws, all of them here rather than in the app so they can be tested without a window:
@@ -64,17 +65,26 @@ internal enum BoardFanoutMode
 internal static class BoardFanout
 {
   /*
-   * The crossover, measured rather than guessed (docs/improve-stat-building §4): at 466,165 outcomes the fan-out saves 40 ms — under
-   * the deferred-busy state's own 150 ms "worth telling the user" line and inside run-to-run jitter — while at 862,149 it saves
-   * 253 ms and a whole-capture select-all saves 335-1,381 ms. The constant sits in the unmeasured middle of a measured ≤40 ms and a
-   * measured ≥253 ms on purpose: below it nothing says three threads earn their keep, above it something does. Roughly a ninth of a
-   * farm-night select-all.
+   * The crossover, measured against the SHIPPED path (docs/improve-stat-building §7: three boards over one materialized selection,
+   * four cores, the two shapes ALTERNATING so neither gets a JIT-warm process for free, worst-of-two).
+   *
+   * What fan-out can buy is bounded by arithmetic rather than by the total: the wall becomes the SLOWEST board, so the saving is
+   * `sum(boards) − max(boards)` — the boards that are not the straggler. On these captures damage is the straggler and healing runs
+   * about 0.34 µs per outcome, which makes the saving roughly a third of a microsecond times the outcome count: 18 ms at 36,235
+   * outcomes, 125 ms at 389,552, 194 ms at 717,190 and 1,459 ms on a whole farm night (4,580,874 outcomes; ask end-to-end ×1.32).
+   *
+   * 50,000 puts the constant at ONE FRAME of sibling work — where three thread starts stop being free in the only sense that matters,
+   * a person's perception — and below it a selection keeps today's exact path (a one-row ask builds in ~1 ms: nothing to win, no reason
+   * to schedule). An earlier draft of this constant sat at 500,000 because a phase-0 probe read a 466k-outcome selection as saving
+   * 40 ms; that harness measured all serial rounds before all fanned ones, and the warm process handed the second shape a win it had
+   * not earned while hiding one it had. Measured fairly, a medium click saves well over 100 ms, so 500,000 was quietly leaving a tenth
+   * of a second on every selection of that size.
    *
    * It deliberately shares its METER with the refresh budget (`UnaskedRefresh.OutcomeCount`) but none of its constants: "may this
    * build run at all" and "how many workers may it use" are different questions on different clocks, and a policy that merged them
    * would make every future threshold edit ambiguous about which one it moved.
    */
-  internal const long MinOutcomes = 500_000;
+  internal const long MinOutcomes = 50_000;
 
   private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 

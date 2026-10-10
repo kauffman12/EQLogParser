@@ -50,9 +50,9 @@ namespace EQLogParser.Tests.Ui
       Assert.AreEqual(BoardFanoutMode.Serial, BoardFanout.Decide(0), "nothing to build is never worth three threads");
       Assert.AreEqual(BoardFanoutMode.Serial, BoardFanout.Decide(BoardFanout.MinOutcomes - 1));
 
-      // The measured corner under the constant: 466,165 outcomes (Incogitable's mid window) saved 40 ms — less than the deferred-busy
-      // state's own 150 ms "worth telling the user" line, so fanning that out buys a warning-free log and nothing a person can see.
-      Assert.AreEqual(BoardFanoutMode.Serial, BoardFanout.Decide(466_165), "the shape measured at a 40 ms saving stays serial");
+      // The measured corner under the constant: 36,235 outcomes (five fights of a farm night) saves 18 ms — one frame — so it keeps
+      // today's exact path instead of paying three schedules for something nobody can perceive.
+      Assert.AreEqual(BoardFanoutMode.Serial, BoardFanout.Decide(36_235), "a selection worth one frame stays serial");
     }
 
     [TestMethod]
@@ -60,9 +60,10 @@ namespace EQLogParser.Tests.Ui
     {
       Assert.AreEqual(BoardFanoutMode.Parallel, BoardFanout.Decide(BoardFanout.MinOutcomes), "exactly at the constant, it fans out");
 
-      // The two measured corners above the constant: 862,149 outcomes saves 253 ms, and a whole farm night (4.58 M) saves 335-1,381 ms.
-      Assert.AreEqual(BoardFanoutMode.Parallel, BoardFanout.Decide(862_149));
-      Assert.AreEqual(BoardFanoutMode.Parallel, BoardFanout.Decide(4_580_865));
+      // The measured corners above the constant: 389,552 outcomes saves 125 ms, 717,190 saves 194 ms, and a whole farm night
+      // (4,580,874) saves 1,459 ms of build wall — x1.32 of the ask end to end.
+      Assert.AreEqual(BoardFanoutMode.Parallel, BoardFanout.Decide(389_552));
+      Assert.AreEqual(BoardFanoutMode.Parallel, BoardFanout.Decide(4_580_874));
     }
 
     [TestMethod]
