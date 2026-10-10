@@ -131,6 +131,107 @@ public sealed class StatsBuildTraceTest
   }
 
   /*
+   * The group law behind the board fan-out (docs/improve-stat-building §3, MainWindow.BuildBoards): ONE request that builds
+   * damage, tanking and healing at once is one door wearing three hats, so its three builds must not warn about each other — while
+   * a genuinely foreign build under them still does. Pinned in both directions on purpose: silence for the siblings is easy to get,
+   * and so is silencing everything, which is the failure that costs the reader the one warning this class exists to print.
+   */
+  [TestMethod]
+  public void TheThreeBoardsOfOneRequestAreSiblingsRatherThanAnOverlap()
+  {
+    var before = StatsBuildTrace.OverlapBuilds;
+    var group = StatsBuildTrace.NextGroupId();
+
+    var damage = StatsBuildTrace.Begin("damage", "derived [SelectCommand]", "full", group);
+    Assert.AreEqual(group, damage.Group, "a caller-supplied group is the one the handle reports");
+
+    // The other two boards of the SAME request, each on its own worker — the shape a fanned-out select-all actually is.
+    var others = new Thread(() =>
+    {
+      var tanking = StatsBuildTrace.Begin("tanking", "derived [SelectCommand]", "full", group);
+      var healing = StatsBuildTrace.Begin("healing", "derived [SelectCommand]", "full", group);
+      Assert.AreEqual(0, tanking.OverlappedWith, "the second board of one request does not start OVER anything");
+      Assert.AreEqual(0, healing.OverlappedWith, "nor does the third");
+      StatsBuildTrace.End(healing);
+      StatsBuildTrace.End(tanking);
+    });
+
+    others.Start();
+    others.Join(TimeSpan.FromSeconds(5));
+
+    Assert.AreEqual(before, StatsBuildTrace.OverlapBuilds, "three siblings cost zero overlap warnings");
+    StatsBuildTrace.End(damage);
+    Assert.AreEqual(0, StatsBuildTrace.ActiveBuilds);
+  }
+
+  [TestMethod]
+  public void AForeignBuildUnderAFannedOutRequestStillWarns()
+  {
+    /*
+     * The half that must NOT be silenced: a pane's own dial rebuild (its own door, its own task, no group in common) landing under a
+     * fanned-out selection is two doors that did not talk to each other, and the whole reason this trace exists is to say so.
+     */
+    var before = StatsBuildTrace.OverlapBuilds;
+    var group = StatsBuildTrace.NextGroupId();
+
+    var damage = StatsBuildTrace.Begin("damage", "derived [SettleTick]", "full", group);
+    var tanking = StatsBuildTrace.Begin("tanking", "derived [SettleTick]", "full", group);
+    Assert.AreEqual(0, tanking.OverlappedWith);
+
+    var foreign = new Thread(() =>
+    {
+      // A pane's door: no group at all, which means "I stand alone".
+      var dial = StatsBuildTrace.Begin("healing", "healing pane options [time window]", "rebuild");
+      Assert.AreEqual(2, dial.OverlappedWith, "the foreign build sees both siblings and says so");
+      StatsBuildTrace.End(dial);
+    });
+
+    foreign.Start();
+    foreign.Join(TimeSpan.FromSeconds(5));
+
+    Assert.AreEqual(before + 1, StatsBuildTrace.OverlapBuilds, "one foreign arrival, one warning — the group did not eat it");
+    StatsBuildTrace.End(tanking);
+    StatsBuildTrace.End(damage);
+    Assert.AreEqual(0, StatsBuildTrace.ActiveBuilds);
+  }
+
+  [TestMethod]
+  public void ARequestThatDoesNotAskForAGroupStandsAlone()
+  {
+    /*
+     * "Every existing call site is bit-for-bit unchanged" is a law about the DEFAULT: no group passed = a fresh private one, so two
+     * ungrouped builds are foreign to each other exactly as they were before groups existed.
+     */
+    var first = StatsBuildTrace.Begin("damage", "first door");
+    var second = StatsBuildTrace.Begin("tanking", "second door");
+
+    Assert.IsTrue(first.Group > 0, "group 0 means 'not given'; a real build never reports it");
+    Assert.AreNotEqual(first.Group, second.Group, "two ungrouped builds do not share a group by accident");
+
+    StatsBuildTrace.End(second);
+    StatsBuildTrace.End(first);
+    Assert.AreEqual(0, StatsBuildTrace.ActiveBuilds);
+  }
+
+  [TestMethod]
+  public void GroupingDoesNotUndoNestingOnTheSameThread()
+  {
+    // The two rules are independent: a nested same-thread build is one door whether or not its group matches, and a group never
+    // makes a DIFFERENT thread's foreign build disappear (pinned by AForeignBuildUnderAFannedOutRequestStillWarns).
+    var before = StatsBuildTrace.OverlapBuilds;
+    var group = StatsBuildTrace.NextGroupId();
+
+    var outer = StatsBuildTrace.Begin("healing", "healing pane options [time window]", "rebuild", group);
+    var inner = StatsBuildTrace.Begin("healing", "healing pane options [time window]", "full", group);
+
+    Assert.AreEqual(0, inner.OverlappedWith);
+    Assert.AreEqual(before, StatsBuildTrace.OverlapBuilds);
+
+    StatsBuildTrace.End(inner);
+    StatsBuildTrace.End(outer);
+  }
+
+  /*
    * Where the lines go is not tested here, because nothing in this suite captures logs (the app's own pattern: levels are
    * decided once from settings.txt in App.SetLoggingLevel and read, never intercepted). The law - every build's line is a
    * Debug line, and the only things of this class that reach an ordinary log are the two anomaly Warns pinned by their

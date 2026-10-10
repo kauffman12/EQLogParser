@@ -103,7 +103,7 @@ namespace EQLogParser
      */
     internal void RebuildTotalStats(GenerateStatsOptions options, bool reset = false)
     {
-      var trace = StatsBuildTrace.Begin("damage", options.Source, "re-slice");
+      var trace = StatsBuildTrace.Begin("damage", options.Source, "re-slice", options.BuildGroup);
       try
       {
         RebuildTotalStatsCore(options, reset, trace);
@@ -147,7 +147,7 @@ namespace EQLogParser
     // Traced wrapper (see StatsBuildTrace): the door label comes in on the options, the cost and the record count go out on the line.
     internal void BuildTotalStats(GenerateStatsOptions options)
     {
-      var trace = StatsBuildTrace.Begin("damage", options.Source);
+      var trace = StatsBuildTrace.Begin("damage", options.Source, "full", options.BuildGroup);
       try
       {
         BuildTotalStatsCore(options, trace);

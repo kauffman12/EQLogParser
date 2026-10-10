@@ -60,6 +60,13 @@ namespace EQLogParser
      * content stamp, the fight count — because a duplicate is only recognisable as one if the two lines can be compared.
      */
     public string Source { get; set; }
+
+    /*
+     * The trace GROUP: one id shared by the builds of one request, so they are siblings rather than collisions (StatsBuildTrace
+     * rule 2). MainWindow's fan-out issues one per selection and puts it on all three boards' options; every other door leaves it 0,
+     * which means "this build stands alone" and is issued its own fresh group — i.e. today's warning behaviour, unchanged.
+     */
+    public int BuildGroup { get; set; }
   }
 
 

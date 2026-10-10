@@ -27,6 +27,13 @@ namespace EQLogParser;
  *   2. **Overlap is a warning, not a footnote.** `Begin` counts what is already inside; a build started while another runs means
  *      two doors did not talk to each other, and the reader sees seconds of duplicated work rather than an error. The count and
  *      the other build's identity go on the finished line so a triple reads as a triple in the log.
+ *
+ *      Siblings in one GROUP are not an overlap either — the parallel sibling of "nesting on one thread is not overlap". One request
+ *      that builds its three boards AT ONCE (the fan-out in MainWindow.BuildBoards, docs/improve-stat-building) is one door wearing
+ *      three hats: it issues ONE id from `NextGroupId` and puts it on all three builds' options, so none of them counts the other two.
+ *      A caller that passes no group is issued its own fresh one, which keeps every existing door foreign to every other exactly as
+ *      before: with no fan-out in play the warning surface is bit-for-bit what it was, and a pane's own dial rebuild landing under a
+ *      fanned-out selection still warns — that collision is the defect this warning exists for.
  *   3. **Costs reach the heartbeat.** Each builder's span is registered `uiThread: false` (it runs on a pool thread; naming it in
  *      "in progress" would send a reader to the wrong window) so the perf table lists it and a UI stall can be compared against
  *      a build happening at the same moment.
@@ -61,12 +68,19 @@ internal static class StatsBuildTrace
    * problem from one that costs two seconds and 400 MB (the first wants fewer operations, the second wants fewer objects, and
    * only the second explains a UI-thread pause that outlives the pass itself). Asked once per stage boundary, not per record.
    */
-  private static readonly List<(int Seq, string What, int ThreadId, long Mark, long MarkAlloc, List<string>? Stages)> _inside = [];
+  private static readonly List<(int Seq, string What, int ThreadId, int Group, long Mark, long MarkAlloc, List<string>? Stages)> _inside = [];
 
   /* A stage under half a megabyte is not worth a term on the line; over it, where the bytes are is the question being asked. */
   private const long StageAllocTermBytes = 512 * 1024;
 
   private static int _seq;
+
+  /*
+   * The group counter. Ids start at 1 because 0 means "no group was given" at every call site: a build with no group is issued its
+   * own fresh one, so it stays foreign to everything and the pre-fan-out warning behaviour survives without a branch.
+   */
+  private static int _groupSeq;
+
   private static readonly ConcurrentDictionary<string, string> _lastFinished = new();
   private static long _overlapBuilds;
   private static long _unlabelledBuilds;
@@ -76,10 +90,17 @@ internal static class StatsBuildTrace
   private static readonly int HealingSpan = PerfCounters.Register("stats.healing", false);
 
   /// <summary>One build in progress. Obtain from Begin, close with End (in a finally — an unclosed handle hides the next overlap).</summary>
-  internal readonly record struct Handle(int Seq, string Builder, string Door, string Kind, long StartTicks, long StartAlloc, int OverlappedWith);
+  internal readonly record struct Handle(int Seq, string Builder, string Door, string Kind, long StartTicks, long StartAlloc, int OverlappedWith, int Group);
 
   /// <summary>Builds started since process start.</summary>
   internal static int TotalBuilds => Volatile.Read(ref _seq);
+
+  /// <summary>
+  /// Issue a group id for ONE request whose builds may run side by side. Pass it to every build of that request (on
+  /// `GenerateStatsOptions.BuildGroup`, since the builders are what call Begin) and they stop counting each other as collisions.
+  /// A request that does not ask gets one implicitly, so nothing is ever un-grouped by accident.
+  /// </summary>
+  internal static int NextGroupId() => Interlocked.Increment(ref _groupSeq);
 
   /// <summary>How many of them started while another build was still running.</summary>
   internal static long OverlapBuilds => Interlocked.Read(ref _overlapBuilds);
@@ -92,10 +113,13 @@ internal static class StatsBuildTrace
 
   /*
    * Start tracing one build. `builder` is what got rebuilt ("damage", "tanking", "healing"), `kind` says whether it was built
-   * from a selection's blocks or re-sliced/rebuilt from stored records, and `door` is the caller's own name for why it asked.
+   * from a selection's blocks or re-sliced/rebuilt from stored records, `door` is the caller's own name for why it asked, and
+   * `groupId` ties the builds of one request together (0 = "this build stands alone"; it is issued its own fresh group).
    */
-  internal static Handle Begin(string builder, string? door, string kind = "full")
+  internal static Handle Begin(string builder, string? door, string kind = "full", int groupId = 0)
   {
+    if (groupId == 0) groupId = NextGroupId();
+
     var seq = Interlocked.Increment(ref _seq);
     var labelled = !string.IsNullOrWhiteSpace(door);
     if (!labelled)
@@ -111,11 +135,12 @@ internal static class StatsBuildTrace
     {
       for (var i = 0; i < _inside.Count; i++)
       {
-        if (_inside[i].ThreadId != threadId) overlappedWith++;
+        // Same thread = nesting (one door); same group = siblings of one request (also one door). Anything else is two doors.
+        if (_inside[i].ThreadId != threadId && _inside[i].Group != groupId) overlappedWith++;
       }
       startTicks = Stopwatch.GetTimestamp();
       startAlloc = GC.GetTotalAllocatedBytes();
-      _inside.Add((seq, $"{builder} {kind}", threadId, startTicks, startAlloc, null));
+      _inside.Add((seq, $"{builder} {kind}", threadId, groupId, startTicks, startAlloc, null));
     }
 
     if (!labelled)
@@ -130,13 +155,14 @@ internal static class StatsBuildTrace
       string others;
       lock (_sync)
       {
-        others = string.Join(", ", _inside.Where(e => e.Seq != seq).Select(e => $"#{e.Seq} {e.What}"));
+        // Only the FOREIGN ones are named: blaming a sibling for a collision it did not cause would send the reader to the wrong door.
+        others = string.Join(", ", _inside.Where(e => e.Seq != seq && e.Group != groupId).Select(e => $"#{e.Seq} {e.What}"));
       }
 
       Log.Warn($"stats build #{seq} {builder} {kind} started while {overlappedWith} other stats build(s) were running: {others}");
     }
 
-    return new Handle(seq, builder, labelled ? door! : UnlabelledDoor, kind, startTicks, startAlloc, overlappedWith);
+    return new Handle(seq, builder, labelled ? door! : UnlabelledDoor, kind, startTicks, startAlloc, overlappedWith, groupId);
   }
 
   /// <summary>Close a build and write its line. `detail` is whatever the caller can say cheaply about the inputs.</summary>
@@ -207,7 +233,7 @@ internal static class StatsBuildTrace
       var stageAlloc = allocNow - entry.MarkAlloc;
       (entry.Stages ??= []).Add($"{name} {PerfCounters.ElapsedMs(entry.Mark):F0} ms"
                                 + (stageAlloc >= StageAllocTermBytes ? $"/{Mb(stageAlloc)}" : string.Empty));
-      _inside[i] = (entry.Seq, entry.What, entry.ThreadId, now, allocNow, entry.Stages);
+      _inside[i] = (entry.Seq, entry.What, entry.ThreadId, entry.Group, now, allocNow, entry.Stages);
     }
   }
 

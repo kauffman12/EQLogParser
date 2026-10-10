@@ -104,7 +104,7 @@ namespace EQLogParser
      */
     internal void BuildTotalStats(GenerateStatsOptions options)
     {
-      var trace = StatsBuildTrace.Begin("healing", options.Source);
+      var trace = StatsBuildTrace.Begin("healing", options.Source, "full", options.BuildGroup);
       try
       {
         BuildTotalStatsCore(options, trace);

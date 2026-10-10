@@ -39,7 +39,7 @@ namespace EQLogParser
     // Traced wrapper (see StatsBuildTrace): re-slicing the groups in hand, which is what this pane's own dials ask for.
     internal void RebuildTotalStats(GenerateStatsOptions options)
     {
-      var trace = StatsBuildTrace.Begin("tanking", options.Source, "re-slice");
+      var trace = StatsBuildTrace.Begin("tanking", options.Source, "re-slice", options.BuildGroup);
       try
       {
         RebuildTotalStatsCore(options, trace);
@@ -75,7 +75,7 @@ namespace EQLogParser
     // Traced wrapper (see StatsBuildTrace).
     internal void BuildTotalStats(GenerateStatsOptions options)
     {
-      var trace = StatsBuildTrace.Begin("tanking", options.Source);
+      var trace = StatsBuildTrace.Begin("tanking", options.Source, "full", options.BuildGroup);
       try
       {
         BuildTotalStatsCore(options, trace);
