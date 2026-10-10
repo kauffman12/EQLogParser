@@ -50,14 +50,13 @@ internal static class IdentityVocabulary
    * Everything a Type cell offers, in one list — the whole identity vocabulary at a glance, which is what the old
    * right-click menu could not do (five items had to be remembered, and "take my claim back" was not even among them).
    *
-   * "Clear claim" carries IdentityKind.Unknown because that is exactly what ClassificationCommands.ApplyVerdict(…, Unknown) means —
-   * remove the operator's row (and this server's memory of the name) and let this capture's own rules show through. Each
-   * word appears EXACTLY ONCE: the retired menu listed NPC twice, and a dropdown with two entries for one answer is a bug
-   * a person notices only after clicking.
+   * "Reset" carries IdentityKind.Unknown because that is exactly what ClassificationCommands.ApplyVerdict(…, Unknown) means — remove
+   * the operator's row (and this server's memory of the name) and let this capture's own rules show through. Each word appears
+   * EXACTLY ONCE: the retired menu listed NPC twice, and a dropdown with two entries for one answer is a bug a person notices only after clicking.
    */
   /*
    * One entry per word, named, and `TypeOptions` composes them - so a pane that wants a subset (the "Set … as" cascade takes the four
-   * kinds and leaves "Spell"/"Clear claim" to the row-aware dropdown) reads the SAME record rather than retyping a string. The law that
+   * kinds and leaves "Spell"/"Reset" to the row-aware dropdown) reads the SAME record rather than retyping a string. The law that
    * each word appears exactly once now has arithmetic behind it: there is one object per word in the process.
    */
   internal static readonly TypeOption PlayerOption = new("Player", IdentityKind.Player);
@@ -68,11 +67,30 @@ internal static class IdentityVocabulary
   // fighter's slot (docs/DesignNotes.md → "A name that equals a spell is not a spell row"). It claims no side, so choosing it
   // neither credits nor vetoes anybody - which is why it is safe to offer on every overrulable row.
   internal static readonly TypeOption SpellOption = new("Spell", IdentityKind.Spell);
-  internal static readonly TypeOption ClearClaimOption = new("Clear claim", IdentityKind.Unknown);
+  /*
+   * The take-back, renamed from "Clear claim" on an operator's complaint that the old label promised the wrong thing (2026-11). What this
+   * entry does is reset MEMORY, and "Reset" says that while "clear my claim" suggested the row's answer was being cleared too:
+   *
+   *   - the operator's own row in identity-overrides.txt;
+   *   - the legacy/roster claims a players.txt import or the parser left behind (verified player, verified pet, mercenary,
+   *     game-generated name, the took-an-action flag);
+   *   - this server's older-log verdict, together with the roster "one of ours" bit and the class riding on that same ledger row;
+   *   - any saved summon-owner pair, from the old petmapping.txt feed or from an assignment made in this app.
+   *
+   * Then the CURRENT log answers again, from the lines it already holds. That asymmetry is what the label exists to carry: a name whose
+   * kind came from memory visibly changes (it drops to "Nothing Identified It", or leaves the list if nothing else named it), while a name
+   * this capture identifies comes back on the next pass with its rule beside it in Why - ``X`s pet`` says whose it is, npcs.txt is loaded
+   * data, a pet-target spell hit that defender. Neither is a fault and neither is forgettable from here: to overrule what the capture says,
+   * pick the kind instead (an operator verdict rides at Manual, above every rule), rather than asking for no answer.
+   *
+   * The MACHINE word is unchanged - `IdentityKind.Unknown` in identity-overrides.txt and in eqlogparser.log - exactly as R22's code stayed
+   * `R22-guildmate` when its display word became Achievement: a display rename must not become a file-format change.
+   */
+  internal static readonly TypeOption ResetOption = new("Reset", IdentityKind.Unknown);
 
   internal static readonly TypeOption[] TypeOptions =
   [
-    PlayerOption, PetOption, MercOption, NpcOption, SpellOption, ClearClaimOption,
+    PlayerOption, PetOption, MercOption, NpcOption, SpellOption, ResetOption,
   ];
 
   /*
@@ -83,7 +101,7 @@ internal static class IdentityVocabulary
    *   - **Mercenary is not a verdict you can put on a name.** A mercenary is what /target reported (R3-merc/R13-merc);
    *     typing "Mercenary" onto a raider moves her number off the player column and onto a column nothing else fills,
    *     and no file backs the claim afterwards. A row that already reads Mercenary keeps the entry — the popup opens on
-   *     the current answer — and taking that verdict back is "Clear claim", which is where it always lived.
+   *     the current answer — and taking that verdict back is "Reset", which is where it always lived.
    *   - **An eye is not a fighter of any kind.** `Eye of Zamul` never acts (ClassificationRules.EyeSummonOwnerInName;
    *     docs/DesignNotes.md → "Breadth of evidence, measured"), so it cannot be a person, a mercenary, or somebody's
    *     summon — and minting a Pet row for it would sit beside that player's real pets and split one person's output.
@@ -443,7 +461,7 @@ internal static class IdentityVocabulary
    * three invites an operator to break something they cannot undo by clicking:
    *
    *   - A POSSESSIVE SUMMON (`Tuona`s ward`). The ownership word IS the evidence — R5 reads it off the name and asserts
-   *     Pet at Certain — so the dropdown's Pet/NPC/Player choices are all wrong and "Clear claim" only puts the row back
+   *     Pet at Certain — so the dropdown's Pet/NPC/Player choices are all wrong and "Reset" only puts the row back
    *     to Unknown for one derive.
    *   - A SPELL EFFECT (a name that is a damaging spell, or that only ever appears as a spell attacker). It is not a
    *     creature; typing it as a Player would put it on the roster.

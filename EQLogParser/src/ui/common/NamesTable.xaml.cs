@@ -43,7 +43,7 @@ namespace EQLogParser
    *     closing the window loses nothing and a file edited by hand still wins on the next open.
    *
    * HOW A NAME IS CORRECTED: the pencil in its own cell. Type opens the whole verdict list (Player / Pet / Mercenary /
-   * NPC / Clear claim), Class opens the class list and Owner the people a summon can belong to, all three through
+   * NPC / Spell / Reset), Class opens the class list and Owner the people a summon can belong to, all three through
    * UiElementUtil.OpenCellPopup - the click-the-icon-then-pick popup DamageSummary's Group cell already calls, so this pane joins it instead
    * of hand-rolling a Popup (placement, sizing, focus-back and the close hook are in that helper). There is no context
    * menu on this grid at all: right-drag and right-click
@@ -353,7 +353,7 @@ namespace EQLogParser
        * form makes the eye work for the one clause that matters (docs/DesignNotes.md → "The Names window: four columns, dropdowns in two of them").
        *
        * The proof clause is whatever the deciding rule can say, and NOTHING where no rule says anything - which is the
-       * same state the dropdown words "Clear claim": taking a verdict back leaves the name unclaimed rather than
+       * same state the dropdown words "Reset": taking a verdict back leaves the name unclaimed rather than
        * inventing an answer for the hover to explain. One clause, no separators: every rider that ever joined this string
        * (the roster's opinion, "not in this log", the file names) explained something the reader had not asked about.
        */
@@ -556,7 +556,7 @@ namespace EQLogParser
       // Preselect what the row already says, so the list opens on the current verdict — and so the guard in
       // TypeSelectionChanged can tell "the click that opened this" from "a different answer", which is the difference
       // between refreshing a window and rewriting identity-overrides.txt for nothing. An unplaced name selects nothing:
-      // "Clear claim" is an action, not what the row currently is.
+      // "Reset" is an action, not what the row currently is.
       typeEditComboBox.SelectedValue = row.Kind == IdentityKind.Unknown ? null : row.Kind;
 
       UiElementUtil.OpenCellPopup(typeEditPopup, typeEditComboBox, cell, () =>
@@ -591,11 +591,17 @@ namespace EQLogParser
       if (!row.TypeChoices.Contains(option)) { Refuse(DoorType, $"{option.Word} is not in the list this popup was opened with for {row.Name}"); return; }
 
       /*
-       * "Clear claim" takes back EVERYTHING this window remembers about the name, not only the line in
+       * "Reset" takes back EVERYTHING this window remembers about the name, not only the line in
        * identity-overrides.txt: without the ledger entry going too, the row comes straight back on the next derive wearing
        * its remembered verdict, which is the opposite of what the click looks like it did. Setting a verdict drops the
        * prior as well — this capture's answer now outranks it, and IdentityPriorStore.Recall stops offering it, so the
        * "... in previous log" tooltip cannot survive the override that replaced it.
+       *
+       * What it does NOT do is erase the answer, which is why the entry is called Reset and not something about clearing (2026-11). This
+       * capture's own lines are re-read by the next pass and they are untouched by forgetting: a name npcs.txt places, a ``X`s pet`` name,
+       * a defender a pet-target spell hit, a name the raid healed twenty times over - all of those come back, same kind, same Why word.
+       * Only memory-fed rows visibly move. An operator who wants to overrule what the capture says picks the KIND (Manual strength outranks
+       * every rule, including ones the rules learn later); asking for no answer is not a thing this button can promise.
        */
       // One call, both halves: FORGET what this app believed (ledger row included) then ASSERT the operator's word.
       // The eviction is not a bonus — a verdict that only adds a claim leaves players.txt and petmapping.txt answering
@@ -603,9 +609,11 @@ namespace EQLogParser
       ClassificationCommands.ApplyVerdict(row.Name, option.Kind);
 
       // Names itself: this door writes silently in the stores (ApplyVerdict logs nothing on purpose), so a report of
-      // "I picked Clear claim and nothing happened" has no other way to say whether the click arrived at all.
-      Log.Info($"identity cell: type of {row.Name} -> {IdentityVocabulary.TypeWord(option.Kind)}"
-             + (option.Kind == IdentityKind.Unknown ? " (claim cleared: override, ledger row and every registry claim forgotten)" : ""));
+      // "I picked Reset and nothing happened" has no other way to say whether the click arrived at all. The reset line says what it
+      // removed AND that the capture answers again, because the honest outcome of that verb is sometimes "no visible change".
+      Log.Info(option.Kind == IdentityKind.Unknown
+        ? $"identity cell: reset {row.Name} - override, roster/legacy claims, older-log verdict and saved summon owner forgotten; this capture's own lines answer again"
+        : $"identity cell: type of {row.Name} -> {IdentityVocabulary.TypeWord(option.Kind)}");
 
       Reconcile();
       typeEditPopup.IsOpen = false;
@@ -748,7 +756,7 @@ namespace EQLogParser
      * The three controls that used to sit right of the caption are gone, and their verbs with them rather than hidden:
      *
      *   "Refresh"       — the window follows the derive while it is visible (FollowSession), so nothing needs asking.
-     *   "Not a player"  — DelVerdict plus a re-derive, which the Type cell's "Clear claim" does on the row it is drawn on.
+     *   "Not a player"  — DelVerdict plus a re-derive, which the Type cell's "Reset" does on the row it is drawn on.
      *                     Nothing in this app writes a players.txt `!Name` veto and nothing reads one: that machinery
      *                     arrived seven hours before the only window that could set it lost its menu entry, three days
      *                     after the last release, so no shipped build ever had a door to it (see

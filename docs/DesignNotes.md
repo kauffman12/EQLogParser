@@ -10814,6 +10814,20 @@ nothing). → "Non-goals" in `docs/perf-memory-status.md`, "A histogram nobody a
 
 ### Clear claim forgets everything — which is what makes it the repair (2026-10-09)
 
+> **Renamed to "Reset" on 2026-11.** The heading stays: this section records the decision, and tests cite it by these words. The label
+> changed because an operator read "clear my claim" as "erase what this window thinks this name is", and reported a dead button when the
+> row answered `Pet` again ("reseting my claim did nothing"). Nothing about the verb changed, and that is exactly the trap: `ApplyVerdict(name,
+> IdentityKind.Unknown)` clears **memory** — the operator's row, the players.txt-lineage claims (`ForgetName`: verified player, verified pet, pet
+> map, mercenary, generated name, action flag), this server's older-log verdict together with the roster bit and class riding on the same ledger
+> row, and any saved summon-owner pair — and then the rule book replays over **this capture**, which no forgetting reaches. So a memory-fed row
+> visibly moves (to *Not Placed*, or off the list), while a name the log itself identifies (`npcs.txt`, a ``X`s pet`` spelling, an `R24-petslot`
+> defender, R15's heal crowd, R7's graph) returns with its kind and its Why word intact: deleting a conclusion does not delete the line that
+> produced it. **Reset can only ever move a memory-fed row** — which is what the one-syllable label says and the old two-word one hid. The gesture
+> for disagreeing with the capture is the *kind*, at `RuleStrength.Manual` (1000), above `Certain` (100) and above what the rules learn later.
+> Every cell door in that pane now prints its write or its refusal (`identity cell: …` in `eqlogparser.log`), because both take-backs —
+> `ApplyVerdict(…, Unknown)` and `PlayerRegistry.ForgetPetMapping` — were silent, which left "the click never arrived" indistinguishable from
+> "it arrived, and the capture answered the same way again".
+
 Two Windows-only tests went red long after the commit that changed the behaviour, which is itself the lesson: `d5344014`
 ("a manual verdict forgets everything this app believed about the name, then asserts the operator's word") rewrote what a
 verdict *is*, and only an `EQLogParser.Wpf.Test` assertion that had been written against the old semantics noticed weeks later.

@@ -30,7 +30,7 @@ public class IdentityVerdictMenuTest
       IdentityVerdictMenu.Populate(root, _ => { });
       var words = Words(root);
 
-      Assert.AreEqual(4, words.Count, "the cascade is four kinds — Spell is a rule's answer and \"Clear claim\" needs a row's evidence");
+      Assert.AreEqual(4, words.Count, "the cascade is four kinds — Spell is a rule's answer and \"Reset\" needs a row's evidence");
       CollectionAssert.AreEqual(
         new[] { "Player", "Pet", "Mercenary", "NPC" },
         words,

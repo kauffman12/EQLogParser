@@ -985,7 +985,7 @@ namespace EQLogParser
 
     /*
      * Take the owner off one name and nothing else: "I do not know whose summon this is" is a different act from "this is not a pet"
-     * (which is what `Clear claim` on the Type column says) and from "stop remembering this name at all" (ForgetName). The live pair and
+     * (which is what `Reset` on the Type column says) and from "stop remembering this name at all" (ForgetName). The live pair and
      * the ledger's Owner column both go; `_verifiedPets` stays, because the name was seen fighting as a summon this session whatever its
      * owner turns out to be. No event fires — ownership folds off the line's own possessive word, so no board subscribes to this store.
      */

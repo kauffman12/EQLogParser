@@ -45,10 +45,11 @@
 
         "Refresh"  - the list updates itself now. A census that needs a button to look current reads as broken the first
                      time a name is missing; Apply re-runs on every derive pass and on log open/close/clear.
-        "Not a player" (Solid_Times) - its whole effect is DelVerdict + Re-derive, which the Type cell's "Clear claim"
+        "Not a player" (Solid_Times) - its whole effect is DelVerdict + Re-derive, which the Type cell's "Reset"
                      does in one click on the row it applies to.
         "Forget old log decisions" (Solid_Undo) - same reach, so this too lives in the dropdown: choosing a Type overrules
-                     a remembered verdict, and "Clear claim" drops it. The ledger entry itself is removed by both.
+                     a remembered verdict, and "Reset" drops it (the reset removes the ledger row outright, which is the whole
+                     of what that retired icon asked for). The ledger entry itself is removed by both.
 
       BATCH work - setting a whole block of selected names at once - is not here and never was expressible in a cell: it
       lives in the fight grids' context menu (Set as Player / Mercenary / Pet / NPC, Clear Override). This pane has no
@@ -152,7 +153,7 @@
 
           Three things this cell says, and one it never says. It shows WHO the summon belongs to; the pencil writes one name; the last
           entry in the dropdown is "No Owner", which forgets the pair and KEEPS the Pet verdict ("I do not know whose this is" is not
-          "this is not a pet" — taking everything back is the Type cell's "Clear claim"). What never appears here is the old placeholder
+          "this is not a pet" — taking everything back is the Type cell's "Reset"). What never appears here is the old placeholder
           wording: rows written before the change hold "Unknown Pet Owner", and `PetOwnership.DisplayOf` answers "No Owner" for that, for
           the new word, and for no mapping at all — an empty cell reads as a classifier bug, while "nobody said whose" is a real answer.
         -->

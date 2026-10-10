@@ -279,7 +279,7 @@ public class IdentityVocabularyTest
     var raider = IdentityVocabulary.TypeOptionsFor("Berta", IdentityKind.Player, "R3-joinraid");
     CollectionAssert.Contains(Words(raider), "Player", "the row's own answer must be listed — the popup preselects it");
     CollectionAssert.Contains(Words(raider), "Pet", "an operator may disagree about a summon");
-    CollectionAssert.Contains(Words(raider), "Clear claim", "taking a claim back is always reachable");
+    CollectionAssert.Contains(Words(raider), "Reset", "taking a claim back is always reachable");
     CollectionAssert.DoesNotContain(Words(raider), "Mercenary",
                                     "a mercenary is what /target said; typing it onto a raider relocates her damage");
 
@@ -292,14 +292,14 @@ public class IdentityVocabularyTest
     {
       var eye = IdentityVocabulary.TypeOptionsFor("Eye of Zamul", kind, "R6-npcdb");
       CollectionAssert.Contains(Words(eye), "NPC");
-      CollectionAssert.Contains(Words(eye), "Clear claim");
+      CollectionAssert.Contains(Words(eye), "Reset");
       foreach (var no in new[] { IdentityKind.Player, IdentityKind.Pet, IdentityKind.Merc })
         Assert.IsFalse(eye.Any(o => o.Kind == no), $"an eye may not be set to {no}");
     }
 
     // A summon whose spelling names its master: decided by the name, so nothing to choose but the way out.
     var pet = IdentityVocabulary.TypeOptionsFor("Sancus`s pet", IdentityKind.Pet, "R5-owner:Sancus");
-    CollectionAssert.AreEquivalent(new[] { "Pet", "Clear claim" }, Words(pet));
+    CollectionAssert.AreEquivalent(new[] { "Pet", "Reset" }, Words(pet));
 
     // An operator's own claim keeps the whole vocabulary: a wrong click has to stay correctable by another click.
     Assert.AreEqual(IdentityVocabulary.TypeOptions.Length,
@@ -503,7 +503,7 @@ public class IdentityVocabularyTest
     var options = IdentityVocabulary.TypeOptions;
 
     CollectionAssert.AreEqual(
-        new[] { "Player", "Pet", "Mercenary", "NPC", "Spell", "Clear claim" },
+        new[] { "Player", "Pet", "Mercenary", "NPC", "Spell", "Reset" },
         options.Select(o => o.Word).ToArray());
 
     Assert.AreEqual(options.Length, options.Select(o => o.Kind).Distinct().Count(),
@@ -511,15 +511,20 @@ public class IdentityVocabularyTest
   }
 
   /*
-   * "Clear claim" carries IdentityKind.Unknown on purpose: ClassificationCommands.ApplyVerdict(name, Unknown) removes the row and lets the
+   * "Reset" carries IdentityKind.Unknown on purpose: ClassificationCommands.ApplyVerdict(name, Unknown) removes the row and lets the
    * capture's own rules speak, which is what "no verdict" means. It is NOT another type — the cell for an unplaced name says
    * "Unknown" and stays grey — and Unknown appears in the list exactly once, as that action. Spell IS a kind (R21: a caster-less
    * spell name in a fighter's slot) and is offered like Player or NPC; it claims no side either way.
+   *
+   * The entry reads "Reset" since 2026-11 (was "Clear claim"): the old wording promised that the ANSWER was being cleared, when what the
+   * verb removes is memory — override, roster/legacy claims, older-log verdicts and the saved summon owner — after which this capture's own
+   * lines answer again. A name the log identifies therefore comes straight back, same kind and Why word, and that is the designed outcome of
+   * a reset rather than a dead button. Overruling the capture is a different gesture: pick the kind, which rides at Manual strength.
    */
   [TestMethod]
-  public void ClearingAClaimIsTheUnknownKindRatherThanASixthType()
+  public void ResetIsTheUnknownKindRatherThanASixthType()
   {
-    var clear = IdentityVocabulary.TypeOptions.Single(o => o.Word == "Clear claim");
+    var clear = IdentityVocabulary.TypeOptions.Single(o => o.Word == "Reset");
     Assert.AreEqual(IdentityKind.Unknown, clear.Kind);
 
     // ...and Unknown is offered once only — as the way to stop having a verdict, never as a verdict to set.

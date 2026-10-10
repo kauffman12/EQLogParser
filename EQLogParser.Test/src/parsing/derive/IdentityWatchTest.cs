@@ -59,7 +59,7 @@ public class IdentityWatchTest
     }
 
     [TestMethod]
-    [Description("An unset (the identity pane's Clear claim) answers Unknown again, and that is a change a board must follow.")]
+    [Description("An unset (the identity pane's Reset) answers Unknown again, and that is a change a board must follow.")]
     public void AWatchedNameFallingBackToUnknownFires()
     {
         var timeline = new EntityTimeline();

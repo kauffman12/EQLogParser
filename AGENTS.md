@@ -567,7 +567,7 @@ declare without `?`; add the directive only when the whole file is meant to hold
   reads the night back. Pinned by `ClearedSessionMemoryTest` (a clear keeps saved verdicts and the ledger standing under **either** payload; reload
   restores them; one server's memory does not follow the app into another folder). The fight list now has **one** "Clear": Clear All. The mirror-era
   *Clear Override (N saved)* item that sat there was deleted, not renamed (a first attempt to rename it to "Clear My Claim" was refused by the operator —
-  "why is there still a Clear My Claim?"), because the rule above says the Names pane's Type dropdown `Clear claim` is the only unset
+  "why is there still a Clear My Claim?"), because the rule above says the Names pane's Type dropdown `Reset` is the only unset
   **and the duplicate was weaker than the door it imitated**: the pane wrote `IdentityOverrideStore.Apply(names, null)` while the sanctioned
   unset also forgets the whole ledger row (`NamesTable` → `ClassificationCommands.ApplyVerdict(name, Unknown)`, whose first step is
   `Forget` = `IdentityPriorStore.Remove` + `PlayerRegistry.ForgetName`), so the fight-list click left
@@ -622,7 +622,7 @@ declare without `?`; add the directive only when the whole file is meant to hold
   version handled only the left, which was exactly one button short of the bug — so keep both. `UIElement.Preview*MouseUp` does not fire on release
   outside the control, hence the capture-loss listener. **(2) The identity write is one cascade built once**: `IdentityVerdictMenu.Populate(root,
   onPick)` fills **"Set <name> as ▸"** (Player/Pet/Mercenary/NPC) from `IdentityVocabulary.TypeOptions` — whose entries are now *named* records so a
-  pane takes a subset instead of retyping words (`Spell` and "Clear claim" stay out of a blind cascade). Damage/healing/tanking summaries plus the
+  pane takes a subset instead of retyping words (`Spell` and "Reset" stay out of a blind cascade). Damage/healing/tanking summaries plus the
   fight list all use it; the summaries' **"Set as Verified Player"** is deleted (it wrote players.txt via `AddVerifiedPlayerByOperator` and greyed
   itself out on anybody already placed, and its header printed the `"Unknown"` placeholder as a name). **THE ONE-ROW LAW**: each pane passes
   "the single selected name or null" (`SelectedItems.Count == 1` + a real row; group headers and inactivity dividers select nothing), `Present` heads it
@@ -665,7 +665,7 @@ declare without `?`; add the directive only when the whole file is meant to hold
   "nobody said whose" is an answer), and only a row that READS Pet gets the pencil — `PetOwnership.CanEditOwner` decides the icon AND re-guards the
   write, because typing an owner onto a raider asserts two facts from one cell (that is the fight grid's `Assign … as Pet of`). The dropdown's last entry
   **"No Owner"** un-maps while KEEPING the Pet verdict (`ForgetPetMapping` → `IdentityPriorStore.ForgetPet`) — "I don't know whose" ≠ "not a pet", and wiping
-  the name stays Type's `Clear claim`. Candidates are this app's roster, deduped by name, placeholders dropped **and reflexive forms dropped**
+  the name stays Type's `Reset`. Candidates are this app's roster, deduped by name, placeholders dropped **and reflexive forms dropped**
   (`yourself`/`himself`/…), but **"You" is offered**: `IsPersonWord` keeps it as a person for exactly that reason, and reusing that test as the refusal set cut
   off the operator's own character. List is built per click, never per census row (the mapping runs over every name twice a second). Candidates and wording are
   Core (`PetOwnership`), pinned by `PetOwnershipTest`; docs/DesignNotes.md → "petmapping.txt is a feed now". Two things moved to the **Why cell's tooltip** instead of being deleted: the cast a spell verdict rests on
@@ -809,14 +809,24 @@ declare without `?`; add the directive only when the whole file is meant to hold
 - **Identity has two writes and one unset — and no veto.** `ClassificationCommands` is the whole vocabulary: `ApplyVerdict`
   (Player / Pet / Merc / NPC into `identity-overrides.txt` — the name it ships under; the pre-release spelling
   `mirror-overrides.txt` never reached an installed build, so nothing reads it and no migration code exists) and
-  `ApplyVerdict(name, IdentityKind.Unknown)`, which the Type dropdown's **"Clear claim"**
+  `ApplyVerdict(name, IdentityKind.Unknown)`, which the Type dropdown's **"Reset"**
   calls. That entry is the *only* unset, so "isn't there already an option to clear the name?" is answered by the same
-  five words in that dropdown (plus `Remove` on the roster) and by nothing else.
+  word in that dropdown (plus `Remove` on the roster) and by nothing else. **It was renamed from "Clear claim" on 2026-11** because the old
+  wording promised the wrong thing, and the distinction is the law: **Reset removes MEMORY, never evidence.** It clears the operator's row,
+  the players.txt-lineage claims, this server's older-log verdict (with the roster bit and class on that ledger row) and any saved summon-owner
+  pair — then `RederiveAsync` replays the rule book over THIS capture, which forgetting cannot touch. So a memory-fed name visibly drops (to
+  *Not Placed*, or off the list), while a name the log itself identifies — `npcs.txt`, a ``X`s pet`` spelling, a `R24-petslot` defender, R15's heal crowd,
+  R7's graph — **comes back on the next pass with the same kind and the same Why word**, which is the designed outcome of a reset and not a dead
+  button. Overruling the capture is the *other* gesture: pick a kind, which rides at `RuleStrength.Manual` (1000) above `Certain` (100), so it
+  survives what the rules learn later. Never widen Reset into a suppression, and never add an "assert Unknown" entry without deciding its board
+  cost (an unplaced name's incoming damage is `RaidSide` on the tank board and its output stops folding under `+Pets`). The machine word stays
+  `IdentityKind.Unknown` in `identity-overrides.txt` and in the log lines, exactly as `R22-guildmate` kept its code when its display word became
+  *Achievement*.
 
 **Both verbs FORGET before they assert, and the unset forgets without asserting** (`d5344014`, and the reason a Windows-only
 test pair went red weeks later): `Forget` = `IdentityPriorStore.Remove` — the **whole ledger row**: remembered verdict, the
 roster's "one of ours" bit, the class that rode with it, the pet-owner column — plus `PlayerRegistry.ForgetName` (verified
-player, verified pet, pet map, merc, game-generated name, action flag). So **"Clear claim" is not a way back to what memory
+player, verified pet, pet map, merc, game-generated name, action flag). So **"Reset" is not a way back to what memory
 said**: after it the name reads Unknown until this capture's own lines re-earn it, and **a name whose only claim on the list was
 memory leaves the list** (`TakingAClaimBackTakesTheLegacyMemoryWithIt`). That erasure is exactly why it is the repair door for a
 name legacy mis-named — `players.txt` has no writer and its importer refuses any folder whose ledger already carries roster rows
@@ -975,7 +985,7 @@ whose 10,000 cast lines are still in the open capture, which is a different harm
   block of rows out of a long table, and this pane's menu carried its one most-important verb (*clear my claim*) invisibly while offering two identical NPC lines.
   Type and Class each carry a pencil that opens a `ComboBox` in a popup over the clicked cell (`UiElementUtil.OpenCellPopup`, the same helper DamageSummary's Group cell calls - joined, not re-written, because its
   cell placement, sizing, focus-back and close hook are the parts the operator meant by "i put a lot of work into getting that working well"). Four laws: the option list shows
-  **its own row's** vocabulary, not the whole one (`NameRow.TypeChoices` ← `IdentityVocabulary.TypeOptionsFor`; the five answers exist in `IdentityVocabulary.TypeOptions`, each written exactly once, "Clear claim" carrying
+  **its own row's** vocabulary, not the whole one (`NameRow.TypeChoices` ← `IdentityVocabulary.TypeOptionsFor`; the five answers exist in `IdentityVocabulary.TypeOptions`, each written exactly once, "Reset" carrying
   `IdentityKind.Unknown` because that is what `ClassificationCommands.ApplyVerdict(name, Unknown)` writes); the combo **preselects the row's current verdict** so the handler can
   refuse a click that changes nothing (a no-op must not spend a derive pass or rewrite identity-overrides.txt); a cell edit edits its cell — batching lives in the
   fight grids' menu alone now, this pane has no buttons at all; and **the class pencil appears only on a `Player` row** (`NameRow.ClassEditable`) because `SetDefaultPlayerClass` verifies
@@ -993,7 +1003,7 @@ whose 10,000 cast lines are still in the open capture, which is a different harm
   and a wrong verdict on a real person then could not be taken back from this window at all, the one failure mode every other rule here exists to avoid. A behaviour verdict (graph, heals, /who, chat, a cast) is somebody ACTING, so it stays
   correctable even when the word doubles as a spell. The same measurement refused a parser "fix": `Boom!` keeps its bang because spells.txt carries both `Boom` (13031) and `Boom!` (54752), and "is this string a spell NAME?" must consult
   `_spellsNameDb` only — abbreviations legitimately carry punctuation. Docs/DesignNotes.md → "A name that equals a spell is not a spell row". And
-  **"Clear claim" forgets the ledger entry and every registry claim too** (`ApplyVerdict`'s own `Forget` step, not a later
+  **"Reset" forgets the ledger entry and every registry claim too** (`ApplyVerdict`'s own `Forget` step, not a later
   `IdentityPriorStore.Remove` someone might forget to pair with it), or the row comes straight back on the next pass wearing
   *"… in previous log"*, which is the opposite of what the click looked like it did. Any write
   here (dropdown **or** band icon) goes through `Reconcile()` = `RederiveAsync()` + `Refresh()`, like `FightTable.ApplyOverride` always did: the census is right on its

@@ -20,7 +20,7 @@ namespace EQLogParser;
  * Three laws:
  *   - **only watched names are read**, so a capture that keeps meeting new mobs costs nothing;
  *   - an answer that FLIPS fires (Unknown→Pet when a pet pair is finally learned, Player→Npc while a raider is charmed), and so does a
- *     watched name going back to Unknown — `Clear claim` in the identity pane must refresh the boards it just un-decided;
+ *     watched name going back to Unknown — `Reset` in the identity pane must refresh the boards it just un-decided;
  *   - an empty watch never fires. Nothing on screen means nothing can have changed on screen, and inventing a rebuild for it would put
  *     the flicker straight back.
  */

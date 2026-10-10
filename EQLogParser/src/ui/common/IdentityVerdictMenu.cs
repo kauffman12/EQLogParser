@@ -20,7 +20,7 @@ namespace EQLogParser;
  * Three rules this class exists to hold:
  *
  *   1. **Words from the vocabulary, never retyped.** Player / Pet / Mercenary / NPC, in TypeOptions' order, minus the two entries that
- *      belong to a row-aware dropdown rather than to a blind cascade ("Spell" is a kind the rules reach and "Clear claim" needs the row's
+ *      belong to a row-aware dropdown rather than to a blind cascade ("Spell" is a kind the rules reach and "Reset" needs the row's
  *      own evidence to mean anything). Mercenary IS offered here because these panes ask it as a judgement about a name they are looking
  *      at, and the operator asked for all four; the Names pane still trims it per row (IdentityVocabulary.TypeOptionsFor), which is a
  *      difference the pane can afford to state rather than invent a second vocabulary over.

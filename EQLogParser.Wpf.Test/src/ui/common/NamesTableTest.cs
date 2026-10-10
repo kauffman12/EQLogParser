@@ -97,7 +97,9 @@ public class NamesTableTest
   }
 
   /*
-   * "Clear claim" forgets FIRST and writes nothing after — and that is the whole of its use.
+   * "Reset" (the entry an operator reads; it writes IdentityKind.Unknown) forgets FIRST and writes nothing after — and that
+   * is the whole of its use. Renamed from "Clear claim" in 2026-11: the old label promised the ANSWER was being cleared, while what the
+   * verb removes is memory, after which this capture's own lines answer again.
    *
    * Every verdict write starts at `ClassificationCommands.Forget`, including the Unknown one that means "take my claim
    * back": the ledger row goes (the remembered verdict, the roster's "one of ours" bit, the class that rode with it, the
@@ -236,7 +238,7 @@ public class NamesTableTest
 
     var pet = NamesTable.RowFrom(new ClassificationReport.Row
     { Name = "Sancus`s pet", Kind = IdentityKind.Pet, Reason = "R5-owner:Sancus" });
-    CollectionAssert.AreEquivalent(new[] { "Pet", "Clear claim" }, Words(pet));
+    CollectionAssert.AreEquivalent(new[] { "Pet", "Reset" }, Words(pet));
   }
 
   /*

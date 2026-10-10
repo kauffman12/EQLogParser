@@ -17,7 +17,7 @@ namespace EQLogParser;
  *   The last entry is the take-back: `Labels.Unassigned`, which prints "No Owner" (2026-10-09 — the window used to offer a choice
  *   labelled "Unknown Pet Owner", and the operator asked for two words that say what the click does). Choosing it forgets the pair and
  *   KEEPS the Pet verdict: "I do not know whose this is" is not "this is not a pet". Clearing everything a name is stays where it was,
- *   under the Type column's "Clear claim".
+ *   under the Type column's "Reset".
  *
  *   The row's current answer is always in its own list, even when it is junk. A value missing from the dropdown it opens with reads as a
  *   blank cell, and a blank cell reads as a classifier bug — so an owner who left the raid, or a placeholder stored under the old
