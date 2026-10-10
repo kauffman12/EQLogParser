@@ -8877,6 +8877,56 @@ menu closes, `DeriveEngine.ActiveChanged` has already dropped this pane's rows a
 `CloseMenu()` finds nothing pending. Without that ordering, closing the menu would announce a selection whose fights no longer exist,
 which is the same class of bug as announcing one behind an open menu.
 
+## The dropdown that did nothing: a repaint is an ask, not a call (2026-11)
+
+The report named the asymmetry, which is why it was findable: from a summary pane's right-click menu a verdict works every time — the
+cell changes, the summary refreshes, the fight list follows — while the **Type dropdown in Player/NPC Identity** "did nothing": picking Pet
+over a Player left the row reading Player, a second pick moved the cell and left the summary stale, and the calculator "fixed everything".
+
+The write was never the suspect. Both doors call `ClassificationCommands.ApplyVerdict`, both log an `identity cell:` line when they do, and
+identity-overrides.txt keeps whatever they wrote. What differs is that **the menu has nothing of its own to repaint**. This pane rebuilds
+itself from a census — a full classification pass over the capture — and until today that rebuild answered "one is already running" by
+returning:
+
+```csharp
+if (Interlocked.Exchange(ref _refreshInFlight, 1) == 1) return;   // doc comment: "harmless while one is running"
+```
+
+Not harmless. On a finished log nothing asks again, so the store held the operator's verdict while the grid went on showing what *used to be*
+true, and the repair was to click twice — the second ask finding the road clear. A busy flag whose answer to an explicit request is silence is
+the same defect `DeriveRequests` was written for on the derive lane ("the operator set a name as Pet while a pass happened to be running"),
+so this is its sibling, not a new idea: **an ask that arrives while one is running is delayed into exactly one follow-up**, which is what makes
+honouring it affordable when a live raid hands out passes twice a second — ten asks behind one build buy one re-run, not ten.
+
+Two questions had been conflated in that single flag, and separating them is the actual change:
+
+| Question | Who answers it | What ignoring it looks like |
+| --- | --- | --- |
+| May I build now? | `TryBegin` — one census at a time, an ask during one is remembered (`OwesRerun`) | "the dropdown did nothing the first time" |
+| Does this answer still describe the world? | `Invalidate()` on every operator write + `IsFresh(stamp)` before painting | the cell flips back to the old kind a second after the click |
+
+**A census that started before a write may not be the last word.** The water mark is stamped in `Reconcile` *before* either ask, so an
+auto-refresh that began 200 ms earlier cannot arrive afterwards and win; a declined answer re-owes the repaint rather than becoming a secret.
+The same check has to happen **again when a census held for an open editor is released**: `EditorHold` keeps the newest held build, and
+*newest* is not the same as *unwritten-underneath* — a verdict can land from another pane's menu while this pane's popup is holding a census,
+which is exactly the shape that paints Player over the Pet just written. `ClearRows` abandons both the run flag and the debt: no census of last
+night may paint tonight, and none is owed to a capture that closed.
+
+The popup helper got the second half of the report's plausible mechanisms, checked against what the retired Verified Players pane did (that
+dropdown was reported good): it declared its Popups in markup — content-sized, `Placement="Mouse"` — set the preselect there, and had no census
+hold to leak. `OpenCellPopup`, which this pane joined rather than re-implementing, used to attach `Closed` *from inside* `Opened`, so a popup that
+opened without raising `Opened` left the caller's release unrun forever — and here that release is what frees `EditorHold`, so **one** pencil click
+could leave every later census deferred and unapplied, i.e. a table that answers nobody. `Closed` is now wired before `IsOpen = true` (and `Opened`
+is the one-shot), and sizing happens *before* opening — with a zero skipped rather than written, because an unmeasured cell reports 0, some popups
+size themselves from markup, and a popup sized to nothing is a pencil that does nothing.
+
+**What is claimed and what is not**: the repaint law is pinned by six headless tests (`CensusRepaintTest`) — ask delayed rather than dropped, ten
+asks coalescing into one, a write making an in-flight census unpaintable, a held census re-checked at release, the dust settling on exactly one run
+carrying both writes, and a capture change owing nothing. The popup ordering ships as reasoning: `Opened`, `Closed` and a real drop-down need a live
+window, and Wpf.Test cannot raise those events honestly. To triage the next report from a log file, read the two voices that exist for it —
+`identity cell: type of X -> …` says the write happened, and `name census: asked while one runs; one follow-up is owed` says the repaint was delayed
+rather than lost.
+
 ## Say what a name is, from wherever you noticed it (2026-11)
 
 > **In one breath:** one `IdentityVerdictMenu` builds the "**Set <name> as ▸**" cascade for four panes out of

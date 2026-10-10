@@ -370,6 +370,24 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   Re-pointing `_typeEditRow` by name after a merge is NOT the fix (it saves the preselect, not the gesture). Sibling law: `FightTable`'s
   `_settle.MenuOpen`. Tests: `EditorHoldTest` (stray close can't park the count, intermediate close doesn't paint, abandon drops and un-latches) +
   Windows-only `ACensusWaitsForAnOpenCellEditorRatherThanYankingTheRowOutFromUnderIt`. DesignNotes.md → "A live pane must not repaint out from under an open editor".
+- **A repaint is an ask, not a call: busy means DELAYED, and a census older than a write may not paint** (2026-11, from "the identity table's dropdowns
+  do nothing; the summary menu works"): `NamesTable.Refresh` used to answer `Interlocked.Exchange(ref _refreshInFlight, 1) == 1` by returning, under a
+  comment calling that harmless — so an operator's verdict wrote identity-overrides.txt while the repaint vanished, and on a finished log nothing asked
+  again (the repair was to click twice). **`CensusRepaint`** (Core, the sibling of `DeriveRequests`) is now the only door: `TryBegin` allows one census and
+  REMEMBERS an ask arriving during it (ten asks buy exactly ONE follow-up); `Invalidate()` — stamped in `Reconcile` BEFORE the write's own asks — marks every
+  census started earlier unpaintable, because a busy flag cannot tell "an answer" from "an old answer", and the old one erases the click in front of the person
+  who made it; `Complete` hands back Fresh or Rerun and the debt is cleared by the run that PAYS it, so "is the list going to fix itself?" stays answerable.
+  **The stamp travels with a census held for an open editor** (`AcceptCensus(rows, stamp)` → `ReleaseHeldCensus` re-asks `IsFresh` at release): EditorHold keeps
+  the NEWEST held build, and newest ≠ unwritten-underneath — a verdict arriving from another pane's menu while this popup holds a census is exactly what paints
+  Player over the Pet just written; a refused paint owes another run, and `ClearRows` `Abandon()`s so no census of last night paints tonight. Two more ways that
+  one click died lived in `UiElementUtil.OpenCellPopup`, checked against the retired Verified Players pane the operator remembers working (markup popups,
+  content-sized at the mouse, no hold to leak): its release hook is now wired BEFORE `IsOpen = true` (it hung off `Opened`, so an unraised `Opened` left
+  `EditorHold` open forever → every later census deferred and never applied → a table answering nobody after ONE pencil click), and sizing happens before opening,
+  skipping a zero (an unmeasured cell reports 0, and a popup sized to nothing is a pencil that does nothing). The testable half is headless (`CensusRepaintTest`:
+  ask delayed not dropped, ten coalesce into one, a write unpaints an in-flight census, a held census re-checked at release, the dust settling on one run carrying
+  both writes, a capture change owing nothing); popup ordering ships as reasoning, since no windowless host raises `Opened` honestly. Triage from a log:
+  `identity cell: type of X -> …` says the write happened; `name census: asked while one runs; one follow-up is owed` says the repaint was delayed, not lost.
+  DesignNotes.md → "The dropdown that did nothing: a repaint is an ask, not a call".
 - **A manual verdict FORGETS then ASSERTS, through one door** (2026-10-09: "if im making a manual decision id like to remove all
   previous knowledge and accept what im saying … my rule would override"): `ClassificationCommands.ApplyVerdict(name, kind, petOf)` is
   the ONLY write behind the Names window's Type cell, the Set-as cascade and `Assign X as Pet of Y` (the thin store-level setters are gone —
