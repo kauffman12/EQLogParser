@@ -658,14 +658,24 @@ namespace EQLogParser
           foreach (var entry in ledger.RosterEntries())
           {
             var name = entry.Key;
-            if (_verifiedPlayers.ContainsKey(name)) continue;
 
             /*
-             * init:true, always. This is a load, not a sighting: the stamp on the row is the last time anything saw this
-             * name, and overwriting it with today's date is exactly how petmapping.txt aged a whole file out in one
-             * startup (docs/DesignNotes.md → "A load is not a sighting").
+             * Membership and class are TWO statements on one ledger row, and only the first is conditional. The pet loop above makes
+             * every owner a member — and an owner is usually a roster member with a class of their own — so skipping the whole row for a
+             * name already in the list dropped its saved class: a roster `Bard=…,Class=Bard` who also owns a summon came back from Init
+             * with no class at all, leaving the Class cell empty with nothing to fall back to. The class is applied on every row now;
+             * within an Init this map has no other writer for these names, so last-wins here is the row's own answer.
              */
-            AddVerifiedPlayer(name, entry.Value.SeenAtS, true);
+            if (!_verifiedPlayers.ContainsKey(name))
+            {
+              /*
+               * init:true, always. This is a load, not a sighting: the stamp on the row is the last time anything saw this
+               * name, and overwriting it with today's date is exactly how petmapping.txt aged a whole file out in one
+               * startup (docs/DesignNotes.md → "A load is not a sighting").
+               */
+              AddVerifiedPlayer(name, entry.Value.SeenAtS, true);
+            }
+
             SetDefaultPlayerClass(name, entry.Value.Class, true);
           }
         }
