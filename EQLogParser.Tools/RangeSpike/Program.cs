@@ -1,10 +1,15 @@
+/*
+ * Annotations only (this project builds Nullable=disable, like Core): the spike speaks in optional strings because a
+ * census answer legitimately has no name. Same convention as EQLogParser.Core.
+ */
+#nullable enable annotations
+
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 
-using EQLogParser;
 using EQLogParser;
 
 /*
