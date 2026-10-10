@@ -72,7 +72,12 @@ namespace EQLogParser
     {
       < 0 => "whole-file",
       0 => "follow-end",
-      _ => $"last-{minBack / 60}min"
+      /*
+       * `minBack` is MINUTES the whole way through: LogReader's third state is "read back N minutes by timestamp", and MainWindow
+       * passes the settings value straight in. Dividing by 60 here printed `last-0min` for a quarter-hour open (found while reading the
+       * diagnostic line for another question) — a log word that says zero while the door says fifteen is how a diagnosis goes wrong.
+       */
+      _ => $"last-{minBack}min"
     };
 
     /// <summary>Starting capacity for the damage table, or the table's own default when there is nothing to size from.</summary>

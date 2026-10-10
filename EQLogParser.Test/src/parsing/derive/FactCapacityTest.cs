@@ -100,7 +100,9 @@ namespace EQLogParser
       // The words these three states print, asserted because the log line is how a field run diagnoses a session.
       Assert.AreEqual("whole-file", FactCapacity.ModeWord(-1));
       Assert.AreEqual("follow-end", FactCapacity.ModeWord(0));
-      Assert.AreEqual("last-15min", FactCapacity.ModeWord(15 * 60), "the menu hands seconds, the word says minutes");
+      Assert.AreEqual("last-15min", FactCapacity.ModeWord(15),
+        "LogReader turns this number into DateTime.Now.AddMinutes(-minBack), so a quarter-hour open is 15 and NOT 900; "
+        + "the first version of this assertion divided by 60 and printed last-0min for every timed open");
     }
 
     [TestMethod]
