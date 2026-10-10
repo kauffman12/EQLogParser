@@ -10444,6 +10444,33 @@ case now has its own test (`ARuleThatDemotesANameTheRosterClaimsStillFlags`).
 possessive word regardless of what the owner now reads (Jondolar: raid total correctly −1,386,760,156 while an 8,582,650
 `Jondolar +Pets` row stayed). That is a separate question — whether an NPC's summons belong on a raid board at all.
 
+### What a manual verdict outranks, and what it cannot
+
+The operator's sentence (2026-11), after a review asked whether `FightProjection.SideAt` honours overrides: *"the point of manually
+allowing the user to Set as NPC or set as anything is to override everything else … about charm i agree that we want the temporal
+flips so it is the exception … type gives manual precedence. class uses manual as a default if the log doesnt say anything better as
+class can flip. and charm really has nothing to do with manual at all and needs to be dynamic all the time."* That is the law, and it is
+three statements about three different questions rather than one ranking:
+
+- **Kind (the Type cell) — manual wins outright.** `IdentityOverrideStore` is consulted inside the rule book at
+  `RuleStrength.Manual` (1000, over `Certain` = 100), so it outranks every claim a pass can make and nothing but another operator
+  write outranks it. This is what "override everything else" means, and it is what the cell reads.
+- **Class — manual is a FALLBACK, never a ceiling.** Class is per-second evidence read against the fact clock
+  (`GetPlayerClass(name, t)`, confidence windows in `PlayerRegistry`), because a real reclass happens inside one night; an operator's
+  typed class answers "what should I show when this log has not said?", so `Recalculate` clears the fallback lane
+  (`ForgetDefaultClass`) while this capture's cast-learned windows stay standing. See **The class precedence law**.
+- **Temporal intervals — not in scope for a manual verdict at all.** A charm window (`R9-charm`) or an affiliation interval says what
+  a name did *during these seconds*; a manual verdict has no time axis, so it cannot speak to it and does not try. `SideAt` therefore
+  keeps consulting charm/affiliation intervals independently of overrides — reproduced both ways: manual **NPC** plus a pet-affiliation
+  interval routes that name's facts raid-side for the interval, and manual **Player** plus a charm window routes them NPC-ward while the
+  Type cell still reads Player. Both are intended. The displayed verdict answers "what is this name"; the routing answers "who was it
+  fighting for in this second", and only the first one is an operator's to decide.
+
+Consequences worth holding: do **not** add a manual-override term to `FightProjection.SideAt`, `OwnerOf` or any interval lookup — the
+two shapes above are the design, not a leak, and "fixing" them would let one static click erase a whole window's worth of what the log
+watched happen. The Type cell and the board may legitimately disagree for the seconds inside a flip, which is why the row's status word
+(`dead, charmed`, `charmed`) and `CharmEndReason` exist: the flip says so on the row that it happened.
+
 ## A live pane must not repaint out from under an open editor
 
 Field report (2026-10-09): *"after changing a player to NPC from the damage summary I wasn't able to change the type or reset claim
