@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reflection;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -150,7 +149,15 @@ namespace EQLogParser
 
     /// <summary>The list itself, so a test can see whether a census actually landed rather than being held behind an open editor.</summary>
     internal ObservableCollection<NameRow> RowsForTest => _rows;
-    private int _refreshInFlight;
+
+    /*
+     * One census at a time; an ask that arrives during one is OWED rather than lost; and no census may paint an answer older than the last
+     * operator write (CensusRepaint). This replaces a bare `Interlocked.Exchange(ref _refreshInFlight, 1) == 1 → return`, which is how "the
+     * dropdown did nothing the first time" happened: the verdict went into identity-overrides.txt, the repaint that would have shown it met a
+     * busy flag and evaporated, and on a finished log nothing ever asks again — so the store and the screen disagreed until a second click, or
+     * the calculator, happened to find the road clear.
+     */
+    private readonly CensusRepaint _repaint = new();
 
     // The engine this pane follows, and the floor between automatic rebuilds (see EventsDerived). An explicit Refresh()
     // — menu, first show, after a write — never waits.
@@ -316,11 +323,16 @@ namespace EQLogParser
       // The capture this pane was reading is gone, so a census queued behind an open editor describes a log nobody is looking at.
       Editors.Abandon();
       ForgetRecalc();
+      _repaint.Abandon();
       _rankOnApply = true;
       _rows.Clear();
     }
 
-    /// <summary>Rebuild the list from the captured facts. Safe to call from anywhere; harmless while one is running.</summary>
+    /// <summary>
+    /// Rebuild the list from the captured facts. Safe to call from anywhere, and never a no-op: an ask that lands while a census is already
+    /// running is remembered and paid by one follow-up (CensusRepaint). "Harmless while one is running" was the doc comment here, and what it
+    /// called harmless is exactly the bug that comment helped hide.
+    /// </summary>
     public void Refresh()
     {
       var session = DeriveEngine.Active;
@@ -331,24 +343,42 @@ namespace EQLogParser
         return;
       }
 
-      if (Interlocked.Exchange(ref _refreshInFlight, 1) == 1) return;
+      // Busy is not "no": the ask is remembered and paid by one follow-up census. Logged because this is the seam where an operator's click
+      // used to vanish, and "the cell never changed" should be answerable from eqlogparser.log rather than by guessing at it.
+      if (!_repaint.TryBegin(out var stamp))
+      {
+        Log.Debug($"name census: asked while one runs; one follow-up is owed (gen {stamp})");
+        return;
+      }
 
       _ = Task.Run(() =>
       {
         ClassificationReport? census = null;
         try { census = session.BuildNameCensus(); }
         catch (Exception ex) { Log.Error("Name census failed", ex); }
-        finally { Interlocked.Exchange(ref _refreshInFlight, 0); }
 
         Dispatcher.BeginInvoke(() =>
         {
+          var outcome = _repaint.Complete(stamp);
+
           /*
            * The answer may land after the capture moved on: this log closed and another opened (or just this one
            * closed) is exactly when a stale list is most likely to be applied LAST. The session that built it must
-           * still be the active one - not merely "a" session.
+           * still be the active one - not merely "a" session - and nothing is owed to a closed capture either:
+           * ClearRows abandoned the debt, and a follow-up here would repaint a grid that belongs to another file.
            */
           if (!ReferenceEquals(session, DeriveEngine.Active)) return;
-          Apply(census);
+
+          /*
+           * A census that STARTED before an operator's write describes a world that no longer exists. Showing it is how a name "stays" the kind
+           * it used to be one second after somebody told it otherwise, so it is declined rather than painted-and-then-corrected: the follow-up
+           * below reads the stores as they are now.
+           */
+          if (census is not null && _repaint.IsFresh(stamp)) Apply(census, stamp);
+
+          // One hop and only one: RERUN means asks piled up behind this build or a write landed under it. Either way the next census is taken
+          // from the world as it now is, which is what makes converging cheap instead of looping.
+          if (outcome == CensusRepaint.Outcome.Rerun) Refresh();
         });
       });
     }
@@ -498,21 +528,44 @@ namespace EQLogParser
 
     private void EventsThemeChanged(string _) => ApplyColumnWidths();
 
-    private void Apply(ClassificationReport? census)
+    private void Apply(ClassificationReport? census, long stamp)
     {
       if (census is null) return;
 
       // An EMPTY census still lands: "this capture has no names" clears the list, and dropping it would keep last night's rows.
-      AcceptCensus(census.Rows);
+      AcceptCensus(census.Rows, stamp);
     }
 
     /// <summary>A census arriving from the derive: fold it in now, or hold it until the open cell editor closes. True when it painted.</summary>
-    internal bool AcceptCensus(IReadOnlyList<ClassificationReport.Row> rows)
+    internal bool AcceptCensus(IReadOnlyList<ClassificationReport.Row> rows) => AcceptCensus(rows, _repaint.Generation);
+
+    /*
+     * The stamp is a census's birth certificate: it says which world these rows describe, and it has to travel WITH a held build. Reason:
+     * `EditorHold` keeps the NEWEST held census, and newest is not the same as unwritten-underneath — a verdict can arrive from another
+     * pane's right-click menu while this pane's own popup is open, so releasing a pre-write census at that moment is the silent "I picked Pet
+     * and it stayed Player". A census handed in from outside (a test, or any future caller) carries the CURRENT generation, which is the
+     * honest answer for rows whose age nobody recorded.
+     */
+    private bool AcceptCensus(IReadOnlyList<ClassificationReport.Row> rows, long stamp)
     {
-      if (Editors.Defer(() => MergeInto(rows))) return false;
+      if (Editors.Defer(() => ReleaseHeldCensus(rows, stamp))) return false;
 
       MergeInto(rows);
       return true;
+    }
+
+    /// <summary>A held census released by the last editor closing. Stale means a write landed while it waited: refuse it and ask again.</summary>
+    private void ReleaseHeldCensus(IReadOnlyList<ClassificationReport.Row> rows, long stamp)
+    {
+      if (!_repaint.IsFresh(stamp))
+      {
+        Log.Debug("name census: the build held for an editor predates an operator's write - refused, and a repaint is owed");
+        _repaint.OwePaint();
+        Refresh();
+        return;
+      }
+
+      MergeInto(rows);
     }
 
     private void MergeInto(IReadOnlyList<ClassificationReport.Row> rows)
@@ -810,6 +863,13 @@ namespace EQLogParser
       // Same debt IdentityVerdictMenu.Write records: the census below repaints from its own classification, but the fight list and
       // the boards need the pass — and that pass must not be declined as if it were traffic (UnaskedRefresh).
       UnaskedRefresh.OweGesture("identity edit");
+
+      /*
+       * Water mark FIRST, and deliberately before either ask: any census already building read the stores BEFORE this write, and after this
+       * line nothing may paint its answer as the last word. Without it the pane converges on a race — an auto-refresh that started 200 ms
+       * before the click finishes a moment later, and "the dropdown did nothing" is what that looks like from a chair.
+       */
+      _repaint.Invalidate();
 
       DeriveEngine.Active?.RederiveAsync();
       Refresh();
