@@ -270,6 +270,9 @@ namespace EQLogParser
 
     private void EventsActiveChanged()
     {
+      // A capture change also takes back any in-flight notice: last night's calculator click may not own a row of this log.
+      ForgetRecalc();
+
       if (IsVisible) FollowSession();
       else UnfollowSession();
     }
@@ -312,6 +315,7 @@ namespace EQLogParser
     {
       // The capture this pane was reading is gone, so a census queued behind an open editor describes a log nobody is looking at.
       Editors.Abandon();
+      ForgetRecalc();
       _rankOnApply = true;
       _rows.Clear();
     }
@@ -880,6 +884,16 @@ namespace EQLogParser
       _recalcFloor?.Stop();
       _recalcFloor = null;
       FindRow(name)?.Recalculating = false;
+    }
+
+    /// <summary>Drop an in-flight "Recalculating…": its name belongs to a capture that is no longer open.</summary>
+    private void ForgetRecalc()
+    {
+      _recalcName = null;
+      _recalcHardCap?.Stop();
+      _recalcHardCap = null;
+      _recalcFloor?.Stop();
+      _recalcFloor = null;
     }
 
     private void OnRecalcFloorTick(object? sender, EventArgs e)
