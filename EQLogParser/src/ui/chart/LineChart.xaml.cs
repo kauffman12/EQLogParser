@@ -203,7 +203,10 @@ namespace EQLogParser
             if (ChartUpdateQuestion.IsRepeat(key, _lastUpdateKey, _hasAppliedData))
             {
               _skippedDuplicate = true;
-              Log.Info($"chart.update skipped: {GetType().Name} was asked the question it just answered "
+              // Debug, not Info: a skip is the healthy case (a repeated gesture, a duplicate announce), so printing it at
+              // all costs nothing and printing it in a player's log would teach them to wonder. The line exists for the
+              // "three asks arrived" vs "one ask, three builds" question, which is asked with Debug on.
+              Log.Debug($"chart.update skipped: {GetType().Name} was asked the question it just answered "
                        + $"(data generation {e.DataGeneration}, nothing rebuilt since)");
             }
             else

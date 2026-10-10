@@ -131,74 +131,10 @@ public sealed class StatsBuildTraceTest
   }
 
   /*
-   * What an ordinary log holds. The full line for every build used to print at Info, which on a live pull is several lines a
-   * second restating one door - thousands of identical sentences per raid night, and the reader still has to scan them to find
-   * the place where the door CHANGED. So a build's line is Debug, and Info carries the door's first appearance plus a periodic
-   * restatement with what was held back. Pinned here because the whole point is that the signal survives the demotion: a door
-   * that started building is always visible without Debug, and a repetition never floods.
+   * Where the lines go is not tested here, because nothing in this suite captures logs (the app's own pattern: levels are
+   * decided once from settings.txt in App.SetLoggingLevel and read, never intercepted). The law - every build's line is a
+   * Debug line, and the only things of this class that reach an ordinary log are the two anomaly Warns pinned by their
+   * counters above - lives in the StatsBuildTrace header and docs/DesignNotes -> "Name every door". A line drifting back to
+   * Info is found by grepping a normal session's EQLogParser.log, which is also how the original flood was found.
    */
-  [TestInitialize]
-  public void Setup() => _interval = StatsBuildTrace.EchoIntervalSeconds;
-
-  [TestCleanup]
-  public void Cleanup() => StatsBuildTrace.EchoIntervalSeconds = _interval;
-
-  private double _interval;
-
-  [TestMethod]
-  public void ARepeatingDoorEchoesOnceAndCountsWhatItHeldBack()
-  {
-    StatsBuildTrace.EchoIntervalSeconds = 1_000_000;   // no clock re-echo in this test; only the door may speak
-
-    for (var i = 1; i <= 3; i++)
-    {
-      var handle = StatsBuildTrace.Begin("damage", $"derived [SelectCommand] stamp {i} fights {i}");
-      StatsBuildTrace.End(handle);
-    }
-
-    Assert.AreEqual("derived [SelectCommand]", StatsBuildTrace.LastEchoOf("damage"),
-      "the door word - not the numbers that move within it - is what the log echoes");
-    Assert.AreEqual(2, StatsBuildTrace.SuppressedSinceEcho("damage"),
-      "the two repeats were held back at Debug rather than printed again");
-
-    // Nothing is lost by holding them: the last build's own line still reads with its own counters.
-    var line = StatsBuildTrace.LastFinishedLineOf("damage");
-    Assert.IsNotNull(line);
-    StringAssert.Contains(line, "fights 3", "the suppressed build's full line is still what a Debug reader retrieves");
-  }
-
-  [TestMethod]
-  public void ANewDoorIsReportedImmediatelyEvenIfTheLastOneWasLoud()
-  {
-    StatsBuildTrace.EchoIntervalSeconds = 1_000_000;
-
-    var first = StatsBuildTrace.Begin("healing", "derived [SelectCommand] stamp 1 fights 1");
-    StatsBuildTrace.End(first);
-    var repeat = StatsBuildTrace.Begin("healing", "derived [SelectCommand] stamp 2 fights 2");
-    StatsBuildTrace.End(repeat);
-
-    var other = StatsBuildTrace.Begin("healing", "healing pane [ContentLoaded]");
-    StatsBuildTrace.End(other);
-
-    Assert.AreEqual("healing pane [ContentLoaded]", StatsBuildTrace.LastEchoOf("healing"),
-      "a door nobody has seen for that board gets its line right away - this is the one the reader is waiting for");
-    Assert.AreEqual(0, StatsBuildTrace.SuppressedSinceEcho("healing"), "counting starts over for the new door");
-  }
-
-  [TestMethod]
-  public void ASilentDoorStillRestatesItselfOnItsOwnClock()
-  {
-    // A door that keeps building for an hour must not vanish from a log the way it would with pure change-detection:
-    // the periodic line, with its suppressed count, is what proves the app was alive and building all along.
-    StatsBuildTrace.EchoIntervalSeconds = 0;
-
-    var a = StatsBuildTrace.Begin("tanking", "derived [SettleTick] stamp 1 fights 1");
-    StatsBuildTrace.End(a);
-    Assert.AreEqual(0, StatsBuildTrace.SuppressedSinceEcho("tanking"));
-
-    var b = StatsBuildTrace.Begin("tanking", "derived [SettleTick] stamp 2 fights 2");
-    StatsBuildTrace.End(b);
-    Assert.AreEqual(0, StatsBuildTrace.SuppressedSinceEcho("tanking"),
-      "the interval elapsed, so the second build echoed instead of counting up");
-  }
 }

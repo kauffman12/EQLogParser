@@ -875,11 +875,12 @@ namespace EQLogParser
 
       /*
        * One line per ask, whatever the gate decided, because "the damage grid filled three times" is a question about DOORS and this is
-       * the only place that sees both the door (which the pane names) and what the single-flight rule made of it. Info rather than Debug:
-       * asks are one-per-gesture, not per frame, and a player reporting multiple builds should not have to know how to turn Debug on.
-       * Asks from the panes' own doors do NOT come through here — they call the builders directly, and StatsBuildTrace is what names them.
+       * the only place that sees both the door (which the pane names) and what the single-flight rule made of it. Debug rather than Info:
+       * asks are one-per-gesture and the line is diagnostic trace, not something a player needs to see — the boards on screen answer for
+       * themselves, and EQLogParser.log stays clean unless Debug=True. Asks from the panes' own doors do NOT come through here — they
+       * call the builders directly, and StatsBuildTrace is what names them.
        */
-      Log.Info($"board ask [{request.Reason}]{(request.Detail is null ? string.Empty : $" {request.Detail}")}"
+      Log.Debug($"board ask [{request.Reason}]{(request.Detail is null ? string.Empty : $" {request.Detail}")}"
                + $": {request.Fights.Count} fight(s), stamp {request.ContentStamp}, tank type {tankingDamageType}"
                + $" -> {outcome}");
     }
@@ -957,8 +958,8 @@ namespace EQLogParser
 
         var records = input.Fights.Sum(static f => f.DamageBlocks.Sum(static b => b.Actions.Count));
         var tankRecords = input.Fights.Sum(static f => f.TankingBlocks.Sum(static b => b.Actions.Count));
-        // Debug, not Info: `board ask [reason] -> outcome` above already tells the story at the level a player's log
-        // keeps, and this restates the same event with counters. It stays because those counters are what a Debug run
+        // Debug, like the `board ask [reason] -> outcome` line above: together they restate one click with counters,
+        // and that is exactly the level a player's log does NOT carry. It stays because those counters are what a Debug run
         // reads when a board's numbers look wrong (how many records reached the builders, how long materialize took).
         Log.Debug($"Derived damage summary [{request.Reason}]: {input.Fights.Count} fight(s), {records:N0} record(s), "
                  + $"{tankRecords:N0} taken"

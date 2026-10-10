@@ -433,7 +433,7 @@ select-all on the UI thread, and only `SummaryBuildGateTest` (which controls whe
 difference. A throwing build returns the gate to idle (`finally`) — a latched runner reads as "the stats froze", the same law as
 the timer overlay's `_isRendering`. What the gate does NOT do is merge two genuinely different questions: a select-all whose
 first announcement saw a partial selection, or a pull moving content under a whole-capture selection, still builds twice —
-serialized, once each, and `Log.Debug("summary build Queued|SkippedSame: …")` next to the `Derived damage summary:` Info lines
+serialized, once each, and `Log.Debug("summary build Queued|SkippedSame: …")` next to the `Derived damage summary:` Debug line
 says which happened.
 - **Every door into the boards names itself, and overlap warns** (2026-11): a board can be produced by the fight list's selection
 (through `MainWindow` and `SummaryBuildGate`) **and** by each summary pane's own triggers — a time-window or damage-type dial, a toolbar
@@ -442,7 +442,11 @@ meter's per-refresh `DerivedTotals` scopes — and **none of those go through th
 doors: `GenerateStatsOptions.Source` carries the door in the caller's own words on EVERY `GenerateStatsOptions`, `StatsBuildTrace` numbers each
 build process-wide and prints `stats build #7 damage full: 3410 ms | from derived [SelectCommand] | 159.6 MB allocated | …` (bytes beside
 milliseconds since `d1da38c3`, which is what made a 72 MB histogram findable in one grep instead of one gcdump), and a call site that leaves `Source` null
-prints **UNLABELLED** and warns — an anonymous pass over two million records is exactly what gets defended as "probably necessary". Two laws
+prints **UNLABELLED** and warns — an anonymous pass over two million records is exactly what gets defended as "probably necessary".
+**The levels are part of the design**: every per-build / per-ask / per-skip / per-open trace line of this class (`stats build #N …`,
+`board ask [reason] …`, `chart.update skipped`, `load: read loop #N`) is a **Debug** line — a player's `eqlogparser.log` carries none of it
+without `Debug=True`; what stays visible is the two anomaly warns and the one-line-per-session anchors (`capture: started`,
+`derive: first pass`, `fight list: N row(s) painted`), which are per-capture facts, not a stream (docs/DesignNotes.md → "Name every door"). Two laws
 inside the trace: **nesting on one thread is not overlap** (`HealingStatsBuilder.RebuildTotalStats` calls `BuildTotalStats` under its own lock;
 warning on ordinary work is how a real warning stops being read — pinned both directions) and **an unclosed handle hides the next overlap**, so
 builders wrap their bodies in try/finally via traced wrappers rather than instrumenting inside the `lock`. On the pane side an announce carries

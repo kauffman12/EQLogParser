@@ -7243,28 +7243,30 @@ which is now possible because every door names itself:
 - `GenerateStatsOptions.Source` carries the door, in the caller's own words; a call site that leaves it null prints **UNLABELLED** and
   warns, so an anonymous pass over two million records cannot be defended as "probably necessary".
 - `StatsBuildTrace` numbers every build process-wide, times it, prints `stats build #7 damage full 3410 ms | from derived [SelectCommand] …`
-  (Debug for repeats, Info for a door's first appearance - see the levels law below), and **warns when a build starts while another is inside** — naming the other one. Nesting on the same thread does not count: healing's
+  (every line at Debug - see the levels law below), and **warns when a build starts while another is inside** — naming the other one. Nesting on the same thread does not count: healing's
   `RebuildTotalStats` calls `BuildTotalStats` under its own lock, and calling that an overlap would put a warning on ordinary work, which is
   how a real one stops being read (`StatsBuildTraceTest` pins both directions).
 - The pane says why it announced, through `BoardRequest.Reason` — `SelectCommand`, `MenuClose`, `SettleTick`, `SnapshotSwap`, `RowEdited`,
   `ContentMoved`, `Settings`, `Manual` — and `FightTable` logs a deduped announce at Debug rather than swallowing it, because "three asks
   arrived" and "one ask, three builds" look identical from the grid.
-- `MainWindow` logs one Info per ask with what the gate decided: `board ask [SettleTick] … -> Started|Queued|SkippedSame`.
+- `MainWindow` logs one Debug line per ask with what the gate decided: `board ask [SettleTick] … -> Started|Queued|SkippedSame`.
 
 Read three lines like that together and the triple is self-diagnosing: **same door twice** → a duplicated trigger; **different doors, one of
 them a pane** → the panes bypassing the single-flight rule (they still do); **different stamps on the same door** → the capture genuinely moved
 under the selection, which is the case that must rebuild.
 
-**The levels are part of the design, because a metric stream is not a diagnosis (2026-11).** Every build line still exists; only a door's
-FIRST appearance prints at Info. A repeat of the same door (same reason word, whatever its stamp and fight count) goes to Debug and counts up,
-and the next echo carries `+N earlier build(s) of this door logged at Debug only`, with one forced echo every 10 s so a long-lived door cannot
-vanish from the log the way pure change-detection would hide it (`StatsBuildTraceTest` pins the three behaviours: repeats counted, a new door
-reported at once, the clock re-asserting a silent one). Before this the trace printed at Info per board per build: a selected encounter
-refreshing at the derive cadence is three boards at up to two passes a second - thousands of identical sentences in one raid night - and the
-reader had to scan them to find the line where the door changed. `MainWindow`'s `Derived damage summary [...]` moved to Debug for the same
-reason; it restates `board ask`, which stays Info because it carries the gate's decision, and per-capture anchors stay Info too:
-`capture: started`, `derive: first pass`, and the new **`fight list: N row(s) painted`** - the moment a reader could have clicked, which is the
-timestamp every "it built three times when I clicked once" report needs to be readable at all.
+**The levels are part of the design, because a metric stream is not a diagnosis (2026-11; demoted in full the same month).** The trace
+printed at Info per board per build: a selected encounter refreshing at the derive cadence is three boards at up to two passes a second -
+thousands of identical sentences in one raid night. A first pass thinned it (a line when the door changed, plus a periodic echo carrying
+`+N earlier build(s) of this door logged at Debug only`) - and the thinning itself still left a metric stream in an ordinary log. The rule is
+now simpler than either: **every per-build, per-ask, per-skip and per-open line of this class is a Debug line**, so `settings.txt` `Debug=True`
+is the door into all of it (`stats build #N …`, `board ask [reason] … -> outcome`, `chart.update skipped`, `load: read loop #N on thread …`,
+`Derived damage summary […]`, the gate's `summary build Queued|SkippedSame`). The echo machinery went with the demotion - it thinned a stream
+that no longer reaches an ordinary log, which is dead weight pinned by tests for a defect that cannot happen. What DOES reach a player's log:
+the two anomaly **warns** (a door that did not name itself, two builds running over each other - defects, not metrics, and both rare enough
+that seeing one is the point) and the per-capture **anchors**, which are one line per session, not a stream: `capture: started`,
+`derive: first pass`, and `fight list: N row(s) painted` (once per capture) - the moment a reader could have clicked, which is the timestamp
+every "it built three times when I clicked once" report needs to be readable at all.
 
 **The recipe when the field reports double builds**: set `Debug=True` in `settings.txt` (that raises log4net's root to Debug *and* implies
 `PerfReport`, so the beat lines come with it), reproduce twice - once immediately after a load, once a minute later - and send

@@ -233,13 +233,14 @@ namespace EQLogParser
 
         _ready = true;
 
-        // One line per open, and it is the answer to "is the load running on my UI thread?". Before this class was made
-        // context-free it named WPF's synchronization context here; the honest answer now is "none".
+        // One line per open, at Debug (a player's log never carries it; the session contract lines `capture: started` /
+        // `derive: first pass` stay at Info), and it is the answer to "is the load running on my UI thread?". Before this
+        // class was made context-free it named WPF's synchronization context here; the honest answer now is "none".
         //
         // It names WHICH reader too, because that was the other unanswerable question: closing one log and opening another leaves two of
         // these lines in one file, and "four lines for two sessions" reads as a reader that will not stop. An ordinal plus the file makes
         // each line belong to someone — which is also what tells a leftover reader from the one you just started.
-        Log.Info($"load: read loop #{Interlocked.Increment(ref _readersStarted)} on thread "
+        Log.Debug($"load: read loop #{Interlocked.Increment(ref _readersStarted)} on thread "
                  + $"{Environment.CurrentManagedThreadId}, sync context = "
                  + $"{SynchronizationContext.Current?.GetType().Name ?? "none"} | {Path.GetFileName(FileName)}"
                  + $" | {FactCapacity.ModeWord(minBack)} from {origin}");
