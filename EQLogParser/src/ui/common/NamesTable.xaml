@@ -100,7 +100,8 @@
           Name, with the pane's one button — the calculator (2026-11). It is where the take-back lives now that it stopped being a
           dropdown entry: a list of ANSWERS should not carry a verb whose honest outcome is often an identical cell, and an operator who
           cannot see the control cannot call it dead. Clicking forgets every stored belief about this name — override, ledger row,
-          registry claims, class — and lets this capture's own lines answer again (ClassificationCommands.Recalculate); the word under the
+          registry claims, and the stored fallback class (this capture's own cast-learned windows stay — kind is static, class is
+          live evidence) — and lets this capture's own lines answer again (ClassificationCommands.Recalculate); the word under the
           icon reads "Recalculating…" until the pass that answers the click has landed and been shown.
         -->
         <syncfusion:GridTemplateColumn HeaderText="Name" MappingName="Name" Width="190">

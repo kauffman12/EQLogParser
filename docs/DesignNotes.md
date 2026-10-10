@@ -10977,15 +10977,18 @@ while the wide take-back lived one column over — two controls both reading "re
    `IdentityVocabularyTest.NoDropdownEntryWritesUnknownTheTakeBackIsAClick` (was `ResetIsTheUnknownKindRatherThanASixthType`)
    and `ARowOffersOnlyTheKindsItsNameAllows`.
 2. **The take-back is one click, on a calculator icon in the Name column**, wired to
-   `ClassificationCommands.Recalculate(name)` = `Forget` + `ApplyVerdict(name, Unknown)` + the new `PlayerRegistry.ForgetClass`.
-   The class is the half the old door never had: the ledger row carried it, but nothing in the dropdown path ever called
-   `ForgetClass`, so tonight's cast-learned window survived a reset and reasserted itself — "the last log showed me" is exactly
-   what the operator asked to be forgotten. `ForgetClass` clears **both** class lanes (default + learned windows, case-insensitive
-   maps) for one name only; a kind verdict (`Set as …`) deliberately does not touch them, because a raider's ten thousand cast
-   lines are still in the capture and a click about *what a name is* must not blank what they prove. Pinned by
-   `RecalculateIdentityTest` (every lane seeded the way its real writer writes it, all gone after one click; no negative entry of
-   any kind written — `TryGet` false, not an Unknown row — and a re-claim lands as for a name never seen) and by the old
-   `TakingAClaimBackTakesTheLegacyMemoryWithIt`, which now pins the door the click goes through.
+   `ClassificationCommands.Recalculate(name)` = `Forget` + `ApplyVerdict(name, Unknown)` + the new `PlayerRegistry.ForgetDefaultClass`.
+   The class half follows the split the operator stated: **kind is a static verdict that does not change inside a log; class is
+   dynamic per-second evidence** (cast-learned windows read against the fact clock by `GetPlayerClass(name, t)`, and it changes
+   often in the same log file) **with the set-default class as fallback only** — the word a read lands on when no window answers.
+   So the calculator takes back the FALLBACK lane (the players.txt row, the pencil-typed default: memory that would shadow what
+   this log says), and it is the ONLY thing that does; the capture's own windows survive even it, because they ARE "what the current
+   log thinks" and retire with the capture on their own. A kind verdict (`Set as …`) overrides every *identity* belief — that is its
+   whole purpose, at Manual (1000) over the rules and memory — but touches NEITHER class lane, because a click about what a name IS
+   is not an opinion about its class. Pinned by `RecalculateIdentityTest` (every lane seeded the way its real writer writes it; the
+   fallback gone after one click while the per-second window read still lands; no negative entry of any kind written — `TryGet` false,
+   not an Unknown row — and a re-claim lands as for a name never seen) and by the old `TakingAClaimBackTakesTheLegacyMemoryWithIt`,
+   which now pins the door the click goes through.
 3. **The Owner list holds valid owners only** (`PetOwnership.Choices` drops its trailing entry): a row whose answer is nobody
    opens it *blank* — there is no "what it says" to preselect, and every real name in the list is a change by construction, so
    the handler's no-op guard can never mistake a placeholder for one. `IsClear` survives as the vocabulary question ("does this

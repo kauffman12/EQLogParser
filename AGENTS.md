@@ -818,12 +818,14 @@ declare without `?`; add the directive only when the whole file is meant to hold
   operator's field sentence names: its honest outcome — memory gone, capture answers again, often an **identical cell** — reads as a dead button
   inside a list of ANSWERS, so the verb moved beside its subject where a click can be seen (the row reads `Recalculating…` while it runs:
   `RecalcOverlay`, floor → pass landed → hard cap). `Recalculate` = `Forget` + `ApplyVerdict(name, Unknown)` +
-  **`PlayerRegistry.ForgetClass`** — the class is the half the old door never had: the ledger row carried it, but nothing in the dropdown path
-  ever called `ForgetClass`, so tonight's cast-learned window survived a reset and reasserted itself, and "the last log showed me" is exactly what
-  was asked to be forgotten. The calculator is the *only* unset, so "isn't there already an option to clear the name?" is answered by that one
+  **`PlayerRegistry.ForgetDefaultClass`** — the stored FALLBACK class is the half the old door never had (the players.txt row, the pencil-typed
+  default: memory that would shadow what this log says). The capture's own cast-learned class WINDOWS stay, because of the kind/class split the
+  operator stated: **kind is a static verdict that does not change inside a log; class is dynamic per-second evidence (windows read against the fact
+  clock, `GetPlayerClass(name, t)`) with the default as fallback only** — so "purely going to show what the current log thinks" includes the class
+  THIS log learned and excludes last night's. The calculator is the *only* unset, so "isn't there already an option to clear the name?" is answered by that one
   icon (plus `Remove` on the roster) and by nothing else, and the distinction stays the law: **it removes MEMORY, never evidence.** It clears the
   operator's row, the players.txt-lineage claims, this server's older-log verdict (with the roster bit and class on that ledger row), any saved
-  summon-owner pair and both class lanes — then `RederiveAsync` replays the rule book over THIS capture, which forgetting cannot touch. So a
+  summon-owner pair and the fallback class — then `RederiveAsync` replays the rule book over THIS capture, which forgetting cannot touch. So a
   memory-fed name visibly drops (to *Not Placed*, or off the list), while a name the log itself identifies — `npcs.txt`, a ``X`s pet`` spelling, a
   `R24-petslot` defender, R15's heal crowd, R7's graph — **comes back on the next pass with the same kind and the same Why word**, which is the
   designed outcome of a take-back rather than a dead button. Overruling the capture is the *other* gesture: pick a kind, which rides at
@@ -845,10 +847,11 @@ name legacy mis-named — `players.txt` has no writer and its importer refuses a
 a name's past is a capture that watches it act again. Three consequences, all pinned or named: **`Row.IsDisagreement` is
 unreachable from a single click** (the verdict deletes the very roster claim it would contradict — the flag lights when memory
 refills *after* the verdict, which is what `AContradictedRosterIsKnownOnTheRowAndSaidNowhere` now builds by ordering); no surface
-may offer "restore what was there", because after a write there is nothing to restore. The class split runs on the VERB, not on the name:
-a kind verdict (`Set as …`) leaves `_defaultPlayerClass`/`_activePlayerClass` alone — a click about what a name IS must not blank what this
-capture's cast lines prove — while the calculator takes BOTH lanes off its one name (`ForgetClass`, surgical: no other name in either map
-moves), because forgetting "what the last log showed" includes the class the last log showed.
+may offer "restore what was there", because after a write there is nothing to restore. The class split runs on the QUESTION, not on the name:
+a kind verdict (`Set as …`) leaves `_defaultPlayerClass`/`_activePlayerClass` alone — kind and class are different questions on different clocks
+(kind is static, class is dynamic and changes often inside one log file), so a click about what a name IS overrides every IDENTITY belief but
+touches neither class lane — while the calculator takes back the FALLBACK lane only (`ForgetDefaultClass`, surgical: no other name in the map
+moves); the capture's own windows survive even it, because they are this log's evidence and retire with the capture on their own.
 
 **Nothing writes or reads a `players.txt`
   `!Name` rejection any more.** That tombstone arrived 2026-09-28 16:05 (`9de0f230`) and its sole door — Verified Players'
@@ -1014,8 +1017,9 @@ moves), because forgetting "what the last log showed" includes the class the las
   and a wrong verdict on a real person then could not be taken back from this window at all, the one failure mode every other rule here exists to avoid. A behaviour verdict (graph, heals, /who, chat, a cast) is somebody ACTING, so it stays
   correctable even when the word doubles as a spell. The same measurement refused a parser "fix": `Boom!` keeps its bang because spells.txt carries both `Boom` (13031) and `Boom!` (54752), and "is this string a spell NAME?" must consult
   `_spellsNameDb` only — abbreviations legitimately carry punctuation. Docs/DesignNotes.md → "A name that equals a spell is not a spell row". And
-  **The calculator click forgets the ledger entry and every registry claim too** (and, since 2026-11, both class lanes — the half the old
-  dropdown door never had; `Recalculate` calls `ForgetClass`, so a learned window does not survive its own reset). All of it goes through `ApplyVerdict`'s own
+  **The calculator click forgets the ledger entry and every registry claim too** (and, since 2026-11, the stored fallback class — the half the old
+  dropdown door never had; `Recalculate` calls `ForgetDefaultClass`, while this capture's cast-learned windows stay standing: kind is a static
+  verdict, class is live evidence read per second). All of it goes through `ApplyVerdict`'s own
   `Forget` step, not a later `IdentityPriorStore.Remove` someone might forget to pair with it — or the row comes straight back on the next pass wearing
   *"… in previous log"*, which is the opposite of what the click looked like it did. Any write
   here (dropdown **or** band icon) goes through `Reconcile()` = `RederiveAsync()` + `Refresh()`, like `FightTable.ApplyOverride` always did: the census is right on its

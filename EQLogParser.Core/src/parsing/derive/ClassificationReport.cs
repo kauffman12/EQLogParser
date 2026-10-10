@@ -795,9 +795,11 @@ namespace EQLogParser
      * It is `ApplyVerdict(name, Unknown)` — the whole forget-then-withdraw law, so no narrower copy can drift from it: the
      * override row goes, the ledger row goes (older-log verdict, roster "one of ours" bit, the class on that row, the owner
      * column), and every registry claim goes (verified player — the players.txt lineage — verified pet, mercenary, generated
-     * name, took-an-action flag, the live pet-map pair). On top of it stands `ForgetClass`, which nothing else clears: the
-     * roster-class and cast-learned class lanes both go, so a class typed by an operator does not survive its own take-back.
-     * This capture's own cast lines re-teach a class on the next pass exactly like any other evidence.
+     * name, took-an-action flag, the live pet-map pair). On top of it stands `ForgetDefaultClass`: the stored FALLBACK class goes —
+     * the players.txt row, the class an operator typed at the pencil — so memory cannot shadow what this log says. This capture's
+     * own cast-learned WINDOWS stay: class is live per-second evidence and it moves often inside one file (kind is the static half of
+     * that split, which is why a kind verdict touches neither lane). "Purely going to show what the current log thinks" includes the
+     * class this log learned; it does not include last night's.
      *
      * What remains after it is one thing only: what the open log says. A name nothing in it places drops to *Not Placed* (or off
      * the list); a name its lines DO place comes back with its rule beside it — `npcs.txt`, a ``X`s pet`` spelling, an
@@ -817,7 +819,7 @@ namespace EQLogParser
       if (string.IsNullOrWhiteSpace(name)) return;
 
       ApplyVerdict(name!, IdentityKind.Unknown);
-      PlayerRegistry.Instance.ForgetClass(name!);
+      PlayerRegistry.Instance.ForgetDefaultClass(name!);
     }
 
   }

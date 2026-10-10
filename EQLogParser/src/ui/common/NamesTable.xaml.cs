@@ -801,8 +801,10 @@ namespace EQLogParser
      * ANSWERS should not carry a verb whose honest outcome is often an identical cell; the click, beside the name it applies to,
      * is what an operator can actually see). It does what the old entry did at its widest: forgets EVERY stored belief about this
      * name — override, ledger row (verdict + roster bit + class + owner), verified-pet and every other registry claim, and the
-     * class lanes the old door never had — then lets only this capture's own lines answer. ClassificationCommands.Recalculate is
-     * the whole of the forget; Reconcile owes the pass that re-runs the rules and repaints everything off the result.
+     * stored FALLBACK class the old door never had. This capture's cast-learned class WINDOWS stay — kind is a static verdict but
+     * class is live per-second evidence, and "what the current log thinks" includes the class this log learned — then lets only this
+     * capture's own lines answer. ClassificationCommands.Recalculate is the whole of the forget; Reconcile owes the pass that re-runs
+     * the rules and repaints everything off the result.
      */
     private void RecalcMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {

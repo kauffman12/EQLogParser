@@ -5,12 +5,14 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace EQLogParser;
 
 /*
- * The Name column's calculator: forget everything this application has ever written down about a name — manual override,
- * legacy/roster claims, older-log verdict, saved summon owner, and (the half "Reset" in the dropdown never had) the class —
- * then let only the open capture answer (2026-11, docs/DesignNotes.md → "The calculator takes everything back").
+ * The Name column's calculator: forget everything this application has ever WRITTEN DOWN about a name — manual override,
+ * legacy/roster claims, older-log verdict, saved summon owner, and (the half "Reset" in the dropdown never had) the stored fallback
+ * class — then let only the open capture answer (2026-11, docs/DesignNotes.md → "The calculator takes everything back").
  *
- * The memory-vs-evidence asymmetry is the law: a name whose only claim was memory leaves, and a name this capture's own lines
- * place comes straight back — forgetting a belief deletes nothing that a line of the log can re-earn. What this file pins is
+ * The memory-vs-evidence asymmetry is the law, in TWO lanes: kind is a static verdict, so a name whose only claim was memory
+ * leaves and a name this capture's own lines place comes straight back; class is dynamic per-second evidence with the default as
+ * fallback-only, so the fallback (memory) goes while this capture's cast-learned WINDOWS stay — "purely going to show what the current
+ * log thinks" includes the class this log learned. What this file pins is
  * the forget side (every lane, in one verb) and the two things it must NOT do: leave a stored answer underneath, and write
  * anything negative at all (a "suppression" would be a sixth identity word nobody priced — there is no ban to write, which is
  * exactly why an unplaced name stays eligible for every rule on every pass).
@@ -96,8 +98,10 @@ public sealed class RecalculateIdentityTest
     Assert.IsFalse(IdentityPriorStore.Instance.TryGetRoster(name), "…and with it the ledger's roster bit and the older-log verdict…");
     Assert.IsFalse(PlayerRegistry.Instance.IsVerifiedPet(name), "…and the verified-pet claim…");
     Assert.IsNull(PlayerRegistry.Instance.GetPlayerFromPet(name), "…and the saved owner pair — BOTH lanes, live map and ledger column");
-    Assert.AreEqual(string.Empty, PlayerRegistry.Instance.GetPlayerClass(name, 0.0),
-                    "the class is the half the old dropdown-Reset never had: roster default AND learned windows both go");
+    Assert.AreEqual(string.Empty, PlayerRegistry.Instance.GetDefaultPlayerClass(name),
+                    "the stored FALLBACK class goes: the roster row and a typed default are memory, and memory is what this click forgets");
+    Assert.AreEqual("Cleric", PlayerRegistry.Instance.GetPlayerClass(name, 20.0),
+                    "this capture's own cast-learned window SURVIVES the take-back — it is what the current log thinks, read against its own clock");
     Assert.IsFalse(IdentityLookup.IsOneOfUs(name), "nothing left in memory calls it one of ours");
 
     // The click is about one name. A neighbour's beliefs are not collateral damage.
@@ -135,27 +139,32 @@ public sealed class RecalculateIdentityTest
   }
 
   /*
-   * `ForgetClass` is the only verb that clears the class lanes, and it must be surgical: a verdict about what a name IS never
-   * touches them (a raider whose 10,000 cast lines are still in the capture keeps her class through a kind change), while the
-   * calculator — and the calculator alone — takes both lanes off one name and nothing else.
+   * The kind/class split: kind is a STATIC decision — a Set-as overrides every identity belief and never changes inside the log —
+   * while class is DYNAMIC evidence (per-second windows) with the default as fallback-only. So a kind verdict touches NEITHER class
+   * lane, and the calculator — alone — takes back the fallback; the capture's own windows stay, because they are this log's opinion,
+   * and they retire with the capture on their own.
    */
   [TestMethod]
-  public void TheKindVerdictKeepsTheClassAndOnlyRecalculateTakesItOff()
+  public void AKindVerdictTouchesNoClassLaneAndOnlyTheCalculatorTakesTheFallback()
   {
     const string victim = "Probemage";
     const string bystander = "Probecast";
 
-    PlayerRegistry.Instance.SetDefaultPlayerClass(victim, "Bard");
-    PlayerRegistry.Instance.SetActivePlayerClass(victim, "Cleric", 2, 10.0);
+    PlayerRegistry.Instance.SetDefaultPlayerClass(victim, "Bard");          // the fallback lane (typed default)
+    PlayerRegistry.Instance.SetActivePlayerClass(victim, "Cleric", 2, 10.0); // this capture's own window
     PlayerRegistry.Instance.SetDefaultPlayerClass(bystander, "Bard");
 
     ClassificationCommands.ApplyVerdict(victim, IdentityKind.Npc);
+    Assert.AreEqual("Bard", PlayerRegistry.Instance.GetDefaultPlayerClass(victim),
+                    "a Set-as click overrides every IDENTITY belief; the class is a different question on a different clock");
     Assert.AreEqual("Cleric", PlayerRegistry.Instance.GetPlayerClass(victim, 20.0),
-                    "a Set-as click changes what a name is; the class of this capture's cast lines survives it");
+                    "…and the live windows keep answering their per-second reads through it");
 
-    PlayerRegistry.Instance.ForgetClass(victim);
-    Assert.AreEqual(string.Empty, PlayerRegistry.Instance.GetPlayerClass(victim, 0.0), "both lanes, in one spelling — the maps are case-insensitive");
-    Assert.AreEqual("Bard", PlayerRegistry.Instance.GetPlayerClass(bystander, 0.0), "no other name in either lane moves");
+    ClassificationCommands.Recalculate(victim);
+    Assert.AreEqual(string.Empty, PlayerRegistry.Instance.GetDefaultPlayerClass(victim), "the fallback lane goes, in one spelling — the map is case-insensitive");
+    Assert.AreEqual("Cleric", PlayerRegistry.Instance.GetPlayerClass(victim, 20.0),
+                    "but the window read still lands: what THIS log learned about the class survives, and is read at its own second");
+    Assert.AreEqual("Bard", PlayerRegistry.Instance.GetDefaultPlayerClass(bystander), "no other name in the lane moves");
   }
 
   [TestMethod]
