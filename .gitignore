@@ -36,3 +36,6 @@ website/dist/feed.xml
 website/.venv/
 
 __pycache__/
+
+# Working review notes for discussion (not shipped documentation).
+gpt-review-*.md
