@@ -324,7 +324,7 @@ namespace EQLogParser
         if (!_sessionPainted)
         {
           _sessionPainted = true;
-          Log.Info($"fight list: {snapshot.Rows.Count} row(s) painted - this capture is on screen");
+          Log.Debug($"fight list: {snapshot.Rows.Count} row(s) painted - this capture is on screen");
         }
 
         /*

@@ -463,8 +463,12 @@ milliseconds since `d1da38c3`, which is what made a 72 MB histogram findable in 
 prints **UNLABELLED** and warns — an anonymous pass over two million records is exactly what gets defended as "probably necessary".
 **The levels are part of the design**: every per-build / per-ask / per-skip / per-open trace line of this class (`stats build #N …`,
 `board ask [reason] …`, `chart.update skipped`, `load: read loop #N`) is a **Debug** line — a player's `eqlogparser.log` carries none of it
-without `Debug=True`; what stays visible is the two anomaly warns and the one-line-per-session anchors (`capture: started`,
-`derive: first pass`, `fight list: N row(s) painted`), which are per-capture facts, not a stream (docs/DesignNotes.md → "Name every door"). Two laws
+without `Debug=True`. The same demotion then took in the last machine-written anchors (`capture: started`, `derive: starting over`/`Derive done`,
+`derive: first pass`, `fight list: N row(s) painted`, the identity-memory load line, `dock:`): a derive pass runs on its own clock even over a
+finished capture, so two Info lines per pass buried the raid in bookkeeping (docs/DesignNotes.md → "What a player's log is for"). **Info is for
+things a person did or something broke**: the legacy open/close lines (`Selected Log File`, `Finished Loading Log File in N seconds.`), one line per
+deliberate identity write (`identity cell: …`, `pet assigned: …`, `clear all: re-opening …`), and the anomaly warns — two of the trace class plus
+`derive: N fact value(s) did not fit their field`, which moved out of the first-pass Debug line precisely so a clamped clock cannot hide.
 inside the trace: **nesting on one thread is not overlap** (`HealingStatsBuilder.RebuildTotalStats` calls `BuildTotalStats` under its own lock;
 warning on ordinary work is how a real warning stops being read — pinned both directions) and **an unclosed handle hides the next overlap**, so
 builders wrap their bodies in try/finally via traced wrappers rather than instrumenting inside the `lock`. On the pane side an announce carries
@@ -685,8 +689,8 @@ declare without `?`; add the directive only when the whole file is meant to hold
   selection speaks through the boards it feeds, and a failed pass only through eqlogparser.log (`FightTableLoadBandTest` pins what the band may still say). A
   mid-log attach is forward-only by construction: no backfill exists (facts before the tap were never captured), and the chat sink was fixed when
   the file opened (`LogProcessor` holds it), so drink evidence and chat identity join at the next open while facts and heals flow from now.
-  One line per session in eqlogparser.log - `capture: started (file)` at open, `derive: first pass - N facts, M rows`
-  at the first pass - so a list that silently fails to fill is diagnosed by which of the two lines is missing.
+  A list that silently fails to fill is diagnosed by which of `capture: started (file)` and `derive: first pass - N facts, M rows` is
+  missing - both are Debug now (a normal session writes neither), so the diagnosis runs with `Debug=True` in settings.txt.
 - **The fight list's right-click menu: one settle, one verdict cascade, one clear** (2026-11, from three field reports — "sometimes the stats
   panel acts like it got two selections"; "some weird clear on the right click menu"; "i remember there used to be a refresh"). Four rules.
   **(1) One announce per gesture.** The grid raises SelectedItemsChanged once per row on a drag, so `SelectionSettle` (Core) + one DispatcherTimer

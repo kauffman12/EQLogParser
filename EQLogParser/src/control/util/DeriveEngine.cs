@@ -379,13 +379,15 @@ namespace EQLogParser
       var requestBound = _requests.StartBound();
 
       /*
-       * What reaches the player's own log. An expensive pass is an event worth a line; the cheap lane runs twice a second, and four
-       * lines of bookkeeping per second would push the raid out of the file this app writes (and out of the tail anyone reading it).
-       * Failures still log at their own level whatever the lane.
+       * Debug only, for both lanes. These lines were Info and a normal session filled with them: every pass - including the ones
+       * the cadence runs by itself over a capture that stopped growing - wrote a start line and a done line, so the player's log
+       * said more about derive bookkeeping than about the raid. Debug=True still gets the whole story (cost, continued vs rebuilt),
+       * which is what a cost question needs; an ordinary session pays two interpolated strings and no log write. Failures keep
+       * their own level whatever the lane.
        */
       void Note(string message)
       {
-        if (kind == DeriveKind.Full) Log.Info(message); else Log.Debug(message);
+        Log.Debug(message);
       }
 
       Note($"Derive starting over {CapturedTotal:N0} captured facts");
@@ -528,16 +530,19 @@ namespace EQLogParser
           {
             _firstDeriveLogged = true;
             /*
-             * One line per session, and nothing about the packing guards unless one of them fired: they exist to catch a
-             * timestamp outside 1931-2068 or a heal mask/label that does not fit its narrowed byte, and every real capture
-             * measured so far answers zero. A non-zero number here is not noise to be ignored — it means the boards are
-             * being built from clamped values, which is exactly the kind of thing that otherwise gets read as a layout bug.
+             * The counters of the first pass go to Debug ("did the derive run at all, and over how much"); they are the same
+             * bookkeeping as the per-pass lines above and a session that is working needs neither in its own file. What stays at
+             * Warn level by severity is the packing-guard count below.
              */
             var guards = CombatCapture.FactGuardCount;
-            Log.Info(guards == 0
-              ? $"derive: first pass - {snapshot.FactCount:N0} facts, {snapshot.Rows.Count} rows"
-              : $"derive: first pass - {snapshot.FactCount:N0} facts, {snapshot.Rows.Count} rows | " +
-                $"{guards} fact value(s) did not fit their field (clock clamp or heal mask/label) - see FactTime/HealFact");
+            Log.Debug($"derive: first pass - {snapshot.FactCount:N0} facts, {snapshot.Rows.Count} rows");
+            /*
+             * The non-zero case is its own Warn rather than a clause on the Debug line above: a clamped clock or a heal mask that
+             * did not fit means the boards are built from clipped values, and that must reach a normal log - it reads as a layout
+             * bug or a wrong number long before anyone thinks to run with Debug.
+             */
+            if (guards != 0)
+              Log.Warn($"derive: {guards} fact value(s) did not fit their field (clock clamp or heal mask/label) - see FactTime/HealFact");
           }
 
           /*

@@ -7263,10 +7263,27 @@ now simpler than either: **every per-build, per-ask, per-skip and per-open line 
 is the door into all of it (`stats build #N …`, `board ask [reason] … -> outcome`, `chart.update skipped`, `load: read loop #N on thread …`,
 `Derived damage summary […]`, the gate's `summary build Queued|SkippedSame`). The echo machinery went with the demotion - it thinned a stream
 that no longer reaches an ordinary log, which is dead weight pinned by tests for a defect that cannot happen. What DOES reach a player's log:
-the two anomaly **warns** (a door that did not name itself, two builds running over each other - defects, not metrics, and both rare enough
-that seeing one is the point) and the per-capture **anchors**, which are one line per session, not a stream: `capture: started`,
-`derive: first pass`, and `fight list: N row(s) painted` (once per capture) - the moment a reader could have clicked, which is the timestamp
-every "it built three times when I clicked once" report needs to be readable at all.
+the anomaly **warns** (a door that did not name itself, two builds running over each other - defects, not metrics, and both rare enough
+that seeing one is the point).
+
+### What a player's log is for (2026-11: the last machine-written lines went to Debug too)
+
+The anchors survived the first demotion on an argument about diagnosis - `capture: started`, `derive: first pass`, `fight list: N row(s) painted`
+were "one per capture, not a stream". That reasoning had one hole: **a derive pass is not one per capture**. The full clock keeps passing over a
+capture that stopped growing, and every operator write asks for a pass of its own, so `Derive starting over N captured facts` + `Derive done: 511
+fights, 608 ms (rebuilt)` printed again minutes later with nothing user-visible having happened - and the pair arrived **twice per gesture** (the
+full pass, then a fold that reported "continued"), which reads like a bug even when it is the cadence. Twenty-odd of those lines during ten minutes
+of clicking out-numbered every word about the raid, with `PerfReport` off the whole time: the gate covers the perf journal, and these were plain
+Info calls that never consulted it. So now: **Info is for things a person did or something broke.** Demoted to Debug - the derive pass pair and the
+first-pass counters, `capture: started` (mode, door and `sized-from` included), "Monitoring from the end of the file", `fight list: N row(s)
+painted`, the identity-memory load line, the roster-expiry line, `dock: X shown as AutoHidden`. Kept at Info - the legacy phrases (`Selected Log
+File`, `Finished Loading Log File in N seconds.`), one line per deliberate identity write (`identity cell: …`, `pet assigned: …`, `clear all:
+re-opening …`, which exist because "nothing happened" was otherwise unfalsifiable), and one new **warn**: the fact-packing guard count moved out of
+the first-pass line, because a clamped clock or an oversized heal mask means the boards are built from clipped values and that must not hide behind
+a Debug line someone has to think to enable.
+
+The diagnosis this trades is not lost, only gated: "the fight list never filled" is still answered by which of `capture: started` and
+`derive: first pass` is missing - with `Debug=True`, which is already how every cost question in this file gets reproduced.
 
 **The recipe when the field reports double builds**: set `Debug=True` in `settings.txt` (that raises log4net's root to Debug *and* implies
 `PerfReport`, so the beat lines come with it), reproduce twice - once immediately after a load, once a minute later - and send

@@ -203,11 +203,11 @@ namespace EQLogParser
         aged = PruneRosterLocked();
       }
 
-      // One line per log opened, because "did the memory load?" is otherwise unanswerable from a player's log file:
-      // the census just quietly shows more names. The dropped count says what this rewrite took out, so an operator who
-      // hand-edited the file can see whether their edit was read or refused.
+      // Debug, one line per log opened: "did the memory load, and how much of it?" is the question this answers, and the
+      // dropped count still says what a rewrite took out so an operator who hand-edited the file can see whether their edit was
+      // read or refused - with Debug=True. An ordinary session opens logs without wanting an identity-memory report each time.
       if (loaded.Count > 0 || dropped > 0)
-        Log.Info($"Identity priors for {_serverName}: {loaded.Count} remembered verdicts"
+        Log.Debug($"Identity priors for {_serverName}: {loaded.Count} remembered verdicts"
                  + (roster > 0 ? $", {roster} carried over from the roster" : string.Empty)
                  + (owners > 0 ? $", {owners} carrying a pet owner" : string.Empty)
                  + (dropped > 0
@@ -737,8 +737,8 @@ namespace EQLogParser
       var what = new List<string>();
       if (expired is { Count: > 0 }) what.Add($"{expired.Count} roster names aged out");
       if (expiredPets is { Count: > 0 }) what.Add($"{expiredPets.Count} pet mappings aged out");
-      Log.Info($"Identity priors for {_serverName}: {string.Join(", ", what)} " +
-               $"({PlayerRegistry.StaleDays} days without a sighting)");
+      Log.Debug($"Identity priors for {_serverName}: {string.Join(", ", what)} " +
+                $"({PlayerRegistry.StaleDays} days without a sighting)");
       return true;
     }
 

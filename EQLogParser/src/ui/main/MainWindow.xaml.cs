@@ -1512,9 +1512,13 @@ namespace EQLogParser
             statusText.Text = "Monitoring Log";
 
             ConfigUtil.SetSetting("LastOpenedFile", AppSettings.CurrentLogFile);
-            Log.Info(followedFromEnd
-              ? "Monitoring from the end of the file - no history was read."
-              : $"Finished Loading Log File in {seconds} seconds.");
+            /*
+             * The legacy phrase stays at Info - it is the line a player already knows. "We read nothing because this open
+             * follows from end of file" is diagnostic context for a reader of the log, not news, and on a startup auto-monitor or a
+             * Clear All it printed every single open; Debug=True still shows it beside the capture line below.
+             */
+            if (followedFromEnd) Log.Debug("Monitoring from the end of the file - no history was read.");
+            else Log.Info($"Finished Loading Log File in {seconds} seconds.");
             MainActions.UpdateStatus("Monitoring Last Log");
 
             await Task.Delay(500);
@@ -1663,12 +1667,10 @@ namespace EQLogParser
             _engineSessionId = _engine.SessionId;
             _engine.Start();
             chatSink = new CompositeChatSink(chatSink, _engine.ChatSink);
-            // One line per open: if the derived list ever silently fails to fill, this is the line that is
-            // missing from the log (session created) or that arrives without rows following it (derive stuck).
-            // Mode and door ride on this line because both were unanswerable from a log: which of the three ways of
-            // reading a file an open chose, and who asked. `sized-from` is the input to the capacity hint (0 means the
-            // tables start small and double), so "why is the working set this big on an idle monitor" reads off one line.
-            Log.Info($"capture: started ({Path.GetFileName(theFile)}) {FactCapacity.ModeWord(lastMins)}"
+            // Debug, not Info: mode, door and `sized-from` are exactly what a capacity or "why is the working set this big"
+            // question needs, and nothing about a working session belongs in a player's log. With Debug=True the line is
+            // unchanged - which of the three ways of reading a file an open chose, who asked, and the capacity hint it fed.
+            Log.Debug($"capture: started ({Path.GetFileName(theFile)}) {FactCapacity.ModeWord(lastMins)}"
                      + $" from {origin} | sized-from={hintBytes / (1024 * 1024):N0} MB");
 
             _eqLogReader = new LogReader(new LogProcessor(theFile, chatSink, new TriggerHookAdapter()), theFile, origin, lastMins);

@@ -92,9 +92,9 @@ namespace EQLogParser
           }
           else
           {
-            // Which shape a click chose, per window: docking placement is invisible in the log, and this is the one door that
-            // moves a window at all. Rare (a menu click) and it names itself, so it can stay at Info.
-            Log.Info($"dock: {name} shown as {showState}");
+            // Debug: which shape a click chose, per window. Docking placement is invisible in the log otherwise and this is the
+            // one door that moves a window at all, so the line stays useful - just not as news in a player's file.
+            Log.Debug($"dock: {name} shown as {showState}");
             DockingManager.SetState(control, showState);
             dockSite.ActivateWindow(name);
           }
