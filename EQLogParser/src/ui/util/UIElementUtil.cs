@@ -484,22 +484,44 @@ namespace EQLogParser
       popup.HorizontalOffset = 0;
       popup.VerticalOffset = 0;
 
+      /*
+       * Size it, THEN open it. This used to set the popup's and the box's Width/Height from inside the Opened handler - i.e. AFTER
+       * `IsDropDownOpen = true` had already asked WPF to lay the list out - so the first thing the drop-down ever measured against was whatever
+       * size the Popup happened to have, not the cell it is standing in. Ordering only: the numbers are the same ones the operator tuned in
+       * DamageSummary's Group cell, and this pane joins that helper rather than growing its own.
+       *
+       * A zero is skipped rather than written. Some popups size themselves from markup (`Width="{Binding PlacementTarget.Width …}"`) and a cell
+       * that has not been laid out yet reports 0 - writing that would produce an invisible popup whose pencil click does nothing at all, which
+       * is the failure this helper must never have.
+       */
+      if (cell.ActualWidth > 0)
+      {
+        popup.Width = cell.ActualWidth;
+        comboBox.Width = cell.ActualWidth;
+      }
+      if (cell.ActualHeight > 0) popup.Height = cell.ActualHeight;
+
       void OnPopupOpen(object s, EventArgs args)
       {
+        popup.Opened -= OnPopupOpen;   // one-shot: the release hook is already wired
         comboBox.IsDropDownOpen = true;
-        popup.Closed += OnPopupClose;
-        popup.Opened -= OnPopupOpen;
-        popup.Width = cell.ActualWidth;
-        popup.Height = cell.ActualHeight;
-        comboBox.Width = cell.ActualWidth;
       }
 
       void OnPopupClose(object s, EventArgs args)
       {
         popup.Closed -= OnPopupClose;
+        popup.Opened -= OnPopupOpen;
         onClosed();
       }
 
+      /*
+       * `Closed` is wired BEFORE the popup opens: the release hook has to exist before the thing it releases can happen, the same law as closing
+       * a perf span in a `finally`. It used to be attached from inside `Opened`, so a popup that opened without raising `Opened` (or threw while
+       * sizing) left the caller's `onClosed` unrun forever - and for Player/NPC Identity that callback releases `EditorHold`, the guard that
+       * keeps a census from yanking an open cell out from under the pointer. A hold that never releases defers every later census and applies
+       * none: after ONE pencil click the pane stops answering anyone.
+       */
+      popup.Closed += OnPopupClose;
       popup.Opened += OnPopupOpen;
       popup.IsOpen = true;
     }
