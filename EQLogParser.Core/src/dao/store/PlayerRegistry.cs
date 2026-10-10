@@ -563,6 +563,24 @@ namespace EQLogParser
       }
     }
 
+    /*
+     * The class half of the take-back, and the ONLY thing that clears it. `ForgetName` leaves both lanes alone on purpose — a
+     * verdict about what a name IS must not blank the class of a raider whose 10,000 cast lines are still in the open capture;
+     * learned windows would come back on the next pass anyway, and evicting them costs that pass nothing. The Name column's
+     * calculator asks for the coarser verb — "show me what this log thinks from scratch" includes re-earning tonight's class from
+     * this capture's own cast lines — which is why `ClassificationCommands.Recalculate` pairs the two calls.
+     *
+     * Both maps are case-insensitive, so one spelling reaches both; no other name in either lane moves, and nothing here touches
+     * the ledger (the class that rode on a ledger row goes with `IdentityPriorStore.Remove`, as always).
+     */
+    internal void ForgetClass(string name)
+    {
+      if (string.IsNullOrEmpty(name)) return;
+
+      _defaultPlayerClass.TryRemove(name, out _);
+      _activePlayerClass.TryRemove(name, out _);
+    }
+
     internal void Init()
     {
       lock (_lock)

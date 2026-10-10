@@ -788,5 +788,37 @@ namespace EQLogParser
     /// name reads Unknown again on a capture whose own lines say nothing.</summary>
     public static void ClearPrior(IdentityPriorStore priors, string name) => priors.Remove(name);
 
+    /*
+     * The Name column's calculator — THE ONE door for "forget everything this application has ever written down about this name,
+     * then let only this capture answer" (2026-11; the operator: "purely going to show what the current log thinks").
+     *
+     * It is `ApplyVerdict(name, Unknown)` — the whole forget-then-withdraw law, so no narrower copy can drift from it: the
+     * override row goes, the ledger row goes (older-log verdict, roster "one of ours" bit, the class on that row, the owner
+     * column), and every registry claim goes (verified player — the players.txt lineage — verified pet, mercenary, generated
+     * name, took-an-action flag, the live pet-map pair). On top of it stands `ForgetClass`, which nothing else clears: the
+     * roster-class and cast-learned class lanes both go, so a class typed by an operator does not survive its own take-back.
+     * This capture's own cast lines re-teach a class on the next pass exactly like any other evidence.
+     *
+     * What remains after it is one thing only: what the open log says. A name nothing in it places drops to *Not Placed* (or off
+     * the list); a name its lines DO place comes back with its rule beside it — `npcs.txt`, a ``X`s pet`` spelling, an
+     * R24-petslot defender, R15's heal crowd, R7's graph, tonight's casts. Deleting stored beliefs does not delete the lines that
+     * earned them: that asymmetry is the verb, and the pane shows it while it is out there (the "Recalculating…" label stays up
+     * at least as long as the pass takes, so an identical answer still says it tried).
+     *
+     * What it is NOT: a suppression. There is no asserted Unknown and no "never classify this again" — an unplaced name stays
+     * eligible for every rule on every pass, because that silence is what an operator asks the capture to fill, not a verdict to
+     * write down. The two doors it replaces are deleted rather than parked: the Type dropdown's "Reset" entry and the Owner
+     * dropdown's "No Owner" entry — both wrote a narrower forget that an operator had to combine by hand. `PlayerRegistry.
+     * ForgetPetMapping` survives as the narrow verb with its test, but has no UI door: taking the pair back now means taking
+     * everything back, and a second, weaker take-back beside it is how this feature shipped once before.
+     */
+    public static void Recalculate(string? name)
+    {
+      if (string.IsNullOrWhiteSpace(name)) return;
+
+      ApplyVerdict(name!, IdentityKind.Unknown);
+      PlayerRegistry.Instance.ForgetClass(name!);
+    }
+
   }
 }

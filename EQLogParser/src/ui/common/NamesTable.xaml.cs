@@ -70,7 +70,7 @@ namespace EQLogParser
      * parsing/derive read IdentityKind), but "Kind" as a header made people look for a mob/npc KIND, so the column says
      * Type and the value says NPC rather than Npc.
      */
-    internal sealed class NameRow
+    internal sealed class NameRow : System.ComponentModel.INotifyPropertyChanged
     {
       public string Name { get; init; } = string.Empty;
       public string Type { get; init; } = string.Empty;
@@ -118,6 +118,31 @@ namespace EQLogParser
 
       /// <summary>The WHY cell's tooltip: the proof in one line, plus a short flag when one changes what to do.</summary>
       public string Provenance { get; init; } = string.Empty;
+
+      /*
+       * The calculator's label, per row (2026-11). The honest outcome of a take-back is sometimes an IDENTICAL cell — the capture
+       * re-earns exactly what memory said — and an operator who cannot tell "tried" from "did nothing" calls the click dead. So
+       * the name itself reads "Recalculating…" until the pass this click asked for has landed and been shown (the timing law is
+       * RecalcOverlay: a floor, then the pass, capped). The grid binds to DisplayText, not Name: the sort key stays the name,
+       * so the list does not reshuffle while the word sits over it.
+       */
+      private bool _recalculating;
+
+      public bool Recalculating
+      {
+        get => _recalculating;
+        set
+        {
+          if (_recalculating == value) return;
+          _recalculating = value;
+          PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(Recalculating)));
+          PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(DisplayText)));
+        }
+      }
+
+      public string DisplayText => Recalculating ? "Recalculating…" : Name;
+
+      public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
     }
 
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
@@ -157,6 +182,16 @@ namespace EQLogParser
 
     // Applied once, then only on a theme change: re-sizing on every Loaded would fight an operator who dragged a column.
     private bool _widthsApplied;
+
+    /*
+     * The calculator's in-flight click, one at a time: which row is labelled, since when, and whether the pass it asked for has
+     * landed. The label comes down on the first of (pass landed, hard cap) once the floor is paid — RecalcOverlay decides; a
+     * bulk load parks both derive lanes, so the cap is what keeps a row that is being re-read from reading as frozen.
+     */
+    private string? _recalcName;
+    private long _recalcStartTick;
+    private bool _recalcPassLanded;
+    private System.Windows.Threading.DispatcherTimer? _recalcHardCap;
 
     public NamesTable()
     {
@@ -249,6 +284,15 @@ namespace EQLogParser
       // The census walks the capture this pane is following; a pass from one that is no longer open (Dispose does not
       // join a running pass) must not repaint it with the previous log's names — DerivedSnapshot.SessionId.
       if (!snapshot.FromLiveSession) return;
+
+      // A pass landed: that is what a calculator click was waiting for. (The census below is throttled at 2 s; the LABEL is not —
+      // the click owed its answer as soon as the pass ran, and Reconcile already ran an unthrottled census beside the write.)
+      if (_recalcName is not null)
+      {
+        _recalcPassLanded = true;
+        TryHideRecalc();
+      }
+
       ThrottledRefresh();
     }
 
@@ -393,7 +437,7 @@ namespace EQLogParser
     {
       var fontSize = ThemeConfig.CurrentFontSize;
       var iconAllowance = fontSize + 16;                       // EQIconStyle square + the 8+8 margins
-      var columns = ThemeConfig.CurrentNameWidth
+      var columns = ThemeConfig.CurrentNameWidth + iconAllowance                                    // Name + its calculator
                   + TypeColumnWidth() + iconAllowance                                               // Type + its pencil
                   + 2 * (ThemeConfig.CurrentMediumWidth + ThemeConfig.CurrentShortestWidth)          // Class and Why
                   + ThemeConfig.CurrentMediumWidth + ThemeConfig.CurrentShortestWidth + iconAllowance; // Owner + its pencil
@@ -430,7 +474,7 @@ namespace EQLogParser
       {
         var width = column.MappingName switch
         {
-          "Name" => ThemeConfig.CurrentNameWidth,
+          "Name" => ThemeConfig.CurrentNameWidth + iconAllowance,   // the calculator icon pays for itself, like the pencils
           "Type" => TypeColumnWidth() + iconAllowance,
           "Why" => ThemeConfig.CurrentMediumWidth + ThemeConfig.CurrentShortestWidth,
           "PlayerClass" => ThemeConfig.CurrentMediumWidth + ThemeConfig.CurrentShortestWidth,
@@ -706,13 +750,13 @@ namespace EQLogParser
        * pair, records the owner as roster, refuses a pair already in effect by asking BOTH stores case-insensitively, and asks for the pass
        * that folds the summon's facts under its person (`+Pets`).
        *
-       * The take-back has no verdict to assert — "not whose I know" is not a Kind — so it goes straight to the store, which takes the pair
-       * out of the live map AND the ledger's ownership lane while leaving the Pet verdict standing.
+       * The list no longer offers a take-back entry (2026-11: it is the calculator click now, and wider on purpose), but a value that names
+       * nobody must still never be written AS an owner — a restored row or a stale pick feeding this handler is exactly the shape that guard
+       * was bought for. Taking an owner back is a forget (live map AND ledger lane, Pet verdict standing); only a person is an assign.
        */
       if (PetOwnership.IsClear(owner))
       {
         PlayerRegistry.Instance.ForgetPetMapping(row.Name);
-        // The claim logs itself inside PetAssignment; the take-back was the silent half.
         Log.Info($"identity cell: owner of {row.Name} taken back (the Pet verdict stands)");
       }
       else PetAssignment.Assign(row.Name, owner);
@@ -750,6 +794,61 @@ namespace EQLogParser
 
       DeriveEngine.Active?.RederiveAsync();
       Refresh();
+    }
+
+    /*
+     * The calculator click — the take-back's door since 2026-11 ("Reset" stopped being a dropdown entry because a list of
+     * ANSWERS should not carry a verb whose honest outcome is often an identical cell; the click, beside the name it applies to,
+     * is what an operator can actually see). It does what the old entry did at its widest: forgets EVERY stored belief about this
+     * name — override, ledger row (verdict + roster bit + class + owner), verified-pet and every other registry claim, and the
+     * class lanes the old door never had — then lets only this capture's own lines answer. ClassificationCommands.Recalculate is
+     * the whole of the forget; Reconcile owes the pass that re-runs the rules and repaints everything off the result.
+     */
+    private void RecalcMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+      if (sender is not ImageAwesome icon || icon.DataContext is not NameRow row) return;
+
+      var name = row.Name;
+      _recalcName = name;
+      _recalcStartTick = Environment.TickCount64;
+      _recalcPassLanded = false;
+      row.Recalculating = true;
+
+      ClassificationCommands.Recalculate(name);
+      Log.Info($"identity cell: {name} recalculated - stored beliefs forgotten, this capture answers again");
+      Reconcile();
+
+      // The cap is the other half of RecalcOverlay.ShouldHide: a pass parked behind a bulk load may not hold the row hostage.
+      _recalcHardCap?.Stop();
+      _recalcHardCap = null;
+      var remaining = Math.Max(0, RecalcOverlay.HardCapMs - (Environment.TickCount64 - _recalcStartTick));
+      if (remaining == 0) TryHideRecalc();
+      else _recalcHardCap = new System.Windows.Threading.DispatcherTimer(
+                   TimeSpan.FromMilliseconds(remaining), System.Windows.Threading.DispatcherPriority.Background,
+                   OnRecalcHardCapTick, Dispatcher);
+    }
+
+    private void OnRecalcHardCapTick(object? sender, EventArgs e)
+    {
+      _recalcHardCap?.Stop();
+      TryHideRecalc();   // the cap alone cannot pay the floor; ShouldHide still checks it
+    }
+
+    /*
+     * When the label comes down is RecalcOverlay's law: never before the floor (an answer identical to what was on screen must
+     * still show that the click was heard), then at the first of the pass landing and the cap. The census may have replaced the row
+     * by then — a fresh instance carries no label, so there is nothing to un-latch on it.
+     */
+    private void TryHideRecalc()
+    {
+      if (_recalcName is null) return;
+      if (!RecalcOverlay.ShouldHide(_recalcStartTick, Environment.TickCount64, _recalcPassLanded)) return;
+
+      var name = _recalcName;
+      _recalcName = null;
+      _recalcHardCap?.Stop();
+      _recalcHardCap = null;
+      FindRow(name)?.Recalculating = false;
     }
 
     /*

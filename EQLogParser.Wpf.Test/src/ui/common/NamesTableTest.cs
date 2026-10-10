@@ -97,9 +97,11 @@ public class NamesTableTest
   }
 
   /*
-   * "Reset" (the entry an operator reads; it writes IdentityKind.Unknown) forgets FIRST and writes nothing after — and that
-   * is the whole of its use. Renamed from "Clear claim" in 2026-11: the old label promised the ANSWER was being cleared, while what the
-   * verb removes is memory, after which this capture's own lines answer again.
+   * The take-back forgets FIRST and writes nothing after — and that is the whole of its use. It sat in the Type dropdown for a while
+   * ("Clear claim", renamed "Reset" on 2026-11), but a list of ANSWERS should not carry a verb whose honest outcome is often no visible
+   * change: what it removes is memory, after which this capture's own lines answer again, so a name the log identifies comes straight
+   * back. It is the Name column's calculator click now (ClassificationCommands.Recalculate, which adds the class lanes); this test pins
+   * the door that click goes through.
    *
    * Every verdict write starts at `ClassificationCommands.Forget`, including the Unknown one that means "take my claim
    * back": the ledger row goes (the remembered verdict, the roster's "one of ours" bit, the class that rode with it, the
@@ -238,7 +240,9 @@ public class NamesTableTest
 
     var pet = NamesTable.RowFrom(new ClassificationReport.Row
     { Name = "Sancus`s pet", Kind = IdentityKind.Pet, Reason = "R5-owner:Sancus" });
-    CollectionAssert.AreEquivalent(new[] { "Pet", "Reset" }, Words(pet));
+    // The spelling settles the answer, so the list is exactly what it already is — and no row's list carries a take-back: that
+    // click lives beside the name (the calculator), where an operator can actually see it.
+    CollectionAssert.AreEquivalent(new[] { "Pet" }, Words(pet));
   }
 
   /*

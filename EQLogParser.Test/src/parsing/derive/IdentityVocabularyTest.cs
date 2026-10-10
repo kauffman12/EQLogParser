@@ -267,8 +267,11 @@ public class IdentityVocabularyTest
    * The Type dropdown per row: the window shows one list for the whole vocabulary, and an operator read that as "this pane
    * decides whether my raider is a mercenary". Two kinds are not opinions — Mercenary is what /target reported (typing it
    * onto a raider moves her number to a column nothing else fills), and an eye is not a fighter of any kind — and where the
-   * name itself settles the answer, CanOverrule hides the pencil and this list keeps only the way back out. One recognizer
-   * for both, so the menu can never offer what the write path refuses.
+   * name itself settles the answer, CanOverrule hides the pencil and this list keeps only what the row already is. One
+   * recognizer for both, so the menu can never offer what the write path refuses. And NO list in this pane offers a take-back:
+   * "Clear claim" then "Reset" were dropdown entries, and an operator read their no-visible-effect as a dead button — the verb
+   * resets MEMORY while this capture's lines answer again, so it is now the Name column's calculator click
+   * (ClassificationCommands.Recalculate), never an answer a name could be.
    */
   [TestMethod]
   public void TheTypeListOffersOnlyWhatANameCanBe()
@@ -279,7 +282,8 @@ public class IdentityVocabularyTest
     var raider = IdentityVocabulary.TypeOptionsFor("Berta", IdentityKind.Player, "R3-joinraid");
     CollectionAssert.Contains(Words(raider), "Player", "the row's own answer must be listed — the popup preselects it");
     CollectionAssert.Contains(Words(raider), "Pet", "an operator may disagree about a summon");
-    CollectionAssert.Contains(Words(raider), "Reset", "taking a claim back is always reachable");
+    Assert.IsFalse(raider.Any(o => o.Kind == IdentityKind.Unknown),
+        "no entry writes Unknown: the take-back is the calculator click beside the name, never an answer in this list");
     CollectionAssert.DoesNotContain(Words(raider), "Mercenary",
                                     "a mercenary is what /target said; typing it onto a raider relocates her damage");
 
@@ -291,15 +295,15 @@ public class IdentityVocabularyTest
     foreach (var kind in new[] { IdentityKind.Npc, IdentityKind.Unknown })
     {
       var eye = IdentityVocabulary.TypeOptionsFor("Eye of Zamul", kind, "R6-npcdb");
-      CollectionAssert.Contains(Words(eye), "NPC");
-      CollectionAssert.Contains(Words(eye), "Reset");
+      CollectionAssert.AreEquivalent(new[] { "NPC" }, Words(eye), "the eye's list is exactly its own answer");
       foreach (var no in new[] { IdentityKind.Player, IdentityKind.Pet, IdentityKind.Merc })
         Assert.IsFalse(eye.Any(o => o.Kind == no), $"an eye may not be set to {no}");
     }
 
-    // A summon whose spelling names its master: decided by the name, so nothing to choose but the way out.
+    // A summon whose spelling names its master: decided by the name, so the list is exactly what it already is. The way out
+    // still exists — it is the calculator click, which on this row re-earns Pet from the line that spells the owner.
     var pet = IdentityVocabulary.TypeOptionsFor("Sancus`s pet", IdentityKind.Pet, "R5-owner:Sancus");
-    CollectionAssert.AreEquivalent(new[] { "Pet", "Reset" }, Words(pet));
+    CollectionAssert.AreEquivalent(new[] { "Pet" }, Words(pet));
 
     // An operator's own claim keeps the whole vocabulary: a wrong click has to stay correctable by another click.
     Assert.AreEqual(IdentityVocabulary.TypeOptions.Length,
@@ -494,8 +498,10 @@ public class IdentityVocabularyTest
   }
 
   /*
-   * The Type dropdown, as data: the whole identity vocabulary in one list — which is exactly what the retired right-click
-   * menu was not, since its items had to be remembered and one of them ("clear my claim") almost nobody knew existed.
+   * The Type dropdown, as data: the five kinds, in one list — each an answer a name could be. The take-back is not among them
+   * (2026-11): it was, first as "Clear claim" and then as "Reset", and its honest outcome — memory gone, capture answers again,
+   * often the same cell on screen — read as a dead button inside a dropdown of ANSWERS. It is a click action now (the Name
+   * column's calculator), and the law this list asserts is that the two stay apart: entries are kinds, never verbs.
    */
   [TestMethod]
   public void TheTypeDropdownOffersEachAnswerExactlyOnce()
@@ -503,7 +509,7 @@ public class IdentityVocabularyTest
     var options = IdentityVocabulary.TypeOptions;
 
     CollectionAssert.AreEqual(
-        new[] { "Player", "Pet", "Mercenary", "NPC", "Spell", "Reset" },
+        new[] { "Player", "Pet", "Mercenary", "NPC", "Spell" },
         options.Select(o => o.Word).ToArray());
 
     Assert.AreEqual(options.Length, options.Select(o => o.Kind).Distinct().Count(),
@@ -511,24 +517,25 @@ public class IdentityVocabularyTest
   }
 
   /*
-   * "Reset" carries IdentityKind.Unknown on purpose: ClassificationCommands.ApplyVerdict(name, Unknown) removes the row and lets the
-   * capture's own rules speak, which is what "no verdict" means. It is NOT another type — the cell for an unplaced name says
-   * "Unknown" and stays grey — and Unknown appears in the list exactly once, as that action. Spell IS a kind (R21: a caster-less
-   * spell name in a fighter's slot) and is offered like Player or NPC; it claims no side either way.
-   *
-   * The entry reads "Reset" since 2026-11 (was "Clear claim"): the old wording promised that the ANSWER was being cleared, when what the
-   * verb removes is memory — override, roster/legacy claims, older-log verdicts and the saved summon owner — after which this capture's own
-   * lines answer again. A name the log identifies therefore comes straight back, same kind and Why word, and that is the designed outcome of
-   * a reset rather than a dead button. Overruling the capture is a different gesture: pick the kind, which rides at Manual strength.
+   * Unknown is NOT in the dropdown, and it may not come back through one. It used to be there twice over: as an entry a person
+   * clicked ("Clear claim", renamed "Reset" on 2026-11 because that label promised the answer was being cleared), and as an
+   * implied promise — that clicking it would make the cell stop saying something. What `ApplyVerdict(name, Unknown)` actually
+   * does is remove memory: override, roster/legacy claims, older-log verdicts, saved summon owner (and Recalculate, its door,
+   * adds the class). Then this capture's own lines answer again, so a name the log identifies comes straight back — same kind,
+   * same Why word — which is what made the entry read as dead inside a list of answers. The take-back is therefore a click
+   * action (the calculator in the Name column), and overruling the capture is still its own gesture: pick a kind, which rides
+   * at Manual strength above everything.
    */
   [TestMethod]
-  public void ResetIsTheUnknownKindRatherThanASixthType()
+  public void NoDropdownEntryWritesUnknownTheTakeBackIsAClick()
   {
-    var clear = IdentityVocabulary.TypeOptions.Single(o => o.Word == "Reset");
-    Assert.AreEqual(IdentityKind.Unknown, clear.Kind);
+    Assert.IsFalse(IdentityVocabulary.TypeOptions.Any(o => o.Kind == IdentityKind.Unknown),
+        "an entry that writes Unknown would assert what the calculator only withholds — a silence at Manual strength is a suppression, and there is no such word");
 
-    // ...and Unknown is offered once only — as the way to stop having a verdict, never as a verdict to set.
-    Assert.AreEqual(1, IdentityVocabulary.TypeOptions.Count(o => o.Kind == IdentityKind.Unknown));
+    // And the per-row lists inherit the law: they are filtered from TypeOptions, so a smuggled entry cannot reach one row only.
+    foreach (var kind in new[] { IdentityKind.Player, IdentityKind.Pet, IdentityKind.Npc, IdentityKind.Unknown })
+      Assert.IsFalse(IdentityVocabulary.TypeOptionsFor("Berta", kind, null).Any(o => o.Kind == IdentityKind.Unknown),
+          $"a row reading {kind} still gets no take-back in its list");
   }
 
   /*

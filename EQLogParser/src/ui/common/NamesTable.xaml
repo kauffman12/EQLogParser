@@ -45,11 +45,11 @@
 
         "Refresh"  - the list updates itself now. A census that needs a button to look current reads as broken the first
                      time a name is missing; Apply re-runs on every derive pass and on log open/close/clear.
-        "Not a player" (Solid_Times) - its whole effect is DelVerdict + Re-derive, which the Type cell's "Reset"
+        "Not a player" (Solid_Times) - its whole effect is DelVerdict + Re-derive, which the Name column's calculator
                      does in one click on the row it applies to.
-        "Forget old log decisions" (Solid_Undo) - same reach, so this too lives in the dropdown: choosing a Type overrules
-                     a remembered verdict, and "Reset" drops it (the reset removes the ledger row outright, which is the whole
-                     of what that retired icon asked for). The ledger entry itself is removed by both.
+        "Forget old log decisions" (Solid_Undo) - same reach, so this too was retired rather than moved: choosing a Type overrules
+                     a remembered verdict, and the calculator drops it outright (it removes the ledger row, which is the whole
+                     of what that icon asked for). The ledger entry itself is removed by both.
 
       BATCH work - setting a whole block of selected names at once - is not here and never was expressible in a cell: it
       lives in the fight grids' context menu (Set as Player / Mercenary / Pet / NPC, Clear Override). This pane has no
@@ -96,12 +96,30 @@
         came BACK on 2026-10-09 (see the column below), and the Pet Owners window it was deferred to is gone with its file frozen.
       -->
       <syncfusion:SfDataGrid.Columns>
-        <syncfusion:GridTextColumn HeaderText="Name" MappingName="Name" Width="150"/>
+        <!--
+          Name, with the pane's one button — the calculator (2026-11). It is where the take-back lives now that it stopped being a
+          dropdown entry: a list of ANSWERS should not carry a verb whose honest outcome is often an identical cell, and an operator who
+          cannot see the control cannot call it dead. Clicking forgets every stored belief about this name — override, ledger row,
+          registry claims, class — and lets this capture's own lines answer again (ClassificationCommands.Recalculate); the word under the
+          icon reads "Recalculating…" until the pass that answers the click has landed and been shown.
+        -->
+        <syncfusion:GridTemplateColumn HeaderText="Name" MappingName="Name" Width="190">
+          <syncfusion:GridTemplateColumn.CellTemplate>
+            <DataTemplate>
+              <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                <fa:ImageAwesome Margin="8,1,4,0" Style="{StaticResource EQIconStyle}" Icon="Solid_Calculator" Cursor="Hand"
+                                 MouseLeftButtonUp="RecalcMouseLeftButtonUp"
+                                 ToolTip="Forget everything this app has stored about this name; this log answers again"/>
+                <TextBlock VerticalAlignment="Center" Text="{Binding DisplayText}"/>
+              </StackPanel>
+            </DataTemplate>
+          </syncfusion:GridTemplateColumn.CellTemplate>
+        </syncfusion:GridTemplateColumn>
 
         <!--
           Type: the verdict word and the pencil that overrules it - click the icon, the combo opens over the cell, picking
-          writes. One dropdown instead of five menu items means the whole vocabulary (including "clear my claim") is visible at
-          once instead of having to be remembered.
+          writes. One dropdown instead of five menu items means the whole vocabulary of KINDS is visible at once. The take-back
+          is not in that list (2026-11) - it is the calculator beside the name, where a click can be seen.
         -->
         <syncfusion:GridTemplateColumn HeaderText="Type" MappingName="Type" Width="90">
           <syncfusion:GridTemplateColumn.CellTemplate>
@@ -151,11 +169,12 @@
           reasoning died with the window's write side — petmapping.txt is frozen (docs/DesignNotes.md → "petmapping.txt is a feed now"),
           so an identity list that could not show or correct an owner left the operator no door at all except a file the app no longer reads.
 
-          Three things this cell says, and one it never says. It shows WHO the summon belongs to; the pencil writes one name; the last
-          entry in the dropdown is "No Owner", which forgets the pair and KEEPS the Pet verdict ("I do not know whose this is" is not
-          "this is not a pet" — taking everything back is the Type cell's "Reset"). What never appears here is the old placeholder
-          wording: rows written before the change hold "Unknown Pet Owner", and `PetOwnership.DisplayOf` answers "No Owner" for that, for
-          the new word, and for no mapping at all — an empty cell reads as a classifier bug, while "nobody said whose" is a real answer.
+          Three things this cell says, and one it never says. It shows WHO the summon belongs to; the pencil's list holds VALID OWNERS
+          ONLY (2026-11 — the old trailing "No Owner" entry wrote a narrow forget while a wider take-back sat in another column, so it is
+          gone: taking an owner back means taking everything back, and that is one click on the calculator beside the name); a row whose
+          answer is nobody opens the list blank. What never appears here is the old placeholder wording: rows written before the change
+          hold "Unknown Pet Owner", and `PetOwnership.DisplayOf` answers "No Owner" for that, for the new word, and for no mapping at all —
+          an empty cell reads as a classifier bug, while "nobody said whose" is a real answer.
         -->
         <syncfusion:GridTemplateColumn HeaderText="Owner" MappingName="Owner" Width="130">
           <syncfusion:GridTemplateColumn.CellTemplate>
@@ -212,7 +231,7 @@
       The three cell dropdowns (Type, Class, Owner) are each ONE popup reused by every row, opened by the pencil's click and
       re-pointed at that cell by UiElementUtil.OpenCellPopup. The owner list is built per click in code-behind
       (PetOwnership.Choices over the players this application knows) rather than declared here: it is a live question — "whose summon
-      can this be, right now" — and its last entry is the take-back. Plain strings, so no DisplayMemberPath.
+      can this be, right now" — and it holds valid owners only; the take-back is the calculator click, never an entry. Plain strings, so no DisplayMemberPath.
     -->
     <Popup x:Name="ownerEditPopup" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade" Placement="Mouse">
       <ComboBox x:Name="ownerEditComboBox"

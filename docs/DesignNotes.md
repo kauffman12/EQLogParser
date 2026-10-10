@@ -10951,3 +10951,64 @@ reference clamped to the wall clock, which is exactly the change that must not b
 compared dotnet-second stamps against `DateTimeOffset.UtcNow.ToUnixTimeSeconds()`, i.e. two different units, and switched
 the verdict expiry off entirely on every real row. Any future guard has to clamp within this unit and say so in
 `StaleVerdictsExpireAgainstTheNewestSighting`.
+
+## The calculator takes everything back (2026-11)
+
+Two field sentences, in the operator's words: "if the reset ends up with the same result at least the user knows that it
+tried", and "just leave the valid values in the dropdowns and if you want to reset things you click the calculator". They
+describe one defect that had two faces.
+
+**The defect.** The take-back had been a dropdown entry — `Clear claim`, renamed `Reset` on 2026-11 because that label
+promised the ANSWER was being cleared — sitting inside the Type cell's list of **kinds**. But what the entry did, and what
+`ClassificationCommands.ApplyVerdict(name, Unknown)` does, is remove *memory*: the override, the ledger row (verdict, roster
+bit, class, owner column), every registry claim. Then the next pass re-runs the rule book over this capture's unchanged lines,
+and any name the log itself identifies — a ``X`s pet`` spelling, a `/target` frame, a class-family cast, a pet-target spell,
+raid-wide healing, `npcs.txt` — **comes straight back with the same kind and the same Why word**. So the entry's honest outcome
+was often an identical cell, and an identical cell inside a list of answers reads as a dead button. Worse, it was the weaker
+door: beside it sat the Owner cell's trailing `No Owner`, which wrote a *narrow* forget (the pair goes, the Pet verdict stands)
+while the wide take-back lived one column over — two controls both reading "reset", only one of them saying what it does.
+
+**The decision.** No entry writes `Unknown` any more, and the verb moves next to its subject:
+
+1. **The Type dropdown is exactly the five kinds** (`IdentityVocabulary.TypeOptions`), each an answer a name could be; the
+   per-row lists are filtered from that table, so a smuggled take-back cannot reach one row only. `Unknown` may not come back
+   through an entry, because an entry that writes it would *assert* what the verb only withholds — a silence at Manual (1000)
+   sits above this capture's own evidence, i.e. a suppression, and there is no such word in the identity vocabulary. Pinned by
+   `IdentityVocabularyTest.NoDropdownEntryWritesUnknownTheTakeBackIsAClick` (was `ResetIsTheUnknownKindRatherThanASixthType`)
+   and `ARowOffersOnlyTheKindsItsNameAllows`.
+2. **The take-back is one click, on a calculator icon in the Name column**, wired to
+   `ClassificationCommands.Recalculate(name)` = `Forget` + `ApplyVerdict(name, Unknown)` + the new `PlayerRegistry.ForgetClass`.
+   The class is the half the old door never had: the ledger row carried it, but nothing in the dropdown path ever called
+   `ForgetClass`, so tonight's cast-learned window survived a reset and reasserted itself — "the last log showed me" is exactly
+   what the operator asked to be forgotten. `ForgetClass` clears **both** class lanes (default + learned windows, case-insensitive
+   maps) for one name only; a kind verdict (`Set as …`) deliberately does not touch them, because a raider's ten thousand cast
+   lines are still in the capture and a click about *what a name is* must not blank what they prove. Pinned by
+   `RecalculateIdentityTest` (every lane seeded the way its real writer writes it, all gone after one click; no negative entry of
+   any kind written — `TryGet` false, not an Unknown row — and a re-claim lands as for a name never seen) and by the old
+   `TakingAClaimBackTakesTheLegacyMemoryWithIt`, which now pins the door the click goes through.
+3. **The Owner list holds valid owners only** (`PetOwnership.Choices` drops its trailing entry): a row whose answer is nobody
+   opens it *blank* — there is no "what it says" to preselect, and every real name in the list is a change by construction, so
+   the handler's no-op guard can never mistake a placeholder for one. `IsClear` survives as the vocabulary question ("does this
+   string name nobody") because the stored wordings on disk still need an answer; it lost its UI door, and the pane's handler
+   keeps it only as a guard against a stale pick writing an owner that is not a person. Pinned by `PetOwnershipTest`
+   (`NoClearEntryIsTheLastEntry…` → `NoClearEntryIsOfferedTheTakeBackIsTheCalculator`, the blank-open shape, and the file-wording
+   law moved to `TheWordForNobodyIsTwoWordsAndNotAFile`).
+
+**The "at least the user knows it tried" half.** While the click is in flight the name cell reads **`Recalculating…`** — a word
+over the name (`NameRow.DisplayText`; `Name` stays the sort key so the list does not reshuffle mid-recount), shown by the
+handler, then hidden by `RecalcOverlay`: never before a **500 ms floor** (under it an identical-looking answer must still show
+the click was heard — this is the *inverse* of `DeferredBusyState`, which delays showing for the same reason from the other
+side), then at the first of **the pass landing** (`EventsDerived`, signalled before its 2 s census throttle, because the click
+owed its answer as soon as the pass ran) and a **5 s hard cap** — a bulk load parks both derive lanes, and a label that waits on
+a pass that may not come for minutes would read as a frozen row. A census replacing the row mid-flight is harmless: fresh
+instances start unlabelled. Pinned by `RecalcOverlayTest` (floor / pass / cap / monotonicity over plain longs) and, in
+`EQLogParser.Wpf.Test`, `RecalcOverlayRowWordTest`.
+
+**What did not change.** The verb is still forget-then-the-capture-answers, so the memory-vs-evidence table from when `Reset`
+was renamed stands word for word — a name whose only claim was memory leaves the list, and a name this capture places comes back.
+That is no longer surprising, because the control now says *recalculate* rather than sitting in a column of answers: the operator
+sees the click happen, waits for the word to come down, and knows which case they got.
+
+**Honesty note.** The Wpf assembly builds here (zero warnings, `--no-incremental`) but its tests run only on Windows; the
+NamesTable wiring — the icon, the label lifecycle, the blank-open owner list — is pinned in `EQLogParser.Wpf.Test` and needs a
+Windows run to count as measured.

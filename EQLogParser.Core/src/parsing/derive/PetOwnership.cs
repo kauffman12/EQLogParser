@@ -14,10 +14,13 @@ namespace EQLogParser;
  *   catch, and Pet/Merc/Spell/NPC rows have nothing to persist here — ownership is a claim about a summon. (The operator chose this over
  *   "any row, where choosing an owner also asserts Pet".)
  *
- *   The last entry is the take-back: `Labels.Unassigned`, which prints "No Owner" (2026-10-09 — the window used to offer a choice
- *   labelled "Unknown Pet Owner", and the operator asked for two words that say what the click does). Choosing it forgets the pair and
- *   KEEPS the Pet verdict: "I do not know whose this is" is not "this is not a pet". Clearing everything a name is stays where it was,
- *   under the Type column's "Reset".
+ *   The list holds VALID OWNERS ONLY (2026-11, on request: "just leave the valid values in the dropdowns and if you want to reset
+ *   things you click the calculator"). The old trailing entry, `Labels.Unassigned` printed as "No Owner" (it used to read "Unknown Pet
+ *   Owner", and the operator asked for two words that say what the click does), wrote a NARROW forget — the pair went, the Pet verdict
+ *   stayed — beside the wider take-back in another column, which is exactly the kind of second, weaker door this pane used to ship with.
+ *   Taking an owner back now means taking everything back, and that is one click: the Name column's calculator
+ *   (ClassificationCommands.Recalculate). A row whose answer is nobody opens the list blank — there is no "what it says" to preselect,
+ *   and a blank selection in a pick-your-owner list reads as one, not as a bug.
  *
  *   The row's current answer is always in its own list, even when it is junk. A value missing from the dropdown it opens with reads as a
  *   blank cell, and a blank cell reads as a classifier bug — so an owner who left the raid, or a placeholder stored under the old
@@ -61,19 +64,14 @@ internal static class PetOwnership
 
     /*
      * The row's own answer comes first, so the popup opens on what it says even when that answer is nobody the roster knows — but a
-     * placeholder is not "its own answer", it is the absence of one: adding the stored wording beside the trailing entry would give the
-     * same click two lines in one dropdown (and preselect the stale text instead of "No Owner").
+     * placeholder is not "its own answer", it is the absence of one: it would put a dead word in the list and preselect it. An
+     * ownerless row therefore opens blank, and picking any real name is a change by construction (the handler's no-op guard compares
+     * against an answer that is not in the list and can never match).
      */
     if (IsCandidate(current) && seen.Add(current!)) list.Insert(0, current!);
 
+    // Sorted only: there is no take-back entry any more. The calculator is the door for "no owner", and it is wider on purpose.
     list.Sort(System.StringComparer.Ordinal);
-
-    /*
-     * The take-back goes last, whatever else the list holds — including when the row ALREADY reads unassigned: an ownerless pet must be
-     * able to open its own dropdown on its own value (preselecting the entry is what lets the handler refuse a click that changes
-     * nothing, rather than spending a derive pass and rewriting a store).
-     */
-    list.Add(Labels.Unassigned);
     return list;
   }
 

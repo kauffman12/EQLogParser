@@ -15,11 +15,12 @@ namespace EQLogParser;
 public sealed class PetOwnershipTest
 {
   [TestMethod]
-  public void TheTakeBackSaysNoOwner()
+  public void TheWordForNobodyIsTwoWordsAndNotAFile()
   {
-    // What the pane actually receives as its take-back entry, rather than the constant read beside its own definition.
-    var entry = PetOwnership.Choices(null, ["Ziggy"])[^1];
-    Assert.AreEqual("No Owner", entry, "the dropdown entry the operator asked for is two words");
+    // The cell word, from DisplayOf rather than the constant read beside its own definition: an unmapped pet prints it, and nothing
+    // about the stores may leak a file name into the pane that asks about them.
+    var entry = PetOwnership.DisplayOf(null);
+    Assert.AreEqual("No Owner", entry, "the cell word the operator asked for is two words");
     Assert.IsFalse(entry.Contains(".txt", StringComparison.Ordinal));
 
     // Files hold the old wording; nothing writes it. Both must answer the same question, in either direction of the ask.
@@ -45,20 +46,29 @@ public sealed class PetOwnershipTest
     Assert.IsFalse(PetOwnership.CanEditOwner(IdentityKind.Unknown));
   }
 
+  /*
+   * The list holds VALID OWNERS ONLY (2026-11, on request): the trailing "No Owner" entry is gone because it wrote a NARROW forget
+   * — the pair went, the Pet verdict stayed — beside the wider take-back in another column. Two doors that both read as "reset"
+   * is exactly how this pane shipped before; now resetting means the calculator click in the Name column, and the dropdown offers
+   * one thing only: who the summon belongs to.
+   */
   [TestMethod]
-  public void TheTakeBackIsTheLastEntryAndAppearsOnce()
+  public void NoClearEntryIsOfferedTheTakeBackIsTheCalculator()
   {
-    var choices = PetOwnership.Choices("Ziggy", ["Beorun", "Ziggy", "Romance"]);
+    foreach (var current in new[] { "Ziggy", Labels.Unassigned, Labels.LegacyUnassigned, null })
+    {
+      var choices = PetOwnership.Choices(current, ["Beorun", "Ziggy", "Romance"]);
 
-    Assert.AreEqual(Labels.Unassigned, choices[^1], "'No Owner' is the last thing in the list, so it never hides a real owner");
-    Assert.AreEqual(1, choices.Count(c => PetOwnership.IsClear(c)),
-        "the same click appeared twice in one dropdown; the stored wording and the new one are one entry");
+      Assert.AreEqual(0, choices.Count(c => PetOwnership.IsClear(c)),
+          $"a clear entry crept back in for a row reading '{current ?? "<nobody>"}' — the take-back is the calculator click, never an owner to pick");
+    }
   }
 
   /*
    * A value missing from its own dropdown reads as a blank cell, and a blank cell reads as a classifier bug — so an owner who is not on
    * this session's roster (disbanded raid, a name the capture never verifies) still has to be selectable. The placeholder is the exception
-   * the other way: it is the ABSENCE of an answer, and its entry is the trailing "No Owner", not a stale string from a file.
+   * the other way: it is the ABSENCE of an answer, and a row storing one opens its list blank — nothing in the list can match what it
+   * says, so preselecting anything would be a lie.
    */
   [TestMethod]
   public void ACurrentOwnerNobodyKnowsIsStillSelectable()
@@ -66,21 +76,23 @@ public sealed class PetOwnershipTest
     var choices = PetOwnership.Choices("Longgone", ["Beorun", "Ziggy"]);
 
     CollectionAssert.Contains(choices, "Longgone");
-    Assert.IsTrue(choices.IndexOf("Longgone") < choices.Count - 1, "the real answer sits above the take-back, not after it");
+    Assert.AreEqual(1, choices.Count(c => string.Equals(c, "Longgone", StringComparison.OrdinalIgnoreCase)),
+                    "the current answer appears once, whether or not the roster still knows it");
   }
 
   [TestMethod]
-  public void AStoredPlaceholderIsNeverOfferedAsItsOwnAnswer()
+  public void AStoredPlaceholderOpensTheListBlankAndLeaksNoFileWording()
   {
     foreach (var legacy in new[] { Labels.LegacyUnassigned, Labels.Unassigned })
     {
       var choices = PetOwnership.Choices(legacy, ["Beorun", "Ziggy"]);
 
-      Assert.AreEqual(1, choices.Count(c => PetOwnership.IsClear(c)),
-          $"a row storing {legacy} got a second entry for the same click");
-      Assert.AreEqual(Labels.Unassigned, choices[^1], "the entry reads what it now says, whatever the file held");
+      Assert.AreEqual(0, choices.Count(c => PetOwnership.IsClear(c)),
+          $"a row storing {legacy} must not get a word that writes nothing — its answer is nobody, and the list holds only people");
       Assert.IsFalse(choices.Any(c => c == Labels.LegacyUnassigned),
-          "the wording an old file holds leaked into the dropdown beside the current one");
+          "the wording an old file holds leaked into the dropdown");
+      CollectionAssert.AreEqual(new[] { "Beorun", "Ziggy" }, choices,
+          $"a row whose answer is nobody opens on its VALID OWNERS only — no word for the absence of one, and {legacy} not among them");
     }
   }
 
@@ -97,9 +109,14 @@ public sealed class PetOwnershipTest
     foreach (var junk in new[] { Labels.LegacyUnassigned, "yourself", "himself", "herself", Labels.Unk })
       Assert.IsFalse(choices.Contains(junk), $"{junk} was offered as somebody who can own a pet");
 
-    Assert.AreEqual(1, choices.Count(c => PetOwnership.IsClear(c)));
+    Assert.AreEqual(0, choices.Count(c => PetOwnership.IsClear(c)), "and no take-back entry among them either");
   }
 
+  /*
+   * `IsClear` survives the removal of its only UI door: it is the VOCABULARY question "does this string name nobody", and the stored
+   * wordings on disk still need an answer (a restored folder can hold rows written under either wording). What changed is who may ASK
+   * it with a picked value — nobody can any more, because the list holds only candidates and the take-back moved to the calculator.
+   */
   [TestMethod]
   public void ChoosingNoOwnerIsTheClearAndChoosingAPersonIsNot()
   {
