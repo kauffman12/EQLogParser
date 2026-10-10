@@ -432,20 +432,37 @@ namespace EQLogParser
      * these are the widths that fit the longest word each column can print.
      */
     /*
-     * What this grid wants to be wide, asked by ThemeConfig to size the right-hand identity strip (MainWindow's
-     * namesWindow/petMappingWindow pair). The two panes are tabbed into ONE panel, so they must ask for the SAME width or
-     * the strip jumps when you switch tabs — and the width has to come from this file's own column arithmetic, because a
-     * number written next to the dock markup drifts the day a column changes and the last column ends up behind a
-     * horizontal scrollbar in a pane nobody can widen past the strip.
+     * One place answers "how wide is this column?", and both doors read it: `ApplyColumnWidths` walks the live grid and
+     * asks per column, while `DesiredPaneWidth` — which ThemeConfig calls to size the right-hand identity strip before
+     * the pane exists, so it cannot ask the grid — sums the same answers over the declared columns. The two numbers were
+     * written next to each other with their own copies of the arithmetic and had drifted (one said ~771 px fixed, the
+     * other ~385 px at 12 pt), which is how a column change could quietly desize the strip it feeds. Measured numbers are
+     * what the law carries: ~771 px at 12 pt from the fixed buckets, ~385 px from the shared switch — the width has to
+     * come from this file's own column arithmetic because a number written beside the dock markup drifts the day a column
+     * changes and the last column ends up behind a horizontal scrollbar in a pane nobody can widen past the strip.
      */
+    private static double ColumnWidth(string mappingName)
+    {
+      // The pencil (and the calculator) is EQIconStyle — a square of the current font size — plus the 8+8 margins every icon in these panes carries.
+      var iconAllowance = ThemeConfig.CurrentFontSize + 16;
+      return mappingName switch
+      {
+        "Name" => ThemeConfig.CurrentNameWidth + iconAllowance,               // the calculator icon pays for itself, like the pencils
+        "Type" => TypeColumnWidth() + iconAllowance,
+        "PlayerClass" => ThemeConfig.CurrentMediumWidth + ThemeConfig.CurrentShortestWidth,
+        "Owner" => ThemeConfig.CurrentMediumWidth + ThemeConfig.CurrentShortestWidth + iconAllowance,
+        "Why" => ThemeConfig.CurrentMediumWidth + ThemeConfig.CurrentShortestWidth,
+        _ => 0.0,
+      };
+    }
+
+    /// <summary>The grid's columns in the order the XAML declares them — what `DesiredPaneWidth` sums over.</summary>
+    private static readonly string[] ColumnNames = { "Name", "Type", "PlayerClass", "Owner", "Why" };
+
     internal static double DesiredPaneWidth()
     {
-      var fontSize = ThemeConfig.CurrentFontSize;
-      var iconAllowance = fontSize + 16;                       // EQIconStyle square + the 8+8 margins
-      var columns = ThemeConfig.CurrentNameWidth + iconAllowance                                    // Name + its calculator
-                  + TypeColumnWidth() + iconAllowance                                               // Type + its pencil
-                  + 2 * (ThemeConfig.CurrentMediumWidth + ThemeConfig.CurrentShortestWidth)          // Class and Why
-                  + ThemeConfig.CurrentMediumWidth + ThemeConfig.CurrentShortestWidth + iconAllowance; // Owner + its pencil
+      double columns = 0;
+      foreach (var name in ColumnNames) columns += ColumnWidth(name);
       var rowHeader = Application.Current.Resources["EQTableRowHeaderWidth"] is double w ? w : 32.0;  // ShowRowHeader="True"
       return columns + rowHeader + 18;                        // 18: the vertical scrollbar that comes with a long list
     }
@@ -472,20 +489,9 @@ namespace EQLogParser
     {
       if (namesGrid?.Columns is null) return;
 
-      // The pencil is EQIconStyle — a square of the current font size — plus the 8+8 margins every icon in these panes carries.
-      var iconAllowance = ThemeConfig.CurrentFontSize + 16;
-
       foreach (var column in namesGrid.Columns)
       {
-        var width = column.MappingName switch
-        {
-          "Name" => ThemeConfig.CurrentNameWidth + iconAllowance,   // the calculator icon pays for itself, like the pencils
-          "Type" => TypeColumnWidth() + iconAllowance,
-          "Why" => ThemeConfig.CurrentMediumWidth + ThemeConfig.CurrentShortestWidth,
-          "PlayerClass" => ThemeConfig.CurrentMediumWidth + ThemeConfig.CurrentShortestWidth,
-          "Owner" => ThemeConfig.CurrentMediumWidth + ThemeConfig.CurrentShortestWidth + iconAllowance,
-          _ => 0.0,
-        };
+        var width = ColumnWidth(column.MappingName);
         if (width > 0) column.Width = width;
       }
     }
