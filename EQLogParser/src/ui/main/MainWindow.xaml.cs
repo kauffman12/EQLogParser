@@ -93,6 +93,9 @@ namespace EQLogParser
 
     private LogReader _eqLogReader;
     private DeriveEngine _engine;
+
+    /// <summary>DeriveEngine.SessionId of the capture now open (0 = none), so a worker build can ask whether it still owns the boards.</summary>
+    private int _engineSessionId;
     private readonly List<bool> _logWindows = [];
     private readonly List<string> _recentFiles = [];
     private readonly string _activeWindow;
@@ -866,7 +869,7 @@ namespace EQLogParser
        * damage-type filter. The gate drops a request whose key has already been built or is
        * building, queues at most one newer one behind a run, and never lets two materializations overlap.
        */
-      var key = SummaryKeyFor(request.Fights, request.ContentStamp, tankingDamageType);
+      var key = SummaryKeyFor(session.SessionId, request.Fights, request.ContentStamp, tankingDamageType);
       var askedAt = Stopwatch.GetTimestamp();
       var outcome = _summaryGate.Request(key, () => BuildBoards(session, request, tankingDamageType, askedAt));
 
@@ -891,10 +894,15 @@ namespace EQLogParser
      * built per announcement, on the UI thread) — but it IS why the gate logs its two non-Started outcomes: a board that
      * refuses to update while the pane says it announced is diagnosable from eqlogparser.log rather than argued about.
      */
-    private long SummaryKeyFor(IReadOnlyList<DerivedFight> selected, long contentStamp, int tankingDamageType)
+    internal static long SummaryKeyFor(int sessionId, IReadOnlyList<DerivedFight> selected, long contentStamp, int tankingDamageType)
     {
       var hash = unchecked((contentStamp * 397) ^ tankingDamageType);
       foreach (var fight in selected) hash = unchecked(hash * 17 + fight.Id);
+      // The capture this question belongs to, mixed in LAST so nothing else about a session can collide with it. Two logs
+      // can hand out the same ids, stamp and filter — and an empty selection over two of them is the everyday case: closing
+      // one capture and opening another asks the SAME key for a board the new capture has never painted, which the gate would
+      // otherwise answer "already built" to. See BoardKeyTest.
+      hash = unchecked(hash * 31 + sessionId);
       return hash == 0 ? 1 : hash;
     }
 
@@ -908,6 +916,18 @@ namespace EQLogParser
       var buildSpan = PerfCounters.Begin(BoardBuildId);
       var waitedMs = StatsBuildTrace.ElapsedSince(askedAt);
       SummaryInput input = null;
+
+      /*
+       * Whose capture is this build for, still? A session that has been closed answers with an EMPTY summary (Dispose drops
+       * the snapshot, and BuildSummaryInput reads that as "clear every board"), so a build that outlived its own log would
+       * blank the boards of whatever opened next — including Clear All's own fresh session. Newest question wins: the gate
+       * never un-STARTS work, so it stops before painting instead. `_engineSessionId` is written on the UI thread only.
+       */
+      if (session.SessionId != Volatile.Read(ref _engineSessionId))
+      {
+        Log.Debug($"board build abandoned [{request.Reason}]: capture {session.SessionId} closed while this was queued");
+        return;
+      }
 
       /*
        * The door label every builder prints (StatsBuildTrace). It carries the reason and the content stamp so two lines can be compared:
@@ -928,6 +948,12 @@ namespace EQLogParser
         damageStatsOptions.Npcs.AddRange(input.Fights);
         damageStatsOptions.AllRanges = input.AllRanges;
         damageStatsOptions.MinSeconds = 0;
+
+        if (session.SessionId != Volatile.Read(ref _engineSessionId))
+        {
+          Log.Debug($"board build abandoned [{request.Reason}]: capture closed while this materialized");
+          return;
+        }
 
         var records = input.Fights.Sum(static f => f.DamageBlocks.Sum(static b => b.Actions.Count));
         var tankRecords = input.Fights.Sum(static f => f.TankingBlocks.Sum(static b => b.Actions.Count));
@@ -1564,6 +1590,7 @@ namespace EQLogParser
             // the single chat sink slot via fan-out (archive first, derivation second — D8 seam).
             _engine?.Dispose();
             _engine = null;
+            _engineSessionId = 0;
             IChatSink chatSink = new ChatDbSink();
             /*
              * The engine sizes its fact arrays from this file when the whole of it will be read (see FactCapacity):
@@ -1580,6 +1607,7 @@ namespace EQLogParser
              */
             var hintBytes = FactCapacity.HintForOpen(lastMins, LogReader.FileSizeOrZero(theFile));
             _engine = new DeriveEngine(hintBytes);
+            _engineSessionId = _engine.SessionId;
             _engine.Start();
             chatSink = new CompositeChatSink(chatSink, _engine.ChatSink);
             // One line per open: if the derived list ever silently fails to fill, this is the line that is
@@ -1632,6 +1660,7 @@ namespace EQLogParser
         _eqLogReader = null;
         _engine?.Dispose();
         _engine = null;
+        _engineSessionId = 0;
         fileText.Text = string.Empty;
         ConfigUtil.ServerName = null;
         ConfigUtil.PlayerName = null;
