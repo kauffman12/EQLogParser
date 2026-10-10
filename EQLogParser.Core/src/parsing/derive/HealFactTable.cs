@@ -205,6 +205,17 @@ namespace EQLogParser
     long CompactToCount();
     ReadOnlySpan<HealFact> Heals { get; }
     void AddHeal(HealFact heal);
+
+    /*
+     * Whether the rows are ordered by time. Windowed readers may halve for a start point while this holds; a store that
+     * cannot promise it (a spool handing back runs out of order, a restored log concatenated backwards) says false and
+     * every reader pays the full walk rather than silently losing the rows before the backwards append. The same law as
+     * `CastHistory.AscendingTime`: one backwards row retires the fast path, permanently and honestly.
+     */
+    bool AscendingTime { get; }
+
+    /// <summary>First row whose time is at or after `time`, or the count when none is. Meaningful only while AscendingTime holds.</summary>
+    int FirstIndexAtOrAfter(double time);
     short InternName(string name);
     string NameOf(short idx);
     ushort InternSpell(string spell);
@@ -230,6 +241,14 @@ namespace EQLogParser
 
     private readonly List<string> _spells = [];
     private readonly Dictionary<string, ushort> _spellMap = new(StringComparer.Ordinal);
+
+    /*
+     * Set once, at the first append that goes backwards in time, and never restored: like the cast history's flag beside
+     * it, an unordered store is a property of the data this session was handed, and a reader that halved over it would
+     * return a window that silently omitted rows. Lines arrive through one parser thread in file order, so in practice
+     * this stays true and windowed reads get their start point for a halving instead of a walk.
+     */
+    private bool _ascendingTime = true;
 
     // Sizing mirrors the damage table's contract: the caller estimates from file size, growth doubles.
     // Heal lines measured about a quarter of the damage rate, so the default starts there.
@@ -267,8 +286,33 @@ namespace EQLogParser
 
     public void AddHeal(HealFact heal)
     {
+      if (_ascendingTime && _healCount > 0 && heal.TimeS < _heals[_healCount - 1].TimeS) _ascendingTime = false;
+
       if (_healCount == _heals.Length) Array.Resize(ref _heals, _heals.Length * 2);
       _heals[_healCount++] = heal;
+    }
+
+    /// <inheritdoc cref="IHealFactTable.AscendingTime"/>
+    public bool AscendingTime => _ascendingTime;
+
+    /*
+     * The first row at or after `time` (rows ascending while AscendingTime holds — the caller's job, and HealSummarySource
+     * asks it). Returns HealCount when every row is older, which is the honest "start past the end" rather than a clamp:
+     * a window to the right of the capture materializes nothing either way.
+     */
+    public int FirstIndexAtOrAfter(double time)
+    {
+      var low = 0;
+      var high = _healCount - 1;
+
+      while (low <= high)
+      {
+        var middle = (low + high) >>> 1;
+        if (_heals[middle].TimeS >= time) high = middle - 1;
+        else low = middle + 1;
+      }
+
+      return low;
     }
   }
 }

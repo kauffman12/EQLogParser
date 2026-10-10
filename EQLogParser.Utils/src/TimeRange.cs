@@ -185,20 +185,34 @@ namespace EQLogParser
             }
             else
             {
-              foreach (var segment in range.TimeSegments)
-              {
-                if (logTime >= segment.BeginTime && logTime <= segment.EndTime)
-                {
-                  pass = true;
-                  break;
-                }
-              }
+              // The halved question, not the scan: same inclusive bounds, and TimeRange keeps the list sorted and disjoint by
+              // construction (see Contains). This door walks a log's lines, so per line it was paying for every span.
+              pass = range.Contains(logTime);
             }
           }
         }
       }
 
       return pass;
+    }
+
+    /*
+     * Is this instant inside one of the range's seconds? Inclusive on both ends, exactly as the linear test ever was.
+     *
+     * The halving is legal for the same reason Add()'s search is: every path that fills this list comes through Add(TimeSegment), which keeps
+     * it sorted and disjoint. That is why this is a member of TimeRange rather than a loop at a call site - a caller cannot tell from a
+     * `List<TimeSegment>` whether the law was obeyed, and a linear scan over a few thousand spans costs 1,300 comparisons per question.
+     * Measured: windowing 420k heal rows against a 2,653-span capture window went 2,159 ms -> 27 ms (docs/DesignNotes.md ->
+     * "A window is searched, never walked").
+     *
+     * Building the list by touching TimeSegments directly would break this, exactly as it breaks GetTotal()'s silence rule.
+     */
+    public bool Contains(double time)
+    {
+      if (TimeSegments.Count == 0) return false;
+
+      var index = FirstSpanReaching(time);
+      return index < TimeSegments.Count && time >= TimeSegments[index].BeginTime;
     }
 
     /*

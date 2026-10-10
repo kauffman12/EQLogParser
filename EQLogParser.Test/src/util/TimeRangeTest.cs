@@ -257,5 +257,61 @@ namespace EQLogParserTest
       var a = new TimeSegment(10, 20);
       Assert.IsFalse(a.Equals(null));
     }
+
+    /*
+     * Contains is the halved form of "is this instant inside one of my seconds", and it is legal only because Add keeps the list
+     * sorted and disjoint - so this asserts it against the linear question over randomly built ranges (which exercises that law at
+     * the same time), including every instant around every edge and each gap in between.
+     */
+    [TestMethod]
+    public void Contains_MatchesTheLinearQuestionOverRandomlyBuiltRanges()
+    {
+      var random = new Random(20261112);
+
+      for (var trial = 0; trial < 30; trial++)
+      {
+        var range = new TimeRange();
+        for (var i = 0; i < random.Next(0, 12); i++)
+        {
+          var begin = random.Next(500, 1_000) + random.Next(0, 3) * 400;
+          range.Add(new TimeSegment(begin, begin + random.Next(0, 30)));
+        }
+
+        // Probes: every edge, both sides of every edge, the middle of every gap, and points outside everything.
+        var probes = new List<double> { -1_000, 0, 100_000 };
+        foreach (var segment in range.TimeSegments)
+        {
+          probes.Add(segment.BeginTime - 1);
+          probes.Add(segment.BeginTime);
+          probes.Add((segment.BeginTime + segment.EndTime) / 2);
+          probes.Add(segment.EndTime);
+          probes.Add(segment.EndTime + 1);
+        }
+
+        foreach (var probe in probes)
+        {
+          var linear = range.TimeSegments.Any(s => probe >= s.BeginTime && probe <= s.EndTime);
+          Assert.AreEqual(linear, range.Contains(probe),
+              $"trial {trial} at {probe}: halving and scanning disagreed over [{string.Join(", ", range.TimeSegments.Select(s => $"{s.BeginTime}-{s.EndTime}"))}]");
+        }
+      }
+    }
+
+    [TestMethod]
+    public void Contains_EmptyRangeIsFalseAndReadsNothing()
+    {
+      Assert.IsFalse(new TimeRange().Contains(100));
+
+      var range = new TimeRange(new TimeSegment(10, 20));
+      Assert.IsTrue(range.Contains(10), "inclusive at the start");
+      Assert.IsTrue(range.Contains(20), "inclusive at the end");
+      Assert.IsFalse(range.Contains(9));
+      Assert.IsFalse(range.Contains(21));
+
+      // A read may not rewrite the list it is asked of - the rule GetTotal() carries for the same reason.
+      Assert.AreEqual(1, range.TimeSegments.Count);
+      Assert.AreEqual(10, range.TimeSegments[0].BeginTime);
+      Assert.AreEqual(20, range.TimeSegments[0].EndTime);
+    }
   }
 }
