@@ -12,8 +12,8 @@ namespace EQLogParser;
  * memoized on `_healerHealedKeys` for a while; this test is what stops that being an accident somebody can undo from either end
  * (the call site or the helper), because the failure mode is invisible: the board looks identical and the log file grows.
  *
- * The measured context, over eqlog_Kizant_xegony-09-03-26.txt with `EQLP_BOARD_WALK=… dotnet test --filter BoardWalkCost` (the
- * same instrument production prints from): the healing build went **238.8 MB → 145.5 MB** traced, its `window` stage
+ * The measured context, over eqlog_Kizant_xegony-09-03-26.txt through StatsBuildTrace's own lines (the one-off probe that ran it has been
+ * deleted; these are its numbers): the healing build went **238.8 MB → 145.5 MB** traced, its `window` stage
  * **225.8 MB → 132.4 MB**, and the wall time stayed **flat** (701 → 708 ms). The bytes came from two things, neither of them a
  * string: pass 1 used to copy every accepted heal into a `List<(double, HealRecord)>` (24 bytes each, plus the arrays its growth
  * copies through) where it now walks the source range when nothing was dropped, and the six per-segment time-segment maps are

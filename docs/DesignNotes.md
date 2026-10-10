@@ -10013,9 +10013,9 @@ so an ordinary line does not grow noise. "The board takes 2.6 s" and "the board 
 operations, the second wants fewer objects, and only the second explains why a UI-thread pause outlives the pass that caused it (this is the
 same gen0-on-the-painting-thread effect the field runs measured as `pause … ms/30 s`).
 
-Measured headlessly over `eqlog_Kizant_xegony-09-03-26.txt` — the very capture the field log came from — with `BoardWalkCostRealLogTest`
-(`EQLP_BOARD_WALK=<log>`): 4,832,103 facts → 708 rows → 697 fights materialized into **4,660,915 damage + 133,784 taken records**, i.e. the
-`Select All` an operator actually performs.
+Measured headlessly over `eqlog_Kizant_xegony-09-03-26.txt` — the very capture the field log came from — through the stats-build trace's own
+lines (the one-off probe that produced these numbers has been deleted; this table is what it left behind): 4,832,103 facts → 708 rows → 697
+fights materialized into **4,660,915 damage + 133,784 taken records**, i.e. the `Select All` an operator actually performs.
 
 | | before | after | what changed |
 |---|---|---|---|
@@ -10110,9 +10110,8 @@ not make the first pass faster — that is still the per-record hashing discusse
 
 B13 removed the duplicate chart passes. One pass per build remains — ~1.5 s over a night's Select All — and the two candidate cures are
 opposite: maintain *less per record*, or walk *fewer records*. The difference matters, because one of them is weeks of surgery on the board
-builders and the other is a few lines in the chart. So the question was measured rather than argued, in the gated cost probe
-(`EQLP_BOARD_WALK=local/logs/live/eqlog_Kizant_xegony-09-03-26.txt dotnet test --filter BoardWalkCost --logger "console;verbosity=detailed"`,
-the operator's own capture: 4,832,103 facts → 697 fights → **4,660,915 damage records**):
+builders and the other is a few lines in the chart. So the question was measured rather than argued, on the operator's own capture `eqlog_Kizant_xegony-09-03-26.txt`
+(4,832,103 facts → 697 fights → **4,660,915 damage records**), through the same trace lines as above:
 
 | what the loop does, per record | ns/record | over 4.66 M |
 |---|---|---|
@@ -10144,8 +10143,8 @@ surface on screen does not use", and it was taken up on the spot: see "A histogr
 
 ## A histogram nobody asked for
 
-The candidate above measured bigger than expected. Running `EQLP_BOARD_WALK` twice over the operator's capture — once as shipped, once with the
-hit-frequency fill temporarily skipped inside the damage walk:
+The candidate above measured bigger than expected. Measured twice over the operator's capture — once as shipped, once with the
+hit-frequency fill temporarily skipped inside the damage walk (the probe that ran this has been deleted; these are its numbers):
 
 | whole-capture damage build | as shipped (eager) | histogram skipped (the ceiling) |
 |---|---|---|
