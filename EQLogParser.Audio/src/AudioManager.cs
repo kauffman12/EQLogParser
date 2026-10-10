@@ -474,6 +474,14 @@ namespace EQLogParser.Audio
 
       try
       {
+        /*
+         * Prove the voices of the engine RUNNING WHEN THE GATE WAS WON. The one captured above can be retired while this queues
+         * (a TTS Engine switch, or a shutdown), and asking a dead engine would report "no usable voices" about a system the user is no
+         * longer speaking through - with the warning below naming an engine that is already gone. Re-reading costs one field read.
+         */
+        engine = _tts;
+        if (engine is null) return;
+
         await engine.LoadVoicesAsync().ConfigureAwait(false);
       }
       finally
