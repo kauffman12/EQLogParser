@@ -152,8 +152,10 @@ namespace EQLogParser
 
         /*
          * The two Assign items name their subject the way they always did ("Unknown" being the generic wording when nothing usable is
-         * selected). The cascade says the same thing in its own shape, and counts a batch: ctrl-click twelve rows and the menu reads
-         * "Set 12 names as", which is the only honest header for a multi-selection.
+         * selected). The cascade says the same thing in its own shape and under the stricter law: `IdentityVerdictMenu.Present` takes ONE
+         * name — the row a verdict can honestly be about — so a ctrl-clicked block greys the cascade out rather than heading it with a
+         * count. That is not timidity: a ruling re-routes sides, rows and `+Pets` folding for every name it covers and identity-overrides.txt
+         * keeps only the latest word, so there is no undo (AGENTS: force one selected row).
          */
         menuItemSetAsPet.Header = $"Assign {selectedName} as Pet of";
         menuItemSetPlayerClass.Header = $"Assign Default Class for {selectedName}";
