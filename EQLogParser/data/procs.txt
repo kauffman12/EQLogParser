@@ -148,6 +148,52 @@ Bladewhirl XXVIII
 # Bard Katta's Song of Sword Dancing
 Blade Dance
 
+# Bard Selo's Kick
+Selo's Kick I
+Selo's Kick II
+Selo's Kick III
+Selo's Kick IV
+Selo's Kick V
+Selo's Kick VI
+Selo's Kick VII
+Selo's Kick VIII
+Selo's Kick IX
+Selo's Kick X
+Selo's Kick XI
+Selo's Kick XII
+Selo's Kick XIII
+Selo's Kick XIV
+Selo's Kick XV
+Selo's Kick XVI
+Selo's Kick XVII
+Selo's Kick XVIII
+Selo's Kick XIX
+Selo's Kick XX
+Selo's Kick XXI
+Selo's Kick XXII
+Selo's Kick XXIII
+Selo's Kick XXIV
+Selo's Kick XXV
+Selo's Kick XXVI
+Selo's Kick XXVII
+Selo's Kick XXVIII
+Selo's Kick XXIX
+Selo's Kick XXX
+Selo's Kick XXXI
+Selo's Kick XXXII
+Selo's Kick XXXIII
+Selo's Kick XXXIV
+Selo's Kick XXXV
+Selo's Kick XXXVI
+Selo's Kick XXXVII
+Selo's Kick XXXVIII
+Selo's Kick XXXIX
+Selo's Kick XL
+Selo's Kick XLI
+Selo's Kick XLII
+Selo's Kick XLIII
+Selo's Kick XLIV
+
 # Bard Synergy
 Troubadour's Synergy Effect I
 Troubadour's Synergy Effect II
@@ -1548,6 +1594,12 @@ Composite Reinforced Strike 3
 Composite Reinforced Strike 4
 Composite Reinforced Strike 5
 Composite Reinforced Strike 6
+Diametric Reinforced Strike 1
+Diametric Reinforced Strike 2
+Diametric Reinforced Strike 3
+Diametric Reinforced Strike 4
+Diametric Reinforced Strike 5
+Diametric Reinforced Strike 6
 Dichotomic Reinforced Strike 1
 Dichotomic Reinforced Strike 2
 Dichotomic Reinforced Strike 3
@@ -2053,9 +2105,13 @@ Flames of Power VIII Azia
 Flames of Power VIII Beza
 Flames of Power VIII Caza
 Flames of Power Azia X
+Flames of Power Azia XI
 Flames of Power Beza X
+Flames of Power Beza XI
 Flames of Power Caza X
+Flames of Power Caza XI
 Flames of Power Dena X
+Flames of Power Dena XI
 Flames of Weakness I
 Flames of Weakness II
 Flames of Weakness III
@@ -2068,6 +2124,12 @@ Composite Companion Strike 3
 Composite Companion Strike 4
 Composite Companion Strike 5
 Composite Companion Strike 6
+Diametric Companion Strike 1
+Diametric Companion Strike 2
+Diametric Companion Strike 3
+Diametric Companion Strike 4
+Diametric Companion Strike 5
+Diametric Companion Strike 6
 Dichotomic Companion Strike 1
 Dichotomic Companion Strike 2
 Dichotomic Companion Strike 3
@@ -2086,6 +2148,12 @@ Ecliptic Companion Strike 3
 Ecliptic Companion Strike 4
 Ecliptic Companion Strike 5
 Ecliptic Companion Strike 6
+Reciprocal Companion Strike 1
+Reciprocal Companion Strike 2
+Reciprocal Companion Strike 3
+Reciprocal Companion Strike 4
+Reciprocal Companion Strike 5
+Reciprocal Companion Strike 6
 
 # Mage Elemental Form
 Elemental Air I
@@ -3007,6 +3075,7 @@ Inquisitor's Judgment Strike XXXVI
 Inquisitor's Judgment Strike XXXVII
 Inquisitor's Judgment Strike XXXVIII
 Inquisitor's Judgment Strike XXXIX
+Inquisitor's Judgment Strike XL
 Inquisitor's Judgment Strike L
 Inquisitor's Judgment Strike LI
 Inquisitor's Judgment Strike LII
@@ -3815,6 +3884,12 @@ Composite Roar Strike 3
 Composite Roar Strike 4
 Composite Roar Strike 5
 Composite Roar Strike 6
+Diametric Roar Strike 1
+Diametric Roar Strike 2
+Diametric Roar Strike 3
+Diametric Roar Strike 4
+Diametric Roar Strike 5
+Diametric Roar Strike 6
 Dichotomic Roar Strike 1
 Dichotomic Roar Strike 2
 Dichotomic Roar Strike 3
@@ -4319,6 +4394,7 @@ Impenitence Rk. II
 Impenitence Rk. III
 Remorselessness
 Remorselessness Rk. II
+Remorselessness Rk. III
 Ruthlessness
 Ruthlessness II
 Ruthlessness III
@@ -4360,6 +4436,7 @@ Mental Wretchedness Strike III
 # SK Remorseless Demeanor
 Remorselessness
 Remorselessness Rk. II
+Remorselessness Rk. III
 
 # SK Spite of Ronak
 KraDu's Spite
