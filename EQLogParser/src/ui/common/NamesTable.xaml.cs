@@ -476,6 +476,13 @@ namespace EQLogParser
       if (selectedName is not null) namesGrid.SelectedItem = FindRow(selectedName);
       if (_typeEditRow is not null) _typeEditRow = FindRow(_typeEditRow.Name);
       if (_classEditRow is not null) _classEditRow = FindRow(_classEditRow.Name);
+      /*
+       * All THREE open editors, including the owner one. It was the last column to come back and its row was left pointing at a
+       * discarded instance: the popup's guard compares the pick against `row.Owner` to tell "the click that opened this" from a real
+       * change, so a captured old row compares a NEW pick against an OLD answer — the one comparison in this pane that can refuse a
+       * genuine edit as "you picked what it already says". A write that goes out by name is harmless; a refusal is not.
+       */
+      if (_ownerEditRow is not null) _ownerEditRow = FindRow(_ownerEditRow.Name);
     }
 
     /*
@@ -574,8 +581,14 @@ namespace EQLogParser
        * never offered.
        */
       var row = _typeEditRow;
-      if (row is null || option.Kind == row.Kind || !row.Overrulable) return;
-      if (!row.TypeChoices.Contains(option)) return;
+      if (row is null)
+      {
+        Refuse(DoorType, "no cell is being edited - the popup closed before the pick landed");
+        return;
+      }
+      if (option.Kind == row.Kind) { RefuseDebug(DoorType, $"{row.Name} already reads {option.Word}"); return; }
+      if (!row.Overrulable) { Refuse(DoorType, $"{row.Name} offers no Type pencil (a summon's spelling or a spell name settles its kind)"); return; }
+      if (!row.TypeChoices.Contains(option)) { Refuse(DoorType, $"{option.Word} is not in the list this popup was opened with for {row.Name}"); return; }
 
       /*
        * "Clear claim" takes back EVERYTHING this window remembers about the name, not only the line in
@@ -588,6 +601,11 @@ namespace EQLogParser
       // The eviction is not a bonus — a verdict that only adds a claim leaves players.txt and petmapping.txt answering
       // underneath it, which is how a name kept behaving like a player after being told NPC.
       ClassificationCommands.ApplyVerdict(row.Name, option.Kind);
+
+      // Names itself: this door writes silently in the stores (ApplyVerdict logs nothing on purpose), so a report of
+      // "I picked Clear claim and nothing happened" has no other way to say whether the click arrived at all.
+      Log.Info($"identity cell: type of {row.Name} -> {IdentityVocabulary.TypeWord(option.Kind)}"
+             + (option.Kind == IdentityKind.Unknown ? " (claim cleared: override, ledger row and every registry claim forgotten)" : ""));
 
       Reconcile();
       typeEditPopup.IsOpen = false;
@@ -615,14 +633,16 @@ namespace EQLogParser
       if (sender is not ComboBox combo || combo.SelectedValue is not string className) return;
 
       var row = _classEditRow;
-      if (row is null || row.PlayerClass == className) return;
+      if (row is null) { Refuse(DoorClass, "no cell is being edited - the popup closed before the pick landed"); return; }
+      if (row.PlayerClass == className) { RefuseDebug(DoorClass, $"{row.Name} already reads {className}"); return; }
 
       // SetDefaultPlayerClass validates the word itself (CombatRecordLookup.IsValidClassName), so the blank entry that
       // MainActions.ClassList leads with — the old window's way of showing "no class" — writes nothing at all rather
       // than a roster row with an empty class.
-      if (string.IsNullOrEmpty(className)) return;
+      if (string.IsNullOrEmpty(className)) { RefuseDebug(DoorClass, "the blank class entry writes nothing"); return; }
 
       PlayerRegistry.Instance.SetDefaultPlayerClass(row.Name, className);
+      Log.Info($"identity cell: class of {row.Name} -> {className}");
       Reconcile();
       classEditPopup.IsOpen = false;
     }
@@ -661,10 +681,15 @@ namespace EQLogParser
       if (sender is not ComboBox combo || combo.SelectedItem is not string owner) return;
 
       var row = _ownerEditRow;
-      if (row is null || !row.OwnerEditable) return;
+      if (row is null) { Refuse(DoorOwner, "no cell is being edited - the popup closed before the pick landed"); return; }
+      if (!row.OwnerEditable) { Refuse(DoorOwner, $"{row.Name} no longer reads Pet, so it has no Owner pencil"); return; }
 
       // The click that opened the popup, and a pick of what the cell already says: both write nothing.
-      if (string.Equals(owner, row.Owner, StringComparison.OrdinalIgnoreCase)) return;
+      if (string.Equals(owner, row.Owner, StringComparison.OrdinalIgnoreCase))
+      {
+        RefuseDebug(DoorOwner, $"{row.Name} already belongs to {owner}");
+        return;
+      }
 
       /*
        * Setting an owner goes through the SAME seam the summary panes' `Assign … as Pet of` uses — `PetAssignment.Assign` — rather than
@@ -676,12 +701,31 @@ namespace EQLogParser
        * The take-back has no verdict to assert — "not whose I know" is not a Kind — so it goes straight to the store, which takes the pair
        * out of the live map AND the ledger's ownership lane while leaving the Pet verdict standing.
        */
-      if (PetOwnership.IsClear(owner)) PlayerRegistry.Instance.ForgetPetMapping(row.Name);
+      if (PetOwnership.IsClear(owner))
+      {
+        PlayerRegistry.Instance.ForgetPetMapping(row.Name);
+        // The claim logs itself inside PetAssignment; the take-back was the silent half.
+        Log.Info($"identity cell: owner of {row.Name} taken back (the Pet verdict stands)");
+      }
       else PetAssignment.Assign(row.Name, owner);
 
       Reconcile();
       ownerEditPopup.IsOpen = false;
     }
+
+    /*
+     * The three cell doors had no voice at all: their writes go into stores that log nothing, and a refusal was a bare `return`. So
+     * "I picked it and nothing happened" could not be told apart from "the click never reached the handler" - not from the log, which is
+     * the only instrument anyone has when a pane looks dead. A pick that lands is Info (one line per deliberate edit); a pick refused for
+     * the ordinary reason (you chose what the cell already says) is Debug, because that gesture is normal and Info must stay readable.
+     * The surprising refusals - no row, no pencil, an option the popup never offered - are Info: they should not happen at all.
+     */
+    private const string DoorType = "type pick";
+    private const string DoorClass = "class pick";
+    private const string DoorOwner = "owner pick";
+
+    private static void Refuse(string door, string why) => Log.Info($"identity cell: {door} ignored - {why}");
+    private static void RefuseDebug(string door, string why) => Log.Debug($"identity cell: {door} ignored - {why}");
 
     /*
      * After any write: re-scan this window AND ask for a pass. The census builds its own timeline (so it is correct on

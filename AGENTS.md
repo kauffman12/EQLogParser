@@ -1466,6 +1466,24 @@ After completing work, verify:
 ## Important: Never Touch
 - `BackupUtil`
 - `MaterialDarkCustom`
+- **Every identity cell door names its decision, and a merged row is handed back to ALL THREE editors** (2026-11, from "i assigned
+  someone as a pet to a player and it initially worked… but reseting my claim did nothing and trying to change the owner back to unknown did
+  nothing"). Both writes can succeed **silently** — `ClassificationCommands.ApplyVerdict` logs nothing and neither does
+  `PlayerRegistry.ForgetPetMapping` — so a report of "nothing happened" could not be told apart from "the click never reached the handler";
+  `EQLogParser.log` holds no evidence either way. So each door now prints one Info line when it writes (`identity cell: type of X -> …`,
+  `owner of X taken back`, `class of X -> …`) and one when it **refuses for a reason that should not happen** (no row being edited, no pencil,
+  an option the popup never offered); picking what the cell already says is Debug, because that gesture is ordinary. The one defect that was
+  provable from reading: `NamesTable.MergeInto` hands the selection and an open editor back **by name** after a census merge (rows are
+  replaced, not mutated) — for `_typeEditRow` and `_classEditRow`, but not `_ownerEditRow`, which kept pointing at a discarded instance. Any
+  write that goes out by name survives that; the Owner guard does not, because it compares the pick against `row.Owner` to tell "the click that
+  opened this" from a real change — so a stale row can refuse a genuine edit as "you picked what it already says". **A snapshot fed into a
+  no-op test must be re-pointed like its siblings.** Reachability is narrow and stated as much: an open popup holds the census (`Editors`),
+  so the window needs a released hold (hide / capture-change `Abandon`) — which is why this is written as a provable asymmetry now fixed, NOT
+  as a confirmed cause of the field report, and why the logging exists. Also pinned headlessly (`SummonOwnerTakeBackTest`): the take-back leaves the live map,
+  the ledger's ownership lane AND `IdentityLookup.OwnerOf` empty, survives flush + reload (a pair returning tomorrow is worse than nothing
+  happening), keeps the Pet verdict standing, and re-assigning the SAME owner afterwards is not a no-op — which is what
+  `PetAssignment`'s "already in effect" refusal has to ask both stores about. `Log.Info` lines are one per deliberate click; the pane still
+  shows no status text at all.
 - **A refresh answers for itself; only a machine's refresh may decline, and it says so** (2026-11): an applied change is visible in
   the place the operator is looking — the row that left the list is gone, a claimed summon reads `X +Pets` — because re-presenting a
   pool the builder already holds costs **~10 ms for one row, 25–32 ms for a whole-capture selection**, and the boards' own door prints
