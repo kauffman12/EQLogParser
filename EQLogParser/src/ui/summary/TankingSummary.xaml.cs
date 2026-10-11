@@ -351,6 +351,9 @@ namespace EQLogParser
             case "NONPC":
             case "NODATA":
               CurrentStats = null;
+              // Empty answers clear the grid: see DamageSummary's NONPC/NODATA branch. A shift-click that
+              // removes the last selected fight announced zero fights and left the previous rows on screen.
+              dataGrid.ItemsSource = NoResultsList;
               maxTimeChooser.MaxValue = 0;
               minTimeChooser.MaxValue = 0;
               title.Content = e.State == "NONPC" ? Labels.NoNpcs : Labels.NoData;

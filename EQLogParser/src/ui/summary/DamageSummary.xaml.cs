@@ -769,6 +769,10 @@ namespace EQLogParser
           case "NONPC":
           case "NODATA":
             CurrentStats = null;
+            // A build that found nothing has to answer for the rows already on screen: shifting the last row
+            // out of the fight list announces zero fights, this branch sets the title, and without clearing the
+            // grid the old selection's rows stayed visible underneath "No NPCs".
+            dataGrid.ItemsSource = null;
             maxTimeChooser.MaxValue = 0;
             minTimeChooser.MaxValue = 0;
             title.Content = e.State == "NONPC" ? Labels.NoNpcs : Labels.NoData;

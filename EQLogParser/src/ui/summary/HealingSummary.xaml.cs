@@ -255,6 +255,7 @@ namespace EQLogParser
           case "NONPC":
           case "NODATA":
             CurrentStats = null;
+            dataGrid.ItemsSource = NoResultsList; // an empty answer clears the grid; see DamageSummary
             maxTimeChooser.MaxValue = 0;
             minTimeChooser.MaxValue = 0;
             title.Content = e.State == "NONPC" ? Labels.NoNpcs : Labels.NoData;
