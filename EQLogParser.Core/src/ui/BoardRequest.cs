@@ -30,6 +30,9 @@ internal enum BoardReason
 
   /// <summary>The Refresh button: rebuild whatever is on screen, no questions asked.</summary>
   Manual,
+
+  /// <summary>A row dial (Inactivity, Tanking) moved: the list the reader holds is a different set now, and whatever was hidden is off it.</summary>
+  DialChange,
 }
 
 /// <summary>One ask: these fights, produced by this capture state, for this reason.</summary>

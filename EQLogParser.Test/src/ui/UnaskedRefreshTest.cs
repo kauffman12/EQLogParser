@@ -44,7 +44,7 @@ namespace EQLogParser.Tests.Ui
     // ── the vocabulary: which words mean "a pass did this" ────────────────────────────────────────────────
 
     [TestMethod]
-    public void ThreeReasonsComeFromAPassAndFourFromAnOperator()
+    public void ThreeReasonsComeFromAPassAndFiveFromAnOperator()
     {
       var unasked = new HashSet<BoardReason>();
       var asked = new HashSet<BoardReason>();
@@ -59,8 +59,9 @@ namespace EQLogParser.Tests.Ui
 
       Assert.IsTrue(unasked.SetEquals([ContentMoved, RowEdited, SnapshotSwap]),
           "the pass-driven doors are exactly these three; a fourth word means a new announce path arrived and must decide whether it is traffic");
-      Assert.IsTrue(asked.SetEquals([SelectCommand, MenuClose, SettleTick, Manual]),
-          "an operator gesture is exactly these four - a selection command, a menu released, the settle timer, and Refresh");
+      Assert.IsTrue(asked.SetEquals([SelectCommand, MenuClose, SettleTick, Manual, DialChange]),
+          "an operator gesture is exactly these five - a selection command, a menu released, the settle timer, Refresh, and a row dial "
+          + "(Inactivity / Tanking), which moves the list under the reader's own hand and is therefore never traffic");
     }
 
     // ── what the budget means: deferred, never refused ────────────────────────────────────────────────────

@@ -48,6 +48,16 @@ namespace EQLogParser
      */
     private const int SelectionSettleMs = 600;
 
+    /*
+     * The capture's rows in list order: the truth the patch keeps current, one instance per fight with a `Key` that survives every derive.
+     * What the grid is BOUND to is `_rows`, the projection of this list through the two row dials. A row object is SHARED between the two, so
+     * hiding a fight moves a reference rather than copying or rebuilding anything — which is how a selected row survives a live night with either
+     * dial off, and why SfDataGrid's index-based selection has no filter left to disagree with it. The whole reason, including what the grid-side
+     * filter used to cost: docs/DesignNotes.md → "The fight list dials filter our rows, not the grid".
+     */
+    private List<DerivedFightRow> _allRows = [];
+
+    // What the grid shows: `_allRows` through the Inactivity and Tanking predicates, same order, same instances. Never a copy of a row.
     private ObservableCollection<DerivedFightRow> _rows = [];
     private readonly DispatcherTimer _selectionTimer;
 
@@ -182,7 +192,7 @@ namespace EQLogParser
      * early while the grid is not yet loaded, and SetSourceList/CreateCollectionView run from the load path only -
      * so a pane that is constructed but never arranged keeps View null forever and a View guard would swallow every
      * REAL toggle (measured: FightTableStartupTest's post-load uncheck landed in exactly that dead zone). The handler
-     * bodies touch columns and saved settings, and ApplyFilter already tolerates an absent view until one exists.
+     * bodies touch columns and saved settings, and RebuildVisible below does nothing at all until a grid exists.
      */
     private bool _paneReady;
 
@@ -225,7 +235,7 @@ namespace EQLogParser
       // WPF test host constructs this control too.
       IdentityVerdictMenu.Populate(overrideSetItem, ApplyVerdict);
 
-      ApplyFilter();
+      // No visibility rebuild here: `_allRows` is empty until the first snapshot lands, and every path that fills it projects as it goes.
 
       // Legacy's search debounce, same interval: a name typed at fight speed arrives in a few hundred ms.
       _searchTextTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(750) };
@@ -319,6 +329,7 @@ namespace EQLogParser
       _watch.Clear();
       _currentTimeline = null;
       _currentSnapshot = null;
+      _allRows.Clear();
       _rows.Clear();
 
       // Last night's pointer cannot name this capture's rows: the instance is gone, and a menu opened without a pointer
@@ -333,9 +344,12 @@ namespace EQLogParser
       _capturedFacts = 0;
     }
 
-    // Derivation completes on a background thread; rows swap on the dispatcher. Big logs derive
-    // thousands of fights — a whole-collection ItemsSource swap re-lays-out once instead of
-    // signalling every row insert, and ItemsSourceChanged reapplies the divider filter.
+    /*
+     * Derivation completes on a background thread; rows change on the dispatcher. Two paths: patch the rows that moved (the common case) and then
+     * reconcile the visible projection so a fight crossing a dial's line joins or leaves without touching anyone else, or swap the whole collection
+     * where a patch cannot be trusted — a sorted grid, a list with nothing in it yet, too much churn. A swap is one re-layout instead of thousands of
+     * row notifications, which is also why a dial toggle swaps rather than reconciles (RebuildVisible).
+     */
     // Internal for the band's WPF test (a live session is not needed to hand this panel a snapshot); every
     // production call arrives through the session's Derived event.
     internal void OnDerived(DerivedSnapshot snapshot)
@@ -371,17 +385,18 @@ namespace EQLogParser
          * the scroll position and the search mark all survive untouched — no re-lookup by name, no blink.
          */
         /*
-         * Two states keep the wholesale path, both because a patch cannot make their bookkeeping come true. A SORTED grid would hold
-         * updated cells in yesterday's order (this build's Syncfusion has no live re-sort the pane can call cheaply, and guessing row
-         * positions is the failure mode the selection code already refuses). And with "show tanking" off the view filters per ROW on
-         * Fight.DamageToOwner — a field a patch mutates — and there is no filter refresh to ask for either (checked against the shipped
-         * assembly: no RefreshLiveFilter), so a row that starts or stops taking damage would stay hidden or stay shown. Patching the
-         * unfiltered, unsorted list — which is what a live raid pane spends its whole night in — is where the win lives.
+         * One state keeps the wholesale path: a SORTED grid would hold updated cells in yesterday's order (this build's Syncfusion has no live
+         * re-sort the pane can call cheaply, and guessing row positions is the failure mode the selection code already refuses).
+         *
+         * It used to refuse a SECOND state, "Tanking unchecked", because the grid filtered on Fight.DamageToOwner — a field a patch mutates — and
+         * the shipped assembly offers no live-filter refresh (View.RefreshFilter is all there is). That put the unchecked mode on a whole-list
+         * rebuild every pass while the checked mode patched some rows of many, which is one reason the dial misbehaved exactly when it was used.
+         * Visibility is the pane's own bookkeeping now (ShownRows), so the patch runs either way and only a sort still forces a swap.
          */
-        var canPatch = _rows.Count > 0 && fightGrid.SortColumnDescriptions.Count == 0 && _currentShowTanking;
+        var canPatch = _allRows.Count > 0 && fightGrid.SortColumnDescriptions.Count == 0;
         var patch = canPatch
-          ? RowPatch.Build<DerivedFightRow>(_rows, snapshot.Rows, static row => row.Key,
-                                            static (a, b) => a.SameDisplayAs(b), Math.Max(256, _rows.Count / 2))
+          ? RowPatch.Build<DerivedFightRow>(_allRows, snapshot.Rows, static row => row.Key,
+                                            static (a, b) => a.SameDisplayAs(b), Math.Max(256, _allRows.Count / 2))
           : null;
         if (patch != null)
         {
@@ -394,8 +409,15 @@ namespace EQLogParser
           // DerivedFight objects for every row while most cells read identically, and the snapshot this pass published is keyed on
           // the new objects — a survivor still holding last pass's fight would materialize as "no damage, no tanking" the next time
           // its boards are built.
-          RowPatch.Apply(_rows, patch, static (target, source) => target.CopyDisplayFrom(source),
+          RowPatch.Apply(_allRows, patch, static (target, source) => target.CopyDisplayFrom(source),
                                static (target, source) => target.Fight = source.Fight);
+
+          /*
+           * The patch moved the truth; bring the visible list along. Reference bookkeeping only: a fight that crossed the Tanking line joins or
+           * leaves, every other row keeps its object, so the selection, the scroll position and the search mark hold through a pass however the
+           * dials happen to be set.
+           */
+          ShownRows.Reconcile(_rows, VisibleRows());
 
           // A marked row that left the list takes its highlight with it; one that stayed keeps it WITHOUT a repaint, which is the
           // difference between a search mark that holds and one that blinks off twice a second.
@@ -417,7 +439,13 @@ namespace EQLogParser
            * built from no longer exists, which is a structural fact no watch can see - and anything at all moving under the selection, which
            * AnnounceSelection filters by identity before it spends a build.
            */
-          var removedSelected = patch.Removals.Any(selected.Contains);
+          /*
+           * Gone means gone from the list the reader can see: a row this pass deleted, or one the dials now hide, takes its boards with it. The set
+           * is built once per pass rather than probing the visible list per selected row — a raid-total selection against a night's list is
+           * hundreds of rows, and this runs on every patched pass.
+           */
+          var visibleNow = new HashSet<DerivedFightRow>(_rows, ReferenceEqualityComparer.Instance);
+          var removedSelected = selected.Any(row => !visibleNow.Contains(row));
           var touched = selected.Count > 0 && (removedSelected || contentMoved || UnaskedRefresh.HasGesture);
           if (touched) AnnounceSelection(removedSelected ? BoardReason.RowEdited : BoardReason.ContentMoved, force: true);
 
@@ -457,8 +485,9 @@ namespace EQLogParser
          */
         _selectionTimer.Stop();
 
-        var previousRows = _rows.Count;
-        _rows = new ObservableCollection<DerivedFightRow>(snapshot.Rows);
+        var previousRows = _allRows.Count;
+        _allRows = new List<DerivedFightRow>(snapshot.Rows);
+        _rows = new ObservableCollection<DerivedFightRow>(VisibleRows());
         fightGrid.ItemsSource = _rows;
 
         // Every instance was just replaced. GroupSectionSelect's chain reads the cursor and the selection instead, both of
@@ -555,8 +584,6 @@ namespace EQLogParser
       _session = null;
     }
 
-    private void FightGridItemsSourceChanged(object sender, Syncfusion.UI.Xaml.Grid.GridItemsSourceChangedEventArgs e) => ApplyFilter();
-
     private void GridSelectionChanged(object sender, GridSelectionChangedEventArgs e)
     {
       // Restart the pause on every click so a dragged range announces once, at the end - and ask SelectionSettle
@@ -619,8 +646,21 @@ namespace EQLogParser
     /*
      * What this pane is holding right now. internal for the session-switch tests: ActiveChanged cannot be raised from
      * outside DeriveEngine and a real engine needs a file, so the seam those laws live behind is ClearForNewCapture.
+     *
+     * The pair states the dial law in one line: `RowCount` counts what the grid renders (the visible projection), `RowCountAll` counts what the
+     * capture holds. A dial moves the first and must never move the second — a hidden fight is still a fight, and it comes back when the box is
+     * ticked again.
      */
     internal int RowCount => _rows.Count;
+    internal int RowCountAll => _allRows.Count;
+
+    /*
+     * The two selection probes the dial tests need without reaching into the grid's SelectedItems from outside the pane — nothing production uses.
+     * Both mean nothing unless the grid's view has materialized (it exists only after the control loads), which is why the tests gate on View and
+     * report inconclusive rather than driving a selection into a store that is not wired yet.
+     */
+    internal void SelectRowForTest(DerivedFightRow row) => fightGrid?.SelectedItems.Add(row);
+    internal bool IsSelectedForTest(DerivedFightRow row) => fightGrid?.SelectedItems.Contains(row) == true;
 
     /*
      * The fights behind this window in the legacy shape the older consumers read: MainWindow.GetFights feeds
@@ -810,14 +850,14 @@ namespace EQLogParser
       // firing was measured where this checkbox's field WAS already wired and a later element in the markup (a
       // column) was not - so testing fightShowBreaks here would let that firing through to half-built state.
       // It is also not fightGrid.View: View materializes only on the grid's Loaded pass, so on a pane that never
-      // arranges the guard would swallow every real toggle forever (see _paneReady). ApplyFilter below tolerates
-      // a missing view until one exists.
+      // arranges the guard would swallow every real toggle forever (see _paneReady). RebuildVisible below does nothing at all until there is a
+      // grid to point at, so absorbing this firing costs nothing.
       if (!_paneReady) return;
       if (fightShowBreaks.IsChecked.HasValue && fightShowBreaks.IsChecked != _currentShowBreaks)
       {
         _currentShowBreaks = fightShowBreaks.IsChecked == true;
         ConfigUtil.SetSetting("NpcShowInactivityBreaks", _currentShowBreaks);
-        ApplyFilter();
+        RebuildVisible();
       }
     }
 
@@ -849,7 +889,7 @@ namespace EQLogParser
       {
         _currentShowTanking = fightShowTanking.IsChecked == true;
         ConfigUtil.SetSetting("NpcShowTanking", _currentShowTanking);
-        ApplyFilter();
+        RebuildVisible();
       }
     }
 
@@ -933,7 +973,8 @@ namespace EQLogParser
       selectAllItem.IsEnabled = false;
       foreach (var row in _rows)
       {
-        if (IsShown(row) && row.Fight is not null) { selectAllItem.IsEnabled = unsorted; break; }
+        // `_rows` IS the visible list, so this only asks whether a Select All would have anything to take; dividers carry no fight.
+        if (row.Fight is not null) { selectAllItem.IsEnabled = unsorted; break; }
       }
 
       var groupRow = GroupTargetRow();
@@ -980,16 +1021,44 @@ namespace EQLogParser
      * behavior, ported whole: one current result at a time, found on a debounce while typing, cycled with Enter /
      * Shift+Enter (SearchForNpc).
      */
-    private void ApplyFilter()
-    {
-      if (fightGrid?.View == null) return;
-      fightGrid.View.Filter = item => IsShown((DerivedFightRow)item);
-      fightGrid.View.RefreshFilter();
-    }
-
     private bool IsShown(DerivedFightRow row) => row.IsDivider
       ? _currentShowBreaks
       : _currentShowTanking || ShownWhenTankingHidden(row.Fight);
+
+    // The projection the dials currently call for, in list order and by reference (ShownRows).
+    private List<DerivedFightRow> VisibleRows() => ShownRows.Project(_allRows, IsShown);
+
+    /*
+     * A dial moved: re-point the grid at the new projection. Wholesale rather than reconciled because a toggle moves most of the list at once,
+     * and one ItemsSource assignment repaints once where hundreds of insert/remove notifications would not.
+     *
+     * The selection follows what the reader can still see, BY INSTANCE — legal because `_allRows` and this projection share the objects. Legacy
+     * had to drop the selection on every swap (its two lists held different Fight objects) and this pane used to restore it by recomputing shown
+     * positions; neither is needed now, so a row that survives the toggle keeps its highlight and only what the new view legitimately hides loses
+     * one — with the report told either way, so it never keeps showing a fight that stopped being on the list.
+     */
+    private void RebuildVisible()
+    {
+      if (fightGrid is not { } grid) return;
+
+      var held = new List<DerivedFightRow>();
+      foreach (var item in grid.SelectedItems)
+      {
+        if (item is DerivedFightRow row) held.Add(row);
+      }
+
+      var shown = VisibleRows();
+      _rows = new ObservableCollection<DerivedFightRow>(shown);
+      grid.ItemsSource = _rows;
+
+      var keeps = new HashSet<DerivedFightRow>(shown, ReferenceEqualityComparer.Instance);
+      foreach (var row in held)
+      {
+        if (keeps.Contains(row)) grid.SelectedItems.Add(row);
+      }
+
+      AnnounceSelection(BoardReason.DialChange, "row dial", force: true);
+    }
 
     // Legacy swapped whole lists for this dial (_fights vs _nonTankingFights); one predicate over the derived
     // rows says the same thing. DamageToOwner is the raid's output ON this row, so zero means the line exists
@@ -1079,8 +1148,9 @@ namespace EQLogParser
     {
       ClearSearchMark();
 
-      // Legacy walks View.Records - the materialized item list, not the view itself.
-      var records = fightGrid.View.Records;
+      // The visible list IS `_rows` now (the pane applies its own dials), which is what "the materialized item list" meant when this was a port
+      // of legacy's walk over View.Records — same sequence, one less indirection, and no requirement that the grid has loaded.
+      var records = _rows;
       if (fightSearchBox.Text.Length == 0 || records.Count == 0) return;
 
       int checksNeeded;
@@ -1126,7 +1196,7 @@ namespace EQLogParser
         {
           // Case-insensitive on purpose: rows are stored CapitalizeFirst and the user types however they type.
           // A divider row's name is the gap label, never a fight, so it simply never matches.
-          if (records.GetItemAt(i) is DerivedFightRow { Name: not null } row &&
+          if (records[i] is DerivedFightRow { Name: not null } row &&
               row.Name.IndexOf(fightSearchBox.Text, StringComparison.OrdinalIgnoreCase) > -1)
           {
             row.IsSearchResult = true;
@@ -1145,15 +1215,15 @@ namespace EQLogParser
     }
 
     /*
-     * The right-click menu's selection items. Programmatic selects go through SelectRows over the SHOWN rows -
-     * the same run walk RestoreSelection uses, because SelectRows wants contiguous grid ranges and a hidden row
-     * (a filtered-out divider or name) takes no range. Each handler announces straight away rather than waiting
+     * The right-click menu's selection items. Programmatic selects go through SelectRows over the VISIBLE rows as runs (`SelectVisibleRuns`),
+     * because SelectRows wants contiguous grid ranges and a divider row takes no range. Restoring a selection does not need the walk — it adds row
+     * instances (RestoreSelection). Each handler announces straight away rather than waiting
      * out the settle timer: "Select All" is one deliberate act, not a drag to debounce; the timer's later tick
      * re-announces the same ids and no-ops.
      */
     private void SelectAllClick(object sender, RoutedEventArgs e)
     {
-      SelectShownRuns(row => row.Fight is not null);
+      SelectVisibleRuns(row => row.Fight is not null);
       AnnounceSelection(BoardReason.SelectCommand, "select all");
     }
 
@@ -1196,8 +1266,7 @@ namespace EQLogParser
         foreach (var item in fightGrid.SelectedItems)
           if (item is DerivedFightRow row) section.Add(row);
 
-        Predicate<DerivedFightRow> wanted = row => section.Contains(row);
-        SelectShownRuns(wanted);
+        SelectVisibleRuns(row => section.Contains(row));
       }
       else
       {
@@ -1280,8 +1349,21 @@ namespace EQLogParser
      */
     private static FightKey KeyOf(DerivedFight fight) => new(fight.Name, fight.BeginTime);
 
+    /*
+     * Re-put a selection onto brand-new row objects. The key (name + the second it began) is what identifies a life across passes, because
+     * FightProjection renumbers ids every pass — but the SELECT is by instance: `_rows` holds exactly what is on screen, so an object found by
+     * key is added directly and no position has to be computed for it. A kept fight the dials hide is simply not in `_rows` to be found, which is
+     * the right answer rather than a loss: the report cannot keep describing a row this list does not have.
+     */
     private void RestoreSelection(HashSet<FightKey> keepKeys)
-      => SelectShownRuns(row => row.Fight is { } fight && keepKeys.Contains(KeyOf(fight)));
+    {
+      if (fightGrid is not { } grid) return;
+
+      foreach (var row in _rows)
+      {
+        if (row.Fight is { } fight && keepKeys.Contains(KeyOf(fight))) grid.SelectedItems.Add(row);
+      }
+    }
 
     /*
      * Follow the growth the way the old list did: when a pass put new rows at the bottom, scroll to the bottom - unless the mouse is inside
@@ -1293,57 +1375,27 @@ namespace EQLogParser
     {
       if (fightGrid is not { } grid) return;
 
-      var shown = grid.View?.Records?.Count ?? 0;
+      var shown = _rows.Count;
       if (!FightListFollow.ShouldFollowToNewest(rowsArrived, IsVisible, grid.IsMouseOver, shown)) return;
 
       grid.Dispatcher.BeginInvoke(new System.Action(() =>
       {
         // Re-read the count: another pass may have landed in the meantime, and the point is the LAST row, whatever number that is now.
-        var last = grid.View?.Records?.Count ?? 0;
+        var last = _rows.Count;
         if (last > 1) grid.ScrollInView(new RowColumnIndex(last, 0));
       }), DispatcherPriority.Background);
     }
 
-    // Both programmatic selects share this: select every SHOWN row matching the predicate, range by range.
-    // The grid positions come from ShownRunPositions — counted over the shown rows only, because a hidden divider or a
-    // filtered-out name takes no grid row and counting it would push every later range down by one per hidden row.
-    private void SelectShownRuns(Predicate<DerivedFightRow> matches)
+    /*
+     * Both programmatic selects share this: every visible row matching the predicate, range by range. `_rows` is what the grid renders, so a run
+     * of it IS a run of grid rows and the only offset left is where the grid's data begin. The shown-position walk this replaces existed purely to
+     * translate between index-based grid calls and a grid-side filter; with that filter gone, the translation went too.
+     */
+    private void SelectVisibleRuns(Predicate<DerivedFightRow> matches)
     {
       var first = FirstRecordRow();
-      foreach (var (from, to) in ShownRunPositions(_rows, IsShown, matches))
+      foreach (var (from, to) in ShownRows.Runs(_rows, matches))
         fightGrid.SelectRows(first + from, first + to);
-    }
-
-    /*
-     * The walk's decision, apart from the grid so it can be tested without one: the closed runs of shown-and-matching rows,
-     * as [from, to] pairs in SHOWN positions (0-based among the rows the view actually renders). A hidden row closes any open
-     * run but does not advance the position, and a shown row that does not match closes the run AND advances it — the next run
-     * starts after the row that broke the first.
-     */
-    internal static List<(int From, int To)> ShownRunPositions(IReadOnlyList<DerivedFightRow> rows,
-                                                              Predicate<DerivedFightRow> isShown,
-                                                              Predicate<DerivedFightRow> matches)
-    {
-      var runs = new List<(int, int)>();
-      var visiblePos = 0;
-      var runStart = -1;
-      for (var i = 0; i <= rows.Count; i++)
-      {
-        var hit = i < rows.Count && isShown(rows[i]) && matches(rows[i]);
-        if (hit)
-        {
-          if (runStart < 0) runStart = visiblePos;
-        }
-        else if (runStart >= 0)
-        {
-          runs.Add((runStart, visiblePos - 1));
-          runStart = -1;
-        }
-
-        if (i < rows.Count && isShown(rows[i])) visiblePos++;
-      }
-
-      return runs;
     }
 
     // Where the data rows begin, read off the grid instead of assumed: a row that is not a record (header,

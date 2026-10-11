@@ -7,8 +7,11 @@ namespace EQLogParser.Wpf.Test.src.ui.common;
 /*
  * The "Tanking" dial ported from the legacy fight table ("Include Fights with only Tanking data"). Legacy
  * expressed it by swapping whole lists (_fights vs _nonTankingFights); the derived grid says the same thing
- * with one predicate over the row's direction split, so the predicate is what gets pinned - the grid seam
- * (checkbox -> ApplyFilter) is the same mechanism the inactivity dial already proves at startup.
+ * with one predicate over the row's direction split, so the predicate is what gets pinned - the seam that carries
+ * it (checkbox -> RebuildVisible) is the same mechanism the inactivity dial already proves at startup. What the
+ * dial does to the list once the predicate answers is the pane's own bookkeeping and is headless-tested over there
+ * (EQLogParser.Test/src/ui/ShownRowsTest.cs); what is pinned here is that the decision itself still answers the
+ * same question.
  *
  * DamageToOwner is the raid's output ON the row's anchor; zero means the row exists only because the anchor
  * was hitting us, which is exactly what the dial off is for.
