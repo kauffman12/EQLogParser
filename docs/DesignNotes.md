@@ -8210,9 +8210,39 @@ prints load, full pass (classify + project), continued passes and the carried pa
 
 ## Rows go cold, and what a chunk costs to remember
 
+### Review correction: publication and retention are part of the store (2026-11)
+
+The first implementation's codec round trips passed, but its concurrency and lifetime did not. Heal append cleared the only raw
+array before publishing its blob; a reader could receive a zero heal. Damage readers could race removal of the blob against another
+reader that had already observed a null slot. Reference-array growth also did not take the publication lock. Finally, `ColdifyNow`
+competed with the asynchronous encoder, so a test could encode twice and count a blob twice. These were correctness failures,
+not tolerable compression misses.
+
+Both tables now use **`ColdChunks<T>`**: one encoder per table, a queue of immutable completed chunks, and one lock around reference-array
+growth, blob publication and cold decoding. The raw array stays visible until its verified blob is published. Blobs survive reads;
+there is no remove-on-read race. Appending never waits for an encoder. `ColdifyNow` is a barrier after append stops and returns the
+number of completed backings, not how much work the caller happened to win. Encoding failure keeps the raw array and logs the exception.
+
+The normal first classification/projection previously restored **all** arrays permanently (the review measured combined table estimates
+21,981,840 → 92,062,320 bytes). Compression therefore saved no steady-state memory in the application. Now decoded arrays are a bounded
+four-chunk cache per stream, separate from the append tail. A multi-stage read (`RetainDecoded`, scoped with `using`) retains decodes until
+its **last** overlapping reader leaves, then trims to four: otherwise each rule and selected fight could decode the same chunk again.
+A span/ref already handed out keeps its array alive after eviction. `EstimatedBytes` counts both backing and any retained decoded arrays;
+it does not claim to measure arrays still held by external readers or garbage awaiting collection.
+
+Re-measured by `ColdChunkRealLogTest` on `eqlog_Kizant_xegony-2.txt`, including classification, projection and whole-capture materialization:
+**damage 52.3 MB of row payload → 22.3 MB total table estimate (8.8 MB backing); heals 28.6 → 7.0 MB (3.2 MB backing)** after normal reads.
+Parse plus encoder drain: **12.9 s**. A bounded cache without read scopes cost classify/project/materialize **1313/631/1062 ms**;
+scopes measured **853/520/931 ms**, with the same 251 fights and 1,242,265 heals in the selection. These are single-run phase measurements,
+not a claimed end-to-end speedup. Re-reading cold history now deliberately pays decode again; the saving is persistent memory, unlike the
+first version's one-time saving before the application read anything. `ColdChunksConcurrencyTest` pins blocked-encoder publication,
+single decode for competing readers, growth races, backing counts, eviction and overlapping/throwing read scopes.
+
+### Historical codec selection and first realization (retention corrected above)
+
 A damage chunk that can never receive another row is encoded and handed back to the GC (A1 step 3a, `DamageFactChunkCodec`).
 That moment exists and is exact: ordinals only go up, so when the append path buys chunk *ci*, chunk *ci-1* is finished forever.
-The array is handed to a pool worker by value, which is why no lock guards cold storage — nothing can write what gets encoded.
+The immutable array is encoded outside the publication lock; the representations and reference-array growth are synchronized.
 Reading a cold chunk decodes it back (same rows, same ordinals); this is invisible below the addressing door (`At`/`RefAt`/`FactsIn`).
 
 **The format was chosen by candidate measurement**, over `eqlog_Kizant_xegony-2.txt` (2,286,368 rows, 52.3 MB of row bytes):
@@ -10693,6 +10723,31 @@ backlog 12, drops mostly superseded rows). The remaining UI cost is the chart's,
 
 ## Snapshot unless a name changed what it is (2026-10-08)
 
+### Review correction: queue the question, and watch the answer actually built (2026-11)
+
+A summary request now carries the **pane's snapshot** beside its selected row references. Materialization must use that snapshot's
+index, facts, timeline and hidden-pet rows, not the engine's latest projection: a full re-derive replaces row objects, and the new
+index correctly answers nothing for an old row key. The drill-down materialization doors use the same pairing. Pending work releases
+its snapshot when superseded or finished; it is not retained in a static cache.
+
+`SummaryBuildGate` only dedupes against a completed key **while idle**. A completed A followed by running B followed by A must queue A
+again, because B will replace A's answer. A running A followed by pending B followed by A still cancels B. Work returns `bool`, and
+all three builders report caught failures through their own `GenerateStatsOptions.BuildFailed`; fan-out reports thrown/abandoned
+workers too. A failed/partial build clears the reusable key and remains retryable. Manual Refresh and identity/class gestures carry a
+new request generation, so a same-stamp class edit cannot be skipped as a previously answered question. An owed gesture itself makes
+the pane ask after a pass even when facts and verdict stamps did not change.
+
+The watch baseline is the timeline **used by the build**, never whatever timeline the pane has when it finishes. Its per-name routing
+stamp includes ownership and historical affiliation boundaries, not just the final kind: Pet(Alice) → Pet(Bob), taking an owner back,
+or correcting a historical charm all change boards. Victims and healed names are watched alongside attackers and healers. On board
+completion the pane installs the baseline on its dispatcher, refuses a closed session, and checks the current timeline immediately:
+on a finished log there may be no later stamp change to ask again. Arriving damage and unrelated new names remain non-triggers.
+
+Regression coverage: `SummaryBuildGateTest`, `BoardFailureResultTest`, `IdentityWatchTest`, and Windows-only
+`QueuedSummarySnapshotTest` (including the request-key generation). The Windows assembly builds on Linux; its execution is still a
+Windows verification requirement.
+
+
 The previous section fixed the *width* of the trigger (capture-wide → selection-scoped). The operator then rejected the premise:
 
 > remember i really dont want updates happening dynamically because new damage came in either. id rather it be like a snapshot of what
@@ -11555,6 +11610,17 @@ hours earlier, one long-lived row owns the tail), so selections are made by ROW 
 shape `Decide` prices. Re-measure recipe: `docs/improve-stat-building.md` §12 (harness deleted after reading, per the gated-test law).
 
 ## A window is searched, never walked (2026-11)
+
+**Review correction (2026-11):** the unordered fallback selected all matching heals but returned them in arrival order, while the
+healing builder advances a time cursor. `HealSummarySource.Materialize` now stably sorts only an unordered capture's result, on both
+the ranged and whole-capture doors. Equal-second heals retain arrival order; ordinary ascending captures pay no sort or copy.
+`DerivedHealBoardTest.BackwardsHealsReachTheRealBoardAndEqualSecondOrderIsStable` checks the actual builder, not just the selected list.
+
+**Retracted review finding:** a backwards cast append was alleged to move the ambiguity query's anchor back into pruned history.
+`RecordsStore.Add(List<RecordList>, ...)` keeps the global cache timestamp-sorted: the anchor stays its maximum, not its last arrival.
+The review's scratch cast also omitted `SpellData.HasAmbiguity`, so it never entered the cache. The valid regression now uses ambiguous
+casts at T, T+1000 and T+5, plus a backwards T+995 inside the real window; pruning loses no answer. No cast-pruning behavior was changed.
+
 
 The fan-out next door bought ×1.3 on a whole-capture selection. The call that runs **before** those three boards bought **×65** for
 doing nothing but asking a question the wrong way — and it was the single largest number left in one gesture.

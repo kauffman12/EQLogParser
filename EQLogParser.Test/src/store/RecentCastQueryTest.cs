@@ -44,6 +44,21 @@ public sealed class RecentCastQueryTest
         RecordsStore.Instance.Add(Cast(spell, caster), atSeconds);
 
     [TestMethod]
+    public void ABackwardsAppendCannotMoveTheSortedGlobalAnchorBackIntoPrunedHistory()
+    {
+        AddCast("Chokidin", "Old", T0);
+        AddCast("Nictinus", "Anchor", T0 + 1000);
+        AddCast("Chokidin", "Backwards", T0 + 5);
+        Assert.IsEmpty(RecordsStore.Instance.GetCastsBySpellName("Chokidin", 8),
+            "an unpruned scan also returns nothing: newest timestamp is still T0+1000");
+        Assert.AreEqual(1, RecordsStore.Instance.GetCastsBySpellName("Nictinus", 8).Count);
+        AddCast("Chokidin", "InWindow", T0 + 995);
+        var casts = RecordsStore.Instance.GetCastsBySpellName("Chokidin", 8);
+        Assert.AreEqual(1, casts.Count);
+        Assert.AreEqual("InWindow", casts[0].Cast.Caster);
+    }
+
+    [TestMethod]
     public void ARecentCastQueryReturnsTheWindowNewestFirst()
     {
         for (var i = 0; i <= 12; i++)
