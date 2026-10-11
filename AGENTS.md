@@ -1533,10 +1533,15 @@ npcs.txt; it is the *only* evidence for **6** names (Incogitable) and **4** (Kiz
   full replay, plus the projection/classification split named as the re-measure command), `UnrowedFactsTest`,
   `MeterBoardCostRealLogTest`/`RealLogBenchTest` (named cost probes), `LiveTailChangeProbeTest`
   (`EQLP_LIVE_TAIL_PROBE` — replays a capture as growing prefixes and prints which rows a pass actually changes; its answer
-  killed the equality-gate proposal and is in DesignNotes), and the two gates the cell cache rests on: **`PetLearningProbeTest`**
+  killed the equality-gate proposal and is in DesignNotes), and the three probes the cell cache rests on: **`PetLearningProbeTest`**
   (`EQLP_PET_LEARN` — replays `DamageStatsBuilder`'s OWN pet-placement rule over materialized records and asserts the ceilings behind
   "what a cached walk may carry": order-dependent placement, how many names would churn, map sizes) and **`RowReuseCeilingProbeTest`**
-  (`EQLP_REUSE_CEILING` — what a WHOLE-ROW cache could save at best; its ~20 % answer is the bar any cell cache must clear). Both assert on
+  (`EQLP_REUSE_CEILING` — what a WHOLE-ROW cache could save at best; its ~20 % answer is the bar any cell cache must clear) and
+  **`MaterializeAppendProbeTest`** (`EQLP_MATERIALIZE_APPEND` + `EQLP_MATERIALIZE_CHUNKS` — ONE table fed in chunks with a projection between
+  chunks, every visible row materialized twice per pass: through a FRESH `FightFactIndex` (= pre-layer-1 behaviour) and through the carried one,
+  timing only the per-row loop; asserts the two arms' output is identical every pass. Its answer is the realized layer-1 saving — ×3.41 time /
+  −67.5 % bytes on Incogitable, ×4.40 / −72.2 % on the farm night, and 535 ms → 3 ms for a pass where only `Dead`/`GroupId` moved — and layer 2's
+  gate asks this same harness again, which is why it stays). All three assert on
   real captures no fixture reaches, and DesignNotes cites each by name where its number is used. Deleted on those terms:
   `RegistryRebuildTest` (phase exit gate satisfied, recall figures recorded in DesignNotes), `HitByNpcCensusTest`
   (premise dead with the rule it proposed) and `TempOverrideProbeTest` (self-labelled "delete after reading"; its two field reports are
@@ -1598,14 +1603,37 @@ After completing work, verify:
   happening), keeps the Pet verdict standing, and re-assigning the SAME owner afterwards is not a no-op — which is what
   `PetAssignment`'s "already in effect" refusal has to ask both stores about. `Log.Info` lines are one per deliberate click; the pane still
   shows no status text at all.
+- **A materialized row CONTINUES when it grew and is re-presented when only a stamp moved** (2026-11, layer 1 of the cell cache):
+  `FightFactIndex.SummaryFightFor` used to answer "this row moved" by walking every ordinal the row ever held, re-allocating every
+  block and `DamageRecord` — per touched row per pass, for records that cannot have changed. Now the cache entry's own
+  `DamageCount`/`TankCount` do double duty as stamp **and resume point**, and the walk lives in one place (`RowWalk` +
+  `AddDamage`/`AddTank`) shared by both paths, so the warm answer cannot drift from the cold one. Three laws. (1) **Appending is
+  sound because the store is append-only and a rebuilt pass throws the index away with its rows** — so the proof an unchanged block is
+  correct is its **ordinal prefix, never a content hash** (hashing records costs what skipping them was for). (2) **A published `Fight`
+  is never mutated**: growth returns a NEW Fight sharing CLOSED blocks by reference and cloning only each direction's LAST block
+  (`ReopenTail`), because the old one sits inside a `SummaryInput` a worker thread may be enumerating — un-clone the tail and
+  `GrowingARowLeavesTheFightItAlreadyHandedOutAlone` fails by name. (3) **Everything the loop ACCUMULATES continues**: counts and
+  totals, both per-player segment maps and the three DD/DoT/Proc dictionaries, whose value objects are mutated in place
+  (`UpdateTimeSegments` writes `EndTime`; boards add to Count/Max/Total) — cloning keys, not records. The taunt stream stays walked
+  whole (name-keyed, cheap, routed by a lifetime that advances; a resume rule there buys taunts that silently vanish). Measured on real
+  captures (`MaterializeAppendProbeTest`, `EQLP_MATERIALIZE_APPEND`): **×2.7 time / −65 % bytes** on a ~290k-fact growth pass over
+  Incogitable (565→210 ms, 215→75 MB), **×6.7 / −77 %** on the farm night's last pass, and **535 ms → 3 ms** for a pass where only
+  `Dead`/`GroupId` moved; warm never reaches zero because a pass still asks every row whether it grew — that residual is layer 2's
+  target, and nothing here licenses layer 2 (its gate is still the fold-at-publish measurement).
+  `MaterializationContinuationTest` pins warm == from-zero field-for-field, the no-mutation law, **and that the warm path actually runs**
+  (block identity — a test that silently took the cold path everywhere would be green, which is how an optimisation of this kind goes
+  absent). docs/DesignNotes.md → "Layer 1 is built: a grown row continues instead of re-walking".
 - **A refresh answers for itself; only a machine's refresh may decline, and it says so** (2026-11): an applied change is visible in
   the place the operator is looking — the row that left the list is gone, a claimed summon reads `X +Pets` — because re-presenting a
   pool the builder already holds costs **~10 ms for one row, 25–32 ms for a whole-capture selection**, and the boards' own door prints
   `stats build #N … [SelectCommand]`. **There is therefore no toast/banner/progress state for an applied change** (the fight pane has no
-  status section at all), and the deferred notice design stays in `docs/summary-refresh-notification.md` as the alternative. What was
+  status section at all), and the notice alternative stays refused — its write-up never entered the four maintained documents, so what a fresh
+  clone can read is this bullet and docs/DesignNotes.md → "A refresh that answers for itself". What was
   broken is the other direction: every derive-driven rebuild funnels through **one door**, `FightTable.AnnounceSelection`, on three
   reason words (`ContentMoved`/`RowEdited` from the row patch, `SnapshotSwap` from a wholesale swap) and feeds all three boards; at two
-  passes a second, a whole-capture selection costs **~1.5 s** each time. So the cost gate is `UnaskedRefresh` (Core), called once, after
+  passes a second, a whole-capture selection costs **~1.5 s** each time (the materialize half of that has fallen for rows that merely GREW —
+  see the layer-1 bullet above — while the prices below stay deliberately above what a build measures). So the cost gate is `UnaskedRefresh`
+  (Core), called once, after
   dedupe and before recording: **a hand's gesture (`SelectCommand`, `MenuClose`, `SettleTick`, `Manual`) builds at any size — law;** the
   three pass-driven words are **priced, not capped**: an ask costs `FixedCostMs` (120) + `MicrosecondsPerOutcome` (2.0 µs ×
   `DamageHits + TankHits` — the rate deliberately sits *above* the measured 0.87–1.35 µs because heals are not in that count) and may run

@@ -9382,7 +9382,8 @@ same pain needs no counting at all: keep the previous board on screen while a ne
 ## A refresh that answers for itself: the cost budget on unasked passes (2026-11)
 
 The question this closes is *"when a row is added or removed, or a pet is claimed, how does the user know the refresh worked —
-is there some type of notification?"* (asked while `docs/summary-refresh-notification.md` still proposed a toast). Two
+is there some type of notification?"* (asked while an untracked working note — `summary-refresh-notification.md`, one of the local
+documents listed in the table at the end of this file, which resolves on no fresh clone — was still proposing a toast). Two
 measurements settled it: what an applied change already prints, and what a refresh nobody asked for costs.
 
 **An applied change already says so, in the place your eyes are.** A row that leaves the list disappears on the pass that removed
@@ -9438,9 +9439,9 @@ a captured engine: no session means no pass owed, and a dead session can never b
 **What was deliberately not built.** No toast, no banner, no progress state (the fight pane's top-right status section is gone for
 good — see "The fight list announces when the gesture ends"); no new settings key ("was the last refresh worth it?" has one answer per
 machine, which is what `PerfReport` is for); no cancellation of a build already running. The alternative design — a corner notice with
-a settled/busy distinction, its reasons, laws and test plan — stays in `docs/summary-refresh-notification.md` as a working document, so
-if a silent refresh ever needs a visible answer the decisions (no sound, the meter exempt, a decline never shown as a notice) are
-written down once rather than re-litigated.
+a settled/busy distinction, its reasons, laws and test plan — stayed in that same untracked note, so what survives where a clone can read
+it is the part that decided the argument: no sound, the meter exempt, a decline never shown as a notice. If a silent refresh ever needs a
+visible answer, those three are the re-opening conditions rather than a re-litigation.
 
 **An operator write that only lands on a pass owns that pass's announce** (`UnaskedRefresh.OweGesture`, Core, one slot). The hole:
 claiming a pet or writing a verdict is a click, but the announce it causes is not — the write asks for a pass, the pass patches the
@@ -9497,8 +9498,8 @@ spend `BudgetSharePercent` (25 %) of the wall time since that lane last rebuilt:
 every pass, one running encounter waits ~2.2 s, a whole night ~61 s. The clock is an argument to `Allows` because the law is about intervals and
 a test must not sleep through it; an **accept** stamps it and a **refusal does not**, or one deferred giant would push every cheap refresh behind
 it further away. Pinned by `ASelectedRunningEncounterIsDeferredAndThenRuns`, `AWholeNightIsDeferredAndNeverRefusedForever`,
-`ABiggerAskWaitsLongerThanASmallerOne`, `ADeferredAskLeavesTheClockWhereItWas`, `TheEstimatorSitsOnTheMeasuredBoards`; the surface-side design is
-docs/summary-refresh-notification.md §14.
+`ABiggerAskWaitsLongerThanASmallerOne`, `ADeferredAskLeavesTheClockWhereItWas`, `TheEstimatorSitsOnTheMeasuredBoards`. The notice design this
+replaced was §14 of that same untracked note — a pointer that resolves only on the machine which wrote it, which is why what SHIPPED is told here.
 
 ### The heal window's second pass: what was actually being paid for (2026-11)
 
@@ -9839,6 +9840,68 @@ per pass, exactly like the `stats build #N … walked=…` lines did for Phase A
 **Order of work, decided:** layer 1 first (safe, goldens-only, removes the materialize term from every live refresh), then the fold-at-publish
 measurement, then layer 2 only if that number clears the group-content shape. B13's chart second pass wants the same chunk boundaries and is
 designed against the same probe, so it follows rather than arriving beside it.
+
+### Layer 1 is built: a grown row continues instead of re-walking (2026-11)
+
+The section above decided the order of work; this one records layer 1 landing, what it measured on two captures, and the two
+laws its first draft nearly broke.
+
+**What it is.** `FightSummarySource` materializes a row's `Fight` from that row's ordinal run, and the cache in
+`FightFactIndex.SummaryFightFor` had one answer for "this row moved": rebuild from ordinal zero — every block re-opened, every
+`DamageRecord` re-allocated. Now a stamp move asks first whether the entry's own ordinals are still the head of this run
+(`damageCount >= cached.DamageCount && tankCount >= cached.TankCount`), and if so resumes at the count it last consumed. The
+walk itself moved out of `BuildFight` into a `RowWalk` (the open block per direction, each block's second, the two running damage
+bounds) plus `AddDamage`/`AddTank`, which the cold path loops over and the warm path loops over — so "same facts in the same
+blocks" is structural rather than a second implementation that could drift.
+
+**Why appending is sound** (three facts about this store, none of them new): the fact tables are append-only, so ordinal *n*
+describes the same log line forever; a row's ordinal list only ever grows at its end (`FightFactIndex.OnFactLocked`); and a pass
+that **rebuilt** rather than continued threw this index away with the rows it belonged to (`FightProjectionCache.Index` is replaced
+whole), so an entry can never describe a different walk. Therefore **the proof that an already-built block is correct is its ordinal
+prefix — never a content hash**: hashing a block's records costs exactly what skipping them was for.
+
+**Two traps the first draft did not fall into, both pinned by mutation.**
+
+1. **A published `Fight` may not be mutated.** The object handed out last pass lives inside a `SummaryInput` that the summary gate's
+   worker task may be walking right now, so growth returns a **new** `Fight` whose CLOSED blocks are shared by reference and whose
+   LAST block per direction is cloned (`ReopenTail`) — that is the one a fact sharing its second can still extend. Leave the tail
+   shared and the previous generation absorbs facts under its reader: `GrowingARowLeavesTheFightItAlreadyHandedOutAlone` fails by
+   name when the clone is removed.
+2. **Everything the loop *accumulates* has to continue, not just the block cursor.** Hit counts and totals yes; but also the two
+   per-player activity segment maps and the three per-spell dictionaries (DD/DoT/Proc), whose value objects the walk mutates in
+   place (`UpdateTimeSegments` writes `EndTime` into the instance it finds; the spell boards add to Count/Max/Total). Those are
+   cloned key-by-key — a row's worth of keys is tens, against thousands of records left alone. Drop the carry of `DamageHits`/
+   `DamageTotal` and four tests fail; drop a segment clone and a continued walk would edit last pass's Fight through its own map.
+   The taunt stream stays walked whole on purpose: it is name-keyed, cheap, and its routing depends on the row's lifetime, which
+   advances — a resume rule there would trade a cheap scan for taunts that silently go missing.
+
+**Measured (this is what it bought), by `MaterializeAppendProbeTest` (`EQLP_MATERIALIZE_APPEND=<log>`, `EQLP_MATERIALIZE_CHUNKS=N`)**:
+one fact table fed in chunks, and each pass materializing every visible row twice — once through a **fresh** `FightFactIndex` (a fresh
+index is what any rebuilt pass had, so the cold arm *is* pre-layer-1 behaviour) and once through the index the carry keeps alive. Only
+the per-row loop is timed in each arm; the arms' output is compared as text every pass, so a saving measured on a different answer is
+impossible. The timeline is classified on the first chunk and then held still, which is the cheap lane's posture and also the
+conservative one: a pass that re-decides verdicts rebuilds rows and therefore materializations, narrowing the win.
+
+```
+eqlog_Incogitable_xegony.txt   1,890,049 facts, 4,713 visible rows at the end of the replay
+  last growth pass (≈290k new facts):  cold 565 ms / 215.1 MB   warm 210 ms / 75.2 MB    ×2.7 time, -65 % bytes
+  a stamp-only pass (no new fact):     cold 535 ms / 215.1 MB   warm   3 ms /  0.2 MB    ×178 time
+  all passes:                          cold 2,579 ms / 949.5 MB warm 756 ms / 308.7 MB   ×3.41 time, -67.5 % bytes
+                                       (605,596 blocks and 7,466,484 records identical between arms)
+
+eqlog_Kizant_xegony-2.txt      2,285,746 facts, only 274 rows — few huge rows, the worst shape for re-walking
+  last growth pass:                    cold 730 ms / 221.0 MB   warm 109 ms / 51.4 MB    ×6.7 time, -77 % bytes
+  a stamp-only pass:                   cold 529 ms               warm   1 ms
+  all passes:                          cold 2,504 ms / 895.0 MB warm 569 ms / 248.6 MB   ×4.40 time, -72.2 % bytes
+                                       (74,597 blocks and 9,136,936 records identical between arms)
+```
+
+Read the per-pass lines rather than the totals: pass 1 costs the same on both arms (nothing to continue), and warm never reaches
+zero because a pass still **asks** every row whether it grew and clones what the growth touched. That residual is precisely layer 2's
+target — "re-present a row" wants to be a pointer swap plus one tail, not a copy of its block list and segment maps. Quote the two
+captures as the pair, never one: the difference between them is *rows per capture*, which is the variable that decides how much
+re-walking there was to avoid. What this does **not** touch: `groups`/`walk`/`present` in the phase table (the boards' own walk of
+materialized records), and layer 2 remains gated on the fold-at-publish measurement named above — nothing here licenses it.
 
 ### What a session is holding, printed (2026-10)
 
