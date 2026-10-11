@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 
 using EQLogParser;
@@ -747,54 +748,19 @@ namespace EQLogParser
       if (sender is not ImageAwesome icon || icon.DataContext is not NameRow row) return;
       if (UiElementUtil.FindGridCell(icon) is not { } cell) return;
 
-      Editors.Open();
-      _typeEditRow = row;
-      Log.Debug($"identity cell: {DoorType} popup opened for {row.Name}");
-
-      // This row's own list — the kinds its name can still be (IdentityVocabulary.TypeOptionsFor).
-      _cellPreselect = true;
-      typeEditComboBox.ItemsSource = row.TypeChoices;
-
-      // Preselect what the row already says, so the list opens on the current verdict — and so the guard in
-      // TypeSelectionChanged can tell "the click that opened this" from "a different answer", which is the difference
-      // between refreshing a window and rewriting identity-overrides.txt for nothing. An unplaced name selects nothing:
-      // and this list cannot hold the take-back as a VALUE (no entry writes Unknown): that verb is the calculator in the Name column.
-      typeEditComboBox.SelectedValue = row.Kind == IdentityKind.Unknown ? null : row.Kind;
-      _cellPreselect = false;
-
-      UiElementUtil.OpenCellPopup(typeEditPopup, typeEditComboBox, cell, () =>
-      {
-        // What the ComboBox holds at the moment the gesture dies is the answer to "did a pick commit": "(none)" means
-        // WPF closed it before an item landed (a press that never reached the list), a word means the pick was made and
-        // the failure is downstream. Logged before the fields are cleared, because onClosed clears the row first and any
-        // later probe would read "no row in hand" no matter what the click did.
-        Log.Debug($"identity cell: {DoorType} closing for {_typeEditRow?.Name ?? "?"} with selection {(typeEditComboBox.SelectedItem as IdentityVocabulary.TypeOption)?.Word ?? "(none)"}");
-        _typeEditRow = null;
-        typeEditComboBox.SelectedItem = null;
-
-        // The gesture is over — whether the click finished it or WPF closed the popup: let the census land, including the one it queued.
-        Editors.Close();
-      });
-
-      // A table cell is ~20 px and the helper clamps the popup to its host cell, which leaves an OPEN DROP-DOWN hanging
-      // outside the popup's own bounds: with StaysOpen="False" a press on a list item is then a press arriving from
-      // outside, so the popup closes and nothing commits - which is exactly "it opens, I click, nothing happens".
-      // These three popups show a list rather than mirroring a cell, so height comes from their content. DamageSummary's
-      // Group cell shares the helper and is deliberately untouched.
-      typeEditPopup.Height = double.NaN;
+      Log.Debug($"identity cell: {DoorType} menu opened for {row.Name}");
+      OpenChoiceMenu(cell, TypeMenuChoices(row), v => ApplyTypePick(row, (IdentityVocabulary.TypeOption)v));
     }
 
-    private void TypeSelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void ApplyTypePick(NameRow row, IdentityVocabulary.TypeOption option)
     {
-      if (_cellPreselect) return;
-      if (sender is not ComboBox combo) return;
-      if (combo.SelectedItem is not IdentityVocabulary.TypeOption option)
+      if (option is null)
       {
         // A popup that closes WITHOUT committing an item used to leave no trace: the press lands outside the list,
         // onClosed clears the selection, and this returns with nothing said - which is what "the pencil does nothing"
         // looks like from the outside. It is only interesting while a row is in hand, so a completed write (which
         // closes the popup first) stays quiet.
-        if (_typeEditRow is not null) Log.Debug($"identity cell: {DoorType} closed with no item committed for {_typeEditRow.Name}");
+        Log.Debug($"identity cell: {DoorType} picked nothing");
         return;
       }
 
@@ -805,12 +771,6 @@ namespace EQLogParser
        * and the menu read the same recognizer, and if they ever drift the guard wins rather than writing what the pane
        * never offered.
        */
-      var row = _typeEditRow;
-      if (row is null)
-      {
-        Refuse(DoorType, "no cell is being edited - the popup closed before the pick landed");
-        return;
-      }
       if (option.Kind == row.Kind) { RefuseDebug(DoorType, $"{row.Name} already reads {option.Word}"); return; }
       if (!row.Overrulable) { Refuse(DoorType, $"{row.Name} offers no Type pencil (a summon's spelling or a spell name settles its kind)"); return; }
       if (!row.TypeChoices.Contains(option)) { Refuse(DoorType, $"{option.Word} is not in the list this popup was opened with for {row.Name}"); return; }
@@ -841,7 +801,6 @@ namespace EQLogParser
         : $"identity cell: type of {row.Name} -> {IdentityVocabulary.TypeWord(option.Kind)}");
 
       Reconcile();
-      typeEditPopup.IsOpen = false;
     }
 
     private void ClassEditMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
@@ -849,36 +808,18 @@ namespace EQLogParser
       if (sender is not ImageAwesome icon || icon.DataContext is not NameRow row || !row.ClassEditable) return;
       if (UiElementUtil.FindGridCell(icon) is not { } cell) return;
 
-      Editors.Open();
-      _classEditRow = row;
-      Log.Debug($"identity cell: {DoorClass} popup opened for {row.Name}");
-      _cellPreselect = true;
-      classEditComboBox.SelectedItem = (object?)row.PlayerClass ?? "";   // ClassList's first entry is the blank
-      _cellPreselect = false;
-
-      UiElementUtil.OpenCellPopup(classEditPopup, classEditComboBox, cell, () =>
-      {
-        Log.Debug($"identity cell: {DoorClass} closing for {_classEditRow?.Name ?? "?"} with selection {classEditComboBox.SelectedItem ?? "(none)"}");
-        _classEditRow = null;
-        classEditComboBox.SelectedItem = null;
-        Editors.Close();
-      });
-
-      classEditPopup.Height = double.NaN; // see TypeEditMouseLeftButtonUp: an open list needs more than a cell's height
+      Log.Debug($"identity cell: {DoorClass} menu opened for {row.Name}");
+      OpenChoiceMenu(cell, ClassMenuChoices(row), v => ApplyClassPick(row, (string)v));
     }
 
-    private void ClassSelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void ApplyClassPick(NameRow row, string className)
     {
-      if (_cellPreselect) return;
-      if (sender is not ComboBox combo) return;
-      if (combo.SelectedValue is not string className)
+      if (string.IsNullOrEmpty(className))
       {
-        if (_classEditRow is not null) Log.Debug($"identity cell: {DoorClass} closed with no item committed for {_classEditRow.Name}");
+        Log.Debug($"identity cell: {DoorClass} picked nothing");
         return;
       }
 
-      var row = _classEditRow;
-      if (row is null) { Refuse(DoorClass, "no cell is being edited - the popup closed before the pick landed"); return; }
       if (row.PlayerClass == className) { RefuseDebug(DoorClass, $"{row.Name} already reads {className}"); return; }
 
       // SetDefaultPlayerClass validates the word itself (CombatRecordLookup.IsValidClassName), so the blank entry that
@@ -889,7 +830,6 @@ namespace EQLogParser
       PlayerRegistry.Instance.SetDefaultPlayerClass(row.Name, className);
       Log.Info($"identity cell: class of {row.Name} -> {className}");
       Reconcile();
-      classEditPopup.IsOpen = false;
     }
 
     /*
@@ -903,42 +843,18 @@ namespace EQLogParser
       if (sender is not ImageAwesome icon || icon.DataContext is not NameRow row || !row.OwnerEditable) return;
       if (UiElementUtil.FindGridCell(icon) is not { } cell) return;
 
-      Editors.Open();
-      _ownerEditRow = row;
-      Log.Debug($"identity cell: {DoorOwner} popup opened for {row.Name}");
-
-      // PetOwnership.Choices already ends with "No Owner" and drops the placeholders, so the current answer is always in the list —
-      // including a row that reads "No Owner", which opens with that entry selected rather than blank.
-      // IdentityLookup is the one answer to "who is one of ours" (durable roster lane UNION this session's store), so the picker
-      // and the verdicts beside it cannot disagree about who can own a summon.
-      _cellPreselect = true;
-      ownerEditComboBox.ItemsSource = PetOwnership.Choices(row.Owner, IdentityLookup.OurPeopleNames());
-      ownerEditComboBox.SelectedItem = row.Owner;
-      _cellPreselect = false;
-
-      UiElementUtil.OpenCellPopup(ownerEditPopup, ownerEditComboBox, cell, () =>
-      {
-        _ownerEditRow = null;
-        Log.Debug($"identity cell: {DoorOwner} closing for {_ownerEditRow?.Name ?? "?"} with selection {(object?)ownerEditComboBox.SelectedItem ?? "(none)"}");
-        ownerEditComboBox.SelectedItem = null;
-        Editors.Close();
-      });
-
-      ownerEditPopup.Height = double.NaN; // see TypeEditMouseLeftButtonUp: an open list needs more than a cell's height
+      Log.Debug($"identity cell: {DoorOwner} menu opened for {row.Name}");
+      OpenChoiceMenu(cell, OwnerMenuChoices(row), v => ApplyOwnerPick(row, (string)v));
     }
 
-    private void OwnerSelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void ApplyOwnerPick(NameRow row, string owner)
     {
-      if (_cellPreselect) return;
-      if (sender is not ComboBox combo) return;
-      if (combo.SelectedItem is not string owner)
+      if (string.IsNullOrEmpty(owner))
       {
-        if (_ownerEditRow is not null) Log.Debug($"identity cell: {DoorOwner} closed with no item committed for {_ownerEditRow.Name}");
+        Log.Debug($"identity cell: {DoorOwner} picked nothing");
         return;
       }
 
-      var row = _ownerEditRow;
-      if (row is null) { Refuse(DoorOwner, "no cell is being edited - the popup closed before the pick landed"); return; }
       if (!row.OwnerEditable) { Refuse(DoorOwner, $"{row.Name} no longer reads Pet, so it has no Owner pencil"); return; }
 
       // The click that opened the popup, and a pick of what the cell already says: both write nothing.
@@ -967,7 +883,6 @@ namespace EQLogParser
       else PetAssignment.Assign(row.Name, owner);
 
       Reconcile();
-      ownerEditPopup.IsOpen = false;
     }
 
     /*
@@ -981,13 +896,60 @@ namespace EQLogParser
     private const string DoorClass = "class pick";
     private const string DoorOwner = "owner pick";
 
-    /// <summary>
-    /// True while a popup is being PRESELECTED for the row it was opened on. Setting ItemsSource/SelectedValue raises
-    /// SelectionChanged just like a pick does, so without this the pane logged "Speedbump already reads Pet" at open
-    /// time and every genuine no-op looked identical to that - which is how "I clicked and nothing happened" ended up
-    /// reading as "the operator picked the value that was already there".
-    /// </summary>
-    private bool _cellPreselect;
+
+    /*
+     * The cell pickers are CONTEXT MENUS, not ComboBox drop-downs inside a Popup. This pane sits in the identity strip,
+     * which is an AutoHidden docked pane: Syncfusion renders that inside its own host window, and a WPF ComboBox opens
+     * its list in yet another window of its own - so a press on an item is delivered to something the outer popup counts
+     * as outside itself, StaysOpen="False" dismisses the popup on mouse-down, and the item never commits. The field log
+     * said exactly that: a click on Player, and the ComboBox still holding Pet when the popup closed. Menus are the
+     * pattern this application already has working in the same kind of pane - the fight list's right-click menu takes
+     * clicks fine - so the pencil now opens one menu over the cell with that row's own choices, checked at the answer it
+     * currently gives. Every write still goes through Apply*Pick below: the menu is a door, not a second rule.
+     */
+    private void OpenChoiceMenu(FrameworkElement cell, IReadOnlyList<(string Word, bool Current, object Value)> choices, Action<object> onPick)
+    {
+      if (choices.Count == 0) return;
+
+      Editors.Open();
+      var menu = new ContextMenu { PlacementTarget = cell, Placement = PlacementMode.Relative };
+      var settled = false;
+
+      foreach (var (word, current, value) in choices)
+      {
+        var item = new MenuItem { Header = word, IsChecked = current };
+        item.Click += (_, _) =>
+        {
+          if (settled) return;
+          settled = true;
+          Editors.Close();
+          onPick(value);
+        };
+        menu.Items.Add(item);
+      }
+
+      // A gesture that ends without a pick still has to release the census hold - exactly once, because EditorHold counts
+      // and a stray second Close parks the count and stops the pane repainting.
+      menu.Closed += (_, _) =>
+      {
+        if (settled) return;
+        settled = true;
+        Editors.Close();
+      };
+
+      menu.IsOpen = true;
+    }
+
+    private static IReadOnlyList<(string Word, bool Current, object Value)> TypeMenuChoices(NameRow row)
+      => row.TypeChoices.Select(o => (o.Word, o.Kind == row.Kind, (object)o)).ToList();
+
+    private static IReadOnlyList<(string Word, bool Current, object Value)> ClassMenuChoices(NameRow row)
+      => MainActions.ClassList.OfType<string>().Select(c => (c, c == row.PlayerClass, (object)c)).ToList();
+
+    private static IReadOnlyList<(string Word, bool Current, object Value)> OwnerMenuChoices(NameRow row)
+      => PetOwnership.Choices(row.Owner, IdentityLookup.OurPeopleNames())
+          .Select(o => (o, string.Equals(o, row.Owner, StringComparison.OrdinalIgnoreCase), (object)o))
+          .ToList();
 
     private static void Refuse(string door, string why) => Log.Info($"identity cell: {door} ignored - {why}");
     private static void RefuseDebug(string door, string why) => Log.Debug($"identity cell: {door} ignored - {why}");

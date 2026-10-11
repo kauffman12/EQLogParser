@@ -221,33 +221,16 @@
       code-behind (IdentityVocabulary.TypeOptions) because its entries are internal records; the word shows via
       DisplayMemberPath and the verdict travels as SelectedValue.
     -->
-    <Popup x:Name="typeEditPopup" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade" Placement="Mouse">
-      <!-- Wired in the constructor rather than x:Static: the entries are IdentityVocabulary.TypeOption records, and that
-           table is internal (the words are shared with Core's rules and asserted by tests that run anywhere). -->
-      <ComboBox x:Name="typeEditComboBox"
-                HorizontalContentAlignment="Stretch"
-                DisplayMemberPath="Word" SelectedValuePath="Kind"
-                SelectionChanged="TypeSelectionChanged"
-                Style="{DynamicResource EQComboBoxStyle}" />
-    </Popup>
-    <Popup x:Name="classEditPopup" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade" Placement="Mouse">
-      <ComboBox x:Name="classEditComboBox"
-                HorizontalContentAlignment="Stretch"
-                ItemsSource="{x:Static local:MainActions.ClassList}"
-                SelectionChanged="ClassSelectionChanged"
-                Style="{DynamicResource EQComboBoxStyle}" />
-    </Popup>
     <!--
-      The three cell dropdowns (Type, Class, Owner) are each ONE popup reused by every row, opened by the pencil's click and
-      re-pointed at that cell by UiElementUtil.OpenCellPopup. The owner list is built per click in code-behind
+      There used to be three Popups here, one per editable cell, each holding a ComboBox whose drop-down was opened
+      programmatically (and one before that: an EQComboBoxStyle clone per cell). Both shapes are gone on measurement, not
+      preference: this pane lives in the identity strip, which is AutoHidden, so Syncfusion renders it inside its own host
+      window while a ComboBox opens its list in yet another - a press on an item then reads as a press from outside,
+      StaysOpen="False" dismisses on mouse-down, and nothing ever committed. The pickers are ContextMenus built per click in
+      NamesTable.OpenChoiceMenu (the pattern the fight list's menu already proves works in these panes), so this markup holds
+      no editor state at all: not one list to keep in step with a census merge. The owner list is built per click in code-behind
       (PetOwnership.Choices over the players this application knows) rather than declared here: it is a live question — "whose summon
       can this be, right now" — and it holds valid owners only; the take-back is the calculator click, never an entry. Plain strings, so no DisplayMemberPath.
     -->
-    <Popup x:Name="ownerEditPopup" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade" Placement="Mouse">
-      <ComboBox x:Name="ownerEditComboBox"
-                HorizontalContentAlignment="Stretch"
-                SelectionChanged="OwnerSelectionChanged"
-                Style="{DynamicResource EQComboBoxStyle}" />
-    </Popup>
   </Grid>
 </UserControl>
