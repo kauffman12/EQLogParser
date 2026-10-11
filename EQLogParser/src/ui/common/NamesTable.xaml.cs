@@ -797,7 +797,7 @@ namespace EQLogParser
       var current = -1;
       for (var i = 0; i < choices.Count; i++) if (choices[i].Kind == row.Kind) current = i;
       Log.Debug($"identity cell: {DoorType} editor opened for {row.Name} with {choices.Count} options");
-      BeginCellEdit(row, ColumnType, [.. choices.Select(o => o.Word)], current);
+      BeginCellEdit(row, ColumnType, [.. choices.Select(o => o.Word)], current, FindCellEditor(icon));
     }
 
     private void ApplyTypePick(NameRow row, IdentityVocabulary.TypeOption option)
@@ -857,7 +857,7 @@ namespace EQLogParser
 
       var classNames = MainActions.ClassList.OfType<string>().ToList();
       Log.Debug($"identity cell: {DoorClass} editor opened for {row.Name} with {classNames.Count} classes");
-      BeginCellEdit(row, ColumnClass, classNames, classNames.IndexOf(row.PlayerClass ?? string.Empty));
+      BeginCellEdit(row, ColumnClass, classNames, classNames.IndexOf(row.PlayerClass ?? string.Empty), FindCellEditor(icon));
     }
 
     private void ApplyClassPick(NameRow row, string className)
@@ -892,7 +892,7 @@ namespace EQLogParser
 
       var owners = PetOwnership.Choices(row.Owner, IdentityLookup.OurPeopleNames());
       Log.Debug($"identity cell: {DoorOwner} editor opened for {row.Name} with {owners.Count} candidates");
-      BeginCellEdit(row, ColumnOwner, [.. owners], owners.FindIndex(o => string.Equals(o, row.Owner, StringComparison.OrdinalIgnoreCase)));
+      BeginCellEdit(row, ColumnOwner, [.. owners], owners.FindIndex(o => string.Equals(o, row.Owner, StringComparison.OrdinalIgnoreCase)), FindCellEditor(icon));
     }
 
     private void ApplyOwnerPick(NameRow row, string owner)
@@ -976,7 +976,7 @@ namespace EQLogParser
     internal const string ColumnClass = "Class";
     internal const string ColumnOwner = "Owner";
 
-    private void BeginCellEdit(NameRow row, string column, IReadOnlyList<string> items, int currentIndex)
+    internal void BeginCellEdit(NameRow row, string column, IReadOnlyList<string> items, int currentIndex, ComboBox? editor = null)
     {
       EndAllCellEdits();          // one editor on screen at a time, and its census hold ends with it
       Editors.Open();
@@ -990,7 +990,36 @@ namespace EQLogParser
 
       row.EditorItems = items;
       row.EditorCurrentIndex = currentIndex;
+
+      if (editor is not null)
+      {
+        // Track it and preselect NOW, while the value can still be announced as ours. The cell's own ComboBox may not be found at
+        // click time (a row that has never been laid out), and then this simply waits for CellEditorVisibilityChanged.
+        _editorBox = editor;
+        editor.ItemsSource = items;
+        Preselect(editor, currentIndex);
+      }
+
       row.EditingColumn = column;   // the template's ComboBox becomes visible, and opens itself
+    }
+
+    /*
+     * The preselect is the one SelectedIndex write this pane makes, and it has to be announced: SelectedIndex raises the same
+     * SelectionChanged an operator's pick raises, and unbracketed that made opening an editor "pick" the value the cell already had.
+     */
+    private void Preselect(ComboBox box, int index)
+    {
+      if (index < 0 || index >= box.Items.Count && box.ItemsSource is null) return;
+
+      _suppressSelection = true;
+      try
+      {
+        box.SelectedIndex = index;
+      }
+      finally
+      {
+        _suppressSelection = false;
+      }
     }
 
     /*
@@ -1037,16 +1066,7 @@ namespace EQLogParser
         }
 
         _editorBox = box;
-        _suppressSelection = true;
-        try
-        {
-          box.SelectedIndex = row.EditorCurrentIndex;
-        }
-        finally
-        {
-          _suppressSelection = false;
-        }
-
+        Preselect(box, row.EditorCurrentIndex);
         box.Focus();
         box.IsDropDownOpen = true;
       }), System.Windows.Threading.DispatcherPriority.Input);
@@ -1061,6 +1081,27 @@ namespace EQLogParser
      */
     private ComboBox? _editorBox;
     private bool _suppressSelection;
+
+    /* The cell's own editor, found by walking down from the cell the pencil sits in. Null is a normal answer for a row that has not
+     * been laid out yet: the preselect then happens on IsVisibleChanged instead of at the click. */
+    private static ComboBox? FindCellEditor(DependencyObject from)
+    {
+      if (UiElementUtil.FindGridCell(from) is not { } cell) return null;
+
+      var found = new List<ComboBox>();
+      CollectBoxes(cell, found);
+      return found.Count == 1 ? found[0] : null;
+    }
+
+    private static void CollectBoxes(DependencyObject parent, List<ComboBox> into)
+    {
+      for (var i = 0; i < System.Windows.Media.VisualTreeHelper.GetChildrenCount(parent); i++)
+      {
+        var child = System.Windows.Media.VisualTreeHelper.GetChild(parent, i);
+        if (child is ComboBox box) into.Add(box);
+        else CollectBoxes(child, into);
+      }
+    }
 
     /* PROBE: identifies which control instance a line came from, and what it holds. */
     private static string Describe(ComboBox box)
