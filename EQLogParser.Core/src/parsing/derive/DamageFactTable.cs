@@ -568,12 +568,29 @@ namespace EQLogParser
     /// copy). Valid in a chunked world too: a chunk is an array, so the reference points into it exactly as it does today.</summary>
     public ref readonly DamageFact RefAt(int ordinal)
     {
-      if ((uint)ordinal >= (uint)FactCount) return ref ZeroRow;
+      if ((uint)ordinal >= (uint)FactCount) return ref MissedRow(ordinal);
       var chunk = RowsOfChunk(ordinal >> FactChunkShift);
       return ref chunk[ordinal & FactChunkMask];
     }
 
     private static readonly DamageFact ZeroRow;
+    private int _refOutOfRangeReported;
+
+    /*
+     * An ordinal at or past the end is not a condition to handle: `FightFactIndex` stores ordinals and the board blocks are ordinal
+     * runs, so this means a caller's index and this table's rows disagree — a bug. A zero row is still what gets handed back, because
+     * throwing inside a board build lands in MainWindow's swallowing catch, which logs once and leaves every grid showing its LAST
+     * answer: a frozen pane is harder to read than a wrong one (see the standing law about the board build's catch). What it must not
+     * be is silent, so this says it once per capture — ordinal and count, which is the whole diagnosis — with the counter keeping a bad
+     * walk from writing a line per record.
+     */
+    private ref readonly DamageFact MissedRow(int ordinal)
+    {
+      if (Interlocked.Exchange(ref _refOutOfRangeReported, 1) == 0)
+        Log.Warn($"fact ordinal {ordinal} is past the end of this capture ({FactCount:N0} row(s)); a zero row was read in its place");
+
+      return ref ZeroRow;
+    }
     public ReadOnlySpan<DeathFact> Deaths => _deaths.AsSpan(0, _deathCount);
     public ReadOnlySpan<IdentityEvent> IdentityEvents => _identities.AsSpan(0, _identityCount);
     public ReadOnlySpan<TauntFact> Taunts => _taunts.AsSpan(0, _tauntCount);
@@ -703,16 +720,19 @@ namespace EQLogParser
     public string AuxOf(short idx) => idx < 0 ? null : _auxs[idx];
 
     /*
-     * Bytes of row array that hold nothing. Growth doubles (AddFact and its siblings), so a capture that stopped growing
-     * holds between 0 and 100 % more slots than rows: measured on a 467 MB capture whose 2,285,746 damage facts sat in a
-     * 3,200,000-slot array, the damage table alone kept 29 MB of address space for nothing, and with the heal table's
-     * slack beside it ~47 MB of the 397 MB a loaded session holds was empty. CompactToCount hands it back; CombatCapture
-     * decides when (a trim per fact would turn doubling's amortized copy into a copy per fact).
-     */
-    /*
-     * Damage facts no longer contribute slack: rows live in fixed chunks allocated on demand, so the most the store can hold without
-     * writing is the tail of the newest chunk (at most 65,535 rows, ~1.5 MB) instead of up to a whole doubling of the capture. That is
-     * why the old ~47 MB of reserved-but-empty slots at end-of-file is gone by construction rather than by a trim pass.
+     * Bytes of row array that hold nothing — THE QUEUE SLACK ONLY.
+     *
+     * Damage facts contribute none: rows live in fixed chunks allocated on demand, so the most the row store can hold without writing is
+     * the tail of the newest chunk (~1.5 MB) rather than up to a whole doubling of the capture. Before chunks, the growth doubled
+     * (AddFact and its siblings) and a capture that stopped growing held between 0 and 100 % more slots than rows — measured on a 467 MB
+     * capture whose 2,285,746 damage facts sat in a 3,200,000-slot array: 29 MB in the damage table, ~47 MB beside it with the heal table's
+     * share, out of the 397 MB a loaded session held. That went out by construction, not by a trim pass.
+     *
+     * What is left here is real and still doubles: the deaths, identity-event, taunt and evidence queues, and CompactToCount hands it back
+     * when CombatCapture asks (a trim per fact would turn doubling's amortized copy into a copy per fact). The evidence queue is the one
+     * that scales with the log (a line can emit evidence without emitting a fact), so this number is NOT pinned at zero — and note the
+     * once-per-doubling watermark in CombatCapture.CompactRows keys on the DAMAGE fact count, which a quiet capture whose evidence queue
+     * alone keeps growing never trips.
      */
     public long SlackBytes => RowArrays.SlackOf<DeathFact>(_deaths.Length, _deathCount)
                               + RowArrays.SlackOf<IdentityEvent>(_identities.Length, _identityCount)

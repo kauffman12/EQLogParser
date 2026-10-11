@@ -291,14 +291,26 @@ namespace EQLogParser
     internal int HealChunksAllocated => _rows.RawCount;
 
     /// <summary>THE ordinal door for heals — same law as DamageFactTable.At: one row by the ordinal the heal window walk already
-    /// carries, so chunked storage changes this method and no caller. Out of range reads back a zero row rather than throwing.</summary>
+    /// carries, so chunked storage changes this method and no caller. Out of range reads back a zero row rather than throwing, and says
+    /// so once (see DamageFactTable.MissedRow for why logging is the shape and silence is not).</summary>
     public HealFact At(int ordinal) => RefAt(ordinal);   // copies the row; use RefAt where a 32-byte copy matters
 
     /// <summary>By-reference form of the heal door — see DamageFactTable.RefAt.</summary>
     public ref readonly HealFact RefAt(int ordinal)
     {
-      if ((uint)ordinal >= (uint)HealCount) return ref ZeroRow;
+      if ((uint)ordinal >= (uint)HealCount) return ref MissedRow(ordinal);
       return ref _rows.Read(ordinal >> HealChunkShift)[ordinal & HealChunkMask];
+    }
+
+    private int _refOutOfRangeReported;
+
+    /// <summary>The heal half of DamageFactTable.MissedRow: a zero row back, one Warn per capture out.</summary>
+    private ref readonly HealFact MissedRow(int ordinal)
+    {
+      if (Interlocked.Exchange(ref _refOutOfRangeReported, 1) == 0)
+        Log.Warn($"heal ordinal {ordinal} is past the end of this capture ({HealCount:N0} row(s)); a zero row was read in its place");
+
+      return ref ZeroRow;
     }
 
     /// <summary>The slice door: hand back a warm chunk, or decode a cold one into place first. Out of range reads an empty array (no row asks).</summary>
