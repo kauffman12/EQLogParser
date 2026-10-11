@@ -9901,7 +9901,72 @@ zero because a pass still **asks** every row whether it grew and clones what the
 target — "re-present a row" wants to be a pointer swap plus one tail, not a copy of its block list and segment maps. Quote the two
 captures as the pair, never one: the difference between them is *rows per capture*, which is the variable that decides how much
 re-walking there was to avoid. What this does **not** touch: `groups`/`walk`/`present` in the phase table (the boards' own walk of
-materialized records), and layer 2 remains gated on the fold-at-publish measurement named above — nothing here licenses it.
+materialized records); layer 2's gate has since been measured, and §"Fold-at-publish measured: the cost cleared the bar, and the row on screen did not" answers it.
+
+### Fold-at-publish measured: the cost cleared the bar, and the row on screen did not (2026-11)
+
+The boundaries section above left one number outstanding: publishing a carried cell into a fresh display row, on **group** content, may
+cost as much as the records it stopped counting. `FoldAtPublishProbeTest` (`EQLP_FOLD_PUBLISH=<log>`, optional `EQLP_FOLD_WINDOW=5,30`,
+`EQLP_FOLD_ANCHORS=.25,.5,.75`) measured it on four captures. The inputs are real: the board comes from the real builder over a
+whole-capture selection, so every cell is a row the grid actually bound. Windows are taken at three anchors, because a capture's middle can
+be idle and one anchor is a degenerate sample waiting to be read as a shape. Three arms per touched row:
+
+* **COLD** — recount the row's R records through the walk's own calls (`UpdateDamageStats` on the row and on its sub-stat row, plus the raw
+  amount), into a fresh row. What happens today.
+* **FOLD** — `MergeStatsRecursive(fresh, carriedCell)`, then count only the window's N records and merge those too. Layer 2.
+* **HIST** — FOLD plus copying every raw hit amount the cell holds.
+
+The mirror is validated before it is believed: on every plain top-level row compared (18/18 raid, 1/1 group, and the same everywhere else)
+the COLD arm reproduces the published row's `Total` **and** `Hits` exactly. It still runs at ~180-226 ns/record against the builder's
+measured 400-457 ns/record, because it skips block iteration, sub-stat key composition and identity memoization — so every saving quoted
+below is a floor, not a claim.
+
+```
+capture                      facts       fight rows / walk     @50% W=5s: measured R      recount -> fold (+hist)     saving
+raid   Kizant-09-03-26    4,832,103        708 / 2,129 ms      2,849,439 records          641 ms -> 1.64 (3.93)      99.7 %
+farm   Kizant_xegony-2    2,286,368        251 / 1,021 ms      1,541,924 records          339 ms -> 1.49 (2.13)      99.6 %
+group  Roper_thj (EMU)    4,356,144     42,410 / 1,411 ms      1,174,935 records          214 ms -> 0.08 (1.73)     100.0 %
+refer. Incogitable_xegony 1,901,078      4,646 /   629 ms        (same shape throughout)                              >= 99 %
+```
+
+Priced where it matters — the same touched R at the builder's **own** walk rate: on the raid capture those rows are **1,302 ms of its
+2,129 ms walk**, and publish-plus-tail priced at that rate lands at **8-14 ms**. Against the ceiling probe's bar (whole-row reuse saves
+~20 % in raid content, ~35 % in group), the fold takes 99 %+ everywhere. It clears, in every shape sampled.
+
+**Publish is O(keys + segments), and those are small.** Per-row publish cost ran **1-146 us**, the 146 us being a row holding 2,592
+`TimeRange` segments — the ranges union is what a wide row pays for, not its counters. The fattest raid row measured (204,811 records,
+27 cells) publishes in **40 us** against a 46 ms recount: x424. Across 184 per-row samples the fold was never slower than the recount, and
+the worst margin was **x2 on a row holding 64 records and 9 cells**. That is where the boundary actually is, and it says something better
+than "group content kills it": below a few hundred records a row's key count approaches its record count, and at that size neither the walk
+nor the publish is worth milliseconds. The worry that many thin rows would make group content lose was measured over four captures, one of
+them holding 42,410 fight rows, and did not materialize.
+
+**The histogram is not carried today, and buying it back is affordable.** `MergeStatsRecursive` merges counters, ranges, children, resists,
+specials and deaths — and no raw hit amounts (`Attempt` has no merge term at all). A naive cell cache would therefore quietly break
+`HitFreqChart` on every cached row. Copying the amounts instead costs **0-2.9 ms per refresh** (442k-915k amounts) and leaves the saving at
+98.6 %+ on every capture, so the chart's correctness is purchasable rather than a trade; a shared immutable prefix is a later refinement,
+not a prerequisite.
+
+**What does block layer 2: a published row is not a cacheable cell.** Every published row arrives with **undrained best-second scratch** —
+83/83 rows on the raid capture, 59/59 on the farm night, 413/414 on Incogitable — and the fold's guard is per level, so it is the *cells*
+that need draining too (582/597 and 2,736/2,745). Draining means writing `BestSec = max(BestSec, BestSecTemp); BestSecTemp = 0` into the
+object the grid is bound to. A cell therefore has to be taken at a drained boundary rather than lifted out of the display model afterwards,
+and the display model has no copy path: `SubStats`, `SubStats2` and `SubSubStats` are `{ get; } = []`. **Layer 2 begins as a change of shape
+in `PlayerStats`, not as a cache dictionary.** Design rule 3 ("never publish the carried cell") now reads *"take the cell at a drained
+boundary"*, which is the half that design left implicit and this measurement makes mandatory.
+
+**Coverage, stated honestly: 12-44 % of touched records have no damage row to carry them.** A mob beating on a raider lives in
+`TankingBlocks`, so those records are touched but keyed to the other board. The prize is ~56-88 % of the *damage* walk on a refresh, and
+tanking and healing each need the same question asked of their own rows before "the boards cost milliseconds" is true end to end.
+
+**Retention clears.** Carrying every published row's cell costs **4.2-7.9 MB** per session across these captures — amounts dominate at
+8 B per damaging record, while cells and segments grow with keys (413-2,745 of them) — against a capture's own tens-to-hundreds of MB of
+fact rows. It is not a second copy of the data.
+
+**Decision: layer 2 is licensed on cost**, in this order because measurement fixed it: (1) a drained snapshot/copy boundary for
+`PlayerStats` (the blocker above), (2) cells keyed (row x ordinal window) under the same identity-proof discipline
+`FightMaterializationCache` uses, (3) amounts carried so the chart stays true, (4) a full-build fallback when touched cells cross a record
+threshold — tuned against these numbers and gated on `EQLP_LIVE_TAIL_PROBE`'s reused-vs-recounted print.
 
 ### What a session is holding, printed (2026-10)
 

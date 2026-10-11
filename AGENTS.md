@@ -1533,7 +1533,7 @@ npcs.txt; it is the *only* evidence for **6** names (Incogitable) and **4** (Kiz
   full replay, plus the projection/classification split named as the re-measure command), `UnrowedFactsTest`,
   `MeterBoardCostRealLogTest`/`RealLogBenchTest` (named cost probes), `LiveTailChangeProbeTest`
   (`EQLP_LIVE_TAIL_PROBE` — replays a capture as growing prefixes and prints which rows a pass actually changes; its answer
-  killed the equality-gate proposal and is in DesignNotes), and the three probes the cell cache rests on: **`PetLearningProbeTest`**
+  killed the equality-gate proposal and is in DesignNotes), and the four probes the cell cache rests on: **`PetLearningProbeTest`**
   (`EQLP_PET_LEARN` — replays `DamageStatsBuilder`'s OWN pet-placement rule over materialized records and asserts the ceilings behind
   "what a cached walk may carry": order-dependent placement, how many names would churn, map sizes) and **`RowReuseCeilingProbeTest`**
   (`EQLP_REUSE_CEILING` — what a WHOLE-ROW cache could save at best; its ~20 % answer is the bar any cell cache must clear) and
@@ -1541,7 +1541,10 @@ npcs.txt; it is the *only* evidence for **6** names (Incogitable) and **4** (Kiz
   chunks, every visible row materialized twice per pass: through a FRESH `FightFactIndex` (= pre-layer-1 behaviour) and through the carried one,
   timing only the per-row loop; asserts the two arms' output is identical every pass. Its answer is the realized layer-1 saving — ×3.41 time /
   −67.5 % bytes on Incogitable, ×4.40 / −72.2 % on the farm night, and 535 ms → 3 ms for a pass where only `Dead`/`GroupId` moved — and layer 2's
-  gate asks this same harness again, which is why it stays). All three assert on
+  gate asks this same harness again, which is why it stays) and **`FoldAtPublishProbeTest`** (`EQLP_FOLD_PUBLISH` + `EQLP_FOLD_WINDOW` +
+  `EQLP_FOLD_ANCHORS` — three arms over REAL published rows on four captures: recount the row's R records through the walk's own calls /
+  `MergeStatsRecursive` a carried cell into a fresh row and count only the window's N / that plus copying every raw hit amount; asserts the
+  recount mirror reproduces the published row's Total+Hits exactly on every plain row, so it cannot time the wrong work). All four assert on
   real captures no fixture reaches, and DesignNotes cites each by name where its number is used. Deleted on those terms:
   `RegistryRebuildTest` (phase exit gate satisfied, recall figures recorded in DesignNotes), `HitByNpcCensusTest`
   (premise dead with the rule it proposed) and `TempOverrideProbeTest` (self-labelled "delete after reading"; its two field reports are
@@ -1619,10 +1622,26 @@ After completing work, verify:
   captures (`MaterializeAppendProbeTest`, `EQLP_MATERIALIZE_APPEND`): **×2.7 time / −65 % bytes** on a ~290k-fact growth pass over
   Incogitable (565→210 ms, 215→75 MB), **×6.7 / −77 %** on the farm night's last pass, and **535 ms → 3 ms** for a pass where only
   `Dead`/`GroupId` moved; warm never reaches zero because a pass still asks every row whether it grew — that residual is layer 2's
-  target, and nothing here licenses layer 2 (its gate is still the fold-at-publish measurement).
+  target; whether layer 2 deserves to exist is answered by the fold-at-publish bullet below, not by this number.
   `MaterializationContinuationTest` pins warm == from-zero field-for-field, the no-mutation law, **and that the warm path actually runs**
   (block identity — a test that silently took the cold path everywhere would be green, which is how an optimisation of this kind goes
   absent). docs/DesignNotes.md → "Layer 1 is built: a grown row continues instead of re-walking".
+- **Fold-at-publish is cheap; a row on screen is not a cacheable cell** (2026-11, the gate layer 2 was waiting on): measured on four
+  captures by `FoldAtPublishProbeTest`, a 5-30 s refresh of touched rows removes **99.2-100 %** of the recount (bar: whole-row reuse saves
+  ~20 % raid / ~35 % group), and at the builder's own walk rate the raid capture's touched rows are **1,302 ms of a 2,129 ms `walk`** against
+  **8-14 ms** of publish-plus-tail. **Publish is O(keys + segments): 1-146 µs per row**, the maximum being a row with 2,592 `TimeRange`
+  segments; across 184 samples the fold never lost to the recount and the worst margin was ×2 on a row of 64 records / 9 cells — so the old
+  worry that many thin rows would sink it in group content is closed by measurement, not by argument. Two things remain load-bearing:
+  **(1) `MergeStatsRecursive` carries NO hit distribution** (no term touches `Attempt`'s raw amounts), so a cache silently empties
+  `HitFreqChart`; copying the amounts costs 0-2.9 ms per refresh and keeps ≥98.6 %, which buys correctness without a trade — do not "save" it
+  by sharing mutable lists. **(2) A published row arrives with undrained best-second scratch on EVERY capture** (83/83, 59/59, 413/414 rows;
+  582/597 and 2,736/2,745 cells) and the fold refuses that per level, so a cell must be taken at a **drained boundary**, which means the carry
+  cannot lift rows out of the display model as it stands (`SubStats`/`SubStats2`/`SubSubStats` are `{ get; } = []`, no copy path): layer 2
+  starts as a shape change in `PlayerStats`, not as a dictionary. **Coverage is not 100 %**: 12-44 % of touched records belong to names with no
+  damage row of their own (a mob beating on a raider lives in `TankingBlocks`), so the prize is ~56-88 % of the damage walk and tanking/healing
+  need the same question asked separately. Retention clears: carrying every published cell costs **4.2-7.9 MB** per session (amounts at 8 B per
+  damaging record dominate; cells/segments grow with keys). docs/DesignNotes.md → "Fold-at-publish measured: the cost cleared the bar, and the
+  row on screen did not".
 - **A refresh answers for itself; only a machine's refresh may decline, and it says so** (2026-11): an applied change is visible in
   the place the operator is looking — the row that left the list is gone, a claimed summon reads `X +Pets` — because re-presenting a
   pool the builder already holds costs **~10 ms for one row, 25–32 ms for a whole-capture selection**, and the boards' own door prints
