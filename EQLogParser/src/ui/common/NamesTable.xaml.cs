@@ -749,6 +749,7 @@ namespace EQLogParser
 
       Editors.Open();
       _typeEditRow = row;
+      Log.Debug($"identity cell: {DoorType} popup opened for {row.Name}");
 
       // This row's own list — the kinds its name can still be (IdentityVocabulary.TypeOptionsFor).
       typeEditComboBox.ItemsSource = row.TypeChoices;
@@ -771,7 +772,16 @@ namespace EQLogParser
 
     private void TypeSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-      if (sender is not ComboBox combo || combo.SelectedItem is not IdentityVocabulary.TypeOption option) return;
+      if (sender is not ComboBox combo) return;
+      if (combo.SelectedItem is not IdentityVocabulary.TypeOption option)
+      {
+        // A popup that closes WITHOUT committing an item used to leave no trace: the press lands outside the list,
+        // onClosed clears the selection, and this returns with nothing said - which is what "the pencil does nothing"
+        // looks like from the outside. It is only interesting while a row is in hand, so a completed write (which
+        // closes the popup first) stays quiet.
+        if (_typeEditRow is not null) Log.Debug($"identity cell: {DoorType} closed with no item committed for {_typeEditRow.Name}");
+        return;
+      }
 
       /*
        * Three refusals before a write: no row (the click that opened the popup, or a popup already closed), the answer it
@@ -826,6 +836,7 @@ namespace EQLogParser
 
       Editors.Open();
       _classEditRow = row;
+      Log.Debug($"identity cell: {DoorClass} popup opened for {row.Name}");
       classEditComboBox.SelectedItem = (object?)row.PlayerClass ?? "";   // ClassList's first entry is the blank
 
       UiElementUtil.OpenCellPopup(classEditPopup, classEditComboBox, cell, () =>
@@ -838,7 +849,12 @@ namespace EQLogParser
 
     private void ClassSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-      if (sender is not ComboBox combo || combo.SelectedValue is not string className) return;
+      if (sender is not ComboBox combo) return;
+      if (combo.SelectedValue is not string className)
+      {
+        if (_classEditRow is not null) Log.Debug($"identity cell: {DoorClass} closed with no item committed for {_classEditRow.Name}");
+        return;
+      }
 
       var row = _classEditRow;
       if (row is null) { Refuse(DoorClass, "no cell is being edited - the popup closed before the pick landed"); return; }
@@ -868,6 +884,7 @@ namespace EQLogParser
 
       Editors.Open();
       _ownerEditRow = row;
+      Log.Debug($"identity cell: {DoorOwner} popup opened for {row.Name}");
 
       // PetOwnership.Choices already ends with "No Owner" and drops the placeholders, so the current answer is always in the list —
       // including a row that reads "No Owner", which opens with that entry selected rather than blank.
@@ -886,7 +903,12 @@ namespace EQLogParser
 
     private void OwnerSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-      if (sender is not ComboBox combo || combo.SelectedItem is not string owner) return;
+      if (sender is not ComboBox combo) return;
+      if (combo.SelectedItem is not string owner)
+      {
+        if (_ownerEditRow is not null) Log.Debug($"identity cell: {DoorOwner} closed with no item committed for {_ownerEditRow.Name}");
+        return;
+      }
 
       var row = _ownerEditRow;
       if (row is null) { Refuse(DoorOwner, "no cell is being edited - the popup closed before the pick landed"); return; }
