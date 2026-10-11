@@ -139,10 +139,10 @@ namespace EQLogParser
     private int _factsAtLastCompact;
 
     /*
-     * Hand back the row arrays' doubling slack: measured 47 MB of the 397 MB a loaded session retains (damage 29 + heal 18)
-     * is address space the last Array.Resize reserved and nothing ever wrote. Both tables grow by doubling - a law pinned on
-     * purpose, because extra growth steps would be paid for on the parse thread, which is where load time actually goes -
-     * so what costs nothing during a load is left stranded the moment the load stops growing.
+     * Hand back what the row stores reserved and never wrote. The DAMAGE and HEAL rows no longer have any of that — they live in fixed
+     * chunks bought by their first row, so the pre-chunk 47 MB of the 397 MB a loaded session retained (damage 29 + heal 18, measured when
+     * both tables grew by Array.Resize ×2) is gone by construction. What still doubles, and therefore what this reclaims now, is the small
+     * queues beside them: deaths, identity events, taunts, evidence.
      *
      * Two rules keep this from becoming the thing it exists to avoid. It runs AT THE GATE, the same lock every fact takes,
      * so it can never resize underneath an append. And it runs at most once per DOUBLING of the capture: a trim leaves

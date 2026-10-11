@@ -109,8 +109,12 @@ namespace EQLogParser
 
       /*
        * The Type options for THIS row, in the order the in-cell editor shows them. Built in Core
-       * (IdentityVocabulary.TypeOptionsFor) by the same recognizers that hide a pencil, so no row offers Mercenary onto a raider or
-       * any kind at all onto an eye. Includes what the row already is, because the editor preselects that value.
+       * (IdentityVocabulary.TypeOptionsFor) by the same recognizers that hide a pencil, so what is trimmed is what the NAME decides and not
+       * an opinion about which kinds are typeable: an eye offers NPC and nothing else, a summon whose spelling carries its master offers Pet
+       * alone, a row whose verdict IS a spell shape keeps only its own answer. Mercenary is offered on any row the pencil appears on (it is
+       * one vocabulary with the "Set … as" cascade; see IdentityVocabulary.TypeOptionsFor for why the older per-row refusal went).
+       * Includes what the row already is, because the editor preselects that value; never offers Unknown, which is a click for the capture to
+       * answer again rather than a word a cell may hold.
        */
       public IReadOnlyList<IdentityVocabulary.TypeOption> TypeChoices { get; init; } = IdentityVocabulary.TypeOptions;
 
@@ -1040,7 +1044,7 @@ namespace EQLogParser
     /*
      * Open the list once the cell has laid the control out, and if the items have not arrived by then, ask one more time at a lower
      * priority rather than showing an empty drop-down (the app's ComboBox template draws a 95 px empty panel when HasItems is false,
-     * which is what "a white box with nothing in it" is). PROBE: every line prints the control's own answer — item count, selection,
+     * which is what "a white box with nothing in it" is). Every Debug line prints the control's own answer — item count, selection,
      * size — because "the list is empty" and "the list is there but a click does not reach it" are different bugs and this pane has
      * already been fixed for the wrong one twice.
      */
@@ -1103,7 +1107,7 @@ namespace EQLogParser
       }
     }
 
-    /* PROBE: identifies which control instance a line came from, and what it holds. */
+    /* Names the control instance a Debug line came from, and what it holds — cells are realized and reused, so "the combo" is ambiguous. */
     private static string Describe(ComboBox box)
     {
       var name = box.DataContext is NameRow row ? row.Name : "no-row";

@@ -782,15 +782,7 @@ namespace EQLogParser
     }
 
     /*
-     * The damage meter's own question: every row this capture holds that was still alive when the window opened,
-     * measured through the window. No hidden-pet re-adding is needed because the scope is already every row (a pet's
-     * row is in it), which is also why a capture-fed meter and a derived-list select-all can be compared at all.
-     *
-     * Null means the engine has nothing to say yet (no derive landed, or nothing fought since the window opened);
-     * what to paint for that is the overlay's call, exactly as it is today.
-     */
-    /*
-     * "Is there a fight going on?" — the question FightManager's overlay-fight set answered for the meter, asked here of
+     * "Is there a fight going on?" — the question the legacy meter's overlay-fight set answered, asked here of
      * derived rows (LiveFights) on the capture's own newest event. `gapS` comes from the caller because it is the meter's
      * dial: the same number that zeroes its board, so a window cannot be kept open by one rule and blanked by another.
      *
@@ -804,6 +796,12 @@ namespace EQLogParser
       return snapshot is not null && LiveFights.AnyLive(snapshot.AllFights, _capture.LastEventTime, gapS);
     }
 
+    /*
+     * The damage meter's own question: every row this capture holds that was still alive when its window opened, measured through the
+     * window. No hidden-pet re-adding is needed (the scope is already every row, a pet's included), which is also why a capture-fed meter
+     * and a derived-list select-all can be compared at all. `lastFactT` comes back NaN when nothing was in range — the overlay decides what
+     * to paint for that, exactly as it does today.
+     */
     internal DamageOverlayStats BuildOverlayStats(double fromT, double toT, out double lastFactT)
     {
       lastFactT = double.NaN;
