@@ -1525,17 +1525,21 @@ npcs.txt; it is the *only* evidence for **6** names (Incogitable) and **4** (Kiz
   ledger entry (`R19-` is in `IdentityPriorStore.RememberedRules`). Numbers and reasoning:
   docs/DesignNotes.md → "Breadth of evidence, measured" (the eye census); pinned by `EyeSummonTest`.
 - **A versioned cast line is tier-1 identity; the pet's Snare claims Pet, not the player.**
-  `EQDataStore.ClassSafeSpellFamilies` (closed at **15**: Boastful Bellow/Boastful Conclusion → Bard,
+  `EQDataStore.ClassSafeSpellFamilies` (closed at **19**: Boastful Bellow/Boastful Conclusion → Bard,
   Frenzy/Paragon/Focused Paragon of Spirit + Hobble of Spirits → Beastlord, Tireless Sprint → Berserker,
   Celestial Regeneration/Focused Celestial Regeneration → Cleric, Spirit of the Wood/Nature's Boon →
   Druid (their casters Tilwedarx/Tuona cross-check the two families), Gather Mana/Eldritch Rune →
-  Enchanter, Battle Leap Warcry/Battle Leap → Warrior **or** Berserker) claims the caster of
+  Enchanter, Battle Leap Warcry/Battle Leap → Warrior **or** Berserker, Guardian of the Forest/Group
+  Guardian of the Forest → Ranger and Lay on Hands → Paladin (2026-11 AA trio, see below)) claims the caster of
   `X begins casting <family> <roman>.` as Player Certain through R4-spell. **The rank is part of the
-  match and must be the whole tail**: versionless never prints (measured: 0 lines) and matches nothing,
-  and a rank absent from `spells.txt` passes the text gate but fails the data gate — new
-  expansion content is **silent, never guessed**. A family entry may be **multi-bit** (War|Ber): those
-  ranks claim Player Certain while `GetSpellClass` **stays null and no class is ever written** —
-  seeding puts them in `_classAmbiguousFamilyRanks` only, and `ClassificationRules.IsClassSafeCast`
+  match and must be the whole tail**: versionless matches nothing, and it now DOES print —
+  `Lay on Hands.` appears 8 times in the corpus while every older family printed it 0 times — so the anchor
+  refuses a real versionless line rather than an imagined one, and a rank absent from `spells.txt` passes the text
+  gate but fails the data gate: new expansion content is **silent, never guessed**. A family entry may be
+  **multi-bit** (War|Ber, Nec|Shm|Shd): those ranks claim Player Certain while `GetSpellClass` **stays null and no
+  class is ever written** — seeding puts them in `_classAmbiguousFamilyRanks` only, and a label the generic
+  single-mask pass already wrote for such a rank is **removed** (declaring a name ambiguous is the statement that this
+  application will not derive a class from it), and `ClassificationRules.IsClassSafeCast`
   (internal for tests) accepts label-or-ambiguous as "the data knows this rank". Assert both directions
   (`IsClassSafeCast` true + `GetSpellClass` null): the null half is what fails silently if seeding ever
   regresses into the label path, and a coin-flipped class column is worse than silence. Census 2022→2026 + THJ: 17,304 Bellow + 14,689
@@ -1552,11 +1556,42 @@ npcs.txt; it is the *only* evidence for **6** names (Incogitable) and **4** (Kiz
   attackers, but every attacker already held a stronger claim (zero yield = bug surface), so modifier
   masks stay stats-only. Class flows with no new system: the seeded `_spellsToClass` feeds
   `CastLineParser`'s existing registry `SetActivePlayerClass` path. Pinned by `IdentityRulesTest`
-  (`VersionedFamilyListsAreFifteenAndOneNoMore`; `DerivedFightsMatchLiveParseFactForFact` is where the
+  (`VersionedFamilyListsAreNineteenAndOneNoMore`; `DerivedFightsMatchLiveParseFactForFact` is where the
   Hobble split lives in a test). Battle Leap Warcry itself prints
   **zero lines** in every local capture — it ships on user assertion plus the spell DB's War|Ber column,
   with plain Battle Leap's 470 zero-article casts as nearest corroboration; numbers:
   docs/DesignNotes.md → "A versioned class-spell family claims its caster".
+- **AA ranks join the family table, and a family row may be the thing that shuts a bad class label up** (2026-11, the
+  operator's list: Guardian of the Forest / Group Guardian of the Forest → Ranger, Lay on Hands → Paladin, Life Burn →
+  Shadow Knight). Four rows, all measured before entry, and **one of them could not be entered as classed**.
+  `Guardian of the Forest` (41 DB ranks, every one mask 8 = Rng) 428 cast lines, `Group Guardian of the Forest`
+  (21 ranks, all Rng) 261 lines — the group form is a **separate row**, because it does not start with the plain
+  family's prefix and `TryGetVersionedFamily` anchors on `StartsWith` (word order is the whole separation, exactly like
+  `Focused Celestial Regeneration`). Lay on Hands: 36 ranks, all mask 4 = Pal, 42 ranked casts (Shmid, Hacket,
+  Abazzagorath...). Casters are Rng/Pal by their own ten-thousand-deep cast histograms; **zero article-shaped or
+  possessive** ones. Two findings outrank the request. **(1) `Lay on Hands.` prints versionless — 8 lines — so
+  "versionless never prints" was false in the table's own comment**; it still claims nothing (no rank, no family match,
+  and the bare form is what a `/pet` button or a clickie writes), which is why the sentence now says the anchor refuses a
+  line that really occurs rather than a hypothetical one. **(2) `Life Burn` is ONE NAME ON TWO CLASS LINES in
+  `spells.txt`: ranks I–V mask Nec(1024), VI–X mask Shm(512)** — and every caster of a ranked form in eleven captures
+  (Coas, Shennron, Atvar, Virul; 135 casts, all VIII–X) is a **Necromancer** by the ten thousand other spells he casts,
+  while the operator names Shadow Knight. So it enters **multi-bit** `Nec|Shm|Shd`: the rank proves a PLAYER Certain and
+  **no reading may write a class**, which required the seeding change — an ambiguous family rank now has its generic
+  single-mask label **removed**, because leaving it in meant each of those 59–118 casts per capture was feeding "Shaman"
+  sightings into a necromancer's class column. The operator's Shd word rides inside the mask, so a corrected data file
+  keeps claiming the caster with no code change; **if a future data file settles the class, that row becomes single-bit in
+  one edit and the veto retires with it.** Yield is measured and small: those AA casters are raid members the rules
+  already knew — on `eqlog_Kizant_xegony-9-18-22.txt` the whole census fingerprint (611 names, kinds,
+  reasons incl. `R4-spell=54`, totals) is **byte-identical** before and after, while 11 of that capture's family-casters
+  had no OTHER family-safe cast, so the claim is new even where the verdict is not (the placement would matter in a
+  capture without their `/who` lines and Targeted frames). Do **not** widen this to `Group Lay on Hands`: zero DB rows
+  AND zero cast lines, so it would be a permanently silent row (unlike Battle Leap Warcry, which has the data behind it).
+  Pinned by `IdentityRulesTest` (`GuardianLayOnHands_RankedCastsResolve_AndAnUnshippedRankIsSilent`,
+  `LifeBurn_IsPlayerEvidenceAndWritesNoClass_OnEitherHalfOfTheDataSplit` — both directions: `IsClassSafeCast` true,
+  `GetSpellClass` null on **each** half of the split, `IsClassAmbiguousFamilyRank` false for an unshipped rank — and
+  `AVersionedAaCastClaimsItsCaster_GuardianLayOnHandsAndLifeBurn`, which runs real cast lines through the pipeline and
+  refuses the versionless caster). Numbers: docs/DesignNotes.md → "AA ranks on the family table, and the name the data
+  classed two ways".
 - **The frenzy verb claims a class, never a person — and classes are time-bounded.** `X frenzies on Y for N`
   is the berserker frenzy AA (85,685 lines, zero article-shaped actors; a monster's frenzy reads
   `is struck by a frenzied assault` and names no attacker), so `DamageLineParser`'s melee branch — gated on

@@ -126,7 +126,32 @@ namespace EQLogParser
       ("Battle Leap Warcry", SpellClass.War | SpellClass.Ber),
       // The sibling jump spell, same War|Ber mask on all 13 ranks; 470 `begins casting` lines over
       // the corpus, casters Fllint/Tolzol/Rune/Shennron - proper-noun raid names, zero article-shaped.
-      ("Battle Leap", SpellClass.War | SpellClass.Ber)
+      ("Battle Leap", SpellClass.War | SpellClass.Ber),
+      // The ranger's overhaste AA (user-added 2026-11): 41 DB ranks, every one single-bit Rng(8); 428
+      // `begins casting` lines over eleven captures (`Praxxis begins casting Guardian of the Forest XXXVIII.`),
+      // casters Praxxis/Moldar/Lanedoraa/Laika/Tsiawd/Penuvien - whose own cast lines run 11-15k deep in Rng -
+      // and zero article-shaped or possessive ones. The GROUP form is a second button of the same ability and
+      // needs its OWN row: `Group Guardian of the Forest XVIII.` (261 lines, 21 DB ranks, all Rng) does not
+      // start with the plain family's prefix, so word order keeps the two apart exactly as it keeps
+      // `Focused Celestial Regeneration` out of `Celestial Regeneration`.
+      ("Guardian of the Forest", SpellClass.Rng),
+      ("Group Guardian of the Forest", SpellClass.Rng),
+      // The paladin's AA heal (user-added 2026-11): 36 DB ranks, all single-bit Pal(4); 42 ranked cast lines
+      // (Shmid 31 - a paladin's own file runs 32k Pal casts deep - Hacket, Abazzagorath, Tiseanu, Ozimandiasz,
+      // Lasaman). It ALSO prints versionless (`Lay on Hands.`, 8 lines) and those claim nothing: the roman-rank
+      // anchor is what makes a family match a RANK rather than a name. This is the ONLY family whose
+      // versionless form prints - every older one measured 0 such lines - so the refusal is of a real shape now.
+      ("Lay on Hands", SpellClass.Pal),
+      // MULTI-BIT, and the mask carries a disagreement. The operator names this a shadow knight ability; the
+      // shipped data splits ONE name across two class lines BY RANK - `Life Burn I..V` mask Nec(1024) and
+      // `Life Burn VI..X` mask Shm(512). The captures settle nothing between the two readings: every caster of
+      // a ranked form (Coas, Shennron, Atvar, Virul - 135 lines, ranks VIII..X) is a NECROMANCER by the ten
+      // thousand other spells he casts, and the only Shaman sightings those files hold against them are these
+      // very lines. So three bits: the rank proves a PLAYER (Certain) while NEITHER reading may write a class -
+      // the ambiguous lane exists for exactly this, because a coin-flipped class column is worse than silence -
+      // and the operator's Shd sits inside the mask so a corrected data file keeps claiming the caster without
+      // a code change.
+      ("Life Burn", SpellClass.Nec | SpellClass.Shm | SpellClass.Shd)
     ];
 
     // Pet-cast spell families: this exact spell is an ability of a beastlord's pet and never of the
@@ -374,8 +399,17 @@ namespace EQLogParser
           }
           else if ((familyClass & (familyClass - 1)) != 0)
           {
-            // Multi-bit family: rank known for the identity gate, deliberately no class label.
+            /*
+             * Multi-bit family: rank known for the identity gate, deliberately no class label - and a label the loop
+             * above already wrote gets REMOVED, because declaring a name ambiguous is this application saying it will
+             * not derive a class from it. `Life Burn` is what forced the removal rather than leaving it implicit:
+             * spells.txt masks ranks I-V Nec and VI-X Shaman - one AA, two class lines, split by rank - while every
+             * caster of a ranked form in eleven captures (Coas, Shennron, Atvar, Virul) is a NECROMANCER by the ten
+             * thousand other spells he casts, and the only Shaman sightings those files hold against them are these
+             * very lines. Silence beats a coin flip, and it beats a flip the data itself dealt.
+             */
             _classAmbiguousFamilyRanks[spell.Name] = 1;
+            _spellsToClass.TryRemove(spell.Name, out _);
           }
         }
       }

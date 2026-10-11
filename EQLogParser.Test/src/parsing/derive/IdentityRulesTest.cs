@@ -219,13 +219,13 @@ public class IdentityRulesTest
     }
 
     [TestMethod]
-    public void VersionedFamilyListsAreFifteenAndOneNoMore()
+    public void VersionedFamilyListsAreNineteenAndOneNoMore()
     {
         // Closed vocabulary, house law: a new family arrives with a census over several eras AND
         // servers (mob-shaped caster count must stay zero), one settings-free table row, and tests.
         // Finishing Blow was refused entry on measurement: every attacker already held a stronger
         // claim, so the modifier mask stays stats-only (docs/DesignNotes.md → "A versioned class-spell family claims its caster").
-        Assert.AreEqual(15, EQDataStore.ClassSafeSpellFamilies.Length);
+        Assert.AreEqual(19, EQDataStore.ClassSafeSpellFamilies.Length);
         Assert.AreEqual(1, EQDataStore.PetCastSpellFamilies.Length);
 
         // The shipped vocabulary spelled out, so an addition has to be written down on purpose.
@@ -235,7 +235,109 @@ public class IdentityRulesTest
             "Focused Paragon of Spirit", "Hobble of Spirits", "Tireless Sprint",
             "Celestial Regeneration", "Focused Celestial Regeneration", "Spirit of the Wood",
             "Nature's Boon", "Gather Mana", "Eldritch Rune", "Battle Leap Warcry", "Battle Leap",
+            "Guardian of the Forest", "Group Guardian of the Forest", "Lay on Hands", "Life Burn",
         }, EQDataStore.ClassSafeSpellFamilies.Select(f => f.Family).ToArray());
+    }
+
+    /*
+     * The AA trio added 2026-11, asserted at the gate exactly like the families before them: the rank resolves,
+     * the class label says what the DATA says (Ranger / Paladin), and a rank beyond the shipped file is silence.
+     */
+    [TestMethod]
+    public void GuardianLayOnHands_RankedCastsResolve_AndAnUnshippedRankIsSilent()
+    {
+        PipelineHarness.EnsureDataStore();
+
+        foreach (var spell in new[] { "Guardian of the Forest XXXVIII", "Group Guardian of the Forest XVIII",
+                                      "Guardian of the Forest XLI", "Lay on Hands XXXVI" })
+        {
+            Assert.IsTrue(ClassificationRules.IsClassSafeCast(spell), $"{spell} must claim its caster");
+        }
+
+        // The two Guardian forms are one ability behind two buttons, and two rows: the group form claims,
+        // and neither prefix swallows the other's rank tail.
+        Assert.IsTrue(EQDataStore.IsClassSafeSpellName("Group Guardian of the Forest XXI"));
+        Assert.AreEqual("Ranger", EQDataStore.Instance.GetSpellClass("Guardian of the Forest XXXVIII"));
+        Assert.AreEqual("Ranger", EQDataStore.Instance.GetSpellClass("Group Guardian of the Forest XVIII"));
+        Assert.AreEqual("Paladin", EQDataStore.Instance.GetSpellClass("Lay on Hands XXXVI"));
+
+        // Beyond the file: 42 ranks of Guardian, 36 of Lay on Hands. A rank past those is new content, and new
+        // content claims NOTHING rather than being guessed at.
+        Assert.IsFalse(ClassificationRules.IsClassSafeCast("Guardian of the Forest XLII"));
+        Assert.IsNull(EQDataStore.Instance.GetSpellClass("Guardian of the Forest XLII"));
+        Assert.IsFalse(ClassificationRules.IsClassSafeCast("Lay on Hands XXXVII"));
+
+        // The versionless form really does print (`Lay on Hands.`, 8 lines) and really does claim nothing:
+        // no rank, no family match - the same anchor that stops a bare `Boastful Bellow`.
+        Assert.IsFalse(EQDataStore.IsClassSafeSpellName("Lay on Hands"));
+    }
+
+    /*
+     * Life Burn: one name, two class lines IN THE DATA (`I..V` Nec, `VI..X` Shaman), and the operator's word is a
+     * third (shadow knight). So it enters MULTI-BIT, which is the lane that says "a rank proves a PLAYER and nothing
+     * else". Assert BOTH directions like every other ambiguous family: the identity gate OPEN (`IsClassSafeCast`
+     * true) and the class map SHUT (`GetSpellClass` null on both halves of the split). Assert only the first half
+     * and this seeds a Shaman label onto a necromancer's own AA.
+     */
+    [TestMethod]
+    public void LifeBurn_IsPlayerEvidenceAndWritesNoClass_OnEitherHalfOfTheDataSplit()
+    {
+        PipelineHarness.EnsureDataStore();
+
+        // The ranks the corpus actually prints are the Shaman-masked half, cast by necromancers.
+        Assert.IsTrue(ClassificationRules.IsClassSafeCast("Life Burn VIII"));
+        Assert.IsTrue(ClassificationRules.IsClassSafeCast("Life Burn X"));
+        Assert.IsTrue(ClassificationRules.IsClassSafeCast("Life Burn I"));
+        Assert.IsTrue(EQDataStore.Instance.IsClassAmbiguousFamilyRank("Life Burn VIII"));
+
+        Assert.IsNull(EQDataStore.Instance.GetSpellClass("Life Burn VIII"), "the data's Shm reading may not reach the class column");
+        Assert.IsNull(EQDataStore.Instance.GetSpellClass("Life Burn I"), "nor the Nec reading");
+
+        // The rank gate holds this family like every other: XI does not exist in the shipped file.
+        Assert.IsFalse(ClassificationRules.IsClassSafeCast("Life Burn XI"));
+        Assert.IsFalse(EQDataStore.Instance.IsClassAmbiguousFamilyRank("Life Burn XI"));
+    }
+
+    /*
+     * The same four names from the LOG side, in the shapes eleven captures actually print: one versioned cast each
+     * (the group Guardian is its own button), and one bare `Lay on Hands.` which must leave its caster exactly as
+     * it found it. This is the yield of the three family rows: a raid member who says nothing else - no /who, no
+     * Targeted frame, no NPC-attacking swing - is still a PLAYER because the client watched him burn his own AA rank.
+     */
+    [TestMethod]
+    public void AVersionedAaCastClaimsItsCaster_GuardianLayOnHandsAndLifeBurn()
+    {
+        var dir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "derive-aacast-" + Guid.NewGuid().ToString("N")));
+        var log = Path.Combine(dir.FullName, "eqlog_Guardianone_Eqgate.txt");
+        try
+        {
+            File.WriteAllLines(log, new[]
+            {
+                "[Sun Apr 26 18:00:00 2026] Praxxis begins casting Guardian of the Forest XXXVIII.",
+                "[Sun Apr 26 18:00:30 2026] Lanedoraa begins casting Group Guardian of the Forest XVIII.",
+                "[Sun Apr 26 18:01:00 2026] Shmid begins casting Lay on Hands XXXVI.",
+                "[Sun Apr 26 18:01:30 2026] Coas begins casting Life Burn IX.",
+                // The versionless form of the same AA (8 lines over the corpus): no rank, no claim.
+                "[Sun Apr 26 18:02:00 2026] Barehands begins casting Lay on Hands.",
+            });
+
+            var run = PipelineHarness.RunFileDerived(log);
+            var timeline = new EntityTimeline();
+            ClassificationRules.Apply(run.Facts, timeline, run.HealFacts);
+
+            AssertIdentity(timeline, "Praxxis", IdentityKind.Player, "R4-spell");
+            AssertIdentity(timeline, "Lanedoraa", IdentityKind.Player, "R4-spell");
+            AssertIdentity(timeline, "Shmid", IdentityKind.Player, "R4-spell");
+            AssertIdentity(timeline, "Coas", IdentityKind.Player, "R4-spell");
+
+            Assert.AreEqual(IdentityKind.Unknown,
+                timeline.IdentityWithSource("Barehands", out var bareSrc),
+                $"a versionless AA cast claimed a combatant (source {bareSrc ?? "none"})");
+        }
+        finally
+        {
+            try { Directory.Delete(dir.FullName, true); } catch (IOException) { }
+        }
     }
 
     [TestMethod]

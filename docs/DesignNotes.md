@@ -4310,7 +4310,7 @@ Four laws, each with a shape that would have gone wrong without the measurement:
 - The family list is **closed at 15** entries (Boastful Bellow/Conclusion → Bard; Frenzy/Paragon/Focused Paragon + Hobble of
   Spirits → Beastlord; Tireless Sprint → Berserker; Celestial Regeneration/Focused CR → Cleric; Spirit of the Wood/Nature's
   Boon → Druid; Gather Mana/Eldritch Rune → Enchanter; Battle Leap Warcry/Battle Leap → Warrior **or** Berserker), asserted by
-  `VersionedFamilyListsAreFifteenAndOneNoMore`.
+  `VersionedFamilyListsAreNineteenAndOneNoMore`.
 - **The rank is part of the match and must be the whole tail.** Versionless never prints (measured: 0 lines) and matches
   nothing; a rank absent from `spells.txt` passes the text gate but fails the data gate, so new-expansion content is silent,
   never guessed.
@@ -11984,3 +11984,64 @@ tail; it goes through `ReportEvidence` now, which is the one place that knows an
 **The control that makes the tests worth having**: every claim assertion is paired with "an ordinary sentence still
 returns true", because a guard that claimed *every* line would satisfy "the tilde line was dropped" while quietly
 deleting the raid (`LineParsersTest`, PreLineParser region).
+
+## AA ranks on the family table, and the name the data classed two ways (2026-11)
+
+The operator handed over four ability names — Guardian of the Forest, Group Guardian of the Forest, Lay on Hands
+(→ Player + Ranger/Ranger/Paladin) and Life Burn (→ Player + Shadow Knight). Three became family rows. The fourth
+became a row plus a small law, because checking it against the shipped data turned up a contradiction worth writing
+down.
+
+**What was measured before any of them went in.** The cast shape these abilities print is `X begins casting Guardian of
+the Forest XXXVIII.` — a roman rank as the whole tail and **no** `Rk.`, which is the family anchor's own form
+(`TryGetVersionedFamily` wants `family + ' ' + pure roman`). Per name, over eleven captures:
+
+| Family | DB ranks / masks | ranked cast lines | casters |
+| --- | --- | --- | --- |
+| Guardian of the Forest | 41, all mask 8 = Rng | 428 (XXXV, XXXVIII, XXXIX, XLI) | Praxxis, Moldar, Lanedoraa, Laika, Tsiawd, Penuvien |
+| Group Guardian of the Forest | 21, all Rng | 261 (XVIII, XIX, XXI) | the same rangers |
+| Lay on Hands | 36, all mask 4 = Pal | 42 ranked + **8 versionless** | Shmid, Hacket, Abazzagorath, Tiseanu, Ozimandiasz, Lasaman |
+| Life Burn | I–V mask 1024 = Nec, **VI–X mask 512 = Shm** | 135 (VIII, IX, X) | Coas, Shennron, Atvar, Virul |
+
+Zero article-shaped and zero possessive-pet casters among them, which is the entry requirement. The two Guardian forms
+need **two rows**: `Group Guardian of the Forest XVIII.` does not *start with* `Guardian of the Forest`, so neither
+prefix swallows the other — word order does the separating exactly as it does for
+`Focused Celestial Regeneration`/`Celestial Regeneration`.
+
+**`Lay on Hands.` prints versionless, and the table's comment said that never happens.** Eight lines in the corpus,
+against the zero versionless lines every older family produced. The anchor still refuses them — no rank means no family
+match, and a nameless-rank claim is how a clickie or a macro button would start asserting identity — but the sentence in
+the comment is now honest: the rule refuses a shape that really occurs, not a hypothetical one.
+
+**Life Burn is one AA the spell file cannot agree about.** Ranks I–V carry the Necromancer mask, ranks VI–X carry the
+Shaman mask, and the ranks clients actually print here (VIII–X) are the Shaman half. The captures do not arbitrate — they
+only deepen the problem: every caster of a ranked form is a **necromancer** by his own cast history (Coas ~13k
+Nec-resolved casts against 59 that resolve to anything else, and those 59 *are* his Life Burn lines; Shennron 10.5k Nec;
+Atvar 15k Nec), while the operator's word is Shadow Knight. Three readings, one name.
+
+So it enters **multi-bit** (`Nec | Shm | Shd`): the rank proves a PLAYER at Certain and **no** reading may write a class.
+That required a seeding change rather than just a table row, and this is the part worth remembering — a multi-bit family
+now has any generic single-mask label **removed**. Before that, entering Life Burn left `GetSpellClass("Life Burn VIII")`
+answering *Shaman* from the generic pass, and `CastLineParser` fed that straight into the class registry: ~60 Shaman
+sightings a capture for a man whose other ten thousand casts are Necro. The gate test failed on exactly this
+(`Assert.IsNull(GetSpellClass("Life Burn VIII"))`) — writing the test is what found that "multi-bit means no class" was
+true only when the data happened to be multi-bit already, and silent-by-declaration had never actually been silent.
+Declaring a name ambiguous is this application saying it will not derive a class from that name; the seeding loop now
+makes that true whatever the file says. The operator's `Shd` bit sits in the mask so that a corrected data file keeps
+claiming the caster with no code change — and if a future file settles the class, the row becomes single-bit and the veto
+retires with it in the same edit.
+
+**Yield: measured, and honest about being small.** On `eqlog_Kizant_xegony-9-18-22.txt` (the capture with the most of
+these casts — 254 lines) the census fingerprint is **byte-identical** before and after: 6,076,353 facts, 611 names,
+kinds Npc 135 / Pet 55 / Player 148 / Spell 65 / Unknown 208, Σdamage 613,508,845,935, and the same reason histogram down
+to `R4-spell=54`. Nobody moved. Yet 11 of that capture's family-casters had **no other** family-safe cast (per capture:
+3–14 such names across eleven captures), so the claim itself is new while the verdict is not — these are raid members
+who also appear on a `/who` line, in a Targeted frame, or in the graph. This is the same footing `Finishing Blow` was
+refused on, with one difference that matters: Finishing Blow's attackers all held a stronger claim *from the same kind of
+evidence*, so the rule could never fire; here the family claim is the only cast-based evidence these names have, and a
+capture without chat or /who lines — a fresh zone, a new raider on the first pull — is exactly where it fires alone. The
+durable win in this change is the class column: 135 casts' worth of wrong-class sightings stopped across the corpus.
+
+**Refused: `Group Lay on Hands`.** Zero rows in `spells.txt` **and** zero cast lines in the corpus, so its row would be
+permanently silent by the data gate — unlike `Battle Leap Warcry`, which ships on user assertion *with* the DB column
+behind it. A row that can never answer is a row someone later "fixes" by deleting the gate.
