@@ -1002,8 +1002,8 @@ namespace EQLogParser
     {
       if (sender is not ComboBox box) return;
 
-      Log.Debug($"identity editor: visible changed to {box.IsVisible} on {Describe(box)}");
-      if (!box.IsVisible) return;
+      if (!box.IsVisible) return;   // silent: every realized cell in a long grid fires this on its way to invisible
+      Log.Debug($"identity editor: shown for {Describe(box)}");
 
       OpenEditorDropDown(box, first: true);
     }
@@ -1036,11 +1036,31 @@ namespace EQLogParser
           return;
         }
 
-        box.SelectedIndex = row.EditorCurrentIndex;
+        _editorBox = box;
+        _suppressSelection = true;
+        try
+        {
+          box.SelectedIndex = row.EditorCurrentIndex;
+        }
+        finally
+        {
+          _suppressSelection = false;
+        }
+
         box.Focus();
         box.IsDropDownOpen = true;
       }), System.Windows.Threading.DispatcherPriority.Input);
     }
+
+    /*
+     * The two things this file got wrong at once, both visible in the log: `box.SelectedIndex = EditorCurrentIndex` raises the SAME
+     * SelectionChanged an operator's pick raises, so the handler closed the editor mid-open; and EndCellEdit collapsed a control whose
+     * drop-down was still open, which leaves WPF's popup window standing on its own - the white, empty, click-deaf rectangle that only
+     * died on an outside click (its owner had been collapsed out from under it, items cleared). So: the programmatic preselect is
+     * announced-and-suppressed, and closing an editor closes its list first.
+     */
+    private ComboBox? _editorBox;
+    private bool _suppressSelection;
 
     /* PROBE: identifies which control instance a line came from, and what it holds. */
     private static string Describe(ComboBox box)
@@ -1050,19 +1070,6 @@ namespace EQLogParser
              $"sel={box.SelectedIndex} open={box.IsDropDownOpen} vis={box.IsVisible} {box.ActualWidth:0}x{box.ActualHeight:0}]";
     }
 
-    /* PROBE: does a press reach the control at all, and does it land on an item? */
-    private void CellEditorProbeMouseDown(object sender, MouseButtonEventArgs e)
-    {
-      if (sender is not ComboBox box) return;
-
-      var hit = e.OriginalSource as DependencyObject;
-      string? item = null;
-      for (var current = hit; current is not null; current = System.Windows.Media.VisualTreeHelper.GetParent(current))
-        if (current is ComboBoxItem cbi) { item = cbi.Content?.ToString(); break; }
-
-      Log.Debug($"identity editor: mouse down {Describe(box)} source={hit?.GetType().Name ?? "null"} item={item ?? "<none>"} " +
-                $"captured={System.Windows.Input.Mouse.Captured?.GetType().Name ?? "null"}");
-    }
 
     /*
      * The editor ends when the list closes — picked, escaped, or clicked away from — and on a pane hide or capture change. One
@@ -1092,6 +1099,12 @@ namespace EQLogParser
     {
       if (row.EditingColumn is null) return;
 
+      if (_editorBox is { } box)
+      {
+        box.IsDropDownOpen = false;   // before the control vanishes: a list left open over a collapsed owner is the white ghost box
+        _editorBox = null;
+      }
+
       row.EditingColumn = null;
       row.EditorItems = Array.Empty<string>();
       row.EditorCurrentIndex = -1;
@@ -1109,9 +1122,10 @@ namespace EQLogParser
 
     private void TypeCellEditorSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+      if (_suppressSelection) return;   // this pane preselecting what the cell already says is not an operator pick
       if (sender is not ComboBox box || box.DataContext is not NameRow row || !row.IsTypeEditing) return;
 
-      Log.Debug($"identity editor: type selection changed {Describe(box)} item={box.SelectedItem ?? "<none>"}");
+      Log.Debug($"identity cell: type editor picked {box.SelectedItem ?? "<none>"} on {Describe(box)}");
       var index = box.SelectedIndex;
       if (index < 0 || index >= row.TypeChoices.Count) return;
 
@@ -1122,9 +1136,10 @@ namespace EQLogParser
 
     private void ClassCellEditorSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+      if (_suppressSelection) return;   // this pane preselecting what the cell already says is not an operator pick
       if (sender is not ComboBox box || box.DataContext is not NameRow row || !row.IsClassEditing) return;
 
-      Log.Debug($"identity editor: class selection changed {Describe(box)} item={box.SelectedItem ?? "<none>"}");
+      Log.Debug($"identity cell: class editor picked {box.SelectedItem ?? "<none>"} on {Describe(box)}");
       var className = box.SelectedItem as string;
       if (string.IsNullOrEmpty(className)) return;
 
@@ -1134,9 +1149,10 @@ namespace EQLogParser
 
     private void OwnerCellEditorSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+      if (_suppressSelection) return;   // this pane preselecting what the cell already says is not an operator pick
       if (sender is not ComboBox box || box.DataContext is not NameRow row || !row.IsOwnerEditing) return;
 
-      Log.Debug($"identity editor: owner selection changed {Describe(box)} item={box.SelectedItem ?? "<none>"}");
+      Log.Debug($"identity cell: owner editor picked {box.SelectedItem ?? "<none>"} on {Describe(box)}");
       var owner = box.SelectedItem as string;
       if (string.IsNullOrEmpty(owner)) return;
 
