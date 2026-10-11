@@ -1202,7 +1202,12 @@ moves); the capture's own windows survive even it, because they are this log's e
   4,082** and **1,037 of 1,041**, every hidden row an article-shaped mob; reasoning in the same design-doc section. Pinned by
   `CharmRowProjectionTest` (`APetRowIsNotOnTheFightList`, `HidingAPetRowDoesNotDeleteItsDamage`,
   `WithHiddenPetsAddsPairedOrOverlappingRowsOnly`, `ACharmedRaidMemberStaysOnTheList`).
-- **A finished load hands its doubling slack back once per doubling, at the gate**: both fact tables grow by
+- **A finished load hands its doubling slack back once per doubling, at the gate**: **(2026-11 status first: the damage and heal
+  ROW arrays no longer resize — they live in fixed power-of-two chunks bought by their first row (`64c3edd1`, `9422d010`), so there is
+  no doubling copy, no old+new transient and no slack to reclaim on either stream, and the hot read door is `FactRowWalk`'s slice walk
+  rather than one row at a time (`0812ff8d`; docs/DesignNotes.md → "Rows live in chunks, and the addressing tax that came with them").
+  What still grows by `Array.Resize(×2)`, still owes every law below and is what `CompactRows` actually trims now: the small queues —
+  deaths, identity events, taunts, evidence.)** Both fact tables grew by
   `Array.Resize(×2)` and that law stays pinned (`HealFactCaptureTest` — extra growth steps are paid for on the parse thread,
   where half of ingest time goes), so a capture holds up to 100 % more row slots than rows: measured **54.6 MB of the 397 MB
   retained at EOF** on the 467 MB reference capture (2,286,368 facts in a 3,200,000-slot array; 1,247,984 heals in 1,600,000).
