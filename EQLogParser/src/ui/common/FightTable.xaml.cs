@@ -52,6 +52,16 @@ namespace EQLogParser
     private readonly DispatcherTimer _selectionTimer;
 
     /*
+     * The row the POINTER opened the right-click menu over, resolved once per opening. Every position-based item in that
+     * menu (Select Group, Unselect Group) acts on this row's section, and the grid's own current cell is moved to it at
+     * the same moment — the one line the legacy table carried in its ContextMenuOpening and this pane did not, which is
+     * why "the select cursor/item stays where it was": without it a right-click leaves the cursor wherever the person
+     * last LEFT-clicked, so un-selecting a group removed the previously selected one instead of the one under the mouse.
+     * Cleared with the rows it belonged to (a snapshot swap replaces every instance).
+     */
+    private DerivedFightRow _menuRow;
+
+    /*
      * Whether a tick may announce, or whether something is still happening under the cursor. Two parked cases (see
      * SelectionSettle for the reasoning): the right-click menu is open - where SfDataGrid's own move of the current
      * cell to the clicked row would otherwise spend a full materialization before the user has chosen anything, and a
@@ -302,6 +312,10 @@ namespace EQLogParser
       _currentSnapshot = null;
       _rows.Clear();
 
+      // Last night's pointer cannot name this capture's rows: the instance is gone, and a menu opened without a pointer
+      // (keyboard) must not inherit a row from the log that just closed.
+      _menuRow = null;
+
       // A new session is a new load: the band may show again, its counters start from nothing, and nothing has been read yet.
       SetLoadBand(null);
       _loadBandSettled = false;
@@ -437,6 +451,10 @@ namespace EQLogParser
         var previousRows = _rows.Count;
         _rows = new ObservableCollection<DerivedFightRow>(snapshot.Rows);
         fightGrid.ItemsSource = _rows;
+
+        // Every instance was just replaced. GroupSectionSelect's chain reads the cursor and the selection instead, both of
+        // which RestoreSelection has put back by key; holding a discarded row would only name no section.
+        _menuRow = null;
 
         if (restorable) RestoreSelection(keep);
 
@@ -878,6 +896,15 @@ namespace EQLogParser
       // Nothing is announced while the menu is up; whatever the opening itself selected waits for the close.
       _settle.MenuOpen = true;
 
+      /*
+       * Point the cursor at the row under the pointer, exactly as the legacy table did (`if (source.DataContext is Fight
+       * fight) dataGrid.CurrentItem = fight;`). Two things follow: every position-based item below reads the section the
+       * person actually aimed at, and the highlight on screen says which row the menu is about to act on — so "Set X as"
+       * and "Select Group" answer for the line the pointer is touching rather than for whatever was clicked minutes ago.
+       */
+      _menuRow = RowUnderPointer(e.OriginalSource);
+      if (_menuRow is { IsDivider: false }) fightGrid.CurrentItem = _menuRow;
+
       var selected = GetSelectedFights();
       var hasFight = selected.Count > 0;
       // The name the cascade's header will show (this project compiles with nullable annotations off, hence the explicit null).
@@ -899,14 +926,19 @@ namespace EQLogParser
         if (IsShown(row) && row.Fight is not null) { selectAllItem.IsEnabled = unsorted; break; }
       }
 
+      var groupRow = GroupTargetRow();
+      var hasSection = SectionBoundsOf(groupRow).From >= 0;
+
       unselectAllItem.IsEnabled = fightGrid.SelectedItems.Count > 0;
 
       // Clear All needs a session to re-open over. With no engine there is nothing loaded, and the menu item would be
       // offering to unload an empty window (MainWindow.ClearAllFights guards the same thing for the file itself).
       clearAllItem.IsEnabled = _session is not null;
-      var hasCurrent = fightGrid.CurrentItem is DerivedFightRow { IsDivider: false };
-      selectGroupItem.IsEnabled = hasCurrent && unsorted;
-      unselectGroupItem.IsEnabled = hasCurrent && fightGrid.SelectedItems.Count > 0;
+      // Group items follow the pointer (GroupSectionSelect): a section must be nameable, and un-selecting additionally
+      // needs something selected to take away. Selecting does NOT — with an empty selection, right-clicking a fight row
+      // and taking its whole pull is the point of the item (the legacy menu enabled these whenever it had rows at all).
+      selectGroupItem.IsEnabled = GroupSectionSelect.CanSelect(hasSection) && unsorted;
+      unselectGroupItem.IsEnabled = GroupSectionSelect.CanUnselect(hasSection, fightGrid.SelectedItems.Count) && unsorted;
 
       // One fight row, or the cascade greys out (IdentityVerdictMenu.Present): the verdict is one judgement about one name somebody looked
       // at, and a ctrl-click batch would rewrite kinds - and therefore board routing - across rows nobody inspected. Group selection stays
@@ -1133,26 +1165,33 @@ namespace EQLogParser
     // user sees. A sorted grid does not matter: _rows keeps section order regardless of how the view is arranged.
     private void SelectGroup(bool add)
     {
-      if (fightGrid.CurrentItem is not DerivedFightRow { IsDivider: false } target) return;
-
-      var idx = _rows.IndexOf(target);
-      var lo = idx;
-      while (lo > 0 && !_rows[lo - 1].IsDivider) lo--;
-      var hi = idx;
-      while (hi + 1 < _rows.Count && !_rows[hi + 1].IsDivider) hi++;
+      var target = GroupTargetRow();
+      var (lo, hi) = SectionBoundsOf(target);
+      if (lo < 0 || target is null) return;
 
       // Dividers are gaps, not fights: never selected, even though IsShown lets them through with breaks on.
       var section = new HashSet<DerivedFightRow>();
       for (var i = lo; i <= hi; i++)
         if (!_rows[i].IsDivider) section.Add(_rows[i]);
-      Predicate<DerivedFightRow> inSection = row => section.Contains(row);
 
       if (add)
       {
-        SelectShownRuns(inSection);
+        /*
+         * ADD, never replace — the legacy item was `if (!SelectedItems.Contains(fight)) Add`, and that asymmetry is what
+         * made "Select All, then Select Group" harmless there. So the gesture's answer is the union: keep every row the
+         * person already had (whatever they selected by hand, by drag or by Select All) and add this section to it. The
+         * kept rows go through the SAME run walk as the new ones rather than being left alone, because a single
+         * SelectRows range pass is what makes the result independent of whether the control replaces or extends here.
+         */
+        foreach (var item in fightGrid.SelectedItems)
+          if (item is DerivedFightRow row) section.Add(row);
+
+        Predicate<DerivedFightRow> wanted = row => section.Contains(row);
+        SelectShownRuns(wanted);
       }
       else
       {
+        Predicate<DerivedFightRow> inSection = row => section.Contains(row);
         var remove = new HashSet<DerivedFightRow>();
         foreach (var item in fightGrid.SelectedItems)
         {
@@ -1163,6 +1202,67 @@ namespace EQLogParser
       }
 
       AnnounceSelection(BoardReason.SelectCommand, add ? "select group" : "unselect group");
+    }
+
+    /*
+     * The row the pointer is standing on. Walks up from whatever raised the event until an element carries a row as its
+     * data context — in this application's grids a cell's DataContext IS the row item, the same read the identity pane's
+     * pencil makes — and stops at the first non-visual, because a `Run` inside text has no visual parent to ask (asking one
+     * throws, and a throw in ContextMenuOpening costs the menu).
+     *
+     * Null is a real answer: a menu opened over a divider's gap, over the header row, or from the keyboard names no row,
+     * and each of those falls through to the next link of the chain below.
+     */
+    private static DerivedFightRow RowUnderPointer(object originalSource)
+    {
+      if (originalSource is not System.Windows.Media.Visual visual) return null;
+
+      for (DependencyObject v = visual; v is not null; v = System.Windows.Media.VisualTreeHelper.GetParent(v))
+        if (v is FrameworkElement { DataContext: DerivedFightRow row }) return row;
+
+      return null;
+    }
+
+    /*
+     * Which row this menu's group items are about, in the order GroupSectionSelect states it: the row the pointer opened
+     * the menu on, then the grid's current row, then the first selected fight row. A row that names no section (a divider)
+     * is SKIPPED rather than inherited, so clicking the gap between two pulls still un-selects the group that is on screen
+     * instead of doing nothing.
+     */
+    private DerivedFightRow GroupTargetRow()
+    {
+      // A stale instance from a snapshot that has since been replaced is no row at all: IndexOf answers -1 and the chain moves on.
+      var clicked = _menuRow is { } menuRow && _rows.Contains(menuRow) ? menuRow : null;
+      var current = fightGrid.CurrentItem is DerivedFightRow currentRow ? currentRow : null;
+
+      DerivedFightRow firstSelected = null;
+      foreach (var item in fightGrid.SelectedItems)
+      {
+        if (item is DerivedFightRow { IsDivider: false } row) { firstSelected = row; break; }
+      }
+
+      var index = GroupSectionSelect.TargetFor(
+        _rows.IndexOf(clicked), clicked is { IsDivider: false },
+        _rows.IndexOf(current), current is { IsDivider: false },
+        _rows.IndexOf(firstSelected));
+
+      return index >= 0 && index < _rows.Count ? _rows[index] : null;
+    }
+
+    /*
+     * The run of fight rows around `row`, handed to GroupSectionSelect as one bool per displayed row — "is this row a fight
+     * row" is the ONLY fact the section law reads, and stating it that way is what lets the cross-platform tests answer it
+     * about a list they can build. Allocated per gesture, which is one small array against a materialization.
+     */
+    private (int From, int To) SectionBoundsOf(DerivedFightRow row)
+    {
+      var target = _rows.IndexOf(row);
+      if (target < 0) return (GroupSectionSelect.NoRow, GroupSectionSelect.NoRow);
+
+      var namesSection = new bool[_rows.Count];
+      for (var i = 0; i < _rows.Count; i++) namesSection[i] = !_rows[i].IsDivider;
+
+      return GroupSectionSelect.BoundsOf(namesSection, target);
     }
 
     /*
