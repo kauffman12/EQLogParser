@@ -2974,6 +2974,24 @@ the blocking work follows on the UI thread — a yield at Render sits behind the
 what makes the busy state visible there. It cannot help here, because nothing on this path blocks the UI thread; the answer
 does not have to wait for anything except the queue it was posted into.
 
+Three follow-throughs arrived with the report "im seeing the busy indicator showing up in the data grid table in the damage summary when i deselect
+back to nothing selected" (2026-11), because arming on a delay fixes the race and says nothing about the two ways a *correct* tick can still be wrong.
+
+1. **A pane's placeholder list lied to its own guards.** Clearing a summary grid wrote `NoResultsList` — a non-null, empty collection — while
+   `TimeChanged` (the time-window dial) asks `dataGrid.ItemsSource != null` for "is there a board here to re-slice". An empty table therefore answered YES:
+   the hourglass lit over nothing, the selection timer restarted, and the door `"hourglass after time change"` was handed a rebuild of a board that does not
+   exist. "No board" is **null** now, in all three panes (clear, busy and the empty-answer branches), everywhere except `SummaryTable.InitSummaryTable`, which
+   keeps an empty collection for the one thing the field was ever created for — column drag-and-drop failing before any data has arrived — and the dial asks
+   `CurrentStats != null`, a question about the ANSWER rather than about a widget. A placeholder that satisfies a data test while showing nothing is a third state.
+2. **A tick that arrives after its own pane has answered for itself is stale, so the tick asks.** Every handler cancels first, but STARTED arms and a terminal
+   state can still land in a different dispatcher drain (the same one-frame gap that made the immediate clear unreliable). `DeferredBusyState` takes an
+   `IsTerminal` test — "the title no longer says Calculating" is what the pane actually knows — and a tick that finds the surface settled touches nothing: no
+   cleared grid, no second busy message. Cancelling is still correct and still happens; this closes the window where cancelling was too late.
+3. **Each arm names its door** (`"damage"`, `"healing"`, `"tanking"`, `"chart"`) and a fired tick prints `busy shown [door]: still building after 150 ms` at
+   Debug (log-level laws: a gated line, none of it in a player's file). A busy state that will not go away is the interface equivalent of a frozen board, and the
+   question is always *which build was still out there* — that line pairs with the `stats build #N … [door]` line beside it, so the answer comes from a log file.
+
+
 ### What a clean run looks like, because it is worth knowing one
 
 A 21 minute replay soak with `PerfStallMs=200` — FCT, trigger log, meter and four overlays open, the same raid log played twice — produced
@@ -9092,6 +9110,44 @@ instead of jumping to the fight. That is "i want to search for a specific name a
 — which on a live capture is every pass — the search box stopped navigating. Assigning the field on click, comparing on tick, and **not** clearing
 it when the box empties (the pane already refuses to search an empty box, and legacy kept its last term for precisely this reason) gives the
 two-keystroke resume that the original comment described.
+
+### Group and Un-select group act on the row the pointer opened the menu on (2026-11)
+
+Reported: "when i right click it does not offer to unselect a group if you have not already selected one, i expect to be able to right click then unselect
+the group, this used to work". The two items answer one question — *which run of rows is this menu about* — and used to answer it from two different places:
+`CanUnselectGroup` asked the **selection** ("is any row on screen inside the section of any selected fight?") while `UnselectAllGroupClick` walked
+`fightGrid.CurrentItem`, the grid's cursor. An operator who right-clicks a row in order to ask the menu has typically not selected it first, and the cursor is
+SfDataGrid's own state: the comment inside that method asserted the right-click "leaves it on the clicked row (its ContextMenuOpening moves there before the
+menu is built)" while the code above it kept re-deriving a representative out of `SelectedItems` as a hedge against exactly that not holding. Whether legacy
+behaved differently cannot be checked from here — its table left no test, `ContextMenuClosed` writes nothing to `eqlogparser.log` and neither does a menu item
+whose click finds no subject — so the fix is to make the answer incapable of depending on the cursor rather than to argue about 2024.
+
+**`GroupSectionSelect` (Core) states the rule as indexes, bools and tuples**, which is the only shape testable here: the pane that uses it cannot be constructed
+on this machine (`EQLogParser.Wpf.Test` needs Windows), so a law about section arithmetic belongs where a test can reach it, with the pane supplying the three
+indexes it is the only one who can name.
+
+* **The target chain is: the row under the pointer, then the grid's current row, then the first selected fight row.** The first link that exists AND names a
+  section wins, so an enable rule and its click resolve to the same subject by construction — which is what `ARowUnderThePointerIsEnoughToUnselectItsGroup`
+  pins (empty selection: enable YES, un-select removes exactly the two rows of that pull), and `ARowUnderThePointerWinsTheEnableTestToo` pins the same answer on
+  the grey-out path, because an item that greys out over a group on screen is the reported symptom.
+* **A section is the run of displayed rows between dividers** containing the target. A divider is not a subject and names no section: `BoundsOf` refuses it —
+  taking bounds "outward from a divider" would hand back a span made only of gaps, i.e. the visual nothing between two pulls as something to act on. A click
+  therefore falls THROUGH the gap to the cursor or selection (`ADividerCarriesNoSection`), and every enable rule keys off that same refusal.
+* **Selecting a group ADDS it to what is already selected.** Ctrl-click arithmetic, not a replacement: replacing is what "my selection vanished" reports look
+  like, and it is also why the highlight is re-stamped row by row after the write (`SetSelection`'s contract covers selecting, clearing and keeping — three paths
+  that each look like a different bug when broken, including SfDataGrid firing `SelectedItemsChanged` with an empty list for a clear on some builds and not others).
+* **Un-select is idempotent and never toggles.** It removes the section (plus any divider left stranded between two remaining sections) and reports whether there
+  were rows to remove; it must NOT read "is anything selected?" and turn a no into a select — that is the trap the same fix walks past in `NamesTable.ClearSelected`,
+  where an empty selection is an ordinary state. So the item is offered over any selection at all (`CanUnselect` answers YES), because removal costs nothing and the
+  alternative — a greyed item above a board still showing the group — is the failure that was reported.
+
+The pane's half: `ContextMenuOpening` records the row the gesture started on by walking up from `e.OriginalSource` to the first element carrying a row as its data
+context, stopping at the first non-visual (a `Run` inside text has no visual parent to ask and asking one throws — a throw in that handler costs the menu). The field
+is dropped whenever `_rows` is replaced: a snapshot swap discards every instance, so the chain falls back to cursor and selection, which `RestoreSelection` has just
+put back by key. A stale instance also resolves to nothing (`IndexOf` answers −1), which is why a row that left the list cannot point the menu at somebody else's span.
+
+Tests: `GroupSectionSelectTest` (headless, plain assembly) — pointer-only un-select, pointer wins the enable test, select-adds-keeps-others, one pull per section,
+dividers carry no section, and the fallback chain keeps both items usable with zero and two selections.
 
 ## What Clear All means when there is no store to wipe (2026-11)
 

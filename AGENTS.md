@@ -640,7 +640,7 @@ declare without `?`; add the directive only when the whole file is meant to hold
   dead**: `SearchForNpc` branches on `_lastSearchName`, which nothing ever assigned, so every search took the new-search branch and `SelectShownRuns` (which clears the
   selection first) collapsed the grid onto an invisible match instead of jumping to the fight — hence "searching a name sometimes does not work". The field is stamped
   on click and compared on tick, and deliberately **not** cleared when the box empties (the pane refuses to search an empty box; legacy kept its last term so two
-  keystrokes resume where the reader left off). Reasoning: docs/DesignNotes.md → "“i unselect rows and want the summary to stop showing that row”".
+  keystrokes resume where the reader left off). Reasoning: docs/DesignNotes.md → "i unselect rows and want the summary to stop showing that row".
 
 - **A repaint belongs to the capture that is open, and a session change blanks rather than waits** (2026-11, from "clear all does nothing - it just leaves the fight
   list full of content"). Two halves, both load-bearing. (1) `FightTable.ClearForNewCapture` runs on **both sides** of `DeriveEngine.ActiveChanged` — engine gone
@@ -760,6 +760,19 @@ declare without `?`; add the directive only when the whole file is meant to hold
   `IdentityVerdictMenuTest` (Wpf assembly, words/order/idempotency, the one-row enable law including children following a greyed parent, each entry carrying its own `IdentityKind`),
   `ClearedSessionMemoryTest`. Docs: docs/DesignNotes.md → "The fight list announces when the gesture ends", "What Clear All means when there is no
   store to wipe", "Say what a name is, from wherever you noticed it".
+- **Group / Un-select group act on the row the pointer opened the menu on, and un-select NEVER toggles** (2026-11 report: "right click doesn't offer to
+  unselect a group unless I first select one"). `GroupSectionSelect` (Core) is the rule, in indexes/bools/tuples because the pane that uses it cannot be constructed
+  here. **Target chain** = the row under the pointer → the grid's cursor → the first selected fight row, first link that exists AND names a section: so
+  `CanUnselectGroup` and `UnselectAllGroupClick` resolve to ONE subject by construction, where they used to ask the selection and `CurrentItem` separately — which is
+  what greyed the item over a group sitting on screen. **A section is the run of displayed rows between dividers**, and a divider names no section (bounds taken
+  "outward from a divider" are only gaps), so a click on one falls THROUGH to the next link rather than inheriting the gap. **Selecting a group ADDS it to the
+  selection** (Ctrl-click arithmetic; replacing is a "my selection vanished" report) and the highlight is re-stamped row by row after the write, per `SetSelection`'s
+  three-path contract. **Un-select removes and reports whether there were rows to remove** — never reading "is anything selected?" to turn a no into a select (the same
+  trap as an empty selection in `NamesTable.ClearSelected`) — so `CanUnselect` answers YES over any selection: the failure mode is a greyed item above a board still
+  showing the group, not a wasted click. The pane records the clicked row from `ContextMenuOpening`'s `OriginalSource` (walk to the first element whose DataContext is a
+  row, STOPPING at a non-visual — asking `VisualTreeHelper.GetParent` of a `Run` throws, and a throw in that handler costs the menu) and drops it whenever `_rows` is
+  replaced: a snapshot swap discards every instance, so the chain falls back to cursor/selection, which `RestoreSelection` has just put back by key. Tests:
+  `GroupSectionSelectTest` (headless). Reasoning: docs/DesignNotes.md → "Group and Un-select group act on the row the pointer opened the menu on".
 - **The Names pane is current while open and silent while shut** (2026-11; it used to be "asked, never fed"): the census (a full classification pass) ran on
   explicit doors plus a **Refresh** button, and never on `DeriveEngine.Derived` — the reasoning (auto-hide dock slides and tab switches each fired a rebuild, which
   reads as "the table keeps updating itself" while somebody tries to read 4,000 rows) was right about the cadence and wrong about the conclusion: what it bought was a
@@ -1764,6 +1777,16 @@ option changes, and swallowing a notice the build earned is worse than one expli
   paint it asked for. `DeferredBusyStateTest` (Wpf.Test) pumps a real dispatcher, because a `DispatcherTimer` only ticks while
   something pumps: inside-delay shows nothing, past-delay shows exactly once (not per interval), newest request wins, cancel leaves
   nothing armed.
+  Three follow-throughs, all from "im seeing the busy indicator showing up in the data grid table in the damage summary when i deselect back to nothing
+  selected" (2026-11). **(a) A placeholder list is a third state and it lied to its own guards**: clearing a summary grid wrote `NoResultsList` (non-null, empty) while
+  the time-window dial asks `dataGrid.ItemsSource != null` for "is there a board to re-slice" — so the hourglass lit over an empty table, restarted the selection timer
+  and would hand the door `"hourglass after time change"` a build of nothing. **"No board" is NULL now** in all three panes (clear / busy / empty-answer branches),
+  everywhere except `SummaryTable.InitSummaryTable`, which keeps the empty collection for the one thing it was created for (column drag-and-drop before any data has ever
+  arrived); the dial asks `CurrentStats != null` — the ANSWER, not the widget. **(b) A tick may not arrive after its own pane has answered for itself**, so `DeferredBusyState`
+  takes an `IsTerminal` test ("the title no longer says Calculating", which is what the pane knows) and a stale tick touches nothing — cancelling is still done by every
+  handler, this only closes the drain-boundary window where cancelling was too late. **(c) Every arm names its door** (`"damage"`, `"healing"`, `"tanking"`, `"chart"`) and a fired
+  tick prints `busy shown [door]: still building after 150 ms` at Debug, so a busy state that will not go away pairs with the `stats build #N … [door]` line beside it instead of
+  being guessed at. Reasoning: docs/DesignNotes.md → "A busy state may not compete with its own answer".
 
 - **A cell editor lives IN the cell — never wrap an interactive control in a `Popup` you open yourself** (2026-11, and the
   mechanism was proven by the operator's hands, not by inference). The identity pane's pickers were ComboBoxes inside a pane-opened
