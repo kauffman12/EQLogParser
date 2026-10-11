@@ -12057,3 +12057,24 @@ matching `" an "` inside names (`Jazrakhan begins casting Cannibalization XXVII.
 `Leech Touch III` the tightest rank-gate assertion in the table. Census yield was not A/B measured for these three (the
 Life Burn work above used the 2022 capture for that); the counts here are cast-line and data counts, which is all the
 entry rule asks for.
+
+## Garbage collection after loading a log
+
+`GcTidyUp.Request` fires at three moments and nowhere else: **a load that actually handed lines over**, **Clear All**, and a
+finished stats build — each a re-armed settle that waits for *quiet* rather than a fixed nap, rate-limited, never on a plain
+log close (close is almost always the first half of an open, so a tidy armed there would compact in the middle of the next
+read). The reason to ask at all after a load: parsing a capture allocates gigabytes of short-lived text and the garbage is
+gone by definition the moment the file ends, while the runtime's heuristics do not know a load just finished; a follow-from-end
+of file open reads no lines and asks for nothing (`LogReader.LoadAllocatedGarbage`). A plain collection stops every thread, so
+the whole design is about *when*, and each of the three is a moment the player is not asking the interface for anything.
+
+The GC-era test and debug surface is deleted with this note: `GcTidyUpTest`, the FCT placement allocation floor, the walk's
+allocation-floor probe (its control loop included), the gated real-log bench and meter/board cost probes. What stays is the
+implementation above plus `StatsBuildTrace` (milliseconds and allocated bytes beside each build stage, on the Debug line) —
+measure with a named pass, not with a permanent collector.
+
+**Suite speed, same day**: constructing an `EQDataStore` parses `spells.txt` and its siblings (~0.5–0.9 s), and five test
+classes paid that *per test* — most of the suite's wall time. One shared store per process (`PipelineHarness.SharedDataStore()`,
+`EQDataStoreTest.SharedStore`, both built with the working directory pinned so which test asked first cannot decide whether the
+shared store saw the data); everything mutable is still cleared per test, and a test needing a store under different conditions
+builds its own.
