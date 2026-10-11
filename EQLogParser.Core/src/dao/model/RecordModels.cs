@@ -207,7 +207,12 @@ namespace EQLogParser
      */
     private static readonly List<SpellData> NoCandidates = [];
 
-    public string Receiver { get; set; }
+    private int _receiverId;
+    public string Receiver
+    {
+      get => SpellNameIds.Name(_receiverId);
+      set => _receiverId = SpellNameIds.Intern(value);
+    }
     public SpellData SpellData { get; set; }
     public bool IsWearOff { get; set; }
 
@@ -324,14 +329,84 @@ namespace EQLogParser
 
   internal class SpellCast : IAction
   {
-    public string Spell { get; set; }
+    private int _spellId;
+    public string Spell
+    {
+      get => SpellNameIds.Name(_spellId);
+      set => _spellId = SpellNameIds.Intern(value);
+    }
     public SpellData SpellData { get; set; }
-    public string Caster { get; set; }
+    private int _casterId;
+    public string Caster
+    {
+      get => SpellNameIds.Name(_casterId);
+      set => _casterId = SpellNameIds.Intern(value);
+    }
     public bool Interrupted { get; set; }
   }
 
 
 
+
+  /*
+   * Canonical spell/name strings for the per-line action records, so a raid night pays once per DISTINCT name instead of once per line.
+   *
+   * Why: ReceivedSpell and SpellCast were created per buff sight and per cast line carrying the strings the parser had just cut out of the
+   * log. Those tokens are freshly allocated per line, so a session retained one String object per sight for "Fist of Vengement Rk. XIV" and
+   * more for receiver names - measured as the largest retained byte bag in a field heap snapshot (~104 MB of System.String with ReceivedSpell
+   * and SpellCast above it). Interning keeps ONE char[] per distinct name for the life of the process; the per-line token dies immediately.
+   *
+   * Two rules:
+   *   1. **Readers are lock-free.** Writers run on the parse lane; readers are the UI (Timeline, Death Log) and pool threads (Spell Count).
+   *      A grow copies and publishes a finished array through a volatile reference, so a reader sees the old snapshot or the new one and never
+   *      a half-filled table. Writers serialize among themselves.
+   *   2. **A miss reads back null instead of throwing**, because callers already tolerate a nameless action; an id this store handed out is
+   *      always inside some published snapshot.
+   */
+  internal static class SpellNameIds
+  {
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, int> Ids = new(StringComparer.Ordinal);
+    private static readonly object Grow = new();
+
+    // Published through Volatile.Read/Volatile.Write (not the `volatile` modifier: taking a ref to a volatile field is itself
+    // a warning, CS0420, and the Volatile.* calls are what actually order the publication).
+    private static string[] _names = new string[1];
+    private static int _count = 1; // slot 0 means "no name"
+
+    internal static int DistinctNames => _count - 1;
+
+    internal static int Intern(string name)
+    {
+      if (string.IsNullOrEmpty(name)) return 0;
+      if (Ids.TryGetValue(name, out var existing)) return existing;
+
+      lock (Grow)
+      {
+        if (Ids.TryGetValue(name, out existing)) return existing;
+
+        var id = _count;
+        var names = _names;
+        if (id == names.Length)
+        {
+          var grown = new string[Math.Max(names.Length * 2, 64)];
+          Array.Copy(names, grown, id);
+          names = grown;
+        }
+
+        names[id] = name;
+        _count = id + 1;
+        Volatile.Write(ref _names, names);
+        Ids[name] = id;
+        return id;
+      }
+    }
+
+    internal static string Name(int id)
+    {
+      var names = Volatile.Read(ref _names);
+      return id > 0 && id < names.Length ? names[id] : null;
+    }
+  }
 
   internal class PetMapping(string pet, string owner)
   {
