@@ -864,6 +864,14 @@ namespace EQLogParser
       BeginCellEdit(row, ColumnClass, classNames, classNames.IndexOf(row.PlayerClass ?? string.Empty), FindCellEditor(icon));
     }
 
+    /*
+     * This door PRINTS NOTHING when it works (2026-11: "can you remove that debug i listed as well? i want the log quiet again").
+     *
+     * The INFO line existed to answer one question — did the click reach the write, or did the write refuse? — and the fix to the cell made the
+     * answer visible where it actually belongs: an accepted pick shows in the row, so a session no longer needs a log line to prove that
+     * `class of Farzi -> Berserker` happened. What stays are the refusals, at DEBUG: they describe states that should not occur, they are off
+     * unless settings.txt says Debug=True, and they are the only trace left when somebody reports a pick that did nothing.
+     */
     private void ApplyClassPick(NameRow row, string className)
     {
       if (row.PlayerClass == className && !string.IsNullOrEmpty(className))
@@ -881,17 +889,15 @@ namespace EQLogParser
       if (string.IsNullOrEmpty(className))
       {
         PlayerRegistry.Instance.SetDefaultPlayerClass(row.Name, string.Empty);
-        Log.Info($"identity cell: saved class of {row.Name} forgotten - the cell shows what this capture's own lines say");
         Reconcile();
         return;
       }
 
       /*
-       * The write ANSWERS, and the log line follows the answer instead of preceding it. `SetDefaultPlayerClass` validates the word itself
-       * (CombatRecordLookup.IsValidClassName) and used to have its result thrown away while this method printed success, so a refusal and an
-       * acceptance were indistinguishable in the one file an operator reads after "i click and it goes away" (two
-       * `identity cell: class of Farzi -> …` INFO lines, nothing visible on screen; the write had landed and the CELL was reading the other
-       * lane — PlayerRegistry.GetAssignedOrLastKnownPlayerClass).
+       * The write ANSWERS, and the pane acts on it: `SetDefaultPlayerClass` validates the word itself (CombatRecordLookup.IsValidClassName), and
+       * its result used to be thrown away while this method announced success — which is how a refusal and an acceptance looked identical in the
+       * field report that started this (two `identity cell: class of Farzi -> …` INFO lines, nothing visible on screen; the write had landed and
+       * the CELL was reading the other lane — PlayerRegistry.GetAssignedOrLastKnownPlayerClass). A refused word now spends no derive pass.
        */
       if (!PlayerRegistry.Instance.SetDefaultPlayerClass(row.Name, className))
       {
@@ -899,7 +905,7 @@ namespace EQLogParser
         return;
       }
 
-      Log.Info($"identity cell: class of {row.Name} -> {className}");
+      // Nothing printed: the row is the evidence (see this method's header).
       Reconcile();
     }
 

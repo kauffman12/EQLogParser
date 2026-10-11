@@ -167,8 +167,9 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
   that is the column an operator writes; boards keep reading `GetPlayerClass(name, t)`, which stays time-correct with the saved word as fallback
   only. Capture-first order made an accepted pick invisible on exactly the rows whose class pencil shows (a Player row that cast something):
   "i can change type but not class", with `identity cell: class of X -> Y` in the log proving the write landed. The dropdown's blank entry is a
-  **verb** (forget the saved class; the cell returns to what this log says), and `SetDefaultPlayerClass` answers whether the word was accepted —
-  the pane logs the answer, not a promise (`ClassColumnPrecedenceTest`). There is **no** "assert Unknown" entry in any dropdown and no permanent ban mechanism;
+  **verb** (forget the saved class; the cell returns to what this log says), and `SetDefaultPlayerClass` answers whether the word was accepted so a
+  refusal spends no derive pass. **The class door prints nothing on success** (operator: "i want the log quiet again") — the row shows the word, so a
+  session does not need a line to prove a click landed; refusals stay Debug. There is **no** "assert Unknown" entry in any dropdown and no permanent ban mechanism;
   reverting restores the rules' own answer. Ownership writes go through `PetAssignment.Assign` (and ask for a full pass), never into a file.
   **A take-back keeps its row** (2026-11): `Recalculate` notes the name in `TakenBackNames` and `ClassificationReport.Build` lists it as its
   LAST source — `Kind = Unknown`, `Row.Reason = TakenBackNames.Word` (cell *Taken Back*, hover *Claim Taken Back*) — because a verb whose

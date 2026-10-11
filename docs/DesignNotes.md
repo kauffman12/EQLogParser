@@ -7378,7 +7378,8 @@ Info calls that never consulted it. So now: **Info is for things a person did or
 first-pass counters, `capture: started` (mode, door and `sized-from` included), "Monitoring from the end of the file", `fight list: N row(s)
 painted`, the identity-memory load line, the roster-expiry line, `dock: X shown as AutoHidden`. Kept at Info - the legacy phrases (`Selected Log
 File`, `Finished Loading Log File in N seconds.`), one line per deliberate identity write (`identity cell: …`, `pet assigned: …`, `clear all:
-re-opening …`, which exist because "nothing happened" was otherwise unfalsifiable), and one new **warn**: the fact-packing guard count moved out of
+re-opening …`, which exist because "nothing happened" was otherwise unfalsifiable) **except the class pencil**, silent on success since the row
+itself shows the word, and one new **warn**: the fact-packing guard count moved out of
 the first-pass line, because a clamped clock or an oversized heal mask means the boards are built from clipped values and that must not hide behind
 a Debug line someone has to think to enable.
 
@@ -11941,9 +11942,11 @@ law is about the registry's readers, and this changes one display reader. Cleari
 **blank entry is a verb** ("forget the saved class; show what this log says"), which is also why it used to look dead — `ApplyClassPick`
 answered it with "picked nothing" and returned.
 
-**A write has to answer.** `SetDefaultPlayerClass` returns whether the word was accepted, and the pane's INFO line follows that answer
-instead of preceding it; before this, a refusal (`CombatRecordLookup.IsValidClassName`) and an acceptance printed the same success line, which
-is exactly the ambiguity an operator reads back after "nothing happened". Refusals are Debug.
+**A write has to answer — and then be quiet about it.** `SetDefaultPlayerClass` returns whether the word was accepted, so a refusal spends no
+derive pass; its result used to be discarded while the pane printed success unconditionally, which made a refusal and an acceptance look identical in
+exactly the file an operator reads back after "nothing happened". Then the success line itself went out ("can you remove that debug i listed as well?
+i want the log quiet again"): with the cell showing the assignment, a log line proves nothing the row does not, and the INFO tier belongs to the raid.
+What is left at this door is DEBUG-only — an unknown word, a pick that changes nothing, an editor opened without a row.
 
 Pinned by `ClassColumnPrecedenceTest` — including the direction that must NOT move: a saved word never changes what
 `GetPlayerClass(name, t)` answers for a board.

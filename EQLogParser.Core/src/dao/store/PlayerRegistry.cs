@@ -879,9 +879,9 @@ namespace EQLogParser
     /*
      * only do this from user interaction (or a load)
      *
-     * Answers whether the word was ACCEPTED. Every other caller is a load and ignores it; the Identity Table's class pencil does not,
-     * because a refusal used to print its own success line (`identity cell: class of X -> Y` in a session where nothing was written), which
-     * is precisely the log an operator reads back after "I clicked and nothing happened".
+     * Answers whether the word was ACCEPTED. Every other caller is a load and ignores it; the Identity Table's class pencil does not, so that a
+     * refusal spends no derive pass and its DEBUG line is the only thing written. The acceptance line this door used to print unconditionally
+     * (`identity cell: class of X -> Y` even when nothing was stored) is gone: the row itself shows the word now, which is where anybody looks.
      */
     internal bool SetDefaultPlayerClass(string name, string className, bool init = false)
     {
