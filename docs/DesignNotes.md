@@ -7032,11 +7032,12 @@ capture’s rows, patched in place) and `_rows` (what the dials call visible), a
 operations: `Project` (the visible subsequence), `Reconcile` (edit the bound collection in place to match it, fewest edits, reporting what it
 spent), `Runs` (contiguous select ranges). The load-bearing property is that **the two lists hold the SAME row objects** — hiding a fight moves
 a reference, it never copies or rebuilds one. That is what makes the patch legal in both dial states, what lets a selection be carried across a
-toggle and across a wholesale swap *by instance* (no position arithmetic anywhere), and what makes an index into `_rows` BE the grid row, so
-the translation layer is gone rather than correct.
+toggle *by instance*. A wholesale swap restores by stable fight key onto the new row objects, including when sorted. Index-based range selects
+are valid only while unsorted: `_rows` does not follow the grid's column sort. Search must walk `View.Records` and resolve its matched object
+with `ResolveToRowIndex(object)` when the deferred scroll executes.
 
-Corollaries the pane depends on: `View.Filter` stays empty forever (nothing else may decide visibility), a dial toggle is the one place a
-wholesale `ItemsSource` swap is still right (hundreds of per-edit notifications would repaint worse than one assignment) — and it re-adds the
+Corollaries the pane depends on: `View.Filter` stays empty (the pane decides visibility), and dial toggles use a wholesale `ItemsSource` swap,
+as do snapshots that cannot be patched. A toggle clears the grid's selection after the swap and re-adds the
 still-visible selected rows by reference — and a row that stops being visible drops out of the selection with `AnnounceSelection` behind it, so
 the boards cannot keep describing a fight that left the list. `BoardReason.DialChange` is the door’s word for that ask, and it is deliberately
 not in `UnaskedRefresh.IsUnasked`: a dial is a hand, never throttled.
@@ -7046,8 +7047,22 @@ unknown fight stays; a person-row reads above zero whenever the person was struc
 changed. What is new to the eye: with Tanking off, a row now appears or disappears the moment it crosses the line — the incremental path had
 never run in that mode before — and a selection survives live updates instead of being rebuilt under the cursor.
 
-Re-announcement is conditional too — see the next section for what "conditional" means once law 1 guarantees the backing object moves
-every rebuild. The search mark survives a pass now as well, so it stops blinking off twice a second.
+**Review correction:** hiding a divider must not merge encounters. The first projection implementation still found group boundaries in `_rows`,
+so with Inactivity unchecked every fight became one group. `GroupSectionSelect.VisibleMembers` now finds the section in `_allRows`, then applies
+visibility to its members. Both Select Group and Unselect Group use that same set. `GroupVisibilityTest` exercises all four checkbox combinations,
+including selections in other groups and an undamaged fight inside the target group. The pane wiring is covered by `FightTableDialVisibilityTest`.
+
+The same review found search passing an unsorted source index to a sorted-view resolver; search is back on `View.Records` and deferred scrolling
+resolves the row object, ignoring a stale search or a row that left. A toggle clears a hidden search mark and resets its cursor. Live follow is
+triggered by visible insertions, not additions that the checkboxes hide. Selected rows removed by a live visibility change are explicitly removed
+from `SelectedItems` before announcing; the membership check uses typed rows and the reference set rather than LINQ's object-based linear scan.
+
+The two new selection tests originally never loaded the grid and therefore normally reported inconclusive without executing their assertions.
+Those tests and their production-only test wrappers were removed. The remaining WPF tests assert bound data and patch identity without loading a
+windowless grid; they compile on Linux but run only on Windows. Actual clicks, highlights, sorted search and selection preservation are explicit
+unchecked items in `docs/ReleaseChecklist.md`, not claimed as automated coverage.
+
+Re-announcement is conditional too — see the next section. The search mark survives a pass as long as its row stays visible.
 
 ### What makes a board go one pass stale
 

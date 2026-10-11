@@ -402,7 +402,7 @@ namespace EQLogParser
         {
           // What the reader has selected, by INSTANCE: those objects are about to stay in the list, so no restore is needed — but a
           // selected row that this pass edited means the boards under it now show one pass-old numbers.
-          var selected = fightGrid?.SelectedItems is { } items ? items.Cast<object>().ToList() : [];
+          var selected = fightGrid?.SelectedItems is { } items ? items.OfType<DerivedFightRow>().ToList() : [];
           var contentMoved = SelectionStamp(snapshot) != _announcedStamp;
 
           // The refresh runs on EVERY survivor, not just the display-updated ones: a reclassifying rebuild hands out brand-new
@@ -417,7 +417,7 @@ namespace EQLogParser
            * leaves, every other row keeps its object, so the selection, the scroll position and the search mark hold through a pass however the
            * dials happen to be set.
            */
-          ShownRows.Reconcile(_rows, VisibleRows());
+          var (_, visibleInsertions) = ShownRows.Reconcile(_rows, VisibleRows());
 
           // A marked row that left the list takes its highlight with it; one that stayed keeps it WITHOUT a repaint, which is the
           // difference between a search mark that holds and one that blinks off twice a second.
@@ -445,11 +445,17 @@ namespace EQLogParser
            * hundreds of rows, and this runs on every patched pass.
            */
           var visibleNow = new HashSet<DerivedFightRow>(_rows, ReferenceEqualityComparer.Instance);
-          var removedSelected = selected.Any(row => !visibleNow.Contains(row));
+          var removedSelected = false;
+          foreach (var row in selected)
+          {
+            if (visibleNow.Contains(row)) continue;
+            fightGrid.SelectedItems.Remove(row);
+            removedSelected = true;
+          }
           var touched = selected.Count > 0 && (removedSelected || contentMoved || UnaskedRefresh.HasGesture);
           if (touched) AnnounceSelection(removedSelected ? BoardReason.RowEdited : BoardReason.ContentMoved, force: true);
 
-          FollowNewestRows(patch.InsertedCount > 0);
+          FollowNewestRows(visibleInsertions > 0);
           return;
         }
 
@@ -467,13 +473,11 @@ namespace EQLogParser
          * time are read off the same facts on every pass, so the fight (with this pass's numbers in it) is found
          * again - see FightKey for why the row number cannot be that key.
          *
-         * The one case not restored is a user-sorted grid: the keys survive but their new positions depend on how
-         * the sort landed, and guessing at row indices to restore a selection would put the highlight on some
-         * other fight. Better to lose the highlight than to lie about it.
+         * Restoration uses row objects, not positions, so sorting does not change which fights come back selected.
          */
         var keep = new HashSet<FightKey>();
         foreach (var fight in GetSelectedFights()) keep.Add(KeyOf(fight));
-        var restorable = keep.Count > 0 && fightGrid.SortColumnDescriptions.Count == 0;
+        var restorable = keep.Count > 0;
 
         /*
          * Re-arm rather than erase. `_settle.Reset()` used to run here, which threw away a gesture that had not been announced yet: select a
@@ -654,13 +658,9 @@ namespace EQLogParser
     internal int RowCount => _rows.Count;
     internal int RowCountAll => _allRows.Count;
 
-    /*
-     * The two selection probes the dial tests need without reaching into the grid's SelectedItems from outside the pane — nothing production uses.
-     * Both mean nothing unless the grid's view has materialized (it exists only after the control loads), which is why the tests gate on View and
-     * report inconclusive rather than driving a selection into a store that is not wired yet.
-     */
-    internal void SelectRowForTest(DerivedFightRow row) => fightGrid?.SelectedItems.Add(row);
-    internal bool IsSelectedForTest(DerivedFightRow row) => fightGrid?.SelectedItems.Contains(row) == true;
+    // Hidden dividers still separate encounters; only the visible fights in that encounter can be selected.
+    internal List<DerivedFightRow> SectionRowsOf(DerivedFightRow row) =>
+      GroupSectionSelect.VisibleMembers(_allRows, _allRows.IndexOf(row), static item => !item.IsDivider, IsShown);
 
     /*
      * The fights behind this window in the legacy shape the older consumers read: MainWindow.GetFights feeds
@@ -961,10 +961,10 @@ namespace EQLogParser
       string firstSelectedName = hasFight ? selected[0].Name : null;
 
       /*
-       * The position-based selects walk _rows in section order and select by grid POSITION (SelectByShown). A user sort
+       * The range-based selects walk _rows in section order and select by grid POSITION (SelectVisibleRuns). A user sort
        * reorders the records under those positions, so on a sorted grid they would highlight arbitrary fights - and
        * announce them to the boards. Search does not have this problem: it walks the materialized view (SearchForNpc).
-       * Offer them only while the grid is unsorted; RestoreSelection already guards the same way.
+       * Offer range-based selects only while unsorted. Restoration uses row instances and needs no such guard.
        */
       var unsorted = fightGrid.SortColumnDescriptions.Count == 0;
 
@@ -978,7 +978,7 @@ namespace EQLogParser
       }
 
       var groupRow = GroupTargetRow();
-      var hasSection = SectionBoundsOf(groupRow).From >= 0;
+      var hasSection = SectionRowsOf(groupRow).Count > 0;
 
       unselectAllItem.IsEnabled = fightGrid.SelectedItems.Count > 0;
 
@@ -1050,8 +1050,11 @@ namespace EQLogParser
       var shown = VisibleRows();
       _rows = new ObservableCollection<DerivedFightRow>(shown);
       grid.ItemsSource = _rows;
+      grid.SelectedItems.Clear();
 
       var keeps = new HashSet<DerivedFightRow>(shown, ReferenceEqualityComparer.Instance);
+      if (_searchEntry != null && !keeps.Contains(_searchEntry)) ClearSearchMark();
+      _searchIndex = 0;
       foreach (var row in held)
       {
         if (keeps.Contains(row)) grid.SelectedItems.Add(row);
@@ -1148,10 +1151,9 @@ namespace EQLogParser
     {
       ClearSearchMark();
 
-      // The visible list IS `_rows` now (the pane applies its own dials), which is what "the materialized item list" meant when this was a port
-      // of legacy's walk over View.Records — same sequence, one less indirection, and no requirement that the grid has loaded.
-      var records = _rows;
-      if (fightSearchBox.Text.Length == 0 || records.Count == 0) return;
+      // Search follows the displayed order, which differs from _rows when a column is sorted.
+      var records = fightGrid.View?.Records;
+      if (fightSearchBox.Text.Length == 0 || records == null || records.Count == 0) return;
 
       int checksNeeded;
       var direction = 1;
@@ -1196,13 +1198,19 @@ namespace EQLogParser
         {
           // Case-insensitive on purpose: rows are stored CapitalizeFirst and the user types however they type.
           // A divider row's name is the gap label, never a fight, so it simply never matches.
-          if (records[i] is DerivedFightRow { Name: not null } row &&
+          if (records.GetItemAt(i) is DerivedFightRow { IsDivider: false, Name: not null } row &&
               row.Name.IndexOf(fightSearchBox.Text, StringComparison.OrdinalIgnoreCase) > -1)
           {
             row.IsSearchResult = true;
             _searchEntry = row;
             _searchIndex = i + (1 * direction);
-            Dispatcher.InvokeAsync(() => fightGrid.ScrollInView(new RowColumnIndex(fightGrid.ResolveToRowIndex(i), 0)));
+            Dispatcher.InvokeAsync(() =>
+            {
+              // Resolve the object when scrolling: a sort, filter toggle or newer search may have landed while queued.
+              if (!ReferenceEquals(_searchEntry, row)) return;
+              var rowIndex = fightGrid.ResolveToRowIndex(row);
+              if (rowIndex >= 0) fightGrid.ScrollInView(new RowColumnIndex(rowIndex, 0));
+            });
             return;
           }
         }
@@ -1237,22 +1245,11 @@ namespace EQLogParser
 
     private void UnselectGroupClick(object sender, RoutedEventArgs e) => SelectGroup(false);
 
-    // The group of a row is its SECTION: every fight between the same pair of inactivity rows - legacy's GroupId
-    // meaning, read off THIS display list. Walked rather than taken from fight.GroupId on purpose: that stamp
-    // comes from the walk over ALL fights (the "Fight N" number a stats run reads), while the dividers the user
-    // sees come from the walk over the VISIBLE ones, and a hidden pet row active across a quiet gap can bridge a
-    // divider in one but not the other. What the user sees is the definition, so the group stops at what the
-    // user sees. A sorted grid does not matter: _rows keeps section order regardless of how the view is arranged.
+    // Find the encounter in the complete display list, then intersect with visibility. A hidden divider still bounds a group.
     private void SelectGroup(bool add)
     {
-      var target = GroupTargetRow();
-      var (lo, hi) = SectionBoundsOf(target);
-      if (lo < 0 || target is null) return;
-
-      // Dividers are gaps, not fights: never selected, even though IsShown lets them through with breaks on.
-      var section = new HashSet<DerivedFightRow>();
-      for (var i = lo; i <= hi; i++)
-        if (!_rows[i].IsDivider) section.Add(_rows[i]);
+      var section = new HashSet<DerivedFightRow>(SectionRowsOf(GroupTargetRow()), ReferenceEqualityComparer.Instance);
+      if (section.Count == 0) return;
 
       if (add)
       {
@@ -1328,25 +1325,7 @@ namespace EQLogParser
       return index >= 0 && index < _rows.Count ? _rows[index] : null;
     }
 
-    /*
-     * The run of fight rows around `row`, handed to GroupSectionSelect as one bool per displayed row — "is this row a fight
-     * row" is the ONLY fact the section law reads, and stating it that way is what lets the cross-platform tests answer it
-     * about a list they can build. Allocated per gesture, which is one small array against a materialization.
-     */
-    private (int From, int To) SectionBoundsOf(DerivedFightRow row)
-    {
-      var target = _rows.IndexOf(row);
-      if (target < 0) return (GroupSectionSelect.NoRow, GroupSectionSelect.NoRow);
-
-      var namesSection = new bool[_rows.Count];
-      for (var i = 0; i < _rows.Count; i++) namesSection[i] = !_rows[i].IsDivider;
-
-      return GroupSectionSelect.BoundsOf(namesSection, target);
-    }
-
-    /*
-     * Put the highlight back on the rows whose fights survived the swap — the same walk as every other programmatic select.
-     */
+    // Name and start time identify one life even when a derive renumbers fight ids.
     private static FightKey KeyOf(DerivedFight fight) => new(fight.Name, fight.BeginTime);
 
     /*
@@ -1361,7 +1340,8 @@ namespace EQLogParser
 
       foreach (var row in _rows)
       {
-        if (row.Fight is { } fight && keepKeys.Contains(KeyOf(fight))) grid.SelectedItems.Add(row);
+        if (row.Fight is { } fight && keepKeys.Contains(KeyOf(fight)) && !grid.SelectedItems.Contains(row))
+          grid.SelectedItems.Add(row);
       }
     }
 

@@ -70,7 +70,7 @@
                            CurrentCellBorderThickness="0"
                            Grid.Row="1"
                            GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
-                                                     GridLinesVisibility="Horizontal"
+                           GridLinesVisibility="Horizontal"
                            HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
                            IsReadOnly="True"
                            RowHeight="{DynamicResource EQTableRowHeight}"
@@ -138,8 +138,8 @@
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Regular_Square" />
             </MenuItem.Icon>
           </MenuItem>
-          <!-- Group = the right-clicked row's SECTION: every fight between its surrounding inactivity rows -
-               legacy's group semantics, read off this display list (see SelectGroup for why not fight.GroupId). -->
+          <!-- Group boundaries come from the complete display list, including hidden inactivity dividers.
+               Group gestures affect only the visible fights in that encounter. -->
           <MenuItem x:Name="selectGroupItem" Header="Select Group" Click="SelectGroupClick"
                     ToolTip="Every fight in the same section as the right-clicked row - between its surrounding inactivity rows">
             <MenuItem.Icon>

@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -15,7 +14,7 @@ namespace EQLogParser;
  * and the pane had to abandon its incremental patch whenever the filter was on because the shipped assembly has no live-filter refresh.
  *
  * What the laws below pin is the property the pane now leans the whole design on: **rows are shared references**. Hiding a fight moves a
- * reference, so an identity the reader selected cannot silently become a different fight, and an index into the visible list IS a grid row.
+ * reference, so a retained row keeps its identity. Visible-list indices match grid range positions only while the grid is unsorted.
  * A rewrite that copies rows instead of moving them would break these tests rather than ship a phantom selection.
  */
 [TestClass]

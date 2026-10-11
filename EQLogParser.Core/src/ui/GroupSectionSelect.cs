@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace EQLogParser;
@@ -8,8 +9,8 @@ namespace EQLogParser;
  *
  * A GROUP is a SECTION: the run of fight rows between two inactivity dividers. That is the legacy meaning (the old
  * table stamped `Fight.GroupId` while it walked the list, and its menu took "every row with my current row's
- * GroupId"); the derived list derives the same thing from the dividers it actually painted, because the stamp comes
- * from a walk over ALL rows while the dividers come from the VISIBLE ones, and what the person sees is the definition.
+ * GroupId"); the derived list uses the dividers in the complete display-row list, BEFORE either checkbox hides rows.
+ * Hiding a divider changes visibility, never membership. Group gestures take only visible fights from that section.
  *
  * Which ROW a gesture is about is the part that broke (field report: "if i right-click on another group area and do it
  * then it only unselects the group i was previously in. its like the select cursor/item stays where it was"). The
@@ -60,6 +61,26 @@ internal static class GroupSectionSelect
     while (to + 1 < namesSection.Count && namesSection[to + 1]) to++;
 
     return (from, to);
+  }
+
+  /// <summary>Find the section before filtering, then take only its visible fight rows.</summary>
+  internal static List<T> VisibleMembers<T>(IReadOnlyList<T> rows, int target, Predicate<T> namesSection,
+    Predicate<T> isShown) where T : class
+  {
+    if (target < 0 || target >= rows.Count || !isShown(rows[target])) return [];
+
+    var sections = new bool[rows.Count];
+    for (var i = 0; i < rows.Count; i++) sections[i] = namesSection(rows[i]);
+    var (from, to) = BoundsOf(sections, target);
+    if (from == NoRow) return [];
+
+    var members = new List<T>();
+    for (var i = from; i <= to; i++)
+    {
+      if (isShown(rows[i])) members.Add(rows[i]);
+    }
+
+    return members;
   }
 
   /*

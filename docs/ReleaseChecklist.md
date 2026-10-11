@@ -75,6 +75,26 @@ Nothing else holds a version: the `<Version>` entries in the `.csproj` files are
 
    If this release bumps `Microsoft.ML.OnnxRuntime` or `KokoroSharp`, the published Kokoro pack has to be rebuilt against it and `TtsPackManager` re-pointed at the new tag: the installed managed ONNX wrapper and the pack's native `onnxruntime.dll` must be the same version, and KokoroSharp runs on top of everything in the pack.
 
+## Fight list checks on Windows
+
+Use a loaded app with a log containing multiple encounters, inactivity dividers, and NPCs that dealt damage but received none.
+These checks require a realized grid; the automated pane tests exercise bound data, not mouse selection or scrolling.
+
+- [ ] **Checkbox combinations:** both checked shows every display row; Inactivity off hides only dividers; Tanking off hides NPC rows
+  with no damage received from players. Both off applies both rules. Rechecking restores the rows without reloading the log.
+- [ ] **Click after filtering:** with Tanking off, click several remaining rows, including ones below hidden rows. Each highlight and
+  the summary must name the same fight. Repeat with both boxes off on a finished log and while following live damage.
+- [ ] **Selection across a toggle:** select fights from multiple groups, including a tanking-only NPC. Uncheck Tanking: visible fights stay
+  selected, the hidden NPC leaves the selection, and the summary excludes it. If the only selected fight hides, all summaries clear.
+  Rechecking must not silently select fights that were hidden.
+- [ ] **Group boundaries:** with Inactivity off, Select Group and Unselect Group affect only the pointed-at encounter's visible fights,
+  not the whole log or other selected encounters. Repeat with Tanking off too.
+- [ ] **Sorted search and restoration:** sort by name or damage so the order differs from time order. Search with Enter and Shift+Enter:
+  the matching row must be highlighted and scrolled into view in displayed order. Toggle either box and repeat. A re-derive must preserve
+  selected visible fights even while sorted.
+- [ ] **Live changes:** with Tanking off, an NPC becomes visible when it receives its first player damage. Existing visible selections stay
+  on the same fights through updates; a verdict change that hides a selected NPC removes it from the selection and updates the summary.
+
 ## Docking states a unit test cannot reach
 
 Two behaviours depend on state a headless test cannot build; both have shipped broken once.
