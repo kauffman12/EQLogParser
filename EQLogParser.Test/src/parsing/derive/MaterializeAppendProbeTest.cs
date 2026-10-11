@@ -2,8 +2,6 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Text;
 
-using EQLogParser;
-
 namespace EQLogParser;
 
 /*
@@ -12,9 +10,8 @@ namespace EQLogParser;
  * docs/DesignNotes.md → "What the cell cache has to buy at two boundaries").
  *
  * `FightFactIndex.SummaryFightFor` used to answer "this row moved" by re-walking every ordinal the row ever held, so a live
- * pull paid for records that cannot have changed. It now continues from the count it last consumed. `RowReuseCeilingProbeTest`
- * measured the CEILING of whole-row reuse (~20 % of a recount); this measures the REALIZED saving of what was built, on the
- * same two arms over one growing table:
+ * pull paid for records that cannot have changed. It now continues from the count it last consumed. This measures the
+ * realized saving of that continuation, comparing two arms over one growing table:
  *
  *   COLD - every row materialized through a FRESH `FightFactIndex` (a brand-new index is exactly what a rebuilt pass had, and
  *          a fresh index has nothing to continue from): this is pre-layer-1 behaviour.
@@ -35,9 +32,8 @@ namespace EQLogParser;
  *     dotnet test EQLogParser.Test/EQLogParser.Test.csproj --no-build --filter MaterializeAppendProbe --logger "console;verbosity=detailed"
  *
  * It asserts one thing besides running: the two arms agree on what they materialized, every pass — a saving measured on an arm that
- * produced a different answer is not a saving. Kept as the NAMED re-measure command for this seam (the way `RowReuseCeilingProbeTest`
- * and `MeterBoardCostRealLogTest` are kept) because layer 2's gate asks the same question again — "how much of a live pass is left after
- * appending stopped being re-walked" — and that number needs the same harness, not a reconstruction.
+ * produced a different answer is not a saving. Kept as the re-measure command and real-capture equivalence check for the
+ * materialization continuation that production still uses.
  */
 [TestClass]
 [DoNotParallelize]

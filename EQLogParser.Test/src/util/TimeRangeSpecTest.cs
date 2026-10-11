@@ -5,7 +5,7 @@ namespace EQLogParserTest
   /*
    * TimeRange against the thing it is meant to mean: "this player was active during these seconds", where all we ever know for certain is that
    * something happened at an exact second. The existing TimeRangeTest covers the API's happy paths; this file tests meaning and invariants, then
-   * documents four sharp edges the class actually has (see the "sharp edge" tests at the bottom: they assert current behavior on purpose, so a fix
+   * documents three sharp edges the class actually has (see the "sharp edge" tests at the bottom: they assert current behavior on purpose, so a fix
    * makes them fail and get read rather than silently changing numbers somewhere).
    *
    * The reference model is written the slow, obvious way on purpose - a set of active seconds, then spans joined across short silences - so it shares
@@ -488,20 +488,6 @@ namespace EQLogParserTest
       var owns = new TimeRange([copied]);
       copied.EndTime = 900;
       Assert.AreEqual(11, owns.GetTotal());
-    }
-
-    /*
-     * An empty range totals zero, and the app divides by totals in about ten places. Damage over no seconds does not throw: it saturates to
-     * long.MaxValue, which on a chart is a spike tall enough to flatten everything else. Callers have to rule out the zero themselves.
-     */
-    [TestMethod]
-    public void DividingByAnEmptyRangeSaturatesInsteadOfThrowing()
-    {
-      var range = new TimeRange();
-      Assert.AreEqual(0, range.GetTotal());
-
-      var perSecond = (long)Math.Round(5000d / range.GetTotal());
-      Assert.AreEqual(long.MaxValue, perSecond);
     }
 
     /* The one caller of this overload (MainActions' save-selected-fights) checks TimeSegments.Count > 0 first; the check is load bearing. */

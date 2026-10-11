@@ -7177,11 +7177,15 @@ path's target — and the per-row materialization cache is already worth a 3.5×
 ### Would an equality gate have saved anything? Measured: no — so the fight list wants an incremental update (2026-11)
 
 The proposal was to stop repainting surfaces when a derive pass changed nothing visible. Before writing the comparison,
-`LiveTailChangeProbeTest` (gated `EQLP_LIVE_TAIL_PROBE=<log> EQLP_LIVE_TAIL_PASSES=n`) replayed
-`eqlog_Incogitable_xegony.txt` as **growing prefixes** — parse and rules see only what has "arrived", as a live session does —
+the now-retired live-tail probe replayed
+`eqlog_Incogitable_xegony.txt` as **growing prefixes** — parsing saw only what had "arrived" —
 projected each prefix through the engine's own entry point, and compared the fields a surface reads for the rows the grid shows
 (`RaidPet` rows excluded, since `CharmPetRows.Visible` hides them): both damage totals, hit counts, end time, dead + end-reason +
 charm, group id, and the two direction windows.
+
+**Audit correction:** the probe projected the harness's registry-seeded timeline without calling `ClassificationRules.Apply`.
+These are historical seed-only measurements, not evidence about fully classified production passes. The probe is retired;
+see "Retiring probes that no longer protect production" for its final run and the coverage that remains.
 
 **Over 11 comparisons: 0 no-op passes.** Every prefix changed something, touching a median of **188 rows** (min 21, max 1,594) out
 of ~4,835 visible. The columns that moved tell the story: `EndReason` 155 row-instances (rows being closed is the most common
@@ -7206,7 +7210,7 @@ start time (`FightKey`), and it is where flicker comes from.
 **Re-run on a raid-focused capture (2026-11), and the control biting.** `eqlog_Kizant_xegony.txt` (374 MB, 1.93 M facts, ~770 visible
 rows against Incogitable's ~4,835 — a night of real pulls rather than a farm night): **0 no-op passes out of 11**, median **42 rows
 touched** (min 10, max 362), movers `EndReason` ×119, `DamageTotal`/`DamageHits` ×98, `DamageByOwner` ×79, `LastTime` ×65. Re-run at
-finer grain (`EQLP_LIVE_TAIL_PASSES=24`, ~80 k facts per simulated pass): **still 0 no-ops out of 23**, with the smallest touched sets
+finer grain (24 prefixes, ~80 k facts per simulated pass): **still 0 no-ops out of 23**, with the smallest touched sets
 at 6 rows on quiet prefixes, and the cheap digest still reporting 0 false negatives.
 
 So across both shapes — a 4,835-row farm night and a 770-row raid night, at two granularities — an equality gate finds nothing to
@@ -9480,8 +9484,8 @@ is not on the table: the phase boundary is "count less", and counting less needs
 
 The obvious alternative to merge was reuse at row granularity: hand the **untouched rows** over intact, rebuild only the rows the new facts
 belong to (from scratch — no merge), and let finalize redo rates, percent and ranking, which the census above already proved is free. No
-accumulator would be mutated, so the ownership problem goes away. It dies on an arithmetic question, answered by a gated probe
-(`RowReuseCeilingProbeTest`, `EQLP_REUSE_CEILING=<log>`): of the records a full recount walks, how many belong to a row that the new facts
+accumulator would be mutated, so the ownership problem goes away. It dies on an arithmetic question, answered by the now-retired
+whole-row reuse probe: of the records a full recount walks, how many belong to a row that the new facts
 touch? A touched row pays its **whole history**, since it is rebuilt from scratch.
 
 Windows are taken **mid-capture**, because that is what a live refresh looks like. Anchoring on the newest fact was my first attempt and it
@@ -9508,6 +9512,31 @@ by (row × fight/segment), so a touched row pays only its new window and not its
 cells have to be combined into one displayed row. Any future design therefore has to beat this bar and should quote it — **if a proposal
 still walks ~80 % of the records on a 5-second raid refresh, it is not the win it looks like.** Meanwhile the cheapest real relief for the
 same pain needs no counting at all: keep the previous board on screen while a new one is built.
+
+### Retiring probes that no longer protect production (2026-11)
+
+The test audit removed three gated probes after executing them once more on `eqlog_Incogitable_xegony.txt`.
+Their source is preserved at commit `a843c6c7`, not as runnable commands in the current suite:
+
+- `RowReuseCeilingProbeTest` had no correctness assertions. Its final run counted 1,901,078 facts over 1,023 attacker names;
+  mid-capture windows of 5/30/120 seconds estimated 50.8/47.9/46.9 % of the walk could be saved. This remains a
+  hypothetical damage-only ceiling without pet folding, not coverage for a feature that exists.
+- `PetLearningProbeTest` passed its retired cache-design thresholds: 1,477,200 materialized records, 115,101 (7.792 %)
+  deemed order-dependent across 64 names, 107 pets and 97 owners. Its simulation learned while counting, whereas the
+  real builder learns all ownership in the grouping pre-pass. Those figures describe the simulation, not order-dependent
+  production boards. `CarriedOwnershipTest` retains the real-builder tests for order independence and selection dependence.
+- `LiveTailChangeProbeTest` used seven prefixes: six changed comparisons, zero printed control differences, and an
+  identity digest moving six times with zero already-placed verdict flips. Its only final assertion was `passes - 1 > 0`,
+  guaranteed by setup, and it never ran the classification rules. The older live-tail tables therefore describe a
+  registry-seeded projection, not production classification. `CaptureReproducibilityTest`, incremental classification
+  tests and `IdentityWatchTest` remain the executable checks; the snapshot-only board refresh policy remains a product
+  decision, not a conclusion that relies on this probe.
+
+All three reported Passed in the final run (about 76 seconds total); that confirms execution, not meaningful coverage.
+The audit also removed two exact duplicates from `StringCacheTest`, the test of .NET's infinity-to-integer conversion in
+`TimeRangeSpecTest`, and the positive-total-only adjacency test from `TimeRangeTest`. The remaining range tests assert the
+actual merge boundary, shape and duration. No production code changed. Compaction/capacity tests requiring replacement,
+weak tests requiring stronger assertions, and GC scheduling tests remain for separate work rather than losing their coverage.
 
 ## A refresh that answers for itself: the cost budget on unasked passes (2026-11)
 
@@ -9970,8 +9999,8 @@ close == A∪B swept field-by-field), so a partial row can legally become an inp
 
 **Fallback stays a rule, not a hope** (B's rule 4): if the rows a pass must rebuild carry more than a threshold share of the selection's
 records, take the plain full build — measure the threshold on the same capture as the phase table rather than picking a number that sounds
-safe. And **the gate that says whether any of this earned its complexity**: extend `EQLP_LIVE_TAIL_PROBE` to print reused vs recounted records
-per pass, exactly like the `stats build #N … walked=…` lines did for Phase A. If reuse is not a large majority on a live tail, layer 2 is deleted.
+safe. The proposed acceptance gate was a reused-versus-recounted record measurement over a live tail. Layer 2 was subsequently
+built, measured and reverted on workflow grounds (see "Carried counted cells were built, measured and reverted"); this is no longer an open task.
 
 **Order of work, decided:** layer 1 first (safe, goldens-only, removes the materialize term from every live refresh), then the fold-at-publish
 measurement, then layer 2 only if that number clears the group-content shape. B13's chart second pass wants the same chunk boundaries and is
@@ -10102,7 +10131,8 @@ fact rows. It is not a second copy of the data.
 **Decision: layer 2 is licensed on cost**, in this order because measurement fixed it: (1) a drained snapshot/copy boundary for
 `PlayerStats` (the blocker above), (2) cells keyed (row x ordinal window) under the same identity-proof discipline
 `FightMaterializationCache` uses, (3) amounts carried so the chart stays true, (4) a full-build fallback when touched cells cross a record
-threshold — tuned against these numbers and gated on `EQLP_LIVE_TAIL_PROBE`'s reused-vs-recounted print.
+threshold — to be tuned against these numbers with a reused-versus-recounted measurement. This was the historical plan;
+the following section records its implementation and reversal.
 
 ### Carried counted cells were built, measured and reverted (2026-11)
 
@@ -10242,7 +10272,9 @@ computed once for the selection before anything is counted, so a cell's placemen
 selection or answer change invalidates wholesale by stamp rather than per name. A blanket "any segment that could teach something forces a full build" is
 still the wrong default, for the same reason: teaching happens on pets, which are the rows caching pays for.
 
-**That measurement, run (three captures, `PetLearningProbeTest`, materialized records in the builder's own block order):**
+**Historical simulation (three captures, now-retired pet-learning probe, materialized records in block order):**
+The probe learned mappings during its counting loop, unlike the real builder's pre-pass. In particular, "placement would move"
+below is a simulated prefix-learning population, not measured churn within a production build.
 
 | capture | shape | records | own owner word | folded by `_petToPlayer` | attacker is a known OWNER | placement would move | names | learning events |
 |---|---|---|---|---|---|---|---|---|
@@ -10256,8 +10288,8 @@ Three findings, in descending order of usefulness:
   record's own word (0 there, because a derived pet record already carries its owner from the line or the charm window). A cache that ignored the maps
   would move nearly a tenth of a group night onto pets' own names. Run without `EQLP_EMU=1` the same capture reported ~0 owner words and nothing folded:
   the flag law caught this one too.
-- **Placement churn is small in every shape** (0.010 %–7.79 %, ≤ 64 names), so carrying-and-stamping costs a handful of rebuilds per night rather than
-  constantly. The probe now ASSERTS bars on those numbers rather than printing them.
+- **Simulated prefix-learning churn was small in these captures** (0.010 %–7.79 %, ≤ 64 names). The probe asserted cache-design
+  thresholds on those numbers; both the thresholds and the probe retired after that cache was reverted.
 - **`_playerPets` — "this name is an owner" — is the big learned state, not pet ownership**: 25–44 % of records have an attacker who is a known owner, and
   that membership is what folds an owner's own swings into `X +Pets`. Any design that reasons only about pets-and-owners misses the population that
   actually moves rows. It needs a gated probe, and `heap:` (**B11**) now prints per-stream rows and slack while such a
@@ -10760,8 +10792,9 @@ being numeric altogether.
 
 ### The measurement that decided the shape
 
-`EQLP_LIVE_TAIL_PROBE=local/logs/live/eqlog_Incogitable_xegony.txt EQLP_LIVE_TAIL_PASSES=7` (the probe now reports identity churn as
-well as row churn; run from the repo root — the gate needs an absolute path, and a relative one fails with "points at nothing"):
+The now-retired live-tail probe reported the following over seven prefixes of `eqlog_Incogitable_xegony.txt`.
+**Audit correction:** it never ran classification, so this is registry-seed churn, not rule-book churn. The table is retained
+as the historical motivation, not as proof of the production refresh rate (see "Retiring probes that no longer protect production").
 
 | pass | facts | visible rows | rows touched vs previous | names placed | verdict **flips** | newly placed |
 |---|---|---|---|---|---|---|
@@ -10772,8 +10805,8 @@ well as row churn; run from the repo root — the gate needs an absolute path, a
 | 6 | 1.64 M | 3,641 | 662 | 519 | **0** | 44 |
 | 7 | 1.90 M | 4,835 | 1,233 | 628 | **0** | 109 |
 
-**Identity digest: moved 6 of 6 passes. Verdict flips among already-placed names: zero.** Every digest move was the rule book meeting a
-name for the first time. That killed two designs at once:
+**Seed-only identity digest: moved 6 of 6 passes. Verdict flips among already-placed names: zero.** Every digest move was a
+new registry-seeded name. This was originally misreported as the rule book meeting a name for the first time, and motivated two changes:
 
 - gating on `SelectionStamp`/`AnswerStamp` would rebuild **every pass** and look exactly like the flicker being fixed;
 - the selection-scoped `SelectedFingerprint` written hours earlier was also wrong in kind — its remaining half was "my rows' numbers

@@ -55,21 +55,6 @@ namespace EQLogParserTest
     }
 
     [TestMethod]
-    public void GetOrAdd_UpperCaseInput_CapitalizesFirstOnly()
-    {
-      var result = StringCache.GetOrAdd("hello");
-      Assert.AreEqual("Hello", result);
-    }
-
-    [TestMethod]
-    public void GetOrAdd_SameInput_ReturnsSameReference()
-    {
-      var a = StringCache.GetOrAdd("hello");
-      var b = StringCache.GetOrAdd("hello");
-      Assert.AreSame(a, b);
-    }
-
-    [TestMethod]
     public void GetOrAdd_MultiWord_CapitalizesFirstLetterOnly()
     {
       var result = StringCache.GetOrAdd("dark ranger");

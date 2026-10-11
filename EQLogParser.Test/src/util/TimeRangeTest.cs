@@ -112,19 +112,6 @@ namespace EQLogParserTest
     }
 
     [TestMethod]
-    public void Add_AdjacentSegments_WithinOffset_Merges()
-    {
-      // Offset is 6, so segments within 6 seconds merge during GetTotal
-      var range = new TimeRange();
-      range.Add(new TimeSegment(10, 20));
-      range.Add(new TimeSegment(25, 35));
-      // These are 5 seconds apart (20+6 >= 25), so they should merge on GetTotal
-      var total = range.GetTotal();
-      // 10-20 = 11 + 25-35 = 11 + gap fill = 22 + gap (4 seconds + 1)
-      Assert.IsTrue(total > 0);
-    }
-
-    [TestMethod]
     public void GetTotal_EmptyRange_ReturnsZero()
     {
       var range = new TimeRange();
