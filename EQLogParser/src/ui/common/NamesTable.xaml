@@ -16,6 +16,7 @@
       <!-- Hidden rather than Collapsed: a row that offers no pencil still reserves its width, so the words in the Type
            and Class columns line up whether or not this row can be overruled. See PlaceholderVisibilityConverter. -->
       <local:PlaceholderVisibilityConverter x:Key="PlaceholderVisibilityConverter" />
+      <BooleanToVisibilityConverter x:Key="BoolToVis" />
 
       <!-- The same row-number template every other row-headered table in the app declares (implicit style, plain
            index text at EQContentSize): numbering tracks the live row position. Without it this grid was the only
@@ -116,25 +117,28 @@
         <syncfusion:GridTemplateColumn HeaderText="Name" MappingName="Name" Width="190">
           <syncfusion:GridTemplateColumn.CellTemplate>
             <DataTemplate>
-              <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+              <Grid>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
                 <fa:ImageAwesome Margin="8,1,4,0" Style="{StaticResource EQIconStyle}" Icon="Solid_Calculator" Cursor="Hand"
                                  MouseLeftButtonUp="RecalcMouseLeftButtonUp"
                                  ToolTip="Forget everything this app has stored about this name; this log answers again"/>
-                <TextBlock VerticalAlignment="Center" Text="{Binding DisplayText}"/>
-              </StackPanel>
+                  <TextBlock VerticalAlignment="Center" Text="{Binding DisplayText}"/>
+                </StackPanel>
+              </Grid>
             </DataTemplate>
           </syncfusion:GridTemplateColumn.CellTemplate>
         </syncfusion:GridTemplateColumn>
 
         <!--
-          Type: the verdict word and the pencil that overrules it - click the icon, the combo opens over the cell, picking
-          writes. One dropdown instead of five menu items means the whole vocabulary of KINDS is visible at once. The take-back
+          Type: the verdict word and the pencil that overrules it. The pencil swaps THIS CELL to a ComboBox (in the cell, not floating
+          over it — see the in-cell editor note in NamesTable.xaml.cs) and opens its list; picking writes. One dropdown instead of five menu items means the whole vocabulary of KINDS is visible at once. The take-back
           is not in that list (2026-11) - it is the calculator beside the name, where a click can be seen.
         -->
         <syncfusion:GridTemplateColumn HeaderText="Type" MappingName="Type" Width="90">
           <syncfusion:GridTemplateColumn.CellTemplate>
             <DataTemplate>
-              <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+              <Grid>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
                 <!--
                   No pencil where the answer is forced: a summon whose own spelling carries its owner (`Tuona`s ward`) and
                   a spell effect (its Type reads "Spell") each have exactly one right Type, and offering three wrong ones beside it is an
@@ -148,6 +152,16 @@
                                  MouseLeftButtonUp="TypeEditMouseLeftButtonUp" ToolTip="Choose what this name is"/>
                 <TextBlock VerticalAlignment="Center" Text="{Binding Type}"/>
               </StackPanel>
+                <ComboBox HorizontalAlignment="Stretch" VerticalAlignment="Center"
+                          Visibility="{Binding IsTypeEditing, Converter={StaticResource BoolToVis}}"
+                          ItemsSource="{Binding EditorItems}"
+                          Style="{DynamicResource EQComboBoxStyle}"
+                          IsTextSearchEnabled="False"
+                          IsVisibleChanged="CellEditorVisibilityChanged"
+                          DropDownClosed="CellEditorDropDownClosed"
+                          LostKeyboardFocus="CellEditorLostFocus"
+                          SelectionChanged="TypeCellEditorSelectionChanged" />
+              </Grid>
             </DataTemplate>
           </syncfusion:GridTemplateColumn.CellTemplate>
         </syncfusion:GridTemplateColumn>
@@ -164,12 +178,23 @@
         <syncfusion:GridTemplateColumn HeaderText="Class" MappingName="PlayerClass" Width="100">
           <syncfusion:GridTemplateColumn.CellTemplate>
             <DataTemplate>
-              <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+              <Grid>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
                 <fa:ImageAwesome Margin="8,1,4,0" Style="{StaticResource EQIconStyle}" Icon="Regular_Edit" Cursor="Hand"
                                  Visibility="{Binding ClassEditable, Converter={StaticResource PlaceholderVisibilityConverter}}"
                                  MouseLeftButtonUp="ClassEditMouseLeftButtonUp" ToolTip="Choose this player's class"/>
                 <TextBlock VerticalAlignment="Center" Text="{Binding PlayerClass}"/>
               </StackPanel>
+                <ComboBox HorizontalAlignment="Stretch" VerticalAlignment="Center"
+                          Visibility="{Binding IsClassEditing, Converter={StaticResource BoolToVis}}"
+                          ItemsSource="{Binding EditorItems}"
+                          Style="{DynamicResource EQComboBoxStyle}"
+                          IsTextSearchEnabled="False"
+                          IsVisibleChanged="CellEditorVisibilityChanged"
+                          DropDownClosed="CellEditorDropDownClosed"
+                          LostKeyboardFocus="CellEditorLostFocus"
+                          SelectionChanged="ClassCellEditorSelectionChanged" />
+              </Grid>
             </DataTemplate>
           </syncfusion:GridTemplateColumn.CellTemplate>
         </syncfusion:GridTemplateColumn>
@@ -189,12 +214,23 @@
         <syncfusion:GridTemplateColumn HeaderText="Owner" MappingName="Owner" Width="130">
           <syncfusion:GridTemplateColumn.CellTemplate>
             <DataTemplate>
-              <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+              <Grid>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
                 <fa:ImageAwesome Margin="8,1,4,0" Style="{StaticResource EQIconStyle}" Icon="Regular_Edit" Cursor="Hand"
                                  Visibility="{Binding OwnerEditable, Converter={StaticResource PlaceholderVisibilityConverter}}"
                                  MouseLeftButtonUp="OwnerEditMouseLeftButtonUp" ToolTip="Choose who this summon belongs to"/>
                 <TextBlock VerticalAlignment="Center" Text="{Binding Owner}"/>
               </StackPanel>
+                <ComboBox HorizontalAlignment="Stretch" VerticalAlignment="Center"
+                          Visibility="{Binding IsOwnerEditing, Converter={StaticResource BoolToVis}}"
+                          ItemsSource="{Binding EditorItems}"
+                          Style="{DynamicResource EQComboBoxStyle}"
+                          IsTextSearchEnabled="False"
+                          IsVisibleChanged="CellEditorVisibilityChanged"
+                          DropDownClosed="CellEditorDropDownClosed"
+                          LostKeyboardFocus="CellEditorLostFocus"
+                          SelectionChanged="OwnerCellEditorSelectionChanged" />
+              </Grid>
             </DataTemplate>
           </syncfusion:GridTemplateColumn.CellTemplate>
         </syncfusion:GridTemplateColumn>
@@ -215,38 +251,5 @@
         </syncfusion:GridTemplateColumn>
       </syncfusion:SfDataGrid.Columns>
     </syncfusion:SfDataGrid>
-
-    <!--
-      Three ComboBox pickers, one Popup each - the Damage Summary's Group cell shape, kept as close to it as this pane allows: the
-      box is its popup's only child under EQComboBoxStyle, SelectedValuePath and DisplayMemberPath are explicitly null so items are
-      plain strings (the group cell works that way; UIElementUtil.OpenCellPopup's note names records-over-DisplayMemberPath as the one
-      real difference between a picker that commits and one that does not), and the lists are built per click in code-behind because
-      each is a live question - what this name may be, whose summon it is, class words the game knows. The owner list holds valid
-      owners only: taking an owner back is the calculator click in the Name column, never an entry in a list of answers.
-
-      OPEN: whether these commit inside the AutoHidden identity strip is unproven. What was measured is the symptom (a pick that
-      closes the popup reporting the OLD value, while the same helper and near-identical markup work in docked panes), never the
-      mechanism, and three variables are still unseparated: the popup's host window, plain strings vs vocabulary records, and the fact
-      that census merges replace this pane's rows while a group row is never replaced. If a pick still does not commit, log-line
-      evidence ("identity cell:" in eqlogparser.log) is what separates a refused write from a click that never arrived.
-    -->
-    <Popup x:Name="typeEditPopup" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade" Placement="Relative">
-      <ComboBox x:Name="typeEditComboBox" HorizontalContentAlignment="Stretch"
-                SelectedValuePath="{x:Null}" DisplayMemberPath="{x:Null}"
-                SelectionChanged="TypeComboSelectionChanged"
-                Style="{DynamicResource EQComboBoxStyle}" />
-    </Popup>
-    <Popup x:Name="classEditPopup" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade" Placement="Relative">
-      <ComboBox x:Name="classEditComboBox" HorizontalContentAlignment="Stretch"
-                SelectedValuePath="{x:Null}" DisplayMemberPath="{x:Null}"
-                SelectionChanged="ClassComboSelectionChanged"
-                Style="{DynamicResource EQComboBoxStyle}" />
-    </Popup>
-    <Popup x:Name="ownerEditPopup" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade" Placement="Relative">
-      <ComboBox x:Name="ownerEditComboBox" HorizontalContentAlignment="Stretch"
-                SelectedValuePath="{x:Null}" DisplayMemberPath="{x:Null}"
-                SelectionChanged="OwnerComboSelectionChanged"
-                Style="{DynamicResource EQComboBoxStyle}" />
-    </Popup>
   </Grid>
 </UserControl>

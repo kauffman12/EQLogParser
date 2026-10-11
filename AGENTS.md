@@ -1719,16 +1719,19 @@ option changes, and swallowing a notice the build earned is worse than one expli
   something pumps: inside-delay shows nothing, past-delay shows exactly once (not per interval), newest request wins, cancel leaves
   nothing armed.
 
-- **A cell picker in the identity pane is a ComboBox in a Popup opened by `UIElementUtil.OpenCellPopup`, with plain-string items —
-  and its failure inside the AutoHidden strip is UNPROVEN, so do not "fix" it by changing the control** (2026-11). What was measured
-  is only the symptom: a pick closes the popup reporting the OLD value (`closing … with selection Pet` after clicking Player), while the
-  same helper and near-identical markup commit fine in docked panes (Damage Summary's Group cell, today). Two workarounds were shipped and
-  both reverted — per-click `ContextMenu`s (`daf03a61`, unusable for the owner roster) and a `StaysOpen="True"` ListBox flyout
-  (`fb8d4128`, same dead pick plus off-theme styling) — which is why the pane is back on the shape the working panes use and the difference is
-  treated as open. Three variables are still unseparated, in the order the helper's own note suggests: **the popup's host window** (auto-hidden
-  content renders in Syncfusion's own window while the drop-down is a third), **records-over-`DisplayMemberPath` vs plain strings** (the group cell
-  nulls both paths and binds ints; the identity pickers historically bound `IdentityVocabulary.TypeOption` records — now they carry plain words and map
-  back by `SelectedIndex`, so this one is at least aligned), and **census merges replacing this pane's rows** while a group row is never replaced (an
-  editing subject held across a merge points at a discarded row, and the write guards on it). Next time it fails, read `grep "identity cell"` FIRST:
-  a printed refusal means the click arrived and the guard refused, and no amount of popup surgery will help; silence means the pick never happened and
-  the host is the suspect. Proving the host case takes one comparison — same pane docked instead of auto-hidden, same build.
+- **A cell editor lives IN the cell — never wrap an interactive control in a `Popup` you open yourself** (2026-11, and the
+  mechanism was proven by the operator's hands, not by inference). The identity pane's pickers were ComboBoxes inside a pane-opened
+  `Popup` and never committed; two workarounds shipped and were reverted (per-click `ContextMenu`s — unusable for the owner roster —
+  then a `StaysOpen="True"` `ListBox` flyout — same dead pick, off-theme). The decisive observation: *click the icon, move down, click an
+  option → nothing; click the icon, press again inside the cell and drag down into the list → it writes.* That is mouse capture. A press
+  inside the popup you sized keeps capture and the drop-down finishes; a press that starts on an option is in another window outside those
+  bounds, so `StaysOpen="False"` dismisses the popup and destroys the list mid-gesture. `PlacementTarget`, records-vs-plain-string items,
+  `DisplayMemberPath`, census row replacement and Syncfusion were each suspected and each survived a change with the symptom intact. So:
+  `NameRow.EditingColumn` (+ `IsTypeEditing`/`IsClassEditing`/`IsOwnerEditing`, `EditorItems`, `EditorCurrentIndex`) shows a `ComboBox` in
+  that cell's own template, which opens its drop-down on `IsVisibleChanged`; the pick writes through the same `ApplyTypePick` /
+  `ApplyClassPick` / `ApplyOwnerPick` guards and log lines (`identity cell:`), then the editor closes. The editor ends on drop-down close
+  (picked, escaped, clicked away — the `LostKeyboardFocus` path is deferred so focus passing *into* the list cannot snap it shut), on pane
+  hide and on capture change; every end releases the census hold (`Editors`) exactly once, because a parked hold stops the pane repainting.
+  Damage Summary's Group cell still uses `UiElementUtil.OpenCellPopup` and still works — that helper carries the note now, and its list fits
+  inside its anchor, which is the only reason nobody noticed for this long. Reasoning: docs/DesignNotes.md → "A cell editor lives in the cell,
+  because a popup you open yourself eats the pick".

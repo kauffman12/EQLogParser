@@ -500,12 +500,11 @@ namespace EQLogParser
         comboBox.Width = cell.ActualWidth;
       }
       if (cell.ActualHeight > 0) popup.Height = cell.ActualHeight;
-      // NOTE for whoever chases the identity pane's dropdowns: this helper is shared with DamageSummary's Group cell,
-      // which works (as did the old Verified Players / Pet Mapping panes before them). A pick that never commits is
-      // therefore NOT something this sizing does - the difference lives in what the caller puts in the ComboBox
-      // (identity panes use DisplayMemberPath/SelectedValue over IdentityVocabulary.TypeOption records; the group cell
-      // uses plain ints with both paths nulled) or in the caller's row identity (identity rows are replaced by census
-      // merges, group rows are not).
+      // Who else uses this: DamageSummary's Group cell. The identity pane used to, and stopped — not because of anything here,
+      // but because its editor is a ComboBox INSIDE A POPUP THIS PANE OPENS, which cannot work: the combo's list is a second window
+      // outside that popup's bounds, so a press on an option counts as "outside" and dismisses the popup mid-gesture (the working
+      // gesture was press-in-the-cell-then-drag, i.e. mouse capture). The pane now edits in the cell and has one popup total — the
+      // ComboBox's own — so do not route a cell editor back through here. Nothing about this helper's sizing was ever the problem.
 
       void OnPopupOpen(object s, EventArgs args)
       {

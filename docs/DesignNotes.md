@@ -11609,3 +11609,28 @@ they outnumber live rows twofold, so a capture that churned names cannot grow th
 previously handed-out row still reading what it was told; a different carry → fresh objects (so no reuse can come from process
 state); rows that vanish → swept. Numbers before/after come from the app (Process Explorer over a live session, or
 `PerfReport=True` for generation counts in `eqlogparser.log`) rather than from this file.
+
+## A cell editor lives in the cell, because a popup you open yourself eats the pick
+
+The identity pane's Type/Class/Owner pickers were ComboBoxes inside a `Popup` this pane opened. They never committed: the
+window reported the *old* value after every gesture. Two workarounds were shipped and both reverted (per-click `ContextMenu`s, then a
+`StaysOpen="True"` `ListBox` flyout) before the operator's own comparison named the mechanism:
+
+> click the icon, move down, click an option → the menu goes away, nothing happens. Click the icon, then press **in the cell the list
+> opened from** and slide down to an option and release → it works.
+
+Mouse capture. A press that starts inside the outer popup keeps capture, so the drop-down finishes the gesture; a press that starts
+*on an option* is a press in a different window outside that popup's bounds, which `StaysOpen="False"` treats as dismissal — the list is
+destroyed mid-gesture before it can commit. Nothing about styling, item types or Syncfusion was involved; `PlacementTarget`,
+`DisplayMemberPath` vs plain strings, and census row replacement were each tried as suspects and each survived a change with the
+symptom intact.
+
+The repair is structural: **the editor is a `ComboBox` in the cell's own `DataTemplate`, visible only for the row that asked**
+(`NameRow.EditingColumn` + per-column `Is{Type,Class,Owner}Editing`), opening its drop-down when it becomes visible. One popup total —
+the ComboBox's own, which owns its capture — and the pick writes through the same `Apply*` methods as before. The editor ends on
+drop-down close (picked, escaped, clicked away), on a pane hide and on a capture change; each end releases the census hold
+(`Editors`) exactly once, since a parked hold means the pane stops repainting.
+
+Standing rule: **do not wrap an interactive control in a `Popup` you open yourself.** The working panes (Damage Summary's Group cell)
+look like they do exactly that and are the reason this took so long to see — the difference is a press landing inside vs outside the
+bounds you chose, which only shows up when the list is taller than the anchor. `UIElementUtil.OpenCellPopup` carries the note.

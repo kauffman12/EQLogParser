@@ -108,12 +108,56 @@ namespace EQLogParser
       public bool Overrulable { get; init; }
 
       /*
-       * The Type dropdown for THIS row. The window has one ComboBox reused by every cell, so the list is set when a popup
-       * opens — and it is built in Core (IdentityVocabulary.TypeOptionsFor) by the same recognizers that hide a pencil, so
-       * no row offers Mercenary onto a raider or any kind at all onto an eye. Includes what the row already is, because
-       * the popup preselects that value.
+       * The Type options for THIS row, in the order the in-cell editor shows them. Built in Core
+       * (IdentityVocabulary.TypeOptionsFor) by the same recognizers that hide a pencil, so no row offers Mercenary onto a raider or
+       * any kind at all onto an eye. Includes what the row already is, because the editor preselects that value.
        */
       public IReadOnlyList<IdentityVocabulary.TypeOption> TypeChoices { get; init; } = IdentityVocabulary.TypeOptions;
+
+      /*
+       * IN-CELL EDITING (2026-11). The pencil puts a ComboBox IN THE CELL instead of over it. The shape this replaces — an editor
+       * inside our own Popup, opened programmatically — could not work: the ComboBox's list is a second window outside that popup's
+       * bounds, so a press on an option was an "outside" press, which closed the popup and destroyed the list mid-gesture. The
+       * operator's own test says it plainly: click the icon then click an option = nothing; click the icon, press again inside the
+       * cell and drag down into the list = it commits. That is mouse capture, not styling, and the only fix is to have ONE popup —
+       * the ComboBox's own — with the control hosted by the grid cell.
+       *
+       * One cell edits at a time (NamesTable.EndAllCellEdits before opening another). EditingColumn names which of the three, so each
+       * column's template can bind its own visibility; EditorItems is that editor's list, built per click, and EditorCurrentIndex is
+       * what to preselect. All of it is per row, so a recycled cell cannot show somebody else's editor.
+       */
+      private string? _editingColumn;
+
+      public string? EditingColumn
+      {
+        get => _editingColumn;
+        set
+        {
+          if (_editingColumn == value) return;
+          _editingColumn = value;
+          Raise(nameof(EditingColumn));
+          Raise(nameof(IsTypeEditing));
+          Raise(nameof(IsClassEditing));
+          Raise(nameof(IsOwnerEditing));
+        }
+      }
+
+      public bool IsTypeEditing => EditingColumn == NamesTable.ColumnType;
+      public bool IsClassEditing => EditingColumn == NamesTable.ColumnClass;
+      public bool IsOwnerEditing => EditingColumn == NamesTable.ColumnOwner;
+
+      private IReadOnlyList<string> _editorItems = Array.Empty<string>();
+
+      public IReadOnlyList<string> EditorItems
+      {
+        get => _editorItems;
+        set { _editorItems = value; Raise(nameof(EditorItems)); }
+      }
+
+      public int EditorCurrentIndex { get; set; } = -1;
+
+      private void Raise(string name)
+        => PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(name));
 
       /// <summary>The WHY cell's tooltip: the proof in one line, plus a short flag when one changes what to do.</summary>
       public string Provenance { get; init; } = string.Empty;
@@ -134,8 +178,8 @@ namespace EQLogParser
         {
           if (_recalculating == value) return;
           _recalculating = value;
-          PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(Recalculating)));
-          PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(DisplayText)));
+          Raise(nameof(Recalculating));
+          Raise(nameof(DisplayText));
         }
       }
 
@@ -288,7 +332,7 @@ namespace EQLogParser
     {
       // Hidden (or the session moved): drop any repaint waiting behind an editor, and the hold itself, so a close that never came
       // cannot leave the pane one pass short when it is shown again.
-      ClosePickers();
+      EndAllCellEdits();
       Editors.Abandon();
 
       if (_followed is null) return;
@@ -342,7 +386,7 @@ namespace EQLogParser
     private void ClearRows()
     {
       // The capture this pane was reading is gone, so a census queued behind an open editor describes a log nobody is looking at.
-      ClosePickers();
+      EndAllCellEdits();
       Editors.Abandon();
       ForgetRecalc();
       _repaint.Abandon();
@@ -748,10 +792,12 @@ namespace EQLogParser
     private void TypeEditMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
       if (sender is not ImageAwesome icon || icon.DataContext is not NameRow row) return;
-      if (UiElementUtil.FindGridCell(icon) is not { } cell) return;
 
-      Log.Debug($"identity cell: {DoorType} menu opened for {row.Name}");
-      OpenTypeCombo(cell, row);
+      var choices = row.TypeChoices;
+      var current = -1;
+      for (var i = 0; i < choices.Count; i++) if (choices[i].Kind == row.Kind) current = i;
+      Log.Debug($"identity cell: {DoorType} editor opened for {row.Name} with {choices.Count} options");
+      BeginCellEdit(row, ColumnType, [.. choices.Select(o => o.Word)], current);
     }
 
     private void ApplyTypePick(NameRow row, IdentityVocabulary.TypeOption option)
@@ -808,10 +854,10 @@ namespace EQLogParser
     private void ClassEditMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
       if (sender is not ImageAwesome icon || icon.DataContext is not NameRow row || !row.ClassEditable) return;
-      if (UiElementUtil.FindGridCell(icon) is not { } cell) return;
 
-      Log.Debug($"identity cell: {DoorClass} menu opened for {row.Name}");
-      OpenClassCombo(cell, row);
+      var classNames = MainActions.ClassList.OfType<string>().ToList();
+      Log.Debug($"identity cell: {DoorClass} editor opened for {row.Name} with {classNames.Count} classes");
+      BeginCellEdit(row, ColumnClass, classNames, classNames.IndexOf(row.PlayerClass ?? string.Empty));
     }
 
     private void ApplyClassPick(NameRow row, string className)
@@ -843,10 +889,10 @@ namespace EQLogParser
     private void OwnerEditMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
       if (sender is not ImageAwesome icon || icon.DataContext is not NameRow row || !row.OwnerEditable) return;
-      if (UiElementUtil.FindGridCell(icon) is not { } cell) return;
 
-      Log.Debug($"identity cell: {DoorOwner} picker opened for {row.Name}");
-      OpenOwnerCombo(cell, row);
+      var owners = PetOwnership.Choices(row.Owner, IdentityLookup.OurPeopleNames());
+      Log.Debug($"identity cell: {DoorOwner} editor opened for {row.Name} with {owners.Count} candidates");
+      BeginCellEdit(row, ColumnOwner, [.. owners], owners.FindIndex(o => string.Equals(o, row.Owner, StringComparison.OrdinalIgnoreCase)));
     }
 
     private void ApplyOwnerPick(NameRow row, string owner)
@@ -904,12 +950,6 @@ namespace EQLogParser
     private static void RefuseDebug(string door, string why) => Log.Debug($"identity cell: {door} ignored - {why}");
 
     /* A pane hide or a capture change ends any open picker: the popup is anchored to a cell that is about to mean something else. */
-    private void ClosePickers()
-    {
-      typeEditPopup.IsOpen = false;
-      classEditPopup.IsOpen = false;
-      ownerEditPopup.IsOpen = false;
-    }
 
 
     /*
@@ -923,99 +963,127 @@ namespace EQLogParser
      * currently gives. Every write still goes through Apply*Pick below: the menu is a door, not a second rule.
      */
     /*
-     * All three pickers are ComboBoxes in a Popup, opened through UIElementUtil.OpenCellPopup - the same helper, and the same three
-     * habits, as the Damage Summary's Group cell that works today: plain STRING items with SelectedValuePath and DisplayMemberPath
-     * left null (UIElementUtil's own note names records-over-DisplayMemberPath as the one real difference between a picker that
-     * commits and one that silently does not), the ComboBox as the popup's only child under EQComboBoxStyle, and the write guarded by
-     * "who am I editing" rather than by suppressing the event a programmatic preselect raises. SelectionChanged therefore means one
-     * thing: an operator picked something. Indices carry the answer back to Core's own lists, so no string is re-parsed into a kind.
+     * IN-CELL EDITORS. A pencil click puts a ComboBox in the clicked cell and opens its drop-down; the pick writes through the same
+     * Apply* methods the old popup used, and the editor then disappears. Nothing else on screen moves.
+     *
+     * Why the editor lives in the cell rather than in a Popup of its own: with an outer Popup, the ComboBox's list is a SECOND window
+     * outside that popup's bounds, so a press on an option counts as a press "outside" and dismisses the popup — destroying the list
+     * mid-gesture, before anything commits. The operator's comparison is exact: click the icon then click an option writes nothing,
+     * while pressing inside the cell and dragging down into the list does (mouse capture follows the press). One popup total is the
+     * repair, and it is the ComboBox's own.
      */
-    private void OpenTypeCombo(FrameworkElement cell, NameRow row)
+    internal const string ColumnType = "Type";
+    internal const string ColumnClass = "Class";
+    internal const string ColumnOwner = "Owner";
+
+    private void BeginCellEdit(NameRow row, string column, IReadOnlyList<string> items, int currentIndex)
     {
-      _typeEditRow = row;
+      EndAllCellEdits();          // one editor on screen at a time, and its census hold ends with it
       Editors.Open();
 
-      var choices = row.TypeChoices;
-      var words = new List<string>(choices.Count);
-      var current = 0;
-      for (var i = 0; i < choices.Count; i++)
+      switch (column)
       {
-        words.Add(choices[i].Word);
-        if (choices[i].Kind == row.Kind) current = i;
+        case ColumnType: _typeEditRow = row; break;
+        case ColumnClass: _classEditRow = row; break;
+        default: _ownerEditRow = row; break;
       }
 
-      typeEditComboBox.ItemsSource = words;
-      typeEditComboBox.SelectedIndex = current;
-      UiElementUtil.OpenCellPopup(typeEditPopup, typeEditComboBox, cell, () =>
-      {
-        _typeEditRow = null;
-        typeEditComboBox.ItemsSource = null;
-        Editors.Close();
-      });
-    }
-
-    private void TypeComboSelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-      var row = _typeEditRow;
-      if (row is null || typeEditComboBox.SelectedIndex < 0) return;
-      if (typeEditComboBox.SelectedIndex >= row.TypeChoices.Count) return;
-
-      ApplyTypePick(row, row.TypeChoices[typeEditComboBox.SelectedIndex]);
-    }
-
-    private void OpenClassCombo(FrameworkElement cell, NameRow row)
-    {
-      _classEditRow = row;
-      Editors.Open();
-
-      var classNames = MainActions.ClassList.OfType<string>().ToList();
-      classEditComboBox.ItemsSource = classNames;
-      classEditComboBox.SelectedIndex = classNames.IndexOf(row.PlayerClass ?? string.Empty);
-      UiElementUtil.OpenCellPopup(classEditPopup, classEditComboBox, cell, () =>
-      {
-        _classEditRow = null;
-        classEditComboBox.ItemsSource = null;
-        Editors.Close();
-      });
-    }
-
-    private void ClassComboSelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-      var row = _classEditRow;
-      if (row is null || classEditComboBox.SelectedIndex < 0) return;
-
-      ApplyClassPick(row, (string)classEditComboBox.SelectedItem);
+      row.EditorItems = items;
+      row.EditorCurrentIndex = currentIndex;
+      row.EditingColumn = column;   // the template's ComboBox becomes visible, and opens itself
     }
 
     /*
-     * The Owner list is this app's roster (PetOwnership owns the wording and the refusals), deduped. It holds VALID owners only -
-     * "No Owner" left the list when the take-back became the calculator click in the Name column, because taking an owner back takes
-     * everything back, and a dropdown entry that un-writes half a fact is how one cell ends up asserting two things.
+     * The drop-down opens on its own once the control is visible and laid out — same as any WPF data-edit idiom, and NOT the old
+     * failure: there is no enclosing popup to dismiss here. Preselecting raises SelectionChanged like any other programmatic change;
+     * that is harmless because every Apply* refuses a value the row already reads (Debug line, no write, no derive pass).
      */
-    private void OpenOwnerCombo(FrameworkElement cell, NameRow row)
+    private void CellEditorVisibilityChanged(object sender, DependencyPropertyChangedEventArgs e)
     {
-      _ownerEditRow = row;
-      Editors.Open();
+      if (sender is not ComboBox box || !box.IsVisible) return;
 
-      var owners = PetOwnership.Choices(row.Owner, IdentityLookup.OurPeopleNames());
-
-      ownerEditComboBox.ItemsSource = owners;
-      ownerEditComboBox.SelectedIndex = owners.FindIndex(o => string.Equals(o, row.Owner, StringComparison.OrdinalIgnoreCase));
-      Log.Debug($"identity cell: {DoorOwner} picker opened for {row.Name} with {owners.Count} candidates");
-      UiElementUtil.OpenCellPopup(ownerEditPopup, ownerEditComboBox, cell, () =>
+      box.Dispatcher.BeginInvoke(new System.Action(() =>
       {
-        _ownerEditRow = null;
-        ownerEditComboBox.ItemsSource = null;
-        Editors.Close();
-      });
+        if (box.DataContext is not NameRow row || row.EditingColumn is null) return;
+        box.SelectedIndex = row.EditorCurrentIndex;
+        box.Focus();
+        box.IsDropDownOpen = true;
+      }), System.Windows.Threading.DispatcherPriority.Input);
     }
 
-    private void OwnerComboSelectionChanged(object sender, SelectionChangedEventArgs e)
+    /*
+     * The editor ends when the list closes — picked, escaped, or clicked away from — and on a pane hide or capture change. One
+     * Editors.Close() per open: EndCellEdit early-returns for a row that is not editing, so a stray path cannot park the census hold
+     * (a parked count means the pane stops repainting, which is the bug EditorHold exists to prevent).
+     */
+    private void CellEditorDropDownClosed(object sender, System.EventArgs e)
     {
-      var row = _ownerEditRow;
-      if (row is null || ownerEditComboBox.SelectedIndex < 0) return;
+      if (sender is ComboBox { DataContext: NameRow row }) EndCellEdit(row);
+    }
 
-      ApplyOwnerPick(row, (string)ownerEditComboBox.SelectedItem);
+    private void CellEditorLostFocus(object sender, RoutedEventArgs e)
+    {
+      if (sender is not ComboBox box || box.DataContext is not NameRow row) return;
+
+      // Deferred on purpose: focus passes through the drop-down on its way in, and an immediate end would snap the editor shut
+      // before the operator ever sees a list.
+      box.Dispatcher.BeginInvoke(new System.Action(() =>
+      {
+        if (!box.IsDropDownOpen && !box.IsKeyboardFocusWithin) EndCellEdit(row);
+      }), System.Windows.Threading.DispatcherPriority.Input);
+    }
+
+    private void EndCellEdit(NameRow row)
+    {
+      if (row.EditingColumn is null) return;
+
+      row.EditingColumn = null;
+      row.EditorItems = Array.Empty<string>();
+      row.EditorCurrentIndex = -1;
+      _typeEditRow = null;
+      _classEditRow = null;
+      _ownerEditRow = null;
+      Editors.Close();
+    }
+
+    private void EndAllCellEdits()
+    {
+      foreach (var row in _rows)
+        if (row.EditingColumn is not null) { EndCellEdit(row); return; }
+    }
+
+    private void TypeCellEditorSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+      if (sender is not ComboBox box || box.DataContext is not NameRow row || !row.IsTypeEditing) return;
+
+      var index = box.SelectedIndex;
+      if (index < 0 || index >= row.TypeChoices.Count) return;
+
+      var option = row.TypeChoices[index];
+      EndCellEdit(row);           // close BEFORE the write: a write reconciles and repaints rows, and an editor standing inside a
+      ApplyTypePick(row, option); // cell that is about to be re-made would only be in the way
+    }
+
+    private void ClassCellEditorSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+      if (sender is not ComboBox box || box.DataContext is not NameRow row || !row.IsClassEditing) return;
+
+      var className = box.SelectedItem as string;
+      if (string.IsNullOrEmpty(className)) return;
+
+      EndCellEdit(row);
+      ApplyClassPick(row, className);
+    }
+
+    private void OwnerCellEditorSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+      if (sender is not ComboBox box || box.DataContext is not NameRow row || !row.IsOwnerEditing) return;
+
+      var owner = box.SelectedItem as string;
+      if (string.IsNullOrEmpty(owner)) return;
+
+      EndCellEdit(row);
+      ApplyOwnerPick(row, owner);
     }
 
     private void Reconcile()
