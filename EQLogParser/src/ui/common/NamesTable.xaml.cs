@@ -22,7 +22,7 @@ using EQLogParser;
 namespace EQLogParser
 {
   /*
-   * The Player/NPC Identity window (menu name; class still NamesTable): every name in the capture, what it was called, and WHY.
+   * The Identity Table (menu name; class still NamesTable): every name in the capture, what it was called, and WHY.
    * It replaces all three of the panes this application used to keep identity state in - Verified Players, Verified Pets (which could
    * show what somebody typed but never what the classifier concluded, so a wrong verdict had no surface to be noticed on) and Pet
    * Owners, whose window outlived its own file: petmapping.txt froze into the ledger's ownership lane on 2026-10-09, a pair became a
@@ -68,7 +68,7 @@ namespace EQLogParser
      * parsing/derive read IdentityKind), but "Kind" as a header made people look for a mob/npc KIND, so the column says
      * Type and the value says NPC rather than Npc.
      */
-    internal sealed class NameRow : System.ComponentModel.INotifyPropertyChanged
+    internal sealed class NameRow : System.ComponentModel.INotifyPropertyChanged, IIdentityRowKeys
     {
       public string Name { get; init; } = string.Empty;
       public string Type { get; init; } = string.Empty;
@@ -180,11 +180,26 @@ namespace EQLogParser
     internal readonly EditorHold Editors = new();
 
     /*
-     * Whether the next census re-ranks the list or merges into the order already on screen. Set when the pane becomes
-     * visible and whenever the capture changes: ranking is information, and it belongs at the moment somebody navigates
-     * to the tab — not twice a second while they are reading it (MergeRows).
+     * Whether the next census replaces every row or merges into what is already on screen. Set when the pane becomes
+     * visible and whenever the capture changes: a wholesale replace costs the selection and the scroll position, so it
+     * belongs at the moment somebody navigates to the tab — not twice a second while they are reading it (MergeRows).
      */
     private bool _rankOnApply = true;
+
+    /*
+     * Which column the header shows as sorted, mirrored OUT of the grid and kept here. The mirror is the fix: every other
+     * sortable table in this application hands its grid a fresh list per build, so the view sorts a snapshot, while this
+     * pane merges into the collection it already showed — and a view told to sort once, over a source that keeps changing,
+     * is how "Name ↑" ended up printed above a list in census order. IdentityRowOrder carries the rule (and its tests);
+     * these two fields only remember which of its orders the reader asked for.
+     *
+     * The pair starts exactly where the markup's declarative descriptor starts, and SortColumnsChanged keeps them
+     * together after that.
+     */
+    private string _sortColumn = IdentityRowOrder.DefaultColumn;
+    private bool _sortDescending;
+
+    private Comparison<NameRow> RowOrder => IdentityRowOrder.For<NameRow>(_sortColumn, _sortDescending);
 
     // Applied once, then only on a theme change: re-sizing on every Loaded would fight an operator who dragged a column.
     private bool _widthsApplied;
@@ -204,6 +219,10 @@ namespace EQLogParser
     {
       InitializeComponent();
       namesGrid.ItemsSource = _rows;
+      // A header click changes the ORDER of the reader's list, so the pane re-orders its own rows to match it (see
+      // _sortColumn). Nothing else has to happen here: the grid draws its own arrow, and every column in this table is a
+      // word whose sensible first direction is ascending, so DataGridUtil's "default to descending" set stays empty.
+      namesGrid.SortColumnsChanged += SortColumnsChanged;
       // The Type list is NOT set here: one ComboBox serves every cell, so it is filled per row when that cell's popup opens
       // (TypeEditMouseLeftButtonUp), from NameRow.TypeChoices.
 
@@ -578,7 +597,7 @@ namespace EQLogParser
        */
       var selectedName = (namesGrid.SelectedItem as NameRow)?.Name;
 
-      MergeRows(_rows, rows, _rankOnApply);
+      MergeRows(_rows, rows, _rankOnApply, RowOrder);
       _rankOnApply = false;
 
       if (selectedName is not null) namesGrid.SelectedItem = FindRow(selectedName);
@@ -606,9 +625,14 @@ namespace EQLogParser
      *
      * This pane follows the derive, so a pass lands every couple of seconds while a log grows. The version this replaces
      * cleared the collection and re-added every row, which cost two things on each beat: the selection (so the title-bar
-     * icons lost their row) and the ORDER — rows are ranked, so as verdicts and totals moved the line under the cursor slid
-     * somewhere else. A list that rearranges itself twice a second cannot be read while it is live, which is the only time
-     * anybody wants it live.
+     * icons lost their row) and the ORDER — rows were ranked by kind and output, so as verdicts and totals moved the line
+     * under the cursor slid somewhere else. A list that rearranges itself twice a second cannot be read while it is live,
+     * which is the only time anybody wants it live.
+     *
+     * The ORDER shown here is the one the header says (`order`, from IdentityRowOrder), never the census's own ranking: a
+     * list of 4,000 names is read by looking one up, and the arrow over a column has to mean what it draws. The census's
+     * rank still decides which row was emitted first — which is now nothing anyone can see, since the sort breaks every tie
+     * on the name. What stays stable across a pass is each row's own SLOT.
      *
      * Three rules, in this order:
      *
@@ -616,19 +640,26 @@ namespace EQLogParser
      *     row whose Type changed says the new thing without moving anything, itself included.
      *   - A name the census no longer has leaves the list. That is the capture saying this name is gone; a verdict from the
      *     first half of the night parked above an empty slot is exactly what this window was rewritten to stop.
-     *   - Names new since the last pass join at the BOTTOM, in census order. Putting them at their rank would shift every
-     *     row beneath them — the thing this method exists to prevent — so the ranking arrives on the next view instead
-     *     (_rankOnApply), which is when it is worth something.
+     *   - Names new since the last pass join at the index their OWN KEY says — alphabetically under the default sort, next
+     *     to the other rows sharing that Type when a Type sort is up. They used to pile at the bottom in census order,
+     *     which cost less churn and bought a list whose header said "Name ↑" over names in five different orders: an hour
+     *     into a raid the bottom of a live table was a tail of unsorted strays, and that is what got reported.
      *
-     * `rebuild` is that next view: everything out in census order, which is what opening the tab shows. An empty list also
-     * takes this path, so a pane opened on a fresh capture needs no special case.
+     * `rebuild` throws the collection out and lays it out again from this census — the whole-list replace, still in the
+     * header's order — which is what opening the tab shows and what a capture change owes. An empty list also takes this
+     * path, so a pane opened on a fresh capture needs no special case.
      */
-    internal static void MergeRows(ObservableCollection<NameRow> listed, IReadOnlyList<ClassificationReport.Row> census, bool rebuild)
+    internal static void MergeRows(ObservableCollection<NameRow> listed, IReadOnlyList<ClassificationReport.Row> census, bool rebuild, Comparison<NameRow>? order = null)
     {
+      order ??= IdentityRowOrder.For<NameRow>(IdentityRowOrder.DefaultColumn);
+
       if (rebuild || listed.Count == 0)
       {
+        var rows = new List<NameRow>(census.Count);
+        foreach (var row in census) rows.Add(RowFrom(row));
+        rows.Sort(order);
         listed.Clear();
-        foreach (var row in census) listed.Add(RowFrom(row));
+        foreach (var row in rows) listed.Add(row);
         return;
       }
 
@@ -644,13 +675,66 @@ namespace EQLogParser
         listed[i] = RowFrom(fresh);
       }
 
-      // `kept.Add` is true the first time a name is seen, so one pass both dedupes and appends in census order.
+      /*
+       * `kept.Add` is true the first time a name is seen, so one pass both dedupes and places each newcomer — at the index
+       * its own key says (IdentityRowOrder.InsertIndex), not at the bottom. Names are what this table is read by, so a row
+       * turning up mid-raid belongs between Ann and Bob whether or not the census thought of it last; appending them left
+       * the list reading as unsorted for the rest of the session, which is the half of the report this pane fixes.
+       */
       foreach (var row in census)
-        if (kept.Add(row.Name)) listed.Add(RowFrom(row));
+      {
+        if (!kept.Add(row.Name)) continue;
+        var fresh = RowFrom(row);
+        listed.Insert(IdentityRowOrder.InsertIndex(listed, fresh, order), fresh);
+      }
+
+      /*
+       * And one check for the case a merge cannot place its way out of: a row that stayed in its slot but changed the word
+       * being sorted on — its Type under a Type sort, its Owner when a summon finally gets claimed. That is what sorting a
+       * mutable column means, so it is honored rather than frozen: the list is put back in order, and a Name sort (the one
+       * this table is read by) never moves anything at all, because names do not change.
+       */
+      ReorderInto(listed, order);
+    }
+
+    /// <summary>Put the collection into `order` — but only when it disagrees with it. One pass exits at the first
+    /// violation on the common case, so asking after every merge costs a scan of pointers rather than a rewrite.</summary>
+    internal static void ReorderInto(ObservableCollection<NameRow> listed, Comparison<NameRow> order)
+    {
+      if (IdentityRowOrder.IsOrdered(listed, order)) return;
+
+      var ordered = new List<NameRow>(listed.Count);
+      ordered.AddRange(listed);
+      ordered.Sort(order);
+      listed.Clear();
+      foreach (var row in ordered) listed.Add(row);
     }
 
     /// <summary>The live row for a name, or null: used to hand the selection and an open popup back after a merge.</summary>
     private NameRow? FindRow(string name) => _rows.FirstOrDefault(r => name.Equals(r.Name, StringComparison.OrdinalIgnoreCase));
+
+    /*
+     * A header was clicked: take the column and direction off the grid, and put this pane's own rows in that order.
+     *
+     * The grid sorts its view too, and that is fine — sorting something already sorted is nothing. What the pane cannot do
+     * is leave the ordering entirely to the view, because it merges into `_rows` rather than handing the grid a new list:
+     * the collection is what every later pass adds to and what the next repaint reads, so it has to BE the order on screen.
+     */
+    private void SortColumnsChanged(object sender, Syncfusion.UI.Xaml.Grid.GridSortColumnsChangedEventArgs e)
+    {
+      /*
+       * Fully qualified on purpose: this file also uses System.Windows.Controls, and Syncfusion.UI.Xaml.Grid declares its
+       * own SelectionChangedEventArgs, so importing the whole namespace makes three handlers here ambiguous. Two names in
+       * two lines is cheaper than aliasing a vendor namespace nobody else in the pane reads.
+       */
+      var descriptor = namesGrid.SortColumnDescriptions.OfType<Syncfusion.UI.Xaml.Grid.SortColumnDescription>().FirstOrDefault();
+      _sortColumn = descriptor?.ColumnName ?? IdentityRowOrder.DefaultColumn;
+      _sortDescending = descriptor?.SortDirection == System.ComponentModel.ListSortDirection.Descending;
+
+      var selectedName = (namesGrid.SelectedItem as NameRow)?.Name;
+      ReorderInto(_rows, RowOrder);
+      if (selectedName is not null) namesGrid.SelectedItem = FindRow(selectedName);
+    }
 
     /*
      * The Type dropdown: click the pencil in a row, the list opens over the cell, and picking an entry writes that one

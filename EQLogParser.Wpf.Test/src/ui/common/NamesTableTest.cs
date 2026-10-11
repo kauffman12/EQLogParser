@@ -247,10 +247,16 @@ public class NamesTableTest
 
   /*
    * The pane follows the derive — a census lands every couple of seconds while a log grows — and clearing the list on each
-   * one cost both the selection and the order: rows are ranked, so the line under the cursor slid twice a second and the
-   * list could not be read while it was live. MergeRows replaces a row's CELLS at its own index, drops names the capture
-   * lost, and appends newcomers at the bottom; the ranking returns when the tab is opened again (rebuild: true), which is
-   * the moment it is worth something.
+   * one cost both the selection and the scroll position: the line under the cursor slid twice a second and the list could
+   * not be read while it was live. So MergeRows replaces a row's CELLS at its own index and drops names the capture lost.
+   *
+   * The ORDER, though, belongs to the column header (IdentityRowOrder), not to the census. Two laws, both from one field
+   * report — "the indicator shows up correct for the name column but it doesnt stay sorted":
+   *
+   *   - A name arriving mid-capture joins where its OWN KEY says, because a table whose header says Name must read as
+   *     alphabetical, and a tail of strays appended at the bottom said it did not.
+   *   - A rebuild (opening the tab) lays the whole list out in that order too — the census's own rank (raid-side first,
+   *     then busiest) decides nothing a reader can see any more.
    */
   [TestMethod]
   public void ARefreshKeepsEveryRowWhereTheReaderLeftIt()
@@ -263,7 +269,7 @@ public class NamesTableTest
       [CensusRow("Cy"), CensusRow("Ann", IdentityKind.Player, "R3-joinraid"), CensusRow("Bob"), CensusRow("Dee")], rebuild: false);
 
     CollectionAssert.AreEqual(new[] { "Ann", "Bob", "Cy", "Dee" }, listed.Select(r => r.Name).ToList(),
-                              "the order on screen holds; only a new name arrives, and it arrives at the bottom");
+                              "the reader's order holds (a Name sort cannot move a name, and this one is already alphabetical); Dee arrives where its name says");
     Assert.AreEqual(IdentityKind.Player, listed[0].Kind, "a row whose verdict moved says the new thing IN ITS OLD SLOT");
     Assert.AreEqual("Player", listed[0].Type);
   }
@@ -280,15 +286,58 @@ public class NamesTableTest
   }
 
   [TestMethod]
-  public void OpeningTheTabAgainReRanksTheList()
+  public void OpeningTheTabAgainLaysTheWholeListOutInColumnOrder()
   {
     var listed = new ObservableCollection<NamesTable.NameRow>();
     NamesTable.MergeRows(listed, [CensusRow("Ann"), CensusRow("Bob")], rebuild: true);
     NamesTable.MergeRows(listed, [CensusRow("Bob"), CensusRow("Cy")], rebuild: false);
+
+    // Emitted in a third order again, and the pane puts it in the header's order regardless.
     NamesTable.MergeRows(listed, [CensusRow("Cy"), CensusRow("Ann"), CensusRow("Bob")], rebuild: true);
 
+    CollectionAssert.AreEqual(new[] { "Ann", "Bob", "Cy" }, listed.Select(r => r.Name).ToList(),
+                              "navigating to the pane replaces every row and lays them out in the order its header shows — "
+                            + "what the census emitted first is not something a reader can see, and used to be the whole list");
+  }
+
+  /*
+   * The reported bug, in one row: the arrow said Name while the rows underneath it were in census order. That was not only
+   * an initial-paint failure — every name the derive learned after the first pass was APPENDED, so a live table grew a tail
+   * of strays no sort explained. A newcomer belongs between the names it sorts between.
+   */
+  [TestMethod]
+  public void ANameArrivingJoinsWhereItsNameSays()
+  {
+    var listed = new ObservableCollection<NamesTable.NameRow>();
+    NamesTable.MergeRows(listed, [CensusRow("Ann"), CensusRow("Cy")], rebuild: true);
+
+    // Bob is the name this pass learned, and the census thought of it last.
+    NamesTable.MergeRows(listed, [CensusRow("Ann"), CensusRow("Cy"), CensusRow("Bob")], rebuild: false);
+
+    CollectionAssert.AreEqual(new[] { "Ann", "Bob", "Cy" }, listed.Select(r => r.Name).ToList(),
+                              "a new name is inserted at the index its own key says — not at the bottom, where it read as an unsorted tail");
+  }
+
+  /*
+   * Sorting a column whose WORD CHANGES (Type, Class, Owner, Why are all verdicts, and verdicts move while a log loads)
+   * means rows move: that is what sorting it asked for. Under the default Name sort nothing moves at all, which is why the
+   * "do not slide rows under the reader" law survives here — names do not change.
+   */
+  [TestMethod]
+  public void SortingByAWordThatChangedPutsTheMovedRowBackInPlace()
+  {
+    var byType = IdentityRowOrder.For<NamesTable.NameRow>(IdentityRowOrder.TypeColumn);
+    var listed = new ObservableCollection<NamesTable.NameRow>();
+
+    NamesTable.MergeRows(listed, [CensusRow("Ann"), CensusRow("Bob", IdentityKind.Player), CensusRow("Cy")], rebuild: true, order: byType);
+    CollectionAssert.AreEqual(new[] { "Ann", "Cy", "Bob" }, listed.Select(r => r.Name).ToList(),
+                              "NPC before Player, and the two NPCs in name order — a tie on the clicked column breaks on the name so the "
+                            + "list cannot be census order wearing a sort arrow through the back door");
+
+    // Ann is a player now. Nothing was added or removed; only a sorted word moved.
+    NamesTable.MergeRows(listed, [CensusRow("Ann", IdentityKind.Player), CensusRow("Bob", IdentityKind.Player), CensusRow("Cy")], rebuild: false, order: byType);
     CollectionAssert.AreEqual(new[] { "Cy", "Ann", "Bob" }, listed.Select(r => r.Name).ToList(),
-                              "navigating to the pane is when the ranking arrives — held still while read, current when reopened");
+                              "the row whose word changed goes where the sort says, and the survivors keep their relative order");
   }
 
   /*

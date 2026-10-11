@@ -8,7 +8,7 @@
              xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
              mc:Ignorable="d"
              d:DesignHeight="450" d:DesignWidth="900">
-  <!-- ONE CHILD, THE GRID. No header row: the dock tab over this pane already says "Player/NPC Identity", and this
+  <!-- ONE CHILD, THE GRID. No header row: the dock tab over this pane already says "Identity Table", and this
        window lives in a narrow slide-out strip on the right where 30 vertical pixels belong to rows, not to repeating the
        grid, column headers, done — the shape every retired pane beside it also had. -->
   <Grid>
@@ -71,9 +71,18 @@
                            SelectionMode="Extended"
                            ShowRowHeader="True">
       <syncfusion:SfDataGrid.SortColumnDescriptions>
-        <!-- Names ascending, always. The census's own order (raid-side first, then busiest) rearranged rows underneath
-             whoever was reading and looking for one name meant scanning a shuffled list; sorting by hand is the whole
-             point of a 4,000 row table. -->
+        <!--
+          What the list opens in: names ascending. The census's own order (raid-side first, then busiest) rearranged rows
+          underneath whoever was reading and looking for one name meant scanning a shuffled list; sorting by hand is the whole
+          point of a 4,000 row table.
+
+          A click on any header replaces this, and the pane keeps BOTH in step: Syncfusion sorts its view while NamesTable puts
+          its own rows in the same order (IdentityRowOrder is the comparison, NamesTable.SortColumnsChanged is the hook). The
+          second half is not decoration — this grid merges each census into the collection it already showed instead of being
+          handed a new one, so an order held only by the view is an order that quietly stops holding: the arrow stayed on Name
+          over a list in census order, which is what got reported. This markup is the DEFAULT; after that the grid's descriptor
+          is the truth and this pane mirrors it.
+        -->
         <syncfusion:SortColumnDescription ColumnName="Name" SortDirection="Ascending"/>
       </syncfusion:SfDataGrid.SortColumnDescriptions>
       <!--
