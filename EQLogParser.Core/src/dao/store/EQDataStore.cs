@@ -151,7 +151,16 @@ namespace EQLogParser
       // the ambiguous lane exists for exactly this, because a coin-flipped class column is worse than silence -
       // and the operator's Shd sits inside the mask so a corrected data file keeps claiming the caster without
       // a code change.
-      ("Life Burn", SpellClass.Nec | SpellClass.Shm | SpellClass.Shd)
+      ("Life Burn", SpellClass.Nec | SpellClass.Shm | SpellClass.Shd),
+      // Three more AA families (user-added 2026-11), each one single-bit in the data exactly as the user named it:
+      // Area Taunt 9 ranks all War(1) / 40 cast lines (Fllint, Foob, Rune, Virul); Cannibalization 27 ranks all
+      // Shm(512) / 1,641 lines (Jondolar 421, Jazrakhan 219, Carblis 212) - the heaviest new family in the corpus;
+      // Leech Touch 2 ranks all Shd(16) / 222 lines (Reisil, Thulor, Ketruh). Every rank a client prints exists in
+      // the data, so no family here runs into the silence gate on today's content, and none of the cast lines is
+      // article- or possessive-shaped.
+      ("Area Taunt", SpellClass.War),
+      ("Cannibalization", SpellClass.Shm),
+      ("Leech Touch", SpellClass.Shd)
     ];
 
     // Pet-cast spell families: this exact spell is an ability of a beastlord's pet and never of the

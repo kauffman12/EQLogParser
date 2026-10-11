@@ -1525,12 +1525,13 @@ npcs.txt; it is the *only* evidence for **6** names (Incogitable) and **4** (Kiz
   ledger entry (`R19-` is in `IdentityPriorStore.RememberedRules`). Numbers and reasoning:
   docs/DesignNotes.md → "Breadth of evidence, measured" (the eye census); pinned by `EyeSummonTest`.
 - **A versioned cast line is tier-1 identity; the pet's Snare claims Pet, not the player.**
-  `EQDataStore.ClassSafeSpellFamilies` (closed at **19**: Boastful Bellow/Boastful Conclusion → Bard,
+  `EQDataStore.ClassSafeSpellFamilies` (closed at **22**: Boastful Bellow/Boastful Conclusion → Bard,
   Frenzy/Paragon/Focused Paragon of Spirit + Hobble of Spirits → Beastlord, Tireless Sprint → Berserker,
   Celestial Regeneration/Focused Celestial Regeneration → Cleric, Spirit of the Wood/Nature's Boon →
   Druid (their casters Tilwedarx/Tuona cross-check the two families), Gather Mana/Eldritch Rune →
   Enchanter, Battle Leap Warcry/Battle Leap → Warrior **or** Berserker, Guardian of the Forest/Group
-  Guardian of the Forest → Ranger and Lay on Hands → Paladin (2026-11 AA trio, see below)) claims the caster of
+  Guardian of the Forest/Group Guardian of the Forest → Ranger, Lay on Hands → Paladin, Area Taunt → Warrior,
+  Cannibalization → Shaman, Leech Touch → Shadow Knight (2026-11 AA additions; Life Burn is the odd one, see below)) claims the caster of
   `X begins casting <family> <roman>.` as Player Certain through R4-spell. **The rank is part of the
   match and must be the whole tail**: versionless matches nothing, and it now DOES print —
   `Lay on Hands.` appears 8 times in the corpus while every older family printed it 0 times — so the anchor

@@ -12045,3 +12045,13 @@ durable win in this change is the class column: 135 casts' worth of wrong-class 
 **Refused: `Group Lay on Hands`.** Zero rows in `spells.txt` **and** zero cast lines in the corpus, so its row would be
 permanently silent by the data gate — unlike `Battle Leap Warcry`, which ships on user assertion *with* the DB column
 behind it. A row that can never answer is a row someone later "fixes" by deleting the gate.
+
+**Added with them, no story attached (2026-11):** Area Taunt (9 DB ranks, all War; 40 cast lines), Cannibalization
+(27 ranks, all Shm; 1,641 lines — the heaviest of the AA additions), Leech Touch (2 ranks, all Shd; 222 lines). Each
+single-bit in `spells.txt` with the class exactly as the operator named it, every printed rank present in the data
+(so none sits behind the silence gate on today's content: Area Taunt VII/IX, Cannibalization XIII–XXVII, Leech Touch II),
+and no article- or possessive-shaped caster — the 360 lines that first looked like possessive casters were the regex
+matching `" an "` inside names (`Jazrakhan begins casting Cannibalization XXVII.`). Leech Touch's two ranks make
+`Leech Touch III` the tightest rank-gate assertion in the table. Census yield was not A/B measured for these three (the
+Life Burn work above used the 2022 capture for that); the counts here are cast-line and data counts, which is all the
+entry rule asks for.

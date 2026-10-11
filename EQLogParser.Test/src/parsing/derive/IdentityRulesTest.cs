@@ -225,7 +225,7 @@ public class IdentityRulesTest
         // servers (mob-shaped caster count must stay zero), one settings-free table row, and tests.
         // Finishing Blow was refused entry on measurement: every attacker already held a stronger
         // claim, so the modifier mask stays stats-only (docs/DesignNotes.md → "A versioned class-spell family claims its caster").
-        Assert.AreEqual(19, EQDataStore.ClassSafeSpellFamilies.Length);
+        Assert.AreEqual(22, EQDataStore.ClassSafeSpellFamilies.Length);
         Assert.AreEqual(1, EQDataStore.PetCastSpellFamilies.Length);
 
         // The shipped vocabulary spelled out, so an addition has to be written down on purpose.
@@ -236,7 +236,33 @@ public class IdentityRulesTest
             "Celestial Regeneration", "Focused Celestial Regeneration", "Spirit of the Wood",
             "Nature's Boon", "Gather Mana", "Eldritch Rune", "Battle Leap Warcry", "Battle Leap",
             "Guardian of the Forest", "Group Guardian of the Forest", "Lay on Hands", "Life Burn",
+            "Area Taunt", "Cannibalization", "Leech Touch",
         }, EQDataStore.ClassSafeSpellFamilies.Select(f => f.Family).ToArray());
+    }
+
+    /*
+     * The second AA trio (user-named, data-confirmed single-bit): Warrior's Area Taunt, Shaman's Cannibalization,
+     * Shadow Knight's Leech Touch. Asserted the same way as every family before them - the printed rank resolves to
+     * the class the user named, and a rank past the file is silence (Leech Touch has TWO ranks in the data, so its
+     * III is the nearest gate check anywhere in the table).
+     */
+    [TestMethod]
+    public void AreaTauntCannibalizationAndLeechTouch_ResolveToTheClassNamed()
+    {
+        PipelineHarness.EnsureDataStore();
+
+        Assert.IsTrue(ClassificationRules.IsClassSafeCast("Area Taunt IX"));
+        Assert.AreEqual("Warrior", EQDataStore.Instance.GetSpellClass("Area Taunt IX"));
+
+        Assert.IsTrue(ClassificationRules.IsClassSafeCast("Cannibalization XXVII"));
+        Assert.AreEqual("Shaman", EQDataStore.Instance.GetSpellClass("Cannibalization XXVII"));
+
+        Assert.IsTrue(ClassificationRules.IsClassSafeCast("Leech Touch II"));
+        Assert.AreEqual("Shadow Knight", EQDataStore.Instance.GetSpellClass("Leech Touch II"));
+
+        Assert.IsFalse(ClassificationRules.IsClassSafeCast("Leech Touch III"));
+        Assert.IsNull(EQDataStore.Instance.GetSpellClass("Leech Touch III"));
+        Assert.IsFalse(ClassificationRules.IsClassSafeCast("Area Taunt X"));
     }
 
     /*
