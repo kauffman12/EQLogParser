@@ -18,8 +18,7 @@ namespace EQLogParser
     {
       Environment.CurrentDirectory = AppDomain.CurrentDomain.BaseDirectory;
 
-      _dataStore = new EQDataStore();
-      EQDataStore.Instance = _dataStore;
+      _dataStore = PipelineHarness.SharedDataStore();
 
       RecordsStore.Instance.Clear();
       PlayerRegistry.Instance.Clear();

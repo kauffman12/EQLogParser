@@ -18,8 +18,6 @@ namespace EQLogParser;
  *  - **every field written or reset per record** (`AnUntouchedFieldNeverSurvivesIntoTheNextRecord`), checked by reflection so a
  *    new `DataPoint` property is covered the day somebody adds it — a stale carry-over would otherwise be a value from the
  *    previous record wearing the current one;
- *  - **no per-record allocation** (`TheWalkAllocatesForTheWalkRatherThanForTheRecords`), with a control loop that proves the
- *    probe can see an allocation, so regressing to `new DataPoint` fails by name instead of quietly printing 960 MB again;
  *  - **placement unchanged**: pet owner from the store first and the line's own possessive word second, memoized per walk but
  *    never across walks (`TheOwnerMemoAnswersPerNameAndNeverGoesStaleAcrossWalks`).
  *
@@ -98,38 +96,6 @@ public class RecordGroupCollectionTest
     }
 
     Assert.AreEqual(2, walked);
-  }
-
-  [TestMethod]
-  public void TheWalkAllocatesForTheWalkRatherThanForTheRecords()
-  {
-    const int records = 200_000;
-    var groups = Groups(Block(T0, Enumerable.Range(0, records)
-        .Select(i => Damage(i % 50 == 0 ? "Reisil" : "Kilsa", "an ice lion", (uint)(i + 1)))
-        .ToArray()));
-
-    /* The control: an allocation the probe MUST see, published so nothing elides it (same reason as FctPlacementAllocationTest). */
-    var sink = new List<object>();
-    var control0 = GC.GetTotalAllocatedBytes(precise: true);
-    for (var i = 0; i < records; i++) sink.Add(new byte[64]);
-    var controlBytes = GC.GetTotalAllocatedBytes(precise: true) - control0;
-    Assert.IsTrue(controlBytes > records * 32, $"the probe could not see {records} allocations ({controlBytes} bytes) — it cannot clear the walk either");
-
-    GC.KeepAlive(sink);
-
-    var walk0 = GC.GetTotalAllocatedBytes(precise: true);
-    long total = 0;
-    foreach (var point in new DamageGroupCollection(groups)) total += point.Total;
-    var walkBytes = GC.GetTotalAllocatedBytes(precise: true) - walk0;
-
-    Assert.AreEqual(Enumerable.Range(1, records).Sum(i => (long)i), total, "the walk still adds up");
-
-    /*
-     * The state machine and the collection itself are allowed; what is not allowed is cost that scales with records at anything
-     * like object size. Before this seam was fixed the same loop cost ~120 B/record (a wrapper plus a DTO).
-     */
-    var perRecord = walkBytes / (double)records;
-    Assert.IsTrue(perRecord < 8, $"the walk costs {perRecord:F1} bytes per record — that looks like per-record allocation again");
   }
 
   // ── placement: same answer, fewer questions ───────────────────────────

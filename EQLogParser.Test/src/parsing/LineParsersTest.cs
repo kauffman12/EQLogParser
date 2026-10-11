@@ -21,8 +21,8 @@ namespace EQLogParser
       // data files are linked into the test output directory
       Environment.CurrentDirectory = AppDomain.CurrentDomain.BaseDirectory;
 
-      _dataStore = new EQDataStore();
-      EQDataStore.Instance = _dataStore;
+      // The suite's one shared store (loading the data files per test was most of this class's wall time).
+      _dataStore = PipelineHarness.SharedDataStore();
 
       RecordsStore.Instance.Clear();
       HealTap.Clear();

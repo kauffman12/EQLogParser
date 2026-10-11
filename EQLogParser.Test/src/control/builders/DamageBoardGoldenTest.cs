@@ -31,8 +31,7 @@ namespace EQLogParser;
  *     cp EQLogParser.Test/bin/Debug/net10.0/mini-data/board/damage-board.actual.txt \
  *        EQLogParser.Test/data/board/damage-board.golden.txt
  * then read the diff before committing it. The fixture is synthetic and small on purpose: every shape in it was taken
- * from a real capture's grammar, and the point is a readable diff, not volume (volume is what MeterBoardCostRealLogTest
- * and the gated real-log tests are for).
+ * from a real capture's grammar, and the point is a readable diff, not volume (volume belongs to the gated real-log tests).
  */
 [TestClass]
 [DoNotParallelize]

@@ -217,9 +217,9 @@ public class DerivedTotalsTest
      * their instance ones.
      *
      * The count reads the static event's own delegate list by reflection on purpose: the thing being pinned is what is
-     * NOT ours to remove, and a production counter would give that wiring a reason to exist. Both halves matter — the
-     * number must not grow with more calculations, and it must be no larger after a collect (a scope that died
-     * unobserved is fine; one kept alive by the event is the bug).
+     * NOT ours to remove, and a production counter would give that wiring a reason to exist. No forced collection here —
+     * a builder that signs up on the process-static signal is rooted by the event itself, so the count answers without
+     * stopping the world (and the suite no longer keeps GC-probe tests of any kind).
      */
     [TestMethod]
     public void ACalculationLeavesNothingWatchingTheClearSignal()
@@ -237,10 +237,6 @@ public class DerivedTotalsTest
             _ = DerivedTotals.ForOverlay(rows, index, facts, heals, T0, T0 + 100);   // damage + tanking scope
             _ = DerivedTotals.For(rows, index, facts, heals);                          // and the list's own scope
         }
-
-        GC.Collect();
-        GC.WaitForPendingFinalizers();
-        GC.Collect();
 
         var after = ActiveDataClearedSubscribers();
         Assert.AreEqual(before, after,

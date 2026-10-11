@@ -13,6 +13,14 @@ namespace EQLogParser
     private string? _originalCwd;
     private Func<string, string>? _originalClassLabels;
 
+    /*
+     * Stores keyed by the label map they were BUILT with. Loading a store parses spells.txt and its siblings (~0.6 s), which
+     * most of this class paid per test — but the labels are baked in at construction (class-safe family seeding, the class
+     * maps), so a store built for one caller's label set can never answer another's. Keying on the set shares the common one
+     * and keeps every custom map honest.
+     */
+    private static readonly Dictionary<string, EQDataStore> SharedStores = [];
+
     [TestInitialize]
     public void Setup()
     {
@@ -43,7 +51,26 @@ namespace EQLogParser
       }
 
       CombatRecordLookup.ClassLabelByEnumName = name => map.TryGetValue(name, out var value) ? value : null;
-      return new EQDataStore();
+
+      var key = string.Join(",", classes.Select(c => c.enumName + "=" + c.label));
+      if (SharedStores.TryGetValue(key, out var cached))
+      {
+        return cached;
+      }
+
+      /* The load happens with the working directory pinned: whichever test asks first must not decide whether the shared store saw the data files. */
+      var cwd = Environment.CurrentDirectory;
+      try
+      {
+        Environment.CurrentDirectory = AppDomain.CurrentDomain.BaseDirectory;
+        var store = new EQDataStore();
+        SharedStores[key] = store;
+        return store;
+      }
+      finally
+      {
+        Environment.CurrentDirectory = cwd;
+      }
     }
 
     #region ParseCustomSpellData

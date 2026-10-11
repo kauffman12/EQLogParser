@@ -14,9 +14,8 @@ namespace EQLogParser
       // Set current directory so EQDataStore can find data files (data/spells.txt, etc.)
       Environment.CurrentDirectory = AppDomain.CurrentDomain.BaseDirectory;
 
-      // Create a fresh data store which loads from data files
-      _dataStore = new EQDataStore();
-      EQDataStore.Instance = _dataStore;
+      // The suite's one shared store (the data files cost ~0.6 s to load, per test before this).
+      _dataStore = PipelineHarness.SharedDataStore();
 
       // Core resolves healing spells through the host seam; point it at the real store.
       CombatRecordLookup.HealingSpellByName = name => _dataStore.GetHealingSpellByName(name);

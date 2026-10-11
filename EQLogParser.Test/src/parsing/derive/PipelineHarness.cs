@@ -90,6 +90,18 @@ internal static class PipelineHarness
         }
     }
 
+    /*
+     * The ONE data store for the suite. Constructing an EQDataStore parses spells.txt and its sibling data files (~0.5-0.9 s),
+     * which five test classes used to pay per test - most of the suite's wall time for a store whose file-derived maps never
+     * change. A test that needs a store built some other way (missing data files, a hand-seeded row) still constructs its own;
+     * the mutable state around this one (RecordsStore, PlayerRegistry, HealTap, the heal caches) is cleared per test as before.
+     */
+    internal static EQDataStore SharedDataStore()
+    {
+        EnsureDataStore();
+        return _dataStore!;
+    }
+
     // Canonical EQ2 class labels keyed by uppercased SpellClass enum names — the same resource
     // keys App.xaml.cs resolves through the resx ("WAR", "SHD", ...; "*_COLOR" returns null here).
     // The host contract is nullable-oblivious (CombatRecordLookup.ClassLabelByEnumName defaults to `=> null` and

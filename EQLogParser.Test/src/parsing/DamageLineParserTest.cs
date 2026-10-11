@@ -19,9 +19,8 @@ namespace EQLogParser
       // Set current directory so EQDataStore can find data files (data/spells.txt, etc.)
       Environment.CurrentDirectory = AppDomain.CurrentDomain.BaseDirectory;
 
-      // Create a fresh data store which loads from data files
-      _dataStore = new EQDataStore();
-      EQDataStore.Instance = _dataStore;
+      // The suite's one shared store; its file-derived maps are immutable and the mutable state is cleared elsewhere.
+      _dataStore = PipelineHarness.SharedDataStore();
     }
 
     [TestCleanup]
