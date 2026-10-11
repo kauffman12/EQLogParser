@@ -97,8 +97,8 @@ namespace EQLogParser
 
       for (var i = 0; i < expected.Length; i++) AssertSameRow(expected[i], table.At(i), i);
 
-      // Reading them put them back: decode-on-read, not a blob that quietly outranks the truth.
-      Assert.AreEqual(0, table.ColdChunkCount, "a chunk the capture read came back to rows and stopped costing its blob");
+      // Backing survives reads, so eviction never needs to encode the same immutable rows again.
+      Assert.AreEqual(2, table.ColdChunkCount);
       for (var i = 0; i < expected.Length; i++) AssertSameRow(expected[i], table.At(i), i);
     }
 
@@ -123,9 +123,7 @@ namespace EQLogParser
     public void ColdRowsShowUpCheaperInTheNumberThatFeedsTheSpillTrigger()
     {
       var table = Filled(Chunk * 3, out _);
-      var rawChunks = table.FactChunksAllocated;
-      var before = table.EstimatedBytes;
-      Assert.IsTrue(rawChunks >= 3, "three full chunks are live rows before anything is put away");
+      var before = (long)table.FactCount * System.Runtime.InteropServices.Marshal.SizeOf<DamageFact>();
 
       table.ColdifyNow();
 
@@ -133,10 +131,10 @@ namespace EQLogParser
       Assert.IsTrue(table.ColdBlobBytes > 0, "the blobs are counted, not just the live chunks");
       Assert.IsTrue(after < before / 2, $"cold storage has to more than halve what the estimate claims ({before / 1048576.0:F1} MB -> {after / 1048576.0:F1} MB)");
 
-      // Rows read back after a cold period count as rows again — the trigger must not keep believing they are small.
+      // Decoded arrays are counted alongside their backing, not mistaken for still-compressed memory.
       for (var i = 0; i < table.FactCount; i++) _ = table.At(i);
-      Assert.AreEqual(0, table.ColdChunkCount);
-      Assert.IsTrue(table.EstimatedBytes > after, "a decoded chunk stops reporting its blob and starts reporting its rows");
+      Assert.AreEqual(2, table.ColdChunkCount);
+      Assert.IsTrue(table.EstimatedBytes > after);
     }
 
     [TestMethod]
@@ -229,20 +227,20 @@ namespace EQLogParser
     [TestMethod]
     public void HealChunksGoColdOnTheSameRuleAndStillAnswerTheirOrdinals()
     {
-      // Under the floor: a short session is not worth a thread per 768 KiB.
-      var small = HealsFilled(HealChunk + 1000, out _);
-      Assert.AreEqual(0, small.ColdifyNow(), "a capture under the floor keeps its rows in memory");
+      // An appendable tail is never encoded, even when it is full.
+      var small = HealsFilled(HealChunk, out _);
+      Assert.AreEqual(0, small.ColdifyNow());
       Assert.AreEqual(0, small.ColdRowCount);
 
       // Past it: four chunks. The append itself cools what its successor opened; the probe takes the rest.
       var heals = HealsFilled(HealChunk * 4, out var expected);
-      Assert.IsTrue(heals.ColdRowCount > 0, "the handoff runs while the table grows, not only when asked");
-      Assert.IsTrue(heals.ColdifyNow() > 0, "the chunks between the handoff floor and the newest two go cold on request too");
+      Assert.AreEqual(3, heals.ColdifyNow(), "settle joins the append worker; it never encodes a second copy");
+      Assert.AreEqual(3, heals.ColdifyNow(), "a second barrier reports the same backing, not extra work");
       Assert.AreEqual(heals.ColdChunkCount, heals.ColdRowCount / HealChunk);
       Assert.IsTrue(heals.HealChunksAllocated <= 3, $"the warm set stays at the newest chunks plus one (has {heals.HealChunksAllocated})");
 
       for (var i = 0; i < expected.Length; i++) AssertSameHeal(expected[i], heals.At(i), i);
-      Assert.AreEqual(0, heals.ColdChunkCount, "a chunk the reader asked for came back to rows and stopped costing its blob");
+      Assert.AreEqual(3, heals.ColdChunkCount, "the backing survives a read so cache eviction remains safe");
 
       // The entry point a heal window walk really uses: a halving that lands in the middle of the capture, where rows live in blobs. Three rows
       // share a second in this fixture, so what is owed is the FIRST row at or after that second - and a cold row read as the zero row would show
