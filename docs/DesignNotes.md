@@ -11950,3 +11950,37 @@ the cell and drag = works, press on an option = nothing) was, and is fixed by ha
 Standing rule: **do not wrap an interactive control in a `Popup` you open yourself**, and **a drop-down is closed before its control is.** The working panes (Damage Summary's Group cell)
 look like they do exactly that and are the reason this took so long to see — the difference is a press landing inside vs outside the
 bounds you chose, which only shows up when the list is taller than the anchor. `UIElementUtil.OpenCellPopup` carries the note.
+
+## A recognized line is taken: the tilde, the target frame and the achievement (2026-11)
+
+`PreLineParser` exists to answer one question cheaply — *"can I settle this line right here?"* — and its boolean is
+the answer to a second one nobody had been honouring: `LogProcessor` hands a line to
+Damage → Healing → Misc → Cast **only when it returns true**, so `found = true` means the action is never even
+`Split`. Two recognitions wrote evidence and then let the line walk all four parsers anyway, and a third shape arrived
+that no parser could use at all.
+
+**The new shape: a leading tilde.** `[Sat Oct 10 20:01:32 2026] ~ Kizant wonders.` — the client writing a thought of
+its own. It is claimed at the door, before any other check. No local capture carries a single line of this form (the
+corpus's 700-odd `~` characters are all inside chat text: `'WTS ~ Khyldorn … ~ lowest price in baz'`), so this rule
+rests on the operator's field example rather than on a census — the same footing `Battle Leap Warcry` ships on, and
+said plainly in the code comment. It is deliberately narrow: `"~ "` only, so a bare `~` stays available and no
+sentence that merely contains a tilde is touched.
+
+**What taking a line costs, measured.** 6,346 `Targeted (NPC)` lines and 3,764 achievement lines in
+`eqlog_Incogitable_xegony.txt` — 10,110 lines of a capture that previously reached the four parsers. A full-fingerprint
+run before and after (facts, heals, name pool, census size, unresolved count, Σdamage, Σhealing, conflicts, charm
+windows, the per-`IdentityKind` histogram and the entire per-rule reason histogram) is **identical in every number**:
+1,901,078 facts / 420,110 heals / pool 2,752 / census 2,753 names / 1,120 unresolved / Σdamage 589,084,187,813 /
+Σhealing 8,279,995,022 / kinds Merc 4 · Npc 648 · Pet 152 · Player 726 · Spell 102 · Unknown 1,121 /
+`R1-target=592`, `R22-guildmate=83`, `R4-spell=52`, … Only the wall-clock numbers moved, and they moved inside noise.
+That is the proof these lines were worth nothing downstream: the recognitions still fire (their verdict counts are in
+the identical histogram) and no entity, fact or side changed.
+
+**Two refusals ride with it.** `found` follows the **parse**, never the prefix — `"Your guildmate said things."`
+starts like R22's shape, is refused by the recognizer, and keeps its chance at the parsers; and a recognized line with
+nothing in it (`Targeted (NPC): `) fires **no** evidence fact. That branch invoked the event directly with an empty
+tail; it goes through `ReportEvidence` now, which is the one place that knows an empty name is not a name.
+
+**The control that makes the tests worth having**: every claim assertion is paired with "an ordinary sentence still
+returns true", because a guard that claimed *every* line would satisfy "the tilde line was dropped" while quietly
+deleting the raid (`LineParsersTest`, PreLineParser region).

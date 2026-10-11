@@ -30,18 +30,38 @@ namespace EQLogParser
       var found = false;
       var action = lineData.Action;
 
-      // Fire-only recognition: "Targeted (NPC): <name>" lines are discarded by the legacy pipeline
-      // today (no parser consumes them); keeping that fate unchanged, this only reports the name.
+      /*
+       * A line whose data begins with a tilde is not a sentence about the world at all - the client writes it for a
+       * thought/emote of its own (`~ Kizant wonders.`) and nothing downstream has ever had a use for it. Claiming it here
+       * is the cheapest exit in the pipeline: the four real parsers each split the action and walk their own tables over
+       * it today, and every one of them answers "not mine". Reported shape only (no local capture carries the form yet,
+       * so this rests on the field example rather than on a census - see docs/DesignNotes.md), and deliberately narrow:
+       * a bare `~` with nothing after it is not this shape and is left alone.
+       */
+      if (action.StartsWith("~ ", StringComparison.Ordinal)) return false;
+
+      /*
+       * "Targeted (NPC): <name>" - the client naming whatever the button is pointed at. This parser takes the whole line:
+       * no parser downstream has ever consumed it (it was discarded before R1 existed and still is), so letting it walk
+       * Damage/Healing/Misc/Cast produced nothing but work. Reported through `ReportEvidence` rather than the event
+       * directly, because a line whose tail is empty (`Targeted (NPC): `) used to fire an evidence fact about "".
+       */
       if (action.StartsWith("Targeted (NPC)", StringComparison.OrdinalIgnoreCase))
       {
-        EventsEvidence?.Invoke(action[15..].Trim(), lineData.BeginTime, EvidenceFact.EvTargetedNpc);
+        ReportEvidence(action[15..].Trim(), lineData.BeginTime, EvidenceFact.EvTargetedNpc);
+        found = true;
       }
 
-      // Fire-only recognition: an achievement announcement naming somebody in the local player's OWN guild list (R22).
-      // No parser needs this line, so claiming it here would only hide it from the ones that might.
+      /*
+       * An achievement announcement naming somebody in the local player's OWN guild list (R22). The recognizer is exact
+       * (`Your guildmate <name> has completed …`), so a line it accepts is identity evidence and nothing else - the same
+       * argument as above, and the reason `found` follows only when the parse actually produced a name: a line that merely
+       * starts with those words (`Your guildmate said things.`) stays available to the parsers like any other sentence.
+       */
       if (TryGetGuildmate(action, out var guildmate))
       {
-        EventsEvidence?.Invoke(guildmate, lineData.BeginTime, EvidenceFact.EvGuildmate);
+        ReportEvidence(guildmate, lineData.BeginTime, EvidenceFact.EvGuildmate);
+        found = true;
       }
 
       if (action.Length > 10)

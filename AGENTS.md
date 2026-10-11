@@ -264,8 +264,8 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
   sets 3kr each'` is a bazaar hailer and `Bane` sits in npcs.txt as a mob; the same reason `begins singing` was refused
   (`Shalowain begins singing her Rhapsody of Pain.` is an NPC bard). What *was* built is the one shape whose grammar
   belongs to the speaker rather than the thing it names: **`Your guildmate X has completed … achievement.`** —
-  `PreLineParser.TryGetGuildmate` (fire-only, like `Targeted (NPC)`: reports evidence, consumes nothing; letters-only
-  name so a server-qualified one is refused) → `EvidenceFact.EvGuildmate` → **Player at Strong** `R22-guildmate`, which
+  `PreLineParser.TryGetGuildmate` (**a recognized line is TAKEN** — see "A recognized line is taken: `~ `, the target
+  frame, the achievement"; letters-only name so a server-qualified one is refused) → `EvidenceFact.EvGuildmate` → **Player at Strong** `R22-guildmate`, which
   sits under the frames the client produces by looking at the entity (like R17's drink, R19's eye) and over npcs.txt,
   where person-shaped names do sit. `RememberedRules` gained `R22-`, so a silent regular is claimed once and remembered;
   **no `players.txt` write is involved.** **Neither display word says "guildmate"** — the cell reads *Achievement* and the hover
@@ -1807,3 +1807,20 @@ option changes, and swallowing a notice the build earned is worse than one expli
   owner is collapsed — an empty, press-deaf white box until the next outside click. Damage Summary's Group cell still uses `UiElementUtil.OpenCellPopup` and still works — that helper carries the note now, and its list fits
   inside its anchor, which is the only reason nobody noticed for this long. Reasoning: docs/DesignNotes.md → "A cell editor lives in the cell,
   because a popup you open yourself eats the pick".
+
+- **A recognized line is taken: `~ `, the target frame, the achievement** (2026-11): `PreLineParser.NeedProcessing`
+  answers for the whole pipeline — `LogProcessor` hands a line to Damage → Healing → Misc → Cast **only when it returns
+  true**, so `found = false` skips even the `Split`. Three shapes are claimed there and nothing else may need them:
+  the client's new thought line (`~ Kizant wonders.` — matched as `"~ "` only, at the very top; no local capture carries
+  the form, so it ships on the operator's field example the way `Battle Leap Warcry` does, said in the comment),
+  `Targeted (NPC): <name>` (which was already being thrown away by the legacy pipeline) and R22's achievement line.
+  **The cost of taking them is measured at zero**: 10,110 such lines in `eqlog_Incogitable_xegony.txt`, with a full
+  fingerprint identical before and after — facts 1,901,078, heals 420,110, pool 2,752, census 2,753, unresolved 1,120,
+  Σdamage 589,084,187,813, Σhealing 8,279,995,022, kinds Merc 4/Npc 648/Pet 152/Player 726/Spell 102/Unknown 1,121, and
+  the whole per-rule histogram including `R1-target=592` and `R22-guildmate=83`. Two refusals: **`found` follows the
+  PARSE, never the prefix** (`"Your guildmate said things."` is refused by the recognizer and stays available to the
+  parsers), and an empty tail fires **no** evidence (`Targeted (NPC): ` used to fire a fact about `""` because that
+  branch invoked the event instead of `ReportEvidence`). Every claim assertion in `LineParsersTest`'s PreLineParser
+  region is paired with "an ordinary sentence still returns true", because a guard that claimed everything would satisfy
+  "the tilde line was dropped" while deleting the raid. Reasoning and the fingerprint:
+  docs/DesignNotes.md → "A recognized line is taken: the tilde, the target frame and the achievement".

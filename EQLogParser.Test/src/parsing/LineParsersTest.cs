@@ -558,6 +558,126 @@ namespace EQLogParser
       Assert.IsTrue(needProcessing);
     }
 
+    /*
+     * The whole point of this parser: a line it recognizes is TAKEN, so the four real parsers never split it.
+     * Asserted in both directions on purpose - a guard that claimed every line would satisfy "the tilde line is
+     * dropped" while quietly deleting the raid, so each test below keeps an ordinary sentence as its control.
+     *
+     * The tilde line is the newest shape (`~ Kizant wonders.`): the client writes it for a thought of its own and
+     * nothing downstream has any use for it. It claims nothing either, which the second test pins - a name inside a
+     * line nobody watched ACT is not evidence.
+     */
+    [TestMethod]
+    public void NeedProcessing_TildeLine_IsTakenAtTheDoor()
+    {
+      foreach (var line in new[] { "~ Kizant wonders.", "~ Ghoul thinks about lunch." })
+      {
+        List<string> verified = [];
+        Assert.IsFalse(PreLineParser.NeedProcessing(Line(line, 5), (name, _) => verified.Add(name), (_, _) => true, _ => { }),
+          $"tilde line reached the rest of the pipeline: {line}");
+        Assert.AreEqual(0, verified.Count, line);
+      }
+
+      // The control: the same sentence without its tilde is an ordinary line and stays available.
+      Assert.IsTrue(PreLineParser.NeedProcessing(Line("Kizant wonders.", 5), (_, _) => { }, (_, _) => true, _ => { }));
+    }
+
+    [TestMethod]
+    public void ATildeLineClaimsNothingAsEvidence()
+    {
+      var seen = new List<(string Name, byte Kind)>();
+      Action<string, double, byte> onData = (name, _, kind) => seen.Add((name, kind));
+      PreLineParser.EventsEvidence += onData;
+      try
+      {
+        PreLineParser.NeedProcessing(Line("~ Kizant wonders.", 5), (_, _) => { }, (_, _) => true, _ => { });
+      }
+      finally
+      {
+        PreLineParser.EventsEvidence -= onData;
+      }
+
+      Assert.AreEqual(0, seen.Count, string.Join(", ", seen.Select(s => $"{s.Name}/{s.Kind}")));
+    }
+
+    /*
+     * `Targeted (NPC): <name>` - claimed since R1 read it, and the line was still walking four parsers to be thrown
+     * away. The evidence has to survive the claiming (that is the rule's whole input), and a line with an empty tail
+     * must not fire an evidence fact about "" - which is what the direct event invoke used to do.
+     */
+    [TestMethod]
+    public void NeedProcessing_TargetedNpc_ReportsTheNameAndTakesTheLine()
+    {
+      var seen = new List<(string Name, byte Kind)>();
+      Action<string, double, byte> onData = (name, _, kind) => seen.Add((name, kind));
+      PreLineParser.EventsEvidence += onData;
+      try
+      {
+        Assert.IsFalse(PreLineParser.NeedProcessing(Line("Targeted (NPC): an astral barnacle", 5),
+                                                    (_, _) => { }, (_, _) => true, _ => { }),
+                       "Targeted (NPC) reached the rest of the pipeline");
+      }
+      finally
+      {
+        PreLineParser.EventsEvidence -= onData;
+      }
+
+      Assert.AreEqual(1, seen.Count);
+      Assert.AreEqual("an astral barnacle", seen[0].Name);
+      Assert.AreEqual(EvidenceFact.EvTargetedNpc, seen[0].Kind);
+    }
+
+    [TestMethod]
+    public void ATargetedNpcLineWithNoName_FiresNoEvidenceButIsStillTaken()
+    {
+      var seen = new List<(string Name, byte Kind)>();
+      Action<string, double, byte> onData = (name, _, kind) => seen.Add((name, kind));
+      PreLineParser.EventsEvidence += onData;
+      try
+      {
+        Assert.IsFalse(PreLineParser.NeedProcessing(Line("Targeted (NPC): ", 5),
+                                                    (_, _) => { }, (_, _) => true, _ => { }));
+      }
+      finally
+      {
+        PreLineParser.EventsEvidence -= onData;
+      }
+
+      Assert.AreEqual(0, seen.Count, string.Join("/", seen.Select(s => s.Name)));
+    }
+
+    /*
+     * R22's achievement line, same law: recognized means taken. And a line that only STARTS like the shape
+     * (`Your guildmate said things.`) is not recognized, so it keeps its chance at the parsers - which is why
+     * `found` follows the parse rather than the prefix.
+     */
+    [TestMethod]
+    public void NeedProcessing_GuildmateAchievement_ReportsTheNameAndTakesTheLine()
+    {
+      var seen = new List<(string Name, byte Kind)>();
+      Action<string, double, byte> onData = (name, _, kind) => seen.Add((name, kind));
+      PreLineParser.EventsEvidence += onData;
+      try
+      {
+        Assert.IsFalse(PreLineParser.NeedProcessing(
+          Line("Your guildmate Blazem has completed Partisan of Candlemaker's Workshop achievement.", 5),
+          (_, _) => { }, (_, _) => true, _ => { }),
+          "the achievement line reached the rest of the pipeline");
+
+        Assert.IsTrue(PreLineParser.NeedProcessing(Line("Your guildmate said things.", 5),
+                                                   (_, _) => { }, (_, _) => true, _ => { }),
+                      "a line the recognizer refused should stay available to the parsers");
+      }
+      finally
+      {
+        PreLineParser.EventsEvidence -= onData;
+      }
+
+      Assert.AreEqual(1, seen.Count);
+      Assert.AreEqual("Blazem", seen[0].Name);
+      Assert.AreEqual(EvidenceFact.EvGuildmate, seen[0].Kind);
+    }
+
     [TestMethod]
     public void FindPossiblePlayerName_StopsAtSpaceAndFlagsCrossServer()
     {
