@@ -1732,6 +1732,9 @@ option changes, and swallowing a notice the build earned is worse than one expli
   `ApplyClassPick` / `ApplyOwnerPick` guards and log lines (`identity cell:`), then the editor closes. The editor ends on drop-down close
   (picked, escaped, clicked away — the `LostKeyboardFocus` path is deferred so focus passing *into* the list cannot snap it shut), on pane
   hide and on capture change; every end releases the census hold (`Editors`) exactly once, because a parked hold stops the pane repainting.
-  Damage Summary's Group cell still uses `UiElementUtil.OpenCellPopup` and still works — that helper carries the note now, and its list fits
+  Two laws ride the in-cell shape, both from log lines rather than inference: a **programmatic preselect is bracketed in `_suppressSelection`**
+  (`SelectedIndex` raises the same `SelectionChanged` a pick does — unbracketed, opening an editor "picks" the value it already had and closes
+  itself), and **`EndCellEdit` closes the drop-down before clearing the row's editor flag**, because WPF leaves an open list standing after its
+  owner is collapsed — an empty, press-deaf white box until the next outside click. Damage Summary's Group cell still uses `UiElementUtil.OpenCellPopup` and still works — that helper carries the note now, and its list fits
   inside its anchor, which is the only reason nobody noticed for this long. Reasoning: docs/DesignNotes.md → "A cell editor lives in the cell,
   because a popup you open yourself eats the pick".

@@ -11631,6 +11631,15 @@ the ComboBox's own, which owns its capture — and the pick writes through the s
 drop-down close (picked, escaped, clicked away), on a pane hide and on a capture change; each end releases the census hold
 (`Editors`) exactly once, since a parked hold means the pane stops repainting.
 
-Standing rule: **do not wrap an interactive control in a `Popup` you open yourself.** The working panes (Damage Summary's Group cell)
+**A second bug lived inside the repair, and the log caught it.** With the editor in the cell, the operator reported "a white empty box that
+stays open until I click outside" — and the probe lines showed why: this pane preselects the value the cell already reads, `SelectedIndex`
+raises the same `SelectionChanged` a human pick raises, the handler read that as a pick and ended the edit, and `EndCellEdit` collapsed the
+`ComboBox` **while its own drop-down was open**. WPF leaves that popup window standing after its owner is hidden, emptied by the editor's own
+cleanup and deaf to every press: `[items=0 hasItems=False … open=True vis=False]`, fourteen mouse-downs in a row. Two laws follow: bracket a
+programmatic preselect (`_suppressSelection` around it, `try/finally`) so "an operator chose something" stays a sentence with one meaning, and
+**close the drop-down before hiding the control**, on every end path. The AutoHidden host was never involved; the popup-era asymmetry (press in
+the cell and drag = works, press on an option = nothing) was, and is fixed by having no outer popup at all.
+
+Standing rule: **do not wrap an interactive control in a `Popup` you open yourself**, and **a drop-down is closed before its control is.** The working panes (Damage Summary's Group cell)
 look like they do exactly that and are the reason this took so long to see — the difference is a press landing inside vs outside the
 bounds you chose, which only shows up when the list is taller than the anchor. `UIElementUtil.OpenCellPopup` carries the note.
