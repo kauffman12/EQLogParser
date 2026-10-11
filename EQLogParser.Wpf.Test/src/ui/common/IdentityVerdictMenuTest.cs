@@ -9,7 +9,8 @@ namespace EQLogParserWpf.Tests.UI.Common;
 
 /*
  * The "Set <name> as" cascade is the identity verb for four panes, so the thing worth pinning is that there is ONE shape to it:
- * the words come from IdentityVocabulary (a fifth kind cannot appear in one pane and not another), the header names the subject the
+ * the words come from IdentityVocabulary (one kind may not appear in one pane and be hidden in another — Mercenary did exactly that
+ * until 2026-11, offered here while the identity dropdown refused it), the header names the subject the
  * click will write, and a pick carries the Kind it shows. All three are cheap to assert and each has already been divergent in this
  * application — the retired menu had four flat "Set as X" rows here and a different verb ("Set as Verified Player") in the summaries,
  * which is the drift these tests exist to make impossible to repeat.
@@ -22,7 +23,7 @@ namespace EQLogParserWpf.Tests.UI.Common;
 public class IdentityVerdictMenuTest
 {
   [TestMethod]
-  public void TheCascadeOffersTheFourKindsInTheVocabularysOwnOrder()
+  public void TheCascadeOffersTheFiveKindsInTheVocabularysOwnOrder()
   {
     Sta.Run(() =>
     {
@@ -38,9 +39,9 @@ public class IdentityVerdictMenuTest
         words,
         "the words are IdentityVocabulary's, in its order; retyping them per pane is how the panes stopped matching");
 
-      // Filling twice must not add a second set (a pane's constructor is not the only caller, and eight children would render as a bug).
+      // Filling twice must not add a second set (a pane's constructor is not the only caller, and ten children would render as a bug).
       IdentityVerdictMenu.Populate(root, _ => { });
-      Assert.AreEqual(4, Words(root).Count, "Populate is idempotent");
+      Assert.AreEqual(5, Words(root).Count, "Populate is idempotent");
     });
   }
 

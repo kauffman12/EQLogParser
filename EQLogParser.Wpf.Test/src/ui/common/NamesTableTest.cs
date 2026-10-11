@@ -217,10 +217,12 @@ public class NamesTableTest
    */
   /*
    * The Type dropdown belongs to the ROW, not to the window. One ComboBox serves every cell and its list comes from
-   * IdentityVocabulary.TypeOptionsFor — the same recognizers that hide a pencil — so no raider is offered Mercenary (a
-   * mercenary is what /target reported; typing it moves her damage onto a column nothing else fills) and a summon whose
-   * spelling names its master has one verdict and the way back out. RowFrom carries the list, which is what the popup binds
-   * when a cell opens, so this is checked without constructing a pane.
+   * IdentityVocabulary.TypeOptionsFor — the same recognizer that hides a pencil — so what a row refuses is what its NAME decides,
+   * never a guess about which kinds are typeable: an eye is NPC or nothing, a summon whose spelling names its master has one
+   * verdict, and Unknown is in no list at all (the take-back is the calculator beside the name, where an operator can see it).
+   * Mercenary is offered on any row that gets a pencil — one vocabulary with the "Set … as" cascade, since 2026-11.
+   * RowFrom carries the list, which is what the editor binds when a cell opens, so this is checked without constructing a pane;
+   * IdentityVocabularyTest holds the same law in Core, this pins that the PANE hands the row that list.
    */
   [TestMethod]
   public void ARowOffersOnlyTheKindsItsNameAllows()
@@ -231,17 +233,24 @@ public class NamesTableTest
     { Name = "Berta", Kind = IdentityKind.Player, Reason = "R3-joinraid" });
     CollectionAssert.Contains(Words(raider), "Player", "the popup opens on the row's own answer");
     CollectionAssert.Contains(Words(raider), "Pet", "a person may still be overruled about a summon");
-    CollectionAssert.DoesNotContain(Words(raider), "Mercenary",
-                                    "Mercenary is not a verdict an operator can put on a name");
+    CollectionAssert.Contains(Words(raider), "Mercenary",
+                              "one vocabulary, one reach: the cascade offers Mercenary in four panes, so this dropdown may not hide the word");
+    Assert.IsFalse(raider.TypeChoices.Any(o => o.Kind == IdentityKind.Unknown),
+                   "no entry writes Unknown — an asserted silence at Manual strength would outrank what this capture watched");
 
     var merc = NamesTable.RowFrom(new ClassificationReport.Row
     { Name = "Stormpaw", Kind = IdentityKind.Merc, Reason = "R13-merc" });
     CollectionAssert.Contains(Words(merc), "Mercenary", "what the row already is stays in its list");
+    Assert.IsFalse(merc.TypeChoices.Count(o => o.Kind == IdentityKind.Merc) > 1, "one entry per answer, never two");
+
+    // An eye: never a person, never somebody's pet row (that would split its owner's output beside the real pets).
+    var eye = NamesTable.RowFrom(new ClassificationReport.Row
+    { Name = "Eye of Zamul", Kind = IdentityKind.Npc, Reason = "R6-npcdb" });
+    CollectionAssert.AreEquivalent(new[] { "NPC" }, Words(eye), "the eye's list is exactly its own answer");
 
     var pet = NamesTable.RowFrom(new ClassificationReport.Row
     { Name = "Sancus`s pet", Kind = IdentityKind.Pet, Reason = "R5-owner:Sancus" });
-    // The spelling settles the answer, so the list is exactly what it already is — and no row's list carries a take-back: that
-    // click lives beside the name (the calculator), where an operator can actually see it.
+    // The spelling settles the answer, so the list is exactly what it already is.
     CollectionAssert.AreEquivalent(new[] { "Pet" }, Words(pet));
   }
 
@@ -322,6 +331,10 @@ public class NamesTableTest
    * Sorting a column whose WORD CHANGES (Type, Class, Owner, Why are all verdicts, and verdicts move while a log loads)
    * means rows move: that is what sorting it asked for. Under the default Name sort nothing moves at all, which is why the
    * "do not slide rows under the reader" law survives here — names do not change.
+   *
+   * The fixture names its kinds rather than leaving them Unknown on purpose: an unplaced row's Type cell prints "Unknown", which
+   * sorts AFTER every kind word, so an unkinded row is not a stand-in for an NPC and the ordering below would test the alphabet
+   * instead of the rule.
    */
   [TestMethod]
   public void SortingByAWordThatChangedPutsTheMovedRowBackInPlace()
@@ -329,13 +342,13 @@ public class NamesTableTest
     var byType = IdentityRowOrder.For<NamesTable.NameRow>(IdentityRowOrder.TypeColumn);
     var listed = new ObservableCollection<NamesTable.NameRow>();
 
-    NamesTable.MergeRows(listed, [CensusRow("Ann"), CensusRow("Bob", IdentityKind.Player), CensusRow("Cy")], rebuild: true, order: byType);
+    NamesTable.MergeRows(listed, [CensusRow("Ann", IdentityKind.Npc, "R6-npcdb"), CensusRow("Bob", IdentityKind.Player, "R3-joinraid"), CensusRow("Cy", IdentityKind.Npc, "R14-shape")], rebuild: true, order: byType);
     CollectionAssert.AreEqual(new[] { "Ann", "Cy", "Bob" }, listed.Select(r => r.Name).ToList(),
                               "NPC before Player, and the two NPCs in name order — a tie on the clicked column breaks on the name so the "
                             + "list cannot be census order wearing a sort arrow through the back door");
 
     // Ann is a player now. Nothing was added or removed; only a sorted word moved.
-    NamesTable.MergeRows(listed, [CensusRow("Ann", IdentityKind.Player), CensusRow("Bob", IdentityKind.Player), CensusRow("Cy")], rebuild: false, order: byType);
+    NamesTable.MergeRows(listed, [CensusRow("Ann", IdentityKind.Player, "R3-joinraid"), CensusRow("Bob", IdentityKind.Player, "R3-joinraid"), CensusRow("Cy", IdentityKind.Npc, "R14-shape")], rebuild: false, order: byType);
     CollectionAssert.AreEqual(new[] { "Cy", "Ann", "Bob" }, listed.Select(r => r.Name).ToList(),
                               "the row whose word changed goes where the sort says, and the survivors keep their relative order");
   }
