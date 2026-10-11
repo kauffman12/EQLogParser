@@ -52,7 +52,16 @@ namespace EQLogParser
          */
         else if (action.StartsWith("Targeted (NPC)", StringComparison.OrdinalIgnoreCase))
         {
-          ReportEvidence(action[15..].Trim(), lineData.BeginTime, EvidenceFact.EvTargetedNpc);
+          /*
+           * The slice needs its own length check: the branch matches on a 14-character prefix while the name starts at 15, so a
+           * line that is the bare prefix (`Targeted (NPC)`) used to throw out of `action[15..]`. A Targeted line belongs to this
+           * parser whatever its tail - claiming it without reporting anything is the honest reading of an empty one.
+           */
+          if (action.Length > 15)
+          {
+            var target = action[15..].Trim();
+            if (target.Length > 0) ReportEvidence(target, lineData.BeginTime, EvidenceFact.EvTargetedNpc);
+          }
           found = true;
         }
         /*
@@ -68,8 +77,13 @@ namespace EQLogParser
         }
         else if (action.StartsWith("Targeted (Player)", StringComparison.OrdinalIgnoreCase))
         {
-          addVerifiedPlayer(action[19..], lineData.BeginTime);
-          EventsEvidence?.Invoke(action[19..].Trim(), lineData.BeginTime, EvidenceFact.EvTargetedPlayer);
+          // Same law as the NPC half above: 17 characters of prefix, the name starting at 19 - an empty tail is claimed, not sliced.
+          if (action.Length > 19)
+          {
+            var target = action[19..];
+            addVerifiedPlayer(target, lineData.BeginTime);
+            EventsEvidence?.Invoke(target.Trim(), lineData.BeginTime, EvidenceFact.EvTargetedPlayer);
+          }
           found = true; // ignore anything that starts with Targeted
         }
         else if (action.EndsWith(" joined the raid.", StringComparison.OrdinalIgnoreCase) && !action.StartsWith("You have", StringComparison.OrdinalIgnoreCase))
