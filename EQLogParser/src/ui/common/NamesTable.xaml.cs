@@ -288,7 +288,7 @@ namespace EQLogParser
     {
       // Hidden (or the session moved): drop any repaint waiting behind an editor, and the hold itself, so a close that never came
       // cannot leave the pane one pass short when it is shown again.
-      CloseOwnerList();
+      ClosePickers();
       Editors.Abandon();
 
       if (_followed is null) return;
@@ -342,7 +342,7 @@ namespace EQLogParser
     private void ClearRows()
     {
       // The capture this pane was reading is gone, so a census queued behind an open editor describes a log nobody is looking at.
-      CloseOwnerList();
+      ClosePickers();
       Editors.Abandon();
       ForgetRecalc();
       _repaint.Abandon();
@@ -751,7 +751,7 @@ namespace EQLogParser
       if (UiElementUtil.FindGridCell(icon) is not { } cell) return;
 
       Log.Debug($"identity cell: {DoorType} menu opened for {row.Name}");
-      OpenChoiceMenu(cell, TypeMenuChoices(row), v => ApplyTypePick(row, (IdentityVocabulary.TypeOption)v));
+      OpenTypeCombo(cell, row);
     }
 
     private void ApplyTypePick(NameRow row, IdentityVocabulary.TypeOption option)
@@ -811,7 +811,7 @@ namespace EQLogParser
       if (UiElementUtil.FindGridCell(icon) is not { } cell) return;
 
       Log.Debug($"identity cell: {DoorClass} menu opened for {row.Name}");
-      OpenChoiceMenu(cell, ClassMenuChoices(row), v => ApplyClassPick(row, (string)v));
+      OpenClassCombo(cell, row);
     }
 
     private void ApplyClassPick(NameRow row, string className)
@@ -845,8 +845,8 @@ namespace EQLogParser
       if (sender is not ImageAwesome icon || icon.DataContext is not NameRow row || !row.OwnerEditable) return;
       if (UiElementUtil.FindGridCell(icon) is not { } cell) return;
 
-      Log.Debug($"identity cell: {DoorOwner} menu opened for {row.Name}");
-      OpenOwnerList(cell, row);
+      Log.Debug($"identity cell: {DoorOwner} picker opened for {row.Name}");
+      OpenOwnerCombo(cell, row);
     }
 
     private void ApplyOwnerPick(NameRow row, string owner)
@@ -898,6 +898,19 @@ namespace EQLogParser
     private const string DoorClass = "class pick";
     private const string DoorOwner = "owner pick";
 
+    /* Every refusal prints why a click wrote nothing, because "the dropdown did nothing" was the field report and only a log line
+     * can tell an intentional refusal from a dead handler. */
+    private static void Refuse(string door, string why) => Log.Info($"identity cell: {door} ignored - {why}");
+    private static void RefuseDebug(string door, string why) => Log.Debug($"identity cell: {door} ignored - {why}");
+
+    /* A pane hide or a capture change ends any open picker: the popup is anchored to a cell that is about to mean something else. */
+    private void ClosePickers()
+    {
+      typeEditPopup.IsOpen = false;
+      classEditPopup.IsOpen = false;
+      ownerEditPopup.IsOpen = false;
+    }
+
 
     /*
      * The cell pickers are CONTEXT MENUS, not ComboBox drop-downs inside a Popup. This pane sits in the identity strip,
@@ -909,114 +922,102 @@ namespace EQLogParser
      * clicks fine - so the pencil now opens one menu over the cell with that row's own choices, checked at the answer it
      * currently gives. Every write still goes through Apply*Pick below: the menu is a door, not a second rule.
      */
-    private void OpenChoiceMenu(FrameworkElement cell, IReadOnlyList<(string Word, bool Current, object Value)> choices, Action<object> onPick)
+    /*
+     * All three pickers are ComboBoxes in a Popup, opened through UIElementUtil.OpenCellPopup - the same helper, and the same three
+     * habits, as the Damage Summary's Group cell that works today: plain STRING items with SelectedValuePath and DisplayMemberPath
+     * left null (UIElementUtil's own note names records-over-DisplayMemberPath as the one real difference between a picker that
+     * commits and one that silently does not), the ComboBox as the popup's only child under EQComboBoxStyle, and the write guarded by
+     * "who am I editing" rather than by suppressing the event a programmatic preselect raises. SelectionChanged therefore means one
+     * thing: an operator picked something. Indices carry the answer back to Core's own lists, so no string is re-parsed into a kind.
+     */
+    private void OpenTypeCombo(FrameworkElement cell, NameRow row)
     {
-      if (choices.Count == 0) return;
-
+      _typeEditRow = row;
       Editors.Open();
-      var menu = new ContextMenu { PlacementTarget = cell, Placement = PlacementMode.Relative };
-      var settled = false;
 
-      foreach (var (word, current, value) in choices)
+      var choices = row.TypeChoices;
+      var words = new List<string>(choices.Count);
+      var current = 0;
+      for (var i = 0; i < choices.Count; i++)
       {
-        var item = new MenuItem { Header = word, IsChecked = current };
-        item.Click += (_, _) =>
-        {
-          if (settled) return;
-          settled = true;
-          Editors.Close();
-          onPick(value);
-        };
-        menu.Items.Add(item);
+        words.Add(choices[i].Word);
+        if (choices[i].Kind == row.Kind) current = i;
       }
 
-      // A gesture that ends without a pick still has to release the census hold - exactly once, because EditorHold counts
-      // and a stray second Close parks the count and stops the pane repainting.
-      menu.Closed += (_, _) =>
+      typeEditComboBox.ItemsSource = words;
+      typeEditComboBox.SelectedIndex = current;
+      UiElementUtil.OpenCellPopup(typeEditPopup, typeEditComboBox, cell, () =>
       {
-        if (settled) return;
-        settled = true;
+        _typeEditRow = null;
+        typeEditComboBox.ItemsSource = null;
         Editors.Close();
-      };
-
-      menu.IsOpen = true;
+      });
     }
 
-    private static IReadOnlyList<(string Word, bool Current, object Value)> TypeMenuChoices(NameRow row)
-      => row.TypeChoices.Select(o => (o.Word, o.Kind == row.Kind, (object)o)).ToList();
-
-    private static IReadOnlyList<(string Word, bool Current, object Value)> ClassMenuChoices(NameRow row)
-      => MainActions.ClassList.OfType<string>().Select(c => (c, c == row.PlayerClass, (object)c)).ToList();
-
-    /*
-     * The owner flyout: one Popup holding one scrollable ListBox. StaysOpen="True" is the point - nothing may dismiss this
-     * gesture from underneath it; CloseOwnerList runs on every path that ends it (pick, pane hide, capture change), each of
-     * which releases the census hold exactly once.
-     */
-    private void OpenOwnerList(FrameworkElement cell, NameRow row)
+    private void TypeComboSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-      var names = PetOwnership.Choices(row.Owner, IdentityLookup.OurPeopleNames());
+      var row = _typeEditRow;
+      if (row is null || typeEditComboBox.SelectedIndex < 0) return;
+      if (typeEditComboBox.SelectedIndex >= row.TypeChoices.Count) return;
 
+      ApplyTypePick(row, row.TypeChoices[typeEditComboBox.SelectedIndex]);
+    }
+
+    private void OpenClassCombo(FrameworkElement cell, NameRow row)
+    {
+      _classEditRow = row;
       Editors.Open();
-      _ownerEditRow = row;
-      ownerEditPopup.PlacementTarget = cell;
-      ownerEditPopup.Width = Math.Max(220, cell.ActualWidth);
-      ownerEditList.ItemsSource = names;
 
-      var current = names.FindIndex(o => string.Equals(o, row.Owner, StringComparison.OrdinalIgnoreCase));
-      if (current >= 0) ownerEditList.SelectedIndex = current;
-
-      ownerEditPopup.IsOpen = true;
-      ownerEditList.Focus();
+      var classNames = MainActions.ClassList.OfType<string>().ToList();
+      classEditComboBox.ItemsSource = classNames;
+      classEditComboBox.SelectedIndex = classNames.IndexOf(row.PlayerClass ?? string.Empty);
+      UiElementUtil.OpenCellPopup(classEditPopup, classEditComboBox, cell, () =>
+      {
+        _classEditRow = null;
+        classEditComboBox.ItemsSource = null;
+        Editors.Close();
+      });
     }
 
-    /// <summary>Ends the owner gesture: closes the flyout and releases the census hold, whichever path got here first.</summary>
-    private void CloseOwnerList()
+    private void ClassComboSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-      ownerEditPopup.IsOpen = false;
-      _ownerEditRow = null;
-      ownerEditList.ItemsSource = null;
-      Editors.Close();
+      var row = _classEditRow;
+      if (row is null || classEditComboBox.SelectedIndex < 0) return;
+
+      ApplyClassPick(row, (string)classEditComboBox.SelectedItem);
     }
 
     /*
-     * The flyout does not light-dismiss (StaysOpen="True" on purpose: a press that WPF counts as "outside" is exactly what
-     * ate every pick in the old shape), so focus is what ends it - the list takes keyboard focus on open, and an operator who
-     * goes anywhere else moves it. A sticky flyout would be its own bug, which is why a pane hide and a capture change close
-     * it too, next to Editors.Abandon().
+     * The Owner list is this app's roster (PetOwnership owns the wording and the refusals), deduped. It holds VALID owners only -
+     * "No Owner" left the list when the take-back became the calculator click in the Name column, because taking an owner back takes
+     * everything back, and a dropdown entry that un-writes half a fact is how one cell ends up asserting two things.
      */
-    private void OwnerListLostKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+    private void OpenOwnerCombo(FrameworkElement cell, NameRow row)
     {
-      if (_ownerEditRow is not null) CloseOwnerList();
+      _ownerEditRow = row;
+      Editors.Open();
+
+      var owners = PetOwnership.Choices(row.Owner, IdentityLookup.OurPeopleNames());
+
+      ownerEditComboBox.ItemsSource = owners;
+      ownerEditComboBox.SelectedIndex = owners.FindIndex(o => string.Equals(o, row.Owner, StringComparison.OrdinalIgnoreCase));
+      Log.Debug($"identity cell: {DoorOwner} picker opened for {row.Name} with {owners.Count} candidates");
+      UiElementUtil.OpenCellPopup(ownerEditPopup, ownerEditComboBox, cell, () =>
+      {
+        _ownerEditRow = null;
+        ownerEditComboBox.ItemsSource = null;
+        Editors.Close();
+      });
     }
 
-    private void OwnerListMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    private void OwnerComboSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
       var row = _ownerEditRow;
-      if (row is null) return;   // XAML-fired wiring can beat the pane's own fields
+      if (row is null || ownerEditComboBox.SelectedIndex < 0) return;
 
-      // The item under the cursor, not the ListBox's SelectedItem: clicking the name that is ALREADY selected raises no
-      // selection change at all, and that click has to reach ApplyOwnerPick so it can say "already belongs to X" rather
-      // than looking dead.
-      var picked = e.OriginalSource is FrameworkElement fe && fe.DataContext is string name
-        ? name
-        : ownerEditList.SelectedItem as string;
-      if (picked is null) return;
-
-      CloseOwnerList();
-      ApplyOwnerPick(row, picked);
+      ApplyOwnerPick(row, (string)ownerEditComboBox.SelectedItem);
     }
 
-    private static void Refuse(string door, string why) => Log.Info($"identity cell: {door} ignored - {why}");
-    private static void RefuseDebug(string door, string why) => Log.Debug($"identity cell: {door} ignored - {why}");
-
-    /*
-     * After any write: re-scan this window AND ask for a pass. The census builds its own timeline (so it is correct on
-     * its own), but the fight list, the overlay and every board read the LAST derive's snapshot — which is why this pane
-     * used to be the one place an override showed up: FightTable's "Set as …" menu calls RederiveAsync beside its write
-     * and this window called nothing, so a verdict made here left the rest of the application classifying by the old
-     * answer until the derive cadence happened to run (and on a log that stopped growing, never at all).
-     */
     private void Reconcile()
     {
       // Same debt IdentityVerdictMenu.Write records: the census below repaints from its own classification, but the fight list and

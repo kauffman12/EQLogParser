@@ -217,42 +217,36 @@
     </syncfusion:SfDataGrid>
 
     <!--
-      The class list is MainActions.ClassList, the same source the summary panes' menus read. The type list is wired in
-      code-behind (IdentityVocabulary.TypeOptions) because its entries are internal records; the word shows via
-      DisplayMemberPath and the verdict travels as SelectedValue.
+      Three ComboBox pickers, one Popup each - the Damage Summary's Group cell shape, kept as close to it as this pane allows: the
+      box is its popup's only child under EQComboBoxStyle, SelectedValuePath and DisplayMemberPath are explicitly null so items are
+      plain strings (the group cell works that way; UIElementUtil.OpenCellPopup's note names records-over-DisplayMemberPath as the one
+      real difference between a picker that commits and one that does not), and the lists are built per click in code-behind because
+      each is a live question - what this name may be, whose summon it is, class words the game knows. The owner list holds valid
+      owners only: taking an owner back is the calculator click in the Name column, never an entry in a list of answers.
+
+      OPEN: whether these commit inside the AutoHidden identity strip is unproven. What was measured is the symptom (a pick that
+      closes the popup reporting the OLD value, while the same helper and near-identical markup work in docked panes), never the
+      mechanism, and three variables are still unseparated: the popup's host window, plain strings vs vocabulary records, and the fact
+      that census merges replace this pane's rows while a group row is never replaced. If a pick still does not commit, log-line
+      evidence ("identity cell:" in eqlogparser.log) is what separates a refused write from a click that never arrived.
     -->
-    <!--
-      There used to be three Popups here, one per editable cell, each holding a ComboBox whose drop-down was opened
-      programmatically (and one before that: an EQComboBoxStyle clone per cell). Both shapes are gone on measurement, not
-      preference: this pane lives in the identity strip, which is AutoHidden, so Syncfusion renders it inside its own host
-      window while a ComboBox opens its list in yet another - a press on an item then reads as a press from outside,
-      StaysOpen="False" dismisses on mouse-down, and nothing ever committed. The pickers are ContextMenus built per click in
-      NamesTable.OpenChoiceMenu (the pattern the fight list's menu already proves works in these panes), so this markup holds
-      no editor state at all: not one list to keep in step with a census merge. The owner list is built per click in code-behind
-      (PetOwnership.Choices over the players this application knows) rather than declared here: it is a live question — "whose summon
-      can this be, right now" — and it holds valid owners only; the take-back is the calculator click, never an entry. Plain strings, so no DisplayMemberPath.
-    -->
-                  <!--
-      The Owner picker is a scrollable LIST, not a menu: the valid owners are this application's roster, which runs to
-      hundreds of names on a long-lived server folder, and a ContextMenu of that size is unusable. It is also NOT a
-      ComboBox: the drop-down a ComboBox opens is a second window inside the auto-hidden pane's own host, and a press on an
-      item there dismissed the gesture before anything committed (see NamesTable.OpenChoiceMenu for the full story). One
-      Popup, one ListBox, StaysOpen="True" so no light-dismiss race can eat the press - which is why closeOwnerEditPopup
-      is called from every path that ends the gesture: a pick, a pane hide, and a capture change.
-      SystemColors rather than a theme key: this flyout has no EQ style of its own and an unresolvable DynamicResource
-      would render it unreadable in one of the two themes.
-    -->
-    <Popup x:Name="ownerEditPopup" StaysOpen="True" AllowsTransparency="True" Placement="Relative">
-      <Border Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}"
-              BorderBrush="#FF808080" BorderThickness="1">
-        <ScrollViewer MaxHeight="360" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-          <ListBox x:Name="ownerEditList" BorderThickness="0"
-                   Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}"
-                   Foreground="{DynamicResource {x:Static SystemColors.WindowTextBrushKey}}"
-                   MouseLeftButtonUp="OwnerListMouseLeftButtonUp"
-                   LostKeyboardFocus="OwnerListLostKeyboardFocus" />
-        </ScrollViewer>
-      </Border>
+    <Popup x:Name="typeEditPopup" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade" Placement="Relative">
+      <ComboBox x:Name="typeEditComboBox" HorizontalContentAlignment="Stretch"
+                SelectedValuePath="{x:Null}" DisplayMemberPath="{x:Null}"
+                SelectionChanged="TypeComboSelectionChanged"
+                Style="{DynamicResource EQComboBoxStyle}" />
+    </Popup>
+    <Popup x:Name="classEditPopup" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade" Placement="Relative">
+      <ComboBox x:Name="classEditComboBox" HorizontalContentAlignment="Stretch"
+                SelectedValuePath="{x:Null}" DisplayMemberPath="{x:Null}"
+                SelectionChanged="ClassComboSelectionChanged"
+                Style="{DynamicResource EQComboBoxStyle}" />
+    </Popup>
+    <Popup x:Name="ownerEditPopup" StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade" Placement="Relative">
+      <ComboBox x:Name="ownerEditComboBox" HorizontalContentAlignment="Stretch"
+                SelectedValuePath="{x:Null}" DisplayMemberPath="{x:Null}"
+                SelectionChanged="OwnerComboSelectionChanged"
+                Style="{DynamicResource EQComboBoxStyle}" />
     </Popup>
   </Grid>
 </UserControl>

@@ -1719,13 +1719,16 @@ option changes, and swallowing a notice the build earned is worse than one expli
   something pumps: inside-delay shows nothing, past-delay shows exactly once (not per interval), newest request wins, cancel leaves
   nothing armed.
 
-- **Nested popups do not receive clicks inside an AutoHidden pane** (2026-11, measured with a two-handler log over three picker
-  shapes): Syncfusion renders auto-hidden content in its own host window, so anything that opens a *second* WPF window from a cell —
-  `ComboBox`'s drop-down, or our own popup-inside-popup — is dismissed on mouse-down before it commits, and the cell reports
-  "closing with selection <old value>" because the press never reached the item. Docked content and MainWindow's own tree take the
-  identical XAML without complaint (Verified Players did for a year; DamageSummary's Group cell still does), which is why the cause
-  was invisible until someone tested the same control in two hosts. Two consequences: **a picker in this pane is one level deep** —
-  either a `ListBox` in our own popup (`StaysOpen="True"`, dismissed by pick / focus loss / hide / capture change, never by a press WPF
-  counts as outside) or a `ContextMenu` (Type and Class, short lists) — and **the flyout may not light-dismiss**, since the very event
-  that would close it is the one that ate the pick. If a future picker needs a real drop-down here, dock the strip instead of working
-  around the host.
+- **A cell picker in the identity pane is a ComboBox in a Popup opened by `UIElementUtil.OpenCellPopup`, with plain-string items —
+  and its failure inside the AutoHidden strip is UNPROVEN, so do not "fix" it by changing the control** (2026-11). What was measured
+  is only the symptom: a pick closes the popup reporting the OLD value (`closing … with selection Pet` after clicking Player), while the
+  same helper and near-identical markup commit fine in docked panes (Damage Summary's Group cell, today). Two workarounds were shipped and
+  both reverted — per-click `ContextMenu`s (`daf03a61`, unusable for the owner roster) and a `StaysOpen="True"` ListBox flyout
+  (`fb8d4128`, same dead pick plus off-theme styling) — which is why the pane is back on the shape the working panes use and the difference is
+  treated as open. Three variables are still unseparated, in the order the helper's own note suggests: **the popup's host window** (auto-hidden
+  content renders in Syncfusion's own window while the drop-down is a third), **records-over-`DisplayMemberPath` vs plain strings** (the group cell
+  nulls both paths and binds ints; the identity pickers historically bound `IdentityVocabulary.TypeOption` records — now they carry plain words and map
+  back by `SelectedIndex`, so this one is at least aligned), and **census merges replacing this pane's rows** while a group row is never replaced (an
+  editing subject held across a merge points at a discarded row, and the write guards on it). Next time it fails, read `grep "identity cell"` FIRST:
+  a printed refusal means the click arrived and the guard refused, and no amount of popup surgery will help; silence means the pick never happened and
+  the host is the suspect. Proving the host case takes one comparison — same pane docked instead of auto-hidden, same build.
