@@ -15,15 +15,17 @@ namespace EQLogParser;
  * Four surfaces want this menu (damage, healing and tanking summaries, and the fight list) and they must show the SAME words in the
  * SAME order doing the SAME write; four XAML copies is how the retired per-pane items drifted into "Set as Verified Player" here,
  * "Set as Player" there, NPC offered twice, and an unset nobody could find. The words come from IdentityVocabulary.TypeOptions, so a
- * fifth kind would arrive once — in the vocabulary — and appear everywhere.
+ * sixth kind would arrive once — in the vocabulary — and appear everywhere.
  *
  * Three rules this class exists to hold:
  *
- *   1. **Words from the vocabulary, never retyped.** Player / Pet / Mercenary / NPC, in TypeOptions' order, minus the two entries that
- *      belong to a row-aware dropdown rather than to a blind cascade ("Spell" is a kind the rules reach and "Reset" needs the row's
- *      own evidence to mean anything). Mercenary IS offered here because these panes ask it as a judgement about a name they are looking
- *      at, and the operator asked for all four; the Names pane still trims it per row (IdentityVocabulary.TypeOptionsFor), which is a
- *      difference the pane can afford to state rather than invent a second vocabulary over.
+ *   1. **Words from the vocabulary, never retyped.** All five kinds — Player / Pet / Mercenary / NPC / Spell — in TypeOptions' order.
+ *      The two halves met in the middle (2026-11): Mercenary was offered here while the identity dropdown refused it, Spell was typeable
+ *      there while this menu left it out — and a word reachable in three panes and hidden in the fourth reads as a broken pane, not as a rule. The one word NO list offers is Unknown — taking an answer
+ *      back is the calculator beside the name (ClassificationCommands.Recalculate), never a word sitting above this capture's evidence at
+ *      Manual strength. What still trims per row lives in IdentityVocabulary.TypeOptionsFor (an eye is NPC only; a summon whose own spelling
+ *      carries its master and a row whose verdict IS a spell shape are decided by the name) — one recognizer for menu and write guard, so a
+ *      pane can never offer what its own write path refuses.
  *
  *   2. **The header names the subject.** "Set Frostmaw as" reads as a sentence with the click; "Set as" (nothing selected) reads as what
  *      it is — an action with no object yet, still clickable because a greyed menu is a menu nobody discovers. Several rows selected says

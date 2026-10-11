@@ -709,8 +709,9 @@ declare without `?`; add the directive only when the whole file is meant to hold
   with either button**: SfDataGrid raises selection events for a right-drag (legacy's own Refresh-while-selecting behaviour is proof), and the first
   version handled only the left, which was exactly one button short of the bug — so keep both. `UIElement.Preview*MouseUp` does not fire on release
   outside the control, hence the capture-loss listener. **(2) The identity write is one cascade built once**: `IdentityVerdictMenu.Populate(root,
-  onPick)` fills **"Set <name> as ▸"** (Player/Pet/Mercenary/NPC) from `IdentityVocabulary.TypeOptions` — whose entries are now *named* records so a
-  pane takes a subset instead of retyping words (`Spell` stays out of a blind cascade, and the take-back has left the dropdowns entirely since 2026-11). Damage/healing/tanking summaries plus the
+  onPick)` fills **"Set <name> as ▸"** (Player/Pet/Mercenary/NPC/Spell) from `IdentityVocabulary.TypeOptions` — whose entries are *named* records so a
+  pane could take a subset instead of retyping words, and since 2026-11 it takes the whole list: the cascade and the identity dropdown offer the same five
+  words (the take-back has left both entirely). Damage/healing/tanking summaries plus the
   fight list all use it; the summaries' **"Set as Verified Player"** is deleted (it wrote players.txt via `AddVerifiedPlayerByOperator` and greyed
   itself out on anybody already placed, and its header printed the `"Unknown"` placeholder as a name). **THE ONE-ROW LAW**: each pane passes
   "the single selected name or null" (`SelectedItems.Count == 1` + a real row; group headers and inactivity dividers select nothing), `Present` heads it
@@ -721,8 +722,11 @@ declare without `?`; add the directive only when the whole file is meant to hold
   slip through. `Write` = `IdentityOverrideStore.Set` + `IdentityPriorStore.Remove` + `RederiveAsync`, patching **no grid** (a verdict re-reads sides, rows and
   folding — panes repaint from the result). The Assign items' old `IsOneOfUs`/`IsOneOfUsOrMerc` questions did not vanish: they still decide which owners the
   pet-of submenu offers. **Assign ≠ Set**: "Assign <name> as Pet of ▸" maps pet→owner AND sets the kind, so it sits above
-  Set; Set is the kind alone for a name whose owner you cannot tell from there. Mercenary is offered by the cascade while `TypeOptionsFor` still trims
-  it per row in the identity pane — stated difference over ONE vocabulary. **(3) One unset, and it is not here** (see the standing one-unset law):
+  Set; Set is the kind alone for a name whose owner you cannot tell from there. **One vocabulary, one reach** (2026-11): Mercenary was offered by the
+  cascade while the identity pane refused to type it, and `Spell` was typeable there while this menu left it out — an operator who set a mercenary from the
+  damage summary saw the word in the identity cell and could not set it from the identity table, which read as a broken pane rather than as a rule. Both
+  words are now offered everywhere a pencil appears; what `TypeOptionsFor` still trims is what the NAME decides (an eye's NPC-only list, a summon whose own
+  spelling carries its master, a row whose verdict IS a spell shape) plus `Unknown`, which is no list's word. **(3) One unset, and it is not here** (see the standing one-unset law):
   the deleted mirror-era "Clear Override" was removed, not renamed; **Clear All** is the last item, = `MainActions.ClearAllFights` →
   `MainWindow.ClearAllFights()` → `OpenLogFile(CurrentLogFile, 0)` (Open Monitor over the same file: rows/facts/records/boards gone, saved players,
   pets and verdicts kept because identity memory does not register with `LifecycleManager`; the log itself untouched). `LifecycleManagerTest` pins
@@ -1089,11 +1093,14 @@ moves); the capture's own windows survive even it, because they are this log's e
   refuse a click that changes nothing (a no-op must not spend a derive pass or rewrite identity-overrides.txt); a cell edit edits its cell — batching lives in the
   fight grids' menu alone now, and this pane's one button is the calculator in the Name column (2026-11, above); and **the class pencil appears only on a `Player` row** (`NameRow.ClassEditable`) because `SetDefaultPlayerClass` verifies
   the name AND writes players.txt — an icon on an NPC row is exactly the pollution this window exists to catch, and Pet/Merc rows have nothing to persist. Any write
-  **Three kinds are trimmed by the same recognizers that hide a pencil** — one recognizer decides the menu AND the write guard (`TypeSelectionChanged` re-checks
-  `row.TypeChoices.Contains(option)`), because two rules judging one dropdown is how a pane offers what its own write path then refuses: **Mercenary is not a verdict an
-  operator can put on a name** (it is what `/target` reported — R3-merc/R13-merc — and typing it onto a raider moves her damage onto a column nothing else fills, so the
-  entry survives only on a row that already reads Mercenary); **an eye is NPC or nothing** (`Eye of <name>` never acts — docs/DesignNotes.md → "Breadth of evidence, measured" — and a Pet row for it would sit beside its owner's real pets and split one person's output). Take-back reachability is the calculator's job now,
-  not any list's. The row's own answer is always in the list because the popup preselects it: a value missing from its own dropdown reads as a blank cell. An operator's own
+  **The trims come from the same recognizers that hide a pencil** — one recognizer decides the menu AND the write guard (`TypeSelectionChanged` re-checks
+  `row.TypeChoices.Contains(option)`), because two rules judging one dropdown is how a pane offers what its own write path then refuses. What a row may be is
+  decided by its NAME, never by an opinion about which kinds are typeable: **an eye is NPC or nothing** (`Eye of <name>` never acts — docs/DesignNotes.md →
+  "Breadth of evidence, measured" — and a Pet row for it would sit beside its owner's real pets and split one person's output); a summon whose spelling carries
+  its master and a row whose verdict IS an R21 spell shape keep only the answer they already give. Mercenary is offered on every overrulable row since 2026-11 —
+  the older refusal ("it is what `/target` reported, and typing it moves her damage onto a column nothing else fills") died on measurement: `IdentityLookup.IsPlayerSide`
+  is Player-or-Merc, `IsRaidVictimAt` counts Merc and `FightSummarySource` accepts a Merc defender, so the word says who a name fights for and relocates nothing.
+  Take-back reachability is the calculator's job now, not any list's. The row's own answer is always in the list because the popup preselects it: a value missing from its own dropdown reads as a blank cell. An operator's own
   claim (`R10-manual`/`Manual`/`Override`) keeps every entry — a wrong click has to stay correctable by another click.
   Two more from the same list: **some rows get no pencil at all** (`Overrulable` → `CanOverrule`) — a summon whose spelling carries its master and a row whose VERDICT is an R21 spell shape (current or `Prior:`-remembered) each have one
   right answer, and offering four wrong ones invites typing "Player" over `Sonic Bang`; an operator's own verdict always keeps its icon so a wrong click is never permanent (so
