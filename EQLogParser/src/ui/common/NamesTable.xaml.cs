@@ -1000,15 +1000,68 @@ namespace EQLogParser
      */
     private void CellEditorVisibilityChanged(object sender, DependencyPropertyChangedEventArgs e)
     {
-      if (sender is not ComboBox box || !box.IsVisible) return;
+      if (sender is not ComboBox box) return;
 
+      Log.Debug($"identity editor: visible changed to {box.IsVisible} on {Describe(box)}");
+      if (!box.IsVisible) return;
+
+      OpenEditorDropDown(box, first: true);
+    }
+
+    /*
+     * Open the list once the cell has laid the control out, and if the items have not arrived by then, ask one more time at a lower
+     * priority rather than showing an empty drop-down (the app's ComboBox template draws a 95 px empty panel when HasItems is false,
+     * which is what "a white box with nothing in it" is). PROBE: every line prints the control's own answer — item count, selection,
+     * size — because "the list is empty" and "the list is there but a click does not reach it" are different bugs and this pane has
+     * already been fixed for the wrong one twice.
+     */
+    private void OpenEditorDropDown(ComboBox box, bool first)
+    {
       box.Dispatcher.BeginInvoke(new System.Action(() =>
       {
-        if (box.DataContext is not NameRow row || row.EditingColumn is null) return;
+        if (box.DataContext is not NameRow row || row.EditingColumn is null)
+        {
+          Log.Debug($"identity editor: open skipped (no editing row) on {Describe(box)}");
+          return;
+        }
+
+        Log.Debug($"identity editor: open attempt first={first} {Describe(box)} itemsSource={(box.ItemsSource?.GetType().Name ?? "null")} " +
+                  $"declared={row.EditorItems.Count} current={row.EditorCurrentIndex}");
+
+        if (box.Items.Count == 0)
+        {
+          box.ItemsSource = null;
+          box.ItemsSource = row.EditorItems;   // re-ask the binding rather than opening a panel with nothing in it
+          if (first) OpenEditorDropDown(box, first: false);
+          return;
+        }
+
         box.SelectedIndex = row.EditorCurrentIndex;
         box.Focus();
         box.IsDropDownOpen = true;
       }), System.Windows.Threading.DispatcherPriority.Input);
+    }
+
+    /* PROBE: identifies which control instance a line came from, and what it holds. */
+    private static string Describe(ComboBox box)
+    {
+      var name = box.DataContext is NameRow row ? row.Name : "no-row";
+      return $"[{box.GetHashCode():X8} {name} items={box.Items.Count} hasItems={box.HasItems} " +
+             $"sel={box.SelectedIndex} open={box.IsDropDownOpen} vis={box.IsVisible} {box.ActualWidth:0}x{box.ActualHeight:0}]";
+    }
+
+    /* PROBE: does a press reach the control at all, and does it land on an item? */
+    private void CellEditorProbeMouseDown(object sender, MouseButtonEventArgs e)
+    {
+      if (sender is not ComboBox box) return;
+
+      var hit = e.OriginalSource as DependencyObject;
+      string? item = null;
+      for (var current = hit; current is not null; current = System.Windows.Media.VisualTreeHelper.GetParent(current))
+        if (current is ComboBoxItem cbi) { item = cbi.Content?.ToString(); break; }
+
+      Log.Debug($"identity editor: mouse down {Describe(box)} source={hit?.GetType().Name ?? "null"} item={item ?? "<none>"} " +
+                $"captured={System.Windows.Input.Mouse.Captured?.GetType().Name ?? "null"}");
     }
 
     /*
@@ -1018,7 +1071,9 @@ namespace EQLogParser
      */
     private void CellEditorDropDownClosed(object sender, System.EventArgs e)
     {
-      if (sender is ComboBox { DataContext: NameRow row }) EndCellEdit(row);
+      if (sender is not ComboBox box || box.DataContext is not NameRow row) return;
+      Log.Debug($"identity editor: drop-down closed {Describe(box)}");
+      EndCellEdit(row);
     }
 
     private void CellEditorLostFocus(object sender, RoutedEventArgs e)
@@ -1056,6 +1111,7 @@ namespace EQLogParser
     {
       if (sender is not ComboBox box || box.DataContext is not NameRow row || !row.IsTypeEditing) return;
 
+      Log.Debug($"identity editor: type selection changed {Describe(box)} item={box.SelectedItem ?? "<none>"}");
       var index = box.SelectedIndex;
       if (index < 0 || index >= row.TypeChoices.Count) return;
 
@@ -1068,6 +1124,7 @@ namespace EQLogParser
     {
       if (sender is not ComboBox box || box.DataContext is not NameRow row || !row.IsClassEditing) return;
 
+      Log.Debug($"identity editor: class selection changed {Describe(box)} item={box.SelectedItem ?? "<none>"}");
       var className = box.SelectedItem as string;
       if (string.IsNullOrEmpty(className)) return;
 
@@ -1079,6 +1136,7 @@ namespace EQLogParser
     {
       if (sender is not ComboBox box || box.DataContext is not NameRow row || !row.IsOwnerEditing) return;
 
+      Log.Debug($"identity editor: owner selection changed {Describe(box)} item={box.SelectedItem ?? "<none>"}");
       var owner = box.SelectedItem as string;
       if (string.IsNullOrEmpty(owner)) return;
 
