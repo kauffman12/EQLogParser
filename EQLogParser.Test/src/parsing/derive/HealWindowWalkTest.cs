@@ -199,10 +199,11 @@ public sealed class HealWindowWalkTest
     var range = new TimeRange(new TimeSegment(Base + 5, Base + 20));
     var window = Window(heals, range);
 
-    Assert.AreEqual(Signature(Naive(heals, range)), Signature(window),
-        "unordered rows must answer what the linear test answers — a halving here would silently drop the row at Base+5");
+    Assert.AreEqual(Signature(Naive(heals, range).OrderBy(static row => row.Time).ToList()), Signature(window),
+        "the same rows as the linear test, sorted for the builder's time cursor");
     Assert.AreEqual(3, window.Count);
-    Assert.AreEqual((double)Base + 10, window[0].Time, "ingest order is preserved, not sorted");
+    Assert.AreEqual((double)Base + 5, window[0].Time);
+    Assert.AreEqual((double)Base + 5, Window(heals, null)[0].Time, "the whole-capture door also sorts");
 
     // The whole-capture and empty-window no's keep their meaning on an unordered store too.
     Assert.AreEqual(4, Window(heals, null).Count);

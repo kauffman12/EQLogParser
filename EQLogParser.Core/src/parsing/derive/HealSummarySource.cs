@@ -15,8 +15,8 @@ namespace EQLogParser
    *
    *   - **Time ascending.** The builder locates its window with FindIndex(first >= begin) and walks forward from
    *     there, so an unordered list loses part of a segment without complaint. Heal facts are appended in the
-   *     capture's shared sequence (ingest order), and filtering preserves that order — which is why nothing sorts
-   *     here. A sort would be the fix if a chunked spill ever handed back runs out of order (D2), not this.
+   *     capture's shared sequence (ingest order), which may go backwards on a concatenated log. Such a capture is
+   *     stably sorted after filtering; an ascending capture keeps the allocation-free ordered path.
    *
    *   - **OverTotal verbatim**, never HealFact.AskedFor. A line with no "(amount)" left the parser's overHeal at
    *     0, meaning "the line never said", and StatsUtil.UpdateHealStats does
@@ -50,6 +50,13 @@ namespace EQLogParser
     /// empty" true at the seam rather than quietly falling back to the record store.
     /// </summary>
     internal static List<(double, HealRecord)> Materialize(HealFactTable heals, TimeRange range)
+    {
+      var records = MaterializeInArrivalOrder(heals, range);
+      // The builder carries a time cursor. Only an unordered capture needs a stable sort; ties keep arrival order.
+      return heals is { AscendingTime: false } ? records.OrderBy(static row => row.Item1).ToList() : records;
+    }
+
+    private static List<(double, HealRecord)> MaterializeInArrivalOrder(HealFactTable heals, TimeRange range)
     {
       List<(double, HealRecord)> records = [];
       if (heals is null) return records;

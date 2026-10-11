@@ -85,6 +85,28 @@ public class DerivedHealBoardTest
     }
 
     [TestMethod]
+    public void BackwardsHealsReachTheRealBoardAndEqualSecondOrderIsStable()
+    {
+        const long time = 63_800_000_000L;
+        var heals = new HealFactTable(new DamageFactTable(0), 0);
+        var healer = heals.InternName("Reisil");
+        var healed = heals.InternName("Kilsa");
+        PlayerRegistry.Instance.AddVerifiedPlayer("Kilsa", time);
+        PlayerRegistry.Instance.AddVerifiedPlayer("Reisil", time);
+        heals.AddHeal(new HealFact(1, time + 10, healer, healed, 1000, 0, LabelTypes.Heal, 0, 0, HealFact.NoSpell));
+        heals.AddHeal(new HealFact(2, time, healer, healed, 2000, 0, LabelTypes.Heal, 0, 0, HealFact.NoSpell));
+        heals.AddHeal(new HealFact(3, time, healer, healed, 3000, 0, LabelTypes.Heal, 0, 0, HealFact.NoSpell));
+        var range = new TimeRange(new TimeSegment(time, time + 10));
+        foreach (var records in new[] { HealSummarySource.Materialize(heals, range), HealSummarySource.Materialize(heals, null) })
+        {
+            CollectionAssert.AreEqual(new uint[] { 2000, 3000, 1000 }, records.Select(static row => row.Item2.Total).ToArray());
+            var board = BuildHeals([], range, records);
+            Assert.IsNotNull(board);
+            Assert.AreEqual(6000L, board.RaidStats.Total, "the late earlier heal cannot be left behind the builder's cursor");
+        }
+    }
+
+    [TestMethod]
     public void EveryMaterializedHealIsTheRecordTheParserMade()
     {
         var path = Path_(Fixture);
