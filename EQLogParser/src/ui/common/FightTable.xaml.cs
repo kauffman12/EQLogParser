@@ -102,6 +102,14 @@ namespace EQLogParser
     private long _announcedStamp;
 
     /*
+     * Whether THIS capture has ever announced - the dedupe needs it, because an empty selection and a fresh pane look identical
+     * to arithmetic (`_announcedIds` starts empty, `_announcedStamp` starts 0) and swallowing the very first announcement is how
+     * "a wholesale pass says what is on screen" became "nothing arrives until you click something". The first answer of a capture
+     * always goes out; only a REPEAT of an answer dedupes.
+     */
+    private bool _announcedOnce;
+
+    /*
      * What the boards on screen are watching: the identity answer for every name they display, plus the selected rows' own names. A derive
      * pass re-announces only when one of those changed WHAT IT IS (Unknown→Pet, Player→Npc under a charm, an operator taking a claim back) —
      * never because damage arrived. The operator's rule (2026-10-08): "id rather it be like a snapshot of what was selected at the time
@@ -306,6 +314,7 @@ namespace EQLogParser
       // Nothing is announced, so nothing may be remembered as announced: a stamp left over from the log that just closed
       // could otherwise match a new capture's first snapshot by arithmetic (fact totals restart at zero every session) and
       // swallow an announcement that has never happened.
+      _announcedOnce = false;
       _announcedStamp = 0;
       _watch.Clear();
       _currentTimeline = null;
@@ -639,7 +648,7 @@ namespace EQLogParser
       var ids = new List<int>(selected.Count);
       foreach (var fight in selected) ids.Add(fight.Id);
 
-      if (!force && SameIds(ids, _announcedIds))
+      if (!force && _announcedOnce && SameIds(ids, _announcedIds))
       {
         /*
          * The dedupe is where a duplicated door disappears, and "disappears" is exactly why it needs a line: the pane announces from
@@ -727,6 +736,7 @@ namespace EQLogParser
       }
 
       _unaskedDeclined = false;
+      _announcedOnce = true;
       _announcedIds = ids;
       _announcedStamp = _currentStamp;
 
