@@ -4,6 +4,7 @@
 3. Performance improvements to building the **Fight List**
 4. Added checkbox to **Repeated Reset Time** that allows **{counter}** to reset similar to the GINA implementation.
 5. Update spells from beta.
+6. Fixed the **Fight List** checkboxes: hiding rows by **Inactivity** or **Tanking** no longer breaks row selection, and the list now keeps updating live while either one is unchecked.
 
 # 2.4.1 | 09/25/26
 1. Added dropdown to **Timelines** for customizing saved layouts.
