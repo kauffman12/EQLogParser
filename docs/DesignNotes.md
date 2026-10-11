@@ -8208,6 +8208,52 @@ Re-measure: `EQLP_DERIVE_INCREMENT=<log> dotnet test --logger "console;verbosity
 prints load, full pass (classify + project), continued passes and the carried pass. Step 3 — columnar cold chunks with delta-encoded
 `Seq`/time and a codec, where the measured ~4.5×/6.8× on real captures actually lands — comes after this, so nothing is paid for twice.
 
+## Rows go cold, and what a chunk costs to remember
+
+A damage chunk that can never receive another row is encoded and handed back to the GC (A1 step 3a, `DamageFactChunkCodec`).
+That moment exists and is exact: ordinals only go up, so when the append path buys chunk *ci*, chunk *ci-1* is finished forever.
+The array is handed to a pool worker by value, which is why no lock guards cold storage — nothing can write what gets encoded.
+Reading a cold chunk decodes it back (same rows, same ordinals); this is invisible below the addressing door (`At`/`RefAt`/`FactsIn`).
+
+**The format was chosen by candidate measurement**, over `eqlog_Kizant_xegony-2.txt` (2,286,368 rows, 52.3 MB of row bytes):
+
+| layout | blob | ratio | encode (34-35 chunks) |
+|---|---|---|---|
+| row-major, Deflate | 14.62 MB | 3.58× | 1,300 ms |
+| row-major, Brotli | 10.72 MB | 4.88× | 47,870 ms |
+| planes, Deflate | 11.68 MB | 4.48× | 2,740 ms |
+| **planes + delta varint, Deflate** | **9.02 MB** | **5.80×** | **2,422 ms** |
+| planes + delta varint, Brotli | 7.71 MB | 6.79× | 36,179 ms |
+
+Brotli buys 16 % more for fifteen times the CPU, and this runs while a raid is being captured: refused — footprint, not archival.
+Delta is what carried the layout past the older 4.5× estimate; `Seq` is unique per row by construction, so an entropy coder sees noise
+where a difference sees mostly zeros. The shipped blob is zigzag-varint deltas of `Seq` then `TimeS`, then fixed planes
+(atk u16 · def u16 · total u32 · type u8 · flags u8 · mod u16 · sub u16), one Deflate stream; no header, because a chunk's row count is
+derivable from the capture's own length.
+
+**What it realized on that capture** (`ColdChunkRealLogTest`, `EQLP_COLD_REALLOG=<log>`): store **58.5 MB → 16.3 MB**, blobs **8.8 MB**
+(**6.66×** on the cold part), putting all 34 chunks away cost **2,552 ms** (~75 ms each, off the parse thread — load time is unchanged
+because the handoff is per chunk and per worker), and reading the entire capture back cost **551 ms once** (allocation plus decode,
+~3 ms per chunk) before every later walk reads rows again. A whole-capture board build is seconds, so paying that on the first history
+walk and never again is the trade this makes; a session that only ever selects one pull pays it not at all.
+
+Four laws, each because a cheaper-looking version is wrong:
+
+- **Blob before clear.** A reader's invariant is "a null chunk slot always has a blob behind it", so the blob is published first. The one
+  shared mutation (clearing a slot) takes a lock with the only thing that can resize the reference array — `_chunks` growth and cold
+  publication would otherwise lose writes into a discarded copy.
+- **A dictionary for blobs, not a parallel array**, for exactly that resize race.
+- **Encode verifies by decoding.** ~3 ms against a ~75 ms encode, off the parse thread, and it changes the failure mode from *a board
+  quietly reading somebody else's row* to *this chunk stayed raw* plus one `cold chunk:` Warn line in eqlogparser.log. The catch around
+  the whole thing means footprint work cannot take a capture down with it.
+- **`EstimatedBytes` counts blobs, not the rows they replaced**, because that number feeds the spill trigger: a chunk that got 6× smaller
+  has to show up smaller or the trigger spills a session that no longer needs it. After a full read-back it says 58.5 MB again — decoded
+  chunks report rows, which is the truth at that moment.
+
+Not done in this step: the **heal stream** (24 B rows, ~28.6 MB on this capture, measured 4.36× as-is / 6.80× transposed) still holds raw
+rows — same handoff and same codec shape remain to be mirrored onto `HealFactTable` (step 3b), and its window walk already reads through
+the slice door that a cold twin would need.
+
 ## The room a load reserves before it reads, and what parallelism would cost
 
 Two questions got measured on the same capture (`eqlog_Kizant_xegony-09-03-26.txt`, 998 MB, 10,015,348 lines), because

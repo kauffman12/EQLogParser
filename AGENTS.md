@@ -1224,6 +1224,21 @@ moves); the capture's own windows survive even it, because they are this log's e
   shrinks with it, and that is the revisit trigger's input, so it now says what the session holds rather than what it once
   reserved. Cost **34.9 ms** one-time, retained **397.2 → 342.6 MB (−13.8 %)**; numbers, the floor's reasoning and the
   `-l "console;verbosity=detailed"` probe recipe: docs/DesignNotes.md → "The slots a finished load stopped writing".
+- **A chunk goes cold the instant its successor is bought, and the invariant is "a null slot always has a blob behind it"** (2026-11):
+  damage chunks that can never receive another row are encoded (zigzag-varint deltas of `Seq`/`TimeS`, then fixed planes, one Deflate — chosen
+  over four measured candidates: **5.80× vs 4.48× undelta'd; Brotli's extra 16 % costs 15× the CPU, refused**) and their row array goes to the
+  GC: realized **58.5 MB → 16.3 MB** on `eqlog_Kizant_xegony-2.txt`, encode ~75 ms/chunk **on a pool worker handed the array by value** (load
+  time unchanged; no lock, because superseded means immutable), read-back ~3 ms/chunk so a board pays once per chunk of history and never again.
+  Four laws. **(1)** Publish the blob *before* clearing the slot, and take `_chunkGate` for that clear because it is the only mutation sharing
+  the reference array with `Array.Resize` — a lost write would orphan a chunk's rows. **Blobs live in a dictionary, never a parallel array**, for
+  that race. **(2)** Encoding verifies by decoding (~3 ms against ~75) inside a catch: the failure mode is "this chunk stayed raw" plus one
+  `cold chunk:` Warn line, never a board quietly reading somebody else's row — **do not delete the verification to save CPU**, an encode bug has
+  no other surface. **(3)** Ordinals stay the currency (`At`/`RefAt`/`FactsIn` decode on touch), so `FightFactIndex` and every board block keep
+  naming the same row; readers get no representation check. **(4)** `EstimatedBytes` counts blobs because it feeds the spill trigger — and after a
+  whole-capture read it reports rows again, which is the truth then. Heal rows are the remaining half (step 3b): mirror the same handoff onto
+  `HealFactTable`, whose window walk already goes through the slice door. Numbers and rejected codecs: docs/DesignNotes.md → "Rows go cold, and
+  what a chunk costs to remember"; pinned by `ColdChunkTest` (codec edges — `uint.MaxValue`, `NoSubtype`, a backwards second, `ModMask −1` — plus
+  ordinals and seam-crossing slice walks after coldify) and asserted over a real capture by `ColdChunkRealLogTest` (`EQLP_COLD_REALLOG=<log>`).
 - **A capacity hint belongs to the door that reads, and `minBack` has THREE states** (2026-10, found by the heap ledger's first
   field run): `LogReader`'s `minBack` is negative = read from byte 0, positive = seek back N **seconds** by timestamp,
   **zero = `Seek(0, End)` and follow — auto-monitor, File / Open Monitor, Clear All**. `MainWindow.OpenLogFile` sized the session's

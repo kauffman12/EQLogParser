@@ -1,4 +1,7 @@
+using System.Reflection;
 using System.Runtime.InteropServices;
+
+using log4net;
 
 namespace EQLogParser
 {
@@ -183,24 +186,28 @@ namespace EQLogParser
    * yields ReadOnlySpan over a live store, and it must not be able to outlive the frame that reads it. No allocation, no boxing, no per-row
    * delegate; the only cost versus the old flat loop is one outer loop over at most ceil(range / 65536) slices.
    */
-  internal ref struct DamageFactRange(DamageFact[][] chunks, int from, int to)
+  internal ref struct DamageFactRange(DamageFactTable table, int from, int to)
   {
-    private readonly DamageFact[][] _chunks = chunks;
+    private readonly DamageFactTable _table = table;
     private readonly int _from = from;
     private readonly int _to = Math.Max(from, to);
 
-    public Enumerator GetEnumerator() => new(_chunks, _from, _to);
+    public Enumerator GetEnumerator() => new(_table, _from, _to);
 
     // Not `readonly`: MoveNext advances the cursor in place, which is the whole point of a zero-alloc slice walk.
-    public ref struct Enumerator(DamageFact[][] chunks, int from, int to)
+    public ref struct Enumerator(DamageFactTable table, int from, int to)
     {
-      private readonly DamageFact[][] _chunks = chunks;
+      private readonly DamageFactTable _table = table;
       private readonly int _to = to;
       private int _next = from;
       private int _start = from;
       private int _length;
 
-      public ReadOnlySpan<DamageFact> Current => _chunks[_start >> DamageFactTable.FactChunkShift]
+      /*
+       * RowsOf rather than indexing the reference array: a chunk that was put away cold decodes on first touch, so a walk over history
+       * pays ~3 ms per chunk and every later walk reads rows. A slice never spans two chunks, so at most one decode happens per step.
+       */
+      public ReadOnlySpan<DamageFact> Current => _table!.RowsOfChunk(_start >> DamageFactTable.FactChunkShift)
         .AsSpan(_start & DamageFactTable.FactChunkMask, _length);
 
       public bool MoveNext()
@@ -456,6 +463,23 @@ namespace EQLogParser
 
     private DamageFact[][] _chunks = [];
     private int _factCount;
+
+    /*
+     * Cold storage (A1 step 3a): a chunk that can never receive another row is encoded (DamageFactChunkCodec: transposed planes, delta on
+     * Seq/Time, Deflate — measured 5.80x) and its row array is handed back to the GC. Chunks go cold from the append path the instant the
+     * NEXT chunk is bought, which is the moment they become immutable, so no lock protects them: the array handed to the worker is never
+     * written again by anyone, and the only shared mutation (clearing a slot) takes _chunkGate with the one thing that can resize the
+     * reference array. A reader that wants a cold chunk decodes it back — same rows, same ordinals, content byte-identical.
+     *
+     * A dictionary rather than a parallel array because `_chunks` grows and a write racing that growth would land in a discarded copy.
+     */
+    // Same per-class logger convention as every other Core store: a cold-chunk problem has to be findable in eqlogparser.log.
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
+
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<int, byte[]> _cold = new();
+    private readonly object _chunkGate = new();
+    private long _coldBytes;
+    private int _coldHandoffThrough = -1;      // highest chunk index already handed to a worker (single-flight cursor for the append path)
     private DeathFact[] _deaths;
     private int _deathCount;
     private IdentityEvent[] _identities;
@@ -498,7 +522,97 @@ namespace EQLogParser
 
     /// <summary>Sequential access over [from, to) as the CHUNK SLICES covering it: zero allocation, and the inner loop runs over a
     /// contiguous span exactly as it did on the flat buffer. The hot walks use this instead of `Facts` for that reason.</summary>
-    public DamageFactRange FactsIn(int from, int to) => new(_chunks, Math.Max(0, from), Math.Min(to, _factCount));
+    public DamageFactRange FactsIn(int from, int to) => new(this, Math.Max(0, from), Math.Min(to, _factCount));
+
+    /// <summary>Bytes currently held as encoded cold blobs. Cold rows are counted here rather than as chunk bytes.</summary>
+    internal long ColdBlobBytes => Volatile.Read(ref _coldBytes);
+
+    /// <summary>Chunks put away cold (0 while every chunk is live rows). Read by the memory report and by the cold-storage tests.</summary>
+    internal int ColdChunkCount => _cold.Count;
+
+    /// <summary>The row array for a chunk, decoding it first if it went cold. Never null for a chunk the capture reached.</summary>
+    internal DamageFact[] RowsOfChunk(int ci)
+    {
+      var rows = Volatile.Read(ref _chunks[ci]);
+      if (rows is not null) return rows;
+      if (!_cold.TryGetValue(ci, out var blob)) return EmptyChunk;
+
+      var fresh = DamageFactChunkCodec.Decode(blob, ChunkRowsAt(ci));
+      lock (_chunkGate)
+      {
+        var chunks = Volatile.Read(ref _chunks);
+        if (ci < chunks.Length && Interlocked.CompareExchange(ref chunks[ci], fresh, null) is null) Interlocked.Add(ref _coldBytes, -blob.Length);
+      }
+
+      _cold.TryRemove(ci, out _);
+      return Volatile.Read(ref _chunks[ci]) ?? fresh;
+    }
+
+    /* How many rows a chunk index holds — derivable from the capture's length, which is why a blob needs no header. */
+    private int ChunkRowsAt(int ci) => Math.Clamp(_factCount - (ci * FactChunkSize), 0, FactChunkSize);
+
+    private static readonly DamageFact[] EmptyChunk = [];
+
+    /*
+     * Put one completed chunk away. Runs on a pool thread and is never asked about a chunk the append path could still write to: it is
+     * called with the array whose successor was just bought, so rows.Length is a full chunk by construction.
+     *
+     * The blob is published BEFORE the slot is cleared — the invariant readers rely on is "a null slot always has a blob behind it" — and
+     * what it encodes is verified by decoding it back. Verification costs ~3 ms per chunk against a ~70 ms encode, off the parse thread,
+     * and buys the one thing worth buying here: an encoding bug can degrade to "this chunk stayed raw" with a line in the log, never to a
+     * board that quietly reads somebody else's row.
+     */
+    private void ColdifyChunk(int ci, DamageFact[] rows)
+    {
+      try
+      {
+        var blob = DamageFactChunkCodec.Encode(rows, rows.Length);
+        var check = DamageFactChunkCodec.Decode(blob, rows.Length);
+        for (var i = 0; i < rows.Length; i++)
+        {
+          if (SameRow(rows[i], check[i])) continue;
+          Log.Warn($"cold chunk: damage chunk {ci} did not survive its own codec at row {i}; leaving it as rows");
+          return;
+        }
+
+        _cold[ci] = blob;
+        Interlocked.Add(ref _coldBytes, blob.Length);
+
+        lock (_chunkGate)
+        {
+          var chunks = Volatile.Read(ref _chunks);
+          if (ci < chunks.Length) Volatile.Write(ref chunks[ci], null!);
+        }
+      }
+      catch (Exception ex)
+      {
+        // Footprint work may not take the capture down with it: rows stay live, the derive and the boards never notice.
+        Log.Warn($"cold chunk: damage chunk {ci} could not be encoded ({ex.GetType().Name}: {ex.Message}); leaving it as rows");
+      }
+    }
+
+    /*
+     * The synchronous door: encode every chunk that can no longer receive rows, on the calling thread. The append path already hands each
+     * chunk off as it is superseded, so this exists to make the behaviour observable and deterministic where it must be asserted (a test
+     * cannot wait on a pool worker) and to settle a load that stopped mid-chunk. Returns how many chunks it put away.
+     */
+    internal int ColdifyNow()
+    {
+      var newest = _factCount > 0 ? (_factCount - 1) >> FactChunkShift : 0;
+      var done = 0;
+      for (var ci = 0; ci < newest; ci++)
+      {
+        var rows = ci < Volatile.Read(ref _chunks).Length ? Volatile.Read(ref _chunks)[ci] : null;
+        if (rows is not { Length: FactChunkSize }) continue;
+        ColdifyChunk(ci, rows);
+        done++;
+      }
+      return done;
+    }
+
+    private static bool SameRow(in DamageFact a, in DamageFact b) =>
+      a.Seq == b.Seq && a.TimeS == b.TimeS && a.AtkIdx == b.AtkIdx && a.DefIdx == b.DefIdx && a.Total == b.Total
+      && a.TypeId == b.TypeId && a.Flags == b.Flags && a.ModMask == b.ModMask && a.SubIdx == b.SubIdx;
 
     /// <summary>Chunks allocated (not chunks used) - the honest denominator for EstimatedBytes under chunked storage.</summary>
     internal int FactChunksAllocated
@@ -526,8 +640,8 @@ namespace EQLogParser
     public ref readonly DamageFact RefAt(int ordinal)
     {
       if ((uint)ordinal >= (uint)_factCount) return ref ZeroRow;
-      var chunk = _chunks[ordinal >> FactChunkShift];
-      return ref chunk is not null ? ref chunk[ordinal & FactChunkMask] : ref ZeroRow;
+      var chunk = RowsOfChunk(ordinal >> FactChunkShift);
+      return ref chunk.Length > 0 ? ref chunk[ordinal & FactChunkMask] : ref ZeroRow;
     }
 
     private static readonly DamageFact ZeroRow;
@@ -617,9 +731,21 @@ namespace EQLogParser
         Array.Resize(ref _chunks, grown);
       }
 
-      _chunks[ci] ??= new DamageFact[FactChunkSize];
-      _chunks[ci][ordinal & FactChunkMask] = fact;
+      lock (_chunkGate) _chunks[ci] ??= new DamageFact[FactChunkSize];
+      Volatile.Read(ref _chunks)[ci][ordinal & FactChunkMask] = fact;
       _factCount = ordinal + 1;
+
+      /*
+       * Buying chunk ci means chunk ci-1 will never be written again — ordinals only go up. That is the moment to put it away, and the
+       * array goes to the worker by value, so nothing else can mutate what gets encoded (no lock, no stale copy).
+       */
+      var prev = ci - 1;
+      if (prev > Volatile.Read(ref _coldHandoffThrough))
+      {
+        Volatile.Write(ref _coldHandoffThrough, prev);
+        var done = Volatile.Read(ref _chunks)[prev];
+        if (done is { Length: FactChunkSize }) Task.Run(() => ColdifyChunk(prev, done));
+      }
     }
 
     public void AddDeath(DeathFact death)
@@ -716,11 +842,24 @@ namespace EQLogParser
         _chunks[i] = null!;
       }
 
+      // Chunks past the last written row that went cold first: their blobs are the same rows, and nothing will ever ask for them again.
+      foreach (var ci in _cold.Keys)
+        if (ci >= needed && _cold.TryRemove(ci, out var blob))
+        {
+          freed += blob.Length;
+          Interlocked.Add(ref _coldBytes, -blob.Length);
+        }
+
       return freed;
     }
 
     // Approximate in-RAM size of the fact buffers (for the D2 revisit trigger, ~512 MB).
+    /*
+     * A cold chunk counts as its blob, not as the row array it replaced — this number feeds the D2 revisit trigger, so a chunk that got
+     * 5.8x smaller has to show up smaller or the trigger decides this session needs spilling when it already does not.
+     */
     public long EstimatedBytes => (long)FactChunksAllocated * FactChunkSize * Marshal.SizeOf<DamageFact>()
+      + Volatile.Read(ref _coldBytes)
       + (long)_deaths.Length * Marshal.SizeOf<DeathFact>()
       + (long)_identities.Length * Marshal.SizeOf<IdentityEvent>()
       + (long)_taunts.Length * Marshal.SizeOf<TauntFact>()
