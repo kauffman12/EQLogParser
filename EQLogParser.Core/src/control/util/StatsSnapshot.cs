@@ -41,33 +41,17 @@ internal static class StatsSnapshot
   /// <summary>A detached, drained copy of a published row: same numbers, same child rows, nothing shared. The source keeps its own
   /// running second (publishing stays non-destructive) and its own subscribers.</summary>
   internal static PlayerStats Take(PlayerStats row)
-    => (PlayerStats)Copy(row, new Dictionary<PlayerStats, PlayerStats>(ReferenceEqualityComparer.Instance), drainRunningSecond: true);
+    => (PlayerStats)Copy(row, new Dictionary<PlayerStats, PlayerStats>(ReferenceEqualityComparer.Instance));
 
   /// <summary>The same for one cell — a sub-stat node at any depth. Use this to carry a cell; use Take for a whole report.</summary>
   internal static PlayerSubStats TakeCell(PlayerSubStats cell)
-    => Copy(cell, new Dictionary<PlayerStats, PlayerStats>(ReferenceEqualityComparer.Instance), drainRunningSecond: true);
-
-  /*
-   * A detached copy that KEEPS the running second open — the boundary a carried board cell is taken at.
-   *
-   * `Take` drains because it was written as fold input: `MergeStatsRecursive` refuses a row whose `BestSecTemp` still holds
-   * the second being written (that refusal is `UpdateCalculations`' law). A carried cell is not folded, it is CONTINUED:
-   * the next build hands its own accumulating rows back and keeps counting records into them, so closing the open second at
-   * the carry would split one busy second across two partial maxima — `BestSec` (a column the grid prints) would read the
-   * larger of two halves of a second rather than the whole of it, for every name active at the moment the pass landed.
-   * Keeping it open costs nothing and is what makes an incremental build's numbers the same numbers a single build over the
-   * same records produces. (docs/DesignNotes.md → "A carried cell keeps the running second open".)
-   *
-   * Everything else about detachment holds: new lists, new dictionaries, new `TimeRange`s, copied child rows.
-   */
-  internal static PlayerStats TakeCarry(PlayerStats row)
-    => (PlayerStats)Copy(row, new Dictionary<PlayerStats, PlayerStats>(ReferenceEqualityComparer.Instance), drainRunningSecond: false);
+    => Copy(cell, new Dictionary<PlayerStats, PlayerStats>(ReferenceEqualityComparer.Instance));
 
   /*
    * `rows` exists for one edge: `MoreStats` (the healing row hung on a damage row, and anything that ever points back). Registering
    * each row's copy BEFORE descending means a cycle meets its own clone instead of recursing until the stack is gone.
    */
-  private static PlayerSubStats Copy(PlayerSubStats source, Dictionary<PlayerStats, PlayerStats> rows, bool drainRunningSecond)
+  private static PlayerSubStats Copy(PlayerSubStats source, Dictionary<PlayerStats, PlayerStats> rows)
   {
     if (source is null) return null!;
 
@@ -93,7 +77,7 @@ internal static class StatsSnapshot
      * MergeStatsRecursive take this node as a source without its guard firing. Nothing here touches the source's scratch — that is
      * the half publishing was not allowed to do.
      */
-    if (drainRunningSecond) StatsUtil.CloseBestSecond(copy);
+    StatsUtil.CloseBestSecond(copy);
 
     // The chart's amounts ride as fresh objects: an unasked-for row carries raw amounts, an asked-for one carries its dictionaries,
     // and either way the two sides append and read separately. `MergeStatsRecursive` has no term for these, so a cache that skipped
@@ -102,12 +86,12 @@ internal static class StatsSnapshot
 
     copy.Ranges = CopyRange(source.Ranges);
     copy.AllRanges = CopyRange(source.AllRanges);
-    copy.SubSubStats = CopyCells(source.SubSubStats, rows, drainRunningSecond);
+    copy.SubSubStats = CopyCells(source.SubSubStats, rows);
     if (source.SubSubStatsIndex is not null) copy.SubSubStatsIndex = IndexOver(copy.SubSubStats);
 
     if (copy is SubStatsBreakdown breakdown)
     {
-      breakdown.Children = CopyCells(((SubStatsBreakdown)source).Children, rows, drainRunningSecond);
+      breakdown.Children = CopyCells(((SubStatsBreakdown)source).Children, rows);
     }
 
     /*
@@ -118,16 +102,16 @@ internal static class StatsSnapshot
     if (copy is GroupEntry groupCopy)
     {
       var sourceGroup = (GroupEntry)source;
-      groupCopy.Members = CopyRows(sourceGroup.Members, rows, drainRunningSecond);
-      groupCopy.Children = CopyRows(sourceGroup.Children, rows, drainRunningSecond);
+      groupCopy.Members = CopyRows(sourceGroup.Members, rows);
+      groupCopy.Children = CopyRows(sourceGroup.Children, rows);
     }
 
     if (source is not PlayerStats row) return copy;
     var target = (PlayerStats)copy;
 
-    target.SubStats = CopyCells(row.SubStats, rows, drainRunningSecond);
+    target.SubStats = CopyCells(row.SubStats, rows);
     if (row.SubStatsIndex is not null) target.SubStatsIndex = IndexOver(target.SubStats);
-    target.SubStats2 = CopyCells(row.SubStats2, rows, drainRunningSecond);
+    target.SubStats2 = CopyCells(row.SubStats2, rows);
     if (row.SubStats2Index is not null) target.SubStats2Index = IndexOver(target.SubStats2);
 
     /*
@@ -142,25 +126,25 @@ internal static class StatsSnapshot
       row.ResistCounts.ToDictionary(static e => e.Key, static e => new ConcurrentDictionary<string, int>(e.Value)));
     target.Deaths = [.. row.Deaths.Select(static d => new DeathEvent { Record = d.Record, BeginTime = d.BeginTime })];
 
-    target.MoreStats = row.MoreStats is null ? null : CopyMoreStats(row.MoreStats, rows, drainRunningSecond);
+    target.MoreStats = row.MoreStats is null ? null : CopyMoreStats(row.MoreStats, rows);
     return target;
   }
 
-  private static PlayerStats CopyMoreStats(PlayerStats source, Dictionary<PlayerStats, PlayerStats> rows, bool drainRunningSecond)
-    => rows.TryGetValue(source, out var already) ? already : (PlayerStats)Copy(source, rows, drainRunningSecond);
+  private static PlayerStats CopyMoreStats(PlayerStats source, Dictionary<PlayerStats, PlayerStats> rows)
+    => rows.TryGetValue(source, out var already) ? already : (PlayerStats)Copy(source, rows);
 
-  private static List<PlayerSubStats> CopyCells(List<PlayerSubStats> cells, Dictionary<PlayerStats, PlayerStats> rows, bool drainRunningSecond)
+  private static List<PlayerSubStats> CopyCells(List<PlayerSubStats> cells, Dictionary<PlayerStats, PlayerStats> rows)
   {
     var copy = new List<PlayerSubStats>(cells.Count);
-    foreach (var cell in cells) copy.Add(Copy(cell, rows, drainRunningSecond));
+    foreach (var cell in cells) copy.Add(Copy(cell, rows));
 
     return copy;
   }
 
-  private static List<PlayerStats> CopyRows(List<PlayerStats> members, Dictionary<PlayerStats, PlayerStats> rows, bool drainRunningSecond)
+  private static List<PlayerStats> CopyRows(List<PlayerStats> members, Dictionary<PlayerStats, PlayerStats> rows)
   {
     var copy = new List<PlayerStats>(members.Count);
-    foreach (var member in members) copy.Add((PlayerStats)Copy(member, rows, drainRunningSecond));
+    foreach (var member in members) copy.Add((PlayerStats)Copy(member, rows));
 
     return copy;
   }
