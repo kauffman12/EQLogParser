@@ -61,7 +61,7 @@
       <CheckBox x:Name="fightShowBreaks" Margin="8,0,0,2" Template="{StaticResource CustomCheckBoxTemplate}" Checked="ShowBreakChanged" Unchecked="ShowBreakChanged"
                 IsChecked="True" Content="Inactivity" ToolTip="Add Breaks for Inactivity"/>
       <CheckBox x:Name="fightShowTanking" Margin="8,0,0,2" Template="{StaticResource CustomCheckBoxTemplate}" Checked="ShowTankingChanged" Unchecked="ShowTankingChanged"
-                IsChecked="True" Content="Tanking" ToolTip="Include Fights with only Tanking data"/>
+                IsChecked="True" Content="Tanking" ToolTip="Includes NPCs or Spells that damaged players but did not receive damage"/>
     </StackPanel>
     <syncfusion:SfDataGrid x:Name="fightGrid"
                            AllowResizingColumns="True"
