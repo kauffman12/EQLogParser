@@ -752,6 +752,7 @@ namespace EQLogParser
       Log.Debug($"identity cell: {DoorType} popup opened for {row.Name}");
 
       // This row's own list — the kinds its name can still be (IdentityVocabulary.TypeOptionsFor).
+      _cellPreselect = true;
       typeEditComboBox.ItemsSource = row.TypeChoices;
 
       // Preselect what the row already says, so the list opens on the current verdict — and so the guard in
@@ -759,6 +760,7 @@ namespace EQLogParser
       // between refreshing a window and rewriting identity-overrides.txt for nothing. An unplaced name selects nothing:
       // and this list cannot hold the take-back as a VALUE (no entry writes Unknown): that verb is the calculator in the Name column.
       typeEditComboBox.SelectedValue = row.Kind == IdentityKind.Unknown ? null : row.Kind;
+      _cellPreselect = false;
 
       UiElementUtil.OpenCellPopup(typeEditPopup, typeEditComboBox, cell, () =>
       {
@@ -772,6 +774,7 @@ namespace EQLogParser
 
     private void TypeSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+      if (_cellPreselect) return;
       if (sender is not ComboBox combo) return;
       if (combo.SelectedItem is not IdentityVocabulary.TypeOption option)
       {
@@ -837,7 +840,9 @@ namespace EQLogParser
       Editors.Open();
       _classEditRow = row;
       Log.Debug($"identity cell: {DoorClass} popup opened for {row.Name}");
+      _cellPreselect = true;
       classEditComboBox.SelectedItem = (object?)row.PlayerClass ?? "";   // ClassList's first entry is the blank
+      _cellPreselect = false;
 
       UiElementUtil.OpenCellPopup(classEditPopup, classEditComboBox, cell, () =>
       {
@@ -849,6 +854,7 @@ namespace EQLogParser
 
     private void ClassSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+      if (_cellPreselect) return;
       if (sender is not ComboBox combo) return;
       if (combo.SelectedValue is not string className)
       {
@@ -890,8 +896,10 @@ namespace EQLogParser
       // including a row that reads "No Owner", which opens with that entry selected rather than blank.
       // IdentityLookup is the one answer to "who is one of ours" (durable roster lane UNION this session's store), so the picker
       // and the verdicts beside it cannot disagree about who can own a summon.
+      _cellPreselect = true;
       ownerEditComboBox.ItemsSource = PetOwnership.Choices(row.Owner, IdentityLookup.OurPeopleNames());
       ownerEditComboBox.SelectedItem = row.Owner;
+      _cellPreselect = false;
 
       UiElementUtil.OpenCellPopup(ownerEditPopup, ownerEditComboBox, cell, () =>
       {
@@ -903,6 +911,7 @@ namespace EQLogParser
 
     private void OwnerSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+      if (_cellPreselect) return;
       if (sender is not ComboBox combo) return;
       if (combo.SelectedItem is not string owner)
       {
@@ -953,6 +962,14 @@ namespace EQLogParser
     private const string DoorType = "type pick";
     private const string DoorClass = "class pick";
     private const string DoorOwner = "owner pick";
+
+    /// <summary>
+    /// True while a popup is being PRESELECTED for the row it was opened on. Setting ItemsSource/SelectedValue raises
+    /// SelectionChanged just like a pick does, so without this the pane logged "Speedbump already reads Pet" at open
+    /// time and every genuine no-op looked identical to that - which is how "I clicked and nothing happened" ended up
+    /// reading as "the operator picked the value that was already there".
+    /// </summary>
+    private bool _cellPreselect;
 
     private static void Refuse(string door, string why) => Log.Info($"identity cell: {door} ignored - {why}");
     private static void RefuseDebug(string door, string why) => Log.Debug($"identity cell: {door} ignored - {why}");
