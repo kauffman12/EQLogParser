@@ -220,6 +220,11 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
   (`Math.Max(1, Last - Begin + 1)`, matching `TimeSegment.Total`); a death closes only a row that was alive at `dt`; an empty
   window prints nothing rather than a fake zero. A list that never fills is diagnosed by which of `capture: started` /
   `derive: first pass` is missing (both Debug; run with `Debug=True`).
+- **The dials filter our rows, not the grid**: `_allRows` is the capture and `_rows` the visible projection (`ShownRows`: Project/Reconcile/
+  Runs), holding the SAME row instances. `View.Filter` stays empty — a grid-side filter reshuffles index-based selection with no live refresh, which
+  put the unchecked-Tanking mode on a full rebuild per pass and let a highlight mean another fight. So the patch runs in both dial states, selects
+  index `_rows` directly (a run IS a grid range), a toggle re-adds the still-visible selection by reference, and it asks as `BoardReason.DialChange`
+  (a hand, never throttled).
 - **Follow, don't yank**: the list follows its newest row unless a hand is on it (`FightListFollow`: pointer-over or selection
   changed within the settle window parks following; a wholesale snapshot re-arms to the newest row); group gestures act on the
   row the pointer opened the menu on and **un-select never toggles** (an id the grid no longer has clears silently).

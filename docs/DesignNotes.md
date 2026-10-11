@@ -7004,11 +7004,47 @@ Four laws, one of them found by a test refusing the first draft.
    `EveryRowInTheSameSnapshot_HasItsOwnKey` guards the failure that would silence the whole feature: a duplicate key makes `Build` refuse
    forever, which looks exactly like “the patch never applies”.
 
-**Two states deliberately keep the wholesale path**, both because a patch cannot make their bookkeeping come true: a **sorted** grid
-would hold updated cells in yesterday’s order (no cheap live re-sort exists on this control, and guessing row positions is the failure
-mode the selection code already refuses), and **“show tanking” off** filters per ROW on `Fight.DamageToOwner`, a field a patch mutates
-— the shipped `Syncfusion.SfGrid.WPF` (34.2.8) exposes no `RefreshLiveFilter` to ask for, verified by inspecting the assembly rather
-than by hoping. A live raid pane spends its whole night unsorted and unfiltered, which is where the win lives.
+**One state deliberately keeps the wholesale path**: a **sorted** grid would hold updated cells in yesterday’s order (no cheap live re-sort
+exists on this control, and guessing row positions is the failure mode the selection code already refuses). A second state used to be here —
+**“show tanking” off**, because that dial filtered per ROW on `Fight.DamageToOwner`, a field a patch mutates, and the shipped
+`Syncfusion.SfGrid.WPF` (34.2.8) exposes no `RefreshLiveFilter` to ask for (verified by inspecting the assembly rather than by hoping). Hiding
+the filter from the grid removed that restriction: see the next section.
+
+### The fight list dials filter our rows, not the grid (2026-11)
+
+The Fight List has two row dials — **Inactivity** (show the gaps between pulls) and **Tanking** (hide the rows whose whole story is something
+hitting us). Both are one predicate over ONE list. The first version of the derived pane handed that predicate to SfDataGrid
+(`View.Filter` + `RefreshFilter`), and the single choice caused three separate problems, one of them a field report:
+
+- **The patch had to be disabled whenever Tanking was off.** `Fight.DamageToOwner` is a field a patch mutates (a fight starts or stops taking
+  player damage mid-pull) and this build of the grid offers no live-filter refresh — only `View.RefreshFilter`, which re-evaluates every row.
+  So `canPatch` carried a `_currentShowTanking` term and the unchecked mode rebuilt the entire collection on every derive pass, twice a second
+  during a pull, while the checked mode patched ~5 % of the rows.
+- **Index-based selection could mean a different fight than it highlighted.** The control stores selection by ROW INDEX; re-filtering
+  reshuffles which fight sits at each index underneath it. Field report: *“i uncheck tanking, the selection happens quickly but nothing actually
+  happens”* — a click landing while a pass was mid-re-filter looked selected and reported something else (or nothing). Legacy could only dodge
+  this by wiping its selection whenever it swapped lists.
+- **Every index-taking call needed shown-position translation** (`SelectRows`, scroll-to, group select had to count “rows the view actually
+  renders”), which was its own walk with its own off-by-one surface — one hidden row above a run shifted that run by one.
+
+**The rule: the pane owns visibility; the grid renders a list that is already only the visible rows.** `FightTable` keeps `_allRows` (the
+capture’s rows, patched in place) and `_rows` (what the dials call visible), and `ShownRows` (Core, `src/control/ui/`) supplies the three
+operations: `Project` (the visible subsequence), `Reconcile` (edit the bound collection in place to match it, fewest edits, reporting what it
+spent), `Runs` (contiguous select ranges). The load-bearing property is that **the two lists hold the SAME row objects** — hiding a fight moves
+a reference, it never copies or rebuilds one. That is what makes the patch legal in both dial states, what lets a selection be carried across a
+toggle and across a wholesale swap *by instance* (no position arithmetic anywhere), and what makes an index into `_rows` BE the grid row, so
+the translation layer is gone rather than correct.
+
+Corollaries the pane depends on: `View.Filter` stays empty forever (nothing else may decide visibility), a dial toggle is the one place a
+wholesale `ItemsSource` swap is still right (hundreds of per-edit notifications would repaint worse than one assignment) — and it re-adds the
+still-visible selected rows by reference — and a row that stops being visible drops out of the selection with `AnnounceSelection` behind it, so
+the boards cannot keep describing a fight that left the list. `BoardReason.DialChange` is the door’s word for that ask, and it is deliberately
+not in `UnaskedRefresh.IsUnasked`: a dial is a hand, never throttled.
+
+The rules themselves did not move an inch: `ShownWhenTankingHidden(fight)` is still `fight is null || fight.DamageToOwner > 0` (a divider or an
+unknown fight stays; a person-row reads above zero whenever the person was struck, so nobody vanishes under the dial). Only *where* it runs
+changed. What is new to the eye: with Tanking off, a row now appears or disappears the moment it crosses the line — the incremental path had
+never run in that mode before — and a selection survives live updates instead of being rebuilt under the cursor.
 
 Re-announcement is conditional too — see the next section for what "conditional" means once law 1 guarantees the backing object moves
 every rebuild. The search mark survives a pass now as well, so it stops blinking off twice a second.
@@ -7021,7 +7057,8 @@ figures or leaving a board a pass behind.
 
 Two signals were tried and both are wrong in opposite directions:
 
-- **the row diff** (`patch.Updates`/`Removals` intersected with the selection) misses a rebuild where every CELL reads the same but the answer
+- **the row diff** (`patch.Updates`/`Removals` intersected with the selection; “removed” has meant “no longer in the visible list” since
+  the dials moved out of the grid, which is the same thing from the reader’s side) misses a rebuild where every CELL reads the same but the answer
   moved — an ownership or charm verdict shifted, so the same facts now split between `X +Pets` and the mob, and damage/tanking routing followed.
   `SameDisplayAs` cannot see routing; that was the original bug.
 - **object identity** ("the selected row's `Fight` is a different instance than before") over-corrects: law 1 makes that true on EVERY full pass,
