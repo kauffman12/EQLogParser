@@ -102,7 +102,11 @@ namespace EQLogParser
     private readonly Dictionary<DerivedFight, List<int>> _tankingOrdinals = new();
 
     /*
-     * A materialized summary plus a stamp of everything BuildFight read out of the mutable world. See SummaryFightFor.
+     * A materialized summary plus a stamp of everything the walk read out of the mutable world. See SummaryFightFor.
+     *
+     * The two counts do DOUBLE duty: they are the stamp AND the resume point. A cached entry whose DamageCount/TankCount
+     * are below the row's current runs is not merely stale, it is a walk that stopped partway through an ordinal list that
+     * has since grown - which is exactly what ContinueFight picks up (see the append-only laws there).
      */
     private readonly record struct CachedSummary(Fight Built, int DamageCount, int TankCount, int TauntCount,
       double BeginTime, double LastTime, bool Dead, int GroupId);
@@ -243,7 +247,18 @@ namespace EQLogParser
           return cached.Built;
         }
 
-        var built = BuildFight(fight, facts, double.NegativeInfinity, double.PositiveInfinity);
+        /*
+         * Something moved. Before layer 1 that meant one answer - re-walk the row from ordinal zero, allocating every block
+         * and every record again — which a live pull pays per touched row per pass for records that cannot have changed. Now:
+         * continue from the published prefix when the entry's own ordinals still describe the head of this run, rebuild from
+         * scratch only when nothing can be trusted (no prior answer, or a run that somehow got SHORTER - append-only is a
+         * law of this store, so that branch is a guard against its violation rather than a case that happens).
+         */
+        var canContinue = cached.Built is not null && damageCount >= cached.DamageCount && tankCount >= cached.TankCount;
+        var built = canContinue
+          ? ContinueFight(cached, fight, facts)
+          : BuildFight(fight, facts, double.NegativeInfinity, double.PositiveInfinity);
+
         _summaries[fight] = new CachedSummary(built, damageCount, tankCount, facts.TauntCount,
           fight.BeginTime, fight.LastTime, fight.Dead, fight.GroupId);
         return built;
@@ -287,7 +302,148 @@ namespace EQLogParser
     private string OwnerOf(DamageFact fact, string attacker)
       => fact.OwnerInLine ? ClassificationRules.OwnerInName(attacker) : _charmers?.OwnerOf(attacker, fact.TimeS);
 
+    /*
+     * The accumulation state of one row's materialization, so ONE loop body serves both a row built from zero and a row
+     * continued from its published prefix (`ContinueFight`). Everything here is either a cursor into the Fight being
+     * built or the running bounds the damage pass keeps out of the published object until the walk closes.
+     */
+    private sealed class RowWalk
+    {
+      internal Fight Summary;
+
+      /*
+       * The block that a fact sharing its second would join, and that second (NaN = no block yet). This is the whole of
+       * FightManager.AddAction's grouping rule ("consecutive actions sharing a timestamp"), which is why it can cross a
+       * pass boundary unchanged: "consecutive" only ever compares against the PREVIOUS fact, so a continued walk groups
+       * its first new fact exactly as a from-zero walk would have.
+       */
+      internal ActionGroup DamageBlock;
+      internal double DamageBlockTime = double.NaN;
+      internal double BeginDamage = double.NaN;
+      internal double LastDamage = double.NaN;
+
+      // The same cursor for the tanking half. Taunts have none, on purpose: they are a name-keyed stream walked whole,
+      // cheap enough (a few thousand struct compares) that a resume rule for its window would be complexity bought with
+      // silently-losable taunts.
+      internal ActionGroup TankBlock;
+      internal double TankBlockTime = double.NaN;
+    }
+
+    /*
+     * Cold materialization: every ordinal of the row, from zero. This is what a REBUILT classification pass pays (its
+     * `FightFactIndex` is new, so there is nothing to continue), what the meter's windowed slice always pays, and what the
+     * first click on a row pays. A live row that merely GREW takes `ContinueFight` instead, and both go through AddDamage
+     * and AddTank — "same facts in the same blocks" is structural here rather than argued.
+     */
     private Fight? BuildFight(DerivedFight fight, DamageFactTable facts, double fromT, double toT)
+    {
+      var walk = new RowWalk { Summary = NewSummary(fight, fromT, toT) };
+
+      /*
+       * Two passes over one row, in this order: what the raid did to this name (the damage board's half) and
+       * what this name did to the raid (the tanking board's). A row can have either, both, or — for a selection
+       * that only ever got hit — only the second, so neither pass is allowed to decide whether the Fight exists.
+       */
+      var allFacts = facts.Facts;
+
+      if (_damageOrdinals.TryGetValue(fight, out var damageRun))
+        foreach (var ordinal in damageRun) AddDamage(walk, allFacts[ordinal], facts, fromT, toT);
+
+      if (_tankingOrdinals.TryGetValue(fight, out var tankRun))
+        foreach (var ordinal in tankRun) AddTank(walk, allFacts[ordinal], facts, fromT, toT);
+
+      AddTaunts(walk, fight, facts, fromT, toT);
+      return FinishFight(walk);
+    }
+
+    /*
+     * Layer 1 of the materialization cache: a row that grew continues instead of re-walking (docs/DesignNotes.md →
+     * "What the cell cache has to buy at two boundaries"). Before this, any movement in a live row's ordinal run sent
+     * `BuildFight` over every ordinal it had EVER held, allocating every block and every DamageRecord again — the
+     * materialize term, paid per touched row per pass, for records that could not have changed.
+     *
+     * Appending is sound on three facts about this store, all pinned elsewhere:
+     *   - the fact tables are APPEND-ONLY, so ordinal n describes the same line forever (rows keep their indices even
+     *     across a slack trim, which is what lets `FightFactIndex` hold ordinals at all);
+     *   - a row's ordinal list is only ever appended to (`OnFactLocked`), and a pass that REBUILT rather than continued
+     *     threw this index away with the rows it belongs to, so a cache entry can never describe a different walk;
+     *   - therefore the proof that an already-built block is still correct is its ORDINAL PREFIX. Never a content hash:
+     *     hashing a block's records costs exactly what skipping them was for.
+     *
+     * What the tail walk must not lose is the accumulated half of every structure the loop touches, so it starts from a
+     * copy (`CarryForward`) rather than from nothing: hit counts and totals, activity segments, per-spell aggregates, and
+     * the open block each direction ended on. The taunt pass re-runs whole (see RowWalk).
+     */
+    private Fight? ContinueFight(CachedSummary cached, DerivedFight fight, DamageFactTable facts)
+    {
+      var walk = CarryForward(cached.Built, fight);
+      var allFacts = facts.Facts;
+
+      if (_damageOrdinals.TryGetValue(fight, out var damageRun))
+        for (var i = cached.DamageCount; i < damageRun.Count; i++) AddDamage(walk, allFacts[damageRun[i]], facts, double.NegativeInfinity, double.PositiveInfinity);
+
+      if (_tankingOrdinals.TryGetValue(fight, out var tankRun))
+        for (var i = cached.TankCount; i < tankRun.Count; i++) AddTank(walk, allFacts[tankRun[i]], facts, double.NegativeInfinity, double.PositiveInfinity);
+
+      AddTaunts(walk, fight, facts, double.NegativeInfinity, double.PositiveInfinity);
+      return FinishFight(walk);
+    }
+
+    /*
+     * The new Fight that a continued walk writes into: fresh containers, holding the SAME closed blocks and records.
+     *
+     * Nothing published is mutated, which is the reason this returns a new Fight rather than appending in place — the
+     * object handed out last pass lives inside a `SummaryInput` that a builder may be walking on a worker thread right
+     * now, and appending to a List<T> under somebody else's enumerator is both a torn board and a throw. Closed blocks
+     * are shared by reference (immutable-by-discipline once published: only the walk's own tail ever gets an Add); only
+     * the LAST block of each direction is cloned, because that is the one a fact sharing its second can still extend.
+     *
+     * The per-player segment maps and the per-spell aggregates hold mutable VALUE objects (UpdateTimeSegments writes
+     * EndTime into a TimeSegment; the spell boards add to Count/Max/Total), so those are cloned key by key — a row's
+     * worth of keys is tens, against thousands of records left alone. Copying whole block LISTS per pass is O(blocks) of
+     * pointer memcpy (not records); making that sub-linear is the cell-level cache, which is layer 2 and gated on its own
+     * measurement.
+     */
+    private static RowWalk CarryForward(Fight published, DerivedFight fight)
+    {
+      var summary = NewSummary(fight, double.NegativeInfinity, double.PositiveInfinity);
+
+      // What the walk accumulates continues rather than restarts.
+      summary.DamageHits = published.DamageHits;
+      summary.DamageTotal = published.DamageTotal;
+      summary.TankHits = published.TankHits;
+      summary.TankTotal = published.TankTotal;
+      summary.BeginTankingTime = published.BeginTankingTime;
+      summary.LastTankingTime = published.LastTankingTime;
+
+      CopyBlocks(published.DamageBlocks, summary.DamageBlocks);
+      CopyBlocks(published.TankingBlocks, summary.TankingBlocks);
+      CopySegments(published.DamageSegments, summary.DamageSegments);
+      CopySegments(published.TankSegments, summary.TankSegments);
+      CopySubSegments(published.DamageSubSegments, summary.DamageSubSegments);
+      CopySubSegments(published.TankSubSegments, summary.TankSubSegments);
+      CopySpellStats(published.DdDamage, summary.DdDamage);
+      CopySpellStats(published.DoTDamage, summary.DoTDamage);
+      CopySpellStats(published.ProcDamage, summary.ProcDamage);
+
+      var walk = new RowWalk
+      {
+        Summary = summary,
+        BeginDamage = published.BeginDamageTime,
+        LastDamage = published.LastDamageTime,
+      };
+
+      // Re-open the tail: cloned so an extend cannot reach the published block, and its second becomes the cursor, which
+      // is what makes the first new fact join or open a block exactly as it would have inside one uninterrupted loop.
+      walk.DamageBlock = ReopenTail(summary.DamageBlocks);
+      walk.DamageBlockTime = walk.DamageBlock?.BeginTime ?? double.NaN;
+      walk.TankBlock = ReopenTail(summary.TankingBlocks);
+      walk.TankBlockTime = walk.TankBlock?.BeginTime ?? double.NaN;
+      return walk;
+    }
+
+    /// <summary>The Fight header both paths start from: the row's identity, bounds and window clamp. See BuildFight/CarryForward.</summary>
+    private static Fight NewSummary(DerivedFight fight, double fromT, double toT)
     {
       var summary = new Fight
       {
@@ -303,190 +459,216 @@ namespace EQLogParser
        * Clamp the row's own span to the window. These two are the DPS clock (Build hands them to AllRanges, which is
        * also what windows the healing board), so an unclamped BeginTime would divide the slice's damage by seconds
        * the slice never had — legacy's overlay measures against the segments it accumulated since the reset, not
-       * against the encounter's birth.
+       * against the encounter's birth. An unbounded window (every cached path) leaves them untouched.
        */
       if (!double.IsNaN(summary.BeginTime) && summary.BeginTime < fromT) summary.BeginTime = fromT;
       if (!double.IsNaN(summary.LastTime) && summary.LastTime > toT) summary.LastTime = toT;
 
-      /*
-       * Two passes over one row, in this order: what the raid did to this name (the damage board's half) and
-       * what this name did to the raid (the tanking board's). A row can have either, both, or — for a selection
-       * that only ever got hit — only the second, so neither pass is allowed to decide whether the Fight exists.
-       */
-      var allFacts = facts.Facts;
-      List<int> ordinals = _damageOrdinals.TryGetValue(fight, out var damageRun) ? damageRun : [];
-      ActionGroup block = null;
-      var lastBlockTime = double.NaN;
-      var beginDamage = double.NaN;
-      var lastDamage = double.NaN;
+      return summary;
+    }
 
-      foreach (var ordinal in ordinals)
+    private static void CopyBlocks(List<ActionGroup> from, List<ActionGroup> to)
+    {
+      foreach (var block in from) to.Add(block);
+    }
+
+    /*
+     * A TimeSegment is mutable and UpdateTimeSegments writes EndTime into the instance it found, so a continued walk
+     * would edit last pass's Fight through its own segment map. Clone the values; the keys are vocabulary strings.
+     */
+    private static void CopySegments(Dictionary<string, TimeSegment> from, Dictionary<string, TimeSegment> to)
+    {
+      foreach (var pair in from) to[pair.Key] = new TimeSegment(pair.Value.BeginTime, pair.Value.EndTime);
+    }
+
+    private static void CopySubSegments(Dictionary<string, Dictionary<string, TimeSegment>> from,
+                                        Dictionary<string, Dictionary<string, TimeSegment>> to)
+    {
+      foreach (var pair in from)
       {
-        var fact = allFacts[ordinal];
-        var time = (double)fact.TimeS;
+        var copy = new Dictionary<string, TimeSegment>(pair.Value.Count);
+        CopySegments(pair.Value, copy);
+        to[pair.Key] = copy;
+      }
+    }
 
-        // Outside the meter's window: not carried, not counted, not a second of activity. Bounds and segments below
-        // are computed from what survives, which is why no other line here needs to know about the window.
-        if (time < fromT || time > toT) continue;
-
-        // Same rule as FightManager.AddAction: consecutive actions sharing a timestamp share a block.
-        if (block is null || !lastBlockTime.Equals(time))
+    /// <summary>SpellDamageStats accumulates Count/Max/Total in place, same rule as the segment maps above.</summary>
+    private static void CopySpellStats(Dictionary<string, SpellDamageStats> from, Dictionary<string, SpellDamageStats> to)
+    {
+      foreach (var pair in from)
+        to[pair.Key] = new SpellDamageStats
         {
-          block = new ActionGroup { BeginTime = time };
-          summary.DamageBlocks.Add(block);
-          lastBlockTime = time;
-        }
+          Caster = pair.Value.Caster, Spell = pair.Value.Spell,
+          Count = pair.Value.Count, Max = pair.Value.Max, Total = pair.Value.Total,
+        };
+    }
 
-        var record = RecordFrom(fact, facts);
-        block.Actions.Add(record);
+    /*
+     * Replace the last block of a copied list with a clone of itself and hand it back as the walk's open block. The
+     * published one keeps its own Actions list and every reference in it; nothing above this line can reach it.
+     */
+    private static ActionGroup ReopenTail(List<ActionGroup> blocks)
+    {
+      if (blocks.Count == 0) return null;
 
-        // The per-spell activity key comes from the same helper FightManager uses. It cannot be null here:
-        // SubTypeOf guarantees a subtype, and CreateRecordKey returns at least that.
-        StatsUtil.UpdateTimeSegments(summary.DamageSegments, summary.DamageSubSegments,
-          StatsUtil.CreateRecordKey(record.Type, record.SubType), record.Attacker, time);
+      var last = blocks[^1];
+      var clone = new ActionGroup { BeginTime = last.BeginTime };
+      foreach (var action in last.Actions) clone.Actions.Add(action);
+      blocks[^1] = clone;
+      return clone;
+    }
 
-        if (LabelTypes.IsHit(fact.TypeId))
-        {
-          summary.DamageHits++;
-          summary.DamageTotal += fact.Total;
-        }
+    /*
+     * One damage-side fact: its block, its record, its activity windows, the hit count and total, the running bounds, and
+     * the per-spell boards' aggregates. Every rule in here is the rule the from-zero walk always had — this is the same
+     * code, moved so the continued walk cannot drift from it.
+     */
+    private void AddDamage(RowWalk walk, DamageFact fact, DamageFactTable facts, double fromT, double toT)
+    {
+      var summary = walk.Summary;
+      var time = (double)fact.TimeS;
 
-        /*
-         * Both bounds need their own NaN test rather than a bare comparison: `time > NaN` is false, so seeding
-         * lastDamage with NaN and comparing left every fight ending at NaN. TimeRange.Add drops a segment whose
-         * bounds do not compare, and DamageStatsBuilder divides by an activity window of nothing — a derived
-         * selection that produces no numbers at all, with no exception anywhere to say so.
-         */
-        if (double.IsNaN(beginDamage) || time < beginDamage) beginDamage = time;
-        if (double.IsNaN(lastDamage) || time > lastDamage) lastDamage = time;
+      // Outside the meter's window: not carried, not counted, not a second of activity. Bounds and segments are computed
+      // from what survives, which is why no other line here needs to know about the window.
+      if (time < fromT || time > toT) return;
 
-        /*
-         * The per-spell boards read these dictionaries off the same Fight (SpellDamageStatsViewer): fill them with
-         * FightManager's own live-parse shape - same key, same switch, same Count/Max/Total arithmetic. The kind
-         * words are Labels' vocabulary (RecordFrom hands back LabelTypes.LabelOf), so Dd/Dot/Proc arrive without a
-         * re-map, and a miss never reaches the switch because a miss is not any of these three words.
-         */
-        /*
-         * The per-spell boards read these dictionaries off the same Fight (SpellDamageStatsViewer): fill them with
-         * FightManager's own live-parse shape - same key, same switch, same Count/Max/Total arithmetic. The kind
-         * words are Labels' vocabulary (RecordFrom hands back LabelTypes.LabelOf), so Dd/Dot/Proc arrive without a
-         * re-map, and a miss never reaches the switch because a miss is not any of these three words.
-         *
-         * The key is built INSIDE the branches that use it. A melee record cannot appear in a spell board, and this
-         * loop runs on every record of the selection: hoisting the concatenation cost one string per swing for the
-         * two words that need it (on a group night, 12k rows of mostly melee = 293k strings per build).
-         */
-        SpellDamageStats stats = null;
-        switch (record.Type)
-        {
-          case Labels.Dd:
-            var ddKey = record.Attacker + "++" + record.SubType;
-            if (!summary.DdDamage.TryGetValue(ddKey, out stats))
-            {
-              stats = new SpellDamageStats { Caster = record.Attacker, Spell = record.SubType };
-              summary.DdDamage[ddKey] = stats;
-            }
-            break;
-          case Labels.Dot:
-            var dotKey = record.Attacker + "++" + record.SubType;
-            if (!summary.DoTDamage.TryGetValue(dotKey, out stats))
-            {
-              stats = new SpellDamageStats { Caster = record.Attacker, Spell = record.SubType };
-              summary.DoTDamage[dotKey] = stats;
-            }
-            break;
-          case Labels.Proc:
-            var procKey = record.Attacker + "++" + record.SubType;
-            if (!summary.ProcDamage.TryGetValue(procKey, out stats))
-            {
-              stats = new SpellDamageStats { Caster = record.Attacker, Spell = record.SubType };
-              summary.ProcDamage[procKey] = stats;
-            }
-            break;
-        }
-
-        if (stats != null)
-        {
-          stats.Count += 1;
-          stats.Max = Math.Max(record.Total, stats.Max);
-          stats.Total += record.Total;
-        }
+      // Same rule as FightManager.AddAction: consecutive actions sharing a timestamp share a block.
+      if (walk.DamageBlock is null || !walk.DamageBlockTime.Equals(time))
+      {
+        walk.DamageBlock = new ActionGroup { BeginTime = time };
+        summary.DamageBlocks.Add(walk.DamageBlock);
+        walk.DamageBlockTime = time;
       }
 
-      summary.BeginDamageTime = beginDamage;
-      summary.LastDamageTime = lastDamage;
+      var record = RecordFrom(fact, facts);
+      walk.DamageBlock.Actions.Add(record);
+
+      // The per-spell activity key comes from the same helper FightManager uses. It cannot be null here:
+      // SubTypeOf guarantees a subtype, and CreateRecordKey returns at least that.
+      StatsUtil.UpdateTimeSegments(summary.DamageSegments, summary.DamageSubSegments,
+        StatsUtil.CreateRecordKey(record.Type, record.SubType), record.Attacker, time);
+
+      if (LabelTypes.IsHit(fact.TypeId))
+      {
+        summary.DamageHits++;
+        summary.DamageTotal += fact.Total;
+      }
 
       /*
-       * The tanking half, built the same way off the away-facing ordinals. FightManager's own tank branch is the
-       * spec: block per run of one second, activity windows keyed by the SAME record-key helper and attributed to
-       * record.Defender (the raider who took it — the damage pass attributes them to record.Attacker), then
-       * Begin/LastTankingTime and TankHits/TankTotal.
-       *
-       * Note what is NOT gated here. The damage pass counts hits and total only for LabelTypes.IsHit facts,
-       * because legacy gates them on StatsUtil.IsHitType; the tank branch in FightManager is unconditional, so
-       * a resisted spell that dealt zero still counts as a hit a player took. Copying that asymmetry is the
-       * point — "tidying" it would move the tank board's # Hits column away from legacy for no reason.
+       * Both bounds need their own NaN test rather than a bare comparison: `time > NaN` is false, so seeding
+       * lastDamage with NaN and comparing left every fight ending at NaN. TimeRange.Add drops a segment whose
+       * bounds do not compare, and DamageStatsBuilder divides by an activity window of nothing — a derived
+       * selection that produces no numbers at all, with no exception anywhere to say so.
        */
-      if (_tankingOrdinals.TryGetValue(fight, out var tankRun) && tankRun.Count > 0)
+      if (double.IsNaN(walk.BeginDamage) || time < walk.BeginDamage) walk.BeginDamage = time;
+      if (double.IsNaN(walk.LastDamage) || time > walk.LastDamage) walk.LastDamage = time;
+
+      /*
+       * The per-spell boards read these dictionaries off the same Fight (SpellDamageStatsViewer): fill them with
+       * FightManager's own live-parse shape - same key, same switch, same Count/Max/Total arithmetic. The kind
+       * words are Labels' vocabulary (RecordFrom hands back LabelTypes.LabelOf), so Dd/Dot/Proc arrive without a
+       * re-map, and a miss never reaches the switch because a miss is not any of these three words.
+       *
+       * The key is built INSIDE the branches that use it. A melee record cannot appear in a spell board, and this
+       * loop runs on every record of the selection: hoisting the concatenation cost one string per swing for the
+       * two words that need it (on a group night, 12k rows of mostly melee = 293k strings per build).
+       */
+      SpellDamageStats stats = null;
+      switch (record.Type)
       {
-        ActionGroup tankBlock = null;
-        var lastTankBlockTime = double.NaN;
-
-        foreach (var ordinal in tankRun)
-        {
-          var fact = allFacts[ordinal];
-          var time = (double)fact.TimeS;
-
-          if (time < fromT || time > toT) continue;
-
-          if (tankBlock is null || !lastTankBlockTime.Equals(time))
+        case Labels.Dd:
+          var ddKey = record.Attacker + "++" + record.SubType;
+          if (!summary.DdDamage.TryGetValue(ddKey, out stats))
           {
-            tankBlock = new ActionGroup { BeginTime = time };
-            summary.TankingBlocks.Add(tankBlock);
-            lastTankBlockTime = time;
+            stats = new SpellDamageStats { Caster = record.Attacker, Spell = record.SubType };
+            summary.DdDamage[ddKey] = stats;
           }
-
-          var record = RecordFrom(fact, facts);
-          tankBlock.Actions.Add(record);
-
-          StatsUtil.UpdateTimeSegments(summary.TankSegments, summary.TankSubSegments,
-            StatsUtil.CreateRecordKey(record.Type, record.SubType), record.Defender, time);
-
-          if (double.IsNaN(summary.BeginTankingTime)) summary.BeginTankingTime = time;
-          summary.LastTankingTime = time;
-          summary.TankHits++;
-          summary.TankTotal += fact.Total;
-        }
+          break;
+        case Labels.Dot:
+          var dotKey = record.Attacker + "++" + record.SubType;
+          if (!summary.DoTDamage.TryGetValue(dotKey, out stats))
+          {
+            stats = new SpellDamageStats { Caster = record.Attacker, Spell = record.SubType };
+            summary.DoTDamage[dotKey] = stats;
+          }
+          break;
+        case Labels.Proc:
+          var procKey = record.Attacker + "++" + record.SubType;
+          if (!summary.ProcDamage.TryGetValue(procKey, out stats))
+          {
+            stats = new SpellDamageStats { Caster = record.Attacker, Spell = record.SubType };
+            summary.ProcDamage[procKey] = stats;
+          }
+          break;
       }
 
-      // FightManager rebuilds this string on every record; the last write is what the tooltip shows, so one
-      // write at the end of materializing gives the identical text for the identical fight.
-      if (!double.IsNaN(summary.BeginTime) && !double.IsNaN(summary.LastTime))
+      if (stats != null)
       {
-        summary.TooltipText = $"#Hits To Players: {summary.TankHits}, #Hits From Players: {summary.DamageHits}, "
-                              + $"Time Alive: {(long)(summary.LastTime - summary.BeginTime + 1)}s";
+        stats.Count += 1;
+        stats.Max = Math.Max(record.Total, stats.Max);
+        stats.Total += record.Total;
+      }
+    }
+
+    /*
+     * One tanking-side fact, built by the same rules as its damage twin with two deliberate differences, both inherited
+     * from FightManager's own tank branch: the activity windows are attributed to record.Defender (the raider who took
+     * it), and hits/total are counted UNCONDITIONALLY — a resisted spell that dealt zero is still a hit a player took.
+     * Copying that asymmetry is the point; "tidying" it would move the tank board's # Hits column away from legacy for
+     * no reason.
+     */
+    private void AddTank(RowWalk walk, DamageFact fact, DamageFactTable facts, double fromT, double toT)
+    {
+      var summary = walk.Summary;
+      var time = (double)fact.TimeS;
+
+      if (time < fromT || time > toT) return;
+
+      if (walk.TankBlock is null || !walk.TankBlockTime.Equals(time))
+      {
+        walk.TankBlock = new ActionGroup { BeginTime = time };
+        summary.TankingBlocks.Add(walk.TankBlock);
+        walk.TankBlockTime = time;
       }
 
-      /*
-       * The taunt board reads TauntBlocks off these same fights (TauntStatsViewer): legacy attached every taunt to
-       * GetFight(npc) ?? Create(npc, t), so a fact belongs to the ONE open row that name has at its second - never
-       * more than one, because one name carries one open row. That is the routing rule this pass implements: the
-       * fact names the row AND sits inside the row's OWN lifetime, intersected with the requested window.
-       *
-       * The lifetime clamp is load-bearing and easy to lose: the damage and tank passes cannot have this bug
-       * because they walk this row's own ordinals, but taunts are a name-keyed stream walked whole. With an
-       * unbounded selection every row named "An echo" would receive every taunt that ever named one - measured on
-       * Incogitable, Useless's 4,364 taunt lines read back as multiples of thousands per add name. Same-name rows
-       * never overlap in time (one life each), so the clamp is exact rather than approximate.
-       *
-       * What the clamp gives up, by design: a taunt that hits no row's lifetime at all sits on a fight legacy would
-       * have INVENTED for it (`?? Create`). The derived list has no such rows - a row is one life, and a life with
-       * no facts is not a life - so those taunts are the derived board's known residue rather than fabricated rows.
-       *
-       * Same one-second block rule as the damage and tank passes - the builder merges same-BeginTime blocks across
-       * fights, and a split run would double-count an instant. The outcome words come back off the fact's bits
-       * exactly as the parser split them; nothing is re-inferred.
-       */
+      var record = RecordFrom(fact, facts);
+      walk.TankBlock.Actions.Add(record);
+
+      StatsUtil.UpdateTimeSegments(summary.TankSegments, summary.TankSubSegments,
+        StatsUtil.CreateRecordKey(record.Type, record.SubType), record.Defender, time);
+
+      if (double.IsNaN(summary.BeginTankingTime)) summary.BeginTankingTime = time;
+      summary.LastTankingTime = time;
+      summary.TankHits++;
+      summary.TankTotal += fact.Total;
+    }
+
+    /*
+     * The taunt board reads TauntBlocks off these same fights (TauntStatsViewer): legacy attached every taunt to
+     * GetFight(npc) ?? Create(npc, t), so a fact belongs to the ONE open row that name has at its second - never
+     * more than one, because one name carries one open row. That is the routing rule this pass implements: the
+     * fact names the row AND sits inside the row's OWN lifetime, intersected with the requested window.
+     *
+     * The lifetime clamp is load-bearing and easy to lose: the damage and tank passes cannot have this bug
+     * because they walk this row's own ordinals, but taunts are a name-keyed stream walked whole. With an
+     * unbounded selection every row named "An echo" would receive every taunt that ever named one - measured on
+     * Incogitable, Useless's 4,364 taunt lines read back as multiples of thousands per add name. Same-name rows
+     * never overlap in time (one life each), so the clamp is exact rather than approximate.
+     *
+     * What the clamp gives up, by design: a taunt that hits no row's lifetime at all sits on a fight legacy would
+     * have INVENTED for it (`?? Create`). The derived list has no such rows - a row is one life, and a life with
+     * no facts is not a life - so those taunts are the derived board's known residue rather than fabricated rows.
+     *
+     * Same one-second block rule as the damage and tank passes - the builder merges same-BeginTime blocks across
+     * fights, and a split run would double-count an instant. The outcome words come back off the fact's bits
+     * exactly as the parser split them; nothing is re-inferred.
+     *
+     * Always walked whole, including on a continued row: the stream is small and its window depends on the row's
+     * lifetime, which advances — a resume rule here would trade a cheap scan for taunts that silently go missing.
+     */
+    private static void AddTaunts(RowWalk walk, DerivedFight fight, DamageFactTable facts, double fromT, double toT)
+    {
+      var summary = walk.Summary;
       ActionGroup tauntBlock = null;
       var lastTauntBlockTime = double.NaN;
 
@@ -520,6 +702,26 @@ namespace EQLogParser
           Success = (taunt.Flags & TauntFact.TauntSuccess) != 0,
           IsImproved = (taunt.Flags & TauntFact.TauntImproved) != 0,
         });
+      }
+    }
+
+    /*
+     * Close a walk: the bounds it kept in locals, the tooltip text, and the one rule that decides whether this row is
+     * part of the selection at all.
+     */
+    private static Fight? FinishFight(RowWalk walk)
+    {
+      var summary = walk.Summary;
+
+      summary.BeginDamageTime = walk.BeginDamage;
+      summary.LastDamageTime = walk.LastDamage;
+
+      // FightManager rebuilds this string on every record; the last write is what the tooltip shows, so one
+      // write at the end of materializing gives the identical text for the identical fight.
+      if (!double.IsNaN(summary.BeginTime) && !double.IsNaN(summary.LastTime))
+      {
+        summary.TooltipText = $"#Hits To Players: {summary.TankHits}, #Hits From Players: {summary.DamageHits}, "
+                              + $"Time Alive: {(long)(summary.LastTime - summary.BeginTime + 1)}s";
       }
 
       /*
