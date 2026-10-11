@@ -33,7 +33,7 @@ public class IdentityVerdictMenuTest
 
       Assert.AreEqual(5, words.Count,
         "the cascade is the whole vocabulary — the five kinds IdentityVocabulary.TypeOptions holds, and nothing that takes an answer back " +
-        "(that is the calculator beside the name in the identity pane, never a word above the evidence)");
+        "(that is the take-back icon beside the name in the identity pane, never a word above the evidence)");
       CollectionAssert.AreEqual(
         new[] { "Player", "Pet", "Mercenary", "NPC", "Spell" },
         words,

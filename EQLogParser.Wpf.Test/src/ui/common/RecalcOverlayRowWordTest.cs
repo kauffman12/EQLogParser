@@ -3,7 +3,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace EQLogParser;
 
 /*
- * The word under the calculator icon while its click runs (2026-11). Lives in this assembly because NameRow is nested in the
+ * The word under the take-back icon icon while its click runs (2026-11). Lives in this assembly because NameRow is nested in the
  * WPF control; nothing here is constructed, so no STA. The law: the cell says "Recalculating…" until the pass the click asked for
  * has landed and been shown — "if it ends up with the same result, at least the user knows it tried" — and the name stays the
  * SORT key underneath (a label that reshuffles a 4,000-row list twice a second is the flicker this pane's merge law exists to

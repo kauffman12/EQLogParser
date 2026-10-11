@@ -3,7 +3,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace EQLogParser;
 
 /*
- * The calculator's label timing (2026-11; the row word it shows is pinned in EQLogParser.Wpf.Test, where NamesTable is reachable):
+ * The take-back's label timing (2026-11; the row word it shows is pinned in EQLogParser.Wpf.Test, where NamesTable is reachable):
  * the click's honest outcome is sometimes an identical cell, so
  * "tried" has to be sayable. The law (RecalcOverlay) in three terms — a floor, then the pass that answers the click, capped for the
  * bulk load that parks both derive lanes. What must NOT come back: a wall-clock guess in place of the pass (a label that hides before

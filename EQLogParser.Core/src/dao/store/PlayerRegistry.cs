@@ -539,7 +539,7 @@ namespace EQLogParser
      * and "show me what the current log thinks" keeps them standing; they retire with the capture (this store is per-capture), so
      * nothing has to evict them. `ForgetName` leaves BOTH lanes alone — a verdict about what a name IS must not touch either, and
      * that is the kind/class split: kind is a static decision that does not change inside a log, class is dynamic evidence that
-     * does. The Name column's calculator (`ClassificationCommands.Recalculate`) is the single caller of this method.
+     * does. the take-back icon in the Name column (`ClassificationCommands.Recalculate`) is the single caller of this method.
      *
      * The map is case-insensitive, so one spelling reaches it; no other name in the lane moves, and nothing here touches the
      * ledger (the class that rode on a ledger row goes with `IdentityPriorStore.Remove`, as always).

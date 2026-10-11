@@ -161,10 +161,15 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
   is a read-only feed into the ledger's Owner lane. **A load is not a sighting** (`init: true`, stamps carried verbatim);
   every stamp is .NET-epoch seconds (`DateUtil.ToDotNetSeconds`); staleness runs on `PlayerRegistry.StaleDays`.
 - **Take-back and no veto**: `ClassificationCommands` is the whole vocabulary — `ApplyVerdict` (FORGETS the ledger row and all
-  registry claims, then asserts at Manual) and `Recalculate(name)` (the Names pane's calculator: forget + Unknown verdict +
-  `ForgetDefaultClass`). Class is a separate lane: kind verdicts never touch it. There is **no** "assert Unknown" entry in any
-  dropdown and no permanent ban mechanism; reverting restores the rules' own answer. Ownership writes go through
-  `PetAssignment.Assign` (and ask for a full pass), never into a file.
+  registry claims, then asserts at Manual) and `Recalculate(name)` (the Names pane's take-back button — `Solid_History`, since
+  `Solid_Calculator` was the same glyph four summary panes use for OPTIONS: forget + Unknown verdict + `ForgetDefaultClass`). Class is a
+  separate lane: kind verdicts never touch it. There is **no** "assert Unknown" entry in any dropdown and no permanent ban mechanism;
+  reverting restores the rules' own answer. Ownership writes go through `PetAssignment.Assign` (and ask for a full pass), never into a file.
+  **A take-back keeps its row** (2026-11): `Recalculate` notes the name in `TakenBackNames` and `ClassificationReport.Build` lists it as its
+  LAST source — `Kind = Unknown`, `Row.Reason = TakenBackNames.Word` (cell *Taken Back*, hover *Claim Taken Back*) — because a verb whose
+  result is that its subject vanishes out of the window the click happened in reads as a delete. Display state only: it claims nothing, asks
+  the timeline first so a placed name keeps its own rule word, accumulates per name, and clears when the session dies. `ApplyVerdict(name,
+  Unknown)` is a different gesture and stamps nothing (`RecalculateIdentityTest`).
 - **Words live in `IdentityVocabulary`**, coverage asserted in both directions: cell words ≤ 18 chars, static tooltip clauses
   ≤ 28, hover head line exactly one clause plus capped extra lines ranked by `ClaimRanks`, Title Case, the app's own nouns only
   (Player/Pet/Mercenary/NPC/Spell — never "monster", "mob", "our"). **No surface names a file.** An unplaced row answers
@@ -185,6 +190,12 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
   lazily opened windows.
 - **Nothing on a worker thread may touch a DependencyObject**: UI values enter a board build as plain data captured on the UI
   thread (`_fightPane`, `tankingDamageType` read with `Volatile`), and optional work runs *after* the builders under its own try.
+- **"No rows to show" is an empty collection, never null** (2026-11): the panes hand back `SummaryTable.NoResultsList` from `ClearData`,
+  from STARTED and from a build with no NPCs/no data. A null `ItemsSource` is SfDataGrid's own word for "the data has not arrived" and it
+  answers with an uncontrollable spinner in the middle of the table (that is what an operator saw: "the datagrid itself puts a busy icon in
+  the center … it wasnt happening before this branch" — null had become the no-board value). The **one** surviving null is Damage Summary's
+  group re-slice, where assigning null *before* the grouped list exists to make the tree grid see a change: a control workaround, not a
+  state, and do not "clean it up". Related law unchanged: no pane asks its grid whether an answer exists — those guards read `CurrentStats`.
 - **A busy state is earned** (`DeferredBusyState`: arm on STARTED, show only if still running after `PerfJournal.SlowPassMs`;
   every event cancels first; blanking paths cancel explicitly). Where work blocks the UI thread, `await
   Dispatcher.Yield(DispatcherPriority.Render)`.

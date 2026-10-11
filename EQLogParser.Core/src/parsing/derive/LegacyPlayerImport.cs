@@ -37,7 +37,7 @@ namespace EQLogParser
    *
    *   It runs ONCE per folder, and THE MARKER IS THE LEDGER FILE ITSELF - not a side file, and not "does the lane still have
    *     rows". Row presence was the first gate and it is not a durability record: rows are data, and data can be taken back. An
-   *     operator's calculator click (Recalculate) removes a name and the stale-days prune ages names out on flush, so when the LAST
+   *     operator's take-back click (Recalculate) removes a name and the stale-days prune ages names out on flush, so when the LAST
    *     imported row left the file the legacy file walked back in and re-imported every name it holds - including the ones just
    *     removed. Nothing here deletes identity-priors.txt and Save writes it emptied as happily as full, so its EXISTENCE is the
    *     stable fact: emptiness is a value, not an absence. Escape hatch for re-reading the legacy files stays what it was -

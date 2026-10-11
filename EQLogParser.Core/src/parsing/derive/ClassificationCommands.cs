@@ -74,7 +74,7 @@ namespace EQLogParser
     public static void ClearPrior(IdentityPriorStore priors, string name) => priors.Remove(name);
 
     /*
-     * The Name column's calculator — THE ONE door for "forget everything this application has ever written down about this name,
+     * the take-back icon in the Name column — THE ONE door for "forget everything this application has ever written down about this name,
      * then let only this capture answer" (2026-11; the operator: "purely going to show what the current log thinks").
      *
      * It is `ApplyVerdict(name, Unknown)` — the whole forget-then-withdraw law, so no narrower copy can drift from it: the
@@ -105,6 +105,16 @@ namespace EQLogParser
 
       ApplyVerdict(name!, IdentityKind.Unknown);
       PlayerRegistry.Instance.ForgetDefaultClass(name!);
+
+      /*
+       * And the row stays on the Identity Table, reading Unknown (2026-11). Removing memory can leave NOTHING for the census to list a
+       * name from — no facts in this capture, no override, no roster row, no ledger verdict — and before this line the subject of the
+       * operator's click simply vanished out of the window the click happened in, which reads as a delete when it is the one thing this
+       * verb is not. `TakenBackNames` is display input for exactly that case: it claims nothing, reaches no store, and loses to anything
+       * the capture has to say (ClassificationReport asks the timeline first), so a name this log places still comes back with its rule
+       * beside it — the same asymmetry, now visible instead of expressed as a row that disappears.
+       */
+      TakenBackNames.Note(name);
     }
 
   }

@@ -2992,6 +2992,19 @@ back to nothing selected" (2026-11), because arming on a delay fixes the race an
    question is always *which build was still out there* — that line pairs with the `stats build #N … [door]` line beside it, so the answer comes from a log file.
 
 
+
+**The grid has two words for "nothing here", and only one is quiet (2026-11).** With the deferred busy state in place, an operator
+still reported a spinner: "the datagrid itself puts a busy icon in the center of the table area when its empty … it wasnt happening
+before this branch". They were right — `f5c244ea`/`c111ed33` had made **null** the panes' no-board value, and `SfDataGrid`/`SfTreeGrid`
+render a null `ItemsSource` as *"the data has not arrived"*: a centred, uncontrollable spinner over an answer that already finished. An
+empty collection draws an empty table. So master's pattern is the law again — every pane hands back `SummaryTable.NoResultsList` from
+`ClearData`, from STARTED (its title already says what it is waiting for), and from a build with no NPCs / no data. The one null that
+survives is Damage Summary's group re-slice, where assigning null **before** the grouped list exists to make the tree grid see a change:
+a control workaround, not a state, and it must not be "cleaned up".
+
+What the placeholder was actually guilty of stands unchanged: **no pane may ask its grid whether an answer exists**. `TimeChanged` asks
+`CurrentStats`, which is what makes handing the grid an honest empty list safe.
+
 ### What a clean run looks like, because it is worth knowing one
 
 A 21 minute replay soak with `PerfStallMs=200` — FCT, trigger log, meter and four overlays open, the same raid log played twice — produced
@@ -11588,7 +11601,7 @@ compared dotnet-second stamps against `DateTimeOffset.UtcNow.ToUnixTimeSeconds()
 the verdict expiry off entirely on every real row. Any future guard has to clamp within this unit and say so in
 `StaleVerdictsExpireAgainstTheNewestSighting`.
 
-## The calculator takes everything back (2026-11)
+## The take-back icon takes everything back (2026-11)
 
 Two field sentences, in the operator's words: "if the reset ends up with the same result at least the user knows that it
 tried", and "just leave the valid values in the dropdowns and if you want to reset things you click the calculator". They
@@ -11654,6 +11667,31 @@ sees the click happen, waits for the word to come down, and knows which case the
 **Honesty note.** The Wpf assembly builds here (zero warnings, `--no-incremental`) but its tests run only on Windows; the
 NamesTable wiring — the icon, the label lifecycle, the blank-open owner list — is pinned in `EQLogParser.Wpf.Test` and needs a
 Windows run to count as measured.
+
+### A take-back keeps its row, reading what it did (2026-11)
+
+The verb removes memory, and for a name whose every claim came from memory that left **nothing to list**: the row the operator
+clicked on disappeared out of the window the click happened in. Two readings of the field report were offered by the same person
+weeks apart — "at least the user knows that it tried" and "if the name isn't in the current log, keep it on the list with Unknown" —
+and they are the same complaint: a verb whose result is that its subject vanishes looks like a delete.
+
+So the take-back notes the name (`TakenBackNames`, Core) and `ClassificationReport.Build` lists it as its fifth source, LAST:
+
+- facts → manual overrides → roster/priors → casts and heals seen → **names taken back this session**. A name any earlier source
+  already lists keeps its own answer; `AddRow` asks the timeline before it will say "Taken Back" at all. The loop therefore adds a
+  row only for *un-written by hand, unanswered by the log*, which is what makes it safe to run last and cheap to ignore otherwise.
+- The marker travels as `Row.Reason = "TakenBack"` — **display state, not an identity claim**. It has a rank in
+  `IdentityVocabulary.ClaimRanks` (with the operator's own hand), a cell word (**"Taken Back"**) and a hover sentence
+  (**"Claim Taken Back"**), because a row may not reach the screen wearing an internal identifier. The Type cell reads **Unknown**:
+  the click asserted nothing, and an asserted Unknown would sit at Manual strength above this capture's own evidence — the one thing
+  the take-back must never become.
+- It is per name and it accumulates (a set, not the single-slot `RecalcOverlay` the label uses); it clears when the session dies, so a
+  capture nobody clicked in lists no taken-back names and an empty list stays honest.
+
+**Not the same gesture:** `ApplyVerdict(name, Unknown)` — writing an answer from a dropdown — stamps nothing, and no dropdown writes
+Unknown at all. Pinned by `RecalculateIdentityTest` (`ATakenBackNameStaysOnTheListReadingUnknownRatherThanVanishing`,
+`TwoTakeBacksBothKeepTheirRows`, `AnExplicitUnknownVerdictIsNotATakeBackAndStampsNothing`) and by the vocabulary coverage in
+`IdentityVocabularyTest`, which now has to know the word or the census test fails.
 
 ## A board belongs to the capture that asked (2026-11)
 

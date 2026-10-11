@@ -49,7 +49,7 @@ public sealed class PetOwnershipTest
   /*
    * The list holds VALID OWNERS ONLY (2026-11, on request): the trailing "No Owner" entry is gone because it wrote a NARROW forget
    * — the pair went, the Pet verdict stayed — beside the wider take-back in another column. Two doors that both read as "reset"
-   * is exactly how this pane shipped before; now resetting means the calculator click in the Name column, and the dropdown offers
+   * is exactly how this pane shipped before; now resetting means the take-back click in the Name column, and the dropdown offers
    * one thing only: who the summon belongs to.
    */
   [TestMethod]
@@ -60,7 +60,7 @@ public sealed class PetOwnershipTest
       var choices = PetOwnership.Choices(current, ["Beorun", "Ziggy", "Romance"]);
 
       Assert.AreEqual(0, choices.Count(c => PetOwnership.IsClear(c)),
-          $"a clear entry crept back in for a row reading '{current ?? "<nobody>"}' — the take-back is the calculator click, never an owner to pick");
+          $"a clear entry crept back in for a row reading '{current ?? "<nobody>"}' — the take-back is the take-back click, never an owner to pick");
     }
   }
 
@@ -115,7 +115,7 @@ public sealed class PetOwnershipTest
   /*
    * `IsClear` survives the removal of its only UI door: it is the VOCABULARY question "does this string name nobody", and the stored
    * wordings on disk still need an answer (a restored folder can hold rows written under either wording). What changed is who may ASK
-   * it with a picked value — nobody can any more, because the list holds only candidates and the take-back moved to the calculator.
+   * it with a picked value — nobody can any more, because the list holds only candidates and the take-back moved to the take-back icon.
    */
   [TestMethod]
   public void ChoosingNoOwnerIsTheClearAndChoosingAPersonIsNot()

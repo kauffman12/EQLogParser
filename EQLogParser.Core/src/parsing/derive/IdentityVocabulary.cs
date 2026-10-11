@@ -52,9 +52,9 @@ internal static class IdentityVocabulary
    *
    * NO entry here writes Unknown. That is deliberate, not a gap: the take-back used to be an entry ("Clear claim", then "Reset") and an
    * operator read its no-visible-effect as a dead button, because the verb resets MEMORY while this capture's own lines answer again.
-   * The take-back is now the Name column's calculator icon — `ClassificationCommands.Recalculate`, which also takes the class back,
+   * The take-back is now the take-back icon in the Name column — `ClassificationCommands.Recalculate`, which also takes the class back,
    * and it is a click action rather than a dropdown word, because "forget everything, let the log decide" is not an answer a name
-   * could be (docs/DesignNotes.md → "The calculator takes everything back"). Each kind word appears EXACTLY ONCE: the retired menu
+   * could be (docs/DesignNotes.md → "The take-back icon takes everything back"). Each kind word appears EXACTLY ONCE: the retired menu
    * listed NPC twice, and a dropdown with two entries for one answer is a bug a person notices only after clicking.
    */
   /*
@@ -83,7 +83,7 @@ internal static class IdentityVocabulary
    *   - **Mercenary is not a verdict you can put on a name.** A mercenary is what /target reported (R3-merc/R13-merc);
    *     typing "Mercenary" onto a raider moves her number off the player column and onto a column nothing else fills,
    *     and no file backs the claim afterwards. A row that already reads Mercenary keeps the entry — the popup opens on
-   *     the current answer — and taking that verdict back is the Name column's calculator
+   *     the current answer — and taking that verdict back is the take-back icon in the Name column
    *     (ClassificationCommands.Recalculate), which is where it has lived since 2026-11.
    *   - **An eye is not a fighter of any kind.** `Eye of Zamul` never acts (ClassificationRules.EyeSummonOwnerInName;
    *     docs/DesignNotes.md → "Breadth of evidence, measured"), so it cannot be a person, a mercenary, or somebody's
@@ -235,6 +235,13 @@ internal static class IdentityVocabulary
   internal static readonly IReadOnlyDictionary<string, int> ClaimRanks = new Dictionary<string, int>(StringComparer.Ordinal)
   {
     ["R10-manual"] = 100, ["Manual"] = 100, ["Override"] = 100,
+    /*
+     * The hand that WROTE nothing: the operator's own withdrawal of a claim (see TakenBackNames). It sits with the operator lane
+     * rather than with the memory lanes because rank says how much weight a ten-line hover gives a sentence, and "I un-wrote this
+     * myself a minute ago" outranks every inference about it — including the absence beside it. It is not a verdict and reaches no
+     * store; the row it explains reads Unknown.
+     */
+    ["TakenBack"] = 100,
     ["R1-target"] = 90, ["R3-merc"] = 90, ["R13-merc"] = 90, ["R2-who"] = 90, ["R0-local"] = 90, ["R1-conflict"] = 90,
     ["R3-chat"] = 80, ["R3-joinraid"] = 80, ["R3-leader"] = 80, ["R22-guildmate"] = 80,
     ["R3-joingroup"] = 80, ["R3-leaveraid"] = 80, ["R3-leftgroup"] = 80,
@@ -395,6 +402,12 @@ internal static class IdentityVocabulary
       // a reader has to be taught before the hover means anything.
       "R9-charm" => "Reported Charmed",
       "R10-manual" or "Manual" or "Override" => $"You Chose {TypeWord(kind)}",
+      /*
+       * The only proof this application can give that is about its OWN history: a claim was taken back here, and the capture has
+       * not answered since. It says WHAT the operator did rather than what the name is, because it does not say what the name is —
+       * the Type cell beside it reads Unknown, and that pairing is the honest form of "I asked and this log had nothing to say".
+       */
+      "TakenBack" => "Claim Taken Back",
       "R13-merc" => "From /target as Mercenary",
       // Which shape? The article is the game's own "this is a thing" marker, so the hover says where it looked
       // instead of gesturing at "shape" (same reason R21 stopped saying "No Caster in Line").
@@ -454,13 +467,13 @@ internal static class IdentityVocabulary
    * three invites an operator to break something they cannot undo by clicking:
    *
    *   - A POSSESSIVE SUMMON (`Tuona`s ward`). The ownership word IS the evidence — R5 reads it off the name and asserts
-   *     Pet at Certain — so the dropdown's Pet/NPC/Player choices are all wrong, and even the calculator only puts the row
+   *     Pet at Certain — so the dropdown's Pet/NPC/Player choices are all wrong, and even the take-back only puts the row
    *     back to Pet on the next pass: the line that spells the owner is in THIS capture, and forgetting memory cannot delete it.
    *   - A SPELL EFFECT (a name that is a damaging spell, or that only ever appears as a spell attacker). It is not a
    *     creature; typing it as a Player would put it on the roster.
    *
    * An operator verdict always counts as overrulable — a wrong click has to stay correctable by another one, and the
-   * calculator in the Name column is where the take-back lives now.
+   * take-back icon in the Name column is where the verb lives now.
    */
   internal static bool CanOverrule(string? name, string? source)
   {
@@ -599,6 +612,14 @@ internal static class IdentityVocabulary
      * claims loses the difference the cell exists to show (asserted by EveryRuleWordHasAWordWorthPrinting).
      */
     ["R26-savedpet"] = "Saved Pet",
+
+    /*
+     * Also not a rule, and reachable from no fixture's rule pass either (only a click writes it): the operator took this name's
+     * claim back and NOTHING since has placed it. "Taken Back" rather than "Not Placed", because "Not Placed" is the word for a
+     * name nobody ever asked about — the two states look identical in the Type cell and are not the same thing to the person who
+     * just clicked (docs/DesignNotes.md → "A take-back keeps its row, reading what it did").
+     */
+    ["TakenBack"] = "Taken Back",
 
     // Two spellings the files themselves carry, kept mapped because they are already on disk:
     //   "Override" — what IdentityOverrideStore.LoadAll hands back as a row's source.

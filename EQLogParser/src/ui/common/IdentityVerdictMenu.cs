@@ -22,7 +22,7 @@ namespace EQLogParser;
  *   1. **Words from the vocabulary, never retyped.** All five kinds — Player / Pet / Mercenary / NPC / Spell — in TypeOptions' order.
  *      The two halves met in the middle (2026-11): Mercenary was offered here while the identity dropdown refused it, Spell was typeable
  *      there while this menu left it out — and a word reachable in three panes and hidden in the fourth reads as a broken pane, not as a rule. The one word NO list offers is Unknown — taking an answer
- *      back is the calculator beside the name (ClassificationCommands.Recalculate), never a word sitting above this capture's evidence at
+ *      back is the take-back icon beside the name (ClassificationCommands.Recalculate), never a word sitting above this capture's evidence at
  *      Manual strength. What still trims per row lives in IdentityVocabulary.TypeOptionsFor (an eye is NPC only; a summon whose own spelling
  *      carries its master and a row whose verdict IS a spell shape are decided by the name) — one recognizer for menu and write guard, so a
  *      pane can never offer what its own write path refuses.

@@ -87,6 +87,14 @@ public class IdentityVocabularyTest
      */
     IdentityPriorStore.OwnerReason,
 
+ /*
+  * Also not a rule, and not evidence of any kind: it is DISPLAY state (TakenBackNames), stamped by the take-back click on the one name
+  * the operator just withdrew a claim for. It exists so that name keeps its row — reading Unknown with "Claim Taken Back" as its proof —
+  * instead of vanishing out of the window the click happened in, which makes a verb look like a delete. Nothing about it claims an
+  * identity; the census asks for it last, over names this capture left unplaced (docs/DesignNotes.md → "A take-back keeps its row, reading what it did").
+  */
+ TakenBackNames.Word,
+
     // The two spellings the FILES carry, so they must map even though no rule writes them: what
     // IdentityOverrideStore.LoadAll reports as a row's source ("Override"), and AddRow's word for an override read out of
     // the file before any timeline existed — this window opened before the first derive pass ("Manual").
@@ -270,7 +278,7 @@ public class IdentityVocabularyTest
    * name itself settles the answer, CanOverrule hides the pencil and this list keeps only what the row already is. One
    * recognizer for both, so the menu can never offer what the write path refuses. And NO list in this pane offers a take-back:
    * "Clear claim" then "Reset" were dropdown entries, and an operator read their no-visible-effect as a dead button — the verb
-   * resets MEMORY while this capture's lines answer again, so it is now the Name column's calculator click
+   * resets MEMORY while this capture's lines answer again, so it is now the take-back click in the Name column
    * (ClassificationCommands.Recalculate), never an answer a name could be.
    */
   [TestMethod]
@@ -283,7 +291,7 @@ public class IdentityVocabularyTest
     CollectionAssert.Contains(Words(raider), "Player", "the row's own answer must be listed — the popup preselects it");
     CollectionAssert.Contains(Words(raider), "Pet", "an operator may disagree about a summon");
     Assert.IsFalse(raider.Any(o => o.Kind == IdentityKind.Unknown),
-        "no entry writes Unknown: the take-back is the calculator click beside the name, never an answer in this list");
+        "no entry writes Unknown: the take-back is the take-back click beside the name, never an answer in this list");
     CollectionAssert.Contains(Words(raider), "Mercenary",
       "one vocabulary, one reach: the 'Set … as' cascade offers Mercenary in four panes, so the identity dropdown may not hide the word " +
       "the same operator just wrote from them (2026-11 field report). Typing it keeps the name raid-side — IdentityLookup.IsPlayerSide is " +
@@ -303,7 +311,7 @@ public class IdentityVocabularyTest
     }
 
     // A summon whose spelling names its master: decided by the name, so the list is exactly what it already is. The way out
-    // still exists — it is the calculator click, which on this row re-earns Pet from the line that spells the owner.
+    // still exists — it is the take-back click, which on this row re-earns Pet from the line that spells the owner.
     var pet = IdentityVocabulary.TypeOptionsFor("Sancus`s pet", IdentityKind.Pet, "R5-owner:Sancus");
     CollectionAssert.AreEquivalent(new[] { "Pet" }, Words(pet));
 
@@ -503,7 +511,7 @@ public class IdentityVocabularyTest
    * The Type dropdown, as data: the five kinds, in one list — each an answer a name could be. The take-back is not among them
    * (2026-11): it was, first as "Clear claim" and then as "Reset", and its honest outcome — memory gone, capture answers again,
    * often the same cell on screen — read as a dead button inside a dropdown of ANSWERS. It is a click action now (the Name
-   * column's calculator), and the law this list asserts is that the two stay apart: entries are kinds, never verbs.
+   * column's take-back icon), and the law this list asserts is that the two stay apart: entries are kinds, never verbs.
    */
   [TestMethod]
   public void TheTypeDropdownOffersEachAnswerExactlyOnce()
@@ -525,14 +533,14 @@ public class IdentityVocabularyTest
    * does is remove memory: override, roster/legacy claims, older-log verdicts, saved summon owner (and Recalculate, its door,
    * adds the class). Then this capture's own lines answer again, so a name the log identifies comes straight back — same kind,
    * same Why word — which is what made the entry read as dead inside a list of answers. The take-back is therefore a click
-   * action (the calculator in the Name column), and overruling the capture is still its own gesture: pick a kind, which rides
+   * action (the take-back icon in the Name column), and overruling the capture is still its own gesture: pick a kind, which rides
    * at Manual strength above everything.
    */
   [TestMethod]
   public void NoDropdownEntryWritesUnknownTheTakeBackIsAClick()
   {
     Assert.IsFalse(IdentityVocabulary.TypeOptions.Any(o => o.Kind == IdentityKind.Unknown),
-        "an entry that writes Unknown would assert what the calculator only withholds — a silence at Manual strength is a suppression, and there is no such word");
+        "an entry that writes Unknown would assert what the take-back icon only withholds — a silence at Manual strength is a suppression, and there is no such word");
 
     // And the per-row lists inherit the law: they are filtered from TypeOptions, so a smuggled entry cannot reach one row only.
     foreach (var kind in new[] { IdentityKind.Player, IdentityKind.Pet, IdentityKind.Npc, IdentityKind.Unknown })

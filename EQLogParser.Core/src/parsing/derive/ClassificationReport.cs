@@ -360,6 +360,22 @@ namespace EQLogParser
         }
       }
 
+      /*
+       * And the names whose claim the operator just took back (2026-11). The take-back REMOVES — override, ledger row, registry
+       * claims — so on a name whose every claim came from memory there is nothing left for any of the four sources above to list,
+       * and the row the click was made on disappeared out of the window the click happened in. That reads as a delete, which is the
+       * one thing this verb is not; the operator asked instead that such a name "be switched to Unknown" (docs/DesignNotes.md →
+       * "A take-back keeps its row, reading what it did").
+       *
+       * LAST of the five sources on purpose: a name this capture's facts, overrides, roster or ledger still carry was listed
+       * above and keeps its answer, and AddRow asks the timeline before it will say "Taken Back" at all. So this loop can only ever
+       * add a row for "un-written by hand, unanswered by the log", and it asserts nothing about the name — see TakenBackNames.
+       */
+      foreach (var name in TakenBackNames.All())
+      {
+        if (!rows.ContainsKey(name)) AddRow(rows, name, timeline, overrides, registry, priors, castProof, seenCasts, healProof, 0, 0, 0, hasFacts: false, withdrawnClaim: true);
+      }
+
       var list = new List<Row>(rows.Values);
       list.Sort(static (a, b) =>
       {
@@ -478,7 +494,8 @@ namespace EQLogParser
                               IdentityOverrideStore? overrides, PlayerRegistry? registry, IdentityPriorStore? priors,
                               CastProof castProof, HashSet<string>? seenCasts, HealCasterProof healProof,
                               double damage, double healing, long events, bool hasFacts,
-                              int hitsOnRaid = 0, int hitsOnNpcs = 0, int hitsOnPets = 0, int hitsOnSelf = 0)
+                              int hitsOnRaid = 0, int hitsOnNpcs = 0, int hitsOnPets = 0, int hitsOnSelf = 0,
+                              bool withdrawnClaim = false)
     {
       var kind = IdentityKind.Unknown;
       string source = string.Empty;
@@ -539,6 +556,16 @@ namespace EQLogParser
           priorSeenAt = prior.SeenAtS;
         }
       }
+
+      /*
+       * The one provenance that is neither a rule nor a store: the operator withdrew this name's claim and NOTHING has answered
+       * since — no fact, no override, no roster row, no ledger verdict, nothing this timeline watched. That state used to print as
+       * the bare absence ("Not Placed" / "Nothing Identified It") on a row that then was not there at all; now the row exists and
+       * says what made it exist, because a name sitting on the list reading "nothing identified it" with no explanation is parser
+       * evidence, not an answer to "why is my click here?". A name this capture DOES place never reaches this line: the kind, the
+       * rule's word and the facts above all still stand, which is the asymmetry the take-back is built on.
+       */
+      if (withdrawnClaim && kind == IdentityKind.Unknown && !isOperator) source = TakenBackNames.Word;
 
       // Last-known, not just the default: GetDefaultPlayerClass sees only the roster block and ability words,
       // so every class the engine LEARNED from casting (CastLineParser's records - including what R4's

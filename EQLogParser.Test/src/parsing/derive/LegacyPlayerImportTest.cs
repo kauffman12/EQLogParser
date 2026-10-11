@@ -360,7 +360,7 @@ public class RosterImportTest
   public void TakingBackTheLastImportedNameDoesNotReopenPlayersTxt()
   {
     /*
-     * The durability question, in the shape an operator produces it: import, then take a name back (the Names pane's calculator), then
+     * The durability question, in the shape an operator produces it: import, then take a name back (the Names pane's take-back click), then
      * keep playing. The gate used to be "does the lane still carry rows", so forgetting the LAST imported name made the folder look
      * never-migrated and players.txt - which sits in the folder, unread but present - walked every one of its names back in,
      * including the ones just removed. The marker is the LEDGER FILE, which nothing here deletes and which Save writes emptied as

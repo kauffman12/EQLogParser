@@ -100,7 +100,7 @@ public class NamesTableTest
    * The take-back forgets FIRST and writes nothing after — and that is the whole of its use. It sat in the Type dropdown for a while
    * ("Clear claim", renamed "Reset" on 2026-11), but a list of ANSWERS should not carry a verb whose honest outcome is often no visible
    * change: what it removes is memory, after which this capture's own lines answer again, so a name the log identifies comes straight
-   * back. It is the Name column's calculator click now (ClassificationCommands.Recalculate, which adds the class lanes); this test pins
+   * back. It is the take-back click in the Name column now (ClassificationCommands.Recalculate, which adds the class lanes); this test pins
    * the door that click goes through.
    *
    * Every verdict write starts at `ClassificationCommands.Forget`, including the Unknown one that means "take my claim
@@ -219,7 +219,7 @@ public class NamesTableTest
    * The Type dropdown belongs to the ROW, not to the window. One ComboBox serves every cell and its list comes from
    * IdentityVocabulary.TypeOptionsFor — the same recognizer that hides a pencil — so what a row refuses is what its NAME decides,
    * never a guess about which kinds are typeable: an eye is NPC or nothing, a summon whose spelling names its master has one
-   * verdict, and Unknown is in no list at all (the take-back is the calculator beside the name, where an operator can see it).
+   * verdict, and Unknown is in no list at all (the take-back is the take-back icon beside the name, where an operator can see it).
    * Mercenary is offered on any row that gets a pencil — one vocabulary with the "Set … as" cascade, since 2026-11.
    * RowFrom carries the list, which is what the editor binds when a cell opens, so this is checked without constructing a pane;
    * IdentityVocabularyTest holds the same law in Core, this pins that the PANE hands the row that list.

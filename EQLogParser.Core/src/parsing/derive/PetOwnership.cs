@@ -15,10 +15,10 @@ namespace EQLogParser;
  *   "any row, where choosing an owner also asserts Pet".)
  *
  *   The list holds VALID OWNERS ONLY (2026-11, on request: "just leave the valid values in the dropdowns and if you want to reset
- *   things you click the calculator"). The old trailing entry, `Labels.Unassigned` printed as "No Owner" (it used to read "Unknown Pet
+ *   things you click the take-back icon"). The old trailing entry, `Labels.Unassigned` printed as "No Owner" (it used to read "Unknown Pet
  *   Owner", and the operator asked for two words that say what the click does), wrote a NARROW forget — the pair went, the Pet verdict
  *   stayed — beside the wider take-back in another column, which is exactly the kind of second, weaker door this pane used to ship with.
- *   Taking an owner back now means taking everything back, and that is one click: the Name column's calculator
+ *   Taking an owner back now means taking everything back, and that is one click: the take-back icon in the Name column
  *   (ClassificationCommands.Recalculate). A row whose answer is nobody opens the list blank — there is no "what it says" to preselect,
  *   and a blank selection in a pick-your-owner list reads as one, not as a bug.
  *
@@ -70,7 +70,7 @@ internal static class PetOwnership
      */
     if (IsCandidate(current) && seen.Add(current!)) list.Insert(0, current!);
 
-    // Sorted only: there is no take-back entry any more. The calculator is the door for "no owner", and it is wider on purpose.
+    // Sorted only: there is no take-back entry any more. The take-back icon is the door for "no owner", and it is wider on purpose.
     list.Sort(System.StringComparer.Ordinal);
     return list;
   }

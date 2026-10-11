@@ -674,6 +674,14 @@ namespace EQLogParser
       _snapshot = null;
       _carriedTimeline = null;
 
+      /*
+       * The names whose claim was taken back belong to THIS capture (2026-11): the list exists so a click keeps its row on the Identity
+       * Table, and last night's click has no business pinning a name onto tonight's log. Deliberately NOT inside the still-mine guard
+       * below — a stale entry would sit on the new capture until some later session happened to be disposed, while the race this does
+       * accept (a take-back clicked in the microseconds between an open and its first census) has no rows on screen to click yet.
+       */
+      TakenBackNames.Clear();
+
       // Only take the seam down if it is still OURS: a new session can already be wired by the time an old engine is
       // disposed, and blanking that one would send every identity question back to memory behind its owner's back.
       if (ReferenceEquals(IdentityLookup.LiveVerdict, _liveKindAt)) IdentityLookup.LiveVerdict = null;

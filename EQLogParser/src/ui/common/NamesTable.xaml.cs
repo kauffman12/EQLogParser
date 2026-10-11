@@ -167,7 +167,7 @@ namespace EQLogParser
       public string Provenance { get; init; } = string.Empty;
 
       /*
-       * The calculator's label, per row (2026-11). The honest outcome of a take-back is sometimes an IDENTICAL cell — the capture
+       * The take-back's label, per row (2026-11). The honest outcome of a take-back is sometimes an IDENTICAL cell — the capture
        * re-earns exactly what memory said — and an operator who cannot tell "tried" from "did nothing" calls the click dead. So
        * the name itself reads "Recalculating…" until the pass this click asked for has landed and been shown (the timing law is
        * RecalcOverlay: a floor, then the pass, capped). The grid binds to DisplayText, not Name: the sort key stays the name,
@@ -204,7 +204,7 @@ namespace EQLogParser
      * operator write (CensusRepaint). This replaces a bare `Interlocked.Exchange(ref _refreshInFlight, 1) == 1 → return`, which is how "the
      * dropdown did nothing the first time" happened: the verdict went into identity-overrides.txt, the repaint that would have shown it met a
      * busy flag and evaporated, and on a finished log nothing ever asks again — so the store and the screen disagreed until a second click, or
-     * the calculator, happened to find the road clear.
+     * the take-back icon, happened to find the road clear.
      */
     private readonly CensusRepaint _repaint = new();
 
@@ -254,7 +254,7 @@ namespace EQLogParser
     private bool _widthsApplied;
 
     /*
-     * The calculator's in-flight click, one at a time: which row is labelled, since when, and whether the pass it asked for has
+     * The take-back's in-flight click, one at a time: which row is labelled, since when, and whether the pass it asked for has
      * landed. The label comes down on the first of (pass landed, hard cap) once the floor is paid — RecalcOverlay decides; a
      * bulk load parks both derive lanes, so the cap is what keeps a row that is being re-read from reading as frozen.
      */
@@ -346,7 +346,7 @@ namespace EQLogParser
 
     private void EventsActiveChanged()
     {
-      // A capture change also takes back any in-flight notice: last night's calculator click may not own a row of this log.
+      // A capture change also takes back any in-flight notice: last night's take-back click may not own a row of this log.
       ForgetRecalc();
 
       if (IsVisible) FollowSession();
@@ -364,7 +364,7 @@ namespace EQLogParser
       // join a running pass) must not repaint it with the previous log's names — DerivedSnapshot.SessionId.
       if (!snapshot.FromLiveSession) return;
 
-      // A pass landed: that is what a calculator click was waiting for. (The census below is throttled at 2 s; the LABEL is not —
+      // A pass landed: that is what a take-back click was waiting for. (The census below is throttled at 2 s; the LABEL is not —
       // the click owed its answer as soon as the pass ran, and Reconcile already ran an unthrottled census beside the write.)
       if (_recalcName is not null)
       {
@@ -502,7 +502,7 @@ namespace EQLogParser
        * the head alone answers "why does it say That", and a four-line head makes the eye work for the one clause that matters.
        *
        * The proof clause is whatever the deciding rule can say, and NOTHING where no rule says anything - which is the
-       * same state the calculator click takes a name back to: unclaimed, rather than
+       * same state the take-back click takes a name back to: unclaimed, rather than
        * inventing an answer for the hover to explain. One clause, no separators: every rider that ever joined this string
        * (the roster's opinion, "not in this log", the file names) explained something the reader had not asked about.
        */
@@ -543,11 +543,11 @@ namespace EQLogParser
      */
     private static double ColumnWidth(string mappingName)
     {
-      // The pencil (and the calculator) is EQIconStyle — a square of the current font size — plus the 8+8 margins every icon in these panes carries.
+      // The pencil ((and the take-back icon)) is EQIconStyle — a square of the current font size — plus the 8+8 margins every icon in these panes carries.
       var iconAllowance = ThemeConfig.CurrentFontSize + 16;
       return mappingName switch
       {
-        "Name" => ThemeConfig.CurrentNameWidth + iconAllowance,               // the calculator icon pays for itself, like the pencils
+        "Name" => ThemeConfig.CurrentNameWidth + iconAllowance,               // the take-back icon pays for itself, like the pencils
         "Type" => TypeColumnWidth() + iconAllowance,
         "PlayerClass" => ThemeConfig.CurrentMediumWidth + ThemeConfig.CurrentShortestWidth,
         "Owner" => ThemeConfig.CurrentMediumWidth + ThemeConfig.CurrentShortestWidth + iconAllowance,
@@ -828,7 +828,7 @@ namespace EQLogParser
       if (!row.TypeChoices.Contains(option)) { Refuse(DoorType, $"{option.Word} is not in the list this popup was opened with for {row.Name}"); return; }
 
       /*
-       * The calculator click takes back EVERYTHING this window remembers about the name, not only the line in
+       * the take-back click takes back EVERYTHING this window remembers about the name, not only the line in
        * identity-overrides.txt: without the ledger entry going too, the row comes straight back on the next derive wearing
        * its remembered verdict, which is the opposite of what the click looks like it did. Setting a verdict drops the
        * prior as well — this capture's answer now outranks it, and IdentityPriorStore.Recall stops offering it, so the
@@ -923,7 +923,7 @@ namespace EQLogParser
        * pair, records the owner as roster, refuses a pair already in effect by asking BOTH stores case-insensitively, and asks for the pass
        * that folds the summon's facts under its person (`+Pets`).
        *
-       * The list no longer offers a take-back entry (2026-11: it is the calculator click now, and wider on purpose), but a value that names
+       * The list no longer offers a take-back entry (2026-11: it is the take-back click now, and wider on purpose), but a value that names
        * nobody must still never be written AS an owner — a restored row or a stale pick feeding this handler is exactly the shape that guard
        * was bought for. Taking an owner back is a forget (live map AND ledger lane, Pet verdict standing); only a person is an assign.
        */
@@ -1223,7 +1223,7 @@ namespace EQLogParser
     }
 
     /*
-     * The calculator click — the take-back's door since 2026-11 ("Reset" stopped being a dropdown entry because a list of
+     * the take-back click — the take-back's door since 2026-11 ("Reset" stopped being a dropdown entry because a list of
      * ANSWERS should not carry a verb whose honest outcome is often an identical cell; the click, beside the name it applies to,
      * is what an operator can actually see). It does what the old entry did at its widest: forgets EVERY stored belief about this
      * name — override, ledger row (verdict + roster bit + class + owner), verified-pet and every other registry claim, and the
@@ -1320,7 +1320,7 @@ namespace EQLogParser
      * The three controls that used to sit right of the caption are gone, and their verbs with them rather than hidden:
      *
      *   "Refresh"       — the window follows the derive while it is visible (FollowSession), so nothing needs asking.
-     *   "Not a player"  — DelVerdict plus a re-derive: the Type cell answers with a verdict and the Name column's calculator takes
+     *   "Not a player"  — DelVerdict plus a re-derive: the Type cell answers with a verdict and the take-back icon in the Name column takes
      *                     one back, both drawn on the row they apply to.
      *                     Nothing in this app writes a players.txt `!Name` veto and nothing reads one: that machinery
      *                     arrived seven hours before the only window that could set it lost its menu entry, three days
