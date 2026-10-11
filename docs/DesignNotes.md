@@ -9734,6 +9734,12 @@ cache, measured against the bar in "How much a whole-row cache would actually sa
 
 ### How B gets built: the cell cache and the recursive fold (design, 2026-10)
 
+> **SUPERSEDED (2026-11).** Layer 2 was designed, built, measured over real captures and then reverted before it
+> reached a user, because no door in the application asks the question it answers — see
+> §"Carried counted cells were built, measured and reverted". Layer 1 below stands: a grown row continuing instead of
+> re-materializing is shipped and independent of what was reverted. The numbers this chapter priced are kept there
+> rather than re-derived from memory.
+
 Agreed shape, grounded in what the code already guarantees rather than in a new abstraction:
 
 1. **Fold first, cache second.** `StatsUtil.MergeStats` folds scalars today; B needs its recursive counterpart - fold two sources by walking
@@ -9968,62 +9974,45 @@ fact rows. It is not a second copy of the data.
 `FightMaterializationCache` uses, (3) amounts carried so the chart stays true, (4) a full-build fallback when touched cells cross a record
 threshold — tuned against these numbers and gated on `EQLP_LIVE_TAIL_PROBE`'s reused-vs-recounted print.
 
-### The copy a carried cell needs, and the second it has to be taken at (2026-11)
+### Carried counted cells were built, measured and reverted (2026-11)
 
-The section above ended with a blocker rather than a plan: *"a published row is not a cacheable cell."* Two facts made layer 2 impossible
-as designed. Every published row still holds its **running best-second scratch** — `BestSecTemp` with the current second's total in it —
-because draining it at publish was measured to be a bug (`UpdateCalculations` leaves it alone;
-`StatResumeTest.APublishedReportLeavesTheCurrentSecondAbleToGrow` is that law: publish 100, 60 more arrive in the same second, and a drained
-report says 60 where one uninterrupted pass says 160), while `MergeStatsRecursive` **refuses** an undrained row on purpose, at every level.
-And the display model had **no copy path**: `SubStats`, `SubStats2`, `SubSubStats` were `{ get; } = []`, so "keep a cell for myself and hand
-the grid its own object" was not expressible — a cache of published rows is a cache of objects the next build mutates, in both directions.
-
-What exists now is one boundary, `StatsSnapshot` (Core/src/control/util): `Take(PlayerStats)` and `TakeCell(PlayerSubStats)`. Two laws, and
-`StatsSnapshotTest` pins them rather than the happy path.
-
-**Drained — on the copy only.** The snapshot walks its own tree and closes each node's second (`BestSec = max(BestSec, BestSecTemp);
-BestSecTemp = 0`, reusing `StatsUtil.CloseBestSecond` so there is one rule, not a copy of it). The row it came from keeps its scratch and can
-keep growing that second: taking a copy must never be destructive, which is the same reason publish isn't. So `(BestSec, BestSecTemp)` is the
-**one pair of fields the boundary is allowed to move**, named as such in the field sweep — exceptions are written down, not skipped.
-
-**Detached — no mutable object on either side.** `MemberwiseClone` carries ~70 scalars and preserves the runtime type; every reference it
-shared is then re-pointed: three child lists AND their **`SubStatIndex` accelerators rebuilt over the copies** (an index maps keys to row
-instances, and `SubStatLookup` never scans — an un-indexed copy opens a SECOND row for a key the board already has, which no magnitude test
-can see), `Specials`/`ResistCounts`/`Deaths` as new containers, `TimeRange`s through the overload that **copies each segment** (the
-`List<TimeSegment>` overload ADOPTS and welds later — the same law that says a board build may never add to a range it adopted), and
-`Attempt`'s private hit-distribution fields via `CopyDistributionTo`, in whichever shape they are: raw amounts if nobody opened
-`HitFreqChart`, dictionaries if somebody did (a copy taken after materialization arriving "unmaterialized" would mean arriving EMPTY, since
-the amounts were already released). `GroupEntry.Members/Children` are copied too — nothing in `PlayerStats` hints that those lists exist. A
-`MoreStats` cycle meets its own clone instead of the stack, and a row shape not listed in `StatsSnapshot.RowShapes` **throws by name** rather
-than being scalar-copied into sharing its own fields: adding a subclass is an intentional act, and this is where it has to be noticed. The
-view's `PropertyChanged` subscription is dropped on the copy (`DetachViewSubscribers`) — a snapshot no grid displays must not keep its pane
-alive, and answering a change on it is a bug, not a nicety.
-
-**What it costs, measured rather than assumed** — `SnapshotCostProbeTest` (`EQLP_SNAPSHOT_COST=<log>`, `EQLP_EMU=1` for EMU shapes), over the
-rows a whole-capture overlay build actually publishes, arms **alternated** per row so neither enjoys a warmer cache:
+Layer 2 shipped as `DamageCellStore`: one detached `PlayerStats` graph per name plus a per-block resume point, so a
+build over a capture it had already counted walked only what materialization appended. It worked, measured headlessly
+over the same replay production does (one fact table, its ordinals grown through the real `FightSummarySource`):
 
 ```
-capture                     rows  records behind them   snapshot total   mean/row    retained        recount      snapshot as % of recount
-raid   Kizant-09-03-26        38       1,053,190            2.6 ms       67.3 us     8.2 MB           219 ms                1.17 %
-farm   Kizant_xegony-2        26         553,477            1.0 ms       38.6 us     4.4 MB           115 ms                0.88 %
-group  Roper_thj (EMU)       207         736,390            2.9 ms       14.2 us     7.2 MB           140 ms                2.10 %
+eqlog_Incogitable_xegony.txt   reused 1,463,646 of 1,477,200 actions (99.1 %)
+                               damage build 1,460 ms -> 180 ms;  walk 627 -> 57 ms;  ~4 MB held per capture
+eqlog_gromm_bertox.txt         reused 62.4 %;  21 ms -> 1 ms
 ```
 
-**A snapshot is ~1-2 % of the recount it replaces**, which is what step 2 needs: fold probe's own line for the raid capture put those rows'
-`walk` at 2,115 ms of a 2,340 ms build, and a per-touched-row cost of 14-67 µs does not compete with it. Retention lands at **4.4-8.2 MB**
-carrying every published row — the same order as the fold probe's independent 4.2-7.9 MB estimate, and for the same reason: raw amounts at
-8 B per damaging record are the bulk (7.6 of 8.2 MB on the raid capture), while cells and segments grow with keys (552 cells / 845 segments)
-rather than with records. The fattest single row measured was `Roper\`s Host of the Elements` at 2,306 KB and 896 µs — a 288k-record row that a
-recount prices in tens of milliseconds. The probe also **asserts** each copy reproduces the row it came from (`Total`, `Hits`, child count,
-scratch closed), because real published rows — aggregates, group content, 42k-name boards — are the shapes no fixture reaches.
+It is reverted anyway (`eb3cd4f8`), and the reason is a workflow rather than a defect:
 
-**What is deliberately NOT here.** No cache: step 2 (cells keyed by row × ordinal window, under the same identity-proof discipline
-`FightMaterializationCache` uses, with a full-build fallback when touched cells cross a record threshold) is unbuilt and **nothing in
-production calls `StatsSnapshot` yet** — this commit is the boundary and its laws, not a fast path, and it should be measured as such. No
-tanking or healing side either: the coverage line above (12-44 % of touched records belong to names with no damage row) still stands, and each
-board has to be asked in its own terms before "the boards cost milliseconds" is true end to end. And no distribution merging:
-`MergeStatsRecursive` still carries no histogram, which the copy sidesteps by being a copy — the day a fold is asked to merge two cells that
-each hold amounts, that gap reopens.
+* **The operator's session is eight DIFFERENT questions, not one asked nine times.** Open a large log → select the
+  group of fights for raid event 1 → select event 2 → ... eight times → open spell counts for a few players → open the
+  damage breakdown for a few players. Each selection starts a cold carry by construction; a memo keyed on the question
+  fails the same way, and it only ever helps revisits.
+* **The drill-downs already cost nothing.** `SpellCountTable.Init(selectedStats, currentStats)` and
+  `DamageBreakdown.Init(currentStats, selectedStats)` read the board that was built a moment ago — no second walk over
+  records. (Confirmed as the reason those surfaces "feel fast" on a huge capture.)
+* **The two doors that rebuild unasked cannot use it.** A derive pass re-announces only when a displayed name changed
+  what it IS (the operator's standing snapshot rule), and a classification move is exactly what invalidates carried
+  cells. Live traffic therefore refuses the set at the moment it would have needed it.
+
+**What stands as the target instead, with the numbers attached:** the per-ask cost of that workflow is materialize +
+`groups` + `walk`, and on Incogitable's whole capture `groups` copies blocks into a retained pool for **1,196 ms /
+23.5 MB — more than the counting it feeds.** So the next item is making that pool *be* the materialized blocks
+(adoption instead of copy): no cache, no invalidation, helps the first click after opening a log and every one of the
+eight, and removes ~24 MB of garbage per click. Second: `walk`'s ~500 ns/record is about a dozen dictionary probes on
+the per-name accumulator path — flat name→id indexing, whose counters already exist to decide it. Third (memory, not
+milliseconds): materialize builds every record before accumulating anything (a whole-capture select-all peaks ~+527 MB),
+and `Attempt` retains raw hit amounts per row until someone opens the frequency chart.
+
+Deleted with the feature, not parked: `DamageCellStore`, the builder's open/store seam, `GenerateStatsOptions.CellProof`,
+`StatsSnapshot` (`.Take`/`.TakeCell`/`.TakeCarry`) with its no-sharing field sweep and `Attempt.ShallowReplica` /
+`CopyDistributionTo`, and `FoldAtPublishProbeTest` (`EQLP_FOLD_PUBLISH`), whose pricing question this section now
+answers. The §"What a cached walk is allowed to carry" decisions below stay useful as the record of what reference
+stability costs and buys, since layer 1 depends on exactly that reasoning.
 
 ### What a session is holding, printed (2026-10)
 

@@ -202,10 +202,9 @@ namespace EQLogParser
     public TimeRange AllRanges { get; set; } = new();
 
     /*
-     * The three published child lists carry `internal set` for ONE consumer: StatsSnapshot, which takes a detached copy of a row
-     * (docs/DesignNotes.md → "The copy a carried cell needs, and the second it has to be taken at"). A shallow replica shares each
-     * list object, and a list on both sides of that boundary is not a copy — the next walk appends into what somebody else is
-     * holding. Nothing outside that file assigns one; the write law is unchanged and still enforced by how rows get made: every
+     * The three published child lists keep `internal set` as a write guard, not for a consumer: nothing outside this assembly may swap a
+     * published list out from under a reader. (It arrived with the detached-copy work of 2026-11 and stayed after that work was reverted —
+     * the guard is worth its three keywords even with no copier.) The write law itself is unchanged and is enforced by how rows get made: every
      * row enters through SubStatOf / SubStat2Of / SubSubStatOf (grep `.SubStats.Add`), because a list added to behind its index
      * desynchronises the accelerator and mints a duplicate row for a key the board already has.
      */
@@ -230,21 +229,13 @@ namespace EQLogParser
   {
     public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
 
-    /*
-     * Drop whoever is listening. A shallow replica copies the subscription list along with everything else, and a snapshot is an
-     * object no view will ever display: keeping its grid alive (the handler holds the pane, the pane holds the window) is the leak,
-     * and answering a change on a row nobody is showing is the bug. Called by StatsSnapshot on the COPY only — the row the builder
-     * keeps publishing still has, and needs, its subscribers.
-     */
-    internal void DetachViewSubscribers() => PropertyChanged = null;
-
     protected void OnPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string name = null)
     {
       PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(name));
     }
 
-    // The internal setters belong to StatsSnapshot for the reason stated on PlayerSubStats.SubSubStats: a replica has to be
-    // given its OWN dictionaries and lists, and a getter-only property cannot be re-pointed. Same write law as before.
+    // `internal set` is the same write guard as on PlayerSubStats.SubSubStats: a board's dictionaries and lists are swapped only from
+    // inside this assembly, and never by a view. The write law itself is unchanged.
     public List<DeathEvent> Deaths { get; internal set; } = [];
     public ConcurrentDictionary<string, string> Specials { get; internal set; } = new();
     public ConcurrentDictionary<string, ConcurrentDictionary<string, int>> ResistCounts { get; internal set; } = new();

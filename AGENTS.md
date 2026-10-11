@@ -25,7 +25,7 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
 - **Zero warnings is the bar, and it is counted, not hoped for**: `dotnet build EQLogParser.sln -p:EnableWindowsTargeting=true --no-incremental --nologo 2>&1 | grep -cE ": (warning|error) [A-Z]+[0-9]+"` prints **0** before a commit
   (`--no-incremental` is load-bearing: MSBuild reports diagnostics only for projects it recompiles, so counting after `dotnet test` prints 0 about
   assemblies it never rebuilt — that is how an MSTEST0017 in a new test file shipped past a "clean" local count; docs/CodingStandards.md → "Build Warnings") (match diagnostics, not words — MSBuild's summary always contains `0 Warning(s)`). Nine CS8632s shipped once because a file in Core (project `Nullable=disable`) wrote `string?` without opening `#nullable enable annotations`; the whole fleet is one pragma, and it is why each new warning dies in its own commit (docs/CodingStandards.md → "Build Warnings", "Nullable Reference Types"). Nothing in this repo suppresses a warning (`#pragma warning disable`, `<NoWarn>`) — fixing the cause is the rule.
-- Tests: `dotnet test EQLogParser.Test/EQLogParser.Test.csproj` is the non-WPF suite (**1,958 passed / 16 env-gated skips**, plain `net10.0`, 2026-11 — the trim-moves-no-ordinal law, the once-per-doubling watermark, the ungrowable-empty-array floor and the copy boundary's no-sharing field sweep are in that count). `EQLogParser.Wpf.Test` targets `net10.0-windows` and only
+- Tests: `dotnet test EQLogParser.Test/EQLogParser.Test.csproj` is the non-WPF suite (**1,946 passed / 14 env-gated skips**, plain `net10.0`, 2026-11 — the trim-moves-no-ordinal law, the once-per-doubling watermark and the ungrowable-empty-array floor are in that count). `EQLogParser.Wpf.Test` targets `net10.0-windows` and only
   runs on Windows; its total belongs to a Windows run rather than being quoted here (a `[TestMethod]` grep counts data-driven variants and is not an executed count) — add it to the headless number instead of trusting arithmetic. A Windows run that *loses* `Sta.Run` bodies rather than failing them is the failure mode to watch.
 - **Real-log corpus layout (local/, gitignored)**: `local/logs/live/` holds live-format captures; `local/logs/emu/` holds EMU-server captures (THJ/TSS/Heroes Forge shapes) that need the app's `EnableEmuParsing` behaviour. The env-gated real-log tests run them via **`EQLP_EMU=1`**, which sets `AppSettings.IsEmuParsingEnabled` for the duration of a `PipelineHarness` run (restored after — the flag is process-global and live-format logs misparse with it on). Without it an EMU capture parses with DamageLineParser's live grammar and silently loses the `(Owner: X)` / `scores a critical hit! (N)` shapes, so a parity run over `emu/` without the flag measures nothing. Timestamps are the same `[DDD MMM dd HH:mm:ss yyyy]` shape in both directories.
 
@@ -1530,7 +1530,9 @@ npcs.txt; it is the *only* evidence for **6** names (Incogitable) and **4** (Kiz
   full replay, plus the projection/classification split named as the re-measure command), `UnrowedFactsTest`,
   `MeterBoardCostRealLogTest`/`RealLogBenchTest` (named cost probes), `LiveTailChangeProbeTest`
   (`EQLP_LIVE_TAIL_PROBE` — replays a capture as growing prefixes and prints which rows a pass actually changes; its answer
-  killed the equality-gate proposal and is in DesignNotes), and the four probes the cell cache rests on: **`PetLearningProbeTest`**
+  killed the equality-gate proposal and is in DesignNotes), the probes that priced what a carried walk may carry (layer 2 itself was built and reverted — see
+  DesignNotes → "Carried counted cells were built, measured and reverted" — but these measure the STORES, so their
+  ceilings stay true whatever the board does with them): **`PetLearningProbeTest`**
   (`EQLP_PET_LEARN` — replays `DamageStatsBuilder`'s OWN pet-placement rule over materialized records and asserts the ceilings behind
   "what a cached walk may carry": order-dependent placement, how many names would churn, map sizes) and **`RowReuseCeilingProbeTest`**
   (`EQLP_REUSE_CEILING` — what a WHOLE-ROW cache could save at best; its ~20 % answer is the bar any cell cache must clear) and
@@ -1538,12 +1540,12 @@ npcs.txt; it is the *only* evidence for **6** names (Incogitable) and **4** (Kiz
   chunks, every visible row materialized twice per pass: through a FRESH `FightFactIndex` (= pre-layer-1 behaviour) and through the carried one,
   timing only the per-row loop; asserts the two arms' output is identical every pass. Its answer is the realized layer-1 saving — ×3.41 time /
   −67.5 % bytes on Incogitable, ×4.40 / −72.2 % on the farm night, and 535 ms → 3 ms for a pass where only `Dead`/`GroupId` moved — and layer 2's
-  gate asks this same harness again, which is why it stays) and **`FoldAtPublishProbeTest`** (`EQLP_FOLD_PUBLISH` + `EQLP_FOLD_WINDOW` +
-  `EQLP_FOLD_ANCHORS` — three arms over REAL published rows on four captures: recount the row's R records through the walk's own calls /
-  `MergeStatsRecursive` a carried cell into a fresh row and count only the window's N / that plus copying every raw hit amount; asserts the
-  recount mirror reproduces the published row's Total+Hits exactly on every plain row, so it cannot time the wrong work). All four assert on
+  gate asked this harness too, and layer 2 was reverted before reaching a user) — all three assert on
   real captures no fixture reaches, and DesignNotes cites each by name where its number is used. Deleted on those terms:
-  `RegistryRebuildTest` (phase exit gate satisfied, recall figures recorded in DesignNotes), `HitByNpcCensusTest`
+  `RegistryRebuildTest` (phase exit gate satisfied, recall figures recorded in DesignNotes), **`FoldAtPublishProbeTest`**
+  (`EQLP_FOLD_PUBLISH`/`_FOLD_WINDOW`/`_FOLD_ANCHORS` — it priced publishing a carried cell into a fresh display row, the gate layer 2 was built
+  behind; that feature was reverted for asking a question no door in the app asks, and its numbers plus the workflow that killed it are in
+  DesignNotes), `HitByNpcCensusTest`
   (premise dead with the rule it proposed) and `TempOverrideProbeTest` (self-labelled "delete after reading"; its two field reports are
   answered by the forget-then-assert verdict law — see "Clear claim forgets everything" — and its gate was cited by no document at all) — so a comment or doc that cites a deleted census is a bug to fix, not a
   reference to preserve. Before deleting anything here, run it: a one-off measurement is worth more executed twice
@@ -1619,47 +1621,30 @@ After completing work, verify:
   captures (`MaterializeAppendProbeTest`, `EQLP_MATERIALIZE_APPEND`): **×2.7 time / −65 % bytes** on a ~290k-fact growth pass over
   Incogitable (565→210 ms, 215→75 MB), **×6.7 / −77 %** on the farm night's last pass, and **535 ms → 3 ms** for a pass where only
   `Dead`/`GroupId` moved; warm never reaches zero because a pass still asks every row whether it grew — that residual is layer 2's
-  target; whether layer 2 deserves to exist is answered by the fold-at-publish bullet below, not by this number.
+  target; layer 2 was built behind that residual and reverted (next bullet), so it is no one's target now.
   `MaterializationContinuationTest` pins warm == from-zero field-for-field, the no-mutation law, **and that the warm path actually runs**
   (block identity — a test that silently took the cold path everywhere would be green, which is how an optimisation of this kind goes
   absent). docs/DesignNotes.md → "Layer 1 is built: a grown row continues instead of re-walking".
-- **Fold-at-publish is cheap; a row on screen is not a cacheable cell** (2026-11, the gate layer 2 was waiting on): measured on four
-  captures by `FoldAtPublishProbeTest`, a 5-30 s refresh of touched rows removes **99.2-100 %** of the recount (bar: whole-row reuse saves
-  ~20 % raid / ~35 % group), and at the builder's own walk rate the raid capture's touched rows are **1,302 ms of a 2,129 ms `walk`** against
-  **8-14 ms** of publish-plus-tail. **Publish is O(keys + segments): 1-146 µs per row**, the maximum being a row with 2,592 `TimeRange`
-  segments; across 184 samples the fold never lost to the recount and the worst margin was ×2 on a row of 64 records / 9 cells — so the old
-  worry that many thin rows would sink it in group content is closed by measurement, not by argument. Two things remain load-bearing:
-  **(1) `MergeStatsRecursive` carries NO hit distribution** (no term touches `Attempt`'s raw amounts), so a cache silently empties
-  `HitFreqChart`; copying the amounts costs 0-2.9 ms per refresh and keeps ≥98.6 %, which buys correctness without a trade — do not "save" it
-  by sharing mutable lists. **(2) A published row arrives with undrained best-second scratch on EVERY capture** (83/83, 59/59, 413/414 rows;
-  582/597 and 2,736/2,745 cells) and the fold refuses that per level, so a cell must be taken at a **drained boundary**, which means the carry
-  cannot lift rows out of the display model as it stands (`SubStats`/`SubStats2`/`SubSubStats` are `{ get; } = []`, no copy path): layer 2
-  starts as a shape change in `PlayerStats`, not as a dictionary. **Coverage is not 100 %**: 12-44 % of touched records belong to names with no
-  damage row of their own (a mob beating on a raider lives in `TankingBlocks`), so the prize is ~56-88 % of the damage walk and tanking/healing
-  need the same question asked separately. Retention clears: carrying every published cell costs **4.2-7.9 MB** per session (amounts at 8 B per
-  damaging record dominate; cells/segments grow with keys). docs/DesignNotes.md → "Fold-at-publish measured: the cost cleared the bar, and the
-  row on screen did not".
-- **A carried cell is TAKEN, never lifted: `StatsSnapshot` drains on the COPY and shares nothing** (2026-11, layer 2 step 1 — the blocker
-  the fold-at-publish bullet left behind): a published row may not be cached, because it keeps its `BestSecTemp` by law (`StatResumeTest`:
-  publishing must leave the running second able to grow) and `MergeStatsRecursive` refuses that per level. The boundary is one call —
-  `StatsSnapshot.Take(row)` / `.TakeCell(node)` — whose result has every node's second closed while the live row keeps its own scratch, so
-  **`(BestSec, BestSecTemp)` is the ONLY pair of fields allowed to change across it** (named in the field sweep; exceptions are written down,
-  never skipped). **Detached** means every reference is re-pointed after `MemberwiseClone`: the three child lists AND their `SubStatIndex`
-  accelerators **rebuilt over the copies** (`SubStatLookup` never scans, so an un-indexed copy mints a second row for a key the board already
-  has), `Specials`/`ResistCounts`/`Deaths` as new containers, `TimeRange`s through the overload that **copies segments** (the
-  `List<TimeSegment>` overload adopts and welds), `Attempt`'s private amounts/dictionaries via `CopyDistributionTo` **in whichever shape they
-  are** (a copy taken after `HitFreqChart` materialized a row must carry dictionaries, or it arrives EMPTY because the lists were released),
-  `GroupEntry.Members/Children`, and a `MoreStats` cycle meets its own clone rather than the stack; the copy's `PropertyChanged` subscription
-  is dropped (`DetachViewSubscribers`) so a snapshot no grid shows cannot keep a pane alive. **A row shape not listed in
-  `StatsSnapshot.RowShapes` throws by name** instead of being scalar-copied into sharing its fields: adding a `PlayerStats`/`PlayerSubStats`
-  subclass means adding it there, and the `internal set` added to the published child lists belongs to this file only (the write law — every
-  row enters through `SubStatOf`/`SubStat2Of`/`SubSubStatOf` — is unchanged). Cost, measured by `SnapshotCostProbeTest`
-  (`EQLP_SNAPSHOT_COST=<log>`, alternated arms): **a snapshot is 0.88-2.10 % of the recount it replaces** (raid 2.6 ms vs 219 ms over 38 rows
-  and 1.05 M records; farm night 1.0 vs 115 ms; group `Roper_thj` 2.9 vs 140 ms over 207 rows, mean 14 µs/row), and carrying every published
-  row retains **4.4-8.2 MB**, raw amounts being the bulk (7.6 of the 8.2) — the same order as the fold probe's independent estimate. **Nothing
-  in production calls it yet**: step 2 (cells keyed by row × ordinal window under `FightMaterializationCache`'s identity proof, with a
-  full-build fallback) is unbuilt, and tanking/healing have not been asked their own version of the question. docs/DesignNotes.md → "The copy
-  a carried cell needs, and the second it has to be taken at"; laws pinned by `StatsSnapshotTest`.
+- **A row on screen is not a cacheable cell — and pricing the carry was not the blocker, the workflow was** (2026-11): the gate layer 2 was
+  waiting on measured out cheap (`FoldAtPublishProbeTest` over four captures: refreshing only touched rows removes **99.2-100 %** of a recount, against
+  whole-row reuse's ~20 % raid / ~35 % group; at the walk's own rate the raid capture's touched rows were **1,302 ms of a 2,129 ms `walk`**), and the
+  carry was then built and measured (**99.1 %** of actions reused, an Incogitable damage build **1,460 → 180 ms**) — and reverted all the same, because
+  a real session is *eight different fight-group selections* plus drill-downs that read the board already built, so a per-name board cache starts cold on
+  every question and the only unasked rebuilds are classification-driven, which invalidate it. See docs/DesignNotes.md → "Carried counted cells were
+  built, measured and reverted" (numbers, the deletion list, and the cache-free targets that replaced them). The pricing probes themselves are deleted;
+  their runs are in git history at `fd891099` and `eb3cd4f8`.
+- **The copy boundary written for a carried cell is deleted along with the carry** (2026-11): `DamageCellStore`, `StatsSnapshot`
+  (`Take`/`TakeCell`/`TakeCarry`) and its no-sharing field sweep, `Attempt.ShallowReplica`/`CopyDistributionTo` and the builder's open/store seam all
+  left together when carrying counted cells was reverted. The answer to "what does a carry cost to take safely?" is in docs/DesignNotes.md →
+  "Carried counted cells were built, measured and reverted", with the measurement (99.1 % of actions reused; a damage build 1,460 → 180 ms; walk
+  627 → 57 ms) and the workflow that made it inert: **eight DIFFERENT selections of fight groups, then drill-downs (`SpellCountTable.Init`,
+  `DamageBreakdown.Init`) that read the board already built at zero extra cost** — so a cache keyed by question starts cold every time, and the only
+  unasked rebuilds are the ones a classification move triggers, which is what invalidates carried cells. Do not re-add a per-name board cache from
+  those numbers. The standing targets are cache-free: `groups` copying blocks into a retained pool (**1,196 ms / 23.5 MB on Incogitable — adoption,
+  not copy**, more than the counting it feeds), `walk`'s ~500 ns/record of per-record dictionary probes (flat name→id indexing, counters already
+  exist to decide it), and materialize building every record before accumulating anything (a whole-capture select-all peaks ~+527 MB). Whatever copy
+  helper returns must keep the rule that was learned writing it: **anything cloned for display shares no mutable object with what keeps accumulating**,
+  and a new `PlayerStats`/`PlayerSubStats` subclass must fail by name rather than scalar-copy itself into sharing.
 - **A refresh answers for itself; only a machine's refresh may decline, and it says so** (2026-11): an applied change is visible in
   the place the operator is looking — the row that left the list is gone, a claimed summon reads `X +Pets` — because re-presenting a
   pool the builder already holds costs **~10 ms for one row, 25–32 ms for a whole-capture selection**, and the boards' own door prints
