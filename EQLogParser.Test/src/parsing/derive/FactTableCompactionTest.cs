@@ -154,15 +154,18 @@ namespace EQLogParser
                                    typeId: LabelTypes.Heal, flags: 0, modMask: 0, subIdx: HealFact.NoSpell));
       }
 
-      Assert.IsTrue(heals.SlackBytes > 0, "300 heals in a buffer that doubled to 512");
+      // The chunked law replaces the doubling one here, and the state this asserted no longer exists: 300 heals used to sit in a
+      // buffer that doubled to 512 slots (212 empty ones for CompactToCount to hand back), and now they buy exactly one chunk with
+      // nothing reserved beyond them. Kept as a test rather than deleted because it is still the fixture that proves a heal trim, if
+      // one is ever added, neither loses rows nor breaks the shared name pool.
+      Assert.AreEqual(1, heals.HealChunksAllocated, "300 heals buy exactly one chunk");
+      Assert.AreEqual(0L, heals.SlackBytes, "and leave no reserved-but-empty slots behind");
       var before = heals.Heals.ToArray();
-      var slackBefore = heals.SlackBytes;
 
       var freed = heals.CompactToCount();
 
       Assert.AreEqual(before.Length, heals.HealCount, "no heal lost");
-      Assert.AreEqual(slackBefore, freed, "the trim reports exactly the slack the buffer was holding");
-      Assert.AreEqual(0L, heals.SlackBytes, "and nothing is left empty");
+      Assert.AreEqual(0L, freed, "there is nothing inside a chunk to hand back");
       for (var i = 0; i < before.Length; i++)
       {
         var now = heals.Heals[i];

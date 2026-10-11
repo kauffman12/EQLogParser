@@ -203,7 +203,7 @@ namespace EQLogParser
 
     /// <summary>Shrink the heal array to its rows, returning the bytes released (CombatCapture.CompactRows asks).</summary>
     long CompactToCount();
-    ReadOnlySpan<HealFact> Heals { get; }
+    HealFactReader Heals { get; }
     void AddHeal(HealFact heal);
 
     /*
@@ -236,7 +236,16 @@ namespace EQLogParser
   {
     private readonly DamageFactTable _names;
 
-    private HealFact[] _heals;
+    /*
+     * Chunked row storage, mirroring DamageFactTable: a chunk (32,768 rows x 24 bytes ~= 768 KiB) is bought when its first row arrives, so
+     * nothing is ever copied, old and new never coexist, and no doubling of empty slots survives a load. Ordinals stay the currency that
+     * HealSummarySource's window walk and the sequence law speak: chunk = ordinal >> shift, slot = ordinal & mask.
+     */
+    internal const int HealChunkShift = 15;                       // 32,768 rows x 24 B ~= 768 KiB per chunk
+    internal const int HealChunkSize = 1 << HealChunkShift;
+    internal const int HealChunkMask = HealChunkSize - 1;
+
+    private HealFact[][] _chunks = [];
     private int _healCount;
 
     private readonly List<string> _spells = [];
@@ -255,11 +264,26 @@ namespace EQLogParser
     internal HealFactTable(DamageFactTable names, int initialCapacity = 16_384)
     {
       _names = names ?? throw new ArgumentNullException(nameof(names));
-      _heals = new HealFact[initialCapacity];
+      _chunks = initialCapacity > 0 ? new HealFact[(initialCapacity + HealChunkSize - 1) / HealChunkSize][] : [];
     }
 
     public int HealCount => _healCount;
-    public ReadOnlySpan<HealFact> Heals => _heals.AsSpan(0, _healCount);
+    /// <summary>The capture's heals by ordinal (Length + this[ordinal]) — see HealFactReader and DamageFactTable.Facts for why this is a
+    /// reader rather than the span it used to be.</summary>
+    public HealFactReader Heals => new(this);
+
+    /// <summary>Sequential access over [from, to) as the chunk slices covering it: zero allocation, contiguous inside each slice.</summary>
+    public HealFactRange HealsIn(int from, int to) => new(_chunks, Math.Max(0, from), Math.Min(to, _healCount));
+
+    internal int HealChunksAllocated
+    {
+      get
+      {
+        var n = 0;
+        for (var i = 0; i < _chunks.Length; i++) if (_chunks[i] is not null) n++;
+        return n;
+      }
+    }
 
     /// <summary>THE ordinal door for heals — same law as DamageFactTable.At: one row by the ordinal the heal window walk already
     /// carries, so chunked storage changes this method and no caller. Out of range reads back a zero row rather than throwing.</summary>
@@ -268,16 +292,33 @@ namespace EQLogParser
     /// <summary>By-reference form of the heal door — see DamageFactTable.RefAt.</summary>
     public ref readonly HealFact RefAt(int ordinal)
     {
-      return ref (uint)ordinal < (uint)_healCount ? ref _heals[ordinal] : ref ZeroRow;
+      if ((uint)ordinal >= (uint)_healCount) return ref ZeroRow;
+      var chunk = _chunks[ordinal >> HealChunkShift];
+      return ref chunk is not null ? ref chunk[ordinal & HealChunkMask] : ref ZeroRow;
     }
 
     private static readonly HealFact ZeroRow;
-    public long EstimatedBytes => (long)_heals.Length * Marshal.SizeOf<HealFact>();
+    public long EstimatedBytes => (long)HealChunksAllocated * HealChunkSize * Marshal.SizeOf<HealFact>();
 
     // Same doubling slack as the damage table beside it: measured 1,243,469 heals sitting in a 1,600,000-slot array.
-    public long SlackBytes => RowArrays.SlackOf<HealFact>(_heals.Length, _healCount);
+    /// <summary>Zero by construction: a chunk is allocated only once a row needs it, and the unwritten tail of the newest chunk is
+    /// slots inside an allocation that already holds real rows.</summary>
+    public long SlackBytes => 0;
 
-    public long CompactToCount() => RowArrays.TrimTo(ref _heals, _healCount);
+    public long CompactToCount()
+    {
+      // Whole chunks the capture never reached (possible when a capacity hint preallocated them); rows are never renumbered.
+      var needed = (_healCount + HealChunkSize - 1) / HealChunkSize;
+      var freed = 0L;
+      for (var i = _chunks.Length - 1; i >= needed; i--)
+      {
+        if (_chunks[i] is null) continue;
+        freed += (long)HealChunkSize * Marshal.SizeOf<HealFact>();
+        _chunks[i] = null!;
+      }
+
+      return freed;
+    }
 
     // Names live in the damage table: same string, same index, in both streams.
     public short InternName(string name) => _names.InternName(name);
@@ -298,10 +339,20 @@ namespace EQLogParser
 
     public void AddHeal(HealFact heal)
     {
-      if (_ascendingTime && _healCount > 0 && heal.TimeS < _heals[_healCount - 1].TimeS) _ascendingTime = false;
+      if (_ascendingTime && _healCount > 0 && heal.TimeS < At(_healCount - 1).TimeS) _ascendingTime = false;
 
-      if (_healCount == _heals.Length) Array.Resize(ref _heals, _heals.Length * 2);
-      _heals[_healCount++] = heal;
+      var ordinal = _healCount;
+      var ci = ordinal >> HealChunkShift;
+      if (ci >= _chunks.Length)
+      {
+        var grown = Math.Max(_chunks.Length * 2, 4);
+        while (ci >= grown) grown *= 2;
+        Array.Resize(ref _chunks, grown);
+      }
+
+      _chunks[ci] ??= new HealFact[HealChunkSize];
+      _chunks[ci][ordinal & HealChunkMask] = heal;
+      _healCount = ordinal + 1;
     }
 
     /// <inheritdoc cref="IHealFactTable.AscendingTime"/>
@@ -320,11 +371,74 @@ namespace EQLogParser
       while (low <= high)
       {
         var middle = (low + high) >>> 1;
-        if (_heals[middle].TimeS >= time) high = middle - 1;
+        if (At(middle).TimeS >= time) high = middle - 1;   // the ordinal door: rows live in chunks now
         else low = middle + 1;
       }
 
       return low;
+    }
+  }
+
+  /*
+   * Ordinal view over the chunked heal rows — Length and this[ordinal], which is everything HealSummarySource's window walk, the
+   * classification cursors and the report ever asked of the flat span. A class because the interface cannot hand out a ref struct.
+   */
+  internal sealed class HealFactReader(HealFactTable table) : System.Collections.Generic.IEnumerable<HealFact>
+  {
+    public int Length => table.HealCount;
+
+    public ref readonly HealFact this[int ordinal] => ref table.RefAt(ordinal);
+
+    public RowEnumerator GetEnumerator() => new(table);
+
+    System.Collections.Generic.IEnumerator<HealFact> System.Collections.Generic.IEnumerable<HealFact>.GetEnumerator()
+    {
+      for (var i = 0; i < table.HealCount; i++) yield return table.At(i);
+    }
+
+    System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
+      => ((System.Collections.Generic.IEnumerable<HealFact>)this).GetEnumerator();
+
+    public struct RowEnumerator(HealFactTable table)
+    {
+      private readonly HealFactTable _table = table;
+      private int _index = -1;
+
+      public HealFact Current => _table.At(_index);
+
+      public bool MoveNext() => ++_index < _table.HealCount;
+    }
+  }
+
+  /// <summary>Sequential read of an ordinal range as chunk slices; see DamageFactRange for the reasoning.</summary>
+  internal ref struct HealFactRange(HealFact[][] chunks, int from, int to)
+  {
+    private readonly HealFact[][] _chunks = chunks;
+    private readonly int _from = from;
+    private readonly int _to = Math.Max(from, to);
+
+    public Enumerator GetEnumerator() => new(_chunks, _from, _to);
+
+    public ref struct Enumerator(HealFact[][] chunks, int from, int to)
+    {
+      private readonly HealFact[][] _chunks = chunks;
+      private readonly int _to = to;
+      private int _next = from;
+      private int _start = from;
+      private int _length;
+
+      public ReadOnlySpan<HealFact> Current => _chunks[_start >> HealFactTable.HealChunkShift]
+        .AsSpan(_start & HealFactTable.HealChunkMask, _length);
+
+      public bool MoveNext()
+      {
+        if (_next >= _to) return false;
+
+        _start = _next;
+        _length = Math.Min(HealFactTable.HealChunkSize - (_start & HealFactTable.HealChunkMask), _to - _start);
+        _next += _length;
+        return true;
+      }
     }
   }
 }

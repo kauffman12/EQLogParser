@@ -81,7 +81,10 @@ public class HealFactCaptureTest
          */
         var facts = new DamageFactTable(1_000);
         var heals = new HealFactTable(facts, 1_000);
-        Assert.AreEqual(24_000L, heals.EstimatedBytes, "one heal fact's measured size, at capacity, no per-record allocation");
+        // Chunks changed what this prices: a hint sizes a table of chunk references (8 bytes each) and the megabytes appear only when a
+        // chunk's first row arrives. An empty capture holds zero heal bytes — the idle-monitor case that used to reserve the whole file
+        // to store nothing.
+        Assert.AreEqual(0L, heals.EstimatedBytes, "a hint reserves references, not rows: nothing written, nothing held");
 
         /*
          * The estimate prices the BUFFER, not the row count — which is the honest statement for D2's memory
@@ -89,11 +92,19 @@ public class HealFactCaptureTest
          * rounds capacity up past what is stored. 16 → 32 → 64 → 128 across 65 adds: eight times the bytes for
          * four times the facts.
          */
+        // One chunk per HealChunkSize rows, bought at the seam: the estimate is allocated capacity, and 65 rows cost exactly one chunk —
+        // the old store paid eight times the bytes for four times the facts (16 -> 32 -> 64 -> 128).
         var grown = new HealFactTable(new DamageFactTable(1), 16);
-        var before = grown.EstimatedBytes;
         for (var i = 0; i < 65; i++) grown.AddHeal(default);
         Assert.AreEqual(65, grown.HealCount);
-        Assert.AreEqual(before * 8, grown.EstimatedBytes, "the estimate follows the doubling the buffer actually did");
+        var oneChunk = (long)HealFactTable.HealChunkSize * Unsafe.SizeOf<HealFact>();
+        Assert.AreEqual(oneChunk, grown.EstimatedBytes, "the first row buys one chunk; filling it buys no more");
+
+        for (var i = 65; i < HealFactTable.HealChunkSize; i++) grown.AddHeal(default);
+        Assert.AreEqual(oneChunk, grown.EstimatedBytes, "still the same chunk at its last slot");
+
+        grown.AddHeal(default);
+        Assert.AreEqual(oneChunk * 2, grown.EstimatedBytes, "the row past the seam buys the second chunk");
     }
 
     [TestMethod]
@@ -177,7 +188,7 @@ public class HealFactCaptureTest
         var seqs = new List<(int Seq, bool IsHeal)>();
         var dmg = run.Facts.Facts.ToArray();   // the store is chunked now; this test wants a snapshot it can scan by seq
         for (var i = 0; i < dmg.Length; i++) seqs.Add((dmg[i].Seq, false));
-        var heals = run.HealFacts.Heals;
+        var heals = run.HealFacts.Heals.ToArray();   // chunked store; this scan wants a flat snapshot
         for (var i = 0; i < heals.Length; i++) seqs.Add((heals[i].Seq, true));
 
         Assert.AreEqual(dmg.Length + heals.Length, seqs.Count);
@@ -226,7 +237,7 @@ public class HealFactCaptureTest
         // make "the same raider" two different numbers.
         var run = PipelineHarness.RunFileDerived(HealFixture);
 
-        var heals = run.HealFacts.Heals;
+        var heals = run.HealFacts.Heals.ToArray();   // chunked store; this scan wants a flat snapshot
         Assert.IsTrue(heals.Length > 0);
 
         for (var i = 0; i < heals.Length; i++)
