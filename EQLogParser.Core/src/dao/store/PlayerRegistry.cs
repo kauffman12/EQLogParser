@@ -365,6 +365,25 @@ namespace EQLogParser
       return string.Empty;
     }
 
+    /*
+     * The class to SHOW in the window where a class is WRITTEN (2026-11): the saved word first, this capture's last-known answer second.
+     *
+     * `GetLastKnownPlayerClass` and `GetPlayerClass(name, t)` read the other way round - what the log watched, with the saved word as
+     * fallback only - and that is right for a board, which reports what the capture saw. The Identity Table asks a different question
+     * ("what did we decide about this name?"), and with capture-first order an operator's pick was invisible: the pencil wrote the default
+     * lane, the cell kept reading the cast-learned window, and the dropdown closed on a row that never changed. Field report, with the log
+     * line proving the write landed: "identity cell: class of Farzi -> Berserker", then "-> Monk", "i can change type but not class".
+     *
+     * Only this one reader changes precedence. The capture's windows stay the authority for every board and for `GetPlayerClass(name, t)`,
+     * so a mid-log reclass still reads correctly per second - and clearing the saved word (the dropdown's blank entry, or the take-back)
+     * hands the cell straight back to what this log says.
+     */
+    internal string GetAssignedOrLastKnownPlayerClass(string name)
+    {
+      var assigned = GetDefaultPlayerClass(name);
+      return assigned.Length > 0 ? assigned : GetLastKnownPlayerClass(name);
+    }
+
     internal string GetLastKnownPlayerClass(string name)
     {
       if (string.IsNullOrEmpty(name) || !_activePlayerClass.TryGetValue(name, out var active))
@@ -857,15 +876,21 @@ namespace EQLogParser
     }
 
 
-    // only do this from user interaction
-    internal void SetDefaultPlayerClass(string name, string className, bool init = false)
+    /*
+     * only do this from user interaction (or a load)
+     *
+     * Answers whether the word was ACCEPTED. Every other caller is a load and ignores it; the Identity Table's class pencil does not,
+     * because a refusal used to print its own success line (`identity cell: class of X -> Y` in a session where nothing was written), which
+     * is precisely the log an operator reads back after "I clicked and nothing happened".
+     */
+    internal bool SetDefaultPlayerClass(string name, string className, bool init = false)
     {
       // The literal "You" is resolved to ConfigUtil.PlayerName by the parsers; this is the safety check behind that rule, kept
       // because a durable row named "You" would be unreachable through the lookups that normalise it.
-      if (string.IsNullOrEmpty(name) || "You".Equals(name, StringComparison.OrdinalIgnoreCase)) return;
+      if (string.IsNullOrEmpty(name) || "You".Equals(name, StringComparison.OrdinalIgnoreCase)) return false;
 
       var clear = string.IsNullOrEmpty(className);
-      if (!clear && !CombatRecordLookup.IsValidClassName(className)) return;
+      if (!clear && !CombatRecordLookup.IsValidClassName(className)) return false;
 
       lock (_lock)
       {
@@ -886,6 +911,8 @@ namespace EQLogParser
           IdentityPriorStore.Instance.SetRosterClass(name, clear ? null : className);
         }
       }
+
+      return true;
     }
 
     internal static bool IsPossiblePlayerName(string part, int stop = -1)

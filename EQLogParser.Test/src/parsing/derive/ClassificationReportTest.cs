@@ -317,13 +317,19 @@ public class ClassificationReportTest
   }
 
   /*
-   * The class column used to show only the roster block and ability words: the census asked
-   * GetDefaultPlayerClass, so every class LEARNED from casting - CastLineParser's confidence records, which is
-   * what legacy's Verified Players grid displayed - was invisible in the window built to replace it. Both
-   * getters must answer here: learned first, and the default still for names no cast taught.
+   * The class column used to show only the roster block and ability words: the census asked a getter that ignored CastLineParser's
+   * confidence records, so every class LEARNED from casting - what legacy's Verified Players grid displayed - was invisible in the window
+   * built to replace it. Both lanes must answer here.
+   *
+   * WHICH answers first changed in 2026-11, and this test is where it is pinned: the column now reads the ASSIGNED word ahead of the learned
+   * one (PlayerRegistry.GetAssignedOrLastKnownPlayerClass), because this is the column a pencil WRITES and capture-first order made an
+   * accepted pick invisible - "i can change type but not class", with `identity cell: class of Farzi -> Berserker` in the log proving the write
+   * landed on a row that kept showing what its own casts said. The worry behind the old order (a saved guess from another night must not erase
+   * what this capture watched) is not lost: it is what the BOARDS do, through GetPlayerClass(name, t), and forgetting the saved word returns
+   * the cell to this capture. See ClassColumnPrecedenceTest for both directions.
    */
   [TestMethod]
-  public void AClassLearnedFromCastingShowsInTheCensus()
+  public void AClassLearnedFromCastingShowsInTheCensusUntilAWordIsAssigned()
   {
     // Class writes gate on the host validator (CombatRecordLookup.IsValidClassName, wired by App.xaml.cs,
     // "nothing is a class" headless) - same two-word stub PlayerRegistryPersistenceTest uses, restored in a
@@ -335,12 +341,14 @@ public class ClassificationReportTest
       var raider = BusiestAttacker();
       PlayerRegistry.Instance.SetActivePlayerClass(raider, "Cleric", 2, LogStartS());
 
-      // A default written after the learned record must not outrank it - the record says what this capture's
-      // casts showed, the default is a saved guess.
+      var learnedRow = Census().Rows.Single(r => r.Name.Equals(raider, StringComparison.OrdinalIgnoreCase));
+      Assert.AreEqual("Cleric", learnedRow.Class, "nothing assigned: what this capture's casts showed is the whole answer");
+
+      // And an ASSIGNED word takes the cell over, even against a learned record - deliberately, and only here.
       PlayerRegistry.Instance.SetDefaultPlayerClass(raider, "Warrior");
 
-      var learnedRow = Census().Rows.Single(r => r.Name.Equals(raider, StringComparison.OrdinalIgnoreCase));
-      Assert.AreEqual("Cleric", learnedRow.Class, "the spell-learned class must be the one displayed");
+      Assert.AreEqual("Warrior", Census().Rows.Single(r => r.Name.Equals(raider, StringComparison.OrdinalIgnoreCase)).Class,
+                      "the column the pencil writes into must show what was written; boards still read the learned window per second");
 
       // And the roster default still answers for a name that never cast a class-bearing spell.
       string? secondName = null;

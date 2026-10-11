@@ -866,20 +866,39 @@ namespace EQLogParser
 
     private void ApplyClassPick(NameRow row, string className)
     {
-      if (string.IsNullOrEmpty(className))
+      if (row.PlayerClass == className && !string.IsNullOrEmpty(className))
       {
-        Log.Debug($"identity cell: {DoorClass} picked nothing");
+        RefuseDebug(DoorClass, $"{row.Name} already reads {className}");
         return;
       }
 
-      if (row.PlayerClass == className) { RefuseDebug(DoorClass, $"{row.Name} already reads {className}"); return; }
+      /*
+       * The blank entry MainActions.ClassList leads with is not "picked nothing": it is this pane's way of taking a saved class BACK.
+       * `SetDefaultPlayerClass` REMOVES the default for an empty word (it never stores one for readers to re-filter), and because this column
+       * reads assigned-first the cell goes back to showing what THIS capture learned. Answering "picked nothing" is what made that entry look
+       * dead, and answering twice was what made a real pick look dead too.
+       */
+      if (string.IsNullOrEmpty(className))
+      {
+        PlayerRegistry.Instance.SetDefaultPlayerClass(row.Name, string.Empty);
+        Log.Info($"identity cell: saved class of {row.Name} forgotten - the cell shows what this capture's own lines say");
+        Reconcile();
+        return;
+      }
 
-      // SetDefaultPlayerClass validates the word itself (CombatRecordLookup.IsValidClassName), so the blank entry that
-      // MainActions.ClassList leads with — the old window's way of showing "no class" — writes nothing at all rather
-      // than a roster row with an empty class.
-      if (string.IsNullOrEmpty(className)) { RefuseDebug(DoorClass, "the blank class entry writes nothing"); return; }
+      /*
+       * The write ANSWERS, and the log line follows the answer instead of preceding it. `SetDefaultPlayerClass` validates the word itself
+       * (CombatRecordLookup.IsValidClassName) and used to have its result thrown away while this method printed success, so a refusal and an
+       * acceptance were indistinguishable in the one file an operator reads after "i click and it goes away" (two
+       * `identity cell: class of Farzi -> …` INFO lines, nothing visible on screen; the write had landed and the CELL was reading the other
+       * lane — PlayerRegistry.GetAssignedOrLastKnownPlayerClass).
+       */
+      if (!PlayerRegistry.Instance.SetDefaultPlayerClass(row.Name, className))
+      {
+        Log.Debug($"identity cell: {DoorClass} refused for {row.Name}: '{className}' is not a class word this build accepts");
+        return;
+      }
 
-      PlayerRegistry.Instance.SetDefaultPlayerClass(row.Name, className);
       Log.Info($"identity cell: class of {row.Name} -> {className}");
       Reconcile();
     }

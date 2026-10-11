@@ -588,7 +588,10 @@ namespace EQLogParser
         ReasonDetail = castProof.For(source, name),
         HealedByCasters = healProof.For(source, name),
         IsOperatorVerdict = isOperator,
-        Class = NullIfEmpty(registry?.GetLastKnownPlayerClass(name)),
+        // Assigned first, then what this capture learned (PlayerRegistry.GetAssignedOrLastKnownPlayerClass): this is the column an operator
+        // WRITES, and with capture-first order a written class was invisible on exactly the rows whose pencil shows - a Player row that cast
+        // something. Boards keep reading GetPlayerClass(name, t), which stays time-correct.
+        Class = NullIfEmpty(registry?.GetAssignedOrLastKnownPlayerClass(name)),
         TypedEntry = typed,
         LastSeenUnixSeconds = lastSeen,
         PetOwner = petOwner,

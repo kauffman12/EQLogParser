@@ -11914,6 +11914,40 @@ is stated in `MergeRows` rather than hidden. The three Windows-side tests to re-
 violation, so on a Name sort (the usual case) it never rewrites; insertion is `log n`. No allocation beyond
 one `NameRow` per newcomer, which the merge already built.
 
+
+### The class the window writes and the class the log watched (2026-11)
+
+Report: "i can change type but not class. the dropdown comes up, i click, and it goes away" — accompanied by two lines of its own log:
+
+```
+identity cell: class of Farzi -> Berserker
+identity cell: class of Farzi -> Monk
+```
+
+The write was landing. What was wrong is that **the cell was reading the other lane**: `ClassificationReport` filled `Row.Class` from
+`GetLastKnownPlayerClass`, which prefers the capture's cast-learned windows and treats the saved word as a *fallback only*. And the class
+pencil appears exactly on rows whose windows are full — a Player row that cast something is what teaches a window. So an accepted pick could
+never be seen, in the one window where a class is written, on precisely the rows where an operator would write one.
+
+**Two lanes, two questions, and only the pane's order changes:**
+
+| reader | question | order |
+|---|---|---|
+| boards, `GetPlayerClass(name, t)` | what did this log watch? | time-correct windows; saved word as fallback (a mid-log reclass must still read per second) |
+| Identity Table (`GetAssignedOrLastKnownPlayerClass`) | what did we decide? | **saved word first**, capture's answer when nothing is saved |
+
+That keeps the standing law intact — *kind is a static verdict, class is per-second evidence with the default as fallback only* — because the
+law is about the registry's readers, and this changes one display reader. Clearing the lane returns the cell to the capture: the dropdown's
+**blank entry is a verb** ("forget the saved class; show what this log says"), which is also why it used to look dead — `ApplyClassPick`
+answered it with "picked nothing" and returned.
+
+**A write has to answer.** `SetDefaultPlayerClass` returns whether the word was accepted, and the pane's INFO line follows that answer
+instead of preceding it; before this, a refusal (`CombatRecordLookup.IsValidClassName`) and an acceptance printed the same success line, which
+is exactly the ambiguity an operator reads back after "nothing happened". Refusals are Debug.
+
+Pinned by `ClassColumnPrecedenceTest` — including the direction that must NOT move: a saved word never changes what
+`GetPlayerClass(name, t)` answers for a board.
+
 ### Two labels and one separator (same sitting)
 
 * The pane's dock header and its View / Windows entry now read **Identity Table**. The old label ("Player/NPC

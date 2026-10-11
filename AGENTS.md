@@ -163,7 +163,12 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
 - **Take-back and no veto**: `ClassificationCommands` is the whole vocabulary — `ApplyVerdict` (FORGETS the ledger row and all
   registry claims, then asserts at Manual) and `Recalculate(name)` (the Names pane's take-back button — `Solid_History`, since
   `Solid_Calculator` was the same glyph four summary panes use for OPTIONS: forget + Unknown verdict + `ForgetDefaultClass`). Class is a
-  separate lane: kind verdicts never touch it. There is **no** "assert Unknown" entry in any dropdown and no permanent ban mechanism;
+  separate lane: kind verdicts never touch it. **The Identity Table shows the SAVED class first** (`GetAssignedOrLastKnownPlayerClass`), because
+  that is the column an operator writes; boards keep reading `GetPlayerClass(name, t)`, which stays time-correct with the saved word as fallback
+  only. Capture-first order made an accepted pick invisible on exactly the rows whose class pencil shows (a Player row that cast something):
+  "i can change type but not class", with `identity cell: class of X -> Y` in the log proving the write landed. The dropdown's blank entry is a
+  **verb** (forget the saved class; the cell returns to what this log says), and `SetDefaultPlayerClass` answers whether the word was accepted —
+  the pane logs the answer, not a promise (`ClassColumnPrecedenceTest`). There is **no** "assert Unknown" entry in any dropdown and no permanent ban mechanism;
   reverting restores the rules' own answer. Ownership writes go through `PetAssignment.Assign` (and ask for a full pass), never into a file.
   **A take-back keeps its row** (2026-11): `Recalculate` notes the name in `TakenBackNames` and `ClassificationReport.Build` lists it as its
   LAST source — `Kind = Unknown`, `Row.Reason = TakenBackNames.Word` (cell *Taken Back*, hover *Claim Taken Back*) — because a verb whose
