@@ -1573,23 +1573,25 @@ npcs.txt; it is the *only* evidence for **6** names (Incogitable) and **4** (Kiz
   possessive** ones. Two findings outrank the request. **(1) `Lay on Hands.` prints versionless — 8 lines — so
   "versionless never prints" was false in the table's own comment**; it still claims nothing (no rank, no family match,
   and the bare form is what a `/pet` button or a clickie writes), which is why the sentence now says the anchor refuses a
-  line that really occurs rather than a hypothetical one. **(2) `Life Burn` is ONE NAME ON TWO CLASS LINES in
-  `spells.txt`: ranks I–V mask Nec(1024), VI–X mask Shm(512)** — and every caster of a ranked form in eleven captures
-  (Coas, Shennron, Atvar, Virul; 135 casts, all VIII–X) is a **Necromancer** by the ten thousand other spells he casts,
-  while the operator names Shadow Knight. So it enters **multi-bit** `Nec|Shm|Shd`: the rank proves a PLAYER Certain and
-  **no reading may write a class**, which required the seeding change — an ambiguous family rank now has its generic
-  single-mask label **removed**, because leaving it in meant each of those 59–118 casts per capture was feeding "Shaman"
-  sightings into a necromancer's class column. The operator's Shd word rides inside the mask, so a corrected data file
-  keeps claiming the caster with no code change; **if a future data file settles the class, that row becomes single-bit in
-  one edit and the veto retires with it.** Yield is measured and small: those AA casters are raid members the rules
+  line that really occurs rather than a hypothetical one. **(2) `Life Burn` is the one family whose MASK OVERRIDES
+  `spells.txt` rather than reading it.** With this app's `SpellClass` bits (`Nec = 1024`, `Shm = 512`) the file masks ranks
+  **I–V Nec** and **VI–X Shaman**, and the printed ranks (VIII–X) are the Shaman half — bad data: the operator states Life
+  Burn is a necromancer AA outright ("shaman is not ever a life burn user"), and every Life Burn caster in eleven captures
+  is necro-dominant by their OTHER casts (Coas 59 casts/95% of 12,966; Shennron 42/61%; Atvar 11/97%; Patayin, Nostrad,
+  Messanna, Siigsaur, Rhot, Miid 94–99%) — **except Virul** (9 casts, War-dominant), the one name to watch if a class
+  column ever looks wrong. So the row is **single-bit `SpellClass.Nec`**: the rank gate still applies (`Life Burn XI` claims
+  nothing) while seeding writes *Necromancer* over all ten ranks, so no rank decides the class column. The **multi-bit
+  lane stays** for what really is ambiguous (Battle Leap/Warcry War|Ber) and keeps the seeding law this AA forced — an
+  ambiguous family rank has its generic single-mask label **removed**, because leaving it in fed "Shaman" sightings from
+  `CastLineParser` into necromancers' class columns (~60 per capture). Yield is measured and small: those AA casters are raid members the rules
   already knew — on `eqlog_Kizant_xegony-9-18-22.txt` the whole census fingerprint (611 names, kinds,
   reasons incl. `R4-spell=54`, totals) is **byte-identical** before and after, while 11 of that capture's family-casters
   had no OTHER family-safe cast, so the claim is new even where the verdict is not (the placement would matter in a
   capture without their `/who` lines and Targeted frames). Do **not** widen this to `Group Lay on Hands`: zero DB rows
   AND zero cast lines, so it would be a permanently silent row (unlike Battle Leap Warcry, which has the data behind it).
   Pinned by `IdentityRulesTest` (`GuardianLayOnHands_RankedCastsResolve_AndAnUnshippedRankIsSilent`,
-  `LifeBurn_IsPlayerEvidenceAndWritesNoClass_OnEitherHalfOfTheDataSplit` — both directions: `IsClassSafeCast` true,
-  `GetSpellClass` null on **each** half of the split, `IsClassAmbiguousFamilyRank` false for an unshipped rank — and
+  `LifeBurn_RankedCastsWriteNecromancer_OverridingTheDataColumn` — both halves of the file's split answer *Necromancer*,
+  the ambiguous lane is empty for it, and an unshipped rank still claims nothing — and
   `AVersionedAaCastClaimsItsCaster_GuardianLayOnHandsAndLifeBurn`, which runs real cast lines through the pipeline and
   refuses the versionless caster). Numbers: docs/DesignNotes.md → "AA ranks on the family table, and the name the data
   classed two ways".

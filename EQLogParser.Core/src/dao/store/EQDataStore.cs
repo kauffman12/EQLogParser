@@ -142,16 +142,14 @@ namespace EQLogParser
       // anchor is what makes a family match a RANK rather than a name. This is the ONLY family whose
       // versionless form prints - every older one measured 0 such lines - so the refusal is of a real shape now.
       ("Lay on Hands", SpellClass.Pal),
-      // MULTI-BIT, and the mask carries a disagreement. The operator names this a shadow knight ability; the
-      // shipped data splits ONE name across two class lines BY RANK - `Life Burn I..V` mask Nec(1024) and
-      // `Life Burn VI..X` mask Shm(512). The captures settle nothing between the two readings: every caster of
-      // a ranked form (Coas, Shennron, Atvar, Virul - 135 lines, ranks VIII..X) is a NECROMANCER by the ten
-      // thousand other spells he casts, and the only Shaman sightings those files hold against them are these
-      // very lines. So three bits: the rank proves a PLAYER (Certain) while NEITHER reading may write a class -
-      // the ambiguous lane exists for exactly this, because a coin-flipped class column is worse than silence -
-      // and the operator's Shd sits inside the mask so a corrected data file keeps claiming the caster without
-      // a code change.
-      ("Life Burn", SpellClass.Nec | SpellClass.Shm | SpellClass.Shd),
+      // Necromancer - and this mask OVERRIDES the data file instead of reading it. `spells.txt` classifies the AA by
+      // rank (`Life Burn I..V` mask 1024 = Nec already, `VI..X` mask 512 = Shaman), and the Shaman half is wrong data:
+      // the operator states it as a necromancer ability outright, and every capture agrees - each caster of a ranked
+      // form (Coas, Shennron, Atvar, Virul, Tyrtan, Akinaara - 149 lines) resolves to Necromancer on their OTHER casts,
+      // with these very lines as the only Shaman/Shd evidence in the files against them. Declaring the family single-bit
+      // makes seeding write "Necromancer" over the per-rank label for all ten ranks, so the class column cannot flip
+      // depending on which rank was cast. The rank still has to exist in the file to claim anything, as everywhere else.
+      ("Life Burn", SpellClass.Nec),
       // Three more AA families (user-added 2026-11), each one single-bit in the data exactly as the user named it:
       // Area Taunt 9 ranks all War(1) / 40 cast lines (Fllint, Foob, Rune, Virul); Cannibalization 27 ranks all
       // Shm(512) / 1,641 lines (Jondolar 421, Jazrakhan 219, Carblis 212) - the heaviest new family in the corpus;
@@ -412,7 +410,8 @@ namespace EQLogParser
              * Multi-bit family: rank known for the identity gate, deliberately no class label - and a label the loop
              * above already wrote gets REMOVED, because declaring a name ambiguous is this application saying it will
              * not derive a class from it. `Life Burn` is what forced the removal rather than leaving it implicit:
-             * spells.txt masks ranks I-V Nec and VI-X Shaman - one AA, two class lines, split by rank - while every
+             * spells.txt masks ranks I-V Nec(1024) and VI-X Shaman(512) - one name, two class lines, split by rank -
+              * while every
              * caster of a ranked form in eleven captures (Coas, Shennron, Atvar, Virul) is a NECROMANCER by the ten
              * thousand other spells he casts, and the only Shaman sightings those files hold against them are these
              * very lines. Silence beats a coin flip, and it beats a flip the data itself dealt.

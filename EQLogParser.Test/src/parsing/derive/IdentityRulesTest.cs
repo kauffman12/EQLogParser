@@ -299,25 +299,29 @@ public class IdentityRulesTest
     }
 
     /*
-     * Life Burn: one name, two class lines IN THE DATA (`I..V` Nec, `VI..X` Shaman), and the operator's word is a
-     * third (shadow knight). So it enters MULTI-BIT, which is the lane that says "a rank proves a PLAYER and nothing
-     * else". Assert BOTH directions like every other ambiguous family: the identity gate OPEN (`IsClassSafeCast`
-     * true) and the class map SHUT (`GetSpellClass` null on both halves of the split). Assert only the first half
-     * and this seeds a Shaman label onto a necromancer's own AA.
+     * Life Burn: a necromancer AA whose SPELL FILE is half wrong - `SpellClass` says Nec=1024 and Shm=512, and the rows
+     * mask ranks I..V as Nec(1024) but VI..X as Shaman(512). The operator states the class outright (no shaman ever
+     * uses this AA), and the captures back
+     * it (every ranked caster is a necromancer by ~10k other spells; these lines are the only Shd/Shm sightings against
+     * them), so the family row declares Nec and the class column must ANSWER Necromancer on both halves of the bad
+     * split - that is what makes the override real rather than a comment. Assert both halves: only one of them is a
+     * rank any client in our corpus prints, and a future capture casts the other.
      */
     [TestMethod]
-    public void LifeBurn_IsPlayerEvidenceAndWritesNoClass_OnEitherHalfOfTheDataSplit()
+    public void LifeBurn_RankedCastsWriteNecromancer_OverridingTheDataColumn()
     {
         PipelineHarness.EnsureDataStore();
 
-        // The ranks the corpus actually prints are the Shaman-masked half, cast by necromancers.
+        Assert.IsTrue(ClassificationRules.IsClassSafeCast("Life Burn I"));
         Assert.IsTrue(ClassificationRules.IsClassSafeCast("Life Burn VIII"));
         Assert.IsTrue(ClassificationRules.IsClassSafeCast("Life Burn X"));
-        Assert.IsTrue(ClassificationRules.IsClassSafeCast("Life Burn I"));
-        Assert.IsTrue(EQDataStore.Instance.IsClassAmbiguousFamilyRank("Life Burn VIII"));
 
-        Assert.IsNull(EQDataStore.Instance.GetSpellClass("Life Burn VIII"), "the data's Shm reading may not reach the class column");
-        Assert.IsNull(EQDataStore.Instance.GetSpellClass("Life Burn I"), "nor the Nec reading");
+        // Not in the ambiguous lane any more: this family has an answer, so it writes one.
+        Assert.IsFalse(EQDataStore.Instance.IsClassAmbiguousFamilyRank("Life Burn VIII"));
+        Assert.IsFalse(EQDataStore.Instance.IsClassAmbiguousFamilyRank("Life Burn I"));
+
+        Assert.AreEqual("Necromancer", EQDataStore.Instance.GetSpellClass("Life Burn VIII"), "the file's Shaman mask must not reach the board");
+        Assert.AreEqual("Necromancer", EQDataStore.Instance.GetSpellClass("Life Burn I"), "nor its Shadow Knight mask");
 
         // The rank gate holds this family like every other: XI does not exist in the shipped file.
         Assert.IsFalse(ClassificationRules.IsClassSafeCast("Life Burn XI"));

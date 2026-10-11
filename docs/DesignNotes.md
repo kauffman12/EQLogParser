@@ -12001,7 +12001,7 @@ the Forest XXXVIII.` — a roman rank as the whole tail and **no** `Rk.`, which 
 | Guardian of the Forest | 41, all mask 8 = Rng | 428 (XXXV, XXXVIII, XXXIX, XLI) | Praxxis, Moldar, Lanedoraa, Laika, Tsiawd, Penuvien |
 | Group Guardian of the Forest | 21, all Rng | 261 (XVIII, XIX, XXI) | the same rangers |
 | Lay on Hands | 36, all mask 4 = Pal | 42 ranked + **8 versionless** | Shmid, Hacket, Abazzagorath, Tiseanu, Ozimandiasz, Lasaman |
-| Life Burn | I–V mask 1024 = Nec, **VI–X mask 512 = Shm** | 135 (VIII, IX, X) | Coas, Shennron, Atvar, Virul |
+| Life Burn | I–V mask **1024 = Nec**, **VI–X mask 512 = Shaman** (the bad half) | 149 (ranks VIII, IX, X) | Coas, Shennron, Atvar, Virul, Patayin |
 
 Zero article-shaped and zero possessive-pet casters among them, which is the entry requirement. The two Guardian forms
 need **two rows**: `Group Guardian of the Forest XVIII.` does not *start with* `Guardian of the Forest`, so neither
@@ -12013,23 +12013,25 @@ against the zero versionless lines every older family produced. The anchor still
 match, and a nameless-rank claim is how a clickie or a macro button would start asserting identity — but the sentence in
 the comment is now honest: the rule refuses a shape that really occurs, not a hypothetical one.
 
-**Life Burn is one AA the spell file cannot agree about.** Ranks I–V carry the Necromancer mask, ranks VI–X carry the
-Shaman mask, and the ranks clients actually print here (VIII–X) are the Shaman half. The captures do not arbitrate — they
-only deepen the problem: every caster of a ranked form is a **necromancer** by his own cast history (Coas ~13k
-Nec-resolved casts against 59 that resolve to anything else, and those 59 *are* his Life Burn lines; Shennron 10.5k Nec;
-Atvar 15k Nec), while the operator's word is Shadow Knight. Three readings, one name.
+**Life Burn: the spell file's class column is wrong, and this table overrides it.** `SpellClass` (this app's enum) is
+`Nec = 1024`, `Shm = 512`. `spells.txt` masks **ranks I–V as Nec(1024)** and **ranks VI–X as Shaman(512)**, and the ranks
+clients in our corpus print (VIII–X) are the half the file calls Shaman. The operator states the answer outright — Life
+Burn is a necromancer AA, "shaman is not ever a life burn user" — and eleven captures agree: judged by their OTHER cast
+lines (resolved through `spells.txt` with that bit order), every Life Burn caster is necro-dominant — Coas 59 casts
+(95% of 12,966 other casts resolve Nec), Shennron 42 (61%), Atvar 11 (97%), Patayin 4 (99%), Nostrad 3 (94%), Messanna 3
+(96%), Siigsaur 2 (94%), Rhot 1 (99%), Miid 1 (95%) — with **one exception worth knowing: Virul**, 9 casts, whose other
+casts run War-dominant (Nec 20%). So the family row declares **single-bit `SpellClass.Nec`**: the rank still has to exist
+in the file to claim anything (`Life Burn XI` claims nothing), but seeding writes *Necromancer* over the per-rank label for
+all ten ranks, and the class column cannot flip depending on which rank was cast.
 
-So it enters **multi-bit** (`Nec | Shm | Shd`): the rank proves a PLAYER at Certain and **no** reading may write a class.
-That required a seeding change rather than just a table row, and this is the part worth remembering — a multi-bit family
-now has any generic single-mask label **removed**. Before that, entering Life Burn left `GetSpellClass("Life Burn VIII")`
-answering *Shaman* from the generic pass, and `CastLineParser` fed that straight into the class registry: ~60 Shaman
-sightings a capture for a man whose other ten thousand casts are Necro. The gate test failed on exactly this
-(`Assert.IsNull(GetSpellClass("Life Burn VIII"))`) — writing the test is what found that "multi-bit means no class" was
-true only when the data happened to be multi-bit already, and silent-by-declaration had never actually been silent.
-Declaring a name ambiguous is this application saying it will not derive a class from that name; the seeding loop now
-makes that true whatever the file says. The operator's `Shd` bit sits in the mask so that a corrected data file keeps
-claiming the caster with no code change — and if a future file settles the class, the row becomes single-bit and the veto
-retires with it in the same edit.
+**The seeding law that came out of this stays**, because Battle Leap / Battle Leap Warcry still need it: declaring a family
+multi-bit means **no class label at all**, and the seeding loop now REMOVES any generic single-mask label for such a rank.
+Before that, an ambiguous entry left `GetSpellClass("Life Burn VIII")` answering *Shaman* from the generic spell→class pass
+and `CastLineParser` fed that into the registry — ~60 Shaman sightings a capture against a man whose other ten thousand
+casts are Necro. The gate test found it (`GetSpellClass` was expected null and returned Shaman): "multi-bit means no class"
+was true only when the file itself happened to be multi-bit, and silent-by-declaration had never actually been silent.
+Declaring a name ambiguous is this application saying it will not derive a class from that name; the seeding loop now makes
+that true whatever the file says.
 
 **Yield: measured, and honest about being small.** On `eqlog_Kizant_xegony-9-18-22.txt` (the capture with the most of
 these casts — 254 lines) the census fingerprint is **byte-identical** before and after: 6,076,353 facts, 611 names,
