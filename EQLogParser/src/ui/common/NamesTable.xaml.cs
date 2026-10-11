@@ -770,6 +770,13 @@ namespace EQLogParser
         // The gesture is over — whether the click finished it or WPF closed the popup: let the census land, including the one it queued.
         Editors.Close();
       });
+
+      // A table cell is ~20 px and the helper clamps the popup to its host cell, which leaves an OPEN DROP-DOWN hanging
+      // outside the popup's own bounds: with StaysOpen="False" a press on a list item is then a press arriving from
+      // outside, so the popup closes and nothing commits - which is exactly "it opens, I click, nothing happens".
+      // These three popups show a list rather than mirroring a cell, so height comes from their content. DamageSummary's
+      // Group cell shares the helper and is deliberately untouched.
+      typeEditPopup.Height = double.NaN;
     }
 
     private void TypeSelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -850,6 +857,8 @@ namespace EQLogParser
         classEditComboBox.SelectedItem = null;
         Editors.Close();
       });
+
+      classEditPopup.Height = double.NaN; // see TypeEditMouseLeftButtonUp: an open list needs more than a cell's height
     }
 
     private void ClassSelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -907,6 +916,8 @@ namespace EQLogParser
         ownerEditComboBox.SelectedItem = null;
         Editors.Close();
       });
+
+      ownerEditPopup.Height = double.NaN; // see TypeEditMouseLeftButtonUp: an open list needs more than a cell's height
     }
 
     private void OwnerSelectionChanged(object sender, SelectionChangedEventArgs e)
