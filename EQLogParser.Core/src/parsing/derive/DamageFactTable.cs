@@ -401,6 +401,25 @@ namespace EQLogParser
     public IReadOnlyList<string> InternedNames => _names;
 
     public ReadOnlySpan<DamageFact> Facts => _facts.AsSpan(0, _factCount);
+
+    /*
+     * THE ordinal door. One row, addressed by the ordinal everything else already speaks: `FightFactIndex` stores ordinals, the board
+     * blocks are ordinal runs, and a materialized selection is a list of these. Every read that wants ONE row should come through here
+     * rather than indexing a span, because this is where the flat buffer stops being one allocation: the day rows move into chunks, the
+     * only change is inside this method (chunk = ordinal >> shift, slot = ordinal & mask), and no caller, no golden board and no
+     * `FightFactIndex` ordinal moves. `Facts` stays for the whole-range walks that want a span; it is the last thing that can be answered
+     * only while storage is contiguous, which is exactly why the door exists before any chunking does.
+     */
+    public DamageFact At(int ordinal) => RefAt(ordinal);
+
+    /// <summary>By-reference form of the door, for readers that hold a row briefly (`ref readonly` at the call site costs no 24-byte
+    /// copy). Valid in a chunked world too: a chunk is an array, so the reference points into it exactly as it does today.</summary>
+    public ref readonly DamageFact RefAt(int ordinal)
+    {
+      return ref (uint)ordinal < (uint)_factCount ? ref _facts[ordinal] : ref ZeroRow;
+    }
+
+    private static readonly DamageFact ZeroRow;
     public ReadOnlySpan<DeathFact> Deaths => _deaths.AsSpan(0, _deathCount);
     public ReadOnlySpan<IdentityEvent> IdentityEvents => _identities.AsSpan(0, _identityCount);
     public ReadOnlySpan<TauntFact> Taunts => _taunts.AsSpan(0, _tauntCount);

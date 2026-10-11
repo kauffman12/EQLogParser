@@ -344,13 +344,12 @@ namespace EQLogParser
        * what this name did to the raid (the tanking board's). A row can have either, both, or — for a selection
        * that only ever got hit — only the second, so neither pass is allowed to decide whether the Fight exists.
        */
-      var allFacts = facts.Facts;
 
       if (_damageOrdinals.TryGetValue(fight, out var damageRun))
-        foreach (var ordinal in damageRun) AddDamage(walk, allFacts[ordinal], facts, fromT, toT);
+        foreach (var ordinal in damageRun) AddDamage(walk, facts.RefAt(ordinal), facts, fromT, toT);   // ordinals through the door
 
       if (_tankingOrdinals.TryGetValue(fight, out var tankRun))
-        foreach (var ordinal in tankRun) AddTank(walk, allFacts[ordinal], facts, fromT, toT);
+        foreach (var ordinal in tankRun) AddTank(walk, facts.RefAt(ordinal), facts, fromT, toT);   // ordinals through the door
 
       AddTaunts(walk, fight, facts, fromT, toT);
       return FinishFight(walk);
@@ -377,13 +376,12 @@ namespace EQLogParser
     private Fight? ContinueFight(CachedSummary cached, DerivedFight fight, DamageFactTable facts)
     {
       var walk = CarryForward(cached.Built, fight);
-      var allFacts = facts.Facts;
 
       if (_damageOrdinals.TryGetValue(fight, out var damageRun))
-        for (var i = cached.DamageCount; i < damageRun.Count; i++) AddDamage(walk, allFacts[damageRun[i]], facts, double.NegativeInfinity, double.PositiveInfinity);
+        for (var i = cached.DamageCount; i < damageRun.Count; i++) AddDamage(walk, facts.RefAt(damageRun[i]), facts, double.NegativeInfinity, double.PositiveInfinity);
 
       if (_tankingOrdinals.TryGetValue(fight, out var tankRun))
-        for (var i = cached.TankCount; i < tankRun.Count; i++) AddTank(walk, allFacts[tankRun[i]], facts, double.NegativeInfinity, double.PositiveInfinity);
+        for (var i = cached.TankCount; i < tankRun.Count; i++) AddTank(walk, facts.RefAt(tankRun[i]), facts, double.NegativeInfinity, double.PositiveInfinity);
 
       AddTaunts(walk, fight, facts, double.NegativeInfinity, double.PositiveInfinity);
       return FinishFight(walk);

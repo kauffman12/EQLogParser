@@ -260,6 +260,18 @@ namespace EQLogParser
 
     public int HealCount => _healCount;
     public ReadOnlySpan<HealFact> Heals => _heals.AsSpan(0, _healCount);
+
+    /// <summary>THE ordinal door for heals — same law as DamageFactTable.At: one row by the ordinal the heal window walk already
+    /// carries, so chunked storage changes this method and no caller. Out of range reads back a zero row rather than throwing.</summary>
+    public HealFact At(int ordinal) => RefAt(ordinal);   // copies the row; use RefAt where a 32-byte copy matters
+
+    /// <summary>By-reference form of the heal door — see DamageFactTable.RefAt.</summary>
+    public ref readonly HealFact RefAt(int ordinal)
+    {
+      return ref (uint)ordinal < (uint)_healCount ? ref _heals[ordinal] : ref ZeroRow;
+    }
+
+    private static readonly HealFact ZeroRow;
     public long EstimatedBytes => (long)_heals.Length * Marshal.SizeOf<HealFact>();
 
     // Same doubling slack as the damage table beside it: measured 1,243,469 heals sitting in a 1,600,000-slot array.

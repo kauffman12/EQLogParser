@@ -194,7 +194,7 @@ namespace EQLogParser
 
       private static long FactWatermark(DamageFactTable facts, int ordinal)
       {
-        ref readonly var f = ref facts.Facts[ordinal];
+        ref readonly var f = ref facts.RefAt(ordinal);   // the ordinal door, not the buffer: see DamageFactTable.RefAt
         var h = (long)f.Seq << 40 ^ (uint)f.DefIdx << 8 ^ f.TypeId;
         h = h * 31 + f.TimeS;
         return h * 31 + NameHash(facts, f.AtkIdx) * 7 + NameHash(facts, f.DefIdx);
