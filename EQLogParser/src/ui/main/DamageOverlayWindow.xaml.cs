@@ -274,11 +274,20 @@ namespace EQLogParser
       dispatcher.BeginInvoke(new Action(RepaintAfterDerive));
     }
 
+    /// <summary>The wall-clock second a meter board was last materialized; see the check in RepaintAfterDerive.</summary>
+    private long _meterBuildSecond = -1;
+
     private void RepaintAfterDerive()
     {
       // A hidden window gets no reason to build a board it will not show; the poll picks it up when it comes back.
       // The tick's own `_lastUpdateTask` guard keeps a derive landing mid-repaint from starting a second one.
       if (_preview || !IsLoaded || !IsVisible) return;
+
+      // A derive pass lands ~2/s and each one used to materialize the whole meter window: measured 3.45 s / 218.6 MB
+      // (damage) plus 1.87 s / 185 MB (healing) for a wide window that paints five bars. Nothing printed can differ
+      // inside one wall-clock second, so the second build is pure garbage. The staleness bound is the seconds column
+      // itself, and only THIS lane is suppressed - the meter's own timer still repaints at its own cadence.
+      if ((long)(DateTime.Now - DateTime.MinValue).TotalSeconds == _meterBuildSecond) return;
 
       UpdateTimerTick(null, EventArgs.Empty);
     }
@@ -451,6 +460,7 @@ namespace EQLogParser
          * old logs are for.
          */
         var nowT = (DateTime.Now - DateTime.MinValue).TotalSeconds;
+        _meterBuildSecond = (long)nowT;
         var timeout = DerivedMeter.TimeoutFor(_currentDamageMode);
 
         // Phase 1: the seconds this board covers, from what is stored and nothing else (no lastFactT known before building).
