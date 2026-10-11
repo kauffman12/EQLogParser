@@ -25,7 +25,7 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
 - **Zero warnings is the bar, and it is counted, not hoped for**: `dotnet build EQLogParser.sln -p:EnableWindowsTargeting=true --no-incremental --nologo 2>&1 | grep -cE ": (warning|error) [A-Z]+[0-9]+"` prints **0** before a commit
   (`--no-incremental` is load-bearing: MSBuild reports diagnostics only for projects it recompiles, so counting after `dotnet test` prints 0 about
   assemblies it never rebuilt — that is how an MSTEST0017 in a new test file shipped past a "clean" local count; docs/CodingStandards.md → "Build Warnings") (match diagnostics, not words — MSBuild's summary always contains `0 Warning(s)`). Nine CS8632s shipped once because a file in Core (project `Nullable=disable`) wrote `string?` without opening `#nullable enable annotations`; the whole fleet is one pragma, and it is why each new warning dies in its own commit (docs/CodingStandards.md → "Build Warnings", "Nullable Reference Types"). Nothing in this repo suppresses a warning (`#pragma warning disable`, `<NoWarn>`) — fixing the cause is the rule.
-- Tests: `dotnet test EQLogParser.Test/EQLogParser.Test.csproj` is the non-WPF suite (**1,958 passed / 16 env-gated skips**, plain `net10.0`, 2026-11 — the trim-moves-no-ordinal law, the once-per-doubling watermark, the ungrowable-empty-array floor and the copy boundary's no-sharing field sweep are in that count). `EQLogParser.Wpf.Test` targets `net10.0-windows` and only
+- Tests: `dotnet test EQLogParser.Test/EQLogParser.Test.csproj` is the non-WPF suite (**1,964 passed / 17 env-gated skips**, plain `net10.0`, 2026-11 — the trim-moves-no-ordinal law, the once-per-doubling watermark, the ungrowable-empty-array floor, the copy boundary's no-sharing field sweep and the carried-cell equivalence pair (cached board == cold board, plus reuse-positive and refuse-when-correct) are in that count). `EQLogParser.Wpf.Test` targets `net10.0-windows` and only
   runs on Windows; its total belongs to a Windows run rather than being quoted here (a `[TestMethod]` grep counts data-driven variants and is not an executed count) — add it to the headless number instead of trusting arithmetic. A Windows run that *loses* `Sta.Run` bodies rather than failing them is the failure mode to watch.
 - **Real-log corpus layout (local/, gitignored)**: `local/logs/live/` holds live-format captures; `local/logs/emu/` holds EMU-server captures (THJ/TSS/Heroes Forge shapes) that need the app's `EnableEmuParsing` behaviour. The env-gated real-log tests run them via **`EQLP_EMU=1`**, which sets `AppSettings.IsEmuParsingEnabled` for the duration of a `PipelineHarness` run (restored after — the flag is process-global and live-format logs misparse with it on). Without it an EMU capture parses with DamageLineParser's live grammar and silently loses the `(Owner: X)` / `scores a critical hit! (N)` shapes, so a parity run over `emu/` without the flag measures nothing. Timestamps are the same `[DDD MMM dd HH:mm:ss yyyy]` shape in both directories.
 
@@ -487,6 +487,34 @@ announce is logged at Debug instead of swallowed — "three asks arrived" and "o
 different stamps on one door = content genuinely moved and the rebuild was owed. **The first-click-after-load triple is still an open question**
 (the load-time `TimeChanged` → hourglass → options chain is the leading suspect and is written up as a hypothesis, not a measurement, in
 docs/DesignNotes.md → "Name every door") — which is why this commit changes log lines and no behaviour.
+
+- **The damage board carries what it counted, and four terms decide whether a carry may be read** (2026-11): `DamageCellStore`
+  keeps one detached `PlayerStats` per name (`StatsSnapshot.TakeCarry`), the top-level/children split, each name's running
+  frame time, the raid total and a **per-block resume point**, so a rebuild over a capture it already counted walks only
+  what materialization appended — measured on Incogitable **1,463,646 of 1,477,200 actions reused (99.1 %)**, damage build
+  **1,460 → 180 ms**, `walk` **627 → 57 ms**, ~4 MB held; `groups` (~105 ms) and materialize are untouched, and that is what
+  a board build still costs. The resume point is (block identity, counted-action count), **never** a hash of the block's
+  records — proving "same records" by reading them costs exactly what skipping them saves (`FightFactIndex` writes the same
+  law above its ordinal-prefix proof). Four terms, every mismatch **fail-closed to a full recount**: `DeriveEngine.SessionId`
+  (the store is process-wide, a closed log's rows are not), `EntityTimeline.StateStamp()` (ownership routes records between a
+  name and its `+Pets` row), a fingerprint of the six `DamageValidator` boxes (they filter *inside* the walk, so this rides in
+  the **cell key** rather than back as the deleted `_statsFilterGeneration`), and the pet map's size (the walk rebuilds it from
+  every record, so a mapping learned late would fold OLD records onto a different owner than their cells were counted under —
+  one cold recount per learning is the whole cost, which is why the first minutes of a capture look like misses). **Exactly one
+  counted block per row may change identity**: materialization clones a grown row's tail before extending it (`ReopenTail`), so
+  proof = same `BeginTime`, at least as many actions, and the SAME record objects in the counted prefix; a rebuilt row, a
+  shorter block or — the dangerous one — **a selection that dropped a row** refuses, because carrying any of that set reports
+  damage nobody selected. A windowed (time-dial) build **neither reads nor replaces** the whole-capture set: its blocks are
+  partly joined objects with no trustworthy resume point, and a slice's totals must not become the night's answer. **There is
+  no dial and no invalidation list**: staleness is impossible because every mismatch recounts. `DamageCellStore.LastDecision`
+  records which refusal fired (the trace line carries it) because a silent fallback to recount looks identical to a cache that
+  never ran — so the test suite asserts reuse is **positive with no refusal recorded**, and four more assert it is **zero**
+  where refusing is right. Tests compare a cached build against a **cold** one over the same fights (goldens own correctness),
+  and grow the capture faithfully: ONE parsed table, its ordinals replayed into ONE `FightFactIndex` up to a time cut —
+  re-parsing makes a new table whose ordinals mean something else, so every row correctly rebuilds, cells correctly refuse and
+  the test proves nothing. Tanking/healing carry nothing yet (their `walk` is an order of magnitude smaller: the heal board is
+  33 ms after the window-walk fix) — same machinery, separate decision. Numbers, the A/B and the re-measure command:
+  docs/DesignNotes.md → "The damage board remembers what it counted".
 
 - **Three boards, three workers above one measured frame of sibling work — and the saving is `sum − max`, never ×3** (2026-11):
   `MainWindow.BuildBoards` built damage, tanking and healing in a line although they share no state (own lock, own traced handle, own
