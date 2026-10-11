@@ -284,8 +284,10 @@ public class IdentityVocabularyTest
     CollectionAssert.Contains(Words(raider), "Pet", "an operator may disagree about a summon");
     Assert.IsFalse(raider.Any(o => o.Kind == IdentityKind.Unknown),
         "no entry writes Unknown: the take-back is the calculator click beside the name, never an answer in this list");
-    CollectionAssert.DoesNotContain(Words(raider), "Mercenary",
-                                    "a mercenary is what /target said; typing it onto a raider relocates her damage");
+    CollectionAssert.Contains(Words(raider), "Mercenary",
+      "one vocabulary, one reach: the 'Set … as' cascade offers Mercenary in four panes, so the identity dropdown may not hide the word " +
+      "the same operator just wrote from them (2026-11 field report). Typing it keeps the name raid-side — IdentityLookup.IsPlayerSide is " +
+      "Player-or-Merc — so it does not relocate her damage; it says who she fights for.");
 
     var merc = IdentityVocabulary.TypeOptionsFor("Stormpaw", IdentityKind.Merc, "R13-merc");
     CollectionAssert.Contains(Words(merc), "Mercenary", "the answer the row already gives is always in its list");

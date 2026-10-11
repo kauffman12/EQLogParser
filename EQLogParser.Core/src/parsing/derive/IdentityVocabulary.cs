@@ -110,7 +110,17 @@ internal static class IdentityVocabulary
     {
       if (option.Kind == kind) { list.Add(option); continue; }   // Unknown is not in the list: it is a click, not an answer
       if (eye && option.Kind != IdentityKind.Npc) continue;   // an eye has exactly one kind it can be: NPC
-      if (decided || option.Kind == IdentityKind.Merc) continue;
+
+      /*
+       * Mercenary used to be skipped here on the reasoning that it is a /target finding rather than something to type. That made this
+       * list disagree with the "Set … as" cascade, which offers all five words in four other panes: an operator who set a mercenary from
+       * the damage summary saw the word in the identity cell and could not set it again from the identity pane, then watched a row whose
+       * OWN answer they had written keep offering the entry their rule-inferred rows never showed. One vocabulary, one reach: a row that
+       * can be overruled can be called anything the vocabulary knows. What stays refused is where the name decides — an eye (NPC only), a
+       * summon whose spelling carries its master, a row whose verdict IS a spell shape (CanOverrule), and Unknown, which is a click for
+       * the capture to answer again rather than a word a cell may hold.
+       */
+      if (decided) continue;
       list.Add(option);
     }
     return list;

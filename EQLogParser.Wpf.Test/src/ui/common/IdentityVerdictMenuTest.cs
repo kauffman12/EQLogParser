@@ -30,9 +30,11 @@ public class IdentityVerdictMenuTest
       IdentityVerdictMenu.Populate(root, _ => { });
       var words = Words(root);
 
-      Assert.AreEqual(4, words.Count, "the cascade is four kinds — Spell is a rule's answer and \"Reset\" needs a row's evidence");
+      Assert.AreEqual(5, words.Count,
+        "the cascade is the whole vocabulary — the five kinds IdentityVocabulary.TypeOptions holds, and nothing that takes an answer back " +
+        "(that is the calculator beside the name in the identity pane, never a word above the evidence)");
       CollectionAssert.AreEqual(
-        new[] { "Player", "Pet", "Mercenary", "NPC" },
+        new[] { "Player", "Pet", "Mercenary", "NPC", "Spell" },
         words,
         "the words are IdentityVocabulary's, in its order; retyping them per pane is how the panes stopped matching");
 
@@ -89,8 +91,10 @@ public class IdentityVerdictMenuTest
 
       foreach (var item in Items(root)) item.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
 
-      CollectionAssert.AreEqual(new[] { IdentityKind.Player, IdentityKind.Pet, IdentityKind.Merc, IdentityKind.Npc }, written,
-        "Player / Pet / Mercenary / NPC in that order, each raising its own kind");
+      CollectionAssert.AreEqual(
+        new[] { IdentityKind.Player, IdentityKind.Pet, IdentityKind.Merc, IdentityKind.Npc, IdentityKind.Spell }, written,
+        "Player / Pet / Mercenary / NPC / Spell in that order, each raising its own kind — the same five words and the same order as the " +
+        "identity pane's dropdown, so one verdict looks like one verdict wherever it is written");
     });
 
   private static List<MenuItem> Items(MenuItem root) => [.. root.Items.OfType<MenuItem>()];

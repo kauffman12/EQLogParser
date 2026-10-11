@@ -39,13 +39,20 @@ internal static class IdentityVerdictMenu
   /// <summary>The header while nothing is selected — the action with no object yet.</summary>
   internal const string BaseHeader = "Set as";
 
-  // The four kinds a cascade offers, taken from the vocabulary rather than restated. Built once: the entries are constants.
+  /*
+   * The whole vocabulary a cascade offers — all five kinds, taken from TypeOptions' own entries and in its order, so this list cannot
+   * disagree with the identity pane's dropdown. Spell is in it because an operator can already write that verdict from the identity table,
+   * and a word reachable in one pane and hidden in another is what made people hunt for the difference; writing it costs no number on a
+   * board (a Spell name keeps the NPC arm of `FightProjection.SideAt`, which is how every fight row was measured before the kind existed).
+   * Built once: the entries are constants.
+   */
   private static readonly IdentityVocabulary.TypeOption[] Offered =
   [
     IdentityVocabulary.PlayerOption,
     IdentityVocabulary.PetOption,
     IdentityVocabulary.MercOption,
     IdentityVocabulary.NpcOption,
+    IdentityVocabulary.SpellOption,
   ];
 
   /*
