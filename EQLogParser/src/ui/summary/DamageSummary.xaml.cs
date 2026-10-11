@@ -706,10 +706,18 @@ namespace EQLogParser
       }
     }
 
+    /*
+     * "There is no board here" is NULL, never an empty list. A placeholder collection is a third state the rest of this pane
+     * cannot read: its guards ask "do we have an answer?" of the grid (`ItemsSource != null`), and an empty list answers YES while
+     * showing nothing — so the time-window dial lit its hourglass over a blank table and even queued a re-slice of a board that did
+     * not exist. The one place the empty list stays is SummaryTable's constructor, where it exists to keep column drag-and-drop from
+     * failing before any data has ever arrived. (Field report, 2026-11: "im seeing the busy indicator showing up in the data grid
+     * table in the damage summary when i deselect back to nothing selected".)
+     */
     private void ClearData()
     {
       CurrentStats = null;
-      dataGrid.ItemsSource = NoResultsList;
+      dataGrid.ItemsSource = null;
       title.Content = Labels.NoNpcs;
       PopulateRosterSelector();
     }
@@ -727,8 +735,8 @@ namespace EQLogParser
             _busyState.Arm(() =>
             {
               title.Content = "Calculating DPS...";
-              dataGrid.ItemsSource = NoResultsList;
-            });
+              dataGrid.ItemsSource = null;
+            }, "damage");
             break;
           case "COMPLETED":
             CurrentStats = e.CombinedStats;
@@ -839,9 +847,14 @@ namespace EQLogParser
       }
     }
 
+    /*
+     * The dial only has work to do when there is a board to re-slice, and "is there a board?" is a question about the ANSWER
+     * (`CurrentStats`), not about what the grid happens to be holding. Reading the grid made an empty placeholder — the one this pane
+     * used to install while busy and after clearing — look like data: hourglass over nothing, and a rebuild of a board that is not there.
+     */
     private void TimeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-      if (dataGrid.ItemsSource != null)
+      if (CurrentStats != null)
       {
         _selectionTimer.Stop();
         _selectionTimer.Start();

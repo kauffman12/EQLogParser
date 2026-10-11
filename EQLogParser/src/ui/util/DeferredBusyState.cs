@@ -1,4 +1,6 @@
+using log4net;
 using System;
+using System.Reflection;
 using System.Windows.Threading;
 
 namespace EQLogParser
@@ -25,6 +27,8 @@ namespace EQLogParser
    */
   internal sealed class DeferredBusyState
   {
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
+
     /*
      * Long enough that a pane which answers inside it never shows a busy state at all — one frame at 60 Hz is 17 ms, so
      * anything under this was going to be invisible anyway — and short enough that the wait past it is what a person
@@ -38,6 +42,13 @@ namespace EQLogParser
     private readonly DispatcherTimer _timer;
     private Action _show;
 
+    /*
+     * Which pane and which door asked, kept only to name the wait in the log. A busy state that will not go away is the interface
+     * equivalent of a frozen board, and the question is always "which build was still out there" — every pane already prints its own
+     * `stats build #N … [door]` line at Debug, so pairing that with this one answers it from a log file instead of from a guess.
+     */
+    private string _source;
+
     internal DeferredBusyState(int showAfterMs = ShowAfterMs)
     {
       _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(showAfterMs) };
@@ -46,14 +57,20 @@ namespace EQLogParser
         // One shot per request: stopping here is what keeps a build that takes ten seconds from repeating its own
         // "still working" state every interval, which would re-trigger whatever the action invalidates.
         _timer.Stop();
-        _show?.Invoke();
+
+        if (_show is not null)
+        {
+          Log.Debug($"busy shown [{_source ?? "unlabelled"}]: still building after {(int)_timer.Interval.TotalMilliseconds} ms");
+          _show.Invoke();
+        }
       };
     }
 
     /// <summary>Promise nothing yet, and say so when this much time has passed with nobody cancelling.</summary>
-    internal void Arm(Action showBusy)
+    internal void Arm(Action showBusy, string source = null)
     {
       _show = showBusy;
+      _source = source;
       _timer.Stop();
       _timer.Start();
     }

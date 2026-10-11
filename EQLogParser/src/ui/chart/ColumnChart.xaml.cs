@@ -105,7 +105,7 @@ namespace EQLogParser
             {
               titleLabel.Content = "Loading...";
               Reset();
-            });
+            }, "chart");
             break;
           case "NONPC":
           case "NODATA":

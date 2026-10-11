@@ -196,10 +196,14 @@ namespace EQLogParser
       ClearData();
     }
 
+    /*
+     * "No board" is NULL, never an empty list — one rule across all three summary panes (see DamageSummary.ClearData for the
+     * reasoning and the field report behind it). A placeholder collection reads as data to this pane's own guards while showing nothing.
+     */
     private void ClearData()
     {
       CurrentStats = null;
-      dataGrid.ItemsSource = NoResultsList;
+      dataGrid.ItemsSource = null;
       title.Content = Labels.NoNpcs;
     }
 
@@ -216,8 +220,8 @@ namespace EQLogParser
             _busyState.Arm(() =>
             {
               title.Content = "Calculating HPS...";
-              dataGrid.ItemsSource = NoResultsList;
-            });
+              dataGrid.ItemsSource = null;
+            }, "healing");
             break;
           case "COMPLETED":
             CurrentStats = e.CombinedStats;
@@ -255,7 +259,7 @@ namespace EQLogParser
           case "NONPC":
           case "NODATA":
             CurrentStats = null;
-            dataGrid.ItemsSource = NoResultsList; // an empty answer clears the grid; see DamageSummary
+            dataGrid.ItemsSource = null; // an empty answer clears the grid; see DamageSummary
             maxTimeChooser.MaxValue = 0;
             minTimeChooser.MaxValue = 0;
             title.Content = e.State == "NONPC" ? Labels.NoNpcs : Labels.NoData;
@@ -293,9 +297,11 @@ namespace EQLogParser
       }
     }
 
+    // Re-slicing needs a board, so the question is asked of the answer (`CurrentStats`) rather than of the grid — an empty
+    // placeholder used to satisfy `ItemsSource != null` and light the hourglass over nothing. See DamageSummary.TimeChanged.
     private void TimeChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
-      if (dataGrid.ItemsSource != null)
+      if (CurrentStats != null)
       {
         _selectionTimer.Stop();
         _selectionTimer.Start();
