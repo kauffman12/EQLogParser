@@ -197,4 +197,68 @@ public sealed class RecentCastQueryTest
         AddCast("Chokidin", "Ammeren", T0 + 501);
         Assert.AreEqual(2, RecordsStore.Instance.GetCastsBySpellName("Chokidin", 8).Count);
     }
+
+    /*
+     * The memory half, and the law that makes it safe: these caches exist only to answer an 8-second question, so a cast older
+     * than the horizon cannot be returned by any question ever asked — but "cannot be returned" is a statement about TIME, not
+     * about position. One field run kept 397,206 of these to the end of the session; the horizon turns that into what happened in
+     * the last two minutes. What this asserts is the answer a raid depends on (the window) alongside the sweep's invariant
+     * (everything at or after the cutoff survives, whatever order it arrived in), so restoring unbounded growth fails by name and
+     * pruning by position would fail here too instead of resolving an abbreviation to the wrong rank.
+     */
+    [TestMethod]
+    public void ACastOlderThanTheHorizonLeavesAndTheEightSecondAnswerIsUnchanged()
+    {
+        for (var i = 0; i <= 400; i++)
+        {
+            AddCast("Chokidin", "Bithika", T0 + i);
+        }
+
+        // The window the resolution actually asks for, at the newest cast: >= (T0+400) - 8.
+        var recent = RecordsStore.Instance.GetCastsBySpellName("Chokidin", 8);
+        Assert.AreEqual(9, recent.Count, "eight seconds of one-second casts still answers nine entries after the sweep");
+        Assert.AreEqual(T0 + 400, recent[0].BeginTime, "newest first, unchanged by the horizon");
+        Assert.AreEqual(T0 + 392, recent[^1].BeginTime, "the oldest second inside the window is inclusive");
+
+        // A question wider than the horizon can only see what was kept: nothing older than newest - horizon may remain.
+        var kept = RecordsStore.Instance.GetCastsBySpellName("Chokidin", 100_000);
+        // Sweeping on a quarter-horizon cadence bounds this at a horizon plus that cadence, and the point is the ORDER OF MAGNITUDE:
+        // 401 casts in, ~2.5 minutes of them retained, versus every cast of the session kept before.
+        Assert.IsTrue(kept.Count <= (int)(RecordsStore.CastHistoryHorizonS * 1.3),
+            $"the cache stayed bounded ({kept.Count} kept of 401 casts), otherwise this is the growth back");
+        Assert.IsTrue(kept.Count >= (int)RecordsStore.CastHistoryHorizonS - 2,
+            $"the sweep keeps a horizon of history, not a stub ({kept.Count})");
+        foreach (var cast in kept)
+        {
+            // One cadence interval of slack is by design: a sweep runs on an arriving cast, so the retained set is what that sweep's
+            // cutoff allowed — never older than the horizon plus the walk between sweeps, and nothing grows in between because
+            // nothing arrives. A second-per-second raid holds a couple of minutes of casts; the session holds no night of them.
+            Assert.IsTrue(cast.BeginTime >= T0 + 400 - RecordsStore.CastHistoryHorizonS * 1.25,
+                "an entry older than the horizon plus one sweep interval survived — pruning by position rather than by time");
+        }
+    }
+
+    // The position half of the same law: what is kept is decided by TIME, so a cast parked behind an older one survives.
+    [TestMethod]
+    public void AnOutOfOrderCastInsideTheHorizonSurvivesTheSweep()
+    {
+        AddCast("Chokidin", "Bithika", T0 + 10);   // schedules the first sweep
+        AddCast("Chokidin", "Bithika", T0 + 500);  // sweeps everything before (T0+380) away
+        AddCast("Chokidin", "Reisil", T0 + 499);   // out of order, BEHIND the newer entry it precedes in time
+        AddCast("Chokidin", "Bithika", T0 + 505);  // no sweep yet (under the next mark)
+
+        // The resolution's own question at this moment: window >= (T0+505) - 8 holds all three of 500, 499 and 505.
+        Assert.AreEqual(3, RecordsStore.Instance.GetCastsBySpellName("Chokidin", 8).Count,
+            "nothing inside the eight-second window may be missing — this is what resolves the rank");
+
+        AddCast("Chokidin", "Bithika", T0 + 560);  // sweeps at cutoff (T0+440)
+        var kept = RecordsStore.Instance.GetCastsBySpellName("Chokidin", 100_000);
+        Assert.IsTrue(kept.Exists(c => c.BeginTime == T0 + 499),
+            "the out-of-order cast is inside the horizon, so it answers; a sweep that trimmed by position would have dropped it");
+
+        foreach (var cast in kept)
+        {
+            Assert.IsTrue(cast.BeginTime >= T0 + 560 - RecordsStore.CastHistoryHorizonS, "nothing older than the horizon remains");
+        }
+    }
 }

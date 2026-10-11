@@ -29,7 +29,28 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<string, List<RecordList>> _recordDictionaries = new();
     private readonly ConcurrentDictionary<string, bool> _recordNeedsEvent = new();
     private readonly Dictionary<string, NpcResistStats> _npcSpellStatsDict = [];
+
+    /*
+     * A rolling horizon for the two cast caches below. The ONLY question either of them answers is "what did this spell NAME
+     * cast recently", and the only door that asks it in production passes 8 seconds (EQDataStore.FindPreviousCast:780) — a buff
+     * or wear-off line whose name could stand for several ranks, resolved by looking back up to eight seconds for a cast line
+     * that printed the message. That query derives its window from the newest entry in these caches (the anchor is a quirk every
+     * existing resolution depends on), so an entry older than `newest - horizon` cannot be returned by any question ever asked,
+     * and keeping it to the end of the session was pure growth: 397,206 kept casts in one field run, most of them nights worth
+     * of seconds nobody can reach.
+     *
+     * The horizon is 15x the widest window rather than 8 + 1 because the cost of being wrong is a rank resolved from the wrong
+     * cast and the cost of being generous is a few hundred list slots. Both the query and the sweep read the SAME newest entry,
+     * so a log whose clock jumps moves them together and stays consistent; that is also why the sweep keeps every entry at or
+     * after the cutoff regardless of position (see DropOlderThanLocked) — an out-of-order append that lands inside the window can
+     * sit anywhere in the list, and dropping it would answer the 8-second question wrong while the board still looked fine.
+     */
+    internal const double CastHistoryHorizonS = 120;
+
     private readonly List<RecordList> _playerAmbiguityCastCache = [];
+
+    // Log time at which the next sweep runs: one per horizon, so the amortized cost per cast is a division.
+    private double _nextCastPruneAtS = double.NaN;
     // One entry per ambiguous spell name. The value carries its own ordering fact — see CastHistory.
     private readonly ConcurrentDictionary<string, CastHistory> _spellNameIndex = new();
     private readonly Timer _eventTimer;
@@ -112,6 +133,9 @@ namespace EQLogParser
       }
       _spellNameIndex.Clear();
 
+      // A new capture starts the horizon over: the first cast of the next session schedules the first sweep.
+      _nextCastPruneAtS = double.NaN;
+
       lock (_npcSpellStatsDict)
       {
         _npcSpellStatsDict.Clear();
@@ -191,6 +215,8 @@ namespace EQLogParser
         {
           history.Add(cached);
         }
+
+        PruneCastHistoryLocked(beginTime);
       }
     }
 
@@ -266,6 +292,63 @@ namespace EQLogParser
         }
 
         return result ?? [];
+      }
+    }
+
+    /*
+     * Drop what no question can reach anymore. Runs under the caller's lock on the add path, once per horizon of LOG time (not
+     * once per cast), and touches only these two caches — SpellRecords keeps its full session list because a buff column may ask
+     * for any window of the night through GetSpellsDuring.
+     */
+    private void PruneCastHistoryLocked(double newestS)
+    {
+      if (!double.IsNaN(_nextCastPruneAtS) && newestS < _nextCastPruneAtS)
+      {
+        return;
+      }
+
+      // Sweep every quarter-horizon so what is retained stays close to one horizon; a sweep costs a division per cast in between.
+      _nextCastPruneAtS = newestS + CastHistoryHorizonS / 4;
+      var cutoff = newestS - CastHistoryHorizonS;
+
+      lock (_playerAmbiguityCastCache)
+      {
+        var keep = 0;
+        for (var i = 0; i < _playerAmbiguityCastCache.Count; i++)
+        {
+          if (_playerAmbiguityCastCache[i].BeginTime >= cutoff)
+          {
+            if (keep != i) _playerAmbiguityCastCache[keep] = _playerAmbiguityCastCache[i];
+            keep++;
+          }
+        }
+
+        if (keep < _playerAmbiguityCastCache.Count) _playerAmbiguityCastCache.RemoveRange(keep, _playerAmbiguityCastCache.Count - keep);
+      }
+
+      /*
+       * Order-preserving compaction per name: keep every entry at or after the cutoff, in arrival order. Deliberately NOT
+       * "RemoveRange from the front while the front is old" — these lists come from a text log and CastHistory.AscendingTime exists
+       * precisely because appends are not guaranteed ascending, so a recent entry can be parked anywhere in the list. A front-only
+       * sweep there is the one mistake that changes WHICH rank an abbreviation resolves to, and the board would look fine anyway.
+       */
+      foreach (var history in _spellNameIndex.Values)
+      {
+        lock (history)
+        {
+          var casts = history.Casts;
+          var keep = 0;
+          for (var i = 0; i < casts.Count; i++)
+          {
+            if (casts[i].BeginTime >= cutoff)
+            {
+              if (keep != i) casts[keep] = casts[i];
+              keep++;
+            }
+          }
+
+          if (keep < casts.Count) casts.RemoveRange(keep, casts.Count - keep);
+        }
       }
     }
 
