@@ -683,7 +683,7 @@ declare without `?`; add the directive only when the whole file is meant to hold
   shipped once as "it stopped working after I restart"), and opening a log **starts a session immediately** (docking
   only in the open-log path once left the window present but sessionless - the exact uncheck/re-check experiment the
   user reaches for). During a bulk load the derived list is legitimately empty (both derive lanes park), so `FightTable`
-  shows a loading band over the table whose **one phrase is "Building derived fight list...", for as long as this session has shown no rows and owes a first
+  shows a loading band over the table whose **one phrase is "Building the Fight List...", for as long as this session has shown no rows and owes a first
   build**. Whether the operator chose the open is irrelevant (`AllowsLoadBand` is deleted, along with the "an open nobody asked for" rule it carried: a silent
   empty grid reads as broken whoever clicked); what decides is **whether the read handed anything over**, which `ReportCaptureProgress(linesRead)` learns
   from the reader (the byte percent left this panel entirely - it belongs to the status line and nowhere else) — a **follow-from-end-of-file open (startup auto-monitor, Clear All) reads no history, owes no build, and stays silent** because an empty list
@@ -740,10 +740,7 @@ declare without `?`; add the directive only when the whole file is meant to hold
   `FollowSession`/`UnfollowSession` around ONE `Derived` handler (rebuild on show, then one pass per derive floored at **2 s** — `AutoRefreshFloorMs`; a live raid hands
   out passes ~2/s and the census walks every name plus the heal stream), `ActiveChanged` keeps it attached to the live engine only, the button is deleted rather than kept,
   and with no session the grid is **emptied** (`ClearRows`) instead of holding last night's names. Anything asserting this must keep the floor (a test that pumps every pass
-  measures nothing) and the unsubscribe (a hidden pane costing census time is the bug this replaced). **Following the derive is not the same as moving the list**:
-  `MergeRows` replaces a row's CELLS at its own index (collection indexer, not Clear+Add), drops names the census lost and appends newcomers at the **bottom**, while
-  `_rankOnApply` — set on show and on every capture change — is the only path that re-ranks, so ranking arrives when somebody navigates to the tab rather than twice a
-  second under their cursor (Clear+Add cost both the order and the selection, and rows are ranked by evidence, which moves). Because rows are replaced rather than
+  measures nothing) and the unsubscribe (a hidden pane costing census time is the bug this replaced). **Following the derive is not the same as moving the list**: `MergeRows` replaces a row's CELLS at its own index (collection indexer, not Clear+Add) and drops names the census lost; `rebuild` (`_rankOnApply`, set on show and on every capture change) is the only wholesale replace, because Clear+Add cost both the selection and the scroll position — and rows used to be ranked by evidence, which moves. **But the ORDER belongs to the header, never to the census** (2026-11, from "the indicator shows up correct for the name column but it doesnt stay sorted"): this is the ONE grid in the application that assigns `ItemsSource` once and then MUTATES that collection — every other sortable pane re-assigns a fresh list per build, which is why their sort always ran over a snapshot and asked nothing of anyone — so **the collection itself carries the order the header shows**. `IdentityRowOrder` (Core) is the comparison: clicked column → **tie broken on NAME** → ordinal; descending reverses the tiebreak too; names compare WITHOUT case. `NamesTable.SortColumnsChanged` mirrors the grid's descriptor into it, a newcomer lands at `IdentityRowOrder.InsertIndex` rather than at the bottom (bottom-appending is what grew an unsorted tail over a live capture), and every merge ends with one `IsOrdered` pass that rewrites only when a sorted word actually changed — so the default **Name sort can never move a name**, while sorting a mutable column (Type/Class/Owner/Why are verdicts) does move rows, which is what sorting it asked for. The name tiebreak is not tidiness: most of this table shares one Type word, so without it the list is census order wearing a sort arrow again. Tests: `IdentityRowOrderTest` (plain assembly — 10 cases; the rule runs anywhere), plus `ANameArrivingJoinsWhereItsNameSays`, `SortingByAWordThatChangedPutsTheMovedRowBackInPlace`, `OpeningTheTabAgainLaysTheWholeListOutInColumnOrder` (Windows-only assembly). DesignNotes.md → "A sort the source does not carry is a sort that stops holding". Because rows are replaced rather than
   mutated, **the selection and an open popup are handed back by NAME** (`FindRow`): the instance is gone even though the line never moved, and a Type cell that opens with
   a blank preselect reads as a classifier bug instead of a refresh bug. Pinned by `ARefreshKeepsEveryRowWhereTheReaderLeftIt`,
   `ANameTheCensusDropsLeavesTheList`, `OpeningTheTabAgainReRanksTheList` (Windows-only assembly, but no WPF is constructed). Five columns sorted by name (Name | Type | Class | Owner | Why): Damage/Healing left because an identity list must not rank
@@ -764,7 +761,7 @@ declare without `?`; add the directive only when the whole file is meant to hold
   VI" and one flat substring test let the pet's spell name itself in a Player row's tooltip; never by widening the claim source, since `StateStamp` hashes
   sources and `IdentityPriorStore` persists them — `CensusCastProofTest`) and the lines no column can carry — "You chose NPC" / "Claim taken back"
   are the only way to tell a row an operator wrote from one the rules inferred (`ProvenanceFor`, pinned by `NamesTableTest`, Windows-only). **No status line and no
-  header**: the pane is the grid alone, because the dock tab over it already says "Player/NPC Identity" — so nothing on screen prints the census
+  header**: the pane is the grid alone, because the dock tab over it already says "Identity Table" — so nothing on screen prints the census
   counters that survive (`TotalNames`/`UnresolvedInCapture`/the five kind counts are computed and tested with no surface — the whole-capture `Disagreements` count went out with its header, since "counted but invisible" is not a reason to compute); see the docking law below.
 - **An outcome word decides; a tag never un-happens it, and a name never carries the sentence's period** (2026-11, both measured on
   `eqlog_Kizant_xegony-2.txt`). (1) `riposte!`/`ripostes!` had an extra guard, `"(Strikethrough)" != split[^1]`, that made the parser
@@ -820,7 +817,7 @@ declare without `?`; add the directive only when the whole file is meant to hold
   the one tooltip string the pane already kept — nothing allocates for a single-claim row. Tests: `EvidenceLinesTest`,
   `IdentityVocabularyTest`, (Windows) `NamesTableTest.ExtraEvidenceRidesBelowTheProofLineInTheHover`.
   Reasoning and measured fixtures: docs/DesignNotes.md → "The cell carries the judgement, the hover carries the reasons".
-- **The identity strip holds ONE pane, and its width law outlived the second pane** (2026-11; Pet Owners left the strip on 2026-10-09 — see the bullet below): Player/NPC Identity sits at `State="AutoHidden"`, `SideInDockedMode="Right"` instead of
+- **The identity strip holds ONE pane, and its width law outlived the second pane** (2026-11; Pet Owners left the strip on 2026-10-09 — see the bullet below): the Identity Table sits at `State="AutoHidden"`, `SideInDockedMode="Right"` instead of
   tabbing with the fight list — and it is `AutoHidden`, never `Float`, because a floated window is a separate OS window that **cannot** share a tab strip, so "floating +
   tabbed together" has exactly one reading. Three laws ride on that. (1) **One width for the whole strip, asked of the grid**, from
   `NamesTable.DesiredPaneWidth()` (its five columns + row header + scrollbar — **≈ 720 px at 12 pt**, the fourth of them being Owner; the Type term is `TypeColumnWidth()`, sized from the longest word that column can ever print, not a theme bucket) fed to `EQIdentityStripWidth` by `ThemeConfig`: a panel whose two tabs
@@ -844,7 +841,7 @@ declare without `?`; add the directive only when the whole file is meant to hold
   sorted insert (a `ToList()` copy + `BinarySearch`) per sighting, per pane, keeping grids nobody had open in order — plus two bulk fills at
   log open. They were also **uncorrectable by construction**: identity is a per-name answer with provenance and a timestamp that MOVES (charm,
   R7, an operator's `Set as`, an expired prior), while an event pump sees only sightings — the same defect class as "a read of memory must not
-  create memory". Player/NPC Identity's census comes from the derive, so it cannot drift, and it carries Type, Class **and Owner**. Two rules for
+  create memory". The Identity Table's census comes from the derive, so it cannot drift, and it carries Type, Class **and Owner**. Two rules for
   whoever adds a pane next. **(1) No window keeps its own list of who/what a name is**: follow `DeriveEngine.Derived`, or read
   `IdentityLookup`/`ClassificationReport` when asked — which is why the Owner dropdown is built per pencil click. **(2) Deleting a window means
   deleting its CONTENT, not its NAME**: `LoadDockState` throws on a window a saved `dockSite.xml` names and MainWindow's catch calls
@@ -1439,7 +1436,7 @@ npcs.txt; it is the *only* evidence for **6** names (Incogitable) and **4** (Kiz
   rewrites them out: a remembered `Pet` for a real person holds them off the board for the whole 90-day window, and no live evidence should have to
   outvote it (`ABugEraCompanionClaimIsRefusedAtLoadAndRewrittenOut`). (2) Ownership does NOT come from this line — it names one participant, so the
   pair still arrives from the possessive words and petmapping.txt. Numbers: docs/DesignNotes.md → "The companion line names the summoner".
-- **Three shapes of the Names and Identities pane, all pinned in `NamesTableTest`.** (1) Column order is **Name, Type, Class, Why** — the two cells
+- **Three shapes of the Identity Table, all pinned in `NamesTableTest`.** (1) Column order is **Name, Type, Class, Why** — the two cells
   that answer to a click sit together and the read-only explanation goes last. (2) A row that offers **no** pencil still **reserves its width**:
   `PlaceholderVisibilityConverter` answers `Hidden`, never `Collapsed`, because Collapsed hands the icon's ~20 px back and the words in that column stop
   starting at the same pixel — a difference in what a row *allows* (spell effects and self-naming summons get no Type pencil; only a Player row gets a

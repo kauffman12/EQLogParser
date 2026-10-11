@@ -11458,3 +11458,83 @@ Probe-side traps worth the recording: my first "worst case" window was an **empt
 instantly trivial — a worst case needs many spans that never match; and a fixture clock outside `FactTime`'s representable window
 (1931–2068) **clamps**, folding every row onto one timestamp so window tests pass by matching everything. Re-measure recipe:
 `docs/improve-stat-building.md` §13 (harness deleted after reading, per the gated-test law).
+
+## A sort the source does not carry is a sort that stops holding (2026-11)
+
+**The report:** in the identity pane "the indicator shows up correct for the name column
+but it doesnt stay sorted. check what we do in other tables and the syncfusion docs to see
+what we're missing". The arrow over **Name** was real; the rows under it were not in name
+order, and the further down a live capture's list you scrolled the worse it read.
+
+**What comparing the panes turned up (the answer was in this repository, not in vendor
+docs — there is no `syncfusion-wpf` folder in a fresh clone, so the claim below is made
+from the code and the shipped assembly only).** Every other sortable grid in the
+application hands its grid a *fresh list* whenever it has rows to show —
+`NpcStatsViewer`, `SpellDamageStatsViewer`, `TauntStatsViewer`, `LootViewer`,
+`HitLogViewer.xaml.cs:333` (`dataGrid.ItemsSource = CollectionViewSource.GetDefaultView(list)`)
+and the three breakdown panes. For those, sorting is applied to a snapshot every build and
+nothing has to be remembered; two of them also hook `ItemsSourceChanged`. `AllowSorting="True"`
+appears in all their markup, and the pair this codebase shares — `DataGridUtil.SortColumnsChanging` /
+`SortColumnsChanged` — does not sort anything: it only chooses a column's *first* direction
+from a caller-supplied "these columns start descending" set.
+
+The Identity Table is the exception by design. It assigns `ItemsSource` **once**, in its
+constructor, and then mutates that collection, because it follows the derive: a census lands
+every couple of seconds while a log grows and `MergeRows` replaces each row's cells at its own
+index rather than clearing the list — clearing cost the selection (the title-bar verbs lose their
+row) and the scroll position. So the order lived only in the view, over a source that kept changing,
+and the merge did one more thing to it: **names new since the last pass were appended at the bottom**
+"so the ranking arrives on the next view instead". Over a live capture that means the first screenful
+looks sorted and everything learned after it piles up in whatever order the derive thought of it —
+a tail of strays with an arrow over them. That is the report, exactly.
+
+**The fix: the collection carries the order the header shows.** `NamesTable` mirrors the grid's
+descriptor (`SortColumnsChanged` → `_sortColumn` / `_sortDescending`) and keeps `_rows` in that order:
+a newcomer goes to `IdentityRowOrder.InsertIndex` (binary, first slot past every row that does not sort
+after it), and each merge ends with one `IsOrdered` pass which rewrites the list only when a violation
+exists. The view sorts too; sorting something already sorted is nothing, and now the display does not
+depend on what the vendor's collection-change path happens to do with an in-place `Replace`.
+
+The comparison itself moved to Core — `EQLogParser.Core/src/ui/IdentityRowOrder.cs` — so it can be
+tested on a machine that has no WPF (`IdentityRowOrderTest`, 10 cases). Three laws, each of which is
+the difference between "sorted" and "looks sorted":
+
+* **A tie on the clicked column breaks on NAME.** Roughly three quarters of this table's rows share one
+  Type word ("NPC"); without a tiebreak the list falls back to census order with an arrow over it — the
+  same bug, one click away, and no test would have seen it because "is it grouped by Type" still passes.
+* **Descending reverses the tiebreak with the column.** A second click flips the display; flipping only
+  the word and leaving names ascending reads as a broken control on any table where most keys repeat.
+* **Names compare without case** — the law `EntityTimeline` and `NamePool` already follow, because one
+  path emits `CapitalizeFirst(raw)` and another keeps what EQ wrote.
+
+**What was deliberately un-pinned, and why.** Two laws written in this pane's own comments said newcomers
+join at the bottom and a rebuild lays the list out in *census* order (`OpeningTheTabAgainReRanksTheList`).
+Both defended the reader against sliding rows — a real concern when rows are ranked by evidence — and both
+were bought at the price of a table that reads as broken, which is what got reported. What survives is the
+part that was ever observable: a name's row keeps its slot (names do not change, so the default Name sort
+moves nothing), the selection and open popups are still handed back **by name**, and only a rebuild does the
+wholesale replace. Sorting a column whose word CHANGES — Type, Class, Owner and Why are all verdicts, and
+verdicts move while a log loads — now moves rows, which is precisely what sorting it asked for; that trade
+is stated in `MergeRows` rather than hidden. The three Windows-side tests to re-run there:
+`ANameArrivingJoinsWhereItsNameSays`, `SortingByAWordThatChangedPutsTheMovedRowBackInPlace`,
+`OpeningTheTabAgainLaysTheWholeListOutInColumnOrder`.
+
+**Cost.** One `IsOrdered` pass per census — a scan of pointers over ~4,000 rows that exits at the first
+violation, so on a Name sort (the usual case) it never rewrites; insertion is `log n`. No allocation beyond
+one `NameRow` per newcomer, which the merge already built.
+
+### Two labels and one separator (same sitting)
+
+* The pane's dock header and its View / Windows entry now read **Identity Table**. The old label ("Player/NPC
+  Identity") was written to reassure people it replaced Verified Players / Verified Pets / Pet Owners; the
+  ToolTip still carries that reassurance, which is where a hovering reader looks, while the tab itself went
+  back to naming the thing. Header renames need no dock-state repair — `45de7d77` renamed "Names" to this same
+  string, and the saved layout keys on the `ContentControl`'s name (`namesWindow`), which is why retired panes
+  survive as name-only stubs.
+* The fight list's loading band says **Building the Fight List…**. "derived" was this codebase's word for which
+  engine produced a row, and a reader standing at a progress bar has no use for it; the band's rules (one phrase,
+  only while the session shows no rows and owes a first build, silent on a follow-from-end open) are untouched,
+  and `FightTableLoadBandTest` still asserts on the word "Building".
+* The `<Separator />` in front of the identity entry is gone and the entry sits between **_Fight List** and
+  **_Preview Parse**: those three are the panes you read a capture with, in the order you use them, and a line
+  through the middle of one group is how a menu starts looking like two groups that were never there.
