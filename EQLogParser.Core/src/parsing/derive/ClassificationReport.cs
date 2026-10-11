@@ -270,20 +270,23 @@ namespace EQLogParser
 
       if (damageFacts is not null)
       {
-        for (var fi = 0; fi < damageFacts.FactCount; fi++)
+        foreach (var slice in damageFacts.FactsIn(0, damageFacts.FactCount))
         {
-          ref readonly var f = ref damageFacts.RefAt(fi);
-          damage[f.AtkIdx] += f.Total;
-          events[f.AtkIdx]++;
+          for (var i = 0; i < slice.Length; i++)
+          {
+            ref readonly var f = ref slice[i];
+            damage[f.AtkIdx] += f.Total;
+            events[f.AtkIdx]++;
 
-          var defKind = verdict[f.DefIdx];
+            var defKind = verdict[f.DefIdx];
 
-          // Self first: a fact whose attacker and defender are the same name is not "damaging players", it is the name hitting
-          // itself (Bjpotratz's whole raid-side number was that, 61 copies of one Evoker reflect).
-          if (f.AtkIdx == f.DefIdx) onSelf[f.AtkIdx]++;
-          else if (defKind is IdentityKind.Player or IdentityKind.Merc) onRaid[f.AtkIdx]++;
-          else if (defKind is IdentityKind.Pet) onPets[f.AtkIdx]++;
-          else if (defKind is IdentityKind.Npc) onMobs[f.AtkIdx]++;
+            // Self first: a fact whose attacker and defender are the same name is not "damaging players", it is the name hitting
+            // itself (Bjpotratz's whole raid-side number was that, 61 copies of one Evoker reflect).
+            if (f.AtkIdx == f.DefIdx) onSelf[f.AtkIdx]++;
+            else if (defKind is IdentityKind.Player or IdentityKind.Merc) onRaid[f.AtkIdx]++;
+            else if (defKind is IdentityKind.Pet) onPets[f.AtkIdx]++;
+            else if (defKind is IdentityKind.Npc) onMobs[f.AtkIdx]++;
+          }
         }
       }
       if (healFacts is not null)

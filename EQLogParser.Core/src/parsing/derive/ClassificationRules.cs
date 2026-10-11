@@ -801,15 +801,17 @@ namespace EQLogParser
 
       // Explicit "Owner: X" annotations: the line says ownership without saying it in the name, and only the
       // flag knows. (Heal lines have no raw text on the fact, so they carry the name-shape case above.)
-      var factsList = facts.Facts;
-      for (var i = state.R5FactCursor; i < factsList.Length; i++)
+      foreach (var slice in FactRowWalk.Damage(facts, state.R5FactCursor))
       {
-        if ((factsList[i].Flags & DamageFact.FlagOwnerInLine) == 0) continue;
-        var flagged = facts.NameOf(factsList[i].AtkIdx);
-        if (!claimed.Contains(flagged)) state.OwnerClaimNames.Add(flagged);
-        ClaimOwnedSummon(timeline, flagged, claimed);
+        for (var i = 0; i < slice.Length; i++)
+        {
+          if ((slice[i].Flags & DamageFact.FlagOwnerInLine) == 0) continue;
+          var flagged = facts.NameOf(slice[i].AtkIdx);
+          if (!claimed.Contains(flagged)) state.OwnerClaimNames.Add(flagged);
+          ClaimOwnedSummon(timeline, flagged, claimed);
+        }
       }
-      state.R5FactCursor = factsList.Length;
+      state.R5FactCursor = facts.FactCount;
     }
 
     private static void ClaimOwnedSummon(EntityTimeline timeline, string name, HashSet<string> claimed)
@@ -982,42 +984,46 @@ namespace EQLogParser
       }
 
       var candidates = state.R15Candidates;
-      var healList = heals.Heals;
-      for (var i = state.R15HealCursor; i < healList.Length; i++)
+      foreach (var slice in FactRowWalk.Healing(heals, state.R15HealCursor))
       {
-        var h = healList[i];
-        var healer = heals.NameOf(h.HealerIdx);
-        var healed = heals.NameOf(h.HealedIdx);
-        if (healer == healed) continue;                       // self-heal proves nothing about anybody else
-
-        var hk = timeline.IdentityAt(healer, h.TimeS, out var hs, out _);
-        if (hs < RuleStrength.Strong || !IsRaidSideKind(hk)) continue;
-
-        if (!candidates.TryGetValue(healed, out var agg))
+        for (var i = 0; i < slice.Length; i++)
         {
-          // Only names nothing has classified yet; stronger evidence elsewhere wins by strength anyway.
-          if (timeline.IdentityAt(healed, h.TimeS) is not IdentityKind.Unknown) continue;
-          agg = candidates[healed] = new HealEdgeAgg();
+          var h = slice[i];
+          var healer = heals.NameOf(h.HealerIdx);
+          var healed = heals.NameOf(h.HealedIdx);
+          if (healer == healed) continue;                       // self-heal proves nothing about anybody else
+
+          var hk = timeline.IdentityAt(healer, h.TimeS, out var hs, out _);
+          if (hs < RuleStrength.Strong || !IsRaidSideKind(hk)) continue;
+
+          if (!candidates.TryGetValue(healed, out var agg))
+          {
+            // Only names nothing has classified yet; stronger evidence elsewhere wins by strength anyway.
+            if (timeline.IdentityAt(healed, h.TimeS) is not IdentityKind.Unknown) continue;
+            agg = candidates[healed] = new HealEdgeAgg();
+          }
+          agg.Lines++;
+          agg.AddHealer(healer);
         }
-        agg.Lines++;
-        agg.AddHealer(healer);
       }
-      state.R15HealCursor = healList.Length;
+      state.R15HealCursor = heals.HealCount;
 
       // Veto: a name that hits our side is not ours, however gently it was healed. A boss rained on by raid
       // AoE heals is the exact trap, and it answers for itself by swinging back.
       var vetos = state.R15Vetos;
-      var factsList = facts.Facts;
-      for (var i = state.R15VetoCursor; i < factsList.Length; i++)
+      foreach (var slice in FactRowWalk.Damage(facts, state.R15VetoCursor))
       {
-        var f = factsList[i];
-        var atk = facts.NameOf(f.AtkIdx);
-        if (!vetos.TryGetValue(atk, out var veto)) veto = default;
-        veto.Edges++;
-        if (IsRaidSideKind(timeline.IdentityAt(facts.NameOf(f.DefIdx), f.TimeS))) veto.RaidSideEdges++;
-        vetos[atk] = veto;   // AttackVeto is a struct - the dictionary holds the copy, not the local
+        for (var i = 0; i < slice.Length; i++)
+        {
+          var f = slice[i];
+          var atk = facts.NameOf(f.AtkIdx);
+          if (!vetos.TryGetValue(atk, out var veto)) veto = default;
+          veto.Edges++;
+          if (IsRaidSideKind(timeline.IdentityAt(facts.NameOf(f.DefIdx), f.TimeS))) veto.RaidSideEdges++;
+          vetos[atk] = veto;   // AttackVeto is a struct - the dictionary holds the copy, not the local
+        }
       }
-      state.R15VetoCursor = factsList.Length;
+      state.R15VetoCursor = facts.FactCount;
 
       // Every carried candidate is re-evaluated each pass - today's from-zero walk asserts over its whole
       // candidate dict too, and SetIdentity dedupe makes the re-assertion free. No admission re-check is
@@ -1117,43 +1123,47 @@ namespace EQLogParser
       }
 
       var candidates = state.R18Candidates;
-      var healList = heals.Heals;
-      for (var i = state.R18HealCursor; i < healList.Length; i++)
+      foreach (var slice in FactRowWalk.Healing(heals, state.R18HealCursor))
       {
-        var h = healList[i];
-        var healer = heals.NameOf(h.HealerIdx);
-        var healed = heals.NameOf(h.HealedIdx);
-        if (healer == healed) continue;                          // self-heal proves nothing about anybody else
-
-        var hk = timeline.IdentityAt(healer, h.TimeS, out var hs, out _);
-        if (hs < RuleStrength.Strong || !IsRaidSideKind(hk)) continue;
-
-        if (!candidates.TryGetValue(healed, out var agg))
+        for (var i = 0; i < slice.Length; i++)
         {
-          // Only names an NPC verdict is holding on the wrong side; anything else is explained already.
-          if (timeline.IdentityWithSource(healed, out _) is not IdentityKind.Npc) continue;
-          agg = candidates[healed] = new HealEdgeAgg();
+          var h = slice[i];
+          var healer = heals.NameOf(h.HealerIdx);
+          var healed = heals.NameOf(h.HealedIdx);
+          if (healer == healed) continue;                          // self-heal proves nothing about anybody else
+
+          var hk = timeline.IdentityAt(healer, h.TimeS, out var hs, out _);
+          if (hs < RuleStrength.Strong || !IsRaidSideKind(hk)) continue;
+
+          if (!candidates.TryGetValue(healed, out var agg))
+          {
+            // Only names an NPC verdict is holding on the wrong side; anything else is explained already.
+            if (timeline.IdentityWithSource(healed, out _) is not IdentityKind.Npc) continue;
+            agg = candidates[healed] = new HealEdgeAgg();
+          }
+          agg.Lines++;
+          agg.AddHealer(healer);
+          if (h.TimeS > agg.LastS) agg.LastS = h.TimeS;
         }
-        agg.Lines++;
-        agg.AddHealer(healer);
-        if (h.TimeS > agg.LastS) agg.LastS = h.TimeS;
       }
-      state.R18HealCursor = healList.Length;
+      state.R18HealCursor = heals.HealCount;
 
       // The swing-back veto, counted over ALL attackers (a name can become a candidate long after its attacks
       // streamed past the cursor, and a from-zero walk counts those older swings), gated below by share.
       var vetos = state.R18Vetos;
-      var factsList = facts.Facts;
-      for (var i = state.R18VetoCursor; i < factsList.Length; i++)
+      foreach (var slice in FactRowWalk.Damage(facts, state.R18VetoCursor))
       {
-        var f = factsList[i];
-        var atk = facts.NameOf(f.AtkIdx);
-        if (!vetos.TryGetValue(atk, out var veto)) veto = default;
-        veto.Edges++;
-        if (IsRaidSideKind(timeline.IdentityAt(facts.NameOf(f.DefIdx), f.TimeS))) veto.RaidSideEdges++;
-        vetos[atk] = veto;   // AttackVeto is a struct - the dictionary holds the copy, not the local
+        for (var i = 0; i < slice.Length; i++)
+        {
+          var f = slice[i];
+          var atk = facts.NameOf(f.AtkIdx);
+          if (!vetos.TryGetValue(atk, out var veto)) veto = default;
+          veto.Edges++;
+          if (IsRaidSideKind(timeline.IdentityAt(facts.NameOf(f.DefIdx), f.TimeS))) veto.RaidSideEdges++;
+          vetos[atk] = veto;   // AttackVeto is a struct - the dictionary holds the copy, not the local
+        }
       }
-      state.R18VetoCursor = factsList.Length;
+      state.R18VetoCursor = facts.FactCount;
 
       foreach (var (name, agg) in candidates)
       {
@@ -1232,12 +1242,14 @@ namespace EQLogParser
      */
     private static void ApplySpellEffects(IFactTable facts, EntityTimeline timeline, ClassificationState state)
     {
-      var factList = facts.Facts;
-      for (var fi = state.R21FactCursor; fi < factList.Length; fi++)
+      foreach (var slice in FactRowWalk.Damage(facts, state.R21FactCursor))
       {
-        if (factList[fi].AttackerIsSpell) state.SpellLineNames.Add(facts.NameOf(factList[fi].AtkIdx));
+        for (var i = 0; i < slice.Length; i++)
+        {
+          if (slice[i].AttackerIsSpell) state.SpellLineNames.Add(facts.NameOf(slice[i].AtkIdx));
+        }
       }
-      state.R21FactCursor = factList.Length;
+      state.R21FactCursor = facts.FactCount;
 
       var evidence = facts.Evidence;
       for (var ei = state.R21EvidenceCursor; ei < evidence.Length; ei++)
@@ -1398,55 +1410,57 @@ namespace EQLogParser
       }
 
       var aggByAttacker = state.GraphAggs;
-      var factList = facts.Facts;
-      for (var fi = state.R7FactCursor; fi < factList.Length; fi++)
+      foreach (var slice in FactRowWalk.Damage(facts, state.R7FactCursor))
       {
-        var f = factList[fi];
-        var atk = facts.NameOf(f.AtkIdx);
-        if (kinds[atk] != IdentityKind.Unknown) continue;
-
-        // Not an entity: what the parser writes when a line names no source. Without this the placeholder "attacked" mobs
-        // all night and earned "R7-graph" - a person invented out of a hole in the grammar (ParserUtil.IsUnattributedName).
-        if (ParserUtil.IsUnattributedName(atk)) continue;
-
-        // A spell name is not a combatant. "You have taken N damage from X." leaves the attacker
-        // field holding a spell, and when that spell targets Self in the spell DB ("Cloudburst
-        // Strike Feedback XII") the fact is the local player hitting themselves with their own
-        // feedback — side evidence from it would fabricate an NPC out of the operator's own cast.
-        // Mob dots share the line shape and keep their evidence: their DB entries are not
-        // Self-target, and something beating you all night still earns the hostile verdict.
-        if (IsSelfTargetDamageSpell(atk)) continue;
-
-        // edges laid down while the attacker is charmed prove nothing about its real side
-        if (windowsByName.TryGetValue(atk, out var wins))
+        for (var i = 0; i < slice.Length; i++)
         {
-          double t = f.TimeS;
-          bool charmed = false;
-          foreach (var (t0, t1) in wins)
+          var f = slice[i];
+          var atk = facts.NameOf(f.AtkIdx);
+          if (kinds[atk] != IdentityKind.Unknown) continue;
+
+          // Not an entity: what the parser writes when a line names no source. Without this the placeholder "attacked" mobs
+          // all night and earned "R7-graph" - a person invented out of a hole in the grammar (ParserUtil.IsUnattributedName).
+          if (ParserUtil.IsUnattributedName(atk)) continue;
+
+          // A spell name is not a combatant. "You have taken N damage from X." leaves the attacker
+          // field holding a spell, and when that spell targets Self in the spell DB ("Cloudburst
+          // Strike Feedback XII") the fact is the local player hitting themselves with their own
+          // feedback — side evidence from it would fabricate an NPC out of the operator's own cast.
+          // Mob dots share the line shape and keep their evidence: their DB entries are not
+          // Self-target, and something beating you all night still earns the hostile verdict.
+          if (IsSelfTargetDamageSpell(atk)) continue;
+
+          // edges laid down while the attacker is charmed prove nothing about its real side
+          if (windowsByName.TryGetValue(atk, out var wins))
           {
-            if (t >= t0 && t < t1) { charmed = true; break; }
+            double t = f.TimeS;
+            bool charmed = false;
+            foreach (var (t0, t1) in wins)
+            {
+              if (t >= t0 && t < t1) { charmed = true; break; }
+            }
+            if (charmed) continue;
           }
-          if (charmed) continue;
-        }
 
-        var def = facts.NameOf(f.DefIdx);
-        if (!aggByAttacker.TryGetValue(atk, out var agg)) aggByAttacker[atk] = agg = new SideAgg();
+          var def = facts.NameOf(f.DefIdx);
+          if (!aggByAttacker.TryGetValue(atk, out var agg)) aggByAttacker[atk] = agg = new SideAgg();
 
-        // A placeholder defender is no side evidence either; counted as unclassified so the unknown-share guard still sees it
-        if (ParserUtil.IsUnattributedName(def)) { agg.UnknownEdges++; continue; }
+          // A placeholder defender is no side evidence either; counted as unclassified so the unknown-share guard still sees it
+          if (ParserUtil.IsUnattributedName(def)) { agg.UnknownEdges++; continue; }
 
-        var dk = kinds[def];
-        switch (dk)
-        {
-          case IdentityKind.Npc: agg.AddNpc(def, f.TimeS); break;
-          // The NPC arm on purpose: `default` below means Player/Pet/Merc, so a Spell defender falling through would count as
-          // player-side opposition and could get its ATTACKER named an enemy ("R7-side") merely for hitting a spell effect.
-          case IdentityKind.Spell: agg.AddNpc(def, f.TimeS); break;
-          case IdentityKind.Unknown: agg.UnknownEdges++; break;
-          default: agg.AddPlayerSide(def, f.TimeS); break;  // Player/Pet/Merc
+          var dk = kinds[def];
+          switch (dk)
+          {
+            case IdentityKind.Npc: agg.AddNpc(def, f.TimeS); break;
+            // The NPC arm on purpose: `default` below means Player/Pet/Merc, so a Spell defender falling through would count as
+            // player-side opposition and could get its ATTACKER named an enemy ("R7-side") merely for hitting a spell effect.
+            case IdentityKind.Spell: agg.AddNpc(def, f.TimeS); break;
+            case IdentityKind.Unknown: agg.UnknownEdges++; break;
+            default: agg.AddPlayerSide(def, f.TimeS); break;  // Player/Pet/Merc
+          }
         }
       }
-      state.R7FactCursor = factList.Length;
+      state.R7FactCursor = facts.FactCount;
 
       foreach (var (atk, agg) in aggByAttacker)
       {

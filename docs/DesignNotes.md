@@ -8169,6 +8169,45 @@ per the disposable-gate rule.
 What this does not touch: the ~1.25 M `HealRecord` objects that sit beside the heal table (the healing board's door is
 records by design), and the name/spell pools. The next real memory number has to come from one of those two.
 
+## Rows live in chunks, and the addressing tax that came with them
+
+Both fact tables stopped being one resizable array (`64c3edd1`, `9422d010`). Damage rows sit in 65,536-row chunks (~1.5 MiB),
+heal rows in 32,768-row chunks, each bought by its first row and addressed as `chunk = ordinal >> shift`, `slot = ordinal & mask`.
+Ordinals are unchanged currency — `FightFactIndex`, the board blocks and every cursor still name the same row — because the
+addressing door (`DamageFactReader` / `HealFactReader`, plus `FactsIn`/`HealsIn`) sits in front of the buffer array.
+
+What that deletes rather than manages: the whole-capture memcpy on each doubling (the parse thread's own bottleneck), the
+old-plus-new-buffer transient during it (>100 MB at raid scale), and up to a full doubling of reserved-but-unwritten slots —
+the 54.6 MB the compaction pass above existed only to hand back. A capacity hint now reserves *chunk references* (8 bytes each)
+instead of rows, so an empty capture holds zero fact bytes. `CompactRows` keeps its policy but has nothing left to trim.
+
+**The tax, measured before it was paid back.** Indexing a chunked store through the reader costs one bounds check plus a
+shift/mask per row instead of a flat span the JIT can hoist checks out of. Same capture (`eqlog_Kizant_xegony-2.txt`,
+2,286,368 facts / 1,247,984 heals), flat vs chunked, same machine:
+
+| | flat | chunked, row-at-a-time | chunked, slice walk |
+|---|---|---|---|
+| load | 12,685 ms | 12,808 ms | 12,656–12,815 ms |
+| full projection pass | 439 ms | 456 ms | 454–456 ms |
+| **classification pass** | **343 ms** | **394 ms** | **344–345 ms** |
+| carried (cheap) pass | ~5 ms | ~5 ms | 5–6 ms |
+
+Load and projection were noise; classification was **+50 ms (+13 %)**, all of it addressing, because eight whole-capture
+cursor loops (R5's `Owner:` scan, R15/R18's heal and veto scans, R21's spell-shape walk, R7's graph, charm's two counter
+walks) plus the identity census read `reader[ordinal]`.
+
+**The payback is a walk shape, not a cache.** Those loops iterate `FactRowWalk.Damage/Healing` (Core) — contiguous chunk
+slices from the cursor to the end — and index inside the slice, which is the flat loop again with one outer loop over at most
+⌈range / 65,536⌉ pieces. The door is a downcast to the production table in ONE place: `ReadOnlySpan` cannot be an interface
+member, and `IFactTable`/`IHealFactTable` deliberately stay implementation-agnostic so a spooled store can answer them, so a
+second implementation trips a cast loudly rather than quietly walking a copy. Cost: back to the flat baseline (344 ms against
+343), with the memory wins kept. `FactRowWalkTest` pins the equivalence that makes the speed legal — same rows, same order,
+same values across two chunk seams, from a cursor parked three rows before a seam, and nothing at all from a cursor at the end.
+
+Re-measure: `EQLP_DERIVE_INCREMENT=<log> dotnet test --logger "console;verbosity=detailed" --filter ~DeriveIncrementBenchmarkTest`
+prints load, full pass (classify + project), continued passes and the carried pass. Step 3 — columnar cold chunks with delta-encoded
+`Seq`/time and a codec, where the measured ~4.5×/6.8× on real captures actually lands — comes after this, so nothing is paid for twice.
+
 ## The room a load reserves before it reads, and what parallelism would cost
 
 Two questions got measured on the same capture (`eqlog_Kizant_xegony-09-03-26.txt`, 998 MB, 10,015,348 lines), because

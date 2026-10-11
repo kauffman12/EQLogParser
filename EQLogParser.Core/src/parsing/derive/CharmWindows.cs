@@ -189,19 +189,21 @@ namespace EQLogParser
       // runs after every other identity rule for that reason — a defender called ours by R1/R2/R3/R6/R7
       // is what ends a charm, so the identities have to be settled first.
       var broke = carry.Broke;
-      var factList = facts.Facts;
       var countFrom = carry.FactCursor;   // window counters extend over the same slice this walk covers
-      for (var i = countFrom; i < factList.Length; i++)
+      foreach (var slice in FactRowWalk.Damage(facts, countFrom))
       {
-        var f = factList[i];
-        if (f.TimeS > carry.LastTime) carry.LastTime = f.TimeS;   // the log's own end: a charm past it never closes
-        var atk = facts.NameOf(f.AtkIdx);
-        if (!starts.ContainsKey(atk)) continue;
-        var t = f.TimeS;
-        if (IsOurSide(timeline, facts.NameOf(f.DefIdx), t)) AddTime(broke, atk, t);
+        for (var i = 0; i < slice.Length; i++)
+        {
+          var f = slice[i];
+          if (f.TimeS > carry.LastTime) carry.LastTime = f.TimeS;   // the log's own end: a charm past it never closes
+          var atk = facts.NameOf(f.AtkIdx);
+          if (!starts.ContainsKey(atk)) continue;
+          var t = f.TimeS;
+          if (IsOurSide(timeline, facts.NameOf(f.DefIdx), t)) AddTime(broke, atk, t);
+        }
       }
 
-      carry.FactCursor = factList.Length;
+      carry.FactCursor = facts.FactCount;
 
       foreach (var (name, startTimes) in starts)
       {
@@ -455,20 +457,22 @@ namespace EQLogParser
         list.Add(w);
       }
 
-      var list2 = facts.Facts;
-      for (var i = countFrom; i < list2.Length; i++)
+      foreach (var slice in FactRowWalk.Damage(facts, countFrom))
       {
-        var f = list2[i];
-        var atk = facts.NameOf(f.AtkIdx);
-        if (!byName.TryGetValue(atk, out var wlist)) continue;
-
-        foreach (var w in wlist)
+        for (var i = 0; i < slice.Length; i++)
         {
-          if (f.TimeS < w.T0 || f.TimeS >= w.T1) continue;
-          w.FactCount++;
-          w.CreditedTotal += f.Total;
-          if (string.Equals(facts.NameOf(f.DefIdx), atk, StringComparison.OrdinalIgnoreCase)) w.SameNameFactCount++;
-          break;
+          var f = slice[i];
+          var atk = facts.NameOf(f.AtkIdx);
+          if (!byName.TryGetValue(atk, out var wlist)) continue;
+
+          foreach (var w in wlist)
+          {
+            if (f.TimeS < w.T0 || f.TimeS >= w.T1) continue;
+            w.FactCount++;
+            w.CreditedTotal += f.Total;
+            if (string.Equals(facts.NameOf(f.DefIdx), atk, StringComparison.OrdinalIgnoreCase)) w.SameNameFactCount++;
+            break;
+          }
         }
       }
 
