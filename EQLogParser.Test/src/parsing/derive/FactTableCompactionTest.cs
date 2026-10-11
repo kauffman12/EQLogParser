@@ -174,33 +174,97 @@ namespace EQLogParser
     }
 
     /*
-     * The policy. CombatCapture.CompactRows runs at the ingest gate and at most once per doubling of the capture, which is
-     * also the only moment there is fresh slack (a doubling just copied these same bytes). The middle step is the one to
-     * read: after a trim, ONE new fact doubles the array, slack is large again — and the answer is still "nothing", because
-     * trimming there would be a full-table copy per fact for the rest of a live session.
+     * What "slack" means now that damage rows live in fixed chunks, and it is a different law rather than the old one with new numbers.
+     *
+     * The old fixture pinned a doubling: reserve slots, fill a little over half, and the capture sits on megabytes of empty address space
+     * until CompactRows hands it back - measured 29 MB of unused slots for the damage table alone on the reference capture. Chunked storage
+     * removes that state instead of reclaiming it: a chunk is allocated when its FIRST row arrives, so writing facts cannot accumulate empty
+     * capacity beyond the tail of the newest chunk, and a capacity hint costs reference slots (8 bytes each), not rows.
+     *
+     * Which is also why the once-per-doubling watermark is not re-pinned here: the guard still exists in CombatCapture for the arrays that
+     * still double (deaths, identity events, taunts, evidence - and the heal table beside them, where DoublingLeavesSlackAndTrimmingHands
+     * EveryByteOfItBack and HealRowsSurviveTheirTrimAndTheirSharedNamesWithThem keep it honest). There is nothing left on the damage side to
+     * police, and pretending otherwise would assert an absence by writing a tautology.
+     *
+     * What THIS fixture guards is the arithmetic that replaced the doubling: chunk = ordinal >> shift, slot = ordinal & mask. A wrong shift or
+     * mask does not throw - it reads a neighbouring row, or silently wastes a megabyte. So the boundary ordinals are named explicitly: 65,535
+     * and 65,536 are the last slot of chunk 0 and the first of chunk 1, and those two are exactly where an off-by-one in the mask lives.
      */
     [TestMethod]
-    public void TheCaptureTrimsOncePerDoublingAndNeverBetween()
+    public void ChunkedRowsAllocateOnDemandAndKeepEveryOrdinalNamingTheSameFact()
     {
       var table = new DamageFactTable(1_024);
-      var capture = new CombatCapture(table);
+      for (var i = 1; i <= 200_000; i++) table.AddFact(Fact(i, 1, 2, (uint)i));
 
-      // Just past a doubling boundary: 262,145 facts in a 524,288-slot buffer leaves ~8 MB of empty slots, over the floor.
-      for (var i = 1; i <= 262_145; i++) table.AddFact(Fact(i, 1, 2, (uint)i));
-      Assert.IsTrue(table.SlackBytes > CombatCapture.MinSlackToCompact, "the fixture is over the floor it asks for");
+      Assert.AreEqual(200_000, table.FactCount);
+      Assert.AreEqual(4, table.FactChunksAllocated,
+        "200,000 rows reach chunk 3; the hint's other twelve chunks cost a null each, not 1.5 MB each");
 
-      var first = capture.CompactRows();
-      Assert.IsTrue(first > 0, "a load's leftover capacity goes back");
+      // No empty address space at all from fact rows: the newest chunk is not full, and an unwritten tail of a chunk costs nothing
+      // the store reserved - it is simply slots inside an allocation that already holds 196,608 real rows. (SlackBytes therefore reports
+      // only the small doubling arrays - deaths, identity events, taunts, evidence - none of which this fixture wrote.)
+      // Measured against the same hint with nothing written: whatever SlackBytes reports is the small doubling arrays this fixture never
+      // touched, and 200,000 fact rows must not have added a byte of it. (An absolute zero would be wrong - the store still preallocates
+      // its identity/taunt/evidence sidecars - and a wrong zero is how a real regression gets "fixed" by loosening the number.)
+      Assert.AreEqual(new DamageFactTable(1_024).SlackBytes, table.SlackBytes,
+        "200,000 fact rows added no reserved-but-empty slots");
 
-      Assert.AreEqual(0L, capture.CompactRows(), "an immediate second ask costs nothing");
+      // Rows survive at the ordinals everything else already stores - and specifically across the chunk seam.
+      foreach (var ordinal in new[] { 0, 1, 65_534, 65_535, 65_536, 65_537, 131_071, 131_072, 199_999 })
+      {
+        Assert.AreEqual((uint)(ordinal + 1), table.At(ordinal).Total, $"ordinal {ordinal} reads its own row");
+      }
 
-      table.AddFact(Fact(262_146, 1, 2, 5));   // this is the add that doubles the buffer...
-      Assert.IsTrue(table.SlackBytes > CombatCapture.MinSlackToCompact, "...so slack exists again right away");
-      Assert.AreEqual(0L, capture.CompactRows(), "and it is still refused: no trim inside the same doubling");
+      Assert.AreEqual((uint)1, table.Facts[0].Total);
+      Assert.AreEqual((uint)200_000, table.Facts[199_999].Total);
 
-      for (var i = 262_147; i <= 530_000; i++) table.AddFact(Fact(i, 1, 2, (uint)i));
-      Assert.IsTrue(capture.CompactRows() > 0, "a doubling's worth of new facts earns the next trim");
-      Assert.AreEqual(530_000, table.FactCount, "and no fact was lost across either trim");
+      // A slice walk over the whole capture sees every row exactly once, in order: the seam cannot skip or repeat a chunk.
+      var seen = 0;
+      foreach (var slice in table.FactsIn(0, table.FactCount))
+      {
+        for (var i = 0; i < slice.Length; i++)
+        {
+          Assert.AreEqual((uint)(++seen), slice[i].Total, $"slice walk position {seen}");
+        }
+      }
+
+      Assert.AreEqual(200_000, seen, "the range covered every row and no row twice");
+
+      // A range that stops mid-chunk stops there, and a range past the end is clamped rather than reading a chunk that was never written.
+      var partial = 0;
+      foreach (var slice in table.FactsIn(100_000, 100_010)) partial += slice.Length;
+      Assert.AreEqual(10, partial);
+
+      var clamped = 0;
+      foreach (var slice in table.FactsIn(199_995, 9_999_999)) clamped += slice.Length;
+      Assert.AreEqual(5, clamped, "a walk asked past the end reads what exists, not unwritten slots");
     }
+    /*
+     * The other half of the same change, and the half that matters for an idle session: a capacity hint used to reserve ROWS, so a
+     * whole-file open committed the file's estimated bytes before the first line parsed (measured on record: ~196 MB reserved to store
+     * nothing on a follow-from-end open). Chunks move that decision to the row itself - the hint sizes a table of references at 8 bytes a
+     * chunk, and the megabytes appear only when a chunk's first row arrives. An empty capture now holds zero fact bytes.
+     */
+    [TestMethod]
+    public void ACapacityHintReservesReferencesRatherThanRows()
+    {
+      var hinted = new DamageFactTable(1_024 * 1_024);   // a whole-file open's estimate: ~1 M rows
+      Assert.AreEqual(0, hinted.FactChunksAllocated, "nothing is allocated before the first row");
+      // The old store turned that hint into ~24 MB of DamageFact slots before parsing a line. What is left is the small
+      // doubling arrays the same hint sizes (deaths and friends) - under a megabyte, not twenty-four.
+      Assert.IsTrue(hinted.EstimatedBytes < 1024 * 1024,
+        $"a hint of 1 M rows reserves {hinted.EstimatedBytes / 1048576.0:F2} MB, not the 24 MB of row slots it used to");
+
+      hinted.AddFact(Fact(1, 1, 2, 5));
+      Assert.AreEqual(1, hinted.FactChunksAllocated, "the first row buys exactly one chunk");
+
+      for (var i = 2; i <= DamageFactTable.FactChunkSize; i++) hinted.AddFact(Fact(i, 1, 2, (uint)i));
+      Assert.AreEqual(1, hinted.FactChunksAllocated, "and filling it buys no more");
+
+      hinted.AddFact(Fact(DamageFactTable.FactChunkSize + 1, 1, 2, 7));
+      Assert.AreEqual(2, hinted.FactChunksAllocated, "the next row after the seam buys the second chunk");
+      Assert.AreEqual(7u, hinted.At(DamageFactTable.FactChunkSize).Total, "across the seam, at the ordinal");
+    }
+
   }
 }

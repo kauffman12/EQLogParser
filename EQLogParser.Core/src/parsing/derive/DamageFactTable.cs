@@ -177,6 +177,78 @@ namespace EQLogParser
   }
 
   // One "X was slain by Y!" / "X died." line.
+
+  /*
+   * Sequential read of an ordinal range as chunk slices: `foreach (var slice in table.FactsIn(from, to))`. A ref struct on purpose - it
+   * yields ReadOnlySpan over a live store, and it must not be able to outlive the frame that reads it. No allocation, no boxing, no per-row
+   * delegate; the only cost versus the old flat loop is one outer loop over at most ceil(range / 65536) slices.
+   */
+  internal ref struct DamageFactRange(DamageFact[][] chunks, int from, int to)
+  {
+    private readonly DamageFact[][] _chunks = chunks;
+    private readonly int _from = from;
+    private readonly int _to = Math.Max(from, to);
+
+    public Enumerator GetEnumerator() => new(_chunks, _from, _to);
+
+    // Not `readonly`: MoveNext advances the cursor in place, which is the whole point of a zero-alloc slice walk.
+    public ref struct Enumerator(DamageFact[][] chunks, int from, int to)
+    {
+      private readonly DamageFact[][] _chunks = chunks;
+      private readonly int _to = to;
+      private int _next = from;
+      private int _start = from;
+      private int _length;
+
+      public ReadOnlySpan<DamageFact> Current => _chunks[_start >> DamageFactTable.FactChunkShift]
+        .AsSpan(_start & DamageFactTable.FactChunkMask, _length);
+
+      public bool MoveNext()
+      {
+        if (_next >= _to) return false;
+
+        _start = _next;
+        _length = Math.Min(DamageFactTable.FactChunkSize - (_start & DamageFactTable.FactChunkMask), _to - _start);
+        _next += _length;
+        return true;
+      }
+    }
+  }
+
+
+  /*
+   * Ordinal view over the chunked store — `Length` and `this[ordinal]`, which is all the cursor loops ever asked of the old flat span.
+   * It is a CLASS on purpose: ReadOnlySpan cannot be an interface member, and the classification stages reach the rows through IFactTable.
+   * A row read costs one bounds check plus the shift/mask split; the hot whole-capture walks skip it by iterating FactsIn's slices instead.
+   */
+  internal sealed class DamageFactReader(DamageFactTable table) : IEnumerable<DamageFact>
+  {
+    public int Length => table.FactCount;
+
+    public ref readonly DamageFact this[int ordinal] => ref table.RefAt(ordinal);
+
+    /// <summary>Pattern-based enumeration for `foreach` over the whole capture. A struct cursor, so a loop costs no allocation; a row read
+    /// is a 24-byte copy of one row, which is what every non-hot consumer (tests, reports, one-off scans) already paid on the flat array.</summary>
+    public RowEnumerator GetEnumerator() => new(table);
+
+    IEnumerator<DamageFact> IEnumerable<DamageFact>.GetEnumerator()
+    {
+      for (var i = 0; i < table.FactCount; i++) yield return table.At(i);
+    }
+
+    System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => ((IEnumerable<DamageFact>)this).GetEnumerator();
+
+    public struct RowEnumerator(DamageFactTable table)
+    {
+      private readonly DamageFactTable _table = table;
+      private int _index = -1;
+
+      public DamageFact Current => _table.At(_index);
+
+      public bool MoveNext() => ++_index < _table.FactCount;
+    }
+  }
+
   internal readonly struct DeathFact
   {
     public readonly int Seq;
@@ -314,7 +386,7 @@ namespace EQLogParser
     void AddEvidence(EvidenceFact evidence);
     short InternAux(string aux);
     string AuxOf(short idx);
-    ReadOnlySpan<DamageFact> Facts { get; }
+    DamageFactReader Facts { get; }
     ReadOnlySpan<DeathFact> Deaths { get; }
     ReadOnlySpan<IdentityEvent> IdentityEvents { get; }
     ReadOnlySpan<TauntFact> Taunts { get; }
@@ -365,7 +437,24 @@ namespace EQLogParser
   {
     public const ushort NoSubtype = ushort.MaxValue;
 
-    private DamageFact[] _facts;
+    /*
+     * Row storage: fixed-size power-of-two CHUNKS, addressed by shift and mask.
+     *
+     * Why this shape and not a growing array: the rows are the biggest thing the application holds (24 bytes apiece, millions of them), and
+     * a single resizable buffer paid for that three ways. Every doubling copied the whole capture (tens of millions of bytes on the parse
+     * thread, which is already the bottleneck), it briefly held the old and new buffers at once (a >100 MB transient at raid scale), and it
+     * left up to 100 % of the rows' worth of reserved-but-empty slots behind until a compaction pass reclaimed them. Chunks end all three:
+     * a chunk is allocated when the first row needs it, nothing is ever copied, and the slack is at most one chunk instead of one whole capture.
+     *
+     * The currency stays exactly what it was. Ordinals are still "the nth fact of the capture", which is what FightFactIndex stores and what
+     * the board blocks are runs of: an ordinal splits into (chunk = i >> Shift, slot = i & Mask) with no table lookup, no search, no offset list.
+     * That is why the addressing door (RefAt / FactsIn) exists in front of this field rather than readers holding the buffer.
+     */
+    internal const int FactChunkShift = 16;                       // 65,536 rows ~= 1.5 MiB per chunk
+    internal const int FactChunkSize = 1 << FactChunkShift;
+    internal const int FactChunkMask = FactChunkSize - 1;
+
+    private DamageFact[][] _chunks = [];
     private int _factCount;
     private DeathFact[] _deaths;
     private int _deathCount;
@@ -387,7 +476,10 @@ namespace EQLogParser
 
     internal DamageFactTable(int initialCapacity = 65_536)
     {
-      _facts = new DamageFact[initialCapacity];
+      // The capacity hint becomes a chunk count: preallocating ceil(hint / chunk) chunks costs at most one chunk more than the old
+      // exact-size buffer, and a hint of 0 (follow-from-end opens: startup auto-monitor, Clear All) allocates NOTHING up front, which is
+      // the same law FactCapacity.HintForOpen exists to enforce, now honoured by the store instead of only by the caller.
+      _chunks = initialCapacity > 0 ? new DamageFact[(initialCapacity + FactChunkSize - 1) / FactChunkSize][] : [];
       _deaths = new DeathFact[Math.Max(16, initialCapacity / 64)];
       _identities = new IdentityEvent[256];   // registry changes are rare (verifications), not per-line
       _taunts = new TauntFact[256];
@@ -400,7 +492,24 @@ namespace EQLogParser
     public int TauntCount => _tauntCount;
     public IReadOnlyList<string> InternedNames => _names;
 
-    public ReadOnlySpan<DamageFact> Facts => _facts.AsSpan(0, _factCount);
+    /// <summary>The whole capture, addressed by ordinal. Same shape the flat span offered (Length + `this[ordinal]`), because that is what
+    /// every cursor loop already speaks; see DamageFactReader.</summary>
+    public DamageFactReader Facts => new(this);
+
+    /// <summary>Sequential access over [from, to) as the CHUNK SLICES covering it: zero allocation, and the inner loop runs over a
+    /// contiguous span exactly as it did on the flat buffer. The hot walks use this instead of `Facts` for that reason.</summary>
+    public DamageFactRange FactsIn(int from, int to) => new(_chunks, Math.Max(0, from), Math.Min(to, _factCount));
+
+    /// <summary>Chunks allocated (not chunks used) - the honest denominator for EstimatedBytes under chunked storage.</summary>
+    internal int FactChunksAllocated
+    {
+      get
+      {
+        var n = 0;
+        for (var i = 0; i < _chunks.Length; i++) if (_chunks[i] is not null) n++;
+        return n;
+      }
+    }
 
     /*
      * THE ordinal door. One row, addressed by the ordinal everything else already speaks: `FightFactIndex` stores ordinals, the board
@@ -416,7 +525,9 @@ namespace EQLogParser
     /// copy). Valid in a chunked world too: a chunk is an array, so the reference points into it exactly as it does today.</summary>
     public ref readonly DamageFact RefAt(int ordinal)
     {
-      return ref (uint)ordinal < (uint)_factCount ? ref _facts[ordinal] : ref ZeroRow;
+      if ((uint)ordinal >= (uint)_factCount) return ref ZeroRow;
+      var chunk = _chunks[ordinal >> FactChunkShift];
+      return ref chunk is not null ? ref chunk[ordinal & FactChunkMask] : ref ZeroRow;
     }
 
     private static readonly DamageFact ZeroRow;
@@ -495,8 +606,20 @@ namespace EQLogParser
 
     public void AddFact(DamageFact fact)
     {
-      if (_factCount == _facts.Length) Array.Resize(ref _facts, _facts.Length * 2);
-      _facts[_factCount++] = fact;
+      var ordinal = _factCount;
+      var ci = ordinal >> FactChunkShift;
+
+      // The reference array grows (a handful of slots, never the rows), and a chunk is bought only when its first row arrives.
+      if (ci >= _chunks.Length)
+      {
+        var grown = Math.Max(_chunks.Length * 2, 4);
+        while (ci >= grown) grown *= 2;
+        Array.Resize(ref _chunks, grown);
+      }
+
+      _chunks[ci] ??= new DamageFact[FactChunkSize];
+      _chunks[ci][ordinal & FactChunkMask] = fact;
+      _factCount = ordinal + 1;
     }
 
     public void AddDeath(DeathFact death)
@@ -551,8 +674,12 @@ namespace EQLogParser
      * slack beside it ~47 MB of the 397 MB a loaded session holds was empty. CompactToCount hands it back; CombatCapture
      * decides when (a trim per fact would turn doubling's amortized copy into a copy per fact).
      */
-    public long SlackBytes => RowArrays.SlackOf<DamageFact>(_facts.Length, _factCount)
-                              + RowArrays.SlackOf<DeathFact>(_deaths.Length, _deathCount)
+    /*
+     * Damage facts no longer contribute slack: rows live in fixed chunks allocated on demand, so the most the store can hold without
+     * writing is the tail of the newest chunk (at most 65,535 rows, ~1.5 MB) instead of up to a whole doubling of the capture. That is
+     * why the old ~47 MB of reserved-but-empty slots at end-of-file is gone by construction rather than by a trim pass.
+     */
+    public long SlackBytes => RowArrays.SlackOf<DeathFact>(_deaths.Length, _deathCount)
                               + RowArrays.SlackOf<IdentityEvent>(_identities.Length, _identityCount)
                               + RowArrays.SlackOf<TauntFact>(_taunts.Length, _tauntCount)
                               + RowArrays.SlackOf<EvidenceFact>(_evidences.Length, _evidenceCount);
@@ -566,7 +693,9 @@ namespace EQLogParser
      */
     public long CompactToCount()
     {
-      var freed = RowArrays.TrimTo(ref _facts, _factCount);
+      // Chunk rows: drop whole chunks the capture never reached (possible when a capacity hint preallocated them), and nothing else -
+      // rows are never renumbered, so FightFactIndex ordinals and any span taken beforehand keep naming the same fact.
+      var freed = CompactFactChunks();
       freed += RowArrays.TrimTo(ref _deaths, _deathCount);
       freed += RowArrays.TrimTo(ref _identities, _identityCount);
       freed += RowArrays.TrimTo(ref _taunts, _tauntCount);
@@ -574,8 +703,24 @@ namespace EQLogParser
       return freed;
     }
 
+
+    /// <summary>Release chunks past the last written row. Returns bytes handed back to the GC.</summary>
+    private long CompactFactChunks()
+    {
+      var needed = (_factCount + FactChunkSize - 1) / FactChunkSize;
+      var freed = 0L;
+      for (var i = _chunks.Length - 1; i >= needed; i--)
+      {
+        if (_chunks[i] is null) continue;
+        freed += (long)FactChunkSize * Marshal.SizeOf<DamageFact>();
+        _chunks[i] = null!;
+      }
+
+      return freed;
+    }
+
     // Approximate in-RAM size of the fact buffers (for the D2 revisit trigger, ~512 MB).
-    public long EstimatedBytes => (long)_facts.Length * Marshal.SizeOf<DamageFact>()
+    public long EstimatedBytes => (long)FactChunksAllocated * FactChunkSize * Marshal.SizeOf<DamageFact>()
       + (long)_deaths.Length * Marshal.SizeOf<DeathFact>()
       + (long)_identities.Length * Marshal.SizeOf<IdentityEvent>()
       + (long)_taunts.Length * Marshal.SizeOf<TauntFact>()

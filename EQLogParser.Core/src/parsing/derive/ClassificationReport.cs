@@ -270,8 +270,9 @@ namespace EQLogParser
 
       if (damageFacts is not null)
       {
-        foreach (var f in damageFacts.Facts)
+        for (var fi = 0; fi < damageFacts.FactCount; fi++)
         {
+          ref readonly var f = ref damageFacts.RefAt(fi);
           damage[f.AtkIdx] += f.Total;
           events[f.AtkIdx]++;
 

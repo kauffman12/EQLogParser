@@ -175,7 +175,7 @@ public class HealFactCaptureTest
         var run = PipelineHarness.RunFileDerived(HealFixture);
 
         var seqs = new List<(int Seq, bool IsHeal)>();
-        var dmg = run.Facts.Facts;
+        var dmg = run.Facts.Facts.ToArray();   // the store is chunked now; this test wants a snapshot it can scan by seq
         for (var i = 0; i < dmg.Length; i++) seqs.Add((dmg[i].Seq, false));
         var heals = run.HealFacts.Heals;
         for (var i = 0; i < heals.Length; i++) seqs.Add((heals[i].Seq, true));
