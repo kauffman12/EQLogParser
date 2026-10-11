@@ -121,7 +121,7 @@
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
                 <fa:ImageAwesome Margin="8,1,4,0" Style="{StaticResource EQIconStyle}" Icon="Solid_Calculator" Cursor="Hand"
                                  MouseLeftButtonUp="RecalcMouseLeftButtonUp"
-                                 ToolTip="Forget everything this app has stored about this name; this log answers again"/>
+                                 ToolTip="Re-calculate type, class, and ownership based solely on the current log file"/>
                   <TextBlock VerticalAlignment="Center" Text="{Binding DisplayText}"/>
                 </StackPanel>
               </Grid>
@@ -149,7 +149,7 @@
                 -->
                 <fa:ImageAwesome Margin="8,1,4,0" Style="{StaticResource EQIconStyle}" Icon="Regular_Edit" Cursor="Hand"
                                  Visibility="{Binding Overrulable, Converter={StaticResource PlaceholderVisibilityConverter}}"
-                                 MouseLeftButtonUp="TypeEditMouseLeftButtonUp" ToolTip="Choose what this name is"/>
+                                 MouseLeftButtonUp="TypeEditMouseLeftButtonUp" ToolTip="Choose type"/>
                 <TextBlock VerticalAlignment="Center" Text="{Binding Type}"/>
               </StackPanel>
                 <ComboBox HorizontalAlignment="Stretch" VerticalAlignment="Center"
@@ -182,7 +182,7 @@
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
                 <fa:ImageAwesome Margin="8,1,4,0" Style="{StaticResource EQIconStyle}" Icon="Regular_Edit" Cursor="Hand"
                                  Visibility="{Binding ClassEditable, Converter={StaticResource PlaceholderVisibilityConverter}}"
-                                 MouseLeftButtonUp="ClassEditMouseLeftButtonUp" ToolTip="Choose this player's class"/>
+                                 MouseLeftButtonUp="ClassEditMouseLeftButtonUp" ToolTip="Choose class"/>
                 <TextBlock VerticalAlignment="Center" Text="{Binding PlayerClass}"/>
               </StackPanel>
                 <ComboBox HorizontalAlignment="Stretch" VerticalAlignment="Center"
@@ -218,7 +218,7 @@
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
                 <fa:ImageAwesome Margin="8,1,4,0" Style="{StaticResource EQIconStyle}" Icon="Regular_Edit" Cursor="Hand"
                                  Visibility="{Binding OwnerEditable, Converter={StaticResource PlaceholderVisibilityConverter}}"
-                                 MouseLeftButtonUp="OwnerEditMouseLeftButtonUp" ToolTip="Choose who this summon belongs to"/>
+                                 MouseLeftButtonUp="OwnerEditMouseLeftButtonUp" ToolTip="Choose Pet Owner"/>
                 <TextBlock VerticalAlignment="Center" Text="{Binding Owner}"/>
               </StackPanel>
                 <ComboBox HorizontalAlignment="Stretch" VerticalAlignment="Center"
