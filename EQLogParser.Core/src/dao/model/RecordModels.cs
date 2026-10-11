@@ -235,7 +235,86 @@ namespace EQLogParser
     internal void AddAmbiguity(List<SpellData> candidates)
     {
       if (candidates is not { Count: > 0 }) return;
-      (_ambiguity ??= new List<SpellData>(candidates.Count)).AddRange(candidates);
+      _ambiguity = SharedCandidates.For(candidates);
+    }
+
+    /*
+     * One shared, never-again-written candidate list per DISTINCT set of spell rows.
+     *
+     * Why this exists: the caller hands over a list it just built — CastLineParser walks the LandsOn tree and gets a fresh, receiver-filtered
+     * List<SpellData> for every buff line whose name stands for several ranks — and storing a copy of that per line meant one list (plus its
+     * backing array) per ambiguous sight in a raid log, all of them holding the same handful of rows. Measured on a field snapshot as the
+     * largest object-count growth during live play: List<SpellData> climbing with ReceivedSpell beside it. The previous fix here removed the
+     * list that unambiguous lines were paying; this one removes the copies ambiguous lines were paying.
+     *
+     * Three rules make sharing safe rather than a bug waiting for a writer:
+     *
+     *   1. **Keyed by identity of elements, not by spell name.** The candidate SET is what must match, and it can legitimately differ for one
+     *      name depending on which tree path produced it (who the effect landed on). Keying on a name could hand a receiver candidates they
+     *      were never offered, and the failure would be a rank resolved from the wrong row with every board still looking correct.
+     *   2. **A collision is answered privately, never by sharing.** On a key hit the stored list is verified element-by-element (reference
+     *      identity of the same database rows); on any mismatch we return our own copy and do not publish it. Being wrong here points only
+     *      away from sharing, which costs bytes and nothing else.
+     *   3. **The value is copied once and treated as frozen** — the caller's list is a transient the tree may hand out again, so we never keep
+     *      it. Nothing in this codebase writes to Ambiguity (readers ask Count / FindAll / FirstOrDefault / foreach), and that law is what lets
+     *      a thousand sights share one instance; a future writer would have to stop sharing, not join it.
+     *
+     * The ceiling is about the number of distinct ambiguous names in a capture (a few hundred at most), so the memo cannot become the thing
+     * it removes: past SharedSetCeiling we stop publishing and go back to one private copy per line, which is exactly yesterday's behaviour.
+     */
+    internal static class SharedCandidates
+    {
+      // Widest candidate set seen is a handful of ranks; 8 slots covers a name with every rank in the book.
+      private const int SharedSetCeiling = 4096;
+
+      private static readonly System.Collections.Concurrent.ConcurrentDictionary<ulong, List<SpellData>> Sets = new();
+
+      // Distinct candidate sets published — for the heap ledger, and to see whether the ceiling is ever near.
+      internal static int SharedSetCount => Sets.Count;
+
+      internal static List<SpellData> For(List<SpellData> candidates)
+      {
+        var key = KeyOf(candidates);
+
+        if (Sets.TryGetValue(key, out var shared))
+        {
+          return SameContent(shared, candidates) ? shared : Copy(candidates);
+        }
+
+        if (Sets.Count >= SharedSetCeiling)
+        {
+          return Copy(candidates);
+        }
+
+        var fresh = Copy(candidates);
+        return Sets.GetOrAdd(key, fresh);
+      }
+
+      private static List<SpellData> Copy(List<SpellData> candidates) => new List<SpellData>(candidates);
+
+      // FNV-1a over the reference identities of the rows: no allocation, and stable for the life of the process.
+      private static ulong KeyOf(List<SpellData> candidates)
+      {
+        var hash = 14695981039346656037UL;
+        for (var i = 0; i < candidates.Count; i++)
+        {
+          hash = (hash ^ (uint)System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(candidates[i])) * 1099511628211UL;
+          hash = (hash ^ (ulong)(uint)i) * 1099511628211UL;
+        }
+
+        return (hash ^ (ulong)(uint)candidates.Count) * 1099511628211UL;
+      }
+
+      private static bool SameContent(List<SpellData> shared, List<SpellData> candidates)
+      {
+        if (shared.Count != candidates.Count) return false;
+        for (var i = 0; i < shared.Count; i++)
+        {
+          if (!ReferenceEquals(shared[i], candidates[i])) return false;
+        }
+
+        return true;
+      }
     }
 
     /// <summary>How many rows the name stood for; 0 means one match and no list allocated.</summary>

@@ -62,4 +62,39 @@ public class ReceivedSpellAmbiguityTest
     Assert.IsFalse(wearOff.HasAmbiguity, "a wear-off names nothing ambiguous and must not look like it did");
     Assert.AreEqual(0, wearOff.AmbiguityCount);
   }
+
+  /*
+   * The copy half of the same law. Buff lines whose NAME stands for several ranks arrive dozens of times a minute in a raid burn, and each
+   * one used to keep its own List<SpellData> holding the same handful of database rows — the largest object-count growth a live-play heap
+   * snapshot showed. Sharing is keyed by the identity of the rows, not by the spell name, because the candidate set legitimately varies for
+   * one name with the tree path that produced it; getting that backwards would resolve a rank from a row this line was never offered.
+   */
+  [TestMethod]
+  public void TwoSightsOfTheSameCandidateSetShareOneList()
+  {
+    var rank = new SpellData { Name = "Cessna Rk. IV", Id = "1" };
+    var other = new SpellData { Name = "Cessna Rk. VII", Id = "2" };
+
+    var first = new ReceivedSpell { Receiver = "Bithika" };
+    first.AddAmbiguity([rank, other]);
+    var second = new ReceivedSpell { Receiver = "Reisil" };
+    second.AddAmbiguity([rank, other]);
+
+    Assert.IsTrue(first.HasAmbiguity && second.HasAmbiguity);
+    Assert.AreSame(first.Ambiguity, second.Ambiguity,
+      "same rows in the same order is one set; the per-line copy is what this removes");
+
+    // A different set for the same name must NOT borrow it — that would answer an 8-second resolution with rows it never saw.
+    var third = new ReceivedSpell { Receiver = "Bithika" };
+    third.AddAmbiguity([rank]);
+    Assert.AreNotSame(first.Ambiguity, third.Ambiguity, "one candidate is a different set");
+    CollectionAssert.AreEqual(new[] { rank }, third.Ambiguity);
+
+    // The caller's list belongs to the tree and may be reused; what we kept is our own frozen copy.
+    var transient = new List<SpellData> { rank, other };
+    var fourth = new ReceivedSpell { Receiver = "Coas" };
+    fourth.AddAmbiguity(transient);
+    transient.Clear();
+    Assert.AreEqual(2, fourth.Ambiguity.Count, "clearing the caller's list may not empty the buff's candidates");
+  }
 }
