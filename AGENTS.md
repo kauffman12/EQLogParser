@@ -1718,3 +1718,14 @@ option changes, and swallowing a notice the build earned is worse than one expli
   paint it asked for. `DeferredBusyStateTest` (Wpf.Test) pumps a real dispatcher, because a `DispatcherTimer` only ticks while
   something pumps: inside-delay shows nothing, past-delay shows exactly once (not per interval), newest request wins, cancel leaves
   nothing armed.
+
+- **Nested popups do not receive clicks inside an AutoHidden pane** (2026-11, measured with a two-handler log over three picker
+  shapes): Syncfusion renders auto-hidden content in its own host window, so anything that opens a *second* WPF window from a cell —
+  `ComboBox`'s drop-down, or our own popup-inside-popup — is dismissed on mouse-down before it commits, and the cell reports
+  "closing with selection <old value>" because the press never reached the item. Docked content and MainWindow's own tree take the
+  identical XAML without complaint (Verified Players did for a year; DamageSummary's Group cell still does), which is why the cause
+  was invisible until someone tested the same control in two hosts. Two consequences: **a picker in this pane is one level deep** —
+  either a `ListBox` in our own popup (`StaysOpen="True"`, dismissed by pick / focus loss / hide / capture change, never by a press WPF
+  counts as outside) or a `ContextMenu` (Type and Class, short lists) — and **the flyout may not light-dismiss**, since the very event
+  that would close it is the one that ate the pick. If a future picker needs a real drop-down here, dock the strip instead of working
+  around the host.

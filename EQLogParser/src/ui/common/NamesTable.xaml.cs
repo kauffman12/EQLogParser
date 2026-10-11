@@ -288,6 +288,7 @@ namespace EQLogParser
     {
       // Hidden (or the session moved): drop any repaint waiting behind an editor, and the hold itself, so a close that never came
       // cannot leave the pane one pass short when it is shown again.
+      CloseOwnerList();
       Editors.Abandon();
 
       if (_followed is null) return;
@@ -341,6 +342,7 @@ namespace EQLogParser
     private void ClearRows()
     {
       // The capture this pane was reading is gone, so a census queued behind an open editor describes a log nobody is looking at.
+      CloseOwnerList();
       Editors.Abandon();
       ForgetRecalc();
       _repaint.Abandon();
@@ -844,7 +846,7 @@ namespace EQLogParser
       if (UiElementUtil.FindGridCell(icon) is not { } cell) return;
 
       Log.Debug($"identity cell: {DoorOwner} menu opened for {row.Name}");
-      OpenChoiceMenu(cell, OwnerMenuChoices(row), v => ApplyOwnerPick(row, (string)v));
+      OpenOwnerList(cell, row);
     }
 
     private void ApplyOwnerPick(NameRow row, string owner)
@@ -946,10 +948,64 @@ namespace EQLogParser
     private static IReadOnlyList<(string Word, bool Current, object Value)> ClassMenuChoices(NameRow row)
       => MainActions.ClassList.OfType<string>().Select(c => (c, c == row.PlayerClass, (object)c)).ToList();
 
-    private static IReadOnlyList<(string Word, bool Current, object Value)> OwnerMenuChoices(NameRow row)
-      => PetOwnership.Choices(row.Owner, IdentityLookup.OurPeopleNames())
-          .Select(o => (o, string.Equals(o, row.Owner, StringComparison.OrdinalIgnoreCase), (object)o))
-          .ToList();
+    /*
+     * The owner flyout: one Popup holding one scrollable ListBox. StaysOpen="True" is the point - nothing may dismiss this
+     * gesture from underneath it; CloseOwnerList runs on every path that ends it (pick, pane hide, capture change), each of
+     * which releases the census hold exactly once.
+     */
+    private void OpenOwnerList(FrameworkElement cell, NameRow row)
+    {
+      var names = PetOwnership.Choices(row.Owner, IdentityLookup.OurPeopleNames());
+
+      Editors.Open();
+      _ownerEditRow = row;
+      ownerEditPopup.PlacementTarget = cell;
+      ownerEditPopup.Width = Math.Max(220, cell.ActualWidth);
+      ownerEditList.ItemsSource = names;
+
+      var current = names.FindIndex(o => string.Equals(o, row.Owner, StringComparison.OrdinalIgnoreCase));
+      if (current >= 0) ownerEditList.SelectedIndex = current;
+
+      ownerEditPopup.IsOpen = true;
+      ownerEditList.Focus();
+    }
+
+    /// <summary>Ends the owner gesture: closes the flyout and releases the census hold, whichever path got here first.</summary>
+    private void CloseOwnerList()
+    {
+      ownerEditPopup.IsOpen = false;
+      _ownerEditRow = null;
+      ownerEditList.ItemsSource = null;
+      Editors.Close();
+    }
+
+    /*
+     * The flyout does not light-dismiss (StaysOpen="True" on purpose: a press that WPF counts as "outside" is exactly what
+     * ate every pick in the old shape), so focus is what ends it - the list takes keyboard focus on open, and an operator who
+     * goes anywhere else moves it. A sticky flyout would be its own bug, which is why a pane hide and a capture change close
+     * it too, next to Editors.Abandon().
+     */
+    private void OwnerListLostKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+    {
+      if (_ownerEditRow is not null) CloseOwnerList();
+    }
+
+    private void OwnerListMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+      var row = _ownerEditRow;
+      if (row is null) return;   // XAML-fired wiring can beat the pane's own fields
+
+      // The item under the cursor, not the ListBox's SelectedItem: clicking the name that is ALREADY selected raises no
+      // selection change at all, and that click has to reach ApplyOwnerPick so it can say "already belongs to X" rather
+      // than looking dead.
+      var picked = e.OriginalSource is FrameworkElement fe && fe.DataContext is string name
+        ? name
+        : ownerEditList.SelectedItem as string;
+      if (picked is null) return;
+
+      CloseOwnerList();
+      ApplyOwnerPick(row, picked);
+    }
 
     private static void Refuse(string door, string why) => Log.Info($"identity cell: {door} ignored - {why}");
     private static void RefuseDebug(string door, string why) => Log.Debug($"identity cell: {door} ignored - {why}");

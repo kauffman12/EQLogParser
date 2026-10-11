@@ -27,7 +27,7 @@
               <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
                 <Grid>
                   <TextBlock HorizontalAlignment="Center" FontSize="{DynamicResource EQContentSize}" VerticalAlignment="Center" Text="{Binding RowIndex, RelativeSource={RelativeSource TemplatedParent}}" TextAlignment="Center" />
-                </Grid>
+  </Grid>
               </Border>
             </ControlTemplate>
           </Setter.Value>
@@ -232,5 +232,27 @@
       (PetOwnership.Choices over the players this application knows) rather than declared here: it is a live question — "whose summon
       can this be, right now" — and it holds valid owners only; the take-back is the calculator click, never an entry. Plain strings, so no DisplayMemberPath.
     -->
+                  <!--
+      The Owner picker is a scrollable LIST, not a menu: the valid owners are this application's roster, which runs to
+      hundreds of names on a long-lived server folder, and a ContextMenu of that size is unusable. It is also NOT a
+      ComboBox: the drop-down a ComboBox opens is a second window inside the auto-hidden pane's own host, and a press on an
+      item there dismissed the gesture before anything committed (see NamesTable.OpenChoiceMenu for the full story). One
+      Popup, one ListBox, StaysOpen="True" so no light-dismiss race can eat the press - which is why closeOwnerEditPopup
+      is called from every path that ends the gesture: a pick, a pane hide, and a capture change.
+      SystemColors rather than a theme key: this flyout has no EQ style of its own and an unresolvable DynamicResource
+      would render it unreadable in one of the two themes.
+    -->
+    <Popup x:Name="ownerEditPopup" StaysOpen="True" AllowsTransparency="True" Placement="Relative">
+      <Border Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}"
+              BorderBrush="#FF808080" BorderThickness="1">
+        <ScrollViewer MaxHeight="360" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+          <ListBox x:Name="ownerEditList" BorderThickness="0"
+                   Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}"
+                   Foreground="{DynamicResource {x:Static SystemColors.WindowTextBrushKey}}"
+                   MouseLeftButtonUp="OwnerListMouseLeftButtonUp"
+                   LostKeyboardFocus="OwnerListLostKeyboardFocus" />
+        </ScrollViewer>
+      </Border>
+    </Popup>
   </Grid>
 </UserControl>
