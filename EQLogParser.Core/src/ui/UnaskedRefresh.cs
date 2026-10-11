@@ -166,6 +166,8 @@ internal static class UnaskedRefresh
    */
   private static string? _owedGesture;
 
+  internal static bool HasGesture => Volatile.Read(ref _owedGesture) is not null;
+
   /// <summary>Record that an operator acted and the result only lands on the next pass. `what` names the act in the log.</summary>
   internal static void OweGesture(string what) => Volatile.Write(ref _owedGesture, what);
 

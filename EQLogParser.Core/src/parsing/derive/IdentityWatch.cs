@@ -32,8 +32,8 @@ internal sealed class IdentityWatch
    * writer tearing the other's enumeration, so each side owns one and a reader takes whichever reference it finds - both are honest
    * answers about what is on screen, and neither can throw mid-walk.
    */
-  private volatile Dictionary<string, IdentityKind> _board = Empty();
-  private volatile Dictionary<string, IdentityKind> _selection = Empty();
+  private volatile Dictionary<string, Answer> _board = Empty();
+  private volatile Dictionary<string, Answer> _selection = Empty();
 
   internal int Count => _board.Count + _selection.Count;
 
@@ -44,15 +44,10 @@ internal sealed class IdentityWatch
     _selection = Empty();
   }
 
-  /*
-   * What the NAMES on the built boards currently are: called at the end of a build, from the names it displayed.
-   *
-   * Two limits, both deliberate. The timeline handed in can be one pass NEWER than the snapshot the boards were built from, and that cannot
-   * strand a board: a flip already visible here is already in the baseline, and anything that changed content moved the pane's content stamp,
-   * which announces on its own — the watch is one trigger among several, not the freshness rule. And it watches KIND only: an owner change
-   * rides on an AffiliationInterval, which moves AnswerStamp() and therefore the stamp gate, so adding ownership here would fire on the same
-   * events the stamp already fires on (docs/DesignNotes.md → "Snapshot unless a name changed what it is").
-   */
+  // Capture the timeline that actually supplied the board, never the pane's newest timeline. The stamp only asks this
+  // watch whether a change matters; it cannot recover a change already erased from this baseline. Owner is part of the
+  // answer: Pet(A) -> Pet(B) changes the board without changing Kind.
+  private readonly record struct Answer(IdentityKind Kind, long Routing);
   internal void CaptureBoard(EntityTimeline timeline, IReadOnlyList<string> names) => _board = AnswersFor(timeline, names);
 
   /*
@@ -76,7 +71,7 @@ internal sealed class IdentityWatch
     return FirstChangedIn(_board, timeline) ?? FirstChangedIn(_selection, timeline);
   }
 
-  private static string FirstChangedIn(Dictionary<string, IdentityKind> answers, EntityTimeline timeline)
+  private static string FirstChangedIn(Dictionary<string, Answer> answers, EntityTimeline timeline)
   {
     // An empty slot never fires: nothing displayed means nothing can have changed on screen. Inventing a rebuild for that is the flicker.
     if (answers.Count == 0) return null;
@@ -84,24 +79,25 @@ internal sealed class IdentityWatch
     foreach (var (name, was) in answers)
     {
       var now = timeline.Identity(name);
-      if (now != was) return $"{was}>{now} {name}";
+      if (now != was.Kind) return $"{was.Kind}>{now} {name}";
+      if (timeline.AnswerStampFor(name) != was.Routing) return $"routing changed {name}";
     }
 
     return null;
   }
 
-  private static Dictionary<string, IdentityKind> AnswersFor(EntityTimeline timeline, IReadOnlyList<string> names)
+  private static Dictionary<string, Answer> AnswersFor(EntityTimeline timeline, IReadOnlyList<string> names)
   {
     var next = Empty();
     if (timeline is null || names is null) return next;
 
     foreach (var name in names)
     {
-      if (!string.IsNullOrEmpty(name)) next[name] = timeline.Identity(name);
+      if (!string.IsNullOrEmpty(name)) next[name] = new Answer(timeline.Identity(name), timeline.AnswerStampFor(name));
     }
 
     return next;
   }
 
-  private static Dictionary<string, IdentityKind> Empty() => new(System.StringComparer.OrdinalIgnoreCase);
+  private static Dictionary<string, Answer> Empty() => new(System.StringComparer.OrdinalIgnoreCase);
 }

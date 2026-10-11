@@ -1,3 +1,4 @@
+using EQLogParser;
 using FontAwesome5;
 using log4net;
 using Microsoft.Win32;
@@ -18,9 +19,6 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
 using System.Xml;
-
-using EQLogParser;
-
 using Application = System.Windows.Application;
 using SelectionChangedEventArgs = System.Windows.Controls.SelectionChangedEventArgs;
 
@@ -47,6 +45,7 @@ namespace EQLogParser
      * byte-identical totals behind one select-all — no derived board reads those stores (docs/DesignNotes.md -> "Name every door").
      */
     private readonly SummaryBuildGate _summaryGate = new(static work => Task.Run(work));
+    private long _summaryGestureGeneration;
 
     /*
      * Opening a log file, and the file dialog inside it. A measured session caught 1.6 s of blocked UI thread right after a load finished,
@@ -781,7 +780,7 @@ namespace EQLogParser
     /// </summary>
     private FightTable _fightPane;
 
-    private void DerivedSelectionChanged(BoardRequest request)
+    private void DerivedSelectionChanged(BoardRequest request, DerivedSnapshot snapshot)
     {
       var session = _engine;
       if (session is null) return;
@@ -807,9 +806,11 @@ namespace EQLogParser
        * damage-type filter. The gate drops a request whose key has already been built or is
        * building, queues at most one newer one behind a run, and never lets two materializations overlap.
        */
-      var key = SummaryKeyFor(session.SessionId, request.Fights, request.ContentStamp, tankingDamageType);
+      if (request.Reason == BoardReason.Manual) _summaryGestureGeneration++;
+      var key = SummaryKeyFor(session.SessionId, request.Fights, request.ContentStamp, tankingDamageType, _summaryGestureGeneration);
       var askedAt = Stopwatch.GetTimestamp();
-      var outcome = _summaryGate.Request(key, () => BuildBoards(session, request, tankingDamageType, askedAt));
+      var buildPane = _fightPane;
+      var outcome = _summaryGate.Request(key, () => BuildBoards(session, snapshot, buildPane, request, tankingDamageType, askedAt));
 
       /*
        * One line per ask, whatever the gate decided, because "the damage grid filled three times" is a question about DOORS and this is
@@ -833,7 +834,8 @@ namespace EQLogParser
      * built per announcement, on the UI thread) — but it IS why the gate logs its two non-Started outcomes: a board that
      * refuses to update while the pane says it announced is diagnosable from eqlogparser.log rather than argued about.
      */
-    internal static long SummaryKeyFor(int sessionId, IReadOnlyList<DerivedFight> selected, long contentStamp, int tankingDamageType)
+    internal static long SummaryKeyFor(int sessionId, IReadOnlyList<DerivedFight> selected, long contentStamp, int tankingDamageType,
+      long gestureGeneration = 0)
     {
       var hash = unchecked((contentStamp * 397) ^ tankingDamageType);
       foreach (var fight in selected) hash = unchecked(hash * 17 + fight.Id);
@@ -842,6 +844,7 @@ namespace EQLogParser
       // one capture and opening another asks the SAME key for a board the new capture has never painted, which the gate would
       // otherwise answer "already built" to. See BoardKeyTest.
       hash = unchecked(hash * 31 + sessionId);
+      hash = unchecked(hash * 31 + gestureGeneration);
       return hash == 0 ? 1 : hash;
     }
 
@@ -860,10 +863,11 @@ namespace EQLogParser
      * Below `BoardFanout.MinOutcomes` the three builds run here in today's order; above it they run side by side (see BoardFanout for
      * what makes that safe and for the one behaviour change it carries: a throwing board no longer takes the other two with it).
      */
-    private void BuildBoards(DeriveEngine session, BoardRequest request, int tankingDamageType, long askedAt)
+    private bool BuildBoards(DeriveEngine session, DerivedSnapshot snapshot, FightTable pane, BoardRequest request, int tankingDamageType, long askedAt)
     {
       var waitedMs = StatsBuildTrace.ElapsedSince(askedAt);
       SummaryInput input = null;
+      var succeeded = false;
 
       /*
        * Whose capture is this build for, still? A session that has been closed answers with an EMPTY summary (Dispose drops
@@ -874,7 +878,7 @@ namespace EQLogParser
       if (!SessionStillOpen(session))
       {
         Log.Debug($"board build abandoned [{request.Reason}]: capture {session.SessionId} closed while this was queued");
-        return;
+        return false;
       }
 
       /*
@@ -889,18 +893,18 @@ namespace EQLogParser
       try
       {
         var materializeWatch = Stopwatch.StartNew();
-        input = session.BuildSummaryInput(request.Fights);
+        input = DeriveEngine.BuildSummaryInput(snapshot, request.Fights);
         materializeWatch.Stop();
 
         if (!SessionStillOpen(session))
         {
           Log.Debug($"board build abandoned [{request.Reason}]: capture closed while this materialized");
-          return;
+          return false;
         }
 
         /*
          * The three option objects are built up front because they may be handed to three workers: each board gets its OWN options
-         * (builders write nothing into them but the healing builder's own rebuild door), and all three carry ONE trace group so the
+         * (including their own BuildFailed result), and all three carry ONE trace group so the
          * siblings of this request never warn about each other (StatsBuildTrace rule 2). Building them before damage runs instead of
          * between builds is what makes "three boards, one question" the same object graph either way; nothing observable moves, since
          * an options object is a bag of references this method fills from `input` and no builder reads another's.
@@ -941,7 +945,7 @@ namespace EQLogParser
 
         /*
          * Serial or fanned out — the boards are the SAME three calls over the SAME options either way; what changes is how many
-         * workers carry them (docs/improve-stat-building §4, numbers in §0). The threshold is measured: below ~500k outcomes the
+         * workers carry them (docs/DesignNotes.md → "Three boards, three workers"). The threshold is measured: below 50k outcomes the
          * whole build is tens of milliseconds and three thread starts are the finding, above it a farm-night select-all saves
          * hundreds of ms to seconds and a live capture's periodic re-run of a held big selection stops spending its wall time in a
          * line. The decision reads `UnaskedRefresh.OutcomeCount` — the same meter the refresh budget prices a build with — so the two
@@ -962,7 +966,7 @@ namespace EQLogParser
            * record costs one grid. "A partial board beats no board," per board — see BoardFanout's law 2.
            */
           Log.Debug($"board fan-out [{request.Reason}]: {outcomes:N0} outcomes over three workers");
-          BoardFanout.RunParallel([
+          succeeded = BoardFanout.RunParallel([
             new("damage", request.Reason.ToString(), () => SessionStillOpen(session),
                 () => DamageStatsBuilder.Instance.BuildTotalStats(damageStatsOptions)),
             new("tanking", request.Reason.ToString(), () => SessionStillOpen(session),
@@ -976,19 +980,24 @@ namespace EQLogParser
           DamageStatsBuilder.Instance.BuildTotalStats(damageStatsOptions);
           TankingStatsBuilder.Instance.BuildTotalStats(tankingStatsOptions);
           HealingStatsBuilder.Instance.BuildTotalStats(healingStatsOptions);
+          succeeded = true;
         }
+        succeeded &= !damageStatsOptions.BuildFailed && !tankingStatsOptions.BuildFailed && !healingStatsOptions.BuildFailed
+                     && SessionStillOpen(session);
       }
       catch (Exception ex)
       {
         // Logged here rather than left to the task: an announcement that threw must still return the gate to idle (its own
         // finally does that), and the boards keep whatever they had — which is why a partial board beats no board.
+        succeeded = false;
         Log.Error("Derived damage summary error", ex);
       }
 
       // Watching happens AFTER the boards, under its own guard: it only decides whether a later derive tick is worth
       // announcing, so losing it must cost that and nothing else. It used to sit first inside the try above, where one
       // throw of its own — a dock-site read from this worker thread — silently took every board with it.
-      WatchBoardNames(input);
+      if (succeeded) WatchBoardNames(pane, input, snapshot?.Timeline, session.SessionId);
+      return succeeded;
     }
 
     /// <summary>
@@ -1006,7 +1015,7 @@ namespace EQLogParser
     /// `X +Pets`. The pane comes from <see cref="_fightPane"/>, captured on the UI thread — this runs on the summary gate's
     /// worker, where no window may be touched, and its own guard keeps a lost watch from costing a board.
     /// </remarks>
-    private void WatchBoardNames(SummaryInput input)
+    private static void WatchBoardNames(FightTable pane, SummaryInput input, EntityTimeline builtUnder, int sessionId)
     {
       if (input is null) return;
       try
@@ -1018,18 +1027,29 @@ namespace EQLogParser
 
           foreach (var block in fight.DamageBlocks)
             foreach (var action in block.Actions)
-              if (action is DamageRecord damage && !string.IsNullOrEmpty(damage.Attacker)) involved.Add(damage.Attacker);
+              if (action is DamageRecord damage)
+              {
+                if (!string.IsNullOrEmpty(damage.Attacker)) involved.Add(damage.Attacker);
+                if (!string.IsNullOrEmpty(damage.Defender)) involved.Add(damage.Defender);
+              }
 
           foreach (var block in fight.TankingBlocks)
             foreach (var action in block.Actions)
-              if (action is DamageRecord taken && !string.IsNullOrEmpty(taken.Attacker)) involved.Add(taken.Attacker);
+              if (action is DamageRecord taken)
+              {
+                if (!string.IsNullOrEmpty(taken.Attacker)) involved.Add(taken.Attacker);
+                if (!string.IsNullOrEmpty(taken.Defender)) involved.Add(taken.Defender);
+              }
         }
 
         // Healers too: the healing board lists names no damage board necessarily showed.
         foreach (var (_, heal) in input.Heals)
+        {
           if (!string.IsNullOrEmpty(heal.Healer)) involved.Add(heal.Healer);
+          if (!string.IsNullOrEmpty(heal.Healed)) involved.Add(heal.Healed);
+        }
 
-        _fightPane?.WatchBoardNames([.. involved]);
+        pane?.WatchBoardNames(builtUnder, [.. involved], sessionId);
       }
       catch (Exception ex)
       {

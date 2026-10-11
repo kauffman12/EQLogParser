@@ -1,3 +1,4 @@
+using EQLogParser;
 using log4net;
 using System;
 using System.Collections.Generic;
@@ -7,8 +8,6 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Threading;
-
-using EQLogParser;
 
 /*
  * Annotations only, no null-flow analysis: the project builds with Nullable=disable, and this API speaks in optional
@@ -324,6 +323,8 @@ namespace EQLogParser
     public ClassificationReport? BuildNameCensus()
     {
       if (_disposed) return null;
+      using var damageRead = _facts.RetainDecoded();
+      using var healRead = _heals.RetainDecoded();
 
       try
       {
@@ -436,6 +437,8 @@ namespace EQLogParser
           EntityTimeline? classified = null;
           var snapshot = _capture.DeriveQuiescent(() =>
           {
+            using var damageRead = _facts.RetainDecoded();
+            using var healRead = _heals.RetainDecoded();
             /*
              * The expensive lane rebuilds the verdicts; the cheap lane takes the instance the last expensive pass left behind, so
              * no rule book runs between the two folds. If no expensive pass has ever finished there is nothing to carry, and this
@@ -692,9 +695,10 @@ namespace EQLogParser
      * Returns an empty input when no snapshot has landed: an empty selection is the caller's business,
      * a missing one means "the list you clicked is gone".
      */
-    internal SummaryInput BuildSummaryInput(IReadOnlyList<DerivedFight> selected)
+    internal static SummaryInput BuildSummaryInput(DerivedSnapshot snapshot, IReadOnlyList<DerivedFight> selected)
     {
-      var snapshot = _snapshot;
+      using var damageRead = snapshot?.Facts?.RetainDecoded();
+      using var healRead = snapshot?.Heals?.RetainDecoded();
       if (snapshot is null || selected is not { Count: > 0 })
       {
         // An empty selection clears every board, so healing arrives as an empty list rather than null: null
@@ -739,17 +743,19 @@ namespace EQLogParser
      * derived rows; this only hands out the legacy shape the older consumers read). `selected` is the grid's own
      * selection; null means every visible row in list order, exactly what the display list shows.
      */
-    internal List<Fight> MaterializeFights(IReadOnlyList<DerivedFight>? selected)
+    internal static List<Fight> MaterializeFights(DerivedSnapshot snapshot, IReadOnlyList<DerivedFight>? selected)
     {
+      if (snapshot?.Facts is null) return [];
+      using var damageRead = snapshot.Facts.RetainDecoded();
       if (selected == null)
       {
         var visible = new List<DerivedFight>();
-        foreach (var row in _snapshot?.Rows ?? [])
+        foreach (var row in snapshot.Rows)
           if (row.Fight is not null) visible.Add(row.Fight);
         selected = visible;
       }
 
-      return FightSummarySource.Build(selected, _projection.Index, _facts).Fights.ToList();
+      return FightSummarySource.Build(selected, snapshot.DamageIndex, snapshot.Facts).Fights.ToList();
     }
 
     /*
@@ -760,8 +766,11 @@ namespace EQLogParser
      */
     internal List<Fight> MaterializeFightsOverlapping(double fromT, double toT)
     {
+      var snapshot = _snapshot;
+      if (snapshot?.Facts is null) return [];
+      using var damageRead = snapshot.Facts.RetainDecoded();
       var overlapping = new List<DerivedFight>();
-      foreach (var row in _snapshot?.Rows ?? [])
+      foreach (var row in snapshot.Rows)
       {
         if (row.Fight is not { } fight) continue;
         if ((fight.BeginDamageTime <= toT && fight.LastDamageTime >= fromT) ||
@@ -769,7 +778,7 @@ namespace EQLogParser
           overlapping.Add(fight);
       }
 
-      return FightSummarySource.Build(overlapping, _projection.Index, _facts).Fights.ToList();
+      return FightSummarySource.Build(overlapping, snapshot.DamageIndex, snapshot.Facts).Fights.ToList();
     }
 
     /*

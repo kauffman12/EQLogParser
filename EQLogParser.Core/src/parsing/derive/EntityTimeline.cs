@@ -194,6 +194,18 @@ namespace EQLogParser
     private readonly Dictionary<string, long> _affiliationAnswers = new(StringComparer.OrdinalIgnoreCase);
     private long _answerDigest;
 
+    // The board watches only names it displayed, but it needs their whole routing answer: a historical charm or owner
+    // change can move damage even when Identity(name) at +infinity is identical. Reuse the already-maintained per-name views.
+    internal long AnswerStampFor(string name)
+    {
+      lock (SyncRoot)
+      {
+        _identityAnswers.TryGetValue(name, out var identity);
+        _affiliationAnswers.TryGetValue(name, out var affiliation);
+        return unchecked(identity + affiliation);
+      }
+    }
+
     // ---- evidence input ----
 
     public void SetIdentity(string name, IdentityKind kind, int strength, string source, double effectiveFrom = double.NegativeInfinity)

@@ -4,8 +4,8 @@
  */
 #nullable enable annotations
 
-using System.Reflection;
 using log4net;
+using System.Reflection;
 
 namespace EQLogParser;
 
@@ -65,7 +65,7 @@ internal enum BoardFanoutMode
 internal static class BoardFanout
 {
   /*
-   * The crossover, measured against the SHIPPED path (docs/improve-stat-building §7: three boards over one materialized selection,
+   * The crossover, measured against the SHIPPED path (docs/DesignNotes.md → "Three boards, three workers": three boards over one materialized selection,
    * four cores, the two shapes ALTERNATING so neither gets a JIT-warm process for free, worst-of-two).
    *
    * What fan-out can buy is bounded by arithmetic rather than by the total: the wall becomes the SLOWEST board, so the saving is
@@ -110,38 +110,43 @@ internal static class BoardFanout
    * work to `Task.Run`, and the suite runs the same jobs inline to assert abandonment and per-board isolation without racing a
    * thread pool — while the concurrency itself is pinned by its own test with the real spawner.
    */
-  internal static void RunParallel(IReadOnlyList<BoardJob> boards, Func<Action, Task>? spawn = null)
+  internal static bool RunParallel(IReadOnlyList<BoardJob> boards, Func<Action, Task>? spawn = null)
   {
     var start = spawn ?? PoolSpawn;
 
     var workers = new Task[boards.Count];
+    var results = new bool[boards.Count];
     for (var i = 0; i < boards.Count; i++)
     {
       var job = boards[i];
-      workers[i] = start(() => RunOne(job));
+      var index = i;
+      workers[i] = start(() => results[index] = RunOne(job));
     }
 
     Task.WaitAll(workers);
+    return Array.TrueForAll(results, static result => result);
   }
 
   /// <summary>Run one board's build under the two laws a worker owes: whose capture is this, and a failure that stays inside its own board.</summary>
-  internal static void RunOne(in BoardJob job)
+  internal static bool RunOne(in BoardJob job)
   {
     if (!job.StillMine())
     {
       Log.Debug($"board build abandoned [{job.Asked}]: capture closed before the {job.Board} board started");
-      return;
+      return false;
     }
 
     try
     {
       job.Build();
+      return true;
     }
     catch (Exception ex)
     {
       // The same anchor the serial path logs, so `grep "Derived damage summary error"` finds a fanned-out failure too — the board
       // suffix says WHICH grid the operator is missing, which is the question the line gets asked.
       Log.Error($"Derived damage summary error ({job.Board} board)", ex);
+      return false;
     }
   }
 }

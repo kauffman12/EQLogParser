@@ -103,6 +103,7 @@ namespace EQLogParser
      */
     internal void RebuildTotalStats(GenerateStatsOptions options, bool reset = false)
     {
+      options.BuildFailed = false;
       var trace = StatsBuildTrace.Begin("damage", options.Source, "re-slice", options.BuildGroup);
       try
       {
@@ -147,6 +148,7 @@ namespace EQLogParser
     // Traced wrapper (see StatsBuildTrace): the door label comes in on the options, the cost and the record count go out on the line.
     internal void BuildTotalStats(GenerateStatsOptions options)
     {
+      options.BuildFailed = false;
       var trace = StatsBuildTrace.Begin("damage", options.Source, "full", options.BuildGroup);
       try
       {
@@ -299,6 +301,7 @@ namespace EQLogParser
         }
         catch (Exception ex)
         {
+          options.BuildFailed = true;
           Log.Error(ex);
           if (StatsBuildTrace.FailFast)
             throw;   // tests: a swallowed builder throw is an empty board, not a failed run
@@ -648,6 +651,7 @@ namespace EQLogParser
           }
           catch (Exception ex)
           {
+            options.BuildFailed = true;
             Log.Error(ex);
             if (StatsBuildTrace.FailFast)
               throw;   // tests: a swallowed builder throw is an empty board, not a failed run

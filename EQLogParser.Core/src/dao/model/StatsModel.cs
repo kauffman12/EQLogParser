@@ -38,6 +38,8 @@ namespace EQLogParser
     public List<Fight> Npcs { get; } = [];
     public long MaxSeconds { get; set; } = -1;
     public long MinSeconds { get; set; } = -1;
+    // Per invocation, reset by the builder wrapper. A caught failure is not an answer the summary gate can cache.
+    internal bool BuildFailed { get; set; }
     public int DamageType { get; set; }
     public TimeRange AllRanges { get; set; }
 

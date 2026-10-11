@@ -1,6 +1,6 @@
-using System.Collections.Generic;
 using EQLogParser;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Collections.Generic;
 
 namespace EQLogParser;
 
@@ -20,6 +20,45 @@ namespace EQLogParser;
 [TestClass]
 public class IdentityWatchTest
 {
+    [TestMethod]
+    public void OwnershipChangesAndHistoricalCharmChangesFireWithoutAKindChange()
+    {
+        var before = Owned("Alice");
+        var watch = new IdentityWatch();
+        watch.CaptureBoard(before, ["Picklepaw"]);
+        Assert.IsFalse(watch.AnyChanged(Owned("Alice")));
+        Assert.IsTrue(watch.AnyChanged(Owned("Bob")), "Pet -> Pet still reroutes its damage");
+        Assert.IsTrue(watch.AnyChanged(Owned(null)), "taking ownership back changes the same answer");
+
+        var after = Owned("Alice");
+        after.AddAffiliation(AffiliationKind.Friendly, "Picklepaw", 10, 20, 100, "R9-charm", "Bob");
+        Assert.AreEqual(before.Identity("Picklepaw"), after.Identity("Picklepaw"));
+        Assert.IsTrue(watch.AnyChanged(after), "historical intervals matter even when the final kind and owner agree");
+    }
+
+    [TestMethod]
+    public void ABuildThatFinishesAfterANewerPassKeepsItsOwnBaseline()
+    {
+        var watch = new IdentityWatch();
+        var builtUnder = Owned("Alice");
+        var newest = Owned("Bob");
+        watch.CaptureSelection(newest, ["A boss"]);
+        watch.CaptureBoard(builtUnder, ["Picklepaw"]);
+        Assert.IsTrue(watch.AnyChanged(newest));
+        watch.CaptureBoard(newest, ["Picklepaw"]);
+        Assert.IsFalse(watch.AnyChanged(newest));
+    }
+
+    private static EntityTimeline Owned(string? owner)
+    {
+        var timeline = new EntityTimeline();
+        timeline.SetIdentity("Picklepaw", IdentityKind.Pet, 100, "R10-manual");
+        if (owner is not null)
+            timeline.AddAffiliation(AffiliationKind.PetOfPlayer, "Picklepaw", double.NegativeInfinity,
+                double.PositiveInfinity, 100, "R10-manual", owner);
+        return timeline;
+    }
+
     [TestMethod]
     [Description("The measured reason for scoping to displayed names: a capture keeps meeting new mobs, and that cannot change what a fixed board shows.")]
     public void NewNamesBeingPlacedNeverFireTheWatch()

@@ -1,16 +1,15 @@
+using EQLogParser;
 using log4net;
 using Syncfusion.UI.Xaml.Grid;
 using Syncfusion.UI.Xaml.ScrollAxis;
 using System;
-using System.Reflection;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
-
-using EQLogParser;
 
 namespace EQLogParser
 {
@@ -34,7 +33,7 @@ namespace EQLogParser
      */
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
-    internal event Action<BoardRequest> DerivedSelectionChanged;
+    internal event Action<BoardRequest, DerivedSnapshot> DerivedSelectionChanged;
 
     /*
      * Selection settles on a pause rather than per click: nothing is recomputed here, the click only says which fights are
@@ -93,6 +92,7 @@ namespace EQLogParser
 
     // The timeline behind `_rows`, kept so the watch can be read on a later pass without waiting for a request. Null until the session paints.
     private EntityTimeline _currentTimeline;
+    private DerivedSnapshot _currentSnapshot;
 
     // The stamp of the newest snapshot this pane has been handed (the one _rows came from). Announcing records it, so
     // "what did the board get built from?" stays answerable while a pass is in flight.
@@ -287,6 +287,7 @@ namespace EQLogParser
       _announcedStamp = 0;
       _watch.Clear();
       _currentTimeline = null;
+      _currentSnapshot = null;
       _rows.Clear();
 
       // A new session is a new load: the band may show again, its counters start from nothing, and nothing has been read yet.
@@ -313,6 +314,7 @@ namespace EQLogParser
         // rows of its own yet (Clear All, an empty file) that late pass IS the content on screen forever.
         if (!snapshot.FromLiveSession) return;
 
+        _currentSnapshot = snapshot;
         _currentTimeline = snapshot.Timeline;
         _currentStamp = SelectionStamp(snapshot);
 
@@ -381,7 +383,7 @@ namespace EQLogParser
            * AnnounceSelection filters by identity before it spends a build.
            */
           var removedSelected = patch.Removals.Any(selected.Contains);
-          var touched = selected.Count > 0 && (removedSelected || contentMoved);
+          var touched = selected.Count > 0 && (removedSelected || contentMoved || UnaskedRefresh.HasGesture);
           if (touched) AnnounceSelection(removedSelected ? BoardReason.RowEdited : BoardReason.ContentMoved, force: true);
           return;
         }
@@ -553,7 +555,16 @@ namespace EQLogParser
      * design - the builder knows the displayed names, this pane knows the selection - and IdentityWatch keeps their slots apart so neither
      * writes a table the other is reading.
      */
-    internal void WatchBoardNames(IReadOnlyList<string> names) => _watch.CaptureBoard(_currentTimeline, names);
+    internal void WatchBoardNames(EntityTimeline builtUnder, IReadOnlyList<string> names, int sessionId)
+    {
+      Dispatcher.InvokeAsync(() =>
+      {
+        if (DeriveEngine.Active?.SessionId != sessionId) return;
+        _watch.CaptureBoard(builtUnder, names);
+        // A pass may have landed while the board was building. Ask now: its stamp may not move again on a finished log.
+        if (_watch.AnyChanged(_currentTimeline)) AnnounceSelection(BoardReason.ContentMoved, force: true);
+      });
+    }
 
     /*
      * What this pane is holding right now. internal for the session-switch tests: ActiveChanged cannot be raised from
@@ -567,7 +578,7 @@ namespace EQLogParser
      * the list shows, in list order - the same set a "select all" would pick up.
      */
     internal List<Fight> GetFights(bool selected)
-        => _session?.MaterializeFights(selected ? GetSelectedFights() : null) ?? [];
+        => DeriveEngine.MaterializeFights(_currentSnapshot, selected ? GetSelectedFights() : null);
 
     // The scoped variant the death viewer wants per death click - see DeriveEngine.MaterializeFightsOverlapping
     // for why materializing everything would be a full board's cost paid per keystroke.
@@ -685,7 +696,7 @@ namespace EQLogParser
       }
       Log.Debug($"announce [{reason}]{(detail is null ? string.Empty : $" {detail}")}: {ids.Count} row(s), stamp {_currentStamp}"
                 + (force ? " (forced)" : string.Empty));
-      DerivedSelectionChanged?.Invoke(new BoardRequest(selected, _currentStamp, reason, detail));
+      DerivedSelectionChanged?.Invoke(new BoardRequest(selected, _currentStamp, reason, detail), _currentSnapshot);
     }
 
     /*

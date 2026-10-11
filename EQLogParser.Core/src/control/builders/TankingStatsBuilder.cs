@@ -39,6 +39,7 @@ namespace EQLogParser
     // Traced wrapper (see StatsBuildTrace): re-slicing the groups in hand, which is what this pane's own dials ask for.
     internal void RebuildTotalStats(GenerateStatsOptions options)
     {
+      options.BuildFailed = false;
       var trace = StatsBuildTrace.Begin("tanking", options.Source, "re-slice", options.BuildGroup);
       try
       {
@@ -75,6 +76,7 @@ namespace EQLogParser
     // Traced wrapper (see StatsBuildTrace).
     internal void BuildTotalStats(GenerateStatsOptions options)
     {
+      options.BuildFailed = false;
       var trace = StatsBuildTrace.Begin("tanking", options.Source, "full", options.BuildGroup);
       try
       {
@@ -194,6 +196,7 @@ namespace EQLogParser
         }
         catch (Exception ex)
         {
+          options.BuildFailed = true;
           Log.Error(ex);
           if (StatsBuildTrace.FailFast)
             throw;   // tests: a swallowed builder throw is an empty board, not a failed run
@@ -401,6 +404,7 @@ namespace EQLogParser
           }
           catch (Exception ex)
           {
+            options.BuildFailed = true;
             Log.Error(ex);
             if (StatsBuildTrace.FailFast)
               throw;   // tests: a swallowed builder throw is an empty board, not a failed run

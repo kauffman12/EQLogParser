@@ -104,6 +104,7 @@ namespace EQLogParser
      */
     internal void BuildTotalStats(GenerateStatsOptions options)
     {
+      options.BuildFailed = false;
       var trace = StatsBuildTrace.Begin("healing", options.Source, "full", options.BuildGroup);
       try
       {
@@ -484,6 +485,7 @@ namespace EQLogParser
         }
         catch (Exception ex)
         {
+          options.BuildFailed = true;
           Log.Error(ex);
           if (StatsBuildTrace.FailFast)
             throw;   // tests: a swallowed builder throw is an empty board, not a failed run
@@ -794,6 +796,7 @@ namespace EQLogParser
           }
           catch (Exception ex)
           {
+            options.BuildFailed = true;
             Log.Error(ex);
             if (StatsBuildTrace.FailFast)
               throw;   // tests: a swallowed builder throw is an empty board, not a failed run
