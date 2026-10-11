@@ -200,7 +200,16 @@ namespace EQLogParser
     public string Key { get; set; }
     public TimeRange Ranges { get; set; } = new();
     public TimeRange AllRanges { get; set; } = new();
-    public List<PlayerSubStats> SubSubStats { get; } = [];
+
+    /*
+     * The three published child lists carry `internal set` for ONE consumer: StatsSnapshot, which takes a detached copy of a row
+     * (docs/DesignNotes.md → "The copy a carried cell needs, and the second it has to be taken at"). A shallow replica shares each
+     * list object, and a list on both sides of that boundary is not a copy — the next walk appends into what somebody else is
+     * holding. Nothing outside that file assigns one; the write law is unchanged and still enforced by how rows get made: every
+     * row enters through SubStatOf / SubStat2Of / SubSubStatOf (grep `.SubStats.Add`), because a list added to behind its index
+     * desynchronises the accelerator and mints a duplicate row for a key the board already has.
+     */
+    public List<PlayerSubStats> SubSubStats { get; internal set; } = [];
 
     // Accelerator for SubSubStats, handed to StatsUtil.SubStatLookup by ref. Nothing else reads it: the published order and
     // content stay the list's, and this class is the only door that adds to it (the per-record scan it replaced is the "why").
@@ -221,16 +230,26 @@ namespace EQLogParser
   {
     public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
 
+    /*
+     * Drop whoever is listening. A shallow replica copies the subscription list along with everything else, and a snapshot is an
+     * object no view will ever display: keeping its grid alive (the handler holds the pane, the pane holds the window) is the leak,
+     * and answering a change on a row nobody is showing is the bug. Called by StatsSnapshot on the COPY only — the row the builder
+     * keeps publishing still has, and needs, its subscribers.
+     */
+    internal void DetachViewSubscribers() => PropertyChanged = null;
+
     protected void OnPropertyChanged([System.Runtime.CompilerServices.CallerMemberName] string name = null)
     {
       PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(name));
     }
 
-    public List<DeathEvent> Deaths { get; } = [];
-    public ConcurrentDictionary<string, string> Specials { get; } = new();
-    public ConcurrentDictionary<string, ConcurrentDictionary<string, int>> ResistCounts { get; } = new();
-    public List<PlayerSubStats> SubStats { get; } = [];
-    public List<PlayerSubStats> SubStats2 { get; } = [];
+    // The internal setters belong to StatsSnapshot for the reason stated on PlayerSubStats.SubSubStats: a replica has to be
+    // given its OWN dictionaries and lists, and a getter-only property cannot be re-pointed. Same write law as before.
+    public List<DeathEvent> Deaths { get; internal set; } = [];
+    public ConcurrentDictionary<string, string> Specials { get; internal set; } = new();
+    public ConcurrentDictionary<string, ConcurrentDictionary<string, int>> ResistCounts { get; internal set; } = new();
+    public List<PlayerSubStats> SubStats { get; internal set; } = [];
+    public List<PlayerSubStats> SubStats2 { get; internal set; } = [];
 
     // Accelerators for the two published lists, handed to StatsUtil.SubStatLookup by ref and read by nothing else. They exist
     // because finding a player's spell row used to mean locking that player's list and scanning it with a string compare per

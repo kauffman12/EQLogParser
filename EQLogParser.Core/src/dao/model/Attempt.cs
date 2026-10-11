@@ -98,6 +98,37 @@ internal class Attempt
   /* True once a histogram exists: lets a test see that reading built it and that building released the raw list. */
   internal bool HitFreqMaterialized => _critFreq is not null || _nonCritFreq is not null;
 
+  /*
+   * A shallow replica of THIS instance: every scalar rides and the RUNTIME type is preserved (a PlayerStats comes back a
+   * PlayerStats). It is declared here, on the base of the row hierarchy, because `MemberwiseClone` is protected and the one
+   * place it may be called is inside the type being cloned.
+   *
+   * "Shallow" is the whole warning: every reference field arrives pointing at the SAME object. That is correct for the ~70
+   * numbers nobody mutates behind a row's back, and wrong for anything a later walk can append to — so StatsSnapshot names
+   * each reference field and re-points it. The list of shapes that may be cloned at all lives there, which is what makes a new
+   * subclass with new fields fail by name instead of sharing half of itself.
+   */
+  internal Attempt ShallowReplica() => (Attempt)MemberwiseClone();
+
+  /*
+   * Copy this row's hit-distribution state onto a replica of itself, sharing nothing. Called from StatsSnapshot.
+   *
+   * A method here rather than two lines in the copier because these four fields are PRIVATE and their rules live with them:
+   * the raw amounts are a list that a later record appends to (so a shared list leaks one side's night into the other's), and
+   * a materialized dictionary is assign-once. Both halves cross over as fresh objects — copying a dictionary nobody will write
+   * to again looks wasteful, and it is the price of "no mutable object sits on both sides of this boundary" being a single rule
+   * instead of a per-field exception list, which is exactly the kind of list that rots. The measurement priced it (0-2.9 ms per
+   * refresh over 442k-915k amounts); docs/DesignNotes.md → "Fold-at-publish measured: the cost cleared the bar, and the row on
+   * screen did not".
+   */
+  internal void CopyDistributionTo(Attempt target)
+  {
+    target._critRaw = _critRaw is {} crit ? [.. crit] : null;
+    target._nonCritRaw = _nonCritRaw is {} plain ? [.. plain] : null;
+    target._critFreq = _critFreq is {} critFreq ? new Dictionary<long, int>(critFreq) : null;
+    target._nonCritFreq = _nonCritFreq is {} plainFreq ? new Dictionary<long, int>(plainFreq) : null;
+  }
+
   private static Dictionary<long, int> FreqOf(ref Dictionary<long, int>? cache, ref List<long>? raw)
   {
     if (cache is not null)
