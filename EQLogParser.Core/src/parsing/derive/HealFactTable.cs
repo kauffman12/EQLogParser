@@ -1,6 +1,11 @@
+#nullable enable annotations   // the nullable MARKS below; the project itself builds with Nullable disabled (docs/CodingStandards.md)
+
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Runtime.InteropServices;
+
+using log4net;
 
 namespace EQLogParser
 {
@@ -234,6 +239,8 @@ namespace EQLogParser
    */
   internal sealed class HealFactTable : IHealFactTable
   {
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
+
     private readonly DamageFactTable _names;
 
     /*
@@ -247,6 +254,27 @@ namespace EQLogParser
 
     private HealFact[][] _chunks = [];
     private int _healCount;
+
+    /*
+     * COLD storage, mirroring DamageFactTable: a chunk becomes a Deflate blob the moment its successor is bought — the row that crossed into
+     * the next 32,768 is at least that far behind the parser, and a heal window walk enters by BINARY search, so it almost never touches the
+     * front of the capture at all. A re-read decodes back into place and retires to cold again on the same rule.
+     *
+     * 28.6 MB of warm rows became 6.31 MB of blob measured on the reference capture (4.53x over the whole stream; 6.80x was the transposed
+     * ceiling before chunking put a limit on the dictionary). The encoder runs on a pool worker handed the array BY VALUE, so a concurrent
+     * append can only add rows the encoder never sees, and every handoff is verified by decoding before the array is released: a corrupt or
+     * mismatched blob means the chunk stays warm and one Warn line appears, never a silently wrong healing board.
+     */
+    private Dictionary<int, byte[]>? _cold;
+    private int _coldRows;
+    private int _warmFromChunkOrdinal;
+
+    // Same floor as the damage table: below this there is nothing worth a thread, and the warm set stays at two chunks plus this.
+    // Two chunks, same as the damage table: below this there is nothing worth a thread, and the warm set stays at the newest two plus one.
+    // (Not `1 << (shift * 2)`: that is a billion rows, which is a fixture hanging for eight minutes rather than a floor.)
+    internal const int ColdMinRowCount = HealChunkSize * 2;
+    /// <summary>Rows from the front of this capture that are held as cold blobs rather than as row arrays.</summary>
+    public int ColdRowCount => _coldRows;
 
     private readonly List<string> _spells = [];
     private readonly Dictionary<string, ushort> _spellMap = new(StringComparer.Ordinal);
@@ -273,7 +301,7 @@ namespace EQLogParser
     public HealFactReader Heals => new(this);
 
     /// <summary>Sequential access over [from, to) as the chunk slices covering it: zero allocation, contiguous inside each slice.</summary>
-    public HealFactRange HealsIn(int from, int to) => new(_chunks, Math.Max(0, from), Math.Min(to, _healCount));
+    public HealFactRange HealsIn(int from, int to) => new(this, Math.Max(0, from), Math.Min(to, _healCount));
 
     internal int HealChunksAllocated
     {
@@ -293,16 +321,45 @@ namespace EQLogParser
     public ref readonly HealFact RefAt(int ordinal)
     {
       if ((uint)ordinal >= (uint)_healCount) return ref ZeroRow;
-      var chunk = _chunks[ordinal >> HealChunkShift];
+      var ci = ordinal >> HealChunkShift;
+      var chunk = _chunks[ci];
+      if (chunk is not null) return ref chunk[ordinal & HealChunkMask];
+
+      // The only cold read path for a single row: decode back into place, warm from here. A heal window walk enters by binary search and usually
+      // never comes this far forward, so this costs what a reader actually asks for rather than what a whole capture holds.
+      if (_cold is not null && _cold.TryGetValue(ci, out var blob)) WarmChunk(ci, HealFactChunkCodec.Decode(blob, HealChunkSize));
+      chunk = _chunks[ci];
       return ref chunk is not null ? ref chunk[ordinal & HealChunkMask] : ref ZeroRow;
     }
 
+    /// <summary>The slice door: hand back a warm chunk, or decode a cold one into place first. Out of range reads an empty array (no row asks).</summary>
+    internal HealFact[] ResolveRangeChunk(int ordinal)
+    {
+      var ci = ordinal >> HealChunkShift;
+      if ((uint)ordinal >= (uint)_healCount) return [];
+      var chunk = _chunks[ci];
+      if (chunk is not null) return chunk;
+      if (_cold is not null && _cold.TryGetValue(ci, out var blob)) WarmChunk(ci, HealFactChunkCodec.Decode(blob, HealChunkSize));
+      return _chunks[ci] ?? [];
+    }
+
+    /// <summary>Put decoded rows back where every reader looks, and move the cold floor past them.</summary>
+    private void WarmChunk(int ci, HealFact[] rows)
+    {
+      _chunks[ci] = rows;
+      _cold?.Remove(ci);
+      _coldRows -= Math.Min(rows.Length, HealChunkSize);
+      if (ci >= _warmFromChunkOrdinal) _warmFromChunkOrdinal = ci + 1;   // do not re-encode what a reader just asked for
+    }
+
     private static readonly HealFact ZeroRow;
-    public long EstimatedBytes => (long)HealChunksAllocated * HealChunkSize * Marshal.SizeOf<HealFact>();
+    public long EstimatedBytes => ((long)HealChunksAllocated * HealChunkSize * Marshal.SizeOf<HealFact>()) + ColdBlobBytes;
 
     // Same doubling slack as the damage table beside it: measured 1,243,469 heals sitting in a 1,600,000-slot array.
     /// <summary>Zero by construction: a chunk is allocated only once a row needs it, and the unwritten tail of the newest chunk is
     /// slots inside an allocation that already holds real rows.</summary>
+    /// <summary>Zero by construction: a chunk is allocated only once a row needs it, cold rows are not slack, and the unwritten tail of the
+    /// newest chunk is slots inside an allocation that already holds real rows.</summary>
     public long SlackBytes => 0;
 
     public long CompactToCount()
@@ -316,6 +373,10 @@ namespace EQLogParser
         freed += (long)HealChunkSize * Marshal.SizeOf<HealFact>();
         _chunks[i] = null!;
       }
+
+      // Cold rows are the opposite of slack — kept deliberately — so there is no count for them to fit in. A store that holds every row as a blob
+      // while its rows go to zero holds nothing this session needs; dropping the blobs returns it to "no heals", and ordinals do not move.
+      if (_cold is { Count: > 0 } && _healCount == 0) ClearCold();
 
       return freed;
     }
@@ -350,9 +411,107 @@ namespace EQLogParser
         Array.Resize(ref _chunks, grown);
       }
 
+      var brandNew = _chunks[ci] is null;
       _chunks[ci] ??= new HealFact[HealChunkSize];
       _chunks[ci][ordinal & HealChunkMask] = heal;
       _healCount = ordinal + 1;
+
+      // Handoff: this chunk's rows are now history, and the array can go to a worker BY VALUE — nothing else can reach it through _chunks once
+      // the slot is cleared, so the writer cannot race the encoder. Only a chunk this table filled may be handed over.
+      if (brandNew && ci >= 2 && ci > _warmFromChunkOrdinal && _healCount >= ColdMinRowCount)
+      {
+        var retiring = ci - 1;
+        var rows = _chunks[retiring];
+        if (rows is not null)
+        {
+          _chunks[retiring] = null!;               // the reader invariant: no slot goes cold
+          if (!TryCold(retiring, rows, HealChunkSize)) _chunks[retiring] = rows;   // refused: put the rows back where the reader looks
+        }
+      }
+    }
+
+    /*
+     * Encode, then PROVE it by decoding and comparing every field before the array is released — both off the parse thread. A mismatch (or a
+     * throw) leaves those rows warm in place and prints one line: a healing board is not worth a clever codec that can be quietly wrong.
+     */
+    private bool TryCold(int ci, HealFact[] rows, int count)
+    {
+      try
+      {
+        var work = rows;
+        var task = Task.Run(() =>
+        {
+          var blob = HealFactChunkCodec.Encode(work, count);
+          var probe = HealFactChunkCodec.Decode(blob, count);
+          for (var i = 0; i < count; i++)
+          {
+            var a = work[i];
+            var b = probe[i];
+            if (a.Seq != b.Seq || a.TimeS != b.TimeS || a.HealerIdx != b.HealerIdx || a.HealedIdx != b.HealedIdx
+                || a.Total != b.Total || a.OverTotal != b.OverTotal || a.TypeId != b.TypeId || a.Flags != b.Flags
+                || a.ModMask != b.ModMask || a.SubIdx != b.SubIdx)
+              throw new InvalidOperationException("cold heal chunk round trip differs at row " + i);
+          }
+          return blob;
+        });
+
+        if (!task.Wait(ColdEncodeTimeoutMs) || task.IsFaulted) return false;
+
+        _cold ??= [];
+        _cold[ci] = task.Result;
+        _coldRows += count;
+        return true;
+      }
+      catch (Exception ex)
+      {
+        Log.Warn($"cold heal chunk: heal chunk {ci} could not be encoded ({ex.GetType().Name}: {ex.Message}); leaving it as rows");
+        return false;
+      }
+    }
+
+    private const int ColdEncodeTimeoutMs = 10_000;
+
+    /// <summary>How many chunks are held as blobs right now.</summary>
+    internal int ColdChunkCount => _cold?.Count ?? 0;
+
+    /// <summary>Blob bytes over the whole cold set (the footprint probes ask for it).</summary>
+    internal long ColdBlobBytes
+    {
+      get
+      {
+        if (_cold is null) return 0;
+        var b = 0L;
+        foreach (var pair in _cold) b += pair.Value.Length;
+        return b;
+      }
+    }
+
+    /// <summary>Encode every eligible chunk NOW, on the calling thread's schedule — the same rule as the handoff (only a full chunk older than the
+    /// newest two), just without waiting for the parser to reach it. Used by the footprint probes; returns chunks put away.</summary>
+    internal int ColdifyNow()
+    {
+      if (_healCount < ColdMinRowCount) return 0;
+      var lastFull = (_healCount - 1) >> HealChunkShift;
+      if (lastFull < 2) return 0;
+
+      var did = 0;
+      for (var ci = _warmFromChunkOrdinal; ci < lastFull; ci++)
+      {
+        var rows = _chunks[ci];
+        if (rows is null) continue;
+        _chunks[ci] = null!;
+        if (TryCold(ci, rows, HealChunkSize)) did++;
+        else _chunks[ci] = rows;
+      }
+      return did;
+    }
+
+    /// <summary>Drop every cold blob (a restored or spooled stream hands back its own rows). Rows never renumber; re-reads rebuild.</summary>
+    public void ClearCold()
+    {
+      _cold?.Clear();
+      _coldRows = 0;
+      _warmFromChunkOrdinal = 0;
     }
 
     /// <inheritdoc cref="IHealFactTable.AscendingTime"/>
@@ -411,24 +570,26 @@ namespace EQLogParser
   }
 
   /// <summary>Sequential read of an ordinal range as chunk slices; see DamageFactRange for the reasoning.</summary>
-  internal ref struct HealFactRange(HealFact[][] chunks, int from, int to)
+  internal ref struct HealFactRange(HealFactTable table, int from, int to)
   {
-    private readonly HealFact[][] _chunks = chunks;
+    private readonly HealFactTable _table = table;
     private readonly int _from = from;
     private readonly int _to = Math.Max(from, to);
 
-    public Enumerator GetEnumerator() => new(_chunks, _from, _to);
+    public Enumerator GetEnumerator() => new(_table, _from, _to);
 
-    public ref struct Enumerator(HealFact[][] chunks, int from, int to)
+    public ref struct Enumerator(HealFactTable table, int from, int to)
     {
-      private readonly HealFact[][] _chunks = chunks;
+      private readonly HealFactTable _table = table;
       private readonly int _to = to;
       private int _next = from;
       private int _start = from;
       private int _length;
 
-      public ReadOnlySpan<HealFact> Current => _chunks[_start >> HealFactTable.HealChunkShift]
-        .AsSpan(_start & HealFactTable.HealChunkMask, _length);
+      public ReadOnlySpan<HealFact> Current => Resolve(_start).AsSpan(_start & HealFactTable.HealChunkMask, _length);
+
+      /// <summary>A cold slice is decoded back into the table, so a window walk over last night's capture reads contiguous spans either way.</summary>
+      private HealFact[] Resolve(int ordinal) => _table.ResolveRangeChunk(ordinal);
 
       public bool MoveNext()
       {

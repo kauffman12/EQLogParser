@@ -8250,9 +8250,24 @@ Four laws, each because a cheaper-looking version is wrong:
   has to show up smaller or the trigger spills a session that no longer needs it. After a full read-back it says 58.5 MB again — decoded
   chunks report rows, which is the truth at that moment.
 
-Not done in this step: the **heal stream** (24 B rows, ~28.6 MB on this capture, measured 4.36× as-is / 6.80× transposed) still holds raw
-rows — same handoff and same codec shape remain to be mirrored onto `HealFactTable` (step 3b), and its window walk already reads through
-the slice door that a cold twin would need.
+**Step 3b put the heal stream on the same machinery**, and its measurement corrected my own earlier estimate. That pre-implementation candidate
+probe said 4.36x for heals (28.6 MB to 6.54 MB, one concatenated Deflate over every row at once); what a chunked store produces on the same
+capture is **3.2 MB — 8.82x**, printed by `EQLP_COLD_REALLOG` beside the damage half, and better even than the 6.80x transposed ceiling that probe
+called the limit. Not a contradiction — a different object: one stream over a whole night smears the delta plane across hours, while 32,768-row
+chunks restart on runs where a heal second repeats inside the chunk and never across the raid. The realization is what the sentence carries now.
+
+- **What a finished load holds with both streams cold** (same capture, printed by the probe before it reads anything): damage **34 blobs**, heals
+  **37 blobs / 3.1 MB standing**. Where the two tables used to keep 58.5 MB + 28.6 MB of rows, the store is ~16 MB of blobs plus three warm chunks
+  each. A full read-back measures in the same band as damage's above (that step logged 551 ms, a later run 358 ms) with **64-69 ms** of heals on top:
+  what a reader asks for, not what a capture holds.
+- **The heal handoff is the same rule rather than an adaptation**: the successor's first row hands the predecessor over; only full chunks older than
+  the newest two; floor at two chunks. That floor is `HealChunkSize * 2` and NOT `1 << (HealChunkShift * 2)` — the latter is a billion rows, so
+  nothing ever went cold and the fixture hung eight minutes trying to reach it, which its own assertion reported as "the rule did not fire".
+  Because a heal window ENTERS by binary search (`FirstIndexAtOrAfter`) instead of scanning, decode-on-read serves only the window somebody opens:
+  a live raid's healing board never touches the cold front at all.
+- **What 3b cost**: a full-capture load went ~12.8 s to ~13.9-14.1 s with both encode lanes running — about a tenth of a background path that already
+  shows a loading band, paid once, in exchange for 28.6 MB returning to the GC. If it ever needs to come back the dial is the compression LEVEL
+  (SmallestSize is what bought 8.8x) or a worker budget, not the architecture. Classification is unaffected: 346 ms full, 5 ms carried afterwards.
 
 ## The room a load reserves before it reads, and what parallelism would cost
 

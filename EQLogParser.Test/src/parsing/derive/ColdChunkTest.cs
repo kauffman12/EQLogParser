@@ -155,5 +155,127 @@ namespace EQLogParser
       AssertSameRow(Row((Chunk * 2) + 5), table.At((Chunk * 2) + 5), (Chunk * 2) + 5);
       Assert.AreEqual((Chunk * 2) + 6, table.FactCount, "appending past a cold pair continues the same ordinal sequence");
     }
+    private const int HealChunk = HealFactTable.HealChunkSize;
+
+    /// <summary>The heal codec round-trips what this stream writes, including the shapes a fixture would not pick by accident: a no-paren line
+    /// (OverTotal 0, which is NOT "asked for this"), an overheal, Hot, the owner-in-name flag, the "no text" mask, NoSpell beside a real spell id.</summary>
+    [TestMethod]
+    public void HealRowsRoundTripThroughTheCodecFieldForField()
+    {
+      var names = new DamageFactTable();
+      var heals = new HealFactTable(names);
+      var healer = names.InternName("Reisil");
+      var healed = names.InternName("Bulgar`s pet");
+      var spell = heals.InternSpell("Celestial Regeneration XI");
+
+      var rows = new HealFact[HealChunk];
+      for (var i = 0; i < rows.Length; i++)
+        rows[i] = new HealFact(i + 1, FixtureTime.BaseL + (i / 4), healer, healed,
+          total: (uint)(i * 7919), overTotal: (uint)(i * 9000),
+          typeId: LabelTypes.Heal, flags: 0, modMask: 0, subIdx: spell);
+
+      // The awkward shapes, spread out so they are not one varint run.
+      rows[0] = new HealFact(0, FixtureTime.BaseL, 0, (short)(short.MaxValue - 1), uint.MaxValue, 0u,
+        LabelTypes.Hot, HealFact.FlagOwnerInLine, (short)-1, HealFact.NoSpell);                     // no spell, no paren, no text mask
+      rows[7] = new HealFact(9, rows[0].TimeS - 3, healer, healed, 5, 9, LabelTypes.Heal, 0, 0, spell);   // the clock went backwards
+      rows[HealChunk - 1] = new HealFact(int.MaxValue - 2, FixtureTime.BaseL + 900_000_000, 1, 2, 1, 2, LabelTypes.Hot, 1, 3, 0);
+
+      var blob = HealFactChunkCodec.Encode(rows, rows.Length);
+      var back = HealFactChunkCodec.Decode(blob, rows.Length);
+
+      Assert.AreEqual(rows.Length, back.Length, "the decode owes one row per row encoded");
+      for (var i = 0; i < rows.Length; i++) AssertSameHeal(rows[i], back[i], i);
+      Assert.IsTrue(blob.Length < (HealChunk * 24) / 2,
+        $"heals transpose less well than damage, but cold storage still has to beat half the row bytes (blob {blob.Length} of {HealChunk * 24})");
+    }
+
+    private static void AssertSameHeal(in HealFact want, in HealFact got, int ordinal)
+    {
+      Assert.AreEqual(want.Seq, got.Seq, $"heal {ordinal}: seq");
+      Assert.AreEqual(want.TimeS, got.TimeS, $"heal {ordinal}: time");
+      Assert.AreEqual(want.HealerIdx, got.HealerIdx, $"heal {ordinal}: healer id");
+      Assert.AreEqual(want.HealedIdx, got.HealedIdx, $"heal {ordinal}: healed id");
+      Assert.AreEqual(want.Total, got.Total, $"heal {ordinal}: total");
+      Assert.AreEqual(want.OverTotal, got.OverTotal,
+        $"heal {ordinal}: OverTotal is the line's own word - 0 means 'no paren', so a codec that wrote AskedFor instead would move every overheal figure");
+      Assert.AreEqual(want.TypeId, got.TypeId, $"heal {ordinal}: type");
+      Assert.AreEqual(want.Flags, got.Flags, $"heal {ordinal}: flags");
+      Assert.AreEqual(want.ModMask, got.ModMask, $"heal {ordinal}: modifier mask");
+      Assert.AreEqual(want.SubIdx, got.SubIdx, $"heal {ordinal}: spell id");
+    }
+
+    private static HealFactTable HealsFilled(int count, out HealFact[] expected)
+    {
+      var names = new DamageFactTable();
+      var healer = names.InternName("Reisil");
+      var healed = names.InternName("Coas");
+      var table = new HealFactTable(names);
+      expected = new HealFact[count];
+      for (var i = 0; i < count; i++)
+      {
+        expected[i] = new HealFact(i + 1, FixtureTime.BaseL + (i / 3), healer, healed,
+          total: (uint)(i * 7919), overTotal: (uint)(i * 9000),
+          typeId: (i % 6 == 0) ? LabelTypes.Hot : LabelTypes.Heal,
+          flags: (byte)((i % 5 == 0) ? HealFact.FlagOwnerInLine : 0),
+          modMask: (short)((i % 9 == 0) ? 0x0F : 0),
+          subIdx: (ushort)(i % 3 == 0 ? HealFact.NoSpell : i % 20));
+        table.AddHeal(expected[i]);
+      }
+      return table;
+    }
+
+    /// <summary>The heal handoff follows the damage rule: below the floor nothing goes cold, past it only the full chunks older than the newest
+    /// two, and every heal ordinal — including the one a window walk finds by BINARY SEARCH — still names its own row.</summary>
+    [TestMethod]
+    public void HealChunksGoColdOnTheSameRuleAndStillAnswerTheirOrdinals()
+    {
+      // Under the floor: a short session is not worth a thread per 768 KiB.
+      var small = HealsFilled(HealChunk + 1000, out _);
+      Assert.AreEqual(0, small.ColdifyNow(), "a capture under the floor keeps its rows in memory");
+      Assert.AreEqual(0, small.ColdRowCount);
+
+      // Past it: four chunks. The append itself cools what its successor opened; the probe takes the rest.
+      var heals = HealsFilled(HealChunk * 4, out var expected);
+      Assert.IsTrue(heals.ColdRowCount > 0, "the handoff runs while the table grows, not only when asked");
+      Assert.IsTrue(heals.ColdifyNow() > 0, "the chunks between the handoff floor and the newest two go cold on request too");
+      Assert.AreEqual(heals.ColdChunkCount, heals.ColdRowCount / HealChunk);
+      Assert.IsTrue(heals.HealChunksAllocated <= 3, $"the warm set stays at the newest chunks plus one (has {heals.HealChunksAllocated})");
+
+      for (var i = 0; i < expected.Length; i++) AssertSameHeal(expected[i], heals.At(i), i);
+      Assert.AreEqual(0, heals.ColdChunkCount, "a chunk the reader asked for came back to rows and stopped costing its blob");
+
+      // The entry point a heal window walk really uses: a halving that lands in the middle of the capture, where rows live in blobs. Three rows
+      // share a second in this fixture, so what is owed is the FIRST row at or after that second - and a cold row read as the zero row would show
+      // up here as a start point far to the right.
+      var probe = expected.Length / 2;
+      var target = heals.At(probe).TimeS;
+      var found = heals.FirstIndexAtOrAfter(target);
+      Assert.IsTrue(found <= probe && heals.At(found).TimeS == target, $"cold halving landed at {found} for second {target}");
+      Assert.IsTrue(found == 0 || heals.At(found - 1).TimeS < target, "the start point is the first row of its second, not one after it");
+      Assert.AreEqual(expected[found].Total, heals.At(found).Total, "and that row is still its own heal, not a zero row");
+    }
+
+    /// <summary>A heal slice walk over cold chunks returns every row once, and the estimate that feeds the spill trigger reports the blobs.</summary>
+    [TestMethod]
+    public void HealSlicesCrossColdSeamsAndTheEstimateReportsTheBlobs()
+    {
+      var heals = HealsFilled(HealChunk * 4, out var expected);   // past the table's own floor, so anything may go cold
+
+      var before = (long)expected.Length * 24;                  // what the same rows cost as rows
+      Assert.IsTrue(heals.ColdifyNow() > 0);
+      Assert.IsTrue(heals.ColdBlobBytes > 0, "the blobs are counted, not just the live chunks");
+      Assert.IsTrue(heals.EstimatedBytes < before / 2,
+        $"cold heals have to more than halve the estimate against their own row bytes ({before / 1048576.0:F1} MB of rows -> {heals.EstimatedBytes / 1048576.0:F1} MB store)");
+
+      var seen = 0;
+      foreach (var slice in heals.HealsIn(HealChunk - 5, heals.HealCount))
+        for (var i = 0; i < slice.Length; i++)
+        {
+          AssertSameHeal(heals.At((HealChunk - 5) + seen), slice[i], (HealChunk - 5) + seen);
+          seen++;
+        }
+      Assert.AreEqual(heals.HealCount - (HealChunk - 5), seen, "cold chunks and a live tail walk as one contiguous range");
+    }
+
   }
 }

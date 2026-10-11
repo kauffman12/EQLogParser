@@ -20,6 +20,8 @@ namespace EQLogParser
   [TestClass]
   public class ColdChunkRealLogTest
   {
+    private const int HealChunk = HealFactTable.HealChunkSize;
+
     [TestMethod]
     public void EveryRowOfACaptureSurvivesBeingPutAway()
     {
@@ -27,6 +29,11 @@ namespace EQLogParser
       if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) Assert.Inconclusive("set EQLP_COLD_REALLOG=local/logs/live/eqlog_….txt to run this");
 
       var run = PipelineHarness.RunFileDerived(path);
+
+      // What the load itself left behind, before this test reads anything: the handoff should already have cooled everything older than the newest
+      // two chunks on both streams. If a number here is 0, the append seam that filled this capture skipped the handoff and production would too.
+      Console.WriteLine($"[cold] after load, before reading: damage {run.Facts.ColdChunkCount * DamageFactTable.FactChunkSize:N0} rows cold ({run.Facts.ColdChunkCount} blobs), " +
+                        $"heals {((HealFactTable)run.HealFacts).ColdRowCount:N0} rows cold ({((HealFactTable)run.HealFacts).ColdChunkCount} blobs)");
       var facts = run.Facts;
       var count = facts.FactCount;
 
@@ -65,6 +72,56 @@ namespace EQLogParser
       Assert.IsTrue(blobBytes < rawBytes / 2, $"cold storage has to be worth its CPU (blobs {blobBytes / 1048576.0:F1} MB of {rawBytes / 1048576.0:F1} MB)");
       Console.WriteLine($"[cold] read the whole capture back in {readBackMs} ms after coldify; store now {facts.EstimatedBytes / 1048576.0:F1} MB " +
                         $"({facts.ColdChunkCount} chunks still cold — reading returns rows)");
+      Console.WriteLine($"[cold] read the whole capture back in {readBackMs} ms after coldify; store now {facts.EstimatedBytes / 1048576.0:F1} MB " +
+                        $"({facts.ColdChunkCount} chunks still cold — reading returns rows)");
+
+      // The heal stream, same probe on its own table: it is a third of the row bytes here and the healing board reads it through the same door.
+      var heals = (HealFactTable)run.HealFacts;
+      var healBlobAfterLoad = heals.ColdBlobBytes;
+      var healCount = heals.HealCount;
+      var healBefore = new HealFact[healCount];
+      var h = 0;
+      foreach (var slice in heals.HealsIn(0, healCount))
+        for (var s2 = 0; s2 < slice.Length; s2++) healBefore[h++] = slice[s2];
+      Assert.AreEqual(healCount, h, "the pre-pass walked every heal");
+
+      var healRawRows = (long)healCount * 24;
+      w.Restart();
+      var healChunks = heals.ColdifyNow();
+      var healEncodeMs = w.ElapsedMilliseconds;
+      var healBlobBytes = heals.ColdBlobBytes;
+
+      w.Restart();
+      for (var k = 0; k < healCount; k++)
+      {
+        var got = heals.At(k);
+        Assert.AreEqual(healBefore[k].Seq, got.Seq, $"heal {k} came back with a different sequence");
+        Assert.AreEqual(healBefore[k].Total, got.Total, $"heal {k} came back with a different amount");
+        Assert.AreEqual(healBefore[k].OverTotal, got.OverTotal, $"heal {k} came back with a different ask (overheal)");
+        Assert.AreEqual(healBefore[k].HealerIdx, got.HealerIdx, $"heal {k} came back from a different healer");
+      }
+      var healReadMs = w.ElapsedMilliseconds;
+
+      Console.WriteLine($"[cold/heal] blobs standing right after the load (before this probe read anything): {healBlobAfterLoad / 1048576.0:F1} MB");
+      Console.WriteLine($"[cold/heal] {healCount:N0} heals, {healChunks} chunks put away on request in {healEncodeMs} ms | " +
+                        $"rows {healRawRows / 1048576.0:F1} MB -> blobs {healBlobBytes / 1048576.0:F1} MB " +
+                        $"(ratio {healRawRows / (double)Math.Max(1L, healBlobBytes):F2}x on the cold part); read back in {healReadMs} ms");
+      // A chunk-by-chunk encode of every row, measured directly: the number the load's own blobs should match. If the standing blobs are much
+      // smaller than this, some chunk went cold that was not full, and a reader would be getting zero rows out of it.
+      var probeBlob = 0;
+      for (var start = 0; start < healCount; start += HealChunk)
+      {
+        var n = Math.Min(HealChunk, healCount - start);
+        var window = new HealFact[n];
+        for (var q = 0; q < n; q++) window[q] = heals.At(start + q);
+        probeBlob += HealFactChunkCodec.Encode(window, n).Length;
+      }
+      Console.WriteLine($"[cold/heal] fresh chunk-by-chunk encode of all {healCount:N0} rows: {probeBlob / 1048576.0:F1} MB " +
+                        $"(ratio {healRawRows / (double)Math.Max(1, probeBlob):F2}x) vs {healBlobAfterLoad / 1048576.0:F1} MB standing after the load");
+
+      var blobForRatio = Math.Max(healBlobBytes, healBlobAfterLoad);
+      Assert.IsTrue(blobForRatio > 0 && blobForRatio < healRawRows / 2,
+        $"cold heals have to be worth their CPU (blobs {blobForRatio / 1048576.0:F1} MB of {healRawRows / 1048576.0:F1} MB of rows)");
     }
   }
 }
