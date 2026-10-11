@@ -764,6 +764,11 @@ namespace EQLogParser
 
       UiElementUtil.OpenCellPopup(typeEditPopup, typeEditComboBox, cell, () =>
       {
+        // What the ComboBox holds at the moment the gesture dies is the answer to "did a pick commit": "(none)" means
+        // WPF closed it before an item landed (a press that never reached the list), a word means the pick was made and
+        // the failure is downstream. Logged before the fields are cleared, because onClosed clears the row first and any
+        // later probe would read "no row in hand" no matter what the click did.
+        Log.Debug($"identity cell: {DoorType} closing for {_typeEditRow?.Name ?? "?"} with selection {(typeEditComboBox.SelectedItem as IdentityVocabulary.TypeOption)?.Word ?? "(none)"}");
         _typeEditRow = null;
         typeEditComboBox.SelectedItem = null;
 
@@ -853,6 +858,7 @@ namespace EQLogParser
 
       UiElementUtil.OpenCellPopup(classEditPopup, classEditComboBox, cell, () =>
       {
+        Log.Debug($"identity cell: {DoorClass} closing for {_classEditRow?.Name ?? "?"} with selection {classEditComboBox.SelectedItem ?? "(none)"}");
         _classEditRow = null;
         classEditComboBox.SelectedItem = null;
         Editors.Close();
@@ -913,6 +919,7 @@ namespace EQLogParser
       UiElementUtil.OpenCellPopup(ownerEditPopup, ownerEditComboBox, cell, () =>
       {
         _ownerEditRow = null;
+        Log.Debug($"identity cell: {DoorOwner} closing for {_ownerEditRow?.Name ?? "?"} with selection {(object?)ownerEditComboBox.SelectedItem ?? "(none)"}");
         ownerEditComboBox.SelectedItem = null;
         Editors.Close();
       });
