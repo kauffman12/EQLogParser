@@ -11584,3 +11584,28 @@ one `NameRow` per newcomer, which the merge already built.
 * The `<Separator />` in front of the identity entry is gone and the entry sits between **_Fight List** and
   **_Preview Parse**: those three are the panes you read a capture with, in the order you use them, and a line
   through the middle of one group is how a menu starts looking like two groups that were never there.
+
+## An unchanged fight row is not rebuilt every pass (2026-11)
+
+During a live raid the cheap derive lane runs about twice a second, and `DerivedFightRows.Build` paid for it in full every
+time: a fresh `DerivedFightRow` plus roughly six formatted strings (`Key`, `Begin`, `Last`, `Duration`, the tooltip's
+interpolated numbers, identity/source) for EVERY row the capture has ever made — a few thousand rows on a night, so thousands
+of objects and tens of KB per pass, forever, whether or not anything happened to any row. That is the allocation a task manager
+shows climbing during a pull, and none of it was work the screen needed.
+
+`DerivedRowCarry` (passed in by `DeriveEngine`, one per session) keys rows by their existing display key and hands back the
+SAME instance when every input to every printed field is unchanged: the same `DerivedFight` object, the same identity answer and
+source string, the same damage/hit/tank-hit totals, the same `LastTime`. Then, and only then, are all the strings on the row
+identical by definition, so reuse is invisible — nothing moved, so nothing has to be announced. Anything else allocates exactly
+as before: **a row whose numbers grew is a NEW object**, because the grid already holds the previous one and mutating an instance
+would change pixels without `RowPatch`/`ContentChanged` ever saying so. That half is the reason this is reuse-rather-than-mutation.
+
+**It is not static, and that is a session rule, not tidiness**: a carried row holds its `DerivedFight`, so a static carry would
+keep a closed log's fights reachable — the same law `DerivedSnapshot.SessionId` and "no surface may hold a `DeriveEngine` past
+its session" state. `DeriveEngine.Dispose` nulls it. Entries for rows that left the list (a clear, a re-projection) are swept once
+they outnumber live rows twofold, so a capture that churned names cannot grow the carry without bound.
+
+`DerivedRowCarryTest` pins the pair and the anti-static guard: unchanged → `AreSame`; grown damage/hits → `AreNotSame`, with the
+previously handed-out row still reading what it was told; a different carry → fresh objects (so no reuse can come from process
+state); rows that vanish → swept. Numbers before/after come from the app (Process Explorer over a live session, or
+`PerfReport=True` for generation counts in `eqlogparser.log`) rather than from this file.

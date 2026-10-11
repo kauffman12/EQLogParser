@@ -1,3 +1,5 @@
+#nullable enable annotations
+
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -190,10 +192,86 @@ namespace EQLogParser
     internal IReadOnlyList<DerivedFight> AllFights = [];
   }
 
+  /*
+   * What a live session keeps between derive passes so an unchanged row costs nothing to draw. (2026-11, measured by the workflow
+   * rather than a profiler: a raid hands this class two passes a second, and every pass walked EVERY row the capture has ever made —
+   * a night of ~4,000 rows is ~8,000 fresh row objects and roughly six formatted strings each, per second, whether or not anybody
+   * clicked. That gen-0 traffic is what Process Explorer shows climbing during a live pull.)
+   *
+   * The rule is narrow on purpose: a row is reused ONLY when the underlying `DerivedFight` is the same object AND every value the row
+   * prints is unchanged — identity, source, both hit counts, status, times. Then, and only then, are the values identical by
+   * definition, so handing back the SAME instance is invisible to the grid: nothing changed, so nothing has to be announced.
+   * Anything different allocates exactly as before.
+   *
+   * It is deliberately NOT static. A carried row holds its `DerivedFight`, and a closed log's fights are the thing `Dispose` promises
+   * to let go (see DerivedSnapshot.SessionId and "no surface may hold a DeriveEngine past its session"); this lives on the engine
+   * instance and dies with it. Entries for rows that left the list are swept when they outnumber live rows twofold, so a capture that
+   * churned names cannot grow without bound.
+   */
+  internal sealed class DerivedRowCarry
+  {
+    internal sealed class Entry(DerivedFight fight, DerivedFightRow row, IdentityKind identity, string source,
+      int tankHits, double lastTime, long damage, uint hits)
+    {
+      internal readonly DerivedFight Fight = fight;
+      internal readonly DerivedFightRow Row = row;
+      internal readonly IdentityKind Identity = identity;
+      internal readonly string Source = source;
+      internal readonly int TankHits = tankHits;
+      internal readonly double LastTime = lastTime;
+      internal readonly long Damage = damage;
+      internal readonly uint Hits = hits;
+      internal int Pass;
+
+      // Every input the row's printed fields are computed from. Reference equality on the fight is the cheap half;
+      // the numbers are the rest, because a continued live row is the same object with bigger totals.
+      internal bool Matches(DerivedFight other, IdentityKind identity, string source, int tankHits)
+        => ReferenceEquals(Fight, other)
+           && Identity == identity && Source == source && TankHits == tankHits
+           && LastTime == other.LastTime && Damage == other.DamageTotal && Hits == other.DamageHits;
+    }
+
+    // Dividers carry their gap; their only field is the formatted silence inside it.
+    internal sealed class DividerEntry(double gapFrom, double gapTo, DerivedFightRow row) 
+    {
+      internal readonly DerivedFightRow Row = row;
+      internal int Pass;
+      internal bool Matches(double from, double to) => gapFrom == from && gapTo == to;
+    }
+
+    private readonly Dictionary<string, Entry> _rows = []; // OrdinalIgnoreCase: the keys embed a name.
+    private readonly Dictionary<string, DividerEntry> _dividers = [];
+    private int _pass;
+
+    internal int RowCount => _rows.Count;
+    internal Entry? Find(string key) => _rows.TryGetValue(key, out var e) ? e : null;
+    internal DividerEntry? FindDivider(string key) => _dividers.TryGetValue(key, out var e) ? e : null;
+    internal void Put(string key, Entry entry) => _rows[key] = entry;
+    internal void PutDivider(string key, DividerEntry entry) => _dividers[key] = entry;
+
+    /// <summary>Marks the start of a pass; entries not touched by it are swept once they pile up.</summary>
+    internal int BeginPass() => ++_pass;
+
+    internal void Sweep(int liveRows)
+    {
+      if (_rows.Count <= liveRows * 2 && _dividers.Count <= liveRows * 2) return;
+
+      List<string>? stale = null;
+      foreach (var pair in _rows)
+        if (pair.Value.Pass != _pass) (stale ??= []).Add(pair.Key);
+      if (stale is not null) foreach (var key in stale) _rows.Remove(key);
+
+      stale = null;
+      foreach (var pair in _dividers)
+        if (pair.Value.Pass != _pass) (stale ??= []).Add(pair.Key);
+      if (stale is not null) foreach (var key in stale) _dividers.Remove(key);
+    }
+  }
+
   internal static class DerivedFightRows
   {
     public static DerivedSnapshot Build(IReadOnlyList<DerivedFight> fights, EntityTimeline timeline, long factCount,
-      DamageFactTable facts, FightFactIndex damageIndex)
+      DamageFactTable facts, FightFactIndex damageIndex, DerivedRowCarry? carry = null)
     {
       var snapshot = new DerivedSnapshot
       {
@@ -206,28 +284,51 @@ namespace EQLogParser
       };
 
       snapshot.AllFights = fights;
+      var pass = carry?.BeginPass() ?? 0;
 
       foreach (var (isDivider, gapFrom, gapTo, fight) in Sectionizer.ToDisplayRows(CharmPetRows.Visible(fights)))
       {
         if (isDivider)
         {
-          snapshot.Rows.Add(new DerivedFightRow
+          var dKey = DividerKey(gapFrom);
+          if (carry?.FindDivider(dKey) is { } held && held.Matches(gapFrom, gapTo))
+          {
+            held.Pass = pass;
+            snapshot.Rows.Add(held.Row);
+            continue;
+          }
+
+          var divider = new DerivedFightRow
           {
             IsDivider = true,
-            Key = DividerKey(gapFrom),
+            Key = dKey,
             Name = "Inactivity > " + DateUtil.FormatGeneralTime(Math.Max(0, gapTo - gapFrom)),
-          });
+          };
+          carry?.PutDivider(dKey, new DerivedRowCarry.DividerEntry(gapFrom, gapTo, divider) { Pass = pass });
+          snapshot.Rows.Add(divider);
           continue;
         }
 
         snapshot.FightCount++;
         var identity = timeline.IdentityWithSource(fight.Name, out var source);
+        var tankHits = damageIndex.TankingOrdinalCount(fight);
+        var key = FightKey(fight);
+
+        // Unchanged since the last pass, down to the object: same fight, same identity answer, same numbers. Reusing the row is
+        // invisible precisely because every value on it is identical — no field moved, so there is nothing for the grid to learn.
+        if (carry?.Find(key) is { } carried && carried.Matches(fight, identity, source ?? string.Empty, tankHits))
+        {
+          carried.Pass = pass;
+          snapshot.Rows.Add(carried.Row);
+          continue;
+        }
+
         var status = StatusOf(fight);
         var tooltip = $"#Hits To Players: {damageIndex.TankingOrdinalCount(fight)}, "
                     + $"#Hits From Players: {fight.DamageHits}, Time Alive: {(long)fight.DurationSeconds}s";
         if (status.Length > 0)
           tooltip += $", {status}";
-        snapshot.Rows.Add(new DerivedFightRow
+        var row = new DerivedFightRow
         {
           Key = FightKey(fight),
           Name = fight.Name,
@@ -254,9 +355,13 @@ namespace EQLogParser
           Status = status,
           TooltipText = tooltip,
           Fight = fight,
-        });
+        };
+        carry?.Put(key, new DerivedRowCarry.Entry(fight, row, identity, source ?? string.Empty, tankHits,
+                                                 fight.LastTime, fight.DamageTotal, fight.DamageHits) { Pass = pass });
+        snapshot.Rows.Add(row);
       }
 
+      carry?.Sweep(snapshot.FightCount);
       return snapshot;
     }
 

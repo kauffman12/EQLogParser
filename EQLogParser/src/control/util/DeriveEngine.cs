@@ -94,6 +94,9 @@ namespace EQLogParser
     // the pass that produced the rows, so it has to be reachable from the UI without re-deriving.
     private DerivedSnapshot _snapshot;
 
+    // Reused row objects for THIS capture only (DerivedRowCarry); nulled on Dispose so a closed log's fights are not kept alive by them.
+    private DerivedRowCarry _rowCarry = new();
+
     /*
      * The projection carried from pass to pass, together with the index its facts went into. Whether a pass may continue it
      * is decided inside (FightProjectionCache) on two gates: the watermarks still name the same facts, and the
@@ -457,7 +460,14 @@ namespace EQLogParser
             // dividers in this grid.
             Sectionizer.StampGroupIds(fights);
 
-            var snapshot = DerivedFightRows.Build(fights, timeline, CapturedTotal, _facts, damageIndex);
+            /*
+             * Rows are built with this session's carry (DerivedRowCarry): a row whose fight and every printed value are unchanged since
+             * the last pass comes back as the SAME object instead of a fresh one plus six formatted strings. A raid runs two passes a
+             * second over every row the capture has ever made, so that reuse is the difference between an idle-hour allocation rate and
+             * a live one; it lives here, on the session, because a carried row holds its fight and a closed log's fights must not stay
+             * reachable through anything static.
+             */
+            var snapshot = DerivedFightRows.Build(fights, timeline, CapturedTotal, _facts, damageIndex, _rowCarry);
             snapshot.Heals = _heals;
             // Every announcement says which capture it came from; see DerivedSnapshot.SessionId.
             snapshot.SessionId = SessionId;
@@ -652,6 +662,9 @@ namespace EQLogParser
       _disposed = true;
       _quietTimer.Stop();
       _capture.Stop();
+
+      // Carried rows hold their fights; dropping the carry is part of letting a closed capture go.
+      _rowCarry = null;
 
       // The fact table is the biggest thing the engine holds; a disposed session must not stay the reason
       // a closed log's records are still reachable.
