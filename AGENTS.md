@@ -25,7 +25,7 @@ You are an expert AI assistant tasked with maintaining this C#/WPF/.net 10.0 pro
 - **Zero warnings is the bar, and it is counted, not hoped for**: `dotnet build EQLogParser.sln -p:EnableWindowsTargeting=true --no-incremental --nologo 2>&1 | grep -cE ": (warning|error) [A-Z]+[0-9]+"` prints **0** before a commit
   (`--no-incremental` is load-bearing: MSBuild reports diagnostics only for projects it recompiles, so counting after `dotnet test` prints 0 about
   assemblies it never rebuilt — that is how an MSTEST0017 in a new test file shipped past a "clean" local count; docs/CodingStandards.md → "Build Warnings") (match diagnostics, not words — MSBuild's summary always contains `0 Warning(s)`). Nine CS8632s shipped once because a file in Core (project `Nullable=disable`) wrote `string?` without opening `#nullable enable annotations`; the whole fleet is one pragma, and it is why each new warning dies in its own commit (docs/CodingStandards.md → "Build Warnings", "Nullable Reference Types"). Nothing in this repo suppresses a warning (`#pragma warning disable`, `<NoWarn>`) — fixing the cause is the rule.
-- Tests: `dotnet test EQLogParser.Test/EQLogParser.Test.csproj` is the non-WPF suite (**1,933 passed / 14 env-gated skips**, plain `net10.0`, 2026-10-09 — the trim-moves-no-ordinal law, the once-per-doubling watermark and the ungrowable-empty-array floor are in that count). `EQLogParser.Wpf.Test` targets `net10.0-windows` and only
+- Tests: `dotnet test EQLogParser.Test/EQLogParser.Test.csproj` is the non-WPF suite (**1,958 passed / 16 env-gated skips**, plain `net10.0`, 2026-11 — the trim-moves-no-ordinal law, the once-per-doubling watermark, the ungrowable-empty-array floor and the copy boundary's no-sharing field sweep are in that count). `EQLogParser.Wpf.Test` targets `net10.0-windows` and only
   runs on Windows; its total belongs to a Windows run rather than being quoted here (a `[TestMethod]` grep counts data-driven variants and is not an executed count) — add it to the headless number instead of trusting arithmetic. A Windows run that *loses* `Sta.Run` bodies rather than failing them is the failure mode to watch.
 - **Real-log corpus layout (local/, gitignored)**: `local/logs/live/` holds live-format captures; `local/logs/emu/` holds EMU-server captures (THJ/TSS/Heroes Forge shapes) that need the app's `EnableEmuParsing` behaviour. The env-gated real-log tests run them via **`EQLP_EMU=1`**, which sets `AppSettings.IsEmuParsingEnabled` for the duration of a `PipelineHarness` run (restored after — the flag is process-global and live-format logs misparse with it on). Without it an EMU capture parses with DamageLineParser's live grammar and silently loses the `(Owner: X)` / `scores a critical hit! (N)` shapes, so a parity run over `emu/` without the flag measures nothing. Timestamps are the same `[DDD MMM dd HH:mm:ss yyyy]` shape in both directories.
 
@@ -1639,6 +1639,27 @@ After completing work, verify:
   need the same question asked separately. Retention clears: carrying every published cell costs **4.2-7.9 MB** per session (amounts at 8 B per
   damaging record dominate; cells/segments grow with keys). docs/DesignNotes.md → "Fold-at-publish measured: the cost cleared the bar, and the
   row on screen did not".
+- **A carried cell is TAKEN, never lifted: `StatsSnapshot` drains on the COPY and shares nothing** (2026-11, layer 2 step 1 — the blocker
+  the fold-at-publish bullet left behind): a published row may not be cached, because it keeps its `BestSecTemp` by law (`StatResumeTest`:
+  publishing must leave the running second able to grow) and `MergeStatsRecursive` refuses that per level. The boundary is one call —
+  `StatsSnapshot.Take(row)` / `.TakeCell(node)` — whose result has every node's second closed while the live row keeps its own scratch, so
+  **`(BestSec, BestSecTemp)` is the ONLY pair of fields allowed to change across it** (named in the field sweep; exceptions are written down,
+  never skipped). **Detached** means every reference is re-pointed after `MemberwiseClone`: the three child lists AND their `SubStatIndex`
+  accelerators **rebuilt over the copies** (`SubStatLookup` never scans, so an un-indexed copy mints a second row for a key the board already
+  has), `Specials`/`ResistCounts`/`Deaths` as new containers, `TimeRange`s through the overload that **copies segments** (the
+  `List<TimeSegment>` overload adopts and welds), `Attempt`'s private amounts/dictionaries via `CopyDistributionTo` **in whichever shape they
+  are** (a copy taken after `HitFreqChart` materialized a row must carry dictionaries, or it arrives EMPTY because the lists were released),
+  `GroupEntry.Members/Children`, and a `MoreStats` cycle meets its own clone rather than the stack; the copy's `PropertyChanged` subscription
+  is dropped (`DetachViewSubscribers`) so a snapshot no grid shows cannot keep a pane alive. **A row shape not listed in
+  `StatsSnapshot.RowShapes` throws by name** instead of being scalar-copied into sharing its fields: adding a `PlayerStats`/`PlayerSubStats`
+  subclass means adding it there, and the `internal set` added to the published child lists belongs to this file only (the write law — every
+  row enters through `SubStatOf`/`SubStat2Of`/`SubSubStatOf` — is unchanged). Cost, measured by `SnapshotCostProbeTest`
+  (`EQLP_SNAPSHOT_COST=<log>`, alternated arms): **a snapshot is 0.88-2.10 % of the recount it replaces** (raid 2.6 ms vs 219 ms over 38 rows
+  and 1.05 M records; farm night 1.0 vs 115 ms; group `Roper_thj` 2.9 vs 140 ms over 207 rows, mean 14 µs/row), and carrying every published
+  row retains **4.4-8.2 MB**, raw amounts being the bulk (7.6 of the 8.2) — the same order as the fold probe's independent estimate. **Nothing
+  in production calls it yet**: step 2 (cells keyed by row × ordinal window under `FightMaterializationCache`'s identity proof, with a
+  full-build fallback) is unbuilt, and tanking/healing have not been asked their own version of the question. docs/DesignNotes.md → "The copy
+  a carried cell needs, and the second it has to be taken at"; laws pinned by `StatsSnapshotTest`.
 - **A refresh answers for itself; only a machine's refresh may decline, and it says so** (2026-11): an applied change is visible in
   the place the operator is looking — the row that left the list is gone, a claimed summon reads `X +Pets` — because re-presenting a
   pool the builder already holds costs **~10 ms for one row, 25–32 ms for a whole-capture selection**, and the boards' own door prints
