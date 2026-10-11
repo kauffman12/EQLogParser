@@ -272,10 +272,12 @@ namespace EQLogParser
      * "No board" is NULL, never an empty list — one rule across all three summary panes (see DamageSummary.ClearData for the
      * reasoning and the field report behind it). A placeholder collection reads as data to this pane's own guards while showing nothing.
      */
+    // An empty collection, not null: null is the grid's word for "data has not arrived", and it answers that with a centered spinner.
+    // See SummaryTable.ShowNoResults; this pane's guards ask CurrentStats, so nothing reads the widget for an answer.
     private void ClearData()
     {
       CurrentStats = null;
-      dataGrid.ItemsSource = null;
+      dataGrid.ItemsSource = NoResultsList;
       title.Content = Labels.NoNpcs;
     }
 
@@ -312,7 +314,7 @@ namespace EQLogParser
               _busyState.Arm(() =>
               {
                 title.Content = "Calculating Tanking DPS...";
-                dataGrid.ItemsSource = null;
+                dataGrid.ItemsSource = NoResultsList;
               }, "tanking");
               break;
             case "COMPLETED":
@@ -356,8 +358,9 @@ namespace EQLogParser
             case "NODATA":
               CurrentStats = null;
               // Empty answers clear the grid: see DamageSummary's NONPC/NODATA branch. A shift-click that
-              // removes the last selected fight announced zero fights and left the previous rows on screen.
-              dataGrid.ItemsSource = null;
+              // removes the last selected fight announced zero fights and left the previous rows on screen — and they clear to an
+              // empty COLLECTION, not null, which the grid renders as a spinner over an answer that already arrived.
+              dataGrid.ItemsSource = NoResultsList;
               maxTimeChooser.MaxValue = 0;
               minTimeChooser.MaxValue = 0;
               title.Content = e.State == "NONPC" ? Labels.NoNpcs : Labels.NoData;

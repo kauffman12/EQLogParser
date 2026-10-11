@@ -130,11 +130,17 @@ namespace EQLogParser
       parent.Items.Add(item);
     }
 
-    internal void Clear()
-    {
-      TheTitle.Content = Labels.NoNpcs;
-      TheDataGrid.ItemsSource = null;
-    }
+    /*
+     * "No rows to show" is THIS empty collection, never null (2026-11, returning to the pattern master ships). SfDataGrid/SfTreeGrid have
+     * two words for an empty table and only one of them is quiet: null means "the data has not arrived" and the control answers it with a
+     * spinner in the middle of the grid — an animation claiming work is under way, whether or not anything is coming — while an empty list
+     * draws an empty table. Every pane therefore hands back NoResultsList from ClearData, from STARTED (its title already says what it is
+     * waiting for; the grid does not need to invent a second indicator nobody controls), and from a build that found no NPCs / no data.
+     *
+     * The one null that stays is DamageSummary's group re-slice, where assigning null BEFORE the grouped list exists to make the tree grid
+     * see a change; that is a control workaround, not a state. And no pane asks its grid whether an answer exists — those guards read
+     * CurrentStats, which is what makes an empty placeholder safe to display (docs/DesignNotes.md → "A busy state may not compete with its own answer").
+     */
 
     internal void ClassSelectionChanged(object sender, EventArgs e)
     {

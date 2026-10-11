@@ -707,17 +707,20 @@ namespace EQLogParser
     }
 
     /*
-     * "There is no board here" is NULL, never an empty list. A placeholder collection is a third state the rest of this pane
-     * cannot read: its guards ask "do we have an answer?" of the grid (`ItemsSource != null`), and an empty list answers YES while
-     * showing nothing — so the time-window dial lit its hourglass over a blank table and even queued a re-slice of a board that did
-     * not exist. The one place the empty list stays is SummaryTable's constructor, where it exists to keep column drag-and-drop from
-     * failing before any data has ever arrived. (Field report, 2026-11: "im seeing the busy indicator showing up in the data grid
-     * table in the damage summary when i deselect back to nothing selected".)
+     * "There is no board here" is an EMPTY COLLECTION (ShowNoResults), not null. Null is the grid's own word for "the data has not
+     * arrived", and SfDataGrid/SfTreeGrid answer it with a spinner in the middle of the table — so a finished build that found nothing
+     * sat under an animation claiming work was still happening (field report: "the datagrid itself puts a busy icon in the center of the
+     * table area when its empty", and "it wasnt happening before this branch" — the branch that made null the no-board value is the one
+     * that put it there). See SummaryTable.ShowNoResults for the two words and which state owns each.
+     *
+     * The placeholder never was the defect; the GUARD was. This pane used to ask `ItemsSource != null` — of the widget — whether there
+     * was an answer to re-slice, and an empty table said YES: the hourglass lit over nothing and the dial queued a rebuild of a board that
+     * does not exist. That question is asked of CurrentStats now, which is what makes handing the grid an honest empty list safe.
      */
     private void ClearData()
     {
       CurrentStats = null;
-      dataGrid.ItemsSource = null;
+      dataGrid.ItemsSource = NoResultsList;
       title.Content = Labels.NoNpcs;
       PopulateRosterSelector();
     }
@@ -735,7 +738,7 @@ namespace EQLogParser
             _busyState.Arm(() =>
             {
               title.Content = "Calculating DPS...";
-              dataGrid.ItemsSource = null;
+              dataGrid.ItemsSource = NoResultsList;
             }, "damage");
             break;
           case "COMPLETED":
@@ -779,8 +782,9 @@ namespace EQLogParser
             CurrentStats = null;
             // A build that found nothing has to answer for the rows already on screen: shifting the last row
             // out of the fight list announces zero fights, this branch sets the title, and without clearing the
-            // grid the old selection's rows stayed visible underneath "No NPCs".
-            dataGrid.ItemsSource = null;
+            // grid the old selection's rows stayed visible underneath "No NPCs". Empty collection, not null — this
+            // is a finished answer with no rows, not data that has not arrived.
+            dataGrid.ItemsSource = NoResultsList;
             maxTimeChooser.MaxValue = 0;
             minTimeChooser.MaxValue = 0;
             title.Content = e.State == "NONPC" ? Labels.NoNpcs : Labels.NoData;
