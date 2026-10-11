@@ -67,6 +67,14 @@ namespace EQLogParser
      * which means "this build stands alone" and is issued its own fresh group — i.e. today's warning behaviour, unchanged.
      */
     public int BuildGroup { get; set; }
+
+    /*
+     * Which capture and which classification this build belongs to, so the damage board may start from what the LAST build
+     * counted instead of re-counting the night (see DamageCellStore for what that buys and what invalidates it). Null on
+     * every door that cannot answer — a slice, a re-slice, a scope build over records nobody classified — and null means
+     * "count it all", which is exactly what those doors want.
+     */
+    public DamageBoardProof? CellProof { get; set; }
   }
 
 

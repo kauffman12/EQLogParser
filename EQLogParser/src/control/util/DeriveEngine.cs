@@ -720,6 +720,14 @@ namespace EQLogParser
     public DerivedSnapshot Snapshot => _snapshot;
 
     /*
+     * The classification state the rows on screen were folded under, for one question: may a board start from what its LAST
+     * build counted (`DamageCellStore`). Growth is fine — a cheap lane appends facts and never re-decides what a name IS — but a
+     * pass that moved a verdict re-routes records between a name and its `+Pets` row, and cells counted under the old answer
+     * would print a board nobody gets by clicking. 0 means "no timeline yet", which no door may treat as an answer.
+     */
+    public long ClassificationStamp => _carriedTimeline is { } carried ? carried.StateStamp() : 0L;
+
+    /*
      * The fights this window answers for, as legacy-shaped rows: the door MainWindow.GetFights feeds to the
      * spell, taunt, death and export paths while the engine is attached. Materialization is the same pass a board
      * click pays - records rebuilt from the facts - but nothing here is stored twice (the snapshot keeps the

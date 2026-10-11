@@ -912,6 +912,17 @@ namespace EQLogParser
         damageStatsOptions.AllRanges = input.AllRanges;
         damageStatsOptions.MinSeconds = 0;
 
+        /*
+         * The damage board's permission to start from what the last build counted (DamageCellStore). Both numbers are the
+         * engine's own: which capture this is, and whether anything re-decided a name since the rows were folded. A stamp of 0
+         * means no timeline has landed yet — not an answer, so no permission — and the store refuses a set for any other stamp
+         * than the one it was written under, so a re-classified pass recounts the night exactly as it does today.
+         */
+        if (session.ClassificationStamp is var stamp and > 0)
+        {
+          damageStatsOptions.CellProof = new DamageBoardProof(session.SessionId, stamp);
+        }
+
         // Same rows, other direction: TankingStatsBuilder walks fight.TankingBlocks and takes each player's
         // activity window from TankSegments, both of which the materializer fills off the same facts.
         GenerateStatsOptions tankingStatsOptions = new() { Source = door, BuildGroup = buildGroup };
