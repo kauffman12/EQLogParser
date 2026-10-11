@@ -12,7 +12,7 @@ namespace EQLogParser
    * column starts at the same pixel; Collapsed hands the space back, and the rows without an icon slide left of the
    * rows with one.
    *
-   * The Names and Identities pane is where this shows: its Type cell carries a pencil on most rows but deliberately
+   * The Identity Table is where this shows: its Type cell carries a pencil on most rows but deliberately
    * none on a spell effect or a summon whose own spelling fixes its Type (IdentityVocabulary.CanOverrule), and its
    * Class cell carries one only once a row reads Player. With Collapsed those exceptions punched a ragged left edge
    * through the middle of both columns — a difference in what a row ALLOWS, rendered as a difference in where its

@@ -117,7 +117,7 @@
               next pass. It is File / Open Monitor over the same file (MainWindow.ClearAllFights): nothing loaded, following from end of
               file, saved identity memory kept.
 
-          What is NOT here: an identity unset. "Set <name> as" writes; taking a verdict back is the Type cell of the Player/NPC Identity
+          What is NOT here: an identity unset. "Set <name> as" writes; taking a verdict back is the Type cell of the Identity Table
           pane, the app's one unset - and this menu's old "clear" was deleted rather than renamed (docs/DesignNotes.md).
         -->
         <ContextMenu>
@@ -177,7 +177,7 @@
           <!--
             Legacy's Clear All, in the shape a projection can honour (see MainWindow.ClearAllFights for why wiping rows
             is not a thing that exists here). THE only "clear" in this menu: the identity take-back that used to sit here
-            was deleted rather than renamed - unclaiming a name belongs to the Type cell of the Player/NPC Identity pane,
+            was deleted rather than renamed - unclaiming a name belongs to the Type cell of the Identity Table pane,
             and one verb wants one door. It is also the larger action of the two, which is why it is last.
           -->
           <MenuItem x:Name="clearAllItem" Header="Clear All" Click="ClearAllClick"

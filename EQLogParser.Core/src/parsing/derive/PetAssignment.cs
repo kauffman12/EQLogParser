@@ -13,7 +13,7 @@ namespace EQLogParser;
  * The ONE write behind "this summon belongs to that raider", whoever asked.
  *
  * Three DOORS make that claim, all of them a hand: the damage summary's and tanking summary's `Assign <name> as Pet of ▸` items
- * (picked from the board the operator is reading) and the Owner cell in Player/NPC Identity (picked where the name is read — this seam
+ * (picked from the board the operator is reading) and the Owner cell in the Identity Table (picked where the name is read — this seam
  * replaced the Pet Owners window's picker when that pane was retired on 2026-10-09, so there is still exactly one way to make the claim).
  * Chat deliberately stays off this path:
  * `ChatDB` reads `"Stormclaw says, 'My leader is Beorun.'"` straight into `PlayerRegistry`, and that is right — it is evidence

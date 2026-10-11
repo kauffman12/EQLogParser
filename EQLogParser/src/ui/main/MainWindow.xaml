@@ -264,21 +264,26 @@
                 <fa:ImageAwesome x:Name="npcIcon" Tag="npcWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
             </MenuItem>
+            <!--
+              One window for everything the three old panes held, plus what they could never show: what the rules
+              concluded and which line said so. Their menu entries are gone and so is their content: two surfaces for the same
+              names is how a stale list stays trusted. Pet Owners lost its separate window with them on 2026-10-09 — its own
+              reasoning ("it maintains the persistent owner pairs, which is something the user curates across logs, not legacy,
+              a different job") died the day petmapping.txt froze and a pair became a column of the identity ledger. An owner is
+              SET where the name is read: the Owner cell in the Identity Table. The ToolTip still names what this REPLACES,
+              because that is where ten years of users reach for: no jargon.
+
+              It sits BETWEEN the fight list and Preview Parse, and nothing separates it from either. These three are the panes
+              you read a capture with, in the order you use them; the line above used to divide the identity pane off as if it
+              belonged to another group, which is what it looks like when a separator says two things that are one thing.
+            -->
+            <MenuItem x:Name="namesWindowMenuItem" Header="_Identity Table" Click="MenuItemNamesClick"
+                      ToolTip="Shows who every name in the log is - player, pet, mercenary or NPC - whose summon it is, and what said so. Replaces the old Verified Players, Verified Pets and Pet Owners windows." />
             <MenuItem x:Name="playerParseTextWindowMenuItem" Header="_Preview Parse" Click="MenuItemWindowClick">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="playerParseIcon" Tag="playerParseTextWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
             </MenuItem>
-            <Separator />
-            <!-- One window for everything the three old panes held, plus what they could never show: what the rules
-                 concluded and which line said so. Their menu entries are gone and so is their content: two surfaces for the same
-                 names is how a stale list stays trusted. Pet Owners lost its separate window with them on 2026-10-09 — its own
-                 reasoning ("it maintains the persistent owner pairs, which is something the user curates across logs, not legacy,
-                 a different job") died the day petmapping.txt froze and a pair became a column of the identity ledger. An owner is
-                 SET where the name is read: the Owner cell in Player/NPC Identity. The ToolTip still names what this REPLACES,
-                 because that is where ten years of users reach for: no jargon. -->
-            <MenuItem x:Name="namesWindowMenuItem" Header="Player/NPC _Identity" Click="MenuItemNamesClick"
-                      ToolTip="Shows who every name in the log is - player, pet, mercenary or NPC - whose summon it is, and what said so. Replaces the old Verified Players, Verified Pets and Pet Owners windows." />
           </MenuItem>
         </MenuItem>
         <MenuItem Header="_Options" Margin="4,0,0,0">
@@ -544,7 +549,7 @@
           VESTIGIAL PANE, no content on purpose — same shape as mirrorFightWindow above.
 
           The Pet Owners grid is gone (2026-10-09): petmapping.txt froze into the identity ledger's ownership lane, its rows became
-          something you read and edit per NAME in Player/NPC Identity (the Owner column), and this pane's remaining job was a
+          something you read and edit per NAME in the Identity Table (the Owner column), and this pane's remaining job was a
           second list of those pairs, kept in order by a live-event pump on the UI thread. What stays is the NAME: a dockSite.xml
           saved while this pane was open still says "petMappingWindow", and LoadDockState throws on a window it cannot find —
           MainWindow's catch then calls ResetState() and wipes the operator's ENTIRE layout. MainWindow hides it after every load,
@@ -553,7 +558,7 @@
         <ContentControl x:Name="petMappingWindow" syncfusion:DockingManager.Header="Pet Owners (retired)" syncfusion:DockingManager.State="Hidden"
                       syncfusion:DockingManager.CanDocument="False"/>
         <!--
-          Player/NPC Identity, alone in the right-hand strip (it used to tab with the fight list, and it used to share this
+          Identity Table, alone in the right-hand strip (it used to tab with the fight list, and it used to share this
           strip with Pet Owners).
 
           Whose summon a name is stopped being a separate pane on 2026-10-09: an owner is a column of this table now, which is where
@@ -563,13 +568,13 @@
 
           AutoHidden, so it eats no screen space while closed: a strip on the right edge slides the tab out over the tables.
         -->
-        <ContentControl x:Name="namesWindow" Padding="0" Margin="0" syncfusion:DockingManager.Header="Player/NPC Identity" syncfusion:DockingManager.State="AutoHidden"
+        <ContentControl x:Name="namesWindow" Padding="0" Margin="0" syncfusion:DockingManager.Header="Identity Table" syncfusion:DockingManager.State="AutoHidden"
                       syncfusion:DockingManager.SideInDockedMode="Right"
                       syncfusion:DockingManager.DesiredWidthInDockedMode="{DynamicResource EQIdentityStripWidth}" syncfusion:DockingManager.DesiredWidthInFloatingMode="{DynamicResource EQIdentityStripWidth}" syncfusion:DockingManager.CanDocument="False">
           <local:NamesTable />
         </ContentControl>
         <!--
-          VESTIGIAL PANES: the two windows Player/NPC Identity replaced years ago, now with no grid, no rows and no removal
+          VESTIGIAL PANES: the two windows the Identity Table replaced years ago, now with no grid, no rows and no removal
           handlers left inside them either (2026-10-09 — MainActions.LoadVerified and the live-event pump that kept those grids
           sorted are deleted; the identity pane is the one list, rebuilt from the derive).
 

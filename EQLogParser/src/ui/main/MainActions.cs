@@ -37,7 +37,7 @@ namespace EQLogParser
     internal static readonly HttpClient TheHttpClient = new();
 
     /*
-     * The class list every class dropdown offers — here, in Player/NPC Identity's cell editor, and in the summary panes' menus.
+     * The class list every class dropdown offers — here, in the Identity Table's cell editor, and in the summary panes' menus.
      * It is a plain List that is FILLED ONCE at startup (InitClassList) and then only read: the collections this file used to
      * carry beside it (Verified Players, Verified Pets, Pet Owners) were UI-side copies of identity state, sorted one insert per
      * registry sighting on the UI thread, and they went stale the moment a verdict moved. The identity pane's census is the list now.
@@ -168,7 +168,7 @@ namespace EQLogParser
      * COPIES of identity state in sorted order — Verified Players, Verified Pets and Pet Owners — one Dispatcher post per registry
      * sighting (`EventsNewVerifiedPlayer`/`EventsNewVerifiedPet`/`EventsNewPetMapping`, each inserting into a sorted
      * ObservableCollection and rewriting its dock header), plus two bulk fills at log open and a clear at close. The panes are
-     * retired shells now, and the state they copied is answered in one place: Player/NPC Identity's census (which the derive
+     * retired shells now, and the state they copied is answered in one place: the Identity Table's census (which the derive
      * rebuilds, so it cannot go stale) carries the verdict, the class AND the owner column.
      *
      * What survived, and why: `ClassList` below (game data, not identity state); `PlayerRegistry.EventsNewVerifiedPlayer`,

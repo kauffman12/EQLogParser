@@ -6,7 +6,7 @@ namespace EQLogParser.Tests.Ui
    * The identity pane's repaint policy, in the one place it is decided (EQLogParser.Core/src/ui/CensusRepaint.cs).
    *
    * The field report this was written for: from the summary panes' right-click menu a verdict works every time — the cell changes,
-   * the summary refreshes, the fight list follows. From the Type dropdown in Player/NPC Identity the SAME write "did nothing": the
+   * the summary refreshes, the fight list follows. From the Type dropdown in the Identity Table the SAME write "did nothing": the
    * row kept the kind it had; a second click moved the cell and the summary still did not follow; the calculator fixed everything.
    * The write was never the problem (both doors call `ClassificationCommands.ApplyVerdict`, and identity-overrides.txt says so).
    * What differs is the pane's own repaint: the menu has nothing to repaint, and this pane's census — a full classification pass over

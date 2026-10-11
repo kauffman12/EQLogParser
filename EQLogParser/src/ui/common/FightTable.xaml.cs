@@ -462,7 +462,7 @@ namespace EQLogParser
       if (linesRead > 0) _awaitingFirstRows = true;   // monotonic for the session; a follow-from-end open never sets it
       if (!_awaitingFirstRows) return;
 
-      SetLoadBand("Building derived fight list\u2026");
+      SetLoadBand("Building the Fight List\u2026");
     }
 
     // null takes the band down; UI thread. The bar is the XAML's own indeterminate one - the only phase this band
@@ -815,7 +815,7 @@ namespace EQLogParser
     /*
      * Where the cascade's four picks land: the ONE selected fight's name (the menu is greyed unless exactly one row is selected, and the
      * inactivity dividers name nothing). SET only: there is no clear here, because taking a verdict back lives behind the Type cell of the
-     * Player/NPC Identity pane, the app's ONE unset. This pane still writes them because a fight row is where a misfiled mob is noticed.
+     * Identity Table pane, the app's ONE unset. This pane still writes them because a fight row is where a misfiled mob is noticed.
      */
     private void ApplyVerdict(IdentityKind kind)
     {

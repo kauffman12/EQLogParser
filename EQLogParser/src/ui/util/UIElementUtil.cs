@@ -517,7 +517,7 @@ namespace EQLogParser
       /*
        * `Closed` is wired BEFORE the popup opens: the release hook has to exist before the thing it releases can happen, the same law as closing
        * a perf span in a `finally`. It used to be attached from inside `Opened`, so a popup that opened without raising `Opened` (or threw while
-       * sizing) left the caller's `onClosed` unrun forever - and for Player/NPC Identity that callback releases `EditorHold`, the guard that
+       * sizing) left the caller's `onClosed` unrun forever - and for Identity Table that callback releases `EditorHold`, the guard that
        * keeps a census from yanking an open cell out from under the pointer. A hold that never releases defers every later census and applies
        * none: after ONE pencil click the pane stops answering anyone.
        */

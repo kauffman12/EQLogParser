@@ -199,7 +199,7 @@ namespace EQLogParser
 
 
   /*
-     * The list of people a summon can belong to — read by Player/NPC Identity's Owner dropdown, which is where an owner gets set now
+     * The list of people a summon can belong to — read by the Identity Table's Owner dropdown, which is where an owner gets set now
      * that the Pet Owners window is gone. It used to be exactly
      * `PlayerRegistry.GetVerifiedPlayers()` — i.e. whoever tonight's ingest happened to claim — which meant the picker and
      * the identity verdicts were two different answers to "who is one of ours?". Now it is the durable roster lane PLUS the

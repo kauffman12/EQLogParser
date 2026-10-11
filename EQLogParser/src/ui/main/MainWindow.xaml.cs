@@ -219,7 +219,7 @@ namespace EQLogParser
        * One thing is left to populate at startup: the class list. It used to sit inside `InitVerifiedPlayers`, which also wired
        * the three retired panes' live-event pumps (a registry sighting posted onto the UI thread to insert one name into a sorted
        * ObservableCollection, per sighting). Those windows are gone — the identity pane reads the same facts out of the derive —
-       * but `MainActions.ClassList` outlives them: it is what every class dropdown offers, here and in Player/NPC Identity.
+       * but `MainActions.ClassList` outlives them: it is what every class dropdown offers, here and in the Identity Table.
        */
       MainActions.InitClassList();
 
@@ -278,7 +278,7 @@ namespace EQLogParser
 
         /*
          * Same law for Pet Owners, which is a name-only stub from 2026-10-09 (the markup explains why the shell stays): a saved
-         * layout that had it auto-hidden on the right would otherwise slide an empty tab out beside Player/NPC Identity forever,
+         * layout that had it auto-hidden on the right would otherwise slide an empty tab out beside the Identity Table forever,
          * and no menu item exists to close it. Hiding at load is what makes the absorb-the-stale-name trick safe.
          */
         DockingManager.SetState(petMappingWindow, DockState.Hidden);
@@ -1244,7 +1244,7 @@ namespace EQLogParser
 
     // Main Menu
     /*
-     * The Player/NPC Identity window (see NamesTable). Docking it is not enough on its own: the census is built on demand, so a
+     * The Identity Table window (see NamesTable). Docking it is not enough on its own: the census is built on demand, so a
      * window reopened after an hour should answer about the log that is open now rather than about the one that was
      * open when it was last looked at.
      */
@@ -1266,7 +1266,7 @@ namespace EQLogParser
     /*
      * One-time repair of a saved layout for the identity pane.
      *
-     * Player/NPC Identity moved out of the fight list's tab group into the right-hand strip. A dockSite.xml
+     * The Identity Table moved out of the fight list's tab group into the right-hand strip. A dockSite.xml
      * written before that says "tabbed with npcWindow", and an operator would keep getting the OLD arrangement with no way
      * to notice the new one exists - so the saved state is corrected once, then left alone: anyone who moves the pane after
      * this build starts keeps their choice, because nothing here runs twice. Options / Reset Window State stays the escape
@@ -1560,7 +1560,7 @@ namespace EQLogParser
                * The registry comes up as a mirror of that ledger: roster membership, class, and the pet→owner pairs. Nothing here
                * pushes those into window-side collections any more. The three lists this call used to feed (Verified Players, Verified
                * Pets, Pet Owners) each held a COPY of identity state, sorted on the UI thread as the parse learned names, and each was
-               * stale the moment a verdict moved; Player/NPC Identity reads the derive's own census, and an owner rides in its Owner
+               * stale the moment a verdict moved; the Identity Table reads the derive's own census, and an owner rides in its Owner
                * column (IdentityLookup is still the single answer to "who is one of ours" — it just has no copies underneath it now).
                */
               PlayerRegistry.Instance.Init();

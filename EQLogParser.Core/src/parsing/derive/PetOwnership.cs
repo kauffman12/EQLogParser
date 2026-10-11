@@ -6,7 +6,7 @@ namespace EQLogParser;
 
 /*
  * Editing WHO OWNS a summon, decided in Core so the rules are testable without a window and cannot drift between the panes that offer
- * it (Names and Identities today; the fight grids' "Assign <name> as Pet of ▸" item already asks the same questions in its own shape).
+ * it (the Identity Table today; the fight grids' "Assign <name> as Pet of ▸" item already asks the same questions in its own shape).
  *
  * Three laws, all of them answers to something the old Pet Owners window got wrong or never offered:
  *

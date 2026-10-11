@@ -10,7 +10,7 @@ namespace EQLogParser.Wpf.Test;
  * The loading band over the derived fight list (loadOverlay), and the one thing it is allowed to say.
  *
  * Bulk ingest parks both derive lanes by design, so during the load of a big capture this window shows NO rows. What it
- * says while it has none is "Building derived fight list..." over an indeterminate bar, with the captured-fact count as
+ * says while it has none is "Building the Fight List..." over an indeterminate bar, with the captured-fact count as
  * the moving part - and it says it for EVERY open whose read has history in it, chosen by hand or not: the grid is empty
  * because it is being built, and a pane that sits silent and blank reads as a broken feature (or, before the list blanked
  * on a session change, as last night's raid). The file's own PERCENT stays out of here - the application-wide status line

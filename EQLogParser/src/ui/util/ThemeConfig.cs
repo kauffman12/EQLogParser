@@ -273,7 +273,7 @@ namespace EQLogParser
       Application.Current.Resources["EQCheckBoxScale"] = 0.9 + ((CurrentFontSize - 10) * 0.06);
       SyncFusionUtil.SetDesiredWidth("EQFightWindowWidth", 220 + (14.0 * CurrentFontSize), _mainWindow.npcWindow);
       /*
-       * The right-hand identity strip: Player/NPC Identity, alone since the Pet Owners pane was retired (2026-10-09). The width is
+       * The right-hand identity strip: the Identity Table, alone since the Pet Owners pane was retired (2026-10-09). The width is
        * still asked of the grid itself (NamesTable.DesiredPaneWidth) rather than written beside the dock markup, because too narrow
        * puts the Why column behind a horizontal scrollbar in a pane that cannot be widened past the strip, and a constant would have
        * to be re-derived by hand every time a column changes — which is exactly what just happened (the Owner column made it wider).

@@ -298,7 +298,7 @@ namespace EQLogParser
     }
 
     /*
-     * The name census for the Player/NPC Identity window. Built on demand rather than carried in the snapshot: a derive lands every
+     * The name census for the Identity Table window. Built on demand rather than carried in the snapshot: a derive lands every
      * few seconds while a log loads and a census nobody has open would be thrown away each time.
      *
      * It reads THE TIMELINE THE LAST EXPENSIVE PASS PUBLISHED (`_carriedTimeline`) instead of assembling a second one. It used to run
