@@ -8989,8 +8989,9 @@ whatever parked, once.
 tick time (`FightTable` passes it as a delegate), not a flag set on `MouseButtonDown` and cleared on `MouseButtonUp`. A
 latched pair needs a third place to be cleared — capture lost to a scroll, a popup stealing the up, a menu swallowing it —
 and the failure mode of a stuck-down flag is *announcements never happen again*, which reads as "the boards froze" and is
-the class of bug this whole pane keeps re-learning. `Reset()` exists for the two paths that drop every row (session change,
-wholesale snapshot): the ids a parked change named are gone with them.
+the class of bug this whole pane keeps re-learning. `Reset()` exists for the path that drops every row **and its selection with
+them** (a session change): the ids a parked change named are gone with it. The wholesale snapshot path stopped calling it — see the next
+section, which is exactly about what erasing a parked gesture there cost.
 
 **The other thing that left that menu, on a second report — and it should have gone the first time.** The pane also carried
 *Clear Override (N saved)*, the item the operator had called "some weird clear on the right-click that i have no idea what it does".
@@ -9040,6 +9041,57 @@ memory came out *slightly higher* than master. Not yet decomposed — the trims 
 split, `HitLabel`) are all reductions, so the increase is expected to be the carry (`FightProjectionCache`'s rows plus the
 index blocks) rather than the capture; that question belongs to the same revisit as Clear All. Quoted as reported, not as a
 measurement protocol: one open, one machine, no journal attached.
+
+### "i unselect rows and want the summary to stop showing that row" (2026-11)
+
+The request sounds like one line of code and turned out to be three shut doors, all reported as *nothing happened*: "ctrl+right click to deselect
+does not update events ... sometimes it actually looks deselected but the event never worked". Each door announces on its own authority, so any
+one of them alone was enough to produce that report; and every one failed in the direction that costs the operator the last repair available,
+because `RefreshClick` enables itself **on a selection** — unselect everything and the manual door closes at the same moment the automatic ones
+jammed.
+
+**1. A wholesale pass recorded "the boards answer for nothing" without ever answering.** The swap cleared `_announcedIds` / `_announcedStamp`
+and `Reset()` the settle, then announced *only* if it restored a selection onto the new rows. Those two fields are not notes about the pane's own
+grid: they are what the report **underneath** the grid adds up. Clearing them to "nothing" asserted a question was answered that nobody answered,
+and dedupe is ids-only when `!force` — so every later deselection matched it and returned at `announce skipped [SettleTick]: already announced
+0 row(s)`, the exact line this report wrote into `eqlogparser.log` while one fight's boards stayed on screen. The swap now **announces whatever it
+left selected, empty included** (`AWholesalePassAnnouncesWhatTheSwapLeftSelected`), and re-arms the settle timer instead of erasing it: a gesture
+parked behind an open menu or a held button survives the swap and is evaluated as the swap left it, while an idle timer costs one tick that does
+nothing. Consequence worth stating: on a **user-sorted** grid, where a selection cannot be restored by key, a pass now *blanks* the boards — which
+is honest (the highlight is gone) where before the report went on showing rows the grid no longer highlighted.
+
+**2. The identity watch was asked about a selection that did not exist.** Since "a board refreshes on classification, never on arriving damage", a
+pass-driven announce needs a changed identity answer for a name on screen — and with nothing selected it reported `the capture moved to stamp N but
+no displayed name changed what it is (0 row(s), 5 name(s) watched)` and returned. The watch has no subject there: an empty selection has one answer,
+always, and it is "the boards go blank" (`MainWindow.BuildSummaryInput` has cleared all three — healing included — on an empty selection since the
+first port). So an empty selection is exempt from that gate. **The law, since the operator had to ask twice for it: deselecting to nothing always
+reaches the boards; classification gating applies to non-empty selections only.**
+
+**3. The menu deferral was the one parked state that could not heal itself.** `SelectionSettle.MenuOpen` was a pure latch — set on
+`ContextMenuOpening`, cleared on `ContextMenuClosing` — and since only `CloseMenu()` announces, one closing event that never reaches the pane
+(click-through, a menu dismissed by another window, whatever) parks that gesture *and every later one for the rest of the session*: the tick defers
+while `MenuOpen`, re-arms, defers again. The pointer already had the answer and the class documents it — state is **queried**, never accumulated,
+"so a lost button-up cannot wedge announcements off" — so the menu takes the same shape: the events still drive the latch (their order is what
+announces exactly once, at the close), backstopped by a probe of `ContextMenu.IsOpen`, which WPF clears by itself
+(`AMenuThatNeverSaidGoodbyeCannotParkTheSession`, plus its sibling pinning that the events hold their own where the probe cannot see the menu). This
+is *a candidate* cause rather than a proven one: the log lines above prove 1 and 2 fired, while nothing in a log distinguishes a lost
+`ContextMenuClosing`; it is fixed by making the condition unable to persist rather than by catching it.
+
+**The viewport law that came with it: master followed the newest row, and this pane had thrown that away.** Legacy's `NewRowsAdded` scrolled to the
+grid's last record whenever a pass added rows, with one exception — `!dataGrid.IsMouseOver`. That exception *is* the design, so it is ported rather
+than improved: no scroll position is remembered anywhere (a heuristic about where the reader "wanted" to be is exactly what gets it wrong), while a
+hand inside the grid is the reader saying *I am using this part of the list*, for as long as it stays. `FightListFollow` (Core, so the rule runs
+without a dispatcher — `FightListFollowTest`) holds the permission: rows arrived, pane on screen, no hand on it, more than one row; the pane waits
+one layout pass before scrolling because the rows exist before the scrollable extent does.
+
+**And the bug found while reading for that one: the first search after a derive click was dead.** `SearchForNpc` chooses between "jump to the next
+hit" and "start a new search, collapse to it" by comparing against `_lastSearchName`, which **nothing ever assigned** — so the field carried its
+default empty string for the life of the pane, every search took the *new-search* branch, and `SelectShownRuns` (which clears the grid selection before
+selecting what matched) meant typing "dread" while a fight was highlighted collapsed that selection onto an invisible row plus a status-line count
+instead of jumping to the fight. That is "i want to search for a specific name and it sometimes does not work": after any pass that rebuilt the list
+— which on a live capture is every pass — the search box stopped navigating. Assigning the field on click, comparing on tick, and **not** clearing
+it when the box empties (the pane already refuses to search an empty box, and legacy kept its last term for precisely this reason) gives the
+two-keystroke resume that the original comment described.
 
 ## What Clear All means when there is no store to wipe (2026-11)
 

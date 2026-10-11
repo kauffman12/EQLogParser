@@ -134,6 +134,37 @@ public sealed class FightTableSessionSwitchTest
   }
 
   [TestMethod]
+  [Description("A wholesale pass announces the selection it left behind, empty included")]
+  public void AWholesalePassAnnouncesWhatTheSwapLeftSelected()
+  {
+    /*
+     * The swap decides what is highlighted, so it is also the door that has to TELL the boards what is highlighted. It used to announce only
+     * when a selection came back onto the new rows - and otherwise clear its own memory of the last ids instead - which recorded "the boards
+     * answer for nothing" as a question already answered, while the report underneath kept showing whichever fight had been clicked. Every later
+     * deselection then deduped against that ("announce skipped: already announced 0 row(s)"), which is one shape of "i unselect rows and want the
+     * summary to stop showing that row" arriving as nothing happening - with Refresh greyed out for want of a selection, so no door was left.
+     */
+    Sta.Run(() =>
+    {
+      var table = new FightTable();
+      var asked = new List<BoardRequest>();
+      table.DerivedSelectionChanged += (request, _) => asked.Add(request);
+
+      table.OnDerived(Snapshot());
+      Flush();
+
+      Assert.AreEqual(1, asked.Count, "the swap says out loud what is on screen - here, nothing");
+      Assert.AreEqual(0, asked[0].Fights.Count, "an empty selection's answer is 'no data', stated rather than assumed");
+      Assert.AreEqual(BoardReason.SnapshotSwap, asked[0].Reason);
+
+      // The same rows again arrive as a patch with nothing changed: the announce above already answered for them.
+      table.OnDerived(Snapshot());
+      Flush();
+      Assert.AreEqual(1, asked.Count, "announcing once is what keeps a live capture from re-running the boards every pass");
+    });
+  }
+
+  [TestMethod]
   public void AnUnattributedSnapshotBelongsToWhicheverCaptureIsOpen()
   {
     /*

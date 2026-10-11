@@ -60,16 +60,25 @@ namespace EQLogParser
      * cannot wedge announcements off. BOTH buttons count: SfDataGrid selects on a right-drag as well as a left one, and
      * "right-drag to pick a range, then open the menu" is precisely the gesture this pane has to survive.
      */
-    private readonly SelectionSettle _settle = new(PointerIsDown);
+    private readonly SelectionSettle _settle;
 
     /// <summary>Any mouse button held over the app: a drag in progress parks a selection announcement.</summary>
     internal static bool PointerIsDown() =>
       System.Windows.Input.Mouse.LeftButton == System.Windows.Input.MouseButtonState.Pressed ||
       System.Windows.Input.Mouse.RightButton == System.Windows.Input.MouseButtonState.Pressed;
 
-    // What was last announced, as fight ids. Two jobs: a stale snapshot's rows cannot be re-announced as
-    // if they were new, and a grid that re-raises SelectionChanged with the same selection (or with none,
-    // when an ItemsSource swap lands) must not clear stats nobody changed.
+    /*
+     * The grid's context menu, open RIGHT NOW. WPF clears IsOpen itself when the menu goes away, so this is the menu equivalent of
+     * querying the button state: the open/close handlers still drive the latch (their order is what announces a change exactly once at the
+     * close), and this backstops the case where the closing event never arrives — latched alone, one such menu would park every later
+     * gesture in the session, which is the shape of "I deselected the row and the summary never updated".
+     */
+    private bool MenuIsOpen() => fightGrid?.ContextMenu?.IsOpen == true;
+
+    // What was last announced, as fight ids - which is to say, WHAT THE REPORT UNDERNEATH THIS GRID adds up. Two jobs: a stale snapshot's rows
+    // cannot be re-announced as if they were new, and a grid that re-raises SelectionChanged with the same selection must not rebuild boards
+    // nobody changed. Because it is a claim about the boards, only an announce may write it: clearing it to "nothing" without announcing left
+    // every later deselection deduping against an answer nobody gave (see OnDerived's wholesale path).
     private List<int> _announcedIds = [];
 
     /*
@@ -164,6 +173,9 @@ namespace EQLogParser
 
     public FightTable()
     {
+      // Before anything can park or release a gesture: the probe reads `fightGrid`, which InitializeComponent wires.
+      _settle = new SelectionSettle(PointerIsDown, MenuIsOpen);
+
       InitializeComponent();
 
       // Same placeholder idiom as the legacy table: the prompt is text in the box, cleared on focus.
@@ -385,6 +397,8 @@ namespace EQLogParser
           var removedSelected = patch.Removals.Any(selected.Contains);
           var touched = selected.Count > 0 && (removedSelected || contentMoved || UnaskedRefresh.HasGesture);
           if (touched) AnnounceSelection(removedSelected ? BoardReason.RowEdited : BoardReason.ContentMoved, force: true);
+
+          FollowNewestRows(patch.InsertedCount > 0);
           return;
         }
 
@@ -410,23 +424,32 @@ namespace EQLogParser
         foreach (var fight in GetSelectedFights()) keep.Add(KeyOf(fight));
         var restorable = keep.Count > 0 && fightGrid.SortColumnDescriptions.Count == 0;
 
-        // The rows the last announcement pointed at no longer exist: forget them rather than let the swap's
-        // selection reset look like a change and clear a summary nobody touched. What is on that board now
-        // came from the previous pass, and stays there until the next click - or until the selection below
-        // comes back, which re-announces with THIS pass's numbers.
+        /*
+         * Re-arm rather than erase. `_settle.Reset()` used to run here, which threw away a gesture that had not been announced yet: select a
+         * row, then deselect it, and if this pass lands inside the 600 ms settle window (or while the right-click menu is up) the pending mark
+         * is gone - and with nothing pending the menu's close announces nothing either. The reader keeps a report showing a row the grid no
+         * longer highlights, Refresh is greyed out for want of a selection, and the only door left is clicking some other fight.
+         * Restarting the timer costs one tick that does nothing when nothing is pending, and evaluates the selection AS THE SWAP LEFT IT when
+         * something is.
+         */
         _selectionTimer.Stop();
-        _settle.Reset();
-        _announcedIds = [];
-        _announcedStamp = 0;   // same reason as the session-change path: these rows are gone, so no content memory survives
 
+        var previousRows = _rows.Count;
         _rows = new ObservableCollection<DerivedFightRow>(snapshot.Rows);
         fightGrid.ItemsSource = _rows;
 
-        if (restorable)
-        {
-          RestoreSelection(keep);
-          AnnounceSelection(BoardReason.SnapshotSwap);
-        }
+        if (restorable) RestoreSelection(keep);
+
+        /*
+         * Announce whatever the swap left selected, always - INCLUDING "nothing". Those two fields describe what the boards show, and a swap can
+         * change that question with no click involved: it restores rows by key, or refuses to on a sorted grid, or finds nothing selected at all.
+         * Clearing the memory to an empty selection instead (what this used to do) recorded a question as ANSWERED that nobody answered, after
+         * which every later deselect deduped against it ("announce skipped: already announced 0 row(s)") while the report went on showing the fight
+         * that stopped being selected.
+         */
+        AnnounceSelection(BoardReason.SnapshotSwap);
+
+        FollowNewestRows(snapshot.Rows.Count > previousRows);
       });
     }
 
@@ -588,8 +611,9 @@ namespace EQLogParser
     /*
      * `force` is the pass-driven re-announce: the selection itself did not change, but the rows under it did (a display edit, a row
      * this pass removed, or a rebuilt backing object), so the board must be rebuilt even though the ids are the ones already announced.
-     * The dedup stays for everything else — an ItemsSource swap landing and the settle timer firing both announce the same selection,
-     * and only the first may materialize (see OnDerived's wholesale path, which clears _announcedIds before the swap on purpose).
+     * The dedup stays for everything else - an ItemsSource swap landing and the settle timer firing both announce the same selection, and only
+     * the first may materialize. A swap announces the selection it actually left behind, empty included, so "the ids are the ones already
+     * announced" means the boards already answer for what is highlighted.
      */
     private void AnnounceSelection(BoardReason reason, string detail = null, bool force = false)
     {
@@ -657,16 +681,21 @@ namespace EQLogParser
        * announce, this records nothing: the answer on screen is still current, and Refresh stays able to force one.
        */
       /*
-       * A derive pass is not news to a board somebody is reading. New damage lands on rows nobody selected, in fights nobody is looking at,
-       * and rebuilding to redraw identical figures is the "the whole table cleared and reloaded for no reason" reported twice from the field —
-       * and asked, explicitly, to stop: a selection is a SNAPSHOT unless a name changed what it IS. So the only thing a pass may announce on
-       * is a changed identity answer for a displayed or selected name (IdentityWatch) — exactly "the pet changes or player turning npc" — and
-       * that costs one dictionary lookup per name already on screen.
+       * A derive pass is not news to a board somebody is reading. New damage lands on rows nobody selected, in fights nobody is looking at, and
+       * rebuilding to redraw identical figures is the "the whole table cleared and reloaded for no reason" reported twice from the field — and
+       * asked, explicitly, to stop: a selection is a SNAPSHOT unless a name changed what it IS. So the only thing a pass may announce on is a
+       * changed identity answer for a displayed or selected name (IdentityWatch) — exactly "the pet changes or player turning npc" — and that
+       * costs one dictionary lookup per name already on screen.
        *
-       * A hand-built snapshot (what a test hands the pane: only DerivedFightRows.Build stamps) carries no timeline, and there the older
-       * behaviour stands, because nothing can tell. An empty watch answers "nothing changed" on purpose: that is what makes a quiet tail cheap.
+       * A hand-built snapshot (what a test hands the pane: only DerivedFightRows.Build stamps) carries no timeline, and there the older behaviour
+       * stands, because nothing can tell. An empty watch answers "nothing changed" on purpose: that is what makes a quiet tail cheap.
+       *
+       * An EMPTY selection is exempt from all of it, because the watch has no subject there: it asks "did the answer under this selection change",
+       * and with nothing selected the answer is always the same one — the boards go blank (MainWindow's BuildSummaryInput says so: an empty
+       * selection clears every board, healing included). Gating that made a deselection read as traffic — "the capture moved but no displayed name
+       * changed what it is", said the Debug line, while the report under a now-empty grid went on showing one fight.
        */
-      if (reason is BoardReason.ContentMoved or BoardReason.SnapshotSwap && _currentTimeline is { } watched)
+      if (selected.Count > 0 && reason is BoardReason.ContentMoved or BoardReason.SnapshotSwap && _currentTimeline is { } watched)
       {
         var moved = _watch.FirstChanged(watched);
         if (moved is null)
@@ -1143,6 +1172,27 @@ namespace EQLogParser
 
     private void RestoreSelection(HashSet<FightKey> keepKeys)
       => SelectShownRuns(row => row.Fight is { } fight && keepKeys.Contains(KeyOf(fight)));
+
+    /*
+     * Follow the growth the way the old list did: when a pass put new rows at the bottom, scroll to the bottom - unless the mouse is inside
+     * the grid, which is how that pane knew a person was reading it. FightListFollow holds the rule and why a hand test beats any memory of
+     * scroll position. The scroll waits one layout pass because the rows exist before the scrollable extent does, and scrolling to a row the
+     * presenter has not measured yet is a no-op that loses the follow.
+     */
+    private void FollowNewestRows(bool rowsArrived)
+    {
+      if (fightGrid is not { } grid) return;
+
+      var shown = grid.View?.Records?.Count ?? 0;
+      if (!FightListFollow.ShouldFollowToNewest(rowsArrived, IsVisible, grid.IsMouseOver, shown)) return;
+
+      grid.Dispatcher.BeginInvoke(new System.Action(() =>
+      {
+        // Re-read the count: another pass may have landed in the meantime, and the point is the LAST row, whatever number that is now.
+        var last = grid.View?.Records?.Count ?? 0;
+        if (last > 1) grid.ScrollInView(new RowColumnIndex(last, 0));
+      }), DispatcherPriority.Background);
+    }
 
     // Both programmatic selects share this: select every SHOWN row matching the predicate, range by range.
     // The grid positions come from ShownRunPositions — counted over the shown rows only, because a hidden divider or a

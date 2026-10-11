@@ -20,13 +20,25 @@ namespace EQLogParser;
  *      settle window alone handles that, but a drag that ENDS inside the window would still spend a rebuild mid-gesture.
  *      The pane passes a probe (WPF: `Mouse.LeftButton == MouseButtonState.Pressed`) so the state is queried, never
  *      accumulated - a missed button-up cannot wedge the gate shut the way a flag set on down and cleared on up can.
+ *
+ * The menu deferral used to be ONLY a latch, which made it the one parked state that could not heal itself: a menu whose
+ * closing event never arrives (field report: "ctrl-clicked a row off and the summary never updated - other times it looks
+ * deselected but the event never worked") leaves every later tick parked, and only the close ever announces, so no later
+ * click is answered either. `menuHeld` applies the button law to the menu as well: the pane may latch from the events AND
+ * hand over a probe of the menu's own live state (WPF: `ContextMenu.IsOpen`, which WPF clears itself when the menu goes
+ * away), so an open is honoured while it is real and forgotten the moment it is not.
  */
-internal sealed class SelectionSettle(Func<bool> pointerHeld = null)
+internal sealed class SelectionSettle(Func<bool> pointerHeld = null, Func<bool> menuHeld = null)
 {
   private bool _pending;
+  private bool _menuLatch;
 
-  /// <summary>True while the context menu is open (the pane sets this from ContextMenuOpening/Closing).</summary>
-  internal bool MenuOpen { get; set; }
+  /// <summary>True while a context menu holds the gesture: latched by the pane's open/close events, backstopped by the probe.</summary>
+  internal bool MenuOpen
+  {
+    get => _menuLatch || menuHeld?.Invoke() == true;
+    set => _menuLatch = value;
+  }
 
   /// <summary>Something changed and has not been announced yet - the pane restarts its timer while this is true.</summary>
   internal bool Pending => _pending;
@@ -51,7 +63,7 @@ internal sealed class SelectionSettle(Func<bool> pointerHeld = null)
   /// <summary>The menu closed. Returns true when a change was parked behind it and must be announced now, once.</summary>
   internal bool CloseMenu()
   {
-    MenuOpen = false;
+    _menuLatch = false;
     if (!_pending) return false;
 
     _pending = false;
