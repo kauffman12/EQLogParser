@@ -7494,7 +7494,10 @@ get two lines — and every later sighting only raises `SightingsOf`/`Silenced`.
 Also from that audit, all one-liners in the same direction: `Log.Warn("Suspending")`/`"Resume"` became Info with actual words (the laptop sleeping
 is a thing that happened to the session, not a defect), the clipboard's "text was null" went to Debug (neither a gesture nor a breakage), and the
 docking warning that read `Can not determine ControlControl state for:` now says `dock: no show state for X - the click could not place the window`
-(it stays a Warn: a menu click that did nothing is worth seeing). Already-correct siblings left alone: `DamageFactTable.MissedRow`/`HealFactTable`
+(it stays a Warn: a menu click that did nothing is worth seeing). **Two cases were offered up for promotion and refused by the operator, so they stay
+Debug** — `TriggerOverlayManager`'s `Error Adding Text` / `Error Starting Timer` / `Error Stopping Timer` and `NagUtil`'s `Error loading
+files-database.json`. Read them as a decision, not an oversight: neither is worth a line in a player's file per overlay call or per pack, and the
+throttled "text had nowhere to go" warning already covers the case an operator can act on. Already-correct siblings left alone: `DamageFactTable.MissedRow`/`HealFactTable`
 cap their past-end-ordinal warning per capture with their own exchanged flag, and `TriggerOverlayManager`'s dropped-text/timer warnings were
 throttled before this. Tests: `EQLogParser.Test/src/util/RepeatCapTest.cs`.
 
