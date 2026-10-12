@@ -1074,6 +1074,14 @@ namespace EQLogParser
         : items.OfType<DerivedFightRow>().ToList();
     }
 
+    /// <summary>
+    /// Any left gesture invalidates an unconsumed right-press memory. A press whose menu never opened (released
+    /// outside the grid) leaves its snapshot behind, and a later keyboard-opened menu (Apps key) would otherwise
+    /// resurrect it over a selection the operator has changed by hand since. Every way this grid's selection can
+    /// change is a mouse gesture, so a left-press is the invalidation point.
+    /// </summary>
+    private void GridPreviewLeftButtonDown(object sender, MouseButtonEventArgs e) => _rightPressSelection = null;
+
     /*
      * Two row dials, no more - Inactivity (dividers) and Tanking (rows whose whole story is something hitting
      * us). Search deliberately does NOT hide rows. The point of a
