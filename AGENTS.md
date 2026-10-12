@@ -42,7 +42,7 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
   store cache keyed by the label set it was built with): constructing an `EQDataStore` costs ~0.6 s and five classes used to pay
   it per test — most of the suite's wall time. A test needing a store under different conditions (missing data files, its own
   class labels) builds its own; everything mutable is still cleared per test.
-- **`PipelineHarness` clears the stores** (`PlayerRegistry`, `RecordsStore`, `HealingLineParser.ClearCaches()`), so
+- **`PipelineHarness` clears the stores** (`PlayerRegistry`, `RecordsStore`, `DamageLineParser.ResetProcessState`), so
   re-parsing a fixture in one process cannot double counts, and `RegistrySeed` contributes nothing — tests that need seed
   memory must build it themselves; tests that need healers as healers must give them an evidence line (`EvJoinedRaid`), not
   a registry entry.
