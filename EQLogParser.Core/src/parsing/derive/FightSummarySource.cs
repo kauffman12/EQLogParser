@@ -113,6 +113,29 @@ namespace EQLogParser
 
     private readonly Dictionary<DerivedFight, CachedSummary> _summaries = new();
 
+    /*
+     * The materialization cache is a budgeted accelerator, not storage for the capture (docs/DesignNotes.md →
+     * "DPS and active-reader retention review at 35420fcf"). Unbounded, it retained every row of every selection
+     * for the life of the carried index - measured 2.27M materialized damage records (≈129 MiB) beside a capture
+     * whose settled fact tables cost 19.5 MiB, and the count never fell below the last select-all because an
+     * unchanged classification carries this index all session. The budget counts MATERIALIZED RECORDS (damage +
+     * tanking), which is what pays for the memory, not rows: one farm fight alone carries millions.
+     *
+     * What eviction costs: a re-click on an evicted row pays one materialization walk over that row's own ordinal
+     * run - the same walk the first click always paid. The rows that matter to the budget's losers are closed ones
+     * nobody is watching; the ones it keeps are what was touched most recently, i.e. what a person is about to ask
+     * about again. A full select-all therefore builds its boards from fresh materialization after eviction exactly
+     * like the very first click did - same answer, one walk later.
+     */
+    internal const int SummaryRecordBudget = 250_000;
+
+    // Insertion/recency order for _summaries: oldest entry first, most recently touched last. Touched means "asked
+    // and still the answer" - a stamp-stale read re-writes its own entry at the tail as part of answering.
+    private readonly List<DerivedFight> _summaryOrder = [];
+
+    // Materialized records held by _summaries (per entry: DamageCount + TankCount). The eviction trigger.
+    private long _cachedRecords;
+
     public long DamageFactCount { get; private set; }
 
     // Facts the tank board carries: hits that landed on one of our people (EntityTimeline.IsRaidVictimAt).
@@ -127,6 +150,70 @@ namespace EQLogParser
     // (no re-scan of the whole table on every click) and it dies with the snapshot it belongs to. Both lists
     // count: a fact lands in at most one of them — the rest are unrouted and cost nothing but a counter.
     public long EstimatedBytes => (DamageFactCount + TankingFactCount) * 4L;
+
+    /*
+     * The doubling slack a per-row List<int> carries (up to its own count), for the derive report and tests. Kizant xegony-2
+     * measured 3,500,000 slots against 2,268,615 ordinals - 4.7 MiB of address space a compact can hand back.
+     */
+    internal long OrdinalSlots
+    {
+      get
+      {
+        lock (_gate)
+        {
+          var slots = 0L;
+          foreach (var list in _damageOrdinals.Values) slots += list.Capacity;
+          foreach (var list in _tankingOrdinals.Values) slots += list.Capacity;
+          return slots;
+        }
+      }
+    }
+
+    /* Cached summary bookkeeping for the derive report and tests. */
+    internal int CachedSummaryCount { get { lock (_gate) return _summaries.Count; } }
+    internal long CachedSummaryRecords { get { lock (_gate) return _cachedRecords; } }
+
+    /*
+     * Hand back the ordinal lists' doubling slack, one row at a time. Runs on the full lane only, beside the fact tables'
+     * own CompactRows: a classified pass is what arrives when the capture stopped growing in bulk - the same moment that made
+     * the row arrays' last resize worth trimming.
+     *
+     * Two rules keep it safe and cheap:
+     *
+     *   - **Dead rows only.** An open row's list is about to be written; compacting it would just spend the growth again. A Dead
+     *     row never grows (deaths close rows, gaps close rows, nothing appends to a closed ordinal run), so what a compact
+     *     reclaims here stays reclaimed.
+     *   - **The list is swapped, never resized in place.** A list may already be in somebody's hands (TankingOrdinalsFor hands
+     *     out the LIVE one); replacing the reference under _gate leaves that holder its intact array and costs a temporary copy,
+     *     not a torn read.
+     */
+    internal void CompactOrdinalSlack()
+    {
+      lock (_gate)
+      {
+        ReclaimOrdinalSlack(_damageOrdinals);
+        ReclaimOrdinalSlack(_tankingOrdinals);
+      }
+    }
+
+    private static void ReclaimOrdinalSlack(Dictionary<DerivedFight, List<int>> store)
+    {
+      // Gather first: replacing an entry inside the enumeration would be a throw, and the victim set is what gets copied.
+      var victims = new List<(DerivedFight Fight, int Capacity)>();
+      foreach (var pair in store)
+      {
+        if (pair.Key.Dead && pair.Value.Capacity - pair.Value.Count >= 64)
+        {
+          victims.Add((pair.Key, pair.Value.Capacity));
+        }
+      }
+
+      foreach (var (fight, _) in victims)
+      {
+        var list = store[fight];
+        store[fight] = new List<int>(list);
+      }
+    }
 
     /*
      * The gate is the index's whole reader/writer boundary. The index outlives the pass that fills it - the cheap lane
@@ -244,6 +331,8 @@ namespace EQLogParser
             && cached.Dead == fight.Dead
             && cached.GroupId == fight.GroupId)
         {
+          // Still the answer after an ask: it is the entry eviction must meet last, so move it to the tail.
+          TouchSummaryOrder(fight);
           return cached.Built;
         }
 
@@ -259,9 +348,48 @@ namespace EQLogParser
           ? ContinueFight(cached, fight, facts)
           : BuildFight(fight, facts, double.NegativeInfinity, double.PositiveInfinity);
 
+        var previous = _summaries.TryGetValue(fight, out var prior) ? prior.DamageCount + prior.TankCount : 0;
         _summaries[fight] = new CachedSummary(built, damageCount, tankCount, facts.TauntCount,
           fight.BeginTime, fight.LastTime, fight.Dead, fight.GroupId);
+
+        if (!_summaryOrder.Contains(fight))
+        {
+          _summaryOrder.Add(fight);
+        }
+        else
+        {
+          TouchSummaryOrder(fight);
+        }
+
+        _cachedRecords += damageCount + tankCount - previous;
+        EvictSummariesToBudget();
         return built;
+      }
+    }
+
+    /* O(n) over the cached rows (hundreds, not millions): a click-path cost, and the list only ever holds entries the budget has already kept. */
+    private void TouchSummaryOrder(DerivedFight fight)
+    {
+      _summaryOrder.Remove(fight);
+      _summaryOrder.Add(fight);
+    }
+
+    /* Oldest first until the held records fit again. Removing from _summaries is the whole of eviction: a published Fight is never
+       mutated (the layer-1 law), and a consumer already walking one keeps its own reference - it just stops being REUSABLE, which
+       is what an accelerator losing to the budget means. */
+    private void EvictSummariesToBudget()
+    {
+      while (_cachedRecords > SummaryRecordBudget && _summaryOrder.Count > 0)
+      {
+        var oldest = _summaryOrder[0];
+        if (!_summaries.Remove(oldest, out var evicted))
+        {
+          _summaryOrder.RemoveAt(0);
+          continue;
+        }
+
+        _cachedRecords -= evicted.DamageCount + evicted.TankCount;
+        _summaryOrder.RemoveAt(0);
       }
     }
 

@@ -534,6 +534,14 @@ namespace EQLogParser
           {
             try { _capture.CompactRows(); }
             catch (Exception ex) { Log.Debug("Could not trim row-array slack; the derived boards are unaffected", ex); }
+
+            /*
+             * The index's per-row ordinal lists carry the same doubling slack the fact arrays did (measured 4.7 MiB on a 2.3M-fact
+             * capture), and they die with the snapshot, so their trim belongs to this session too. Dead rows only, reference-swapped
+             * under the index gate - see CompactOrdinalSlack for why that shape is the safe one.
+             */
+            try { _projection.Index.CompactOrdinalSlack(); }
+            catch (Exception ex) { Log.Debug("Could not trim ordinal-list slack; the derived boards are unaffected", ex); }
           }
 
           /*
