@@ -98,7 +98,8 @@ These checks require a realized grid; the automated pane tests exercise bound da
   once. Then fight: new rows and cell updates must not move the viewport, and scrolling up to read an old encounter must hold through a whole pull.
   Clear All and reopening the same log get the reveal again (a new load). Nothing about the pointer counts: leave it inside the grid while the log
   reads and the jump still happens. If the fight list sits behind another tab when the read finishes, opening that tab should show the newest row.
-  Scrolling a search result into view still works — that is a gesture, not a follow.
+  Scrolling a search result into view still works — that is a gesture, not a follow. A new fight appearing mid-pull must not move the list at
+  all (no jump to the top when a row lands), and with a column sorted a pass must keep the reading position too.
 
 ## Docking states a unit test cannot reach
 

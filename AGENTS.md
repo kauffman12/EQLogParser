@@ -229,7 +229,9 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
   (`FightListReveal`: `Arm` per capture, `ReadFinished` from `EventsLogLoadingComplete`, `TryPay` asked by both doors) — not at the first snapshot,
   because a big file hands over rows mid-read. **No attention tests**: the pointer and the pane's visibility are not conditions (a list behind another
   tab gets scrolled and opens at the bottom). A one-row answer spends the reveal without scrolling; an empty grid keeps it. Live growth never scrolls,
-  and after the reveal only a search does. See `docs/DesignNotes.md` → "The fight list moves its own
+  and after the reveal only a search does. **The control must not move it either**: `fightGrid` carries
+  `LiveDataUpdateMode=AllowDataShaping` + `CanMaintainScrollPosition` — Syncfusion's default regenerates its view when the bound collection
+  changes, and a regenerated view sits at row zero, so a source Add threw the viewport away. See `docs/DesignNotes.md` → "The fight list moves its own
   viewport once". Group gestures act on the row the pointer opened the menu on and **un-select never toggles** (an id the grid no longer has
   clears silently).
 - **One announce per gesture** (`SelectionSettle` + one DispatcherTimer at 600 ms; `MenuOpen` via

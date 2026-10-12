@@ -63,10 +63,23 @@
       <CheckBox x:Name="fightShowTanking" Margin="8,0,0,2" Template="{StaticResource CustomCheckBoxTemplate}" Checked="ShowTankingChanged" Unchecked="ShowTankingChanged"
                 IsChecked="True" Content="Tanking" ToolTip="Includes NPCs or Spells that damaged players but did not receive damage"/>
     </StackPanel>
+    <!--
+      Two view switches, both here because this list GROWS while a raid fights (docs/DesignNotes.md → "The fight list moves its own
+      viewport once"): the pane no longer scrolls on its own, so anything the grid does to its own viewport is what the operator sees.
+        LiveDataUpdateMode="AllowDataShaping" — Syncfusion's default regenerates the view when the bound collection changes, and a
+          regenerated view sits at row zero: the list jumped to the top every time a new fight appeared. Shaping applies the add/remove
+          incrementally (sort and filter still honoured), which is what the pane's per-row reconcile was written assuming.
+        CanMaintainScrollPosition="True" — the wholesale path reassigns ItemsSource (first rows of a capture, a sorted grid, churn a
+          patch cannot describe); this is the vendor's own "carry the viewport across that" switch.
+      Neither is a scroll-behaviour decision: the one reveal after a load is FightListReveal's, and these only stop the control from
+      moving the list behind its back.
+    -->
     <syncfusion:SfDataGrid x:Name="fightGrid"
                            AllowResizingColumns="True"
                            AllowSorting="True"
                            AutoGenerateColumns="False"
+                           CanMaintainScrollPosition="True"
+                           LiveDataUpdateMode="AllowDataShaping"
                            CurrentCellBorderThickness="0"
                            Grid.Row="1"
                            GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"

@@ -7090,6 +7090,17 @@ one layout pass costs. The only arithmetic left is that one row has no fold to c
 because a jump still owed somewhere inside a later pull is precisely the surprise this retires. Which is also why the empty grid does NOT pay up: a
 capture can reach 100 % before its first rows exist, and "nothing to reveal yet" is not the same as "nobody is looking".
 
+**The control was moving the list too.** With the pane's own follow gone, the next report was *“during an active fight when a new row is added the
+list scrolls to the top”* — and this one was Syncfusion, not us. `SfDataGrid` defaults to `LiveDataUpdateMode.Default`, which regenerates its view when
+the bound collection changes, and a regenerated view sits at row zero: every reconcile that inserted a fight (or dropped one across a dial's line)
+threw the viewport away, which is precisely what the per-row `ShownRows.Reconcile` was written to avoid — the pane was editing incrementally into a
+control that was not listening incrementally. Two grid switches fix it, both declared in `FightTable.xaml`: `LiveDataUpdateMode="AllowDataShaping"`
+(apply source changes as shaping, sort and filter still honoured) and `CanMaintainScrollPosition="True"` (carry the viewport across the wholesale
+`ItemsSource` reassignment, which still runs for a capture's first rows, for a sorted grid, and when churn exceeds what a patch may describe). The
+API surface was read off the shipped `Syncfusion.SfGrid.WPF.dll` / `Syncfusion.Data.WPF.dll` metadata — there is no local `syncfusion-wpf` checkout to
+cite — which proves the properties exist but not their behaviour, so the wholesale path now also logs which door took it (`fight list: wholesale swap
+(first rows|sorted grid|patch refused)`, Debug). Neither switch is a scroll policy: the reveal stays FightListReveal's.
+
 After that single reveal, the only thing in this pane that moves these rows is a search, and a search is a gesture. No scroll position is remembered
 anywhere, so nothing is restored and no heuristic has to guess intent; the follow code path is gone rather than throttled. `FightListRevealTest`
 asserts it headlessly (six cases: both orders of rows-vs-read, the empty answer keeping the debt, one payment per capture, re-arming on a new load, a

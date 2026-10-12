@@ -493,6 +493,11 @@ namespace EQLogParser
          * highlight would sit on nothing and the next search would skip its own bookkeeping.
          */
         ClearSearchMark();
+
+        // Which door and why. This is the one pass shape that can move the viewport under the reader - the grid re-asks its whole source - so with
+        // the pane no longer scrolling on its own, triage needs to know how often it runs (Debug only; a player's log carries none of this).
+        Log.Debug($"fight list: wholesale swap ({(_allRows.Count == 0 ? "first rows" : fightGrid.SortColumnDescriptions.Count > 0 ? "sorted grid" : "patch refused")}) - {_allRows.Count} row(s) shown");
+
         /*
          * What the user had selected, remembered by name + start time and put back on the new rows.
          *
