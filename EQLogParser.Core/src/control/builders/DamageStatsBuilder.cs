@@ -66,6 +66,15 @@ namespace EQLogParser
         {
           Reset();
 
+          /*
+           * The last answer dies with the capture, not with the next build. Its Groups list is a copy of REFERENCES, so Reset's
+           * _damageGroups.Clear() frees nothing from it - measured 2.2M damage records reachable through GetLastStats AFTER a
+           * production clear. The consumers (summary copy path, column chart) ask only between builds, where the fresh event is the
+           * answer; after a clear the boards are blank by law, and a last answer that outlived its log would be the one surface
+           * still showing last night's raid.
+           */
+          _lastStatsEvent = null;
+
           if (serverChanged)
           {
             _playerGroupAssignments.Clear();

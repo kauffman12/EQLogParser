@@ -61,6 +61,10 @@ namespace EQLogParser
       lock (_lock)
       {
         Reset(true);
+
+        // Same law as the damage builder: the last answer's Groups list outlives every Clear() in Reset, so it is dropped
+        // here with the capture rather than surviving until the next build overwrites the field.
+        _lastStatsEvent = null;
       }
     };
 
