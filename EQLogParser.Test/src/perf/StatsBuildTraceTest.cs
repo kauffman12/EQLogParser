@@ -92,6 +92,39 @@ public sealed class StatsBuildTraceTest
   }
 
   [TestMethod]
+  public void OverlappingStartsAreCountedOnceWarnedUntilTheBoardsGoQuiet()
+  {
+    /*
+     * The warning exists to say "two doors did not talk", but on a live pull with the boards open several doors ask independently all
+     * night, and a per-build WARN turned an operator's log into thousands of lines restating "a raid is happening". So: every collision
+     * counts forever, and only the one that opens an episode speaks. Pinned here by the counters, since the test assemblies do not carry
+     * a log appender — `OverlapsInCurrentEpisode` is exactly "how many collisions are held behind the warning already printed".
+     */
+    var first = StatsBuildTrace.Begin("damage", "derived selection");
+    Assert.AreEqual(0, StatsBuildTrace.OverlapsInCurrentEpisode, "a lone build opens no episode");
+
+    for (var i = 0; i < 2; i++)
+    {
+      var door = i == 0 ? "healing pane shown" : "tanking pane dial";
+      var visitor = new Thread(() =>
+      {
+        var build = StatsBuildTrace.Begin("damage", door);
+        Assert.AreEqual(1, build.OverlappedWith, $"{door} started over the build still inside");
+        StatsBuildTrace.End(build);
+      });
+      visitor.Start();
+      visitor.Join(TimeSpan.FromSeconds(5));
+    }
+
+    Assert.AreEqual(2, StatsBuildTrace.OverlapsInCurrentEpisode,
+      "both collisions are counted behind the one warning, while the episode is open");
+
+    StatsBuildTrace.End(first);
+    Assert.AreEqual(0, StatsBuildTrace.ActiveBuilds);
+    Assert.AreEqual(0, StatsBuildTrace.OverlapsInCurrentEpisode, "quiet closes the episode and re-arms the warning");
+  }
+
+  [TestMethod]
   public void ANestedBuildOnTheSameThreadIsOneDoorRatherThanAnOverlap()
   {
     /*

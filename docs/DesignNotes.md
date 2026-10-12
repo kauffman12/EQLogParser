@@ -7438,7 +7438,8 @@ which is now possible because every door names itself:
 - `GenerateStatsOptions.Source` carries the door, in the caller's own words; a call site that leaves it null prints **UNLABELLED** and
   warns, so an anonymous pass over two million records cannot be defended as "probably necessary".
 - `StatsBuildTrace` numbers every build process-wide, times it, prints `stats build #7 damage full 3410 ms | from derived [SelectCommand] …`
-  (every line at Debug - see the levels law below), and **warns when a build starts while another is inside** — naming the other one. Nesting on the same thread does not count: healing's
+  (every line at Debug - see the levels law below), and **warns when a build starts while another is inside** — naming the other one, once per
+  overlap episode (see the 2.4.3 amendment directly below). Nesting on the same thread does not count: healing's
   `RebuildTotalStats` calls `BuildTotalStats` under its own lock, and calling that an overlap would put a warning on ordinary work, which is
   how a real one stops being read (`StatsBuildTraceTest` pins both directions).
 - The pane says why it announced, through `BoardRequest.Reason` — `SelectCommand`, `MenuClose`, `SettleTick`, `SnapshotSwap`, `RowEdited`,
@@ -7458,8 +7459,21 @@ now simpler than either: **every per-build, per-ask, per-skip and per-open line 
 is the door into all of it (`stats build #N …`, `board ask [reason] … -> outcome`, `chart.update skipped`, `load: read loop #N on thread …`,
 `Derived damage summary […]`, the gate's `summary build Queued|SkippedSame`). The echo machinery went with the demotion - it thinned a stream
 that no longer reaches an ordinary log, which is dead weight pinned by tests for a defect that cannot happen. What DOES reach a player's log:
-the anomaly **warns** (a door that did not name itself, two builds running over each other - defects, not metrics, and both rare enough
-that seeing one is the point).
+the anomaly **warns** (a door that did not name itself, two builds running over each other - defects, not metrics) — **one warning per episode,
+since 2.4.3**.
+
+**Overlap was never rare, so it stopped being per-build (2026-11, after an operator's 2.4.3 log).** The claim above — "rare enough that seeing one
+is the point" — is what a build counted in hours disproves: `stats build #5528` at 19:30 and `#12896` at 20:29 is ~2 builds/second of steady
+board work over a live capture, and the collisions arrive in bursts (three boards of one request landing on top of a stranger's build, then a
+fourth landing on all three). Per-build WARN lines therefore restated "a raid is fighting" thousands of times a night while saying nothing the
+Debug lines do not say better, since the actionable half of an overlap is *which two doors* — a `from <door>` question. An **episode** now runs from
+the first colliding start until every board is quiet again and speaks at most twice: the collision that opened it (naming what it collided with, plus
+"further overlapping starts are counted, not logged"), and one closing line giving the count it swallowed and pointing at Debug. Nothing about the
+measurement narrowed — `OverlapBuilds` still rises per collision, and every colliding build's own Debug line still ends with
+`started over N other build(s)`; `OverlapsInCurrentEpisode` is "how many are held behind the warning already printed", pinned by
+`StatsBuildTraceTest.OverlappingStartsAreCountedOnceWarnedUntilTheBoardsGoQuiet`. The lesson is the same one the levels law learned twice: **a
+warning that fires in steady state is a metric wearing an alarm**, and the fix is to coalesce it to the *change* (episode opens, episode closes),
+never to delete the counter.
 
 ### What a player's log is for (2026-11: the last machine-written lines went to Debug too)
 

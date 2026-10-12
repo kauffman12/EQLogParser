@@ -251,6 +251,13 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
   nesting on one thread is not overlap (builders wrap bodies in try/finally traced wrappers).
 - **Log levels**: the per-build/per-ask trace class is Debug (a player's log carries none of it without `Debug=True`); Info is
   for a thing a person did or something broke, including one line per deliberate identity write.
+- **A steady-state anomaly warns once per EPISODE, not per occurrence** (overlap is the case): an episode runs from the first colliding
+  build until every board is quiet, opens with one WARN naming what collided, closes with one WARN carrying the count it swallowed —
+  while the counters (`StatsBuildTrace.OverlapBuilds`) and each build's own Debug line rise per occurrence as before. A WARN that fires
+  twice a second during a raid is a metric wearing an alarm; coalesce it to the change, never delete the counter.
+- **A cancellation is not a failure**: a render/tick loop whose awaited dispatcher task comes back cancelled because its window closed
+  ends at Debug with no stack (the `finally` that clears its running flag is what guarantees recovery); keep `Log.Warn(…, ex)` for the
+  exception arms that actually mean something broke.
 - **Three boards, three workers above `BoardFanout.MinOutcomes = 50_000`**: each worker re-asks that its capture is open,
   carries its own try/catch, `RunParallel` waits for all, worker count stays three, and a build never adds to a `TimeRange` it
   adopted. Quote end-to-end ratios, never the build wall.

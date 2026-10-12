@@ -98,6 +98,11 @@ These checks require a realized grid; the automated pane tests exercise bound da
   once. Then fight: new rows and cell updates must not move the viewport, and scrolling up to read an old encounter must hold through a whole pull.
   Clear All and reopening the same log get the reveal again (a new load). Nothing about the pointer counts: leave it inside the grid while the log
   reads and the jump still happens. If the fight list sits behind another tab when the read finishes, opening that tab should show the newest row.
+- [ ] **An ordinary log stays ordinary during a live fight** (2026-11): with boards open and damage flowing, `eqlogparser.log` (no `Debug=True`) gains
+  roughly nothing. Two commands after a raid night, both expecting `0` or near it: `grep -c "other stats build(s) were running" eqlogparser.log`
+  (overlap now speaks ONCE per episode plus one closing count, so a night of collisions reads as a handful of lines, and the closing line points at
+  Debug for the doors) and `grep -c "timer overlay render loop failed" eqlogparser.log` (closing the timer overlay used to print that with a
+  TaskCanceledException stack, which is a window shutting down, not a failure). If overlaps genuinely pile up the closing line still says so.
   Scrolling a search result into view still works — that is a gesture, not a follow. A new fight appearing mid-pull must not move the list at
   all (no jump to the top when a row lands), and with a column sorted a pass must keep the reading position too.
 

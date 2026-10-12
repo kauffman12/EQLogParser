@@ -388,6 +388,18 @@ namespace EQLogParser
       {
         await RenderTimerLoopAsync();
       }
+      catch (OperationCanceledException)
+      {
+        /*
+         * Someone asked this loop to stop, which is not a failure and never was: ShortTickAsync awaits Dispatcher.InvokeAsync, and a
+         * window on its way out hands back a CANCELLED task, which is how 2.4.3 printed a stack trace headed "render loop failed" for
+         * the ordinary act of closing the overlay (the close order varies, so this does not try to tell closing from exiting). The
+         * recovery the warning exists for — a dead loop while `_isRendering` still said running — is handled by the finally below, which
+         * clears the flag on every exit path including this one, so the next timer re-arms the loop. What is left here is Debug with no
+         * stack: the render faults that matter are the Exception arm below.
+         */
+        Log.Debug("timer overlay render loop ended on a cancelled tick");
+      }
       catch (Exception ex)
       {
         Log.Warn("timer overlay render loop failed; the next timer restarts it", ex);
