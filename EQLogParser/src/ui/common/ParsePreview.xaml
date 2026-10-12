@@ -26,7 +26,8 @@
         <RowDefinition Height="50*" />
       </Grid.RowDefinitions>
       <StackPanel HorizontalAlignment="Right" Grid.Row="0" Orientation="Horizontal">
-        <TextBox x:Name="customParseTitle" Margin="0,0,8,2" Width="200" TextChanged="CustomTitleTextChanged" KeyDown="CustomTitleKeyDown" GotFocus="CustomTitleGotFocus" LostFocus="CustomTitleLostFocus" />
+        <!-- The cue word is a watermark wired in code (UiElementUtil.SetWatermark). -->
+        <TextBox x:Name="customParseTitle" Margin="0,0,8,2" Width="200" TextChanged="CustomTitleTextChanged" KeyDown="CustomTitleKeyDown" />
         <ComboBox Margin="0,0,8,2" x:Name="parseList" IsEnabled="True" SelectionChanged="ParseListSelectionChanged" />
         <ComboBox Margin="0,0,4,2" x:Name="parseFormat" IsEnabled="True" SelectionChanged="ParseFormatSelectionChanged" />
         <CheckBox x:Name="playerParseTextDoPetLabel" Template="{StaticResource CustomCheckBoxTemplate}" IsChecked="True" Margin="4,0,0,0" Checked="PlayerParseTextCheckChange" Unchecked="PlayerParseTextCheckChange" Content="Denote Pets"/>

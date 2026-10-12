@@ -24,6 +24,8 @@ namespace EQLogParser
       Owner = MainActions.GetOwner();
       voices.ItemsSource = AudioManager.Instance.GetVoiceList();
 
+      UiElementUtil.SetWatermark(characterName, EnterName);
+
       _theCharacter = character;
       if (_theCharacter != null)
       {
@@ -91,7 +93,7 @@ namespace EQLogParser
       }
       else
       {
-        characterName.Text = EnterName;
+        UiElementUtil.RestoreWatermark(characterName, EnterName);
       }
 
       _ready = true;
@@ -109,23 +111,6 @@ namespace EQLogParser
       }
     }
 
-    private void NameGotFocus(object sender, RoutedEventArgs e)
-    {
-      if (characterName?.FontStyle == FontStyles.Italic)
-      {
-        characterName.Text = "";
-        characterName.FontStyle = FontStyles.Normal;
-      }
-    }
-
-    private void NameLostFocus(object sender, RoutedEventArgs e)
-    {
-      if (string.IsNullOrEmpty(characterName.Text))
-      {
-        characterName.FontStyle = FontStyles.Italic;
-        characterName.Text = EnterName;
-      }
-    }
 
     private async void SaveClicked(object sender, RoutedEventArgs e)
     {

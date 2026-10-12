@@ -40,7 +40,8 @@
               <ColumnDefinition Width="70*" />
             </Grid.ColumnDefinitions>
             <Label Grid.Column="0" Content="Name:" HorizontalAlignment="Left" FontSize="{DynamicResource EQTitleSize}" />
-            <TextBox Grid.Column="1" Name="characterName" FontStyle="Italic" TextChanged="TextChanged" PreviewKeyDown="NamePreviewKeyDown" GotFocus="NameGotFocus" LostFocus="NameLostFocus" FontSize="{DynamicResource EQContentSize}" Width="340"/>
+            <!-- The "Enter Character Name" cue is a watermark wired in code (UiElementUtil.SetWatermark). -->
+            <TextBox Grid.Column="1" Name="characterName" TextChanged="TextChanged" PreviewKeyDown="NamePreviewKeyDown" FontSize="{DynamicResource EQContentSize}" Width="340"/>
           </Grid>
         </StackPanel>
         <StackPanel Orientation="Horizontal" Margin="0,18,0,0">

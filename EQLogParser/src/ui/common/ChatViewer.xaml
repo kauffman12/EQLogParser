@@ -34,11 +34,12 @@
       <syncfusion:DateTimeEdit x:Name="startDate" Padding="2,0,2,0" Margin="0,0,0,2" CanEdit="False" FlowDirection="LeftToRight" DateTimeChanged="SelectedDatesChanged"/>
       <fa:ImageAwesome Height="14" Width="14" Margin="8,0,8,0" HorizontalAlignment="Center" Icon="Solid_ArrowRight" Foreground="{DynamicResource ContentForeground}"/>
       <syncfusion:DateTimeEdit x:Name="endDate" Padding="2,0,2,0" Margin="0,0,8,2" CanEdit="False" FlowDirection="LeftToRight" DateTimeChanged="SelectedDatesChanged"/>
-      <syncfusion:SfTextBoxExt x:Name="toFilter" Margin="0,0,8,2" VerticalContentAlignment="Center" FontStyle="Italic"
-                               AutoCompleteMode="SuggestAppend" Width="80" LostFocus="ToFilterLostFocus" GotFocus="ToFilterGotFocus" PreviewKeyDown="ToFilterKeyDown" TextChanged="FilterTextChanged" />
-      <syncfusion:SfTextBoxExt x:Name="fromFilter" Margin="0,0,8,2" VerticalContentAlignment="Center" FontStyle="Italic"
-                               AutoCompleteMode="SuggestAppend" Width="80" LostFocus="FromFilterLostFocus" GotFocus="FromFilterGotFocus" PreviewKeyDown="FromFilterKeyDown" TextChanged="FilterTextChanged" />
-      <TextBox x:Name="textFilter" Margin="0,0,8,2" FontStyle="Italic" Width="170" LostFocus="TextFilterLostFocus" GotFocus="TextFilterGotFocus" PreviewKeyDown="TextFilterKeyDown" TextChanged="FilterTextChanged" />
+      <!-- The filter cue words are watermarks wired in code (UiElementUtil.SetWatermark). -->
+      <syncfusion:SfTextBoxExt x:Name="toFilter" Margin="0,0,8,2" VerticalContentAlignment="Center"
+                               AutoCompleteMode="SuggestAppend" Width="80" PreviewKeyDown="ToFilterKeyDown" TextChanged="FilterTextChanged" />
+      <syncfusion:SfTextBoxExt x:Name="fromFilter" Margin="0,0,8,2" VerticalContentAlignment="Center"
+                               AutoCompleteMode="SuggestAppend" Width="80" PreviewKeyDown="FromFilterKeyDown" TextChanged="FilterTextChanged" />
+      <TextBox x:Name="textFilter" Margin="0,0,8,2" Width="170" PreviewKeyDown="TextFilterKeyDown" TextChanged="FilterTextChanged" />
       <Button Margin="0,0,8,1" Height="{DynamicResource EQButtonHeight}" Padding="16,0,16,0" Click="RefreshClick">Refresh</Button>
     </StackPanel>
     <syncfusion:EditControl x:Name="chatBox" Grid.Row="1" HorizontalAlignment="Stretch" BorderThickness="0" FontFamily="{DynamicResource EQChatFontFamily}" FontSize="{DynamicResource EQChatFontSize}" Margin="0,0,0,15" IsReadOnly="True" ShowBlockIndicatorLine="False" ShowLineNumber="False" ShowDefaultContextMenu="False"

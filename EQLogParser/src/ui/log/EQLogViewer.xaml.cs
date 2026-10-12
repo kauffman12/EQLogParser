@@ -74,9 +74,9 @@ namespace EQLogParser
       }
 
       UpdateCurrentTextColor();
-      logSearch.Text = Resource.LOG_SEARCH_TEXT;
-      logSearch2.Text = Resource.LOG_SEARCH_TEXT;
-      logFilter.Text = Resource.LOG_FILTER_TEXT;
+      UiElementUtil.SetWatermark(logSearch, Resource.LOG_SEARCH_TEXT);
+      UiElementUtil.SetWatermark(logSearch2, Resource.LOG_SEARCH_TEXT);
+      UiElementUtil.SetWatermark(logFilter, Resource.LOG_FILTER_TEXT);
 
       var list = new List<ComboBoxItemDetails>
       {
@@ -621,8 +621,7 @@ namespace EQLogParser
 
           // reset filter
           tabControl.SelectedItem = resultsTab;
-          logFilter.Text = Resource.LOG_FILTER_TEXT;
-          logFilter.FontStyle = FontStyles.Italic;
+          UiElementUtil.RestoreWatermark(logFilter, Resource.LOG_FILTER_TEXT);
           selectedContext.IsEnabled = true;
         }
         else
@@ -740,8 +739,7 @@ namespace EQLogParser
         {
           if (logSearchModifier?.Focus() == true)
           {
-            textBox.Text = Resource.LOG_SEARCH_TEXT;
-            textBox.FontStyle = FontStyles.Italic;
+            UiElementUtil.RestoreWatermark(textBox, Resource.LOG_SEARCH_TEXT);
           }
         }
         else if (e.Key == Key.Enter)
@@ -752,23 +750,6 @@ namespace EQLogParser
       }
     }
 
-    private void SearchGotFocus(object sender, RoutedEventArgs e)
-    {
-      if (sender is TextBox textBox && textBox.FontStyle == FontStyles.Italic)
-      {
-        textBox.Text = "";
-        textBox.FontStyle = FontStyles.Normal;
-      }
-    }
-
-    private void SearchLostFocus(object sender, RoutedEventArgs e)
-    {
-      if (sender is TextBox textBox && string.IsNullOrEmpty(textBox.Text))
-      {
-        textBox.Text = Resource.LOG_SEARCH_TEXT;
-        textBox.FontStyle = FontStyles.Italic;
-      }
-    }
     private void FontFgColorChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
     {
       if (logBox != null && contextBox != null)
@@ -802,26 +783,7 @@ namespace EQLogParser
     {
       if (e.Key == Key.Escape && logFilterModifier?.Focus() == true)
       {
-        logFilter.Text = Resource.LOG_FILTER_TEXT;
-        logFilter.FontStyle = FontStyles.Italic;
-      }
-    }
-
-    private void FilterGotFocus(object sender, RoutedEventArgs e)
-    {
-      if (logFilter?.FontStyle == FontStyles.Italic)
-      {
-        logFilter.Text = "";
-        logFilter.FontStyle = FontStyles.Normal;
-      }
-    }
-
-    private void FilterLostFocus(object sender, RoutedEventArgs e)
-    {
-      if (logFilter != null && string.IsNullOrEmpty(logFilter.Text))
-      {
-        logFilter.Text = Resource.LOG_FILTER_TEXT;
-        logFilter.FontStyle = FontStyles.Italic;
+        UiElementUtil.RestoreWatermark(logFilter, Resource.LOG_FILTER_TEXT);
       }
     }
 

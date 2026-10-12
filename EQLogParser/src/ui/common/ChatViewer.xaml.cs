@@ -37,11 +37,14 @@ namespace EQLogParser
     public ChatViewer()
     {
       InitializeComponent();
-      textFilter.Text = Resource.CHAT_TEXT_FILTER;
+      UiElementUtil.SetWatermark(textFilter, Resource.CHAT_TEXT_FILTER);
+      // While a cue word sits in one of the auto-complete boxes, its suggestion list is dropped (SetWatermark's
+      // restore runs first; this only adds the AutoCompleteSource half the shared handler used to carry).
+      toFilter.LostFocus += (_, _) => { if (string.IsNullOrEmpty(toFilter.Text)) toFilter.AutoCompleteSource = null; };
+      fromFilter.LostFocus += (_, _) => { if (string.IsNullOrEmpty(fromFilter.Text)) fromFilter.AutoCompleteSource = null; };
+
       startDate.DateTime = new DateTime(1999, 3, 16);
       endDate.DateTime = DateTime.Now;
-      toFilter.Text = Resource.CHAT_TO_FILTER;
-      fromFilter.Text = Resource.CHAT_FROM_FILTER;
 
       var allFonts = UiElementUtil.GetSystemFontFamilies();
       fontFamily.ItemsSource = allFonts;
@@ -76,15 +79,9 @@ namespace EQLogParser
     private void EventsThemeChanged(string _) => UpdateCurrentTextColor();
     private async void RefreshClick(object sender, RoutedEventArgs e) => await ChangeSearchAsync(true);
     private void ChatManagerEventsUpdatePlayer(string player) => LoadPlayers(player);
-    private void ToFilterLostFocus(object sender, RoutedEventArgs e) => FilterLostFocus(toFilter, Resource.CHAT_TO_FILTER);
-    private void FromFilterLostFocus(object sender, RoutedEventArgs e) => FilterLostFocus(fromFilter, Resource.CHAT_FROM_FILTER);
-    private void TextFilterLostFocus(object sender, RoutedEventArgs e) => FilterLostFocus(textFilter, Resource.CHAT_TEXT_FILTER);
     private void ToFilterKeyDown(object sender, KeyEventArgs e) => FilterKeyDown(toFilter, Resource.CHAT_TO_FILTER, e);
     private void FromFilterKeyDown(object sender, KeyEventArgs e) => FilterKeyDown(fromFilter, Resource.CHAT_FROM_FILTER, e);
     private void TextFilterKeyDown(object sender, KeyEventArgs e) => FilterKeyDown(textFilter, Resource.CHAT_TEXT_FILTER, e);
-    private void ToFilterGotFocus(object sender, RoutedEventArgs e) => FilterGotFocus(toFilter, Resource.CHAT_TO_FILTER);
-    private void FromFilterGotFocus(object sender, RoutedEventArgs e) => FilterGotFocus(fromFilter, Resource.CHAT_FROM_FILTER);
-    private void TextFilterGotFocus(object sender, RoutedEventArgs e) => FilterGotFocus(textFilter, Resource.CHAT_TEXT_FILTER);
     private async void SelectedDatesChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => await ChangeSearchAsync();
     private long GetEndDate() => (endDate.DateTime != null) ? endDate.DateTime.Value.Ticks / TimeSpan.TicksPerSecond : 0;
     private long GetStartDate() => (startDate.DateTime != null) ? startDate.DateTime.Value.Ticks / TimeSpan.TicksPerSecond : 0;
@@ -461,8 +458,7 @@ namespace EQLogParser
           filterExt.AutoCompleteSource = null;
         }
 
-        filter.Text = text;
-        filter.FontStyle = FontStyles.Italic;
+        UiElementUtil.RestoreWatermark(filter, text);
         chatBox?.Focus();
       }
       else if (filter is SfTextBoxExt filterExt)
@@ -471,28 +467,6 @@ namespace EQLogParser
       }
     }
 
-    private static void FilterGotFocus(TextBox filter, string text)
-    {
-      if (filter != null && filter.Text == text)
-      {
-        filter.Text = "";
-        filter.FontStyle = FontStyles.Normal;
-      }
-    }
-
-    private static void FilterLostFocus(TextBox filter, string text)
-    {
-      if (filter?.Text.Length == 0)
-      {
-        if (filter is SfTextBoxExt filterExt)
-        {
-          filterExt.AutoCompleteSource = null;
-        }
-
-        filter.Text = text;
-        filter.FontStyle = FontStyles.Italic;
-      }
-    }
 
     private void FilterTextChanged(object sender, TextChangedEventArgs e)
     {

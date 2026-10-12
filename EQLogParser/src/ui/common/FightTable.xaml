@@ -54,7 +54,7 @@
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
       <!-- Find-next, not a filter: typing highlights and scrolls to the matching row so the user can fight
            that event and select its group - hiding rows here would hide the very fights around it. -->
-      <TextBox x:Name="fightSearchBox" Margin="4,2,0,2" Width="130" GotFocus="SearchBoxGotFocus" LostFocus="SearchBoxLostFocus" KeyDown="SearchBoxKeyDown" TextChanged="SearchBoxTextChanged"
+      <TextBox x:Name="fightSearchBox" Margin="4,2,0,2" Width="130" KeyDown="SearchBoxKeyDown" TextChanged="SearchBoxTextChanged"
                ToolTip="Find a fight by name (case-insensitive). Enter / Shift+Enter cycles, Esc clears the highlight"/>
       <CheckBox x:Name="fightShowHp" Margin="14,0,0,2" Template="{StaticResource CustomCheckBoxTemplate}" Checked="ShowHpChanged" Unchecked="ShowHpChanged"
                 IsChecked="True" Content="HP" ToolTip="Show Hit Points"/>

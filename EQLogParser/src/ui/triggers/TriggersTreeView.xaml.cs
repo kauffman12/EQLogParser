@@ -48,7 +48,7 @@ namespace EQLogParser
       InitializeComponent();
       SetupDragNDrop(triggerTreeView);
       SetupDragNDrop(overlayTreeView);
-      findTrigger.Text = Resource.TRIGGER_SEARCH_TEXT;
+      UiElementUtil.SetWatermark(findTrigger, Resource.TRIGGER_SEARCH_TEXT);
       TriggerStateDB.Instance.EventsNodeCheckChanged += TriggerNodeCheckChanged;
       _findTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 750) };
       _findTimer.Tick += async (_, _) =>
@@ -1143,30 +1143,13 @@ namespace EQLogParser
     }
     #endregion
 
-    private void FindLostFocus(object sender, RoutedEventArgs e)
-    {
-      if (string.IsNullOrEmpty(findTrigger.Text))
-      {
-        findTrigger.Text = Resource.TRIGGER_SEARCH_TEXT;
-        findTrigger.FontStyle = FontStyles.Italic;
-      }
-    }
 
-    private void FindGotFocus(object sender, RoutedEventArgs e)
-    {
-      if (findTrigger.Text == Resource.TRIGGER_SEARCH_TEXT)
-      {
-        findTrigger.Text = "";
-        findTrigger.FontStyle = FontStyles.Normal;
-      }
-    }
 
     private async void FindKeyDown(object sender, KeyEventArgs e)
     {
       if (e.Key == Key.Escape)
       {
-        findTrigger.Text = Resource.TRIGGER_SEARCH_TEXT;
-        findTrigger.FontStyle = FontStyles.Italic;
+        UiElementUtil.RestoreWatermark(findTrigger, Resource.TRIGGER_SEARCH_TEXT);
         triggerTreeView.Focus();
       }
       else if (e.Key == Key.Enter)

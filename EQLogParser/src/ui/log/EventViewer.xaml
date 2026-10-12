@@ -39,7 +39,8 @@
         <ComboBoxItem>Excludes</ComboBoxItem>
         <ComboBoxItem>Equals</ComboBoxItem>
       </ComboBox>
-      <TextBox x:Name="eventFilter" Margin="0,0,8,2"  FontStyle="Italic" Width="170" LostFocus="FilterLostFocus" GotFocus="FilterGotFocus" PreviewKeyDown="FilterKeyDown" TextChanged="FilterTextChanged" />
+      <!-- The "Event Filter" watermark is wired in code (UiElementUtil.SetWatermark), like every filter box. -->
+      <TextBox x:Name="eventFilter" Margin="0,0,8,2"  Width="170" PreviewKeyDown="FilterKeyDown" TextChanged="FilterTextChanged" />
       <ComboBox x:Name="selectedOptions" Width="145" Margin="0,0,8,2" 
                 DropDownClosed="SelectOptions" ItemTemplateSelector="{StaticResource ComboBoxSelector}" />
       <Button Margin="0,0,8,1" Height="{DynamicResource EQButtonHeight}" Padding="16,0,16,0" Click="RefreshClick">Refresh</Button>

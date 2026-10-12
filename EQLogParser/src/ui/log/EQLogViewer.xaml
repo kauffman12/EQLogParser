@@ -20,13 +20,14 @@
       <local:ComboBoxItemTemplateSelector x:Key="ComboBoxSelector" />
     </Grid.Resources>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
-      <TextBox x:Name="logSearch" Margin="8,0,8,2" MinWidth="180" Padding="3,0,10,0" ToolTip="Minimum of 2 Characters" FontStyle="Italic" TextChanged="SearchTextChange" LostFocus="SearchLostFocus" GotFocus="SearchGotFocus" PreviewKeyDown="SearchKeyDown"/>
+      <!-- Watermarks (the "Search" / "Filter" cue words) are wired in code via UiElementUtil.SetWatermark. -->
+      <TextBox x:Name="logSearch" Margin="8,0,8,2" MinWidth="180" Padding="3,0,10,0" ToolTip="Minimum of 2 Characters" TextChanged="SearchTextChange" PreviewKeyDown="SearchKeyDown"/>
       <ComboBox x:Name="logSearchModifier" Margin="0,0,8,2" SelectedIndex="0" Padding="5,0,10,0" VerticalContentAlignment="Center">
         <ComboBoxItem>And</ComboBoxItem>
         <ComboBoxItem>Or</ComboBoxItem>
         <ComboBoxItem>Exclude</ComboBoxItem>  
       </ComboBox>
-      <TextBox x:Name="logSearch2" Margin="0,0,8,2" MinWidth="180" Padding="3,0,10,0" ToolTip="Minimum of 2 Characters" VerticalContentAlignment="Center" FontStyle="Italic" TextChanged="SearchTextChange" LostFocus="SearchLostFocus" GotFocus="SearchGotFocus" PreviewKeyDown="SearchKeyDown"/>
+      <TextBox x:Name="logSearch2" Margin="0,0,8,2" MinWidth="180" Padding="3,0,10,0" ToolTip="Minimum of 2 Characters" VerticalContentAlignment="Center" TextChanged="SearchTextChange" PreviewKeyDown="SearchKeyDown"/>
       <fa:ImageAwesome x:Name="searchIcon" Rotation="0" Margin="2,4,0,4" Cursor="Hand" VerticalAlignment="Center" Height="18" Width="18" Icon="Solid_Search" ToolTip="Start Searching" MouseLeftButtonDown="SearchClick" IsEnabledChanged="SearchIconIsEnabledChanged">
         <fa:ImageAwesome.LayoutTransform>
           <ScaleTransform ScaleX="{DynamicResource EQCheckBoxScale}" ScaleY="{DynamicResource EQCheckBoxScale}"/>
@@ -39,7 +40,7 @@
         <ComboBoxItem>Include</ComboBoxItem>
         <ComboBoxItem>Exclude</ComboBoxItem>
       </ComboBox>
-      <TextBox x:Name="logFilter" Margin="0,0,8,2" FontStyle="Italic" Padding="3,0,10,0" MinWidth="160" LostFocus="FilterLostFocus" GotFocus="FilterGotFocus" PreviewKeyDown="FilterKeyDown" TextChanged="FilterTextChanged"/>
+      <TextBox x:Name="logFilter" Margin="0,0,8,2" Padding="3,0,10,0" MinWidth="160" PreviewKeyDown="FilterKeyDown" TextChanged="FilterTextChanged"/>
       <ComboBox x:Name="lineTypes" Margin="0,0,8,2" Padding="5,0,10,0" DropDownClosed="SelectLineTypes" ItemTemplateSelector="{StaticResource ComboBoxSelector}" />
     </StackPanel>
     <StackPanel Grid.Row="1" Orientation="Horizontal">

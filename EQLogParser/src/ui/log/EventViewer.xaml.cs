@@ -53,7 +53,7 @@ namespace EQLogParser
       UiElementUtil.SetComboBoxTitle(selectedOptions, Resource.EVENT_TYPES_SELECTED);
       ThemeConfig.EventsThemeChanged += EventsThemeChanged;
 
-      eventFilter.Text = Resource.EVENT_FILTER_TEXT;
+      UiElementUtil.SetWatermark(eventFilter, Resource.EVENT_FILTER_TEXT);
       _filterTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 750) };
       _filterTimer.Tick += (_, _) =>
       {
@@ -222,27 +222,8 @@ namespace EQLogParser
     {
       if (e.Key == Key.Escape)
       {
-        eventFilter.Text = Resource.EVENT_FILTER_TEXT;
-        eventFilter.FontStyle = FontStyles.Italic;
+        UiElementUtil.RestoreWatermark(eventFilter, Resource.EVENT_FILTER_TEXT);
         dataGrid.Focus();
-      }
-    }
-
-    private void FilterGotFocus(object sender, RoutedEventArgs e)
-    {
-      if (eventFilter.Text == Resource.EVENT_FILTER_TEXT)
-      {
-        eventFilter.Text = "";
-        eventFilter.FontStyle = FontStyles.Normal;
-      }
-    }
-
-    private void FilterLostFocus(object sender, RoutedEventArgs e)
-    {
-      if (string.IsNullOrEmpty(eventFilter.Text))
-      {
-        eventFilter.Text = Resource.EVENT_FILTER_TEXT;
-        eventFilter.FontStyle = FontStyles.Italic;
       }
     }
 

@@ -203,9 +203,6 @@ namespace EQLogParser
      */
     private bool _paneReady;
 
-    // The search box's placeholder doubles as the empty-filter state: while it shows, nothing is filtered.
-    private bool _searchPlaceholder;
-
     public FightTable()
     {
       // Before anything can park or release a gesture: the probe reads `fightGrid`, which InitializeComponent wires.
@@ -213,10 +210,9 @@ namespace EQLogParser
 
       InitializeComponent();
 
-      // Same placeholder idiom as the legacy table: the prompt is text in the box, cleared on focus.
-      _searchPlaceholder = true;
-      fightSearchBox.Text = Resource.NPC_SEARCH_TEXT;
-      fightSearchBox.FontStyle = FontStyles.Italic;
+      // The search box's watermark doubles as the empty-filter state (UiElementUtil.SetWatermark): while the cue
+      // word shows, nothing is filtered - TextChanged reads that off the Text itself, not a side flag.
+      UiElementUtil.SetWatermark(fightSearchBox, Resource.NPC_SEARCH_TEXT);
 
       fightGrid.ItemsSource = _rows;
       fightShowBreaks.IsChecked = _currentShowBreaks = ConfigUtil.IfSet("NpcShowInactivityBreaks", true);
@@ -1109,26 +1105,6 @@ namespace EQLogParser
     private int _searchIndex;
     private int _searchDirection = 1;
 
-    private void SearchBoxGotFocus(object sender, RoutedEventArgs e)
-    {
-      if (!_searchPlaceholder) return;
-      _searchPlaceholder = false;
-      fightSearchBox.Text = string.Empty;
-      fightSearchBox.FontStyle = FontStyles.Normal;
-    }
-
-    private void RestoreSearchPlaceholder()
-    {
-      if (fightSearchBox.Text.Length == 0)
-      {
-        _searchPlaceholder = true;
-        fightSearchBox.Text = Resource.NPC_SEARCH_TEXT;
-        fightSearchBox.FontStyle = FontStyles.Italic;
-      }
-    }
-
-    private void SearchBoxLostFocus(object sender, RoutedEventArgs e) => RestoreSearchPlaceholder();
-
     private void SearchBoxKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
       if (e.Key == System.Windows.Input.Key.Enter)
@@ -1141,9 +1117,7 @@ namespace EQLogParser
       {
         // Legacy's escape: clear the box to its placeholder, drop the highlight, hand focus to the grid - the
         // next keystroke is a selection. The box text goes with it; there is nothing to cycle back to.
-        _searchPlaceholder = true;
-        fightSearchBox.Text = Resource.NPC_SEARCH_TEXT;
-        fightSearchBox.FontStyle = FontStyles.Italic;
+        UiElementUtil.RestoreWatermark(fightSearchBox, Resource.NPC_SEARCH_TEXT);
         ClearSearchMark();
         fightGrid.Focus();
       }
@@ -1155,7 +1129,7 @@ namespace EQLogParser
 
       // Legacy's debounce fires only when something was ADDED: backspacing alone must not re-search, but it does
       // drop the stale highlight so an old mark never sits on a row the text no longer names.
-      if (_searchPlaceholder) return;
+      if (fightSearchBox.Text == Resource.NPC_SEARCH_TEXT) return;   // the watermark itself is not a query
       if (e.Changes.FirstOrDefault(change => change.AddedLength > 0) != null)
       {
         _searchTextTimer?.Start();

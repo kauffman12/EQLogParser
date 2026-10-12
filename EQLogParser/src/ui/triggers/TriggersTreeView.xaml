@@ -27,7 +27,8 @@
         <Border Grid.Row="0" Padding="2" Background="{DynamicResource ContentBackgroundAlt3}" BorderThickness="1">
           <DockPanel Background="{DynamicResource ContentBackgroundAlt2}">
             <TextBlock Text="Manage Triggers" Margin="8,1,20,0" FontSize="{DynamicResource EQTitleSize}" Height="{DynamicResource EQButtonHeight}" />
-            <TextBox x:Name="findTrigger" DockPanel.Dock="Right" HorizontalAlignment="Right" Margin="0,0,8,4" Height="{DynamicResource EQButtonHeight}" ToolTip="Search Triggers by Name and Pattern" FontStyle="Italic" Width="140" LostFocus="FindLostFocus" GotFocus="FindGotFocus" PreviewKeyDown="FindKeyDown" TextChanged="FindTextChanged" />
+            <!-- The "Search" cue word is a watermark wired in code (UiElementUtil.SetWatermark). -->
+            <TextBox x:Name="findTrigger" DockPanel.Dock="Right" HorizontalAlignment="Right" Margin="0,0,8,4" Height="{DynamicResource EQButtonHeight}" ToolTip="Search Triggers by Name and Pattern" Width="140" PreviewKeyDown="FindKeyDown" TextChanged="FindTextChanged" />
           </DockPanel>
         </Border>
         <Grid Grid.Row="1">

@@ -55,8 +55,7 @@ namespace EQLogParser
         }
       };
 
-      customParseTitle.Text = Resource.CUSTOM_PARSE_TITLE;
-      customParseTitle.FontStyle = FontStyles.Italic;
+      UiElementUtil.SetWatermark(customParseTitle, Resource.CUSTOM_PARSE_TITLE);
       parseList.Focus();
       _initialized = true;
     }
@@ -276,30 +275,12 @@ namespace EQLogParser
       }
     }
 
-    private void CustomTitleGotFocus(object sender, RoutedEventArgs e)
-    {
-      if (customParseTitle.Text == Resource.CUSTOM_PARSE_TITLE)
-      {
-        customParseTitle.Text = "";
-        customParseTitle.FontStyle = FontStyles.Normal;
-      }
-    }
-
-    private void CustomTitleLostFocus(object sender, RoutedEventArgs e)
-    {
-      if (customParseTitle.Text.Length == 0)
-      {
-        customParseTitle.Text = Resource.CUSTOM_PARSE_TITLE;
-        customParseTitle.FontStyle = FontStyles.Italic;
-      }
-    }
 
     private void CustomTitleKeyDown(object sender, KeyEventArgs e)
     {
       if (e.Key == Key.Escape)
       {
-        customParseTitle.Text = Resource.CUSTOM_PARSE_TITLE;
-        customParseTitle.FontStyle = FontStyles.Italic;
+        UiElementUtil.RestoreWatermark(customParseTitle, Resource.CUSTOM_PARSE_TITLE);
         parseList.Focus();
       }
     }
