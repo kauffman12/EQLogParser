@@ -360,4 +360,10 @@
   <data name="FOLDER_DELETE" xml:space="preserve">
     <value>Folder Delete</value>
   </data>
+  <data name="NAME_FILTER_TEXT" xml:space="preserve">
+    <value>Name Filter</value>
+  </data>
+  <data name="IDENTITIES" xml:space="preserve">
+    <value>Identities</value>
+  </data>
 </root>

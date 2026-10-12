@@ -8,251 +8,274 @@
              xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
              mc:Ignorable="d"
              d:DesignHeight="450" d:DesignWidth="900">
-  <!-- ONE CHILD, THE GRID. No header row: the dock tab over this pane already says "Identity Table", and this
-       window lives in a narrow slide-out strip on the right where 30 vertical pixels belong to rows, not to repeating the
-       grid, column headers, done — the shape every retired pane beside it also had. -->
+  <!--
+    A strip, then the grid — a deliberate reversal of this pane's old "no header row" law (docs/names-table-paging-plan.md →
+    "What we picked"). The law was right while the grid held the whole list: the dock tab already says "Identity Table", and in
+    a narrow slide-out strip 30 pixels belong to rows, not to repeating labels. PAGING is what reverses it: a grid of one page
+    in ten can no longer answer "how many names is this?" and the total becomes functional information, so it sits above the
+    grid — with the two dials that decide WHICH of those names the page shows (a name filter and the closed type list). The
+    row-number column goes away with the row header; its job (position) belongs to a 1,000-row page nobody counts by hand,
+    and its 32 pixels go back to the strip.
+  -->
   <Grid>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+    </Grid.RowDefinitions>
+
     <Grid.Resources>
       <!-- Hidden rather than Collapsed: a row that offers no pencil still reserves its width, so the words in the Type
            and Class columns line up whether or not this row can be overruled. See PlaceholderVisibilityConverter. -->
       <local:PlaceholderVisibilityConverter x:Key="PlaceholderVisibilityConverter" />
       <BooleanToVisibilityConverter x:Key="BoolToVis" />
 
-      <!-- The same row-number template every other row-headered table in the app declares (implicit style, plain
-           index text at EQContentSize): numbering tracks the live row position. Without it this grid was the only
-           one showing Syncfusion's default row header. -->
-      <Style TargetType="syncfusion:GridRowHeaderCell">
-        <Setter Property="Template">
-          <Setter.Value>
-            <ControlTemplate TargetType="syncfusion:GridRowHeaderCell">
-              <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
-                <Grid>
-                  <TextBlock HorizontalAlignment="Center" FontSize="{DynamicResource EQContentSize}" VerticalAlignment="Center" Text="{Binding RowIndex, RelativeSource={RelativeSource TemplatedParent}}" TextAlignment="Center" />
-  </Grid>
-              </Border>
-            </ControlTemplate>
-          </Setter.Value>
-        </Setter>
-      </Style>
+      <!-- The same checkbox-in-a-combobox idiom EventViewer and the breakdown panes use for their multi-selects: a row of
+           CheckBox + word in the drop-down, the SelectedText of the picked row in the closed box. -->
+      <local:ComboBoxItemTemplateSelector x:Key="ComboBoxSelector" />
     </Grid.Resources>
 
     <!--
-      And nothing above the grid either. The census counts that used to sit in the caption, and then on its hover, are
-      computed as before (ClassificationReport owns them, tests pin them) but have no surface here: this is a list of
-      names, not a report header.
+      The strip: the count on the left — "Showing 12,406 Identities", or "Showing 37 of 12,406" when a dial narrows it — and
+      the two dials on the right. The count is what the row header used to say, moved up where a paged grid cannot answer it:
+      an operator who filtered down to nothing needs to know the capture still has the name, not that the page is empty.
 
-      Three controls used to ride at the right of the header, and all three are gone on
-      purpose rather than moved:
-
-        "Refresh"  - the list updates itself now. A census that needs a button to look current reads as broken the first
-                     time a name is missing; Apply re-runs on every derive pass and on log open/close/clear.
-        "Not a player" (Solid_Times) - its whole effect is DelVerdict + Re-derive, which the take-back button beside the name
-                     does in one click on the row it applies to.
-        "Forget old log decisions" (Solid_Undo) - same reach, so this too was retired rather than moved: choosing a Type overrules
-                     a remembered verdict, and the take-back drops it outright (it removes the ledger row, which is the whole
-                     of what that icon asked for). The ledger entry itself is removed by both.
-
-      BATCH work - setting a whole block of selected names at once - is not here and never was expressible in a cell: it
-      lives in the fight grids' context menu (Set as Player / Mercenary / Pet / NPC, Clear Override). This pane has no
-      button left — the take-back beside every name — and three pencils.
+      The dials are VISIBILITY only (the plan's words): they decide which rows a page shows, never which names exist, and
+      they cost the index one filter pass per change — the census's own order and every claim behind the rows are untouched.
     -->
-
-    <syncfusion:SfDataGrid x:Name="namesGrid"
-                           AllowResizingColumns="True"
-                           AllowSorting="True"
-                           AutoGenerateColumns="False"
-                           CurrentCellBorderThickness="0"
-                           FrozenColumnCount="1"
-                           GridLinesVisibility="Both"
-                           HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
-                           IsReadOnly="True"
-                           RowHeight="{DynamicResource EQTableRowHeight}"
-                           RowHeaderWidth="{DynamicResource EQTableRowHeaderWidth}"
-                           GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
-                           SelectionMode="Extended"
-                           ShowRowHeader="True">
-      <syncfusion:SfDataGrid.SortColumnDescriptions>
+    <Grid Grid.Row="0">
+      <Label x:Name="titleCount" Style="{StaticResource EQTitleStyle}" VerticalAlignment="Center"/>
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
         <!--
-          What the list opens in: names ascending. The census's own order (raid-side first, then busiest) rearranged rows
-          underneath whoever was reading and looking for one name meant scanning a shuffled list; sorting by hand is the whole
-          point of a 4,000 row table.
-
-          A click on any header replaces this, and the pane keeps BOTH in step: Syncfusion sorts its view while NamesTable puts
-          its own rows in the same order (IdentityRowOrder is the comparison, NamesTable.SortColumnsChanged is the hook). The
-          second half is not decoration — this grid merges each census into the collection it already showed instead of being
-          handed a new one, so an order held only by the view is an order that quietly stops holding: the arrow stayed on Name
-          over a list in census order, which is what got reported. This markup is the DEFAULT; after that the grid's descriptor
-          is the truth and this pane mirrors it.
+          The type dial: the closed vocabulary of kinds (IdentityVocabulary.TypeOptions — Player, Pet, Mercenary, NPC, Spell),
+          one checkbox row each, all checked at birth. A click on a row toggles it; closing the list applies the change if any.
+          The closed box reads what was picked last ("All Types" when nothing was narrowed), and the count beside it says how
+          many rows that means — the two numbers together are the whole answer to "why is my name not here".
         -->
-        <syncfusion:SortColumnDescription ColumnName="Name" SortDirection="Ascending"/>
-      </syncfusion:SfDataGrid.SortColumnDescriptions>
-      <!--
-        No context menu. Every verdict a right-click used to offer is now the pencil in the Type cell (the same verb,
-        the same file), so the menu was a second door to the same room - and a hidden one, since nothing on the row
-        hinted at it. What could not live in a cell went to the two icons in the title band.
-      -->
-      <!--
-        Widths are pixels, not grid stars: SfDataGrid's Width is a double, so "1.6*" throws while the column is being
-        created and takes the whole window (and the app, which docks it at startup) down with a XamlParseException that
-        points at a line of markup and never says what it disliked. The numbers below are only the FIRST paint: the pane
-        sizes these from the same theme-scaled variables every other table reads (ApplyColumnWidths, re-run when the
-        theme changes), because ThemeConfig cannot answer anything until after this markup has been loaded.
+        <ComboBox x:Name="typeFilterBox" Width="150" Margin="0,0,8,2" IsTextSearchEnabled="False"
+                  DropDownClosed="TypeFilterDropDownClosed" ItemTemplateSelector="{StaticResource ComboBoxSelector}" />
+        <!-- The name dial: the app's one filter idiom (UiElementUtil.SetWatermark, like every filter box in the app).
+             Matching is case-insensitive "contains", and a pause of typing is what rebuilds — not a keystroke. -->
+        <TextBox x:Name="nameSearchBox" Margin="0,0,8,2" Width="170"
+                 TextChanged="NameSearchBoxTextChanged" PreviewKeyDown="NameSearchBoxPreviewKeyDown" />
+      </StackPanel>
+    </Grid>
 
-        Five columns in a fixed order — Name, Type, Class, Owner, Why: the cells you can edit sit together right after the name,
-        and WHY is the read-only explanation, so it goes last instead of between the things you click.
+    <!--
+      THE PAGER, then the grid inside it. One page of a thousand rows at a time (CensusPageSize in the code-behind): the
+      grid's whole visible world is a slice of the pane's published list, handed out by OnDemandLoading as pages turn. The
+      strip under the grid is PreviousNext only — with twenty-plus pages a numeric strip is more pixels than pages.
 
-        What this window used to carry and still does not: Damage/Healing belong on a damage board, not on an identity list; Notes
-        held sentences that were mostly empty and, where they were not, are now the WHY cell's tooltip — see ProvenanceFor. Owner
-        came BACK on 2026-10-09 (see the column below), and the Pet Owners window it was deferred to is gone with its file frozen.
-      -->
-      <syncfusion:SfDataGrid.Columns>
+      This replaces binding the grid to the collection itself (the old `namesGrid.ItemsSource = _rows`). What that bought
+      was one notification per row per census beat — 25,000 of them, twice a second on a live raid. What it costs is the
+      laws that now live in the publish door instead: the list arrives pre-sorted (the pane's own index, not the view), the
+      selection comes back by NAME after every publish, and an open in-cell editor holds the paint (docs/names-table-paging-plan.md).
+    -->
+    <!-- The pager is a SIBLING of the grid, not its wrapper: SfDataPager pages whatever grid its Target names (wired in the
+         constructor), and it draws its own strip — PreviousNext under the grid, so page ten is one click from the list. -->
+    <Grid Grid.Row="1">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="*"/>
+        <RowDefinition Height="Auto"/>
+      </Grid.RowDefinitions>
+      <syncfusion:SfDataPager x:Name="idPager" Grid.Row="1"
+                              DisplayMode="PreviousNext"
+                              UseOnDemandPaging="True"
+                              OnDemandLoading="PagerOnDemandLoading" />
+      <syncfusion:SfDataGrid x:Name="namesGrid" Grid.Row="0"
+                             AllowResizingColumns="True"
+                             AllowSorting="True"
+                             AutoGenerateColumns="False"
+                             CurrentCellBorderThickness="0"
+                             FrozenColumnCount="1"
+                             GridLinesVisibility="Both"
+                             HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
+                             IsReadOnly="True"
+                             RowHeight="{DynamicResource EQTableRowHeight}"
+                             GridCopyOption="CopyData,IncludeHeaders,IncludeFormat"
+                             SelectionMode="Extended"
+                             ShowRowHeader="False">
+        <syncfusion:SfDataGrid.SortColumnDescriptions>
+          <!--
+            What the list opens in: names ascending. The census's own order (raid-side first, then busiest) rearranged rows
+            underneath whoever was reading and looking for one name meant scanning a shuffled list; sorting by hand is the whole
+            point of a 4,000 row table.
+
+            A header click replaces this, and the pane keeps BOTH in step: the pane rebuilds its published list in the clicked
+            order (IdentityRowOrder is the comparison, NamesTable.RequestViewRebuild is the door), while the grid's own view sort
+            is DECLINED on purpose — the list arrives pre-sorted, and a second sort would re-sort ONE page of a thousand, which
+            is alphabetical within a slice, not over the list (SortColumnsChanging). This markup is the DEFAULT; after that the
+            grid's descriptor is the truth and this pane mirrors it.
+          -->
+          <syncfusion:SortColumnDescription ColumnName="Name" SortDirection="Ascending"/>
+        </syncfusion:SfDataGrid.SortColumnDescriptions>
         <!--
-          Name, with the pane's one button — the history icon, Solid_History (2026-11; it was Solid_Calculator until then, which is the
-          same glyph the four summary panes use for their OPTIONS button, so this window's only verb shared a picture with an unrelated
-          verb in four other windows). It is where the take-back lives now that it stopped being a dropdown entry: a list of ANSWERS should
-          not carry a verb whose honest outcome is often an identical cell, and an operator who cannot see the control cannot call it dead.
-          Clicking forgets every stored belief about this name — override, ledger row, registry claims, and the stored fallback class (this
-          capture's own cast-learned windows stay — kind is static, class is live evidence) — and lets this capture's own lines answer again
-          (ClassificationCommands.Recalculate). The glyph is a clock whose arrow runs back because that is the verb: back to what THIS log
-          says. The word under it reads "Recalculating…" until the pass that answers the click has landed and been shown, and a name this
-          capture never mentions keeps its row afterwards — reading Unknown (TakenBackNames) rather than vanishing.
+          No context menu. Every verdict a right-click used to offer is now the pencil in the Type cell (the same verb,
+          the same file), so the menu was a second door to the same room - and a hidden one, since nothing on the row
+          hinted at it. What could not live in a cell went to the two icons in the title band.
         -->
-        <syncfusion:GridTemplateColumn HeaderText="Name" MappingName="Name" Width="190">
-          <syncfusion:GridTemplateColumn.CellTemplate>
-            <DataTemplate>
-              <Grid>
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                <fa:ImageAwesome Margin="8,1,4,0" Style="{StaticResource EQIconStyle}" Icon="Solid_History" Cursor="Hand"
-                                 MouseLeftButtonUp="RecalcMouseLeftButtonUp"
-                                 ToolTip="Re-calculate type, class, and ownership based solely on the current log file"/>
-                  <TextBlock VerticalAlignment="Center" Text="{Binding DisplayText}"/>
+        <!--
+          Widths are pixels, not grid stars: SfDataGrid's Width is a double, so "1.6*" throws while the column is being
+          created and takes the whole window (and the app, which docks it at startup) down with a XamlParseException that
+          points at a line of markup and never says what it disliked. The numbers below are only the FIRST paint: the pane
+          sizes these from the same theme-scaled variables every other table reads (ApplyColumnWidths, re-run when the
+          theme changes), because ThemeConfig cannot answer anything until after this markup has been loaded.
+
+          Five columns in a fixed order — Name, Type, Class, Owner, Why: the cells you can edit sit together right after the name,
+          and WHY is the read-only explanation, so it goes last instead of between the things you click.
+
+          What this window used to carry and still does not: Damage/Healing belong on a damage board, not on an identity list; Notes
+          held sentences that were mostly empty and, where they were not, are now the WHY cell's tooltip — see ProvenanceFor. Owner
+          came BACK on 2026-10-09 (see the column below), and the Pet Owners window it was deferred to is gone with its file frozen.
+        -->
+        <syncfusion:SfDataGrid.Columns>
+          <!--
+            Name, with the pane's one button — the history icon, Solid_History (2026-11; it was Solid_Calculator until then, which is the
+            same glyph the four summary panes use for their OPTIONS button, so this window's only verb shared a picture with an unrelated
+            verb in four other windows). It is where the take-back lives now that it stopped being a dropdown entry: a list of ANSWERS should
+            not carry a verb whose honest outcome is often an identical cell, and an operator who cannot see the control cannot call it dead.
+            Clicking forgets every stored belief about this name — override, ledger row, registry claims, and the stored fallback class (this
+            capture's own cast-learned windows stay — kind is static, class is live evidence) — and lets this capture's own lines answer again
+            (ClassificationCommands.Recalculate). The glyph is a clock whose arrow runs back because that is the verb: back to what THIS log
+            says. The word under it reads "Recalculating…" until the pass that answers the click has landed and been shown, and a name this
+            capture never mentions keeps its row afterwards — reading Unknown (TakenBackNames) rather than vanishing.
+          -->
+          <syncfusion:GridTemplateColumn HeaderText="Name" MappingName="Name" Width="190">
+            <syncfusion:GridTemplateColumn.CellTemplate>
+              <DataTemplate>
+                <Grid>
+                  <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                  <fa:ImageAwesome Margin="8,1,4,0" Style="{StaticResource EQIconStyle}" Icon="Solid_History" Cursor="Hand"
+                                   MouseLeftButtonUp="RecalcMouseLeftButtonUp"
+                                   ToolTip="Re-calculate type, class, and ownership based solely on the current log file"/>
+                    <TextBlock VerticalAlignment="Center" Text="{Binding DisplayText}"/>
+                  </StackPanel>
+                </Grid>
+              </DataTemplate>
+            </syncfusion:GridTemplateColumn.CellTemplate>
+          </syncfusion:GridTemplateColumn>
+
+          <!--
+            Type: the verdict word and the pencil that overrules it. The pencil swaps THIS CELL to a ComboBox (in the cell, not floating
+            over it — see the in-cell editor note in NamesTable.xaml.cs) and opens its list; picking writes. One dropdown instead of five menu items means the whole vocabulary of KINDS is visible at once. The take-back
+            is not in that list (2026-11) - it is the history icon beside the name, where a click can be seen.
+          -->
+          <syncfusion:GridTemplateColumn HeaderText="Type" MappingName="Type" Width="90">
+            <syncfusion:GridTemplateColumn.CellTemplate>
+              <DataTemplate>
+                <Grid>
+                  <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                  <!--
+                    No pencil where the answer is forced: a summon whose own spelling carries its owner (`Tuona`s ward`) and
+                    a spell effect (its Type reads "Spell") each have exactly one right Type, and offering three wrong ones beside it is an
+                    invitation to break a row nobody can put back. NameRow.Overrulable decides; see CanOverrule.
+
+                    The space is taken either way: PlaceholderVisibilityConverter answers HIDDEN, not Collapsed, so a row with no pencil still reserves
+                    the icon's width and every word in this column starts at the same pixel (ARowWithoutAPencilStillPaysForOne).
+                  -->
+                  <fa:ImageAwesome Margin="8,1,4,0" Style="{StaticResource EQIconStyle}" Icon="Regular_Edit" Cursor="Hand"
+                                   Visibility="{Binding Overrulable, Converter={StaticResource PlaceholderVisibilityConverter}}"
+                                   MouseLeftButtonUp="TypeEditMouseLeftButtonUp" ToolTip="Choose type"/>
+                  <TextBlock VerticalAlignment="Center" Text="{Binding Type}"/>
                 </StackPanel>
-              </Grid>
-            </DataTemplate>
-          </syncfusion:GridTemplateColumn.CellTemplate>
-        </syncfusion:GridTemplateColumn>
+                  <ComboBox HorizontalAlignment="Stretch" VerticalAlignment="Center"
+                            Visibility="{Binding IsTypeEditing, Converter={StaticResource BoolToVis}}"
+                            ItemsSource="{Binding EditorItems}"
+                            Style="{DynamicResource EQComboBoxStyle}"
+                            IsTextSearchEnabled="False"
+                            IsVisibleChanged="CellEditorVisibilityChanged"
+                            DropDownClosed="CellEditorDropDownClosed"
+                            LostKeyboardFocus="CellEditorLostFocus"
+                            SelectionChanged="TypeCellEditorSelectionChanged" />
+                </Grid>
+              </DataTemplate>
+            </syncfusion:GridTemplateColumn.CellTemplate>
+          </syncfusion:GridTemplateColumn>
+          <!--
+            Class, with the same pencil as Type - but only on a row where choosing a class MEANS something. Setting one
+            writes players.txt (SetDefaultPlayerClass verifies the name as a player), so an NPC row gets no icon: typing a
+            mob into the roster is exactly the pollution this window exists to catch. Nor does a Pet or Merc row get one -
+            nothing persists mercenaries, and a pet's class belongs to nobody's roster. A name the rules have not placed
+            declares itself with Type first; the pencil arrives as soon as the row reads Player (NameRow.ClassEditable).
 
-        <!--
-          Type: the verdict word and the pencil that overrules it. The pencil swaps THIS CELL to a ComboBox (in the cell, not floating
-          over it — see the in-cell editor note in NamesTable.xaml.cs) and opens its list; picking writes. One dropdown instead of five menu items means the whole vocabulary of KINDS is visible at once. The take-back
-          is not in that list (2026-11) - it is the history icon beside the name, where a click can be seen.
-        -->
-        <syncfusion:GridTemplateColumn HeaderText="Type" MappingName="Type" Width="90">
-          <syncfusion:GridTemplateColumn.CellTemplate>
-            <DataTemplate>
-              <Grid>
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                <!--
-                  No pencil where the answer is forced: a summon whose own spelling carries its owner (`Tuona`s ward`) and
-                  a spell effect (its Type reads "Spell") each have exactly one right Type, and offering three wrong ones beside it is an
-                  invitation to break a row nobody can put back. NameRow.Overrulable decides; see CanOverrule.
+            It sits BEFORE Why: the columns you can edit stay together right after the Name, and the read-only sentence that explains a verdict goes
+            last rather than between two things you click.
+          -->
+          <syncfusion:GridTemplateColumn HeaderText="Class" MappingName="PlayerClass" Width="100">
+            <syncfusion:GridTemplateColumn.CellTemplate>
+              <DataTemplate>
+                <Grid>
+                  <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                  <fa:ImageAwesome Margin="8,1,4,0" Style="{StaticResource EQIconStyle}" Icon="Regular_Edit" Cursor="Hand"
+                                   Visibility="{Binding ClassEditable, Converter={StaticResource PlaceholderVisibilityConverter}}"
+                                   MouseLeftButtonUp="ClassEditMouseLeftButtonUp" ToolTip="Choose class"/>
+                    <TextBlock VerticalAlignment="Center" Text="{Binding PlayerClass}"/>
+                  </StackPanel>
+                  <ComboBox HorizontalAlignment="Stretch" VerticalAlignment="Center"
+                            Visibility="{Binding IsClassEditing, Converter={StaticResource BoolToVis}}"
+                            ItemsSource="{Binding EditorItems}"
+                            Style="{DynamicResource EQComboBoxStyle}"
+                            IsTextSearchEnabled="False"
+                            IsVisibleChanged="CellEditorVisibilityChanged"
+                            DropDownClosed="CellEditorDropDownClosed"
+                            LostKeyboardFocus="CellEditorLostFocus"
+                            SelectionChanged="ClassCellEditorSelectionChanged" />
+                </Grid>
+              </DataTemplate>
+            </syncfusion:GridTemplateColumn.CellTemplate>
+          </syncfusion:GridTemplateColumn>
+          <!--
+            Owner, and the same pencil again — but only on a row that READS Pet (NameRow.OwnerEditable → PetOwnership.CanEditOwner).
+            This column came back on 2026-10-09: it used to be absent because "Pet Owners window lists the same pairs", and that
+            reasoning died with the window's write side — petmapping.txt is frozen (docs/DesignNotes.md → "petmapping.txt is a feed now"),
+            so an identity list that could neither show nor correct a summon's owner left no door at all except a file the app no longer reads.
 
-                  The space is taken either way: PlaceholderVisibilityConverter answers HIDDEN, not Collapsed, so a row with no pencil still reserves
-                  the icon's width and every word in this column starts at the same pixel (ARowWithoutAPencilStillPaysForOne).
-                -->
-                <fa:ImageAwesome Margin="8,1,4,0" Style="{StaticResource EQIconStyle}" Icon="Regular_Edit" Cursor="Hand"
-                                 Visibility="{Binding Overrulable, Converter={StaticResource PlaceholderVisibilityConverter}}"
-                                 MouseLeftButtonUp="TypeEditMouseLeftButtonUp" ToolTip="Choose type"/>
-                <TextBlock VerticalAlignment="Center" Text="{Binding Type}"/>
-              </StackPanel>
-                <ComboBox HorizontalAlignment="Stretch" VerticalAlignment="Center"
-                          Visibility="{Binding IsTypeEditing, Converter={StaticResource BoolToVis}}"
-                          ItemsSource="{Binding EditorItems}"
-                          Style="{DynamicResource EQComboBoxStyle}"
-                          IsTextSearchEnabled="False"
-                          IsVisibleChanged="CellEditorVisibilityChanged"
-                          DropDownClosed="CellEditorDropDownClosed"
-                          LostKeyboardFocus="CellEditorLostFocus"
-                          SelectionChanged="TypeCellEditorSelectionChanged" />
-              </Grid>
-            </DataTemplate>
-          </syncfusion:GridTemplateColumn.CellTemplate>
-        </syncfusion:GridTemplateColumn>
-        <!--
-          Class, with the same pencil as Type - but only on a row where choosing a class MEANS something. Setting one
-          writes players.txt (SetDefaultPlayerClass verifies the name as a player), so an NPC row gets no icon: typing a
-          mob into the roster is exactly the pollution this window exists to catch. Nor does a Pet or Merc row get one -
-          nothing persists mercenaries, and a pet's class belongs to nobody's roster. A name the rules have not placed
-          declares itself with Type first; the pencil arrives as soon as the row reads Player (NameRow.ClassEditable).
-
-          It sits BEFORE Why: the columns you can edit stay together right after the Name, and the read-only sentence that explains a verdict goes
-          last rather than between two things you click.
-        -->
-        <syncfusion:GridTemplateColumn HeaderText="Class" MappingName="PlayerClass" Width="100">
-          <syncfusion:GridTemplateColumn.CellTemplate>
-            <DataTemplate>
-              <Grid>
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                <fa:ImageAwesome Margin="8,1,4,0" Style="{StaticResource EQIconStyle}" Icon="Regular_Edit" Cursor="Hand"
-                                 Visibility="{Binding ClassEditable, Converter={StaticResource PlaceholderVisibilityConverter}}"
-                                 MouseLeftButtonUp="ClassEditMouseLeftButtonUp" ToolTip="Choose class"/>
-                <TextBlock VerticalAlignment="Center" Text="{Binding PlayerClass}"/>
-              </StackPanel>
-                <ComboBox HorizontalAlignment="Stretch" VerticalAlignment="Center"
-                          Visibility="{Binding IsClassEditing, Converter={StaticResource BoolToVis}}"
-                          ItemsSource="{Binding EditorItems}"
-                          Style="{DynamicResource EQComboBoxStyle}"
-                          IsTextSearchEnabled="False"
-                          IsVisibleChanged="CellEditorVisibilityChanged"
-                          DropDownClosed="CellEditorDropDownClosed"
-                          LostKeyboardFocus="CellEditorLostFocus"
-                          SelectionChanged="ClassCellEditorSelectionChanged" />
-              </Grid>
-            </DataTemplate>
-          </syncfusion:GridTemplateColumn.CellTemplate>
-        </syncfusion:GridTemplateColumn>
-        <!--
-          Owner, and the same pencil again — but only on a row that READS Pet (NameRow.OwnerEditable → PetOwnership.CanEditOwner).
-          This column came back on 2026-10-09: it used to be absent because "the Pet Owners window lists the same pairs", and that
-          reasoning died with the window's write side — petmapping.txt is frozen (docs/DesignNotes.md → "petmapping.txt is a feed now"),
-          so an identity list that could not show or correct an owner left the operator no door at all except a file the app no longer reads.
-
-          Three things this cell says, and one it never says. It shows WHO the summon belongs to; the pencil's list holds VALID OWNERS
-          ONLY (2026-11 — the old trailing "No Owner" entry wrote a narrow forget while a wider take-back sat in another column, so it is
-          gone: taking an owner back means taking everything back, and that is one click on the history icon beside the name); a row whose
-          answer is nobody opens the list blank. What never appears here is the old placeholder wording: rows written before the change
-          hold "Unknown Pet Owner", and `PetOwnership.DisplayOf` answers "No Owner" for that, for the new word, and for no mapping at all —
-          an empty cell reads as a classifier bug, while "nobody said whose" is a real answer.
-        -->
-        <syncfusion:GridTemplateColumn HeaderText="Owner" MappingName="Owner" Width="130">
-          <syncfusion:GridTemplateColumn.CellTemplate>
-            <DataTemplate>
-              <Grid>
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                <fa:ImageAwesome Margin="8,1,4,0" Style="{StaticResource EQIconStyle}" Icon="Regular_Edit" Cursor="Hand"
-                                 Visibility="{Binding OwnerEditable, Converter={StaticResource PlaceholderVisibilityConverter}}"
-                                 MouseLeftButtonUp="OwnerEditMouseLeftButtonUp" ToolTip="Choose Pet Owner"/>
-                <TextBlock VerticalAlignment="Center" Text="{Binding Owner}"/>
-              </StackPanel>
-                <ComboBox HorizontalAlignment="Stretch" VerticalAlignment="Center"
-                          Visibility="{Binding IsOwnerEditing, Converter={StaticResource BoolToVis}}"
-                          ItemsSource="{Binding EditorItems}"
-                          Style="{DynamicResource EQComboBoxStyle}"
-                          IsTextSearchEnabled="False"
-                          IsVisibleChanged="CellEditorVisibilityChanged"
-                          DropDownClosed="CellEditorDropDownClosed"
-                          LostKeyboardFocus="CellEditorLostFocus"
-                          SelectionChanged="OwnerCellEditorSelectionChanged" />
-              </Grid>
-            </DataTemplate>
-          </syncfusion:GridTemplateColumn.CellTemplate>
-        </syncfusion:GridTemplateColumn>
-        <!--
-          The whole point of the window: which rule read what, in TWO WORDS ("Who", "Chat", "Cast", "Healed", "Owner in
-          Name" - see WhyWord), with the details demoted to the tooltip. It used to print the rule code ("R15-healed") at
-          256 px - wider than the Class column and part of 771 px of fixed startup pixels across the four - to read a
-          string nobody could decode without the source open. Then it carried " (earlier)" on every remembered verdict,
-          which paid width for something only a hover needs; the cell is bare now and the tooltip ends in "in previous log".
-        -->
-        <syncfusion:GridTemplateColumn HeaderText="Why" MappingName="Why" Width="110">
-          <syncfusion:GridTemplateColumn.CellTemplate>
-            <DataTemplate>
-              <TextBlock Text="{Binding Why}" FontSize="{DynamicResource EQContentSize}" VerticalAlignment="Center"
-                         ToolTip="{Binding Provenance}"/>
-            </DataTemplate>
-          </syncfusion:GridTemplateColumn.CellTemplate>
-        </syncfusion:GridTemplateColumn>
-      </syncfusion:SfDataGrid.Columns>
-    </syncfusion:SfDataGrid>
+            Three things this cell says, and one it never says. It shows WHO the summon belongs to; the pencil's list holds VALID OWNERS
+            ONLY (2026-11 — the old trailing "No Owner" entry wrote a narrow forget while a wider take-back sat in another column, so it is
+            gone: taking an owner back means taking everything back, and that is one click on the history icon beside the name); a row whose
+            answer is nobody opens the list blank. What never appears here is the old placeholder wording: rows written before the change
+            hold "Unknown Pet Owner", and `PetOwnership.DisplayOf` answers "No Owner" for that, for the new word, and for no mapping at all —
+            an empty cell reads as a classifier bug, while "nobody said whose" is a real answer.
+          -->
+          <syncfusion:GridTemplateColumn HeaderText="Owner" MappingName="Owner" Width="130">
+            <syncfusion:GridTemplateColumn.CellTemplate>
+              <DataTemplate>
+                <Grid>
+                  <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                  <fa:ImageAwesome Margin="8,1,4,0" Style="{StaticResource EQIconStyle}" Icon="Regular_Edit" Cursor="Hand"
+                                   Visibility="{Binding OwnerEditable, Converter={StaticResource PlaceholderVisibilityConverter}}"
+                                   MouseLeftButtonUp="OwnerEditMouseLeftButtonUp" ToolTip="Choose Pet Owner"/>
+                    <TextBlock VerticalAlignment="Center" Text="{Binding Owner}"/>
+                  </StackPanel>
+                  <ComboBox HorizontalAlignment="Stretch" VerticalAlignment="Center"
+                            Visibility="{Binding IsOwnerEditing, Converter={StaticResource BoolToVis}}"
+                            ItemsSource="{Binding EditorItems}"
+                            Style="{DynamicResource EQComboBoxStyle}"
+                            IsTextSearchEnabled="False"
+                            IsVisibleChanged="CellEditorVisibilityChanged"
+                            DropDownClosed="CellEditorDropDownClosed"
+                            LostKeyboardFocus="CellEditorLostFocus"
+                            SelectionChanged="OwnerCellEditorSelectionChanged" />
+                </Grid>
+              </DataTemplate>
+            </syncfusion:GridTemplateColumn.CellTemplate>
+          </syncfusion:GridTemplateColumn>
+          <!--
+            The whole point of the window: which rule read what, in TWO WORDS ("Who", "Chat", "Cast", "Healed", "Owner in
+            Name" - see WhyWord), with the details demoted to the tooltip. It used to print the rule code ("R15-healed") at
+            256 px - wider than the Class column and part of 771 px of fixed startup pixels across the four - to read a
+            string nobody could decode without the source open. Then it carried " (earlier)" on every remembered verdict,
+            which paid width for something only a hover needs; the cell is bare now and the tooltip ends in "in previous log".
+          -->
+          <syncfusion:GridTemplateColumn HeaderText="Why" MappingName="Why" Width="110">
+            <syncfusion:GridTemplateColumn.CellTemplate>
+              <DataTemplate>
+                <TextBlock Text="{Binding Why}" FontSize="{DynamicResource EQContentSize}" VerticalAlignment="Center"
+                           ToolTip="{Binding Provenance}"/>
+              </DataTemplate>
+            </syncfusion:GridTemplateColumn.CellTemplate>
+          </syncfusion:GridTemplateColumn>
+        </syncfusion:SfDataGrid.Columns>
+      </syncfusion:SfDataGrid>
+    </Grid>
   </Grid>
 </UserControl>

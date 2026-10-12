@@ -376,6 +376,24 @@ namespace EQLogParser {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Name Filter.
+        /// </summary>
+        public static string NAME_FILTER_TEXT {
+            get {
+                return ResourceManager.GetString("NAME_FILTER_TEXT", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Identities.
+        /// </summary>
+        public static string IDENTITIES {
+            get {
+                return ResourceManager.GetString("IDENTITIES", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Import Failed.
         /// </summary>
         public static string IMPORT_ERROR {

@@ -2,7 +2,6 @@ using FontAwesome5;
 using log4net;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -194,10 +193,32 @@ namespace EQLogParser
 
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
-    private readonly ObservableCollection<NameRow> _rows = [];
+    /*
+     * WHAT THE GRID SHOWS: the published list — every name the last census knew, kept to what passes the reader's own question
+     * (the strip's name filter and type multi-select) and ordered by the header's column. The grid itself renders ONE page of
+     * it at a time (CensusPageSize): the pager hands out slices on demand from this list, so a live capture no longer costs one
+     * notification per row per beat — 25,000 rows twice a second is what made the old table feel like it slid under the reader.
+     * The list is swapped whole, every time (docs/names-table-paging-plan.md → "What we picked").
+     */
+    private volatile List<NameRow> _ordered = [];
 
-    /// <summary>The list itself, so a test can see whether a census actually landed rather than being held behind an open editor.</summary>
-    internal ObservableCollection<NameRow> RowsForTest => _rows;
+    /*
+     * The name → row index over the PUBLISHED list. A publish replaces row instances, so everything that survives a publish
+     * comes back by NAME: the selection, the three open editors, the Recalculating label. It mirrors _ordered exactly — a name
+     * that fails the reader's own question is not on screen, so it has no row to point at.
+     */
+    private Dictionary<string, NameRow> _rowsByName = new(StringComparer.OrdinalIgnoreCase);
+
+    /* The census's own total, before the reader's filter: what the title's "Showing X of N" answers with when a dial narrows. */
+    private int _censusTotal;
+
+    /* One object for the life of the pane: the published index and its total are swapped together (ApplyPublished), read from
+       the off-thread build lane, and the lock must stay STABLE across swaps — locking on the dictionary itself would lock two
+       different objects in the two statements. */
+    private readonly object _publishLock = new();
+
+    /// <summary>The published list — filtered and ordered, all pages — so a test can see what landed rather than what sat behind an editor.</summary>
+    internal IReadOnlyList<NameRow> RowsForTest => _ordered;
 
     /*
      * One census at a time; an ask that arrives during one is OWED rather than lost; and no census may paint an answer older than the last
@@ -229,13 +250,6 @@ namespace EQLogParser
     internal readonly EditorHold Editors = new();
 
     /*
-     * Whether the next census replaces every row or merges into what is already on screen. Set when the pane becomes
-     * visible and whenever the capture changes: a wholesale replace costs the selection and the scroll position, so it
-     * belongs at the moment somebody navigates to the tab — not twice a second while they are reading it (MergeRows).
-     */
-    private bool _rankOnApply = true;
-
-    /*
      * Which column the header shows as sorted, mirrored OUT of the grid and kept here. The mirror is the fix: every other
      * sortable table in this application hands its grid a fresh list per build, so the view sorts a snapshot, while this
      * pane merges into the collection it already showed — and a view told to sort once, over a source that keeps changing,
@@ -248,7 +262,31 @@ namespace EQLogParser
     private string _sortColumn = IdentityRowOrder.DefaultColumn;
     private bool _sortDescending;
 
-    private Comparison<NameRow> RowOrder => IdentityRowOrder.For<NameRow>(_sortColumn, _sortDescending);
+    /*
+     * THE READER'S OWN QUESTION, from the strip above the grid: a name filter and the closed type list. The published list is
+     * f(census, question) — one index, built by one method (ApplyCensusRows / RequestViewRebuild) — and every build CARRIES its
+     * question with it, so a published answer the strip no longer asks is dropped rather than painted: that compare, in
+     * identity form, is NamesTableView.Question, and it is what keeps a keystroke that lands mid-build from being lost.
+     */
+    private string _query = "";
+    private HashSet<IdentityKind> _typeFilter = [.. IdentityVocabulary.TypeOptions.Select(o => o.Kind)];
+    private readonly List<ComboBoxItemDetails> _typeItems = [];
+    private System.Windows.Threading.DispatcherTimer? _searchDebounce;
+
+    /* One at a time, and a request that lands mid-build is OWED: newest question wins, and a build answering a question the
+       strip has since moved on from is dropped at the publish door (docs/names-table-paging-plan.md → "The publish door"). */
+    private int _viewBuildGeneration;
+    private bool _viewOwed;
+
+    /*
+     * ONE THOUSAND ROWS PER PAGE (docs/names-table-paging-plan.md → "What we picked"): 25,000 names in twenty-five pages, and
+     * 1,000 is exactly what this app's other big grids already render without complaint — the vendor's own sample runs 576k rows
+     * at this page size. A constant by design: a dial nobody asked for.
+     */
+    private const int CensusPageSize = NamesTableView.DefaultPageSize;
+
+    /// <summary>What the closed type box reads when nothing is narrowed.</summary>
+    private const string AllTypesWord = "All Types";
 
     // Applied once, then only on a theme change: re-sizing on every Loaded would fight an operator who dragged a column.
     private bool _widthsApplied;
@@ -267,11 +305,40 @@ namespace EQLogParser
     public NamesTable()
     {
       InitializeComponent();
-      namesGrid.ItemsSource = _rows;
-      // A header click changes the ORDER of the reader's list, so the pane re-orders its own rows to match it (see
-      // _sortColumn). Nothing else has to happen here: the grid draws its own arrow, and every column in this table is a
-      // word whose sensible first direction is ascending, so DataGridUtil's "default to descending" set stays empty.
+
+      /*
+       * The grid shows the PAGER'S VIEW, not a collection: the pager pages ITS OWN source (idPager.Source, set on every publish),
+       * and the grid renders one page of that at a time (ApplyPublished hands it pages, PagerOnDemandLoading serves them). No
+       * wiring between the two controls — one list flows through the pager into the grid. Binding the grid to the whole list
+       * is what cost one notification per row per census beat; the pager is why that cost is gone.
+       */
+      namesGrid.ItemsSource = idPager.PagedSource;
+      idPager.PageSize = CensusPageSize;
+
+      /*
+       * A header click changes the ORDER of the reader's list, so the pane rebuilds it in that order (see _sortColumn). The grid
+       * draws its own arrow, and every column in this table is a word whose sensible first direction is ascending, so
+       * DataGridUtil's "default to descending" set stays empty.
+       */
       namesGrid.SortColumnsChanged += SortColumnsChanged;
+      namesGrid.SortColumnsChanging += SortColumnsChanging;
+
+      // The type dial's rows: the closed vocabulary (IdentityVocabulary.TypeOptions), all checked at birth — a filter nobody has
+      // touched filters nothing, and the box opens on its own answer.
+      foreach (var option in IdentityVocabulary.TypeOptions)
+        _typeItems.Add(new ComboBoxItemDetails(true, option.Word) { Value = option.Kind.ToString(), SelectedText = AllTypesWord });
+      typeFilterBox.ItemsSource = _typeItems;
+      typeFilterBox.SelectedIndex = 0;   // the closed box reads a word at birth, not a blank: "All Types"
+
+      // The name dial: the app's one filter idiom (wired like every filter box), and a rebuild per PAUSE of typing — the box's
+      // 300 ms debounce is what keeps a keystroke from costing a 25,000-row sort.
+      UiElementUtil.SetWatermark(nameSearchBox, Resource.NAME_FILTER_TEXT);
+      _searchDebounce = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
+      _searchDebounce.Tick += (_, _) =>
+      {
+        _searchDebounce.Stop();
+        RunSearchNow();
+      };
       // The Type list is NOT set here: one ComboBox serves every cell, so it is filled per row when that cell's popup opens
       // (TypeEditMouseLeftButtonUp), from NameRow.TypeChoices.
 
@@ -325,11 +392,7 @@ namespace EQLogParser
       }
 
       if (session is null) ClearRows();
-      else
-      {
-        _rankOnApply = true;   // you just opened it: show the ranking, then hold it still (MergeRows)
-        Refresh();
-      }
+      else Refresh();   // you just opened it: a fresh census lays the whole list out in the header's order
     }
 
     private void UnfollowSession()
@@ -394,8 +457,16 @@ namespace EQLogParser
       Editors.Abandon();
       ForgetRecalc();
       _repaint.Abandon();
-      _rankOnApply = true;
-      _rows.Clear();
+
+      // The dials belong to the READERS, not to a capture: back to asking nothing, so the next log opens unfiltered.
+      _searchDebounce?.Stop();
+      nameSearchBox.Text = "";
+      _query = "";
+      foreach (var item in _typeItems) { item.IsChecked = true; item.SelectedText = AllTypesWord; }
+      _typeFilter = [.. IdentityVocabulary.TypeOptions.Select(o => o.Kind)];
+      _viewOwed = false;
+
+      ApplyPublished([], 0);   // an empty capture is an empty grid and an empty title, not last night's rows
     }
 
     /// <summary>
@@ -563,8 +634,9 @@ namespace EQLogParser
     {
       double columns = 0;
       foreach (var name in ColumnNames) columns += ColumnWidth(name);
-      var rowHeader = Application.Current.Resources["EQTableRowHeaderWidth"] is double w ? w : 32.0;  // ShowRowHeader="True"
-      return columns + rowHeader + 18;                        // 18: the vertical scrollbar that comes with a long list
+      return columns + 18;   // 18: the vertical scrollbar that comes with a long list
+      // (The row-header width this used to add left with ShowRowHeader="False": paging moved the count into the strip's title,
+      // and 32 pixels went back to rows — docs/names-table-paging-plan.md → "What we picked".)
     }
 
     /*
@@ -606,7 +678,7 @@ namespace EQLogParser
       AcceptCensus(census.Rows, stamp);
     }
 
-    /// <summary>A census arriving from the derive: fold it in now, or hold it until the open cell editor closes. True when it painted.</summary>
+    /// <summary>A census arriving from the derive: publish it now, or hold it until the open cell editor closes. True when it painted.</summary>
     internal bool AcceptCensus(IReadOnlyList<ClassificationReport.Row> rows) => AcceptCensus(rows, _repaint.Generation);
 
     /*
@@ -620,7 +692,7 @@ namespace EQLogParser
     {
       if (Editors.Defer(() => ReleaseHeldCensus(rows, stamp))) return false;
 
-      MergeInto(rows);
+      ApplyCensusRows(rows);
       return true;
     }
 
@@ -635,144 +707,325 @@ namespace EQLogParser
         return;
       }
 
-      MergeInto(rows);
+      ApplyCensusRows(rows);
     }
 
-    private void MergeInto(IReadOnlyList<ClassificationReport.Row> rows)
+    /*
+     * One census pass into the list: build every row, keep what passes the reader's own question, order it by the header's
+     * column, and publish (ApplyPublished). This replaces MergeRows — the merge-in-place law (keep a row's slot, insert the
+     * newcomer at its key) existed because the GRID saw the whole collection, so every one of the 25k rows was a notification
+     * the UI paid for twice a second. The grid now shows a page, so the list is rebuilt and swapped as one: the reader-visible
+     * laws all survive on the published list — a name arrives where its key says (it sorts in), a name the census lost leaves
+     * (the build has no row for it), a row whose word changed says the new thing (RowFrom re-reads it), and the header's arrow
+     * means what it draws (IdentityRowOrder, off in Core with tests).
+     */
+    private void ApplyCensusRows(IReadOnlyList<ClassificationReport.Row> rows)
     {
-      /*
-       * The selection is a row OBJECT, and MergeRows replaces rows rather than mutating them, so it has to be handed back
-       * by NAME: the instance it pointed at is gone even though the line on screen never moved. An open dropdown's row is
-       * re-pointed for the same reason — its write goes out by name, so a stale reference costs only the popup's preselect,
-       * and a Type cell that opens blank reads as a bug in the classifier rather than in the refresh.
-       */
+      var question = CurrentQuestion();
+      var built = new List<NameRow>(rows.Count);
+      foreach (var row in rows) built.Add(RowFrom(row));
+
+      ApplyPublished(NamesTableView.FilterOrdered(built, KeepPredicate(), OrderFor(question)), rows.Count);
+    }
+
+    /// <summary>The reader's question as it reads right now: what the next build carries, and what a landing build is checked against.</summary>
+    private NamesTableView.Question CurrentQuestion() => NamesTableView.For(_query, _typeFilter, _sortColumn, _sortDescending);
+
+    /*
+     * The filter, as a predicate captured by VALUE: the query word and the chosen kinds are snapshotted now, because the build
+     * runs on another thread and a keystroke that lands mid-build is exactly the case that must not bleed into its answer.
+     */
+    private Func<NameRow, bool> KeepPredicate()
+    {
+      var query = _query;
+      var kinds = _typeFilter.ToArray();
+      return r => (query.Length == 0 || r.Name.Contains(query, StringComparison.OrdinalIgnoreCase)) && kinds.Contains(r.Kind);
+    }
+
+    private static Comparison<NameRow> OrderFor(NamesTableView.Question question)
+      => IdentityRowOrder.For<NameRow>(question.Column, question.Descending);
+
+    /*
+     * A dial moved (a pause of typing, a type toggle, a header click): rebuild the ORDERED list from what is already published
+     * and swap it in. Off-thread — sorting 25k rows is the only part of a view refresh with any weight to it — one at a time,
+     * and an ask that lands mid-build is OWED: newest question wins, and a build whose question the strip no longer asks is
+     * dropped at the publish door rather than painted (docs/names-table-paging-plan.md → "The publish door").
+     */
+    private void RequestViewRebuild()
+    {
+      if (_viewBuildGeneration != 0) { _viewOwed = true; return; }
+
+      var question = CurrentQuestion();
+      var keep = KeepPredicate();
+      var order = OrderFor(question);
+      Dictionary<string, NameRow> snapshot;
+      int total;
+      lock (_publishLock) { snapshot = new Dictionary<string, NameRow>(_rowsByName); total = _censusTotal; }
+
+      var generation = System.Threading.Interlocked.Increment(ref _viewBuildGeneration);
+      _ = Task.Run(() =>
+      {
+        var rows = new List<NameRow>(snapshot.Count);
+        foreach (var pair in snapshot) rows.Add(pair.Value);
+        var ordered = NamesTableView.FilterOrdered(rows, keep, order);
+
+        Dispatcher.BeginInvoke(() =>
+        {
+          if (System.Threading.Interlocked.CompareExchange(ref _viewBuildGeneration, 0, generation) != generation) return;   // a newer ask owns the door
+
+          if (!CurrentQuestion().Equals(question))
+          {
+            // The strip moved while this build ran: its answer is not the last word. Drop it and owe the rebuild that answers
+            // what is asked NOW — this is the hazard the plan's publish door names, in one code path.
+            Log.Debug("name view: the build answered a question the strip no longer asks - dropped, one rebuild owed");
+            _viewOwed = true;
+          }
+          else if (!Editors.Defer(() => ApplyPublished(ordered, total)))
+            ApplyPublished(ordered, total);
+
+          if (_viewOwed && _viewBuildGeneration == 0) { _viewOwed = false; RequestViewRebuild(); }
+        });
+      });
+    }
+
+    /* What RequestViewRebuild does with the thread hop taken out: a test (or any caller on the UI thread) that needs the
+       published list to have settled by the time the line below runs. */
+    internal void RebuildOrderedNow()
+    {
+      var question = CurrentQuestion();
+      List<NameRow> rows;
+      int total;
+      lock (_publishLock) { rows = [.. _rowsByName.Values]; total = _censusTotal; }
+      ApplyPublished(NamesTableView.FilterOrdered(rows, KeepPredicate(), OrderFor(question)), total);
+    }
+
+    /*
+     * THE PUBLISH DOOR: the only place a built list reaches the grid (docs/names-table-paging-plan.md → "The publish door").
+     * The two checks happen upstream — a census carries its world stamp through CensusRepaint, a view rebuild its question
+     * through RequestViewRebuild, and both defer through EditorHold — so what arrives here already answers the world and the
+     * strip as they read. What this method does is mechanical:
+     *
+     *   - swap the published list and its name index (row instances are replaced; names are what survive);
+     *   - move the pager to the page the SELECTION lives on — a JUMP when the reader's own question moved it, a clamp when
+     *     the list shrank, nothing when there is no selection (NamesTableView.DecidePage owns that arithmetic);
+     *   - hand the selection back BY NAME and show it: an object the grid's current page does not show is how "the selection
+     *     vanished" would happen;
+     *   - re-point every open editor and the Recalculating label, for exactly the reasons MergeInto had — a write that goes
+     *     out by name is harmless, a stale instance in the owner cell's guard is not;
+     *   - say in the title how many of the census's names are showing, which a paged grid cannot answer for itself.
+     */
+    private void ApplyPublished(List<NameRow> ordered, int total)
+    {
       var selectedName = (namesGrid.SelectedItem as NameRow)?.Name;
 
-      MergeRows(_rows, rows, _rankOnApply, RowOrder);
-      _rankOnApply = false;
+      var indexByName = new Dictionary<string, NameRow>(ordered.Count, StringComparer.OrdinalIgnoreCase);
+      foreach (var row in ordered) indexByName[row.Name] = row;
 
-      if (selectedName is not null) namesGrid.SelectedItem = FindRow(selectedName);
+      lock (_publishLock)
+      {
+        _rowsByName = indexByName;
+        _censusTotal = total;
+      }
+      _ordered = ordered;
+
+      var selectedIndex = selectedName is null ? -1 : IndexOf(ordered, selectedName);
+      var decision = NamesTableView.DecidePage(ordered.Count, CensusPageSize, idPager.PageIndex, selectedIndex);
+
+      /*
+       * Hand the pager its new list and let it re-derive its view: assigning Source resets the page to zero, so the move below is what puts the
+       * reader back where the SELECTION lives (a jump when the question moved it, a clamp when the list shrank). Moving after, never before —
+       * a page asked for on the old view is a page nobody can answer.
+       */
+      idPager.Source = ordered;
+      if (decision.PageCount > 0 && decision.PageIndex != idPager.PageIndex)
+        idPager.MoveToPage(decision.PageIndex);   // fires OnDemandLoading: the grid sees the page the selection lives on
+
+      namesGrid.SelectedItem = selectedIndex is >= 0 ? indexByName[selectedName!] : null;
+      if (selectedIndex is >= 0) ShowRowAt(selectedIndex % CensusPageSize);
+
       if (_typeEditRow is not null) _typeEditRow = FindRow(_typeEditRow.Name);
       if (_classEditRow is not null) _classEditRow = FindRow(_classEditRow.Name);
-      /*
-       * All THREE open editors, including the owner one. It was the last column to come back and its row was left pointing at a
-       * discarded instance: the popup's guard compares the pick against `row.Owner` to tell "the click that opened this" from a real
-       * change, so a captured old row compares a NEW pick against an OLD answer — the one comparison in this pane that can refuse a
-       * genuine edit as "you picked what it already says". A write that goes out by name is harmless; a refusal is not.
-       */
       if (_ownerEditRow is not null) _ownerEditRow = FindRow(_ownerEditRow.Name);
 
-      /*
-       * The take-back's "Recalculating…" label rides on the row INSTANCE, which this merge replaced, while the state behind it
-       * is keyed by NAME. Restamped here, the notice lasts what RecalcOverlay decided (floor, then pass-or-cap) instead of
-       * vanishing at the first census pass that happened to land mid-flight — a click that stops announcing itself before its
-       * answer arrived is the failure the floor exists to prevent.
-       */
       if (_recalcName is not null) FindRow(_recalcName)?.Recalculating = true;
+
+      UpdateTitle(ordered.Count, total);
     }
 
     /*
-     * Put a census into the list without moving what the reader is looking at.
-     *
-     * This pane follows the derive, so a pass lands every couple of seconds while a log grows. The version this replaces
-     * cleared the collection and re-added every row, which cost two things on each beat: the selection (so the title-bar
-     * icons lost their row) and the ORDER — rows were ranked by kind and output, so as verdicts and totals moved the line
-     * under the cursor slid somewhere else. A list that rearranges itself twice a second cannot be read while it is live,
-     * which is the only time anybody wants it live.
-     *
-     * The ORDER shown here is the one the header says (`order`, from IdentityRowOrder), never the census's own ranking: a
-     * list of 4,000 names is read by looking one up, and the arrow over a column has to mean what it draws. The census's
-     * rank still decides which row was emitted first — which is now nothing anyone can see, since the sort breaks every tie
-     * on the name. What stays stable across a pass is each row's own SLOT.
-     *
-     * Three rules, in this order:
-     *
-     *   - A name already on the list KEEPS ITS SLOT. Its cells are replaced at that index (the collection's indexer), so a
-     *     row whose Type changed says the new thing without moving anything, itself included.
-     *   - A name the census no longer has leaves the list. That is the capture saying this name is gone; a verdict from the
-     *     first half of the night parked above an empty slot is exactly what this window was rewritten to stop.
-     *   - Names new since the last pass join at the index their OWN KEY says — alphabetically under the default sort, next
-     *     to the other rows sharing that Type when a Type sort is up. They used to pile at the bottom in census order,
-     *     which cost less churn and bought a list whose header said "Name ↑" over names in five different orders: an hour
-     *     into a raid the bottom of a live table was a tail of unsorted strays, and that is what got reported.
-     *
-     * `rebuild` throws the collection out and lays it out again from this census — the whole-list replace, still in the
-     * header's order — which is what opening the tab shows and what a capture change owes. An empty list also takes this
-     * path, so a pane opened on a fresh capture needs no special case.
+     * Scroll a page-local row into view: the grid's own scroll door (SfDataGrid.ScrollInView), with the data rows' start position read off
+     * the grid rather than assumed — the same translation every other scroll in this app does, because a header or summary row would offset
+     * any index written down by hand.
      */
-    internal static void MergeRows(ObservableCollection<NameRow> listed, IReadOnlyList<ClassificationReport.Row> census, bool rebuild, Comparison<NameRow>? order = null)
+    private void ShowRowAt(int pageLocalIndex)
     {
-      order ??= IdentityRowOrder.For<NameRow>(IdentityRowOrder.DefaultColumn);
-
-      if (rebuild || listed.Count == 0)
-      {
-        var rows = new List<NameRow>(census.Count);
-        foreach (var row in census) rows.Add(RowFrom(row));
-        rows.Sort(order);
-        listed.Clear();
-        foreach (var row in rows) listed.Add(row);
-        return;
-      }
-
-      var incoming = new Dictionary<string, ClassificationReport.Row>(census.Count, StringComparer.OrdinalIgnoreCase);
-      foreach (var row in census) incoming[row.Name] = row;
-
-      // Reverse because rows leave while we walk; names that survive are replaced where they stand.
-      var kept = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-      for (var i = listed.Count - 1; i >= 0; i--)
-      {
-        if (!incoming.TryGetValue(listed[i].Name, out var fresh)) { listed.RemoveAt(i); continue; }
-        kept.Add(listed[i].Name);
-        listed[i] = RowFrom(fresh);
-      }
-
-      /*
-       * `kept.Add` is true the first time a name is seen, so one pass both dedupes and places each newcomer — at the index
-       * its own key says (IdentityRowOrder.InsertIndex), not at the bottom. Names are what this table is read by, so a row
-       * turning up mid-raid belongs between Ann and Bob whether or not the census thought of it last; appending them left
-       * the list reading as unsorted for the rest of the session, which is the half of the report this pane fixes.
-       */
-      foreach (var row in census)
-      {
-        if (!kept.Add(row.Name)) continue;
-        var fresh = RowFrom(row);
-        listed.Insert(IdentityRowOrder.InsertIndex(listed, fresh, order), fresh);
-      }
-
-      /*
-       * And one check for the case a merge cannot place its way out of: a row that stayed in its slot but changed the word
-       * being sorted on — its Type under a Type sort, its Owner when a summon finally gets claimed. That is what sorting a
-       * mutable column means, so it is honored rather than frozen: the list is put back in order, and a Name sort (the one
-       * this table is read by) never moves anything at all, because names do not change.
-       */
-      ReorderInto(listed, order);
+      if (namesGrid.View is null) return;
+      var firstRecord = FirstRecordRow();
+      namesGrid.ScrollInView(new Syncfusion.UI.Xaml.ScrollAxis.RowColumnIndex(firstRecord + pageLocalIndex, 0));
     }
 
-    /// <summary>Put the collection into `order` — but only when it disagrees with it. One pass exits at the first
-    /// violation on the common case, so asking after every merge costs a scan of pointers rather than a rewrite.</summary>
-    internal static void ReorderInto(ObservableCollection<NameRow> listed, Comparison<NameRow> order)
+    /* The index at which data rows begin in the grid, read off it: a row that is not a record resolves to no record, so the first index
+       answering 0 IS the first row (the same walk FightTable does for its reveal). */
+    private int FirstRecordRow()
     {
-      if (IdentityRowOrder.IsOrdered(listed, order)) return;
-
-      var ordered = new List<NameRow>(listed.Count);
-      ordered.AddRange(listed);
-      ordered.Sort(order);
-      listed.Clear();
-      foreach (var row in ordered) listed.Add(row);
+      for (var i = 0; i < 8; i++)
+        // Static on purpose: the extension lives in Syncfusion.UI.Xaml.Grid, whose `using` this file cannot take — it declares its
+        // own SelectionChangedEventArgs and would make three handlers here ambiguous.
+        if (Syncfusion.UI.Xaml.Grid.GridIndexResolver.ResolveToRecordIndex(namesGrid, i) == 0) return i;
+      return 0;
     }
 
-    /// <summary>The live row for a name, or null: used to hand the selection and an open popup back after a merge.</summary>
-    private NameRow? FindRow(string name) => _rows.FirstOrDefault(r => name.Equals(r.Name, StringComparison.OrdinalIgnoreCase));
+    private static int IndexOf(List<NameRow> ordered, string name)
+    {
+      for (var i = 0; i < ordered.Count; i++)
+        if (name.Equals(ordered[i].Name, StringComparison.OrdinalIgnoreCase)) return i;
+      return -1;
+    }
+
+    /// <summary>The live row for a name, or null: used to hand the selection and an open popup back after a publish.</summary>
+    private NameRow? FindRow(string name)
+    {
+      Dictionary<string, NameRow> snapshot;
+      lock (_publishLock) snapshot = _rowsByName;
+      return snapshot.TryGetValue(name, out var row) ? row : null;
+    }
 
     /*
-     * A header was clicked: take the column and direction off the grid, and put this pane's own rows in that order.
-     *
-     * The grid sorts its view too, and that is fine — sorting something already sorted is nothing. What the pane cannot do
-     * is leave the ordering entirely to the view, because it merges into `_rows` rather than handing the grid a new list:
-     * the collection is what every later pass adds to and what the next repaint reads, so it has to BE the order on screen.
+     * The strip's count — what the row header used to say, moved up where a paged grid cannot answer it. No filter in force
+     * reads the census's own size; one in force says both numbers, so "why is my name not here" has an answer that does not
+     * require scrolling to the bottom of page ten.
      */
+    private void UpdateTitle(int shown, int total)
+    {
+      if (total == 0) { titleCount.Content = string.Empty; return; }
+      var filtered = _query.Length > 0 || _typeFilter.Count < IdentityVocabulary.TypeOptions.Length;
+      titleCount.Content = filtered
+        ? $"Showing {shown:N0} of {total:N0} {Resource.IDENTITIES}"
+        : $"Showing {total:N0} {Resource.IDENTITIES}";
+    }
+
+    /*
+     * A page turned: serve it from the published list. The pager has already clamped its own index (ApplyPublished moves it
+     * before asking), so this is a slice, and an empty list simply serves nothing — "no rows to show" is an empty collection
+     * handed to the grid, never a null.
+     */
+    private void PagerOnDemandLoading(object sender, Syncfusion.UI.Xaml.Controls.DataPager.OnDemandLoadingEventArgs e)
+    {
+      if (sender is not Syncfusion.UI.Xaml.Controls.DataPager.SfDataPager pager) return;
+
+      var list = _ordered;
+      var start = Math.Max(0, e.StartIndex);
+      var count = Math.Max(0, Math.Min(e.PageSize, list.Count - start));
+
+      var items = new List<NameRow>(count);
+      for (var i = 0; i < count; i++) items.Add(list[start + i]);
+      pager.LoadDynamicItems(start, items);   // the pager's own door: a page asked for is the page the list has
+    }
+
+    /*
+     * A keystroke is cheap; the rebuild it would cost is not (a 25k sort). So one rebuild per PAUSE of typing: each character
+     * restarts a 300 ms timer, and only the pause runs the search. Esc clears the query the way every filter box in this app
+     * does (the watermark returns with the focus), and the grid takes the focus back because a cleared filter is a reason to
+     * look at the list again.
+     */
+    private void NameSearchBoxTextChanged(object? sender, TextChangedEventArgs e)
+    {
+      _searchDebounce?.Stop();
+      _searchDebounce?.Start();
+    }
+
+    private void RunSearchNow()
+    {
+      // The watermark is a CUE WORD, not a value: while it shows, the box's own Text is empty (UiElementUtil keeps the two
+      // states apart), so an empty read is "no filter", never "the cue word happened to be typed".
+      var query = nameSearchBox.Text.Length == 0 ? "" : nameSearchBox.Text;
+      if (query == _query) return;
+      _query = query;
+      RequestViewRebuild();
+    }
+
+    private void NameSearchBoxPreviewKeyDown(object sender, KeyEventArgs e)
+    {
+      if (e.Key != Key.Escape) return;
+      e.Handled = true;
+      _searchDebounce?.Stop();
+      nameSearchBox.Text = "";
+      _query = "";
+      RequestViewRebuild();
+      namesGrid.Focus();
+    }
+
+    /*
+     * The type dial applies on CLOSE, not per toggle: a multi-select is a gesture with an end, and rebuilding 25k rows once a
+     * checkbox flips would bill the reader for every intermediate state. Closing also reads back what the box picked — the
+     * closed box says "All Types", or how many of the five are showing, which is half of "why is my name not here" on its own.
+     */
+    private void TypeFilterDropDownClosed(object sender, EventArgs e)
+    {
+      var kinds = new HashSet<IdentityKind>();
+      foreach (var item in _typeItems)
+        if (item.IsChecked && Enum.TryParse(item.Value, out IdentityKind kind)) kinds.Add(kind);
+
+      ApplyTypeFilter(kinds);
+    }
+
+    private void ApplyTypeFilter(HashSet<IdentityKind> kinds)
+    {
+      if (kinds.SetEquals(_typeFilter)) return;
+      _typeFilter = kinds;
+
+      var allChecked = kinds.Count == IdentityVocabulary.TypeOptions.Length;
+      foreach (var item in _typeItems)
+        item.SelectedText = allChecked ? AllTypesWord : $"{kinds.Count} of {_typeItems.Count} types";
+
+      RequestViewRebuild();
+    }
+
+    /*
+     * TEST DOORS — the same publishes the UI gets, without the dispatcher hops a test cannot pump deterministically.
+     */
+    internal void PublishCensusForTest(IReadOnlyList<ClassificationReport.Row> rows, string column = IdentityRowOrder.DefaultColumn, bool descending = false)
+    {
+      _sortColumn = column;   // mirror the header state the way SortColumnsChanged does
+      _sortDescending = descending;
+      AcceptCensus(rows);
+    }
+
+    internal void SetSearchTextForTest(string text)
+    {
+      nameSearchBox.Text = text;
+      RunSearchNow();
+    }
+
+    internal void SetTypeFilterForTest(params IdentityKind[] kinds)
+    {
+      for (var i = 0; i < _typeItems.Count; i++)
+        _typeItems[i].IsChecked = kinds.Contains(IdentityVocabulary.TypeOptions[i].Kind);
+      ApplyTypeFilter(new HashSet<IdentityKind>(kinds));
+    }
+
+    /// <summary>The strip's count, as painted: a test reads the answer the reader reads.</summary>
+    internal string TitleTextForTest => titleCount?.Content as string ?? string.Empty;
+
+    /// <summary>The live row for a name, or null: used to hand the selection and an open popup back after a publish.</summary>
+    /*
+     * A header was clicked: take the column and direction off the grid, and rebuild the list in that order.
+     *
+     * The grid's own view sort is DECLINED (SortColumnsChanging clears the descriptor before the view applies it): the
+     * published list arrives already ordered by this pane's index, and a second sort — one the view would apply to a SINGLE
+     * PAGE of a thousand — is alphabetical within a slice, not over the list. The arrow the grid draws is mirrored into
+     * _sortColumn here, which is what the next build sorts by.
+     */
+    private void SortColumnsChanging(object sender, Syncfusion.UI.Xaml.Grid.GridSortColumnsChangingEventArgs e)
+      => namesGrid.SortColumnDescriptions.Clear();
+
     private void SortColumnsChanged(object sender, Syncfusion.UI.Xaml.Grid.GridSortColumnsChangedEventArgs e)
     {
+      /*
+       * Fully qualified on purpose: this file also uses System.Windows.Controls, and Syncfusion.UI.Xaml.Grid declares its
+       * own SelectionChangedEventArgs, so importing the whole namespace makes three handlers here ambiguous. Two names in
+       * two lines is cheaper than aliasing a vendor namespace nobody else in the pane reads.
+       */
       /*
        * Fully qualified on purpose: this file also uses System.Windows.Controls, and Syncfusion.UI.Xaml.Grid declares its
        * own SelectionChangedEventArgs, so importing the whole namespace makes three handlers here ambiguous. Two names in
@@ -782,9 +1035,7 @@ namespace EQLogParser
       _sortColumn = descriptor?.ColumnName ?? IdentityRowOrder.DefaultColumn;
       _sortDescending = descriptor?.SortDirection == System.ComponentModel.ListSortDirection.Descending;
 
-      var selectedName = (namesGrid.SelectedItem as NameRow)?.Name;
-      ReorderInto(_rows, RowOrder);
-      if (selectedName is not null) namesGrid.SelectedItem = FindRow(selectedName);
+      RequestViewRebuild();   // the new order is a new question; the publish door hands the selection back by name
     }
 
     /*
@@ -1186,7 +1437,7 @@ namespace EQLogParser
 
     private void EndAllCellEdits()
     {
-      foreach (var row in _rows)
+      foreach (var row in _ordered)
         if (row.EditingColumn is not null) { EndCellEdit(row); return; }
     }
 

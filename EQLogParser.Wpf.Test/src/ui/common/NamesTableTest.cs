@@ -1,4 +1,3 @@
-using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
@@ -255,82 +254,84 @@ public class NamesTableTest
   }
 
   /*
-   * The pane follows the derive — a census lands every couple of seconds while a log grows — and clearing the list on each
-   * one cost both the selection and the scroll position: the line under the cursor slid twice a second and the list could
-   * not be read while it was live. So MergeRows replaces a row's CELLS at its own index and drops names the capture lost.
-   *
-   * The ORDER, though, belongs to the column header (IdentityRowOrder), not to the census. Two laws, both from one field
-   * report — "the indicator shows up correct for the name column but it doesnt stay sorted":
-   *
-   *   - A name arriving mid-capture joins where its OWN KEY says, because a table whose header says Name must read as
-   *     alphabetical, and a tail of strays appended at the bottom said it did not.
-   *   - A rebuild (opening the tab) lays the whole list out in that order too — the census's own rank (raid-side first,
-   *     then busiest) decides nothing a reader can see any more.
+   * The pane follows the derive — a census lands every couple of seconds while a log grows. Since 2026-12 it no longer merges
+   * into the collection it showed: the grid renders a PAGE of a published list, so each pass rebuilds and swaps the whole
+   * thing (docs/names-table-paging-plan.md). The reader-visible laws that made the merge-in-place design survive are all
+   * re-stated on the PUBLISHED list — a name arrives where its key says, a name the census lost leaves, a row whose word
+   * changed says the new thing — because the sort breaks every tie on the name.
    */
   [TestMethod]
   public void ARefreshKeepsEveryRowWhereTheReaderLeftIt()
   {
-    var listed = new ObservableCollection<NamesTable.NameRow>();
-    NamesTable.MergeRows(listed, [CensusRow("Ann"), CensusRow("Bob"), CensusRow("Cy")], rebuild: true);
+    Sta.Run(() =>
+    {
+      var pane = new NamesTable();
+      pane.PublishCensusForTest([CensusRow("Ann"), CensusRow("Bob"), CensusRow("Cy")]);
 
-    // Cy now outranks everyone, Ann's verdict changed, and Dee has never been listed.
-    NamesTable.MergeRows(listed,
-      [CensusRow("Cy"), CensusRow("Ann", IdentityKind.Player, "R3-joinraid"), CensusRow("Bob"), CensusRow("Dee")], rebuild: false);
+      // Cy now outranks everyone, Ann's verdict changed, and Dee has never been listed.
+      pane.PublishCensusForTest([CensusRow("Cy"), CensusRow("Ann", IdentityKind.Player, "R3-joinraid"), CensusRow("Bob"), CensusRow("Dee")]);
 
-    CollectionAssert.AreEqual(new[] { "Ann", "Bob", "Cy", "Dee" }, listed.Select(r => r.Name).ToList(),
-                              "the reader's order holds (a Name sort cannot move a name, and this one is already alphabetical); Dee arrives where its name says");
-    Assert.AreEqual(IdentityKind.Player, listed[0].Kind, "a row whose verdict moved says the new thing IN ITS OLD SLOT");
-    Assert.AreEqual("Player", listed[0].Type);
+      CollectionAssert.AreEqual(new[] { "Ann", "Bob", "Cy", "Dee" }, pane.RowsForTest.Select(r => r.Name).ToList(),
+                                "the reader's order holds (a Name sort cannot move a name, and this one is already alphabetical); Dee arrives where its name says");
+      Assert.AreEqual(IdentityKind.Player, pane.RowsForTest[0].Kind, "a row whose verdict moved says the new thing IN ITS OLD SLOT");
+      Assert.AreEqual("Player", pane.RowsForTest[0].Type);
+    });
   }
 
   [TestMethod]
   public void ANameTheCensusDropsLeavesTheList()
   {
-    var listed = new ObservableCollection<NamesTable.NameRow>();
-    NamesTable.MergeRows(listed, [CensusRow("Ann"), CensusRow("Bob")], rebuild: true);
-    NamesTable.MergeRows(listed, [CensusRow("Bob")], rebuild: false);
+    Sta.Run(() =>
+    {
+      var pane = new NamesTable();
+      pane.PublishCensusForTest([CensusRow("Ann"), CensusRow("Bob")]);
+      pane.PublishCensusForTest([CensusRow("Bob")]);
 
-    CollectionAssert.AreEqual(new[] { "Bob" }, listed.Select(r => r.Name).ToList(),
-                              "a name the capture stopped reporting leaves; a stale verdict parked above an empty slot is what this window exists to catch");
+      CollectionAssert.AreEqual(new[] { "Bob" }, pane.RowsForTest.Select(r => r.Name).ToList(),
+                                "a name the capture stopped reporting leaves; a stale verdict parked above an empty slot is what this window exists to catch");
+    });
   }
 
   [TestMethod]
   public void OpeningTheTabAgainLaysTheWholeListOutInColumnOrder()
   {
-    var listed = new ObservableCollection<NamesTable.NameRow>();
-    NamesTable.MergeRows(listed, [CensusRow("Ann"), CensusRow("Bob")], rebuild: true);
-    NamesTable.MergeRows(listed, [CensusRow("Bob"), CensusRow("Cy")], rebuild: false);
+    Sta.Run(() =>
+    {
+      var pane = new NamesTable();
+      pane.PublishCensusForTest([CensusRow("Ann"), CensusRow("Bob")]);
 
-    // Emitted in a third order again, and the pane puts it in the header's order regardless.
-    NamesTable.MergeRows(listed, [CensusRow("Cy"), CensusRow("Ann"), CensusRow("Bob")], rebuild: true);
+      // Emitted in a third order, and the published list lands in the header's order regardless: every publish lays the
+      // whole list out from the census (that is what paging made cheap — one swap, no merge).
+      pane.PublishCensusForTest([CensusRow("Cy"), CensusRow("Ann"), CensusRow("Bob")]);
 
-    CollectionAssert.AreEqual(new[] { "Ann", "Bob", "Cy" }, listed.Select(r => r.Name).ToList(),
-                              "navigating to the pane replaces every row and lays them out in the order its header shows — "
-                            + "what the census emitted first is not something a reader can see, and used to be the whole list");
+      CollectionAssert.AreEqual(new[] { "Ann", "Bob", "Cy" }, pane.RowsForTest.Select(r => r.Name).ToList(),
+                                "what the census emitted first is not something a reader can see, and used to be the whole list");
+    });
   }
 
   /*
-   * The reported bug, in one row: the arrow said Name while the rows underneath it were in census order. That was not only
-   * an initial-paint failure — every name the derive learned after the first pass was APPENDED, so a live table grew a tail
-   * of strays no sort explained. A newcomer belongs between the names it sorts between.
+   * The reported bug, in one row: the arrow said Name while the rows underneath it were in census order. A newcomer belongs
+   * between the names it sorts between — which is where the published list puts it, because the sort breaks every tie on the name.
    */
   [TestMethod]
   public void ANameArrivingJoinsWhereItsNameSays()
   {
-    var listed = new ObservableCollection<NamesTable.NameRow>();
-    NamesTable.MergeRows(listed, [CensusRow("Ann"), CensusRow("Cy")], rebuild: true);
+    Sta.Run(() =>
+    {
+      var pane = new NamesTable();
+      pane.PublishCensusForTest([CensusRow("Ann"), CensusRow("Cy")]);
 
-    // Bob is the name this pass learned, and the census thought of it last.
-    NamesTable.MergeRows(listed, [CensusRow("Ann"), CensusRow("Cy"), CensusRow("Bob")], rebuild: false);
+      // Bob is the name this pass learned, and the census thought of it last.
+      pane.PublishCensusForTest([CensusRow("Ann"), CensusRow("Cy"), CensusRow("Bob")]);
 
-    CollectionAssert.AreEqual(new[] { "Ann", "Bob", "Cy" }, listed.Select(r => r.Name).ToList(),
-                              "a new name is inserted at the index its own key says — not at the bottom, where it read as an unsorted tail");
+      CollectionAssert.AreEqual(new[] { "Ann", "Bob", "Cy" }, pane.RowsForTest.Select(r => r.Name).ToList(),
+                                "a new name lands at the index its own key says — not at the bottom, where it read as an unsorted tail");
+    });
   }
 
   /*
    * Sorting a column whose WORD CHANGES (Type, Class, Owner, Why are all verdicts, and verdicts move while a log loads)
-   * means rows move: that is what sorting it asked for. Under the default Name sort nothing moves at all, which is why the
-   * "do not slide rows under the reader" law survives here — names do not change.
+   * means rows move: that is what sorting it asked for. Under the default Name sort nothing moves at all — names do not change.
    *
    * The fixture names its kinds rather than leaving them Unknown on purpose: an unplaced row's Type cell prints "Unknown", which
    * sorts AFTER every kind word, so an unkinded row is not a stand-in for an NPC and the ordering below would test the alphabet
@@ -339,18 +340,60 @@ public class NamesTableTest
   [TestMethod]
   public void SortingByAWordThatChangedPutsTheMovedRowBackInPlace()
   {
-    var byType = IdentityRowOrder.For<NamesTable.NameRow>(IdentityRowOrder.TypeColumn);
-    var listed = new ObservableCollection<NamesTable.NameRow>();
+    Sta.Run(() =>
+    {
+      var pane = new NamesTable();
+      var column = IdentityRowOrder.TypeColumn;
 
-    NamesTable.MergeRows(listed, [CensusRow("Ann", IdentityKind.Npc, "R6-npcdb"), CensusRow("Bob", IdentityKind.Player, "R3-joinraid"), CensusRow("Cy", IdentityKind.Npc, "R14-shape")], rebuild: true, order: byType);
-    CollectionAssert.AreEqual(new[] { "Ann", "Cy", "Bob" }, listed.Select(r => r.Name).ToList(),
-                              "NPC before Player, and the two NPCs in name order — a tie on the clicked column breaks on the name so the "
-                            + "list cannot be census order wearing a sort arrow through the back door");
+      pane.PublishCensusForTest([CensusRow("Ann", IdentityKind.Npc, "R6-npcdb"), CensusRow("Bob", IdentityKind.Player, "R3-joinraid"), CensusRow("Cy", IdentityKind.Npc, "R14-shape")], column: column);
+      CollectionAssert.AreEqual(new[] { "Ann", "Cy", "Bob" }, pane.RowsForTest.Select(r => r.Name).ToList(),
+                                "NPC before Player, and the two NPCs in name order — a tie on the clicked column breaks on the name so the "
+                              + "list cannot be census order wearing a sort arrow through the back door");
 
-    // Ann is a player now. Nothing was added or removed; only a sorted word moved.
-    NamesTable.MergeRows(listed, [CensusRow("Ann", IdentityKind.Player, "R3-joinraid"), CensusRow("Bob", IdentityKind.Player, "R3-joinraid"), CensusRow("Cy", IdentityKind.Npc, "R14-shape")], rebuild: false, order: byType);
-    CollectionAssert.AreEqual(new[] { "Cy", "Ann", "Bob" }, listed.Select(r => r.Name).ToList(),
-                              "the row whose word changed goes where the sort says, and the survivors keep their relative order");
+      // Ann is a player now. Nothing was added or removed; only a sorted word moved.
+      pane.PublishCensusForTest([CensusRow("Ann", IdentityKind.Player, "R3-joinraid"), CensusRow("Bob", IdentityKind.Player, "R3-joinraid"), CensusRow("Cy", IdentityKind.Npc, "R14-shape")], column: column);
+      CollectionAssert.AreEqual(new[] { "Cy", "Ann", "Bob" }, pane.RowsForTest.Select(r => r.Name).ToList(),
+                                "the row whose word changed goes where the sort says, and the survivors keep their relative order");
+    });
+  }
+
+  /*
+   * The strip's two dials (2026-12): a name filter and the closed type list. Both are VISIBILITY — the census keeps knowing
+   * every name, the title says how many of them a page shows, and clearing a dial gives the whole list back (the plan's words).
+   * A filtered name is not a missing name: "Showing 1 of 3" is what tells the two apart on screen.
+   */
+  [TestMethod]
+  public void TheStripDialsNarrowTheListNotTheCensus()
+  {
+    Sta.Run(() =>
+    {
+      var pane = new NamesTable();
+      pane.PublishCensusForTest([CensusRow("Ann", IdentityKind.Player, "R3-joinraid"), CensusRow("Bob", IdentityKind.Npc, "R6-npcdb"), CensusRow("Cyra", IdentityKind.Pet, "R5-owner:Ann")]);
+      Assert.AreEqual("Showing 3 Identities", pane.TitleTextForTest, "no dial touched reads the census's own size");
+
+      // The name dial is a case-insensitive contains: one row answers it.
+      pane.SetSearchTextForTest("an");
+      CollectionAssert.AreEqual(new[] { "Ann" }, pane.RowsForTest.Select(r => r.Name).ToList(), "'an' finds Ann and nothing else");
+      Assert.AreEqual("Showing 1 of 3 Identities", pane.TitleTextForTest,
+                      "the title says both numbers: the row is filtered out of the PAGE, not out of the capture");
+
+      // The type dial narrows on its own.
+      pane.SetSearchTextForTest("");
+      Assert.AreEqual(3, pane.RowsForTest.Count, "clearing the name dial gives the list back");
+      pane.SetTypeFilterForTest(IdentityKind.Npc);
+      CollectionAssert.AreEqual(new[] { "Bob" }, pane.RowsForTest.Select(r => r.Name).ToList(), "the closed vocabulary is the whole of what can be shown");
+
+      // Both dials at once: their intersection, and the title still says 3.
+      pane.SetTypeFilterForTest(IdentityKind.Player, IdentityKind.Pet);
+      pane.SetSearchTextForTest("a");
+      CollectionAssert.AreEqual(new[] { "Ann", "Cyra" }, pane.RowsForTest.Select(r => r.Name).ToList());
+      Assert.AreEqual("Showing 2 of 3 Identities", pane.TitleTextForTest);
+
+      // And a question nobody passes is an EMPTY list, not a crash and not the old rows.
+      pane.SetSearchTextForTest("zzz");
+      Assert.AreEqual(0, pane.RowsForTest.Count, "no answer is a valid answer");
+      Assert.AreEqual("Showing 0 of 3 Identities", pane.TitleTextForTest);
+    });
   }
 
   /*
