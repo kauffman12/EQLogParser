@@ -162,6 +162,13 @@ namespace EQLogParser
     private bool _awaitingFirstRows;
 
     /*
+     * The one scroll this pane is allowed to do on its own: owed by each capture and paid when that capture's file finishes reading, which is the
+     * moment an operator watches rather than the moment some derive happened to finish. FightListReveal holds the sequencing (and why both orders of
+     * rows-vs-read happen) and this class only feeds it events and does the scrolling. Dispatcher-thread only.
+     */
+    private readonly FightListReveal _reveal = new();
+
+    /*
      * One Info line per capture, written the first time this session's rows reach the grid. The open and the first derive
      * pass already announce themselves (`capture: started`, `derive: first pass`); what was missing on the other side is the
      * moment the READER could have clicked something, which is the timestamp every "the stats built three times when I
@@ -256,6 +263,10 @@ namespace EQLogParser
         else if (_settle.Pending) _selectionTimer.Start();   // still parked (menu open / button held): ask again
       };
 
+      // Same single-entry idiom as ActiveChanged: the event is process-wide and a pane can be rebuilt.
+      MainActions.EventsLogLoadingComplete -= OnLogLoadingComplete;
+      MainActions.EventsLogLoadingComplete += OnLogLoadingComplete;
+
       DeriveEngine.ActiveChanged += OnActiveChanged;
       Attach(DeriveEngine.Active);
 
@@ -293,6 +304,22 @@ namespace EQLogParser
     private void OnActiveChanged()
     {
       Dispatcher.InvokeAsync(ClearForNewCapture);
+    }
+
+    /*
+     * The file finished reading (`open == false` is the CLOSE of a log, which owes nothing to a viewport). This is "the progress went away": if rows
+     * are already on screen the jump happens now, and if the derive is still chewing through a big capture the apply paths pay it when they land.
+     * MainWindow raises this from its own UI-thread pump; the dispatch is not for correctness but so the flag and the rows are touched by one thread.
+     */
+    private void OnLogLoadingComplete(string file, bool open)
+    {
+      if (!open) return;
+
+      Dispatcher.InvokeAsync(() =>
+      {
+        _reveal.ReadFinished();
+        RevealNewestRowIfOwed();
+      });
     }
 
     /*
@@ -336,10 +363,12 @@ namespace EQLogParser
       // (keyboard) must not inherit a row from the log that just closed.
       _menuRow = null;
 
-      // A new session is a new load: the band may show again, its counters start from nothing, and nothing has been read yet.
+      // A new session is a new load: the band may show again, its counters start from nothing, nothing has been read yet - and the jump to this
+      // capture's newest row is owed again (RevealNewestRowIfOwed).
       SetLoadBand(null);
       _loadBandSettled = false;
       _awaitingFirstRows = false;
+      _reveal.Arm();
       _sessionPainted = false;
       _capturedFacts = 0;
     }
@@ -417,7 +446,7 @@ namespace EQLogParser
            * leaves, every other row keeps its object, so the selection, the scroll position and the search mark hold through a pass however the
            * dials happen to be set.
            */
-          var (_, visibleInsertions) = ShownRows.Reconcile(_rows, VisibleRows());
+          ShownRows.Reconcile(_rows, VisibleRows());
 
           // A marked row that left the list takes its highlight with it; one that stayed keeps it WITHOUT a repaint, which is the
           // difference between a search mark that holds and one that blinks off twice a second.
@@ -455,7 +484,7 @@ namespace EQLogParser
           var touched = selected.Count > 0 && (removedSelected || contentMoved || UnaskedRefresh.HasGesture);
           if (touched) AnnounceSelection(removedSelected ? BoardReason.RowEdited : BoardReason.ContentMoved, force: true);
 
-          FollowNewestRows(visibleInsertions > 0);
+          RevealNewestRowIfOwed();
           return;
         }
 
@@ -489,7 +518,6 @@ namespace EQLogParser
          */
         _selectionTimer.Stop();
 
-        var previousRows = _allRows.Count;
         _allRows = new List<DerivedFightRow>(snapshot.Rows);
         _rows = new ObservableCollection<DerivedFightRow>(VisibleRows());
         fightGrid.ItemsSource = _rows;
@@ -509,7 +537,7 @@ namespace EQLogParser
          */
         AnnounceSelection(BoardReason.SnapshotSwap);
 
-        FollowNewestRows(snapshot.Rows.Count > previousRows);
+        RevealNewestRowIfOwed();
       });
     }
 
@@ -1346,23 +1374,29 @@ namespace EQLogParser
     }
 
     /*
-     * Follow the growth the way the old list did: when a pass put new rows at the bottom, scroll to the bottom - unless the mouse is inside
-     * the grid, which is how that pane knew a person was reading it. FightListFollow holds the rule and why a hand test beats any memory of
-     * scroll position. The scroll waits one layout pass because the rows exist before the scrollable extent does, and scrolling to a row the
-     * presenter has not measured yet is a no-op that loses the follow.
+     * Pay the capture's one reveal: when its file finishes reading, put the list at its newest row - ONCE, and for no other reason ever. Nothing here
+     * asks where the pointer is or whether anybody is looking at this tab: legacy's `!IsMouseOver` excuse was never protection, since the list slid
+     * down again the moment the pointer left, and a derive pass lands about twice a second while a raid fights. FightListReveal holds the sequencing -
+     * including why two doors call this method, the apply paths (rows arriving after the read) and the loading-complete event (the read finishing
+     * after the rows): either order has to land, and TryPay answers exactly once whichever came first.
+     *
+     * One row is no fold to cross so nothing scrolls, and the debt is spent anyway: a reveal left owed until some later pass is the exact surprise this
+     * retires. A grid on a tab nobody has slid out gets scrolled regardless (one layout pass) - that is what makes the tab OPEN at the bottom. The
+     * scroll waits that pass because rows exist before the scrollable extent does; scrolling to a row the presenter has not measured yet is a no-op.
      */
-    private void FollowNewestRows(bool rowsArrived)
+    private void RevealNewestRowIfOwed()
     {
-      if (fightGrid is not { } grid) return;
+      if (!_reveal.TryPay(_rows.Count > 0)) return;
 
-      var shown = _rows.Count;
-      if (!FightListFollow.ShouldFollowToNewest(rowsArrived, IsVisible, grid.IsMouseOver, shown)) return;
+      if (fightGrid is not { } grid || _rows.Count < 2) return;
 
       grid.Dispatcher.BeginInvoke(new System.Action(() =>
       {
-        // Re-read the count: another pass may have landed in the meantime, and the point is the LAST row, whatever number that is now.
+        // Re-read the count: another pass may have landed in the meantime, and the point is the LAST row, whatever number that is now. The view is
+        // re-asked too - Clear All or a new log between this ask and that layout pass leaves a grid with no records to scroll, and an exception here
+        // has nobody above it to catch it.
         var last = _rows.Count;
-        if (last > 1) grid.ScrollInView(new RowColumnIndex(last, 0));
+        if (last > 1 && grid.View != null) grid.ScrollInView(new RowColumnIndex(last, 0));
       }), DispatcherPriority.Background);
     }
 

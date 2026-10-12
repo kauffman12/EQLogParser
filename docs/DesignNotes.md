@@ -6991,10 +6991,10 @@ Four laws, one of them found by a test refusing the first draft.
    rides along with the copy: leaving the old `DerivedFight` behind would feed the boards one-pass-stale numbers to a row whose cells
    just moved, and a selection materializes from that object.
 2. **A plan resolves every position to a concrete instance.** The first draft had `Apply` walk the INCOMING list and insert wherever the
-   live list did not already hold “that” row — which is never, because the incoming rows are different objects with equal keys; it
+   live list did not already hold "that” row — which is never, because the incoming rows are different objects with equal keys; it
    inserted newcomers over survivors and the grid would have gotten brand-new rows anyway. `Plan.Layout` now holds, for each position of
    the new list, the SURVIVING old object where one matched. `OneRowChanged_OneUpdateAndEveryInstanceKept` is the assertion that caught
-   it — `Assert.AreSame` on a row identity, not “the list looks right”.
+   it — `Assert.AreSame` on a row identity, not "the list looks right”.
 3. **A patch never lies about order or ambiguity.** Matched keys arriving out of relative order (a re-sort) return null; so does a
    duplicate key on either side. `maxChurn` turns the caller back to the wholesale path before mutating anything when too much of the
    list is new — the pane uses `max(256, rows / 2)`, which admits the measured worst pass (1,594 touched of 4,835).
@@ -7002,11 +7002,11 @@ Four laws, one of them found by a test refusing the first draft.
    inactivity divider keys on where its gap STARTS, never on its label, because that label grows as the gap is measured against newer
    facts — keyed on the text, every divider would read as one row leaving and another arriving on every pass.
    `EveryRowInTheSameSnapshot_HasItsOwnKey` guards the failure that would silence the whole feature: a duplicate key makes `Build` refuse
-   forever, which looks exactly like “the patch never applies”.
+   forever, which looks exactly like "the patch never applies”.
 
 **One state deliberately keeps the wholesale path**: a **sorted** grid would hold updated cells in yesterday’s order (no cheap live re-sort
 exists on this control, and guessing row positions is the failure mode the selection code already refuses). A second state used to be here —
-**“show tanking” off**, because that dial filtered per ROW on `Fight.DamageToOwner`, a field a patch mutates, and the shipped
+**"show tanking” off**, because that dial filtered per ROW on `Fight.DamageToOwner`, a field a patch mutates, and the shipped
 `Syncfusion.SfGrid.WPF` (34.2.8) exposes no `RefreshLiveFilter` to ask for (verified by inspecting the assembly rather than by hoping). Hiding
 the filter from the grid removed that restriction: see the next section.
 
@@ -7021,10 +7021,10 @@ hitting us). Both are one predicate over ONE list. The first version of the deri
   So `canPatch` carried a `_currentShowTanking` term and the unchecked mode rebuilt the entire collection on every derive pass, twice a second
   during a pull, while the checked mode patched ~5 % of the rows.
 - **Index-based selection could mean a different fight than it highlighted.** The control stores selection by ROW INDEX; re-filtering
-  reshuffles which fight sits at each index underneath it. Field report: *“i uncheck tanking, the selection happens quickly but nothing actually
+  reshuffles which fight sits at each index underneath it. Field report: *"i uncheck tanking, the selection happens quickly but nothing actually
   happens”* — a click landing while a pass was mid-re-filter looked selected and reported something else (or nothing). Legacy could only dodge
   this by wiping its selection whenever it swapped lists.
-- **Every index-taking call needed shown-position translation** (`SelectRows`, scroll-to, group select had to count “rows the view actually
+- **Every index-taking call needed shown-position translation** (`SelectRows`, scroll-to, group select had to count "rows the view actually
   renders”), which was its own walk with its own off-by-one surface — one hidden row above a run shifted that run by one.
 
 **The rule: the pane owns visibility; the grid renders a list that is already only the visible rows.** `FightTable` keeps `_allRows` (the
@@ -7053,9 +7053,10 @@ visibility to its members. Both Select Group and Unselect Group use that same se
 including selections in other groups and an undamaged fight inside the target group. The pane wiring is covered by `FightTableDialVisibilityTest`.
 
 The same review found search passing an unsorted source index to a sorted-view resolver; search is back on `View.Records` and deferred scrolling
-resolves the row object, ignoring a stale search or a row that left. A toggle clears a hidden search mark and resets its cursor. Live follow is
-triggered by visible insertions, not additions that the checkboxes hide. Selected rows removed by a live visibility change are explicitly removed
-from `SelectedItems` before announcing; the membership check uses typed rows and the reference set rather than LINQ's object-based linear scan.
+resolves the row object, ignoring a stale search or a row that left. A toggle clears a hidden search mark and resets its cursor. Selected rows
+removed by a live visibility change are explicitly removed from `SelectedItems` before announcing; the membership check uses typed rows and the
+reference set rather than LINQ's object-based linear scan. (Scrolling on visible insertions was retired outright soon after — see the next
+section.)
 
 The two new selection tests originally never loaded the grid and therefore normally reported inconclusive without executing their assertions.
 Those tests and their production-only test wrappers were removed. The remaining WPF tests assert bound data and patch identity without loading a
@@ -7063,6 +7064,37 @@ windowless grid; they compile on Linux but run only on Windows. Actual clicks, h
 unchecked items in `docs/ReleaseChecklist.md`, not claimed as automated coverage.
 
 Re-announcement is conditional too — see the next section. The search mark survives a pass as long as its row stays visible.
+
+### The fight list moves its own viewport once (2026-11)
+
+Operator, on the fixed-filter build: *"only scroll down to the bottom after loading a log file. during active fighting just leave the list where
+the user left it and dont change the scroll position automatically."* The request kills a behaviour inherited from the legacy table rather than
+one this branch invented: legacy's `NewRowsAdded` scrolled the grid to its last record on **every** pass that added rows, excused only by
+`!dataGrid.IsMouseOver`. At one row per pull that read as liveness. With the derive pump handing out passes around twice a second
+(the same rate the identity census is measured at, and the reason behind "a census that arrives must not move the list") it reads as a pane that
+cannot be held still while it fills — and the mouse test was never protection anyway: it excuses one pass, then slides the list down the moment the
+pointer leaves. The operator's follow-up settled the design: *"its not related to where the mouse pointer is at all. just dont move the list except
+for the post full log read case"*.
+
+**The law: one reveal per capture, owed from the moment a capture opens and paid when the READ finishes.** The moment is the operator's own —
+`MainActions.EventsLogLoadingComplete(file, open: true)`, raised once per open at 100 % — and deliberately not "the first snapshot": a big capture
+hands this pane rows while the file is still a third read (that is exactly what `_loadBandSettled`, the loading band's flag, exists to record — real
+rows beat a bar), so keying the jump to a derive would fire it mid-file and then sit on its hands. The debt is a Core class, `FightListReveal`: `Arm()`
+in `ClearForNewCapture`, `ReadFinished()` from the event, and `TryPay(hasRows)` asked by BOTH doors — the apply paths (rows arriving after the read) and
+the event handler (the read finishing after the rows) — so either order lands and exactly one payment comes out. Clear All re-arms because Clear All is
+a new load; a follow-from-end open reads nothing, reaches 100 % immediately, and pays at its first answer that has rows in it.
+
+**No attention tests.** The rule asks nothing about the pointer (`IsMouseOver` is gone from this pane) and nothing about whether the tab is showing
+— legacy's dock guard went too, so a fight list sitting behind another pane gets its viewport set anyway and OPENs at the bottom instead of at the top
+one layout pass costs. The only arithmetic left is that one row has no fold to cross, so there is nothing to scroll; the debt is spent even then,
+because a jump still owed somewhere inside a later pull is precisely the surprise this retires. Which is also why the empty grid does NOT pay up: a
+capture can reach 100 % before its first rows exist, and "nothing to reveal yet" is not the same as "nobody is looking".
+
+After that single reveal, the only thing in this pane that moves these rows is a search, and a search is a gesture. No scroll position is remembered
+anywhere, so nothing is restored and no heuristic has to guess intent; the follow code path is gone rather than throttled. `FightListRevealTest`
+asserts it headlessly (six cases: both orders of rows-vs-read, the empty answer keeping the debt, one payment per capture, re-arming on a new load, a
+paid debt staying paid), and what a unit test cannot show — the realized grid moving once at the end of a read and then holding through a pull — is an
+unchecked item in `docs/ReleaseChecklist.md`.
 
 ### What makes a board go one pass stale
 
@@ -7072,7 +7104,7 @@ figures or leaving a board a pass behind.
 
 Two signals were tried and both are wrong in opposite directions:
 
-- **the row diff** (`patch.Updates`/`Removals` intersected with the selection; “removed” has meant “no longer in the visible list” since
+- **the row diff** (`patch.Updates`/`Removals` intersected with the selection; "removed” has meant "no longer in the visible list” since
   the dials moved out of the grid, which is the same thing from the reader’s side) misses a rebuild where every CELL reads the same but the answer
   moved — an ownership or charm verdict shifted, so the same facts now split between `X +Pets` and the mob, and damage/tanking routing followed.
   `SameDisplayAs` cannot see routing; that was the original bug.
@@ -9161,12 +9193,13 @@ announces exactly once, at the close), backstopped by a probe of `ContextMenu.Is
 is *a candidate* cause rather than a proven one: the log lines above prove 1 and 2 fired, while nothing in a log distinguishes a lost
 `ContextMenuClosing`; it is fixed by making the condition unable to persist rather than by catching it.
 
-**The viewport law that came with it: master followed the newest row, and this pane had thrown that away.** Legacy's `NewRowsAdded` scrolled to the
-grid's last record whenever a pass added rows, with one exception — `!dataGrid.IsMouseOver`. That exception *is* the design, so it is ported rather
-than improved: no scroll position is remembered anywhere (a heuristic about where the reader "wanted" to be is exactly what gets it wrong), while a
-hand inside the grid is the reader saying *I am using this part of the list*, for as long as it stays. `FightListFollow` (Core, so the rule runs
-without a dispatcher — `FightListFollowTest`) holds the permission: rows arrived, pane on screen, no hand on it, more than one row; the pane waits
-one layout pass before scrolling because the rows exist before the scrollable extent does.
+**The viewport law that came with it (superseded — see "The fight list moves its own viewport once").** At the time of writing this pane had no
+scroll behaviour at all while master's `NewRowsAdded` scrolled to the grid's last record on every pass that added rows, with one exception —
+`!dataGrid.IsMouseOver`. That was ported as-is, and the surviving truth in it is structural: no scroll position may be remembered anywhere (a
+heuristic about where the reader "wanted" to be is exactly what gets it wrong), and the scroll has to wait a layout pass because rows exist before the
+scrollable extent does. Both still hold. What did not survive is the rule itself — following every growth turned out to be the complaint rather than
+the feature, and the mouse exception protected nobody (it excuses one pass, then moves the list the moment the pointer leaves). The type that held
+those guards no longer exists; the viewport law is `FightListReveal`, one reveal per capture when the read finishes.
 
 **And the bug found while reading for that one: the first search after a derive click was dead.** `SearchForNpc` chooses between "jump to the next
 hit" and "start a new search, collapse to it" by comparing against `_lastSearchName`, which **nothing ever assigned** — so the field carried its

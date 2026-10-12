@@ -94,6 +94,11 @@ These checks require a realized grid; the automated pane tests exercise bound da
   selected visible fights even while sorted.
 - [ ] **Live changes:** with Tanking off, an NPC becomes visible when it receives its first player damage. Existing visible selections stay
   on the same fights through updates; a verdict change that hides a selected NPC removes it from the selection and updates the summary.
+- [ ] **One scroll per capture:** open a long log and let it finish reading (status line: "Monitoring Log") — the list lands at its newest row,
+  once. Then fight: new rows and cell updates must not move the viewport, and scrolling up to read an old encounter must hold through a whole pull.
+  Clear All and reopening the same log get the reveal again (a new load). Nothing about the pointer counts: leave it inside the grid while the log
+  reads and the jump still happens. If the fight list sits behind another tab when the read finishes, opening that tab should show the newest row.
+  Scrolling a search result into view still works — that is a gesture, not a follow.
 
 ## Docking states a unit test cannot reach
 

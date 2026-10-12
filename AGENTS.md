@@ -225,9 +225,13 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
   fights only. Range selects index `_rows` only while unsorted; search walks the grid's sorted view and resolves the matched object when scrolling.
   Restore selection by row instance (sorted too), and ask as `BoardReason.DialChange` on a toggle. See `docs/DesignNotes.md` →
   "The fight list dials filter our rows, not the grid". Real-grid checks belong in `docs/ReleaseChecklist.md`.
-- **Follow, don't yank**: the list follows its newest row unless a hand is on it (`FightListFollow`: pointer-over or selection
-  changed within the settle window parks following; a wholesale snapshot re-arms to the newest row); group gestures act on the
-  row the pointer opened the menu on and **un-select never toggles** (an id the grid no longer has clears silently).
+- **The fight list moves its own viewport once**: one reveal per capture, owed when the capture opens and paid when the READ finishes
+  (`FightListReveal`: `Arm` per capture, `ReadFinished` from `EventsLogLoadingComplete`, `TryPay` asked by both doors) — not at the first snapshot,
+  because a big file hands over rows mid-read. **No attention tests**: the pointer and the pane's visibility are not conditions (a list behind another
+  tab gets scrolled and opens at the bottom). A one-row answer spends the reveal without scrolling; an empty grid keeps it. Live growth never scrolls,
+  and after the reveal only a search does. See `docs/DesignNotes.md` → "The fight list moves its own
+  viewport once". Group gestures act on the row the pointer opened the menu on and **un-select never toggles** (an id the grid no longer has
+  clears silently).
 - **One announce per gesture** (`SelectionSettle` + one DispatcherTimer at 600 ms; `MenuOpen` via
   `ContextOpening/ContextClosed`; `ButtonHeld` for *both* mouse buttons plus capture loss). `AnnounceSelection` is the single
   door for the boards on the pass-driven reasons, deduped by (ids, content stamp) — **but the first answer of a capture always
