@@ -38,10 +38,11 @@ namespace EQLogParser
     {
       InitializeComponent();
       UiElementUtil.SetWatermark(textFilter, Resource.CHAT_TEXT_FILTER);
-      // While a cue word sits in one of the auto-complete boxes, its suggestion list is dropped (SetWatermark's
-      // restore runs first; this only adds the AutoCompleteSource half the shared handler used to carry).
+      // Drop suggestions before the shared blur handler restores the cue text.
       toFilter.LostFocus += (_, _) => { if (string.IsNullOrEmpty(toFilter.Text)) toFilter.AutoCompleteSource = null; };
       fromFilter.LostFocus += (_, _) => { if (string.IsNullOrEmpty(fromFilter.Text)) fromFilter.AutoCompleteSource = null; };
+      UiElementUtil.SetWatermark(toFilter, Resource.CHAT_TO_FILTER);
+      UiElementUtil.SetWatermark(fromFilter, Resource.CHAT_FROM_FILTER);
 
       startDate.DateTime = new DateTime(1999, 3, 16);
       endDate.DateTime = DateTime.Now;
