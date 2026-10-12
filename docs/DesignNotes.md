@@ -12362,3 +12362,101 @@ classes paid that *per test* — most of the suite's wall time. One shared store
 `EQDataStoreTest.SharedStore`, both built with the working directory pinned so which test asked first cannot decide whether the
 shared store saw the data); everything mutable is still cleared per test, and a test needing a store under different conditions
 builds its own.
+
+## DPS and active-reader retention review at 35420fcf
+
+**Review findings, not implemented optimizations.** Two live-format captures were replayed in separate headless processes
+through `PipelineHarness` and the current Core pipeline. A temporary console harness inspected collection counts/capacities,
+classified and projected the facts, materialized every row, then requested one row. The larger-heal capture additionally built
+the singleton damage/healing boards and raised `LifecycleManager.Clear(false)`. No explicit GC or heap-size probe was used;
+these are strong-reference and storage-shape observations, not Windows working-set measurements. The print harness was deleted.
+
+| observation | Kizant xegony-2 | Incogitable xegony |
+|---|---:|---:|
+| damage facts / heal facts | 2,286,368 / 1,247,984 | 1,901,078 / 420,110 |
+| settled table `EstimatedBytes`, damage + healing | 15.48 + 3.98 MiB | 16.61 + 2.34 MiB |
+| full-history `RecordsStore.SpellRecords` entries | 504,742 | 628,746 |
+| routed ordinal count / list capacity | 2,268,615 / 3,499,900 | 1,596,903 / 2,322,940 |
+| cached materialized fights after all, then after one | 251 / 251 | 4,452 / 4,452 |
+| materialized damage records / action-list capacity | 2,268,615 / 3,291,460 | 1,596,903 / 2,319,112 |
+| R7 timestamp count / capacity | 1 / 4 | 11,959 / 16,364 |
+
+The settled estimates were read after `ColdifyNow` and damage-side `CompactToCount`; they exclude materialized summaries,
+board trees, auxiliary records, interning tables and UI/native memory. The Kizant materialized records alone imply roughly
+**129 MiB** from 48-byte damage objects and eight-byte action-reference slots, before block shells, dictionaries and stats.
+That is a structural estimate, not a measured retained heap.
+
+Three concrete lifetime gaps:
+
+- **The singleton last answer survives clear.** Damage and healing `Reset` do not null `_lastStatsEvent`. Its `Groups` hold
+  inner lists independently of the outer list the reset clears. Before AND after the production clear, their last answers
+  still reached **2,205,422 damage records and 1,227,926 heal records**. Clear must release the last answer and audit the other
+  retained build inputs; do not clear published objects in place, because an already-running consumer may own them.
+- **Deselection does not evict summaries.** `FightFactIndex._summaries` has no removal or budget. It dies when the projection
+  index is replaced, but an unchanged classification carries that index for the session. The older claim here that a
+  deselected row's materialization becomes garbage is incorrect at this revision. Bound historical reuse by record/byte
+  budget, preserving useful hot/open-row continuation; an entry-count ceiling alone does not bound one enormous fight.
+- **Heal deduplication outlived its store.** `HealingLineParser._healCache` still retains repeated `HealRecord` instances,
+  although the fact tap and FCT copy their values rather than keep those objects. About **51k / 39k** entries survived the
+  production clear, plus a **1,250,008-byte** repeat filter in each process. Exact counts vary with the hash filter. Production
+  has no caller of `ClearCaches`; only tests do. Each incoming record is allocated before lookup, so this cache no longer
+  removes the parser allocation either. Removing it is preferable to periodically clearing an otherwise unused history.
+
+Smaller candidates: `Attempt` keeps uint-sized hit amounts in `List<long>` (losslessly halve the raw payload while keeping
+histogram keys long); compact ordinal runs under the index gate (Kizant has about **4.7 MiB** of capacity slack); replace R7's
+per-edge timestamp lists with per-opponent first/last/burst counters, preserving arrival-order behavior. R7 was small on both
+captures, so it is not a measured leading owner. Full spell/buff records remain genuine history for the spell/timeline/death
+surfaces: packed records or cold auxiliary chunks are plausible, arbitrary expiry is not.
+
+Two qualifications prevent the wrong optimization. `StringCache` began with **193,122** entries from static data, before
+reading either log; its post-parse counts were 193,607 / 198,676. Its dynamic pool has no production clear, and both hit ids
+and `SpellNameIds` are process-lifetime, but their ids cannot simply be reset while old records still exist. Also,
+`ColdChunks.RetainDecoded` deliberately suspends the four-warm-chunk bound during a pass: Kizant reached **35 damage / 39
+heal decoded chunks**, falling to **5 / 5** after the lease (four warm plus the append tail). Bounded/chunk-oriented board
+consumption would lower peak memory, but blindly removing these leases trades memory for repeated decompression.
+
+The reader already bounds its queue at 25,000 lines plus a 5,000-line batch; live tailing normally stays far below that.
+The main remaining opportunity is to stop retaining obsolete object graphs, then consider fact-backed streaming for boards
+and charts. More frequent collections cannot reclaim the strong references above.
+
+## Retention fixes at 35420fcf, verified on the same captures (2026-11)
+
+The three lifetime gaps above are fixed, and two of the smaller candidates landed. All numbers below re-measured with the
+same headless harness shape (load through `LogProcessor`, classify, project, materialize every row, build both boards,
+fire the production clear) on `eqlog_Kizant_xegony-2.txt` (251 rows).
+
+| observation | before | after |
+|---|---:|---:|
+| cached materialized summaries after select-all | 251 rows, ≈2.27M records, life of session | **17 entries / 173,774 records**, at or under budget |
+| `GetLastStats()` after the production clear | 2.2M damage + 1.2M heal records reachable | **null** on both builders |
+| routed ordinal list capacity (this capture) | 3,499,900 slots (≈4.7 MiB slack) | 2,275,398 after one compaction (≈4.7 MiB reclaimed) |
+| heal repeat store | static `RepeatStore<HealRecord>` ≈51k records + 1,250,008-byte filter | deleted from the type |
+
+- **Clear releases the last answer.** The `ActiveDataCleared` handlers in `DamageStatsBuilder` and
+  `HealingStatsBuilder` now null `_lastStatsEvent` beside their existing `Reset`. The property stays - it is the live
+  answer between builds (summary copy path, column chart) - but a board's last answer dies with the capture that produced
+  it, which is what every grid already did. Not done in place on published objects: the handlers only drop the builder's
+  own reference; a consumer mid-walk keeps its `StatsGenerationEvent`.
+- **The materialization cache has a budget.** `FightFactIndex.SummaryRecordBudget` = 250,000 materialized records
+  (damage + tanking per entry), enforced in `SummaryFightFor` with oldest-first eviction; a read that is still the answer
+  moves its entry to the tail, so a row someone is watching survives while closed rows somebody selected once do not. A
+  published `Fight` is never mutated - eviction is dictionary removal only, and an evicted row re-materializes on demand
+  (same numbers, fresh object; the cache was acceleration, not storage). One farm fight larger than the budget simply
+  spends one walk per click, which is what every first click always paid. `SummaryCacheBudgetTest` pins the budget, the
+  recency touch and the rebuild.
+- **Ordinal slack compacts with the session.** `FightFactIndex.CompactOrdinalSlack()` runs on the full derive lane beside
+  `_capture.CompactRows()`: dead rows only (an open row's list is about to be written), reference-swapped under the index
+  gate so a list already in somebody's hands stays intact, and a 64-slot floor keeps small rows from churning.
+  `SummaryCacheBudgetTest` pins both rules; on this capture one call reclaimed the measured ≈4.7 MiB.
+- **The heal repeat store is gone.** `HealingLineParser._healCache`, its filter and `ClearCaches()` were deleted: nothing
+  retained those instances (fact rows and FCT commands copy values), production had no caller of the clear, and every
+  record was allocated before the lookup, so it bought neither sharing nor allocation savings - only retention.
+  `RepeatStore`/`RepeatFilter` remain in `EQLogParser.Utils` with their own tests. The one behavior pin moved from "same
+  instance from the third sighting" to "every line is its own value-equal record".
+- **Attempt's raw lists are `uint`.** Hit amounts arrive as `HitRecord.Total` (uint) and leave the raw list through the
+  chart's long keys, so `List<uint>` halves the payload of a histogram nobody has asked for; `FreqOf` casts at the one
+  door. `HitFrequencyLazinessTest` counts unchanged.
+
+Not taken: R7 aggregate compaction (small on both captures - its per-edge timestamp lists are the cheapest shape for a
+counter that must preserve arrival order), spell-history packing and fact-backed board walks (the standing architectural
+candidates from the review).
