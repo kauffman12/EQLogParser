@@ -182,9 +182,12 @@ public sealed class FightTableGroupGestureTest
             "unselect group over an unselected group must not spend the selection that was");
     }
 
-    // ContextMenuEventArgs has no public constructor; the opening handler reads it like any mouse event's source,
-    // and an unfilled instance says "no row under the pointer" - which this test supplies through RightClickOn.
-    private static object ContextMenuArgs() => Activator.CreateInstance(typeof(ContextMenuEventArgs), nonPublic: true)!;
+    // ContextMenuEventArgs has NO reachable constructor (not even non-public), so it is allocated without running
+    // one. That is safe here because the opening handler reads exactly one thing off it - OriginalSource, a plain
+    // field which comes back null, the same answer a keyboard-opened menu gives; this test names its row through
+    // RightClickOn instead.
+    private static object ContextMenuArgs() =>
+      System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject(typeof(ContextMenuEventArgs));
 
     // What GridContextMenuOpening does with a row under the pointer: name it and point the cursor at it.
     private static void RightClickOn(FightTable table, DerivedFightRow row)
