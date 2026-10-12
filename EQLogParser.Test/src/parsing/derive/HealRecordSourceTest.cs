@@ -23,7 +23,6 @@ public class HealRecordSourceTest
   [TestInitialize]
   public void Setup()
   {
-    HealingLineParser.ClearCaches();
     RecordsStore.Instance.Clear(false);
     PlayerRegistry.Instance.Clear();
     HealTap.Clear();
@@ -36,7 +35,6 @@ public class HealRecordSourceTest
     // A wired table is process state pointing at one capture's rows. Left standing it would let the next test's board
     // read this fixture's heals — the same hazard Dispose's still-mine guard exists for in production.
     HealRecordSource.Current = null;
-    HealingLineParser.ClearCaches();
     RecordsStore.Instance.Clear(false);
     PlayerRegistry.Instance.Clear();
     HealTap.Clear();

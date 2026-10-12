@@ -27,15 +27,14 @@ namespace EQLogParser;
 public class DerivedHealBoardTest
 {
     /*
-     * Same three process globals as HealFactCaptureTest, for the same reason: RecordsStore keeps every record any
+     * Same process globals as HealFactCaptureTest, for the same reason: RecordsStore keeps every record any
      * test has ever parsed, so a second parse of this fixture inside the same run would double the board (3,401
-     * becoming 6,802 is exactly what that looks like), and the heal RepeatStore decides instance sharing from
-     * sighting history. The builder itself starts each build clean — it is the input that has to be.
+     * becoming 6,802 is exactly what that looks like). The builder itself starts each build clean — it is the
+     * input that has to be.
      */
     [TestInitialize]
     public void Setup()
     {
-        HealingLineParser.ClearCaches();
         RecordsStore.Instance.Clear(false);
         HealTap.Clear();
         PlayerRegistry.Instance.Clear();
@@ -45,7 +44,6 @@ public class DerivedHealBoardTest
     [TestCleanup]
     public void Cleanup()
     {
-        HealingLineParser.ClearCaches();
         RecordsStore.Instance.Clear(false);
         HealTap.Clear();
         PlayerRegistry.Instance.Clear();

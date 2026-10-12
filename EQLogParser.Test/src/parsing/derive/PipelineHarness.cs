@@ -152,11 +152,6 @@ internal static class PipelineHarness
         // Clear parser state left by other tests in this process (assembly is serialized, not isolated).
         DamageLineParser.ResetProcessState();
 
-        // The heal stream's repeat store is static process state (AGENTS: "The heal store and its RepeatFilter are
-        // static"), so each capture gets its own first-sighting semantics. Hygiene, not the fix for the residue noted below:
-        // clearing it does NOT bring the missing pet claims back (measured).
-                HealingLineParser.ClearCaches();
-
         // The registry is a process-lifetime singleton the parsers read for every name lookup;
         // without this, verifications from earlier tests' logs leak into this run's routing
         // (measured: the same real log compared as 4473 vs 4274 current fights across two runs).

@@ -28,17 +28,12 @@ namespace EQLogParser
       HealTap.Clear();
       PlayerRegistry.Instance.Clear();
 
-      // The heal cache and its sighting history are process globals: without this, whichever test class got
-      // here first decides whether a heal looks like a repeat, and the sharing assertions below depend on
-      // which sighting they are.
-      HealingLineParser.ClearCaches();
     }
 
     [TestCleanup]
     public void Cleanup()
     {
       AdpsTracker.Instance.Clear();
-      HealingLineParser.ClearCaches();
       RecordsStore.Instance.Clear();
       HealTap.Clear();
       PlayerRegistry.Instance.Clear();
@@ -115,26 +110,20 @@ namespace EQLogParser
     }
 
     [TestMethod]
-    public void Process_RepeatedHeal_SharesOneRecordInstanceFromTheThirdSighting()
+    public void Process_RepeatedHeal_KeepsEveryLineAsItsOwnValueEqualRecord()
     {
-      // three quarters of a raid night's heal lines restate a heal already seen; the repeat has to cost
-      // a slot in the store rather than another object, or the log keeps 2.7M of them alive per sitting.
-      // A heal seen once is deliberately left unremembered — 84% of distinct values are never restated, and
-      // the store keeps the record either way, so an entry spent on a first sighting buys nothing — which
-      // means sharing begins on the third line, not the second. See RepeatStore.
+      // The repeat cache used to collapse repeated heals onto one instance; it is gone because nothing
+      // retained those instances any more (fact rows and FCT commands copy the values), and the store it
+      // filled was pure process-lifetime retention. What stays pinned here is the half that mattered:
+      // value equality, so a repeat of a heal reads back as the same heal on every field.
       const string Text = "Fllint healed Foob for 11820 hit points by Blessing of the Ancients III.";
       HealingLineParser.Process(Line(Text, 5));
       HealingLineParser.Process(Line(Text, 6));
 
       var heals = HealTap.All().ToList();
       Assert.AreEqual(2, heals.Count);
-      Assert.AreEqual(heals[0].Item2, heals[1].Item2);
-      Assert.AreNotSame(heals[0].Item2, heals[1].Item2, "the second sighting is the one that pays for the entry");
-
-      HealingLineParser.Process(Line(Text, 7));
-      var restated = HealTap.All().ToList();
-      Assert.AreEqual(3, restated.Count);
-      Assert.AreSame(restated[1].Item2, restated[2].Item2);
+      Assert.AreEqual(heals[0].Item2, heals[1].Item2, "a restated heal is value-equal on every stored field");
+      Assert.AreNotSame(heals[0].Item2, heals[1].Item2, "each line keeps its own record - no sharing store any more");
     }
 
     [TestMethod]

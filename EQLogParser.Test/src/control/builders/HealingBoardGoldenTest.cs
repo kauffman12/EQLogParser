@@ -44,7 +44,6 @@ public class HealingBoardGoldenTest
         CombatRecordLookup.IsValidClassName = name => EQDataStore.Instance.IsValidClassName(name);
 
         DamageLineParser.ResetProcessState();
-        HealingLineParser.ClearCaches();   // the heal repeat-store is process state: re-parsing a fixture would double the board
         RecordsStore.Instance.Clear(false);
         PlayerRegistry.Instance.Clear();
         HealRecordSource.Current = null;
@@ -62,7 +61,6 @@ public class HealingBoardGoldenTest
         AppSettings.IsHealingSwarmPetsEnabled = _swarm;
         CombatRecordLookup.IsValidClassName = _originalIsValidClass ?? (_ => false);
         DamageLineParser.ResetProcessState();
-        HealingLineParser.ClearCaches();
         RecordsStore.Instance.Clear(false);
         PlayerRegistry.Instance.Clear();
     }

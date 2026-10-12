@@ -53,9 +53,11 @@ public class HitRecord : IAction
 }
 
 /*
- * One heal. Equal by value, so the manager can keep a single instance for every repeat of it —
- * heals are the most repetitive thing a raid writes (three quarters of one night's heal lines
- * restate a heal already seen), and each repeat costs an object if nothing recognises it.
+ * One heal. Equal by value: heal lines restate one another constantly (three quarters of a night's
+ * restate a heal already seen), so the golden comparisons and the fact tap ask about equality rather
+ * than identity. There is no sharing store any more - the fact rows and the FCT command are copies of
+ * the record's values by design, which is what lets every line keep its own instance (the repeat cache
+ * measured as pure retention: docs/DesignNotes.md → "DPS and active-reader retention review at 35420fcf").
  */
 internal class HealRecord : HitRecord
 {
@@ -90,8 +92,10 @@ internal class HealRecord : HitRecord
 }
 
 /*
- * One damage event. Equal by value so the parser's RepeatStore hands the same instance to every
- * repeat of it; numbers in docs/DesignNotes.md → What a loaded raid costs in memory.
+ * One damage event, equal by value (golden comparisons and test assertions ask about equality, not
+ * identity). Damage records are never retained: they are built, handed to consumers and dropped -
+ * the fact table is their permanent home (docs/DesignNotes.md → Where a large capture's bytes
+ * actually are).
  */
 internal class DamageRecord : HitRecord
 {

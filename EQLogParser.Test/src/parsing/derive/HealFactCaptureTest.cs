@@ -29,10 +29,8 @@ public class HealFactCaptureTest
     [TestInitialize]
     public void Setup()
     {
-        // Both stores are process globals. RecordsStore holds the records every other test class has parsed;
-        // the heal RepeatStore decides instance sharing by sighting history. Without clearing, whichever test
-        // ran first decides what "the same population" means (the trap LineParsersTest documents).
-        HealingLineParser.ClearCaches();
+        // Both stores are process globals: RecordsStore holds the records every other test class has parsed,
+        // and without clearing, whichever test ran first decides what "the same population" means.
         RecordsStore.Instance.Clear(false);
         HealTap.Clear();
         PlayerRegistry.Instance.Clear();
@@ -41,7 +39,6 @@ public class HealFactCaptureTest
     [TestCleanup]
     public void Cleanup()
     {
-        HealingLineParser.ClearCaches();
         RecordsStore.Instance.Clear(false);
         HealTap.Clear();
         PlayerRegistry.Instance.Clear();
@@ -160,8 +157,8 @@ public class HealFactCaptureTest
         Assert.AreEqual(storedTotal, factTotal);
         Assert.AreEqual(storedAsked, factAsked);
 
-        // Field for field, in the order both sides saw them. Values only, never instance identity: heals are
-        // shared by value (RepeatStore), and a captured fact is a copy of the record's contents by design.
+        // Field for field, in the order both sides saw them. Values only, never instance identity: a captured
+        // fact is a copy of the record's contents by design.
         for (var i = 0; i < stored.Count; i++)
         {
             var rec = stored[i].Item2;

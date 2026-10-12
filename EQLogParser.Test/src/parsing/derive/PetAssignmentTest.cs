@@ -32,7 +32,6 @@ public class PetAssignmentTest
     {
         PipelineHarness.EnsureDataStore();
         DamageLineParser.ResetProcessState();
-        HealingLineParser.ClearCaches();
         RecordsStore.Instance.Clear(false);
         PlayerRegistry.Instance.Clear();
 
@@ -46,7 +45,6 @@ public class PetAssignmentTest
         PetAssignment.Reroute = _originalReroute;
         UnaskedRefresh.ClearGesture();   // the gesture is process state; do not spend a forced build in the next test class
         DamageLineParser.ResetProcessState();
-        HealingLineParser.ClearCaches();
         RecordsStore.Instance.Clear(false);
         PlayerRegistry.Instance.Clear();
     }

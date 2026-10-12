@@ -25,7 +25,6 @@ public class SelectionOrderTitleTest
     {
         PipelineHarness.EnsureDataStore();
         DamageLineParser.ResetProcessState();
-        HealingLineParser.ClearCaches();
         RecordsStore.Instance.Clear(false);
         PlayerRegistry.Instance.Clear();
         HealRecordSource.Current = null;
@@ -35,7 +34,6 @@ public class SelectionOrderTitleTest
     public void Cleanup()
     {
         DamageLineParser.ResetProcessState();
-        HealingLineParser.ClearCaches();
         RecordsStore.Instance.Clear(false);
         PlayerRegistry.Instance.Clear();
     }

@@ -56,7 +56,6 @@ public class DamageBoardGoldenTest
         CombatRecordLookup.IsValidClassName = name => EQDataStore.Instance.IsValidClassName(name);
 
         DamageLineParser.ResetProcessState();
-        HealingLineParser.ClearCaches();
         RecordsStore.Instance.Clear(false);
         PlayerRegistry.Instance.Clear();
         HealRecordSource.Current = null;
@@ -95,7 +94,6 @@ public class DamageBoardGoldenTest
         DamageStatsBuilder.Instance.SetPlayerAssignedGroup("Bryn", -1);
         CombatRecordLookup.IsValidClassName = _originalIsValidClass ?? (_ => false);
         DamageLineParser.ResetProcessState();
-        HealingLineParser.ClearCaches();
         RecordsStore.Instance.Clear(false);
         PlayerRegistry.Instance.Clear();
     }

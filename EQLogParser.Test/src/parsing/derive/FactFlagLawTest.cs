@@ -39,9 +39,8 @@ public sealed class FactFlagLawTest
     public void Setup()
     {
         // Parser process state, the record store and the registry: this file asks what the CAPTURE wrote, and a leftover
-        // repeat-cache instance or verified name would answer for whichever test ran before it.
+        // verified name would answer for whichever test ran before it.
         DamageLineParser.ResetProcessState();
-        HealingLineParser.ClearCaches();
         RecordsStore.Instance.Clear(false);
         PlayerRegistry.Instance.Clear();
 
@@ -56,7 +55,6 @@ public sealed class FactFlagLawTest
     {
         _capture.Stop();
         DamageLineParser.ResetProcessState();
-        HealingLineParser.ClearCaches();
         RecordsStore.Instance.Clear(false);
         PlayerRegistry.Instance.Clear();
     }

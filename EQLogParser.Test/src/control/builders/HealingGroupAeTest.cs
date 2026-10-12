@@ -38,7 +38,6 @@ namespace EQLogParser.Tests.Control.Builders
       CombatRecordLookup.HealingSpellByName = name => EQDataStore.Instance.GetHealingSpellByName(name);
 
       DamageLineParser.ResetProcessState();
-      HealingLineParser.ClearCaches();
       RecordsStore.Instance.Clear(false);
       PlayerRegistry.Instance.Clear();
       HealRecordSource.Current = null;
@@ -55,7 +54,6 @@ namespace EQLogParser.Tests.Control.Builders
       AppSettings.IsHealingSwarmPetsEnabled = _swarm;
       CombatRecordLookup.HealingSpellByName = _originalHealingSpell ?? (name => null!);
       DamageLineParser.ResetProcessState();
-      HealingLineParser.ClearCaches();
       RecordsStore.Instance.Clear(false);
       PlayerRegistry.Instance.Clear();
     }

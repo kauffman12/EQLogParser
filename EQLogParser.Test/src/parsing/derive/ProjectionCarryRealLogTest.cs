@@ -43,7 +43,6 @@ public class ProjectionCarryRealLogTest
 
     PipelineHarness.EnsureDataStore();
     DamageLineParser.ResetProcessState();
-    HealingLineParser.ClearCaches();
     RecordsStore.Instance.Clear(false);
     PlayerRegistry.Instance.Clear();
     HealRecordSource.Current = null;

@@ -46,7 +46,6 @@ public class TankingBoardGoldenTest
         CombatRecordLookup.IsValidClassName = name => EQDataStore.Instance.IsValidClassName(name);
 
         DamageLineParser.ResetProcessState();
-        HealingLineParser.ClearCaches();
         RecordsStore.Instance.Clear(false);
         PlayerRegistry.Instance.Clear();
         HealRecordSource.Current = null;
@@ -78,7 +77,6 @@ public class TankingBoardGoldenTest
 
         CombatRecordLookup.IsValidClassName = _originalIsValidClass ?? (_ => false);
         DamageLineParser.ResetProcessState();
-        HealingLineParser.ClearCaches();
         RecordsStore.Instance.Clear(false);
         PlayerRegistry.Instance.Clear();
     }

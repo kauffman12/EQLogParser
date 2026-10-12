@@ -24,7 +24,6 @@ public class HealingBlockShapeTest
     {
         PipelineHarness.EnsureDataStore();
         DamageLineParser.ResetProcessState();
-        HealingLineParser.ClearCaches();
         RecordsStore.Instance.Clear(false);
         PlayerRegistry.Instance.Clear();
         HealRecordSource.Current = null;
@@ -34,7 +33,6 @@ public class HealingBlockShapeTest
     public void Cleanup()
     {
         DamageLineParser.ResetProcessState();
-        HealingLineParser.ClearCaches();
         RecordsStore.Instance.Clear(false);
         PlayerRegistry.Instance.Clear();
     }
