@@ -35,6 +35,15 @@ namespace EQLogParser
     private readonly Dictionary<string, ConcurrentDictionary<string, RepeatedData>> _repeatedTimerTimes = [];
     private readonly Dictionary<string, ConcurrentDictionary<string, RepeatedData>> _repeatedSpeakTimes = [];
     private readonly ConcurrentDictionary<string, bool> _requiredOverlays = [];
+
+    /*
+     * Cooldown stamps for the "send-to-chat text but no usable webhook" warning. This sits on the per-match path: a trigger that fires every few
+     * seconds with the box ticked and the URL empty used to print a line each time, which is a config state wearing an alarm. Once per trigger per
+     * few minutes instead — the same shape `TriggerOverlayManager.ShouldWarnNow` gives the missing-overlay warnings, because a misconfiguration can
+     * be fixed mid-session and the next sighting should be news again.
+     */
+    private static readonly ConcurrentDictionary<string, long> _webhookWarnStamps = [];
+    private static readonly long WebhookWarnCooldownTicks = MonoTime.SecondsToTicks(300);
     private readonly ConcurrentDictionary<string, List<TimerData>> _timerLists = [];
     private readonly BlockingCollection<TriggerLogItem> _triggerLogCollection = [];
     private readonly BlockingCollection<LineData> _chatCollection = [];
@@ -796,7 +805,11 @@ namespace EQLogParser
         if (string.IsNullOrEmpty(url) || !url.StartsWith("http", StringComparison.OrdinalIgnoreCase))
         {
           url ??= "Not Set";
-          Log.Warn($"Can not send to chat, invalid webhook: {url}");
+          if (TriggerOverlayManager.ShouldWarnNow(_webhookWarnStamps, $"chat:{wrapper.TriggerData?.Pattern}",
+                MonoTime.NowStamp(), WebhookWarnCooldownTicks))
+          {
+            Log.Warn($"Can not send to chat, invalid webhook: {url} (trigger '{wrapper.Name}')");
+          }
         }
         else
         {

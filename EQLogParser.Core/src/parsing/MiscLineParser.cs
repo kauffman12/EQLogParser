@@ -492,21 +492,16 @@ namespace EQLogParser
           }
         }
       }
-      catch (ArgumentNullException ne)
+      catch (Exception ex) when (ex is ArgumentNullException or NullReferenceException or ArgumentOutOfRangeException or ArgumentException)
       {
-        Log.Error(ne);
-      }
-      catch (NullReferenceException nr)
-      {
-        Log.Error(nr);
-      }
-      catch (ArgumentOutOfRangeException aor)
-      {
-        Log.Error(aor);
-      }
-      catch (ArgumentException ae)
-      {
-        Log.Error(ae);
+        /*
+         * The same four shapes this method has always swallowed, gathered into one guard so the voice-cap below has somewhere to live: anything
+         * else still escapes, and a per-line fault speaks once with the line that threw rather than once per line (RepeatCap).
+         */
+        if (RepeatCap.SpeaksOnce($"misc.Process {ex.GetType().Name}"))
+        {
+          Log.Error($"line parse failed (this failure repeats silently): {ex} | line: {RepeatCap.Clip(lineData.Action)}");
+        }
       }
 
       return handled;

@@ -7475,6 +7475,29 @@ measurement narrowed — `OverlapBuilds` still rises per collision, and every co
 warning that fires in steady state is a metric wearing an alarm**, and the fix is to coalesce it to the *change* (episode opens, episode closes),
 never to delete the counter.
 
+**Say it once, then count: `RepeatCap` (2026-11, from the same audit).** The overlap warning was the visible symptom; auditing every remaining
+`Log.Info`/`Warn`/`Error` call for the same shape found the worse one hiding in plain sight — the four line parsers' `catch` blocks each called
+`Log.Error(e)` on a **per-log-line** path. One unhandled line shape throws again on every matching line of a capture, so a single parser defect
+printed a full stack trace per occurrence (tens of thousands a night), and did it without naming the line that threw, which made the report
+unreproducible as well as unreadable. `EQLogParser.Core/src/util/RepeatCap.cs` is the one mechanism for this class:
+`SpeaksOnce(key)` returns true only for the first sighting of a key — keyed on the *failure* (site + exception type), so two different bugs still
+get two lines — and every later sighting only raises `SightingsOf`/`Silenced`. Two decisions worth keeping:
+
+- **No timer on it.** A parse fault has no quiet moment to speak at, so a cooldown would still print one line per interval all night; the episode
+  trick belongs to overlap (which does go quiet) and the cooldown form belongs to `TriggerOverlayManager.ShouldWarnNow`, where the condition is a
+  config state an operator can fix mid-session (missing overlay window, trigger with "send to chat" ticked and no webhook — now throttled through
+  that same helper rather than per match).
+- **A capped message has to carry its evidence the one time.** So the parser sites stopped logging a bare exception and gained
+  `RepeatCap.Clip(lineData.Action)` — the offending text, newlines folded, length cut. Silence is counted (`Silenced`), never invented: nothing here
+  raises a line by itself, and anything wanting to report the total at a natural boundary (a load finishing, an export) can read it.
+
+Also from that audit, all one-liners in the same direction: `Log.Warn("Suspending")`/`"Resume"` became Info with actual words (the laptop sleeping
+is a thing that happened to the session, not a defect), the clipboard's "text was null" went to Debug (neither a gesture nor a breakage), and the
+docking warning that read `Can not determine ControlControl state for:` now says `dock: no show state for X - the click could not place the window`
+(it stays a Warn: a menu click that did nothing is worth seeing). Already-correct siblings left alone: `DamageFactTable.MissedRow`/`HealFactTable`
+cap their past-end-ordinal warning per capture with their own exchanged flag, and `TriggerOverlayManager`'s dropped-text/timer warnings were
+throttled before this. Tests: `EQLogParser.Test/src/util/RepeatCapTest.cs`.
+
 ### What a player's log is for (2026-11: the last machine-written lines went to Debug too)
 
 The anchors survived the first demotion on an argument about diagnosis - `capture: started`, `derive: first pass`, `fight list: N row(s) painted`

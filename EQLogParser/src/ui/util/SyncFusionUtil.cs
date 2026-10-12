@@ -88,7 +88,9 @@ namespace EQLogParser
           var showState = ShowStateFor(control);
           if (showState == DockState.Hidden)
           {
-            Log.Warn("Can not determine ControlControl state for: " + name);
+            // A menu click that could not place the window is worth a Warn (the operator saw nothing happen), but say what the state was:
+            // ShowStateFor answered Hidden, which means neither visible nor dockable-by-rule for this pane.
+            Log.Warn($"dock: no show state for {name} - the click could not place the window");
           }
           else
           {

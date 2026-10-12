@@ -255,6 +255,9 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
   build until every board is quiet, opens with one WARN naming what collided, closes with one WARN carrying the count it swallowed —
   while the counters (`StatsBuildTrace.OverlapBuilds`) and each build's own Debug line rise per occurrence as before. A WARN that fires
   twice a second during a raid is a metric wearing an alarm; coalesce it to the change, never delete the counter.
+- **A per-line `catch` caps its own voice** (`RepeatCap.SpeaksOnce`, keyed on site + exception type): the first sighting prints with the evidence
+  that makes it fixable — `RepeatCap.Clip(lineData.Action)` — and repeats only raise `Silenced`. No cooldown on this one (a parse fault has no quiet
+  moment); a fixable-mid-session config state uses the cooldown form `TriggerOverlayManager.ShouldWarnNow` instead.
 - **A cancellation is not a failure**: a render/tick loop whose awaited dispatcher task comes back cancelled because its window closed
   ends at Debug with no stack (the `finally` that clears its running flag is what guarantees recovery); keep `Log.Warn(…, ex)` for the
   exception arms that actually mean something broke.

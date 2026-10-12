@@ -79,7 +79,15 @@ namespace EQLogParser
       }
       catch (Exception e)
       {
-        Log.Error(e);
+        /*
+         * This catch sits under one line of the log file, so a shape it cannot handle throws again on every matching line — thousands of copies
+         * of one stack trace in a night, which buries everything else the log has to say. The fault therefore speaks ONCE, and speaks with the
+         * text that threw (a bare `Log.Error(e)` never carried it, so the report was unreproducible), and the repeats are counted by RepeatCap.
+         */
+        if (RepeatCap.SpeaksOnce($"damage.Process {e.GetType().Name}"))
+        {
+          Log.Error($"damage line parse failed (this failure repeats silently): {e} | line: {RepeatCap.Clip(lineData.Action)}");
+        }
       }
 
       return processed;

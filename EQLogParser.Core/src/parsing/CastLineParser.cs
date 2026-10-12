@@ -183,7 +183,11 @@ namespace EQLogParser
       }
       catch (Exception e)
       {
-        Log.Error(e);
+        // Per-line path: one fault, said once with the line that caused it; repeats counted (RepeatCap).
+        if (RepeatCap.SpeaksOnce($"cast.Process {e.GetType().Name}"))
+        {
+          Log.Error($"cast line parse failed (this failure repeats silently): {e} | line: {RepeatCap.Clip(lineData.Action)}");
+        }
       }
 
       return false;

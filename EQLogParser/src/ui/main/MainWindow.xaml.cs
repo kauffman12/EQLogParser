@@ -649,7 +649,9 @@ namespace EQLogParser
       switch (e.Mode)
       {
         case PowerModes.Suspend:
-          Log.Warn("Suspending");
+          // Info, not Warn: the machine going to sleep is a thing that happened to the session (triggers off, config written), not a defect —
+          // and a bare "Suspending" at Warn read like an error in an otherwise quiet log while explaining nothing about what the app did.
+          Log.Info("system: suspending - triggers stopped, settings written, overlays closed");
           _saveTimer?.Stop();
           ConfigUtil.Save();
           await TriggerManager.Instance.DisposeAsync();
@@ -657,7 +659,7 @@ namespace EQLogParser
           CloseDamageOverlay(false);
           break;
         case PowerModes.Resume:
-          Log.Warn("Resume");
+          Log.Info("system: resumed - triggers restarted, monitor overlays re-opened");
           _saveTimer?.Start();
           await TriggerManager.Instance.StartAsync();
           OpenDamageOverlayIfEnabled(true, false);

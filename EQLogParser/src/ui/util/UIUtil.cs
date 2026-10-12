@@ -51,7 +51,9 @@ namespace EQLogParser
       }
       else
       {
-        Log.Warn("Attempted to set Clipboard Text to null");
+        // Debug: a caller handing us nothing is neither a thing the operator did nor something broken, and a couple of copy verbs sit on paths
+        // that can repeat. The clipboard failure above stays an Error because THAT one leaves the user without their text.
+        Log.Debug("Clipboard text request carried nothing to set");
       }
     }
 

@@ -103,6 +103,8 @@ These checks require a realized grid; the automated pane tests exercise bound da
   (overlap now speaks ONCE per episode plus one closing count, so a night of collisions reads as a handful of lines, and the closing line points at
   Debug for the doors) and `grep -c "timer overlay render loop failed" eqlogparser.log` (closing the timer overlay used to print that with a
   TaskCanceledException stack, which is a window shutting down, not a failure). If overlaps genuinely pile up the closing line still says so.
+  A third, from the same audit: `grep -c "parse failed" eqlogparser.log` — a parser fault that repeats per log line now prints ONCE (`RepeatCap`),
+  with the offending line quoted on that single line; more than one such line means genuinely different failures, which is what the key is for.
   Scrolling a search result into view still works — that is a gesture, not a follow. A new fight appearing mid-pull must not move the list at
   all (no jump to the top when a row lands), and with a column sorted a pass must keep the reading position too.
 
