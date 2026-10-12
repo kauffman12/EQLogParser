@@ -66,8 +66,11 @@ internal class Attempt
    *   - **the same distribution, exactly.** Bucketing or sampling would have been cheaper again and was refused: this chart's point is individual
    *     hit amounts. Laziness buys the time and the memory; the answer must not move by one count.
    */
-  private List<long>? _critRaw;
-  private List<long>? _nonCritRaw;
+  /* The amounts arrive as HitRecord.Total (uint) - the widest value a damage line can carry. They stay uint in
+     the raw lists, which halves the payload a histogram nobody has asked for yet; the materialized dictionary keys
+     keep the long the chart has always read, so widening the column later touches one cast and nothing else. */
+  private List<uint>? _critRaw;
+  private List<uint>? _nonCritRaw;
   private Dictionary<long, int>? _critFreq;
   private Dictionary<long, int>? _nonCritFreq;
 
@@ -76,7 +79,7 @@ internal class Attempt
   public Dictionary<long, int> NonCritFreqValues => FreqOf(ref _nonCritFreq, ref _nonCritRaw);
 
   /* One damaging record's amount, kept for a histogram nobody has asked for yet. Zero-damage outcomes never reach this (callers check). */
-  internal void RecordHitTotal(long total, bool isCrit)
+  internal void RecordHitTotal(uint total, bool isCrit)
   {
     if (isCrit)
     {
@@ -99,7 +102,7 @@ internal class Attempt
   internal bool HitFreqMaterialized => _critFreq is not null || _nonCritFreq is not null;
 
 
-  private static Dictionary<long, int> FreqOf(ref Dictionary<long, int>? cache, ref List<long>? raw)
+  private static Dictionary<long, int> FreqOf(ref Dictionary<long, int>? cache, ref List<uint>? raw)
   {
     if (cache is not null)
       return cache;
@@ -110,7 +113,7 @@ internal class Attempt
       foreach (var amount in raw)
       {
         built.TryGetValue(amount, out var had);
-        built[amount] = had + 1;
+        built[(long)amount] = had + 1;
       }
 
       // The dictionary holds every count the list did; keeping both would cost more than the eager version this replaced.

@@ -35,7 +35,6 @@ public class HitFrequencyLazinessTest
   public void Setup()
   {
     DamageLineParser.ResetProcessState();
-    HealingLineParser.ClearCaches();
     RecordsStore.Instance.Clear(false);
     PlayerRegistry.Instance.Clear();
   }
@@ -44,7 +43,6 @@ public class HitFrequencyLazinessTest
   public void Cleanup()
   {
     DamageLineParser.ResetProcessState();
-    HealingLineParser.ClearCaches();
     RecordsStore.Instance.Clear(false);
     PlayerRegistry.Instance.Clear();
   }
@@ -84,7 +82,8 @@ public class HitFrequencyLazinessTest
     var row = new Attempt();
     foreach (var amount in amounts)
     {
-      row.RecordHitTotal(amount, isCrit: false);
+      // record.Total is uint; the test's helper keeps long to mirror the chart's dictionary keys
+      row.RecordHitTotal((uint)amount, isCrit: false);
     }
 
     CollectionAssert.AreEqual(expected.Select(PairText).OrderBy(t => t).ToList(), row.NonCritFreqValues.Select(PairText).OrderBy(t => t).ToList(),
