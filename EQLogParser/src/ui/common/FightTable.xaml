@@ -91,6 +91,7 @@
                            RowStyle="{DynamicResource FightRowStyle}"
                            ContextMenuClosing="GridContextMenuClosing"
                            ContextMenuOpening="GridContextMenuOpening"
+                           PreviewMouseRightButtonDown="GridPreviewRightButtonDown"
                            SelectionChanged="GridSelectionChanged"
                            SelectionMode="Extended"
                            ShowRowHeader="True"

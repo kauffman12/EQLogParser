@@ -234,6 +234,11 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
   changes, and a regenerated view sits at row zero, so a source Add threw the viewport away. See `docs/DesignNotes.md` → "The fight list moves its own
   viewport once". Group gestures act on the row the pointer opened the menu on and **un-select never toggles** (an id the grid no longer has
   clears silently).
+- **The right press is a question, not a selection**: SfDataGrid treats *any* button's press as selection input — Extended mode
+  without Ctrl replaces the whole selection with the pressed row before the menu exists (33.1.49, no button guard on the press path).
+  `FightTable` remembers `SelectedItems` at `PreviewMouseRightButtonDown` (it tunnels ahead of the control) and puts it back at
+  `ContextMenuOpening`, before any enable-check, gesture or board reads what survived; a Ctrl/Shift press IS the operator editing the
+  selection and passes through (`_rightPressSelection`).
 - **One announce per gesture** (`SelectionSettle` + one DispatcherTimer at 600 ms; `MenuOpen` via
   `ContextOpening/ContextClosed`; `ButtonHeld` for *both* mouse buttons plus capture loss). `AnnounceSelection` is the single
   door for the boards on the pass-driven reasons, deduped by (ids, content stamp) — **but the first answer of a capture always

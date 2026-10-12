@@ -9,6 +9,7 @@ using System.Linq;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Threading;
 
 namespace EQLogParser
@@ -70,6 +71,17 @@ namespace EQLogParser
      * Cleared with the rows it belonged to (a snapshot swap replaces every instance).
      */
     private DerivedFightRow _menuRow;
+
+    /// <summary>
+    /// What the grid had selected when the RIGHT button went down, or null. SfDataGrid treats a right-click as
+    /// selection input like any other: its press handling (decompiled 33.1.49 shows no button guard anywhere
+    /// above it) collapses an extended selection to just the clicked row before any menu exists — operators
+    /// reported "right click clears everything", and with groups too big for one screen the theft hid until they
+    /// scrolled. A press asks this pane a question; it does not own the selection. Remembered on the way down,
+    /// put back by GridContextMenuOpening before the menu items, the boards or any gesture read what survived.
+    /// Ctrl/Shift presses ARE the operator editing the selection: nothing is remembered then, nothing restored.
+    /// </summary>
+    private List<DerivedFightRow> _rightPressSelection;
 
     /*
      * Whether a tick may announce, or whether something is still happening under the cursor. Two parked cases (see
@@ -975,6 +987,14 @@ namespace EQLogParser
       // Nothing is announced while the menu is up; whatever the opening itself selected waits for the close.
       _settle.MenuOpen = true;
 
+      // The press has already spent whatever selection it walked over (see GridPreviewRightButtonDown). It comes
+      // back now, before the enable/disable arithmetic below, the group gestures, or a settle-driven board build
+      // can answer for what the button did instead of what the operator chose.
+      var remembered = _rightPressSelection;
+      _rightPressSelection = null;
+      if (remembered is { Count: > 0 }
+          && !fightGrid.SelectedItems.OfType<DerivedFightRow>().ToHashSet().SetEquals(remembered)) RestoreSelectedRows(remembered);
+
       /*
        * Point the cursor at the row under the pointer, exactly as the legacy table did (`if (source.DataContext is Fight
        * fight) dataGrid.CurrentItem = fight;`). Two things follow: every position-based item below reads the section the
@@ -1040,6 +1060,18 @@ namespace EQLogParser
     private void GridContextMenuClosing(object sender, System.Windows.Controls.ContextMenuEventArgs e)
     {
       if (_settle.CloseMenu()) AnnounceSelection(BoardReason.MenuClose);
+    }
+
+    /// <summary>
+    /// Tunnels ahead of the control's press handling (which runs during the bubbling MouseDown below it) to
+    /// remember what was selected before it can collapse. See _rightPressSelection.
+    /// </summary>
+    private void GridPreviewRightButtonDown(object sender, MouseButtonEventArgs e)
+    {
+      // Ctrl/Shift means the operator IS editing the selection with this click; the control keeps it then.
+      _rightPressSelection = Keyboard.Modifiers != ModifierKeys.None || fightGrid?.SelectedItems is not { } items
+        ? null
+        : items.OfType<DerivedFightRow>().ToList();
     }
 
     /*
@@ -1285,6 +1317,24 @@ namespace EQLogParser
       }
 
       AnnounceSelection(BoardReason.SelectCommand, add ? "select group" : "unselect group");
+    }
+
+    /// <summary>
+    /// Replaces the selection with exactly these rows — the same instance-held clear-and-re-add RebuildVisible does
+    /// after a dial moves, so every row goes through the control's own selection-changed door. Rows that left the
+    /// projection between press and open are not chased; they stopped being on screen by the operator's own dials.
+    /// </summary>
+    private void RestoreSelectedRows(List<DerivedFightRow> rows)
+    {
+      var keeps = new HashSet<DerivedFightRow>(rows, ReferenceEqualityComparer.Instance);
+
+      // Clear first: the controller's Reset re-lists whatever SelectedItems still holds, so emptying it is the
+      // only ordering where Reset means cleared.
+      fightGrid.SelectedItems.Clear();
+      foreach (var row in _rows)
+      {
+        if (keeps.Contains(row)) fightGrid.SelectedItems.Add(row);
+      }
     }
 
     /*
