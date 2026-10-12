@@ -104,8 +104,7 @@ namespace EQLogParser
     internal void OwePaint() => Volatile.Write(ref _pending, 1);
 
     /// <summary>
-    /// The capture changed underneath: no census of the old log may paint and none is owed any more (`ClearRows` calls this on the way
-    /// to an empty grid, so a build from last night cannot arrive as tonight's answer — and its run flag cannot block tonight's).
+    /// Forget this gate's debt and run flag; callers must independently refuse any abandoned callback before completing it.
     /// </summary>
     internal void Abandon()
     {

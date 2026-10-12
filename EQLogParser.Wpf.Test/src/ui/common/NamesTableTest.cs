@@ -1,7 +1,7 @@
+using EQLogParser;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
-using EQLogParser;
 
 namespace EQLogParser.Wpf.Test;
 
@@ -256,7 +256,7 @@ public class NamesTableTest
   /*
    * The pane follows the derive — a census lands every couple of seconds while a log grows. Since 2026-12 it no longer merges
    * into the collection it showed: the grid renders a PAGE of a published list, so each pass rebuilds and swaps the whole
-   * thing (docs/names-table-paging-plan.md). The reader-visible laws that made the merge-in-place design survive are all
+   * thing (docs/DesignNotes.md → "Identity Table paging"). The reader-visible laws of the former merge design are all
    * re-stated on the PUBLISHED list — a name arrives where its key says, a name the census lost leaves, a row whose word
    * changed says the new thing — because the sort breaks every tie on the name.
    */
@@ -265,7 +265,7 @@ public class NamesTableTest
   {
     Sta.Run(() =>
     {
-      var pane = new NamesTable();
+      var pane = CreatePane();
       pane.PublishCensusForTest([CensusRow("Ann"), CensusRow("Bob"), CensusRow("Cy")]);
 
       // Cy now outranks everyone, Ann's verdict changed, and Dee has never been listed.
@@ -283,7 +283,7 @@ public class NamesTableTest
   {
     Sta.Run(() =>
     {
-      var pane = new NamesTable();
+      var pane = CreatePane();
       pane.PublishCensusForTest([CensusRow("Ann"), CensusRow("Bob")]);
       pane.PublishCensusForTest([CensusRow("Bob")]);
 
@@ -297,7 +297,7 @@ public class NamesTableTest
   {
     Sta.Run(() =>
     {
-      var pane = new NamesTable();
+      var pane = CreatePane();
       pane.PublishCensusForTest([CensusRow("Ann"), CensusRow("Bob")]);
 
       // Emitted in a third order, and the published list lands in the header's order regardless: every publish lays the
@@ -318,7 +318,7 @@ public class NamesTableTest
   {
     Sta.Run(() =>
     {
-      var pane = new NamesTable();
+      var pane = CreatePane();
       pane.PublishCensusForTest([CensusRow("Ann"), CensusRow("Cy")]);
 
       // Bob is the name this pass learned, and the census thought of it last.
@@ -342,7 +342,7 @@ public class NamesTableTest
   {
     Sta.Run(() =>
     {
-      var pane = new NamesTable();
+      var pane = CreatePane();
       var column = IdentityRowOrder.TypeColumn;
 
       pane.PublishCensusForTest([CensusRow("Ann", IdentityKind.Npc, "R6-npcdb"), CensusRow("Bob", IdentityKind.Player, "R3-joinraid"), CensusRow("Cy", IdentityKind.Npc, "R14-shape")], column: column);
@@ -367,7 +367,7 @@ public class NamesTableTest
   {
     Sta.Run(() =>
     {
-      var pane = new NamesTable();
+      var pane = CreatePane();
       pane.PublishCensusForTest([CensusRow("Ann", IdentityKind.Player, "R3-joinraid"), CensusRow("Bob", IdentityKind.Npc, "R6-npcdb"), CensusRow("Cyra", IdentityKind.Pet, "R5-owner:Ann")]);
       Assert.AreEqual("Showing 3 Identities", pane.TitleTextForTest, "no dial touched reads the census's own size");
 
@@ -393,6 +393,96 @@ public class NamesTableTest
       pane.SetSearchTextForTest("zzz");
       Assert.AreEqual(0, pane.RowsForTest.Count, "no answer is a valid answer");
       Assert.AreEqual("Showing 0 of 3 Identities", pane.TitleTextForTest);
+      pane.SetSearchTextForTest(Resource.NAME_FILTER_TEXT);
+      Assert.AreEqual(2, pane.RowsForTest.Count, "the restored watermark is not a name query");
+      pane.SetTypeFilterForTest(IdentityVocabulary.TypeOptions.Select(option => option.Kind).ToArray());
+      Assert.AreEqual(3, pane.RowsForTest.Count, "widening both dials recovers the complete source without another census");
+    });
+  }
+
+  [TestMethod]
+  public void EveryPageComparatorMatchesTheGlobalIndexIncludingClass()
+  {
+    var comparisonsAgree = true;
+    Sta.Run(() =>
+    {
+      var pane = CreatePane();
+      NamesTable.NameRow[] rows =
+      [
+        NamesTable.RowFrom(new ClassificationReport.Row
+          { Name = "Ann", Kind = IdentityKind.Player, Class = "Wizard", Reason = "R3-joinraid" }),
+        NamesTable.RowFrom(new ClassificationReport.Row
+          { Name = "Bob", Kind = IdentityKind.Player, Class = "Bard", Reason = "R4-spell:Boastful Bellow XLVII" }),
+        NamesTable.RowFrom(new ClassificationReport.Row
+          { Name = "Cy", Kind = IdentityKind.Pet, PetOwner = "Bob", Reason = "R5-owner:Bob" }),
+      ];
+      foreach (var column in pane.namesGrid.Columns)
+      {
+        var installed = pane.namesGrid.SortComparers.FirstOrDefault(item => item.PropertyName == column.MappingName);
+        var coreColumn = column.MappingName == "PlayerClass" ? IdentityRowOrder.ClassColumn : column.MappingName;
+        var expected = IdentityRowOrder.For<NamesTable.NameRow>(coreColumn);
+        foreach (var x in rows)
+          foreach (var y in rows)
+            comparisonsAgree &= installed is not null
+              && Math.Sign(installed.Comparer.Compare(x, y)) == Math.Sign(expected(x, y));
+      }
+    });
+    Assert.IsTrue(comparisonsAgree, "the vendor's slice sort must use the full index's comparison, not a second order");
+  }
+
+  [TestMethod]
+  public void AnOldViewCannotOverwriteANewerCensusOrReplaceItsHeldResult()
+  {
+    Sta.Run(() =>
+    {
+      var pane = CreatePane();
+      pane.AcceptCensus([CensusRow("Ann", IdentityKind.Player)]);
+      var oldView = pane.BuildViewForTest();
+      pane.Editors.Open();
+      pane.AcceptCensus([CensusRow("Ann", IdentityKind.Npc), CensusRow("Bob")]);
+      Assert.IsFalse(pane.PublishViewForTest(oldView), "an old worker cannot replace the newest held census");
+      pane.Editors.Close();
+      Assert.AreEqual(2, pane.RowsForTest.Count);
+      Assert.AreEqual(IdentityKind.Npc, pane.RowsForTest[0].Kind);
+      Assert.IsFalse(pane.PublishViewForTest(oldView), "it cannot overwrite the already-published census either");
+      Assert.AreEqual(IdentityKind.Npc, pane.RowsForTest[0].Kind);
+    });
+  }
+
+  [TestMethod]
+  public void AHeldAnswerCannotPaintAfterTheReaderChangesTheQuestion()
+  {
+    Sta.Run(() =>
+    {
+      var pane = CreatePane();
+      pane.AcceptCensus([CensusRow("Ann", IdentityKind.Player), CensusRow("Bob", IdentityKind.Npc)]);
+      pane.Editors.Open();
+      pane.AcceptCensus([CensusRow("Ann", IdentityKind.Player), CensusRow("Bob", IdentityKind.Npc), CensusRow("Cy")]);
+      // The real TextChanged handler changes the ticket immediately, before the debounced worker is asked.
+      pane.nameSearchBox.Text = "Bob";
+      pane.Editors.Close();
+      Assert.AreEqual(2, pane.RowsForTest.Count, "the now-stale held census did not paint its third row");
+      pane.SetSearchTextForTest("Bob");
+      CollectionAssert.AreEqual(new[] { "Bob" }, pane.RowsForTest.Select(row => row.Name).ToArray());
+    });
+  }
+
+  [TestMethod]
+  public void ANewCensusWhileFilteredKeepsBothDialsAndStillRetainsTheExcludedNames()
+  {
+    Sta.Run(() =>
+    {
+      var pane = CreatePane();
+      pane.AcceptCensus([CensusRow("Ann", IdentityKind.Player), CensusRow("Bob", IdentityKind.Npc)]);
+      pane.SetTypeFilterForTest(IdentityKind.Player);
+      pane.SetSearchTextForTest("an");
+      pane.AcceptCensus([CensusRow("Ann", IdentityKind.Npc), CensusRow("Annette", IdentityKind.Player),
+        CensusRow("Bob", IdentityKind.Npc), CensusRow("Takenback", IdentityKind.Unknown, TakenBackNames.Word)]);
+      CollectionAssert.AreEqual(new[] { "Annette" }, pane.RowsForTest.Select(row => row.Name).ToArray());
+      pane.SetSearchTextForTest("");
+      pane.SetTypeFilterForTest(IdentityVocabulary.TypeOptions.Select(option => option.Kind).ToArray());
+      Assert.AreEqual(4, pane.RowsForTest.Count, "All Types recovers Unknown/taken-back names too");
+      Assert.AreEqual(IdentityKind.Npc, pane.RowsForTest[0].Kind, "the retained source has the new verdict");
     });
   }
 
@@ -408,7 +498,7 @@ public class NamesTableTest
   {
     Sta.Run(() =>
     {
-      var pane = new NamesTable();
+      var pane = CreatePane();
 
       Assert.IsTrue(pane.AcceptCensus([CensusRow("Ann"), CensusRow("Bob")]), "nothing is open: the census lands as it always did");
       Assert.AreEqual(2, pane.RowsForTest.Count);
@@ -500,12 +590,11 @@ public class NamesTableTest
   [TestMethod]
   public void TheColumnsGoNameTypeClassOwnerWhy()
   {
-    EnsurePaneResources();
 
     var order = new List<string>();
     Sta.Run(() =>
     {
-      foreach (var column in new NamesTable().namesGrid.Columns) order.Add(column.MappingName ?? string.Empty);
+      foreach (var column in CreatePane().namesGrid.Columns) order.Add(column.MappingName ?? string.Empty);
     });
 
     CollectionAssert.AreEqual(new[] { "Name", "Type", "PlayerClass", "Owner", "Why" }, order,
@@ -537,13 +626,14 @@ public class NamesTableTest
 
   // The two app-level StaticResource keys this pane's markup needs, stubbed for a headless test host — same shape as
   // FightTableStartupTest's. A Style whose TargetType is the element or a base of it; anything else throws on parse.
-  private static void EnsurePaneResources() => Sta.Run(() =>
+  private static NamesTable CreatePane()
   {
-    _ = Application.Current ?? new Application();
-    var res = Application.Current!.Resources;
-    res["EQIconStyle"] ??= new Style(typeof(Image));
-    res["EQTitleStyle"] ??= new Style(typeof(ContentControl));
-  });
+    // Resources and the pane belong to the SAME STA body, including when this test runs by itself.
+    var application = Application.Current ?? new Application();
+    application.Resources["EQIconStyle"] ??= new Style(typeof(Image));
+    application.Resources["EQTitleStyle"] ??= new Style(typeof(ContentControl));
+    return new NamesTable();
+  }
 
   /*
    * The one thing worth adding to this window: when a verdict came from a CAST, the tooltip names it (the census puts it

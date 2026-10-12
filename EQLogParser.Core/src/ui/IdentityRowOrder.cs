@@ -23,13 +23,8 @@ internal interface IIdentityRowKeys
 /*
  * The Identity Table's sort: which column decides, and what equal rows do.
  *
- * Why a rule lives here at all: every other sortable table in this application hands its grid a FRESH list each build
- * (NpcStatsViewer, the breakdown panes, HitLogViewer), so the view sorts a snapshot and order is the vendor's problem for
- * one frame. This pane is different by design — it follows the derive, so a census lands every couple of seconds and it
- * merges into the collection it already showed rather than replacing it (a Clear-and-refill cost both the selection and
- * the order; see NamesTable.MergeRows). A view that was told to sort once, over a source that keeps changing underneath
- * it, is how the header ends up showing "Name ↑" over a list in census order — which is exactly what was reported. So the
- * LIST itself carries the order the header shows, and this is the comparison it carries it by.
+ * The complete filtered index carries the header's order before the pager slices it. The vendor's page-local sort uses
+ * the same comparison, including tie breaks, so its second sort cannot disagree. See docs/DesignNotes.md → "Identity Table paging".
  *
  * Three laws:
  *

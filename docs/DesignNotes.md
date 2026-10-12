@@ -4497,7 +4497,9 @@ Design points worth keeping:
   derive retires a stage after five failures: the two lanes must not be able to make each other look broken. A from-zero
   replay costs tens of milliseconds of rules on whatever thread the pane opened on, once per deliberate refresh — which is
   what a window that never updates by itself is for.
-- **No status line, and in the end no header either.** This bullet used to describe the house title bar
+- **No status line; the original no-header shape is superseded by "Identity Table paging".** Paging makes the total functional
+  information, so the current pane has a count/filter strip, but no rule-health counters or diagnostic status text.
+  The historical shape below used to describe the house title bar
   (`EQGridTitleHeight`, the word "Names" in `EQTitleStyle`, controls right) with the census summary demoted to that
   caption's tooltip. The caption is gone now: the pane is the grid and nothing above it, the shape Pet Owners has — a dock
   tab already prints "Player/NPC Identity" over it, and this window lives in a narrow slide-out strip where every vertical
@@ -11987,7 +11989,78 @@ instantly trivial — a worst case needs many spans that never match; and a fixt
 (1931–2068) **clamps**, folding every row onto one timestamp so window tests pass by matching everything. Re-measure recipe:
 `docs/improve-stat-building.md` §13 (harness deleted after reading, per the gated-test law).
 
+## Identity Table paging
+
+The Identity Table now renders **1,000 names per page** through an on-demand `SfDataPager` sibling. The census can include
+up to the ledger's **25,000 remembered names**, even names absent from this capture. A whole-census count and two visibility
+dials replace the old no-header shape: **All Types** and a case-insensitive name-contains box. Row numbers are removed because
+page-local ordinals are not whole-list positions. These controls change no identity verdicts or memory.
+
+**Source and answer are separate.** The pane retains the complete latest census independently of the filtered, ordered index.
+Every question starts there, so clearing a query, widening types, or recovering from zero matches restores excluded names
+without another derive pass. All five types checked means **no type predicate**, including Unknown and Taken Back rows.
+A narrowed set includes only the selected kinds; no types checked means no rows. Spell direction words remain display detail:
+Player Spell and NPC Spell both have Kind = Spell. There is no Unknown verdict entry in any editor.
+
+**One worker lane builds the index.** Both census arrival and question changes use `NamesViewBuildLane`; one running build
+coalesces any number of overlapping asks into one follow-up against the newest source and question. Projection, provenance,
+filtering, global ordering and the name dictionary are all built off-thread from plain rows. A failed build frees the lane.
+Abandoning the pane drops its old debt but does not pretend its still-running worker has finished; a new capture's ask waits
+for that worker to exit. `CensusRepaint` separately governs the expensive census itself. Replacing that gate on hide/capture
+change isolates an old callback's Complete from the new capture's running flag and debt.
+
+**An answer has a ticket, not just a query.** `NamesTableView.BuildStamp` carries pane lifetime epoch, capture SessionId,
+census revision, the source's pane-local write generation, the engine's explicit Full-request generation, and the exact
+query/type-set/sort question. Every identity-write UI door asks for a Full pass, so reading the existing DeriveRequests ledger
+also invalidates answers after writes from **other panes** (and deliberate re-derive gestures); it adds no ledger stamps.
+A census carries that bound from its start and reruns if it moved. A keystroke changes the current
+question immediately; only rebuilding is debounced for **300 ms**. Every result must match the current ticket before entering
+`EditorHold`, and again at release. Thus an older census cannot overwrite a newer verdict, a queued result cannot resurrect a
+closed capture, and changing a query or writing from another pane while an editor is open cannot paint an outdated held result.
+A write invalidates the source as well as its index: filtering an old census again cannot make it current.
+
+**Publish is mechanical.** Swap the index and its name dictionary together; invalidate every visited page, including the
+current one; recompute PageCount; clamp or follow the selected name to its page; reload that page even if its number is unchanged;
+restore selection by name; restamp the take-back label; update the counts from the same result. No-match/empty-census states
+serve an empty page, not null or a stale cached slice. An ordinary census does not explicitly reveal an unchanged selection:
+a reader who selected a name and scrolled away keeps reading there. CanMaintainScrollPosition and AllowDataShaping also ask
+the grid to preserve its viewport through reloads, as on the fight list. A question gesture or selection crossing pages can reveal it.
+Explicit paging ends a cell edit first and clamps against any newer index released by that close. Closing the ComboBox can
+synchronously re-enter DropDownClosed, so the end-edit door guards re-entry and releases the hold exactly once.
+
+**Installed Syncfusion 34.2.8 behavior (verified against its implementation).** The grid's ItemsSource is an actual binding to
+`idPager.PagedSource`, not a one-time property copy: that view is created/replaced during initialization/template application.
+On-demand mode never assigns Source; it uses explicit PageCount, OnDemandLoading and `LoadDynamicItems(startIndex, items)`.
+`PagedCollectionView.ResetCache()` **exists**, but preserves the current page; `ResetCacheForPage(PageIndex)` evicts that too.
+Zero pages clears/refreshes the paged view without navigating the pager to a nonexistent numeric button. A header click's
+descriptor must not be cleared inside SortColumnsChanging: the vendor adds it again afterwards. Instead each column installs a
+custom comparator identical to `IdentityRowOrder`, including case-insensitive words, name tie breaks and full descending reversal.
+The Class grid mapping is PlayerClass and is translated to Core's Class key. Re-sorting a page by exactly the global comparison
+cannot change its order. Header arrows remain vendor-owned; CancelScroll suppresses its interim automatic reveal.
+
+The name watermark is **actual Text**, not an adornment. `NamesTableView.QueryText` treats the exact cue as no query on startup,
+blur, Escape and capture reset. Type captions use `UiElementUtil.SetComboBoxTitle` to reselect the item because SelectedText has
+no change notifier. The watermark migration also wires Chat's To/From boxes; their autocomplete-clear handlers run before blur
+restores the cue. Hiding preserves filters/sort and invalidates outstanding answers; a capture change clears rows and both dials
+**even when hidden**. Showing takes a new census. Sort remains the reader's preference across captures.
+
+**Verification and limits.** Headless tests cover predicates, cue handling, whole-census search, page boundaries, global ordering,
+every ticket field, held-result rejection and the coalesced lane/abandon rules. Windows-only pane tests call the same build/publish
+logic inline (no unpumped Task.Run assertions) and cover filter recovery, filtered census replacement and stale/held results.
+A Linux build is API validation, not a Windows paging test. Realized-grid, cache, header, editor, viewport and large-capture checks
+live in ReleaseChecklist. No responsiveness or memory improvement is claimed from unexecuted Windows measurements. If the vendor
+on-demand behavior fails that gate, the fallback is fresh-list binding plus EnableDataVirtualization, with whole-list search and
+its unbounded per-census grid cost; this remains a fallback, not a second shipped mode.
+
+Correction verification on Linux: **2,026 headless tests passed, 9 gated tests skipped**; the full non-incremental solution
+build, including the Windows test assembly, reported **0 warnings and 0 errors**. The Windows assembly was built, not run.
+An earlier run also hit the pre-existing timestamp-boundary flake in ImportingTheSameMapTwiceChangesNothing (the two imports
+crossed a wall-clock second); two complete reruns passed without changes to that unrelated test or import path.
+
 ## A sort the source does not carry is a sort that stops holding (2026-11)
+
+**Historical implementation:** the merge-based repair below was replaced by the globally ordered paged index described in
+"Identity Table paging". The comparison laws and tests remain; there is no MergeRows method or grid-bound whole-census collection.
 
 **The report:** in the identity pane "the indicator shows up correct for the name column
 but it doesnt stay sorted. check what we do in other tables and the syncfusion docs to see

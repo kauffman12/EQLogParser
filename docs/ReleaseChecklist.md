@@ -108,6 +108,33 @@ These checks require a realized grid; the automated pane tests exercise bound da
   Scrolling a search result into view still works — that is a gesture, not a follow. A new fight appearing mid-pull must not move the list at
   all (no jump to the top when a row lands), and with a column sorted a pass must keep the reading position too.
 
+## Identity Table paging checks on Windows
+
+Run `dotnet test EQLogParser.Wpf.Test/EQLogParser.Wpf.Test.csproj` on Windows, then use a realized Identity Table with
+more than 1,000 names and a capture that is still growing. A Linux build does not exercise the pager or in-cell ComboBoxes.
+
+- [ ] **Startup and empty states:** the grid follows the pager when its template creates PagedSource. A capture with no names,
+  zero search matches and no types checked shows no stale rows or indefinite spinner. Clearing the dials restores names.
+- [ ] **Whole-census lookup:** find a name originally on a later page; clear the query and recover the full list without a
+  new derive. Switch NPC-only to Player/Pet, then All Types: unplaced and Taken Back rows are included only in All Types.
+- [ ] **Cue and captions:** focus/blur the empty Name Filter, press Escape after typing, and close/reopen the capture. The cue
+  never becomes a query. Toggle checkboxes without selecting a different ComboBox row: the closed caption updates every time.
+  In Chat, To/From cues appear, clear on focus and return on empty blur without leaving autocomplete suggestions behind.
+- [ ] **Global headers:** click Name, Type, Class, Owner and Why both ways; check page boundaries and equal-word name ties.
+  Class really sorts class words, not names; the arrow matches the entire list, not just the current slice.
+- [ ] **Cache invalidation:** visit several pages, return to one and change a verdict from another pane. Both that page and
+  previously visited pages show the new word after a census; the current page reloads even when its page number did not change.
+- [ ] **Editing and races:** on a later page open each cell editor, let a census arrive, then pick/escape/page away. The editor
+  is not torn out mid-pick, closes cleanly, and the newest held result lands once. Change filters or write from another pane
+  during the hold: an older answer never overwrites the newer question/verdict. Take-back retains its Unknown row in All Types.
+- [ ] **Viewport and selection:** select a row, scroll elsewhere within its page and allow several censuses. The viewport stays
+  put. A deliberate filter/sort can follow the surviving selection to its new page; shrinking results clamps to an existing page.
+- [ ] **Capture isolation:** hide the pane during a build, switch logs, then show it: only the new capture appears and both
+  filters are cleared. Hide/show the same capture preserves dials and sort. Repeat close/reopen while an editor holds an answer.
+- [ ] **Narrow pane and scale:** count, dials and PreviousNext strip fit the docked width at supported font sizes. With a
+  name-heavy capture (up to 25,000 ledger entries), record responsiveness and per-census UI cost, including on a slower machine.
+  These measurements are still a release gate, not an inferred result of a passing build.
+
 ## Docking states a unit test cannot reach
 
 Two behaviours depend on state a headless test cannot build; both have shipped broken once.

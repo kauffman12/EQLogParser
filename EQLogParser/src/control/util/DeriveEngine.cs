@@ -43,6 +43,9 @@ namespace EQLogParser
      */
     internal int SessionId { get; } = Interlocked.Increment(ref _sessionCounter);
 
+    // All identity-write UI doors ask for a Full pass. Reading its ledger lets a census reject writes from OTHER panes too.
+    internal int ExplicitRequestGeneration => _requests.StartBound();
+
     private static int _sessionCounter;
 
     public static event Action ActiveChanged;

@@ -8,15 +8,7 @@
              xmlns:syncfusion="http://schemas.syncfusion.com/wpf"
              mc:Ignorable="d"
              d:DesignHeight="450" d:DesignWidth="900">
-  <!--
-    A strip, then the grid — a deliberate reversal of this pane's old "no header row" law (docs/names-table-paging-plan.md →
-    "What we picked"). The law was right while the grid held the whole list: the dock tab already says "Identity Table", and in
-    a narrow slide-out strip 30 pixels belong to rows, not to repeating labels. PAGING is what reverses it: a grid of one page
-    in ten can no longer answer "how many names is this?" and the total becomes functional information, so it sits above the
-    grid — with the two dials that decide WHICH of those names the page shows (a name filter and the closed type list). The
-    row-number column goes away with the row header; its job (position) belongs to a 1,000-row page nobody counts by hand,
-    and its 32 pixels go back to the strip.
-  -->
+  <!-- Paging needs a whole-census count and visibility dials above the page. See docs/DesignNotes.md: Identity Table paging. -->
   <Grid>
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto"/>
@@ -60,18 +52,8 @@
       </StackPanel>
     </Grid>
 
-    <!--
-      THE PAGER, then the grid inside it. One page of a thousand rows at a time (CensusPageSize in the code-behind): the
-      grid's whole visible world is a slice of the pane's published list, handed out by OnDemandLoading as pages turn. The
-      strip under the grid is PreviousNext only — with twenty-plus pages a numeric strip is more pixels than pages.
-
-      This replaces binding the grid to the collection itself (the old `namesGrid.ItemsSource = _rows`). What that bought
-      was one notification per row per census beat — 25,000 of them, twice a second on a live raid. What it costs is the
-      laws that now live in the publish door instead: the list arrives pre-sorted (the pane's own index, not the view), the
-      selection comes back by NAME after every publish, and an open in-cell editor holds the paint (docs/names-table-paging-plan.md).
-    -->
-    <!-- The pager is a SIBLING of the grid, not its wrapper: SfDataPager pages whatever grid its Target names (wired in the
-         constructor), and it draws its own strip — PreviousNext under the grid, so page ten is one click from the list. -->
+    <!-- Sibling controls: on-demand slices feed PagedSource; the binding follows that view through template initialization.
+         PageCount and cache invalidation are explicit. Source is never assigned in on-demand mode. -->
     <Grid Grid.Row="1">
       <Grid.RowDefinitions>
         <RowDefinition Height="*"/>
@@ -82,10 +64,13 @@
                               UseOnDemandPaging="True"
                               OnDemandLoading="PagerOnDemandLoading" />
       <syncfusion:SfDataGrid x:Name="namesGrid" Grid.Row="0"
+                             ItemsSource="{Binding ElementName=idPager, Path=PagedSource}"
                              AllowResizingColumns="True"
                              AllowSorting="True"
                              AutoGenerateColumns="False"
                              CurrentCellBorderThickness="0"
+                             CanMaintainScrollPosition="True"
+                             LiveDataUpdateMode="AllowDataShaping"
                              FrozenColumnCount="1"
                              GridLinesVisibility="Both"
                              HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
@@ -101,17 +86,16 @@
             point of a 4,000 row table.
 
             A header click replaces this, and the pane keeps BOTH in step: the pane rebuilds its published list in the clicked
-            order (IdentityRowOrder is the comparison, NamesTable.RequestViewRebuild is the door), while the grid's own view sort
-            is DECLINED on purpose — the list arrives pre-sorted, and a second sort would re-sort ONE page of a thousand, which
-            is alphabetical within a slice, not over the list (SortColumnsChanging). This markup is the DEFAULT; after that the
-            grid's descriptor is the truth and this pane mirrors it.
+            order (IdentityRowOrder is the comparison, NamesTable.RequestViewRebuild is the door). Custom comparers make the
+            vendor's page-local sort identical to the global order, including tie breaks. This markup is the default; after
+            that the grid's descriptor is the truth and this pane mirrors it.
           -->
           <syncfusion:SortColumnDescription ColumnName="Name" SortDirection="Ascending"/>
         </syncfusion:SfDataGrid.SortColumnDescriptions>
         <!--
           No context menu. Every verdict a right-click used to offer is now the pencil in the Type cell (the same verb,
           the same file), so the menu was a second door to the same room - and a hidden one, since nothing on the row
-          hinted at it. What could not live in a cell went to the two icons in the title band.
+          hinted at it. Taking a claim back lives in the Name cell's history icon.
         -->
         <!--
           Widths are pixels, not grid stars: SfDataGrid's Width is a double, so "1.6*" throws while the column is being

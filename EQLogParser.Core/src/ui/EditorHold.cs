@@ -17,7 +17,7 @@ namespace EQLogParser;
  * ANOTHER pane forces a pass immediately, and a census landing while a cell popup is open tears out the very cell the popup is
  * anchored to. WPF closes the popup, its close hook clears "which row am I editing", and the click that was already on its way
  * arrives with no subject — so the write is silently dropped and the operator sees a dropdown that does nothing. Re-pointing the
- * edited row by name (MergeRows does) cannot save it: the popup is gone before the re-point matters.
+ * edited row by name cannot save it: the editor is gone before the re-point matters.
  *
  * So the hold is not an optimisation, it is the correctness boundary: while an editor is open, no repaint lands; the newest one
  * runs on the last close. Newest-wins because an older census describes a capture that has already moved on — running two would

@@ -4,7 +4,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 /*
  * The Identity Table's view arithmetic, out of the pane and onto a surface where it can be exercised without a 25,000-name
  * capture: what one page holds, which page a published list lands on, and when that landing is a jump. These are the
- * decisions docs/names-table-paging-plan.md → "The publish door" puts in front of the grid, and every one of them is a
+ * decisions docs/DesignNotes.md → "Identity Table paging" puts in front of the grid, and every one of them is a
  * hazard that only shows up at a boundary — 0 rows, exactly one page, one row past it, a filter that shrinks ten pages to
  * two, a selection that survives a rebuild on another page.
  */
