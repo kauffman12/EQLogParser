@@ -1,10 +1,10 @@
-# 2.4.2 | 10/11/26
+# 2.4.3 | 10/11/26
 1. **Major Parsing Updates**
 2. New identification system for determining players/npcs/pets.
 3. Performance improvements to building the **Fight List**
 4. Added checkbox to **Repeated Reset Time** that allows **{counter}** to reset similar to the GINA implementation.
 5. Update spells from beta.
-6. Fixed the **Fight List** checkboxes: hiding rows by **Inactivity** or **Tanking** no longer breaks row selection, and the list now keeps updating live while either one is unchecked.
+6. **Fight List** selection fixes.
 
 # 2.4.1 | 09/25/26
 1. Added dropdown to **Timelines** for customizing saved layouts.
