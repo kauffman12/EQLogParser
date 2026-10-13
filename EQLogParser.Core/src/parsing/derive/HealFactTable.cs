@@ -55,8 +55,8 @@ namespace EQLogParser
      * FIELD ORDER IS THE LAYOUT: widest first, then the four-byte fields, then two-byte, then bytes. The same ten values
      * in the order this struct once shipped in were 40 bytes (an int before the lone long opened a four-byte pad and eight
      * bytes of tail), the clock's rebasing took that to 28 (FactTime), and packing the label into the flags byte plus the
-     * modifier mask into one byte — which measured heal traffic says is all it needs — lands it on **24**, matching a
-     * damage row. The CLR may reorder fields, so the layout is a fact about this build rather than a promise, and
+     * modifier mask into one byte landed it on 24; widening the two name ids subsequently took it to 28, matching
+     * damage. The CLR may reorder fields, so the layout is a fact about this build rather than a promise, and
      * HealFactCaptureTest asserting the measured size is what makes a change in padding visible.
      */
 

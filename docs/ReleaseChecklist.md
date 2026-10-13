@@ -97,6 +97,9 @@ These checks require a realized grid; the automated pane tests exercise bound da
 - [ ] **A menu opened without a pointer names THIS capture** (2026-10-13): right-click a fight and release outside the grid (so no
   menu appears), then Clear All or open a different log and open the menu from the keyboard (Shift+F10 / Apps key, no mouse press).
   The actions must apply to rows of the log now open, never to the released press's snapshot from the log that closed.
+- [ ] **Keyboard after an abandoned right-press:** select fights, right-press and release outside the grid without opening a menu.
+  Change the selection with Shift+Down or Ctrl+A, then open a menu with Apps or Shift+F10. The current selection must survive;
+  no earlier pointer selection may return. Repeat while staying in the same capture.
 - [ ] **One scroll per capture:** open a long log and let it finish reading (status line: "Monitoring Log") — the list lands at its newest row,
   once. Then fight: new rows and cell updates must not move the viewport, and scrolling up to read an old encounter must hold through a whole pull.
   Clear All and reopening the same log get the reveal again (a new load). Nothing about the pointer counts: leave it inside the grid while the log
@@ -140,6 +143,12 @@ operator checks with `Debug=True`, on a capture of several hundred MB or more:
 - Closing the window or opening another log MID-load leaves no wedge and no second capture alive;
   `grep -c "Error Loading File" eqlogparser.log` says whether an abort was recorded as a failed load.
 - Clear All re-opens the same file at EOF (a monitor re-open, not a re-read) and every board empties and refills.
+- **Cleanup stays with its capture:** finish a bulk load, then close or open another log before its six-second backstop.
+  Also switch captures while a board completion has queued cleanup or while the cleanup notice yields for rendering. No
+  old cleanup may run inside the next read, stop its fallback timer, or restore the prior capture's status text.
+- **Preview Parse stays cleared:** leave it open or hidden during a large board build, then Clear All or switch logs. The
+  old parse, available label and selected player set must not return when the worker finishes. A build in the new log
+  still publishes normally.
 
 ## Identity Table paging checks on Windows
 
@@ -168,6 +177,8 @@ more than 1,000 names and a capture that is still growing. A Linux build does no
 - [ ] **Editing and races:** on a later page open each cell editor, let a census arrive, then pick/escape/page away. The editor
   is not torn out mid-pick, closes cleanly, and the newest held result lands once. Change filters or write from another pane
   during the hold: an older answer never overwrites the newer question/verdict. Take-back retains its Unknown row in All Types.
+- [ ] **Blank class pick:** set a saved class on a Player row, choose blank, and confirm that the cell returns to what
+  this capture says (or blank when the capture learned none). It must not keep the saved override or strand the editor hold.
 - [ ] **Viewport and selection:** select a row, scroll elsewhere within its page and allow several censuses. The viewport stays
   put. A deliberate filter/sort can follow the surviving selection to its new page; shrinking results clamps to an existing page.
 - [ ] **The pager states where it is** (2026-10-13): with more than 1,000 names the line beside the arrows reads

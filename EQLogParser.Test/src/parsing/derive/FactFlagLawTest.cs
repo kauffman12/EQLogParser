@@ -192,7 +192,7 @@ public sealed class FactFlagLawTest
     {
         /*
          * Values pinned, not just masks, because the retired ones matter: bits 4 and 8 on DamageFact and 2 and 4 on
-         * HealFact hold an older build's registry opinion (spool files written by RangeSpike carry them). A new flag
+         * HealFact held an older build's registry opinion. Retired values remain unavailable to new line evidence. A new flag
          * takes a HIGHER bit so no old file can be misread as claiming it — the moment this test fails is the moment to
          * re-read that note instead of taking the first free value.
          */

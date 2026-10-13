@@ -12947,3 +12947,46 @@ searched, never walked". Probe harnesses were deleted after reading per the gate
 changes repaint within a frame, and what was actually broken — unasked whole-board rebuilds twice a second — is fixed by the cost
 budget (`UnaskedRefresh`), the owed gesture, and the one pet-claim door (`PetAssignment`). Law at "A refresh that answers for itself";
 its three re-opening conditions are recorded there, which is what licenses the toast design's deletion.
+
+## Branch review follow-ups
+
+The `develop` versus `master` review found four correctness/coverage issues and five follow-up candidates:
+
+- **Queued cleanup has capture ownership.** `CaptureTidyGate` stamps each arm with a session id and generation. Taking an arm
+  does not make its queued callback immortal: close/open invalidates it, a worker from an older capture cannot take the new arm,
+  and both dispatcher entry and the render yield recheck ownership. An invalidated callback neither collects nor restores old
+  status text. Clear All's labelled cleanup uses the same ownership gate. No change to Server/concurrent/Interactive GC or the
+  six-second fallback.
+- **Keyboard input ends abandoned right-press memory.** The grid's preview-key door clears the remembered selection before
+  keyboard navigation, Ctrl+A or Apps/Shift+F10 can reuse an abandoned pointer gesture. It handles no key itself. Routed WPF
+  regressions cover the pane's invalidation; actual vendor keyboard selection remains a Windows checklist check.
+- **The flush-boundary test now crosses a boundary.** Its hit/death pair uses a reader batch size of one rather than two,
+  putting the death's previous sentence in a different ParseUnits delivery while agreeing with the same-batch control.
+  The wider batch-equivalence test remains.
+- **Blank is the forget-class verb.** The class selection handler distinguishes no selected item from an empty selected string,
+  so blank reaches `ApplyClassPick` and releases the editor hold when accepted. A WPF regression exercises that handler.
+- **Identity projection filters first.** After the closed universe gate, `NamesTableView.Project` checks name/type keys before
+  `RowFrom` constructs cells, tooltips and editor choices. Global sort and name tie-breaks are unchanged; the complete census is
+  retained, and the total still counts the whole listable universe rather than just this question's matches.
+- **Healing decode uses seed rows.** Sequence, time and name ids land directly in the output array, then the fixed planes rebuild
+  those rows. This removes two long and two int scratch arrays (24 payload bytes per row). Seeds use a valid Heal label and mask,
+  so decoding creates no fictitious packing faults. Codec shape, public normalization, OverTotal and compression level are unchanged.
+- **Preview Parse publishes atomically on its dispatcher.** Clear advances a publication epoch immediately; dictionaries, available
+  labels, selected rows and text are all applied in one guarded dispatcher operation. Build events carry the session that supplied
+  their records, not the session open when a delayed build starts. STARTED/answer pairs retain the original epoch too, so both queued
+  and late answers are discarded after clear. Re-slices keep their inputs' session stamp. The host keeps one pane for its lifetime;
+  short-lived hosts can dispose it to detach subscriptions. WPF regressions cover queued, late and stale-session answers.
+- **The supported span lookup was tried, then rejected on measurement.** .NET 10 does support
+  `GetAlternateLookup<ReadOnlySpan<char>>()`; the comment claiming otherwise was wrong. A temporary Release console probe compared
+  the existing FNV/open-addressed implementation against cached alternate lookups, with 5M warmup probes, seven alternating timed
+  runs of 20M probes and matching checksums. A 16-word common-hit/miss mix measured **66.22 ms FNV / 102.55 ms Frozen alternate**;
+  all 52 verbs/plurals plus four misses measured **67.64 / 108.19 ms**. Dictionary alternate was also slower (**63.67 / 100.32 ms**,
+  **67.45 / 102.12 ms**). These are isolated lookup times, not whole-load ratios. Keep the faster custom table, fed from the single
+  ordinal vocabulary, and add equivalence coverage for every verb/plural, case, empty token and unknown spelling. The probe was deleted.
+- **Comments describe the current program.** Identity editors are in-cell ComboBoxes, not a second popup or context menu; name ids
+  are ints with varint cold encoding; rebased clocks and widened row sizes point to executed size tests; retired flag comments no
+  longer cite deleted tooling; trigger readers feed TriggerProcessor rather than the combat ParseLane or ambiguity store.
+
+Linux validation: full non-incremental solution build, **0 warnings / 0 errors**, including the WPF assembly; headless suite,
+**2,084 passed / 9 skipped**. Windows execution is still required for the WPF regressions and the realized-grid release checks;
+a Linux build is not their result.

@@ -215,12 +215,9 @@ namespace EQLogParser
     internal static string GetHitType(string word)
       => word is not null && HitTypes.TryGetValue(word, out var hitType) ? hitType : null;
 
-    /*
-     * Span door over a LineWords token. This framework's FrozenDictionary<string, V> has no span TryGetValue (measured,
-     * not assumed — the compile fails), so lookups run through a tiny open-addressed table fed FROM HitTypes in the
-     * static initializer: one source of literals, no materialized string per probe.
-     */
-    private const int HitSlotCount = 128; // power of two ≥ 52 entries with low load
+    // .NET 10 supports alternate span lookup, but this small table measured faster with ordinal open addressing.
+    // Both doors read the one vocabulary above. See docs/DesignNotes.md → "Branch review follow-ups".
+    private const int HitSlotCount = 128;
     private static readonly string[] HitKeySlots = new string[HitSlotCount];
     private static readonly string[] HitPluralSlots = new string[HitSlotCount];
 
@@ -241,7 +238,7 @@ namespace EQLogParser
 
     private static int SpanBucket(ReadOnlySpan<char> span)
     {
-      // FNV-1a, ordinal over UTF-16 units — matches SequenceEqual semantics exactly.
+      // FNV-1a over UTF-16 units, matching ordinal SequenceEqual.
       var hash = 2166136261u;
       for (var i = 0; i < span.Length; i++)
       {
@@ -254,19 +251,12 @@ namespace EQLogParser
     internal static string GetHitType(LineWords.Word word)
     {
       var span = word.Span;
-      if (span.IsEmpty)
-      {
-        return null;
-      }
+      if (span.IsEmpty) return null;
 
       var slot = SpanBucket(span);
       while (HitKeySlots[slot] is { } key)
       {
-        if (span.SequenceEqual(key.AsSpan()))
-        {
-          return HitPluralSlots[slot];
-        }
-
+        if (span.SequenceEqual(key.AsSpan())) return HitPluralSlots[slot];
         slot = (slot + 1) & (HitSlotCount - 1);
       }
 

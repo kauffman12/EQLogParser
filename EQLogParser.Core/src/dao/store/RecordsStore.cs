@@ -265,15 +265,11 @@ namespace EQLogParser
        * not wall time. It is a quirk (a log whose clock jumps moves the window) and it is the behaviour every existing
        * resolution depends on, so bounding the scan is not the day to change which casts are "recent".
        *
-       * What the locking lesson cost (2026-10-13) is that these lists are NOT single-thread property any more: every
-       * stream that parses appends to them and runs the horizon prune, and pruning's RemoveRange CLEARS the vacated
-       * slots — one file can have several readers alive (the open's own loop plus a trigger reader per enabled
-       * character), so "exactly one thread ever parsed" was never the invariant it looked like. Reading Count and
-       * indexing the last entry outside the cache lock latches a stale size over a sweeping list: the field NRE
-       * surfaced at `FindByLandsOn` because both this method and FindPreviousCast
-       * inline, so the throw pointed at a call site with no frame naming it. The lock covers anchor reads AND the scan
-       * because both must agree with each other; the order is cache → history, the one Add already uses (re-verifying
-       * the order is load-bearing: nothing here may ever lock history first). RecordsStoreConcurrencyTest storms this.
+       * Anchor reads and scans share the lock with appends and horizon pruning: RemoveRange clears vacated slots,
+       * so a Count read outside the lock could index a swept entry. The current combat loader is sequential, and trigger
+       * readers feed their own TriggerProcessor, not this store; that does not make concurrent store access safe.
+       * The order remains cache → history, the order Add uses. Nothing may lock history first.
+       * RecordsStoreConcurrencyTest pins this contract.
        */
       lock (_playerAmbiguityCastCache)
       {

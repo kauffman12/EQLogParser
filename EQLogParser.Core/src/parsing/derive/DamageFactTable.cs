@@ -97,13 +97,9 @@ namespace EQLogParser
   }
 
   /*
-   * One parsed damage line, exactly as the parser fired it. Names are interned indices (short)
-   * into the fact table's name table — 32 B/record, no per-record allocation after init.
-   *
-   * The size is not an accident and it is worth knowing which bytes are load-bearing, because this is
-   * the most numerous thing the engine holds: a 5 M-fact log is 160 MB of it. Seq + TimeS (and TimeS
-   * must be a long — see its comment) cannot shrink; AtkIdx/DefIdx/SubIdx are the interning that makes
-   * the table cheap at all. Everything else lives in the padding around those: TypeId, Flags, ModMask.
+   * One parsed damage line, exactly as the parser fired it. Names are interned int ids; the clock is a rebased int
+   * read back as epoch seconds (FactTime). Size is asserted by FactTimeTest, with the storage decisions recorded in
+   * docs/DesignNotes.md → "What a loaded raid costs in memory".
    *
    * OverTotal used to sit here and was always 0 — "asked for more than landed" is a heal-line number,
    * and HealRecord owns it for the same reason (docs/DesignNotes.md → What a loaded raid costs in
@@ -630,8 +626,8 @@ namespace EQLogParser
      * per-line catch swallows it. So the 32,768th name did not fail loudly — its line was dropped and the capture quietly went
      * blind from there on, which is a data-loss bug wearing a capacity-error costume.
      *
-     * The price is row width: `DamageFact` goes 24 → 28 bytes (+4 B per fact, the cold-chunk id planes go 2 B → 4 B each), and
-     * that was weighed — `ushort` would have been free and gives only 65,534 slots, which is not enough to stop the break. A
+     * The price is row width: `DamageFact` goes 24 → 28 bytes (+4 B per fact); cold ids use zigzag varints rather than
+     * widened fixed planes (DamageFactChunkCodec). `ushort` would have been free and gives only 65,534 slots, which is not enough. A
      * silent clamp or a hash alias into a full table is worse than four bytes: it invents or loses entities.
      *
      * So there is deliberately NO capacity check here any more. An int id space cannot be reached — the pool itself would need

@@ -106,7 +106,8 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
 ## Memory, facts storage, GC
 - **Healing is a second fact table** (`HealFactTable`) sharing only the name pool and sequence counter with damage
   (`IFactTable.NextSeq()`); quiescence counts heals too (`DeriveEngine.CapturedTotal`). Struct size is asserted
-  (`AFactIsItsMeasuredSizeNotWishes`) — field order wide→narrow, `DamageFact` stays 32 B with `ModifiersMask` in the padding.
+  (`AFactIsItsMeasuredSizeNotWishes`) — field order wide→narrow; clock and id widths are measured in the size tests,
+  with their storage decisions in `docs/DesignNotes.md`.
 - **A fact carries what its own line says, never what the registry believed**: only `LineDerivedFlagMask` bits appear on a
   fact; registry verdicts travel as `IdentityEvent`. Retired bit values stay retired (old `.spool` files hold them).
 - **Chunks go cold, rows never move**: a superseded chunk encodes (delta varint + fixed planes + Deflate at the one level `FactChunkCompression` names — not a format version, the blob is plain Deflate either way) and its row array
@@ -126,7 +127,8 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
   board build or a one-shot backstop: the old synchronous pass at "Finished" fired BEFORE the first full derive and its boards, the biggest allocators of
   a bulk load, and collected half) and `Clear All` (synchronous, after its re-open) — each labelled *"Cleaning up.."* in the status line, because a pause
   with a name reads as work and a silent one reads as a hang. Stats builds request nothing — the build seam PAYS an armed tidy, never asks; a new OPEN
-  disarms a pending one (a pass inside another load's bulk read is what Close's law already refuses). Never on the parse
+  invalidates pending AND queued tickets. Close invalidates too; dispatcher entry and the render yield both recheck capture ownership,
+  including before restoring status text. Never on the parse
   path: `docs/DesignNotes.md` → "Garbage collection after loading a log".
 
 ## The derive engine

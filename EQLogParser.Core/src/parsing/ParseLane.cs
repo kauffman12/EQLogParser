@@ -18,10 +18,9 @@ namespace EQLogParser
    * suite) reaches Main through the parsers' static forwarders, so the app running the way it always ran — one
    * reader, one capture — behaves bit-identically, and an unbound thread IS the Main lane.
    *
-   * Today every production stream binds Main — the bulk read, the monitor tail, and the trigger lane's own readers
-   * over the same file all parse on it, which is what the app has always done. A lane instance is what anything ELSE
-   * that ingests binds (a test driving its own capture, a second reader that must not raise into the session's
-   * tables), and keeping that door explicit is the point: the alternative is process-static events, where a raise from
+   * The production combat processor binds Main for its bulk read and monitor tail. Trigger readers instead feed
+   * TriggerProcessor's separate pipeline and never enter this lane. A lane instance lets an isolated consumer bind
+   * without raising into the active capture's tables. Keeping that door explicit is the point: otherwise a raise from
    * any stream reaches every subscriber in the process. What is deliberately NOT here: `PlayerRegistry` (identity
    * memory is process-wide by design — its verdicts are shared, and its events reach whichever captures subscribed)
    * and the interned name pools (per fact table).
