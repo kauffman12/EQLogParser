@@ -58,7 +58,17 @@ namespace EQLogParser
     // (LogReader keeps feeding long after LinkTo).
     internal Task Completion => _readTask;
 
-    public void LinkTo(BlockingCollection<LogReaderItem> collection)
+    /*
+     * The stream arrives in batches because crossing the thread boundary is what costs, not parsing: per-line
+     * handoff measured at ~21,460 ms CPU and 885 MB allocated for 4.5 M items against ~10,721 ms and 108 MB for the
+     * same work in batches of 5,000 (docs/DesignNotes.md → "The reader hands the parser one line at a time…").
+     *
+     * The batch shape must stay invisible downstream. Lines go to DoPreProcess one at a time, in arrival order, on
+     * THIS thread and no other — that is what keeps the cross-line carries (crit pairing, the sentence before a
+     * death, the dice roll's adjacency test) behaving exactly as they did when one line crossed at a time. How many
+     * lines a producer happened to bundle must never reach a parser.
+     */
+    public void LinkTo(BlockingCollection<LogReaderItem[]> collection)
     {
       // start archive if enabled (app side channel; no-op headless)
       _chatSink.Init();
@@ -70,10 +80,17 @@ namespace EQLogParser
         ParseLane.BindCurrentThread(_lane);
         try
         {
-          foreach (var data in collection.GetConsumingEnumerable())
+          foreach (var batch in collection.GetConsumingEnumerable())
           {
+            // Checked per LINE, inside the batch: a dispose must stop where it lands rather than swallow the
+            // rest of whatever bundle the reader happened to hand over (the drain law on Completion).
+            foreach (var data in batch)
+            {
+              if (_isDisposed) break;
+              DoPreProcess(data.Line, data.Ts, data.IsMonitor);
+            }
+
             if (_isDisposed) break;
-            DoPreProcess(data.Line, data.Ts, data.IsMonitor);
           }
         }
         catch (Exception ex)

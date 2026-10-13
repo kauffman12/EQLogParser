@@ -12,7 +12,7 @@ namespace EQLogParser
   public partial class TriggersTester : IDocumentContent
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
-    private BlockingCollection<LogReaderItem> _buffer;
+    private BlockingCollection<LogReaderItem[]> _buffer;
     private TriggerConfig _theConfig;
     private bool _ready;
 
@@ -111,7 +111,7 @@ namespace EQLogParser
 
               if (_theConfig != null)
               {
-                _buffer = new BlockingCollection<LogReaderItem>(new ConcurrentQueue<LogReaderItem>());
+                _buffer = new BlockingCollection<LogReaderItem[]>(new ConcurrentQueue<LogReaderItem[]>());
                 await TriggerManager.Instance.SetTestProcessor(_theConfig, _buffer);
               }
             }
@@ -127,7 +127,7 @@ namespace EQLogParser
                   await TriggerManager.Instance.StopTestProcessor();
                 }
 
-                _buffer = new BlockingCollection<LogReaderItem>(new ConcurrentQueue<LogReaderItem>());
+                _buffer = new BlockingCollection<LogReaderItem[]>(new ConcurrentQueue<LogReaderItem[]>());
                 await TriggerManager.Instance.SetTestProcessor(character, _buffer);
               }
               else
@@ -176,7 +176,7 @@ namespace EQLogParser
             if (dateTime != DateTime.MinValue)
             {
               var beginTime = DateUtil.ToDotNetSeconds(dateTime);
-              _buffer?.Add(new(line, beginTime, true));
+              _buffer?.Add([new LogReaderItem(line, beginTime, true)]);
             }
           }
         }
@@ -298,7 +298,7 @@ namespace EQLogParser
                         {
                           if (!stop)
                           {
-                            _buffer?.Add(new(line, nowTime, true));
+                            _buffer?.Add([new LogReaderItem(line, nowTime, true)]);
                           }
                         }
 

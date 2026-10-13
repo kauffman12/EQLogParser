@@ -95,13 +95,13 @@ namespace EQLogParser
       }
     }
 
-    internal async Task SetTestProcessor(TriggerConfig config, BlockingCollection<LogReaderItem> collection)
+    internal async Task SetTestProcessor(TriggerConfig config, BlockingCollection<LogReaderItem[]> collection)
     {
       await InitTestProcessor(TriggerStateDB.DefaultUser, $"Trigger Tester ({TriggerStateDB.DefaultUser})", ConfigUtil.PlayerName,
         config.Voice, config.VoiceRate, -1, null, null, null, null, collection);
     }
 
-    internal async Task SetTestProcessor(TriggerCharacter character, BlockingCollection<LogReaderItem> collection)
+    internal async Task SetTestProcessor(TriggerCharacter character, BlockingCollection<LogReaderItem[]> collection)
     {
       var playerName = !FileUtil.ParseFileName(character.FilePath, out var parsedPlayerName, out _) ? character.Name : parsedPlayerName;
       await InitTestProcessor(character.Id, $"Trigger Tester ({character.Name})", playerName, character.Voice,
@@ -175,7 +175,7 @@ namespace EQLogParser
     }
 
     private async Task InitTestProcessor(string id, string name, string playerName, string voice, int voiceRate,
-      int customVolume, string activeColor, string idleColor, string resetColor, string fontColor, BlockingCollection<LogReaderItem> collection)
+      int customVolume, string activeColor, string idleColor, string resetColor, string fontColor, BlockingCollection<LogReaderItem[]> collection)
     {
       if (_testProcessor != null)
       {

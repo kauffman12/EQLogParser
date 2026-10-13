@@ -8719,11 +8719,29 @@ elided by the JIT (0 collections, 0 bytes, "results" that mean nothing — make 
 through a `MethodImpl(MethodImplOptions.NoInlining)` touch), and a `grep` filter on benchmark output that matches only some
 rows makes a live run look hung.
 
-**Standing decision.** The reader→parser seam does not hand off one item at a time. The bound stays (backpressure), but the
-element becomes a batch over pooled buffers, so the fix touches exactly the seam: `LogReader` (producer + `FlushBatch`),
-`ILogProcessor.LinkTo` and the consumer loop in `LogProcessor`, `TriggerProcessor.LinkTo`, and the two `TriggersTester`
-buffers with their `TriggerManager` signatures. Prefer one element type over a second API shape — triggers submit a
-single-item batch rather than keeping a per-item channel alive beside it.
+**Shipped (2026-10-13), with one deviation.** The reader→parser seam no longer hands off one item at a time: the element is
+`LogReaderItem[]`, and the bound is stated in the unit the queue holds — `QueueBoundBatches = 5` × `BatchSize = 5000`, the
+same 25,000 lines (~5 MB of strings) that were in flight before, so the reader runs as far ahead and parks at the same
+point while paying one handshake per 5,000 lines instead of 5,000. Touched exactly the seam named here: `LogReader.FlushBatch`,
+`ILogProcessor.LinkTo` + the consumer loop in `LogProcessor`, `TriggerProcessor.LinkTo`, and the two `TriggersTester`
+buffers with their `TriggerManager` signatures — one element type, no second API shape, and triggers submit a single-item
+batch (their pacing comes from lines arriving per take, so `TriggerProcessor` unfolds each batch and runs every line on its
+own, exactly as before).
+
+**The deviation: a copy crosses, not a pooled buffer.** The plan said ArrayPool; the shipped version does
+`_lines.Add(_batch.ToArray(), …)`. Pooling measured 0.4 MB against 108 MB of transient arrays per capture — and that is the
+whole argument for declining it, because the retraction above proves this garbage costs ~0.2 % of wall and dies in gen0 with
+nothing promoted. Buying a 108 MB number that was measured to be nearly free would mean every path that abandons a batch
+(dispose, a cancel mid-block, a consumer fault) owing a `Return` exactly once — a double-return or leaked-buffer bug in
+exchange for a cost that does not exist.
+
+**Batch shape must stay invisible downstream, and that is what is asserted here rather than a timing threshold**
+(`BatchHandoffEquivalenceTest`): the same lines through one real `LogProcessor` in three shapes (1 line per handoff, 7 — a
+bundle that does not divide the file — and the whole file in one batch) produce the same records in the same order, a partial
+final batch arrives whole, and — the case where a bundle could actually matter — a carry written on the last line of one
+batch is still read by the first line of the next (`PreviousAction` → `DeathRecord.Previous`). `LogReaderThreadTest` on
+Windows now also asserts the file crossed *in batches* (`handoffs ≤ Lines / BatchSize + 1`), so a reader that regressed to
+per-item `Add` fails there instead of quietly costing half a core.
 
 Two traps, both paid for:
 

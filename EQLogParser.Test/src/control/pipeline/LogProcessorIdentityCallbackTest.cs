@@ -57,15 +57,17 @@ public class LogProcessorIdentityCallbackTest
      */
     private static void Process(params string[] lines)
     {
-        using var items = new BlockingCollection<LogReaderItem>(new ConcurrentQueue<LogReaderItem>());
+        using var items = new BlockingCollection<LogReaderItem[]>(new ConcurrentQueue<LogReaderItem[]>());
         using var processor = new LogProcessor("callbacks.txt", new NullSinks(), new NullSinks());
         processor.LinkTo(items);
 
+        // One batch per shape change is not what the reader does, but a stream of one-line batches is the
+        // harshest case for the consumer: it proves the loop does not depend on a bundle being full.
         foreach (var line in lines)
         {
             var dt = DateUtil.ParseStandardDate(line);
             Assert.AreNotEqual(DateTime.MinValue, dt, $"fixture line has no standard timestamp: {line}");
-            items.Add(new LogReaderItem(line, DateUtil.ToDotNetSeconds(dt), false));
+            items.Add([new LogReaderItem(line, DateUtil.ToDotNetSeconds(dt), false)]);
         }
 
         items.CompleteAdding();

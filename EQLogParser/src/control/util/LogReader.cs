@@ -36,16 +36,21 @@ namespace EQLogParser
      * unbounded would buffer a whole night of strings behind the parser - but it is also why WHO runs this loop matters:
      * the thread that blocks in Add is the thread that cannot paint a window. See the note on StartAsync.
      *
-     * The number itself is five handoffs (BatchSize) deep, and it was 100,000 until the memory pass asked what those slots
-     * cost: a `LogReaderItem` is 24 bytes unboxed in the queue's own segments, but the STRING it carries is what pays - at
-     * ~95 characters per EverQuest line (a 973 MB capture over 10.2 M lines) that is ~200 bytes of UTF-16 per slot, so
-     * 100,000 of them held ~22 MB of a bulk load's peak working set against an parser that was the bottleneck either way.
-     * Lowering it changes no throughput (a queue at its bound means the PARSE lane is the limit; a queue near empty means
-     * the reader is, and neither cares how high the ceiling is) while taking ~17 MB out of the load. It also matters for
-     * steady raid tailing far less than for an open: live traffic leaves this queue nearly empty by itself.
+     * The number itself is five batches deep, and it was 100,000 LINES until the memory pass asked what those slots
+     * cost: the `LogReaderItem` is 24 bytes but the STRING it carries is what pays - at ~95 characters per EverQuest line
+     * (a 973 MB capture over 10.2 M lines) that is ~200 bytes of UTF-16 per line, so 100,000 of them held ~22 MB of a bulk
+     * load's peak working set against a parser that was the bottleneck either way. Lowering it changes no throughput (a
+     * queue at its bound means the PARSE lane is the limit; a queue near empty means the reader is, and neither cares how
+     * high the ceiling is) while taking ~17 MB out of the load. It also matters for steady raid tailing far less than for
+     * an open: live traffic leaves this queue nearly empty by itself.
+     *
+     * It is stated in BATCHES now because that is the unit the queue holds: five of them is the same 25,000 lines
+     * (~5 MB of strings) that were in flight before, so the reader runs exactly as far ahead and parks at exactly the
+     * same point. What changed is only the price of getting there - one handshake per 5,000 lines instead of 5,000 of
+     * them — the handoff was measured at roughly half the CPU of the ingest loop (see the section named above).
      */
-    private const int QueueBound = 25_000;
-    private readonly BlockingCollection<LogReaderItem> _lines = new(new ConcurrentQueue<LogReaderItem>(), QueueBound);
+    private const int QueueBoundBatches = 5;
+    private readonly BlockingCollection<LogReaderItem[]> _lines = new(new ConcurrentQueue<LogReaderItem[]>(), QueueBoundBatches);
     private readonly List<LogReaderItem> _batch = new(BatchSize);
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static ReadOnlySpan<char> LoadingMsg => "LOADING, PLEASE WAIT...";
@@ -439,10 +444,18 @@ namespace EQLogParser
       if (_batch.Count == 0) return;
 
       var flushed = _batch.Count;
-      foreach (var item in _batch)
-      {
-        _lines.Add(item, _cts.Token);  // Blocks if queue full, but consumer keeps processing
-      }
+
+      /*
+       * ONE handoff for the whole batch. A COPY crosses, not the accumulator: the consumer can still be reading what
+       * it took when this list is cleared and refilled with the next few thousand lines, so whatever is in the queue
+       * belongs to whoever receives it.
+       *
+       * Renting the buffer from ArrayPool (and having the consumer return it once drained) measured lower still -
+       * 0.4 MB against 108 MB of transient arrays per capture - and was not taken: every path that abandons a batch
+       * (dispose, cancel mid-block, a consumer fault) would then owe that return exactly once, and getting it wrong
+       * is a double-return or a leaked buffer rather than a garbage number the GC reclaims for free.
+       */
+      _lines.Add(_batch.ToArray(), _cts.Token);  // Blocks if queue full, but consumer keeps processing
       _batch.Clear();
 
       // Counted here rather than at the batch site because this is the one place that knows how many lines crossed.

@@ -193,7 +193,9 @@ internal static class PipelineHarness
         var capture = new CombatCapture(facts, heals);
         capture.Start();
 
-        using var items = new BlockingCollection<LogReaderItem>(new ConcurrentQueue<LogReaderItem>(), 100_000);
+        // Batches, exactly like LogReader: the harness must exercise the seam the app uses, not a
+        // per-item fiction. Same 100,000 lines of in-flight ceiling, stated in batches of 5,000.
+        using var items = new BlockingCollection<LogReaderItem[]>(new ConcurrentQueue<LogReaderItem[]>(), 20);
         // capture came from `new` three lines up: an `is not null` check here would not just be
         // dead, it poisons the flow analysis and makes every later `capture.` a CS8602.
         using var processor = new LogProcessor(path, new CaptureSinks(capture), new NoOpSinks());
@@ -214,12 +216,12 @@ internal static class PipelineHarness
             batch.Add(new LogReaderItem(line, ts, false));
             if (batch.Count >= batchSize)
             {
-                foreach (var item in batch) items.Add(item);
+                items.Add(batch.ToArray());
                 batch.Clear();
             }
         }
 
-        foreach (var item in batch) items.Add(item);
+        if (batch.Count > 0) items.Add(batch.ToArray());
         items.CompleteAdding();
 
         // Wait for a full drain before Dispose (which would otherwise race the consumer and drop

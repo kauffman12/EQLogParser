@@ -26,21 +26,28 @@ namespace EQLogParser.Wpf.Test
     /* Enough lines to cross several batches (LogReader flushes every 5,000) and the whole file, so a loop that dies after
        one lucky handoff cannot pass. */
     private const int Lines = 20_000;
-    private const int BatchSeen = 5_000;
+    private const int BatchSize = 5_000;
 
     /// <summary>Consumes whatever the reader hands over and counts it - no parsing, no dispatcher, no state to clean.</summary>
     private sealed class CountingProcessor : ILogProcessor
     {
       internal long Seen;
+
+      /// <summary>Handoffs, so the test can say the file crossed IN BATCHES and not one line at a time.</summary>
+      internal long Handoffs;
       private Task? _pump;
 
-      public void LinkTo(BlockingCollection<LogReaderItem> collection)
+      public void LinkTo(BlockingCollection<LogReaderItem[]> collection)
       {
         _pump = Task.Run(() =>
         {
           try
           {
-            foreach (var _ in collection.GetConsumingEnumerable()) Interlocked.Increment(ref Seen);
+            foreach (var batch in collection.GetConsumingEnumerable())
+            {
+              Interlocked.Add(ref Seen, batch.Length);
+              Interlocked.Increment(ref Handoffs);
+            }
           }
           catch (InvalidOperationException)
           {
@@ -111,6 +118,14 @@ namespace EQLogParser.Wpf.Test
           + "was posted back to the thread that started it");
         Assert.AreEqual(0L, Interlocked.Read(ref context.Posted),
           "the read loop posted work to its starting synchronization context; every await must be ConfigureAwait(false)");
+
+        // The whole file crossed, and it crossed in BATCHES: 20,000 lines at 5,000 a batch is four handoffs plus
+        // room for the boundary. A reader that added per line lands here with ~20,000 (docs/DesignNotes.md ->
+        // "The reader hands the parser one line at a time…").
+        var handoffs = Interlocked.Read(ref processor.Handoffs);
+        Assert.IsTrue(handoffs <= Lines / BatchSize + 1,
+          $"the reader handed over {handoffs} items for {Lines} lines; a bulk read should cross in batches of "
+          + $"{BatchSize}, not one line at a time");
 
         reader.Dispose();
       }

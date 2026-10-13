@@ -125,7 +125,10 @@ operator checks with `Debug=True`, on a capture of several hundred MB or more:
 - Totals match a re-open of the same file (same process or not): damage, healing, and fight count identical. Same-file
   determinism is the property to defend here; there is no second read path to compare against any more.
 - Live tailing works right after: lines appended while the load ran appear, and the boards are not a monitor that missed
-  its history.
+  its history. Lines now reach the parser **in batches**, so the thing to watch is latency rather than correctness — a line
+  written while watching must land within about a second, not wait for 5,000 more.
+- The Trigger Tester's non-realtime run still speaks its sample lines one at a time at their own pace (same seam, now
+  carrying batches; a bundle treated as one event would fire every trigger at once).
 - Closing the window or opening another log MID-load leaves no wedge and no second capture alive;
   `grep -c "Error Loading File" eqlogparser.log` says whether an abort was recorded as a failed load.
 - Clear All re-opens the same file at EOF (a monitor re-open, not a re-read) and every board empties and refills.

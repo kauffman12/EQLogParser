@@ -171,7 +171,7 @@ namespace EQLogParser
       await GetActiveTriggersAsync();
     }
 
-    public void LinkTo(BlockingCollection<LogReaderItem> collection)
+    public void LinkTo(BlockingCollection<LogReaderItem[]> collection)
     {
       // delay start until log is ready
       AudioManager.Instance.StartAudio(CurrentCharacterId);
@@ -268,15 +268,25 @@ namespace EQLogParser
         {
           while (!_isDisposed)
           {
-            if (collection.TryTake(out var data, 250))
+            if (collection.TryTake(out var batch, 250))
             {
-              try
+              /*
+               * A batch is transport, never a unit of work: every line inside it runs the trigger pipeline on its own,
+               * in order. The tester paces its lines a second apart and that pacing comes from how many lines arrive
+               * per take, so unfolding the bundle here (rather than treating it as one event) is what keeps the
+               * tester behaving as it did when one line crossed at a time.
+               */
+              foreach (var data in batch)
               {
-                DoProcessAsync(data.Line, data.Ts).GetAwaiter().GetResult();
-              }
-              catch
-              {
-                // ignore
+                if (_isDisposed) break;
+                try
+                {
+                  DoProcessAsync(data.Line, data.Ts).GetAwaiter().GetResult();
+                }
+                catch
+                {
+                  // ignore
+                }
               }
             }
           }
