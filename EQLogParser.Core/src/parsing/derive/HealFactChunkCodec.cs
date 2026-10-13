@@ -11,7 +11,8 @@ namespace EQLogParser;
  *
  *   1. zigzag varint deltas of Seq            (unique per row across both streams, so entropy coding alone could not touch it)
  *   2. zigzag varint deltas of TimeS          (a heal second repeats far more often than a damage second, which is why this stream transposes well)
- *   3. healer id (u16) · healed id (u16) · total (u32) · overTotal (u32) · type (u8) · flags (u8) · modifier mask (u16) · spell/subtype id (u16)
+ *   3. healer id · healed id — zigzag varints beside Seq and TimeS, for the reason written in DamageFactChunkCodec
+ *   4. total (u32) · overTotal (u32) · type (u8) · flags (u8) · modifier mask (u16) · spell/subtype id (u16)
  *
  * `OverTotal` is written as the row stores it, never as `AskedFor`: a heal line without its "(amount)" paren legitimately carries 0 there and
  * that zero is the difference between "asked for exactly this" and "asked for more" in every overheal figure on the healing board.
@@ -22,11 +23,11 @@ namespace EQLogParser;
  */
 internal static class HealFactChunkCodec
 {
-  private const int FixedWidth = (2 * 4) + (4 * 2) + 1 + 1 + (2 * 2);   // healer, healed, total, overTotal, type, flags, mod, sub
+  private const int FixedWidth = (4 * 2) + 1 + 1 + (2 * 2);   // total, overTotal, type, flags, mod, sub — the ids are varints
 
   internal static byte[] Encode(HealFact[] rows, int count)
   {
-    var body = new byte[(count * (10 + 10 + FixedWidth)) + 1];
+    var body = new byte[(count * ((4 * 10) + FixedWidth)) + 1];   // four varint fields worst case, then the fixed planes
     var p = 0;
 
     long prevSeq = 0, prevTime = 0;
@@ -36,12 +37,10 @@ internal static class HealFactChunkCodec
       prevSeq = rows[i].Seq;
       p = WriteVarint(body, p, rows[i].TimeS - prevTime);
       prevTime = rows[i].TimeS;
+      p = WriteVarint(body, p, rows[i].HealerIdx);   // zigzag varints, same reason as DamageFactChunkCodec: a widened id plane cost more than the ids are worth
+      p = WriteVarint(body, p, rows[i].HealedIdx);
     }
 
-    for (var i = 0; i < count; i++) BinaryPrimitives.WriteUInt16LittleEndian(body.AsSpan(p + (i * 2), 2), (ushort)rows[i].HealerIdx);
-    p += count * 2;
-    for (var i = 0; i < count; i++) BinaryPrimitives.WriteUInt16LittleEndian(body.AsSpan(p + (i * 2), 2), (ushort)rows[i].HealedIdx);
-    p += count * 2;
     for (var i = 0; i < count; i++) BinaryPrimitives.WriteUInt32LittleEndian(body.AsSpan(p + (i * 4), 4), rows[i].Total);
     p += count * 4;
     for (var i = 0; i < count; i++) BinaryPrimitives.WriteUInt32LittleEndian(body.AsSpan(p + (i * 4), 4), rows[i].OverTotal);
@@ -70,6 +69,8 @@ internal static class HealFactChunkCodec
 
     var seqs = new long[count];
     var times = new long[count];
+    var healerIds = new int[count];   // read with the varints, applied when the rows are assembled below
+    var healedIds = new int[count];
     var p = 0;
     long seq = 0, time = 0;
 
@@ -80,11 +81,11 @@ internal static class HealFactChunkCodec
       time += ReadVarint(body, ref p);
       seqs[i] = seq;
       times[i] = time;
+      healerIds[i] = (int)ReadVarint(body, ref p);
+      healedIds[i] = (int)ReadVarint(body, ref p);
     }
 
-    var healer = p;
-    var healed = healer + (count * 2);
-    var total = healed + (count * 2);
+    var total = p;
     var overTotal = total + (count * 4);
     var type = overTotal + (count * 4);
     var flags = type + count;
@@ -94,8 +95,8 @@ internal static class HealFactChunkCodec
     var rows = new HealFact[count];
     for (var i = 0; i < count; i++)
       rows[i] = new HealFact((int)seqs[i], times[i],
-        (short)BinaryPrimitives.ReadUInt16LittleEndian(body.AsSpan(healer + (i * 2), 2)),
-        (short)BinaryPrimitives.ReadUInt16LittleEndian(body.AsSpan(healed + (i * 2), 2)),
+        healerIds[i],
+        healedIds[i],
         BinaryPrimitives.ReadUInt32LittleEndian(body.AsSpan(total + (i * 4), 4)),
         BinaryPrimitives.ReadUInt32LittleEndian(body.AsSpan(overTotal + (i * 4), 4)),
         body[type + i],

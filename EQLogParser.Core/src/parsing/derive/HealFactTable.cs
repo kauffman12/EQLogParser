@@ -87,8 +87,9 @@ namespace EQLogParser
     // happen between two timestamps keep the order the consumer saw them in.
     public readonly int Seq;
 
-    public readonly short HealerIdx;
-    public readonly short HealedIdx;
+    // int ids: the shared name pool is wider than 16 bits — see DamageFactTable.InternName for the decision and its price.
+    public readonly int HealerIdx;
+    public readonly int HealedIdx;
 
     // Spell name index ("Heroic Renewal Rk. II"), which is what HealRecord.SubType holds and what
     // StatsUtil.CreateRecordKey builds its activity windows from.
@@ -148,7 +149,7 @@ namespace EQLogParser
       UnknownTypeLabels = 0;
     }
 
-    public HealFact(int seq, long timeS, short healerIdx, short healedIdx, uint total, uint overTotal,
+    public HealFact(int seq, long timeS, int healerIdx, int healedIdx, uint total, uint overTotal,
       byte typeId, byte flags, short modMask, ushort subIdx)
     {
       Seq = seq;
@@ -220,8 +221,8 @@ namespace EQLogParser
 
     /// <summary>First row whose time is at or after `time`, or the count when none is. Meaningful only while AscendingTime holds.</summary>
     int FirstIndexAtOrAfter(double time);
-    short InternName(string name);
-    string NameOf(short idx);
+    int InternName(string name);
+    string NameOf(int idx);
     ushort InternSpell(string spell);
     string SpellOf(ushort idx);
   }
@@ -243,11 +244,11 @@ namespace EQLogParser
     private readonly DamageFactTable _names;
 
     /*
-     * Chunked row storage, mirroring DamageFactTable: a chunk (32,768 rows x 24 bytes ~= 768 KiB) is bought when its first row arrives, so
+     * Chunked row storage, mirroring DamageFactTable: a chunk (32,768 rows x 28 bytes ~= 896 KiB) is bought when its first row arrives, so
      * nothing is ever copied, old and new never coexist, and no doubling of empty slots survives a load. Ordinals stay the currency that
      * HealSummarySource's window walk and the sequence law speak: chunk = ordinal >> shift, slot = ordinal & mask.
      */
-    internal const int HealChunkShift = 15;                       // 32,768 rows x 24 B ~= 768 KiB per chunk
+    internal const int HealChunkShift = 15;                       // 32,768 rows x 28 B ~= 896 KiB per chunk (row width: see DamageFactTable.InternName)
     internal const int HealChunkSize = 1 << HealChunkShift;
     internal const int HealChunkMask = HealChunkSize - 1;
 
@@ -329,8 +330,8 @@ namespace EQLogParser
     public long CompactToCount() => 0;
 
     // Names live in the damage table: same string, same index, in both streams.
-    public short InternName(string name) => _names.InternName(name);
-    public string NameOf(short idx) => _names.NameOf(idx);
+    public int InternName(string name) => _names.InternName(name);
+    public string NameOf(int idx) => _names.NameOf(idx);
 
     public ushort InternSpell(string spell)
     {

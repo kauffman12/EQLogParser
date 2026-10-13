@@ -141,8 +141,9 @@ namespace EQLogParser
 
     /// <summary>dotnet-epoch seconds, exactly as every consumer has always read them. See FactTime for the storage.</summary>
     public long TimeS => FactTime.ToEpochSeconds(_timeS);
-    public readonly short AtkIdx;
-    public readonly short DefIdx;
+    // int ids: see InternName. These two are the whole reason a damage row is 28 bytes and not 24.
+    public readonly int AtkIdx;
+    public readonly int DefIdx;
     public readonly uint Total;
     public readonly byte TypeId;
     public readonly byte Flags;
@@ -156,7 +157,7 @@ namespace EQLogParser
     public readonly short ModMask;
     public readonly ushort SubIdx;   // index into the subtype table (spell/modifier name); 65535 = none
 
-    public DamageFact(int seq, long timeS, short atkIdx, short defIdx, uint total, byte typeId, byte flags, short modMask, ushort subIdx)
+    public DamageFact(int seq, long timeS, int atkIdx, int defIdx, uint total, byte typeId, byte flags, short modMask, ushort subIdx)
     {
       Seq = seq;
       _timeS = FactTime.FromEpochSeconds(timeS);
@@ -260,10 +261,10 @@ namespace EQLogParser
   {
     public readonly int Seq;
     public readonly long TimeS;   // dotnet-epoch seconds — see DamageFact.TimeS
-    public readonly short KilledIdx;
-    public readonly short KillerIdx;
+    public readonly int KilledIdx;
+    public readonly int KillerIdx;   // -1 when the line named no killer
 
-    public DeathFact(int seq, long timeS, short killedIdx, short killerIdx)
+    public DeathFact(int seq, long timeS, int killedIdx, int killerIdx)
     {
       Seq = seq;
       TimeS = timeS;
@@ -289,10 +290,10 @@ namespace EQLogParser
     // Best-effort: the last BeginTime observed before this event fired (registry events carry no
     // timestamp). Replay order is by Seq, never by this field.
     public readonly long TimeS;
-    public readonly short NameIdx;
+    public readonly int NameIdx;
     public readonly byte Kind;
 
-    public IdentityEvent(int seq, long timeS, short nameIdx, byte kind)
+    public IdentityEvent(int seq, long timeS, int nameIdx, byte kind)
     {
       Seq = seq;
       TimeS = timeS;
@@ -329,11 +330,11 @@ namespace EQLogParser
 
     public readonly int Seq;
     public readonly long TimeS;
-    public readonly short NameIdx;
+    public readonly int NameIdx;
     public readonly byte Kind;
-    public readonly short AuxIdx;
+    public readonly int AuxIdx;   // -1 when the evidence carries no secondary string
 
-    public EvidenceFact(int seq, long timeS, short nameIdx, byte kind, short auxIdx = -1)
+    public EvidenceFact(int seq, long timeS, int nameIdx, byte kind, int auxIdx = -1)
     {
       Seq = seq;
       TimeS = timeS;
@@ -356,11 +357,11 @@ namespace EQLogParser
 
     public readonly int Seq;
     public readonly long TimeS;       // dotnet-epoch seconds — see DeathFact.TimeS
-    public readonly short NpcIdx;
-    public readonly short AttackerIdx; // the taunter; -1 when the line carried no name for them
+    public readonly int NpcIdx;
+    public readonly int AttackerIdx; // the taunter; -1 when the line carried no name for them
     public readonly byte Flags;        // TauntSuccess, TauntImproved
 
-    public TauntFact(int seq, long timeS, short npcIdx, short attackerIdx = -1, byte flags = 0)
+    public TauntFact(int seq, long timeS, int npcIdx, int attackerIdx = -1, byte flags = 0)
     {
       Seq = seq;
       TimeS = timeS;
@@ -379,11 +380,11 @@ namespace EQLogParser
     int IdentityEventCount { get; }
     int TauntCount { get; }
     IReadOnlyList<string> InternedNames { get; }
-    short InternName(string name);
+    int InternName(string name);
 
     /// <summary>Lookup without interning: the name's index, or -1 when this capture never named it.</summary>
-    short NameIndexOf(string name);
-    string NameOf(short idx);
+    int NameIndexOf(string name);
+    string NameOf(int idx);
     ushort InternSubtype(string subtype);
     string SubtypeOf(ushort idx);
     void AddFact(DamageFact fact);
@@ -391,8 +392,8 @@ namespace EQLogParser
     void AddIdentity(IdentityEvent identity);
     void AddTaunt(TauntFact taunt);
     void AddEvidence(EvidenceFact evidence);
-    short InternAux(string aux);
-    string AuxOf(short idx);
+    int InternAux(string aux);
+    string AuxOf(int idx);
     DamageFactReader Facts { get; }
     ReadOnlySpan<DeathFact> Deaths { get; }
     ReadOnlySpan<IdentityEvent> IdentityEvents { get; }
@@ -447,7 +448,7 @@ namespace EQLogParser
     /*
      * Row storage: fixed-size power-of-two CHUNKS, addressed by shift and mask.
      *
-     * Why this shape and not a growing array: the rows are the biggest thing the application holds (24 bytes apiece, millions of them), and
+     * Why this shape and not a growing array: the rows are the biggest thing the application holds (28 bytes apiece, millions of them), and
      * a single resizable buffer paid for that three ways. Every doubling copied the whole capture (tens of millions of bytes on the parse
      * thread, which is already the bottleneck), it briefly held the old and new buffers at once (a >100 MB transient at raid scale), and it
      * left up to 100 % of the rows' worth of reserved-but-empty slots behind until a compaction pass reclaimed them. Chunks end all three:
@@ -481,12 +482,12 @@ namespace EQLogParser
 
     private readonly List<string> _names = [];
     // Ignore-case: see InternName. Same comparer rule as EntityTimeline's identity/affiliation keys.
-    private readonly Dictionary<string, short> _nameMap = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, int> _nameMap = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<string> _subtypes = [];
     private readonly Dictionary<string, ushort> _subtypeMap = new(StringComparer.Ordinal);
     // Secondary strings for evidence facts (spell/class/channel names) - small, shared namespace.
     private readonly List<string> _auxs = [];
-    private readonly Dictionary<string, short> _auxMap = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, int> _auxMap = new(StringComparer.OrdinalIgnoreCase);
 
     internal DamageFactTable(int initialCapacity = 65_536)
     {
@@ -619,24 +620,41 @@ namespace EQLogParser
      * Subtype and label tables deliberately stay ordinal: those strings are vocabulary words the user's
      * settings and `Labels` constants compare against.
      */
-    public short InternName(string name)
+    /*
+     * THE ID IS AN `int`, AND THAT IS A DECISION WITH A PRICE (2026-10-13). It used to be a short, which capped a capture at
+     * short.MaxValue = 32,767 distinct names — with a message claiming 65,535, so anyone reading the error was lied to about
+     * twice. A real session can exceed it: the pool holds every unique NPC and player PLUS every spell name that ever appears
+     * as an attacker (`DamageFact.AttackerIsSpell`), and unique names across a long capture run past 100,000.
+     *
+     * What happened at the old ceiling is the part worth remembering: this throw was raised on the INGEST path, where the
+     * per-line catch swallows it. So the 32,768th name did not fail loudly — its line was dropped and the capture quietly went
+     * blind from there on, which is a data-loss bug wearing a capacity-error costume.
+     *
+     * The price is row width: `DamageFact` goes 24 → 28 bytes (+4 B per fact, the cold-chunk id planes go 2 B → 4 B each), and
+     * that was weighed — `ushort` would have been free and gives only 65,534 slots, which is not enough to stop the break. A
+     * silent clamp or a hash alias into a full table is worse than four bytes: it invents or loses entities.
+     *
+     * So there is deliberately NO capacity check here any more. An int id space cannot be reached — the pool itself would need
+     * gigabytes of strings and dictionary nodes first, and `List<T>` stops on its own — while every check that used to live here
+     * was a ceiling a real capture could hit.
+     */
+    public int InternName(string name)
     {
       if (_nameMap.TryGetValue(name, out var idx)) return idx;
-      if (_names.Count >= short.MaxValue) throw new InvalidOperationException("capture: name table exceeded 65535 entries");
       _names.Add(TextUtils.CapitalizeFirst(name));
-      idx = (short)(_names.Count - 1);
+      idx = _names.Count - 1;
       _nameMap[name] = idx;
       return idx;
     }
 
-    public string NameOf(short idx) => _names[idx];
+    public string NameOf(int idx) => _names[idx];
 
     /*
      * Look a name up WITHOUT adding it (same OrdinalIgnoreCase key as InternName). Rules that want to know whether a name took
      * part in the capture must not intern it: interning from a read path would grow the very pool they are asking about, and the
      * id's string is what rows display.
      */
-    public short NameIndexOf(string name) => _nameMap.TryGetValue(name, out var idx) ? idx : (short)-1;
+    public int NameIndexOf(string name) => _nameMap.TryGetValue(name, out var idx) ? idx : -1;
 
     /*
      * The id's type is part of the contract, and it is the SAME one the fact carries: subIdx is a ushort with NoSubtype
@@ -700,25 +718,21 @@ namespace EQLogParser
     }
 
     /*
-     * short on purpose: both EvidenceFact fields that can carry this id are shorts, and a read must not silently wrap. The
-     * capacity check is what makes that true - without it the 32,769th distinct aux would intern at -32768, AuxOf would hand
-     * back null for a name the capture actually used, and a later alias would hand back somebody else's.
+     * int, same decision as InternName (see the comment there — 16-bit ids threw on the ingest path at 32,767, where a per-line
+     * catch swallowed it and the capture silently lost lines). -1 means "this evidence carries no secondary string", so the
+     * table can never intern the sentinel; there is no ceiling check because an int id space is not reachable.
      */
-    public short InternAux(string aux)
+    public int InternAux(string aux)
     {
       if (string.IsNullOrEmpty(aux)) return -1;
       if (_auxMap.TryGetValue(aux, out var idx)) return idx;
-      // Stops rather than wrapping to a negative id (which AuxOf would read as "no aux" or as another name's), and names the
-      // string that got here - see InternSubtype for why the message has to carry the offender.
-      if (_auxs.Count >= short.MaxValue)
-        throw new InvalidOperationException($"capture: aux table exceeded its {short.MaxValue - 1} entries at '{aux}'");
       _auxs.Add(aux);
-      idx = (short)(_auxs.Count - 1);
+      idx = _auxs.Count - 1;
       _auxMap[aux] = idx;
       return idx;
     }
 
-    public string AuxOf(short idx) => idx < 0 ? null : _auxs[idx];
+    public string AuxOf(int idx) => idx < 0 ? null : _auxs[idx];
 
     /*
      * Bytes of row array that hold nothing — THE QUEUE SLACK ONLY.

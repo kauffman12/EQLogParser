@@ -68,6 +68,12 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
   tilde emote (`~ Kizant wonders.`), `Targeted (NPC)`/`Targeted (Player)`, guildmate achievements, raid/group join-leave,
   raid leader, drink/eat — so the four real parsers never re-walk a line that already paid for itself. Each branch's slice
   needs its **own** length check (prefix 14–17 chars, name at 15/19): a bare prefix is claimed, not sliced.
+- **A name id is an `int`** (`InternName` and every `*Idx` field on every fact kind). It used to be a short, which capped a capture
+  at 32,767 distinct names and threw **on the ingest path**, where the per-line catch swallows it — a long capture silently stopped
+  recording rows with no crash and no warning. Fact rows are therefore **28 B**, not 24; that trade was argued once, do not re-litigate
+  it cheaply (`docs/DesignNotes.md` → "A fact row is 24 bytes…" carries the numbers). Cold id columns are **zigzag varints** so widening
+  costs 1-3 bytes a row in a blob rather than a fixed 4 — the cold-store halving guard is what caught the fixed-plane version, so keep it
+  asserted. `ushort` (65,534 slots) was considered and rejected as not enough; subtype/spell-sub ids stay `ushort` deliberately.
 - **A record carries only what its own lines can write.** `OverTotal` lives on `HealRecord`, not `HitRecord`; nothing in the
   codebase takes a `HitRecord` (`StatsUtil.UpdateDamageStats(DamageRecord)` / `UpdateHealStats(HealRecord)`,
   `LineModifiersParser.UpdateStats(short mask, uint total, …)`). `DamageRecord` deliberately has no defender owner, but

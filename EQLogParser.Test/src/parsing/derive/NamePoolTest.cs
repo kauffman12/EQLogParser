@@ -148,19 +148,40 @@ public class NamePoolTest
     }
 
     [TestMethod]
-    public void AuxIdsRefuseToWrapRatherThanAlias()
+    public void NameAndAuxIdsKeepWorkingPastEveryOldSixteenBitCeiling()
     {
-        // The aux table holds spell tokens and channel words, small in practice - but a read that SILENTLY wraps at the
-        // 32,768th entry hands back null for a name the capture used, and a later alias hands back somebody else's. The
-        // id field is a short by construction (both EvidenceFact fields), so the table throws at the same boundary
-        // instead.
+        /*
+         * Both pools used to be 16-bit and THREW at short.MaxValue (32,767 — the message claimed 65,535, so even the error lied),
+         * and it threw on the ingest path where a per-line catch swallowed it: past that name the capture silently stopped taking
+         * lines. The ids are int now, so this test inverts the old law — there is no boundary left to refuse at, and what has to be
+         * proven is that entries past every old width are DISTINCT, STABLE and readable. A truncated id would not fail; it would
+         * alias one entity onto another, which is worse than the crash it replaced.
+         */
         var t = new DamageFactTable();
+        const int Past = 70_000;   // past short.MaxValue AND past ushort.MaxValue: both old ceilings cleared in one run
 
-        for (var i = 0; i < short.MaxValue - 1; i++) Assert.AreEqual((short)i, t.InternAux("x" + i));
-        Assert.AreEqual(short.MaxValue - 1, t.InternAux("x" + (short.MaxValue - 1)));
-        Assert.Throws<InvalidOperationException>(() => t.InternAux("x" + short.MaxValue));
+        var firstMismatch = -1;
+        for (var i = 0; i < Past; i++)
+        {
+            if (t.InternName("n" + i) != i || t.InternAux("x" + i) != i) { firstMismatch = i; break; }
+        }
 
-        // A refused entry must not consume its slot: the table still answers everything it took.
-        Assert.AreEqual(short.MaxValue - 1, t.InternAux("x" + (short.MaxValue - 1)));
+        Assert.AreEqual(-1, firstMismatch, $"an id pool stopped matching its own count at entry {firstMismatch}");
+
+        // A repeat of an entry that arrived past the old ceiling returns ITS id — no second copy, no truncated one.
+        Assert.AreEqual(65_535, t.InternName("n65535"));
+        Assert.AreEqual(Past - 1, t.InternName("n" + (Past - 1)));
+
+        // No aliasing across the old boundary: a wide id reads back its OWN string. A u16 would have sent #69,999 to whoever owned #4,464.
+        Assert.AreEqual("N65535", t.NameOf(65_535));              // the pool stores CapitalizeFirst — display form, not fixture spelling
+        Assert.AreEqual("N" + (Past - 1), t.NameOf(Past - 1));
+        Assert.AreEqual("x" + (Past - 1), t.AuxOf(Past - 1));
+        Assert.AreEqual(65_535, t.NameIndexOf("n65535"), "a read path must find a wide name without interning a second copy of it");
+        Assert.AreEqual(-1, t.NameIndexOf("never seen at all"), "an absent name still answers -1 rather than an id");
+
+        // And a fact can ADDRESS those names, which is the whole point — this row was impossible to express before.
+        t.AddFact(new DamageFact(1, 1_700_000_000L, Past - 1, 65_535, 500, LabelTypes.Dd, 0, 0, DamageFactTable.NoSubtype));
+        Assert.AreEqual(Past - 1, t.Facts[0].AtkIdx);
+        Assert.AreEqual(65_535, t.Facts[0].DefIdx);
     }
 }

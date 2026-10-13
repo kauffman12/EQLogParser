@@ -261,7 +261,7 @@ public class MaterializationContinuationTest
         var sharedBlock = first.DamageBlocks[0];
 
         // Same facts; the row's state changes (a death lands) and its group divider moves.
-        log.Facts.AddDeath(new DeathFact(99, (long)(T0 + 30), log.Facts.InternName("Echohead"), (short)-1));
+        log.Facts.AddDeath(new DeathFact(99, (long)(T0 + 30), log.Facts.InternName("Echohead"), -1));
         rows = cache.Project(log.Facts, timeline);
         Sectionizer.StampGroupIds(rows);
 

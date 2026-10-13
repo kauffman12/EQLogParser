@@ -25,7 +25,7 @@ namespace EQLogParser
     {
       var table = new DamageFactTable(16);
       for (var i = 1; i <= Rows; i++)
-        table.AddFact(new DamageFact(i, 1_000 + i, (short)(i % 5), (short)((i * 3) % 7), (uint)(i * 31),
+        table.AddFact(new DamageFact(i, 1_000 + i, i % 5, (i * 3) % 7, (uint)(i * 31),
           LabelTypes.Melee, i % 2 == 0 ? DamageFact.FlagOwnerInLine : (byte)0, 0, DamageFactTable.NoSubtype));
       return table;
     }
@@ -35,7 +35,7 @@ namespace EQLogParser
     {
       var table = new HealFactTable(names);
       for (var i = 1; i <= Rows; i++)
-        table.AddHeal(new HealFact(i, 2_000 + i, (short)(i % 4), (short)((i * 5) % 9), (uint)(i * 7), (uint)i,
+        table.AddHeal(new HealFact(i, 2_000 + i, i % 4, (i * 5) % 9, (uint)(i * 7), (uint)i,
           LabelTypes.Hot, 0, 0, HealFact.NoSpell));
       return table;
     }

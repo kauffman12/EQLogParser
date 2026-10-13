@@ -24,6 +24,14 @@ namespace EQLogParser
   {
     private const int Chunk = DamageFactTable.FactChunkSize;
 
+    /*
+     * A NAME ID PAST 16 BITS. 1,048,583 sits well above the ~100k distinct names a long capture really reaches and far above
+     * what any u16 could hold, and it rides in the awkward-shape fixture of BOTH codecs on purpose: if an id plane were ever
+     * narrowed back to two bytes the value would truncate silently and the row would come home naming somebody else — the exact
+     * failure the widening to int was done to prevent. The round-trip equality on this id is the regression test for that.
+     */
+    private const int WideNameId = 1_048_583;
+
     private static DamageFact Row(int i)
     {
       // A deterministic mix that behaves like a real capture: seconds mostly holding still, ids clustering on a few names.
@@ -31,8 +39,8 @@ namespace EQLogParser
       return new DamageFact(
         seq: i,
         timeS: FixtureTime.BaseL + (i / 7),
-        atkIdx: (short)(state % 40),
-        defIdx: (short)((state >> 5) % 90),
+        atkIdx: state % 40,
+        defIdx: (state >> 5) % 90,
         // Amounts like a capture's, not like a random stream: most hits are four digits with a long tail, and the real
         // measurement behind this storage got its ratio from exactly that (docs/DesignNotes.md → "Rows go cold, and what a chunk costs to remember").
         total: (uint)((state >> 6) % 4096),
@@ -74,7 +82,7 @@ namespace EQLogParser
       for (var i = 0; i < Chunk; i++) rows[i] = Row(i);
 
       // The deliberately awkward ones, spread through the chunk so they are not all in the first varint run.
-      rows[0] = new DamageFact(0, FixtureTime.BaseL, 0, (short)(short.MaxValue - 1), uint.MaxValue,
+      rows[0] = new DamageFact(0, FixtureTime.BaseL, 0, WideNameId, uint.MaxValue,
         LabelTypes.Dd, DamageFact.FlagAttackerIsSpell | DamageFact.FlagOwnerInLine, (short)-1, DamageFactTable.NoSubtype);
       rows[7] = new DamageFact(9, rows[0].TimeS - 4, -1, 1, 0, LabelTypes.Melee, 0, 0, 0);      // the clock went backwards
       rows[Chunk - 1] = new DamageFact(int.MaxValue - 2, FixtureTime.BaseL + 900_000_000, 1, 2, 1, LabelTypes.Bane, 2, 4, 3);
@@ -173,7 +181,7 @@ namespace EQLogParser
           typeId: LabelTypes.Heal, flags: 0, modMask: 0, subIdx: spell);
 
       // The awkward shapes, spread out so they are not one varint run.
-      rows[0] = new HealFact(0, FixtureTime.BaseL, 0, (short)(short.MaxValue - 1), uint.MaxValue, 0u,
+      rows[0] = new HealFact(0, FixtureTime.BaseL, 0, WideNameId, uint.MaxValue, 0u,
         LabelTypes.Hot, HealFact.FlagOwnerInLine, (short)-1, HealFact.NoSpell);                     // no spell, no paren, no text mask
       rows[7] = new HealFact(9, rows[0].TimeS - 3, healer, healed, 5, 9, LabelTypes.Heal, 0, 0, spell);   // the clock went backwards
       rows[HealChunk - 1] = new HealFact(int.MaxValue - 2, FixtureTime.BaseL + 900_000_000, 1, 2, 1, 2, LabelTypes.Hot, 1, 3, 0);
@@ -259,7 +267,7 @@ namespace EQLogParser
     {
       var heals = HealsFilled(HealChunk * 4, out var expected);   // past the table's own floor, so anything may go cold
 
-      var before = (long)expected.Length * 24;                  // what the same rows cost as rows
+      var before = (long)expected.Length * System.Runtime.InteropServices.Marshal.SizeOf<HealFact>();   // what the same rows cost AS rows: measured from the struct, not a remembered number
       Assert.IsTrue(heals.ColdifyNow() > 0);
       Assert.IsTrue(heals.ColdBlobBytes > 0, "the blobs are counted, not just the live chunks");
       Assert.IsTrue(heals.EstimatedBytes < before / 2,

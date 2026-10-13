@@ -61,14 +61,14 @@ public class HealFactCaptureTest
     [TestMethod]
     public void AFactIsItsMeasuredSizeNotWishes()
     {
-        Assert.AreEqual(24, Unsafe.SizeOf<DamageFact>(),
-          "damage facts are the most numerous thing the engine holds: 24 since the clock stopped carrying year 1 (FactTime)");
-        // 24 bytes: the clock rebased to four (FactTime) and, once nothing wider than four was left, the label folded
-        // into the flags byte and the modifier mask into its own one (measured heal traffic needs neither more — see
-        // HealFact's _modMask). History of these same ten values: 40 as shipped, 32 ordered wide-to-narrow, 28 rebased,
-        // 24 packed. A heal row is now the same size as a damage row.
-        Assert.AreEqual(24, Unsafe.SizeOf<HealFact>(),
-          "a heal row is 24 bytes — packed label bit, one-byte mask, four-byte clock; more means a pad came back");
+        Assert.AreEqual(28, Unsafe.SizeOf<DamageFact>(),
+          "damage facts are the most numerous thing the engine holds: 28 since name ids outgrew 16 bits (DamageFactTable.InternName)");
+        // History of these same fields, all measured: 40 as shipped, 32 ordered wide-to-narrow, 28 with the clock rebased
+        // (FactTime), 24 packed — then BACK to 28 on 2026-10-13 when the name pool proved it needs more than 65,534 entries.
+        // The cold encoding pays most of it back: the id columns are zigzag varints, so a widened id costs 1-3 bytes in a blob
+        // instead of a fixed 4 (DamageFactChunkCodec). A heal row is still the same size as a damage row.
+        Assert.AreEqual(28, Unsafe.SizeOf<HealFact>(),
+          "a heal row is 28 bytes — packed label bit, one-byte mask, four-byte clock, 32-bit name ids; more means a pad came back");
 
         /*
          * The heal table's estimate is its own buffer at 32 B a fact. The damage table's EstimatedBytes covers

@@ -9126,6 +9126,42 @@ silently and corrupted every timestamp. True of the raw value; pointless as a st
 On the capture the operator loaded (~7.5 M damage + ~4.1 M heals) that is **~93 MB less retained** out of ~371 MB of row
 slots — a quarter of the biggest thing the process keeps, from two width changes and no semantic change anywhere.
 
+**Back up to 28 B: the name pool outgrew 16 bits (2026-10-13).** The two id columns went `short` → `int`, so both rows are
+28 bytes again. The reason is not a refactor but a live data-loss bug: `InternName` threw at `short.MaxValue` = **32,767**
+distinct names — while its message claimed 65,535, so even the error lied — and it threw on the **ingest** path, where the
+per-line catch swallows exceptions. Past the 32,768th name a capture therefore stopped taking lines *silently*: no crash, no
+warning the operator would connect to the missing rows, just a board that quietly undercounts for the rest of the session. A
+capture legitimately passes 32,767: the pool holds every unique NPC and player **plus every spell name that ever appears as an
+attacker** (`DamageFact.AttackerIsSpell`), and unique names across a long capture run past 100,000.
+
+| choice | slots | row width | verdict |
+|---|---|---|---|
+| `short` (was) | 32,767 — with a message claiming 65,535 | 24 B | broke in the field, and broke quietly |
+| `ushort` | 65,534 (0xFFFF as the "no name" sentinel; the old u16 chunk planes would have stayed bit-compatible) | 24 B, free | **rejected: still not enough**, on the operator's own reading of their captures |
+| **`int` (shipped)** | effectively unbounded — the pool runs out of memory before the id does, so `InternName` now has NO capacity check at all and no ceiling to hit | 28 B (+4 B a row) | correctness first; the cost is paid back where it can be (below) |
+
+Where the four bytes land, and what was done about them: **hot rows** pay +4 B each (~+17 % on row slots until a chunk goes
+cold). The **cold encoding was rewritten to absorb it** rather than passing the bill along — an earlier cut wrote the ids as
+fixed i32 planes, which pushed a chunk's pre-Deflate row from 26 to 30 bytes and tripped the standing cold-store guard ("cold
+rows must at least halve against their own row bytes", `ColdChunkTest`); the id columns are **zigzag varints** now (1–3 bytes for
+any id a real capture reaches, and the `-1` "no name" sentinel costs one byte instead of four), so the guard passes with room
+again. A widened goalpost was the alternative and it was refused — that test is what told us the change had a cost.
+
+Two smaller findings from doing this:
+- `FightProjection.FactWatermark` packed its digest as `Seq << 40 ^ (uint)DefIdx << 8 ^ TypeId`, which is only bit-safe while ids
+  fit in 16 bits; with 32-bit ids the `<< 8` would drop the high bits, so a fact whose defender changed could watermark identical to
+  one that did not — a projection continuing when it must restart. Re-laid out: Seq in the high half, the whole id in the low half,
+  `TypeId` folded by the multiply chain.
+- The `>100k` worry about **spell ids does not apply to fact storage**: `Spell.Id` is a `string` end to end, and no field narrows it.
+  Spell *names* reach facts through the name pool (widened) and the subtype lane; the subtype/spell-sub tables stay `ushort` with their
+  honest throw-and-name-the-offender check, because a capture measures ~1,100 of those ids (`InternSubtype`'s comment carries that number).
+
+Regression cover: `ColdChunkTest.WideNameId` (a name id of 1,048,583 riding the awkward-shape fixture of **both** codecs, so a plane
+narrowed back to 2 bytes would truncate it and come home naming somebody else) and
+`NamePoolTest.NameAndAuxIdsKeepWorkingPastEveryOldSixteenBitCeiling` (70,000 entries in both pools: ids equal their own count, a repeat
+returns its own id, wide ids read back their own strings, `NameIndexOf` finds them without interning a second copy, and a fact can address
+them). Both fail on the pre-widening code.
+
 **The clock (`FactTime`, Core).** A row stores seconds-since-2000-01-01 and its `TimeS` property hands back the dotnet-epoch
 long it always handed back, so the base is known in exactly two functions and reaches no rule, window, digest or board:
 `FightProjection`'s identity hash, the charm windows, R7/R15's heal gates, every builder and both boards compare and

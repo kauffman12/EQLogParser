@@ -188,16 +188,25 @@ namespace EQLogParser
        * A genuine continuation still passes: the same first N lines of the same log intern the same names in the same
        * order, which is the only reason an ordinal from the previous pass means anything at all.
        */
-      private static long NameHash(DamageFactTable facts, short idx)
+      private static long NameHash(DamageFactTable facts, int idx)
         => idx >= 0 && idx < facts.InternedNames.Count
              ? StringComparer.Ordinal.GetHashCode(facts.NameOf(idx)) : -1;
 
       private static long FactWatermark(DamageFactTable facts, int ordinal)
       {
         ref readonly var f = ref facts.RefAt(ordinal);   // the ordinal door, not the buffer: see DamageFactTable.RefAt
-        var h = (long)f.Seq << 40 ^ (uint)f.DefIdx << 8 ^ f.TypeId;
-        h = h * 31 + f.TimeS;
-        return h * 31 + NameHash(facts, f.AtkIdx) * 7 + NameHash(facts, f.DefIdx);
+
+        /*
+         * Bit layout matters here because this is a CHANGE DETECTOR: the old line packed Seq at bit 40, a 16-bit defender id at
+         * bit 8 and TypeId in the low byte. With ids now 32 bits (see DamageFactTable.InternName), `id << 8` would drop the high
+         * bits of name #70,000 and a fact whose defender changed could watermark identically to one that did not — a projection
+         * that continues when it should restart. So: Seq in the high half, the whole id in the low half (nothing shifted, nothing
+         * discarded), and TypeId folded by the multiply chain instead of sharing the id's bits.
+         */
+        var h = ((long)f.Seq << 32) ^ (uint)f.DefIdx;
+        h = (h * 31) + f.TimeS;
+        h = (h * 7) + f.TypeId;
+        return (h * 31) + (NameHash(facts, f.AtkIdx) * 7) + NameHash(facts, f.DefIdx);
       }
 
       private static long DeathWatermark(DamageFactTable facts, int ordinal)

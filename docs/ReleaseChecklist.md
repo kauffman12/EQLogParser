@@ -129,6 +129,10 @@ operator checks with `Debug=True`, on a capture of several hundred MB or more:
   written while watching must land within about a second, not wait for 5,000 more.
 - The Trigger Tester's non-realtime run still speaks its sample lines one at a time at their own pace (same seam, now
   carrying batches; a bundle treated as one event would fire every trigger at once).
+- **A long capture must not quietly stop counting.** The name pool used to throw at 32,767 distinct names on the ingest path, where a
+  per-line catch swallowed it — the operator just got boards that read low. Ids are `int` now, so after a long live session or a big file:
+  `grep -c "name table exceeded" eqlogparser.log` must be **0**, and a name that arrives late in a huge file (a new raid member, an uncommon
+  NPC, a spell nobody cast yet) has to appear on the boards and the identity list rather than being missing without complaint.
 - With `Debug=True`, startup prints one `gc: collector = workstation, latency = SustainedLowLatency outside a bulk read,
   Batch inside one` — if it says `collector = server`, the csproj flag came back; if latency is not SustainedLowLatency, the
   write in `App.OnStartup` did not run.

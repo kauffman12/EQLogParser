@@ -41,7 +41,7 @@ public class FightProjectionIncrementTest
                                           total: dmg, typeId: label, flags: 0, modMask: 0, subIdx: ushort.MaxValue));
 
         internal void Slain(string name, double t)
-          => Facts.AddDeath(new DeathFact(_seq++, (long)(T0 + t), Facts.InternName(name), (short)-1));
+          => Facts.AddDeath(new DeathFact(_seq++, (long)(T0 + t), Facts.InternName(name), -1));
 
         internal void Charm(string name, double t)
           => Facts.AddEvidence(new EvidenceFact(_seq++, (long)(T0 + t), Facts.InternName(name), EvidenceFact.EvCharmStart));

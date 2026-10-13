@@ -32,7 +32,7 @@ public sealed class HealWindowWalkTest
    */
   private const long Base = 63_800_000_000L;
 
-  private static HealFact Fact(long time, uint total, short healer = 1, short healed = 2) =>
+  private static HealFact Fact(long time, uint total, int healer = 1, int healed = 2) =>
       new(0, time, healer, healed, total, 0, LabelTypes.Heal, 0, LineModifiersParser.None, HealFact.NoSpell);
 
   /* A table with two interned names, because NameOf reads the pool and index 0 is no one. */
