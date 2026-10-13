@@ -427,6 +427,14 @@ namespace EQLogParser
       _readerDone = false;
       _linesRead = 0;
       _bandGuard?.Stop();   // a guard armed for the session that just closed must not settle this one's band
+
+      /*
+       * A right-press memory belongs to the grid it was taken in. A press whose menu never opened (released outside the grid)
+       * leaves its snapshot standing, and the next menu can be opened by the Apps key on a DIFFERENT capture — restoring then
+       * would hand the new grid row objects from the dead one, and row instances are the currency. Left-press invalidates it
+       * within a session; this invalidates it across one.
+       */
+      _rightPressSelection = null;
       _reveal.Arm();
       _sessionPainted = false;
       _capturedFacts = 0;
