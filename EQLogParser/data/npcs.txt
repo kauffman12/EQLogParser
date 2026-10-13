@@ -1,35 +1,53 @@
+A Calli`do devotee
+A Calli`do fan
+A Mella`re devotee
+A Mella`re fan
 A bedeviled scrykin
+A blazing goon
 A bloated foodstuff
 A bomb
+A bramble sentinel
 A chaotic earth pile
 A cold spiritlight
 A constituent
+A corpsecoiling penetrator
 A corrupted egg
 A crazed scrykin
 A cursed deathspeaker
 A cursed swindler
+A fractured psyche
+A frozen goon
 A fungoid charger
 A fungoid fanatic
 A fungoid savage
+A graveburrow horror
 A greedling
+A greedy wolf
 A grudgeling
 A hateful spiter
 A healthy foodstuff
+A hungering maw
 A killer moth
 A knight of loathing
 A lava blob
 A linen songspinner
 A living storm
 A lost shade
+A mad amalgamation
 A mage of loathing
 A malicious husk
 A malicious vessel
 A malignant thief
 A manifestation of Okahn
+A menancing amalgamation
 A payload specialist
 A rageling
+A ravenous wolf
+A restless knight
 A runic worker
 A rusher
+A seagull
+A sickly goon
 A silk moth
 A spite forgatherer
 A spite golem
@@ -45,15 +63,19 @@ A tangled strongbox
 A thief of loathing
 A trapper
 A twisted strongbox
+A walking horror
 A waxwork ambusher
 A waxwork soldier
 A waxwork zealot
 A young spiter
 Adalaide Galerider
 Alleza
+An Era`mi devotee
+An Era`mi fan
 An ashenback blob
 An echo
 An inferior spite
+An intimidating goon
 An unyielding edifice
 Anguillifor
 Aqua Castroll
@@ -61,9 +83,11 @@ Arcanist Aunrae V`Len
 Ashenback
 Atathus, the Red Lord
 Ballafore
+Blazing Gateway
 Brood Architect Hazuri
 Bucktooth XXVI
 Bunny
+Calli`do
 Captain Luft
 Captain Riyu
 Chthamalus
@@ -75,24 +99,30 @@ Efiiren Solitai
 Elder Monolith
 Elewisa the Oathbound
 Ephialtes
+Era`mi
 Eye of Mother
 First Raider
 First Scout
 First Soldier
 First Stormer
+Frozen Gateway
 Glarubaran, the Great Storm
 Harla Dar
 Keikolin the Enlightened
 Kellis the Young
 Ma`Maie, the Nest Mother
 Mambatali
+Mella`re
 Mirala
+Moruuk
 Muji
 Norlan Prellmoss
 Queseris Trisleth
 Riptide
 Shar`Drahn
+Sickly Gateway
 Silverwing
+Sorshkah
 Spitetangle
 Stonetangle Prison
 Tallongast, The Egg
@@ -102,8 +132,14 @@ Teknaz, Bringer of Flames
 Tha`k Rustae, the Butcher
 The Colossus of Skylance
 The Loathing Lord
+Tholuxe Paells
 Twisted egg sacs
 Unigami
+Vazaelle Kaleine The Aberrant
+Vazaelle Kaleine The Devout
+Vazaelle Kaleine The Inevitable
+Vazaelle Kaleine The Mad
+Vazaelle Kaleine The Voidless
 Venesh the Greenblood
 Vengecoil
 Vengeskein

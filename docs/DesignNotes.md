@@ -3967,14 +3967,67 @@ re-measured, and `HealFactCaptureTest` re-asserts each shape against the parser'
 
 ## The NPC registry in `data/npcs.txt`
 
-The file is 38,462 lines of names, one per line, and it is matched **case-blindly**: `EQDataStore` loads it into
+The file is 38,498 lines of names, one per line, and it is matched **case-blindly**: `EQDataStore` loads it into
 `_allNpcs`, a `ConcurrentDictionary` built with `StringComparer.OrdinalIgnoreCase`, so `IsKnownNpc("A Shadowstone
-Grabber")` answers for a row written in lowercase. The lowercase convention (117 rows still start capital) is tidiness,
-not behaviour — but it means **dedupe has to be done case-insensitively**, or the same mob goes in twice.
+Grabber")` answers for a row written in lowercase — inner case included, which is what lets the file's lowercase
+convention meet a client rendering like `Vazaelle Kaleine The Devout`. (`_allNpcs` keys go through the interned
+`StringCache.GetOrAdd`, whose job is `CapitalizeFirst`; that alone would look like leading-case-only matching, so
+`NpcDatabaseTierTest.TheListIsMatchedWithoutCaseAnywhereInTheName` pins it.) 153 rows start capital and the file is
+ordinal-sorted with those rows at the top — new entries go in sorted, not appended. It already carries **39 duplicate
+rows that differ only by case**, harmless through an ignore-case dictionary and a reminder that dedupe has to be done
+case-insensitively.
 
-What an entry buys: R6 (`R6-npcdb`) identity — **Medium** when the name contains a space, only **Weak** for a bare word,
-which is why `Mite`, `Fade` and `Umber` stay overridable by line evidence — plus NPC-side fight edges through
-`IsKnownNpc` in `FightDeriver`/`FightManager` and kill labelling in `EventViewer`.
+What an entry buys: R6 (`R6-npcdb`) identity — **Medium** when the name contains a space (an EQ character name is one
+token, so `A bramble sentinel` cannot be anybody's PC), and **`RuleStrength.Listed` = 20** for a bare word — plus
+NPC-side fight edges through `IsKnownNpc` in `FightDeriver`/`FightManager` and kill labelling in `EventViewer`.
+
+### What the `Listed` rung is, and what it is not (2026-11)
+
+The operator's sentence for this file: *"if it's in npcs.txt it's certain an NPC — it just might not be this time."*
+A bare word used to sit at `Weak` (10), one rung above nothing, which understated it. It now has its own rung,
+strictly between a hint and corroboration, for one specific reason that is about mechanism rather than confidence:
+`RegistrySeed` replays this application's warm memory of its raid at **8-10**, documented as "below the rule tiers so
+rule output overrides this seed", and at Weak a bare-word list hit beat that memory only because it happened to be
+written second — an equal-strength tie, decided by which stage ran when. Same answer, wrong mechanism: a precedence
+that depends on write order is one stage reorder away from flipping. `NpcDatabaseTierTest` runs both orders and
+requires the same winner.
+
+Say precisely what outranks a list hit, because the interesting constraint here is **stage order**, not arithmetic:
+almost every rule after R6 reads only names that are still Unknown (the R7 graph at `kinds[atk] != Unknown`, plus R15,
+R25, R26), so a list hit already settles that name at *any* strength. Lifting it changed no winner among the rules.
+What still beats it is anything the evidence stage reads off the lines before R6 runs: target frames and `/who` at
+Certain, joins, guild/group/raid speech, guildmate announcements, a drink line and an eye summon at Strong, a loot line
+at Medium. And what outranks a **wrong** list hit is the operator — an R10 verdict (Manual, 1000), or one
+`Targeted (Player):` line on the name.
+
+3,223 of the file's 38,498 rows are spaceless (8.4 %), which is the same "a shape any character could wear" share the
+comma-title note measured. The bare word that shows this working is in the shipped file already: `Lucian` reads Npc on
+a capture where nothing else claims it (`R6-npcdb`, Listed), while `Alleza` — also in the file, and demonstrably a name
+players answer to — keeps its verdict wherever a line says something about her (`RosterMemoryClaimTest`,
+`GuildmateRuleTest`, `SavedPetOwnerClaimTest` all borrow it for exactly that reason). Two of the beta names below
+(`Era`mi`, `Sorshkah`) cannot be character names at all — `'` is not legal in one — so they settle the shape question
+but never the collision question.
+
+### The 2026-11 beta batch: 36 rows from one capture
+
+39 distinct name fields from `eqlog_Kizant_beta.txt` (344 MB, Oct 11) went through the shipped file and the rule book.
+**3 were already in it** (`Scorn`, `A wailing banshee`, `A forsaken banshee`), so **36 rows were added**: the
+`Era`mi`/`Calli`do`/`Mella`re` families, nine `Vazaelle Kaleine The …` forms and the `Gateway`/`goon`/`horror`/`wolf`
+classes, plus the bare words `Era`mi`, `Calli`do`, `Mella`re`, `Sorshkah`, `Moruuk`. Two of those five are corroborated
+by a second shipped file — spells.txt flavour text says `Sorshkah slashes and mangles you with tooth and claw.` and
+`Moruuk's blow rattles you` — which is the strongest evidence a name is content rather than a person: a character name
+never appears inside a shipped spell's description.
+
+After the change, on that same capture: R6-npcdb owns **20** census rows (18 spaced at Medium, 2 bare words at Listed —
+`Moruuk` and `Lucian`), and of the 39 submitted names **19** now read NPC by the list, **17** by the client's own
+`Targeted (NPC)` frame, **3** as charmed. 38 person-evidenced names in the capture still came out Player/Merc; the list
+stepped on none. What the batch mainly buys is provenance and durability: names that rested on "somebody happened to
+target it this time" now have a file behind them, so they read NPC on a capture where nobody does.
+
+Before that batch the same file answered for only **3** of those names — which is the honest scale of `npcs.txt` as an
+identity input on current content: 19 more of the 39 needed nothing but R14's article, and R6-npcdb fired on exactly
+3 rows in the whole capture. Absence from the file is not a classification gap on live content the shipped list
+predates; it is a provenance gap.
 
 Eighty-eight names came from the six captures (Sep 2022 → Sep 2026): every name no rule placed *and* absent from the
 file case-insensitively, each then checked against `everquest.allakhazam.com/search.html?q=<name>` — the Mobs tab is a
@@ -4000,9 +4053,9 @@ What the batch says about our own rules, measured over those 88 names: **65 alre
 these captures — the registry buys *provenance* (R6, plus fight edges in the live path) for names that would otherwise
 rest on a shape guess whenever nobody targets them. Shape coverage: **40 are article-shaped** (what R14 reads), **9 are
 bare words** (`Fade`, `Firethorn`, `Gwark`, `Lich`, `Magmath`, `Mite`, `NeuroKraken`, `Umber`, `Windshear`) — invisible to
-every shape rule, and precisely the shape a player is free to choose, which is why R6 caps a spaceless name at Weak and
-why the collision policy (a registry hit never outranks player evidence; see the `Terror` case in the identity design notes) has
-to stay. **Three carry a comma title** (`Kratakel, Lord Misery`, `Keltakun, Last Word`, `Ogna, Artisan of War`) and one of
+every shape rule, and precisely the shape a player is free to choose, which is why R6 caps a spaceless name at
+`RuleStrength.Listed` (see "What the `Listed` rung is, and what it is not" above) and why the collision policy — a list
+hit never outranks what this capture saw somebody doing — has to stay. **Three carry a comma title** (`Kratakel, Lord Misery`, `Keltakun, Last Word`, `Ogna, Artisan of War`) and one of
 them is the biggest name in the set at 68,416 attack edges: no grammar rule can see that shape, so either a name list or
 the client's own target line is the only road to it. **Twelve have no combat line at all** (civilians, shades,
 `The Headsman`, `Defense Unit CDL`) — they were never going to reach a fight list, and "no rule placed it" meant *no

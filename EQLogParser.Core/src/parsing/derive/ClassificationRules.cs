@@ -9,6 +9,18 @@ namespace EQLogParser
     public const int Certain = 100;  // line-intrinsic truth: targeted verdicts, who roster, ownership in line
     public const int Strong = 60;    // behavior only your side performs: join/leave, guild/group/raid speech
     public const int Medium = 30;    // strong corroboration: multi-word NPC name hit, graph inference
+
+    /*
+     * The rung for "a shipped data table lists this exact string" — above a bare hint, below every rung that
+     * knows something about THIS capture. A dictionary entry is certain about the name and silent about the
+     * occasion: `Scorn` is a mob in npcs.txt, and if somebody on this server is called Scorn then the list is
+     * simply not talking about her. That is why it sits under Medium (the graph, heal breadth, a loot line)
+     * rather than beside it: a tie is settled by arrival order, and "who won" must not depend on stage order.
+     * Above the remembered lanes it goes for the same reason in reverse — `RegistrySeed` writes 8-10 precisely
+     * so rule output overrides it, and letting a warm cache outvote a lookup would re-create that tie.
+     */
+    public const int Listed = 20;
+
     public const int Weak = 10;      // single-source hints kept for context only
   }
 
@@ -891,7 +903,7 @@ namespace EQLogParser
      * capture where nobody parks the target frame on it. Four years of logs never put a comma name under
      * `Targeted (Player)`, and npcs.txt itself holds 238 of them (`Atathus, the Red Lord`,
      * `Ma`Maie, the Nest Mother`), so the shape is ordinary, not exotic - 0.6 % of the registry, against 8 % that
-     * is a single bare word, which is a shape any character could wear (see the R6 tiers above).
+     * is a single bare word, which is a shape any character could wear (`NpcDatabaseStrengthFor`).
      *
      * The one counterexample class is SUMMONS, not players: a pet name is free text, so `Feroun, come back` is
      * legal and prints with no ownership word for R5 to read. What keeps that honest is ordering - this rule runs
@@ -1179,19 +1191,45 @@ namespace EQLogParser
       return minted;
     }
 
-    // R6: every log name that is an exact NPC-database entry (engine's own npcs.txt load).
-    // Multi-word names are distinctive enough to assert Npc at Medium; single-token names (an NPC
-    // called "Vex" collides with a player named "Vex") only corroborate at Weak.
+    /*
+     * R6: every log name that is an exact NPC-database entry (the engine's own npcs.txt load, matched case-blindly).
+     *
+     * Two rungs, and the divider is shape, not confidence in the file. A name with a space in it (`A bramble
+     * sentinel`, `Kratakel, Lord Misery`) cannot be worn by a character — EQ character names are one token — so
+     * the lookup asserts Npc at Medium. A bare word can be worn by anybody, so it asserts Npc at `Listed`: the
+     * file is certain about the string and says nothing about the occasion (an NPC called `Scorn` collides with a
+     * raid member called Scorn).
+     *
+     * WHAT THE LIFT ACTUALLY BUYS, stated exactly, because the interesting constraint here is stage order rather
+     * than arithmetic: almost every rule after this one reads only names that are still Unknown (R7 graph line
+     * 1449, R15, R25, R26), so a list hit is already the answer for that name at ANY strength — raising it from
+     * Weak changes no winner among the rules. What changes is the remembered lanes: `RegistrySeed` writes Player,
+     * Pet and Merc at 8-10 by design ("below the rule tiers, so rule output overrides this seed"), and at Weak a
+     * bare-word list hit beat that claim only because it happened to arrive second — an equal-strength tie settled
+     * by write order. At Listed it wins on strength, which is the same answer and no longer a coin toss about
+     * stage order (pinned both ways in `NpcDatabaseTierTest`).
+     *
+     * What still outranks it, from lines this capture actually printed: everything the evidence stage claims
+     * before R6 runs — target frames and `/who` at Certain, joins, guild/group/raid speech, guildmate
+     * announcements, a drink line and an eye summon at Strong, loot at Medium. And what outranks a WRONG list hit
+     * is the operator: R10's Manual verdict (1000) or a `Targeted (Player):` line on the name once. The bare-word
+     * tier is 3,223 of the file's 38,498 entries (8.4 %), the same share the comma-title note measured as
+     * "a shape any character could wear".
+     */
     private static void ApplyNpcDatabase(IFactTable facts, EntityTimeline timeline)
     {
       var store = EQDataStore.Instance;
       foreach (var name in facts.InternedNames)
       {
         if (!store.IsKnownNpc(name)) continue;
-        var strength = name.Contains(' ') ? RuleStrength.Medium : RuleStrength.Weak;
+        var strength = NpcDatabaseStrengthFor(name);
         timeline.SetIdentity(name, IdentityKind.Npc, strength, "R6-npcdb", double.NegativeInfinity);
       }
     }
+
+    // The one place the two NPC-list rungs are decided, so a test can pin the ladder without a capture.
+    internal static int NpcDatabaseStrengthFor(string name)
+      => name.Contains(' ') ? RuleStrength.Medium : RuleStrength.Listed;
 
     /*
      * R21: a name the spell database answers for is a spell effect, not a creature, and must never end up in the

@@ -169,8 +169,9 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
   `spells.txt`; new content is silent, never guessed); `Life Burn` declares `SpellClass.Nec` **overriding** the file's bad
   Shaman half; a multi-bit family means "no class label", and seeding REMOVES any generic label for such a rank (Battle
   Leap/Warcry). R5 ownership sweeps the name pool (a comma in an owner text claims the pet, not a raid member);
-  `X is called to it owner.` names the **summoner** (`R5-companion` → Player), never the summon; R14 article ⇒ NPC at Medium;
-  R15 needs ≥10 heals from ≥2 Strong casters and any swing back vetoes; R17 drink/eat names a player; R21 spell shapes
+  `X is called to it owner.` names the **summoner** (`R5-companion` → Player), never the summon; R6-npcdb ⇒ NPC — Medium for a
+  spaced name, `Listed` (20) for a bare word, which beats remembered and seeded grades but never a line this capture printed;
+  R14 article ⇒ NPC at Medium; R15 needs ≥10 heals from ≥2 Strong casters and any swing back vetoes; R17 drink/eat names a player; R21 spell shapes
   (`… by .`, seen being cast, known spell name) type as **Spell** with no pencil; R24-petslot: `Target = Pet/Pet2` in the
   spell data makes the *defender* a Pet (ask `GetSpellByName`; damage lines only; never invents an owner); R25-roster and
   R26-savedpet claim Unknown-only names in their own folder's pool, last, at Strong.
