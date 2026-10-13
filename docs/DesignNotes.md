@@ -8680,9 +8680,9 @@ Two traps, both paid for:
 ## The damage parser reads word views; the per-line Split array is gone (2026-08)
 
 `docs/tokenizer-plan.md` (local note) proposed killing the 374 B `Split(' ')` that "Where ingest spends its time" named as
-the widest single allocation in ingest. Shipped for the **damage** path; healing never needed it (it indexes `Action`
-directly), and Misc/Cast keep the legacy array door — which is now **lazy**: `LineData.Split` materializes from `Action`
-only for a line that actually reaches those parsers, and the eager `lineData.Split = …` in `LogProcessor` is gone.
+the widest single allocation in ingest. Shipped first for the **damage** path; the completion for Cast
+and Misc is its own section below. Even at this step `LineData.Split` stopped being eager: it materializes from `Action`
+only for a line that actually reaches an array-consuming parser, and the eager `lineData.Split = …` in `LogProcessor` is gone.
 
 `LineWords` is the word view: one scan for space positions into a single `int[]`, tokens as `(source, start, length)`
 structs, ordinal `==` against literals, and materialization only where a word becomes something a record **owns**
@@ -8706,11 +8706,9 @@ was deleted; LineWordsTest stays as the permanent pin.
 
 The Release wall cost is real and small: word scanning runs in parallel with the parse and costs a little more CPU than
 `Split`'s single alloc-and-copy while `SequenceEqual`-style compares stay cheap-but-not-free; the biggest remaining slice
-of it is lines that fall through to Misc/Cast and pay the word scan AND still materialize the array. **Steps 3–4 of the
-plan (migrating Cast and Misc to words) are what buy that +3 % back** — each is now an independent commit with the same
-oracle-style validation available; until then this trade stands as taken deliberately: fewer bytes and gentler GC on a
-5-hour raid, a hair more CPU on load. The chain dispatch also keeps the exact case order of the old switch, which is why
-the migration diff reads like the switch it replaced.
+of it was lines that fell through to Misc/Cast and paid the word scan AND still materialized the array — which is exactly
+what the very next two steps removed. The chain dispatch keeps the exact case order of the old switch, which is why
+every migration diff in this family reads like the switch it replaced.
 
 Related laws from the same work:
 
@@ -8720,8 +8718,45 @@ Related laws from the same work:
   table fed from that dictionary in the static initializer, because **this framework's `FrozenDictionary<string, V>` has
   no span `TryGetValue`** (the compile fails; do not "just add" the overload call).
 - **`LineData` has two doors and one text.** `Words` builds lazily from `Action`; `Split` builds lazily from `Action`
-  (NOT through Words — a Misc line must pay exactly what it paid before, one Split, no double scan). A set `Split`
-  invalidates the word view. Every producer sets `Action`; tests that set both keep doing so.
+  (NOT through Words — a line that still wants the array must pay exactly what it paid before, one Split, no double
+  scan). A set `Split` invalidates the word view. Every producer sets `Action`; tests that set both keep doing so.
+
+## The word-view migration finishes: cast, then misc — and `Split` loses its last production reader (2026-08)
+
+The two steps this chapter deferred landed within a day, with the same disposable-oracle discipline.
+
+**Cast** moved to `LineWords`: its position switch became an ordered ordinal chain like damage's, and EQDataStore's
+three spell doors (`TryGetLandsOnOther`/`LandsOnYou`/`WearOff`) take `(LineWords, lastIndex)`. The one that matters
+for allocation is `SearchSpellPath`: it walks from the line END up the spell tree, and it now materializes only the
+words it **probes** — one small string per tree level, and a miss at level one (the common case for every line that is
+not a spell) probes exactly once instead of receiving a whole pre-built array. `ParserUtil.ParseSpellOrNpc(LineWords,
+int)` became the single mirror of the text version, shared by cast and damage's taunt paths — "a third caller should not
+re-mirror it" is written on the door. Healing needed one change only: its amount probe reads an `AsSpan` instead of
+slicing a fresh string per heal line; healing had already indexed `Action` directly for decades and keeps doing so.
+
+**Misc** was the last production reader. Its case-switch became the same ordered ordinal chain; `ParseWho` and
+`ParseCurrency` walk `LineWords`; loot, resist, random-roll and mez-break names materialize only through the join
+doors. The conversion preserves the throw profile *literally*, including the IndexOutOfRange that rides through the old
+`catch` list uncaught on malformed input on both sides — same line, same behavior, quirk for quirk.
+
+**`LineData.Split` now has zero production readers.** The property stays for test fixtures and UI paths that hand in a
+pre-built array, but a new parser reads `Words`; there is no longer any line shape whose parse pulls the array into
+existence.
+
+**Validation (both oracles deleted after use; the numbers live here).** A pipeline oracle — damage/heal/cast-evidence/
+death/taunt in event order plus an end-of-run store walk of SpellCast (with the mutated-by-interrupt `Interrupted`
+flag), ReceivedSpell, Zone and Special actions — ran byte-identical across all 13 live and all 6 emu captures on both
+sides of the cast+heal step. A second oracle dedicated to misc's observable surface — resist/mez/WHO/looter/companion/
+charm events, the Resist/Loot/Random/MezBreak stores in insertion order, NPC resist stats, and every verified name's
+class lane — ran byte-identical across 4 live captures (including the resist-dense Incogitable raid) and all 6 emu
+captures. Coverage it actually exercised: 2,722 resist events, 30,256 loot records, 40 random rolls, 453 mez breaks,
+769 WHO roster lines, 57 companion calls, 17 charm events, 416 NPC resist-stat rows. The unit suite (2,042) stayed
+green at every step.
+
+**Release, all 13 live captures, HEAD (damage-only migration) vs this step** — allocation summed **105,431 → 101,462 MB
+(−3.8 %)**, every file between −2.2 % and −6.1 %; total wall **net −0.8 %**, per file within ±2.8 %. The +2…+4 % Release
+cost the damage chapter booked is therefore *paid back by this step*: lines that fall through no longer pay the word scan
+AND materialize the array. These are pipeline-oracle walls (parse + derive + store walk), not load-to-idle.
 
 ## What garbage a raid actually makes, and what it does to a cadence thread (2026-11)
 
