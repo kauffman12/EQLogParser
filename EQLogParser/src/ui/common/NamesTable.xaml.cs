@@ -20,7 +20,7 @@ using System.Windows.Input;
 namespace EQLogParser
 {
   /*
-   * The Identity Table (menu name; class still NamesTable): every name in the capture, what it was called, and WHY.
+   * The Identity Table (menu name; class still NamesTable): the listable census names, what they were called, and WHY.
    * It replaces all three of the panes this application used to keep identity state in - Verified Players, Verified Pets (which could
    * show what somebody typed but never what the classifier concluded, so a wrong verdict had no surface to be noticed on) and Pet
    * Owners, whose window outlived its own file: petmapping.txt froze into the ledger's ownership lane on 2026-10-09, a pair became a
@@ -39,15 +39,11 @@ namespace EQLogParser
    *     files the old panes used (verdicts, roster, rejections) plus the sighting ledger. Nothing is stored here, so
    *     closing the window loses nothing and a file edited by hand still wins on the next open.
    *
-   * HOW A NAME IS CORRECTED: the pencil in its own cell. Type opens the whole verdict list (Player / Pet / Mercenary /
-   * NPC / Spell / Reset), Class opens the class list and Owner the people a summon can belong to, all three through
-   * UiElementUtil.OpenCellPopup - the click-the-icon-then-pick popup DamageSummary's Group cell already calls, so this pane joins it instead
-   * of hand-rolling a Popup (placement, sizing, focus-back and the close hook are in that helper). There is no context
-   * menu on this grid at all: right-drag and right-click
-   * are how a person grabs a block of rows out of a long table, and a menu drawn over that gesture hid the one verb
-   * almost nobody knew existed ("clear my claim" lived only in the fight grids). BATCH work — setting a whole block of
-   * selected names at once — is the one thing a cell cannot express, and it lives in the fight grids' context menu; this
-   * pane keeps no buttons of its own any more, only the two pencils.
+   * HOW A NAME IS CORRECTED: a pencil opens a ComboBox INSIDE its cell. Type offers Player / Pet / Mercenary / NPC / Spell;
+   * Class offers the class words plus blank to forget the saved class; Owner offers the names a summon can belong to.
+   * The Name column's take-back button calls ClassificationCommands.Recalculate. The editor holds census publication until
+   * its pick commits or it closes. See docs/DesignNotes.md → "A cell editor lives in the cell, because a popup you open yourself eats the pick".
+   * Batch verdicts remain in the fight grids' context menu; this table edits one name at a time.
    */
   public partial class NamesTable
   {
@@ -753,19 +749,7 @@ namespace EQLogParser
     private static void Refuse(string door, string why) => Log.Info($"identity cell: {door} ignored - {why}");
     private static void RefuseDebug(string door, string why) => Log.Debug($"identity cell: {door} ignored - {why}");
 
-    /* A pane hide or a capture change ends any open picker: the popup is anchored to a cell that is about to mean something else. */
-
-
-    /*
-     * The cell pickers are CONTEXT MENUS, not ComboBox drop-downs inside a Popup. This pane sits in the identity strip,
-     * which is an AutoHidden docked pane: Syncfusion renders that inside its own host window, and a WPF ComboBox opens
-     * its list in yet another window of its own - so a press on an item is delivered to something the outer popup counts
-     * as outside itself, StaysOpen="False" dismisses the popup on mouse-down, and the item never commits. The field log
-     * said exactly that: a click on Player, and the ComboBox still holding Pet when the popup closed. Menus are the
-     * pattern this application already has working in the same kind of pane - the fight list's right-click menu takes
-     * clicks fine - so the pencil now opens one menu over the cell with that row's own choices, checked at the answer it
-     * currently gives. Every write still goes through Apply*Pick below: the menu is a door, not a second rule.
-     */
+    // A pane hide or capture change closes editors before their cells can mean something else.
     /*
      * IN-CELL EDITORS. A pencil click puts a ComboBox in the clicked cell and opens its drop-down; the pick writes through the same
      * Apply* methods the old popup used, and the editor then disappears. Nothing else on screen moves.
@@ -994,8 +978,8 @@ namespace EQLogParser
       if (sender is not ComboBox box || box.DataContext is not NameRow row || !row.IsClassEditing) return;
 
       Log.Debug($"identity cell: class editor picked {box.SelectedItem ?? "<none>"} on {Describe(box)}");
-      var className = box.SelectedItem as string;
-      if (string.IsNullOrEmpty(className)) return;
+      // An empty selected word takes the saved class back; no selected item writes nothing.
+      if (box.SelectedItem is not string className) return;
 
       EndCellEdit(row);
       ApplyClassPick(row, className);

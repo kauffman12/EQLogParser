@@ -721,6 +721,35 @@ public class NamesTableTest
     Assert.AreEqual(Labels.Unassigned, legacy.Owner);
   }
 
+  [TestMethod]
+  public void TheBlankClassPickTakesTheSavedClassBackAndReleasesTheEditor()
+  {
+    var seeded = false;
+    var forgotten = false;
+    var editorClosed = false;
+    Sta.Run(() =>
+    {
+      seeded = PlayerRegistry.Instance.SetDefaultPlayerClass("Ann", "Wizard");
+      var pane = CreatePane();
+      pane.AcceptCensus([new ClassificationReport.Row { Name = "Ann", Kind = IdentityKind.Player, Class = "Wizard" }]);
+      var row = pane.RowsForTest.Single();
+      var box = new ComboBox { DataContext = row };
+      pane.BeginCellEdit(row, NamesTable.ColumnClass, ["", "Wizard"], 1, box);
+      box.SelectedIndex = 0;
+      var handler = typeof(NamesTable).GetMethod("ClassCellEditorSelectionChanged",
+        System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+        ?? throw new MissingMethodException("ClassCellEditorSelectionChanged");
+      handler.Invoke(pane, [box,
+        new SelectionChangedEventArgs(System.Windows.Controls.Primitives.Selector.SelectionChangedEvent,
+          new[] { "Wizard" }, new[] { "" })]);
+      forgotten = string.IsNullOrEmpty(PlayerRegistry.Instance.GetAssignedOrLastKnownPlayerClass("Ann"));
+      editorClosed = !pane.Editors.IsOpen && string.IsNullOrEmpty(row.EditingColumn);
+    });
+    Assert.IsTrue(seeded, "control: the saved class exists before the gesture");
+    Assert.IsTrue(forgotten, "the actual handler must pass the empty word through to the forget-class door");
+    Assert.IsTrue(editorClosed, "the accepted blank pick ends the edit and releases its census hold");
+  }
+
   // The two app-level StaticResource keys this pane's markup needs, stubbed for a headless test host — same shape as
   // FightTableStartupTest's. A Style whose TargetType is the element or a base of it; anything else throws on parse.
   private static NamesTable CreatePane()
