@@ -106,6 +106,71 @@ public class NamesTableUniverseTest
   }
 
   /*
+   * The eye rule is CONDITIONAL, and the operator's own caveat is why: `Eye of <name>` names its master the way a summon word does,
+   * but NPCs in this game are legitimately named like an eye, so the shape alone proves nothing. An eye row goes only while the name
+   * inside it reads Player, and comes back the moment it stops reading that way. (Measured: three captures, ~1.5 GB, zero eye-shaped
+   * census rows — an eye is refused as a combatant before its name is interned. This lane exists in code, not yet in data.)
+   */
+  [TestMethod]
+  public void AnEyeWhoseMasterIsOneOfOursHasNoRow()
+  {
+    var census = new[] { Row("Kizant", IdentityKind.Player, "R3-joinraid"), Row("Eye of Kizant", IdentityKind.Npc, "R6-npcdb") };
+    CollectionAssert.AreEqual(new[] { "Kizant" }, NamesTableView.Universe(census).ConvertAll(r => r.Name).ToArray(),
+                              "reading the name already says whose eye it is, and an eye can only ever be NPC anyway");
+
+    // The same row with the master NOT one of ours: NPC, Pet, Unknown and absent all keep it. Shape alone decides nothing.
+    foreach (var kind in new[] { IdentityKind.Npc, IdentityKind.Pet, IdentityKind.Merc, IdentityKind.Unknown })
+      Assert.AreEqual(2, NamesTableView.Universe(new[] { Row("Zulmozar", kind, "R6-npcdb"), EyeOf("Zulmozar") }).Count,
+                      $"{kind} is not a player, so the eye is a name worth showing");
+
+    CollectionAssert.AreEqual(new[] { "Eye of Nobody" },
+                              NamesTableView.Universe(new[] { EyeOf("Nobody") }).ConvertAll(r => r.Name).ToArray(),
+                              "a master nobody has placed maps to no player, so nothing may be hidden");
+  }
+
+  /*
+   * The un-hide law, both directions in one run: an operator who says "Kizant is an NPC" gets the eye row back on the next census,
+   * and saying Player again takes it away. Hiding that never came back would be a filter with no handle.
+   */
+  [TestMethod]
+  public void CallingTheMasterNPCBringsTheEyeBack()
+  {
+    var ours = new[] { Row("Kizant", IdentityKind.Player, "R3-joinraid"), EyeOf("Kizant") };
+    Assert.AreEqual(1, NamesTableView.Universe(ours).Count);
+
+    var theirs = new[] { Row("Kizant", IdentityKind.Npc, "R6-npcdb"), EyeOf("Kizant") };
+    Assert.AreEqual(2, NamesTableView.Universe(theirs).Count, "he stopped mapping to a player, so the eye is worth a row again");
+
+    Assert.AreEqual(1, NamesTableView.Universe(ours).Count, "and it goes again when he maps to one — no sticky hiding either way");
+  }
+
+  /*
+   * The three eyes that are creatures rather than somebody's summon (the closed list ClassificationRules refuses) are not owned
+   * shapes at all, so a raid member named Veeshan cannot make one of them disappear.
+   */
+  [TestMethod]
+  public void TheRefusedThreeEyesAreNotOwnedShapes()
+  {
+    foreach (var name in new[] { "Veeshan", "Despair", "Mother" })
+      Assert.AreEqual(2, NamesTableView.Universe(new[] { Row(name, IdentityKind.Player, "R2-who"), EyeOf(name) }).Count,
+                      $"Eye of {name} is a creature, not an owned summon");
+  }
+
+  [TestMethod]
+  public void AnOperatorVerdictOnAnEyeKeepsItsRowAndTheMasterIsMatchedWithoutCase()
+  {
+    Assert.AreEqual(2, NamesTableView.Universe(new[]
+      { Row("Kizant", IdentityKind.Player, "R3-joinraid"), EyeOf("Kizant", operatorVerdict: true) }).Count,
+      "a hand-written claim on the eye itself is a question the row has to stay visible to answer");
+
+    Assert.AreEqual(1, NamesTableView.Universe(new[] { Row("Kizant", IdentityKind.Player, "R3-joinraid"), EyeOf("kizant") }).Count,
+                    "the master text is copied out of a sentence, so it matches a name without case");
+  }
+
+  private static ClassificationReport.Row EyeOf(string master, bool operatorVerdict = false)
+    => new() { Name = $"Eye of {master}", Kind = IdentityKind.Npc, Reason = "R6-npcdb", IsOperatorVerdict = operatorVerdict };
+
+  /*
    * The boundary itself — a real pane, a real pager and a strip that counts what it can actually show — is asserted in
    * NamesTableTest (Windows-only assembly). Kept here as a pointer because the claim "display only" is worth naming: what this
    * file pins is the predicate, and what the pane test pins is that the predicate runs once, before the question, at the door.

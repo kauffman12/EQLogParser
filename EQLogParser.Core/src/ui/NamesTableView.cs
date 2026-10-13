@@ -1,3 +1,6 @@
+// Annotations only; Core builds with Nullable=disable, and the eye rule's optional kind lookup needs to say "or nothing".
+#nullable enable annotations
+
 namespace EQLogParser;
 
 internal interface IIdentityCensusRow : IIdentityRowKeys
@@ -48,9 +51,54 @@ internal static class NamesTableView
    *
    * NOT hidden here: R21 spell-effect rows have no pencil either, and they stay listed — a dot or proc name is worth looking up even
    * though nobody can type a better answer for it. "Cannot be edited" and "is not worth a row" are two different decisions.
+   *
+   * THE EYE HALF ASKS ABOUT ANOTHER ROW. `Eye of <name>` names its master the way ``Kizant`s pet`` does, but the shape proves nothing
+   * about that name: NPCs are legitimately named like one, and an eye can only ever be NPC anyway (IdentityVocabulary.TypeOptionsFor).
+   * So an eye keeps its row by default and loses it ONLY while the name inside it reads Player — "Eye of Kizant" goes while Kizant is
+   * one of ours and comes back the moment he is not (an operator calling him NPC, or his name leaving the census). Measured: zero
+   * eye-shaped rows in three captures (~1.5 GB), because an eye is refused as a combatant before its name is interned; this guards a
+   * lane that exists in code rather than a population of rows, which is exactly why it is conditional instead of unconditional.
+   *
+   * `kindByName` is null when the caller offers no kinds, which reads "no eye can be resolved" — the direction that keeps rows.
    */
-  internal static bool IsListed(ClassificationReport.Row row)
-    => row.IsOperatorVerdict || ClassificationRules.OwnerInName(row.Name) is null;
+  internal static bool IsListed(ClassificationReport.Row row, IReadOnlyDictionary<string, IdentityKind>? kindByName = null)
+  {
+    if (row.IsOperatorVerdict) return true;                              // a hand-written claim always keeps its row
+    if (ClassificationRules.OwnerInName(row.Name) is not null) return false;   // a summon word in the name settles it
+
+    var master = ClassificationRules.EyeSummonOwnerInName(row.Name);
+    return master is null                                                // not an eye: nothing more to ask
+           || kindByName is null
+           || !kindByName.TryGetValue(master, out var masterKind)
+           || masterKind != IdentityKind.Player;                          // only one of ours makes the row pointless
+  }
+
+  /*
+   * The census filtered to its table's universe, in source order. One entry point because the eye rule needs the whole census to
+   * answer for a single row, and the dictionary that costs (a name→kind map over up to 25,000 remembered names) is built only when a
+   * census actually carries an eye shape — which measured captures say it essentially never does.
+   */
+  internal static List<ClassificationReport.Row> Universe(IReadOnlyList<ClassificationReport.Row> census)
+  {
+    var kindByName = KindLookupForEyes(census);
+    var listed = new List<ClassificationReport.Row>(census.Count);
+    foreach (var row in census)
+      if (IsListed(row, kindByName)) listed.Add(row);
+    return listed;
+  }
+
+  private static Dictionary<string, IdentityKind>? KindLookupForEyes(IReadOnlyList<ClassificationReport.Row> census)
+  {
+    var hasEye = false;
+    foreach (var row in census)
+      if (ClassificationRules.EyeSummonOwnerInName(row.Name) is not null) { hasEye = true; break; }
+    if (!hasEye) return null;
+
+    // Names are matched without case here because the master text is copied out of a sentence, not interned.
+    var map = new Dictionary<string, IdentityKind>(census.Count, StringComparer.OrdinalIgnoreCase);
+    foreach (var row in census) map[row.Name] = row.Kind;
+    return map;
+  }
 
   internal static bool Matches(string name, IdentityKind kind, Question question)
   {

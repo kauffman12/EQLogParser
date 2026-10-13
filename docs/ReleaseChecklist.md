@@ -159,6 +159,10 @@ more than 1,000 names and a capture that is still growing. A Linux build does no
   finds nothing — while its **owner** does appear, a pet with a player-chosen name still shows its Owner pencil, and `…s Ward of
   Destruction` shapes are unaffected. Write any verdict onto a hidden name (another pane or an existing override) and its row comes back,
   because a click that left no row could never be taken back. The strip's total counts only listed names: it must not promise the hidden ones.
+- [ ] **An eye follows its master** (2026-10-13; conditional, and three captures measured here contain no eye row at all — an eye is refused as a
+  combatant before its name is interned, so check this only if one ever appears). While its master reads Player there is no `Eye of <master>` row;
+  setting that master NPC from any board's menu brings the row back on the next census. An eye whose master reads NPC or Unknown, one that is not in
+  the census at all, and `Eye of Veeshan`/`Despair`/`Mother` are never hidden.
 - [ ] **Cache invalidation:** visit several pages, return to one and change a verdict from another pane. Both that page and
   previously visited pages show the new word after a census; the current page reloads even when its page number did not change.
 - [ ] **Editing and races:** on a later page open each cell editor, let a census arrive, then pick/escape/page away. The editor

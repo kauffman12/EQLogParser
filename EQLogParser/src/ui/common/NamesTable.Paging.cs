@@ -149,21 +149,18 @@ public partial class NamesTable
 
   private static ViewBuild BuildView(IReadOnlyList<ClassificationReport.Row> source, NamesTableView.BuildStamp stamp)
   {
-    // The universe first, the question second: a name whose own spelling settled its kind never becomes a row at all
-    // (NamesTableView.IsListed). The full census stays retained below, so widening a dial still needs no new derive pass.
-    var projected = new List<NameRow>(source.Count);
-    foreach (var row in source)
-    {
-      if (!NamesTableView.IsListed(row)) continue;
-      projected.Add(RowFrom(row));
-    }
+    // The universe first, the question second: the names the log settled by itself never become rows at all
+    // (NamesTableView.Universe). The full census stays retained below, so widening a dial still needs no new derive pass.
+    var listed = NamesTableView.Universe(source);
+    var projected = new List<NameRow>(listed.Count);
+    foreach (var row in listed) projected.Add(RowFrom(row));
     var ordered = NamesTableView.Build(projected, stamp.Question);
     var index = new Dictionary<string, NameRow>(ordered.Count, StringComparer.OrdinalIgnoreCase);
     foreach (var row in ordered) index[row.Name] = row;
 
     // Total is what THIS table can show, not everything the capture remembered: the two only ever differ by the rows that were
     // never candidates for a row, and a strip whose total included them would promise names no dial or search can reach.
-    return new ViewBuild(stamp, ordered, index, projected.Count);
+    return new ViewBuild(stamp, ordered, index, listed.Count);
   }
 
   private void RequestViewRebuild()

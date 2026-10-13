@@ -12365,6 +12365,29 @@ Because the exclusion happens before the count, the strip's total is now **the t
 remembered — the number a reader can reach by any dial or search. That is the honest denominator for "Showing … of N Identities", and it
 means an operator searching for a hidden name gets an empty answer from a count that never promised to hold it.
 
+**An eye is hidden only while its master is one of ours (2026-10-13).** `Eye of Kizant` names its master the way a summon word does, but
+the operator's own objection stops the shape from being enough on its own: "NPCs can exist that are named like that" — and an eye can only
+ever be NPC anyway (`IdentityVocabulary.TypeOptionsFor` trims its dropdown to that one kind). So the rule is **conditional on another row**:
+the eye has no row while the name inside it reads Player in the same census, and it comes back by itself the moment that stops being true —
+an operator calling Kizant NPC, or his name leaving the census. Hidden-forever would be a filter with no handle.
+
+| asked | answered |
+|---|---|
+| master reads Player | hidden (the name already says everything the row would) |
+| master reads NPC / Pet / Mercenary / Unknown | listed — shape alone proves nothing about the master |
+| master not in the census at all | listed ("maps to no player" is not "maps to a player") |
+| `Eye of Veeshan` / `Despair` / `Mother` | listed — the closed three are creatures, and `EyeSummonOwnerInName` refuses them |
+| an operator verdict on the eye itself | listed — the take-back exception outranks both rules |
+
+The master text is matched **without case**, because it is copied out of a sentence rather than interned.
+
+Measured first, and it changed how the rule is written: three captures (~1.5 GB total — live `Incogitable_xegony` 2,948 rows, THJ
+`Bulron_thj` 7,996, live `Kizant_xegony-09-03-26` 411) contain **zero** eye-shaped census rows, because an eye is refused as a combatant
+before its name is ever interned. So this guards a lane that exists in code — the NPC-only dropdown trim, and any eye name a prior ledger
+carries in — rather than a population of rows today, which is exactly why it is conditional instead of unconditional: an unconditional eye
+filter would be guessing at data no capture has shown. The cost is bounded the same way: `NamesTableView.Universe` builds its name→kind map
+only for a census that actually contains an eye shape, so the ordinary 25,000-name census pays nothing for it.
+
 **Only a question follows the selection.** `NamesTableView.DecidePage(…, followSelection)` clamps in both modes and moves to the
 selected row's page only when the caller says the QUESTION changed — query, type dial, or sort header. Publishing passed no such
 flag and followed unconditionally, so the pane's own comment ("ordinary censuses restore selection, not attention") described an

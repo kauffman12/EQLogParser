@@ -599,6 +599,29 @@ public class NamesTableTest
     });
   }
 
+  /*
+   * The conditional half of the table's universe at the real door: an eye belonging to one of ours has no row, and gets it back the
+   * moment the name inside it stops being one of ours. Headless NamesTableUniverseTest pins the arithmetic; this pins that the pane
+   * consults the census's own kinds, which is the part a per-row predicate cannot do alone.
+   */
+  [TestMethod]
+  public void AnEyeOfAPlayerHasNoRowAndComesBackWhenHeIsNotOne()
+  {
+    Sta.Run(() =>
+    {
+      var pane = CreatePane();
+      pane.PublishCensusForTest([CensusRow("Kizant", IdentityKind.Player, "R3-joinraid"),
+                                 CensusRow("Eye of Kizant", IdentityKind.Npc, "R6-npcdb")]);
+      CollectionAssert.AreEqual(new[] { "Kizant" }, pane.RowsForTest.Select(r => r.Name).ToList(),
+                                "the eye is pointless while its master reads Player");
+
+      pane.PublishCensusForTest([CensusRow("Kizant", IdentityKind.Npc, "R6-npcdb"),
+                                 CensusRow("Eye of Kizant", IdentityKind.Npc, "R6-npcdb")]);
+      CollectionAssert.AreEqual(new[] { "Eye of Kizant", "Kizant" }, pane.RowsForTest.Select(r => r.Name).ToList(),
+                                "he stopped mapping to a player, so the eye is a name worth showing again");
+    });
+  }
+
   private static ClassificationReport.Row CensusRow(string name, IdentityKind kind = IdentityKind.Unknown, string reason = "")
     => new() { Name = name, Kind = kind, Reason = reason };
 

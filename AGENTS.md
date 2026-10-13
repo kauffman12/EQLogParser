@@ -206,6 +206,9 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
   out of the same string, so `NamesTableView.IsListed` keeps such names out of the Identity Table at the one census→row door —
   **display only** (no verdict, board number, ledger entry or digest reads it). An operator verdict on such a name always comes back; the
   owner row and any custom-named pet never left. Spell-effect rows have no pencil but keep their row: "cannot be edited" ≠ "not worth a row".
+  **An eye is hidden conditionally**: `Eye of <name>` has no row only while `<name>` reads Player in the same census, and returns on the next
+  census when it stops reading that way (NPC/Pet/Merc/Unknown/absent all keep it; the refused three are creatures). `NamesTableView.Universe`
+  owns both halves — one door, because the eye rule needs other rows' kinds.
 
 ## Panes and UI
 - **A cell editor lives IN the cell.** Never open a `Popup` yourself for an interactive pick: mouse capture kills the pick.
