@@ -191,8 +191,23 @@ public sealed class FightTableLoadBandTest
       Flush();
       Assert.AreEqual(Visibility.Visible, table.loadOverlay.Visibility, "an empty mid-load snapshot is not an answer");
 
+      /*
+       * The detail line while the read is in flight: lines only. During a backfill the capture holds just the trickle of
+       * stream-wide identity events until the merge - quoting "8 facts captured" beside twelve million lines reads as a
+       * stall, when the truth is that every row is waiting one merge away.
+       */
+      table.OnCapturing(8);
+      Flush();
+      StringAssert.Contains(table.loadDetail.Text, "lines read");
+      Assert.IsFalse(table.loadDetail.Text.Contains("facts", StringComparison.OrdinalIgnoreCase),
+          "a mid-backfill capture count is a tease, not progress");
+
       // The reader finishes; the same emptiness now IS the whole statement, and the next pass settles it.
       table.ReportReadFinished();
+      Flush();
+      StringAssert.Contains(table.loadDetail.Text, "facts captured",
+          "the fact count is allowed to speak once the read is done");
+
       table.OnDerived(new DerivedSnapshot { DerivedAt = DateTime.Now, FightCount = 0, FactCount = 3 });
       Flush();
       Assert.AreEqual(Visibility.Collapsed, table.loadOverlay.Visibility, "zeros after a finished read are the answer");

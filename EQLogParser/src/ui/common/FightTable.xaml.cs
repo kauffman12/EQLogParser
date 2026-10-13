@@ -358,6 +358,10 @@ namespace EQLogParser
       _readerDone = true;
       if (_loadBandSettled || _sessionPainted || !_awaitingFirstRows) return;
 
+      // The merge lands the facts a beat before the reader's last percent; restate the detail line now so the big
+      // number appears the moment it is allowed to speak, not at the next event.
+      if (loadOverlay.Visibility == Visibility.Visible) UpdateLoadDetail();
+
       _bandGuard ??= new DispatcherTimer { Interval = TimeSpan.FromSeconds(8) };
       _bandGuard.Stop();                       // re-armed, never added twice: this fires on every 100 % pump tick
       _bandGuard.Tick -= BandGuardTick;
@@ -614,7 +618,8 @@ namespace EQLogParser
      * the number will stop moving. With no band showing there is nothing to update - a settled list refreshes
      * through OnDerived, which is the message.
      */
-    private void OnCapturing(long total)
+    // Internal for the band's WPF test; production arrival is the session's Capturing event.
+    internal void OnCapturing(long total)
     {
       _capturedFacts = total;
       if (loadOverlay.Visibility == Visibility.Visible) UpdateLoadDetail();
@@ -662,14 +667,18 @@ namespace EQLogParser
     }
 
     /*
-     * The moving part under the headline. Sequential loads move both numbers together; a sharded backfill moves ONLY lines
-     * until the merge (facts wait in lane tables), so a detail line that quotes just facts reads as frozen through the whole
-     * read - which is the field complaint the band exists to prevent.
+     * The moving part under the headline — and while the reader is still moving, the ONLY honest one. A sharded backfill
+     * parks every damage and heal row in its lane table until the merge, so the capture's fact count through the whole read
+     * is the trickle of stream-wide identity events: quoting it next to twelve million lines read says "8 facts?!" when the
+     * true state is "ten million rows waiting one merge away" (field report on exactly this). Lines carry the read; facts
+     * answer once the read is done (and immediately for an open that read no history — the live monitor, where facts are
+     * the whole story from the first second).
      */
     private void UpdateLoadDetail()
     {
       var lines = _linesRead > 0 ? $"{_linesRead:N0} lines read" : null;
-      var facts = _capturedFacts > 0 ? $"{_capturedFacts:N0} facts captured" : null;
+      var facts = _capturedFacts > 0 && (_readerDone || _linesRead == 0)
+          ? $"{_capturedFacts:N0} facts captured" : null;
       loadDetail.Text = (lines, facts) switch
       {
         (null, null) => "waiting for first facts",

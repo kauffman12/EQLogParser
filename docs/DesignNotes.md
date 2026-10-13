@@ -8512,7 +8512,11 @@ snapshot or right after it. A backfill changes what mid-load means: every fact w
 run zero-fight passes *early* in the read, and settling on one left the pane blank for the rest of a twenty-second load (field:
 "the progress flashed and disappeared"). The band now ends on rows landing, or on an empty snapshot **after** the reader reported
 done (`ReportReadFinished`, fed by `EventsLogLoadingComplete`); a guard timer settles a band no post-read snapshot ever came to
-answer, which is the zero-fight capture. And its detail line quotes lines *and* facts, because through a backfill only lines move.
+answer, which is the zero-fight capture. Its detail line quotes **lines while the reader moves and facts only once it has
+stopped**: through a backfill the capture holds nothing but the trickle of stream-wide identity events until the merge, and
+"8 facts captured" beside twelve million lines reads as a stall when the truth is ten million rows waiting one merge away
+(the 950 ms merge turned 8 into 11,097,543 on the field capture — CapturedTotal counts damage + heals + deaths + taunts +
+identity events, so it sits above the merge line's facts+heals pair by the non-damage rows).
 
 ## What the FCT overlay costs per number on screen (2026-11)
 
