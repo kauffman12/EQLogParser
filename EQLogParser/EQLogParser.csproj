@@ -17,6 +17,15 @@
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <ImportWindowsDesktopTargets>true</ImportWindowsDesktopTargets>
     <Platforms>AnyCPU;x64</Platforms>
+    <!--
+      Server GC ships on purpose (2026-10-13): with the workstation collector the two backfill lanes coupled through
+      one shared arena and spent ~40% of their time in or behind GC. Measured on an i5-13600K over a 1,276 MB capture:
+      per-range rates 40/43 -> 68/73 MB/s, Finished 18 s -> 11 s, and the labelled GC tidy 350 ms -> 119 ms. The tax
+      is retention - post-tidy working set ~+90 MB (690 vs 593), steady-state only; docs/DesignNotes -> "How loading
+      is sharded in the app" carries the numbers and the revisit condition (low-RAM reports).
+    -->
+    <ServerGarbageCollection>true</ServerGarbageCollection>
+    <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
   </PropertyGroup>
   <PropertyGroup>
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>

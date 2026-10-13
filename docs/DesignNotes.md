@@ -8512,11 +8512,27 @@ snapshot or right after it. A backfill changes what mid-load means: every fact w
 run zero-fight passes *early* in the read, and settling on one left the pane blank for the rest of a twenty-second load (field:
 "the progress flashed and disappeared"). The band now ends on rows landing, or on an empty snapshot **after** the reader reported
 done (`ReportReadFinished`, fed by `EventsLogLoadingComplete`); a guard timer settles a band no post-read snapshot ever came to
-answer, which is the zero-fight capture. Its detail line quotes **lines while the reader moves and facts only once it has
-stopped**: through a backfill the capture holds nothing but the trickle of stream-wide identity events until the merge, and
-"8 facts captured" beside twelve million lines reads as a stall when the truth is ten million rows waiting one merge away
-(the 950 ms merge turned 8 into 11,097,543 on the field capture — CapturedTotal counts damage + heals + deaths + taunts +
-identity events, so it sits above the merge line's facts+heals pair by the non-damage rows).
+answer, which is the zero-fight capture. Its detail line speaks in **captured facts through every phase** (operator
+2026-10-13: "it's still counting lines" — thirteen million of them out loud reads as telemetry from the wrong feature).
+Two sources, one seam, never summed: while the lanes run the number is the SUM OF THE LANE CAPTURES
+(`LogReader.BackfilledFacts` — every row lives there until Merge, so that sum is the real captured count; the old law that
+"8 facts beside twelve million lines reads as a stall" stands for the SESSION capture, which really does hold only stream-wide
+identity strays mid-read — it just stopped being the only place facts exist). From the merge on, the session's own capture
+event answers, and a monotonic `Math.Max` carries the display across the seam where both sources describe the same rows.
+Lines remain only as the opening phrase before the first fact batch. `FightTableLoadBandTest.LaneFactsLeadTheDetailLineThroughABackfill`
+holds the seam on Windows.
+
+**Server GC is what makes the lanes scale (2026-10-13, shipped via `EQLogParser.csproj`).** The same 1,276 MB capture, same
+machine (i5-13600K), warm OS cache, sharded on two lanes: with the workstation collector the ranges ran 40/43 MB/s and
+the load Finished at ~18 s; with Server GC the same ranges run **68/73 MB/s and Finish at ~11 s**, and the labelled GC tidy
+runs **350 ms → 119 ms** (`GcTidyUp.TidyNow` needed no change — its full blocking compacting `GC.Collect(2, Aggressive)` +
+LOH `CompactOnce` is honoured by either collector, and `CollectionCount(2)` still measures gen2 across all heaps). Why:
+two threads allocating ~1.3 GB/s through one shared workstation arena couple through each other's pauses; per-core heaps
+decouple them. An earlier suspect died in the same session — pinning the process to the six P-cores changed nothing (17.4 vs
+~18 s), so this was never core selection, GC is coupled bandwidth. The measured tax is **retention, steady-state only**: post-tidy
+working set ~690 MB vs ~593 (+90), load peak unchanged — per-core heaps commit where allocation happens and the tidy compacts
+every heap anyway; Task Manager's between-load floor sits a little higher because Server GC decommits less eagerly, which is
+mode behavior, not a stale collection call. Revisit (an opt-out, or back to workstation) if low-RAM machines report pressure.
 
 ## What the FCT overlay costs per number on screen (2026-11)
 

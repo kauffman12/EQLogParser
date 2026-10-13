@@ -102,6 +102,40 @@ public sealed class FightTableLoadBandTest
   }
 
   [TestMethod]
+  public void LaneFactsLeadTheDetailLineThroughABackfill()
+  {
+    Sta.Run(() =>
+    {
+      var table = new FightTable();
+
+      /*
+       * The mid-load detail line counts CAPTURED FACTS, not lines (operator 2026-10-13). While the lanes run, the count
+       * arrives from their own tables (the pendingFacts parameter); lines speak only until the first fact batch exists.
+       */
+      table.ReportCaptureProgress(1_000_000);
+      Flush();
+      StringAssert.Contains(table.loadDetail.Text, "lines read", "before any facts land, lines carry the read");
+
+      table.ReportCaptureProgress(1_100_000, 45_000);
+      Flush();
+      Assert.AreEqual("45,000 facts captured", table.loadDetail.Text,
+        "once the lanes count facts, facts are the message - the line count goes quiet");
+
+      // The merge seam: pending stops arriving (the reader answers 0 outside a backfill) and the session's own
+      // capture event has not landed yet — the floor keeps the display honest instead of falling back to lines.
+      table.ReportCaptureProgress(1_300_000, 0);
+      Flush();
+      Assert.AreEqual("45,000 facts captured", table.loadDetail.Text, "the seam spends nothing - the floor holds");
+
+      // And the real capture overtakes it, monotonic as ever.
+      table.OnCapturing(11_097_543);
+      Flush();
+      Assert.AreEqual("11,097,543 facts captured", table.loadDetail.Text,
+        "the session capture takes the number over at its own value");
+    });
+  }
+
+  [TestMethod]
   public void AFollowFromEndOpenStaysSilent()
   {
     Sta.Run(() =>

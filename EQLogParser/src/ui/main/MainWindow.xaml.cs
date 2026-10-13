@@ -1451,14 +1451,16 @@ namespace EQLogParser
           // ticks stop appearing while the load keeps running (the UI thread never got here). Cheap, bounded
           // by the load's wall time, and Debug-only like every other `load:` line (2026-10-13: a sharded load
           // showed no progress for its whole 17 s and nothing in the log could say which side went quiet).
-          Log.Debug($"load: progress tick {filePercent:F0}% | lines={_eqLogReader.HandedOverLines:N0} | {seconds}s");
+          var laneFacts = _eqLogReader.BackfilledFacts;
+          Log.Debug($"load: progress tick {filePercent:F0}% | lines={_eqLogReader.HandedOverLines:N0}" +
+                    (laneFacts > 0 ? $" | laneFacts={laneFacts:N0}" : string.Empty) + $" | {seconds}s");
 
           // The derived fight list has no rows of its own until the first snapshot (bulk ingest parks the derive
           // lanes by design), so without this it would sit as a silent empty grid through the whole load. It gets the
           // handover count rather than filePercent: the percent is THIS line's job (one copy per pump, at the top of the
           // window), while the panel only needs to know whether a first build is owed at all — a follow-from-end open
           // (Clear All, the startup auto-monitor) reads no history and its empty list is the correct answer.
-          if (npcWindow?.Content is FightTable pumpTable) pumpTable.ReportCaptureProgress(_eqLogReader.HandedOverLines);
+          if (npcWindow?.Content is FightTable pumpTable) pumpTable.ReportCaptureProgress(_eqLogReader.HandedOverLines, laneFacts);
 
           statusText.Text = filePercent < 100.0 ? $"Reading Log.. {filePercent}% in {seconds} seconds" : $"Additional Processing... {seconds} seconds";
           statusText.Foreground = Application.Current.Resources["EQWarnForegroundBrush"] as SolidColorBrush;

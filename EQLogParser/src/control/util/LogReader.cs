@@ -72,6 +72,10 @@ namespace EQLogParser
     private long[] _shardConsumed;
     private long[] _backfillWindows;
     private int _backfillActive;
+
+    // The lanes' captures, published while they run (null before the first and after Merge). Assigned by the
+    // backfill task only; the UI pump reads it through Volatile to answer BackfilledFacts mid-load.
+    private BackfillShard[] _liveShards;
     private long _nextUpdateThreshold;
     private double _lastParsedTime;
 
@@ -94,6 +98,30 @@ namespace EQLogParser
      * zero, and the open path words its announcement accordingly.
      */
     internal long HandedOverLines => _handedOver;
+
+    /*
+     * What the open has CAPTURED so far, while a sharded backfill still runs: every parsed damage and heal row lives in
+     * its lane's capture until the merge, so the honest mid-load fact count is the sum of those tables — which is what
+     * the fight list's band quotes instead of "lines read" (operator 2026-10-13: thirteen million lines counted out loud
+     * read as telemetry from the wrong feature; this pane counts captures). ZERO outside a running backfill on purpose:
+     * once Merge returns, the session's own capture answers through its Capturing event, and summing both sources at
+     * any point would double every merged row. The lane counters are plain longs written by each lane's parse thread;
+     * a pump read is a snapshot in time, which is exactly what a display number may be.
+     */
+    internal long BackfilledFacts
+    {
+      get
+      {
+        if (Volatile.Read(ref _liveShards) is not { } shards) return 0L;
+        var total = 0L;
+        foreach (var shard in shards)
+        {
+          total += shard.Capture.Facts.FactCount + (shard.Capture.HealFacts?.HealCount ?? 0L);
+        }
+
+        return total;
+      }
+    }
 
     /*
      * "Is there load garbage to hand back?" — the law behind which 100 % asks the collector for memory, stated here because it is a fact
@@ -534,6 +562,9 @@ namespace EQLogParser
           tasks[slot] = Task.Run(() => RunRangeAsync(slot, cuts[slot], cuts[slot + 1], shard, processor));
         }
 
+        // Publish the lanes once every slot exists (BackfilledFacts iterates without locking); Merge clears it.
+        Volatile.Write(ref _liveShards, shards.ToArray());
+
         await Task.WhenAll(tasks);
         backfill.Merge(shards);   // stops the lane captures and pours under the ingest gate; nothing tails before this returns
         Log.Debug($"load: backfill merged into the capture in {stopwatch.ElapsedMilliseconds:N0} ms (wall, all ranges + merge)");
@@ -546,6 +577,7 @@ namespace EQLogParser
       }
       finally
       {
+        Volatile.Write(ref _liveShards, null);
         Volatile.Write(ref _backfillActive, 0);
       }
     }

@@ -179,11 +179,15 @@ namespace EQLogParser
      * fact sits in a lane table until the merge, so the stray passes of the read window derive nothing and used to take the
      * band down for good at twenty percent with twenty seconds still reading (field: "the progress flashed and disappeared").
      * After the reader is done, zeros ARE all this capture will say, and the band settles. `_linesRead` is the same pump's
-     * other number, and during a backfill the only moving one: millions of lines land in lane tables while the capture holds
-     * strays, so the detail line quotes lines until facts overtake them.
+     * other number, and the opening phrase only: the detail line counts CAPTURED FACTS through every phase (see
+     * UpdateLoadDetail) — lines speak just for the seconds before the first fact batch exists.
      */
     private bool _readerDone;
     private long _linesRead;
+
+    // Facts counted by the backfill's lane captures, newest tick; monotonic, and it carries the detail line across
+    // the merge seam until the session's own capture event overtakes it (UpdateLoadDetail).
+    private long _pendingFacts;
     private DispatcherTimer _bandGuard;
 
     /*
@@ -426,6 +430,7 @@ namespace EQLogParser
       _awaitingFirstRows = false;
       _readerDone = false;
       _linesRead = 0;
+      _pendingFacts = 0;
       _bandGuard?.Stop();   // a guard armed for the session that just closed must not settle this one's band
       _reveal.Arm();
       _sessionPainted = false;
@@ -635,14 +640,15 @@ namespace EQLogParser
      * So the band says one thing, for as long as this session has shown no rows and owes a first build: the list is empty
      * because it is being made — with the captured-fact count under the bar as the moving part, which only this panel has.
      */
-    internal void ReportCaptureProgress(long linesRead)
+    internal void ReportCaptureProgress(long linesRead, long pendingFacts = 0)
     {
       if (Dispatcher.CheckAccess() == false)
       {
-        Dispatcher.InvokeAsync(() => ReportCaptureProgress(linesRead));
+        Dispatcher.InvokeAsync(() => ReportCaptureProgress(linesRead, pendingFacts));
         return;
       }
 
+      _pendingFacts = Math.Max(_pendingFacts, pendingFacts);   // lane facts during a backfill; 0 every other phase
       _linesRead = Math.Max(_linesRead, linesRead);   // the detail line's other moving part; monotonic for the session
       if (_loadBandSettled) return;   // rows landed this session: the list itself is the message
       if (linesRead > 0) _awaitingFirstRows = true;   // monotonic for the session; a follow-from-end open never sets it
@@ -667,25 +673,29 @@ namespace EQLogParser
     }
 
     /*
-     * The moving part under the headline — and while the reader is still moving, the ONLY honest one. A sharded backfill
-     * parks every damage and heal row in its lane table until the merge, so the capture's fact count through the whole read
-     * is the trickle of stream-wide identity events: quoting it next to twelve million lines read says "8 facts?!" when the
-     * true state is "ten million rows waiting one merge away" (field report on exactly this). Lines carry the read; facts
-     * answer once the read is done (and immediately for an open that read no history — the live monitor, where facts are
-     * the whole story from the first second).
+     * The moving part under the headline, spoken in CAPTURED FACTS through every phase (operator 2026-10-13: "it's still
+     * counting lines" — thirteen million of them out loud reads as telemetry from the wrong feature, and this pane counts
+     * captures). Two sources and one seam, never summed:
+     *   - while a sharded backfill runs, every row sits in its lane's capture until the merge, so the number is those
+     *     tables' sum (LogReader.BackfilledFacts) — real counts, not the session capture's trickle of stream-wide identity
+     *     events that earned the old "8 facts?!" law. That law stands for the SESSION capture; it just stopped being the
+     *     only place facts exist mid-read.
+     *   - from the merge on, the session's own capture answers through OnCapturing. Math.Max over both carries the display
+     *     across the seam, where the two sources describe the same rows and agree, and keeps it monotonic if a late tick
+     *     arrives with a smaller pending count.
+     * Lines remain only as the opening phrase, for the seconds before the first fact batch lands (and for an open that
+     * reads no history, "waiting for first facts" holds until the monitor's first real capture).
      */
     private void UpdateLoadDetail()
     {
-      var lines = _linesRead > 0 ? $"{_linesRead:N0} lines read" : null;
-      var facts = _capturedFacts > 0 && (_readerDone || _linesRead == 0)
-          ? $"{_capturedFacts:N0} facts captured" : null;
-      loadDetail.Text = (lines, facts) switch
+      var facts = Math.Max(_pendingFacts, _capturedFacts);
+      if (facts > 0)
       {
-        (null, null) => "waiting for first facts",
-        (not null, null) => lines,
-        (null, not null) => facts,
-        _ => $"{lines} | {facts}",
-      };
+        loadDetail.Text = $"{facts:N0} facts captured";
+        return;
+      }
+
+      loadDetail.Text = _linesRead > 0 ? $"{_linesRead:N0} lines read" : "waiting for first facts";
     }
 
     private void Attach(DeriveEngine session)
