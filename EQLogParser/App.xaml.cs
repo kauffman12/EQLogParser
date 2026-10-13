@@ -9,7 +9,6 @@ using Microsoft.Extensions.Caching.Memory;
 using System;
 using System.IO;
 using System.Reflection;
-using System.Runtime;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Interop;
@@ -57,25 +56,6 @@ namespace EQLogParser
         // Register global logging callbacks for utility code that cannot pass per-call loggers
         ExceptionUtil.GlobalLogError = Log.Error;
         ExceptionUtil.GlobalLogDebug = msg => Log.Debug(msg);
-
-        /*
-         * No runtime GC policy is set here, and that absence is the decision. `GCLatencyMode.Interactive` — the default — is the mode
-         * that lets the collector do background work when it judges it is needed, which is what this app wants outside a load, and
-         * Server GC (EQLogParser.csproj) already runs gen2 concurrently across parallel heaps, which is the short-pause story while a
-         * raid is on screen.
-         *
-         * `SustainedLowLatency` was tried as the steady state on 2026-10-13 for the FCT overlay's stutter — it defers exactly the
-         * blocking gen2 that stall is, and the reasoning looked sound. The field verdict was worse, so it is retired: do not re-add it
-         * without new evidence, and note which part of the diagnosis it does NOT settle. The overlay question is still open; what
-         * remains is this app's OWN compacting pass (`GcTidyUp`, 119–350 ms measured — so the useful observation is whether a stutter
-         * sits beside a load or a Clear All rather than in the middle of a fight) and the UI thread's own work (meter rebuild, grid
-         * refresh, FCT label churn). docs/DesignNotes → "Parallel loading: measured, shipped, and backed out".
-         *
-         * The one mode this process takes is Batch for the duration of a bulk file read (`BulkGcMode`), which restores whatever mode it
-         * found — here, Interactive — the moment the file runs out, so nothing rides along behind a live raid.
-         */
-        Log.Debug($"gc: collector = {(GCSettings.IsServerGC ? "server" : "workstation")}, "
-                  + $"latency = {GCSettings.LatencyMode} outside a bulk read, Batch inside one");
 
         // Runtime OS gate: below Win10 we warn and keep running in degraded mode; the TFM target is
         // compile-time only and does not bound the installed OS - do not remove or harden into an exit.

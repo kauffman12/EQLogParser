@@ -3092,8 +3092,8 @@ across 37,641 arrays, `SpellData[]` 44 MB, `ReceivedSpell` 679 k / 31 MB, `Spell
 `EQLogParser.Core` types; **WPF and Syncfusion together are under 25 MB**, and nothing audio-related appears at all. So the resident gigabytes are
 the data the tabs draw, proportional to the log, not a UI leak — which also explains the pause: a full collection's cost scales with that heap, and
 launch pays for it in advance (minute one of this run spent **11.2 s** paused while the heap went 624 → 2,997 MB, ~280 ms at a time — a real share
-of a 54 second load). The levers are allocating less during the parse or telling the collector not to compact mid-replay
-(`GCSettings.LatencyMode = SustainedLowLatency`); neither is measured, so neither is done.
+of a 54 second load). The levers are allocating less during the parse, or telling the collector not to compact mid-replay. The second was tried in the field on
+2026-10-13 (`SustainedLowLatency`) and lost; allocating less is the one that has paid, every time.
 
 The trigger path, from the same run at **608 active triggers** with logsim feeding ~2,350 lines/s: `trig.line` held `avg 0.10 ms` every single
 window for eleven minutes, worst 6–21 ms, with `trig.tests` at 19–30 M patterns per 20 s window — roughly 1.2 M pattern tests a second, about a
@@ -8585,17 +8585,9 @@ reading of these numbers as a batching win was wrong, and "the new version garba
 spotting the actual cause. Note also that dropping both properties means workstation GC **with background collection still
 on** (concurrent is the default), so that row is a clean Server-vs-workstation switch, not two changes.
 
-**Collector: workstation was tried in the field and lost (2026-10-13).** The exchange above was put to the person who pays for it —
-footprint against load seconds they can feel — and taken away from Server GC. That build shipped, got used, and was **worse**: slower
-loads, and no relief on the symptom the work was really aimed at (the FCT overlay stutters when something collects). So
-`ServerGarbageCollection` is back in the csproj, and the flag's justification is now an operator's machine instead of a loader that no
-longer exists. Worth noting that the *pause* argument runs the same way as the wall-clock argument once you ask which pause hurts: Server
-GC collects several smaller heaps in parallel with gen2 concurrent by default, so a stall on 600 MB–1.5 GB is short, while workstation's
-gen2 is one foreground stop-the-world over the entire heap — the config chosen for memory was also the one with the worst long pause, and
-`SustainedLowLatency` (its intended patch) cost memory to defer a collection that Server GC was never about to make in the first place.
-Still unanswered, and cheap if anyone wants it: how much of the 6 s `Batch` recovers on each collector — `EQLP_BULKGC=0` versus unset,
-same file warm, plus working set after the tidy.
-
+**Collector: Server GC stays.** It arrived with the parallel loader, was removed once that reason died (the measured exchange being ~6 s
+off a warm open — 23 s against 17 s on the same capture — for roughly +90 MB of post-tidy working set), and went back in after workstation
+proved worse in daily use. Numbers above came from one machine, which is the standing caveat; `DOTNET_gcServer=0` overrides it per launch.
 
 **If parallel reading is ever attempted again**, the prerequisite list is short and specific: the four carries
 above become either line-local or merge-time reconciled (with the crit ones proven to be `(attacker, <=1 s[, value])
@@ -12633,58 +12625,14 @@ never comes — the first field run paid at the backstop with the working set go
 capture measured here), and paying mid-pass on some slower box is merely the old behaviour, never wrong. Same two moments,
 same labelled pause — just paid when the work has actually stopped.
 
-**Throughput mode while a bulk file streams (`BulkGcMode`, 2026-10-13).** Separate question, same collector: not *when* to
-force a collection, but what policy the runtime should follow *during* the read. `GCLatencyMode.Batch` means "minimise total
-GC time; pauses are acceptable", which is exactly the shape of a file open — the operator is watching a loading band, while
-background collection competes for the two threads that are producing the garbage. The ledger that justifies it is above in
-"The reader hands the parser one line at a time…": +200 B per line, **22 gen0 collections, nothing promoted** — concurrency
-is protecting a generation this workload never reaches.
-
-The law is about scope, because `GCSettings.LatencyMode` is one process-global slot with no ownership:
-
-- **Entered for the bulk phase only and left at end of file.** `LogReader.ReadFileAsync` holds it in an explicit `using`
-  BLOCK rather than a method-scoped `using var`, because the monitor loop lives in that same method — a mode left on after
-  the file runs out would sit behind a live raid for hours, which is the one place a stutter costs something and memory
-  growth (what `SustainedLowLatency` trades for smoothness) is unwanted.
-- **Refcounted, not set-and-restored.** More than one reader can be alive over one process (an open plus a trigger reader
-  per enabled character), so the first sets it, the last restores what it *found* — never a hardcoded `Interactive`, which
-  would silently downgrade a promise somebody else made. `BulkGcModeTest` pins nesting, double-dispose, unwind-by-exception
-  and that restore-to-what-was-found.
-- **Decided on bytes this read will walk, not file size** (`ShouldUseBatchMode`, threshold 32 MiB). A follow-from-end-of-file
-  open over a 1.2 GB capture reads nothing and must stay out — that is the case a file-size rule gets wrong.
-- `SustainedLowLatency` is **not** the load mode: it avoids gen2 by keeping memory longer, which is both the wrong direction
-  for throughput and the wrong trade against the retention tax below.
-
-This changes no collector *choice* — `GCSettings.IsServerGC` is read-only at runtime, so Server vs workstation stays a
-csproj/startup decision (workstation now, see "Parallel loading: measured, shipped, and backed out"). Until the load-side
-comparison above finishes, `EQLP_BULKGC=0|1` overrides this mechanism from the environment so one build measures both arms;
-**that gate is temporary and is deleted with the answer**, not kept as a dial.
-
-**Steady state: no latency-mode write at all — Server GC + the runtime's own `Interactive` (revised the same day, 2026-10-13).** The
-morning's reasoning is kept because the taxonomy outlived the choice, and three of these modes sound alike:
-
-- What it was reached for is the **FCT overlay**, the only surface here with a soft real-time budget: a stalled render thread is a big hit
-  nobody saw. A report of "it stutters when GC runs" points at a *blocking gen2* (tens to hundreds of ms on a 600 MB–1.5 GB heap), not at
-  the frequent gen0 collections, which are microseconds and do not visibly freeze a canvas — and deferring blocking gen2 is exactly what
-  `SustainedLowLatency` does.
-- **Plain `LowLatency` is still the wrong instrument**, and that part is documented behaviour rather than measurement: it is a hint about
-  the current burst of allocations (draw one frame, handle one input event) that the runtime stops honouring by itself, so held over an app
-  that allocates continuously it buys nothing durable. `NoGCRegion` is unusable (parsing allocates).
-- **What the field said: worse.** Workstation GC + `SustainedLowLatency` on the operator's machine was not a relief on the stutter and cost
-  load time, so the write came out of `App.OnStartup` and `Interactive` — the default, the mode that lets the collector do background work
-  when it judges it is needed — governs outside a load. The theory was sound and the measurement was not; that is recorded here so nobody
-  re-runs it from the same reasoning.
-- **Why Server GC makes the whole argument much weaker**: its gen2 runs concurrently across parallel heaps, which already keeps the long
-  stall off the render thread. `SustainedLowLatency` on top of that pays memory to avoid a pause this collector is not making — the shape of
-  a bad trade, and the mistake this section exists to document.
-- **What this does NOT settle: the overlay stutter.** GC policy has now been pushed in both directions (deferring gen2, then not) with no fix.
-  Suspects in order: **(1) `GcTidyUp`'s own forced Aggressive + compacting pass** at load-end and Clear All — 119–350 ms measured, by far the
-  biggest single pause this app creates, so the useful observation is *where* a stutter sits (beside a load or a Clear All means it is ours);
-  **(2) the UI thread's own work** (meter rebuild, grid refresh, FCT label churn). The older raid probe ("What garbage a raid actually makes…")
-  remains the reference for what the parse/derive threads cost, with its limits written there.
-- `BulkGcMode` needed no change and is unaffected: it puts back whatever mode it **found** at end of file, which is why reverting the app
-  default moved nothing in the load path (`BulkGcModeTest.AnEarlierLowLatencyPromiseIsKeptRatherThanOverwritten` pins exactly that handoff).
-
+**GC policy is not a knob this app turns (2026-10-13).** Server GC with concurrent collection and the default `Interactive` latency mode
+is what ships: background collection happens when the runtime judges it needed, and gen2 across per-core heaps pauses briefly. A short
+list of things tried and rejected, so the same three hours are not spent twice — `Batch` scoped to the bulk read (worked as designed,
+bought nothing a user could feel, and left a mechanism with no reason: removed), `SustainedLowLatency` as the steady state (field verdict:
+worse), plain `LowLatency` (documented as a hint about one burst of allocations — the runtime stops honouring it, so as a permanent setting
+it does nothing durable), and workstation GC generally (its gen2 is one foreground stop-the-world over the whole heap). The FCT overlay's
+stutter is still open and is not a GC-policy problem: look at `GcTidyUp`'s own compacting pass (119–350 ms, fired by a load or a Clear All)
+and at the UI thread's own work before blaming the collector's schedule again.
 
 ## DPS and active-reader retention review at 35420fcf
 

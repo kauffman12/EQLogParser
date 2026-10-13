@@ -119,16 +119,9 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
 - **A board-row read does not allocate**: `PlayerRegistry.GetPlayerClass` binary-searches inside the per-name lock rather
   than copying the boundary list out.
 - **Only an INSTANCE method group allocates** — measure before caching a delegate (`LogProcessor._addMerc`).
-- **Collector POLICY follows the phase** (`BulkGcMode`): `GCLatencyMode.Batch` is entered for a bulk read of ≥ 32 MiB and
-  released at end of file — refcounted across overlapping readers, restoring what it FOUND, never a hardcoded mode. A monitor
-  open (follow-from-EOF) reads zero bytes and must not enter it; neither does the tail loop, which is why the scope is a
-  `using` BLOCK inside `ReadFileAsync`. This is policy, not collector choice: `GCSettings.IsServerGC` is startup-only.
-- **Shipped collector/policy**: **Server GC** + `ConcurrentGarbageCollection` on, and **no latency-mode write at startup** —
-  `Interactive` (the runtime default) is the mode that lets the collector do background work when it judges it needed. Field verdict
-  2026-10-13: workstation GC + `SustainedLowLatency` was tried for the FCT stutter and measured **worse** — do not re-add either without
-  new evidence (`docs/DesignNotes.md` → "Parallel loading: measured, shipped, and backed out"). The overlay stutter is still unexplained;
-  suspects are `GcTidyUp`'s own compacting pass and the UI thread's work, not GC policy.
-
+- **GC policy is not ours to tune**: ship Server GC + concurrent collection with the default `Interactive` mode and set no latency mode
+  anywhere. `Batch`, `SustainedLowLatency`, `LowLatency` and workstation were all tried on 2026-10-13; all lost (`docs/DesignNotes.md` →
+  "Garbage collection after loading a log").
 - **GC**: forced collection is paid at **two labelled moments only** — a load that actually read lines (**armed** at 100 %, landed by the first contentful
   board build or a one-shot backstop: the old synchronous pass at "Finished" fired BEFORE the first full derive and its boards, the biggest allocators of
   a bulk load, and collected half) and `Clear All` (synchronous, after its re-open) — each labelled *"Cleaning up.."* in the status line, because a pause

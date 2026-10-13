@@ -18,23 +18,11 @@
     <ImportWindowsDesktopTargets>true</ImportWindowsDesktopTargets>
     <Platforms>AnyCPU;x64</Platforms>
     <!--
-      SERVER GC, on purpose and now for a reason that is field data rather than a loader that no longer exists. The flag arrived with
-      the parallel loader; on 2026-10-13 it was REMOVED for footprint (the measured exchange being ~6 s off a warm open, 23 s -> 17 s on
-      the same capture, against roughly +90 MB of post-tidy working set). Workstation was then run in the field by the person who uses
-      this app and it was worse: slower loads, and no relief on what the change was actually for — the FCT overlay stutters when
-      something collects. So it is back.
-
-      The pause story is why Server GC is the right side of that trade here rather than a memory indulgence: it collects several smaller
-      heaps IN PARALLEL and does gen2 CONCURRENTLY by default, so the stall on a 600 MB-1.5 GB capture is short, while workstation's gen2
-      is one foreground stop-the-world over the whole heap. That is also why there is no GCLatencyMode write anywhere at startup:
-      Interactive (the runtime default) is the mode that lets the collector do background work when it judges it is needed.
-      SustainedLowLatency was tried as the steady state the same day and retired on the same field results — docs/DesignNotes ->
-      "Parallel loading: measured, shipped, and backed out" carries both verdicts so nobody re-runs the experiment blind.
-
-      The only policy taken at runtime is GCLatencyMode.Batch for the duration of a bulk file read (Core/src/perf/BulkGcMode.cs), which
-      restores whatever mode it found when the file runs out. ConcurrentGarbageCollection stays explicit because it is the PAUSE lever,
-      not a throughput lever: background gen2 is what keeps a collection off the render thread's critical path. DOTNET_gcServer=0 in the
-      environment still overrides this build for measurement without a rebuild.
+      Server GC with background (concurrent) collection — the runtime default latency mode, Interactive, collects when it judges it
+      needed and does gen2 concurrently across per-core heaps, which is what a live overlay wants: short pauses rather than deferred work
+      that turns into a bigger stall plus a larger working set. Measured here: about 6 s off a warm open versus workstation (17 s vs 23 s
+      on the same capture) for roughly +90 MB post-tidy; workstation and GCLatencyMode experiments were tried in the field and lost, so
+      nothing at startup overrides the mode. DOTNET_gcServer=0 still overrides this build for measurement without a rebuild.
     -->
     <ServerGarbageCollection>true</ServerGarbageCollection>
     <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>

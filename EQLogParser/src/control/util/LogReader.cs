@@ -255,46 +255,31 @@ namespace EQLogParser
         _currentPos = _fs.Position;
         var bytesRead = _fs.Position;
 
-        /*
-         * What THIS read will walk, which is not the file's size: a monitor open (minBack 0) sits at end of file and reads
-         * nothing, so it stays out of throughput mode however big the capture on disk is.
-         */
-        var bulkBytes = Math.Max(0, _initSize - _fs.Position);
-
-        /*
-         * An explicit using BLOCK rather than `using var` for the method, because the monitor loop further down lives in
-         * this same method: batch mode belongs to the bulk read and must be gone the moment the file runs out, not ride
-         * along behind a live raid for the next four hours. Unwinding through a cancel or a failed read leaves it the same
-         * way, which is the other half of why the scope ends here.
-         */
-        using (BulkGcMode.EnterForBulkRead(bulkBytes))
+        // date is now valid so read every line
+        while ((line = await _reader.ReadLineAsync(_cts.Token).ConfigureAwait(false)) != null)
         {
-          // date is now valid so read every line
-          while ((line = await _reader.ReadLineAsync(_cts.Token).ConfigureAwait(false)) != null)
+          if (_cts.IsCancellationRequested)
           {
-            if (_cts.IsCancellationRequested)
-            {
-              throw new TaskCanceledException();
-            }
-
-            // update progress during initial load
-            bytesRead += Encoding.UTF8.GetByteCount(line) + 2;
-            if (bytesRead >= _nextUpdateThreshold)
-            {
-              _currentPos = _fs.Position;
-              _nextUpdateThreshold += _initSize / 50; // 2% of InitSize
-            }
-            else if (_initSize - bytesRead < 10000)
-            {
-              _currentPos = _fs.Position;
-            }
-            else if (_fs.Position >= _initSize)
-            {
-              _currentPos = _fs.Position;
-            }
-
-            HandleLine(line, ref previous);
+            throw new TaskCanceledException();
           }
+
+          // update progress during initial load
+          bytesRead += Encoding.UTF8.GetByteCount(line) + 2;
+          if (bytesRead >= _nextUpdateThreshold)
+          {
+            _currentPos = _fs.Position;
+            _nextUpdateThreshold += _initSize / 50; // 2% of InitSize
+          }
+          else if (_initSize - bytesRead < 10000)
+          {
+            _currentPos = _fs.Position;
+          }
+          else if (_fs.Position >= _initSize)
+          {
+            _currentPos = _fs.Position;
+          }
+
+          HandleLine(line, ref previous);
         }
       }
       catch (TaskCanceledException)
