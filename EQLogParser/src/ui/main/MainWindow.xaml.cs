@@ -1439,6 +1439,13 @@ namespace EQLogParser
           var seconds = Math.Round((DateTime.Now - _startLoadTime).TotalSeconds);
           var filePercent = Math.Round(_eqLogReader.GetProgress());
 
+          // One Debug line per tick, and it is the only honest answer to "the progress text vanished during a
+          // load": either the pump ticked and the reader reported this percent (reader-side question), or the
+          // ticks stop appearing while the load keeps running (the UI thread never got here). Cheap, bounded
+          // by the load's wall time, and Debug-only like every other `load:` line (2026-10-13: a sharded load
+          // showed no progress for its whole 17 s and nothing in the log could say which side went quiet).
+          Log.Debug($"load: progress tick {filePercent:F0}% | lines={_eqLogReader.HandedOverLines:N0} | {seconds}s");
+
           // The derived fight list has no rows of its own until the first snapshot (bulk ingest parks the derive
           // lanes by design), so without this it would sit as a silent empty grid through the whole load. It gets the
           // handover count rather than filePercent: the percent is THIS line's job (one copy per pump, at the top of the

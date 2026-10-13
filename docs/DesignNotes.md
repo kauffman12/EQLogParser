@@ -8493,8 +8493,11 @@ bytes (asserted headlessly), and `ParseLane` keeps cross-line carries and parser
 it is one of two. When both ranges are drained, `CombatCapture.MergeShards` pours them into the session capture under the
 ingest gate — name pools remapped, one shared sequence renumbered into file order, the event-time window stamped from the
 merged rows — and the ordinary tail continues from the byte where the open began. The operator sees a single load: the
-progress band aggregates range bytes, and everything downstream of the reader (archive hook, GC tidy-up gate, monitor)
-is lane-blind. `LogShardPlan.Workers` is the one dial for raising this to three (~2.0× for roughly half again the load-time
+progress band aggregates range bytes and deliberately tops out at 99 % while a backfill is in flight — consumed
+bytes are not a finished load (queue drain and merge are still owed; a field log once showed "Finished Loading"
+and the compacting GC firing INSIDE the merge) — and everything downstream of the reader (archive hook, GC
+tidy-up gate, monitor) is lane-blind. The `load:` Debug lines answer the next "what did the lanes do": one line
+per range with bytes/lines/ms/MB-per-second, and one pump tick per poll while a load runs. `LogShardPlan.Workers` is the one dial for raising this to three (~2.0× for roughly half again the load-time
 memory); the 64 MiB floor is why normal-size logs still take the untouched single-lane path, as do seek-back opens and gzips.
 
 Two laws hold the design up. A lane drains its processor completely before the merge stops any shard capture, and no tail

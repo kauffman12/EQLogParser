@@ -205,7 +205,15 @@ namespace EQLogParser
           total += windows[i];
         }
 
-        return total > 0 ? done / (double)total * 100 : 0.0;
+        /*
+         * CAPPED below 100 while the lanes are still owned by RunBackfillAsync. Consumed bytes are not a
+         * finished load: after the last chunk every lane still drains its queue and the merge still pours —
+         * and a pump that saw true 100 % there announced "Finished Loading", ran the compacting GC INSIDE the
+         * merge and printed "Monitoring Log" while the tail reader had not even opened (2026-10-13 field log:
+         * `Finished Loading Log File in 17 seconds` lands 280 ms BEFORE `backfill merged`). Percent is a
+         * promise about the whole open, so the last point belongs to the merge, not to the disk.
+         */
+        return total > 0 ? Math.Min(99.0, done / (double)total * 100) : 0.0;
       }
 
       if (!_ready)
@@ -546,9 +554,11 @@ namespace EQLogParser
     {
       using var items = new BlockingCollection<LogReaderItem>(new ConcurrentQueue<LogReaderItem>(), QueueBound);
       processor.LinkTo(items);
+      var stopwatch = Stopwatch.StartNew();
+      long lines = 0;
       try
       {
-        ReadAndFeedRange(slot, from, to, items);
+        lines = ReadAndFeedRange(slot, from, to, items);
       }
       finally
       {
@@ -568,6 +578,15 @@ namespace EQLogParser
           await completion.ConfigureAwait(false);
         }
 
+        /*
+         * One line per range at Debug, and it is the answer to "what did the lanes actually do": bytes, lines,
+         * wall INCLUDING the final queue drain, and the resulting MB/s. A rate sitting at the machine's
+         * sequential-disk ceiling names bandwidth as the sharding limit; a rate well above it says the parse was
+         * the limit and both lanes did their job (docs/DesignNotes → "How loading is sharded in the app").
+         */
+        var ms = Math.Max(1, stopwatch.ElapsedMilliseconds);
+        Log.Debug($"load: range {slot} [{from:N0}, {to:N0}) fed {lines:N0} lines in {ms:N0} ms "
+                  + $"({(to - from) / 1048576.0 * 1000 / ms:F0} MB/s)");
         processor.Dispose();
       }
     }
@@ -579,42 +598,37 @@ namespace EQLogParser
      * worker's pool thread; the queue blocks it while parsing catches up — the same backpressure shape the
      * sequential reader has always had.
      */
-    private void ReadAndFeedRange(int slot, long from, long to, BlockingCollection<LogReaderItem> items)
+    // Returns the number of lines this range stamped and fed (the same set FlushShardBatch counts into
+    // _handedOver), which is what the per-range Debug line reports. The body is HandleLine's bulk half: same
+    // gate, no monitor/archive channels - a backfill line is a bulk line.
+    private long ReadAndFeedRange(int slot, long from, long to, BlockingCollection<LogReaderItem> items)
     {
       var token = _cts?.Token ?? default;
       var batch = new List<LogReaderItem>(BatchSize);
       string previous = null;
       double lastTs = 0;
+      long fed = 0;
 
       LogRangeReader.ForEachLine(FileName, from, to,
         line =>
         {
-          if (StampAndFeed(line, ref previous, ref lastTs, batch, items, token))
+          if (!TryStamp(line, ref previous, ref lastTs))
           {
-            previous = line;
+            return;
+          }
+
+          batch.Add(new LogReaderItem(line, lastTs, false));
+          previous = line;
+          fed++;
+          if (batch.Count >= BatchSize)
+          {
+            FlushShardBatch(batch, items, token);
           }
         },
         consumed => Volatile.Write(ref _shardConsumed[slot], consumed), token);
 
       FlushShardBatch(batch, items, token);
-    }
-
-    // Worker mirror of HandleLine minus the monitor/archive channels: a backfill line is a bulk line.
-    private bool StampAndFeed(string line, ref string previous, ref double lastTs,
-      List<LogReaderItem> batch, BlockingCollection<LogReaderItem> items, CancellationToken token)
-    {
-      if (!TryStamp(line, ref previous, ref lastTs))
-      {
-        return false;
-      }
-
-      batch.Add(new LogReaderItem(line, lastTs, false));
-      if (batch.Count >= BatchSize)
-      {
-        FlushShardBatch(batch, items, token);
-      }
-
-      return true;
+      return fed;
     }
 
     private void FlushShardBatch(List<LogReaderItem> batch, BlockingCollection<LogReaderItem> items, CancellationToken token)

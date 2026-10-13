@@ -115,7 +115,11 @@ the app, so these are operator checks with `Debug=True`:
 
 - Opening a big log prints exactly one `load: sharded backfill '<file>' | ranges=2` and a following `backfill merged`;
   opening a small log or a last-minutes view prints neither (policy at the door, not in the dark).
-- The progress band moves smoothly during the backfill (it aggregates range bytes) rather than sitting at 0 % and jumping.
+- The progress band moves smoothly during the backfill (it aggregates range bytes and caps at 99 % until the merge
+  returns) rather than sitting at 0 % and jumping, and `Finished Loading Log File` / `gc.tidy log loaded` appear only
+  AFTER `backfill merged` — never inside it. The `load: progress tick` and per-range `load: range N … MB/s` Debug
+  lines say who was quiet if anything looks stuck (a range rate pinned at the disk's sequential speed means the file,
+  not the parse, is the limit).
 - Boards show the same totals as a sequential load of the same file — quickest control is temporarily setting
   `LogShardPlan.Workers = 1` and diffing the damage/heal totals; a debug build also logs merged fact counts.
 - Live tailing works right after: new lines during the load appear, and the merged rows are already on the boards when
