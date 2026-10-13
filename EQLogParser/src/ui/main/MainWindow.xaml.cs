@@ -1745,8 +1745,10 @@ namespace EQLogParser
      * The load's collection, deferred to where its garbage actually dies: armed at 100 % on a read that read lines, paid by the
      * first contentful board build (ConsumePostLoadTidy) or, for a capture nothing ever built boards from, by this backstop. The due
      * flag crosses threads under Interlocked because builds finish on workers; arming and paying are UI-thread. The backstop is what
-     * keeps the pre-2026-10-13 guarantee - a load that read lines always gets its pass - and 10 s sits comfortably past the first
-     * full pass plus fan-out of every capture measured here (field: 2.9 s + ~1 s of boards at 11 M facts).
+     * keeps the pre-2026-10-13 guarantee - a load that read lines always gets its pass - and it is usually THE payer: an operator
+     * who has not clicked a fight row asks no board, so the seam waits for a selection that may never come (field: the first run
+     * paid at the backstop 8 s after the rows appeared). 6 s puts the pause right behind the first full pass - Finished +2.3/+2.9 s
+     * on every capture measured here, with margin - and paying mid-pass on some slower box is merely the old behavior, never wrong.
      */
     private int _postLoadTidyDue;
     private DispatcherTimer _postLoadTidyFallback;
@@ -1754,7 +1756,7 @@ namespace EQLogParser
     private void ArmPostLoadTidy()
     {
       Interlocked.Exchange(ref _postLoadTidyDue, 1);
-      _postLoadTidyFallback ??= new DispatcherTimer { Interval = TimeSpan.FromSeconds(10) };
+      _postLoadTidyFallback ??= new DispatcherTimer { Interval = TimeSpan.FromSeconds(6) };
       _postLoadTidyFallback.Stop();
       _postLoadTidyFallback.Tick -= PostLoadTidyFallbackTick;   // one handler entry, re-armed like every other timer here
       _postLoadTidyFallback.Tick += PostLoadTidyFallbackTick;

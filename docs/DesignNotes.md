@@ -12485,9 +12485,13 @@ the three-board fan-out, which allocate more than the read itself. The field fil
 nothing asked again, which is precisely how it read to the operator ("it didn't garbage collect after the log finished
 loading. but it did after i manually clicked clear all"). The moment now **arms** at 100 % instead of paying:
 `MainWindow.ConsumePostLoadTidy` pays it at the seam where all three boards of one request have answered and the
-materializer has let go (labelled `gc.tidy first boards built`), with a 10 s one-shot backstop keeping the old guarantee for
-a capture nothing builds boards from, and a new open disarming a pending pass so it can never land inside the next load's
-bulk read. Same two moments, same labelled pause — just paid when the work is actually over.
+materializer has let go (labelled `gc.tidy first boards built`), with a 6 s one-shot backstop keeping the old guarantee,
+and a new open disarming a pending pass so it can never land inside the next load's bulk read. The backstop is usually
+THE payer, and that is fine: an operator who has not clicked a row asks no board, so the seam may wait on a selection that
+never comes — the first field run paid at the backstop with the working set going 1477 → 593 MB. The interval started at
+10 s and read as "oddly delayed"; 6 s lands the pause just behind the rows (first full pass = Finished +2.3/+2.9 s on every
+capture measured here), and paying mid-pass on some slower box is merely the old behaviour, never wrong. Same two moments,
+same labelled pause — just paid when the work has actually stopped.
 
 ## DPS and active-reader retention review at 35420fcf
 
