@@ -989,8 +989,8 @@ namespace EQLogParser
 
         /*
          * The settle a bulk load armed (see ArmPostLoadTidy): this seam is the moment all three boards of one request have answered
-         * and the materializer has let go, so the first-pass temporaries are dead by definition. Fights.Count > 0 keeps the mid-backfill
-         * builds of empty snapshots from spending the arm on a build that built nothing.
+         * and the materializer has let go, so the first-pass temporaries are dead by definition. Fights.Count > 0 keeps an early
+         * build over an empty snapshot from spending the arm on a build that built nothing.
          */
         if (succeeded && input.Fights.Count > 0) ConsumePostLoadTidy();
       }
@@ -1449,18 +1449,15 @@ namespace EQLogParser
           // One Debug line per tick, and it is the only honest answer to "the progress text vanished during a
           // load": either the pump ticked and the reader reported this percent (reader-side question), or the
           // ticks stop appearing while the load keeps running (the UI thread never got here). Cheap, bounded
-          // by the load's wall time, and Debug-only like every other `load:` line (2026-10-13: a sharded load
-          // showed no progress for its whole 17 s and nothing in the log could say which side went quiet).
-          var laneFacts = _eqLogReader.BackfilledFacts;
-          Log.Debug($"load: progress tick {filePercent:F0}% | lines={_eqLogReader.HandedOverLines:N0}" +
-                    (laneFacts > 0 ? $" | laneFacts={laneFacts:N0}" : string.Empty) + $" | {seconds}s");
+          // by the load's wall time, and Debug-only like every other `load:` line.
+          Log.Debug($"load: progress tick {filePercent:F0}% | lines={_eqLogReader.HandedOverLines:N0} | {seconds}s");
 
           // The derived fight list has no rows of its own until the first snapshot (bulk ingest parks the derive
           // lanes by design), so without this it would sit as a silent empty grid through the whole load. It gets the
           // handover count rather than filePercent: the percent is THIS line's job (one copy per pump, at the top of the
           // window), while the panel only needs to know whether a first build is owed at all — a follow-from-end open
           // (Clear All, the startup auto-monitor) reads no history and its empty list is the correct answer.
-          if (npcWindow?.Content is FightTable pumpTable) pumpTable.ReportCaptureProgress(_eqLogReader.HandedOverLines, laneFacts);
+          if (npcWindow?.Content is FightTable pumpTable) pumpTable.ReportCaptureProgress(_eqLogReader.HandedOverLines);
 
           statusText.Text = filePercent < 100.0 ? $"Reading Log.. {filePercent}% in {seconds} seconds" : $"Additional Processing... {seconds} seconds";
           statusText.Foreground = Application.Current.Resources["EQWarnForegroundBrush"] as SolidColorBrush;
@@ -1638,9 +1635,9 @@ namespace EQLogParser
             Log.Debug($"capture: started ({Path.GetFileName(theFile)}) {FactCapacity.ModeWord(lastMins)}"
                      + $" from {origin} | sized-from={hintBytes / (1024 * 1024):N0} MB");
 
-            // `_engine` is the sharded-backfill collaborator: on a whole-file open big enough to earn it, the
-            // load reads on two lanes and merges into this session's capture (LogReader class comment + DesignNotes).
-            _eqLogReader = new LogReader(new LogProcessor(theFile, chatSink, new TriggerHookAdapter()), theFile, origin, lastMins, _engine);
+            // One reader, one lane, file order: the session's own capture is what the processor fills (see LogReader's
+            // class comment for why reading stays single-threaded).
+            _eqLogReader = new LogReader(new LogProcessor(theFile, chatSink, new TriggerHookAdapter()), theFile, origin, lastMins);
             /*
              * Start the read loop OFF this thread - and Task.Run is needed even though LogReader made all of its own
              * awaits context-free, because the first segment runs on whoever called and everything here is already inside a

@@ -175,19 +175,15 @@ namespace EQLogParser
 
     /*
      * Set when THIS open's reader reports done (ReportReadFinished, fed by EventsLogLoadingComplete). It turns "the list
-     * is now the answer" from a guess into a fact: a 0-row snapshot MID-read proves nothing — during a sharded backfill every
-     * fact sits in a lane table until the merge, so the stray passes of the read window derive nothing and used to take the
-     * band down for good at twenty percent with twenty seconds still reading (field: "the progress flashed and disappeared").
-     * After the reader is done, zeros ARE all this capture will say, and the band settles. `_linesRead` is the same pump's
-     * other number, and the opening phrase only: the detail line counts CAPTURED FACTS through every phase (see
-     * UpdateLoadDetail) — lines speak just for the seconds before the first fact batch exists.
+     * is now the answer" from a guess into a fact: a 0-row snapshot MID-read proves nothing — an early pass can find no
+     * finished fight while rows are still landing, and settling on that left the pane blank for the rest of the load.
+     * After the reader is done, zeros ARE all this capture will say (a capture with no fights, a follow-from-end open),
+     * and the band settles. `_linesRead` is the same pump's other number, and the opening phrase only: the detail line
+     * counts CAPTURED FACTS (see UpdateLoadDetail) — lines speak just for the seconds before the first fact batch exists.
      */
     private bool _readerDone;
     private long _linesRead;
 
-    // Facts counted by the backfill's lane captures, newest tick; monotonic, and it carries the detail line across
-    // the merge seam until the session's own capture event overtakes it (UpdateLoadDetail).
-    private long _pendingFacts;
     private DispatcherTimer _bandGuard;
 
     /*
@@ -430,7 +426,6 @@ namespace EQLogParser
       _awaitingFirstRows = false;
       _readerDone = false;
       _linesRead = 0;
-      _pendingFacts = 0;
       _bandGuard?.Stop();   // a guard armed for the session that just closed must not settle this one's band
       _reveal.Arm();
       _sessionPainted = false;
@@ -462,9 +457,8 @@ namespace EQLogParser
 
         /*
          * The list answers for the band when it HAS rows, or when the reader finished and these zeros are the whole
-         * statement (see ReportReadFinished for why a mid-load 0-row snapshot must NOT settle it — the sharded backfill
-         * made that snapshot arrive twenty seconds before any row existed). Rows landing while the pump is still under
-         * 100 % still win: real rows beat a bar, and they always will.
+         * statement (see ReportReadFinished for why a mid-read 0-row snapshot must NOT settle it). Rows landing while
+         * the pump is still under 100 % still win: real rows beat a bar, and they always will.
          */
         if (!_loadBandSettled && (snapshot.Rows.Count > 0 || _readerDone))
         {
@@ -640,15 +634,14 @@ namespace EQLogParser
      * So the band says one thing, for as long as this session has shown no rows and owes a first build: the list is empty
      * because it is being made — with the captured-fact count under the bar as the moving part, which only this panel has.
      */
-    internal void ReportCaptureProgress(long linesRead, long pendingFacts = 0)
+    internal void ReportCaptureProgress(long linesRead)
     {
       if (Dispatcher.CheckAccess() == false)
       {
-        Dispatcher.InvokeAsync(() => ReportCaptureProgress(linesRead, pendingFacts));
+        Dispatcher.InvokeAsync(() => ReportCaptureProgress(linesRead));
         return;
       }
 
-      _pendingFacts = Math.Max(_pendingFacts, pendingFacts);   // lane facts during a backfill; 0 every other phase
       _linesRead = Math.Max(_linesRead, linesRead);   // the detail line's other moving part; monotonic for the session
       if (_loadBandSettled) return;   // rows landed this session: the list itself is the message
       if (linesRead > 0) _awaitingFirstRows = true;   // monotonic for the session; a follow-from-end open never sets it
@@ -673,22 +666,16 @@ namespace EQLogParser
     }
 
     /*
-     * The moving part under the headline, spoken in CAPTURED FACTS through every phase (operator 2026-10-13: "it's still
-     * counting lines" — thirteen million of them out loud reads as telemetry from the wrong feature, and this pane counts
-     * captures). Two sources and one seam, never summed:
-     *   - while a sharded backfill runs, every row sits in its lane's capture until the merge, so the number is those
-     *     tables' sum (LogReader.BackfilledFacts) — real counts, not the session capture's trickle of stream-wide identity
-     *     events that earned the old "8 facts?!" law. That law stands for the SESSION capture; it just stopped being the
-     *     only place facts exist mid-read.
-     *   - from the merge on, the session's own capture answers through OnCapturing. Math.Max over both carries the display
-     *     across the seam, where the two sources describe the same rows and agree, and keeps it monotonic if a late tick
-     *     arrives with a smaller pending count.
+     * The moving part under the headline, spoken in CAPTURED FACTS (operator 2026-10-13: "it's still counting lines" —
+     * thirteen million of them out loud reads as telemetry from the wrong feature, and this pane counts captures). One
+     * source: the session's own capture, answered through OnCapturing as rows land — a bulk read fills it in file order,
+     * so this number moves for as long as the load runs.
      * Lines remain only as the opening phrase, for the seconds before the first fact batch lands (and for an open that
      * reads no history, "waiting for first facts" holds until the monitor's first real capture).
      */
     private void UpdateLoadDetail()
     {
-      var facts = Math.Max(_pendingFacts, _capturedFacts);
+      var facts = _capturedFacts;
       if (facts > 0)
       {
         loadDetail.Text = $"{facts:N0} facts captured";

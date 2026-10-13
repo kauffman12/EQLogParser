@@ -21,10 +21,10 @@ namespace EQLogParser.Wpf.Test;
  * correct answer rather than a wait. `linesRead` on ReportCaptureProgress is that whole distinction.
  *
  * Rows take the band down for good - real rows beat a bar, and a quiet stretch mid-file can legitimately complete a
- * derive under 100 %. An EMPTY snapshot does not, unless the reader has already finished: during a sharded backfill the
- * facts all sit in lane tables until the merge, so stray early passes derive zero fights, and letting those zeros settle
- * the band is exactly the field bug "the progress flashed and disappeared" - twenty seconds of read left with no rows
- * and no band. ReportReadFinished marks that boundary; a guard timer settles a band no snapshot ever came to answer.
+ * derive under 100 %. An EMPTY snapshot does not, unless the reader has already finished: an early pass can find no
+ * finished fight while rows are still landing, and letting those zeros settle the band is the field bug "the progress
+ * flashed and disappeared" - most of a read left with no rows and no band. ReportReadFinished marks that boundary; a
+ * guard timer settles a band no snapshot ever came to answer (a capture with no fights at all).
  *
  * The pane carries no status text at all: the top-right message section was removed on request, so a derive, a selection
  * or a failed pass has nothing to say there - DeriveEngine journals failures to eqlogparser.log (repeating stack plus
@@ -102,36 +102,35 @@ public sealed class FightTableLoadBandTest
   }
 
   [TestMethod]
-  public void LaneFactsLeadTheDetailLineThroughABackfill()
+  public void CaptureFactsReplaceLinesInTheDetailLine()
   {
     Sta.Run(() =>
     {
       var table = new FightTable();
 
       /*
-       * The mid-load detail line counts CAPTURED FACTS, not lines (operator 2026-10-13). While the lanes run, the count
-       * arrives from their own tables (the pendingFacts parameter); lines speak only until the first fact batch exists.
+       * The mid-load detail line counts CAPTURED FACTS, not lines (operator 2026-10-13: "it's still counting lines"
+       * — thirteen million of them out loud reads as telemetry from the wrong feature). Lines speak only until the
+       * first facts exist; after that, a further pump tick must not drag the display back to a line count.
        */
       table.ReportCaptureProgress(1_000_000);
       Flush();
       StringAssert.Contains(table.loadDetail.Text, "lines read", "before any facts land, lines carry the read");
 
-      table.ReportCaptureProgress(1_100_000, 45_000);
+      table.OnCapturing(45_000);
       Flush();
       Assert.AreEqual("45,000 facts captured", table.loadDetail.Text,
-        "once the lanes count facts, facts are the message - the line count goes quiet");
+        "once facts land, facts are the message - the line count goes quiet");
 
-      // The merge seam: pending stops arriving (the reader answers 0 outside a backfill) and the session's own
-      // capture event has not landed yet — the floor keeps the display honest instead of falling back to lines.
-      table.ReportCaptureProgress(1_300_000, 0);
+      table.ReportCaptureProgress(1_300_000);
       Flush();
-      Assert.AreEqual("45,000 facts captured", table.loadDetail.Text, "the seam spends nothing - the floor holds");
+      Assert.AreEqual("45,000 facts captured", table.loadDetail.Text,
+        "a later pump tick does not fall back to counting lines");
 
-      // And the real capture overtakes it, monotonic as ever.
       table.OnCapturing(11_097_543);
       Flush();
       Assert.AreEqual("11,097,543 facts captured", table.loadDetail.Text,
-        "the session capture takes the number over at its own value");
+        "the capture keeps reporting its own growing count");
     });
   }
 
@@ -226,21 +225,17 @@ public sealed class FightTableLoadBandTest
       Assert.AreEqual(Visibility.Visible, table.loadOverlay.Visibility, "an empty mid-load snapshot is not an answer");
 
       /*
-       * The detail line while the read is in flight: lines only. During a backfill the capture holds just the trickle of
-       * stream-wide identity events until the merge - quoting "8 facts captured" beside twelve million lines reads as a
-       * stall, when the truth is that every row is waiting one merge away.
+       * The detail line while the read is in flight: the capture's OWN count. One reader fills one capture in file
+       * order, so a mid-read count is real progress - and it says more than a line count does (operator 2026-10-13:
+       * thirteen million lines counted out loud reads as telemetry from the wrong feature).
        */
       table.OnCapturing(8);
       Flush();
-      StringAssert.Contains(table.loadDetail.Text, "lines read");
-      Assert.IsFalse(table.loadDetail.Text.Contains("facts", StringComparison.OrdinalIgnoreCase),
-          "a mid-backfill capture count is a tease, not progress");
+      Assert.AreEqual("8 facts captured", table.loadDetail.Text, "the capture's own growing count carries the read");
 
       // The reader finishes; the same emptiness now IS the whole statement, and the next pass settles it.
       table.ReportReadFinished();
       Flush();
-      StringAssert.Contains(table.loadDetail.Text, "facts captured",
-          "the fact count is allowed to speak once the read is done");
 
       table.OnDerived(new DerivedSnapshot { DerivedAt = DateTime.Now, FightCount = 0, FactCount = 3 });
       Flush();
