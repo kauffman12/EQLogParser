@@ -136,8 +136,8 @@ namespace EQLogParser
 
       try
       {
-        var split = lineData.Split;
-        if (split is { Length: >= 2 })
+        var split = lineData.Words;
+        if (split.Length >= 2)
         {
           // [Sun Mar 01 22:20:36 2020] A shaded torch has been awakened by Drogbaa.
           // [Sun Mar 01 20:35:55 2020] The master looter, Qulas, looted 32426 platinum from the corpse.
@@ -171,7 +171,7 @@ namespace EQLogParser
           {
             if (i == 0 && split[0].StartsWith("--", StringComparison.OrdinalIgnoreCase))
             {
-              looter = split[0] == "--You" ? ConfigUtil.PlayerName : split[0].TrimStart('-');
+              looter = split[0] == "--You" ? ConfigUtil.PlayerName : split.StringAt(0).TrimStart('-');
             }
             // [Thu Jan 27 16:32:01 2022] [1 Warrior] Spasiba(Gnome)  ZONE: The Bazaar(bazaar)
             // [Thu Jan 27 16:32:01 2022] [120 Shadowblade (Rogue)] Bloodydagger(Iksar) < Realm of Insanity> ZONE: Realm of Insanity Village III, 200 Terminus Heights, Palatial Guild Hall
@@ -200,77 +200,90 @@ namespace EQLogParser
             }
             else
             {
-              switch (split[i])
+              var word = split[i];
+
+              /*
+               * The old `switch (split[i])` as an ordered chain — same case order, same bodies, same throws on the
+               * same malformed lines (the catch above still swallows exactly its four shapes; IndexOutOfRange rides
+               * through uncaught here and there exactly as it always did). Verified record-for-record on all 19 real
+               * captures before this replaced the switch.
+               */
+              if (word == "**A")
               {
-                case "**A":
-                  if (i == 0 && split[1] == "Magic" && split[2] == "Die" && split[4] == "rolled" && split[6].Length > 2)
+                if (i == 0 && split[1] == "Magic" && split[2] == "Die" && split[4] == "rolled" && split[6].Length > 2)
+                {
+                  var player = split.StringAt(6)[..^1];
+                  if (split.Length == 25 && split[12] == "number" && split[16].Length > 1 && split[24].Length > 1)
                   {
-                    var player = split[6][..^1];
-                    if (split.Length == 25 && split[12] == "number" && split[16].Length > 1 && split[24].Length > 1)
+                    var to = split.StringAt(16)[..^1];
+                    var rolled = split.StringAt(24)[..^1];
+                    if (int.TryParse(split[14].Span, out var fromNumber) && int.TryParse(to, out var toNumber) && int.TryParse(rolled, out var rolledNumber))
                     {
-                      var to = split[16][..^1];
-                      var rolled = split[24][..^1];
-                      if (int.TryParse(split[14], out var fromNumber) && int.TryParse(to, out var toNumber) && int.TryParse(rolled, out var rolledNumber))
-                      {
-                        var record = new RandomRecord { Player = player, Rolled = rolledNumber, To = toNumber, From = fromNumber };
-                        RecordsStore.Instance.Add(record, lineData.BeginTime);
-                        handled = true;
-                      }
-                    }
-                    else if (split.Length == 7)
-                    {
-                      oldRandom = true;
-                      _randomPlayer = player;
-                      _lastLine = lineData.LineNumber;
-                    }
-                  }
-                  break;
-                case "**It":
-                  if (!string.IsNullOrEmpty(_randomPlayer) && (_lastLine + 1) == lineData.LineNumber && split.Length == 18 && split[5] == "number" &&
-                      split[9].Length > 1 && split[17].Length > 1)
-                  {
-                    var to = split[9][..^1];
-                    var rolled = split[17][..^1];
-                    if (int.TryParse(split[7], out var fromNumber) && int.TryParse(to, out var toNumber) && int.TryParse(rolled, out var rolledNumber))
-                    {
-                      var record = new RandomRecord { Player = _randomPlayer, Rolled = rolledNumber, To = toNumber, From = fromNumber };
+                      var record = new RandomRecord { Player = player, Rolled = rolledNumber, To = toNumber, From = fromNumber };
                       RecordsStore.Instance.Add(record, lineData.BeginTime);
                       handled = true;
                     }
                   }
-                  break;
-                case "awakened":
-                  awakenedIndex = i;
-                  break;
-                case "is":
-                  isIndex = i;
-                  break;
-                case "left":
-                  leftIndex = i;
-                  break;
-                case "looted":
-                  lootedIndex = i;
-                  break;
-                case "resisted":
-                  if (split.Length > i + 3 && split[i + 1].Length > 2 && split[^1].EndsWith('!'))
+                  else if (split.Length == 7)
                   {
-                    var npc = ParserUtil.JoinWords(split, 0, i);
-                    npc = TextUtils.CapitalizeFirst(npc);
-                    string spell;
-                    string attacker;
-                    if (split[i + 1] != "your")
+                    oldRandom = true;
+                    _randomPlayer = player;
+                    _lastLine = lineData.LineNumber;
+                  }
+                }
+              }
+              else if (word == "**It")
+              {
+                if (!string.IsNullOrEmpty(_randomPlayer) && (_lastLine + 1) == lineData.LineNumber && split.Length == 18 && split[5] == "number" &&
+                    split[9].Length > 1 && split[17].Length > 1)
+                {
+                  var to = split.StringAt(9)[..^1];
+                  var rolled = split.StringAt(17)[..^1];
+                  if (int.TryParse(split[7].Span, out var fromNumber) && int.TryParse(to, out var toNumber) && int.TryParse(rolled, out var rolledNumber))
+                  {
+                    var record = new RandomRecord { Player = _randomPlayer, Rolled = rolledNumber, To = toNumber, From = fromNumber };
+                    RecordsStore.Instance.Add(record, lineData.BeginTime);
+                    handled = true;
+                  }
+                }
+              }
+              else if (word == "awakened")
+              {
+                awakenedIndex = i;
+              }
+              else if (word == "is")
+              {
+                isIndex = i;
+              }
+              else if (word == "left")
+              {
+                leftIndex = i;
+              }
+              else if (word == "looted")
+              {
+                lootedIndex = i;
+              }
+              else if (word == "resisted")
+              {
+                if (split.Length > i + 3 && split[i + 1].Length > 2 && split[^1].EndsWith('!'))
+                {
+                  var npc = split.JoinWords(0, i);
+                  npc = TextUtils.CapitalizeFirst(npc);
+                  string spell;
+                  string attacker;
+                  if (split[i + 1] != "your")
+                  {
+                    if (split[i + 2] == "pet's")
                     {
-                      if (split[i + 2] == "pet's")
-                      {
-                        attacker = split[i + 1] + " pet";
-                        spell = ParserUtil.JoinWords(split, i + 3, split.Length - i - 3).TrimEnd('!');
-                      }
-                      else
-                      {
-                        attacker = split[i + 1][..^2];
-                        spell = ParserUtil.JoinWords(split, i + 2, split.Length - i - 2).TrimEnd('!');
-                      }
+                      attacker = split.StringAt(i + 1) + " pet";
+                      spell = split.JoinWords(i + 3, split.Length - i - 3).TrimEnd('!');
                     }
+                    else
+                    {
+                      attacker = split.StringAt(i + 1)[..^2];
+                      spell = split.JoinWords(i + 2, split.Length - i - 2).TrimEnd('!');
+                    }
+                  }
                     else
                     {
                       /*
@@ -282,7 +295,7 @@ namespace EQLogParser
                        * parser already uses for that (ParserUtil.IsUnattributedName), never a hole.
                        */
                       attacker = string.IsNullOrEmpty(ConfigUtil.PlayerName) ? Labels.Unk : ConfigUtil.PlayerName;
-                      spell = ParserUtil.JoinWords(split, i + 2, split.Length - i - 2).TrimEnd('!');
+                      spell = split.JoinWords(i + 2, split.Length - i - 2).TrimEnd('!');
                     }
                     var record = new ResistRecord { Attacker = StringCache.GetOrAdd(attacker), Defender = StringCache.GetOrAdd(npc), Spell = StringCache.GetOrAdd(spell) };
                     RecordsStore.Instance.Add(record, lineData.BeginTime);
@@ -300,164 +313,174 @@ namespace EQLogParser
                     }
                     handled = true;
                   }
-                  break;
-                case "item(s):":
-                  if (split.Length > 9 && split[1] == "won" && split[4] == "roll")
+              }
+              else if (word == "item(s):")
+              {
+                if (split.Length > 9 && split[1] == "won" && split[4] == "roll")
+                {
+                  itemsIndex = i;
+                }
+              }
+              // persona change
+              else if (word == "loaded")
+              {
+                if (split.Length >= 7 && i == 2 && split[^1] == "set." && split[3] == "your" && split[1] == "successfully" && split[0] == "You")
+                {
+                  var className = split.JoinWords(4, 1 + (split.Length - 7));
+                  if (EQDataStore.Instance.IsValidClassName(className))
                   {
-                    itemsIndex = i;
+                    PlayerRegistry.Instance.SetActivePlayerClass(ConfigUtil.PlayerName, className, 1, lineData.BeginTime);
                   }
-                  break;
-                // persona change
-                case "loaded":
-                  if (split.Length >= 7 && i == 2 && split[^1] == "set." && split[3] == "your" && split[1] == "successfully" && split[0] == "You")
+                  handled = true;
+                }
+              }
+              else if (word == "looter,")
+              {
+                masterLootIndex = (i == 2 && split[1] == "master" && split[0] == "The") ? i + 1 : -1;
+              }
+              else if (word == "receive")
+              {
+                receiveIndex = (i == 1 && split[0] == "You") ? i : -1;
+              }
+              else if (word == "with")
+              {
+                if (itemsIndex > -1 && split.Length > i + 2 && split[i + 2] == "roll")
+                {
+                  looter = split.StringAt(0).Equals("you", StringComparison.OrdinalIgnoreCase) ? ConfigUtil.PlayerName : split.StringAt(0);
+                  var item = split.JoinWords(itemsIndex + 1, i - itemsIndex - 1);
+                  EventsLooterIdentified?.Invoke(looter, lineData.BeginTime);
+                  var record = new LootRecord { Item = StringCache.GetOrAdd(item), Player = StringCache.GetOrAdd(looter), Quantity = 0, IsCurrency = false, Npc = StringCache.GetOrAdd("Won Roll (Not Looted)") };
+                  RecordsStore.Instance.Add(record, lineData.BeginTime);
+                  handled = true;
+                }
+              }
+              else if (word == "reflected")
+              {
+                if (split.Length > 6 && i >= 6 && i + 2 < split.Length && split[0].StartsWith(ConfigUtil.PlayerName, StringComparison.Ordinal)
+                  && split[i - 1] == "been" && split[i - 2] == "has" && split[i - 3] == "spell" && split[i + 1] == "by")
+                {
+                  // var spell = split.JoinWords(1, i - 4);
+                  var npc = split.JoinWords(i + 2, split.Length - i - 2).TrimEnd('.');
+                  npc = TextUtils.CapitalizeFirst(npc);
+                  RecordsStore.Instance.UpdateNpcSpellStats(npc, SpellResist.Reflected, true);
+                  StringCache.GetOrAdd(npc);
+                  handled = true;
+                }
+              }
+              else if (word == "by")
+              {
+                if (awakenedIndex > -1 && awakenedIndex == (i - 1) && split.Length > 5 && split[i - 2] == "been" && split[i - 3] == "has")
+                {
+                  var awakened = split.JoinWords(0, i - 3);
+                  awakened = TextUtils.CapitalizeFirst(awakened);
+                  var breaker = split.JoinWords(i + 1, split.Length - i - 1).TrimEnd('.');
+                  breaker = TextUtils.CapitalizeFirst(breaker);
+                  var mezBreak = new MezBreakRecord { Breaker = StringCache.GetOrAdd(breaker), Awakened = StringCache.GetOrAdd(awakened) };
+                  RecordsStore.Instance.Add(mezBreak, lineData.BeginTime);
+                  EventsNewMezBreak?.Invoke(mezBreak);
+                  handled = true;
+                }
+                else if (isIndex > 0 && StruckByTypes.ContainsKey(split.StringAt(i - 1)))
+                {
+                  // ignore common lines like: is struck by
+                  return false;
+                }
+              }
+              else if (word == "on")
+              {
+                if (!string.IsNullOrEmpty(looter) && leftIndex == 1 && split.Length > 4)
+                {
+                  // covers "a" or "an"
+                  var item = split.JoinWords(3, i - 3);
+                  var npc = split.JoinWords(i + 1, split.Length - i - 1).TrimEnd(LootedFromTrim).Trim().Replace("'s corpse", "");
+                  npc = TextUtils.CapitalizeFirst(npc);
+                  var record = new LootRecord { Item = StringCache.GetOrAdd(item), Player = StringCache.GetOrAdd(looter), Quantity = 0, IsCurrency = false, Npc = StringCache.GetOrAdd($"{npc} (Left on Chest)") };
+                  RecordsStore.Instance.Add(record, lineData.BeginTime);
+                  handled = true;
+                }
+              }
+              else if (word == "from")
+              {
+                if (masterLootIndex > -1 && lootedIndex > masterLootIndex && split.Length > lootedIndex + 1 && split.Length > 5)
+                {
+                  var name = split.StringAt(3).TrimEnd(',');
+                  // if master looter is empty then it was the current player who looted
+                  if (string.IsNullOrEmpty(name))
                   {
-                    var className = ParserUtil.JoinWords(split, 4, 1 + (split.Length - 7));
-                    if (EQDataStore.Instance.IsValidClassName(className))
-                    {
-                      PlayerRegistry.Instance.SetActivePlayerClass(ConfigUtil.PlayerName, className, 1, lineData.BeginTime);
-                    }
+                    name = ConfigUtil.PlayerName;
+                  }
+
+                  if (ParseCurrency(split, lootedIndex + 1, i, out var item, out var count))
+                  {
+                    EventsLooterIdentified?.Invoke(name, lineData.BeginTime);
+                    var record = new LootRecord { Item = StringCache.GetOrAdd(item), Player = StringCache.GetOrAdd(name), Quantity = count, IsCurrency = true };
+                    RecordsStore.Instance.Add(record, lineData.BeginTime);
                     handled = true;
                   }
-                  break;
-                case "looter,":
-                  masterLootIndex = (i == 2 && split[1] == "master" && split[0] == "The") ? i + 1 : -1;
-                  break;
-                case "receive":
-                  receiveIndex = (i == 1 && split[0] == "You") ? i : -1;
-                  break;
-                case "with":
-                  if (itemsIndex > -1 && split.Length > i + 2 && split[i + 2] == "roll")
+                }
+                else if (!string.IsNullOrEmpty(looter) && lootedIndex == 2 && split.Length > 4)
+                {
+                  // covers "a" or "an"
+                  var count = split[3][0] == 'a' ? 1 : split.ParseUInt(3);
+                  var item = split.JoinWords(4, i - 4);
+                  var npc = split.JoinWords(i + 1, split.Length - i - 1).TrimEnd(LootedFromTrim).Trim().Replace("'s corpse", "");
+                  npc = TextUtils.CapitalizeFirst(npc);
+
+                  if (count > 0 && count != ushort.MaxValue)
                   {
-                    looter = split[0].Equals("you", StringComparison.OrdinalIgnoreCase) ? ConfigUtil.PlayerName : split[0];
-                    var item = ParserUtil.JoinWords(split, itemsIndex + 1, i - itemsIndex - 1);
                     EventsLooterIdentified?.Invoke(looter, lineData.BeginTime);
-                    var record = new LootRecord { Item = StringCache.GetOrAdd(item), Player = StringCache.GetOrAdd(looter), Quantity = 0, IsCurrency = false, Npc = StringCache.GetOrAdd("Won Roll (Not Looted)") };
+                    var record = new LootRecord { Item = StringCache.GetOrAdd(item), Player = StringCache.GetOrAdd(looter), Quantity = count, IsCurrency = false, Npc = StringCache.GetOrAdd(npc) };
                     RecordsStore.Instance.Add(record, lineData.BeginTime);
                     handled = true;
                   }
-                  break;
-                case "reflected":
-                  if (split.Length > 6 && i >= 6 && i + 2 < split.Length && split[0].StartsWith(ConfigUtil.PlayerName, StringComparison.Ordinal)
-                    && split[i - 1] == "been" && split[i - 2] == "has" && split[i - 3] == "spell" && split[i + 1] == "by")
+                }
+                else if (receiveIndex > -1 && i > receiveIndex && string.IsNullOrEmpty(looter))
+                {
+                  if (ParseCurrency(split, 2, i, out var item, out var count))
                   {
-                    // var spell = ParserUtil.JoinWords(split, 1, i - 4);
-                    var npc = ParserUtil.JoinWords(split, i + 2, split.Length - i - 2).TrimEnd('.');
-                    npc = TextUtils.CapitalizeFirst(npc);
-                    RecordsStore.Instance.UpdateNpcSpellStats(npc, SpellResist.Reflected, true);
-                    StringCache.GetOrAdd(npc);
-                    handled = true;
-                  }
-                  break;
-                case "by":
-                  if (awakenedIndex > -1 && awakenedIndex == (i - 1) && split.Length > 5 && split[i - 2] == "been" && split[i - 3] == "has")
-                  {
-                    var awakened = ParserUtil.JoinWords(split, 0, i - 3);
-                    awakened = TextUtils.CapitalizeFirst(awakened);
-                    var breaker = ParserUtil.JoinWords(split, i + 1, split.Length - i - 1).TrimEnd('.');
-                    breaker = TextUtils.CapitalizeFirst(breaker);
-                    var mezBreak = new MezBreakRecord { Breaker = StringCache.GetOrAdd(breaker), Awakened = StringCache.GetOrAdd(awakened) };
-                    RecordsStore.Instance.Add(mezBreak, lineData.BeginTime);
-                    EventsNewMezBreak?.Invoke(mezBreak);
-                    handled = true;
-                  }
-                  else if (isIndex > 0 && StruckByTypes.ContainsKey(split[i - 1]))
-                  {
-                    // ignore common lines like: is struck by
-                    return false;
-                  }
-                  break;
-                case "on":
-                  if (!string.IsNullOrEmpty(looter) && leftIndex == 1 && split.Length > 4)
-                  {
-                    // covers "a" or "an"
-                    var item = ParserUtil.JoinWords(split, 3, i - 3);
-                    var npc = ParserUtil.JoinWords(split, i + 1, split.Length - i - 1).TrimEnd(LootedFromTrim).Trim().Replace("'s corpse", "");
-                    npc = TextUtils.CapitalizeFirst(npc);
-                    var record = new LootRecord { Item = StringCache.GetOrAdd(item), Player = StringCache.GetOrAdd(looter), Quantity = 0, IsCurrency = false, Npc = StringCache.GetOrAdd($"{npc} (Left on Chest)") };
+                    var record = new LootRecord { Item = StringCache.GetOrAdd(item), Player = StringCache.GetOrAdd(ConfigUtil.PlayerName), Quantity = count, IsCurrency = true };
                     RecordsStore.Instance.Add(record, lineData.BeginTime);
                     handled = true;
                   }
-                  break;
-                case "from":
-                  if (masterLootIndex > -1 && lootedIndex > masterLootIndex && split.Length > lootedIndex + 1 && split.Length > 5)
+                }
+              }
+              else if (word == "given")
+              {
+                if (split[i - 1] == "was" && split.Length == (i + 3) && split[i + 1] == "to")
+                {
+                  var player = split.StringAt(i + 2);
+                  if (player.Length > 3)
                   {
-                    var name = split[3].TrimEnd(',');
-                    // if master looter is empty then it was the current player who looted
-                    if (string.IsNullOrEmpty(name))
-                    {
-                      name = ConfigUtil.PlayerName;
-                    }
-
-                    if (ParseCurrency(split, lootedIndex + 1, i, out var item, out var count))
-                    {
-                      EventsLooterIdentified?.Invoke(name, lineData.BeginTime);
-                      var record = new LootRecord { Item = StringCache.GetOrAdd(item), Player = StringCache.GetOrAdd(name), Quantity = count, IsCurrency = true };
-                      RecordsStore.Instance.Add(record, lineData.BeginTime);
-                      handled = true;
-                    }
-                  }
-                  else if (!string.IsNullOrEmpty(looter) && lootedIndex == 2 && split.Length > 4)
-                  {
-                    // covers "a" or "an"
-                    var count = split[3][0] == 'a' ? 1 : ParserUtil.ParseUInt(split, 3);
-                    var item = ParserUtil.JoinWords(split, 4, i - 4);
-                    var npc = ParserUtil.JoinWords(split, i + 1, split.Length - i - 1).TrimEnd(LootedFromTrim).Trim().Replace("'s corpse", "");
-                    npc = TextUtils.CapitalizeFirst(npc);
-
-                    if (count > 0 && count != ushort.MaxValue)
-                    {
-                      EventsLooterIdentified?.Invoke(looter, lineData.BeginTime);
-                      var record = new LootRecord { Item = StringCache.GetOrAdd(item), Player = StringCache.GetOrAdd(looter), Quantity = count, IsCurrency = false, Npc = StringCache.GetOrAdd(npc) };
-                      RecordsStore.Instance.Add(record, lineData.BeginTime);
-                      handled = true;
-                    }
-                  }
-                  else if (receiveIndex > -1 && i > receiveIndex && string.IsNullOrEmpty(looter))
-                  {
-                    if (ParseCurrency(split, 2, i, out var item, out var count))
-                    {
-                      var record = new LootRecord { Item = StringCache.GetOrAdd(item), Player = StringCache.GetOrAdd(ConfigUtil.PlayerName), Quantity = count, IsCurrency = true };
-                      RecordsStore.Instance.Add(record, lineData.BeginTime);
-                      handled = true;
-                    }
-                  }
-                  break;
-                case "given":
-                  if (split[i - 1] == "was" && split.Length == (i + 3) && split[i + 1] == "to")
-                  {
-                    var player = split[i + 2];
-                    if (player.Length > 3)
-                    {
-                      looter = player[..^1];
-                      looter = looter.Equals("you", StringComparison.OrdinalIgnoreCase) ? ConfigUtil.PlayerName : looter;
-                      EventsLooterIdentified?.Invoke(looter, lineData.BeginTime);
-                      var item = ParserUtil.JoinWords(split, 1, i - 2);
-                      var record = new LootRecord { Item = StringCache.GetOrAdd(item), Player = StringCache.GetOrAdd(looter), Quantity = 0, IsCurrency = false, Npc = StringCache.GetOrAdd("Given (Not Looted)") };
-                      RecordsStore.Instance.Add(record, lineData.BeginTime);
-                      handled = true;
-                    }
-                  }
-                  break;
-                case "split.":
-                case "split":
-                  if (receiveIndex > -1 && split[i - 1] == "your" && split[i - 2] == "as")
-                  {
-                    if (ParseCurrency(split, 2, i - 2, out var item, out var count))
-                    {
-                      var record = new LootRecord { Item = StringCache.GetOrAdd(item), Player = StringCache.GetOrAdd(ConfigUtil.PlayerName), Quantity = count, IsCurrency = true };
-                      RecordsStore.Instance.Add(record, lineData.BeginTime);
-                      handled = true;
-                    }
-                  }
-                  break;
-                case "There":
-                  if (i == 0 && split.Length >= 5 && split[1] == "are" && split[3] == "players" &&
-                      split[4] == "in" && split[5] == "your" && split[6] == "raid.")
-                  {
-                    RaidRosterStore.Instance.FlushCurrentGroup();
+                    looter = player[..^1];
+                    looter = looter.Equals("you", StringComparison.OrdinalIgnoreCase) ? ConfigUtil.PlayerName : looter;
+                    EventsLooterIdentified?.Invoke(looter, lineData.BeginTime);
+                    var item = split.JoinWords(1, i - 2);
+                    var record = new LootRecord { Item = StringCache.GetOrAdd(item), Player = StringCache.GetOrAdd(looter), Quantity = 0, IsCurrency = false, Npc = StringCache.GetOrAdd("Given (Not Looted)") };
+                    RecordsStore.Instance.Add(record, lineData.BeginTime);
                     handled = true;
                   }
-                  break;
+                }
+              }
+              else if (word == "split." || word == "split")
+              {
+                if (receiveIndex > -1 && split[i - 1] == "your" && split[i - 2] == "as")
+                {
+                  if (ParseCurrency(split, 2, i - 2, out var item, out var count))
+                  {
+                    var record = new LootRecord { Item = StringCache.GetOrAdd(item), Player = StringCache.GetOrAdd(ConfigUtil.PlayerName), Quantity = count, IsCurrency = true };
+                    RecordsStore.Instance.Add(record, lineData.BeginTime);
+                    handled = true;
+                  }
+                }
+              }
+              else if (word == "There")
+              {
+                if (i == 0 && split.Length >= 5 && split[1] == "are" && split[3] == "players" &&
+                    split[4] == "in" && split[5] == "your" && split[6] == "raid.")
+                {
+                  RaidRosterStore.Instance.FlushCurrentGroup();
+                  handled = true;
+                }
               }
             }
 
@@ -475,11 +498,11 @@ namespace EQLogParser
           {
             if (!string.IsNullOrEmpty(looter) && lootedIndex == 2 && split.Length > 4)
             {
-              var item = ParserUtil.JoinWords(split, 4, split.Length - 4);
+              var item = split.JoinWords(4, split.Length - 4);
               if (item.Length > 3 && item.EndsWith(".--", StringComparison.OrdinalIgnoreCase))
               {
                 // covers "a" or "an"
-                var count = split[3][0] == 'a' ? 1 : ParserUtil.ParseUInt(split, 3); item = item[..^3];
+                var count = split[3][0] == 'a' ? 1 : split.ParseUInt(3); item = item[..^3];
                 if (count > 0 && count != ushort.MaxValue)
                 {
                   EventsLooterIdentified?.Invoke(looter, lineData.BeginTime);
@@ -507,7 +530,7 @@ namespace EQLogParser
       return handled;
     }
 
-    private static bool ParseCurrency(string[] pieces, int startIndex, int toIndex, out string item, out uint count)
+    private static bool ParseCurrency(LineWords pieces, int startIndex, int toIndex, out string item, out uint count)
     {
       var parsed = true;
       item = null;
@@ -522,9 +545,9 @@ namespace EQLogParser
           continue;
         }
 
-        if (TextUtils.ParseUInt(pieces[i]) is var value && Currency.FirstOrDefault(curr => pieces[i + 1].StartsWith(curr, StringComparison.OrdinalIgnoreCase)) is { } type)
+        if (pieces.ParseUInt(i) is var value && Currency.FirstOrDefault(curr => pieces[i + 1].StartsWith(curr, StringComparison.OrdinalIgnoreCase)) is { } type)
         {
-          tmp.Add(pieces[i] + " " + type);
+          tmp.Add(pieces.StringAt(i) + " " + type);
           if (Rates.TryGetValue($"{pieces[i + 1][0]}", out var rate))
           {
             count += value * rate;
@@ -545,7 +568,7 @@ namespace EQLogParser
       return parsed;
     }
 
-    private static bool ParseWho(string[] split, int start, out string player, out string className, out int group)
+    private static bool ParseWho(LineWords split, int start, out string player, out string className, out int group)
     {
       player = null;
       group = -1;
@@ -555,12 +578,12 @@ namespace EQLogParser
       {
         if (split[start] == "[ANONYMOUS]")
         {
-          player = split[start + 1];
+          player = split.StringAt(start + 1);
           return true;
         }
         else
         {
-          var level = split[start][1..];
+          var level = split.StringAt(start)[1..];
           if (int.TryParse(level, out _))
           {
             var classStart = -1;
@@ -573,20 +596,20 @@ namespace EQLogParser
 
               if (classStart > -1 && split[i].EndsWith(")]", StringComparison.OrdinalIgnoreCase))
               {
-                className = ParserUtil.JoinWords(split, classStart, i - classStart + 1);
+                className = split.JoinWords(classStart, i - classStart + 1);
                 if (className.Length > 4)
                 {
                   className = className[1..^2];
                 }
 
-                player = split[i + 1];
+                player = split.StringAt(i + 1);
 
                 // Scan for (Group: X) pattern in remaining tokens
                 for (var j = i + 2; j < split.Length - 1; j++)
                 {
                   if (split[j] == "(Group:" && j + 1 < split.Length)
                   {
-                    var groupStr = split[j + 1].TrimEnd(')');
+                    var groupStr = split.StringAt(j + 1).TrimEnd(')');
                     group = groupStr == "None" ? 0 : int.TryParse(groupStr, out var g) ? g : 0;
                     break;
                   }
