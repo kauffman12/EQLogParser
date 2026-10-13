@@ -567,6 +567,38 @@ public class NamesTableTest
     });
   }
 
+  /*
+   * The universe, at the door where a census becomes rows (docs/DesignNotes.md → "Identity Table paging"): a summon whose own
+   * spelling names its owner is not listed at all, while the OWNER and any pet that genuinely needs one are. The strip counts what
+   * the table can show, so no dial and no search promises a name nobody put in the list — an operator looking for "Kizant`s pet"
+   * gets nothing back and the count says why there is nothing (it never claimed to hold it).
+   */
+  [TestMethod]
+  public void ASummonThatSpellsItsOwnerIsNotInTheTableAtAll()
+  {
+    Sta.Run(() =>
+    {
+      var pane = CreatePane();
+      pane.PublishCensusForTest([
+        CensusRow("Kizant", IdentityKind.Player, "R3-joinraid"),
+        CensusRow("Kizant`s pet", IdentityKind.Pet, "R5-owner:Kizant"),
+        CensusRow("Beorun`s warder", IdentityKind.Pet, "R5-owner:Beorun"),
+        CensusRow("Puksuu", IdentityKind.Pet, "R24-petslot")]);
+
+      CollectionAssert.AreEqual(new[] { "Kizant", "Puksuu" }, pane.RowsForTest.Select(r => r.Name).ToList(),
+                                "the two closed rows never arrive; the owner and the pet that needs an owner do");
+      Assert.AreEqual($"Showing 1 to {2:N0} of {2:N0} Identities", pane.TitleTextForTest,
+                      "total is the table's own universe, not everything the capture remembered");
+
+      // The take-back exception, on the same surface: a hand-written verdict keeps its row even on a name that spells otherwise.
+      pane.PublishCensusForTest([
+        CensusRow("Kizant", IdentityKind.Player, "R3-joinraid"),
+        new ClassificationReport.Row { Name = "Kizant`s pet", Kind = IdentityKind.Npc, Reason = "Manual", IsOperatorVerdict = true }]);
+      CollectionAssert.AreEqual(new[] { "Kizant", "Kizant`s pet" }, pane.RowsForTest.Select(r => r.Name).ToList(),
+                                "a wrong click that left no row would be a permanent click");
+    });
+  }
+
   private static ClassificationReport.Row CensusRow(string name, IdentityKind kind = IdentityKind.Unknown, string reason = "")
     => new() { Name = name, Kind = kind, Reason = reason };
 

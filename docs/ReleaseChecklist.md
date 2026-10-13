@@ -155,6 +155,10 @@ more than 1,000 names and a capture that is still growing. A Linux build does no
   In Chat, To/From cues appear, clear on focus and return on empty blur without leaving autocomplete suggestions behind.
 - [ ] **Global headers:** click Name, Type, Class, Owner and Why both ways; check page boundaries and equal-word name ties.
   Class really sorts class words, not names; the arrow matches the entire list, not just the current slice.
+- [ ] **No summon-word rows** (2026-10-13): `Kizant`s pet`, `X`s warder`, `Y`s familiar` appear nowhere in the table and searching for one
+  finds nothing — while its **owner** does appear, a pet with a player-chosen name still shows its Owner pencil, and `…s Ward of
+  Destruction` shapes are unaffected. Write any verdict onto a hidden name (another pane or an existing override) and its row comes back,
+  because a click that left no row could never be taken back. The strip's total counts only listed names: it must not promise the hidden ones.
 - [ ] **Cache invalidation:** visit several pages, return to one and change a verdict from another pane. Both that page and
   previously visited pages show the new word after a census; the current page reloads even when its page number did not change.
 - [ ] **Editing and races:** on a later page open each cell editor, let a census arrive, then pick/escape/page away. The editor

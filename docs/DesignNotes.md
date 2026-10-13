@@ -12327,6 +12327,44 @@ arithmetic of its own:
 `CountText` takes the noun as an argument because words are Resource vocabulary (the WPF assembly) while the arithmetic is Core;
 that split is also what lets the three-number shape be asserted headlessly instead of by squinting at a grid.
 
+**A name that spells its summon word has no row (2026-10-13).** "Kizant`s pet" and "Beorun`s warder" are settled twice over by the
+log itself: the kind IS Pet at Certain, and R5 reads the owner out of the very string it read the suffix from (`R5-owner:Kizant`). Such
+a row already had no Type pencil (`IdentityVocabulary.CanOverrule`); the operator asked for the other half — "thats just what the log
+says", so do not list it either. `NamesTableView.IsListed` is that decision, applied at exactly one door (the pane's census → rows
+step, before any question), and the census itself stays retained so widening a dial still needs no derive pass.
+
+Measured on the real captures (`ClassificationReport.Rows`, one raid night each):
+
+| capture | census rows | spelled-by-name | verdicts among them | Pet rows total |
+|---|---|---|---|---|
+| live `Incogitable_xegony` (344 MB) | 2,948 | 140 (4.7 %) | **all Pet**, none carrying an operator verdict | 160 |
+| THJ `Bulron_thj` (148 MB) | 7,996 | 5 (0.1 %) | all Pet | 35 |
+
+Nothing was hidden that the rules were unsure about — in both captures every spelled-by-name row was a Pet with no dissent, which is
+what makes the exclusion safe rather than convenient. Three things the measurement also said:
+
+- **The Owner cell was blank on most of them anyway**: only 63 of the 140 had a registry owner (`GetPlayerFromPet` learns from
+  `petmapping.txt` and from ownership words ON the line, not from the name's spelling), so over half those rows displayed a name the
+  reader could parse better than the table could. Hiding them removes a column that could not fill itself.
+- **The fixable half keeps its row.** The owner ("Kizant") is a row of its own and keeps its pencil, which is where a summon whose
+  master is actually an NPC gets corrected — measured in the THJ capture as `A worry wraith`s pet`, whose owner R5 corroborates at
+  Medium only, i.e. exactly the claim a person might need to overrule. A pet with a player-chosen name keeps its row too (20 of that
+  live capture's 160 Pet rows, verdicted by `R24-petslot` / `R20-petspell` / registry seed), because for those the owner really is unknown.
+- **The shape is the summon word, not the apostrophe.** `OwnerInName` requires the suffix to be the whole tail, so
+  "Bulron`s Ward of Destruction" and "Bulron`s Call of Xuzl" are not matched and keep their rows; neither does any possessive over a
+  corpse or an unrelated noun. The comma case ("Akini, Xanathan`s Warder") is hidden: R5 drops the OWNER claim there but still decides
+  the kind at Certain, and two claimed masters is not a question an Owner cell can answer either.
+
+**Display only, and it stays that way**: no verdict, board number, prior ledger entry or digest reads `IsListed`. The exception is an
+operator's own verdict — a hand-written claim on such a name keeps its row (and its pencil), because a wrong click that left no trace
+would be a permanent click; that is the same law `CanOverrule` already states about the icon. R21 spell-effect rows also have no pencil
+and **stay listed**: a dot or proc name is worth looking up, and 299 of that live census's rows are exactly that. "Cannot be edited" and
+"is not worth a row" are deliberately two different predicates.
+
+Because the exclusion happens before the count, the strip's total is now **the table's universe** rather than everything the capture
+remembered — the number a reader can reach by any dial or search. That is the honest denominator for "Showing … of N Identities", and it
+means an operator searching for a hidden name gets an empty answer from a count that never promised to hold it.
+
 **Only a question follows the selection.** `NamesTableView.DecidePage(…, followSelection)` clamps in both modes and moves to the
 selected row's page only when the caller says the QUESTION changed — query, type dial, or sort header. Publishing passed no such
 flag and followed unconditionally, so the pane's own comment ("ordinary censuses restore selection, not attention") described an

@@ -26,6 +26,32 @@ internal static class NamesTableView
 
   internal static bool IsCurrent(BuildStamp answer, BuildStamp current) => answer == current;
 
+  /*
+   * The table's UNIVERSE: which names it lists at all, decided before any question is asked.
+   *
+   * A name whose own spelling carries a summon word — "Kizant`s pet", "Beorun`s warder" (ClassificationRules.OwnerSuffixes, the
+   * one list) — is settled twice over by the log itself: the kind IS Pet at Certain, and R5 writes the owner out of the very
+   * string it read the suffix from (`R5-owner:Kizant`). Nothing a person could type improves that, so such a row already has no
+   * Type pencil (IdentityVocabulary.CanOverrule) — and listing 140 of them in a raid night (measured: 4.7% of that census, every
+   * one verdicted Pet, zero surprises; docs/DesignNotes.md → "Identity Table paging") is a wall of rows repeating names the reader
+   * already knows. An operator asked for exactly this: "thats just what the log says".
+   *
+   * DISPLAY ONLY, which is the whole point: the name is still classified, still scored on the boards, still remembered in the
+   * ledger. What disappears is an answer nobody can change, not the answer. And the fixable half of the case stays on screen: a
+   * summon whose owner is really an NPC ("A worry wraith`s pet") is corrected at the OWNER's row, which keeps its pencil.
+   *
+   * Two doors stay open by design:
+   *   - **An operator verdict is always listed.** A wrong click has to remain correctable by another one — the same reason an
+   *     override keeps its pencil on a name that spells otherwise (and it is the only way such a row can ever be taken back).
+   *   - **A custom-named pet is listed.** "Puksuu" is a Pet by spell data or petslot evidence, so its owner genuinely is a
+   *     question for a person (20 of that capture's 160 Pet rows). Only the summon-word shape is closed.
+   *
+   * NOT hidden here: R21 spell-effect rows have no pencil either, and they stay listed — a dot or proc name is worth looking up even
+   * though nobody can type a better answer for it. "Cannot be edited" and "is not worth a row" are two different decisions.
+   */
+  internal static bool IsListed(ClassificationReport.Row row)
+    => row.IsOperatorVerdict || ClassificationRules.OwnerInName(row.Name) is null;
+
   internal static bool Matches(string name, IdentityKind kind, Question question)
   {
     // All Types is unfiltered, including unplaced and taken-back rows. A narrowed set includes only its chosen kinds.

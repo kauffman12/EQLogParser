@@ -202,6 +202,11 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
   *Not Placed* / **Nothing Identified It**; an unmapped code echoes itself rather than being guessed. Direction words exist only
   for Spell rows, decided from final verdicts.
 
+- **A name that spells its summon word has no row.** `` `s pet|warder|ward|familiar|mount`` is Pet by that spelling and R5 reads the owner
+  out of the same string, so `NamesTableView.IsListed` keeps such names out of the Identity Table at the one census→row door —
+  **display only** (no verdict, board number, ledger entry or digest reads it). An operator verdict on such a name always comes back; the
+  owner row and any custom-named pet never left. Spell-effect rows have no pencil but keep their row: "cannot be edited" ≠ "not worth a row".
+
 ## Panes and UI
 - **A cell editor lives IN the cell.** Never open a `Popup` yourself for an interactive pick: mouse capture kills the pick.
   `NameRow.EditingColumn` shows a `ComboBox` in the cell template; bracket programmatic preselects in `_suppressSelection`;
