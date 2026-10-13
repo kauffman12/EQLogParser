@@ -913,14 +913,16 @@ namespace EQLogParser
          */
         var buildGroup = StatsBuildTrace.NextGroupId();
 
-        GenerateStatsOptions damageStatsOptions = new() { Source = door, BuildGroup = buildGroup };
+        GenerateStatsOptions damageStatsOptions = new()
+          { Source = door, BuildGroup = buildGroup, SessionId = session.SessionId };
         damageStatsOptions.Npcs.AddRange(input.Fights);
         damageStatsOptions.AllRanges = input.AllRanges;
         damageStatsOptions.MinSeconds = 0;
 
         // Same rows, other direction: TankingStatsBuilder walks fight.TankingBlocks and takes each player's
         // activity window from TankSegments, both of which the materializer fills off the same facts.
-        GenerateStatsOptions tankingStatsOptions = new() { Source = door, BuildGroup = buildGroup };
+        GenerateStatsOptions tankingStatsOptions = new()
+          { Source = door, BuildGroup = buildGroup, SessionId = session.SessionId };
         tankingStatsOptions.Npcs.AddRange(input.Fights);
         tankingStatsOptions.AllRanges = input.AllRanges;
         tankingStatsOptions.MinSeconds = 0;
@@ -929,7 +931,8 @@ namespace EQLogParser
         // Healing: no Fight objects involved anywhere on this path. The window is the selection's, the records
         // are the capture's, and the builder's own filters (AoE healing, swarm pets) run over them unchanged —
         // so the healing tab stops being the one board that ignored which list was clicked.
-        GenerateStatsOptions healingStatsOptions = new() { Source = door, BuildGroup = buildGroup };
+        GenerateStatsOptions healingStatsOptions = new()
+          { Source = door, BuildGroup = buildGroup, SessionId = session.SessionId };
         healingStatsOptions.Npcs.AddRange(input.Fights);
         healingStatsOptions.AllRanges = input.AllRanges;
         healingStatsOptions.MinSeconds = 0;
@@ -992,7 +995,7 @@ namespace EQLogParser
          * and the materializer has let go, so the first-pass temporaries are dead by definition. Fights.Count > 0 keeps an early
          * build over an empty snapshot from spending the arm on a build that built nothing.
          */
-        if (succeeded && input.Fights.Count > 0) ConsumePostLoadTidy();
+        if (succeeded && input.Fights.Count > 0) ConsumePostLoadTidy(session.SessionId);
       }
       catch (Exception ex)
       {
@@ -1661,6 +1664,7 @@ namespace EQLogParser
 
     private void CloseLogFile(bool changed)
     {
+      DisarmPostLoadTidy();   // invalidate queued callbacks as well as the fallback timer
       try
       {
         /*
@@ -1723,38 +1727,38 @@ namespace EQLogParser
        * the monitor seeks to end of file, nothing allocates behind the collector. Here rather than inside CloseLogFile because a close is
        * nearly always the first half of an OPEN, and a pass between them lands in the middle of that bulk read.
        */
-      _ = Dispatcher.InvokeAsync(async () => await TidyWithNoticeAsync("capture cleared"), DispatcherPriority.DataBind);
+      if (_engine is not { } session) return;
+      _captureTidy.Arm(session.SessionId);
+      if (_captureTidy.TryTake(session.SessionId, out var ticket)) QueueTidy(ticket, "capture cleared");
     }
 
-    /*
-     * Paint a name over the pause, then stop the world right here - "Cleaning up.." stays on screen frozen mid-compaction,
-     * which reads as work happening, not as a hang. The status line's previous text is restored afterwards so neither caller
-     * hard-codes the other's phrase.
-     */
-    private async Task TidyWithNoticeAsync(string reason)
+    // Recheck both scheduling boundaries: a close/open can run before the callback or during the render yield.
+    private async Task TidyWithNoticeAsync(CaptureTidyGate.Ticket ticket, string reason)
     {
+      if (!_captureTidy.IsCurrent(ticket, _engineSessionId)) return;
       var prior = statusText.Text;
-      statusText.Text = "Cleaning up..";
-      await Dispatcher.Yield(DispatcherPriority.Render);
-      GcTidyUp.TidyNow(reason);
-      statusText.Text = prior;
+      const string notice = "Cleaning up..";
+      statusText.Text = notice;
+      try
+      {
+        await Dispatcher.Yield(DispatcherPriority.Render);
+        if (_captureTidy.IsCurrent(ticket, _engineSessionId)) GcTidyUp.TidyNow(reason);
+      }
+      finally
+      {
+        if (_captureTidy.IsCurrent(ticket, _engineSessionId) && statusText.Text == notice) statusText.Text = prior;
+      }
     }
 
-    /*
-     * The load's collection, deferred to where its garbage actually dies: armed at 100 % on a read that read lines, paid by the
-     * first contentful board build (ConsumePostLoadTidy) or, for a capture nothing ever built boards from, by this backstop. The due
-     * flag crosses threads under Interlocked because builds finish on workers; arming and paying are UI-thread. The backstop is what
-     * keeps the pre-2026-10-13 guarantee - a load that read lines always gets its pass - and it is usually THE payer: an operator
-     * who has not clicked a fight row asks no board, so the seam waits for a selection that may never come (field: the first run
-     * paid at the backstop 8 s after the rows appeared). 6 s puts the pause right behind the first full pass - Finished +2.3/+2.9 s
-     * on every capture measured here, with margin - and paying mid-pass on some slower box is merely the old behavior, never wrong.
-     */
-    private int _postLoadTidyDue;
+    // One arm shared by workers and the fallback; tickets survive consumption but not a capture change.
+    // See docs/DesignNotes.md → "Garbage collection after loading a log".
+    private readonly CaptureTidyGate _captureTidy = new();
     private DispatcherTimer _postLoadTidyFallback;
 
     private void ArmPostLoadTidy()
     {
-      Interlocked.Exchange(ref _postLoadTidyDue, 1);
+      if (_engineSessionId == 0) return;
+      _captureTidy.Arm(_engineSessionId);
       _postLoadTidyFallback ??= new DispatcherTimer { Interval = TimeSpan.FromSeconds(6) };
       _postLoadTidyFallback.Stop();
       _postLoadTidyFallback.Tick -= PostLoadTidyFallbackTick;   // one handler entry, re-armed like every other timer here
@@ -1768,28 +1772,32 @@ namespace EQLogParser
      */
     private void DisarmPostLoadTidy()
     {
-      Interlocked.Exchange(ref _postLoadTidyDue, 0);
+      _captureTidy.Invalidate();
       _postLoadTidyFallback?.Stop();
     }
 
     private async void PostLoadTidyFallbackTick(object sender, EventArgs e)
     {
       ((DispatcherTimer)sender).Stop();
-      if (Interlocked.CompareExchange(ref _postLoadTidyDue, 0, 1) == 1) await TidyWithNoticeAsync("log loaded");
+      if (_captureTidy.TryTake(_engineSessionId, out var ticket)) await TidyWithNoticeAsync(ticket, "log loaded");
     }
 
     /*
      * Asked by a finished board build - worker thread - for ANY reason; only the arm decides. The first contentful build of the armed
      * capture pays it once; after that this is the load-bearing no-op that keeps every live-session pass from tidying by accident.
      */
-    private void ConsumePostLoadTidy()
+    private void ConsumePostLoadTidy(int sessionId)
     {
-      if (Interlocked.CompareExchange(ref _postLoadTidyDue, 0, 1) != 1) return;
+      if (_captureTidy.TryTake(sessionId, out var ticket)) QueueTidy(ticket, "first boards built");
+    }
 
+    private void QueueTidy(CaptureTidyGate.Ticket ticket, string reason)
+    {
       Dispatcher.InvokeAsync(async () =>
       {
+        if (!_captureTidy.IsCurrent(ticket, _engineSessionId)) return;
         _postLoadTidyFallback?.Stop();
-        await TidyWithNoticeAsync("first boards built");
+        await TidyWithNoticeAsync(ticket, reason);
       }, DispatcherPriority.DataBind);
     }
 

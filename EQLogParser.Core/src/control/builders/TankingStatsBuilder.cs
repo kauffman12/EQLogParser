@@ -22,6 +22,7 @@ namespace EQLogParser
     private List<List<ActionGroup>> _tankingGroups = [];
     private PlayerStats _raidTotals;
     private List<Fight> _selected;
+    private int _captureSessionId;
     private string _title;
 
     /*
@@ -87,6 +88,7 @@ namespace EQLogParser
       {
         try
         {
+          _captureSessionId = options.SessionId;
           FireNewStatsEvent();
           Reset();
 
@@ -383,6 +385,7 @@ namespace EQLogParser
             // generating new stats
             var genEvent = new StatsGenerationEvent
             {
+              SessionId = _captureSessionId,
               Type = Labels.TankParse,
               State = "COMPLETED",
               CombinedStats = combined
@@ -409,13 +412,15 @@ namespace EQLogParser
     private void FireNewStatsEvent()
     {
       // generating new stats
-      EventsGenerationStatus?.Invoke(new StatsGenerationEvent { Type = Labels.TankParse, State = "STARTED" });
+      EventsGenerationStatus?.Invoke(new StatsGenerationEvent
+        { SessionId = _captureSessionId, Type = Labels.TankParse, State = "STARTED" });
     }
 
     private void FireNoDataEvent(string state, int damageType)
     {
       // nothing to do
-      EventsGenerationStatus?.Invoke(new StatsGenerationEvent { Type = Labels.TankParse, State = state });
+      EventsGenerationStatus?.Invoke(new StatsGenerationEvent
+        { SessionId = _captureSessionId, Type = Labels.TankParse, State = state });
       FireChartEvent("CLEAR", damageType);
     }
 

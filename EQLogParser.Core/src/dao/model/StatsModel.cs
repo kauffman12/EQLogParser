@@ -71,6 +71,9 @@ namespace EQLogParser
      */
     public string Source { get; set; }
 
+    // Capture that supplied these records; zero is a headless build without a capture.
+    public int SessionId { get; set; }
+
     /*
      * The trace GROUP: one id shared by the builds of one request, so they are siblings rather than collisions (StatsBuildTrace
      * rule 2). MainWindow's fan-out issues one per selection and puts it on all three boards' options; every other door leaves it 0,
@@ -82,6 +85,7 @@ namespace EQLogParser
 
   internal class StatsGenerationEvent
   {
+    public int SessionId { get; set; }
     public bool Limited { get; set; }
     public string Type { get; set; }
     public string State { get; set; }

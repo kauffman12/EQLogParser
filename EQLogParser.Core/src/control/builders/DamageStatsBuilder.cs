@@ -35,6 +35,7 @@ namespace EQLogParser
     private PlayerStats _raidTotals;
     private List<Fight> _selected;
     private StatsGenerationEvent _lastStatsEvent;
+    private int _captureSessionId;
     private string _title;
 
     /*
@@ -168,6 +169,7 @@ namespace EQLogParser
       {
         try
         {
+          _captureSessionId = options.SessionId;
           FireNewStatsEvent();
           Reset();
 
@@ -639,6 +641,7 @@ namespace EQLogParser
             // generating new stats
             var genEvent = new StatsGenerationEvent
             {
+              SessionId = _captureSessionId,
               Type = Labels.DamageParse,
               State = "COMPLETED",
               CombinedStats = combined,
@@ -668,13 +671,15 @@ namespace EQLogParser
     private void FireNewStatsEvent()
     {
       // generating new stats
-      EventsGenerationStatus?.Invoke(new StatsGenerationEvent { Type = Labels.DamageParse, State = "STARTED" });
+      EventsGenerationStatus?.Invoke(new StatsGenerationEvent
+        { SessionId = _captureSessionId, Type = Labels.DamageParse, State = "STARTED" });
     }
 
     private void FireNoDataEvent(GenerateStatsOptions options, string state)
     {
       // nothing to do
-      EventsGenerationStatus?.Invoke(new StatsGenerationEvent { Type = Labels.DamageParse, State = state });
+      EventsGenerationStatus?.Invoke(new StatsGenerationEvent
+        { SessionId = _captureSessionId, Type = Labels.DamageParse, State = state });
       FireChartEvent("CLEAR");
     }
 

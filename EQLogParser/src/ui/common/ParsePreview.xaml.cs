@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
+using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -13,10 +14,15 @@ namespace EQLogParser
   /// <summary>
   /// Interaction logic for ParsePreview.xaml
   /// </summary>
-  public partial class ParsePreview
+  public partial class ParsePreview : IDisposable
   {
     private readonly ObservableCollection<string> _availableParses = [];
-    private readonly ConcurrentDictionary<string, ParseData> _parses = new();
+    // Display state is dispatcher-owned; only in-flight build tickets cross threads.
+    private readonly Dictionary<string, ParseData> _parses = new();
+    private readonly ConcurrentDictionary<string, Publication> _buildTickets = new();
+    private long _publicationEpoch;
+    private int _disposed;
+    private sealed record Publication(long Epoch, int SessionId);
     private readonly bool _initialized;
     private readonly DispatcherTimer _titleTimer;
 
@@ -39,24 +45,13 @@ namespace EQLogParser
       playerParseTextDoRank.IsChecked = ConfigUtil.IfSetOrElse("PlayerParseShowRank", true);
       playerParseTextDoSpecials.IsChecked = ConfigUtil.IfSetOrElse("PlayerParseShowSpecials", true);
 
-      // this window is either hidden or visible and doesn't need to implement dispose - there is exactly one of it, in MainWindow.xaml,
-      // so these subscriptions are app-lifetime on purpose.
+      // The host's one pane lives for the app; short-lived hosts can detach through Dispose.
       DamageStatsBuilder.Instance.EventsGenerationStatus += EventsGenerationStatus;
       HealingStatsBuilder.Instance.EventsGenerationStatus += EventsGenerationStatus;
       TankingStatsBuilder.Instance.EventsGenerationStatus += EventsGenerationStatus;
 
-      /*
-       * The last answer dies with the capture here too: every COMPLETED build leaves its CombinedStats in _parses, and nothing else
-       * in the app owns this window's copy - without this line a hidden Preview Parse keeps last night's whole raid (every row of it)
-       * through a Clear All and across the next log. Same law DamageStatsBuilder documents for GetLastStats.
-       */
-      CombatEvents.ActiveDataCleared += _ => Dispatcher.InvokeAsync(() =>
-      {
-        _parses.Clear();
-        _availableParses.Clear();
-        parseList.SelectedIndex = -1;
-        playerParseTextBox.Text = string.Empty;
-      });
+      // Clear invalidates queued publications immediately, including those made while this pane is hidden.
+      CombatEvents.ActiveDataCleared += ActiveDataCleared;
 
       _titleTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1000) };
       _titleTimer.Tick += (_, _) =>
@@ -74,6 +69,17 @@ namespace EQLogParser
       _initialized = true;
     }
 
+    public void Dispose()
+    {
+      if (Interlocked.Exchange(ref _disposed, 1) != 0) return;
+      DamageStatsBuilder.Instance.EventsGenerationStatus -= EventsGenerationStatus;
+      HealingStatsBuilder.Instance.EventsGenerationStatus -= EventsGenerationStatus;
+      TankingStatsBuilder.Instance.EventsGenerationStatus -= EventsGenerationStatus;
+      CombatEvents.ActiveDataCleared -= ActiveDataCleared;
+      ClearParses();
+      _buildTickets.Clear();
+    }
+
     internal void CopyToEqClick(string type)
     {
       if (parseList.SelectedItem?.ToString() != type && _availableParses.Contains(type))
@@ -86,70 +92,107 @@ namespace EQLogParser
 
     internal void AddParse(string type, CombinedStats combined, List<PlayerStats> selected = null, bool copy = false)
     {
-      _parses[type] = new ParseData { CombinedStats = combined };
-
-      if (selected != null)
-      {
-        _parses[type].Selected.AddRange(selected);
-      }
-
-      if (!_availableParses.Contains(type))
-      {
-        Dispatcher.InvokeAsync(() => _availableParses.Add(type));
-      }
-
-      TriggerParseUpdate(type, copy);
+      var ticket = PublicationNow();
+      var selection = selected is null ? new List<PlayerStats>() : new List<PlayerStats>(selected);
+      DispatchPublication(ticket, () => PublishParse(type, combined, selection, copy));
     }
 
     internal void UpdateParse(PlayerStatsSelectionChangedEventArgs data, bool hasTopParse, string label, string topLabel)
     {
-      // change the update order based on whats displayed
-      if (parseList.SelectedItem?.ToString() == topLabel)
+      var ticket = PublicationNow();
+      var selection = data.Selected is null ? new List<PlayerStats>() : new List<PlayerStats>(data.Selected);
+      var combined = data.CurrentStats;
+      DispatchPublication(ticket, () =>
       {
-        UpdateParse(label, data.Selected);
-        if (hasTopParse)
+        // Keep the selected parse last, so the refresh does not switch away from what was being read.
+        if (parseList.SelectedItem?.ToString() == topLabel)
         {
-          AddParse(topLabel, data.CurrentStats, data.Selected);
+          UpdateSelection(label, selection);
+          if (hasTopParse) PublishParse(topLabel, combined, selection, false);
         }
-      }
-      else
-      {
-        if (hasTopParse)
+        else
         {
-          AddParse(topLabel, data.CurrentStats, data.Selected);
+          if (hasTopParse) PublishParse(topLabel, combined, selection, false);
+          UpdateSelection(label, selection);
         }
-
-        UpdateParse(label, data.Selected);
-      }
+      });
     }
 
     internal void UpdateParse(string type, List<PlayerStats> selected)
     {
-      if (_parses.TryGetValue(type, out var value))
-      {
-        value.Selected.Clear();
-        if (selected != null)
-        {
-          _parses[type].Selected.AddRange(selected);
-        }
+      var ticket = PublicationNow();
+      var selection = selected is null ? new List<PlayerStats>() : new List<PlayerStats>(selected);
+      DispatchPublication(ticket, () => UpdateSelection(type, selection));
+    }
 
-        TriggerParseUpdate(type);
+    internal void ClearParses()
+    {
+      var epoch = Interlocked.Increment(ref _publicationEpoch);
+      void Clear()
+      {
+        if (epoch != Interlocked.Read(ref _publicationEpoch)) return;
+        _titleTimer?.Stop();
+        _parses.Clear();
+        _availableParses.Clear();
+        parseList.SelectedIndex = -1;
+        playerParseTextBox.Text = string.Empty;
       }
+
+      if (Dispatcher.CheckAccess()) Clear();
+      else _ = Dispatcher.InvokeAsync(Clear);
+    }
+
+    internal void EventsGenerationStatus(StatsGenerationEvent e)
+    {
+      if (Volatile.Read(ref _disposed) != 0) return;
+      if (e.State == "STARTED")
+      {
+        // Each singleton builder serializes its start/answer pair. A clear must not restamp its old answer.
+        _buildTickets[e.Type] = new Publication(Interlocked.Read(ref _publicationEpoch), e.SessionId);
+      }
+      else if (e.State is "COMPLETED" or "NONPC" or "NODATA"
+        && _buildTickets.TryRemove(e.Type, out var ticket))
+      {
+        var type = e.Type;
+        var combined = e.CombinedStats;
+        DispatchPublication(ticket, () => PublishParse(type, combined, [], false));
+      }
+    }
+
+    private void ActiveDataCleared(bool _) => ClearParses();
+
+    private Publication PublicationNow()
+      => new(Interlocked.Read(ref _publicationEpoch), DeriveEngine.Active?.SessionId ?? 0);
+
+    private void DispatchPublication(Publication ticket, Action publish)
+    {
+      void Apply()
+      {
+        if (Volatile.Read(ref _disposed) == 0 && ticket == PublicationNow()) publish();
+      }
+
+      if (Dispatcher.CheckAccess()) Apply();
+      else _ = Dispatcher.InvokeAsync(Apply);
+    }
+
+    private void PublishParse(string type, CombinedStats combined, List<PlayerStats> selected, bool copy)
+    {
+      var value = new ParseData { CombinedStats = combined };
+      value.Selected.AddRange(selected);
+      _parses[type] = value;
+      if (!_availableParses.Contains(type)) _availableParses.Add(type);
+      TriggerParseUpdate(type, copy);
+    }
+
+    private void UpdateSelection(string type, List<PlayerStats> selected)
+    {
+      if (!_parses.TryGetValue(type, out var value)) return;
+      value.Selected.Clear();
+      value.Selected.AddRange(selected);
+      TriggerParseUpdate(type);
     }
 
     private void CopyToEqButtonClick(object sender = null, RoutedEventArgs e = null) => CopyToEqClick(parseList.SelectedItem?.ToString());
-
-    private void EventsGenerationStatus(StatsGenerationEvent e)
-    {
-      switch (e.State)
-      {
-        case "COMPLETED":
-        case "NONPC":
-        case "NODATA":
-          AddParse(e.Type, e.CombinedStats);
-          break;
-      }
-    }
 
     private void SetParseTextByType(string type)
     {
@@ -157,7 +200,6 @@ namespace EQLogParser
       {
         var combined = value.CombinedStats;
         var customTitle = customParseTitle.FontStyle == FontStyles.Italic ? null : customParseTitle.Text;
-        var opts = GetSummaryOptions();
         var summary = StatsFormatter.Build(type, combined, value.Selected, GetSummaryOptions(), customTitle);
 
         if (summary != null)
@@ -186,22 +228,10 @@ namespace EQLogParser
 
     private void TriggerParseUpdate(string type, bool copy = false)
     {
-      Dispatcher.InvokeAsync(() =>
-      {
-        if (parseList.SelectedItem?.ToString() == type)
-        {
-          SetParseTextByType(type);
-        }
-        else
-        {
-          parseList.SelectedItem = type;
-        }
+      if (parseList.SelectedItem?.ToString() == type) SetParseTextByType(type);
+      else parseList.SelectedItem = type;
 
-        if (copy)
-        {
-          CopyToEqButtonClick();
-        }
-      });
+      if (copy) CopyToEqButtonClick();
     }
 
     private void PlayerParseTextBoxTextChanged(object sender, TextChangedEventArgs e)

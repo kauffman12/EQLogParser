@@ -42,6 +42,7 @@ namespace EQLogParser
     private List<Fight> _selected;
     private TimeRange _allRanges;
     private StatsGenerationEvent _lastStatsEvent;
+    private int _captureSessionId;
     private string _title;
     private bool _isLimited;
 
@@ -82,6 +83,7 @@ namespace EQLogParser
       {
         if (_healingGroups.Count != 0)
         {
+          options.SessionId = _captureSessionId;
           options.Npcs.AddRange(_selected);
           options.AllRanges = _allRanges;
           BuildTotalStats(options);
@@ -120,6 +122,7 @@ namespace EQLogParser
       {
         try
         {
+          _captureSessionId = options.SessionId;
           FireNewStatsEvent();
           Reset();
 
@@ -643,13 +646,15 @@ namespace EQLogParser
     private void FireNewStatsEvent()
     {
       // generating new stats
-      EventsGenerationStatus?.Invoke(new StatsGenerationEvent { Type = Labels.HealParse, State = "STARTED" });
+      EventsGenerationStatus?.Invoke(new StatsGenerationEvent
+        { SessionId = _captureSessionId, Type = Labels.HealParse, State = "STARTED" });
     }
 
     private void FireNoDataEvent(GenerateStatsOptions options, string state)
     {
       // nothing to do
-      EventsGenerationStatus?.Invoke(new StatsGenerationEvent { Type = Labels.HealParse, State = state });
+      EventsGenerationStatus?.Invoke(new StatsGenerationEvent
+        { SessionId = _captureSessionId, Type = Labels.HealParse, State = state });
       FireChartEvent("CLEAR");
     }
 
@@ -777,6 +782,7 @@ namespace EQLogParser
             // generating new stats
             var genEvent = new StatsGenerationEvent
             {
+              SessionId = _captureSessionId,
               Type = Labels.HealParse,
               State = "COMPLETED",
               CombinedStats = combined,
