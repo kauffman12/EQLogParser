@@ -109,7 +109,7 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
   (`AFactIsItsMeasuredSizeNotWishes`) — field order wide→narrow, `DamageFact` stays 32 B with `ModifiersMask` in the padding.
 - **A fact carries what its own line says, never what the registry believed**: only `LineDerivedFlagMask` bits appear on a
   fact; registry verdicts travel as `IdentityEvent`. Retired bit values stay retired (old `.spool` files hold them).
-- **Chunks go cold, rows never move**: a superseded chunk encodes (delta varint + fixed planes + Deflate) and its row array
+- **Chunks go cold, rows never move**: a superseded chunk encodes (delta varint + fixed planes + Deflate at the one level `FactChunkCompression` names — not a format version, the blob is plain Deflate either way) and its row array
   is dropped; publish the blob before clearing the slot, encoding verifies by decoding inside a catch, ordinals remain the
   currency (`At`/`RefAt`/`FactsIn` decode on touch), and `EstimatedBytes` counts blobs because it feeds the spill trigger.
 - **Doubling still applies to the small queues**; `CompactRows` reclaims slack **once per doubling** under `_gate` with a

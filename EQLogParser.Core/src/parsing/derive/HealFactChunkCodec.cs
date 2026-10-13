@@ -55,7 +55,8 @@ internal static class HealFactChunkCodec
     p += count * 2;
 
     using var ms = new MemoryStream(Math.Max(1024, p / 4));
-    using (var d = new DeflateStream(ms, CompressionLevel.SmallestSize, true)) d.Write(body, 0, p);
+    // Same dial as the damage lane, for the same reason: see FactChunkCompression.
+    using (var d = new DeflateStream(ms, FactChunkCompression.NewOptions(), true)) d.Write(body, 0, p);
     return ms.ToArray();
   }
 

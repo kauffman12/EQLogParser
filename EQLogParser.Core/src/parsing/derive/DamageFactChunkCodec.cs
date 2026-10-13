@@ -66,7 +66,9 @@ internal static class DamageFactChunkCodec
     p += count * 2;
 
     using var ms = new MemoryStream(Math.Max(1024, p / 4));
-    using (var d = new DeflateStream(ms, CompressionLevel.SmallestSize, true)) d.Write(body, 0, p);
+    // Level lives in FactChunkCompression (shared with the heal lane): the blob format is plain Deflate either way,
+    // so a level change costs no format version and no old capture stops reading.
+    using (var d = new DeflateStream(ms, FactChunkCompression.NewOptions(), true)) d.Write(body, 0, p);
     return ms.ToArray();
   }
 

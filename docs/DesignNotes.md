@@ -8497,8 +8497,52 @@ chunks restart on runs where a heal second repeats inside the chunk and never ac
   Because a heal window ENTERS by binary search (`FirstIndexAtOrAfter`) instead of scanning, decode-on-read serves only the window somebody opens:
   a live raid's healing board never touches the cold front at all.
 - **What 3b cost**: a full-capture load went ~12.8 s to ~13.9-14.1 s with both encode lanes running — about a tenth of a background path that already
-  shows a loading band, paid once, in exchange for 28.6 MB returning to the GC. If it ever needs to come back the dial is the compression LEVEL
-  (SmallestSize is what bought 8.8x) or a worker budget, not the architecture. Classification is unaffected: 346 ms full, 5 ms carried afterwards.
+  shows a loading band, paid once, in exchange for 28.6 MB returning to the GC. The dials named at the time were the compression **LEVEL**
+  (SmallestSize is what bought 8.8x) or a worker budget, not the architecture — and the first of those has since been turned, which is
+  the next section. Classification is unaffected: 346 ms full, 5 ms carried afterwards.
+
+### The cold-chunk Deflate level: 9 → 7 (2026-11)
+
+Both codecs shipped on `CompressionLevel.SmallestSize` (zlib **level 9**) because the layout work needed a strong entropy coder to be
+compared against, not because 9 was ever chosen over its neighbours. .NET 10 added `ZLibCompressionOptions`, which **`DeflateStream`
+accepts** — so an exact level (and strategy) became nameable without touching the blob format: output is still raw Deflate, old blobs
+still read, and no format version was needed. (`SmallestSize` reproduces options level 9 byte for byte and `Optimal` reproduces 6,
+measured on identical bodies, which is what makes the comparison below a comparison against what was actually shipping.)
+
+The question was "faster without giving up much", and the answer is **level 7**, now the one dial in `FactChunkCompression` so the two
+lanes of one capture always move together. Measured on `eqlog_Kizant_xegony-09-03-26.txt` (4,832,103 damage facts / 2,670,809 heals,
+73 damage + 81 heal cold chunks): real chunk bodies were taken out of the finished store, run through production `Encode`, inflated back
+to the exact bytes it built, and re-compressed at each candidate — body construction is level-independent and so stays out of the timing,
+and every candidate saw byte-identical input. Sample: 10 damage chunk bodies (9 MiB) and 10 heal bodies (5 MiB).
+
+| level | damage bytes | vs 9 | damage encode | heal bytes | vs 9 | heal encode |
+|---|---|---|---|---|---|---|
+| **9 (was)** | 2,694,000 | — | 550 ms | 856,157 | — | 212 ms |
+| 8 | 2,681,340 | −0.47 % | 510 ms (−7 %) | 854,074 | −0.24 % | 141 ms (−33 %) |
+| **7 (now)** | 2,705,760 | **+0.44 %** | **160 ms (−71 %)** | 864,284 | **+0.95 %** | **53 ms (−75 %)** |
+| 6 (= `Optimal`) | 2,720,980 | +1.00 % | 100 ms (−82 %) | 867,494 | +1.32 % | 29 ms (−86 %) |
+| 5 | 2,771,860 | +2.89 % | 71 ms | 885,433 | +3.42 % | 20 ms |
+| 7 `Filtered` | 2,778,300 | +3.13 % | 161 ms | 877,257 | +2.46 % | 53 ms |
+| 9 `Filtered` | 2,742,880 | +1.81 % | 590 ms | 860,884 | +0.55 % | 224 ms |
+
+**Decode is level-independent** (10 ms per 10 damage chunks at every level), which is the fact that makes this dial cheap to turn: a board
+that walks history pays the same after the change as before it. What changes is encode CPU, and that runs concurrent with parsing.
+
+Whole-store effect on the same capture, production blobs measured end to end at each setting: damage **19,585,642 → 19,627,505** bytes
+(+0.21 %), heals **6,889,705 → 6,964,516** (+1.09 %) — **+116,674 bytes standing, +0.44 % of the whole cold store**. Load *wall* did not
+move (34.1 s at level 9 vs 34.2-34.8 s at 7 in this harness, inside run-to-run noise) because the encode lane never sits on the critical
+path; what the change buys is pool CPU, ~4.1 s of encode work down to ~1.6 s by the sample rates above. That CPU is why the level matters
+at all — a load that competes with itself also competes with the derive passes and with whoever is watching a loading band.
+
+Two refusals came out of the same sweep, and both are worth keeping written down: **level 8 compressed slightly smaller than 9 and ran
+only 7 % faster on the damage lane**, so it bought nothing a person can feel (the knee is between 7 and 8, not above 9); and the
+**`Filtered` strategy — aimed at exactly the predictor output our varint-delta planes are — is worse on both axes**, which is the interesting
+one: the intuition "filtered suits filtered data" loses to the fact that the string matcher it suppresses was finding real repeats in the
+planes. `Fixed` and `HuffmanOnly` were not run; they exist for other jobs.
+
+The probe that produced this (a gated `EQLP_CHUNK_PROBE=<log>` test re-encoding sampled chunk bodies) is deleted per AGENTS — a gate that
+answers a one-time question is disposable, the numbers above are the durable half. Re-measuring needs only a fresh copy: inflate a
+production blob, re-compress at each level, and read `ColdBlobBytes` for the store-wide figure.
 
 ## The room a load reserves before it reads, and what parallelism would cost
 
