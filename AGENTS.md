@@ -277,7 +277,8 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
   Identity questions are per-name and memoized per fresh walk; composed row keys are memoized; `SubStatIndex` mirrors the
   published `Key` (`CreateRecordKey`, and a null key lives in `NoName`), and its pair lane is an accelerator only.
 - **A histogram is counted when the chart asks, never during a build** (`Attempt.RecordHitTotal` → materialize on first read,
-  release the raw list; the materialized dictionary is assign-once; no board build may read it).
+  release the raw list; the materialized dictionary is assign-once; no board build may read it). Scoped builds (the overlay meter,
+  ~1 Hz) set `GenerateStatsOptions.CollectHitTotals = false` — their rows have no chart, so they keep no raw amounts at all.
 - **A chart event names the build behind it and a repeat question is dropped**: `DataPointEvent.DataGeneration` + full
   question compare after `AutoSelectViewOption`; `-1` means "walk it"; a build always restamps; the record filter belongs to the
   view option's `ShouldSkipRecord`.

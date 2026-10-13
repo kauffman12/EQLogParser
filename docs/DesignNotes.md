@@ -9854,6 +9854,27 @@ The audit also removed two exact duplicates from `StringCacheTest`, the test of 
 actual merge boundary, shape and duration. No production code changed. Compaction/capacity tests requiring replacement,
 weak tests requiring stronger assertions, and GC scheduling tests remain for separate work rather than losing their coverage.
 
+## What board builds create, and where that stops (2026-10)
+
+The walks are near allocation-free per record — pet-row names, sub-stat rows, `healer|healed` keys and identity answers are all memoized
+per name per build — so what a rebuild still creates is placed deliberately:
+
+- **A scoped build collects nothing a chart could ever ask.** The overlay meter computes its damage and tanking halves about once a second
+  (`DerivedTotals`), rows no `HitFreqChart` can be pointed at; both scope options set `GenerateStatsOptions.CollectHitTotals = false`, so their
+  walks keep no raw hit amounts at all. Pane builds leave it true and the chart's laziness stands: amounts are kept for panes, counted when read,
+  released when the histogram exists.
+- **The three containers only raid rows use — `Deaths`, `Specials`, `ResistCounts` — are made on first touch**, not in every `PlayerStats`
+  constructor (two of them were `ConcurrentDictionary`s, whose constructors take their tables immediately). The builders write these for the raid
+  totals row and read them from that row only, so every other name the walk met — thousands of mob names on a group night, every second on the
+  meter's path — pre-allocated containers nothing would ever look at.
+- **The heal board's materialized list is its build's peak**: one (time + record) pair per heal in the selection's window, dropped when the board
+  has answered. That replaces the all-night record store that was deleted with its measurement (→ "Where a large capture's bytes actually are"),
+  and it stays a pair because `HealRecord` deliberately carries no timestamp — the time belongs to the cursor, not the row.
+
+Clear All's fan-out now reaches every surface's last answer: `ParsePreview` was the exception, keeping each board's COMPLETED `CombinedStats` in
+its parse list — a hidden window holding last night's raid and every row of it across any number of clears. `ActiveDataCleared` drops them there too,
+the law `DamageStatsBuilder.ClearedByActiveData` documents.
+
 ## A refresh that answers for itself: the cost budget on unasked passes (2026-11)
 
 The question this closes is *"when a row is added or removed, or a pet is claimed, how does the user know the refresh worked —
