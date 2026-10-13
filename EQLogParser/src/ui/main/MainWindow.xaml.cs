@@ -1620,7 +1620,9 @@ namespace EQLogParser
             Log.Debug($"capture: started ({Path.GetFileName(theFile)}) {FactCapacity.ModeWord(lastMins)}"
                      + $" from {origin} | sized-from={hintBytes / (1024 * 1024):N0} MB");
 
-            _eqLogReader = new LogReader(new LogProcessor(theFile, chatSink, new TriggerHookAdapter()), theFile, origin, lastMins);
+            // `_engine` is the sharded-backfill collaborator: on a whole-file open big enough to earn it, the
+            // load reads on two lanes and merges into this session's capture (LogReader class comment + DesignNotes).
+            _eqLogReader = new LogReader(new LogProcessor(theFile, chatSink, new TriggerHookAdapter()), theFile, origin, lastMins, _engine);
             /*
              * Start the read loop OFF this thread - and Task.Run is needed even though LogReader made all of its own
              * awaits context-free, because the first segment runs on whoever called and everything here is already inside a

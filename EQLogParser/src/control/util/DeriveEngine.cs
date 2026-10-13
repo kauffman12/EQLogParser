@@ -30,7 +30,7 @@ namespace EQLogParser
   // overrides re-derive themselves, and a failed pass comes back on DeriveCadence.RetryDelayS's ladder - no flow
   // ever needed a human to force one (the button existed only because the old latch stopped asking forever; see
   // RederiveAsync's catch).
-  internal sealed class DeriveEngine : IDisposable
+  internal sealed class DeriveEngine : IDisposable, IShardedBackfill
   {
     public static DeriveEngine Active { get; private set; }
 
@@ -245,6 +245,59 @@ namespace EQLogParser
 
     // Chat fan-out target for LogProcessor (composed with the app's own sinks — see CompositeChatSink).
     public IChatSink ChatSink { get; }
+
+    /*
+     * IShardedBackfill — this engine is the only thing that owns a session's capture, tables and capacity
+     * math, so it is what lends ingest lanes to a reader splitting one file across two workers. The READER
+     * (LogReader) decides whether the file earns shards and keeps the merge-ordering law: NewShard → drain
+     * every shard → Merge → only then tail lines move. Read LogReader's backfill section for the who/when;
+     * CombatCapture.MergeShards for the atomicity; docs/DesignNotes for the measured why (2 workers ~1.6x
+     * at about today's peak RAM).
+     */
+    public BackfillShard NewShard(long windowBytes)
+    {
+      var lane = new ParseLane();
+      var facts = new DamageFactTable(FactCapacity.DamageForBytes(windowBytes));
+      var heals = new HealFactTable(facts, FactCapacity.HealForBytes(windowBytes));
+      var capture = new CombatCapture(facts, heals, lane);
+      capture.Start();   // subscribed before the range's first line, exactly like Start() for the session
+      return new BackfillShard(new FactShard(facts, heals), lane, capture);
+    }
+
+    public LogProcessor NewShardProcessor(string fileName, BackfillShard shard)
+    {
+      /*
+       * Same fan-out as the main processor — chat DB archive and quick-share see every chat line once (each
+       * byte belongs to exactly one range) — except the identity half writes into THIS shard's capture, so
+       * its evidence and identity rows ride the shard tables into the merge.
+       */
+      var chat = new CompositeChatSink(new ChatDbSink(), new IdentityChatSink(shard.Capture));
+      return new LogProcessor(fileName, chat, new TriggerHookAdapter(), shard.Lane);
+    }
+
+    public void Merge(IReadOnlyList<BackfillShard> shards)
+    {
+      var sw = Stopwatch.StartNew();
+      var rows = new List<FactShard>(shards.Count);
+      foreach (var shard in shards)
+      {
+        shard.Capture.Stop();   // a running capture could still append; merged tables must be finished work
+        rows.Add(shard.Rows);
+      }
+
+      _capture.MergeShards(rows);
+      Log.Debug($"backfill: merged {shards.Count} shards into the capture "
+                + $"(facts={_facts.FactCount:N0} heals={_heals.HealCount:N0}) in {sw.ElapsedMilliseconds:N0} ms");
+    }
+
+    public void Abort(IReadOnlyList<BackfillShard> shards)
+    {
+      // The open was replaced mid-backfill: stop the lanes' captures and let GC take their tables.
+      foreach (var shard in shards)
+      {
+        shard.Capture.Stop();
+      }
+    }
 
     public void Start()
     {
@@ -1002,18 +1055,17 @@ namespace EQLogParser
       return timeline;
     }
 
-    private sealed class IdentityChatSink : IChatSink
+  }
+
+  // Chat → capture, as one half of the composite fan-out. Top-level (was nested) so a shard processor
+  // can point the same adapter at a SHARD's capture during a backfill — see DeriveEngine.NewShardProcessor.
+  internal sealed class IdentityChatSink(CombatCapture capture) : IChatSink
+  {
+    public void Init()
     {
-      private readonly CombatCapture _capture;
-
-      public IdentityChatSink(CombatCapture capture) => _capture = capture;
-
-      public void Init()
-      {
-      }
-
-      public void Add(ChatType chat) => _capture.HandleChat(chat);
     }
+
+    public void Add(ChatType chat) => capture.HandleChat(chat);
   }
 
   // Forwards to several chat sinks in order — the seam that lets ChatDB archiving and the engine

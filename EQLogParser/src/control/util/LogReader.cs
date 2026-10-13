@@ -19,7 +19,16 @@ namespace EQLogParser
    * main window at all but **the trigger lane's own reader over the same file** (`TriggerManager` keeps a reader per
    * enabled character, or one over `AppSettings.CurrentLogFile` in basic mode). One word per construction, beside the file name.
    */
-  internal class LogReader(ILogProcessor logProcessor, string fileName, string origin, int minBack = 0)
+  /*
+   * `backfill` is the sharded-load collaborator (IShardedBackfill / docs/DesignNotes → the sharded-load chapter):
+   * when a WHOLE-file open meets a file big enough to earn it, the bytes [0, EOF-at-open) are read and parsed on
+   * TWO lanes with their own captures, and the merged result is poured into the session's real capture before the
+   * first tail line moves. Every part of this class that matters downstream — progress percent, HandedOverLines,
+   * the watch loop, the archive hook, the GC-tidy gate — sees one reader doing one job over one file, because the
+   * backfill is a prelude INSIDE ReadFileAsync, not a separate lifecycle. Null (every small file, every seek-back,
+   * every gz, every construction that predates this) reads exactly as before.
+   */
+  internal class LogReader(ILogProcessor logProcessor, string fileName, string origin, int minBack = 0, IShardedBackfill backfill = null)
     : IDisposable
   {
     private const int BatchSize = 5000;
@@ -56,6 +65,13 @@ namespace EQLogParser
     private FileSystemWatcher _watcher;
     private long _initSize;
     private long _currentPos;
+
+    // Backfill progress state: while the lanes run, GetProgress answers from these instead of 0.
+    // _shardConsumed[s] is bytes this range has decoded; windows are their byte sizes. The volatile flag
+    // publishes "aggregate these arrays now" without a lock — one writer (the reader task), one reader (the pump).
+    private long[] _shardConsumed;
+    private long[] _backfillWindows;
+    private int _backfillActive;
     private long _nextUpdateThreshold;
     private double _lastParsedTime;
 
@@ -173,6 +189,25 @@ namespace EQLogParser
     /// </summary>
     public double GetProgress()
     {
+      /*
+       * During a sharded backfill no single _currentPos exists — the honest aggregate is the bytes every
+       * range has decoded over the bytes every range owns, which is the same fraction of THE FILE the
+       * sequential reader would have shown. Once the merge lands and the tail reader opens, the ordinary
+       * path resumes at _initSize/total = 100 %.
+       */
+      if (Volatile.Read(ref _backfillActive) != 0 && _shardConsumed is { } consumed && _backfillWindows is { } windows)
+      {
+        long done = 0;
+        long total = 0;
+        for (var i = 0; i < windows.Length; i++)
+        {
+          done += Math.Min(Volatile.Read(ref consumed[i]), windows[i]);
+          total += windows[i];
+        }
+
+        return total > 0 ? done / (double)total * 100 : 0.0;
+      }
+
       if (!_ready)
       {
         return 0.0;
@@ -197,6 +232,20 @@ namespace EQLogParser
         // which is significantly faster for large files
         _initSize = new FileInfo(FileName).Length;
 
+        /*
+         * The sharded prelude: two lanes read and parse [0, _initSize) side by side, then merge into the session's
+         * capture before this thread opens the file for real. The conditions are the measured policy (LogShardPlan):
+         * whole-file mode only — a seek-back is live-tail-shaped and already partial — plain text (a gzip stream has
+         * no byte axis to cut), a collaborator that owns a capture, and a file big enough that each range earns its
+         * lane. Anything else falls through to the sequential path below and nobody mentions it.
+         */
+        var ranges = 1;
+        if (backfill is not null && minBack < 0 && _initSize >= 2 * LogShardPlan.MinWindowBytes &&
+            !FileName.EndsWith(".gz", StringComparison.OrdinalIgnoreCase))
+        {
+          ranges = await RunBackfillAsync(LogShardPlan.Workers);
+        }
+
         _fs = new FileStream(
           path: FileName,
           options: new FileStreamOptions
@@ -212,6 +261,13 @@ namespace EQLogParser
         if (minBack == 0)
         {
           _fs.Seek(0, SeekOrigin.End);
+        }
+        else if (ranges > 1)
+        {
+          // Everything before the open's EOF already reached the capture through the lanes; anything EQ
+          // appended WHILE they ran is read here as ordinary bulk lines — same monitor state, quick-share and
+          // archive behavior any other byte of a backfill gets.
+          _fs.Seek(_initSize, SeekOrigin.Begin);
         }
 
         var minDate = DateTime.MinValue;
@@ -368,43 +424,224 @@ namespace EQLogParser
 
     private void HandleLine(string theLine, ref string previous, bool monitor = false)
     {
-      if (theLine.Length > 28)
+      if (!TryStamp(theLine, ref previous, ref _lastParsedTime))
       {
-        var lineSpan = theLine.AsSpan();
-        if (previous == null || !lineSpan.Slice(1, 24).SequenceEqual(previous.AsSpan(1, 24)))
-        {
-          var dateTime = DateUtil.ParseStandardDate(theLine);
-          if (dateTime == DateTime.MinValue)
-          {
-            return;
-          }
-
-          _lastParsedTime = DateUtil.ToDotNetSeconds(dateTime);
-        }
-
-        if (_cts.Token.IsCancellationRequested)
-        {
-          throw new TaskCanceledException();
-        }
-
-        // if zoning during monitor try to archive
-        if (monitor && lineSpan.Length > 27)
-        {
-          var rest = lineSpan[27..];
-          if (rest.StartsWith(LoadingMsg, StringComparison.OrdinalIgnoreCase) ||
-              rest.StartsWith(WelcomeMsg, StringComparison.OrdinalIgnoreCase))
-          {
-            LogArchiveManager.QueueFileArchiveAsync(this);
-          }
-        }
-
-        _batch.Add(new(theLine, _lastParsedTime, monitor));
-        if (_batch.Count >= BatchSize)
-        {
-          FlushBatch();
-        }
-        previous = theLine;
+        return;
       }
+
+      if (_cts.Token.IsCancellationRequested)
+      {
+        throw new TaskCanceledException();
+      }
+
+      // if zoning during monitor try to archive
+      if (monitor && theLine.Length > 27)
+      {
+        var rest = theLine.AsSpan(27);
+        if (rest.StartsWith(LoadingMsg, StringComparison.OrdinalIgnoreCase) ||
+            rest.StartsWith(WelcomeMsg, StringComparison.OrdinalIgnoreCase))
+        {
+          LogArchiveManager.QueueFileArchiveAsync(this);
+        }
+      }
+
+      _batch.Add(new(theLine, _lastParsedTime, monitor));
+      if (_batch.Count >= BatchSize)
+      {
+        FlushBatch();
+      }
+
+      previous = theLine;
+    }
+
+    /*
+     * The line gate both readers share: a line must be long enough to hold a standard timestamp
+     * ("Tue Apr 14 09:00:00 2026 …") and within one second — logs are second-resolution — an identical date
+     * prefix means the parse (the expensive part) can be reused. Returns false for anything that never
+     * reaches a processor; `lastTs` moves only when the second actually changed, and `previous` is updated
+     * by the CALLER only for accepted lines, exactly as HandleLine always did. The shard workers keep both
+     * in locals (see ReadAndFeedRange); the tail reader passes its fields.
+     */
+    private static bool TryStamp(string theLine, ref string previous, ref double lastTs)
+    {
+      if (theLine.Length <= 28)
+      {
+        return false;
+      }
+
+      var lineSpan = theLine.AsSpan();
+      if (previous == null || !lineSpan.Slice(1, 24).SequenceEqual(previous.AsSpan(1, 24)))
+      {
+        var dateTime = DateUtil.ParseStandardDate(theLine);
+        if (dateTime == DateTime.MinValue)
+        {
+          return false;
+        }
+
+        lastTs = DateUtil.ToDotNetSeconds(dateTime);
+      }
+
+      return true;
+    }
+
+    /*
+     * ─── sharded backfill ─── the reader-side how of IShardedBackfill (the why and the numbers are in
+     * docs/DesignNotes; the whether/how-many policy is LogShardPlan).
+     *
+     * plan → per range: engine-made shard + lane-bound processor → worker → WhenAll → Merge. A failed
+     * attempt aborts WHOLE: there is no partial merge, because half a file's facts wearing whole-file
+     * completeness is the one outcome worse than a load that fails — ReadFileAsync's outer catch surfaces
+     * it like any other broken file. Cancellation rides the same _cts the tail loop and Dispose use.
+     */
+    private async Task<int> RunBackfillAsync(int workers)
+    {
+      var cuts = LogShardPlan.CutPoints(FileName, workers);
+      var ranges = cuts.Length - 1;
+      if (ranges < 2)
+      {
+        return 1;   // the file cannot supply line-aligned ranges; sequential takes it from here
+      }
+
+      var stopwatch = Stopwatch.StartNew();
+      _backfillWindows = new long[ranges];
+      _shardConsumed = new long[ranges];
+      for (var i = 0; i < ranges; i++)
+      {
+        _backfillWindows[i] = cuts[i + 1] - cuts[i];
+      }
+
+      Volatile.Write(ref _backfillActive, 1);
+
+      var shards = new List<BackfillShard>(ranges);
+      try
+      {
+        Log.Debug($"load: sharded backfill '{Path.GetFileName(FileName)}' | ranges={ranges} | bytes={_initSize:N0}");
+        var tasks = new Task[ranges];
+        for (var i = 0; i < ranges; i++)
+        {
+          var slot = i;
+          var shard = backfill.NewShard(_backfillWindows[slot]);
+          shards.Add(shard);
+          var processor = backfill.NewShardProcessor(FileName, shard);
+          tasks[slot] = Task.Run(() => RunRangeAsync(slot, cuts[slot], cuts[slot + 1], shard, processor));
+        }
+
+        await Task.WhenAll(tasks);
+        backfill.Merge(shards);   // stops the lane captures and pours under the ingest gate; nothing tails before this returns
+        Log.Debug($"load: backfill merged into the capture in {stopwatch.ElapsedMilliseconds:N0} ms (wall, all ranges + merge)");
+        return ranges;
+      }
+      catch
+      {
+        backfill.Abort(shards);
+        throw;   // ReadFileAsync's catch reports it; the stack rides on
+      }
+      finally
+      {
+        Volatile.Write(ref _backfillActive, 0);
+      }
+    }
+
+    private async Task RunRangeAsync(int slot, long from, long to, BackfillShard shard, LogProcessor processor)
+    {
+      using var items = new BlockingCollection<LogReaderItem>(new ConcurrentQueue<LogReaderItem>(), QueueBound);
+      processor.LinkTo(items);
+      try
+      {
+        ReadAndFeedRange(slot, from, to, items);
+      }
+      finally
+      {
+        if (!items.IsAddingCompleted)
+        {
+          items.CompleteAdding();
+        }
+
+        /*
+         * The lane drains fully before this worker reports done — and Merge (which stops the shard captures)
+         * only runs after every worker is done — so no parsed event can arrive at a stopped capture. The same
+         * ordering law ShutdownAsync arrives at from the other side.
+         */
+        var completion = processor.Completion;
+        if (completion is not null)
+        {
+          await completion.ConfigureAwait(false);
+        }
+
+        processor.Dispose();
+      }
+    }
+
+    /*
+     * One lane's feed loop: lines come from LogRangeReader (whose fidelity to sequential ReadLine is the
+     * load-bearing property, asserted headlessly in LogRangeReaderTest), are stamped with the same gate the
+     * tail uses, and cross a bounded queue to this shard's lane-bound processor. Runs synchronously on the
+     * worker's pool thread; the queue blocks it while parsing catches up — the same backpressure shape the
+     * sequential reader has always had.
+     */
+    private void ReadAndFeedRange(int slot, long from, long to, BlockingCollection<LogReaderItem> items)
+    {
+      var token = _cts?.Token ?? default;
+      var batch = new List<LogReaderItem>(BatchSize);
+      string previous = null;
+      double lastTs = 0;
+
+      LogRangeReader.ForEachLine(FileName, from, to,
+        line =>
+        {
+          if (StampAndFeed(line, ref previous, ref lastTs, batch, items, token))
+          {
+            previous = line;
+          }
+        },
+        consumed => Volatile.Write(ref _shardConsumed[slot], consumed), token);
+
+      FlushShardBatch(batch, items, token);
+    }
+
+    // Worker mirror of HandleLine minus the monitor/archive channels: a backfill line is a bulk line.
+    private bool StampAndFeed(string line, ref string previous, ref double lastTs,
+      List<LogReaderItem> batch, BlockingCollection<LogReaderItem> items, CancellationToken token)
+    {
+      if (!TryStamp(line, ref previous, ref lastTs))
+      {
+        return false;
+      }
+
+      batch.Add(new LogReaderItem(line, lastTs, false));
+      if (batch.Count >= BatchSize)
+      {
+        FlushShardBatch(batch, items, token);
+      }
+
+      return true;
+    }
+
+    private void FlushShardBatch(List<LogReaderItem> batch, BlockingCollection<LogReaderItem> items, CancellationToken token)
+    {
+      if (batch.Count == 0)
+      {
+        return;
+      }
+
+      foreach (var item in batch)
+      {
+        try
+        {
+          items.Add(item, token);
+        }
+        catch (ObjectDisposedException) when (token.IsCancellationRequested)
+        {
+        }
+        catch (OperationCanceledException)
+        {
+        }
+      }
+
+      // Counted even when cancelled: the counter only answers "did this load move any bytes" for the GC
+      // tidy-up gate, and FlushBatch has always counted it the same way.
+      Interlocked.Add(ref _handedOver, batch.Count);
+      batch.Clear();
     }
 
     private void FlushBatch()
