@@ -12267,7 +12267,7 @@ closed capture, and changing a query or writing from another pane while an edito
 A write invalidates the source as well as its index: filtering an old census again cannot make it current.
 
 **Publish is mechanical.** Swap the index and its name dictionary together; invalidate every visited page, including the
-current one; recompute PageCount; clamp or follow the selected name to its page; reload that page even if its number is unchanged;
+current one; recompute PageCount; clamp to a page that still exists (and follow the selection ONLY when the question changed, below); reload that page even if its number is unchanged;
 restore selection by name; restamp the take-back label; update the counts from the same result. No-match/empty-census states
 serve an empty page, not null or a stale cached slice. An ordinary census does not explicitly reveal an unchanged selection:
 a reader who selected a name and scrolled away keeps reading there. CanMaintainScrollPosition and AllowDataShaping also ask
@@ -12299,10 +12299,40 @@ live in ReleaseChecklist. No responsiveness or memory improvement is claimed fro
 on-demand behavior fails that gate, the fallback is fresh-list binding plus EnableDataVirtualization, with whole-list search and
 its unbounded per-census grid cost; this remains a fallback, not a second shipped mode.
 
+Amendment verification (the page-number work above): **2,056 headless tests passed, 9 gated tests skipped**, and the full
+non-incremental solution build including the Windows test assembly reported **0 warnings and 0 errors**. Built is not run: what
+the pager says, what the strip says, and where the pager stands on a realized grid stay ReleaseChecklist items.
+
 Correction verification on Linux: **2,026 headless tests passed, 9 gated tests skipped**; the full non-incremental solution
 build, including the Windows test assembly, reported **0 warnings and 0 errors**. The Windows assembly was built, not run.
 An earlier run also hit the pre-existing timestamp-boundary flake in ImportingTheSameMapTwiceChangesNothing (the two imports
 crossed a wall-clock second); two complete reruns passed without changes to that unrelated test or import path.
+
+**What the strip and the pager say (2026-10-13).** The report was that one of those numbers lied by omission: "it's not very
+obvious" how many pages exist, and "the Showing text in the title is also confusing considering it lists the total not how many
+are on the page you're looking at". Two lines carry the answer, and both compute it in `NamesTableView` so the pane keeps no
+arithmetic of its own:
+
+- **The strip names the range, not the list.** "Showing 2,001 to 3,000 of 12,406 Identities", and when a dial narrows it the
+  capture's own size stays: "Showing 1 to 37 of 37 Identities, 12,406 total". A filter that finds nothing says
+  *No matching Identities, 12,406 total* — the sentence that answers "did my name vanish or did my filter eat it". An empty
+  census is an EMPTY string, as before: "Showing 0" reads as a failed read rather than an empty capture.
+- **Beside the arrows lives `Page 3 of 14`.** The arrows are Syncfusion's own (`DisplayMode=PreviousNext`); nothing in this
+  repository draws them, and nothing they render says how many pages there are. That number is restamped on
+  `PageIndexChanged` as well as on publish, because clicking an arrow moves the pager without asking this pane first — a range
+  that only a build refreshed would be wrong within one gesture. It is docked at the end of the pager row instead of being
+  inserted into the vendor's control template: retemplating a vendored control for one TextBlock is debt, and the strip needed
+  its own numbers regardless.
+
+`CountText` takes the noun as an argument because words are Resource vocabulary (the WPF assembly) while the arithmetic is Core;
+that split is also what lets the three-number shape be asserted headlessly instead of by squinting at a grid.
+
+**Only a question follows the selection.** `NamesTableView.DecidePage(…, followSelection)` clamps in both modes and moves to the
+selected row's page only when the caller says the QUESTION changed — query, type dial, or sort header. Publishing passed no such
+flag and followed unconditionally, so the pane's own comment ("ordinary censuses restore selection, not attention") described an
+intent the arithmetic contradicted: every census carried a reader back to the selected row's page. A census is not a gesture; the
+page an operator walked to stays theirs until they move it or ask something. Narrowing stays the exception because there the jump
+*is* the answer, and it pairs with `ShowRowAt`, which now fires only on `PageDecision.JumpToSelection`.
 
 ## A sort the source does not carry is a sort that stops holding (2026-11)
 

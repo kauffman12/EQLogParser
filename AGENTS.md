@@ -214,6 +214,10 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
 - **A pane built during MainWindow's own `InitializeComponent` cannot read a theme width** (`ThemeConfig.Current*Width` are
   assigned later): apply at `Loaded`, follow `EventsThemeChanged`, detach on `Unloaded`; a constructor read is only valid for
   lazily opened windows.
+- **Only a question moves a paged table to its selection.** An ordinary census clamps to an existing page and otherwise leaves the
+  reader where they walked (`NamesTableView.DecidePage(..., followSelection)`); following on every build reads as the table moving out
+  from under the operator. And **a readout of vendored control state refreshes on that control's event**, not only on our publish — a
+  page number or range that only a build restamps is wrong one click later.
 - **Nothing on a worker thread may touch a DependencyObject**: UI values enter a board build as plain data captured on the UI
   thread (`_fightPane`, `tankingDamageType` read with `Volatile`), and optional work runs *after* the builders under its own try.
 - **"No rows to show" is an empty collection, never null** (2026-11): the panes hand back `SummaryTable.NoResultsList` from `ClearData`,

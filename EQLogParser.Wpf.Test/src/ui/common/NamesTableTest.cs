@@ -369,13 +369,14 @@ public class NamesTableTest
     {
       var pane = CreatePane();
       pane.PublishCensusForTest([CensusRow("Ann", IdentityKind.Player, "R3-joinraid"), CensusRow("Bob", IdentityKind.Npc, "R6-npcdb"), CensusRow("Cyra", IdentityKind.Pet, "R5-owner:Ann")]);
-      Assert.AreEqual("Showing 3 Identities", pane.TitleTextForTest, "no dial touched reads the census's own size");
+      Assert.AreEqual($"Showing 1 to {3:N0} of {3:N0} Identities", pane.TitleTextForTest,
+                      "the count is the RANGE on screen plus the size of the answer, not one number for a paged list");
 
       // The name dial is a case-insensitive contains: one row answers it.
       pane.SetSearchTextForTest("an");
       CollectionAssert.AreEqual(new[] { "Ann" }, pane.RowsForTest.Select(r => r.Name).ToList(), "'an' finds Ann and nothing else");
-      Assert.AreEqual("Showing 1 of 3 Identities", pane.TitleTextForTest,
-                      "the title says both numbers: the row is filtered out of the PAGE, not out of the capture");
+      Assert.AreEqual($"Showing 1 to {1:N0} of {1:N0} Identities, {3:N0} total", pane.TitleTextForTest,
+                      "narrowed reads say the match count AND the capture's own size: the row is filtered out of the PAGE, not out of the log");
 
       // The type dial narrows on its own.
       pane.SetSearchTextForTest("");
@@ -387,12 +388,13 @@ public class NamesTableTest
       pane.SetTypeFilterForTest(IdentityKind.Player, IdentityKind.Pet);
       pane.SetSearchTextForTest("a");
       CollectionAssert.AreEqual(new[] { "Ann", "Cyra" }, pane.RowsForTest.Select(r => r.Name).ToList());
-      Assert.AreEqual("Showing 2 of 3 Identities", pane.TitleTextForTest);
+      Assert.AreEqual($"Showing 1 to {2:N0} of {2:N0} Identities, {3:N0} total", pane.TitleTextForTest);
 
       // And a question nobody passes is an EMPTY list, not a crash and not the old rows.
       pane.SetSearchTextForTest("zzz");
       Assert.AreEqual(0, pane.RowsForTest.Count, "no answer is a valid answer");
-      Assert.AreEqual("Showing 0 of 3 Identities", pane.TitleTextForTest);
+      Assert.AreEqual($"No matching Identities, {3:N0} total", pane.TitleTextForTest,
+                      "an answer of nothing still says the capture is not empty");
       pane.SetSearchTextForTest(Resource.NAME_FILTER_TEXT);
       Assert.AreEqual(2, pane.RowsForTest.Count, "the restored watermark is not a name query");
       pane.SetTypeFilterForTest(IdentityVocabulary.TypeOptions.Select(option => option.Kind).ToArray());
@@ -522,6 +524,46 @@ public class NamesTableTest
       // And the pane is live again: a later pass paints straight through with no editor open.
       Assert.IsTrue(pane.AcceptCensus([CensusRow("Dee"), CensusRow("Elle")]), "the hold is not latched");
       Assert.AreEqual(2, pane.RowsForTest.Count);
+    });
+  }
+
+  /*
+   * What only the real controls can answer: the numbers beside and above them. The arrows are Syncfusion's own and say
+   * nothing about how many pages exist, so `pagerInfo` does — and it has to follow a click on the arrows, not just a build,
+   * or it lies within one gesture. The title names the RANGE on screen for the same reason: it used to name the whole
+   * filtered list while the reader was looking at one page of it (operator 2026-10-13). That a census must not move the
+   * pager is pinned arithmetic in NamesTableViewTest; here the question is whether the pane and the vendor agree.
+   */
+  [TestMethod]
+  public void ThePagerSaysWhichPageItIsOnAndTheTitleNamesTheRange()
+  {
+    Sta.Run(() =>
+    {
+      var pane = CreatePane();
+      var census = Enumerable.Range(0, 2500).Select(i => CensusRow($"Name{i:D4}", IdentityKind.Player)).ToArray();
+      pane.PublishCensusForTest(census);
+
+      Assert.AreEqual(3, pane.PagerPageCountForTest, "two and a half thousand names are three pages of a thousand");
+      Assert.AreEqual("Page 1 of 3", pane.PagerTextForTest, "the arrows get a page number and a total beside them");
+      Assert.AreEqual($"Showing 1 to {1000:N0} of {2500:N0} Identities", pane.TitleTextForTest,
+                      "page one reads as a range, not as the whole list");
+
+      pane.PagerPageForTest = 2;
+      Assert.AreEqual("Page 3 of 3", pane.PagerTextForTest, "the arrows moved the pager by themselves; the number followed");
+      Assert.AreEqual($"Showing {2001:N0} to {2500:N0} of {2500:N0} Identities", pane.TitleTextForTest,
+                      "the last page ends where the list ends, and the title knows it moved without waiting for a build");
+
+      // A row on this page is selected, then an ordinary census lands: the reader stays where they are.
+      pane.SelectRowForTest("Name2100");
+      pane.PublishCensusForTest(census);
+      Assert.AreEqual(2, pane.PagerPageForTest, "a census that asks no question moves no one");
+      Assert.AreEqual($"Showing {2001:N0} to {2500:N0} of {2500:N0} Identities", pane.TitleTextForTest);
+
+      // Narrowing is a question, and the title says both numbers: what matched, and what the capture holds.
+      pane.SetSearchTextForTest("Name0");
+      Assert.AreEqual($"Showing 1 to {1000:N0} of {1000:N0} Identities, {2500:N0} total", pane.TitleTextForTest,
+                      "the answer AND the capture: 'my name vanished' is usually 'my filter ate it'");
+      Assert.AreEqual("Page 1 of 1", pane.PagerTextForTest);
     });
   }
 

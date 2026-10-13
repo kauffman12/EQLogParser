@@ -94,6 +94,9 @@ These checks require a realized grid; the automated pane tests exercise bound da
   selected visible fights even while sorted.
 - [ ] **Live changes:** with Tanking off, an NPC becomes visible when it receives its first player damage. Existing visible selections stay
   on the same fights through updates; a verdict change that hides a selected NPC removes it from the selection and updates the summary.
+- [ ] **A menu opened without a pointer names THIS capture** (2026-10-13): right-click a fight and release outside the grid (so no
+  menu appears), then Clear All or open a different log and open the menu from the keyboard (Shift+F10 / Apps key, no mouse press).
+  The actions must apply to rows of the log now open, never to the released press's snapshot from the log that closed.
 - [ ] **One scroll per capture:** open a long log and let it finish reading (status line: "Monitoring Log") — the list lands at its newest row,
   once. Then fight: new rows and cell updates must not move the viewport, and scrolling up to read an old encounter must hold through a whole pull.
   Clear All and reopening the same log get the reveal again (a new load). Nothing about the pointer counts: leave it inside the grid while the log
@@ -159,6 +162,12 @@ more than 1,000 names and a capture that is still growing. A Linux build does no
   during the hold: an older answer never overwrites the newer question/verdict. Take-back retains its Unknown row in All Types.
 - [ ] **Viewport and selection:** select a row, scroll elsewhere within its page and allow several censuses. The viewport stays
   put. A deliberate filter/sort can follow the surviving selection to its new page; shrinking results clamps to an existing page.
+- [ ] **The pager states where it is** (2026-10-13): with more than 1,000 names the line beside the arrows reads
+  `Page 1 of 3` and changes when an arrow is clicked — including on the LAST page, where the strip's range must end at the list's
+  real end ("Showing 2,001 to 2,500 of 2,500"), not at a round number. Then select a row on the current page and leave the pane
+  open through several censuses in a live capture: **the page must not change** (it used to be pulled back to the selected row
+  every beat), while typing in the Name Filter must land wherever that answer lives. A narrowed answer reads both numbers —
+  "… of 37 Identities, 12,406 total" — and an answer of nothing reads "No matching Identities, 12,406 total", never "Showing 0".
 - [ ] **Capture isolation:** hide the pane during a build, switch logs, then show it: only the new capture appears and both
   filters are cleared. Hide/show the same capture preserves dials and sort. Repeat close/reopen while an editor holds an answer.
 - [ ] **Narrow pane and scale:** count, dials and PreviousNext strip fit the docked width at supported font sizes. With a

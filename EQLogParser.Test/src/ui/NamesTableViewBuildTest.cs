@@ -29,7 +29,7 @@ public class NamesTableViewBuildTest
     Assert.AreEqual("Name2042", found[0].Name, "search is across the whole census, not its first page");
     Assert.AreEqual(0, NamesTableView.Build(rows, Question("absent")).Count);
     Assert.AreEqual(2500, NamesTableView.Build(rows, Question()).Count);
-    Assert.AreEqual(3, NamesTableView.DecidePage(rows.Length, 1000, 0, -1).PageCount);
+    Assert.AreEqual(3, NamesTableView.DecidePage(rows.Length, 1000, 0, -1, false).PageCount);
   }
 
   [TestMethod]
@@ -40,7 +40,7 @@ public class NamesTableViewBuildTest
       new("An allied spell", IdentityKind.Spell, "Player Spell")];
     var built = NamesTableView.Build(rows, Question("AN", [IdentityKind.Spell]));
     CollectionAssert.AreEqual(new[] { "An allied spell", "An NPC spell" }, built.Select(row => row.Name).ToArray());
-    Assert.AreEqual(2, NamesTableView.DecidePage(built.Count, 1000, 0, -1).SliceCount);
+    Assert.AreEqual(2, NamesTableView.DecidePage(built.Count, 1000, 0, -1, false).SliceCount);
   }
 
   [TestMethod]

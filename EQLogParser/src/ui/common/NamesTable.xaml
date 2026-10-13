@@ -27,9 +27,11 @@
     </Grid.Resources>
 
     <!--
-      The strip: the count on the left — "Showing 12,406 Identities", or "Showing 37 of 12,406" when a dial narrows it — and
-      the two dials on the right. The count is what the row header used to say, moved up where a paged grid cannot answer it:
-      an operator who filtered down to nothing needs to know the capture still has the name, not that the page is empty.
+      The strip: the count on the left and the two dials on the right. The count names the RANGE the reader is looking at plus
+      the size of the answer — "Showing 2,001 to 3,000 of 12,406 Identities", and "… of 37 Identities, 12,406 total" when a dial
+      narrows it — because a paged grid cannot answer "how much is there" on its own. The last number is the one that matters when
+      a dial narrows: an operator who filtered down to nothing needs to know the capture still has the name, not that the page is
+      empty. Page-level position lives beside the arrows instead (see the pager row).
 
       The dials are VISIBILITY only (the plan's words): they decide which rows a page shows, never which names exist, and
       they cost the index one filter pass per change — the census's own order and every claim behind the rows are untouched.
@@ -53,16 +55,27 @@
     </Grid>
 
     <!-- Sibling controls: on-demand slices feed PagedSource; the binding follows that view through template initialization.
-         PageCount and cache invalidation are explicit. Source is never assigned in on-demand mode. -->
+         PageCount and cache invalidation are explicit. Source is never assigned in on-demand mode.
+
+         The arrows are Syncfusion's own (DisplayMode=PreviousNext) — nothing here draws them. What the vendor does NOT say is
+         how many pages there are or which one is showing, so `pagerInfo` sits at the end of the same row and says exactly that
+         ("Page 3 of 14"); it refreshes on PageIndexChanged as well as on publish, because the arrows move the pager without
+         asking this pane first. Docked Right rather than inside the pager's template: the vendor centres its buttons, and
+         retemplating a vendored control to add one TextBlock is a maintenance debt this pane does not need. -->
     <Grid Grid.Row="1">
       <Grid.RowDefinitions>
         <RowDefinition Height="*"/>
         <RowDefinition Height="Auto"/>
       </Grid.RowDefinitions>
-      <syncfusion:SfDataPager x:Name="idPager" Grid.Row="1"
-                              DisplayMode="PreviousNext"
-                              UseOnDemandPaging="True"
-                              OnDemandLoading="PagerOnDemandLoading" />
+      <DockPanel Grid.Row="1" LastChildFill="True">
+        <TextBlock x:Name="pagerInfo" DockPanel.Dock="Right" VerticalAlignment="Center" Margin="8,0,6,2"
+                   Foreground="{DynamicResource ContentForegroundAlt}" />
+        <syncfusion:SfDataPager x:Name="idPager"
+                                DisplayMode="PreviousNext"
+                                UseOnDemandPaging="True"
+                                PageIndexChanged="PagerPageIndexChanged"
+                                OnDemandLoading="PagerOnDemandLoading" />
+      </DockPanel>
       <syncfusion:SfDataGrid x:Name="namesGrid" Grid.Row="0"
                              ItemsSource="{Binding ElementName=idPager, Path=PagedSource}"
                              AllowResizingColumns="True"

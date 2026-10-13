@@ -25,6 +25,9 @@ public partial class NamesTable
   private List<NameRow> _ordered = [];
   private Dictionary<string, NameRow> _rowsByName = new(StringComparer.OrdinalIgnoreCase);
   private NamesTableView.Question? _publishedQuestion;
+  private long _censusTotal;
+  private int _shownCount;
+  private int _pageCount;
   private string _query = string.Empty;
   private HashSet<IdentityKind> _typeFilter = [.. IdentityVocabulary.TypeOptions.Select(o => o.Kind)];
   private readonly List<ComboBoxItemDetails> _typeItems = [];
@@ -37,6 +40,18 @@ public partial class NamesTable
 
   internal IReadOnlyList<NameRow> RowsForTest => _ordered;
   internal string TitleTextForTest => titleCount.Content as string ?? string.Empty;
+  internal string PagerTextForTest => pagerInfo.Text;
+
+  // Standing on a page and walking to another one, without the test reaching into either control.
+  internal int PagerPageForTest
+  {
+    get => idPager.PageIndex;
+    set => idPager.MoveToPage(value);
+  }
+
+  internal void SelectRowForTest(string name) => namesGrid.SelectedItem = FindRow(name);
+
+  internal int PagerPageCountForTest => idPager.PageCount;
 
   // These doors use the real build and publish logic inline, without a Task that an STA assertion cannot wait for.
   internal bool AcceptCensus(IReadOnlyList<ClassificationReport.Row> rows)
@@ -209,8 +224,10 @@ public partial class NamesTable
     var selectedName = namesGrid.SelectedItem is NameRow selected ? selected.Name : null;
     var selectedIndex = selectedName is null ? -1 : view.Ordered.FindIndex(row =>
       string.Equals(row.Name, selectedName, StringComparison.OrdinalIgnoreCase));
-    var decision = NamesTableView.DecidePage(view.Ordered.Count, CensusPageSize, idPager.PageIndex, selectedIndex);
     var questionMoved = view.Stamp.Question != _publishedQuestion;
+
+    // A NEW QUESTION may follow the selection (the reader asked for that name); an ordinary census may not — it clamps only.
+    var decision = NamesTableView.DecidePage(view.Ordered.Count, CensusPageSize, idPager.PageIndex, selectedIndex, questionMoved);
 
     _ordered = view.Ordered;
     _rowsByName = view.Index;
@@ -229,20 +246,36 @@ public partial class NamesTable
     else if (idPager.PagedSource is PagedCollectionView empty) empty.MoveToPage(0);
 
     namesGrid.SelectedItem = selectedName is not null ? FindRow(selectedName) : null;
-    // Ordinary censuses restore selection, not attention: never pull a scrolled-away reader back on every beat.
-    if (selectedIndex >= 0 && (decision.JumpToSelection || questionMoved)) ShowRowAt(selectedIndex % CensusPageSize);
+    // JumpToSelection is true only on a question change that moved the pager, so an ordinary census neither moves the page
+    // nor scrolls within it: selection comes back, attention does not.
+    if (decision.JumpToSelection) ShowRowAt(selectedIndex % CensusPageSize);
 
-    titleCount.Content = view.Total == 0 ? string.Empty
-      : $"Showing {view.Ordered.Count:N0}"
-        + (_query.Length > 0 || _typeFilter.Count < IdentityVocabulary.TypeOptions.Length
-          ? $" of {view.Total:N0}" : "") + $" {Resource.IDENTITIES}";
+    _censusTotal = view.Total;
+    _shownCount = view.Ordered.Count;
+    _pageCount = decision.PageCount;
+    UpdateCountText(decision.PageIndex);
   }
+
+  /*
+   * Both numbers come off the same arithmetic (NamesTableView owns it), and both are re-stamped on every page move: the
+   * count names the RANGE the reader is looking at, so it would lie within seconds if only PublishView refreshed it.
+   */
+  private void UpdateCountText(int pageIndex)
+  {
+    var narrowed = _query.Length > 0 || _typeFilter.Count < IdentityVocabulary.TypeOptions.Length;
+    titleCount.Content = NamesTableView.CountText(_censusTotal, _shownCount, CensusPageSize, pageIndex, narrowed,
+      Resource.IDENTITIES);
+    pagerInfo.Text = NamesTableView.PageText(_pageCount, pageIndex);
+  }
+
+  // The arrows moved the pager by themselves: the range and the page number are the pager's answer, not the build's.
+  private void PagerPageIndexChanged(object sender, EventArgs e) => UpdateCountText(idPager.PageIndex);
 
   private void PagerPageIndexChanging(object? sender, Syncfusion.UI.Xaml.Controls.DataPager.PageIndexChangingEventArgs e)
   {
     EndAllCellEdits();
     // Closing an editor can release a newer filtered index, so clamp the gesture against that index, not the old page count.
-    var decision = NamesTableView.DecidePage(_ordered.Count, CensusPageSize, e.NewPageIndex, -1);
+    var decision = NamesTableView.DecidePage(_ordered.Count, CensusPageSize, e.NewPageIndex, -1, false);
     if (decision.PageCount == 0) e.Cancel = true;
     else e.NewPageIndex = decision.PageIndex;
   }
