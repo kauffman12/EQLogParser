@@ -25,9 +25,12 @@ using EQLogParser;
  *   2. Does merging shards reproduce the sequential capture — same facts, same order, same totals? (merge + diff)
  *
  * (2) is the one that can kill the idea, and it is the reason this exists as code rather than as a slide:
- * the line parsers carry process state across lines (`_previousAction`, `_lastCrit`, `_delayCritRecord`,
- * `_slainTime`, MiscLineParser._randomPlayer/_lastLine) and every one of those is empty at a shard's first
- * line. Guessing which of them matters is what this measures, fact by fact.
+ * parsing carries context across lines — the reader's same-timestamp memoization (TryStamp), and any
+ * neighbor-line heuristic in a parser — and every piece of it starts empty at a shard's first line. Which
+ * of them actually changes an answer is measured fact by fact, not guessed; the shipped answer for lives
+ * and deaths is that they are rebuilt in one pass over the MERGED table (file order, line-aligned cuts),
+ * so seam-position cannot split a life. (The state list this tool was written against was the legacy
+ * parser set; those fields are gone, the diff discipline is not.)
  *
  * Commands:
  *   plan  --file F --parts N                     newline-aligned byte cut points (one per line, then file length)
