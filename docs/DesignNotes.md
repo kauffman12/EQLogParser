@@ -8506,6 +8506,14 @@ whole: there is no partial merge, because half a file's facts wearing whole-file
 a load that fails. Player-visible effect at the shipped setting, per the matrix above: a ~13 s load becomes ~8.5 s with
 peak RAM unchanged.
 
+**A third law is the fight list's band** (`FightTable`): an empty derive snapshot mid-read must not settle it. The band used to come
+down for good at the first snapshot of the session, which was harmless sequential behavior — there, rows usually arrived with that
+snapshot or right after it. A backfill changes what mid-load means: every fact waits in lane tables until the merge, so stray wakes
+run zero-fight passes *early* in the read, and settling on one left the pane blank for the rest of a twenty-second load (field:
+"the progress flashed and disappeared"). The band now ends on rows landing, or on an empty snapshot **after** the reader reported
+done (`ReportReadFinished`, fed by `EventsLogLoadingComplete`); a guard timer settles a band no post-read snapshot ever came to
+answer, which is the zero-fight capture. And its detail line quotes lines *and* facts, because through a backfill only lines move.
+
 ## What the FCT overlay costs per number on screen (2026-11)
 
 Asked for RAM during **active parsing** — a live raid with the overlay up — and measured over Core's own overlay engine

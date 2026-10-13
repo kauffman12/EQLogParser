@@ -174,6 +174,19 @@ namespace EQLogParser
     private bool _awaitingFirstRows;
 
     /*
+     * Set when THIS open's reader reports done (ReportReadFinished, fed by EventsLogLoadingComplete). It turns "the list
+     * is now the answer" from a guess into a fact: a 0-row snapshot MID-read proves nothing — during a sharded backfill every
+     * fact sits in a lane table until the merge, so the stray passes of the read window derive nothing and used to take the
+     * band down for good at twenty percent with twenty seconds still reading (field: "the progress flashed and disappeared").
+     * After the reader is done, zeros ARE all this capture will say, and the band settles. `_linesRead` is the same pump's
+     * other number, and during a backfill the only moving one: millions of lines land in lane tables while the capture holds
+     * strays, so the detail line quotes lines until facts overtake them.
+     */
+    private bool _readerDone;
+    private long _linesRead;
+    private DispatcherTimer _bandGuard;
+
+    /*
      * The one scroll this pane is allowed to do on its own: owed by each capture and paid when that capture's file finishes reading, which is the
      * moment an operator watches rather than the moment some derive happened to finish. FightListReveal holds the sequencing (and why both orders of
      * rows-vs-read happen) and this class only feeds it events and does the scrolling. Dispatcher-thread only.
@@ -325,9 +338,40 @@ namespace EQLogParser
 
       Dispatcher.InvokeAsync(() =>
       {
+        ReportReadFinished();
         _reveal.ReadFinished();
         RevealNewestRowIfOwed();
       });
+    }
+
+    /*
+     * The reader finished with this open. Internal for the WPF band test (a real engine needs a file); production arrives
+     * through OnLogLoadingComplete on the dispatcher, which is also the only thread that touches the band state.
+     *
+     * Arms one short guard when rows have still not landed: without it, a capture that produces no fights AND no derive pass
+     * after its last mid-read snapshot would keep the band up forever — nothing new arrives, so the cadence has nothing left
+     * to derive and never sends another snapshot to settle it. If rows have not painted by then, "no fights" is the answer
+     * however many facts there were, and the band comes down over whatever the list shows.
+     */
+    internal void ReportReadFinished()
+    {
+      _readerDone = true;
+      if (_loadBandSettled || _sessionPainted || !_awaitingFirstRows) return;
+
+      _bandGuard ??= new DispatcherTimer { Interval = TimeSpan.FromSeconds(8) };
+      _bandGuard.Stop();                       // re-armed, never added twice: this fires on every 100 % pump tick
+      _bandGuard.Tick -= BandGuardTick;
+      _bandGuard.Tick += BandGuardTick;
+      _bandGuard.Start();
+    }
+
+    private void BandGuardTick(object sender, EventArgs e)
+    {
+      ((DispatcherTimer)sender).Stop();
+      if (_sessionPainted || _loadBandSettled) return;   // rows arrived, or a post-read snapshot already settled it
+      _loadBandSettled = true;
+      SetLoadBand(null);
+      Log.Debug("fight list: band settled at read-finished + guard — this capture shows no fights");
     }
 
     /*
@@ -376,6 +420,9 @@ namespace EQLogParser
       SetLoadBand(null);
       _loadBandSettled = false;
       _awaitingFirstRows = false;
+      _readerDone = false;
+      _linesRead = 0;
+      _bandGuard?.Stop();   // a guard armed for the session that just closed must not settle this one's band
       _reveal.Arm();
       _sessionPainted = false;
       _capturedFacts = 0;
@@ -404,12 +451,19 @@ namespace EQLogParser
         _currentTimeline = snapshot.Timeline;
         _currentStamp = SelectionStamp(snapshot);
 
-        // Whatever the band was saying, the list itself is now the answer - including the mid-load case where
-        // the reader pump is still under 100 %: real rows beat a progress bar, and for this session they win.
-        _loadBandSettled = true;
-        SetLoadBand(null);
+        /*
+         * The list answers for the band when it HAS rows, or when the reader finished and these zeros are the whole
+         * statement (see ReportReadFinished for why a mid-load 0-row snapshot must NOT settle it — the sharded backfill
+         * made that snapshot arrive twenty seconds before any row existed). Rows landing while the pump is still under
+         * 100 % still win: real rows beat a bar, and they always will.
+         */
+        if (!_loadBandSettled && (snapshot.Rows.Count > 0 || _readerDone))
+        {
+          _loadBandSettled = true;
+          SetLoadBand(null);
+        }
 
-        if (!_sessionPainted)
+        if (!_sessionPainted && snapshot.Rows.Count > 0)
         {
           _sessionPainted = true;
           Log.Debug($"fight list: {snapshot.Rows.Count} row(s) painted - this capture is on screen");
@@ -584,6 +638,7 @@ namespace EQLogParser
         return;
       }
 
+      _linesRead = Math.Max(_linesRead, linesRead);   // the detail line's other moving part; monotonic for the session
       if (_loadBandSettled) return;   // rows landed this session: the list itself is the message
       if (linesRead > 0) _awaitingFirstRows = true;   // monotonic for the session; a follow-from-end open never sets it
       if (!_awaitingFirstRows) return;
@@ -606,8 +661,23 @@ namespace EQLogParser
       loadOverlay.Visibility = Visibility.Visible;
     }
 
+    /*
+     * The moving part under the headline. Sequential loads move both numbers together; a sharded backfill moves ONLY lines
+     * until the merge (facts wait in lane tables), so a detail line that quotes just facts reads as frozen through the whole
+     * read - which is the field complaint the band exists to prevent.
+     */
     private void UpdateLoadDetail()
-      => loadDetail.Text = _capturedFacts > 0 ? $"{_capturedFacts:N0} facts captured" : "waiting for first facts";
+    {
+      var lines = _linesRead > 0 ? $"{_linesRead:N0} lines read" : null;
+      var facts = _capturedFacts > 0 ? $"{_capturedFacts:N0} facts captured" : null;
+      loadDetail.Text = (lines, facts) switch
+      {
+        (null, null) => "waiting for first facts",
+        (not null, null) => lines,
+        (null, not null) => facts,
+        _ => $"{lines} | {facts}",
+      };
+    }
 
     private void Attach(DeriveEngine session)
     {

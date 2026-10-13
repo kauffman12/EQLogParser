@@ -20,8 +20,11 @@ namespace EQLogParser.Wpf.Test;
  * over no lines, so it owes no first build, and an empty list with "Monitoring Log" up top is the
  * correct answer rather than a wait. `linesRead` on ReportCaptureProgress is that whole distinction.
  *
- * The first snapshot takes the band down for good and it stays down for the session - real rows beat a bar, and a quiet
- * stretch mid-file can legitimately complete a derive under 100 %.
+ * Rows take the band down for good - real rows beat a bar, and a quiet stretch mid-file can legitimately complete a
+ * derive under 100 %. An EMPTY snapshot does not, unless the reader has already finished: during a sharded backfill the
+ * facts all sit in lane tables until the merge, so stray early passes derive zero fights, and letting those zeros settle
+ * the band is exactly the field bug "the progress flashed and disappeared" - twenty seconds of read left with no rows
+ * and no band. ReportReadFinished marks that boundary; a guard timer settles a band no snapshot ever came to answer.
  *
  * The pane carries no status text at all: the top-right message section was removed on request, so a derive, a selection
  * or a failed pass has nothing to say there - DeriveEngine journals failures to eqlogparser.log (repeating stack plus
@@ -143,7 +146,7 @@ public sealed class FightTableLoadBandTest
   }
 
   [TestMethod]
-  public void TheFirstSnapshotTakesTheBandDownForGood()
+  public void RowsTakeTheBandDownForGood()
   {
     Sta.Run(() =>
     {
@@ -152,7 +155,13 @@ public sealed class FightTableLoadBandTest
       Flush();
       Assert.AreEqual(Visibility.Visible, table.loadOverlay.Visibility);
 
-      table.OnDerived(new DerivedSnapshot { DerivedAt = DateTime.Now, FightCount = 2, FactCount = 4_000 });
+      table.OnDerived(new DerivedSnapshot
+      {
+        DerivedAt = DateTime.Now,
+        FightCount = 2,
+        FactCount = 4_000,
+        Rows = [new DerivedFightRow { Key = "a" }, new DerivedFightRow { Key = "b" }],
+      });
       Flush();
       Assert.AreEqual(Visibility.Collapsed, table.loadOverlay.Visibility, "rows beat the bar");
 
@@ -160,6 +169,33 @@ public sealed class FightTableLoadBandTest
       table.ReportCaptureProgress(400_000);
       Flush();
       Assert.AreEqual(Visibility.Collapsed, table.loadOverlay.Visibility, "a settled session stays settled");
+    });
+  }
+
+  [TestMethod]
+  public void AnEmptyMidLoadSnapshotKeepsTheBandUp()
+  {
+    Sta.Run(() =>
+    {
+      var table = new FightTable();
+      table.ReportCaptureProgress(120_000);
+      Flush();
+      Assert.AreEqual(Visibility.Visible, table.loadOverlay.Visibility);
+
+      /*
+       * The backfill case: a stray fact wakes a derive pass while nine million lines are still in lane tables, and the
+       * snapshot says zero fights. That is not this capture's answer - it is this capture's middle - and settling on it
+       * is what left the pane blank for the rest of the read.
+       */
+      table.OnDerived(new DerivedSnapshot { DerivedAt = DateTime.Now, FightCount = 0, FactCount = 3 });
+      Flush();
+      Assert.AreEqual(Visibility.Visible, table.loadOverlay.Visibility, "an empty mid-load snapshot is not an answer");
+
+      // The reader finishes; the same emptiness now IS the whole statement, and the next pass settles it.
+      table.ReportReadFinished();
+      table.OnDerived(new DerivedSnapshot { DerivedAt = DateTime.Now, FightCount = 0, FactCount = 3 });
+      Flush();
+      Assert.AreEqual(Visibility.Collapsed, table.loadOverlay.Visibility, "zeros after a finished read are the answer");
     });
   }
 }
