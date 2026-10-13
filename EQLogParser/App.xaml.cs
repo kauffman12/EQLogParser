@@ -59,27 +59,21 @@ namespace EQLogParser
         ExceptionUtil.GlobalLogDebug = msg => Log.Debug(msg);
 
         /*
-         * Collector policy for everything OUTSIDE a bulk file read: don't let the runtime schedule a blocking gen2 while a
-         * raid is on screen. The FCT overlay is the only surface in this app with a soft real-time budget — a stalled render
-         * thread is a big hit nobody saw — and the field report on its stutter is unambiguous: it happens when GC runs.
-         * That points at blocking gen2 (tens to hundreds of ms on a 600 MB-1.5 GB heap) rather than the frequent gen0
-         * collections, which are microseconds and do not visibly freeze a canvas; `LowLatency` was considered and rejected as
-         * the wrong instrument — it is a hint about a short burst of allocations (draw one frame, handle one input) that the
-         * runtime stops honouring on its own, so held permanently over a continuously allocating app it achieves nothing
-         * durable. Cost, stated plainly: deferred gen2 means memory sits higher between a load and a Clear All — that IS the
-         * mechanism, and it self-limits because the runtime collects anyway under memory pressure.
+         * No runtime GC policy is set here, and that absence is the decision. `GCLatencyMode.Interactive` — the default — is the mode
+         * that lets the collector do background work when it judges it is needed, which is what this app wants outside a load, and
+         * Server GC (EQLogParser.csproj) already runs gen2 concurrently across parallel heaps, which is the short-pause story while a
+         * raid is on screen.
          *
-         * Two things still collect on purpose, which is why this does not leak: BulkGcMode overrides to Batch for a bulk read
-         * and restores THIS mode when the file runs out (it puts back what it found), and GcTidyUp's forced Aggressive pass at
-         * load-end and Clear All is honoured in low-latency mode like any other forced collection.
+         * `SustainedLowLatency` was tried as the steady state on 2026-10-13 for the FCT overlay's stutter — it defers exactly the
+         * blocking gen2 that stall is, and the reasoning looked sound. The field verdict was worse, so it is retired: do not re-add it
+         * without new evidence, and note which part of the diagnosis it does NOT settle. The overlay question is still open; what
+         * remains is this app's OWN compacting pass (`GcTidyUp`, 119–350 ms measured — so the useful observation is whether a stutter
+         * sits beside a load or a Clear All rather than in the middle of a fight) and the UI thread's own work (meter rebuild, grid
+         * refresh, FCT label churn). docs/DesignNotes → "Parallel loading: measured, shipped, and backed out".
          *
-         * Unmeasured from here, deliberately: the FCT render path is Windows-only, so no number in this repo says this fixed
-         * the stutter. If it survives, the next suspects are not GC policy — they are GcTidyUp's own compacting pass (the
-         * biggest single pause this app creates, 119-350 ms measured: notice WHETHER the stutter sits next to a load or a
-         * Clear All) and the UI thread's own work (meter rebuild, grid refresh, label churn).
-         * docs/DesignNotes -> "Garbage collection after loading a log".
+         * The one mode this process takes is Batch for the duration of a bulk file read (`BulkGcMode`), which restores whatever mode it
+         * found — here, Interactive — the moment the file runs out, so nothing rides along behind a live raid.
          */
-        GCSettings.LatencyMode = GCLatencyMode.SustainedLowLatency;
         Log.Debug($"gc: collector = {(GCSettings.IsServerGC ? "server" : "workstation")}, "
                   + $"latency = {GCSettings.LatencyMode} outside a bulk read, Batch inside one");
 

@@ -8585,15 +8585,17 @@ reading of these numbers as a batching win was wrong, and "the new version garba
 spotting the actual cause. Note also that dropping both properties means workstation GC **with background collection still
 on** (concurrent is the default), so that row is a clean Server-vs-workstation switch, not two changes.
 
-**Decided (2026-10-13): the app ships workstation GC.** The exchange above was put to the person who pays for it — footprint
-against load seconds they can feel — and footprint won, so `ServerGarbageCollection` is out of the csproj. Two things follow
-that are not the same decision: `ConcurrentGarbageCollection` stays explicitly on because background gen2 is a *pause* lever
-(it turns one foreground stop-the-world into short pauses), and the seconds go on being chased with `GCLatencyMode.Batch`
-scoped to the bulk read (`BulkGcMode`, docs/DesignNotes → "Garbage collection after loading a log"), which is throughput
-bought inside the one window where a pause is invisible. Still unanswered, and it needs this machine or the operator's:
-how much of the 6 s `Batch` recovers on workstation — `EQLP_BULKGC=0` versus unset, same file warm, plus working set after
-the tidy. `DOTNET_gcServer=1` in the environment re-enables Server GC without a rebuild if load seconds ever outrank
-footprint (its price: ~+90 MB post-tidy working set here, +305 MB peak in the older single-thread matrix).
+**Collector: workstation was tried in the field and lost (2026-10-13).** The exchange above was put to the person who pays for it —
+footprint against load seconds they can feel — and taken away from Server GC. That build shipped, got used, and was **worse**: slower
+loads, and no relief on the symptom the work was really aimed at (the FCT overlay stutters when something collects). So
+`ServerGarbageCollection` is back in the csproj, and the flag's justification is now an operator's machine instead of a loader that no
+longer exists. Worth noting that the *pause* argument runs the same way as the wall-clock argument once you ask which pause hurts: Server
+GC collects several smaller heaps in parallel with gen2 concurrent by default, so a stall on 600 MB–1.5 GB is short, while workstation's
+gen2 is one foreground stop-the-world over the entire heap — the config chosen for memory was also the one with the worst long pause, and
+`SustainedLowLatency` (its intended patch) cost memory to defer a collection that Server GC was never about to make in the first place.
+Still unanswered, and cheap if anyone wants it: how much of the 6 s `Batch` recovers on each collector — `EQLP_BULKGC=0` versus unset,
+same file warm, plus working set after the tidy.
+
 
 **If parallel reading is ever attempted again**, the prerequisite list is short and specific: the four carries
 above become either line-local or merge-time reconciled (with the crit ones proven to be `(attacker, <=1 s[, value])
@@ -12658,30 +12660,31 @@ csproj/startup decision (workstation now, see "Parallel loading: measured, shipp
 comparison above finishes, `EQLP_BULKGC=0|1` overrides this mechanism from the environment so one build measures both arms;
 **that gate is temporary and is deleted with the answer**, not kept as a dial.
 
-**Steady state: workstation GC + `SustainedLowLatency`, set at the top of `App.OnStartup` (2026-10-13).** Why this mode and
-not one of its neighbours, since three of them sound alike:
+**Steady state: no latency-mode write at all — Server GC + the runtime's own `Interactive` (revised the same day, 2026-10-13).** The
+morning's reasoning is kept because the taxonomy outlived the choice, and three of these modes sound alike:
 
-- The reason is the **FCT overlay**, the only surface here with a soft real-time budget: a stalled render thread is a big hit
-  nobody saw. The field report on its stutter is that it happens when GC runs — which means a *blocking gen2* (tens to hundreds
-  of ms on a 600 MB–1.5 GB heap), not the frequent gen0 collections, which are microseconds and do not visibly freeze a canvas.
-- Plain **`LowLatency` is the wrong instrument**, and this was considered properly rather than skipped: it is a hint about the
-  current burst of allocations (draw one frame, handle one input event) that the runtime stops honouring on its own. Held
-  permanently over an app that allocates continuously, it buys nothing durable. `NoGCRegion` is unusable (parsing allocates).
-- **Workstation and `SustainedLowLatency` are a pair, not two hunches**: workstation keeps the baseline footprint down (no
-  per-core arenas) but has the nastiest foreground gen2 of the two collectors, and deferring exactly that collection is this
-  mode's one lever. Server GC gets its short pauses a different way, by spending memory.
-- **Cost, stated plainly**: deferred gen2 means the working set sits higher between a load and a Clear All — that *is* the
-  mechanism, not a bug — and it self-limits, because the runtime collects anyway under memory pressure. Two things still
-  collect on purpose: `BulkGcMode` overrides to `Batch` for a bulk read and restores this mode at end of file (it puts back
-  what it **found** — pinned by `BulkGcModeTest.AnEarlierLowLatencyPromiseIsKeptRatherThanOverwritten`), and `GcTidyUp`'s forced
-  Aggressive pass at load-end/Clear All is honoured in low-latency mode like any forced collection.
-- **Unmeasured, on purpose.** The FCT render path is Windows-only, so nothing in this repo says this fixed the stutter; it is a
-  diagnosis-driven change, not a measured one. If stutter survives, the next suspects are not GC policy: `GcTidyUp`'s own
-  compacting pass is the biggest single pause this app creates (119–350 ms measured — so the useful question is *where* the
-  stutter sits, next to a load/Clear All or in the middle of a fight), and then the UI thread's own work (meter rebuild, grid
-  refresh, label churn). The older raid probe ("What garbage a raid actually makes…") found no gen2 in a 12 s window at 233 MB
-  live and SustainedLowLatency collecting more for the same slip — read as what it covered (parse/derive threads, small heap,
-  headless Linux), not as a verdict on a WPF render thread hours into a session.
+- What it was reached for is the **FCT overlay**, the only surface here with a soft real-time budget: a stalled render thread is a big hit
+  nobody saw. A report of "it stutters when GC runs" points at a *blocking gen2* (tens to hundreds of ms on a 600 MB–1.5 GB heap), not at
+  the frequent gen0 collections, which are microseconds and do not visibly freeze a canvas — and deferring blocking gen2 is exactly what
+  `SustainedLowLatency` does.
+- **Plain `LowLatency` is still the wrong instrument**, and that part is documented behaviour rather than measurement: it is a hint about
+  the current burst of allocations (draw one frame, handle one input event) that the runtime stops honouring by itself, so held over an app
+  that allocates continuously it buys nothing durable. `NoGCRegion` is unusable (parsing allocates).
+- **What the field said: worse.** Workstation GC + `SustainedLowLatency` on the operator's machine was not a relief on the stutter and cost
+  load time, so the write came out of `App.OnStartup` and `Interactive` — the default, the mode that lets the collector do background work
+  when it judges it is needed — governs outside a load. The theory was sound and the measurement was not; that is recorded here so nobody
+  re-runs it from the same reasoning.
+- **Why Server GC makes the whole argument much weaker**: its gen2 runs concurrently across parallel heaps, which already keeps the long
+  stall off the render thread. `SustainedLowLatency` on top of that pays memory to avoid a pause this collector is not making — the shape of
+  a bad trade, and the mistake this section exists to document.
+- **What this does NOT settle: the overlay stutter.** GC policy has now been pushed in both directions (deferring gen2, then not) with no fix.
+  Suspects in order: **(1) `GcTidyUp`'s own forced Aggressive + compacting pass** at load-end and Clear All — 119–350 ms measured, by far the
+  biggest single pause this app creates, so the useful observation is *where* a stutter sits (beside a load or a Clear All means it is ours);
+  **(2) the UI thread's own work** (meter rebuild, grid refresh, FCT label churn). The older raid probe ("What garbage a raid actually makes…")
+  remains the reference for what the parse/derive threads cost, with its limits written there.
+- `BulkGcMode` needed no change and is unaffected: it puts back whatever mode it **found** at end of file, which is why reverting the app
+  default moved nothing in the load path (`BulkGcModeTest.AnEarlierLowLatencyPromiseIsKeptRatherThanOverwritten` pins exactly that handoff).
+
 
 ## DPS and active-reader retention review at 35420fcf
 

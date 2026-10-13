@@ -123,11 +123,12 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
   released at end of file — refcounted across overlapping readers, restoring what it FOUND, never a hardcoded mode. A monitor
   open (follow-from-EOF) reads zero bytes and must not enter it; neither does the tail loop, which is why the scope is a
   `using` BLOCK inside `ReadFileAsync`. This is policy, not collector choice: `GCSettings.IsServerGC` is startup-only.
-- **Shipped collector/policy pair**: **workstation GC** (`ServerGarbageCollection` out of the csproj; `ConcurrentGarbageCollection`
-  stays on — background gen2 is a *pause* lever) + **`SustainedLowLatency`** written at the top of `App.OnStartup`, because the FCT
-  overlay's stutter happens when GC runs and blocking gen2 is the long pause. Plain `LowLatency` is NOT the middle ground (a
-  self-exiting hint about one burst of allocations). Cost = higher working set between load and Clear All; `GcTidyUp`'s forced
-  pass still reclaims it.
+- **Shipped collector/policy**: **Server GC** + `ConcurrentGarbageCollection` on, and **no latency-mode write at startup** —
+  `Interactive` (the runtime default) is the mode that lets the collector do background work when it judges it needed. Field verdict
+  2026-10-13: workstation GC + `SustainedLowLatency` was tried for the FCT stutter and measured **worse** — do not re-add either without
+  new evidence (`docs/DesignNotes.md` → "Parallel loading: measured, shipped, and backed out"). The overlay stutter is still unexplained;
+  suspects are `GcTidyUp`'s own compacting pass and the UI thread's work, not GC policy.
+
 - **GC**: forced collection is paid at **two labelled moments only** — a load that actually read lines (**armed** at 100 %, landed by the first contentful
   board build or a one-shot backstop: the old synchronous pass at "Finished" fired BEFORE the first full derive and its boards, the biggest allocators of
   a bulk load, and collected half) and `Clear All` (synchronous, after its re-open) — each labelled *"Cleaning up.."* in the status line, because a pause

@@ -133,19 +133,18 @@ operator checks with `Debug=True`, on a capture of several hundred MB or more:
   per-line catch swallowed it — the operator just got boards that read low. Ids are `int` now, so after a long live session or a big file:
   `grep -c "name table exceeded" eqlogparser.log` must be **0**, and a name that arrives late in a huge file (a new raid member, an uncommon
   NPC, a spell nobody cast yet) has to appear on the boards and the identity list rather than being missing without complaint.
-- With `Debug=True`, startup prints one `gc: collector = workstation, latency = SustainedLowLatency outside a bulk read,
-  Batch inside one` — if it says `collector = server`, the csproj flag came back; if latency is not SustainedLowLatency, the
-  write in `App.OnStartup` did not run.
-- With `Debug=True`, a big open prints exactly one `gc.mode batch ON for a bulk read (N MB), from SustainedLowLatency` and one
-  `gc.mode batch OFF, back to SustainedLowLatency` when the file runs out — and **neither** line for a small file or for a
+- With `Debug=True`, startup prints one `gc: collector = server, latency = Interactive outside a bulk read, Batch inside one`. If it says
+  `collector = workstation` the csproj flag went missing; if latency is anything but `Interactive`, something is setting a mode again —
+  `SustainedLowLatency` was tried on 2026-10-13 and measured worse, so its return is a regression, not a feature.
+- With `Debug=True`, a big open prints exactly one `gc.mode batch ON for a bulk read (N MB), from Interactive` and one
+  `gc.mode batch OFF, back to Interactive` when the file runs out — and **neither** line for a small file or for a
   follow-from-end-of-file open (a monitor over a 1.2 GB capture reads nothing, so it must not change a process-wide policy).
   If a load ends without the OFF line while nothing else is reading, a scope leaked: note it as a bug, do not shrug it off.
 - While a big file loads the window may feel slightly stiffer (fewer, longer collections are the deal being struck); the
   boards, the overlay and live tailing must behave normally once it finishes.
-- **The FCT overlay is the thing this GC pair was chosen for**: during a real fight, watch whether numbers still freeze.
-  Where the stutter sits now is the diagnosis — mid-fight is the runtime's collection (this change targets that), beside a
-  load or a Clear All is our own compacting tidy, and neither means the mode failed. Also expect the working set to sit a
-  little higher between a load and a Clear All: deferring gen2 is the mechanism, so that is the price, not a leak.
+- **The FCT overlay question is still open** — where a stutter sits IS the measurement: beside a load or a Clear All points at our own
+  compacting tidy (`GcTidyUp`, 119–350 ms), mid-fight points at the runtime, and no GC policy change in this repo has fixed either.
+
 - Closing the window or opening another log MID-load leaves no wedge and no second capture alive;
   `grep -c "Error Loading File" eqlogparser.log` says whether an abort was recorded as a failed load.
 - Clear All re-opens the same file at EOF (a monitor re-open, not a re-read) and every board empties and refills.

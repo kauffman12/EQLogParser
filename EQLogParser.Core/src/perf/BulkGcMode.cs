@@ -16,9 +16,11 @@ namespace EQLogParser
    * is not a cost during a load — the operator is looking at a loading band — while the reclaimed concurrency comes straight
    * off the two threads doing the reading and parsing.
    *
-   * Which is why this is scoped instead of set once at startup. `SustainedLowLatency` (or plain `Interactive`) is the right
-   * answer for live play, where a stutter lands on a raid; `Batch` left on after a load would quietly grow the working set
-   * of an app that then sits idle for four hours. So the mode is entered for the bulk read and left when the file runs out,
+   * Which is why this is scoped instead of set once at startup. Outside a load the process runs the runtime default
+   * (`Interactive`), which is the mode that lets Server GC do its background work — `SustainedLowLatency` was tried there on
+   * 2026-10-13 for the FCT overlay's stutter and retired the same day on field results (docs/DesignNotes → "Parallel loading:
+   * measured, shipped, and backed out"), and `Batch` left on after a load would quietly grow the working set of an app that
+   * then sits idle for four hours. So the mode is entered for the bulk read and left when the file runs out,
    * by whoever is still holding it — more than one reader can be alive over different files (the open's own loop plus a
    * trigger reader per enabled character), so a naive set-and-restore would drop the mode out from under a load that is
    * still running.
