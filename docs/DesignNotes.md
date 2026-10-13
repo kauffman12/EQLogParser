@@ -8464,25 +8464,39 @@ costs 100 % more slots while an overshoot costs its overshoot and is handed back
 failure mode is honest and stated: an oddly chat-dominated gigabyte precommits ~175 MB it does not need, bounded by the
 clamp and reclaimed at EOF. A "last N minutes" open reads an unknown slice and therefore passes no hint.
 
-**Speed, and its price.** `EQLogParser.Tools/RangeSpike` (local, throwaway) re-measured at this commit:
+**Speed, and its price.** `EQLogParser.Tools/RangeSpike` (local) re-measured over the whole matrix on this same capture
+(18-core Linux box; each shard carries its own tables and its own copy of the reader→parser seam):
 
-| run | wall | damage / heal facts | peak RSS |
-|---|---|---|---|
-| sequential, whole file | **15,712 ms** | 4,832,102 / 2,670,809 | 1,415 MB |
-| 4 shards in parallel | **6,982 ms** (includes four process starts) | 4,832,103 / 2,670,809 summed | ~600 MB each ≈ **2.4 GB** |
+| run | wall | + merge | damage / heal facts summed | RSS |
+|---|---|---|---|---|
+| sequential, whole file | **13.2–13.4 s** | — | 4,832,102 / 2,670,809 | 860 MB peak |
+| 2 shards | **7.9 s** | +~0.5 s | exact (damage ±1) | ~440 MB each ≈ today's peak |
+| 3 shards | **5.75 s** | +~0.7 s | 4,832,103 / 2,670,809 exact | ~350–450 MB each |
+| 4 shards | **4.8 s** | **607 ms** | 4,832,103 / 2,670,809 exact | ~350 MB each ≈ 1.4 GB total |
 
-Three things to read out of that. The sequential path is **36 % faster than the spike's original 24,726 ms** number
-still quoted elsewhere in these notes, and none of that came from the spike — it is the fact-bit deletion and the work
-around it, so old numbers should not be reused for planning. Four workers are worth ~2.3× here (and the spike measured
-3.7× at eight), but every worker carries its own fact tables: **parallel load trades memory for time on a project whose
-open complaint is memory.** Content parity across shards was near-exact — heals, deaths and taunts sum to the sequential
-counts exactly, damage by ±1 of 4.8 M (the delayed-critical boundary), which is the same shape the spike reported. Any
-in-app version still owes the harder work: the parse lane's statics (`DamageLineParser._previousAction`, the heal
-`RepeatStore`, `PlayerRegistry`, `ConfigUtil.PlayerName`) are process-global, which is exactly why the spike had to be a
-separate executable rather than a thread pool inside the app.
+What the matrix says now (the older 24.7 s and 15.7 s sequential figures are dead — the word-view migration, the queue-
+bound cut and the capacity hints moved everything; do not plan from them). **Two workers is the sweet spot: ~1.6× wall at
+the same peak RAM today's single-threaded load already reaches**, three workers ~2.0×, four ~2.45× counting the merge.
+Deaths, taunts and evidence sum exactly; damage differs by 1 in 4.8 M (the delayed-critical boundary: `_delayCritRecord`
+carries across line boundaries, and a shard edge is one).
 
-So the order is memory first, threads second: reserve sizing is shipped, and if the parse lane gets de-staticized (worth
-doing for testability regardless), a 2-worker load is roughly time-neutral on RAM against today's 4-worker dream.
+The one parity finding a *table* merge does not settle: **identity events are not shard-additive** — four shards emitted
+383 IdentityEvents where the sequential run wrote 126, because each worker's timeline discovers the same names
+independently. That is fine as long as verdicts travel as evidence (they do — a fact carries only what its line says) and
+the merged tables get a classification pass after the merge, which the derive engine already owes anyway; but it means the
+merge step is a re-derive, not just an ordinal renumber, and board parity must be asserted on a merged load before any
+in-app sharding ships.
+
+What an in-app version still owes: the mutable parse-lane state is now short enough to name — `DamageLineParser`'s
+`_previousAction`, `_delayCritRecord` and lazily-written `SpellTypeCache`, and the parsers' static *events*
+(`CastLineParser.EventsCastEvidence`, `MiscLineParser`'s three, `PreLineParser.EventsEvidence`) which a second worker in
+the same process would fire across. `PlayerRegistry` is shared-on-purpose and `ConfigUtil.PlayerName` reads the same value
+in every worker; the heal RepeatStore is gone, so it no longer appears on this list. The reader→parser seam is batched,
+both shards get their near-linear CPU efficiency back (the per-item handshake roughly doubles a lane's CPU — see
+"The reader hands the parser one line at a time"), which is why that fix ships first and stands on its own.
+
+So the order holds: memory first (shipped), the seam's batch handoff second (standing decision, cheap), and 2-worker
+sharded loading third — worth ~1.6× a whole load's wall at no memory cost once the short state list above becomes per-scope.
 
 ## What the FCT overlay costs per number on screen (2026-11)
 
