@@ -18,10 +18,13 @@ namespace EQLogParser
    * suite) reaches Main through the parsers' static forwarders, so the app running the way it always ran — one
    * reader, one capture — behaves bit-identically, and an unbound thread IS the Main lane.
    *
-   * A sharded load creates one extra lane per worker, gives each its own CombatCapture over its own fact tables,
-   * and merges the results; lanes are born clean and die with the load. What is deliberately NOT here:
-   * `PlayerRegistry` (identity memory is process-wide by design — shards share its verdicts, and its events reach
-   * whichever captures subscribed) and the interned name pools (per fact table, renumbered at merge).
+   * Today every production stream binds Main — the bulk read, the monitor tail, and the trigger lane's own readers
+   * over the same file all parse on it, which is what the app has always done. A lane instance is what anything ELSE
+   * that ingests binds (a test driving its own capture, a second reader that must not raise into the session's
+   * tables), and keeping that door explicit is the point: the alternative is process-static events, where a raise from
+   * any stream reaches every subscriber in the process. What is deliberately NOT here: `PlayerRegistry` (identity
+   * memory is process-wide by design — its verdicts are shared, and its events reach whichever captures subscribed)
+   * and the interned name pools (per fact table).
    */
   internal sealed class ParseLane
   {
@@ -40,22 +43,6 @@ namespace EQLogParser
     internal static ParseLane Current => _current ?? Main;
 
     internal static void BindCurrentThread(ParseLane lane) => _current = lane;
-
-    /*
-     * The first stamp this stream parsed: where its file position begins in log time — mid-file for a shard, the
-     * head of the file for Main and slot 0. The cast-ambiguity retry asks which rows sit near a seam (a lane cannot
-     * see casts the other lane has not parsed yet; that gap is exactly this stamp plus the cast window — see
-     * RecordsStore's seam-recheck block). Written once by the lane's own parse thread and read only there too,
-     * so the plain double needs no more synchronization than its assignment.
-     */
-    private double _firstStampS = double.NaN;
-
-    internal double FirstStampS => _firstStampS;
-
-    internal void NoteFirstStamp(double timeS)
-    {
-      if (double.IsNaN(_firstStampS) && timeS > 0) _firstStampS = timeS;
-    }
 
     // ---- events of this stream ---------------------------------------------------------------
     // Plain delegate fields, not `event` declarations: the hot raise sites hoist the field into a local and skip

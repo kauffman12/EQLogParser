@@ -290,9 +290,9 @@ namespace EQLogParser
         else
         {
           newSpell.AddAmbiguity(result.SpellData);
-          // Bulk opens remember their open questions for one retry after the merge (a lane cannot see the casts the
-          // other lane has not parsed yet). No-ops unless a sharded load opened the door — live parsing never enqueues.
-          RecordsStore.Instance.AddPendingAmbiguity(newSpell, beginTime);
+          // A maybe, carried on the row and answered by whoever reads it: EQDataStore.FindPreviousCast while the
+          // line is still warm, and EQDataStore.ResolveSpellAmbiguity at the boards that show buffs. Nobody asks
+          // again later — the cast lines this would need are already parsed, because the file is read in order.
         }
 
         RecordsStore.Instance.Add(newSpell, beginTime);

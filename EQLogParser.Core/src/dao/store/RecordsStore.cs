@@ -32,7 +32,7 @@ namespace EQLogParser
 
     /*
      * A rolling horizon for the two cast caches below. The ONLY question either of them answers is "what did this spell NAME
-     * cast recently", and the only door that asks it in production passes 8 seconds (EQDataStore.FindPreviousCast:780) — a buff
+     * cast recently", and the only door that asks it in production passes 8 seconds (EQDataStore.FindPreviousCast) — a buff
      * or wear-off line whose name could stand for several ranks, resolved by looking back up to eight seconds for a cast line
      * that printed the message. That query derives its window from the newest entry in these caches (the anchor is a quirk every
      * existing resolution depends on), so an entry older than `newest - horizon` cannot be returned by any question ever asked,
@@ -54,19 +54,6 @@ namespace EQLogParser
     // One entry per ambiguous spell name. The value carries its own ordering fact — see CastHistory.
     private readonly ConcurrentDictionary<string, CastHistory> _spellNameIndex = new();
 
-    // Set only while a sharded bulk open wants its ambiguity retry (see FinishCastHistoryHold): the horizon sweep
-    // stands down and unresolved received-spell rows accumulate below instead of evaporating. Touched only through
-    // Volatile.Read/Write — lanes set eyes on it from several threads.
-    private bool _holdCastHistory;
-
-    // FindPreviousCast's lookback, verbatim: a cast this far before a row proves the rank it named.
-    private const double WindowS = 8;
-
-    // Only rows within this of a lane's first stamp can have been starved by the seam (their window still reaches
-    // back across the cut). WindowS is the exact boundary; the extra seconds cover stamps that are slightly out of
-    // order at the byte split — pure insurance, those rows can only resolve, never wrongly.
-    private const double SeamRecheckWindowS = WindowS + 2;
-    private readonly List<PendingAmbiguity> _pendingAmbiguity = [];
     private readonly Timer _eventTimer;
 
     private static readonly string[] TimedRecordTypes =
@@ -146,11 +133,6 @@ namespace EQLogParser
         }
       }
       _spellNameIndex.Clear();
-
-      // A retry that was in flight when this session died is nobody's question anymore, and a hold must never
-      // survive the load that earned it — Clear closes the door from the other side too.
-      Volatile.Write(ref _holdCastHistory, false);
-      lock (_pendingAmbiguity) { _pendingAmbiguity.Clear(); }
 
       // A new capture starts the horizon over: the first cast of the next session schedules the first sweep.
       _nextCastPruneAtS = double.NaN;
@@ -239,153 +221,6 @@ namespace EQLogParser
       }
     }
 
-    /*
-     * ─── Bulk-open ambiguity retry (the sharded seam's cast-recency gap) ───
-     * The 8-second cast check resolves "which rank does <player>'s <spell name>" from a cast line that sits earlier
-     * in the file. A sequential reader has always parsed it; a lane has NOT parsed the other lane's half, so rows
-     * near a shard seam fail a check a sequential load would have passed — and unlike the crit pairing, no amount
-     * of waiting fixes the question while it is being asked.
-     *
-     * The store itself was never sharded (identity/recency memory is process-wide on purpose), so by merge time
-     * every cast IS present. Rather than let the seam keep its wrong answer, a sharded open holds the horizon sweep,
-     * remembers the FEW rows the seam could have starved (see AddPendingAmbiguity — not every ambiguity failure), and
-     * asks ONE more time when the merge completes — each row anchored to its own timestamp, reproducing what the
-     * sequential parse would have concluded. The row already carries its candidate list (AddAmbiguity), so this
-     * re-decides; it never re-parses, never re-walks the file.
-     *
-     * Why hold the sweep at all when only seam rows are retried: a seam sits mid-file, so by load end its casts are
-     * far older than the horizon relative to the newest line and would be swept — holding is what keeps exactly those
-     * casts alive to be re-asked. Memory stays bounded by one file's casts-of-ambiguous-names.
-     *
-     * Three doors keep the scope the operator asked for — a file open, never live: BeginCastHistoryHold is called
-     * only by the sharded backfill; AddPendingAmbiguity no-ops while the hold is closed (the live tail, seek-back
-     * and small files never grow the list); FinishCastHistoryHold runs exactly once per load. ReleaseCastHistoryHold
-     * covers a dead lane: the hold must not outlive the load it was earned for.
-     */
-    internal void BeginCastHistoryHold()
-    {
-      lock (_pendingAmbiguity) { _pendingAmbiguity.Clear(); }
-      Volatile.Write(ref _holdCastHistory, true);
-    }
-
-    /*
-     * Remembers a received-spell row the parse could not pin to one rank — but only the rows a seam could actually
-     * have gotten wrong, which is the operator's narrowing and it is exactly right:
-     *
-     * A row asks about casts in [beginTime − 8 s, beginTime]. A lane parses its own bytes in order, so by the time it
-     * reaches any row, everything from its OWN past is already in the shared store — a deep row's whole lookback window
-     * is covered and its parse-time answer is the sequential answer. Only a row whose window still reaches BACK across
-     * the cut — into the other lane's not-yet-parsed territory — can have been starved. That is beginTime within 8 s of
-     * the lane's first stamp (ParseLane.FirstStampS): nothing deeper qualifies, so nothing deeper is queued.
-     *
-     * SeamRecheckWindowS is that 8 s plus a couple seconds' slop for boundary lines whose stamps are slightly out of
-     * order — a handful of extra rows that can only ever resolve, never wrongly. With no seam to speak of (FirstStampS
-     * unset — a direct store unit test, or the very first line before any stamp), the row is kept: the honest default
-     * when the seam position is unknown is to re-check rather than to drop.
-     */
-    internal void AddPendingAmbiguity(ReceivedSpell spell, double beginTime)
-    {
-      if (!Volatile.Read(ref _holdCastHistory)) return;
-
-      var first = ParseLane.Current.FirstStampS;
-      if (!double.IsNaN(first) && (beginTime < first || beginTime - first > SeamRecheckWindowS)) return;
-
-      lock (_pendingAmbiguity) { _pendingAmbiguity.Add(new PendingAmbiguity(spell, beginTime)); }
-    }
-
-    /// <summary>The second look: re-ask each unresolved row against the now-complete history, then let the horizon resume.</summary>
-    internal (int pending, int resolved) FinishCastHistoryHold()
-    {
-      Volatile.Write(ref _holdCastHistory, false);
-      PendingAmbiguity[] round;
-      lock (_pendingAmbiguity) { round = [.. _pendingAmbiguity]; _pendingAmbiguity.Clear(); }
-
-      var resolvedCount = 0;
-      foreach (var item in round)
-      {
-        if (item.Spell.SpellData is not null) continue; // something answered it first (the class-lane resolver writes back too)
-        foreach (var candidate in item.Spell.Ambiguity) // the parse's own order: first cast-backed name wins
-        {
-          if (candidate.Name is null) continue;
-          // The accept rule mirrors FindPreviousCast: a self-target spell is proven by ANY recent cast of that rank,
-          // a targeted one only by the receiver having cast it themselves.
-          var requiredCaster = candidate.Target == (int)SpellTarget.Self ? null : item.Spell.Receiver;
-          if (WasCastWithin(candidate.Name, item.BeginTime, requiredCaster))
-          {
-            item.Spell.SpellData = candidate;
-            resolvedCount++;
-            break;
-          }
-        }
-      }
-
-      PruneAfterHoldReleased();
-      return (round.Length, resolvedCount);
-    }
-
-    /// <summary>Dead-lane path: no retry, but the hold and everything it was protecting go now.</summary>
-    internal void ReleaseCastHistoryHold()
-    {
-      Volatile.Write(ref _holdCastHistory, false);
-      lock (_pendingAmbiguity) { _pendingAmbiguity.Clear(); }
-      PruneAfterHoldReleased();
-    }
-
-    // The horizon is earned back the moment the hold closes; sweep once at the newest time we have.
-    private void PruneAfterHoldReleased()
-    {
-      double newest = double.NaN;
-      lock (_playerAmbiguityCastCache) { if (_playerAmbiguityCastCache.Count > 0) newest = _playerAmbiguityCastCache[^1].BeginTime; }
-      if (!double.IsNaN(newest)) PruneCastHistoryLocked(newest);
-    }
-
-    // The retry's question: a real cast of this name inside [atS − 8 s, atS] — the same horizon and the same
-    // interrupted-skip as the parse-time FindPreviousCast, but anchored to THIS row's timestamp instead of "whatever
-    // is newest in the cache" (which at load end is the end of the file, and would answer every old row wrong).
-    internal bool WasCastWithin(string spellName, double atS, string requiredCaster)
-    {
-      if (!_spellNameIndex.TryGetValue(spellName, out var history)) return false;
-      lock (history)
-      {
-        var casts = history.Casts;
-        // A sorted segment gets a binary descent to the window's right edge, then walks back only over entries inside
-        // [atS − 8 s, atS]. Without it a near-seam row (its atS is early in the file) would scan down from the NEWEST
-        // cast — nearly the whole list for a common spell — to reach a window near the head. An out-of-order segment
-        // falls back to the full backward walk; that flag already means "no usable order".
-        var i = history.AscendingTime ? LastIndexAtOrBefore(casts, atS) : casts.Count - 1;
-        for (; i >= 0; i--)
-        {
-          var cast = casts[i];
-          if (cast.BeginTime < atS - WindowS) break; // ascending: once past the low edge, every earlier entry is too
-          if (cast.Cast.Interrupted) continue;
-          if (requiredCaster is null || string.Equals(cast.Cast.Caster, requiredCaster, StringComparison.OrdinalIgnoreCase)) return true;
-        }
-      }
-      return false;
-    }
-
-    // Rightmost index whose BeginTime <= value (the window's upper edge), or -1 when the whole list is newer.
-    private static int LastIndexAtOrBefore(List<CachedCast> casts, double value)
-    {
-      var lo = 0; var hi = casts.Count - 1; var found = -1;
-      while (lo <= hi)
-      {
-        var mid = (lo + hi) >>> 1;
-        if (casts[mid].BeginTime <= value) { found = mid; lo = mid + 1; }
-        else { hi = mid - 1; }
-      }
-      return found;
-    }
-
-    private sealed class PendingAmbiguity
-    {
-      internal readonly ReceivedSpell Spell;
-      internal readonly double BeginTime;
-      internal PendingAmbiguity(ReceivedSpell spell, double beginTime) { Spell = spell; BeginTime = beginTime; }
-    }
-
-
-
     internal IEnumerable<NpcResistStats> GetAllNpcResistStats()
     {
       NpcResistStats[] statsCopy;
@@ -430,10 +265,12 @@ namespace EQLogParser
        * not wall time. It is a quirk (a log whose clock jumps moves the window) and it is the behaviour every existing
        * resolution depends on, so bounding the scan is not the day to change which casts are "recent".
        *
-       * What DID change (2026-10-13, sharded loading) is who else holds these lists: two parse lanes append AND horizon-
-       * prune them at once, and pruning's RemoveRange CLEARS the vacated slots. Reading Count and indexing the last
-       * entry outside the cache lock — which was safe when exactly one thread ever parsed — now latches a stale size over
-       * a sweeping list: the field NRE surfaced as `FindByLandsOn line 845` because both this method and FindPreviousCast
+       * What the locking lesson cost (2026-10-13) is that these lists are NOT single-thread property any more: every
+       * stream that parses appends to them and runs the horizon prune, and pruning's RemoveRange CLEARS the vacated
+       * slots — one file can have several readers alive (the open's own loop plus a trigger reader per enabled
+       * character), so "exactly one thread ever parsed" was never the invariant it looked like. Reading Count and
+       * indexing the last entry outside the cache lock latches a stale size over a sweeping list: the field NRE
+       * surfaced at `FindByLandsOn` because both this method and FindPreviousCast
        * inline, so the throw pointed at a call site with no frame naming it. The lock covers anchor reads AND the scan
        * because both must agree with each other; the order is cache → history, the one Add already uses (re-verifying
        * the order is load-bearing: nothing here may ever lock history first). RecordsStoreConcurrencyTest storms this.
@@ -479,10 +316,6 @@ namespace EQLogParser
      */
     private void PruneCastHistoryLocked(double newestS)
     {
-      // A bulk open under cast-history hold stands the sweep down entirely — its retry asks about rows hours old,
-      // and a horizon that eats their casts eats the answers. Finish/Release resume it with one sweep at the newest
-      // time; nothing else may leave this closed, which is why both end in PruneAfterHoldReleased.
-      if (Volatile.Read(ref _holdCastHistory)) return;
       if (!double.IsNaN(_nextCastPruneAtS) && newestS < _nextCastPruneAtS)
       {
         return;
