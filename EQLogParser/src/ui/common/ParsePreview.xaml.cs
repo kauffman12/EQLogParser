@@ -39,10 +39,24 @@ namespace EQLogParser
       playerParseTextDoRank.IsChecked = ConfigUtil.IfSetOrElse("PlayerParseShowRank", true);
       playerParseTextDoSpecials.IsChecked = ConfigUtil.IfSetOrElse("PlayerParseShowSpecials", true);
 
-      // this window is either hidden or visible and doesn't need to implement dispose
+      // this window is either hidden or visible and doesn't need to implement dispose - there is exactly one of it, in MainWindow.xaml,
+      // so these subscriptions are app-lifetime on purpose.
       DamageStatsBuilder.Instance.EventsGenerationStatus += EventsGenerationStatus;
       HealingStatsBuilder.Instance.EventsGenerationStatus += EventsGenerationStatus;
       TankingStatsBuilder.Instance.EventsGenerationStatus += EventsGenerationStatus;
+
+      /*
+       * The last answer dies with the capture here too: every COMPLETED build leaves its CombinedStats in _parses, and nothing else
+       * in the app owns this window's copy - without this line a hidden Preview Parse keeps last night's whole raid (every row of it)
+       * through a Clear All and across the next log. Same law DamageStatsBuilder documents for GetLastStats.
+       */
+      CombatEvents.ActiveDataCleared += _ => Dispatcher.InvokeAsync(() =>
+      {
+        _parses.Clear();
+        _availableParses.Clear();
+        parseList.SelectedIndex = -1;
+        playerParseTextBox.Text = string.Empty;
+      });
 
       _titleTimer = new DispatcherTimer { Interval = new TimeSpan(0, 0, 0, 0, 1000) };
       _titleTimer.Tick += (_, _) =>
