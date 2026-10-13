@@ -108,6 +108,22 @@ These checks require a realized grid; the automated pane tests exercise bound da
   Scrolling a search result into view still works — that is a gesture, not a follow. A new fight appearing mid-pull must not move the list at
   all (no jump to the top when a row lands), and with a column sorted a pass must keep the reading position too.
 
+## Sharded load checks on Windows
+
+Whole-file opens of logs at least 2× 64 MiB read on two lanes and merge (LogReader / docs/DesignNotes); Linux cannot run
+the app, so these are operator checks with `Debug=True`:
+
+- Opening a big log prints exactly one `load: sharded backfill '<file>' | ranges=2` and a following `backfill merged`;
+  opening a small log or a last-minutes view prints neither (policy at the door, not in the dark).
+- The progress band moves smoothly during the backfill (it aggregates range bytes) rather than sitting at 0 % and jumping.
+- Boards show the same totals as a sequential load of the same file — quickest control is temporarily setting
+  `LogShardPlan.Workers = 1` and diffing the damage/heal totals; a debug build also logs merged fact counts.
+- Live tailing works right after: new lines during the load appear, and the merged rows are already on the boards when
+  capture started (a merged load must not look like a monitor that missed its history).
+- Closing the window or opening another log MID-backfill leaves no wedge and no second capture alive (the attempt aborts
+  whole); `grep -c "Error Loading File" eqlogparser.log` says whether an abort was recorded as a failed load.
+- Clear All on a sharded capture re-opens at EOF (a monitor re-open is not a re-shard) and every board empties and refills.
+
 ## Identity Table paging checks on Windows
 
 Run `dotnet test EQLogParser.Wpf.Test/EQLogParser.Wpf.Test.csproj` on Windows, then use a realized Identity Table with

@@ -55,6 +55,11 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
   harness or re-isolate what measurement already ruled out.
 
 ## Parsing, records, facts
+- **Big whole-file loads read on two lanes and merge before the tail** (policy `LogShardPlan`, line fidelity
+  `LogRangeReader`, pour `CombatCapture.MergeShards` under the ingest gate). LogReader owns the ordering — every lane
+  drained, shard captures stopped, merged, only then any tail line — and a failed attempt aborts whole; there is no
+  partial merge. Seek-back opens, gzips, and files under 2×64 MiB take the untouched single-lane path.
+  See docs/DesignNotes.md → "How loading is sharded in the app".
 - **A recognized line is taken.** `PreLineParser.NeedProcessing` sets `found = true` for every shape it consumes — the
   tilde emote (`~ Kizant wonders.`), `Targeted (NPC)`/`Targeted (Player)`, guildmate achievements, raid/group join-leave,
   raid leader, drink/eat — so the four real parsers never re-walk a line that already paid for itself. Each branch's slice

@@ -8480,23 +8480,28 @@ the same peak RAM today's single-threaded load already reaches**, three workers 
 Deaths, taunts and evidence sum exactly; damage differs by 1 in 4.8 M (the delayed-critical boundary: `_delayCritRecord`
 carries across line boundaries, and a shard edge is one).
 
-The one parity finding a *table* merge does not settle: **identity events are not shard-additive** — four shards emitted
-383 IdentityEvents where the sequential run wrote 126, because each worker's timeline discovers the same names
-independently. That is fine as long as verdicts travel as evidence (they do — a fact carries only what its line says) and
-the merged tables get a classification pass after the merge, which the derive engine already owes anyway; but it means the
-merge step is a re-derive, not just an ordinal renumber, and board parity must be asserted on a merged load before any
-in-app sharding ships.
+Why merged content stays honest even though **identity events are not shard-additive** (four shards emitted 383
+IdentityEvents where the sequential run wrote 126 — each lane discovers the same names independently): a fact carries
+only what its own line says and verdicts travel as evidence, so a renumbered merged table is simply a capture that gets
+the classification pass the derive engine already owes. The merge is an ordinal renumber; the re-derive does the rest.
 
-What an in-app version still owes: the mutable parse-lane state is now short enough to name — `DamageLineParser`'s
-`_previousAction`, `_delayCritRecord` and lazily-written `SpellTypeCache`, and the parsers' static *events*
-(`CastLineParser.EventsCastEvidence`, `MiscLineParser`'s three, `PreLineParser.EventsEvidence`) which a second worker in
-the same process would fire across. `PlayerRegistry` is shared-on-purpose and `ConfigUtil.PlayerName` reads the same value
-in every worker; the heal RepeatStore is gone, so it no longer appears on this list. The reader→parser seam is batched,
-both shards get their near-linear CPU efficiency back (the per-item handshake roughly doubles a lane's CPU — see
-"The reader hands the parser one line at a time"), which is why that fix ships first and stands on its own.
+## How loading is sharded in the app
 
-So the order holds: memory first (shipped), the seam's batch handoff second (standing decision, cheap), and 2-worker
-sharded loading third — worth ~1.6× a whole load's wall at no memory cost once the short state list above becomes per-scope.
+A whole-file open of a plain-text log at least 2× the shard floor (64 MiB) reads on two lanes: `LogShardPlan` cuts the file at newline boundaries, and each lane runs its own reader → processors → capture over
+its own capacity-hinted tables. `LogRangeReader` returns exactly the lines a sequential `ReadLine` would for a range's
+bytes (asserted headlessly), and `ParseLane` keeps cross-line carries and parser events per stream, so a lane does not know
+it is one of two. When both ranges are drained, `CombatCapture.MergeShards` pours them into the session capture under the
+ingest gate — name pools remapped, one shared sequence renumbered into file order, the event-time window stamped from the
+merged rows — and the ordinary tail continues from the byte where the open began. The operator sees a single load: the
+progress band aggregates range bytes, and everything downstream of the reader (archive hook, GC tidy-up gate, monitor)
+is lane-blind. `LogShardPlan.Workers` is the one dial for raising this to three (~2.0× for roughly half again the load-time
+memory); the 64 MiB floor is why normal-size logs still take the untouched single-lane path, as do seek-back opens and gzips.
+
+Two laws hold the design up. A lane drains its processor completely before the merge stops any shard capture, and no tail
+line moves before the merge returns — so no parsed event can arrive at a stopped capture. And a failed attempt aborts
+whole: there is no partial merge, because half a file's facts wearing whole-file completeness is the one outcome worse than
+a load that fails. Player-visible effect at the shipped setting, per the matrix above: a ~13 s load becomes ~8.5 s with
+peak RAM unchanged.
 
 ## What the FCT overlay costs per number on screen (2026-11)
 
