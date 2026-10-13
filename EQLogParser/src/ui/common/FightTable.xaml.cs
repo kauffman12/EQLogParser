@@ -1159,12 +1159,12 @@ namespace EQLogParser
     }
 
     /// <summary>
-    /// Any left gesture invalidates an unconsumed right-press memory. A press whose menu never opened (released
-    /// outside the grid) leaves its snapshot behind, and a later keyboard-opened menu (Apps key) would otherwise
-    /// resurrect it over a selection the operator has changed by hand since. Every way this grid's selection can
-    /// change is a mouse gesture, so a left-press is the invalidation point.
+    /// A left gesture ends any unconsumed right-press memory.
     /// </summary>
     private void GridPreviewLeftButtonDown(object sender, MouseButtonEventArgs e) => _rightPressSelection = null;
+
+    // Keyboard selection and keyboard-opened menus must never resurrect an abandoned mouse gesture.
+    private void GridPreviewKeyDown(object sender, KeyEventArgs e) => _rightPressSelection = null;
 
     /*
      * Two row dials, no more - Inactivity (dividers) and Tanking (rows whose whole story is something hitting

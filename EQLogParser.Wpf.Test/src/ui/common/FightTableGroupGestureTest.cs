@@ -1,10 +1,9 @@
+using EQLogParser;
 using System.Collections;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
-
-using EQLogParser;
 
 namespace EQLogParser.Wpf.Test;
 
@@ -181,6 +180,55 @@ public sealed class FightTableGroupGestureTest
         CollectionAssert.AreEquivalent(protectedRows, afterUnselect,
             "unselect group over an unselected group must not spend the selection that was");
     }
+
+  [TestMethod]
+  [DataRow(System.Windows.Input.Key.Down)]
+  [DataRow(System.Windows.Input.Key.A)]
+  [DataRow(System.Windows.Input.Key.Apps)]
+  [DataRow(System.Windows.Input.Key.F10)]
+  public void AKeyboardGestureInvalidatesAnAbandonedRightPress(System.Windows.Input.Key key)
+  {
+    var expected = new List<DerivedFightRow>();
+    var afterOpening = new List<DerivedFightRow>();
+    Sta.Run(() =>
+    {
+      var app = Application.Current ?? new Application();
+      app.Resources["CustomCheckBoxTemplate"] ??= new ControlTemplate(typeof(CheckBox));
+      app.Resources["TemplateToolTip"] ??= new DataTemplate();
+      app.Resources["EQIconStyle"] ??= new Style(typeof(System.Windows.Controls.Image));
+      var table = Paint(Snapshot());
+      var window = new Window { Content = table, Width = 640, Height = 480 };
+      window.Show();
+      try
+      {
+        Flush();
+        var grid = table.fightGrid;
+        var rows = ((IEnumerable)grid.ItemsSource).Cast<DerivedFightRow>().Where(r => !r.IsDivider).ToList();
+        grid.SelectedItems.Add(rows[0]);
+        grid.RaiseEvent(new System.Windows.Input.MouseButtonEventArgs(
+          System.Windows.Input.Mouse.PrimaryDevice, Environment.TickCount, System.Windows.Input.MouseButton.Right)
+        { RoutedEvent = UIElement.PreviewMouseRightButtonDownEvent, Source = grid });
+        // No menu opened. A later key press tunnels through the real XAML wiring.
+        var source = PresentationSource.FromVisual(window)
+          ?? throw new InvalidOperationException("The shown test window has no presentation source");
+        grid.RaiseEvent(new System.Windows.Input.KeyEventArgs(System.Windows.Input.Keyboard.PrimaryDevice,
+          source, Environment.TickCount, key)
+        { RoutedEvent = System.Windows.Input.Keyboard.PreviewKeyDownEvent, Source = grid });
+        // Replay the keyboard's new selection, then open its menu.
+        expected.AddRange(rows.Skip(20).Take(3));
+        grid.SelectedItems.Clear();
+        foreach (var row in expected) grid.SelectedItems.Add(row);
+        Invoke(table, "GridContextMenuOpening", grid, ContextMenuArgs());
+        afterOpening.AddRange(grid.SelectedItems.Cast<DerivedFightRow>());
+      }
+      finally
+      {
+        window.Close();
+      }
+    });
+    CollectionAssert.AreEquivalent(expected, afterOpening,
+      "the keyboard's selection must not be overwritten by the abandoned mouse press");
+  }
 
     // ContextMenuEventArgs has NO reachable constructor (not even non-public), so it is allocated without running
     // one. That is safe here because the opening handler reads exactly one thing off it - OriginalSource, a plain
