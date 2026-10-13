@@ -599,8 +599,8 @@ internal static class Program
         WriteStrings(w, subtypes);
         WriteStrings(w, auxs);
         WriteStrings(w, spells);
-        WriteStructs(w, facts.Facts);
-        WriteStructs(w, heals.Heals);
+        WriteStructs(w, facts.Facts.ToArray());     // ditto: DamageFactReader
+        WriteStructs(w, heals.Heals.ToArray());   // row API (HealFactReader) materialised once for the spool
         WriteStructs(w, facts.Deaths);
         WriteStructs(w, facts.Taunts);
         WriteStructs(w, facts.IdentityEvents);
