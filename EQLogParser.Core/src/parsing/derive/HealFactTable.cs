@@ -345,6 +345,9 @@ namespace EQLogParser
 
     public string SpellOf(ushort idx) => idx == HealFact.NoSpell || idx >= _spells.Count ? null : _spells[idx];
 
+    // See DamageFactTable.SubtypeCount: the shard merge remaps the spell pool index by index.
+    public int SpellCount => _spells.Count;
+
     public void AddHeal(HealFact heal)
     {
       if (_ascendingTime && _healCount > 0 && heal.TimeS < At(_healCount - 1).TimeS) _ascendingTime = false;

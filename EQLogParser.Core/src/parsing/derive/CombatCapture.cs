@@ -46,11 +46,19 @@ namespace EQLogParser
     private long _lastSeenTs = -1;
     private long _firstSeenTs = -1;
 
-    public CombatCapture(IFactTable facts, IHealFactTable heals = null, ParseLane lane = null)
+    /*
+     * startSequence is for the sharded-load hand-off: a session that opens onto merged tables must keep
+     * numbering events ABOVE the merged history (FactShardMerge returns the last sequence it used), because
+     * the heal-to-damage pairing and the projection's within-fight ordering both read this shared clock — a
+     * monitor row restarting at 1 would interleave with the first second of the capture. Every ordinary
+     * session passes nothing and starts at zero, exactly as it always has.
+     */
+    public CombatCapture(IFactTable facts, IHealFactTable heals = null, ParseLane lane = null, int startSequence = 0)
     {
       _facts = facts ?? throw new ArgumentNullException(nameof(facts));
       _heals = heals;
       _lane = lane ?? ParseLane.Main;
+      _sequence = startSequence;
 
       // One capture, one tally of the fact-packing guards (FactTime's clamp counter, HealFact's mask/label counters). They
       // are process statics because a row is a struct with no session to hang them on, and a fresh capture is the point

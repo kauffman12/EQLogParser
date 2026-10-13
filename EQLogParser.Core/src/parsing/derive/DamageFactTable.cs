@@ -664,6 +664,11 @@ namespace EQLogParser
 
     public string SubtypeOf(ushort idx) => idx == NoSubtype ? null : _subtypes[idx];
 
+    // Pool sizes. Rows never need them; FactShardMerge does — remapping a shard's index space means walking
+    // each source pool entry by entry and interning its string into the target.
+    public int SubtypeCount => _subtypes.Count;
+    public int AuxCount => _auxs.Count;
+
     public void AddFact(DamageFact fact)
     {
       var ordinal = _factCount;
