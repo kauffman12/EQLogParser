@@ -8553,12 +8553,23 @@ plus a trigger reader per enabled character, which is what `LogReader`'s `origin
 `ResolveSpellAmbiguity` at the boards) stay: that mechanism was never about sharding, only its retry was. The
 reader → parser queue shape, `FactCapacity`'s whole-file hint and `GcTidyUp`'s timing law are untouched.
 
-**Server GC is now justified by nothing measured.** It shipped as "what makes the lanes scale" (numbers above).
-Its stated cause — two threads allocating ~1.3 GB/s through one shared workstation arena — does not exist with
-one parse lane, and the older single-threaded matrix in "Asking the collector for memory back at chosen moments"
-measured Server GC at 8,083 ms / **916 MB** against the default's 7,942 ms / 611 MB and concluded it should not
-ship. It is left enabled pending one A/B on a real capture with a single lane (`DOTNET_gcServer=0` vs shipping
-default: wall, peak RSS, tidy ms); until that is recorded here, nobody should claim Server GC earns its memory.
+**Server GC: enabled here, absent from master, justified by nothing measured on one stream.** `EQLogParser.csproj` sets
+`ServerGarbageCollection` + `ConcurrentGarbageCollection`, which reach `runtimeconfig.json` as `System.GC.Server` /
+`System.GC.Concurrent`. It was added for the parallel loader (numbers above) and left in place when that loader came out.
+Its stated cause — two threads allocating through one shared workstation arena — does not exist with one parse lane, and the
+single-stream evidence points the other way: an older matrix in "Asking the collector for memory back at chosen moments"
+measured Server GC at 8,083 ms / **916 MB** against the default's 7,942 ms / **611 MB**, and the field measurement's own
+tax was retention (post-tidy working set **+90 MB**, 690 vs 593, steady state). So it stays on as a default, not as a
+finding, until one A/B is recorded here.
+
+**Attribution warning, because this bit a real comparison.** Master has no `ServerGarbageCollection`, so timing "master
+versus this branch" on a big file measures **the collector and everything else that changed**, not the ingest change alone.
+The lane-era field numbers were 18 s → 11 s for the workstation→server switch on a 1,276 MB capture, which is far larger
+than any per-line optimisation in this codebase — so a several-second win over master should be assumed shared with the GC
+until proven otherwise. One extra run separates them: launch the current build with `DOTNET_gcServer=0` (the environment
+variable beats `runtimeconfig.json`) and compare wall, peak RSS and the labelled tidy ms against the shipping build.
+Until that line exists here, nobody should claim Server GC earns its memory — and nobody should credit a batching or
+parsing change with a collector win.
 
 **If parallel reading is ever attempted again**, the prerequisite list is short and specific: the four carries
 above become either line-local or merge-time reconciled (with the crit ones proven to be `(attacker, <=1 s[, value])
