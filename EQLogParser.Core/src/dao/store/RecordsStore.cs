@@ -261,37 +261,50 @@ namespace EQLogParser
         return [];
       }
 
-      // The anchor stays exactly as it was: the newest cast in the global ambiguity cache, not this spell's newest
-      // and not wall time. It is a quirk (a log whose clock jumps moves the window) and it is the behaviour every
-      // existing resolution depends on, so bounding the scan is not the day to change which casts are "recent".
-      var end = _playerAmbiguityCastCache.Count - 1;
-      if (end <= -1) return [];
-
-      var endTime = _playerAmbiguityCastCache[end].BeginTime - duration;
-      lock (history)
+      /*
+       * The anchor stays exactly as it was — the newest cast in the global ambiguity cache, not this spell's newest and
+       * not wall time. It is a quirk (a log whose clock jumps moves the window) and it is the behaviour every existing
+       * resolution depends on, so bounding the scan is not the day to change which casts are "recent".
+       *
+       * What DID change (2026-10-13, sharded loading) is who else holds these lists: two parse lanes append AND horizon-
+       * prune them at once, and pruning's RemoveRange CLEARS the vacated slots. Reading Count and indexing the last
+       * entry outside the cache lock — which was safe when exactly one thread ever parsed — now latches a stale size over
+       * a sweeping list: the field NRE surfaced as `FindByLandsOn line 845` because both this method and FindPreviousCast
+       * inline, so the throw pointed at a call site with no frame naming it. The lock covers anchor reads AND the scan
+       * because both must agree with each other; the order is cache → history, the one Add already uses (re-verifying
+       * the order is load-bearing: nothing here may ever lock history first). RecordsStoreConcurrencyTest storms this.
+       */
+      lock (_playerAmbiguityCastCache)
       {
-        var casts = history.Casts;
-        // Plain null, no `?`: Core compiles with nullable annotations disabled, and annotating anyway is the
-        // CS8632 this repo has had nine of — the fix is the annotation context or none at all, never a pragma.
-        List<CachedCast> result = null;
-        for (var i = casts.Count - 1; i >= 0; i--)
-        {
-          var cast = casts[i];
-          if (cast.BeginTime >= endTime)
-          {
-            // Grown on demand: a query that finds nothing allocates no list at all (Array.Empty below), and one
-            // that finds its usual single match pays for four slots rather than for the night.
-            result ??= [];
-            result.Add(cast);
-          }
-          else if (history.AscendingTime)
-          {
-            // Ascending appends, so everything further back is at least as old as this entry.
-            break;
-          }
-        }
+        var end = _playerAmbiguityCastCache.Count - 1;
+        if (end <= -1) return [];
 
-        return result ?? [];
+        var endTime = _playerAmbiguityCastCache[end].BeginTime - duration;
+        lock (history)
+        {
+          var casts = history.Casts;
+          // Plain null, no `?`: Core compiles with nullable annotations disabled, and annotating anyway is the
+          // CS8632 this repo has had nine of — the fix is the annotation context or none at all, never a pragma.
+          List<CachedCast> result = null;
+          for (var i = casts.Count - 1; i >= 0; i--)
+          {
+            var cast = casts[i];
+            if (cast.BeginTime >= endTime)
+            {
+              // Grown on demand: a query that finds nothing allocates no list at all (Array.Empty below), and one
+              // that finds its usual single match pays for four slots rather than for the night.
+              result ??= [];
+              result.Add(cast);
+            }
+            else if (history.AscendingTime)
+            {
+              // Ascending appends, so everything further back is at least as old as this entry.
+              break;
+            }
+          }
+
+          return result ?? [];
+        }
       }
     }
 
