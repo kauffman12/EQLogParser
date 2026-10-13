@@ -88,14 +88,16 @@ internal static class DerivedTotals
     var damageScope = new DamageStatsBuilder();
     // Named for StatsBuildTrace: this scope runs per meter refresh on a pool thread, so its lines must not read as UNLABELLED
     // duplicates of the fight list's builds (they are separate builder instances and never touch the panes' grids).
-    var damageOptions = new GenerateStatsOptions { Source = "damage meter overlay", AllRanges = input.AllRanges, MinSeconds = 0 };
+    // CollectHitTotals=false: a scope's rows reach a meter grid and nothing else - no HitFreqChart can ask them - so the raw
+    // amounts the walk would append for every hit (about once a second while the overlay is open) are pure garbage by construction.
+    var damageOptions = new GenerateStatsOptions { Source = "damage meter overlay", AllRanges = input.AllRanges, MinSeconds = 0, CollectHitTotals = false };
     damageOptions.Npcs.AddRange(input.Fights);
     damageScope.EventsGenerationStatus += generated => damage = generated.CombinedStats;
     damageScope.BuildTotalStats(damageOptions);
 
     CombinedStats? tanking = null;
     var tankScope = new TankingStatsBuilder();
-    var tankingOptions = new GenerateStatsOptions { Source = "damage meter overlay", AllRanges = input.AllRanges, MinSeconds = 0 };
+    var tankingOptions = new GenerateStatsOptions { Source = "damage meter overlay", AllRanges = input.AllRanges, MinSeconds = 0, CollectHitTotals = false };
     tankingOptions.Npcs.AddRange(input.Fights);
     tankScope.EventsGenerationStatus += generated => tanking = generated.CombinedStats;
     tankScope.BuildTotalStats(tankingOptions);
@@ -122,6 +124,8 @@ internal static class DerivedTotals
     var options = new GenerateStatsOptions
     {
       Source = "derived totals query",
+      // Same law as ForOverlay: scoped rows outlive nobody's chart, so no raw amounts are kept (GenerateStatsOptions.CollectHitTotals).
+      CollectHitTotals = false,
       AllRanges = input.AllRanges,
       // An empty heal list means "this scope healed nothing", not "say nothing about healing" — see the note on
       // GenerateStatsOptions.Heals. Passing null here would leave a refresh showing the previous scope's numbers.

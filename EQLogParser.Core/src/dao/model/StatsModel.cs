@@ -44,6 +44,14 @@ namespace EQLogParser
     public TimeRange AllRanges { get; set; }
 
     /*
+     * Whether this build's walk keeps raw hit amounts for the HitFreqChart histograms (Attempt). True for every board a pane can
+     * put a chart on - the chart asks its question of that build's rows later. The scoped builds (DerivedTotals: the overlay meter,
+     * about once a second) set false: those rows reach a meter grid and nothing else, so every amount kept there is an append nobody
+     * can ever ask about. Laziness law unchanged - this stops COLLECTING where no consumer exists, it does not count eagerly anywhere.
+     */
+    internal bool CollectHitTotals { get; set; } = true;
+
+    /*
      * Where the HEALING board reads its records from. Null means "the record store", which is what every caller
      * does today, and that is why this lives on the options rather than behind a builder overload — the healing
      * builder never looks at a Fight (it pulls GetAllHeals and windows it by time), so the the derivation cannot
@@ -238,9 +246,16 @@ namespace EQLogParser
 
     // `internal set` is the same write guard as on PlayerSubStats.SubSubStats: a board's dictionaries and lists are swapped only from
     // inside this assembly, and never by a view. The write law itself is unchanged.
-    public List<DeathEvent> Deaths { get; internal set; } = [];
-    public ConcurrentDictionary<string, string> Specials { get; internal set; } = new();
-    public ConcurrentDictionary<string, ConcurrentDictionary<string, int>> ResistCounts { get; internal set; } = new();
+    /*
+     * Made on first touch, not per row: the builders WRITE these for exactly one row - the raid totals (StatsUtil's PopulateSpecials,
+     * resist and death accumulation all name the raid stats) - and read them from that same row only. So every other PlayerStats this
+     * assembly makes used to pre-allocate two ConcurrentDictionaries and a List of containers nothing would ever look at: on a group
+     * night whose board carries a few thousand mob names that is megabytes of emptiness per rebuild, and the overlay's scope builders
+     * pay it every second. The getter race is the assign-once kind: both writers get a valid object and the loser costs one.
+     */
+    public List<DeathEvent> Deaths { get => _deaths ??= []; internal set => _deaths = value; }
+    public ConcurrentDictionary<string, string> Specials { get => _specials ??= new(); internal set => _specials = value; }
+    public ConcurrentDictionary<string, ConcurrentDictionary<string, int>> ResistCounts { get => _resistCounts ??= new(); internal set => _resistCounts = value; }
     public List<PlayerSubStats> SubStats { get; internal set; } = [];
     public List<PlayerSubStats> SubStats2 { get; internal set; } = [];
 
@@ -276,6 +291,10 @@ namespace EQLogParser
         }
       }
     }
+
+    private List<DeathEvent> _deaths;
+    private ConcurrentDictionary<string, string> _specials;
+    private ConcurrentDictionary<string, ConcurrentDictionary<string, int>> _resistCounts;
 
     // For Syncfusion TreeGrid expansion state preservation
     private bool _isExpanded;

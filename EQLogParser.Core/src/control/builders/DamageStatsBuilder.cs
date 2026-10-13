@@ -492,8 +492,9 @@ namespace EQLogParser
                       var critHits = subStats.CritHits;
                       StatsUtil.UpdateDamageStats(subStats, record, false, isAttackerPet);
 
-                      // don't count misses/dodges or where no damage was done
-                      if (record.Total > 0)
+                      // don't count misses/dodges or where no damage was done; and a scoped build (options.CollectHitTotals) has
+                      // no chart that could ever ask these rows, so it keeps no amounts at all (see GenerateStatsOptions).
+                      if (record.Total > 0 && options.CollectHitTotals)
                       {
                         // The histogram is not built here: the walk keeps the amount and Attempt turns the list into counts when HitFreqChart asks.
                         subStats.RecordHitTotal(record.Total, isCrit: subStats.CritHits > critHits);
