@@ -28,7 +28,7 @@ namespace EQLogParser
     {
       try
       {
-        var split = lineData.Split;
+        var split = lineData.Words;
         if (split.Length > 1 && !split[0].Contains('.') && !split[^1].EndsWith(')') && !CheckLandsOnMessages(split, lineData.BeginTime))
         {
           string player = null;
@@ -56,50 +56,50 @@ namespace EQLogParser
             player = ConfigUtil.PlayerName;
             if (split[1] == "activate" && split.Length > 2)
             {
-              spellName = TextUtils.ParseSpellOrNpc([.. split], 2);
+              spellName = ParserUtil.ParseSpellOrNpc(split, 2);
             }
             else if (split[1] == "begin" && split.Length > 3)
             {
               if (split[2] == "casting")
               {
-                spellName = TextUtils.ParseSpellOrNpc([.. split], 3);
+                spellName = ParserUtil.ParseSpellOrNpc(split, 3);
                 isCasting = true;
               }
               else if (split[2] == "singing")
               {
-                spellName = TextUtils.ParseSpellOrNpc([.. split], 3);
+                spellName = ParserUtil.ParseSpellOrNpc(split, 3);
               }
             }
           }
           else if (split[1] == "activates")
           {
-            player = split[0];
-            spellName = TextUtils.ParseSpellOrNpc([.. split], 2);
+            player = split.StringAt(0);
+            spellName = ParserUtil.ParseSpellOrNpc(split, 2);
           }
-          else if (split.Length > 3 && Array.FindIndex(split, 1, split.Length - 1, s => s == "begins") is var bIndex and > -1 && (bIndex + 2) < split.Length)
+          else if (split.Length > 3 && FindBegins(split) is var bIndex and > -1 && (bIndex + 2) < split.Length)
           {
             if (split[bIndex + 1] == "casting")
             {
-              player = string.Join(" ", [.. split], 0, bIndex);
-              spellName = TextUtils.ParseSpellOrNpc([.. split], bIndex + 2);
+              player = split.JoinRaw(0, bIndex);
+              spellName = ParserUtil.ParseSpellOrNpc(split, bIndex + 2);
               isCasting = true;
             }
             else if (split[bIndex + 1] == "singing")
             {
-              player = string.Join(" ", [.. split], 0, bIndex);
-              spellName = TextUtils.ParseSpellOrNpc([.. split], bIndex + 2);
+              player = split.JoinRaw(0, bIndex);
+              spellName = ParserUtil.ParseSpellOrNpc(split, bIndex + 2);
             }
             else if (split.Length > 5 && split[2] == "to" && split[4] == "a")
             {
               if (split[3] == "cast" && split[5] == "spell.")
               {
-                player = split[0];
+                player = split.StringAt(0);
                 spellName = ParseOldSpellName(split, 6);
                 isCasting = true;
               }
               else if (split[3] == "sing" && split[5] == "song.")
               {
-                player = split[0];
+                player = split.StringAt(0);
                 spellName = ParseOldSpellName(split, 6);
               }
             }
@@ -107,7 +107,7 @@ namespace EQLogParser
           else if (split.Length > 4 && split[^1] == "interrupted." && split[^2] == "is" && split[^3] == "spell")
           {
             isInterrupted = true;
-            spellName = string.Join(" ", [.. split], 1, split.Length - 4);
+            spellName = split.JoinRaw(1, split.Length - 4);
 
             if (split[0] == "Your")
             {
@@ -115,7 +115,7 @@ namespace EQLogParser
             }
             else if (split[0].Length > 3 && split[0][^1] == 's' && split[0][^2] == '\'')
             {
-              player = split[0][..^2];
+              player = split.StringAt(0)[..^2];
             }
           }
 
@@ -193,12 +193,19 @@ namespace EQLogParser
       return false;
     }
 
-    private static bool CheckLandsOnMessages(string[] split, double beginTime)
+    /*
+     * Same walk the array version made, over the word view. The old period loop truncated a copy of the array;
+     * the equivalent here is a BOUND handed to the spell-tree door — first word ending in '.' decides how far back
+     * a lookup may read, and a non-final "Rk." means this is a rank line, not a lands-on line (returned false then,
+     * false now). Traced equivalence of that old loop: it acted only on the FIRST '.'-ending word (after truncating,
+     * its own index walked past the shortened length and it exited), which is exactly what the break below does.
+     */
+    private static bool CheckLandsOnMessages(LineWords split, double beginTime)
     {
       // ZONE EVENT - moved here to keep it in the same thread as lands on message parsing
       if (split.Length > 3 && split[1] == "have" && split[2] == "entered")
       {
-        var zone = ParserUtil.JoinWords(split, 3, split.Length - 3).TrimEnd('.');
+        var zone = split.JoinWords(3, split.Length - 3).TrimEnd('.');
         RecordsStore.Instance.Add(new ZoneRecord { Zone = zone }, beginTime);
         if (!zone.StartsWith("an area", StringComparison.OrdinalIgnoreCase))
         {
@@ -209,40 +216,42 @@ namespace EQLogParser
 
       // old logs sometimes had received messages on the same line as a heal
       // [Sun Aug 04 23:39:56 2019] You are generously healed. You healed Kizant for 35830 (500745) hit points by Staunch Recovery.
+      var bound = split.Length - 1;
       for (var i = 0; i < split.Length; i++)
       {
         if (split[i].EndsWith('.'))
         {
           // if it's a spell
-          var lastIndex = split.Length - 1;
-          if (lastIndex != i && split[i].Equals("Rk.", StringComparison.Ordinal))
+          if (i != split.Length - 1)
           {
-            return false;
+            if (split[i] == "Rk.")
+            {
+              return false;
+            }
+
+            bound = i;
           }
 
-          if (i < lastIndex)
-          {
-            split = split[..(i + 1)];
-          }
+          break;
         }
       }
 
       // lands on you
-      if (EQDataStore.Instance.TryGetLandsOnYou(split, out var searchResult))
+      if (EQDataStore.Instance.TryGetLandsOnYou(split, bound, out var searchResult))
       {
         AddReceived(ConfigUtil.PlayerName, searchResult);
         return true;
       }
 
       // wear off you
-      if (EQDataStore.Instance.TryGetWearOff(split, out searchResult))
+      if (EQDataStore.Instance.TryGetWearOff(split, bound, out searchResult))
       {
         AddReceived(ConfigUtil.PlayerName, searchResult, true);
         return true;
       }
 
       // lands on other
-      if (EQDataStore.Instance.TryGetLandsOnOther(split, out searchResult, out var target))
+      if (EQDataStore.Instance.TryGetLandsOnOther(split, bound, out searchResult, out var target))
       {
         AddReceived(target, searchResult);
 
@@ -302,9 +311,24 @@ namespace EQLogParser
       return found;
     }
 
-    private static string ParseOldSpellName(string[] split, int spellIndex)
+    // Array.FindIndex(split, 1, length-1, == "begins") over the word view — same index range, no lambda capture.
+    private static int FindBegins(LineWords split)
     {
-      return string.Join(" ", [.. split], spellIndex, split.Length - spellIndex).Trim(OldSpellChars);
+      for (var i = 1; i < split.Length; i++)
+      {
+        if (split[i] == "begins")
+        {
+          return i;
+        }
+      }
+
+      return -1;
+    }
+
+    // The old logs' tail shape: "begins to cast a spell. <Spell Name>" — raw-join the range, trim the brackets off.
+    private static string ParseOldSpellName(LineWords split, int spellIndex)
+    {
+      return split.JoinRaw(spellIndex, split.Length - spellIndex).Trim(OldSpellChars);
     }
   }
 }

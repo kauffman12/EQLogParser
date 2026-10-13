@@ -231,6 +231,10 @@ namespace EQLogParser
       internal char this[System.Index index]
         => _wordSource[index.GetOffset(_wordLength) + _wordStart];
 
+      internal bool EndsWith(char value) => !IsEmpty && _wordSource[_wordStart + _wordLength - 1] == value;
+
+      internal bool Contains(char value) => Span.IndexOf(value) > -1;
+
       internal bool StartsWith(char value) => !IsEmpty && _wordSource[_wordStart] == value;
 
       internal bool StartsWith(string value) => Span.StartsWith(value.AsSpan(), StringComparison.Ordinal);

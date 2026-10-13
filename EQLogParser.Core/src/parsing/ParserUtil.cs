@@ -273,6 +273,13 @@ namespace EQLogParser
       return null;
     }
 
+    /*
+     * LineWords door for TextUtils.ParseSpellOrNpc: raw-join from index to end of line, trim the trailing '.'.
+     * Same contract as the string[] version — one materialized name is what the record owns either way. Damage's
+     * taunt paths and CastLineParser both read this; a third caller should not re-mirror it.
+     */
+    internal static string ParseSpellOrNpc(LineWords split, int index) => split.JoinRaw(index, split.Length - index).Trim('.');
+
     /// <summary>
     /// Checks if a word is a hit type addition (frenzy/frenzies).
     /// </summary>

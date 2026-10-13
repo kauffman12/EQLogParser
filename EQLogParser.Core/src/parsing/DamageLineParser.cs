@@ -974,7 +974,7 @@ namespace EQLogParser
             {
               Player = StringCache.GetOrAdd(ConfigUtil.PlayerName),
               Success = false,
-              Npc = StringCache.GetOrAdd(ParseSpellOrNpc(split, 5))
+              Npc = StringCache.GetOrAdd(ParserUtil.ParseSpellOrNpc(split, 5))
             };
             EventsNewTaunt?.Invoke(new TauntEvent { BeginTime = lineData.BeginTime, Record = taunt });
           }
@@ -999,7 +999,7 @@ namespace EQLogParser
           var name = i == 2 ? split.StringAt(0) + " " + split.StringAt(1) : split.StringAt(0);
           if (failedIndex == i && split[i + 1] == "to" && split[i + 2] == "taunt")
           {
-            var taunt = new TauntRecord { Player = StringCache.GetOrAdd(name), Success = false, Npc = StringCache.GetOrAdd(ParseSpellOrNpc(split, 3 + i)) };
+            var taunt = new TauntRecord { Player = StringCache.GetOrAdd(name), Success = false, Npc = StringCache.GetOrAdd(ParserUtil.ParseSpellOrNpc(split, 3 + i)) };
             EventsNewTaunt?.Invoke(new TauntEvent { BeginTime = lineData.BeginTime, Record = taunt });
           }
           else if (split.Length > 10 && split[^1] == "taunt." && split[^2] == "improved" &&
@@ -1099,12 +1099,6 @@ namespace EQLogParser
 
       return record;
     }
-
-    /*
-     * Mirror of TextUtils.ParseSpellOrNpc over word views: join from index to end of line, trim the trailing '.'.
-     * Same contract as the string[] version Cast still uses; the record owns one materialized name either way.
-     */
-    private static string ParseSpellOrNpc(LineWords split, int index) => split.JoinRaw(index, split.Length - index).Trim('.');
 
     private static bool ParseNpcName(LineWords parts, int length, out string output)
     {

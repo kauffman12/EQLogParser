@@ -685,14 +685,14 @@ namespace EQLogParser
       return spellData;
     }
 
-    internal bool TryGetLandsOnOther(string[] split, out SpellTreeResult found, out string player)
+    internal bool TryGetLandsOnOther(LineWords split, int lastIndex, out SpellTreeResult found, out string player)
     {
       player = null;
-      found = SearchSpellPath(_landsOnOtherTree, split);
+      found = SearchSpellPath(_landsOnOtherTree, split, lastIndex);
 
       if (found.SpellData.Count > 0 && found.DataIndex > -1)
       {
-        player = string.Join(" ", [.. split], 0, found.DataIndex + 1);
+        player = split.JoinRaw(0, found.DataIndex + 1);
         if (player.EndsWith("'s", StringComparison.OrdinalIgnoreCase))
         {
           // if string is only 2 then it must be invalid
@@ -706,9 +706,9 @@ namespace EQLogParser
       return false;
     }
 
-    internal bool TryGetLandsOnYou(string[] split, out SpellTreeResult found)
+    internal bool TryGetLandsOnYou(LineWords split, int lastIndex, out SpellTreeResult found)
     {
-      found = SearchSpellPath(_landsOnYouTree, split);
+      found = SearchSpellPath(_landsOnYouTree, split, lastIndex);
 
       if (found.DataIndex == 0 && found.SpellData.Count > 0)
       {
@@ -735,13 +735,13 @@ namespace EQLogParser
       return false;
     }
 
-    internal bool TryGetWearOff(string[] split, out SpellTreeResult found)
+    internal bool TryGetWearOff(LineWords split, int lastIndex, out SpellTreeResult found)
     {
-      found = SearchSpellPath(_wearOffTree, split);
+      found = SearchSpellPath(_wearOffTree, split, lastIndex);
 
       if (found.DataIndex == 0 && found.SpellData.Count > 0)
       {
-        found.SpellData = FindByLandsOn(split[0], found.SpellData);
+        found.SpellData = FindByLandsOn(split.StringAt(0), found.SpellData);
 
         // check Adps
         var spellDataSet = AdpsTracker.Instance.GetWearOffSpells(found.SpellData[0].WearOff);
@@ -890,16 +890,18 @@ namespace EQLogParser
     }
 
     /// <summary>
-    /// Searches for a spell path in the provided spell tree.
+    /// Searches for a spell path in the provided spell tree, walking the word view from `lastIndex` toward the head.
+    /// Only PROBED words materialize (one small string per tree level, and a miss at level one — the common case —
+    /// probes exactly once), which is what replaced handing the whole Split array to this walk.
     /// </summary>
-    public static SpellTreeResult SearchSpellPath(SpellTreeNode node, string[] split, int lastIndex = -1)
+    public static SpellTreeResult SearchSpellPath(SpellTreeNode node, LineWords split, int lastIndex = -1)
     {
       if (lastIndex == -1)
       {
         lastIndex = split.Length - 1;
       }
 
-      if (node.Words.TryGetValue(split[lastIndex], out var child))
+      if (node.Words.TryGetValue(split.StringAt(lastIndex), out var child))
       {
         if (lastIndex > 0)
         {

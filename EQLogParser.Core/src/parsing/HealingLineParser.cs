@@ -213,7 +213,7 @@ namespace EQLogParser
           var amountEnd = part.IndexOf(' ', amountIndex);
           if (amountEnd > -1)
           {
-            var value = TextUtils.ParseUInt(part[amountIndex..amountEnd]);
+            var value = TextUtils.ParseUInt(part.AsSpan(amountIndex, amountEnd - amountIndex));
             if (value != uint.MaxValue)
             {
               heal = value;
