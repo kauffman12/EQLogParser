@@ -238,7 +238,9 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
   without Ctrl replaces the whole selection with the pressed row before the menu exists (33.1.49, no button guard on the press path).
   `FightTable` remembers `SelectedItems` at `PreviewMouseRightButtonDown` (it tunnels ahead of the control) and puts it back at
   `ContextMenuOpening`, before any enable-check, gesture or board reads what survived; a Ctrl/Shift press IS the operator editing the
-  selection and passes through (`_rightPressSelection`).
+  selection and passes through (`_rightPressSelection`). **FightTable is the only grid that guards this** (operator's call): the protection
+  pays where rebuilding a selection costs minutes (Select All over a session, group gestures); every other Extended grid keeps the control's
+  default right-click-selects semantics because its selections are cheap to rebuild — do not generalize the guard.
 - **One announce per gesture** (`SelectionSettle` + one DispatcherTimer at 600 ms; `MenuOpen` via
   `ContextOpening/ContextClosed`; `ButtonHeld` for *both* mouse buttons plus capture loss). `AnnounceSelection` is the single
   door for the boards on the pass-driven reasons, deduped by (ids, content stamp) — **but the first answer of a capture always
