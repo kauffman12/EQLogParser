@@ -47,18 +47,28 @@ namespace EQLogParser
     // The six queues of a shard, in the order the merge's pick-min scans them.
     private const int Queues = 6;
 
-    internal static int MergeInto(DamageFactTable facts, HealFactTable heals, IReadOnlyList<FactShard> shards)
+    /*
+     * What a merge leaves behind for the session that continues on these tables: the last sequence used
+     * (the live capture resumes its counter above it) and the first and last event seconds emitted in file
+     * order — the endpoints CombatCapture needs for its event-time window, which the sequential capture
+     * would have marked during the load the shards just replaced.
+     */
+    internal readonly record struct MergeResult(int LastSequence, double FirstTimeS, double LastTimeS);
+
+    internal static MergeResult MergeInto(DamageFactTable facts, HealFactTable heals, IReadOnlyList<FactShard> shards, int startSequence = 0)
     {
-      var seq = 0;
+      var seq = startSequence;
+      var firstT = double.NaN;
+      var lastT = double.NaN;
       foreach (var shard in shards)
       {
-        MergeOne(facts, heals, shard, ref seq);
+        MergeOne(facts, heals, shard, ref seq, ref firstT, ref lastT);
       }
 
-      return seq;
+      return new MergeResult(seq, firstT, lastT);
     }
 
-    private static void MergeOne(DamageFactTable facts, HealFactTable heals, FactShard shard, ref int seq)
+    private static void MergeOne(DamageFactTable facts, HealFactTable heals, FactShard shard, ref int seq, ref double firstT, ref double lastT)
     {
       var src = shard.Facts;
       var srcHeals = shard.Heals;
@@ -131,6 +141,14 @@ namespace EQLogParser
         // int like CombatCapture._sequence, not wider: the sequential capture is the ceiling on event
         // count, and the merge must hit exactly the same ceiling, not a different one.
         var n = ++seq;
+        // The event second of the row about to be emitted (the case bodies below advance the cursors).
+        var rowT = QueueTime(best, src, srcHeals, heads);
+        if (double.IsNaN(firstT))
+        {
+          firstT = rowT;
+        }
+
+        lastT = rowT;
         switch (best)
         {
           case 0:
@@ -212,6 +230,18 @@ namespace EQLogParser
         3 => facts.Taunts[head].Seq,
         4 => facts.IdentityEvents[head].Seq,
         _ => facts.Evidence[head].Seq,
+      };
+
+    // The same six queues read for their event second (dotnet-epoch, as every row already stores it).
+    private static double QueueTime(int queue, DamageFactTable facts, HealFactTable heals, int[] heads) =>
+      queue switch
+      {
+        0 => facts.RefAt(heads[0]).TimeS,
+        1 => heals.RefAt(heads[1]).TimeS,
+        2 => facts.Deaths[heads[2]].TimeS,
+        3 => facts.Taunts[heads[3]].TimeS,
+        4 => facts.IdentityEvents[heads[4]].TimeS,
+        _ => facts.Evidence[heads[5]].TimeS,
       };
   }
 }

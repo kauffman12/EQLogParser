@@ -115,7 +115,7 @@ public class FactShardMergeTest
 
     var mergedFacts = new DamageFactTable(64);
     var mergedHeals = new HealFactTable(mergedFacts, 64);
-    var lastSeq = FactShardMerge.MergeInto(mergedFacts, mergedHeals, [new FactShard(shardA.Facts, shardA.Heals), new FactShard(shardB.Facts, shardB.Heals)]);
+    var lastSeq = FactShardMerge.MergeInto(mergedFacts, mergedHeals, [new FactShard(shardA.Facts, shardA.Heals), new FactShard(shardB.Facts, shardB.Heals)]).LastSequence;
 
     // Counts first — a missing row with matching totals would be the quiet bug.
     Assert.AreEqual(seqFacts.FactCount, mergedFacts.FactCount, "damage count");
@@ -194,7 +194,7 @@ public class FactShardMergeTest
 
     var facts = new DamageFactTable(64);
     var heals = new HealFactTable(facts, 64);
-    var lastSeq = FactShardMerge.MergeInto(facts, heals, [new FactShard(shardA.Facts, shardA.Heals), new FactShard(shardB.Facts, shardB.Heals)]);
+    var lastSeq = FactShardMerge.MergeInto(facts, heals, [new FactShard(shardA.Facts, shardA.Heals), new FactShard(shardB.Facts, shardB.Heals)]).LastSequence;
 
     // The hand-off: the session capture is built over the merged tables with the merge's last sequence.
     var capture = new CombatCapture(facts, heals, ParseLane.Main, lastSeq);
@@ -222,5 +222,110 @@ public class FactShardMergeTest
     Assert.AreEqual(7u, tail.Total);
     Assert.IsTrue(tail.Seq > lastSeq, $"a monitor row numbered {tail.Seq} would interleave with the merged history at {lastSeq}");
     Assert.AreEqual(lastSeq + 1, tail.Seq);
+  }
+
+  [TestMethod]
+  public void MergedResultEndpointsAreTheEmittedRows()
+  {
+    var shardA = RunStream(new ArraySegment<string>(Lines, 0, 3));
+    var shardB = RunStream(new ArraySegment<string>(Lines, 3, 3));
+    var facts = new DamageFactTable(64);
+    var heals = new HealFactTable(facts, 64);
+    var merged = FactShardMerge.MergeInto(facts, heals,
+      [new FactShard(shardA.Facts, shardA.Heals), new FactShard(shardB.Facts, shardB.Heals)]);
+
+    // The first emitted row is the first line's damage (that shape always lands); the last endpoint is
+    // stated from the merged data itself — which row a fixture slice ends on depends on identity gating,
+    // and the endpoints must follow what was EMITTED, not what lines existed.
+    Assert.AreEqual(RoundedTs(Lines[0]), merged.FirstTimeS);
+    Assert.AreEqual(LatestRowTime(facts, heals), merged.LastTimeS);
+  }
+
+  [TestMethod]
+  public void MergeShardsContinuesSequenceAndStampsTheEventWindow()
+  {
+    // The app's actual sequence of moments: the session capture ingests part of a file on its own …
+    var facts = new DamageFactTable(64);
+    var heals = new HealFactTable(facts, 64);
+    var lane = new ParseLane();
+    var capture = new CombatCapture(facts, heals, lane);
+    capture.Start();
+    double expectedLast;
+    try
+    {
+      using (var items = new BlockingCollection<LogReaderItem>(new ConcurrentQueue<LogReaderItem>()))
+      using (var processor = new LogProcessor("head.txt", new NullSinks(), new NullSinks(), lane))
+      {
+        processor.LinkTo(items);
+        var dt = DateUtil.ParseStandardDate(Lines[0]);
+        items.Add(new LogReaderItem(Lines[0], DateUtil.ToDotNetSeconds(dt), false));
+        items.CompleteAdding();
+        Assert.IsTrue(processor.Completion!.Wait(TimeSpan.FromSeconds(60)));
+      }
+
+      // … then absorbs finished shards behind it, exactly as a backfill would (source captures stopped —
+      // RunStream stops its own; the session capture keeps running).
+      var shardA = RunStream(new ArraySegment<string>(Lines, 1, 2));
+      var shardB = RunStream(new ArraySegment<string>(Lines, 3, 3));
+      capture.MergeShards([new FactShard(shardA.Facts, shardA.Heals), new FactShard(shardB.Facts, shardB.Heals)]);
+      expectedLast = LatestRowTime(facts, heals);
+    }
+    finally
+    {
+      capture.Stop();
+    }
+
+    // Same content as one sequential stream over all six lines, and the row-for-row compare (Describe
+    // carries Seq) proves the renumbering landed as if it had all been one stream — no offset, no gap,
+    // no collision with the row this capture ingested itself before the merge.
+    var (seqFacts, seqHeals) = RunStream(Lines);
+    Assert.AreEqual(seqFacts.FactCount, facts.FactCount);
+    Assert.AreEqual(seqHeals.HealCount, heals.HealCount);
+    for (var i = 0; i < seqFacts.FactCount; i++)
+    {
+      Assert.AreEqual(Describe(seqFacts, seqFacts.RefAt(i)), Describe(facts, facts.RefAt(i)), $"damage row {i}");
+    }
+
+    for (var i = 0; i < seqHeals.HealCount; i++)
+    {
+      Assert.AreEqual(Describe(seqFacts, seqHeals, seqHeals.RefAt(i)), Describe(facts, heals, heals.RefAt(i)), $"heal row {i}");
+    }
+
+    // The event-time window spans the whole run: the first line's second SURVIVED the merge (it must not
+    // rewind or replace what the capture already saw) and the last merged second arrived even though this
+    // capture never marked it.
+    Assert.AreEqual(RoundedTs(Lines[0]), capture.FirstEventTime, "first event time moved during the merge");
+    Assert.AreEqual(expectedLast, capture.LastEventTime, "last event time did not arrive with the shards");
+  }
+
+  // The ts domain a capture stores: rounded dotnet seconds of the line's own timestamp.
+  private static double RoundedTs(string line) => Math.Round(DateUtil.ToDotNetSeconds(DateUtil.ParseStandardDate(line)));
+
+  // The widest event second across every queue a merge emits — the honest expected value for a window
+  // endpoint, independent of which fixture lines identity gating let through.
+  private static double LatestRowTime(DamageFactTable facts, HealFactTable heals)
+  {
+    var latest = double.MinValue;
+    for (var i = 0; i < facts.FactCount; i++)
+    {
+      latest = Math.Max(latest, facts.RefAt(i).TimeS);
+    }
+
+    for (var i = 0; i < heals.HealCount; i++)
+    {
+      latest = Math.Max(latest, heals.RefAt(i).TimeS);
+    }
+
+    foreach (var f in facts.Deaths)
+    {
+      latest = Math.Max(latest, f.TimeS);
+    }
+
+    foreach (var f in facts.Taunts)
+    {
+      latest = Math.Max(latest, f.TimeS);
+    }
+
+    return latest;
   }
 }

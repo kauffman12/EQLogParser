@@ -376,5 +376,43 @@ namespace EQLogParser
       _lastSeenTs = ts;
       return ts;
     }
+
+    /*
+     * The sharded-load hand-off: finished shard tables become this capture's rows, atomically against any
+     * derivation (one hold of the same ingest gate every sequential append takes — a pass must never read
+     * half-merged tables, and a 10-million-event merge is just a long append). The sequence continues from
+     * wherever this capture stands, and the result renumbers exactly as FactShardMerge promises: pool
+     * remap through this capture's own tables, shared-clock renumbering, file order across ranges.
+     *
+     * Callers must have STOPPED every shard capture first (a running capture could still append), and must
+     * not have let any live event flow yet — the event-time window is stamped from the merged rows as if
+     * this capture had read them itself, which is only true before the tail begins. LogReader owns that
+     * ordering; nothing else calls this.
+     */
+    internal void MergeShards(IReadOnlyList<FactShard> shards)
+    {
+      if (_facts is not DamageFactTable df || _heals is not HealFactTable hf)
+      {
+        throw new InvalidOperationException("MergeShards needs a capture built over concrete damage and heal tables");
+      }
+
+      lock (_gate)
+      {
+        var merged = FactShardMerge.MergeInto(df, hf, shards, _sequence);
+        _sequence = merged.LastSequence;
+
+        // The merged TimeS values are already in this capture's ts domain (the shard captures converted with
+        // the same ToTimeS), so the window is written directly — MarkTs would convert a second time.
+        if (!double.IsNaN(merged.FirstTimeS) && _firstSeenTs < 0)
+        {
+          _firstSeenTs = (long)merged.FirstTimeS;
+        }
+
+        if (!double.IsNaN(merged.LastTimeS))
+        {
+          _lastSeenTs = Math.Max(_lastSeenTs, (long)merged.LastTimeS);
+        }
+      }
+    }
   }
 }
