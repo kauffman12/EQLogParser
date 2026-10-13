@@ -83,6 +83,15 @@ namespace EQLogParser
       {
         if (_healingGroups.Count != 0)
         {
+          /*
+           * A reslice restates rows that are already in hand, so it must carry the capture those rows came from rather than whatever
+           * the caller happens to know: the pane's own dials build a fresh GenerateStatsOptions with no session in it, and this method
+           * delegates to BuildTotalStats - which stamps events from options - so without this line every STARTED/COMPLETED pair of a
+           * dial change would announce itself as session 0 and the Top Parse preview would drop the answer as "not this capture".
+           * Damage and Tanking need no such line because they have a reslice core of their own (RebuildTotalStatsCore), which never reads
+           * the id off the options; healing's reslice runs the FULL build core, and that core takes its stamp from `options.SessionId`.
+           * Pinned by StatsSessionOwnershipTest.AHealingResliceKeepsItsInputsOriginalCaptureStamp.
+           */
           options.SessionId = _captureSessionId;
           options.Npcs.AddRange(_selected);
           options.AllRanges = _allRanges;

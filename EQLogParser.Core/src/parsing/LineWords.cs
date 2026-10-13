@@ -39,9 +39,6 @@ namespace EQLogParser
     internal Word this[int index]
       => new(_source, _starts[index], EndOf(index) - _starts[index]);
 
-    /// <summary>Token for the whole source string — a plain full Split, for the legacy `LineData.Split` door.</summary>
-    internal string[] ToArray() => _length == 0 ? [] : _source.Split(' ');
-
     internal static LineWords Build(string action)
     {
       // Null only: "" must build ONE empty token because that is what "".Split(' ') returns — the equivalence
@@ -66,19 +63,7 @@ namespace EQLogParser
       return new LineWords(action, starts, n);
     }
 
-    private static int CountSpaces(string s)
-    {
-      var count = 0;
-      for (var i = 0; i < s.Length; i++)
-      {
-        if (s[i] == ' ')
-        {
-          count++;
-        }
-      }
-
-      return count;
-    }
+    private static int CountSpaces(string s) => s.AsSpan().Count(' ');
 
     private int EndOf(int index) => index + 1 < _length ? _starts[index + 1] - 1 : _source.Length;
 
@@ -191,26 +176,12 @@ namespace EQLogParser
         return string.Empty;
       }
 
-      var total = count - 1;
-      for (var i = 0; i < count; i++)
-      {
-        total += this[start + i].Length;
-      }
-
-      return string.Create(total, (words: this, start, count), static (span, state) =>
-      {
-        var pos = 0;
-        for (var i = 0; i < state.count; i++)
-        {
-          if (i > 0)
-          {
-            span[pos++] = ' ';
-          }
-
-          state.words[state.start + i].Span.CopyTo(span.Slice(pos));
-          pos += state.words[state.start + i].Length;
-        }
-      });
+      // Empty tokens preserve every original space, so a raw join is exactly one contiguous source slice.
+      // Read both endpoint tokens to retain the old walk's bounds checks (EndOf alone would clamp an invalid last index).
+      var from = _starts[start];
+      var last = start + count - 1;
+      var length = (_starts[last] - from) + this[last].Length;
+      return _source.Substring(from, length);
     }
 
     /// <summary>One token of the line: a (source, start, length) view. Comparison semantics are ordinal, like == on strings.</summary>

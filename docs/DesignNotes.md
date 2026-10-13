@@ -3165,8 +3165,12 @@ which is the whole argument for spending one pass when the parse's garbage has j
 A loaded capture keeps its records, so a raid night that restates the same swing ten thousand times can hold ten thousand objects saying one thing.
 Two caches have always existed against that — `FightManager._damageCache` for damage, `HealingLineParser._healCache` for heals — and both were
 `Dictionary<Record, Record>` keyed to themselves. Getting this right took measuring the wrong beliefs out of them rather than adding a third cache.
-The two pieces are `RepeatStore<T>` (the shared instances) and `RepeatFilter` (a Bloom filter over value hashes), both in
+The two pieces were `RepeatStore<T>` (the shared instances) and `RepeatFilter` (a Bloom filter over value hashes), both in
 `EQLogParser.Utils/src/`, named next to `StringCache` because they solve the same problem one level up.
+
+**Retired 2026-11, both files deleted with their tests.** Nothing was left that shared record instances: damage stopped sharing when its consumers
+began copying values, and the heal half went next (see "The heal repeat store is gone" below). What follows stays as the measurement of why a
+record-sharing cache looked cheap and was not — read it as history, not as a type you can open.
 
 Measured on one player's capture — `eqlog_Kizant_xegony.txt`, 6,066,108 lines, 3,359,001 damage events and 461,467 heals, 26 Apr → 6 May 2026 —
 driven through the real pipeline (`DamageLineParser`/`HealingLineParser` and the real `FightManager`, so the `Attacker` rewrite happens too), keeping
@@ -12803,15 +12807,40 @@ builds its own.
 (2,940 ms over 11 M facts) and the three-board fan-out, which allocate more than the read itself. The field file shows the order exactly:
 `gc.tidy log loaded` @+0.4 s after Finished, `Derive done: 876 fights` +3 s later — the collection swept half the load and
 nothing asked again, which is precisely how it read to the operator ("it didn't garbage collect after the log finished
-loading. but it did after i manually clicked clear all"). The moment now **arms** at 100 % instead of paying:
-`MainWindow.ConsumePostLoadTidy` pays it at the seam where all three boards of one request have answered and the
-materializer has let go (labelled `gc.tidy first boards built`), with a 6 s one-shot backstop keeping the old guarantee,
-and a new open disarming a pending pass so it can never land inside the next load's bulk read. The backstop is usually
-THE payer, and that is fine: an operator who has not clicked a row asks no board, so the seam may wait on a selection that
-never comes — the first field run paid at the backstop with the working set going 1477 → 593 MB. The interval started at
-10 s and read as "oddly delayed"; 6 s lands the pause just behind the rows (first full pass = Finished +2.3/+2.9 s on every
-capture measured here), and paying mid-pass on some slower box is merely the old behaviour, never wrong. Same two moments,
-same labelled pause — just paid when the work has actually stopped.
+loading. but it did after i manually clicked clear all") moved this moment twice, and the second move is the one that
+shipped (2026-10). The branch version deferred the pass to the first contentful board build (`gc.tidy first boards built`)
+with a 6 s one-shot backstop behind it and a gate holding tickets so two seams could not both collect; that pass had the
+best numbers of anything here — the field run paid at the backstop with the working set going **1477 → 593 MB** — and the worst
+legibility, because every moment it could fire sat *after* the fight list's loading band came down. An operator watching a bar
+get replaced by rows, then a frozen window with no bar, read exactly what they said: no collection happened. So the seam is back
+where the load ends, and what does the waiting is the **loading band** instead of a timer:
+
+- MainWindow pays at the 100 % tick (`PayLoadTidyAsync`, gated by `LogReader.LoadAllocatedGarbage` so a follow-from-end open reads no
+  lines and pays nothing), on a **pool thread**. Read that for what it is: a blocking full compaction suspends every managed thread,
+  dispatcher included, so nothing paints during the pass on any thread — asking from a pool thread decides *who is inside* the pause
+  (our code rather than the message loop, frozen mid-frame with no label owner) and keeps only this tick's tail waiting. The old synchronous
+  pass was the other half of the hang story;
+- it brackets the pass with `PostLoadCleanup` (`Mark`, released in a `finally`), and FightTable will not hide its band while a hold stands
+  (`SettleLoadBand`, re-asked every 200 ms with an **8 s deadline** so a mark nobody clears cannot strand a bar over an answer — 8 s and not
+  less because a pass itself has been measured at 3,065 ms on a ~4.8 GB raid heap, and a hold shorter than the work it waits for is a hold
+  that fails on the biggest logs). The cadence starts the first derive as soon as the lanes drain, so its rows land in the same moment
+  threads resume: without the hold the bar comes down and the freeze arrives after it, which is the reported failure. The mark is set before
+  the collector starts precisely so the bar is standing when they do.
+  **Counted, not a flag** (review 2026-11): the UI stays live through the pass, so `Clear All` can mark while a load's collection is still
+  running — one bool let whichever `finally` ran first take the other pass's bar down mid-collection. Each pass releases exactly its own hold;
+- there is no backstop timer, no gate and no ticket, because there is only one seam again. A new open or close calls `PostLoadCleanup.Reset()`
+  — drop the whole count, not one release — so a debt cannot cross captures and an in-flight pass of the file that just closed cannot park the
+  next session's band for a cleanup that is not its business (that pass cannot be cancelled, and its own `Clear` clamps at zero).
+  `PostLoadCleanupTest` pins the counting, the clamp and the door reset.
+- **the tick's tail is a transaction** (`2026-11` review): when the pass answers that the capture closed, the pump clears `_isStarting` before
+  returning. A stuck true silences `SaveTimerTick`, so closing a log mid-cleanup — with no replacement open to reach 100 % — quietly stopped
+  writing `settings.ini` for the rest of the session.
+
+**The trade, stated with its number**: paying at 100 % reclaims the read's garbage (split strings, records, per-line temporaries — dead by
+definition at that seam) and NOT the first derive's or the three boards', which the deferred pass folded into one collection. The peak is
+unchanged; what changes is the resting working set on a capture where the boards run after the pause. If field RSS comes back as a complaint,
+re-measure against 1477 → 593 MB before moving the seam again — and if it moves, the band holds it either way, so the fix is a payer change
+rather than a new mechanism.
 
 **GC policy is not a knob this app turns (2026-10-13).** Server GC with concurrent collection and the default `Interactive` latency mode
 is what ships: background collection happens when the runtime judges it needed, and gen2 across per-core heaps pauses briefly. A short
@@ -12910,8 +12939,9 @@ fire the production clear) on `eqlog_Kizant_xegony-2.txt` (251 rows).
 - **The heal repeat store is gone.** `HealingLineParser._healCache`, its filter and `ClearCaches()` were deleted: nothing
   retained those instances (fact rows and FCT commands copy values), production had no caller of the clear, and every
   record was allocated before the lookup, so it bought neither sharing nor allocation savings - only retention.
-  `RepeatStore`/`RepeatFilter` remain in `EQLogParser.Utils` with their own tests. The one behavior pin moved from "same
-  instance from the third sighting" to "every line is its own value-equal record".
+  `RepeatStore`/`RepeatFilter` outlived that by one more pass: with no record-sharing cache left anywhere, nothing called them, so both files and
+  both test classes are deleted too. The one behavior pin moved from "same instance from the third sighting" to "every line is its own
+  value-equal record".
 - **Attempt's raw lists are `uint`.** Hit amounts arrive as `HitRecord.Total` (uint) and leave the raw list through the
   chart's long keys, so `List<uint>` halves the payload of a histogram nobody has asked for; `FreqOf` casts at the one
   door. `HitFrequencyLazinessTest` counts unchanged.
@@ -12952,11 +12982,12 @@ its three re-opening conditions are recorded there, which is what licenses the t
 
 The `develop` versus `master` review found four correctness/coverage issues and five follow-up candidates:
 
-- **Queued cleanup has capture ownership.** `CaptureTidyGate` stamps each arm with a session id and generation. Taking an arm
-  does not make its queued callback immortal: close/open invalidates it, a worker from an older capture cannot take the new arm,
-  and both dispatcher entry and the render yield recheck ownership. An invalidated callback neither collects nor restores old
-  status text. Clear All's labelled cleanup uses the same ownership gate. No change to Server/concurrent/Interactive GC or the
-  six-second fallback.
+- **The post-load cleanup is owned by the capture that asked, and waited on by the fight list.** The gate that queued it
+  (`CaptureTidyGate`, with its session id, generation and six-second fallback) is deleted along with the deferred seam it existed for;
+  `PostLoadCleanup` is what remains, and it is a counted mark rather than a queue: `Mark`/`Clear` bracket one pass (released in a `finally`, so the
+  band it was holding cannot outlive it) and the capture doors call `Reset`. The pass runs on a pool thread from the 100 % tick (or Clear All),
+  skips itself if the capture closed before the collector started, and never restores status text it no longer owns. FightTable's hold deadline is the
+  second guarantee that no bar sticks. No change to Server/concurrent/Interactive GC.
 - **Keyboard input ends abandoned right-press memory.** The grid's preview-key door clears the remembered selection before
   keyboard navigation, Ctrl+A or Apps/Shift+F10 can reuse an abandoned pointer gesture. It handles no key itself. Routed WPF
   regressions cover the pane's invalidation; actual vendor keyboard selection remains a Windows checklist check.
@@ -12990,3 +13021,60 @@ The `develop` versus `master` review found four correctness/coverage issues and 
 Linux validation: full non-incremental solution build, **0 warnings / 0 errors**, including the WPF assembly; headless suite,
 **2,084 passed / 9 skipped**. Windows execution is still required for the WPF regressions and the realized-grid release checks;
 a Linux build is not their result.
+
+## Ordered-ingest performance review: remaining parser work
+
+**Review and isolated experiments, not shipped optimizations or whole-load measurements.** The current reader already hands over
+5,000-line batches to one ordered `LogProcessor` consumer; production parsers use `LineWords`, not the legacy Split property.
+The old per-line queue and eager-Split profiles therefore cannot rank today's bottlenecks. Keep the consumer, carries and event order;
+no file partitioning or parallel record processing is proposed.
+
+A disposable Release/net10.0 console probe referenced the current Core and compared local candidate helpers without changing production
+sources. Every twentieth physical line from each of `eqlog_Incogitable_xegony.txt`, `eqlog_Kizant_xegony.txt`, `eqlog_Kizant_beta.txt`
+and `eqlog_Bulron_thj.txt` supplied an action when longer than 28 characters: **649,504 actions**, including **10,276 recognized chats**.
+These helper inputs were not timestamp-validated pipeline replays. Six timed pairs alternated old/new order after four warmup pairs;
+Linux, in-memory strings, default probe GC configuration. Checksums were consumed; no forced collections or allocation assertions.
+
+| helper experiment | current wall | candidate wall | scope |
+|---|---:|---:|---|
+| `ChatLineParser.ParseChatType`: replace eight rejection scans with a static ordinal `SearchValues<string>` | 41.39–42.00 ms | 13.44–13.96 ms | all sampled actions; existing You/other recognizers unchanged |
+| `LineWords.Build`: replace only scalar CountSpaces with `AsSpan().Count(' ')` | 57.51–57.96 ms | 36.90–37.85 ms | complete tokenization of all sampled actions, including allocation; second offset-writing scan unchanged |
+| `LineWords.JoinRaw`: one source substring from stored offsets instead of length sum + word copies | 21.07–24.99 ms | 13.24–14.34 ms | prebuilt word views, last up to three tokens of each action; not actual parser call frequencies |
+| `DamageLineParser.InIgnoreList`: suffix loop instead of capturing `ChestTypes.FindIndex` predicate | 36.00–36.40 ms | 27.93–28.20 ms | two million calls over twelve synthetic names, mixed ordinary/pet/eye/chest/mount cases |
+
+Equivalence checked all sampled chats (null/result, channel, sender, receiver, TextStart, SenderIsYou), all sampled token contents and
+counts, and the tested raw joins. Another 2,000 seeded random space/letter strings compared every valid raw-join range, including empty
+tokens. Ignore-list checks compared each of the twelve inputs. This is useful helper evidence, **not** a record/fact equivalence oracle.
+The temporary probe and candidate copies were deleted. None of these ratios should be advertised as a faster whole-file open.
+
+**Next experiments, not measured here:** modifier extraction still joins a suffix and then slices off parentheses before looking up a
+cached mask; a span lookup can avoid both transient strings on hits while keeping per-record class/identity side effects. Spell-tree
+lookup (`EQDataStore.SearchSpellPath`) still materializes a word per dictionary probe and allocates a result object on misses; test
+ordinal span lookup plus a value/out result against actual spell traffic. The earlier rejected alternate-lookup experiment concerned the
+small custom hit-verb table, not these allocating dictionary probes. `LineWords.JoinWords` can use a source-slice fast path only where
+empty-token normalization is unnecessary; its short-result skip and >256-character raw fallback remain part of the contract.
+
+Two additional small costs: `GetTypeFromSpell` builds `type + "=" + spell` even on a cache hit (a dedicated typed key can avoid that
+without changing board keys), and melee/miss branches capitalize the same closed hit-type vocabulary per record (cache display literals,
+not identity verdicts). Avoid caching registry-dependent owner answers: a later line can change those answers.
+
+Prioritize the four isolated wins for a full-pipeline A/B, then the modifier and spell lookup seams. Measure Release read-to-consumer-drain
+and load-to-usable-list separately on live and emu captures, with byte-identical ordered events/facts and final store contents as the bar.
+Do not reorder heal/damage dispatch merely to skip tokenization: `DamageLineParser.Process` updates PreviousAction even when it declines a
+line, and old crit and dice-roll carries also depend on the stream. Leave compression round-trip verification, queue bounds and parser
+synchronization intact; no evidence here licenses trading away their correctness or memory guarantees.
+
+**Implementation follow-up:** review items 2, 3 and 4 are now applied: span-based space counting, a contiguous source copy in
+`JoinRaw`, and the ignore-list suffix loop. The endpoint reads in `JoinRaw` keep invalid positive ranges throwing rather than
+silently truncating them; zero/negative counts retain their empty result. `JoinWords` normalization and all parser dispatch/carry
+behavior are unchanged. `LineWordsTest` compares every raw-join range against `string.Join` across the corpus and seeded fuzz,
+including empty tokens and long input, and pins invalid-range behavior. `DamageIgnoreListTest` checks both damage and death
+publication for every ignored suffix, mixed case, near misses, summoned eyes and the three countable-eye exceptions. Chat rejection,
+modifier lookup, spell-tree lookup and the other allocation candidates above remain unimplemented; no new whole-load speedup is claimed.
+
+**Review follow-up on the cleanup rework (2026-11):** six findings applied — `_isStarting` on the abandoned tick, the counted mark with `Reset`
+at the capture doors, and the wording of every claim about what a pool thread buys during a blocking collection (this paragraph is where that
+correction lives; the mechanism text above says it straight). Validation for this tree: full non-incremental solution build **0 warnings / 0 errors**
+including the WPF assembly; headless suite **2,085 passed / 9 skipped** (2,094 total — the 2,084 recorded above predates the three deleted test
+classes and the join/ignore-list/cleanup-mark coverage added since). Windows execution is still owed for the WPF band tests and the new
+realized-grid checklist item; a Linux build is not their result.

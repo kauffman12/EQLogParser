@@ -104,6 +104,12 @@ These checks require a realized grid; the automated pane tests exercise bound da
   once. Then fight: new rows and cell updates must not move the viewport, and scrolling up to read an old encounter must hold through a whole pull.
   Clear All and reopening the same log get the reveal again (a new load). Nothing about the pointer counts: leave it inside the grid while the log
   reads and the jump still happens. If the fight list sits behind another tab when the read finishes, opening that tab should show the newest row.
+- [ ] **The load's cleanup pause sits behind the band** (2026-11): open a large log (several million lines) and watch the fight list as the read
+  reaches 100 %. The application status line says *"Cleaning up.."* while this pane's loading band is still up, and the band — not an already-readable
+  grid — is what disappears when the pause ends. A freeze that lands *after* the rows are painted is the regression this checks for (it is how the old
+  deferred pass read in the field): `PostLoadCleanup` holds the bar only while the collector runs, with an 8 s deadline of its own (sized above the worst pass ever measured, 3,065 ms). Opening a log from
+  end of file (the startup auto-monitor, Clear All) reads no lines and must pay no pause at all. With `Debug=True`, `grep "load band\|gc.tidy" eqlogparser.log`
+  says which moment ran and which was skipped.
 - [ ] **An ordinary log stays ordinary during a live fight** (2026-11): with boards open and damage flowing, `eqlogparser.log` (no `Debug=True`) gains
   roughly nothing. Two commands after a raid night, both expecting `0` or near it: `grep -c "other stats build(s) were running" eqlogparser.log`
   (overlap now speaks ONCE per episode plus one closing count, so a night of collisions reads as a handful of lines, and the closing line points at
@@ -121,8 +127,8 @@ docs/DesignNotes → "Parallel loading: measured, shipped, and backed out"). Lin
 operator checks with `Debug=True`, on a capture of several hundred MB or more:
 
 - The progress band moves smoothly rather than sitting at 0 % and jumping to 100 %, and it reaches 100 % in step with
-  `Finished Loading Log File`. `gc.tidy log loaded` appears later still — the tidy is armed at 100 % and lands on the
-  first contentful board build (or its one-shot backstop), never inside the read.
+  `Finished Loading Log File`. `gc.tidy log loaded` appears at that tick and not before — the cleanup is paid when the read ends, on a pool
+  thread, never inside the read (see "The load's cleanup pause sits behind the band" under Fight list checks).
 - The fight list shows its band while lines are arriving and hands over rows without clearing them; an empty snapshot
   mid-read must not settle it (`FightTableLoadBandTest` covers this headless for the WPF side).
 - Spot-check what a cross-line carry produces, since these are the fields a mid-file cut used to corrupt: a fight with

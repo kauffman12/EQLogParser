@@ -98,12 +98,6 @@ namespace EQLogParser
     }
 
     /// <summary>
-    /// A census completed FRESH, was held for an open editor, and is now refused at release because a write landed while it waited.
-    /// Refusing is not silence: the repaint is owed again or the pane converges on the very stale answer it just declined.
-    /// </summary>
-    internal void OwePaint() => Volatile.Write(ref _pending, 1);
-
-    /// <summary>
     /// Forget this gate's debt and run flag; callers must independently refuse any abandoned callback before completing it.
     /// </summary>
     internal void Abandon()

@@ -114,15 +114,6 @@ namespace EQLogParser
   }
 
 
-  internal class OverlayPlayerTotal
-  {
-    internal long Damage { get; set; }
-    internal TimeRange Range { get; set; }
-    internal string Name { get; set; }
-    internal double UpdateTime { get; set; }
-  }
-
-
   internal class CombinedStats
   {
     public string TargetTitle { get; set; }
@@ -201,7 +192,6 @@ namespace EQLogParser
     public float MeleeAccRate { get; set; }
     public float MeleeHitRate { get; set; }
     public float LuckRate { get; set; }
-    public float StrikethroughRate { get; set; }
     public float RampageRate { get; set; }
     public float RiposteRate { get; set; }
     public float TwincastRate { get; set; }
@@ -374,9 +364,7 @@ namespace EQLogParser
     public double LastTankingTime { get; set; } = double.NaN;
     public string BeginTimeString { get; set; }
     public long Id { get; set; }
-    public string CorrectMapKey { get; set; }
     public int GroupId { get; set; }
-    public int NonTankingGroupId { get; set; }
     public bool IsInactivity { get; set; }
     public long TankTotal { get; set; }
     public long DamageHits { get; set; }

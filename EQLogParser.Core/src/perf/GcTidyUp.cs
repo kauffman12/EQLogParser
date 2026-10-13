@@ -7,18 +7,24 @@ using System.Runtime;
 namespace EQLogParser
 {
   /*
-   * The one place this app spends a forced collection, at exactly two moments, both labelled in the status line as
-   * "Cleaning up.." so the stop-the-world has a name. A load that actually read lines ARMS one at 100 %; it is paid by the
-   * first contentful board build (MainWindow.ConsumePostLoadTidy) or a one-shot backstop — the field showed the old
-   * synchronous pass firing at "Finished" while the first full derive and its three-board fan-out, the biggest allocators
-   * of a bulk load, were still ahead: it collected half the garbage and nothing asked again (2026-10-13). Clear All
-   * pays synchronously after its re-open (MainWindow.ClearAllFights); the re-open seeks to end of file and reads nothing,
-   * so nothing allocates behind that collector.
+   * The one place this app spends a forced collection, at exactly two moments, both paid through MainWindow.PayLoadTidyAsync
+   * and both labelled in the status line as "Cleaning up.." so the stop-the-world has a name:
    *
-   * A log CLOSE arms nothing: closing is almost always the first half of an open, and a pass between them lands inside
-   * the next file's bulk read — which is why a new OPEN disarms a pending tidy too. Stats builds ask for nothing; the
-   * build seam PAYS an armed load tidy, it never requests one. Boards keep their GC to the runtime and win by allocating
-   * less. Measurements: docs/DesignNotes.md → "Garbage collection after loading a log".
+   *   - **a load that actually read lines** (MainWindow's progress pump, at 100 %), because that is the last moment the operator is
+   *     still looking at loading UI, and the fight list keeps its loading band UP while a pass holds the mark (PostLoadCleanup), so the pause
+   *     lands behind a bar instead of under a grid the operator has begun to read. The blocking collection suspends every managed thread — the
+   *     pool thread it runs on is about who is inside the pause (our code, not the message loop), not about painting through it — and what the
+   *     mark buys is that the bar still stands when threads resume, which is when this capture's first rows land: the cadence starts the first
+   *     derive as soon as the lanes drain. LogReader.LoadAllocatedGarbage keeps a follow-from-end open (which read no line) from paying at all; and
+   *   - **Clear All** (MainWindow.ClearAllFights), after its re-open: this is the one verb that drops a whole capture while the app
+   *     keeps running, so returned segments are worth most here, and the re-open seeks to end of file and reads nothing.
+   *
+   * A log CLOSE pays nothing: closing is almost always the first half of an open, and a pass between them lands inside the next file's
+   * bulk read — which is why a new OPEN resets the mark (PostLoadCleanup.Reset, with ownership asked again at the collector's own door).
+   * Stats builds ask for nothing and pay nothing: they win by allocating less, and what they allocate is the runtime's to collect.
+   * An earlier cut deferred the load tidy to the first contentful board build with a backstop timer behind it; that put the freeze in
+   * the middle of an already-answered grid, so the deferral, the timer and the gate holding its tickets are all gone — one seam at 100 %,
+   * and the band does the waiting. Measurements: docs/DesignNotes.md → "Garbage collection after loading a log".
    */
   internal static class GcTidyUp
   {

@@ -1317,10 +1317,15 @@ namespace EQLogParser
        * ClassificationRules.EyeSummonOwnerInName - because R19 has to spell an owner exactly the way this gate
        * refuses the fight, and two copies of a name cut are how a rule claims a raider the meter refuses.
        */
-      var ignore = name.EndsWith("`s Mount", StringComparison.OrdinalIgnoreCase) ||
-        ChestTypes.FindIndex(type => name.EndsWith(type, StringComparison.OrdinalIgnoreCase)) >= 0 ||
-        ClassificationRules.EyeSummonOwnerInName(name) is not null;
-      return ignore;
+      if (name.EndsWith("`s Mount", StringComparison.OrdinalIgnoreCase)) return true;
+
+      // No capturing predicate on the per-damage path.
+      foreach (var type in ChestTypes)
+      {
+        if (name.EndsWith(type, StringComparison.OrdinalIgnoreCase)) return true;
+      }
+
+      return ClassificationRules.EyeSummonOwnerInName(name) is not null;
     }
 
     internal class OldCritData

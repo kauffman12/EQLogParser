@@ -20,15 +20,6 @@ namespace EQLogParser
       "Companion's Aegis", "Second Wind Ward", "Zeal of the Elements"
     ];
 
-    // Mirror evidence (D8): caster + resolved spell name per non-interrupted cast; R4 tier-1
-    // identity comes from spell identity alone (curated epics / Spires, see EQDataStore seed).
-    // Raised on the parsing lane; this is the Main-lane forwarder session subscribers use (see ParseLane).
-    internal static event Action<string, string, double> EventsCastEvidence
-    {
-      add => ParseLane.Main.CastEvidence += value;
-      remove => ParseLane.Main.CastEvidence -= value;
-    }
-
     public static bool Process(LineData lineData)
     {
       try

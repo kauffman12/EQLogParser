@@ -229,10 +229,43 @@ namespace EQLogParser.Parsing
     [TestMethod]
     public void JoinRawKeepsEmptyTokensLikeStringJoin()
     {
-      var line = "a  b"; // tokens: "a", "", "b"
-      var split = line.Split(' ');
-      var words = LineWords.Build(line);
-      Assert.AreEqual(string.Join(" ", split, 0, split.Length), words.JoinRaw(0, words.Length));
+      foreach (var line in Corpus)
+      {
+        AssertRawRanges(line);
+      }
+
+      AssertRawRanges($" {new string('x', 300)}  {new string('y', 300)} ");
+    }
+
+    [TestMethod]
+    public void JoinRawMatchesStringJoinUnderFuzz()
+    {
+      var rng = new Random(4203);
+      const string alphabet = " ab  .\tÞ";
+      for (var iteration = 0; iteration < 2000; iteration++)
+      {
+        var chars = new char[rng.Next(0, 100)];
+        for (var i = 0; i < chars.Length; i++)
+        {
+          chars[i] = alphabet[rng.Next(alphabet.Length)];
+        }
+
+        AssertRawRanges(new string(chars));
+      }
+    }
+
+    [TestMethod]
+    public void JoinRawRejectsInvalidPositiveRangesButKeepsEmptyRangeBehavior()
+    {
+      var words = LineWords.Build("a  b");
+      Assert.ThrowsExactly<IndexOutOfRangeException>(() => words.JoinRaw(-1, 1));
+      Assert.ThrowsExactly<IndexOutOfRangeException>(() => words.JoinRaw(words.Length, 1));
+      Assert.ThrowsExactly<IndexOutOfRangeException>(() => words.JoinRaw(1, words.Length));
+      Assert.ThrowsExactly<IndexOutOfRangeException>(() => words.JoinRaw(0, int.MaxValue));
+      Assert.ThrowsExactly<IndexOutOfRangeException>(() => LineWords.Empty.JoinRaw(0, 1));
+      Assert.AreEqual(string.Empty, words.JoinRaw(-1, 0));
+      Assert.AreEqual(string.Empty, words.JoinRaw(int.MaxValue, -1));
+      Assert.AreEqual(string.Empty, LineWords.Empty.JoinRaw(0, 0));
     }
 
     [TestMethod]
@@ -245,6 +278,20 @@ namespace EQLogParser.Parsing
       var assigned = "other text here".Split(' ');
       lineData.Split = assigned;
       Assert.AreSame(assigned, lineData.Split);
+    }
+
+    private static void AssertRawRanges(string line)
+    {
+      var split = line.Split(' ');
+      var words = LineWords.Build(line);
+      for (var start = 0; start <= split.Length; start++)
+      {
+        for (var count = 0; count <= split.Length - start; count++)
+        {
+          Assert.AreEqual(string.Join(" ", split, start, count), words.JoinRaw(start, count),
+            $"JoinRaw({start},{count}) of <{line}>");
+        }
+      }
     }
   }
 }

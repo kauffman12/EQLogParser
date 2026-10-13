@@ -5,8 +5,8 @@ namespace EQLogParser.Wpf.Test;
 /*
  * Which 100 % gets a forced collection, and which gets left alone.
  *
- * At progress-complete, MainWindow runs its one synchronous tidy (`GcTidyUp.TidyNow`) gated by this predicate — and two
- * completely different states report that completion. An open that read a file allocated gigabytes of short-lived text,
+ * At progress-complete, MainWindow pays its one tidy (`GcTidyUp.TidyNow`, on a pool thread behind the loading bar)
+ * gated by this predicate — and two completely different states report that completion. An open that read a file allocated gigabytes of short-lived text,
  * so asking the collector for it back at EOF is the cheapest tidy in the app (measurements: docs/DesignNotes.md →
  * "Garbage collection after loading a log"). An open that FOLLOWED from end of file — the startup
  * auto-monitor, and Clear All's re-open — reaches the same 100 % having handed over zero lines: no parse ran, so a

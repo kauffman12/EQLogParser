@@ -990,12 +990,6 @@ namespace EQLogParser
         succeeded &= !damageStatsOptions.BuildFailed && !tankingStatsOptions.BuildFailed && !healingStatsOptions.BuildFailed
                      && SessionStillOpen(session);
 
-        /*
-         * The settle a bulk load armed (see ArmPostLoadTidy): this seam is the moment all three boards of one request have answered
-         * and the materializer has let go, so the first-pass temporaries are dead by definition. Fights.Count > 0 keeps an early
-         * build over an empty snapshot from spending the arm on a build that built nothing.
-         */
-        if (succeeded && input.Fights.Count > 0) ConsumePostLoadTidy(session.SessionId);
       }
       catch (Exception ex)
       {
@@ -1470,14 +1464,34 @@ namespace EQLogParser
             statusText.Foreground = Application.Current.Resources["EQGoodForegroundBrush"] as SolidColorBrush;
 
             /*
-             * The parse is over and MOST of its garbage is dead - which the field found out is not all of it: this synchronous pass ran at
-             * "Finished" while the first full derive (2.9 s) and the boards' fan-out were still ahead, so it collected half the load and
-             * nothing ever asked again - "it didn't garbage collect after the log finished loading" (2026-10-13). The moment therefore ARMS
-             * a settle instead of paying one: consumed by the first contentful board build (ConsumePostLoadTidy, where every allocator in
-             * the flow has finished) with a one-shot timer as backstop for captures nothing builds boards from. Only if a load happened:
-             * following from end of file reaches 100 % having read no line - LogReader.LoadAllocatedGarbage is that gate.
+             * The one collection a load pays, paid HERE because this is the last moment the operator is still looking at loading UI: the
+             * fight list's band only comes down when its first rows land, so the labelled pause lands behind a bar that says work is
+             * happening instead of in the middle of an answered grid ("it didn't garbage collect after the log finished loading",
+             * 2026-10-13). An earlier cut deferred this to the first contentful board build and kept a backstop timer for captures that
+             * build no boards; that moved the freeze to a moment with no loading UI left on screen, so both are gone - one seam, no timer.
+             * The load's own garbage (split strings, records, per-line temporaries) is dead at this seam; what the boards allocate after
+             * it is the runtime's business, which ships Server GC concurrent (GcTidyUp, docs/DesignNotes.md ->
+             * "Garbage collection after loading a log").
+             *
+             * Only if a load happened: following from end of file reaches 100 % having read no line, and a compacting pass then stops
+             * every thread to hand back startup allocations for nothing - LogReader.LoadAllocatedGarbage is that gate.
+             *
+             * The tick WAITS for it. That is not sloppiness about the await: the label has to outlive the pause (a name that disappeared
+             * before the stop-the-world is a silent pause wearing a hat), and nothing below this line may announce a load - "Monitoring Log",
+             * the loading-complete event, the overlays - while the capture is still compacting. Asking from a pool thread does NOT keep the UI
+             * running (a blocking full collection suspends every managed thread, this one included); what it keeps off the dispatcher is OUR
+             * code - no nested pump under the pause - and only this tick's tail waits for the answer.
              */
-            if (LogReader.LoadAllocatedGarbage(_eqLogReader.HandedOverLines)) ArmPostLoadTidy();
+            if (LogReader.LoadAllocatedGarbage(_eqLogReader.HandedOverLines) && !await PayLoadTidyAsync("log loaded"))
+            {
+              // A person picked another log while the collector ran. This tick's capture is gone, so nothing below it - status text,
+              // the loading-complete event, the overlays - may be written for it; the open that replaced this one pumps its own.
+              // Clearing the starting flag is NOT that open's job: if the next gesture is a CLOSE rather than an open, no pump ever reaches
+              // 100 % again, and a stuck true silences SaveTimerTick (settings.ini stops being written) for the rest of the session.
+              _isStarting = false;
+              Log.Debug("load: tidy landed on a closed capture - the rest of this tick is dropped");
+              return;
+            }
 
             /*
              * Two different states reach 100 %, and only one of them has read a log. Following from end of file
@@ -1551,7 +1565,7 @@ namespace EQLogParser
         if (!string.IsNullOrEmpty(theFile))
         {
           Log.Info($"Selected Log File: {theFile}");
-          DisarmPostLoadTidy();   // a tidy armed by the previous capture must not land inside this one's bulk read
+          PostLoadCleanup.Reset();   // a cleanup marked by the previous capture must not hold this one's band or land in its read
           FileUtil.ParseFileName(theFile, out var name, out var server);
           var changed = ConfigUtil.ServerName != server;
 
@@ -1664,7 +1678,7 @@ namespace EQLogParser
 
     private void CloseLogFile(bool changed)
     {
-      DisarmPostLoadTidy();   // invalidate queued callbacks as well as the fallback timer
+      PostLoadCleanup.Reset();   // a close ends the cleanup mark: whatever opens next is not holding on for this capture
       try
       {
         /*
@@ -1726,79 +1740,63 @@ namespace EQLogParser
        * lands in free space rather than in fragmentation. Tidied AFTER the re-open so what the pass sees is the dead session, and because
        * the monitor seeks to end of file, nothing allocates behind the collector. Here rather than inside CloseLogFile because a close is
        * nearly always the first half of an OPEN, and a pass between them lands in the middle of that bulk read.
+       *
+       * Asked through the same door a load uses - labelled "Cleaning up..", collected on a pool thread, and dropped if this capture is
+       * not the open answer when the collector starts. It belongs to the session the re-open above made, not to the one that died.
        */
-      if (_engine is not { } session) return;
-      _captureTidy.Arm(session.SessionId);
-      if (_captureTidy.TryTake(session.SessionId, out var ticket)) QueueTidy(ticket, "capture cleared");
+      _ = PayLoadTidyAsync("capture cleared");
     }
 
-    // Recheck both scheduling boundaries: a close/open can run before the callback or during the render yield.
-    private async Task TidyWithNoticeAsync(CaptureTidyGate.Ticket ticket, string reason)
+    /*
+     * The only two callers of GcTidyUp (which owns why these are the only two): the tick a load finished on, and Clear All.
+     *
+     * The collection runs on a POOL thread. That is not a claim that the UI keeps painting - a blocking full compaction suspends every
+     * managed thread, so nothing repaints while it runs whatever asked - it is about who sits inside the pause: a pool thread holds our own
+     * code, while a UI-thread pass would be the message loop itself, frozen with a half-painted frame and no label owner. Labelled either way,
+     * because a pause with a name reads as work.
+     *
+     * The answer says whether the capture that asked is still open. Between handing this off and the collector starting, a person can
+     * pick another log, and a pass inside the NEXT file's bulk read is the one thing GC law forbids - so ownership is asked at the
+     * collector's own door (OpenLogFile/CloseLogFile call PostLoadCleanup.Reset, and the count cannot cancel a pass already begun) and the
+     * pass is skipped rather than relocated.
+     *
+     * The mark does more than guard this call: it is what keeps the fight list's loading band up around the pause, because on a long capture
+     * the first derive starts the moment the lanes drain and its rows land exactly when threads resume - without the hold, the bar would come
+     * down and the freeze would arrive after it. Mark/Clear bracket ONE pass (two can overlap now that the UI stays live through the pause);
+     * Clear runs in a finally, so no path can strand the band, and FightTable caps the wait by itself besides.
+     */
+    private async Task<bool> PayLoadTidyAsync(string reason)
     {
-      if (!_captureTidy.IsCurrent(ticket, _engineSessionId)) return;
-      var prior = statusText.Text;
       const string notice = "Cleaning up..";
+      if (_engine is not { } session) return false;
+
+      var prior = statusText.Text;
+      PostLoadCleanup.Mark();
       statusText.Text = notice;
       try
       {
-        await Dispatcher.Yield(DispatcherPriority.Render);
-        if (_captureTidy.IsCurrent(ticket, _engineSessionId)) GcTidyUp.TidyNow(reason);
+        await Task.Run(() =>
+        {
+          if (!SessionStillOpen(session))
+          {
+            Log.Debug($"gc.tidy skipped [{reason}]: the capture changed before the collector started");
+            return;
+          }
+
+          GcTidyUp.TidyNow(reason);
+        });
       }
       finally
       {
-        if (_captureTidy.IsCurrent(ticket, _engineSessionId) && statusText.Text == notice) statusText.Text = prior;
+        // Released before the status line, and whatever happens above: the fight list is waiting on this pass's hold to take its bar down.
+        PostLoadCleanup.Clear();
+
+        // Restore the words only if they are still ours to restore: another path may have answered, and a capture that closed
+        // while this ran already wrote its own status line.
+        if (SessionStillOpen(session) && statusText.Text == notice) statusText.Text = prior;
       }
-    }
 
-    // One arm shared by workers and the fallback; tickets survive consumption but not a capture change.
-    // See docs/DesignNotes.md → "Garbage collection after loading a log".
-    private readonly CaptureTidyGate _captureTidy = new();
-    private DispatcherTimer _postLoadTidyFallback;
-
-    private void ArmPostLoadTidy()
-    {
-      if (_engineSessionId == 0) return;
-      _captureTidy.Arm(_engineSessionId);
-      _postLoadTidyFallback ??= new DispatcherTimer { Interval = TimeSpan.FromSeconds(6) };
-      _postLoadTidyFallback.Stop();
-      _postLoadTidyFallback.Tick -= PostLoadTidyFallbackTick;   // one handler entry, re-armed like every other timer here
-      _postLoadTidyFallback.Tick += PostLoadTidyFallbackTick;
-      _postLoadTidyFallback.Start();
-    }
-
-    /*
-     * A new open outranks an armed tidy: a pass between a close and its bulk read lands INSIDE the read, which is the same law that
-     * keeps log CLOSE from collecting at all. Clear All disarms through this door and then pays its own labelled pass.
-     */
-    private void DisarmPostLoadTidy()
-    {
-      _captureTidy.Invalidate();
-      _postLoadTidyFallback?.Stop();
-    }
-
-    private async void PostLoadTidyFallbackTick(object sender, EventArgs e)
-    {
-      ((DispatcherTimer)sender).Stop();
-      if (_captureTidy.TryTake(_engineSessionId, out var ticket)) await TidyWithNoticeAsync(ticket, "log loaded");
-    }
-
-    /*
-     * Asked by a finished board build - worker thread - for ANY reason; only the arm decides. The first contentful build of the armed
-     * capture pays it once; after that this is the load-bearing no-op that keeps every live-session pass from tidying by accident.
-     */
-    private void ConsumePostLoadTidy(int sessionId)
-    {
-      if (_captureTidy.TryTake(sessionId, out var ticket)) QueueTidy(ticket, "first boards built");
-    }
-
-    private void QueueTidy(CaptureTidyGate.Ticket ticket, string reason)
-    {
-      Dispatcher.InvokeAsync(async () =>
-      {
-        if (!_captureTidy.IsCurrent(ticket, _engineSessionId)) return;
-        _postLoadTidyFallback?.Stop();
-        await TidyWithNoticeAsync(ticket, reason);
-      }, DispatcherPriority.DataBind);
+      return SessionStillOpen(session);
     }
 
     private void UpdateRecentFiles()

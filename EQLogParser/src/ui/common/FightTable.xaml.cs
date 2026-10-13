@@ -187,6 +187,21 @@ namespace EQLogParser
     private DispatcherTimer _bandGuard;
 
     /*
+     * The band waits out a post-load collection (see SettleLoadBand), and this timer is the only thing that wakes it afterwards.
+     * Created once per control; its handler comes off on every stop so successive holds cannot stack ticks.
+     */
+    private DispatcherTimer _cleanupHold;
+    private long _cleanupHoldDeadline;
+
+    /*
+     * How long the band may outlive its rows for a cleanup that never reports back - an escape hatch, not a wait. Sized from the measured
+     * wall of a pass itself: 236 ms in a real session, 3,065 ms on a ~4.8 GB raid heap (GcTidyUp; docs/DesignNotes.md -> "Garbage collection
+     * after loading a log"), so this clears the worst pass ever recorded with room, and still ends long before a bar reads as broken. The same
+     * order as _bandGuard's 8 s, which is the pane's other "something never arrived" deadline.
+     */
+    private const long CleanupHoldMs = 8_000;
+
+    /*
      * The one scroll this pane is allowed to do on its own: owed by each capture and paid when that capture's file finishes reading, which is the
      * moment an operator watches rather than the moment some derive happened to finish. FightListReveal holds the sequencing (and why both orders of
      * rows-vs-read happen) and this class only feeds it events and does the scrolling. Dispatcher-thread only.
@@ -373,9 +388,58 @@ namespace EQLogParser
     {
       ((DispatcherTimer)sender).Stop();
       if (_sessionPainted || _loadBandSettled) return;   // rows arrived, or a post-read snapshot already settled it
+      SettleLoadBand("read finished with no fights");
+    }
+
+    /*
+     * The bar comes down when this session has an answer AND no post-load collection is still running.
+     *
+     * By the time this is asked the ROWS are already painted - only the HIDING is deferred. A long capture runs its labelled cleanup
+     * ("Cleaning up..") at the same moment as its first derive, and a stop-the-world landing on a grid whose bar just dropped reads as a hang
+     * instead of as the end of a load; the pause belongs behind the bar, which is where it was asked for (2026-10-13). The list does not own
+     * when a collection happens and never blocks on one: it asks whether a pass is in flight (PostLoadCleanup) and holds for at most
+     * CleanupHoldMs, so a mark nobody clears cannot strand the bar over the answer.
+     */
+    private void SettleLoadBand(string reason)
+    {
+      if (PostLoadCleanup.Owes && !CleanupHoldExpired())
+      {
+        ArmCleanupHold();
+        return;
+      }
+
+      StopCleanupHold();
       _loadBandSettled = true;
       SetLoadBand(null);
-      Log.Debug("fight list: band settled at read-finished + guard — this capture shows no fights");
+      Log.Debug($"load band: hidden [{reason}]");
+    }
+
+    private bool CleanupHoldExpired() => _cleanupHoldDeadline != 0 && Environment.TickCount64 >= _cleanupHoldDeadline;
+
+    private void ArmCleanupHold()
+    {
+      _cleanupHold ??= new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
+      _cleanupHold.Stop();
+      _cleanupHold.Tick -= OnCleanupHoldTick;
+      _cleanupHold.Tick += OnCleanupHoldTick;
+
+      if (_cleanupHoldDeadline == 0)
+      {
+        _cleanupHoldDeadline = Environment.TickCount64 + CleanupHoldMs;
+        Log.Debug("load band: rows landed, holding the bar while the post-load collection finishes");
+      }
+
+      _cleanupHold.Start();
+    }
+
+    private void OnCleanupHoldTick(object sender, EventArgs e) => SettleLoadBand("cleanup hold ended");
+
+    private void StopCleanupHold()
+    {
+      _cleanupHoldDeadline = 0;
+      if (_cleanupHold == null) return;
+      _cleanupHold.Stop();
+      _cleanupHold.Tick -= OnCleanupHoldTick;
     }
 
     /*
@@ -427,6 +491,7 @@ namespace EQLogParser
       _readerDone = false;
       _linesRead = 0;
       _bandGuard?.Stop();   // a guard armed for the session that just closed must not settle this one's band
+      StopCleanupHold();    // ...and neither may a hold waiting on the dead capture's cleanup
 
       /*
        * A right-press memory belongs to the grid it was taken in. A press whose menu never opened (released outside the grid)
@@ -468,11 +533,7 @@ namespace EQLogParser
          * statement (see ReportReadFinished for why a mid-read 0-row snapshot must NOT settle it). Rows landing while
          * the pump is still under 100 % still win: real rows beat a bar, and they always will.
          */
-        if (!_loadBandSettled && (snapshot.Rows.Count > 0 || _readerDone))
-        {
-          _loadBandSettled = true;
-          SetLoadBand(null);
-        }
+        if (!_loadBandSettled && (snapshot.Rows.Count > 0 || _readerDone)) SettleLoadBand("first rows of the session");
 
         if (!_sessionPainted && snapshot.Rows.Count > 0)
         {

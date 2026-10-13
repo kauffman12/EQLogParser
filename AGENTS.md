@@ -123,13 +123,16 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
 - **GC policy is not ours to tune**: ship Server GC + concurrent collection with the default `Interactive` mode and set no latency mode
   anywhere. `Batch`, `SustainedLowLatency`, `LowLatency` and workstation were all tried on 2026-10-13; all lost (`docs/DesignNotes.md` →
   "Garbage collection after loading a log").
-- **GC**: forced collection is paid at **two labelled moments only** — a load that actually read lines (**armed** at 100 %, landed by the first contentful
-  board build or a one-shot backstop: the old synchronous pass at "Finished" fired BEFORE the first full derive and its boards, the biggest allocators of
-  a bulk load, and collected half) and `Clear All` (synchronous, after its re-open) — each labelled *"Cleaning up.."* in the status line, because a pause
-  with a name reads as work and a silent one reads as a hang. Stats builds request nothing — the build seam PAYS an armed tidy, never asks; a new OPEN
-  invalidates pending AND queued tickets. Close invalidates too; dispatcher entry and the render yield both recheck capture ownership,
-  including before restoring status text. Never on the parse
-  path: `docs/DesignNotes.md` → "Garbage collection after loading a log".
+- **GC**: forced collection runs at **two labelled moments only** — the 100 % tick of a load that actually read lines (`LogReader.LoadAllocatedGarbage`)
+  and `Clear All` after its re-open — both on a **pool thread**, each labelled *"Cleaning up.."* in the status line, because a pause with a name reads as
+  work and a silent one reads as a hang. A blocking collection suspends **every** managed thread, dispatcher included: never design or claim for painting
+  *through* it. The **fight list's loading band is what waits** — `PostLoadCleanup` brackets one pass (`Mark`, released in a `finally`; the capture doors
+  call `Reset`, because a debt never crosses a capture) and `FightTable` will not hide its band while a hold stands, with a deadline of its own so no stuck
+  mark can park it; the first derive starts as soon as the lanes drain, so without the hold the bar falls and the freeze arrives after it. The load tick awaits
+  the pass so the label outlives it and nothing announces a still-compacting capture — and if the pass answers that the capture closed, the tick clears
+  `_isStarting` on its way out (a stuck true silences `SaveTimerTick`). Stats builds request nothing and pay nothing; GC.Collect is not cancellable, so capture
+  ownership is asked BEFORE starting. Never collect on the parse path. Why this seam rather than the deferred one, with every measurement and the trade taken:
+  `docs/DesignNotes.md` → "Garbage collection after loading a log".
 
 ## The derive engine
 - **`DeriveCadence.Decide(...) -> { None, ProjectionOnly, Full }`** is the only rule (Core, dispatcher-free). Check order:

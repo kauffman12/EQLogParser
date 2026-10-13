@@ -96,7 +96,7 @@ namespace EQLogParser
      * about what a reader did rather than about a status line. Two states reach 100 %: an open that read a file, and an open that followed
      * from end of file (lastMins 0) having handed over nothing. Only the first allocated gigabytes of split strings and per-line
      * temporaries — which is what makes a load expensive for the collector — so only the first is worth a blocking compacting pass.
-     * Static with the count as a parameter so the rule can be asserted without opening a file (MainWindowTidyTriggerTest).
+     * Static with the count as a parameter so the rule can be asserted without opening a file (LoadTidyTriggerTest).
      */
     internal static bool LoadAllocatedGarbage(long handedOverLines) => handedOverLines > 0;
 

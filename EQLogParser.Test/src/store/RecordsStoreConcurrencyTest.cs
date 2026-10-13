@@ -7,10 +7,16 @@ using EQLogParser;
 namespace EQLogParser;
 
 /*
- * The cast caches are process-global, and more than one thread can be parsing at any moment — the open's own read
- * loop and the trigger lane's readers over the same file all feed the same parsers — while every one of them also
- * queries the cache (ambiguous-abbreviation resolution reads the cast history several times per line). That combination was
- * a latent single-thread design: GetCastsBySpellName read the ambiguity cache's anchor — Count and the last entry —
+ * The cast caches are process-global - shared across captures, not owned by one (that is RecordsStore's own header) - while the code that
+ * fills them is per line and the code that asks them a question runs wherever a line is being parsed. Two things make that more than one
+ * thread: `ParseLane` exists so several readers can be alive at once (LogProcessor binds its lane for the whole run; null means Main), and
+ * the log-preview pane re-parses damage lines itself - `EQLogViewer` calls DamageLineParser.ParseLine on its own task, with no capture open,
+ * beside whatever the open session's reader is doing. Every one of those threads both writes (`RecordsStore.Add`, reached from the damage,
+ * cast and misc parsers plus the capture that taps them) and reads: ambiguous-abbreviation resolution walks the cast history through
+ * `EQDataStore.FindPreviousCast` → GetCastsBySpellName several times per line, and a horizon prune can be emptying the same cache on another
+ * lane. The trigger lane is not one of these writers - TriggerProcessor reads chat shapes only (ChatLineParser, ConditionParser).
+ *
+ * That mix was a latent single-thread design: GetCastsBySpellName read the ambiguity cache's anchor — Count and the last entry —
  * OUTSIDE the lock that Add and the horizon prune hold, and a prune's RemoveRange CLEARS the vacated slots. A reader
  * that latched the old Count mid-sweep could index a nulled entry; the throw folded through the inlined FindPreviousCast
  * onto `EQDataStore.FindByLandsOn` with no frame naming the real method (field NRE 2026-10-13 while reading
