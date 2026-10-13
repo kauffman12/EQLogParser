@@ -25,8 +25,8 @@ internal enum BoardFanoutMode
 /*
  * Three boards, three workers, one answer per board.
  *
- * The shape this exists for (docs/DesignNotes → "Where a board build's time actually goes", measured in
- * docs/improve-stat-building §0): `MainWindow.BuildBoards` materializes a selection and then builds damage, tanking and healing in
+ * The shape this exists for (docs/DesignNotes → "Three boards, three workers: what fan-out buys, and what it cannot"):
+ * `MainWindow.BuildBoards` materializes a selection and then builds damage, tanking and healing in
  * a LINE. The boards share no state — each has its own lock, its own traced handle, its own events, its own output rows — so the
  * line is not a dependency, it is an accident of the method body. Measured on 4 cores over the 998 MB farm night, the build wall
  * goes 4,074 ms → 2,615 ms (×1.56) and the end-to-end ask ×1.32; on Incogitable ×1.29 / ×1.07, because there materialize is the

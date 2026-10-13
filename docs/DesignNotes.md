@@ -182,8 +182,8 @@ So there is one structural item left, and it is a reader problem rather than an 
 
 Open costs, stated honestly so nobody inherits them as surprises: classification keeps a ~250 ms floor *when a rule finds something* (R9 charm 83 ms,
 R18 67, R15 54 on Incogitable) — a carried quiet pass is ~2 ms, so what remains at stake there is only the 3 s → 1 s Full-pass floor; a superseded board
-build is not cancelled (B4's open half); `EQLogParser.Wpf.Test` has never been executed by the machine this file is maintained on, only compiled; and the
-GINA `{counter}` semantics question (local working doc `docs/counter-variable-issue.md`) is an open **product** decision, unrelated to the derivation.
+build is not cancelled (B4's open half); and `EQLogParser.Wpf.Test` has never been executed by the machine this file is maintained on, only compiled.
+(The GINA `{counter}` anchor question listed here when this was written has since been decided — see "A repeat window slides only if its trigger says so".)
 
 For the performance and refresh backlog as a whole — what is shipped, what is open in measured order, and what is decided against — see
 "Where we stand: performance, and the refresh nobody asked for".
@@ -11482,7 +11482,9 @@ reported the count "jumps back to 1 even though matches have been arriving conti
 usual sense: **both engines count matches against a window, and differ by exactly one assignment.** GINA's `TriggerFilter.IsMatch` ends with
 `LastMatched = DateTime.Now` unconditionally, so every fire pushes the deadline out another duration (a *sliding* window, which is what makes it
 an idle timeout); EQLP wrote its anchor only inside the reset branch, pinning the window to the FIRST fire of the epoch — so an hour of grinding
-restarts once per hour, forever. Same field, opposite feel. The decompiled reference and the trace are in `docs/counter-variable-issue.md`.
+restarts once per hour, forever. Same field, opposite feel. (The working doc that carried the user report, the fire-by-fire trace and the decompiled
+listing was retired to this section on 2026-11; GINA itself stays readable from the local decompile under `local/GINA/decompiled/` if the semantics
+ever need re-checking against the original.)
 
 **The user decides, per trigger.** A checkbox sits beside the number — "Sliding Reset" — built as `RepeatedResetEditor` in the same shape
 `PatternEditor` uses for a pattern and its "Use Regex" box (stretching value column + fixed 110 px checkbox column, so the two checkboxes line up
@@ -11686,17 +11688,18 @@ next reader cannot tell a closed question from an unasked one. **Five were delet
 (a review of a branch state, findings all closed, and it cited a summary file that had itself been deleted), `legacy-replacement-map.md` (a map of the
 engine deleted in `5d45d866`), `batch-parsing-plan.md` (a two-pass pipeline that was never built; its successor is the shipped one),
 `combat-text-overlay-design.md` (the original FCT brief, whose recommended presets were later removed) and
-`incremental-summary-refresh-review1.md` (its findings now carried, with dispositions, in `docs/incremental-summary-refresh.md` §0). Current dispositions:
+`incremental-summary-refresh-review1.md` (its findings now carried, with dispositions, in `docs/incremental-summary-refresh.md` §0).
+**Four more were retired on 2026-11**, each once this file carried its whole durable half — see "Four closed working docs retire" for what they built
+and where their sentences live now: `counter-variable-issue.md`, `combat-mirror-design.md`, `improve-stat-building.md` and
+`summary-refresh-notification.md`. (`NagFctReference.md`, listed here before, is gone from disk too; if those GINA/FCT notes are ever needed again they
+must be re-derived from the local decompile rather than mourned.) Current dispositions:
 
 | document | state | why |
 |---|---|---|
 | `perf-memory-status.md` | **live** | the B/C backlog with measured opportunity and the catch on each row; nothing here duplicates it |
 | `incremental-summary-refresh.md` | **live** | Phase B's entry point, the row-granularity bar, the structural blocker |
 | `roster-import-plan.md` | **live (mostly landed)** | identity-memory work remaining: class reads through `IdentityLookup`, the write-site twin census, the `"You"` audit, the invariant test |
-| `counter-variable-issue.md` | **resolved 2026-10-09 — the report and the decompiled reference stay useful** | decided as a per-trigger checkbox (sliding = GINA); rule in `RepeatedWindowRule`, law in "A repeat window slides only if its trigger says so" |
-| `combat-mirror-design.md` | **archaeology, status corrected 2026-10-09** | Phases 0–4 shipped, legacy engine + `EnableCombatMirror` deleted; kept for the rule-catalog arguments that still run — DesignNotes outranks it wherever they disagree |
-| `NagFctReference.md` | **keep as reference** | notes on someone else's implementation; not reconstructible from our tree |
-| `summary-refresh-notification.md` | **deferred design only** | §14 records what shipped instead of the notice; §2–§9 are the toast design kept for the day one of the three re-open conditions becomes true |
+| `continue-notes.md` | **live** | the next perf targets with their numbers, the still-open clear-on-empty question, and the OpenCellPopup handler stack |
 
 ## The ledger counts dotnet seconds, so a stale row is a run-order question (2026-10-09)
 
@@ -11925,7 +11928,8 @@ Two probe-side traps that cost an hour each, recorded so they are not re-paid: a
 records nothing for a sub-millisecond build and reads as "the fanned board answered zero"; and a TIME window anchored at a capture's
 newest second is not a small selection — on the farm night the newest 3,600 seconds hold **one row with three outcomes** (the raid sits
 hours earlier, one long-lived row owns the tail), so selections are made by ROW count, which is both the shape a click makes and the
-shape `Decide` prices. Re-measure recipe: `docs/improve-stat-building.md` §12 (harness deleted after reading, per the gated-test law).
+shape `Decide` prices. Re-measure recipe: drive `UnaskedRefresh.OutcomeCount` → `BoardFanout.Decide` → `BoardFanout.RunParallel` over the three real
+builders on one materialized selection, shapes **alternating**, worst-of-2 (the probe harness was deleted after reading, per the gated-test law).
 
 ## A window is searched, never walked (2026-11)
 
@@ -11986,8 +11990,8 @@ last-N-minutes export) asks `Contains` now, so that path is no longer O(lines ×
 
 Probe-side traps worth the recording: my first "worst case" window was an **empty** `TimeRange`, which holds zero spans and is therefore
 instantly trivial — a worst case needs many spans that never match; and a fixture clock outside `FactTime`'s representable window
-(1931–2068) **clamps**, folding every row onto one timestamp so window tests pass by matching everything. Re-measure recipe:
-`docs/improve-stat-building.md` §13 (harness deleted after reading, per the gated-test law).
+(1931–2068) **clamps**, folding every row onto one timestamp so window tests pass by matching everything. Re-measure recipe: time a bounded heal
+window against a full-store pass on a real capture (the probe harness was deleted after reading, per the gated-test law).
 
 ## Identity Table paging
 
@@ -12460,3 +12464,31 @@ fire the production clear) on `eqlog_Kizant_xegony-2.txt` (251 rows).
 Not taken: R7 aggregate compaction (small on both captures - its per-edge timestamp lists are the cheapest shape for a
 counter that must preserve arrival order), spell-history packing and fact-backed board walks (the standing architectural
 candidates from the review).
+
+## Four closed working docs retire: what they built (2026-11)
+
+Per the rule at "The working documents under `docs/`, and what each still owes": each of these shipped its feature, moved its
+durable half into this file, and was deleted rather than archived. Recorded here so the file names do not become orphans.
+
+**Combat Mirror → the derived engine (everything; the word is dead).** The tap (`CombatCapture`), the fact tables, `EntityTimeline`
+and the rule catalog, projection/sectioning, the headless validation runner, and the four surfaces (fight list, three summary boards,
+damage meter, Player/NPC Identity) all shipped — beside the legacy engine first, then instead of it: `FightManager`, the legacy fight
+table, `DamageOverlayStatsBuilder` and the whole parity scaffolding were deleted (`5d45d866`) along with the `EnableCombatMirror` dial,
+so "which engine is this surface reading?" has exactly one answer. Final parity figures are transcribed at "The legacy engine is
+deleted: final parity numbers, kept on paper"; the rule-catalog arguments live in the identity sections of this file and in AGENTS.
+Retired vocabulary — `CombatMirror`, `MirrorSession`, the `EQLogParser.Mirror` namespace, "mirror" itself; what an operator sees is
+*Derived Fight List* / *Capturing…*.
+
+**The `{counter}` window (2026-10-09).** Decided as the per-trigger **Sliding Reset** checkbox (`RepeatedWindowRule` in Core; NAG
+imports carry slides=true). Law, trace and test discipline: "A repeat window slides only if its trigger says so". The GINA original
+stays readable under `local/GINA/decompiled/`.
+
+**Three boards, three workers (2026-11).** Fan-out over one selection (`BoardFanout`, `MinOutcomes = 50_000`) measured ×1.3 end-to-end
+on a farm night with saving capped by the straggler board — law and numbers at "Three boards, three workers: what fan-out buys, and
+what it cannot". Its companion win, the windowed heal walk (`TimeRange.Contains`, ascending-store precondition), is at "A window is
+searched, never walked". Probe harnesses were deleted after reading per the gated-test law.
+
+**Summary refresh stability (2026-11).** The question "how does the user know the refresh worked?" resolved to *no notice*: applied
+changes repaint within a frame, and what was actually broken — unasked whole-board rebuilds twice a second — is fixed by the cost
+budget (`UnaskedRefresh`), the owed gesture, and the one pet-claim door (`PetAssignment`). Law at "A refresh that answers for itself";
+its three re-opening conditions are recorded there, which is what licenses the toast design's deletion.

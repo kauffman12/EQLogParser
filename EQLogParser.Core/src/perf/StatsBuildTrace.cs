@@ -37,7 +37,7 @@ namespace EQLogParser;
  *      question. Silence after the first warning costs nothing an operator could not get from the counter.
  *
  *      Siblings in one GROUP are not an overlap either — the parallel sibling of "nesting on one thread is not overlap". One request
- *      that builds its three boards AT ONCE (the fan-out in MainWindow.BuildBoards, docs/improve-stat-building) is one door wearing
+ *      that builds its three boards AT ONCE (the fan-out in MainWindow.BuildBoards) is one door wearing
  *      three hats: it issues ONE id from `NextGroupId` and puts it on all three builds' options, so none of them counts the other two.
  *      A caller that passes no group is issued its own fresh one, which keeps every existing door foreign to every other exactly as
  *      before: with no fan-out in play WHICH builds collide is decided bit-for-bit as it always was (the episode coalescing above sits on

@@ -164,7 +164,8 @@ public sealed class StatsBuildTraceTest
   }
 
   /*
-   * The group law behind the board fan-out (docs/improve-stat-building §3, MainWindow.BuildBoards): ONE request that builds
+   * The group law behind the board fan-out (MainWindow.BuildBoards; docs/DesignNotes → "Three boards, three
+   * workers"): ONE request that builds
    * damage, tanking and healing at once is one door wearing three hats, so its three builds must not warn about each other — while
    * a genuinely foreign build under them still does. Pinned in both directions on purpose: silence for the siblings is easy to get,
    * and so is silencing everything, which is the failure that costs the reader the one warning this class exists to print.

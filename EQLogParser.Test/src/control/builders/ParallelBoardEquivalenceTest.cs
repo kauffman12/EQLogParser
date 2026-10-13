@@ -7,7 +7,7 @@ namespace EQLogParser;
 
 /*
  * Three boards, one shared materialized selection, three workers — and the SAME answer a line of three builds gives
- * (EQLogParser.Core/src/ui/BoardFanout.cs, docs/improve-stat-building §2/§6).
+ * (EQLogParser.Core/src/ui/BoardFanout.cs; the decision and numbers are in docs/DesignNotes under "Three boards, three workers").
  *
  * This is the equivalence half of the fan-out's safety case, and it is deliberately NOT the goldens: those freeze what a board
  * displays against a file, one board per fixture, on the serial path they have always used. What this test adds is the comparison the

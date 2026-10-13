@@ -11,8 +11,8 @@ namespace EQLogParser.Tests.Ui
    * Whether the three summary boards of ONE selection may run side by side, and what each of its workers owes (EQLogParser.Core/src/ui/BoardFanout.cs).
    *
    * The shape: `MainWindow.BuildBoards` materializes a selection and used to build damage, tanking and healing strictly in a line.
-   * Measured on 4 cores over the 998 MB farm night that line costs 3,899 ms of build wall where three workers need 2,518 (§0 of
-   * docs/improve-stat-building, re-measured from a throwaway probe now deleted); below a measured crossover the same three builds take
+   * Measured on 4 cores over the 998 MB farm night that line is worth hundreds of milliseconds of build wall (the shipping numbers
+   * are in docs/DesignNotes → "Three boards, three workers: what fan-out buys, and what it cannot"); below a measured crossover the same three builds take
    * tens of milliseconds and three thread starts are the whole finding. So the class holds two things: a THRESHOLD on the one meter
    * the refresh budget already reads, and the worker policy (abandon before painting, one board's failure stays in that board, wait
    * for every board).
