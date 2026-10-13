@@ -104,10 +104,10 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
 - **A board-row read does not allocate**: `PlayerRegistry.GetPlayerClass` binary-searches inside the per-name lock rather
   than copying the boundary list out.
 - **Only an INSTANCE method group allocates** — measure before caching a delegate (`LogProcessor._addMerc`).
-- **GC (2026-11)**: `GcTidyUp.Request` fires at three moments only — a load that actually read lines, `Clear All`, and a
-  finished stats build — each a re-armed settle waiting for *quiet*, rate-limited, never on log close (close is almost
-  always the first half of an open). No timers, no collectors on the parse path. Why the post-load collection is worth it:
-  `docs/DesignNotes.md` → "Garbage collection after loading a log".
+- **GC**: forced collection happens at **two synchronous moments only** — a load that actually read lines, and `Clear All` (after its re-open) — each
+  labelled *"Cleaning up.."* in the status line, because a pause with a name reads as work and a silent one reads as a hang. Stats builds request nothing:
+  boards keep their GC to the runtime and win by allocating less. Never on log close (close is almost always the first half of an open), never on the parse
+  path: `docs/DesignNotes.md` → "Garbage collection after loading a log".
 
 ## The derive engine
 - **`DeriveCadence.Decide(...) -> { None, ProjectionOnly, Full }`** is the only rule (Core, dispatcher-free). Check order:

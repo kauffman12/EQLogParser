@@ -2602,7 +2602,7 @@ wrong, and a player's complaint has to share that file with them. When the answe
 report is only the timer it posts on, plus a `GC.GetGCMemoryInfo()`/pause-delta poll every twenty seconds.
 
 The switch controls **speech, not measurement**. `PerfCounters` still counts (interlocked adds on paths that were already touching those fields), and `GcTidyUp`
-still hands memory back at its three chosen moments because that is a feature rather than an instrument. Two consequences worth knowing before reading a log:
+still hands memory back at its two labelled moments because that is a feature rather than an instrument. Two consequences worth knowing before reading a log:
 
 ```
 UI perf reporting on: beat every 20 s, stall threshold 1000 ms
@@ -3143,47 +3143,22 @@ The default *is* concurrent background collection — the first and third rows a
 only thing in the matrix that made the pump arrive late. "More aggressive" has no headroom either: 828 gen0 collections in 7.9 s is one every
 9.6 ms and not one of them was noticeable. Server GC buys the same interface for 50% more memory, so it does not ship.
 
-What is left is *when*, which the runtime cannot know and this program can: `GcTidyUp.Request` asks for one full, compacting collection at three
-moments a player is not asking the interface for anything — a log file finished loading **having read something** (`MainWindow.UpdateLoadingProgress`),
-the fight list's Clear All dropped a whole capture (`MainWindow.ClearAllFights`), and a stats rebuild finished (all three builders, after their locks
-rather than inside them). Two rules make it safe. **A request never collects on the caller's thread**: it waits 1.5 s (`SettleMs`)
-so the trigger's own layout finishes, then collects on a pool thread. **And it is rate-limited** to one per `MinIntervalMs` (60 s), counted in
-`SuppressedCount`, because flapping a time filter five times is ordinary and five forced compactions would be worse than none — which is also why
-there is no timer here, since every forced collection promotes young survivors and a storm makes the heap bigger and the next unasked-for
-collection longer.
+The question left is *when*, which the runtime cannot know and this program can. A forced collection happens at **exactly two moments**, both synchronous and
+both labelled in the status line as *"Cleaning up.."* so the stop-the-world has a name: a log file finished loading **having actually read lines**
+(`MainWindow.UpdateLoadingProgress`), and Clear All (`MainWindow.ClearAllFights`, tidying after its re-open). A labelled pause is what makes synchronous
+acceptable — the operator confirmed a second or two at those points is not awkward — and neither moment is followed by a bulk read, so nothing allocates behind
+the collector. Stats builds ask for nothing: boards keep their GC to the runtime and win by allocating less.
 
-The cost, measured rather than assumed: an aggressive compacting pass on a ~4.8 GB heap stopped every thread for **3,065 ms**, which is roughly
-what a raid-session heap will pay, in a moment chosen to hurt nobody. That the pass reclaims anything was shown in a quiet process — 100 MB of
-released large arrays taking the heap from 30 MB to 5 — and cannot be asserted inside a test run, where `HeapSizeBytes` is dominated by unrelated
-live data (a suite at 4.8 GB swallowed the signal entirely). Every tidy writes one line so the claim stays checkable:
-`gc.tidy log loaded: heap 2901 to 742 MB, working set 3120 to 905 MB, gen2 +1, stopped 812 ms, wall 813 ms`.
+Two gates belong to the design. **An open that read nothing tidies nothing**: 100 % progress means either a file was read or end of file was followed (the startup
+auto-monitor, Clear All's re-open), and stopping every thread to reclaim allocations no parse made is a pure hitch; the gate is
+`LogReader.LoadAllocatedGarbage(handedOverLines)`, pinned both directions by `LoadTidyTriggerTest`. **A close never tidies**: closing is almost always the first
+half of an open, and a pass between them lands inside the next file's bulk read — which is why Clear All tidies after re-opening rather than in `CloseLogFile`.
 
-A request expires, because the settle delay makes it a promise about a moment that can go away. `Reset()` bumps an epoch, and a task still settling when that
-happens stands down instead of collecting: the slot was handed to whoever reset, so collecting would stop the world on behalf of state nobody is waiting for any
-more — and it would also take back a slot that belongs to somebody else now. Proven rather than assumed: with the guard removed, a request retired by `Reset()`
-still ran its collection (two collections where one was asked for). This is what made `GcTidyUpTest` order-dependent — a stats builder finishing its work asks
-for a tidy 1.5 s hence, and in a suite that runs sequentially that timer goes off inside whichever test comes next.
-
-Two corrections to *when*, both 2026-11 and both about arming a collection into the wrong moment. **An open that read nothing asks for
-nothing.** Progress reaching 100 % means two different things: a file was read, or the open followed from end of file (`lastMins: 0` — the startup
-auto-monitor) and handed over zero lines. The second state used to request the same aggressive compacting pass, stopping every thread to reclaim
-allocations no parse ever made; the gate is `LogReader.LoadAllocatedGarbage(handedOverLines)`, pinned both directions by `LoadTidyTriggerTest`
-(Windows assembly), because the failure mode of getting it wrong is a hitch at startup that nobody can name. **Clear All asks for the capture it
-just dropped.** The trigger that lived on the legacy table's clear went away with that table, leaving the app's largest single deallocation — fact
-arrays, projected rows, boards and parsed records dying together while the process keeps running — untidied; `MainWindow.ClearAllFights` now asks
-before re-opening. It is asked *there* and deliberately not inside `CloseLogFile`, because a close is nearly always the first half of an open: a tidy
-armed there expires 1.5 s into a bulk read, which is a blocking compaction in the middle of loading a file *and* spends the 60 s rate limit doing it.
-Clear All is safe precisely because it re-opens from end of file — nothing allocates behind the collection.
-Same file, the tests' own waits: they used to be one condition, `TidyCount == n && Idle`, which cannot distinguish "this machine is slow at compacting" from
-"the tidy finished and never released its slot" — the second is a real bug (every later request refused forever), the first is arithmetic, since one pass costs
-**3,065 ms** on a 4.8 GB heap and a test host's heap is whatever the rest of the suite has been parsing. Five seconds was measured insufficient on Windows for
-the two throttle tests while passing on Linux, so each half now waits and fails separately with a generous budget, quoting counts, whether the slot is claimed
-and how big the heap was.
-
-Two details that are decisions rather than accidents. There is deliberately **no "is a fight active" guard**: a loaded file leaves its last fight
-marked active until further log lines arrive to expire it, so such a guard would quietly veto the most useful trigger, and the interval bounds what
-the stats trigger can cost anyway. And `LargeObjectHeapCompactionMode.CompactOnce` is set on every pass because the runtime clears it afterwards —
-leaving compaction permanently on would slow the collections the runtime picks for itself, which a test now refuses to let happen silently.
+`GcTidyUp.TidyNow` is the collection itself: `LargeObjectHeapCompactionMode.CompactOnce` around an Aggressive, blocking, compacting `GC.Collect(2, ...)`, writing
+one Debug line with heap delta, working-set delta, gen2 count and wall so `grep gc.tidy` answers "did it work" — from a real session:
+`gc.tidy log loaded: heap 264.9 to 205.5 MB, working set 713.7 to 478.5 MB, gen2 +1, wall 236 ms`. Cost and reclamation are measured rather than assumed: a pass
+stops the world about **3 s** on a raid-scale heap (3,065 ms at ~4.8 GB), and in a quiet process 100 MB of released large arrays took the heap from 30 MB to 5 —
+which is the whole argument for spending one pass when the parse's garbage has just died, and never anywhere else.
 
 ### What a loaded raid costs in memory
 
@@ -3523,7 +3498,7 @@ What goes, in the order that leaves the tree compiling:
    probe, with the tests beside them (`PerfCountersTest`, `PerfGcTest`, `PerfGapTest`, `PerfBreakdownTest`, `PerfJournalTest`, `UiBeatMonitorTest` and the Wpf
    beat/gap tests), the `PerfJournal.Enabled` gate and the `PerfReport` read in `App`. The wording assertions go with the sentences they pin — do not keep them as
    a museum.
-3. What stays: **`GcTidyUp` is not an instrument, it is a feature** (it hands gigabytes back at three chosen moments), so `PerfJournal` stays alive for its
+3. What stays: **`GcTidyUp` is not an instrument, it is a feature** (it hands gigabytes back at its two labelled synchronous moments), so `PerfJournal` stays alive for its
    one line — move that to the ordinary logger if deleting `PerfJournal` with the rest. Likewise `FctFramePacer` paces the display and `FctIngest`'s
    drop counters answer "did the overlay have room", which is a product decision, not a measurement — and with them `FctConveyor.PeakWaiting`,
    `DroppedLiveCount` and `MaxDroppedValue`, kept because a cap question is asked long after the pull and each costs one watermark in a loop that exists anyway.
@@ -12429,13 +12404,13 @@ entry rule asks for.
 
 ## Garbage collection after loading a log
 
-`GcTidyUp.Request` fires at three moments and nowhere else: **a load that actually handed lines over**, **Clear All**, and a
-finished stats build — each a re-armed settle that waits for *quiet* rather than a fixed nap, rate-limited, never on a plain
-log close (close is almost always the first half of an open, so a tidy armed there would compact in the middle of the next
-read). The reason to ask at all after a load: parsing a capture allocates gigabytes of short-lived text and the garbage is
-gone by definition the moment the file ends, while the runtime's heuristics do not know a load just finished; a follow-from-end
-of file open reads no lines and asks for nothing (`LogReader.LoadAllocatedGarbage`). A plain collection stops every thread, so
-the whole design is about *when*, and each of the three is a moment the player is not asking the interface for anything.
+A forced collection happens at exactly two moments — **a load that actually handed lines over**, and **Clear All** (after its re-open) —
+both synchronous, both labelled in the status line as *"Cleaning up.."*, never on a plain log close (close is almost always the first half
+of an open, so a pass armed there would compact in the middle of the next read), and stats builds ask for nothing. The reason to collect at
+all after a load: parsing a capture allocates gigabytes of short-lived text and the garbage is gone by definition the moment the file ends,
+while the runtime's heuristics do not know a load just finished; a follow-from-end-of-file open reads no lines and asks for nothing
+(`LogReader.LoadAllocatedGarbage`). A plain collection stops every thread, so the whole design is about *when*. The mechanism and the
+measurements live in "Asking the collector for memory back at chosen moments" earlier in these notes.
 
 The GC-era test and debug surface is deleted with this note: `GcTidyUpTest`, the FCT placement allocation floor, the walk's
 allocation-floor probe (its control loop included), the gated real-log bench and meter/board cost probes. What stays is the

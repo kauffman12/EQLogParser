@@ -1454,14 +1454,22 @@ namespace EQLogParser
             statusText.Foreground = Application.Current.Resources["EQGoodForegroundBrush"] as SolidColorBrush;
 
             /*
+             * The parse is over and its garbage is dead by definition: the per-line temporaries a load churns through are most of what made
+             * it expensive for the collector. The operator gets a beat here, and it has a name - "Cleaning up.." painted, then one synchronous
+             * compacting pass (236 ms over the heap a 328 MB capture leaves; docs/DesignNotes.md → "Garbage collection after loading a log").
+             * Only if a load happened: following from end of file reaches 100 % having read no line, and a compacting pass would stop every
+             * thread to hand back startup allocations no parse ever made - LogReader.LoadAllocatedGarbage is that gate.
+             */
+            if (LogReader.LoadAllocatedGarbage(_eqLogReader.HandedOverLines)) await TidyWithNoticeAsync("log loaded");
+
+            /*
              * Two different states reach 100 %, and only one of them has read a log. Following from end of file
              * (`lastMins: 0` - the startup auto-monitor open) seeks straight to EOF, so progress is 100 % immediately with
              * nothing handed over. Saying "Finished Loading Log File in 1 seconds" there is how an empty fight list starts
              * looking like a bug: the reader did its job, it just had no history to read. ONE phrase either way: both
              * states are "monitoring now", and the parenthetical this used to append said nothing an operator could act
              * on (removed 2026-10-09 on request - nobody could say where it came from, which is the same finding). Where
-             * the two states genuinely differ still shows in eqlogparser.log and in the tidy decision below, which is
-             * where a distinction earns its keep.
+             * the two states genuinely differ shows in eqlogparser.log, which is where a distinction earns its keep.
              */
             var followedFromEnd = _eqLogReader.HandedOverLines == 0;
             statusText.Text = "Monitoring Log";
@@ -1486,18 +1494,6 @@ namespace EQLogParser
               OpenDamageOverlayIfEnabled(true, false);
               SubscribeOverlayFights();
             }, DispatcherPriority.DataBind);
-
-            /*
-             * The parse is finished and its garbage is gone by definition: the split strings and per-line temporaries that make a load
-             * expensive for the collector. Asked for after the overlays have allocated their steady state, and collected on a pool thread,
-             * so the UI thread never sits inside a stop-the-world holding its own work.
-             *
-             * Only if a load happened. Following from end of file reaches 100 % without reading a line, and an aggressive compacting pass
-             * at that moment stops every thread to hand back startup allocations — there is no parse churn to reclaim, because none was
-             * created. The one verb that DOES drop a whole capture (Clear All) asks for its own tidy where it tears the session down
-             * (ClearAllFights), so skipping here leaves nothing untidied.
-             */
-            if (LogReader.LoadAllocatedGarbage(_eqLogReader.HandedOverLines)) GcTidyUp.Request("log loaded");
           }
           else
           {
@@ -1701,19 +1697,30 @@ namespace EQLogParser
 
       Log.Info($"clear all: re-opening {Path.GetFileName(theFile)} as a monitor session (from end of file)");
 
-      /*
-       * The capture about to die is the biggest thing this process holds — fact arrays, projected rows, boards, parsed records — and
-       * Clear All is the one verb that drops it while the app keeps running, which is where returned segments matter most: the next load
-       * lands in free space rather than in fragmentation. Asked BEFORE the re-open so what the collection can see is the dead session.
-       *
-       * Deliberately here and not inside CloseLogFile. A normal open closes the old session and immediately starts reading a new file,
-       * and a tidy armed at that instant would land 1.5 s into the bulk read — stopping the world in the middle of the load, and spending
-       * the rate limit on the worst possible moment. This path is safe because it re-opens from end of file: no read follows, so nothing
-       * else allocates while the collector is doing its job.
-       */
-      GcTidyUp.Request("log closed");
-
       OpenLogFile(theFile, 0, "clear all");
+
+      /*
+       * The capture that just died is the biggest thing this process holds - fact arrays, projected rows, boards, parsed records - and
+       * Clear All is the one verb that drops it while the app keeps running, which is where returned segments matter most: the next load
+       * lands in free space rather than in fragmentation. Tidied AFTER the re-open so what the pass sees is the dead session, and because
+       * the monitor seeks to end of file, nothing allocates behind the collector. Here rather than inside CloseLogFile because a close is
+       * nearly always the first half of an OPEN, and a pass between them lands in the middle of that bulk read.
+       */
+      _ = Dispatcher.InvokeAsync(async () => await TidyWithNoticeAsync("capture cleared"), DispatcherPriority.DataBind);
+    }
+
+    /*
+     * Paint a name over the pause, then stop the world right here - "Cleaning up.." stays on screen frozen mid-compaction,
+     * which reads as work happening, not as a hang. The status line's previous text is restored afterwards so neither caller
+     * hard-codes the other's phrase.
+     */
+    private async Task TidyWithNoticeAsync(string reason)
+    {
+      var prior = statusText.Text;
+      statusText.Text = "Cleaning up..";
+      await Dispatcher.Yield(DispatcherPriority.Render);
+      GcTidyUp.TidyNow(reason);
+      statusText.Text = prior;
     }
 
     private void UpdateRecentFiles()

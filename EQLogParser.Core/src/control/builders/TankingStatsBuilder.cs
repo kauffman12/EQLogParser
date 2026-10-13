@@ -54,7 +54,6 @@ namespace EQLogParser
     private void RebuildTotalStatsCore(GenerateStatsOptions options, in StatsBuildTrace.Handle trace)
     {
       ChartDataGeneration = trace.Seq;
-      var built = false;
 
       lock (_lock)
       {
@@ -62,14 +61,7 @@ namespace EQLogParser
         {
           FireNewStatsEvent();
           ComputeTankingStats(options, trace);
-          built = true;
         }
-      }
-
-      // Outside the lock: the tidy waits before collecting, and it must not be holding the builder while it does.
-      if (built)
-      {
-        GcTidyUp.Request("stats built");
       }
     }
 
