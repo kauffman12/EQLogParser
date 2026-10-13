@@ -19,8 +19,18 @@ namespace EQLogParser.Test
     private const int Self = (int)SpellTarget.Self;          // any caster of that rank proves it
     private const int SingleTarget = (int)SpellTarget.Singletarget; // only the receiver's own cast proves it
 
+    // The seam gate reads the ambient lane's first stamp, so each test runs against a FRESH unstamped lane: its
+    // FirstStampS is NaN (no line parsed), which AddPendingAmbiguity treats as "seam unknown — keep", giving these
+    // store-level tests their plain semantics without depending on what other LogProcessor tests stamped onto Main.
     [TestInitialize]
-    public void TestInit() => RecordsStore.Instance.Clear();
+    public void TestInit()
+    {
+      ParseLane.BindCurrentThread(new ParseLane());
+      RecordsStore.Instance.Clear();
+    }
+
+    [TestCleanup]
+    public void TestCleanup() => ParseLane.BindCurrentThread(null);
 
     private static SpellData Rank(string name, int target) => new() { Name = name, Target = (byte)target };
 
@@ -120,6 +130,28 @@ namespace EQLogParser.Test
       Assert.AreEqual(0, pending);
       Assert.AreEqual(0, resolved);
       Assert.IsNull(row.SpellData);
+    }
+
+    [TestMethod]
+    public void OnlySeamAdjacentRowsAreQueued()
+    {
+      // A lane that begins at t=100 (its own first stamp). Only rows within the seam window of that stamp can have
+      // been starved by the cut; a row deep in the lane already saw its whole lookback and is never even queued.
+      var lane = new ParseLane();
+      lane.NoteFirstStamp(100);
+      ParseLane.BindCurrentThread(lane);
+      RecordsStore.Instance.BeginCastHistoryHold();
+
+      var nearSeam = UnresolvedRow("Bob", ("Chill Skin II", Self));
+      RecordsStore.Instance.AddPendingAmbiguity(nearSeam, 103); // 3 s past the seam: qualifies
+
+      var deepInLane = UnresolvedRow("Zoe", ("Chill Skin II", Self));
+      RecordsStore.Instance.AddPendingAmbiguity(deepInLane, 50_000); // hours into the lane: its own parses covered it
+
+      AddCast("Wex", ("Chill Skin II", Self), 50_995); // inside deepInLane's window — yet a sequential read saw it too
+
+      var (pending, _) = RecordsStore.Instance.FinishCastHistoryHold();
+      Assert.AreEqual(1, pending, "only the near-seam row is a question the seam could have gotten wrong");
     }
 
     [TestMethod]

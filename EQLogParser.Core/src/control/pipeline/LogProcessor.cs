@@ -93,6 +93,10 @@ namespace EQLogParser
       // IsMonitor rides with the line so downstream consumers (FCT) can drop replay records
       var lineData = new LineData { Action = line[27..], BeginTime = dateTime, LineNumber = _lineCount, IsMonitor = monitor };
 
+      // One NaN check per line until the lane has a first stamp; after that this is free. Feeds the seam window of
+      // the cast-ambiguity retry (ParseLane.FirstStampS).
+      _lane.NoteFirstStamp(lineData.BeginTime);
+
       // avoid having other things parse chat by accident
       if (ChatLineParser.ParseChatType(lineData.Action) is { } chatType)
       {

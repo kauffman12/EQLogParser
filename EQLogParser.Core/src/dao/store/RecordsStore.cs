@@ -58,6 +58,14 @@ namespace EQLogParser
     // stands down and unresolved received-spell rows accumulate below instead of evaporating. Touched only through
     // Volatile.Read/Write — lanes set eyes on it from several threads.
     private bool _holdCastHistory;
+
+    // FindPreviousCast's lookback, verbatim: a cast this far before a row proves the rank it named.
+    private const double WindowS = 8;
+
+    // Only rows within this of a lane's first stamp can have been starved by the seam (their window still reaches
+    // back across the cut). WindowS is the exact boundary; the extra seconds cover stamps that are slightly out of
+    // order at the byte split — pure insurance, those rows can only resolve, never wrongly.
+    private const double SeamRecheckWindowS = WindowS + 2;
     private readonly List<PendingAmbiguity> _pendingAmbiguity = [];
     private readonly Timer _eventTimer;
 
@@ -240,15 +248,19 @@ namespace EQLogParser
      *
      * The store itself was never sharded (identity/recency memory is process-wide on purpose), so by merge time
      * every cast IS present. Rather than let the seam keep its wrong answer, a sharded open holds the horizon sweep,
-     * remembers what stayed unresolved, and asks ONE more time when the merge completes — each row anchored to its
-     * own timestamp, reproducing what the sequential parse would have concluded. The row already carries its
-     * candidate list (AddAmbiguity), so this re-decides; it never re-parses, never re-walks the file.
+     * remembers the FEW rows the seam could have starved (see AddPendingAmbiguity — not every ambiguity failure), and
+     * asks ONE more time when the merge completes — each row anchored to its own timestamp, reproducing what the
+     * sequential parse would have concluded. The row already carries its candidate list (AddAmbiguity), so this
+     * re-decides; it never re-parses, never re-walks the file.
+     *
+     * Why hold the sweep at all when only seam rows are retried: a seam sits mid-file, so by load end its casts are
+     * far older than the horizon relative to the newest line and would be swept — holding is what keeps exactly those
+     * casts alive to be re-asked. Memory stays bounded by one file's casts-of-ambiguous-names.
      *
      * Three doors keep the scope the operator asked for — a file open, never live: BeginCastHistoryHold is called
      * only by the sharded backfill; AddPendingAmbiguity no-ops while the hold is closed (the live tail, seek-back
      * and small files never grow the list); FinishCastHistoryHold runs exactly once per load. ReleaseCastHistoryHold
-     * covers a dead lane: the hold must not outlive the load it was earned for. Memory cost is bounded by one
-     * file's casts-of-ambiguous-names — the only entries this store has ever kept.
+     * covers a dead lane: the hold must not outlive the load it was earned for.
      */
     internal void BeginCastHistoryHold()
     {
@@ -256,10 +268,28 @@ namespace EQLogParser
       Volatile.Write(ref _holdCastHistory, true);
     }
 
-    /// <summary>Remembers a received-spell row the parse could not pin to one rank. Free while the hold is closed.</summary>
+    /*
+     * Remembers a received-spell row the parse could not pin to one rank — but only the rows a seam could actually
+     * have gotten wrong, which is the operator's narrowing and it is exactly right:
+     *
+     * A row asks about casts in [beginTime − 8 s, beginTime]. A lane parses its own bytes in order, so by the time it
+     * reaches any row, everything from its OWN past is already in the shared store — a deep row's whole lookback window
+     * is covered and its parse-time answer is the sequential answer. Only a row whose window still reaches BACK across
+     * the cut — into the other lane's not-yet-parsed territory — can have been starved. That is beginTime within 8 s of
+     * the lane's first stamp (ParseLane.FirstStampS): nothing deeper qualifies, so nothing deeper is queued.
+     *
+     * SeamRecheckWindowS is that 8 s plus a couple seconds' slop for boundary lines whose stamps are slightly out of
+     * order — a handful of extra rows that can only ever resolve, never wrongly. With no seam to speak of (FirstStampS
+     * unset — a direct store unit test, or the very first line before any stamp), the row is kept: the honest default
+     * when the seam position is unknown is to re-check rather than to drop.
+     */
     internal void AddPendingAmbiguity(ReceivedSpell spell, double beginTime)
     {
       if (!Volatile.Read(ref _holdCastHistory)) return;
+
+      var first = ParseLane.Current.FirstStampS;
+      if (!double.IsNaN(first) && (beginTime < first || beginTime - first > SeamRecheckWindowS)) return;
+
       lock (_pendingAmbiguity) { _pendingAmbiguity.Add(new PendingAmbiguity(spell, beginTime)); }
     }
 
@@ -314,21 +344,37 @@ namespace EQLogParser
     // is newest in the cache" (which at load end is the end of the file, and would answer every old row wrong).
     internal bool WasCastWithin(string spellName, double atS, string requiredCaster)
     {
-      const double WindowS = 8; // FindPreviousCast's duration, verbatim
       if (!_spellNameIndex.TryGetValue(spellName, out var history)) return false;
       lock (history)
       {
         var casts = history.Casts;
-        for (var i = casts.Count - 1; i >= 0; i--)
+        // A sorted segment gets a binary descent to the window's right edge, then walks back only over entries inside
+        // [atS − 8 s, atS]. Without it a near-seam row (its atS is early in the file) would scan down from the NEWEST
+        // cast — nearly the whole list for a common spell — to reach a window near the head. An out-of-order segment
+        // falls back to the full backward walk; that flag already means "no usable order".
+        var i = history.AscendingTime ? LastIndexAtOrBefore(casts, atS) : casts.Count - 1;
+        for (; i >= 0; i--)
         {
           var cast = casts[i];
-          if (cast.BeginTime < atS - WindowS && history.AscendingTime) break; // older than the window, and nothing before is newer
-          if (cast.BeginTime > atS || cast.BeginTime < atS - WindowS) continue;
+          if (cast.BeginTime < atS - WindowS) break; // ascending: once past the low edge, every earlier entry is too
           if (cast.Cast.Interrupted) continue;
           if (requiredCaster is null || string.Equals(cast.Cast.Caster, requiredCaster, StringComparison.OrdinalIgnoreCase)) return true;
         }
       }
       return false;
+    }
+
+    // Rightmost index whose BeginTime <= value (the window's upper edge), or -1 when the whole list is newer.
+    private static int LastIndexAtOrBefore(List<CachedCast> casts, double value)
+    {
+      var lo = 0; var hi = casts.Count - 1; var found = -1;
+      while (lo <= hi)
+      {
+        var mid = (lo + hi) >>> 1;
+        if (casts[mid].BeginTime <= value) { found = mid; lo = mid + 1; }
+        else { hi = mid - 1; }
+      }
+      return found;
     }
 
     private sealed class PendingAmbiguity

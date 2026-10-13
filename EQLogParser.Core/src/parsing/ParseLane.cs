@@ -41,6 +41,22 @@ namespace EQLogParser
 
     internal static void BindCurrentThread(ParseLane lane) => _current = lane;
 
+    /*
+     * The first stamp this stream parsed: where its file position begins in log time — mid-file for a shard, the
+     * head of the file for Main and slot 0. The cast-ambiguity retry asks which rows sit near a seam (a lane cannot
+     * see casts the other lane has not parsed yet; that gap is exactly this stamp plus the cast window — see
+     * RecordsStore's seam-recheck block). Written once by the lane's own parse thread and read only there too,
+     * so the plain double needs no more synchronization than its assignment.
+     */
+    private double _firstStampS = double.NaN;
+
+    internal double FirstStampS => _firstStampS;
+
+    internal void NoteFirstStamp(double timeS)
+    {
+      if (double.IsNaN(_firstStampS) && timeS > 0) _firstStampS = timeS;
+    }
+
     // ---- events of this stream ---------------------------------------------------------------
     // Plain delegate fields, not `event` declarations: the hot raise sites hoist the field into a local and skip
     // building the event object when nobody is listening (the pattern DamageLineParser/HealingLineParser already

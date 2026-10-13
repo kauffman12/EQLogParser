@@ -8538,15 +8538,19 @@ mode behavior, not a stale collection call. Revisit (an opt-out, or back to work
 ranks asks "was this rank cast in the last 8 s", and near a shard seam that cast sits in the lane that has not parsed its half
 yet — a question a sequential read answers and a lane cannot. The store was never sharded, so at merge time every cast IS
 present; rather than let the seam keep a wrong answer, `RecordsStore` runs **hold + retry** (its block comment carries the laws):
-`RunBackfillAsync` opens the hold — which stands the horizon sweep down, because rows from hours into a file get retried with
-the casts of those hours and a swept horizon is no history at all; every still-unresolved `ReceivedSpell` enqueues, already
-carrying its candidate list (`AddAmbiguity`; readers ask `HasAmbiguity`); `FinishCastHistoryHold` at merge completion re-asks
-each open row ONCE, anchored to **its own timestamp** — the parse-time query anchors to "newest in cache", which at load end is
-the end of the file, a quirk that would answer every old row wrong. The accept rule mirrors `FindPreviousCast`: any recent cast
-proves a self-target rank, only the receiver's own cast proves a targeted one. Three doors keep it a file-open feature and nothing
-else: `Begin` runs only inside the sharded backfill; enqueue no-ops while the hold is closed (live tail, seek-back and small files
-never grow the list); every exit — merge success, dead lane (`Release`), session `Clear` — closes the hold and sweeps once as if
-the horizon had run. It re-decides only: nothing re-parses, answered rows are skipped, and the class-lane resolver at board time
+`RunBackfillAsync` opens the hold (horizon sweep stands down — a seam sits mid-file, so its casts are far older than the horizon
+by load end and would otherwise be swept); only the rows a seam could actually have starved **enqueue** — the operator's narrowing,
+and it is exact: a lane parses its own bytes in order, so every deep row's 8-second lookback is already covered by that lane's own
+earlier lines and answered right at parse time; only a row whose window still reaches back ACROSS the cut can have been starved, i.e.
+`beginTime` within ~10 s of the lane's own first stamp (`ParseLane.FirstStampS`, one NaN-check per line until set). So the pending
+list is each lane's head, not every failure in the file. `FinishCastHistoryHold` at merge completion re-asks each queued row ONCE,
+anchored to **its own timestamp** — the parse-time query anchors to "newest in cache", which at load end is the end of the file, a
+quirk that would answer every old row wrong; the window probe binary-descends a sorted `CastHistory` so an early-seam row does not
+scan down nearly the whole list. The accept rule mirrors `FindPreviousCast`: any recent cast proves a self-target rank, only the
+receiver's own cast proves a targeted one. Three doors keep it a file-open feature and nothing else: `Begin` runs only inside the
+sharded backfill; enqueue no-ops while the hold is closed (live tail, seek-back and small files never grow the list); every exit —
+merge success, dead lane (`Release`), session `Clear` — closes the hold and sweeps once as if the horizon had run. It re-decides only:
+nothing re-parses, answered rows are skipped, and the class-lane resolver at board time
 (`ResolveSpellAmbiguity`) still answers whatever cast-recency cannot. Grep: `cast-ambiguity retry`; the seam itself is reproduced
 headlessly in `RecordsStoreAmbiguityRetryTest`. The one carry this does NOT fix is the delayed-critical pairing (its carry holds
 record objects across lanes) — it remains the sharding debt of record, one line per file at worst.
