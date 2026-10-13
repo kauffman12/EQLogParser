@@ -152,9 +152,8 @@ public partial class NamesTable
     // The universe first, the question second: the names the log settled by itself never become rows at all
     // (NamesTableView.Universe). The full census stays retained below, so widening a dial still needs no new derive pass.
     var listed = NamesTableView.Universe(source);
-    var projected = new List<NameRow>(listed.Count);
-    foreach (var row in listed) projected.Add(RowFrom(row));
-    var ordered = NamesTableView.Build(projected, stamp.Question);
+    // Filter the cheap census keys before constructing cells, tooltips and editor choices.
+    var ordered = NamesTableView.Project(listed, stamp.Question, RowFrom);
     var index = new Dictionary<string, NameRow>(ordered.Count, StringComparer.OrdinalIgnoreCase);
     foreach (var row in ordered) index[row.Name] = row;
 

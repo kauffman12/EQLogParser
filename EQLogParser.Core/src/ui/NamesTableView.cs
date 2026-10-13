@@ -111,6 +111,16 @@ internal static class NamesTableView
     => FilterOrdered(completeCensus, row => Matches(row.Name, row.Kind, question),
       IdentityRowOrder.For<T>(question.Column, question.Descending));
 
+  internal static List<T> Project<T>(IReadOnlyList<ClassificationReport.Row> census, Question question,
+    Func<ClassificationReport.Row, T> project) where T : IIdentityCensusRow
+  {
+    var result = new List<T>();
+    foreach (var row in census)
+      if (Matches(row.Name, row.Kind, question)) result.Add(project(row));
+    result.Sort(IdentityRowOrder.For<T>(question.Column, question.Descending));
+    return result;
+  }
+
   internal static List<T> FilterOrdered<T>(IReadOnlyList<T> rows, Func<T, bool> keep, Comparison<T> order)
   {
     var result = new List<T>(rows.Count);
