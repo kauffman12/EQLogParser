@@ -24,7 +24,10 @@ namespace EQLogParser
       var savedFolder = ConfigUtil.GetSetting("LogManagementArchiveFolder");
       if (!string.IsNullOrEmpty(savedFolder) && Path.GetDirectoryName(savedFolder) != null)
       {
+        // The XAML starts this box italic-hinted ("Select Archive Folder"); a loaded folder is a real value,
+        // so it switches out of the cue like ChooseFolderClicked's write does (and SpritePickerWindow's load).
         txtFolderPath.Text = savedFolder;
+        txtFolderPath.FontStyle = System.Windows.FontStyles.Normal;
       }
 
       // read saved settings
