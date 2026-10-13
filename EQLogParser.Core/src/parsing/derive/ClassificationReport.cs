@@ -242,6 +242,20 @@ namespace EQLogParser
                                              HealFactTable? healFacts, IdentityOverrideStore? overrides,
                                              PlayerRegistry? registry, IdentityPriorStore? priors = null)
     {
+      /*
+       * ONE boundary, read in THIS order. The census runs while the parser is still naming people — BuildNameCensus takes the
+       * inline rule-book path whenever a window opens between the log opening and its first full derive, which on a big file is
+       * mid-read — so "the pool" and "the facts" are two different instants unless the code makes them one.
+       *
+       * The fact bound goes first because every id used by a fact under it was interned before that fact was published; reading
+       * the pool afterwards therefore yields a count that covers every index the walk can meet. Reading it first — which is what
+       * this did — sized the arrays behind a name the grower had not finished adding yet, and the walk indexed past the end:
+       * "Name census skipped; keeping the previous list" with an IndexOutOfRangeException out of a mid-load census
+       * (CensusGrowingPoolTest reproduces it on the first passes). A stale answer is allowed — the next pass catches up — a crash
+       * is not, because the operator's identity list silently stops updating.
+       */
+      var factLimit = damageFacts?.FactCount ?? 0;
+      var healLimit = healFacts?.HealCount ?? 0;
       var names = damageFacts?.InternedNames;
       var count = names?.Count ?? 0;
 
@@ -265,16 +279,25 @@ namespace EQLogParser
 
       if (timeline is not null && count > 0)
       {
-        for (short i = 0; i < names!.Count; i++) verdict[i] = timeline.IdentityAt(names[i], double.PositiveInfinity);
+        // int, not short: this loop's bound is the pool size, and a short counter reaching its own ceiling would index negative.
+        for (var i = 0; i < count; i++) verdict[i] = timeline.IdentityAt(names![i], double.PositiveInfinity);
       }
 
       if (damageFacts is not null)
       {
-        foreach (var slice in damageFacts.FactsIn(0, damageFacts.FactCount))
+        foreach (var slice in damageFacts.FactsIn(0, factLimit))
         {
           for (var i = 0; i < slice.Length; i++)
           {
             ref readonly var f = ref slice[i];
+
+            /*
+             * Belt on braces after the boundary above: the uint cast catches both a new name and a corrupt negative in one
+             * compare, and it is free next to the bounds check the array already pays. Dropping such a fact costs this snapshot
+             * one row that had no business being sized; the next pass counts it.
+             */
+            if ((uint)f.AtkIdx >= (uint)count || (uint)f.DefIdx >= (uint)count) continue;
+
             damage[f.AtkIdx] += f.Total;
             events[f.AtkIdx]++;
 
@@ -291,10 +314,18 @@ namespace EQLogParser
       }
       if (healFacts is not null)
       {
-        foreach (var h in healFacts.Heals)
+        // Same boundary discipline as the damage walk: a bounded range read rather than whatever length the store happens to
+        // have at the moment the walk reaches it.
+        foreach (var slice in healFacts.HealsIn(0, healLimit))
         {
-          healing[h.HealerIdx] += h.Total;
-          events[h.HealerIdx]++;
+          for (var i = 0; i < slice.Length; i++)
+          {
+            ref readonly var h = ref slice[i];
+            if ((uint)h.HealerIdx >= (uint)count) continue;
+
+            healing[h.HealerIdx] += h.Total;
+            events[h.HealerIdx]++;
+          }
         }
       }
 
@@ -315,7 +346,9 @@ namespace EQLogParser
       var rows = new Dictionary<string, Row>(StringComparer.OrdinalIgnoreCase);
       if (names is not null)
       {
-        for (short i = 0; i < names.Count; i++)
+        // The snapshot, not names.Count: the pool may have grown since this census chose its boundary, and a row built from an
+        // index past the arrays is exactly the crash this whole block exists to prevent.
+        for (var i = 0; i < count; i++)
         {
           AddRow(rows, names[i], timeline, overrides, registry, priors, castProof, seenCasts, healProof, damage[i], healing[i],
                  events[i], hasFacts: true, hitsOnRaid: onRaid[i], hitsOnNpcs: onMobs[i],
