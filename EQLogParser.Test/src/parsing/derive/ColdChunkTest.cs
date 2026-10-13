@@ -186,9 +186,13 @@ namespace EQLogParser
       rows[7] = new HealFact(9, rows[0].TimeS - 3, healer, healed, 5, 9, LabelTypes.Heal, 0, 0, spell);   // the clock went backwards
       rows[HealChunk - 1] = new HealFact(int.MaxValue - 2, FixtureTime.BaseL + 900_000_000, 1, 2, 1, 2, LabelTypes.Hot, 1, 3, 0);
 
+      var guards = (HealFact.UnknownTypeLabels, HealFact.MasksBeyondByte, HealFact.MaskSentinelCollisions);
       var blob = HealFactChunkCodec.Encode(rows, rows.Length);
       var back = HealFactChunkCodec.Decode(blob, rows.Length);
 
+      Assert.AreEqual(guards,
+        (HealFact.UnknownTypeLabels, HealFact.MasksBeyondByte, HealFact.MaskSentinelCollisions),
+        "decode seeds must not fabricate a packing fault");
       Assert.AreEqual(rows.Length, back.Length, "the decode owes one row per row encoded");
       for (var i = 0; i < rows.Length; i++) AssertSameHeal(rows[i], back[i], i);
       Assert.IsTrue(blob.Length < (HealChunk * 24) / 2,

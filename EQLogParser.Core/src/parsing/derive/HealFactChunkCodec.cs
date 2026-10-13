@@ -68,10 +68,7 @@ internal static class HealFactChunkCodec
     d.CopyTo(ms);
     var body = ms.GetBuffer();
 
-    var seqs = new long[count];
-    var times = new long[count];
-    var healerIds = new int[count];   // read with the varints, applied when the rows are assembled below
-    var healedIds = new int[count];
+    var rows = new HealFact[count];
     var p = 0;
     long seq = 0, time = 0;
 
@@ -80,10 +77,9 @@ internal static class HealFactChunkCodec
     {
       seq += ReadVarint(body, ref p);
       time += ReadVarint(body, ref p);
-      seqs[i] = seq;
-      times[i] = time;
-      healerIds[i] = (int)ReadVarint(body, ref p);
-      healedIds[i] = (int)ReadVarint(body, ref p);
+      // A valid seed avoids four scratch arrays and must not trip the constructor's packing guards.
+      rows[i] = new HealFact((int)seq, time, (int)ReadVarint(body, ref p), (int)ReadVarint(body, ref p),
+        0, 0, LabelTypes.Heal, 0, LineModifiersParser.None, HealFact.NoSpell);
     }
 
     var total = p;
@@ -93,17 +89,19 @@ internal static class HealFactChunkCodec
     var mod = flags + count;
     var sub = mod + (count * 2);
 
-    var rows = new HealFact[count];
     for (var i = 0; i < count; i++)
-      rows[i] = new HealFact((int)seqs[i], times[i],
-        healerIds[i],
-        healedIds[i],
+    {
+      ref readonly var seed = ref rows[i];
+      rows[i] = new HealFact(seed.Seq, seed.TimeS,
+        seed.HealerIdx,
+        seed.HealedIdx,
         BinaryPrimitives.ReadUInt32LittleEndian(body.AsSpan(total + (i * 4), 4)),
         BinaryPrimitives.ReadUInt32LittleEndian(body.AsSpan(overTotal + (i * 4), 4)),
         body[type + i],
         body[flags + i],
         (short)BinaryPrimitives.ReadUInt16LittleEndian(body.AsSpan(mod + (i * 2), 2)),
         BinaryPrimitives.ReadUInt16LittleEndian(body.AsSpan(sub + (i * 2), 2)));
+    }
 
     return rows;
   }
