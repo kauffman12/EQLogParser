@@ -1,3 +1,5 @@
+using System.Collections.Frozen;
+
 namespace EQLogParser
 {
   /// <summary>
@@ -180,47 +182,95 @@ namespace EQLogParser
       return TextUtils.ParseUInt(split[index]);
     }
 
+    /*
+     * The one hit-type table: verb → display plural, ordinal like the == / switch it replaces. Both doors below read
+     * this dictionary (the span door is what LineWords callers use without materializing a string), so the literal
+     * list can never exist twice. One behavior note versus the old switch: the plural arms returned the input word
+     * ITSELF; this returns an equal literal. Every consumer compares by value, so the difference is invisible.
+     */
+    // Frozen so the Word door can ask with a span and no materialized string.
+    private static readonly FrozenDictionary<string, string> HitTypes = new Dictionary<string, string>(StringComparer.Ordinal)
+    {
+      { "bash", "bashes" }, { "backstab", "backstabs" }, { "bite", "bites" }, { "claw", "claws" },
+      { "cleave", "cleaves" }, { "crush", "crushes" }, { "frenzy", "frenzies" }, { "gore", "gores" },
+      { "hit", "hits" }, { "kick", "kicks" }, { "learn", "learns" }, { "maul", "mauls" },
+      { "punch", "punches" }, { "pierce", "pierces" }, { "reave", "reaves" }, { "rend", "rends" },
+      { "shoot", "shoots" }, { "slash", "slashes" }, { "slam", "slams" }, { "slice", "slices" },
+      { "smash", "smashes" }, { "smite", "smites" }, { "stab", "stabs" }, { "sting", "stings" },
+      { "strike", "strikes" }, { "sweep", "sweeps" },
+      { "bashes", "bashes" }, { "backstabs", "backstabs" }, { "bites", "bites" }, { "claws", "claws" },
+      { "cleaves", "cleaves" }, { "crushes", "crushes" }, { "frenzies", "frenzies" }, { "gores", "gores" },
+      { "hits", "hits" }, { "kicks", "kicks" }, { "learns", "learns" }, { "mauls", "mauls" },
+      { "punches", "punches" }, { "pierces", "pierces" }, { "reaves", "reaves" }, { "rends", "rends" },
+      { "shoots", "shoots" }, { "slashes", "slashes" }, { "slams", "slams" }, { "slices", "slices" },
+      { "smashes", "smashes" }, { "smites", "smites" }, { "stabs", "stabs" }, { "stings", "stings" },
+      { "strikes", "strikes" }, { "sweeps", "sweeps" },
+    }.ToFrozenDictionary(StringComparer.Ordinal);
+
     /// <summary>
     /// Looks up the hit type plural form for a given verb.
     /// Returns null if the word is not a known hit type.
     /// Examples: "bash" → "bashes", "crushes" → "crushes" (plural form)
     /// </summary>
     internal static string GetHitType(string word)
+      => word is not null && HitTypes.TryGetValue(word, out var hitType) ? hitType : null;
+
+    /*
+     * Span door over a LineWords token. This framework's FrozenDictionary<string, V> has no span TryGetValue (measured,
+     * not assumed — the compile fails), so lookups run through a tiny open-addressed table fed FROM HitTypes in the
+     * static initializer: one source of literals, no materialized string per probe.
+     */
+    private const int HitSlotCount = 128; // power of two ≥ 52 entries with low load
+    private static readonly string[] HitKeySlots = new string[HitSlotCount];
+    private static readonly string[] HitPluralSlots = new string[HitSlotCount];
+
+    static ParserUtil()
     {
-      return word switch
+      foreach (var (key, plural) in HitTypes)
       {
-        "bash" => "bashes",
-        "backstab" => "backstabs",
-        "bite" => "bites",
-        "claw" => "claws",
-        "cleave" => "cleaves",
-        "crush" => "crushes",
-        "frenzy" => "frenzies",
-        "gore" => "gores",
-        "hit" => "hits",
-        "kick" => "kicks",
-        "learn" => "learns",
-        "maul" => "mauls",
-        "punch" => "punches",
-        "pierce" => "pierces",
-        "reave" => "reaves",
-        "rend" => "rends",
-        "shoot" => "shoots",
-        "slash" => "slashes",
-        "slam" => "slams",
-        "slice" => "slices",
-        "smash" => "smashes",
-        "smite" => "smites",
-        "stab" => "stabs",
-        "sting" => "stings",
-        "strike" => "strikes",
-        "sweep" => "sweeps",
-        "bashes" or "backstabs" or "bites" or "claws" or "cleaves" or "crushes" or "frenzies" or
-        "gores" or "hits" or "kicks" or "learns" or "mauls" or "punches" or "pierces" or "reaves" or
-        "rends" or "shoots" or "slashes" or "slams" or "slices" or "smashes" or "smites" or "stabs" or
-        "stings" or "strikes" or "sweeps" => word,
-        _ => null
-      };
+        var slot = SpanBucket(key.AsSpan());
+        while (HitKeySlots[slot] is not null)
+        {
+          slot = (slot + 1) & (HitSlotCount - 1);
+        }
+
+        HitKeySlots[slot] = key;
+        HitPluralSlots[slot] = plural;
+      }
+    }
+
+    private static int SpanBucket(ReadOnlySpan<char> span)
+    {
+      // FNV-1a, ordinal over UTF-16 units — matches SequenceEqual semantics exactly.
+      var hash = 2166136261u;
+      for (var i = 0; i < span.Length; i++)
+      {
+        hash = (hash ^ span[i]) * 16777619u;
+      }
+
+      return (int)(hash & (HitSlotCount - 1));
+    }
+
+    internal static string GetHitType(LineWords.Word word)
+    {
+      var span = word.Span;
+      if (span.IsEmpty)
+      {
+        return null;
+      }
+
+      var slot = SpanBucket(span);
+      while (HitKeySlots[slot] is { } key)
+      {
+        if (span.SequenceEqual(key.AsSpan()))
+        {
+          return HitPluralSlots[slot];
+        }
+
+        slot = (slot + 1) & (HitSlotCount - 1);
+      }
+
+      return null;
     }
 
     /// <summary>
@@ -228,5 +278,9 @@ namespace EQLogParser
     /// </summary>
     internal static bool IsHitTypeAddition(string word) =>
       word is "frenzy" or "frenzies";
+
+    /// <summary>Span door over a LineWords token.</summary>
+    internal static bool IsHitTypeAddition(LineWords.Word word) =>
+      word == "frenzy" || word == "frenzies";
   }
 }

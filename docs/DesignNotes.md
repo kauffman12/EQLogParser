@@ -8677,6 +8677,52 @@ Two traps, both paid for:
   calls parsers directly on one thread, so it measures no handoff; and conversely the profile's percentages mix in startup
   and UI. Both are needed: neither one alone put the queue and the pipeline work in the same frame.
 
+## The damage parser reads word views; the per-line Split array is gone (2026-08)
+
+`docs/tokenizer-plan.md` (local note) proposed killing the 374 B `Split(' ')` that "Where ingest spends its time" named as
+the widest single allocation in ingest. Shipped for the **damage** path; healing never needed it (it indexes `Action`
+directly), and Misc/Cast keep the legacy array door — which is now **lazy**: `LineData.Split` materializes from `Action`
+only for a line that actually reaches those parsers, and the eager `lineData.Split = …` in `LogProcessor` is gone.
+
+`LineWords` is the word view: one scan for space positions into a single `int[]`, tokens as `(source, start, length)`
+structs, ordinal `==` against literals, and materialization only where a word becomes something a record **owns**
+(`JoinWords`/`JoinRaw`/`StringAt` — the names that were already being built before). Its one law: **the semantics are
+`Split(' ')`'s, empty entries included** — "a  b" is THREE tokens ("a", "", "b"), `""` is ONE empty token, a leading space
+starts an empty token. A clever scanner that skipped double spaces would shift every index and silently rewrite names.
+`LineWordsTest` pins tokenization, `FindStop`, `JoinWords` (including the old >256-char fallback which joins WITHOUT the
+empty-skip), and `ParseUInt` against the original implementations over a corpus plus seeded fuzz.
+
+**Validation**: a temporary gated oracle dumped every damage record (attacker, defender, type, subtype, total, mask,
+owner), death and taunt in event order for **all 19 real captures** (`local/logs/live` ×13, `local/logs/emu` ×6) before
+and after the migration: **byte-identical on every capture**, Debug and Release alike. The gate is disposable-by-law and
+was deleted; LineWordsTest stays as the permanent pin.
+
+**Measured, same machine, same pipeline (the oracle harness itself, 19 captures):**
+
+| | Debug (19 files) | Release (3 representative files) |
+|---|---|---|
+| allocated bytes | 144,165 → 125,635 MB (**−12.9 %**) | −11.5 %, −15.5 %, −15.3 % per file |
+| wall | +47 % (Debug punishes un-inlined span compares: the case-switch became an ordered chain) | **+2.4 % … +4.3 %** |
+
+The Release wall cost is real and small: word scanning runs in parallel with the parse and costs a little more CPU than
+`Split`'s single alloc-and-copy while `SequenceEqual`-style compares stay cheap-but-not-free; the biggest remaining slice
+of it is lines that fall through to Misc/Cast and pay the word scan AND still materialize the array. **Steps 3–4 of the
+plan (migrating Cast and Misc to words) are what buy that +3 % back** — each is now an independent commit with the same
+oracle-style validation available; until then this trade stands as taken deliberately: fewer bytes and gentler GC on a
+5-hour raid, a hair more CPU on load. The chain dispatch also keeps the exact case order of the old switch, which is why
+the migration diff reads like the switch it replaced.
+
+Related laws from the same work:
+
+- **The hit-type vocabulary exists once.** `ParserUtil.HitTypes` (frozen) is the whole 52-pair list; the string door and
+  the Word door both read it. The old plural arms returned the input word ITSELF, the dictionary returns an equal literal
+  — every consumer compares by value, so the difference is invisible. The span door goes through a tiny open-addressed
+  table fed from that dictionary in the static initializer, because **this framework's `FrozenDictionary<string, V>` has
+  no span `TryGetValue`** (the compile fails; do not "just add" the overload call).
+- **`LineData` has two doors and one text.** `Words` builds lazily from `Action`; `Split` builds lazily from `Action`
+  (NOT through Words — a Misc line must pay exactly what it paid before, one Split, no double scan). A set `Split`
+  invalidates the word view. Every producer sets `Action`; tests that set both keep doing so.
+
 ## What garbage a raid actually makes, and what it does to a cadence thread (2026-11)
 
 The question worth answering for people on old hardware is not "how many bytes does a load allocate" but **"does collection

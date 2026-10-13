@@ -113,8 +113,12 @@ namespace EQLogParser
 
         if (PreLineParser.NeedProcessing(lineData, (name, time) => PlayerRegistry.Instance.AddVerifiedPlayer(name, time), PlayerRegistry.IsPossiblePlayerName, _addMerc))
         {
-          // may as well split once if most things use it
-          lineData.Split = lineData.Action.Split(' ');
+          /*
+           * No eager Split here any more. The word view (LineData.Words) builds itself from Action on first read by
+           * a parser that needs words; the legacy string[] materializes only when Misc/Cast ask for it. This one line
+           * used to be ~374 B and 29 % of ingest stage time on every recognized line — see docs/DesignNotes →
+           * "Where ingest spends its time, stage by stage".
+           */
           if (!DamageLineParser.Process(lineData))
           {
             if (!HealingLineParser.Process(lineData))

@@ -54,13 +54,13 @@ namespace EQLogParser
 
       try
       {
-        var split = lineData.Split;
-        if (split is { Length: >= 2 })
+        var split = lineData.Words;
+        if (split.Length >= 2)
         {
-          var stop = ParserUtil.FindStop(split);
+          var stop = split.FindStop();
 
           // see if it's a died message right away
-          if (split.Length > 1 && stop >= 1 && split[stop] == "died." && ParserUtil.JoinWords(split, 0, stop) is { } test
+          if (split.Length > 1 && stop >= 1 && split[stop] == "died." && split.JoinWords(0, stop) is { } test
             && !string.IsNullOrEmpty(test))
           {
             UpdateSlain(test, "", lineData);
@@ -103,13 +103,13 @@ namespace EQLogParser
 
         try
         {
-          var split = lineData.Action.Split(' ');
+          var split = LineWords.Build(lineData.Action);
           if (split.Length >= 2)
           {
-            var stop = ParserUtil.FindStop(split);
+            var stop = split.FindStop();
 
             // see if it's a died message right away
-            if (!(split.Length > 1 && stop >= 1 && split[stop] == "died." && ParserUtil.JoinWords(split, 0, stop) is { } test && !string.IsNullOrEmpty(test)))
+            if (!(split.Length > 1 && stop >= 1 && split[stop] == "died." && split.JoinWords(0, stop) is { } test && !string.IsNullOrEmpty(test)))
             {
               record = ParseLine(true, lineData, split, stop);
             }
@@ -124,14 +124,14 @@ namespace EQLogParser
       return record;
     }
 
-    private static DamageRecord ParseLine(bool checkLineType, LineData lineData, string[] split, int stop)
+    private static DamageRecord ParseLine(bool checkLineType, LineData lineData, LineWords split, int stop)
     {
       DamageRecord record = null;
       var resist = SpellResist.Undefined;
       string attacker = null;
       string defender = null;
 
-      var isYou = split[0] is "You" or "Your";
+      var isYou = split[0] == "You" || split[0] == "Your";
       long crippleDamageFix = -1;
       int byIndex = -1, forIndex = -1, pointsOfIndex = -1, endDamage = -1, byDamage = -1, extraIndex = -1;
       int fromDamage = -1, hasIndex = -1, haveIndex = -1, hitTypeIndex = -1, hitTypeAdd = -1, slainIndex = -1;
@@ -144,137 +144,157 @@ namespace EQLogParser
       var found = false;
       for (var i = 0; i <= stop && !found; i++)
       {
-        if (!string.IsNullOrEmpty(split[i]))
+        var word = split[i];
+        if (!word.IsEmpty)
         {
-          if (split[i][0] == '(')
+          if (word[0] == '(')
           {
             // Heroes Forge EMU
-            if (split[i] == "(Owner:")
+            if (word == "(Owner:")
             {
               emuPetIndex = i;
               continue;
             }
             return null;  // short circuit over heal
           }
-          switch (split[i])
-          {
-            case "absorbs":
-              // live
-              if (i > 2 && split[i - 1] == "skin" && split[i - 2] == "magical")
-              {
-                absorbsIndex = i - 2;
-              }
-              break;
-            case "absorbed":
-              // emu
-              emuAbsorbedIndex = i;
-              break;
-            case "attention!":
-            case "attention.":
-              attentionIndex = i;
-              break;
-            case "healed":
-            case "casting":
-              return null; // short circuit
-            case "but":
-              butIndex = i;
-              break;
-            case "failed":
-              failedIndex = i;
-              break;
-            case "are":
-            case "is":
-            case "was":
-            case "were":
-              isIndex = i;
-              break;
-            case "has":
-              hasIndex = i;
-              break;
-            case "have":
-              haveIndex = i;
-              break;
-            case "by":
-              byIndex = i;
 
-              if (slainIndex > -1)
+          /*
+           * One word, one branch — the shape the old `switch (split[i])` had, kept in exactly the same order with
+           * exactly the same bodies. A switch over a materialized string is impossible when words are spans, and the
+           * equality chain is not slower: Word == literal checks length first, which is the same first move the
+           * compiler made on every case label. The migration was verified record-for-record byte-identical on all 19
+           * real captures (DesignNotes → "The damage parser reads word views"), which is why the order and every
+           * guard below are verbatim rather than "improved".
+           */
+          if (word == "absorbs")
+          {
+            // live
+            if (i > 2 && split[i - 1] == "skin" && split[i - 2] == "magical")
+            {
+              absorbsIndex = i - 2;
+            }
+          }
+          else if (word == "absorbed")
+          {
+            // emu
+            emuAbsorbedIndex = i;
+          }
+          else if (word == "attention!" || word == "attention.")
+          {
+            attentionIndex = i;
+          }
+          else if (word == "healed" || word == "casting")
+          {
+            return null; // short circuit
+          }
+          else if (word == "but")
+          {
+            butIndex = i;
+          }
+          else if (word == "failed")
+          {
+            failedIndex = i;
+          }
+          else if (word == "are" || word == "is" || word == "was" || word == "were")
+          {
+            isIndex = i;
+          }
+          else if (word == "has")
+          {
+            hasIndex = i;
+          }
+          else if (word == "have")
+          {
+            haveIndex = i;
+          }
+          else if (word == "by")
+          {
+            byIndex = i;
+
+            if (slainIndex > -1)
+            {
+              found = true; // short circuit
+            }
+            else if (i > 4 && split[i - 1] == "damage")
+            {
+              byDamage = i - 1;
+            }
+          }
+          else if (word == "from")
+          {
+            if (i > 3 && split[i - 1] == "damage")
+            {
+              fromDamage = i - 1;
+              if (pointsOfIndex > -1 && extraIndex > -1)
               {
                 found = true; // short circuit
               }
-              else if (i > 4 && split[i - 1] == "damage")
+              else if (stop > (i + 1) && split[i + 1] == "your")
               {
-                byDamage = i - 1;
+                yourIndex = i + 1;
               }
-              break;
-            case "from":
-              if (i > 3 && split[i - 1] == "damage")
+            }
+          }
+          else if (word == "damage." || word == "damage")
+          {
+            if (i == stop)
+            {
+              endDamage = i;
+            }
+          }
+          else if (word == "harmed")
+          {
+            if (i > 0 && split[i - 1] == "has")
+            {
+              harmedIndex = i + 1;
+            }
+          }
+          else if (word == "non-melee")
+          {
+            nonMeleeIndex = i;
+          }
+          else if (word == "point" || word == "points")
+          {
+            if (stop >= (i + 1) && split[i + 1] == "of")
+            {
+              pointsOfIndex = i;
+              if (i > 2 && split[i - 2] == "for")
               {
-                fromDamage = i - 1;
-                if (pointsOfIndex > -1 && extraIndex > -1)
-                {
-                  found = true; // short circuit
-                }
-                else if (stop > (i + 1) && split[i + 1] == "your")
-                {
-                  yourIndex = i + 1;
-                }
+                forIndex = i - 2;
               }
-              break;
-            case "damage.":
-            case "damage":
-              if (i == stop)
-              {
-                endDamage = i;
-              }
-              break;
-            case "harmed":
-              if (i > 0 && split[i - 1] == "has")
-              {
-                harmedIndex = i + 1;
-              }
-              break;
-            case "non-melee":
-              nonMeleeIndex = i;
-              break;
-            case "point":
-            case "points":
-              if (stop >= (i + 1) && split[i + 1] == "of")
-              {
-                pointsOfIndex = i;
-                if (i > 2 && split[i - 2] == "for")
-                {
-                  forIndex = i - 2;
-                }
-              }
-              break;
-            case "blocks!":
-              missType = (stop == i && butIndex > -1 && i > tryIndex) ? 0 : missType;
-              break;
-            case "shielded":
-              shieldedIndex = i;
-              break;
-            case "shield!":
-            case "staff!":
-              missType = (i > 5 && stop == i && butIndex > -1 && i > tryIndex && split[i - 2] == "with" &&
-                split[i - 3].StartsWith("block", StringComparison.OrdinalIgnoreCase)) ? 0 : missType;
-              break;
-            case "dodge!":
-            case "dodges!":
-              missType = (stop == i && butIndex > -1 && i > tryIndex) ? 1 : missType;
-              break;
-            case "miss!":
-            case "misses!":
-              missType = (stop == i && butIndex > -1 && i > tryIndex) ? 2 : missType;
-              break;
-            case "parry!":
-            case "parries!":
-              missType = (stop == i && butIndex > -1 && i > tryIndex) ? 3 : missType;
-              break;
-            case "INVULNERABLE!":
-              missType = (stop == i && butIndex > -1 && i > tryIndex) ? 4 : missType;
-              break;
-            case "riposte!":
-            case "ripostes!":
+            }
+          }
+          else if (word == "blocks!")
+          {
+            missType = (stop == i && butIndex > -1 && i > tryIndex) ? 0 : missType;
+          }
+          else if (word == "shielded")
+          {
+            shieldedIndex = i;
+          }
+          else if (word == "shield!" || word == "staff!")
+          {
+            missType = (i > 5 && stop == i && butIndex > -1 && i > tryIndex && split[i - 2] == "with" &&
+              split[i - 3].StartsWith("block", StringComparison.OrdinalIgnoreCase)) ? 0 : missType;
+          }
+          else if (word == "dodge!" || word == "dodges!")
+          {
+            missType = (stop == i && butIndex > -1 && i > tryIndex) ? 1 : missType;
+          }
+          else if (word == "miss!" || word == "misses!")
+          {
+            missType = (stop == i && butIndex > -1 && i > tryIndex) ? 2 : missType;
+          }
+          else if (word == "parry!" || word == "parries!")
+          {
+            missType = (stop == i && butIndex > -1 && i > tryIndex) ? 3 : missType;
+          }
+          else if (word == "INVULNERABLE!")
+          {
+            missType = (stop == i && butIndex > -1 && i > tryIndex) ? 4 : missType;
+          }
+          else if (word == "riposte!" || word == "ripostes!")
+            {
               /*
                * This used to add `&& "(Strikethrough)" != split[^1]`, which threw away the line rather than downgrading it —
                * including the branch's own documented example (`An enchanted Syldon stalker tries to crush YOU, but YOU riposte!
@@ -289,106 +309,113 @@ namespace EQLogParser
                * dropped; only the riposte was. Anyone who needs the pierced-through subset asks fact.ModMask.
                */
               missType = (stop == i && butIndex > -1 && i > tryIndex) ? 5 : missType;
-              break;
-            case "blow!":
-              missType = (stop == i && butIndex > -1 && i > tryIndex && split[i - 2] == "absorbs") ? 6 : missType;
-              break;
-            case "slain":
-              slainIndex = i;
-              break;
-            case "taken":
-              if (i > 1 && (hasIndex == (i - 1) || haveIndex == (i - 1)))
-              {
-                takenIndex = i - 1;
+            }
+          else if (word == "blow!")
+          {
+            missType = (stop == i && butIndex > -1 && i > tryIndex && split[i - 2] == "absorbs") ? 6 : missType;
+          }
+          else if (word == "slain")
+          {
+            slainIndex = i;
+          }
+          else if (word == "taken")
+          {
+            if (i > 1 && (hasIndex == (i - 1) || haveIndex == (i - 1)))
+            {
+              takenIndex = i - 1;
 
-                if (stop > (i + 2) && split[i + 1] == "an" && split[i + 2] == "extra")
+              if (stop > (i + 2) && split[i + 1] == "an" && split[i + 2] == "extra")
+              {
+                extraIndex = i + 2;
+              }
+            }
+          }
+          // Old EMU critical DD. the following hit is the damage
+          // [Thu Jan 23 21:36:36 2025] You deliver a critical blast! (15094)
+          else if (word == "blast!")
+          {
+            if (stop == i && i > 3 && split.Length > stop && split[i - 1] == "critical" && split[i - 3] == "delivers")
+            {
+              attacker = split.JoinWords(0, i - 3);
+              attacker = ParserUtil.UpdateAttacker(attacker, ConfigUtil.PlayerName, Labels.Dd);
+              _lastCrit = new OldCritData { Attacker = attacker, BeginTime = lineData.BeginTime, Value = split.StringAt(stop + 1) };
+              return null;
+            }
+          }
+          // Old EMU critical melee. this should create a record
+          else if (word == "hit!")
+          {
+            if (stop == i && i > 3 && split.Length > stop && split[i - 1] == "critical" && split[i - 3] == "scores")
+            {
+              oldCritIndex = i - 3;
+            }
+          }
+          // Old EMU critical melee. this should create a record
+          // note the buggy data where there's no space after Blow! Crippling Blow!(1234)
+          else if (word == "Crippling")
+          {
+            if (stop == i + 1 && i > 2 && split.Length > stop && split[i - 1] == "a" && split[i - 2] == "lands" && split[i + 1].StartsWith("Blow!", StringComparison.Ordinal))
+            {
+              var span = split[i + 1].Span;
+              if (span.IndexOf('(') is var index and > -1)
+              {
+                crippleDamageFix = TextUtils.ParseUInt(span.Slice(index)[1..^1]);
+              }
+
+              oldCritIndex = i - 2;
+            }
+          }
+          // Old EMU critical last melee hit. works more like dd crits
+          else if (word == "Blow!!")
+          {
+            if (stop == i && i > 3 && split[i - 1] == "Finishing" && split[i - 3] == "scores")
+            {
+              attacker = split.JoinWords(0, i - 3);
+              attacker = ParserUtil.UpdateAttacker(attacker, ConfigUtil.PlayerName, Labels.Unk);
+              _lastCrit = new OldCritData { Attacker = attacker, BeginTime = lineData.BeginTime };
+              return null;
+            }
+          }
+          else
+          {
+            if (slainIndex == -1 && i > 0 && i < stop && tryIndex == -1 && !foundType)
+            {
+              if ((i + 3) < stop && split[i + 1] == "for" && split[i + 3] == "points")
+              {
+                foundType = hitTypeIndex > -1;
+                continue;
+              }
+              else
+              {
+                var hitType = ParserUtil.GetHitType(word);
+
+                if (hitType is not null)
                 {
-                  extraIndex = i + 2;
-                }
-              }
-              break;
-            // Old EMU critical DD. the following hit is the damage
-            // [Thu Jan 23 21:36:36 2025] You deliver a critical blast! (15094)
-            case "blast!":
-              if (stop == i && i > 3 && split.Length > stop && split[i - 1] == "critical" && split[i - 3] == "delivers")
-              {
-                attacker = ParserUtil.JoinWords(split, 0, i - 3);
-                attacker = ParserUtil.UpdateAttacker(attacker, ConfigUtil.PlayerName, Labels.Dd);
-                _lastCrit = new OldCritData { Attacker = attacker, BeginTime = lineData.BeginTime, Value = split[stop + 1] };
-                return null;
-              }
-              break;
-            // Old EMU critical melee. this should create a record
-            case "hit!":
-              if (stop == i && i > 3 && split.Length > stop && split[i - 1] == "critical" && split[i - 3] == "scores")
-              {
-                oldCritIndex = i - 3;
-              }
-              break;
-            // Old EMU critical melee. this should create a record
-            // note the buggy data where there's no space after Blow! Crippling Blow!(1234)
-            case "Crippling":
-              if (stop == i + 1 && i > 2 && split.Length > stop && split[i - 1] == "a" && split[i - 2] == "lands" && split[i + 1].StartsWith("Blow!", StringComparison.Ordinal))
-              {
-                var span = split[i + 1].AsSpan();
-                if (span.IndexOf('(') is var index and > -1)
-                {
-                  crippleDamageFix = TextUtils.ParseUInt(span.Slice(index)[1..^1]);
+                  hitTypeIndex = i;
+                  subType = hitType;
+                  foundType = true;
                 }
 
-                oldCritIndex = i - 2;
-              }
-              break;
-            // Old EMU critical last melee hit. works more like dd crits
-            case "Blow!!":
-              if (stop == i && i > 3 && split[i - 1] == "Finishing" && split[i - 3] == "scores")
-              {
-                attacker = ParserUtil.JoinWords(split, 0, i - 3);
-                attacker = ParserUtil.UpdateAttacker(attacker, ConfigUtil.PlayerName, Labels.Unk);
-                _lastCrit = new OldCritData { Attacker = attacker, BeginTime = lineData.BeginTime };
-                return null;
-              }
-              break;
-            default:
-              if (slainIndex == -1 && i > 0 && i < stop && tryIndex == -1 && !foundType)
-              {
-                if ((i + 3) < stop && split[i + 1] == "for" && split[i + 3] == "points")
+                if (foundType)
                 {
-                  foundType = hitTypeIndex > -1;
-                  continue;
-                }
-                else
-                {
-                  var hitType = ParserUtil.GetHitType(split[i]);
+                  if (i > 2 && split[i - 1] == "to" && (split[i - 2] == "tries" || split[i - 2] == "try"))
+                  {
+                    tryIndex = i - 2;
+                  }
 
-                  if (hitType is not null)
+                  if (subType == "hits")
                   {
                     hitTypeIndex = i;
-                    subType = hitType;
-                    foundType = true;
+                    foundType = false; // may not be correct so let it try again
                   }
-
-                  if (foundType)
-                  {
-                    if (i > 2 && split[i - 1] == "to" && (split[i - 2] == "tries" || split[i - 2] == "try"))
-                    {
-                      tryIndex = i - 2;
-                    }
-
-                    if (subType == "hits")
-                    {
-                      hitTypeIndex = i;
-                      foundType = false; // may not be correct so let it try again
-                    }
-                  }
-                }
-
-                if (hitTypeIndex > -1 && ParserUtil.IsHitTypeAddition(split[i]))
-                {
-                  hitTypeAdd = i + i;
                 }
               }
-              break;
+
+              if (hitTypeIndex > -1 && ParserUtil.IsHitTypeAddition(word))
+              {
+                hitTypeAdd = i + i;
+              }
+            }
           }
         }
       }
@@ -404,13 +431,13 @@ namespace EQLogParser
         {
           if (split[i] == "YOUR")
           {
-            attacker = split[i];
+            attacker = split.StringAt(i);
             valid = true;
             break;
           }
           else if (split[i].EndsWith("'s", StringComparison.OrdinalIgnoreCase) && (forIndex - byIndex - 2) is var end and > 0)
           {
-            attacker = ParserUtil.JoinWords(split, byIndex + 1, end);
+            attacker = split.JoinWords(byIndex + 1, end);
             attacker = attacker[..^2];
             valid = true;
             break;
@@ -419,8 +446,8 @@ namespace EQLogParser
 
         if (valid)
         {
-          defender = ParserUtil.JoinWords(split, 0, isIndex);
-          var damage = ParserUtil.ParseUInt(split, pointsOfIndex - 1);
+          defender = split.JoinWords(0, isIndex);
+          var damage = split.ParseUInt(pointsOfIndex - 1);
           attacker = ParserUtil.UpdateAttacker(attacker, ConfigUtil.PlayerName, Labels.Ds);
           defender = ParserUtil.UpdateDefender(defender, attacker);
           record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Ds, Labels.Ds);
@@ -435,8 +462,8 @@ namespace EQLogParser
         var attackerSplit = split[fromDamage + 2];
         if (attackerSplit.EndsWith("'s", StringComparison.OrdinalIgnoreCase))
         {
-          attacker = split[fromDamage + 2][..(split[fromDamage + 2].Length - 2)];
-          defender = ParserUtil.JoinWords(split, 0, takenIndex);
+          attacker = split.StringAt(fromDamage + 2)[..^2];
+          defender = split.JoinWords(0, takenIndex);
           isExtra = true;
         }
         else if (attackerSplit == "your")
@@ -444,13 +471,13 @@ namespace EQLogParser
           if (harmedIndex > 1 && split[harmedIndex - 2] == "has" && harmedIndex < (takenIndex - 1))
           {
             // parse this because even if it says 'your' at the end it may not be yours
-            attacker = ParserUtil.JoinWords(split, 0, harmedIndex - 2);
-            defender = ParserUtil.JoinWords(split, harmedIndex, takenIndex - harmedIndex - 1).Trim('.');
+            attacker = split.JoinWords(0, harmedIndex - 2);
+            defender = split.JoinWords(harmedIndex, takenIndex - harmedIndex - 1).Trim('.');
           }
           else
           {
             attacker = ConfigUtil.PlayerName;
-            defender = ParserUtil.JoinWords(split, 0, takenIndex);
+            defender = split.JoinWords(0, takenIndex);
           }
 
           isExtra = true;
@@ -458,8 +485,8 @@ namespace EQLogParser
 
         if (isExtra)
         {
-          var damage = ParserUtil.ParseUInt(split, extraIndex + 1);
-          var spell = ParserUtil.JoinWords(split, fromDamage + 3, stop - fromDamage - 3);
+          var damage = split.ParseUInt(extraIndex + 1);
+          var spell = split.JoinWords(fromDamage + 3, stop - fromDamage - 3);
           var spellData = EQDataStore.Instance.GetDamagingSpellByName(spell);
           resist = spellData?.Resist ?? SpellResist.Undefined;
           attacker = ParserUtil.UpdateAttacker(attacker, ConfigUtil.PlayerName, spell);
@@ -475,10 +502,10 @@ namespace EQLogParser
       else if (!string.IsNullOrEmpty(subType) && isIndex == -1 && pointsOfIndex == (endDamage - 2) && forIndex > -1 && hitTypeIndex < forIndex && nonMeleeIndex == -1)
       {
         var hitTypeMod = hitTypeAdd > 0 ? 1 : 0;
-        attacker = ParserUtil.JoinWords(split, 0, hitTypeIndex);
-        defender = ParserUtil.JoinWords(split, hitTypeIndex + hitTypeMod + 1, forIndex - hitTypeIndex - hitTypeMod - 1);
+        attacker = split.JoinWords(0, hitTypeIndex);
+        defender = split.JoinWords(hitTypeIndex + hitTypeMod + 1, forIndex - hitTypeIndex - hitTypeMod - 1);
         subType = TextUtils.CapitalizeFirst(subType);
-        var damage = ParserUtil.ParseUInt(split, pointsOfIndex - 1);
+        var damage = split.ParseUInt(pointsOfIndex - 1);
         attacker = ParserUtil.UpdateAttacker(attacker, ConfigUtil.PlayerName, subType);
         defender = ParserUtil.UpdateDefender(defender, attacker);
         record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Melee, subType);
@@ -508,15 +535,15 @@ namespace EQLogParser
       else if (byDamage > 3 && pointsOfIndex == (byDamage - 3) && byIndex == (byDamage + 1) && forIndex > -1 && hitTypeIndex > 0 &&
         split[hitTypeIndex] == "hit" && hitTypeIndex < forIndex && split[stop].Length > 0 && split[stop][^1] == '.')
       {
-        var spell = ParserUtil.JoinWords(split, byIndex + 1, stop - byIndex);
+        var spell = split.JoinWords(byIndex + 1, stop - byIndex);
         if (!string.IsNullOrEmpty(spell) && spell[^1] == '.')
         {
           spell = spell[..^1];
-          attacker = ParserUtil.JoinWords(split, 0, hitTypeIndex);
-          defender = ParserUtil.JoinWords(split, hitTypeIndex + 1, forIndex - hitTypeIndex - 1);
+          attacker = split.JoinWords(0, hitTypeIndex);
+          defender = split.JoinWords(hitTypeIndex + 1, forIndex - hitTypeIndex - 1);
           var type = GetTypeFromSpell(spell, Labels.Dd);
-          var damage = ParserUtil.ParseUInt(split, pointsOfIndex - 1);
-          SpellResistMap.TryGetValue(split[byDamage - 1], out resist);
+          var damage = split.ParseUInt(pointsOfIndex - 1);
+          SpellResistMap.TryGetValue(split.StringAt(byDamage - 1), out resist);
 
           attacker = ParserUtil.UpdateAttacker(attacker, ConfigUtil.PlayerName, spell);
           defender = ParserUtil.UpdateDefender(defender, attacker);
@@ -545,8 +572,8 @@ namespace EQLogParser
         var attackerIsSpell = false;
         if (byIndex > -1)
         {
-          spell = ParserUtil.JoinWords(split, fromDamage + 2, byIndex - fromDamage - 2);
-          attacker = ParserUtil.JoinWords(split, byIndex + 1, stop - byIndex);
+          spell = split.JoinWords(fromDamage + 2, byIndex - fromDamage - 2);
+          attacker = split.JoinWords(byIndex + 1, stop - byIndex);
 
           // died to spell emoted/killed self
           if (attacker == ".")
@@ -582,13 +609,13 @@ namespace EQLogParser
         }
         else if (yourIndex > -1)
         {
-          attacker = split[yourIndex];
-          spell = ParserUtil.JoinWords(split, yourIndex + 1, stop - yourIndex);
+          attacker = split.StringAt(yourIndex);
+          spell = split.JoinWords(yourIndex + 1, stop - yourIndex);
           spell = (!string.IsNullOrEmpty(spell) && spell[^1] == '.') ? spell[..^1] : Labels.Dot;
         }
         else if (isYou)
         {
-          spell = ParserUtil.JoinWords(split, fromDamage + 2, stop - fromDamage - 1);
+          spell = split.JoinWords(fromDamage + 2, stop - fromDamage - 1);
           spell = (!string.IsNullOrEmpty(spell) && spell[^1] == '.') ? spell[..^1] : spell;
           attacker = spell;
         }
@@ -617,8 +644,8 @@ namespace EQLogParser
             type = spell == attacker ? Labels.OtherDmg : GetTypeFromSpell(spell, Labels.Dot);
           }
 
-          defender = ParserUtil.JoinWords(split, 0, takenIndex);
-          var damage = ParserUtil.ParseUInt(split, fromDamage - 1);
+          defender = split.JoinWords(0, takenIndex);
+          var damage = split.ParseUInt(fromDamage - 1);
           resist = spellData?.Resist ?? SpellResist.Undefined;
           attacker = ParserUtil.UpdateAttacker(attacker, ConfigUtil.PlayerName, spell);
           defender = ParserUtil.UpdateDefender(defender, attacker);
@@ -628,9 +655,9 @@ namespace EQLogParser
       // [Mon Apr 26 21:07:21 2021] Lawlstryke has taken 216717 damage by Wisp Explosion.
       else if (byDamage > -1 && takenIndex == (byDamage - 3))
       {
-        defender = ParserUtil.JoinWords(split, 0, takenIndex);
-        var damage = ParserUtil.ParseUInt(split, byDamage - 1);
-        var spell = ParserUtil.JoinWords(split, byDamage + 2, stop - byDamage - 1);
+        defender = split.JoinWords(0, takenIndex);
+        var damage = split.ParseUInt(byDamage - 1);
+        var spell = split.JoinWords(byDamage + 2, stop - byDamage - 1);
         if (!string.IsNullOrEmpty(spell) && spell[^1] == '.')
         {
           spell = spell[..^1];
@@ -667,8 +694,8 @@ namespace EQLogParser
       else if (isIndex > -1 && byIndex == -1 && (forIndex + 2) == pointsOfIndex && nonMeleeIndex > pointsOfIndex
         && split[stop].StartsWith("damage", StringComparison.OrdinalIgnoreCase))
       {
-        defender = ParserUtil.JoinWords(split, 0, isIndex);
-        var damage = ParserUtil.ParseUInt(split, pointsOfIndex - 1);
+        defender = split.JoinWords(0, isIndex);
+        var damage = split.ParseUInt(pointsOfIndex - 1);
         attacker = Labels.Unattributed;
         defender = ParserUtil.UpdateDefender(defender, attacker);
         record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Ds, Labels.Ds);
@@ -679,16 +706,16 @@ namespace EQLogParser
       else if (forIndex > -1 && forIndex < pointsOfIndex && nonMeleeIndex < pointsOfIndex &&
                byIndex == (nonMeleeIndex - 1) && isIndex > -1 && split[isIndex + 1] == "hit")
       {
-        defender = ParserUtil.JoinWords(split, 0, isIndex);
+        defender = split.JoinWords(0, isIndex);
         attacker = AppSettings.IsEmuParsingEnabled ? ConfigUtil.PlayerName : Labels.Unk;
-        var damage = ParserUtil.ParseUInt(split, pointsOfIndex - 1);
+        var damage = split.ParseUInt(pointsOfIndex - 1);
         defender = ParserUtil.UpdateDefender(defender, attacker);
         record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Dd, Labels.Dd);
       }
       // falling damage? [Fri Mar 04 21:28:19 2022] You were hit by non-melee for 16 damage
       else if (isIndex > -1 && nonMeleeIndex == (isIndex + 3) && split[isIndex + 1] == "hit" && endDamage == stop && pointsOfIndex == -1)
       {
-        var damage = ParserUtil.ParseUInt(split, endDamage - 1);
+        var damage = split.ParseUInt(endDamage - 1);
         attacker = Labels.Unk;
 
         if (isYou)
@@ -697,7 +724,7 @@ namespace EQLogParser
         }
         else
         {
-          defender = ParserUtil.JoinWords(split, 0, isIndex);
+          defender = split.JoinWords(0, isIndex);
         }
 
         defender = ParserUtil.UpdateDefender(defender, attacker);
@@ -709,13 +736,13 @@ namespace EQLogParser
         && split[absorbsIndex + 5] == "of" && split[stop - 1].EndsWith("'s", StringComparison.OrdinalIgnoreCase))
       {
         // absorbsIndex accounts for magical skin
-        defender = ParserUtil.JoinWords(split, 0, absorbsIndex);
+        defender = split.JoinWords(0, absorbsIndex);
         if (defender.EndsWith("'s", StringComparison.OrdinalIgnoreCase))
         {
           defender = defender[..^2];
         }
 
-        attacker = ParserUtil.JoinWords(split, absorbsIndex + 6, stop - absorbsIndex - 6);
+        attacker = split.JoinWords(absorbsIndex + 6, stop - absorbsIndex - 6);
         attacker = attacker[..^2];
         attacker = ParserUtil.UpdateAttacker(attacker, ConfigUtil.PlayerName, subType);
         defender = ParserUtil.UpdateDefender(defender, attacker);
@@ -729,10 +756,10 @@ namespace EQLogParser
         string attackerOwner = null;
         if (emuPetIndex > -1)
         {
-          attacker = ParserUtil.JoinWords(split, 0, emuPetIndex);
+          attacker = split.JoinWords(0, emuPetIndex);
           if (split[emuPetIndex + 1].EndsWith(")", StringComparison.OrdinalIgnoreCase))
           {
-            var player = split[emuPetIndex + 1][..^1];
+            var player = split.StringAt(emuPetIndex + 1)[..^1];
             PlayerRegistry.Instance.AddVerifiedPlayer(player, lineData.BeginTime);
             PlayerRegistry.Instance.AddPetToPlayer(attacker, player);
             attackerOwner = player;
@@ -740,18 +767,18 @@ namespace EQLogParser
         }
         else
         {
-          attacker = ParserUtil.JoinWords(split, 0, hitTypeIndex);
+          attacker = split.JoinWords(0, hitTypeIndex);
         }
 
-        defender = ParserUtil.JoinWords(split, hitTypeIndex + 1, forIndex - hitTypeIndex - 1);
-        var damage = ParserUtil.ParseUInt(split, pointsOfIndex - 1);
+        defender = split.JoinWords(hitTypeIndex + 1, forIndex - hitTypeIndex - 1);
+        var damage = split.ParseUInt(pointsOfIndex - 1);
         attacker = ParserUtil.UpdateAttacker(attacker, ConfigUtil.PlayerName, Labels.Dd);
         defender = ParserUtil.UpdateDefender(defender, attacker);
 
         subType = Labels.Dd;
         var end = stop + 1;
 
-        if (split.Length > end && split[end].StartsWith('(') && ParserUtil.JoinWords(split, end, split.Length - stop - 1) is { } oldSpell && oldSpell.Length > 2)
+        if (split.Length > end && split[end].StartsWith('(') && split.JoinWords(end, split.Length - stop - 1) is { } oldSpell && oldSpell.Length > 2)
         {
           subType = oldSpell[1..^1];
           subType = TextUtils.CapitalizeFirst(subType);
@@ -763,7 +790,7 @@ namespace EQLogParser
         // handle old style crits for eqemu
         if (record is not null && _lastCrit is not null && string.Equals(_lastCrit.Attacker, record.Attacker, StringComparison.OrdinalIgnoreCase) &&
           (lineData.BeginTime - _lastCrit.BeginTime) <= 1 && _lastCrit.Value?.Length > 2 &&
-          _lastCrit.Value.AsSpan(1, _lastCrit.Value.Length - 2).SequenceEqual(split[pointsOfIndex - 1].AsSpan()))
+          _lastCrit.Value.AsSpan(1, _lastCrit.Value.Length - 2).SequenceEqual(split[pointsOfIndex - 1].Span))
         {
           record.ModifiersMask = LineModifiersParser.Crit;
           _lastCrit = null;
@@ -778,7 +805,7 @@ namespace EQLogParser
       // Old (eqemu) aura damage? [Fri Mar 04 21:28:19 2022] You are immolated by raging energy.  You have taken 179 points of damage.
       else if (AppSettings.IsEmuParsingEnabled && haveIndex > -1 && haveIndex == takenIndex && pointsOfIndex == takenIndex + 3 && split[haveIndex - 1] == "You")
       {
-        var damage = ParserUtil.ParseUInt(split, pointsOfIndex - 1);
+        var damage = split.ParseUInt(pointsOfIndex - 1);
         attacker = Labels.Unk;
         defender = ConfigUtil.PlayerName;
         record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Dot, Labels.Dot);
@@ -789,17 +816,17 @@ namespace EQLogParser
       {
         if (emuPetIndex > -1 && emuPetIndex < hasIndex)
         {
-          defender = ParserUtil.JoinWords(split, 0, emuPetIndex);
+          defender = split.JoinWords(0, emuPetIndex);
           if (split[emuPetIndex + 1].EndsWith(")", StringComparison.OrdinalIgnoreCase))
           {
-            var player = split[emuPetIndex + 1][..^1];
+            var player = split.StringAt(emuPetIndex + 1)[..^1];
             PlayerRegistry.Instance.AddVerifiedPlayer(player, lineData.BeginTime);
             PlayerRegistry.Instance.AddPetToPlayer(defender, player);
           }
         }
         else
         {
-          defender = ParserUtil.JoinWords(split, 0, hasIndex);
+          defender = split.JoinWords(0, hasIndex);
         }
 
         defender = ParserUtil.UpdateDefender(defender, Labels.Unk);
@@ -809,10 +836,10 @@ namespace EQLogParser
       // [Thu Jan 23 21:37:44 2025] Arilyn lands a Crippling Blow!(244)
       else if (AppSettings.IsEmuParsingEnabled && oldCritIndex > -1 && (crippleDamageFix > -1 || (split.Length > stop + 1 && split[stop + 1].Length > 2)))
       {
-        var damage = crippleDamageFix != -1 ? (uint)crippleDamageFix : TextUtils.ParseUInt(split[stop + 1].AsSpan(1, split[stop + 1].Length - 2));
+        var damage = crippleDamageFix != -1 ? (uint)crippleDamageFix : TextUtils.ParseUInt(split[stop + 1].Span.Slice(1, split[stop + 1].Length - 2));
         if (damage != uint.MaxValue)
         {
-          attacker = ParserUtil.JoinWords(split, 0, oldCritIndex);
+          attacker = split.JoinWords(0, oldCritIndex);
           attacker = ParserUtil.UpdateAttacker(attacker, ConfigUtil.PlayerName, Labels.Unk);
 
           var damageRecord = CreateDamageRecord(lineData, split, stop, attacker, Labels.Unk, damage, Labels.Melee, "Hits");
@@ -874,11 +901,11 @@ namespace EQLogParser
         if (!string.IsNullOrEmpty(label))
         {
           var hitTypeMod = hitTypeAdd > 0 ? 1 : 0;
-          defender = ParserUtil.JoinWords(split, hitTypeIndex + hitTypeMod + 1, butIndex - hitTypeIndex - hitTypeMod - 1);
+          defender = split.JoinWords(hitTypeIndex + hitTypeMod + 1, butIndex - hitTypeIndex - hitTypeMod - 1);
           if (!string.IsNullOrEmpty(defender) && defender[^1] == ',')
           {
             defender = defender[..^1];
-            attacker = ParserUtil.JoinWords(split, 0, tryIndex);
+            attacker = split.JoinWords(0, tryIndex);
             subType = TextUtils.CapitalizeFirst(subType);
             attacker = ParserUtil.UpdateAttacker(attacker, ConfigUtil.PlayerName, subType);
             defender = ParserUtil.UpdateDefender(defender, attacker);
@@ -890,9 +917,9 @@ namespace EQLogParser
       // New slain message for npcs
       else if (!checkLineType && slainIndex > -1 && byIndex == (slainIndex + 1) && isIndex > 0 && stop > (slainIndex + 1) && split[isIndex] == "was")
       {
-        var killer = ParserUtil.JoinWords(split, byIndex + 1, stop - byIndex);
+        var killer = split.JoinWords(byIndex + 1, stop - byIndex);
         killer = killer.Length > 1 && killer[^1] == '!' ? killer[..^1] : killer;
-        var slain = ParserUtil.JoinWords(split, 0, isIndex);
+        var slain = split.JoinWords(0, isIndex);
         UpdateSlain(slain, killer, lineData);
         CheckOwner(slain, out _);
         CheckOwner(killer, out _);
@@ -901,9 +928,9 @@ namespace EQLogParser
       // Older slain message for npcs
       else if (!checkLineType && slainIndex > -1 && byIndex == (slainIndex + 1) && hasIndex > 0 && stop > (slainIndex + 1) && split[hasIndex + 1] == "been")
       {
-        var killer = ParserUtil.JoinWords(split, byIndex + 1, stop - byIndex);
+        var killer = split.JoinWords(byIndex + 1, stop - byIndex);
         killer = killer.Length > 1 && killer[^1] == '!' ? killer[..^1] : killer;
-        var slain = ParserUtil.JoinWords(split, 0, hasIndex);
+        var slain = split.JoinWords(0, hasIndex);
         UpdateSlain(slain, killer, lineData);
         CheckOwner(slain, out _);
         CheckOwner(killer, out _);
@@ -911,7 +938,7 @@ namespace EQLogParser
       // [Mon Apr 19 02:22:09 2021] You have been slain by an armed flyer!
       else if (!checkLineType && stop > 4 && slainIndex == 3 && byIndex == 4 && isYou && split[1] == "have" && split[2] == "been")
       {
-        var killer = ParserUtil.JoinWords(split, 5, stop - 4);
+        var killer = split.JoinWords(5, stop - 4);
         killer = killer.Length > 1 && killer[^1] == '!' ? killer[..^1] : killer;
         var slain = ConfigUtil.PlayerName;
         UpdateSlain(slain, killer, lineData);
@@ -920,7 +947,7 @@ namespace EQLogParser
       else if (!checkLineType && slainIndex == 2 && isYou && split[1] == "have")
       {
         var killer = ConfigUtil.PlayerName;
-        var slain = ParserUtil.JoinWords(split, 3, stop - 2);
+        var slain = split.JoinWords(3, stop - 2);
         slain = slain.Length > 1 && slain[^1] == '!' ? slain[..^1] : slain;
         UpdateSlain(slain, killer, lineData);
       }
@@ -947,7 +974,7 @@ namespace EQLogParser
             {
               Player = StringCache.GetOrAdd(ConfigUtil.PlayerName),
               Success = false,
-              Npc = StringCache.GetOrAdd(TextUtils.ParseSpellOrNpc(split, 5))
+              Npc = StringCache.GetOrAdd(ParseSpellOrNpc(split, 5))
             };
             EventsNewTaunt?.Invoke(new TauntEvent { BeginTime = lineData.BeginTime, Record = taunt });
           }
@@ -957,7 +984,7 @@ namespace EQLogParser
           // starts with beast warder or single name
           var i = (split[1] == "warder" && split[0].EndsWith("`s", StringComparison.OrdinalIgnoreCase)) ? 2 : 1;
 
-          var name = (i == 2) ? split[0] + " " + split[1] : split[0];
+          var name = i == 2 ? split.StringAt(0) + " " + split.StringAt(1) : split.StringAt(0);
           if (split[i] == "has" && split[i + 1] == "captured" && ParseNpcName(split, 3 + i, out var npc))
           {
             var taunt = new TauntRecord { Player = StringCache.GetOrAdd(name), Success = true, Npc = StringCache.GetOrAdd(npc) };
@@ -969,10 +996,10 @@ namespace EQLogParser
           // starts with beast warder or single name
           var i = (split[1] == "warder" && split[0].EndsWith("`s", StringComparison.OrdinalIgnoreCase)) ? 2 : 1;
 
-          var name = (i == 2) ? split[0] + " " + split[1] : split[0];
+          var name = i == 2 ? split.StringAt(0) + " " + split.StringAt(1) : split.StringAt(0);
           if (failedIndex == i && split[i + 1] == "to" && split[i + 2] == "taunt")
           {
-            var taunt = new TauntRecord { Player = StringCache.GetOrAdd(name), Success = false, Npc = StringCache.GetOrAdd(TextUtils.ParseSpellOrNpc(split, 3 + i)) };
+            var taunt = new TauntRecord { Player = StringCache.GetOrAdd(name), Success = false, Npc = StringCache.GetOrAdd(ParseSpellOrNpc(split, 3 + i)) };
             EventsNewTaunt?.Invoke(new TauntEvent { BeginTime = lineData.BeginTime, Record = taunt });
           }
           else if (split.Length > 10 && split[^1] == "taunt." && split[^2] == "improved" &&
@@ -984,8 +1011,8 @@ namespace EQLogParser
               var playerIndex = j + 4;
               if (split[j] == "is" && split[j + 1] == "focused" && split[j + 2] == "on" && split[j + 3] == "attacking" && playerIndex < last)
               {
-                var npc = ParserUtil.JoinWords(split, 0, j);
-                var taunter = ParserUtil.JoinWords(split, playerIndex, last - playerIndex);
+                var npc = split.JoinWords(0, j);
+                var taunter = split.JoinWords(playerIndex, last - playerIndex);
                 var taunt = new TauntRecord { Player = StringCache.GetOrAdd(taunter), Success = true, IsImproved = true, Npc = StringCache.GetOrAdd(npc) };
                 EventsNewTaunt?.Invoke(new TauntEvent { BeginTime = lineData.BeginTime, Record = taunt });
               }
@@ -1073,13 +1100,19 @@ namespace EQLogParser
       return record;
     }
 
-    private static bool ParseNpcName(string[] parts, int length, out string output)
+    /*
+     * Mirror of TextUtils.ParseSpellOrNpc over word views: join from index to end of line, trim the trailing '.'.
+     * Same contract as the string[] version Cast still uses; the record owns one materialized name either way.
+     */
+    private static string ParseSpellOrNpc(LineWords split, int index) => split.JoinRaw(index, split.Length - index).Trim('.');
+
+    private static bool ParseNpcName(LineWords parts, int length, out string output)
     {
       output = null;
-      var npc = string.Join(" ", parts, length - 1, parts.Length - length);
-      if (!string.IsNullOrEmpty(npc) && npc.Split("'s") is { Length: 2 } split)
+      var npc = parts.JoinRaw(length - 1, parts.Length - length);
+      if (!string.IsNullOrEmpty(npc) && npc.Split("'s") is { Length: 2 } halves)
       {
-        output = split[0];
+        output = halves[0];
         return true;
       }
 
@@ -1117,7 +1150,7 @@ namespace EQLogParser
       }
     }
 
-    private static DamageRecord CreateDamageRecord(LineData lineData, string[] split, int stop, string attacker, string defender,
+    private static DamageRecord CreateDamageRecord(LineData lineData, LineWords split, int stop, string attacker, string defender,
       uint damage, string type, string subType, bool attackerIsSpell = false)
     {
       DamageRecord record = null;
@@ -1129,7 +1162,7 @@ namespace EQLogParser
         if (split.Length > stop + 1)
         {
           // improve this later so maybe the string doesn't have to be re-joined
-          var modifiers = ParserUtil.JoinWords(split, stop + 1, split.Length - stop - 1);
+          var modifiers = split.JoinWords(stop + 1, split.Length - stop - 1);
           modifiersMask = LineModifiersParser.ParseDamage(attacker, modifiers[1..^1], currentTime, !attackerIsSpell);
         }
 
