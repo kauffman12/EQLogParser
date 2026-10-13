@@ -13,14 +13,19 @@ namespace EQLogParser
   // verification and opened one on a taunt; the fact queues keep the same arrival order so any fold
   // sees exactly what the parse saw.
   //
-  // Thread model: parser events are raised by the LogProcessor consumer task on a single thread,
-  // so appends need no locking (same contract as DamageFactTable).
+  // Thread model: a capture taps ONE ParseLane — the stream whose lines become its rows. Parser events are
+  // raised on the lane its LogProcessor consumer bound, so a capture subscribed to a lane sees exactly that
+  // stream's facts and appends need no locking (same contract as DamageFactTable). With no lane named the tap
+  // sits on ParseLane.Main, which is the single stream this app has always had. PlayerRegistry events are the
+  // deliberate exception: identity memory is process-wide, so a verification from ANY stream reaches every
+  // subscribed capture — a sharded load merges identity rows with that duplication in mind.
   internal sealed class CombatCapture
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
     private const string OwnerToken = "Owner:";
 
+    private readonly ParseLane _lane;
     private readonly IFactTable _facts;
 
     /*
@@ -41,10 +46,11 @@ namespace EQLogParser
     private long _lastSeenTs = -1;
     private long _firstSeenTs = -1;
 
-    public CombatCapture(IFactTable facts, IHealFactTable heals = null)
+    public CombatCapture(IFactTable facts, IHealFactTable heals = null, ParseLane lane = null)
     {
       _facts = facts ?? throw new ArgumentNullException(nameof(facts));
       _heals = heals;
+      _lane = lane ?? ParseLane.Main;
 
       // One capture, one tally of the fact-packing guards (FactTime's clamp counter, HealFact's mask/label counters). They
       // are process statics because a row is a struct with no session to hang them on, and a fresh capture is the point
@@ -79,21 +85,21 @@ namespace EQLogParser
 
     public void Start()
     {
-      DamageLineParser.EventsDamageProcessed += HandleDamage;
-      DamageLineParser.EventsNewDeath += HandleDeath;
-      DamageLineParser.EventsNewTaunt += HandleTaunt;
+      _lane.DamageProcessed += HandleDamage;
+      _lane.NewDeath += HandleDeath;
+      _lane.NewTaunt += HandleTaunt;
 
       // Fires for every heal the parser stored, immediately after RecordsStore.Add — so "heal facts" and
       // "what the healing board reads" are the same population, which is what makes the fidelity ledger
       // (HealFactCaptureTest) an equality test rather than an approximation.
-      if (_heals is not null) HealingLineParser.EventsHealProcessed += HandleHeal;
+      if (_heals is not null) _lane.HealProcessed += HandleHeal;
 
-      PreLineParser.EventsEvidence += OnPreLineEvidence;
-      MiscLineParser.EventsWhoRoster += OnWhoRoster;
-      MiscLineParser.EventsLooterIdentified += OnLooter;
-      MiscLineParser.EventsCompanionCalled += OnCompanionCalled;
-      MiscLineParser.EventsCharm += OnCharm;
-      CastLineParser.EventsCastEvidence += OnCast;
+      _lane.Evidence += OnPreLineEvidence;
+      _lane.WhoRoster += OnWhoRoster;
+      _lane.LooterIdentified += OnLooter;
+      _lane.CompanionCalled += OnCompanionCalled;
+      _lane.Charm += OnCharm;
+      _lane.CastEvidence += OnCast;
 
       var registry = PlayerRegistry.Instance;
       registry.EventsNewVerifiedPet += OnVerifiedPet;
@@ -104,18 +110,18 @@ namespace EQLogParser
 
     public void Stop()
     {
-      DamageLineParser.EventsDamageProcessed -= HandleDamage;
-      DamageLineParser.EventsNewDeath -= HandleDeath;
-      DamageLineParser.EventsNewTaunt -= HandleTaunt;
+      _lane.DamageProcessed -= HandleDamage;
+      _lane.NewDeath -= HandleDeath;
+      _lane.NewTaunt -= HandleTaunt;
 
-      if (_heals is not null) HealingLineParser.EventsHealProcessed -= HandleHeal;
+      if (_heals is not null) _lane.HealProcessed -= HandleHeal;
 
-      PreLineParser.EventsEvidence -= OnPreLineEvidence;
-      MiscLineParser.EventsWhoRoster -= OnWhoRoster;
-      MiscLineParser.EventsLooterIdentified -= OnLooter;
-      MiscLineParser.EventsCompanionCalled -= OnCompanionCalled;
-      MiscLineParser.EventsCharm -= OnCharm;
-      CastLineParser.EventsCastEvidence -= OnCast;
+      _lane.Evidence -= OnPreLineEvidence;
+      _lane.WhoRoster -= OnWhoRoster;
+      _lane.LooterIdentified -= OnLooter;
+      _lane.CompanionCalled -= OnCompanionCalled;
+      _lane.Charm -= OnCharm;
+      _lane.CastEvidence -= OnCast;
 
       var registry = PlayerRegistry.Instance;
       registry.EventsNewVerifiedPet -= OnVerifiedPet;

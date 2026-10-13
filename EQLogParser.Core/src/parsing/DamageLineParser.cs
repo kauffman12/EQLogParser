@@ -7,13 +7,51 @@ namespace EQLogParser
 {
   internal static class DamageLineParser
   {
-    public static event Action<DamageProcessedEvent> EventsDamageProcessed;
-    public static event Action<TauntEvent> EventsNewTaunt;
-    public static event Action<DeathEvent> EventsNewDeath;
+    /*
+     * The raises land on the lane parsing this line (ParseLane); these static events are forwarders onto the Main
+     * lane, which is where every long-standing session subscriber (FctManager, DamageRibbon, the test suite) still
+     * lands. A capture for another stream subscribes to ITS ParseLane field directly, never through here.
+     */
+    public static event Action<DamageProcessedEvent> EventsDamageProcessed
+    {
+      add => ParseLane.Main.DamageProcessed += value;
+      remove => ParseLane.Main.DamageProcessed -= value;
+    }
+
+    public static event Action<TauntEvent> EventsNewTaunt
+    {
+      add => ParseLane.Main.NewTaunt += value;
+      remove => ParseLane.Main.NewTaunt -= value;
+    }
+
+    public static event Action<DeathEvent> EventsNewDeath
+    {
+      add => ParseLane.Main.NewDeath += value;
+      remove => ParseLane.Main.NewDeath -= value;
+    }
+
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
-    private static readonly Dictionary<string, string> SpellTypeCache = [];
-    private static string _previousAction;
-    private static DelayRecord _delayCritRecord;
+
+    // Carries of the lane parsing this line, not of the process: a second ingest stream keeps its own crit pair,
+    // previous sentence and spell-type memo (docs/DesignNotes → the sharded-load chapter).
+    private static Dictionary<string, string> SpellTypeCache => ParseLane.Current.SpellTypeCache;
+    private static string PreviousAction
+    {
+      get => ParseLane.Current.PreviousAction;
+      set => ParseLane.Current.PreviousAction = value;
+    }
+
+    private static DelayRecord DelayCritRecord
+    {
+      get => ParseLane.Current.DelayCritRecord;
+      set => ParseLane.Current.DelayCritRecord = value;
+    }
+
+    private static OldCritData LastCrit
+    {
+      get => ParseLane.Current.LastCrit;
+      set => ParseLane.Current.LastCrit = value;
+    }
 
     private static readonly List<string> ChestTypes =
     [
@@ -35,17 +73,16 @@ namespace EQLogParser
 
     private static readonly string[] SpecialCodeKeys = ["Mana Burn", "Harm Touch", "Life Burn"];
 
-    private static OldCritData _lastCrit;
-
-    // Resets the process-global parser state (crit carryover dials). For headless/test use: a fresh
+    // Resets the parse carries (crit carryover dials) of the calling thread's lane — the Main lane, since
+    // every caller is a test or a headless run, never a bound consumer thread. For headless/test use: a fresh
     // LogProcessor run must not inherit crit carryover from an earlier run in the same process. The app
-    // never calls this. (The slain queue this once cleared belonged to the legacy fight engine: deaths now
+    // never calls this. Shard lanes need no reset; they are discarded whole. (The slain queue this once cleared belonged to the legacy fight engine: deaths now
     // reach every consumer as EventsNewDeath facts, which is also what the projection's death queues eat.)
     internal static void ResetProcessState()
     {
-      _previousAction = null;
-      _delayCritRecord = null;
-      _lastCrit = null;
+      PreviousAction = null;
+      DelayCritRecord = null;
+      LastCrit = null;
     }
 
     public static bool Process(LineData lineData)
@@ -75,7 +112,7 @@ namespace EQLogParser
           }
         }
 
-        _previousAction = lineData.Action;
+        PreviousAction = lineData.Action;
       }
       catch (Exception e)
       {
@@ -338,7 +375,7 @@ namespace EQLogParser
             {
               attacker = split.JoinWords(0, i - 3);
               attacker = ParserUtil.UpdateAttacker(attacker, ConfigUtil.PlayerName, Labels.Dd);
-              _lastCrit = new OldCritData { Attacker = attacker, BeginTime = lineData.BeginTime, Value = split.StringAt(stop + 1) };
+              LastCrit = new OldCritData { Attacker = attacker, BeginTime = lineData.BeginTime, Value = split.StringAt(stop + 1) };
               return null;
             }
           }
@@ -372,7 +409,7 @@ namespace EQLogParser
             {
               attacker = split.JoinWords(0, i - 3);
               attacker = ParserUtil.UpdateAttacker(attacker, ConfigUtil.PlayerName, Labels.Unk);
-              _lastCrit = new OldCritData { Attacker = attacker, BeginTime = lineData.BeginTime };
+              LastCrit = new OldCritData { Attacker = attacker, BeginTime = lineData.BeginTime };
               return null;
             }
           }
@@ -511,11 +548,11 @@ namespace EQLogParser
         record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Melee, subType);
 
         // handle old style crits for eqemu
-        if (record is not null && _lastCrit is not null && string.Equals(_lastCrit.Attacker, record.Attacker, StringComparison.OrdinalIgnoreCase) &&
-          (lineData.BeginTime - _lastCrit.BeginTime) <= 1 && string.IsNullOrEmpty(_lastCrit.Value))
+        if (record is not null && LastCrit is not null && string.Equals(LastCrit.Attacker, record.Attacker, StringComparison.OrdinalIgnoreCase) &&
+          (lineData.BeginTime - LastCrit.BeginTime) <= 1 && string.IsNullOrEmpty(LastCrit.Value))
         {
           record.ModifiersMask = LineModifiersParser.Crit;
-          _lastCrit = null;
+          LastCrit = null;
         }
 
         // Berserker Frenzy: whoever performs the frenzy verb IS a berserker - 85,685 `X frenzies on Y`
@@ -788,12 +825,12 @@ namespace EQLogParser
         record.AttackerOwner = record.AttackerOwner ?? attackerOwner;
 
         // handle old style crits for eqemu
-        if (record is not null && _lastCrit is not null && string.Equals(_lastCrit.Attacker, record.Attacker, StringComparison.OrdinalIgnoreCase) &&
-          (lineData.BeginTime - _lastCrit.BeginTime) <= 1 && _lastCrit.Value?.Length > 2 &&
-          _lastCrit.Value.AsSpan(1, _lastCrit.Value.Length - 2).SequenceEqual(split[pointsOfIndex - 1].Span))
+        if (record is not null && LastCrit is not null && string.Equals(LastCrit.Attacker, record.Attacker, StringComparison.OrdinalIgnoreCase) &&
+          (lineData.BeginTime - LastCrit.BeginTime) <= 1 && LastCrit.Value?.Length > 2 &&
+          LastCrit.Value.AsSpan(1, LastCrit.Value.Length - 2).SequenceEqual(split[pointsOfIndex - 1].Span))
         {
           record.ModifiersMask = LineModifiersParser.Crit;
-          _lastCrit = null;
+          LastCrit = null;
         }
       }
       // Old (eqemu) [Fri Mar 04 21:28:19 2022] The Spellshield absorbed 132 of 162 points of damage
@@ -848,7 +885,7 @@ namespace EQLogParser
             damageRecord.ModifiersMask = LineModifiersParser.Crit;
           }
 
-          _delayCritRecord = new DelayRecord { Record = damageRecord, BeginTime = lineData.BeginTime };
+          DelayCritRecord = new DelayRecord { Record = damageRecord, BeginTime = lineData.BeginTime };
         }
       }
       // [Fri Mar 04 21:28:19 2022] A failed reclaimer tries to punch YOU, but YOUR magical skin absorbs the blow!
@@ -966,7 +1003,7 @@ namespace EQLogParser
           if (attentionIndex == (split.Length - 1) && split.Length > 3 && split[1] == "capture" && ParseNpcName(split, 3, out var npc))
           {
             var taunt = new TauntRecord { Player = StringCache.GetOrAdd(ConfigUtil.PlayerName), Success = true, Npc = StringCache.GetOrAdd(npc) };
-            EventsNewTaunt?.Invoke(new TauntEvent { BeginTime = lineData.BeginTime, Record = taunt });
+            ParseLane.Current.NewTaunt?.Invoke(new TauntEvent { BeginTime = lineData.BeginTime, Record = taunt });
           }
           else if (attentionIndex == (split.Length - 1) && failedIndex == 2 && split.Length > 6 && split[1] == "have" && split[3] == "to")
           {
@@ -976,7 +1013,7 @@ namespace EQLogParser
               Success = false,
               Npc = StringCache.GetOrAdd(ParserUtil.ParseSpellOrNpc(split, 5))
             };
-            EventsNewTaunt?.Invoke(new TauntEvent { BeginTime = lineData.BeginTime, Record = taunt });
+            ParseLane.Current.NewTaunt?.Invoke(new TauntEvent { BeginTime = lineData.BeginTime, Record = taunt });
           }
         }
         else if (attentionIndex > -1 && attentionIndex == (split.Length - 1))
@@ -988,7 +1025,7 @@ namespace EQLogParser
           if (split[i] == "has" && split[i + 1] == "captured" && ParseNpcName(split, 3 + i, out var npc))
           {
             var taunt = new TauntRecord { Player = StringCache.GetOrAdd(name), Success = true, Npc = StringCache.GetOrAdd(npc) };
-            EventsNewTaunt?.Invoke(new TauntEvent { BeginTime = lineData.BeginTime, Record = taunt });
+            ParseLane.Current.NewTaunt?.Invoke(new TauntEvent { BeginTime = lineData.BeginTime, Record = taunt });
           }
         }
         else if (split.Length > 4)
@@ -1000,7 +1037,7 @@ namespace EQLogParser
           if (failedIndex == i && split[i + 1] == "to" && split[i + 2] == "taunt")
           {
             var taunt = new TauntRecord { Player = StringCache.GetOrAdd(name), Success = false, Npc = StringCache.GetOrAdd(ParserUtil.ParseSpellOrNpc(split, 3 + i)) };
-            EventsNewTaunt?.Invoke(new TauntEvent { BeginTime = lineData.BeginTime, Record = taunt });
+            ParseLane.Current.NewTaunt?.Invoke(new TauntEvent { BeginTime = lineData.BeginTime, Record = taunt });
           }
           else if (split.Length > 10 && split[^1] == "taunt." && split[^2] == "improved" &&
             split[^3] == "an" && split[^4] == "to" && split[^5] == "due")
@@ -1014,7 +1051,7 @@ namespace EQLogParser
                 var npc = split.JoinWords(0, j);
                 var taunter = split.JoinWords(playerIndex, last - playerIndex);
                 var taunt = new TauntRecord { Player = StringCache.GetOrAdd(taunter), Success = true, IsImproved = true, Npc = StringCache.GetOrAdd(npc) };
-                EventsNewTaunt?.Invoke(new TauntEvent { BeginTime = lineData.BeginTime, Record = taunt });
+                ParseLane.Current.NewTaunt?.Invoke(new TauntEvent { BeginTime = lineData.BeginTime, Record = taunt });
               }
             }
           }
@@ -1023,14 +1060,14 @@ namespace EQLogParser
 
       if (record is not null)
       {
-        if (_delayCritRecord is not null && (lineData.BeginTime - _delayCritRecord.BeginTime) <= 1 &&
-          string.Equals(record.Attacker, _delayCritRecord.Record.Attacker, StringComparison.OrdinalIgnoreCase))
+        if (DelayCritRecord is not null && (lineData.BeginTime - DelayCritRecord.BeginTime) <= 1 &&
+          string.Equals(record.Attacker, DelayCritRecord.Record.Attacker, StringComparison.OrdinalIgnoreCase))
         {
-          record.ModifiersMask = _delayCritRecord.Record.ModifiersMask;
-          //_delayCritRecord.Record.Defender = record.Defender;
-          //_delayCritRecord.Record.SubType = record.SubType;
-          //EventsDamageProcessed?.Invoke(new DamageProcessedEvent { Record = _delayCritRecord.Record, BeginTime = _delayCritRecord.BeginTime });
-          _delayCritRecord = null;
+          record.ModifiersMask = DelayCritRecord.Record.ModifiersMask;
+          //DelayCritRecord.Record.Defender = record.Defender;
+          //DelayCritRecord.Record.SubType = record.SubType;
+          //EventsDamageProcessed?.Invoke(new DamageProcessedEvent { Record = DelayCritRecord.Record, BeginTime = DelayCritRecord.BeginTime });
+          DelayCritRecord = null;
         }
 
         /*
@@ -1071,7 +1108,7 @@ namespace EQLogParser
           if (!double.IsNaN(lineData.BeginTime))
           {
             // hoisted so the event object is not built per record when nothing is listening (FCT off)
-            var damageHandler = EventsDamageProcessed;
+            var damageHandler = ParseLane.Current.DamageProcessed;
             if (damageHandler is not null)
             {
               damageHandler(new DamageProcessedEvent { Record = record, BeginTime = lineData.BeginTime, IsMonitor = lineData.IsMonitor, Action = lineData.Action });
@@ -1133,13 +1170,13 @@ namespace EQLogParser
           slain = TextUtils.CapitalizeFirst(slain);
 
           var death = new DeathRecord { Killed = StringCache.GetOrAdd(slain), Killer = StringCache.GetOrAdd(killer), Message = StringCache.GetOrAdd(lineData.Action) };
-          if (_previousAction is not null)
+          if (PreviousAction is not null)
           {
-            death.Previous = _previousAction;
+            death.Previous = PreviousAction;
           }
 
           RecordsStore.Instance.Add(death, currentTime);
-          EventsNewDeath?.Invoke(new DeathEvent { Record = death, BeginTime = currentTime });
+          ParseLane.Current.NewDeath?.Invoke(new DeathEvent { Record = death, BeginTime = currentTime });
         }
       }
     }
@@ -1285,14 +1322,14 @@ namespace EQLogParser
       return ignore;
     }
 
-    private class OldCritData
+    internal class OldCritData
     {
       internal string Attacker { get; init; }
       internal double BeginTime { get; init; }
       internal string Value { get; init; }
     }
 
-    private class DelayRecord
+    internal class DelayRecord
     {
       internal DamageRecord Record { get; init; }
       internal double BeginTime { get; init; }

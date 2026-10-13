@@ -7,7 +7,13 @@ namespace EQLogParser
     // Classification evidence (D8): fires this parser's own recognitions with provenance. Purely additive -
     // no branch consumes or alters anything for this; CombatCapture is the only subscriber and the
     // legacy pipeline behaves exactly as before. Kind values are EvidenceFact.Ev* (parsing/derive).
-    internal static event Action<string, double, byte> EventsEvidence;
+    // Raised on the lane that parsed the line; this declaration is the Main-lane forwarder that session
+    // subscribers (CombatCapture for the one normal stream) attach to. See ParseLane.
+    internal static event Action<string, double, byte> EventsEvidence
+    {
+      add => ParseLane.Main.Evidence += value;
+      remove => ParseLane.Main.Evidence -= value;
+    }
 
     /*
      * The evidence wire every parser reports onto, so a recognition anywhere in the pipeline can be remembered
@@ -16,7 +22,7 @@ namespace EQLogParser
      */
     internal static void ReportEvidence(string name, double time, byte kind)
     {
-      if (!string.IsNullOrEmpty(name)) EventsEvidence?.Invoke(name, time, kind);
+      if (!string.IsNullOrEmpty(name)) ParseLane.Current.Evidence?.Invoke(name, time, kind);
     }
 
     // Process things that can easily identify a player
@@ -82,7 +88,7 @@ namespace EQLogParser
           {
             var target = action[19..];
             addVerifiedPlayer(target, lineData.BeginTime);
-            EventsEvidence?.Invoke(target.Trim(), lineData.BeginTime, EvidenceFact.EvTargetedPlayer);
+            ParseLane.Current.Evidence?.Invoke(target.Trim(), lineData.BeginTime, EvidenceFact.EvTargetedPlayer);
           }
           found = true; // ignore anything that starts with Targeted
         }
@@ -92,7 +98,7 @@ namespace EQLogParser
           {
             var test = action[..^17];
             addVerifiedPlayer(test, lineData.BeginTime);
-            EventsEvidence?.Invoke(test, lineData.BeginTime, EvidenceFact.EvJoinedRaid);
+            ParseLane.Current.Evidence?.Invoke(test, lineData.BeginTime, EvidenceFact.EvJoinedRaid);
             found = true;
           }
         }
@@ -102,12 +108,12 @@ namespace EQLogParser
           if (isPossiblePlayerName(test, -1))
           {
             addVerifiedPlayer(test, lineData.BeginTime);
-            EventsEvidence?.Invoke(test, lineData.BeginTime, EvidenceFact.EvJoinedGroup);
+            ParseLane.Current.Evidence?.Invoke(test, lineData.BeginTime, EvidenceFact.EvJoinedGroup);
           }
           else
           {
             addMerc(test);
-            EventsEvidence?.Invoke(test, lineData.BeginTime, EvidenceFact.EvMercJoinedGroup);
+            ParseLane.Current.Evidence?.Invoke(test, lineData.BeginTime, EvidenceFact.EvMercJoinedGroup);
           }
 
           found = true;
@@ -118,7 +124,7 @@ namespace EQLogParser
           if (isPossiblePlayerName(test, -1))
           {
             addVerifiedPlayer(test, lineData.BeginTime);
-            EventsEvidence?.Invoke(test, lineData.BeginTime, EvidenceFact.EvLeftRaid);
+            ParseLane.Current.Evidence?.Invoke(test, lineData.BeginTime, EvidenceFact.EvLeftRaid);
             found = true;
           }
         }
@@ -128,7 +134,7 @@ namespace EQLogParser
           if (isPossiblePlayerName(test, -1))
           {
             addVerifiedPlayer(test, lineData.BeginTime);
-            EventsEvidence?.Invoke(test, lineData.BeginTime, EvidenceFact.EvLeftGroup);
+            ParseLane.Current.Evidence?.Invoke(test, lineData.BeginTime, EvidenceFact.EvLeftGroup);
           }
           else
           {
@@ -143,14 +149,14 @@ namespace EQLogParser
           if (isPossiblePlayerName(test, -1))
           {
             addVerifiedPlayer(test, lineData.BeginTime);
-            EventsEvidence?.Invoke(test, lineData.BeginTime, EvidenceFact.EvRaidLeader);
+            ParseLane.Current.Evidence?.Invoke(test, lineData.BeginTime, EvidenceFact.EvRaidLeader);
             found = true;
           }
         }
         else if (TryGetConsumer(action, out var consumer))
         {
           addVerifiedPlayer(consumer, lineData.BeginTime);
-          EventsEvidence?.Invoke(consumer, lineData.BeginTime, EvidenceFact.EvSelfFeeds);
+          ParseLane.Current.Evidence?.Invoke(consumer, lineData.BeginTime, EvidenceFact.EvSelfFeeds);
           found = true;
         }
       }

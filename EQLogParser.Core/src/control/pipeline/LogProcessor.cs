@@ -35,11 +35,20 @@ namespace EQLogParser
      */
     private readonly Action<string> _addMerc;
 
-    internal LogProcessor(string fileName, IChatSink chatSink, ITriggerHook triggerHook)
+    /*
+     * The stream this processor feeds. Every line it consumes is parsed ON the consumer task, and the consumer
+     * binds this lane as its thread's lane for the whole run — so raises land on this processor's capture and
+     * nowhere else, and the parsers' carries (crit pairing, death's previous sentence) are per stream. Null
+     * means ParseLane.Main, which is what the app's single reader has always been.
+     */
+    private readonly ParseLane _lane;
+
+    internal LogProcessor(string fileName, IChatSink chatSink, ITriggerHook triggerHook, ParseLane lane = null)
     {
       _fileName = fileName ?? string.Empty;
       _chatSink = chatSink ?? throw new ArgumentNullException(nameof(chatSink));
       _triggerHook = triggerHook ?? throw new ArgumentNullException(nameof(triggerHook));
+      _lane = lane ?? ParseLane.Main;
       _addMerc = PlayerRegistry.Instance.AddMerc;
     }
 
@@ -56,6 +65,9 @@ namespace EQLogParser
 
       _readTask = Task.Run(() =>
       {
+        // Bind for the WHOLE run, release in the finally: this is a pooled thread, and a lane left bound after
+        // the stream ends would follow the thread into whatever task runs on it next (ParseLane).
+        ParseLane.BindCurrentThread(_lane);
         try
         {
           foreach (var data in collection.GetConsumingEnumerable())
@@ -70,6 +82,7 @@ namespace EQLogParser
         }
         finally
         {
+          ParseLane.BindCurrentThread(null);
           collection?.Dispose();
         }
       });

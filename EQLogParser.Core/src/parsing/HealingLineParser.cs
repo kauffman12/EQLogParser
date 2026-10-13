@@ -10,8 +10,13 @@ namespace EQLogParser
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
     /* Mirrors DamageLineParser.EventsDamageProcessed so the FCT feed (and anything else) can
-     * consume heals without re-parsing. Fires on the log reader thread, replay and live alike. */
-    public static event Action<HealProcessedEvent> EventsHealProcessed;
+     * consume heals without re-parsing. Fires on the log reader thread, replay and live alike — on the lane that
+     * parsed the line; this static event is the forwarder onto the Main lane every session subscriber uses. */
+    public static event Action<HealProcessedEvent> EventsHealProcessed
+    {
+      add => ParseLane.Main.HealProcessed += value;
+      remove => ParseLane.Main.HealProcessed -= value;
+    }
 
     private HealingLineParser()
     {
@@ -48,7 +53,7 @@ namespace EQLogParser
              */
 
             // hoisted so the event object is not built per heal when nothing is listening (FCT off)
-            var healHandler = EventsHealProcessed;
+            var healHandler = ParseLane.Current.HealProcessed;
             if (healHandler is not null)
             {
               healHandler(new HealProcessedEvent { Record = record, BeginTime = lineData.BeginTime, IsMonitor = lineData.IsMonitor });

@@ -22,12 +22,29 @@ namespace EQLogParser
      * Raised for every stored "X resisted Y's spell" record, alongside the store write. Hoisted-delegate null
      * check like the damage parser's, so a build with no subscriber pays one branch, not an allocation; FCT is
      * the only consumer and it gates itself on Enabled.
+     *
+     * These are forwarders onto the MAIN lane: the raises land on whichever lane parsed the line (ParseLane), and
+     * every session-long subscriber belongs to the one stream the app has always had. A second ingest stream
+     * subscribes to its own ParseLane, so its lines never fan into these.
      */
-    public static event Action<ResistEvent> EventsResistProcessed;
-    public static event Action<MezBreakRecord> EventsNewMezBreak;
+    public static event Action<ResistEvent> EventsResistProcessed
+    {
+      add => ParseLane.Main.Resist += value;
+      remove => ParseLane.Main.Resist -= value;
+    }
+
+    public static event Action<MezBreakRecord> EventsNewMezBreak
+    {
+      add => ParseLane.Main.MezBreak += value;
+      remove => ParseLane.Main.MezBreak -= value;
+    }
 
     // Mirror evidence (D8): fire-only recognitions, no branch consumes anything for them.
-    internal static event Action<string, string, double> EventsWhoRoster;   // name, class, time
+    internal static event Action<string, string, double> EventsWhoRoster   // name, class, time
+    {
+      add => ParseLane.Main.WhoRoster += value;
+      remove => ParseLane.Main.WhoRoster -= value;
+    }
 
     /*
      * "A person loots." Loot, win-roll and corruption lines used to end in `AddVerifiedPlayer`, which filled a store the
@@ -35,12 +52,37 @@ namespace EQLogParser
      * timestamp (R23-loot). One publisher, one verdict chain — the store is not a second authority on who is a player
      * (docs/DesignNotes.md → "The checks that decide who is a player").
      */
-    internal static event Action<string, double> EventsLooterIdentified;    // name, time
-    internal static event Action<string, double> EventsCompanionCalled;     // the SUMMONER whose companion arrived, time
-    internal static event Action<string, double, bool, string> EventsCharm;  // name, time, is-start, owner
+    internal static event Action<string, double> EventsLooterIdentified    // name, time
+    {
+      add => ParseLane.Main.LooterIdentified += value;
+      remove => ParseLane.Main.LooterIdentified -= value;
+    }
 
-    private static string _randomPlayer;
-    private static long _lastLine = -1;
+    internal static event Action<string, double> EventsCompanionCalled     // the SUMMONER whose companion arrived, time
+    {
+      add => ParseLane.Main.CompanionCalled += value;
+      remove => ParseLane.Main.CompanionCalled -= value;
+    }
+
+    internal static event Action<string, double, bool, string> EventsCharm  // name, time, is-start, owner
+    {
+      add => ParseLane.Main.Charm += value;
+      remove => ParseLane.Main.Charm -= value;
+    }
+
+    // Carries of the lane parsing this line: "the roller named by the previous line, and that line's number" —
+    // stream state, not process state (a second ingest stream must not inherit it).
+    private static string RandomPlayer
+    {
+      get => ParseLane.Current.RandomPlayer;
+      set => ParseLane.Current.RandomPlayer = value;
+    }
+
+    private static long LastRolledLine
+    {
+      get => ParseLane.Current.LastRolledLine;
+      set => ParseLane.Current.LastRolledLine = value;
+    }
 
     // Companion and charm line shapes (catalog R5/R9 evidence). Recognition only: the legacy
     // pipeline never consumed these and still does not. Charm NEG lines ("This NPC cannot be
@@ -66,17 +108,17 @@ namespace EQLogParser
       if (action.EndsWith(CompanionCalledSuffix, StringComparison.OrdinalIgnoreCase))
       {
         var owner = action[..^CompanionCalledSuffix.Length].Trim();
-        if (owner.Length > 0) EventsCompanionCalled?.Invoke(owner, beginTime);
+        if (owner.Length > 0) ParseLane.Current.CompanionCalled?.Invoke(owner, beginTime);
       }
       else if (action.EndsWith(CharmedSuffix, StringComparison.OrdinalIgnoreCase))
       {
         var npc = action[..^CharmedSuffix.Length].Trim();
-        if (npc.Length > 0) EventsCharm?.Invoke(npc, beginTime, true, null);
+        if (npc.Length > 0) ParseLane.Current.Charm?.Invoke(npc, beginTime, true, null);
       }
       else if (action.EndsWith(Charmed2Suffix, StringComparison.OrdinalIgnoreCase))
       {
         var npc = action[..^Charmed2Suffix.Length].Trim();
-        if (npc.Length > 0) EventsCharm?.Invoke(npc, beginTime, true, null);
+        if (npc.Length > 0) ParseLane.Current.Charm?.Invoke(npc, beginTime, true, null);
       }
       else
       {
@@ -91,7 +133,7 @@ namespace EQLogParser
           // such lines in three captures are roots, shackle dots and raid invis upkeep), so the spell
           // name decides and everything else is dropped here rather than forwarded as a charm end.
           var spell = SplitCasterAndSpell(action[..marker], out var owner);
-          if (CharmSpells.IsCharmSpellName(spell)) EventsCharm?.Invoke(npc, beginTime, false, owner);
+          if (CharmSpells.IsCharmSpellName(spell)) ParseLane.Current.Charm?.Invoke(npc, beginTime, false, owner);
         }
       }
     }
@@ -184,7 +226,7 @@ namespace EQLogParser
                (split[0].StartsWith('[') && ParseWho(split, 0, out who, out whoClass, out groupId))))
             {
               PlayerRegistry.Instance.AddVerifiedPlayer(who, lineData.BeginTime);
-              EventsWhoRoster?.Invoke(who, whoClass, lineData.BeginTime);
+              ParseLane.Current.WhoRoster?.Invoke(who, whoClass, lineData.BeginTime);
               if (EQDataStore.Instance.IsValidClassName(whoClass))
               {
                 PlayerRegistry.Instance.SetActivePlayerClass(who, whoClass, 1, lineData.BeginTime);
@@ -227,21 +269,21 @@ namespace EQLogParser
                   else if (split.Length == 7)
                   {
                     oldRandom = true;
-                    _randomPlayer = player;
-                    _lastLine = lineData.LineNumber;
+                    RandomPlayer = player;
+                    LastRolledLine = lineData.LineNumber;
                   }
                 }
               }
               else if (word == "**It")
               {
-                if (!string.IsNullOrEmpty(_randomPlayer) && (_lastLine + 1) == lineData.LineNumber && split.Length == 18 && split[5] == "number" &&
+                if (!string.IsNullOrEmpty(RandomPlayer) && (LastRolledLine + 1) == lineData.LineNumber && split.Length == 18 && split[5] == "number" &&
                     split[9].Length > 1 && split[17].Length > 1)
                 {
                   var to = split.StringAt(9)[..^1];
                   var rolled = split.StringAt(17)[..^1];
                   if (int.TryParse(split[7].Span, out var fromNumber) && int.TryParse(to, out var toNumber) && int.TryParse(rolled, out var rolledNumber))
                   {
-                    var record = new RandomRecord { Player = _randomPlayer, Rolled = rolledNumber, To = toNumber, From = fromNumber };
+                    var record = new RandomRecord { Player = RandomPlayer, Rolled = rolledNumber, To = toNumber, From = fromNumber };
                     RecordsStore.Instance.Add(record, lineData.BeginTime);
                     handled = true;
                   }
@@ -300,7 +342,7 @@ namespace EQLogParser
                     var record = new ResistRecord { Attacker = StringCache.GetOrAdd(attacker), Defender = StringCache.GetOrAdd(npc), Spell = StringCache.GetOrAdd(spell) };
                     RecordsStore.Instance.Add(record, lineData.BeginTime);
 
-                    var resistHandler = EventsResistProcessed;
+                    var resistHandler = ParseLane.Current.Resist;
                     if (resistHandler is not null)
                     {
                       resistHandler(new ResistEvent { Record = record, BeginTime = lineData.BeginTime, IsMonitor = lineData.IsMonitor });
@@ -348,7 +390,7 @@ namespace EQLogParser
                 {
                   looter = split.StringAt(0).Equals("you", StringComparison.OrdinalIgnoreCase) ? ConfigUtil.PlayerName : split.StringAt(0);
                   var item = split.JoinWords(itemsIndex + 1, i - itemsIndex - 1);
-                  EventsLooterIdentified?.Invoke(looter, lineData.BeginTime);
+                  ParseLane.Current.LooterIdentified?.Invoke(looter, lineData.BeginTime);
                   var record = new LootRecord { Item = StringCache.GetOrAdd(item), Player = StringCache.GetOrAdd(looter), Quantity = 0, IsCurrency = false, Npc = StringCache.GetOrAdd("Won Roll (Not Looted)") };
                   RecordsStore.Instance.Add(record, lineData.BeginTime);
                   handled = true;
@@ -377,7 +419,7 @@ namespace EQLogParser
                   breaker = TextUtils.CapitalizeFirst(breaker);
                   var mezBreak = new MezBreakRecord { Breaker = StringCache.GetOrAdd(breaker), Awakened = StringCache.GetOrAdd(awakened) };
                   RecordsStore.Instance.Add(mezBreak, lineData.BeginTime);
-                  EventsNewMezBreak?.Invoke(mezBreak);
+                  ParseLane.Current.MezBreak?.Invoke(mezBreak);
                   handled = true;
                 }
                 else if (isIndex > 0 && StruckByTypes.ContainsKey(split.StringAt(i - 1)))
@@ -412,7 +454,7 @@ namespace EQLogParser
 
                   if (ParseCurrency(split, lootedIndex + 1, i, out var item, out var count))
                   {
-                    EventsLooterIdentified?.Invoke(name, lineData.BeginTime);
+                    ParseLane.Current.LooterIdentified?.Invoke(name, lineData.BeginTime);
                     var record = new LootRecord { Item = StringCache.GetOrAdd(item), Player = StringCache.GetOrAdd(name), Quantity = count, IsCurrency = true };
                     RecordsStore.Instance.Add(record, lineData.BeginTime);
                     handled = true;
@@ -428,7 +470,7 @@ namespace EQLogParser
 
                   if (count > 0 && count != ushort.MaxValue)
                   {
-                    EventsLooterIdentified?.Invoke(looter, lineData.BeginTime);
+                    ParseLane.Current.LooterIdentified?.Invoke(looter, lineData.BeginTime);
                     var record = new LootRecord { Item = StringCache.GetOrAdd(item), Player = StringCache.GetOrAdd(looter), Quantity = count, IsCurrency = false, Npc = StringCache.GetOrAdd(npc) };
                     RecordsStore.Instance.Add(record, lineData.BeginTime);
                     handled = true;
@@ -453,7 +495,7 @@ namespace EQLogParser
                   {
                     looter = player[..^1];
                     looter = looter.Equals("you", StringComparison.OrdinalIgnoreCase) ? ConfigUtil.PlayerName : looter;
-                    EventsLooterIdentified?.Invoke(looter, lineData.BeginTime);
+                    ParseLane.Current.LooterIdentified?.Invoke(looter, lineData.BeginTime);
                     var item = split.JoinWords(1, i - 2);
                     var record = new LootRecord { Item = StringCache.GetOrAdd(item), Player = StringCache.GetOrAdd(looter), Quantity = 0, IsCurrency = false, Npc = StringCache.GetOrAdd("Given (Not Looted)") };
                     RecordsStore.Instance.Add(record, lineData.BeginTime);
@@ -487,8 +529,8 @@ namespace EQLogParser
             if (!oldRandom)
             {
               // reset if first part of random wasn't just parsed
-              _randomPlayer = null;
-              _lastLine = -1;
+              RandomPlayer = null;
+              LastRolledLine = -1;
             }
           }
 
@@ -505,7 +547,7 @@ namespace EQLogParser
                 var count = split[3][0] == 'a' ? 1 : split.ParseUInt(3); item = item[..^3];
                 if (count > 0 && count != ushort.MaxValue)
                 {
-                  EventsLooterIdentified?.Invoke(looter, lineData.BeginTime);
+                  ParseLane.Current.LooterIdentified?.Invoke(looter, lineData.BeginTime);
                   var record = new LootRecord { Item = StringCache.GetOrAdd(item), Player = StringCache.GetOrAdd(looter), Quantity = count, IsCurrency = false, Npc = StringCache.GetOrAdd("") };
                   RecordsStore.Instance.Add(record, lineData.BeginTime);
                   handled = true;

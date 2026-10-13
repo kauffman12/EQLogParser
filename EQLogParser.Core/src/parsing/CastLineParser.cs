@@ -22,7 +22,12 @@ namespace EQLogParser
 
     // Mirror evidence (D8): caster + resolved spell name per non-interrupted cast; R4 tier-1
     // identity comes from spell identity alone (curated epics / Spires, see EQDataStore seed).
-    internal static event Action<string, string, double> EventsCastEvidence;
+    // Raised on the parsing lane; this is the Main-lane forwarder session subscribers use (see ParseLane).
+    internal static event Action<string, string, double> EventsCastEvidence
+    {
+      add => ParseLane.Main.CastEvidence += value;
+      remove => ParseLane.Main.CastEvidence -= value;
+    }
 
     public static bool Process(LineData lineData)
     {
@@ -153,7 +158,7 @@ namespace EQLogParser
               RecordsStore.Instance.Add(cast, currentTime);
 
               // Mirror evidence (D8): fire-only, covers every non-interrupted cast verb form.
-              EventsCastEvidence?.Invoke(player, spellName, currentTime);
+              ParseLane.Current.CastEvidence?.Invoke(player, spellName, currentTime);
 
               if (!spellData.IsUnknown && EQDataStore.Instance.GetSpellClass(spellData.Name) is { } theClass)
               {
