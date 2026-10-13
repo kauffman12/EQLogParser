@@ -18,17 +18,19 @@
     <ImportWindowsDesktopTargets>true</ImportWindowsDesktopTargets>
     <Platforms>AnyCPU;x64</Platforms>
     <!--
-      Server GC, added 2026-10-13 for the parallel loader - a reason that no longer exists, so this flag is kept by
-      default rather than by measurement. What was measured (i5-13600K, 1,276 MB capture) was TWO lanes allocating through
-      one shared workstation arena: per-range rates 40/43 -> 68/73 MB/s, Finished 18 s -> 11 s, labelled GC tidy
-      350 ms -> 119 ms. Reading is one stream now, and the single-stream numbers point the other way: post-tidy working set
-      ~+90 MB (690 vs 593) steady state, and an older matrix measured 8,083 ms / 916 MB against the default's
-      7,942 ms / 611 MB. It stays on until one A/B says otherwise - launch this build with DOTNET_gcServer=0 and compare
-      wall, peak RSS and tidy ms - because removing it unmeasured is as much a guess as keeping it.
-      docs/DesignNotes -> "Parallel loading: measured, shipped, and backed out" carries the numbers, the attribution
-      warning (master does not have this flag), and the revisit condition (low-RAM reports).
+      Workstation GC (no ServerGarbageCollection) as of 2026-10-13. Server GC was added for the parallel loader, a reason
+      that died with it, and it was kept by default rather than by measurement: what the flag bought on one machine was
+      about 6 s off a warm open (23 s -> 17 s on the same capture) at ~+90 MB of post-tidy working set - the exact resource
+      this app has spent its recent history pushing down. The operator's call is memory over load seconds, so loading gets
+      its speed back a different way: GCLatencyMode.Batch for the bulk read only (BulkGcMode), which buys throughput inside
+      the one window where a pause is invisible.
+
+      ConcurrentGarbageCollection stays explicitly ON because it is the pause lever, not a throughput lever: background gen2
+      turns one foreground stop-the-world over 600 MB-1.5 GB into short pauses, and GC pauses are how the FCT overlay
+      reports that something collected (docs/DesignNotes -> "Parallel loading: measured, shipped, and backed out" keeps the
+      before/after numbers and the revisit condition - if load seconds matter more than footprint after this, DOTNET_gcServer=1
+      in the environment re-enables it without a rebuild).
     -->
-    <ServerGarbageCollection>true</ServerGarbageCollection>
     <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
   </PropertyGroup>
   <PropertyGroup>

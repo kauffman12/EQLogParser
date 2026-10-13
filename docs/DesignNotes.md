@@ -8585,17 +8585,15 @@ reading of these numbers as a batching win was wrong, and "the new version garba
 spotting the actual cause. Note also that dropping both properties means workstation GC **with background collection still
 on** (concurrent is the default), so that row is a clean Server-vs-workstation switch, not two changes.
 
-**The matrix still owed**, filled by four warm runs plus working set after the tidy, which decides one flag:
-
-| | `Interactive` (app default) | `Batch` during the bulk read |
-|---|---|---|
-| Server GC (shipping) | 17 s | ? |
-| workstation (`DOTNET_gcServer=0`) | 23 s | ? |
-
-Use `EQLP_BULKGC=0` for the `Interactive` column and unset for the `Batch` column — one build, no rebuilds — and `DOTNET_gcServer=0`
-in the environment for the second row (the variable beats `runtimeconfig.json`). If Server GC survives, its cost is retention
-(~+90 MB post-tidy working set measured here, +305 MB peak in the older single-thread matrix) bought with seconds an operator
-feels; if it does not, `Batch` is the mechanism trying to win some of those seconds back without the memory.
+**Decided (2026-10-13): the app ships workstation GC.** The exchange above was put to the person who pays for it — footprint
+against load seconds they can feel — and footprint won, so `ServerGarbageCollection` is out of the csproj. Two things follow
+that are not the same decision: `ConcurrentGarbageCollection` stays explicitly on because background gen2 is a *pause* lever
+(it turns one foreground stop-the-world into short pauses), and the seconds go on being chased with `GCLatencyMode.Batch`
+scoped to the bulk read (`BulkGcMode`, docs/DesignNotes → "Garbage collection after loading a log"), which is throughput
+bought inside the one window where a pause is invisible. Still unanswered, and it needs this machine or the operator's:
+how much of the 6 s `Batch` recovers on workstation — `EQLP_BULKGC=0` versus unset, same file warm, plus working set after
+the tidy. `DOTNET_gcServer=1` in the environment re-enables Server GC without a rebuild if load seconds ever outrank
+footprint (its price: ~+90 MB post-tidy working set here, +305 MB peak in the older single-thread matrix).
 
 **If parallel reading is ever attempted again**, the prerequisite list is short and specific: the four carries
 above become either line-local or merge-time reconciled (with the crit ones proven to be `(attacker, <=1 s[, value])
@@ -12620,9 +12618,34 @@ The law is about scope, because `GCSettings.LatencyMode` is one process-global s
   for throughput and the wrong trade against the retention tax below.
 
 This changes no collector *choice* — `GCSettings.IsServerGC` is read-only at runtime, so Server vs workstation stays a
-csproj/startup decision. Until the matrix under "Parallel loading: measured, shipped, and backed out" settles that question,
-`EQLP_BULKGC=0|1` overrides this mechanism from the environment so one build measures both arms; **that gate is temporary and
-is deleted with the answer**, not kept as a dial.
+csproj/startup decision (workstation now, see "Parallel loading: measured, shipped, and backed out"). Until the load-side
+comparison above finishes, `EQLP_BULKGC=0|1` overrides this mechanism from the environment so one build measures both arms;
+**that gate is temporary and is deleted with the answer**, not kept as a dial.
+
+**Steady state: workstation GC + `SustainedLowLatency`, set at the top of `App.OnStartup` (2026-10-13).** Why this mode and
+not one of its neighbours, since three of them sound alike:
+
+- The reason is the **FCT overlay**, the only surface here with a soft real-time budget: a stalled render thread is a big hit
+  nobody saw. The field report on its stutter is that it happens when GC runs — which means a *blocking gen2* (tens to hundreds
+  of ms on a 600 MB–1.5 GB heap), not the frequent gen0 collections, which are microseconds and do not visibly freeze a canvas.
+- Plain **`LowLatency` is the wrong instrument**, and this was considered properly rather than skipped: it is a hint about the
+  current burst of allocations (draw one frame, handle one input event) that the runtime stops honouring on its own. Held
+  permanently over an app that allocates continuously, it buys nothing durable. `NoGCRegion` is unusable (parsing allocates).
+- **Workstation and `SustainedLowLatency` are a pair, not two hunches**: workstation keeps the baseline footprint down (no
+  per-core arenas) but has the nastiest foreground gen2 of the two collectors, and deferring exactly that collection is this
+  mode's one lever. Server GC gets its short pauses a different way, by spending memory.
+- **Cost, stated plainly**: deferred gen2 means the working set sits higher between a load and a Clear All — that *is* the
+  mechanism, not a bug — and it self-limits, because the runtime collects anyway under memory pressure. Two things still
+  collect on purpose: `BulkGcMode` overrides to `Batch` for a bulk read and restores this mode at end of file (it puts back
+  what it **found** — pinned by `BulkGcModeTest.AnEarlierLowLatencyPromiseIsKeptRatherThanOverwritten`), and `GcTidyUp`'s forced
+  Aggressive pass at load-end/Clear All is honoured in low-latency mode like any forced collection.
+- **Unmeasured, on purpose.** The FCT render path is Windows-only, so nothing in this repo says this fixed the stutter; it is a
+  diagnosis-driven change, not a measured one. If stutter survives, the next suspects are not GC policy: `GcTidyUp`'s own
+  compacting pass is the biggest single pause this app creates (119–350 ms measured — so the useful question is *where* the
+  stutter sits, next to a load/Clear All or in the middle of a fight), and then the UI thread's own work (meter rebuild, grid
+  refresh, label churn). The older raid probe ("What garbage a raid actually makes…") found no gen2 in a 12 s window at 233 MB
+  live and SustainedLowLatency collecting more for the same slip — read as what it covered (parse/derive threads, small heap,
+  headless Linux), not as a verdict on a WPF render thread hours into a session.
 
 ## DPS and active-reader retention review at 35420fcf
 
