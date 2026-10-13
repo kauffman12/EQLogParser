@@ -109,9 +109,11 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
 - **A board-row read does not allocate**: `PlayerRegistry.GetPlayerClass` binary-searches inside the per-name lock rather
   than copying the boundary list out.
 - **Only an INSTANCE method group allocates** — measure before caching a delegate (`LogProcessor._addMerc`).
-- **GC**: forced collection happens at **two synchronous moments only** — a load that actually read lines, and `Clear All` (after its re-open) — each
-  labelled *"Cleaning up.."* in the status line, because a pause with a name reads as work and a silent one reads as a hang. Stats builds request nothing:
-  boards keep their GC to the runtime and win by allocating less. Never on log close (close is almost always the first half of an open), never on the parse
+- **GC**: forced collection is paid at **two labelled moments only** — a load that actually read lines (**armed** at 100 %, landed by the first contentful
+  board build or a one-shot backstop: the old synchronous pass at "Finished" fired BEFORE the first full derive and its boards, the biggest allocators of
+  a sharded load, and collected half) and `Clear All` (synchronous, after its re-open) — each labelled *"Cleaning up.."* in the status line, because a pause
+  with a name reads as work and a silent one reads as a hang. Stats builds request nothing — the build seam PAYS an armed tidy, never asks; a new OPEN
+  disarms a pending one (a pass inside another load's bulk read is what Close's law already refuses). Never on the parse
   path: `docs/DesignNotes.md` → "Garbage collection after loading a log".
 
 ## The derive engine

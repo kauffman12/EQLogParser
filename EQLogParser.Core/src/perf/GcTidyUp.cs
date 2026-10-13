@@ -7,15 +7,18 @@ using System.Runtime;
 namespace EQLogParser
 {
   /*
-   * The one place this app spends a forced collection, and it runs at exactly two moments, both synchronous and both
-   * labelled in the status line as "Cleaning up.." so the stop-the-world has a name: a log load finished having actually
-   * read lines (MainWindow.UpdateLoadingProgress), and Clear All (MainWindow.ClearAllFights, after its re-open). A
-   * labelled pause is what makes synchronous acceptable, and neither moment is followed by a bulk read — the re-open
-   * seeks to end of file and reads nothing — so nothing allocates behind the collector.
+   * The one place this app spends a forced collection, at exactly two moments, both labelled in the status line as
+   * "Cleaning up.." so the stop-the-world has a name. A load that actually read lines ARMS one at 100 %; it is paid by the
+   * first contentful board build (MainWindow.ConsumePostLoadTidy) or a one-shot backstop — the field showed the old
+   * synchronous pass firing at "Finished" while the first full derive and its three-board fan-out, the biggest allocators
+   * of a sharded load, were still ahead: it collected half the garbage and nothing asked again (2026-10-13). Clear All
+   * pays synchronously after its re-open (MainWindow.ClearAllFights); the re-open seeks to end of file and reads nothing,
+   * so nothing allocates behind that collector.
    *
    * A log CLOSE arms nothing: closing is almost always the first half of an open, and a pass between them lands inside
-   * the next file's bulk read. Stats builds ask for nothing — boards keep their GC to the runtime and win by
-   * allocating less. Measurements: docs/DesignNotes.md → "Garbage collection after loading a log".
+   * the next file's bulk read — which is why a new OPEN disarms a pending tidy too. Stats builds ask for nothing; the
+   * build seam PAYS an armed load tidy, it never requests one. Boards keep their GC to the runtime and win by allocating
+   * less. Measurements: docs/DesignNotes.md → "Garbage collection after loading a log".
    */
   internal static class GcTidyUp
   {

@@ -12478,6 +12478,17 @@ classes paid that *per test* — most of the suite's wall time. One shared store
 shared store saw the data); everything mutable is still cleared per test, and a test needing a store under different conditions
 builds its own.
 
+**Moved to where the garbage actually dies (2026-10-13, field).** The post-load pass above fired synchronously at
+"Finished Loading Log File" — and on a sharded capture that is *before* the first full derive (2,940 ms over 11 M facts) and
+the three-board fan-out, which allocate more than the read itself. The field file shows the order exactly:
+`gc.tidy log loaded` @+0.4 s after Finished, `Derive done: 876 fights` +3 s later — the collection swept half the load and
+nothing asked again, which is precisely how it read to the operator ("it didn't garbage collect after the log finished
+loading. but it did after i manually clicked clear all"). The moment now **arms** at 100 % instead of paying:
+`MainWindow.ConsumePostLoadTidy` pays it at the seam where all three boards of one request have answered and the
+materializer has let go (labelled `gc.tidy first boards built`), with a 10 s one-shot backstop keeping the old guarantee for
+a capture nothing builds boards from, and a new open disarming a pending pass so it can never land inside the next load's
+bulk read. Same two moments, same labelled pause — just paid when the work is actually over.
+
 ## DPS and active-reader retention review at 35420fcf
 
 **Review findings, not implemented optimizations.** Two live-format captures were replayed in separate headless processes

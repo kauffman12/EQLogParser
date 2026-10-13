@@ -986,6 +986,13 @@ namespace EQLogParser
         }
         succeeded &= !damageStatsOptions.BuildFailed && !tankingStatsOptions.BuildFailed && !healingStatsOptions.BuildFailed
                      && SessionStillOpen(session);
+
+        /*
+         * The settle a bulk load armed (see ArmPostLoadTidy): this seam is the moment all three boards of one request have answered
+         * and the materializer has let go, so the first-pass temporaries are dead by definition. Fights.Count > 0 keeps the mid-backfill
+         * builds of empty snapshots from spending the arm on a build that built nothing.
+         */
+        if (succeeded && input.Fights.Count > 0) ConsumePostLoadTidy();
       }
       catch (Exception ex)
       {
@@ -1461,13 +1468,14 @@ namespace EQLogParser
             statusText.Foreground = Application.Current.Resources["EQGoodForegroundBrush"] as SolidColorBrush;
 
             /*
-             * The parse is over and its garbage is dead by definition: the per-line temporaries a load churns through are most of what made
-             * it expensive for the collector. The operator gets a beat here, and it has a name - "Cleaning up.." painted, then one synchronous
-             * compacting pass (236 ms over the heap a 328 MB capture leaves; docs/DesignNotes.md → "Garbage collection after loading a log").
-             * Only if a load happened: following from end of file reaches 100 % having read no line, and a compacting pass would stop every
-             * thread to hand back startup allocations no parse ever made - LogReader.LoadAllocatedGarbage is that gate.
+             * The parse is over and MOST of its garbage is dead - which the field found out is not all of it: this synchronous pass ran at
+             * "Finished" while the first full derive (2.9 s) and the boards' fan-out were still ahead, so it collected half the load and
+             * nothing ever asked again - "it didn't garbage collect after the log finished loading" (2026-10-13). The moment therefore ARMS
+             * a settle instead of paying one: consumed by the first contentful board build (ConsumePostLoadTidy, where every allocator in
+             * the flow has finished) with a one-shot timer as backstop for captures nothing builds boards from. Only if a load happened:
+             * following from end of file reaches 100 % having read no line - LogReader.LoadAllocatedGarbage is that gate.
              */
-            if (LogReader.LoadAllocatedGarbage(_eqLogReader.HandedOverLines)) await TidyWithNoticeAsync("log loaded");
+            if (LogReader.LoadAllocatedGarbage(_eqLogReader.HandedOverLines)) ArmPostLoadTidy();
 
             /*
              * Two different states reach 100 %, and only one of them has read a log. Following from end of file
@@ -1541,6 +1549,7 @@ namespace EQLogParser
         if (!string.IsNullOrEmpty(theFile))
         {
           Log.Info($"Selected Log File: {theFile}");
+          DisarmPostLoadTidy();   // a tidy armed by the previous capture must not land inside this one's bulk read
           FileUtil.ParseFileName(theFile, out var name, out var server);
           var changed = ConfigUtil.ServerName != server;
 
@@ -1730,6 +1739,57 @@ namespace EQLogParser
       await Dispatcher.Yield(DispatcherPriority.Render);
       GcTidyUp.TidyNow(reason);
       statusText.Text = prior;
+    }
+
+    /*
+     * The load's collection, deferred to where its garbage actually dies: armed at 100 % on a read that read lines, paid by the
+     * first contentful board build (ConsumePostLoadTidy) or, for a capture nothing ever built boards from, by this backstop. The due
+     * flag crosses threads under Interlocked because builds finish on workers; arming and paying are UI-thread. The backstop is what
+     * keeps the pre-2026-10-13 guarantee - a load that read lines always gets its pass - and 10 s sits comfortably past the first
+     * full pass plus fan-out of every capture measured here (field: 2.9 s + ~1 s of boards at 11 M facts).
+     */
+    private int _postLoadTidyDue;
+    private DispatcherTimer _postLoadTidyFallback;
+
+    private void ArmPostLoadTidy()
+    {
+      Interlocked.Exchange(ref _postLoadTidyDue, 1);
+      _postLoadTidyFallback ??= new DispatcherTimer { Interval = TimeSpan.FromSeconds(10) };
+      _postLoadTidyFallback.Stop();
+      _postLoadTidyFallback.Tick -= PostLoadTidyFallbackTick;   // one handler entry, re-armed like every other timer here
+      _postLoadTidyFallback.Tick += PostLoadTidyFallbackTick;
+      _postLoadTidyFallback.Start();
+    }
+
+    /*
+     * A new open outranks an armed tidy: a pass between a close and its bulk read lands INSIDE the read, which is the same law that
+     * keeps log CLOSE from collecting at all. Clear All disarms through this door and then pays its own labelled pass.
+     */
+    private void DisarmPostLoadTidy()
+    {
+      Interlocked.Exchange(ref _postLoadTidyDue, 0);
+      _postLoadTidyFallback?.Stop();
+    }
+
+    private async void PostLoadTidyFallbackTick(object sender, EventArgs e)
+    {
+      ((DispatcherTimer)sender).Stop();
+      if (Interlocked.CompareExchange(ref _postLoadTidyDue, 0, 1) == 1) await TidyWithNoticeAsync("log loaded");
+    }
+
+    /*
+     * Asked by a finished board build - worker thread - for ANY reason; only the arm decides. The first contentful build of the armed
+     * capture pays it once; after that this is the load-bearing no-op that keeps every live-session pass from tidying by accident.
+     */
+    private void ConsumePostLoadTidy()
+    {
+      if (Interlocked.CompareExchange(ref _postLoadTidyDue, 0, 1) != 1) return;
+
+      Dispatcher.InvokeAsync(async () =>
+      {
+        _postLoadTidyFallback?.Stop();
+        await TidyWithNoticeAsync("first boards built");
+      }, DispatcherPriority.DataBind);
     }
 
     private void UpdateRecentFiles()
