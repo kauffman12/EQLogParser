@@ -55,11 +55,15 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
   harness or re-isolate what measurement already ruled out.
 
 ## Parsing, records, facts
-- **Big whole-file loads read on two lanes and merge before the tail** (policy `LogShardPlan`, line fidelity
-  `LogRangeReader`, pour `CombatCapture.MergeShards` under the ingest gate). LogReader owns the ordering — every lane
-  drained, shard captures stopped, merged, only then any tail line — and a failed attempt aborts whole; there is no
-  partial merge. Seek-back opens, gzips, and files under 2×64 MiB take the untouched single-lane path.
-  See docs/DesignNotes.md → "How loading is sharded in the app".
+- **Reading a log is ONE stream in file order** — one reader, one capture, no cut in the middle. This is not a
+  performance opinion: four carries (`DelayCritRecord`, `LastCrit`/`OldCritData`, `PreviousAction` →
+  `DeathRecord.Previous`, `RandomPlayer` + `LastRolledLine`) depend on an earlier line, and a seam puts that line in
+  another reader's hands, so a critical hit loses its tag, a death loses its last sentence, and a dice roll vanishes.
+  Live parsing structurally cannot hit this, so any repair is machinery that exists only because a file was cut — the
+  parallel loader that needed it was measured, shipped and backed out the same day. `ParseLane` stays (per-stream events
+  and carries; more than one reader can be alive over one file via triggers). Never reintroduce range reading, shard
+  merging, or per-seam seeding/reconciliation without that section. See docs/DesignNotes.md →
+  "Parallel loading: measured, shipped, and backed out".
 - **A recognized line is taken.** `PreLineParser.NeedProcessing` sets `found = true` for every shape it consumes — the
   tilde emote (`~ Kizant wonders.`), `Targeted (NPC)`/`Targeted (Player)`, guildmate achievements, raid/group join-leave,
   raid leader, drink/eat — so the four real parsers never re-walk a line that already paid for itself. Each branch's slice
@@ -111,7 +115,7 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
 - **Only an INSTANCE method group allocates** — measure before caching a delegate (`LogProcessor._addMerc`).
 - **GC**: forced collection is paid at **two labelled moments only** — a load that actually read lines (**armed** at 100 %, landed by the first contentful
   board build or a one-shot backstop: the old synchronous pass at "Finished" fired BEFORE the first full derive and its boards, the biggest allocators of
-  a sharded load, and collected half) and `Clear All` (synchronous, after its re-open) — each labelled *"Cleaning up.."* in the status line, because a pause
+  a bulk load, and collected half) and `Clear All` (synchronous, after its re-open) — each labelled *"Cleaning up.."* in the status line, because a pause
   with a name reads as work and a silent one reads as a hang. Stats builds request nothing — the build seam PAYS an armed tidy, never asks; a new OPEN
   disarms a pending one (a pass inside another load's bulk read is what Close's law already refuses). Never on the parse
   path: `docs/DesignNotes.md` → "Garbage collection after loading a log".

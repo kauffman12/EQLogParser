@@ -8016,13 +8016,13 @@ did", and 2/4 for the same pair on a heal. Over the 952 MiB capture that is ~15 
 **3,529,215** events there: 2,285,746 damage + 1,243,469 heal) spent stamping an opinion. The cost was not the reason they
 went.
 
-**What they recorded could not be reproduced.** RangeSpike's own `flagcheck` (the spool auditor built for the sharding
-study) found **32 of 999 attacker names carrying both values of the side bit inside one sequential pass** — `Betebeatz`
+**What they recorded could not be reproduced.** A spool auditor built for the parallel-loading study (`flagcheck`,
+deleted along with that design) found **32 of 999 attacker names carrying both values of the side bit inside one sequential pass** — `Betebeatz`
 reads side=0 on 9,512 facts and side=1 on 5,342 — and 28 healer names flipping across 52,302 heal facts. A bit that
 changes mid-file for the same name is a timestamped snapshot of registry state wearing the shape of a fact: replay from a
-different starting prefix and it moves, warm-up order moves it, and a sharded reader *cannot* get it right at all (this
-census is exactly what made "stop stamping opinions into facts" prerequisite (b) in
-`EQLogParser.Tools/RangeSpike/README.md`). It also poisoned the flag column's meaning: `OwnerInLine` and `AttackerIsSpell`
+different starting prefix and it moves, warm-up order moves it, and a reader that starts in the middle of a file
+*cannot* get it right at all. This census is exactly what made "stop stamping opinions into facts" a prerequisite for
+parallel loading — a design since backed out; see "Parallel loading: measured, shipped, and backed out". It also poisoned the flag column's meaning: `OwnerInLine` and `AttackerIsSpell`
 beside it are genuinely line-derived, so nothing on the page distinguished evidence from opinion.
 
 **Where that knowledge lives instead.** *When* the registry learned a name already travels as an `IdentityEvent` carrying
@@ -8464,8 +8464,9 @@ costs 100 % more slots while an overshoot costs its overshoot and is handed back
 failure mode is honest and stated: an oddly chat-dominated gigabyte precommits ~175 MB it does not need, bounded by the
 clamp and reclaimed at EOF. A "last N minutes" open reads an unknown slice and therefore passes no hint.
 
-**Speed, and its price.** `EQLogParser.Tools/RangeSpike` (local) re-measured over the whole matrix on this same capture
-(18-core Linux box; each shard carries its own tables and its own copy of the reader→parser seam):
+**Speed, and its price.** A measurement spike (`RangeSpike`, deleted with the design it justified — the figures stay here
+because they are the reason that design went away) re-ran the whole matrix on this same capture (18-core Linux box; each
+shard carried its own tables and its own copy of the reader→parser seam):
 
 | run | wall | + merge | damage / heal facts summed | RSS |
 |---|---|---|---|---|
@@ -8485,75 +8486,85 @@ IdentityEvents where the sequential run wrote 126 — each lane discovers the sa
 only what its own line says and verdicts travel as evidence, so a renumbered merged table is simply a capture that gets
 the classification pass the derive engine already owes. The merge is an ordinal renumber; the re-derive does the rest.
 
-## How loading is sharded in the app
+**None of this matrix ships.** The parallel loader was removed the same day it was measured — see
+"Parallel loading: measured, shipped, and backed out" for what a seam did to cross-line carries and why that outweighed
+~1.6x. Plan from the sequential row.
 
-A whole-file open of a plain-text log at least 2× the shard floor (64 MiB) reads on two lanes: `LogShardPlan` cuts the file at newline boundaries, and each lane runs its own reader → processors → capture over
-its own capacity-hinted tables. `LogRangeReader` returns exactly the lines a sequential `ReadLine` would for a range's
-bytes (asserted headlessly), and `ParseLane` keeps cross-line carries and parser events per stream, so a lane does not know
-it is one of two. When both ranges are drained, `CombatCapture.MergeShards` pours them into the session capture under the
-ingest gate — name pools remapped, one shared sequence renumbered into file order, the event-time window stamped from the
-merged rows — and the ordinary tail continues from the byte where the open began. The operator sees a single load: the
-progress band aggregates range bytes and deliberately tops out at 99 % while a backfill is in flight — consumed
-bytes are not a finished load (queue drain and merge are still owed; a field log once showed "Finished Loading"
-and the compacting GC firing INSIDE the merge) — and everything downstream of the reader (archive hook, GC
-tidy-up gate, monitor) is lane-blind. The `load:` Debug lines answer the next "what did the lanes do": one line
-per range with bytes/lines/ms/MB-per-second, and one pump tick per poll while a load runs. `LogShardPlan.Workers` is the one dial for raising this to three (~2.0× for roughly half again the load-time
-memory); the 64 MiB floor is why normal-size logs still take the untouched single-lane path, as do seek-back opens and gzips.
+## Parallel loading: measured, shipped, and backed out (2026-10-13)
 
-Two laws hold the design up. A lane drains its processor completely before the merge stops any shard capture, and no tail
-line moves before the merge returns — so no parsed event can arrive at a stopped capture. And a failed attempt aborts
-whole: there is no partial merge, because half a file's facts wearing whole-file completeness is the one outcome worse than
-a load that fails. Player-visible effect at the shipped setting, per the matrix above: a ~13 s load becomes ~8.5 s with
-peak RAM unchanged.
+Whole-file loads were read on two lanes for a day. They are not now, and the reason is not speed — it is that
+a cut in the middle of a file severs state the parsers carry between lines, and every repair for that is a
+special case inside a parser that, live, has never needed one. **Reading a log is one stream in file order.**
 
-**A third law is the fight list's band** (`FightTable`): an empty derive snapshot mid-read must not settle it. The band used to come
-down for good at the first snapshot of the session, which was harmless sequential behavior — there, rows usually arrived with that
-snapshot or right after it. A backfill changes what mid-load means: every fact waits in lane tables until the merge, so stray wakes
-run zero-fight passes *early* in the read, and settling on one left the pane blank for the rest of a twenty-second load (field:
-"the progress flashed and disappeared"). The band now ends on rows landing, or on an empty snapshot **after** the reader reported
-done (`ReportReadFinished`, fed by `EventsLogLoadingComplete`); a guard timer settles a band no post-read snapshot ever came to
-answer, which is the zero-fight capture. Its detail line speaks in **captured facts through every phase** (operator
-2026-10-13: "it's still counting lines" — thirteen million of them out loud reads as telemetry from the wrong feature).
-Two sources, one seam, never summed: while the lanes run the number is the SUM OF THE LANE CAPTURES
-(`LogReader.BackfilledFacts` — every row lives there until Merge, so that sum is the real captured count; the old law that
-"8 facts beside twelve million lines reads as a stall" stands for the SESSION capture, which really does hold only stream-wide
-identity strays mid-read — it just stopped being the only place facts exist). From the merge on, the session's own capture
-event answers, and a monotonic `Math.Max` carries the display across the seam where both sources describe the same rows.
-Lines remain only as the opening phrase before the first fact batch. `FightTableLoadBandTest.LaneFactsLeadTheDetailLineThroughABackfill`
-holds the seam on Windows.
+**What shipped** (same day, then removed): `LogShardPlan` cut the file at newline boundaries (2 workers, a
+64 MiB-per-range floor, so only plain-text whole-file opens of >= 128 MiB qualified — every normal-size log,
+seek-back and gzip stayed sequential); `LogRangeReader` handed each lane exactly the lines a sequential
+`ReadLine` would for its bytes; each lane ran reader → processors → its own `CombatCapture` over its own
+capacity-hinted tables; `CombatCapture.MergeShards` poured the results into the session capture under the
+ingest gate (pool remap, one shared sequence renumbered into file order). `ParseLane` came in with it.
 
-**Server GC is what makes the lanes scale (2026-10-13, shipped via `EQLogParser.csproj`).** The same 1,276 MB capture, same
-machine (i5-13600K), warm OS cache, sharded on two lanes: with the workstation collector the ranges ran 40/43 MB/s and
-the load Finished at ~18 s; with Server GC the same ranges run **68/73 MB/s and Finish at ~11 s**, and the labelled GC tidy
-runs **350 ms → 119 ms** (`GcTidyUp.TidyNow` needed no change — its full blocking compacting `GC.Collect(2, Aggressive)` +
-LOH `CompactOnce` is honoured by either collector, and `CollectionCount(2)` still measures gen2 across all heaps). Why:
-two threads allocating ~1.3 GB/s through one shared workstation arena couple through each other's pauses; per-core heaps
-decouple them. An earlier suspect died in the same session — pinning the process to the six P-cores changed nothing (17.4 vs
-~18 s), so this was never core selection, GC is coupled bandwidth. The measured tax is **retention, steady-state only**: post-tidy
-working set ~690 MB vs ~593 (+90), load peak unchanged — per-core heaps commit where allocation happens and the tidy compacts
-every heap anyway; Task Manager's between-load floor sits a little higher because Server GC decommits less eagerly, which is
-mode behavior, not a stale collection call. Revisit (an opt-out, or back to workstation) if low-RAM machines report pressure.
+**What it bought**, on the 998 MB / 10,015,348-line capture in the matrix above: ~13.3 s → 7.9 s + ~0.5 s
+merge (~1.6x) at the same peak RSS; three workers ~2.0x. On a field machine (i5-13600K, 1,276 MB capture,
+warm cache) with Server GC: ranges at 68/73 MB/s and the load finishing ~11 s, against ~18 s on the
+workstation collector. Facts summed exactly except damage ±1 in 4.8 M — and that one missing fact was itself
+the argument against the design: it is `DelayCritRecord` losing its partner across a range edge.
 
-**Cast-ambiguity gets a second look at the merge (2026-11, operator's design).** A buff line whose spell name covers several
-ranks asks "was this rank cast in the last 8 s", and near a shard seam that cast sits in the lane that has not parsed its half
-yet — a question a sequential read answers and a lane cannot. The store was never sharded, so at merge time every cast IS
-present; rather than let the seam keep a wrong answer, `RecordsStore` runs **hold + retry** (its block comment carries the laws):
-`RunBackfillAsync` opens the hold (horizon sweep stands down — a seam sits mid-file, so its casts are far older than the horizon
-by load end and would otherwise be swept); only the rows a seam could actually have starved **enqueue** — the operator's narrowing,
-and it is exact: a lane parses its own bytes in order, so every deep row's 8-second lookback is already covered by that lane's own
-earlier lines and answered right at parse time; only a row whose window still reaches back ACROSS the cut can have been starved, i.e.
-`beginTime` within ~10 s of the lane's own first stamp (`ParseLane.FirstStampS`, one NaN-check per line until set). So the pending
-list is each lane's head, not every failure in the file. `FinishCastHistoryHold` at merge completion re-asks each queued row ONCE,
-anchored to **its own timestamp** — the parse-time query anchors to "newest in cache", which at load end is the end of the file, a
-quirk that would answer every old row wrong; the window probe binary-descends a sorted `CastHistory` so an early-seam row does not
-scan down nearly the whole list. The accept rule mirrors `FindPreviousCast`: any recent cast proves a self-target rank, only the
-receiver's own cast proves a targeted one. Three doors keep it a file-open feature and nothing else: `Begin` runs only inside the
-sharded backfill; enqueue no-ops while the hold is closed (live tail, seek-back and small files never grow the list); every exit —
-merge success, dead lane (`Release`), session `Clear` — closes the hold and sweeps once as if the horizon had run. It re-decides only:
-nothing re-parses, answered rows are skipped, and the class-lane resolver at board time
-(`ResolveSpellAmbiguity`) still answers whatever cast-recency cannot. Grep: `cast-ambiguity retry`; the seam itself is reproduced
-headlessly in `RecordsStoreAmbiguityRetryTest`. The one carry this does NOT fix is the delayed-critical pairing (its carry holds
-record objects across lanes) — it remains the sharding debt of record, one line per file at worst.
+**Why it came out.** Four pieces of data depend on an earlier line, and a seam puts that earlier line in another
+lane's hands (each is a field on `ParseLane`, which is what made the gap structural rather than a bug to fix):
+
+| carry | writes | reads | what a seam costs |
+|---|---|---|---|
+| `DelayCritRecord` (EMU) | `DamageLineParser` after "X scores a critical hit! (N)" | the next record by the same attacker within 1 s takes its `ModifiersMask` (= Crit) | the paired hit loses its Crit tag → wrong crit split on boards and charts |
+| `LastCrit` / `OldCritData{Attacker,BeginTime,Value}` | old-format crit lines | same attacker, <= 1 s (and matching value token when the line carried one) | same |
+| `PreviousAction` | every line that reaches `DamageLineParser.Process` | a "died." line writes it into `DeathRecord.Previous` | a death at a lane's head records no last sentence |
+| `RandomPlayer` + `LastRolledLine` | the announce `**A Magic Die … rolled … Name.` | the result line, only if `LastRolledLine + 1 == LineNumber` — and `LineNumber` counts *accepted lines within one lane* | an entire `RandomRecord` disappears; announce state is counted differently per lane |
+
+Live parsing cannot have this class of bug: one stream in arrival order always sees its true predecessors. So
+the repair is machinery that exists only because a file was cut — either a pre-seam pass that guesses what the
+previous lane's last accepted line was (a second, narrower parser for `PreviousAction`'s text and the dice
+announce), or a post-merge reconciliation pass over seam windows in file order with one-shot consume (the crits).
+Both are permanent special cases in files that read correctly on their own, plus a seam-equivalence harness to
+keep them honest. That was weighed against ~4.5 s on a >= 128 MiB open and refused.
+
+Costs the design carried even where it did not corrupt anything: identity events are **not** lane-additive (four
+lanes emitted 383 `IdentityEvents` where one pass wrote 126 — every lane rediscovers the same names, and the
+re-derive pays to untangle them); the progress band needed three special laws (cap under 100 % while lanes
+still drained and merged, because a field log showed "Finished Loading" 280 ms *before* `backfill merged` with
+the compacting GC running inside the merge; quote lane captures instead of lines; end the band on rows landing or
+on an empty snapshot only after the reader reported done); the fight list's band came down at 20 % in a 20 s load
+("the progress flashed and disappeared"); the post-load GC tidy had to move off "Finished" and onto the first
+board build; and cast-ambiguity needed a hold-plus-retry because the 8-second cast question near a seam asks
+about casts the other lane had not parsed yet.
+
+**What was deleted**, in case someone wants to re-litigate: `LogShardPlan`, `LogRangeReader`, `FactShardMerge`,
+`CombatCapture.MergeShards`, `CombatCapture`'s `startSequence` parameter, `IShardedBackfill`/`BackfillShard`,
+`DeriveEngine`'s implementation of it (`NewShard`/`NewShardProcessor`/`Merge`/`Abort`), `LogReader`'s
+`RunBackfillAsync`/`RunRangeAsync`/`ReadAndFeedRange`/`FlushShardBatch`/`BackfilledFacts`, its aggregate
+progress branch and the `_fs.Seek(_initSize)` that skipped bytes the lanes had eaten, the `IShardedBackfill`
+constructor parameter, `RecordsStore`'s cast-history hold and retry (`BeginCastHistoryHold`,
+`AddPendingAmbiguity`, `FinishCastHistoryHold`, `ReleaseCastHistoryHold`, `WasCastWithin`, `LastIndexAtOrBefore`,
+`PendingAmbiguity`, `_holdCastHistory`), `ParseLane.FirstStampS`/`NoteFirstStamp`, and the
+`EQLogParser.Tools/RangeSpike` harness (which had stopped building when the legacy fight engine was deleted).
+
+**What stayed on purpose.** `ParseLane`: per-stream events and carries are what keep one stream's raises out of
+another capture's subscribers, and more than one reader can still be alive over one file — the open's own loop
+plus a trigger reader per enabled character, which is what `LogReader`'s `origin` parameter exists to tell apart.
+`ReceivedSpell`'s ambiguity list and both resolvers (`FindPreviousCast` while the line is warm,
+`ResolveSpellAmbiguity` at the boards) stay: that mechanism was never about sharding, only its retry was. The
+reader → parser queue shape, `FactCapacity`'s whole-file hint and `GcTidyUp`'s timing law are untouched.
+
+**Server GC is now justified by nothing measured.** It shipped as "what makes the lanes scale" (numbers above).
+Its stated cause — two threads allocating ~1.3 GB/s through one shared workstation arena — does not exist with
+one parse lane, and the older single-threaded matrix in "Asking the collector for memory back at chosen moments"
+measured Server GC at 8,083 ms / **916 MB** against the default's 7,942 ms / 611 MB and concluded it should not
+ship. It is left enabled pending one A/B on a real capture with a single lane (`DOTNET_gcServer=0` vs shipping
+default: wall, peak RSS, tidy ms); until that is recorded here, nobody should claim Server GC earns its memory.
+
+**If parallel reading is ever attempted again**, the prerequisite list is short and specific: the four carries
+above become either line-local or merge-time reconciled (with the crit ones proven to be `(attacker, <=1 s[, value])
+⇒ Crit tag` queries rather than record-object hand-offs), a split-point equivalence harness exists *first*, band
+and progress semantics are re-derived rather than patched, and the identity-event duplication is accepted as
+work the re-derive pays for.
 
 ## What the FCT overlay costs per number on screen (2026-11)
 
@@ -8596,8 +8607,9 @@ else" is now decomposed, and it was not a mystery bucket: **the biggest single l
 damage parser is `lineData.Action.Split(' ')`**.
 
 Method (no profiler): sampled per-stage timers inside `DoPreProcess`, measuring one line in 32 so the probe itself costs
-nothing, run over the 467 MB capture by **`RangeSpike parse --cwd . --file F --out S`** (the headless ingest tool; it was
-unbuildable until the last commit and it reproduces the harness's fact counts exactly). The probe was reverted after the
+nothing, run over the 467 MB capture by the headless ingest spike (`RangeSpike parse`, since deleted with the
+parallel-loading study it grew out of; it had been unbuildable until that commit, and it reproduced the harness's fact
+counts exactly). The probe was reverted after the
 run — the numbers live here, not in the tree.
 
 | stage (per full file, scaled) | ms | calls | note |
@@ -8634,7 +8646,7 @@ Two cautions worth writing down because they cost time to learn:
   VS's own `Instrumentation/*.dat`; nothing here decodes those, and the env-var EventPipe route (`DOTNET_EnableEventPipe=1`)
   produces nettraces this SDK's `dotnet-trace` rejects mid-stream ("Invalid EventBlock header size"), while attach to a
   `dotnet test` host is blocked. So for ingest questions the repo's own headless tool plus targeted timers is the working
-  path — which is why RangeSpike being unbuildable mattered.
+  path — which is why that spike having stopped building mattered.
 
 ## The reader hands the parser one line at a time, and that handshake costs more than the parsers (2026-11)
 
@@ -9134,8 +9146,8 @@ fixture reports coverage forever while checking nothing.
 
 **Refused, with the reason**: dropping `Seq` (its array index already *is* its ordinal within a segment, worth another
 4 bytes a row) — it breaks the moment a session holds more than one spool segment, and cross-stream order is exactly what
-that field buys, so it belongs with the chunking design rather than before it. RangeSpike's `.spool` files are a dev
-artifact and must be regenerated after this change; nothing player-facing has ever persisted fact bytes.
+that field buys, so it belongs with the chunking design rather than before it. The ingest spike's `.spool` files were a
+dev artifact and had to be regenerated after this change; nothing player-facing has ever persisted fact bytes.
 
 ## What NPC means here, and why a pet-proof line outranks `Targeted (NPC)` (2026-11)
 
@@ -12516,8 +12528,8 @@ shared store saw the data); everything mutable is still cleared per test, and a 
 builds its own.
 
 **Moved to where the garbage actually dies (2026-10-13, field).** The post-load pass above fired synchronously at
-"Finished Loading Log File" — and on a sharded capture that is *before* the first full derive (2,940 ms over 11 M facts) and
-the three-board fan-out, which allocate more than the read itself. The field file shows the order exactly:
+"Finished Loading Log File" — which on the two-lane load this was measured against landed *before* the first full derive
+(2,940 ms over 11 M facts) and the three-board fan-out, which allocate more than the read itself. The field file shows the order exactly:
 `gc.tidy log loaded` @+0.4 s after Finished, `Derive done: 876 fights` +3 s later — the collection swept half the load and
 nothing asked again, which is precisely how it read to the operator ("it didn't garbage collect after the log finished
 loading. but it did after i manually clicked clear all"). The moment now **arms** at 100 % instead of paying:

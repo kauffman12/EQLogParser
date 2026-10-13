@@ -108,25 +108,27 @@ These checks require a realized grid; the automated pane tests exercise bound da
   Scrolling a search result into view still works — that is a gesture, not a follow. A new fight appearing mid-pull must not move the list at
   all (no jump to the top when a row lands), and with a column sorted a pass must keep the reading position too.
 
-## Sharded load checks on Windows
+## Big-file load checks on Windows
 
-Whole-file opens of logs at least 2× 64 MiB read on two lanes and merge (LogReader / docs/DesignNotes); Linux cannot run
-the app, so these are operator checks with `Debug=True`:
+A whole-file open reads **one stream in file order** — one reader, one capture, no cut in the middle (LogReader /
+docs/DesignNotes → "Parallel loading: measured, shipped, and backed out"). Linux cannot run the app, so these are
+operator checks with `Debug=True`, on a capture of several hundred MB or more:
 
-- Opening a big log prints exactly one `load: sharded backfill '<file>' | ranges=2` and a following `backfill merged`;
-  opening a small log or a last-minutes view prints neither (policy at the door, not in the dark).
-- The progress band moves smoothly during the backfill (it aggregates range bytes and caps at 99 % until the merge
-  returns) rather than sitting at 0 % and jumping, and `Finished Loading Log File` / `gc.tidy log loaded` appear only
-  AFTER `backfill merged` — never inside it. The `load: progress tick` and per-range `load: range N … MB/s` Debug
-  lines say who was quiet if anything looks stuck (a range rate pinned at the disk's sequential speed means the file,
-  not the parse, is the limit).
-- Boards show the same totals as a sequential load of the same file — quickest control is temporarily setting
-  `LogShardPlan.Workers = 1` and diffing the damage/heal totals; a debug build also logs merged fact counts.
-- Live tailing works right after: new lines during the load appear, and the merged rows are already on the boards when
-  capture started (a merged load must not look like a monitor that missed its history).
-- Closing the window or opening another log MID-backfill leaves no wedge and no second capture alive (the attempt aborts
-  whole); `grep -c "Error Loading File" eqlogparser.log` says whether an abort was recorded as a failed load.
-- Clear All on a sharded capture re-opens at EOF (a monitor re-open is not a re-shard) and every board empties and refills.
+- The progress band moves smoothly rather than sitting at 0 % and jumping to 100 %, and it reaches 100 % in step with
+  `Finished Loading Log File`. `gc.tidy log loaded` appears later still — the tidy is armed at 100 % and lands on the
+  first contentful board build (or its one-shot backstop), never inside the read.
+- The fight list shows its band while lines are arriving and hands over rows without clearing them; an empty snapshot
+  mid-read must not settle it (`FightTableLoadBandTest` covers this headless for the WPF side).
+- Spot-check what a cross-line carry produces, since these are the fields a mid-file cut used to corrupt: a fight with
+  critical hits reports a non-zero crit split (and the overlay marks crits), deaths show their last sentence where the
+  log has one, and a Magic Die roll in the log appears on the boards exactly once.
+- Totals match a re-open of the same file (same process or not): damage, healing, and fight count identical. Same-file
+  determinism is the property to defend here; there is no second read path to compare against any more.
+- Live tailing works right after: lines appended while the load ran appear, and the boards are not a monitor that missed
+  its history.
+- Closing the window or opening another log MID-load leaves no wedge and no second capture alive;
+  `grep -c "Error Loading File" eqlogparser.log` says whether an abort was recorded as a failed load.
+- Clear All re-opens the same file at EOF (a monitor re-open, not a re-read) and every board empties and refills.
 
 ## Identity Table paging checks on Windows
 
