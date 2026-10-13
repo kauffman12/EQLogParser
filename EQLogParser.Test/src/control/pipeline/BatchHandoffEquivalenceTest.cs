@@ -1,6 +1,5 @@
-using System.Collections.Concurrent;
-
 using EQLogParser;
+using System.Collections.Concurrent;
 
 namespace EQLogParser;
 
@@ -152,7 +151,7 @@ public class BatchHandoffEquivalenceTest
     // The one shape that could matter: the sentence before a death is written while parsing the last line of batch one,
     // and read by the first line of batch two. A carry scoped to a batch would leave this death quoting nothing, while
     // every same-batch test stayed green.
-    var split = Feed(2,
+    var split = Feed(1,
     [
       "[Wed Oct 01 12:00:01 2025] Ghoul hits Kizant for 12 points of damage.",
       "[Wed Oct 01 12:00:02 2025] Kizant has been slain by a gnawed ghoul.",
