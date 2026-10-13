@@ -53,6 +53,12 @@ namespace EQLogParser
     private double _nextCastPruneAtS = double.NaN;
     // One entry per ambiguous spell name. The value carries its own ordering fact — see CastHistory.
     private readonly ConcurrentDictionary<string, CastHistory> _spellNameIndex = new();
+
+    // Set only while a sharded bulk open wants its ambiguity retry (see FinishCastHistoryHold): the horizon sweep
+    // stands down and unresolved received-spell rows accumulate below instead of evaporating. Touched only through
+    // Volatile.Read/Write — lanes set eyes on it from several threads.
+    private bool _holdCastHistory;
+    private readonly List<PendingAmbiguity> _pendingAmbiguity = [];
     private readonly Timer _eventTimer;
 
     private static readonly string[] TimedRecordTypes =
@@ -132,6 +138,11 @@ namespace EQLogParser
         }
       }
       _spellNameIndex.Clear();
+
+      // A retry that was in flight when this session died is nobody's question anymore, and a hold must never
+      // survive the load that earned it — Clear closes the door from the other side too.
+      Volatile.Write(ref _holdCastHistory, false);
+      lock (_pendingAmbiguity) { _pendingAmbiguity.Clear(); }
 
       // A new capture starts the horizon over: the first cast of the next session schedules the first sweep.
       _nextCastPruneAtS = double.NaN;
@@ -218,6 +229,113 @@ namespace EQLogParser
 
         PruneCastHistoryLocked(beginTime);
       }
+    }
+
+    /*
+     * ─── Bulk-open ambiguity retry (the sharded seam's cast-recency gap) ───
+     * The 8-second cast check resolves "which rank does <player>'s <spell name>" from a cast line that sits earlier
+     * in the file. A sequential reader has always parsed it; a lane has NOT parsed the other lane's half, so rows
+     * near a shard seam fail a check a sequential load would have passed — and unlike the crit pairing, no amount
+     * of waiting fixes the question while it is being asked.
+     *
+     * The store itself was never sharded (identity/recency memory is process-wide on purpose), so by merge time
+     * every cast IS present. Rather than let the seam keep its wrong answer, a sharded open holds the horizon sweep,
+     * remembers what stayed unresolved, and asks ONE more time when the merge completes — each row anchored to its
+     * own timestamp, reproducing what the sequential parse would have concluded. The row already carries its
+     * candidate list (AddAmbiguity), so this re-decides; it never re-parses, never re-walks the file.
+     *
+     * Three doors keep the scope the operator asked for — a file open, never live: BeginCastHistoryHold is called
+     * only by the sharded backfill; AddPendingAmbiguity no-ops while the hold is closed (the live tail, seek-back
+     * and small files never grow the list); FinishCastHistoryHold runs exactly once per load. ReleaseCastHistoryHold
+     * covers a dead lane: the hold must not outlive the load it was earned for. Memory cost is bounded by one
+     * file's casts-of-ambiguous-names — the only entries this store has ever kept.
+     */
+    internal void BeginCastHistoryHold()
+    {
+      lock (_pendingAmbiguity) { _pendingAmbiguity.Clear(); }
+      Volatile.Write(ref _holdCastHistory, true);
+    }
+
+    /// <summary>Remembers a received-spell row the parse could not pin to one rank. Free while the hold is closed.</summary>
+    internal void AddPendingAmbiguity(ReceivedSpell spell, double beginTime)
+    {
+      if (!Volatile.Read(ref _holdCastHistory)) return;
+      lock (_pendingAmbiguity) { _pendingAmbiguity.Add(new PendingAmbiguity(spell, beginTime)); }
+    }
+
+    /// <summary>The second look: re-ask each unresolved row against the now-complete history, then let the horizon resume.</summary>
+    internal (int pending, int resolved) FinishCastHistoryHold()
+    {
+      Volatile.Write(ref _holdCastHistory, false);
+      PendingAmbiguity[] round;
+      lock (_pendingAmbiguity) { round = [.. _pendingAmbiguity]; _pendingAmbiguity.Clear(); }
+
+      var resolvedCount = 0;
+      foreach (var item in round)
+      {
+        if (item.Spell.SpellData is not null) continue; // something answered it first (the class-lane resolver writes back too)
+        foreach (var candidate in item.Spell.Ambiguity) // the parse's own order: first cast-backed name wins
+        {
+          if (candidate.Name is null) continue;
+          // The accept rule mirrors FindPreviousCast: a self-target spell is proven by ANY recent cast of that rank,
+          // a targeted one only by the receiver having cast it themselves.
+          var requiredCaster = candidate.Target == (int)SpellTarget.Self ? null : item.Spell.Receiver;
+          if (WasCastWithin(candidate.Name, item.BeginTime, requiredCaster))
+          {
+            item.Spell.SpellData = candidate;
+            resolvedCount++;
+            break;
+          }
+        }
+      }
+
+      PruneAfterHoldReleased();
+      return (round.Length, resolvedCount);
+    }
+
+    /// <summary>Dead-lane path: no retry, but the hold and everything it was protecting go now.</summary>
+    internal void ReleaseCastHistoryHold()
+    {
+      Volatile.Write(ref _holdCastHistory, false);
+      lock (_pendingAmbiguity) { _pendingAmbiguity.Clear(); }
+      PruneAfterHoldReleased();
+    }
+
+    // The horizon is earned back the moment the hold closes; sweep once at the newest time we have.
+    private void PruneAfterHoldReleased()
+    {
+      double newest = double.NaN;
+      lock (_playerAmbiguityCastCache) { if (_playerAmbiguityCastCache.Count > 0) newest = _playerAmbiguityCastCache[^1].BeginTime; }
+      if (!double.IsNaN(newest)) PruneCastHistoryLocked(newest);
+    }
+
+    // The retry's question: a real cast of this name inside [atS − 8 s, atS] — the same horizon and the same
+    // interrupted-skip as the parse-time FindPreviousCast, but anchored to THIS row's timestamp instead of "whatever
+    // is newest in the cache" (which at load end is the end of the file, and would answer every old row wrong).
+    internal bool WasCastWithin(string spellName, double atS, string requiredCaster)
+    {
+      const double WindowS = 8; // FindPreviousCast's duration, verbatim
+      if (!_spellNameIndex.TryGetValue(spellName, out var history)) return false;
+      lock (history)
+      {
+        var casts = history.Casts;
+        for (var i = casts.Count - 1; i >= 0; i--)
+        {
+          var cast = casts[i];
+          if (cast.BeginTime < atS - WindowS && history.AscendingTime) break; // older than the window, and nothing before is newer
+          if (cast.BeginTime > atS || cast.BeginTime < atS - WindowS) continue;
+          if (cast.Cast.Interrupted) continue;
+          if (requiredCaster is null || string.Equals(cast.Cast.Caster, requiredCaster, StringComparison.OrdinalIgnoreCase)) return true;
+        }
+      }
+      return false;
+    }
+
+    private sealed class PendingAmbiguity
+    {
+      internal readonly ReceivedSpell Spell;
+      internal readonly double BeginTime;
+      internal PendingAmbiguity(ReceivedSpell spell, double beginTime) { Spell = spell; BeginTime = beginTime; }
     }
 
 
@@ -315,6 +433,10 @@ namespace EQLogParser
      */
     private void PruneCastHistoryLocked(double newestS)
     {
+      // A bulk open under cast-history hold stands the sweep down entirely — its retry asks about rows hours old,
+      // and a horizon that eats their casts eats the answers. Finish/Release resume it with one sweep at the newest
+      // time; nothing else may leave this closed, which is why both end in PruneAfterHoldReleased.
+      if (Volatile.Read(ref _holdCastHistory)) return;
       if (!double.IsNaN(_nextCastPruneAtS) && newestS < _nextCastPruneAtS)
       {
         return;

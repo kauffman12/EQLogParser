@@ -548,6 +548,15 @@ namespace EQLogParser
 
       Volatile.Write(ref _backfillActive, 1);
 
+      /*
+       * Cast-recency cannot be lane-local (the store is process-wide by design), and a line near a seam asks about
+       * casts the OTHER lane has not parsed yet. Rather than pretend the question failed, hold the cast-history
+       * horizon for the load, remember what stayed unresolved, and re-decide once at merge time with every cast
+       * present — reproducing what a sequential read would have concluded. See RecordsStore's ambiguity-retry block;
+       * live parsing never enters here, which is exactly why this gap is a sharding artifact and nothing else.
+       */
+      RecordsStore.Instance.BeginCastHistoryHold();
+
       var shards = new List<BackfillShard>(ranges);
       try
       {
@@ -568,11 +577,18 @@ namespace EQLogParser
         await Task.WhenAll(tasks);
         backfill.Merge(shards);   // stops the lane captures and pours under the ingest gate; nothing tails before this returns
         Log.Debug($"load: backfill merged into the capture in {stopwatch.ElapsedMilliseconds:N0} ms (wall, all ranges + merge)");
+
+        var (pending, resolved) = RecordsStore.Instance.FinishCastHistoryHold();
+        if (pending > 0)
+        {
+          Log.Debug($"cast-ambiguity retry: {pending} pending, {resolved} resolved");
+        }
         return ranges;
       }
       catch
       {
         backfill.Abort(shards);
+        RecordsStore.Instance.ReleaseCastHistoryHold(); // a dead load must not leave the horizon stopped
         throw;   // ReadFileAsync's catch reports it; the stack rides on
       }
       finally

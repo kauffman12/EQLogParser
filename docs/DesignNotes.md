@@ -8534,6 +8534,23 @@ working set ~690 MB vs ~593 (+90), load peak unchanged — per-core heaps commit
 every heap anyway; Task Manager's between-load floor sits a little higher because Server GC decommits less eagerly, which is
 mode behavior, not a stale collection call. Revisit (an opt-out, or back to workstation) if low-RAM machines report pressure.
 
+**Cast-ambiguity gets a second look at the merge (2026-11, operator's design).** A buff line whose spell name covers several
+ranks asks "was this rank cast in the last 8 s", and near a shard seam that cast sits in the lane that has not parsed its half
+yet — a question a sequential read answers and a lane cannot. The store was never sharded, so at merge time every cast IS
+present; rather than let the seam keep a wrong answer, `RecordsStore` runs **hold + retry** (its block comment carries the laws):
+`RunBackfillAsync` opens the hold — which stands the horizon sweep down, because rows from hours into a file get retried with
+the casts of those hours and a swept horizon is no history at all; every still-unresolved `ReceivedSpell` enqueues, already
+carrying its candidate list (`AddAmbiguity`; readers ask `HasAmbiguity`); `FinishCastHistoryHold` at merge completion re-asks
+each open row ONCE, anchored to **its own timestamp** — the parse-time query anchors to "newest in cache", which at load end is
+the end of the file, a quirk that would answer every old row wrong. The accept rule mirrors `FindPreviousCast`: any recent cast
+proves a self-target rank, only the receiver's own cast proves a targeted one. Three doors keep it a file-open feature and nothing
+else: `Begin` runs only inside the sharded backfill; enqueue no-ops while the hold is closed (live tail, seek-back and small files
+never grow the list); every exit — merge success, dead lane (`Release`), session `Clear` — closes the hold and sweeps once as if
+the horizon had run. It re-decides only: nothing re-parses, answered rows are skipped, and the class-lane resolver at board time
+(`ResolveSpellAmbiguity`) still answers whatever cast-recency cannot. Grep: `cast-ambiguity retry`; the seam itself is reproduced
+headlessly in `RecordsStoreAmbiguityRetryTest`. The one carry this does NOT fix is the delayed-critical pairing (its carry holds
+record objects across lanes) — it remains the sharding debt of record, one line per file at worst.
+
 ## What the FCT overlay costs per number on screen (2026-11)
 
 Asked for RAM during **active parsing** — a live raid with the overlay up — and measured over Core's own overlay engine
