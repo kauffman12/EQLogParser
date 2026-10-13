@@ -129,6 +129,12 @@ operator checks with `Debug=True`, on a capture of several hundred MB or more:
   written while watching must land within about a second, not wait for 5,000 more.
 - The Trigger Tester's non-realtime run still speaks its sample lines one at a time at their own pace (same seam, now
   carrying batches; a bundle treated as one event would fire every trigger at once).
+- With `Debug=True`, a big open prints exactly one `gc.mode batch ON for a bulk read (N MB), from Interactive` and one
+  `gc.mode batch OFF, back to Interactive` when the file runs out — and **neither** line for a small file or for a
+  follow-from-end-of-file open (a monitor over a 1.2 GB capture reads nothing, so it must not change a process-wide policy).
+  If a load ends without the OFF line while nothing else is reading, a scope leaked: note it as a bug, do not shrug it off.
+- While a big file loads the window may feel slightly stiffer (fewer, longer collections are the deal being struck); the
+  boards, the overlay and live tailing must behave normally once it finishes.
 - Closing the window or opening another log MID-load leaves no wedge and no second capture alive;
   `grep -c "Error Loading File" eqlogparser.log` says whether an abort was recorded as a failed load.
 - Clear All re-opens the same file at EOF (a monitor re-open, not a re-read) and every board empties and refills.

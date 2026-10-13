@@ -8571,6 +8571,32 @@ variable beats `runtimeconfig.json`) and compare wall, peak RSS and the labelled
 Until that line exists here, nobody should claim Server GC earns its memory — and nobody should credit a batching or
 parsing change with a collector win.
 
+**First field data (2026-10-13), one capture, one machine, two runs each — read it as the confound, not as a result:**
+
+| build | run 1 | run 2 (warm) |
+|---|---|---|
+| master: per-line handoff, workstation GC | 27 s | 23 s |
+| this branch: batched handoff, **Server GC** | 23 s | **17 s** |
+| this branch: batched handoff, workstation GC (both GC properties removed) | 25 s | 23 s |
+
+The warm column is the comparison, and it says the **~6 s came from the collector**; batching alone moved that box's wall by
+about nothing, which is what its spike predicted (~4 % of the ingest loop, low single digits on a whole open) — so the earlier
+reading of these numbers as a batching win was wrong, and "the new version garbage collects a little better" was the operator
+spotting the actual cause. Note also that dropping both properties means workstation GC **with background collection still
+on** (concurrent is the default), so that row is a clean Server-vs-workstation switch, not two changes.
+
+**The matrix still owed**, filled by four warm runs plus working set after the tidy, which decides one flag:
+
+| | `Interactive` (app default) | `Batch` during the bulk read |
+|---|---|---|
+| Server GC (shipping) | 17 s | ? |
+| workstation (`DOTNET_gcServer=0`) | 23 s | ? |
+
+Use `EQLP_BULKGC=0` for the `Interactive` column and unset for the `Batch` column — one build, no rebuilds — and `DOTNET_gcServer=0`
+in the environment for the second row (the variable beats `runtimeconfig.json`). If Server GC survives, its cost is retention
+(~+90 MB post-tidy working set measured here, +305 MB peak in the older single-thread matrix) bought with seconds an operator
+feels; if it does not, `Batch` is the mechanism trying to win some of those seconds back without the memory.
+
 **If parallel reading is ever attempted again**, the prerequisite list is short and specific: the four carries
 above become either line-local or merge-time reconciled (with the crit ones proven to be `(attacker, <=1 s[, value])
 ⇒ Crit tag` queries rather than record-object hand-offs), a split-point equivalence harness exists *first*, band
@@ -12570,6 +12596,33 @@ never comes — the first field run paid at the backstop with the working set go
 10 s and read as "oddly delayed"; 6 s lands the pause just behind the rows (first full pass = Finished +2.3/+2.9 s on every
 capture measured here), and paying mid-pass on some slower box is merely the old behaviour, never wrong. Same two moments,
 same labelled pause — just paid when the work has actually stopped.
+
+**Throughput mode while a bulk file streams (`BulkGcMode`, 2026-10-13).** Separate question, same collector: not *when* to
+force a collection, but what policy the runtime should follow *during* the read. `GCLatencyMode.Batch` means "minimise total
+GC time; pauses are acceptable", which is exactly the shape of a file open — the operator is watching a loading band, while
+background collection competes for the two threads that are producing the garbage. The ledger that justifies it is above in
+"The reader hands the parser one line at a time…": +200 B per line, **22 gen0 collections, nothing promoted** — concurrency
+is protecting a generation this workload never reaches.
+
+The law is about scope, because `GCSettings.LatencyMode` is one process-global slot with no ownership:
+
+- **Entered for the bulk phase only and left at end of file.** `LogReader.ReadFileAsync` holds it in an explicit `using`
+  BLOCK rather than a method-scoped `using var`, because the monitor loop lives in that same method — a mode left on after
+  the file runs out would sit behind a live raid for hours, which is the one place a stutter costs something and memory
+  growth (what `SustainedLowLatency` trades for smoothness) is unwanted.
+- **Refcounted, not set-and-restored.** More than one reader can be alive over one process (an open plus a trigger reader
+  per enabled character), so the first sets it, the last restores what it *found* — never a hardcoded `Interactive`, which
+  would silently downgrade a promise somebody else made. `BulkGcModeTest` pins nesting, double-dispose, unwind-by-exception
+  and that restore-to-what-was-found.
+- **Decided on bytes this read will walk, not file size** (`ShouldUseBatchMode`, threshold 32 MiB). A follow-from-end-of-file
+  open over a 1.2 GB capture reads nothing and must stay out — that is the case a file-size rule gets wrong.
+- `SustainedLowLatency` is **not** the load mode: it avoids gen2 by keeping memory longer, which is both the wrong direction
+  for throughput and the wrong trade against the retention tax below.
+
+This changes no collector *choice* — `GCSettings.IsServerGC` is read-only at runtime, so Server vs workstation stays a
+csproj/startup decision. Until the matrix under "Parallel loading: measured, shipped, and backed out" settles that question,
+`EQLP_BULKGC=0|1` overrides this mechanism from the environment so one build measures both arms; **that gate is temporary and
+is deleted with the answer**, not kept as a dial.
 
 ## DPS and active-reader retention review at 35420fcf
 
