@@ -7,12 +7,12 @@ namespace EQLogParser;
  *
  * It did not always. DamageFact held bits for "the registry thought this attacker was player-side" and "…this defender",
  * HealFact held the healer/healed pair, and CombatCapture asked PlayerRegistry four questions per event to fill them —
- * ~15 million lookups over a 952 MiB capture. They were deleted for the reason RangeSpike's own census produced, not
+ * ~15 million lookups over a 952 MiB capture. They were deleted for the reason a census measured, not
  * because of the cost: **32 of 999 attacker names carried BOTH values of one side bit inside a single sequential pass**
  * (`Betebeatz` reads side=0 on 9,512 facts and side=1 on 5,342), and 28 healer names flipped across 52,302 heal facts.
  * A bit that changes mid-file for the same name is not a property of the sentence — it is a timestamped snapshot of an
- * opinion, which no replay from another prefix reproduces and no sharded reader can reproduce at all (that census is how
- * the parallel-parsing design learned "stop stamping opinions into facts" was a prerequisite).
+ * opinion, which no replay from another prefix reproduces. The census figures live in docs/DesignNotes; what the
+ * measurement taught is the law these tests hold: do not stamp a registry opinion into a fact.
  *
  * Where that knowledge legitimately lives: WHEN the registry learned a name travels as an IdentityEvent with its Seq and
  * TimeS — the non-lossy form — and what a name IS gets decided per name by the rule book over captured evidence. So these

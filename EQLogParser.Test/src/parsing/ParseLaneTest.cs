@@ -17,9 +17,9 @@ namespace EQLogParser;
  *   3. Carries (the sentence before a death, crit pairing) do not cross lanes. This is asserted behaviourally —
  *      a death on an unbound thread after a damage line parsed on another lane must have NO Previous — because
  *      "static field renamed to a lane field" compiles either way and only the run says which one it became.
- *   4. PlayerRegistry is deliberately NOT lane state: a shard's verified player lands in the shared registry,
- *      because identity memory is process-wide by design (see ParseLane's header for the consequence —
- *      registry events reach every subscribed capture, and the merge accounts for it).
+ *   4. PlayerRegistry is deliberately NOT lane state: a second stream's verified player lands in the shared
+ *      registry, because identity memory is process-wide by design (see ParseLane's header for the consequence —
+ *      registry events reach every subscribed capture).
  */
 [TestClass]
 public class ParseLaneTest
@@ -67,7 +67,7 @@ public class ParseLaneTest
     Assert.AreSame(lane, ParseLane.Current);
 
     // The release a consumer's finally performs: the pooled thread goes back to being "no particular stream",
-    // which means Main — not to a dangling shard lane it would contaminate on its next task.
+    // which means Main — not to a dangling lane it would contaminate on its next task.
     ParseLane.BindCurrentThread(null);
     Assert.AreSame(ParseLane.Main, ParseLane.Current);
   }
@@ -83,17 +83,17 @@ public class ParseLaneTest
       ParseLane.Main.Evidence?.Invoke("Kizant", 1.0, EvidenceFact.EvJoinedRaid);
       Assert.AreEqual(1, hits, "a raise on Main did not reach Main's subscriber");
 
-      // A shard lane's raise must stay home. This is the fan-out half of the law: with process-static events,
+      // Another lane's raise must stay home. This is the fan-out half of the law: with process-static events,
       // this invoke would have reached every capture in the process.
-      var shard = new ParseLane();
-      shard.Evidence?.Invoke("Kizant", 1.0, EvidenceFact.EvJoinedRaid);
-      Assert.AreEqual(1, hits, "a raise on a shard lane leaked into Main's subscribers");
+      var auxLane = new ParseLane();
+      auxLane.Evidence?.Invoke("Kizant", 1.0, EvidenceFact.EvJoinedRaid);
+      Assert.AreEqual(1, hits, "a raise on another lane leaked into Main's subscribers");
 
-      // And the reverse: a subscriber attached to a shard field must not see Main's raise.
-      var shardHits = 0;
-      shard.Evidence += (name, time, kind) => shardHits++;
+      // And the reverse: a subscriber attached to another lane's field must not see Main's raise.
+      var otherHits = 0;
+      auxLane.Evidence += (name, time, kind) => otherHits++;
       ParseLane.Main.Evidence?.Invoke("Kizant", 1.0, EvidenceFact.EvJoinedRaid);
-      Assert.AreEqual(0, shardHits, "Main's raise reached a shard lane's subscriber");
+      Assert.AreEqual(0, otherHits, "Main's raise reached another lane's subscriber");
     }
     finally
     {
@@ -106,17 +106,17 @@ public class ParseLaneTest
   {
     // The real seam: LogProcessor binds its lane on the consumer thread, so the line's evidence lands there —
     // never on Main, where the running session's capture would double-count it.
-    var shard = new ParseLane();
-    string? onShard = null;
+    var auxLane = new ParseLane();
+    string? onOther = null;
     string? onMain = null;
     Action<string, double, byte> mainProbe = (name, time, kind) => onMain = name;
-    shard.Evidence += (name, time, kind) => onShard = name;
+    auxLane.Evidence += (name, time, kind) => onOther = name;
     PreLineParser.EventsEvidence += mainProbe;
 
     try
     {
       using var items = new BlockingCollection<LogReaderItem>(new ConcurrentQueue<LogReaderItem>());
-      using var processor = new LogProcessor("shard.txt", new NullSinks(), new NullSinks(), shard);
+      using var processor = new LogProcessor("auxLane.txt", new NullSinks(), new NullSinks(), auxLane);
       processor.LinkTo(items);
 
       const string line = "[Sun Apr 26 18:41:02 2026] Bithika joined the raid.";
@@ -125,10 +125,10 @@ public class ParseLaneTest
       items.CompleteAdding();
       Assert.IsTrue(processor.Completion!.Wait(TimeSpan.FromSeconds(60)));
 
-      Assert.AreEqual("Bithika", onShard, "the shard processor's evidence did not reach its own lane");
-      Assert.IsNull(onMain, "a shard stream's line fanned into the Main lane — the exact double-count lanes prevent");
+      Assert.AreEqual("Bithika", onOther, "the second processor's evidence did not reach its own lane");
+      Assert.IsNull(onMain, "a second stream's line fanned into the Main lane — the exact double-count lanes prevent");
 
-      // Law 4: identity memory is process-wide even for a shard stream.
+      // Law 4: identity memory is process-wide even for a second stream.
       Assert.IsTrue(PlayerRegistry.Instance.IsVerifiedPlayer("Bithika"),
         "the shared registry must learn names from every stream; only EVENTS and carries are lane state");
     }
@@ -143,17 +143,17 @@ public class ParseLaneTest
   {
     // DeathRecord.Previous is the visible edge of the PreviousAction carry. Parsed in order on one lane, the
     // death quotes the line before it; parsed afterwards on an UNBOUND thread (Main), the same death must have
-    // no Previous at all — if the carry were still process-wide, Main would inherit the shard's sentence and
+    // no Previous at all — if the carry were still process-wide, Main would inherit the other lane's sentence and
     // this test would fail while every single-lane test stayed green.
-    DeathEvent? onShard = null;
+    DeathEvent? onOther = null;
     DeathEvent? onMain = null;
-    var shard = new ParseLane();
-    shard.NewDeath += e => onShard = e;
+    var auxLane = new ParseLane();
+    auxLane.NewDeath += e => onOther = e;
     DamageLineParser.EventsNewDeath += e => onMain = e;
 
     try
     {
-      ParseLane.BindCurrentThread(shard);
+      ParseLane.BindCurrentThread(auxLane);
       DamageLineParser.Process(Line("Ghoul hits Kizant for 12 damage.", 100));
       DamageLineParser.Process(Line("Kizant has been slain by a ghoul.", 101));
       ParseLane.BindCurrentThread(null);
@@ -164,13 +164,13 @@ public class ParseLaneTest
     finally
     {
       ParseLane.BindCurrentThread(null);
-      shard.NewDeath -= e => onShard = e;
+      auxLane.NewDeath -= e => onOther = e;
       DamageLineParser.EventsNewDeath -= e => onMain = e;
     }
 
-    Assert.IsNotNull(onShard);
-    Assert.AreEqual("Ghoul hits Kizant for 12 damage.", onShard.Record.Previous,
-      "the shard lane's own carry did not reach its death record");
+    Assert.IsNotNull(onOther);
+    Assert.AreEqual("Ghoul hits Kizant for 12 damage.", onOther.Record.Previous,
+      "the bound lane's own carry did not reach its death record");
     Assert.IsNotNull(onMain);
     Assert.IsNull(onMain.Record.Previous,
       "the previous sentence crossed lanes — carries must belong to the stream that parsed them");
@@ -179,8 +179,8 @@ public class ParseLaneTest
   [TestMethod]
   public void EachLaneHasItsOwnSpellTypeMemo()
   {
-    var shard = new ParseLane();
-    Assert.AreNotSame(ParseLane.Main.SpellTypeCache, shard.SpellTypeCache);
-    Assert.AreEqual(-1, shard.LastRolledLine, "a fresh lane arrives with clean carries — that is what 'born clean' means");
+    var auxLane = new ParseLane();
+    Assert.AreNotSame(ParseLane.Main.SpellTypeCache, auxLane.SpellTypeCache);
+    Assert.AreEqual(-1, auxLane.LastRolledLine, "a fresh lane arrives with clean carries — that is what 'born clean' means");
   }
 }

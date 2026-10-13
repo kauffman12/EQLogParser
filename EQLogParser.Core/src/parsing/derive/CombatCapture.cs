@@ -18,7 +18,7 @@ namespace EQLogParser
   // stream's facts and appends need no locking (same contract as DamageFactTable). With no lane named the tap
   // sits on ParseLane.Main, which is the single stream this app has always had. PlayerRegistry events are the
   // deliberate exception: identity memory is process-wide, so a verification from ANY stream reaches every
-  // subscribed capture — a sharded load merges identity rows with that duplication in mind.
+  // subscribed capture, and the row a verification writes is keyed by name rather than by who raised it.
   internal sealed class CombatCapture
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
@@ -232,8 +232,8 @@ namespace EQLogParser
        * each name at the instant the event fired: ~15 million lookups over a 952 MiB capture, and — the reason they
        * were deleted rather than optimised — an answer no consumer can reproduce. It is not a property of the line:
        * the same name carries the bit only from the second its evidence arrived, so two runs over one file with a
-       * different store warm-up differ in it, and a parallel or sharded reader cannot get it right at all (RangeSpike's
-       * own census was built to prove that, and said so). Identity is derived per name by the rule book from captured
+       * different store warm-up differ in it — 32 of 999 attacker names carried BOTH values of one side bit inside a
+       * single pass (the census is recorded in docs/DesignNotes). Identity is derived per name by the rule book from captured
        * evidence, and WHEN the registry learned something travels honestly as IdentityEvent (VerifiedPlayer/Pet with
        * Seq and TimeS) — which is the non-lossy form of the same knowledge. What stays on the fact is what the line
        * says: a spell standing in for an absent caster, and an ownership word inside a name.

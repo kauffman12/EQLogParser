@@ -1004,8 +1004,8 @@ namespace EQLogParser
 
   }
 
-  // Chat → capture, as one half of the composite fan-out. Top-level (was nested) so a shard processor
-  // can point the same adapter at a SHARD's capture during a backfill — see DeriveEngine.NewShardProcessor.
+  // Chat → capture, as one half of the composite fan-out. Top-level (was nested) because it is a collaborator of
+  // the pipeline rather than a detail of this class: LogProcessor composes it beside the app's own chat sinks.
   internal sealed class IdentityChatSink(CombatCapture capture) : IChatSink
   {
     public void Init()

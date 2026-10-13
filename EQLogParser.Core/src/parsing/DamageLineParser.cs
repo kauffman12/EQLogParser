@@ -33,7 +33,8 @@ namespace EQLogParser
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
     // Carries of the lane parsing this line, not of the process: a second ingest stream keeps its own crit pair,
-    // previous sentence and spell-type memo (docs/DesignNotes → the sharded-load chapter).
+    // previous sentence and spell-type memo. PreviousAction is what a death record reads back as its `Previous`
+    // field (see UpdateSlain), so it spans lines rather than belonging to one.
     private static Dictionary<string, string> SpellTypeCache => ParseLane.Current.SpellTypeCache;
     private static string PreviousAction
     {
@@ -76,7 +77,7 @@ namespace EQLogParser
     // Resets the parse carries (crit carryover dials) of the calling thread's lane — the Main lane, since
     // every caller is a test or a headless run, never a bound consumer thread. For headless/test use: a fresh
     // LogProcessor run must not inherit crit carryover from an earlier run in the same process. The app
-    // never calls this. Shard lanes need no reset; they are discarded whole. (The slain queue this once cleared belonged to the legacy fight engine: deaths now
+    // never calls this. (The slain queue this once cleared belonged to the legacy fight engine: deaths now
     // reach every consumer as EventsNewDeath facts, which is also what the projection's death queues eat.)
     internal static void ResetProcessState()
     {

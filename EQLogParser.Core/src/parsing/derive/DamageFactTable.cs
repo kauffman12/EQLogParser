@@ -118,8 +118,9 @@ namespace EQLogParser
     /*
      * Bits 4 and 8 are RETIRED, not free. They held what PlayerRegistry.IsPetOrPlayerOrMerc answered for each
      * name at the instant the event fired — a snapshot of the registry's opinion rather than of the line, which made
-     * it unreproducible (a name carries it only from its own evidence second onward, so warm-up order changes it and
-     * a sharded reader cannot get it right at all). Nothing read them outside retired measurement tooling; identity
+     * it unreproducible (a name carries it only from its own evidence second onward, so warm-up order changes it —
+     * names flipped side mid-file on a real capture; the census is in docs/DesignNotes). Nothing read them outside
+     * retired measurement tooling; identity
      * is derived per name by the rules, and "when did the registry learn this" travels as IdentityEvent instead.
      *
      * So a NEW flag takes bit 16 or higher, never 4/8: spool files written by an older build have those bits set

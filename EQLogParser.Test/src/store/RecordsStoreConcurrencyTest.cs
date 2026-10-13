@@ -7,12 +7,13 @@ using EQLogParser;
 namespace EQLogParser;
 
 /*
- * The cast caches are process-global, and since sharded loading TWO parse lanes write them at once while both also
- * query them (ambiguous-abbreviation resolution reads the cast history several times per line). That combination was
+ * The cast caches are process-global, and more than one thread can be parsing at any moment — the open's own read
+ * loop and the trigger lane's readers over the same file all feed the same parsers — while every one of them also
+ * queries the cache (ambiguous-abbreviation resolution reads the cast history several times per line). That combination was
  * a latent single-thread design: GetCastsBySpellName read the ambiguity cache's anchor — Count and the last entry —
  * OUTSIDE the lock that Add and the horizon prune hold, and a prune's RemoveRange CLEARS the vacated slots. A reader
  * that latched the old Count mid-sweep could index a nulled entry; the throw folded through the inlined FindPreviousCast
- * onto `EQDataStore.FindByLandsOn line 845` with no frame naming the real method (field NRE 2026-10-13, sharded load of
+ * onto `EQDataStore.FindByLandsOn` with no frame naming the real method (field NRE 2026-10-13 while reading
  * a 1.3 GB capture: "cast line parse failed … Thundablast's detrimental magic splits with Improved Twincast.").
  *
  * This test hammers both halves against the shared RecordsStore (its own state is cleared before and after): two writer

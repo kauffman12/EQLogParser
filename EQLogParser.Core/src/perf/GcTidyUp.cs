@@ -11,7 +11,7 @@ namespace EQLogParser
    * "Cleaning up.." so the stop-the-world has a name. A load that actually read lines ARMS one at 100 %; it is paid by the
    * first contentful board build (MainWindow.ConsumePostLoadTidy) or a one-shot backstop — the field showed the old
    * synchronous pass firing at "Finished" while the first full derive and its three-board fan-out, the biggest allocators
-   * of a sharded load, were still ahead: it collected half the garbage and nothing asked again (2026-10-13). Clear All
+   * of a bulk load, were still ahead: it collected half the garbage and nothing asked again (2026-10-13). Clear All
    * pays synchronously after its re-open (MainWindow.ClearAllFights); the re-open seeks to end of file and reads nothing,
    * so nothing allocates behind that collector.
    *

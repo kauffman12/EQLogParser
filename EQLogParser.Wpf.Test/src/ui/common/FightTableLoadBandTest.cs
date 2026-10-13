@@ -216,7 +216,7 @@ public sealed class FightTableLoadBandTest
       Assert.AreEqual(Visibility.Visible, table.loadOverlay.Visibility);
 
       /*
-       * The backfill case: a stray fact wakes a derive pass while nine million lines are still in lane tables, and the
+       * The case that matters: a stray fact wakes a derive pass while the read is still landing rows, and the
        * snapshot says zero fights. That is not this capture's answer - it is this capture's middle - and settling on it
        * is what left the pane blank for the rest of the read.
        */
