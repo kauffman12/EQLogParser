@@ -404,6 +404,9 @@ namespace EQLogParser
             || !ReferenceEquals(session, DeriveEngine.Active)) return;
 
           var outcome = repaint.Complete(stamp);
+          // ExplicitRequestGeneration counts GESTURES (RederiveAsync from a menu, an override write). A machine path that ever called RederiveAsync on
+          // a timer could keep this census forever stale: every run would finish behind a newer request and repaint nothing. Hold that line at the door
+          // that raises requests, not here.
           var requestsMoved = requestGeneration != session.ExplicitRequestGeneration;
           if (census is not null && repaint.IsFresh(stamp) && !requestsMoved)
           {

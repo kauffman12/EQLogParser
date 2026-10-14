@@ -239,13 +239,13 @@ namespace EQLogParser
 
     // `internal set` is the same write guard as on PlayerSubStats.SubSubStats: a board's dictionaries and lists are swapped only from
     // inside this assembly, and never by a view. The write law itself is unchanged.
-    /*
-     * Made on first touch, not per row: the builders WRITE these for exactly one row - the raid totals (StatsUtil's PopulateSpecials,
-     * resist and death accumulation all name the raid stats) - and read them from that same row only. So every other PlayerStats this
-     * assembly makes used to pre-allocate two ConcurrentDictionaries and a List of containers nothing would ever look at: on a group
-     * night whose board carries a few thousand mob names that is megabytes of emptiness per rebuild, and the overlay's scope builders
-     * pay it every second. The getter race is the assign-once kind: both writers get a valid object and the loser costs one.
-     */
+        /*
+         * Made on first touch, not per row: the builders WRITE these for exactly one row - the raid totals (StatsUtil's PopulateSpecials, resist and
+         * death accumulation all name the raid stats) - and read them from that same row only. Every other PlayerStats this assembly makes used to
+         * pre-allocate two ConcurrentDictionaries and a List of containers nothing would ever look at: megabytes of emptiness per rebuild on a board with
+         * a few thousand mob names, paid by the overlay's scope builders every second. The ??= is safe ONLY because one builder thread writes the raid
+         * row; two concurrent writers would lose the loser's CONTENTS, not just an allocation. Do not parallelise these writers.
+         */
     public List<DeathEvent> Deaths { get => _deaths ??= []; internal set => _deaths = value; }
     public ConcurrentDictionary<string, string> Specials { get => _specials ??= new(); internal set => _specials = value; }
     public ConcurrentDictionary<string, ConcurrentDictionary<string, int>> ResistCounts { get => _resistCounts ??= new(); internal set => _resistCounts = value; }
