@@ -257,3 +257,18 @@ Two behaviours depend on state a headless test cannot build; both have shipped b
   decide the shape of a document). `eqlogparser.log` prints `dock: <window> shown as Document` for every menu-opened window; toolbar
   windows have no line (different door, `SyncFusionUtil.OpenWindow`). If one still opens wrong, record WHICH window and whether
   **Reset Window State** (drops `dockSite.xml`) changes it — that separates the code path from a saved layout.
+
+## Chat archive range checks on Windows
+
+*"Playing past midnight and the chats are stuck on yesterday"* had two causes; this is the first (docs/DesignNotes.md →
+"A chat range is whole days, and an untouched end dial rides the clock"). It cannot be exercised headlessly — it lives in a docked
+pane's date dials — so it is worth ten minutes before a release goes out.
+
+- [ ] **Chat pane across a real midnight.** Open the Chat pane with a player's archive loaded, leave EQLogParser running past
+  00:00 (or advance the system clock an hour over midnight), then press Refresh. Today's messages must appear with **no** change
+  to the date pickers and no restart, and the end-date box should have moved to today by itself. The shipped bug showed the
+  newest line belonging to yesterday with a picker nobody had touched.
+- [ ] **A picked end date still wins.** Pick an end date of yesterday in the same session, Refresh: today must NOT appear. Then
+  move the picker to today and confirm today's messages return — that separates "follows the clock" from "ignores the dial".
+- [ ] **First day of a month / year.** On the 1st (or with the clock rolled over one), refresh the Chat pane and confirm the new
+  `Chat-MM.zip` — and on Jan 1, the new year folder — is read at all. The old bound skipped the whole archive, not a few lines.

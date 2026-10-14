@@ -9,6 +9,13 @@ namespace EQLogParser
     private readonly string _keyword;
     private readonly string _to;
     private readonly string _from;
+
+    /*
+     * The range as whole days, built by ChatDateRange: _startDate is the first covered day's midnight (inclusive) and
+     * _endDate the midnight AFTER the last covered day (exclusive). Both read 0 as "no edge on that side". The three
+     * During* tests below prune which year folders, month archives and day entries are opened at all, so a wrong edge
+     * here does not trim lines — it hides a whole day, which is precisely how today used to vanish after midnight.
+     */
     private readonly double _startDate;
     private readonly double _endDate;
     private readonly Dictionary<string, byte> _validChannels;
@@ -35,26 +42,17 @@ namespace EQLogParser
       _to = to;
     }
 
-    internal bool DuringYear(DateTime year)
-    {
-      var begin = DateUtil.ToDotNetSeconds(year);
-      var end = DateUtil.ToDotNetSeconds(year.AddYears(1));
-      return (_startDate == 0 || (_startDate < end)) && (_endDate == 0 || (_endDate >= begin));
-    }
+    internal bool DuringYear(DateTime year) =>
+      ChatDateRange.Overlaps(_startDate, _endDate, DateUtil.ToDotNetSeconds(year),
+        DateUtil.ToDotNetSeconds(year.AddYears(1)));
 
-    internal bool DuringMonth(DateTime month)
-    {
-      var begin = DateUtil.ToDotNetSeconds(month);
-      var end = DateUtil.ToDotNetSeconds(month.AddMonths(1));
-      return (_startDate == 0 || (_startDate < end)) && (_endDate == 0 || (_endDate >= begin));
-    }
+    internal bool DuringMonth(DateTime month) =>
+      ChatDateRange.Overlaps(_startDate, _endDate, DateUtil.ToDotNetSeconds(month),
+        DateUtil.ToDotNetSeconds(month.AddMonths(1)));
 
-    internal bool DuringDay(DateTime day)
-    {
-      var begin = DateUtil.ToDotNetSeconds(day);
-      var end = DateUtil.ToDotNetSeconds(day.AddDays(1));
-      return (_startDate == 0 || (_startDate < end)) && (_endDate == 0 || (_endDate >= begin));
-    }
+    internal bool DuringDay(DateTime day) =>
+      ChatDateRange.Overlaps(_startDate, _endDate, DateUtil.ToDotNetSeconds(day),
+        DateUtil.ToDotNetSeconds(day.AddDays(1)));
 
     internal bool PassFilter(ChatType chatType)
     {

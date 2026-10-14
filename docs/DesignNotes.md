@@ -13204,3 +13204,57 @@ correction lives; the mechanism text above says it straight). Validation for thi
 including the WPF assembly; headless suite **2,085 passed / 9 skipped** (2,094 total — the 2,084 recorded above predates the three deleted test
 classes and the join/ignore-list/cleanup-mark coverage added since). Windows execution is still owed for the WPF band tests and the new
 realized-grid checklist item; a Linux build is not their result.
+
+
+## A chat range is whole days, and an untouched end dial rides the clock (2026-11)
+
+Reported as a data problem: *"if they're playing past midnight the chats may go to the previous day and they fail to
+rollover properly."* The archive was innocent. Every chat line is filed by its **own** stamp — `LogProcessor.DoPreProcess`
+gives each `ChatType` the `BeginTime` of its own line, `TryStamp` re-parses whenever the 24-character timestamp differs, and
+`ChatDB.ArchiveChat` derives year/month/day off that per-line number, never off "when the timer ran". That was checked rather
+than assumed: the writer's bucketing (`ArchiveChat`'s stamping + `AddToArchiveAsync` + `SaveCurrent` + `GetEntry`) was ported
+verbatim into a throwaway probe on Linux — `ChatDB` is WPF-side, so it cannot run here — and replayed over midnight inside one
+timer batch, Nov 30 → Dec 1, Dec 31 → Jan 1 (a new month zip *and* a new year folder), and two days sharing one zip. Every line
+landed under its own date, no strays, no cross-month bleed. The probe is gone; the result is this paragraph.
+
+The failure was in reading it back, and it was deterministic:
+
+- `ChatViewer` stamped its end dial **once, in its constructor** (`endDate.DateTime = DateTime.Now`). Docked panes are built
+  once per app session, so that instant aged by the hour.
+- `GetEndDate()` turned it into `_endDate`, and the pruning test was `_endDate >= dayBegin`. That holds for the day the dial
+  was stamped and fails for the next one, so at **00:00:01 today left the answer set** and the newest thing on screen belonged
+  to yesterday. `ChatIterator` builds its entry list from that predicate, so the new day's entry was never even opened.
+- **Refresh could not recover it**: `ChangeSearchAsync(force: true)` rebuilds the filter from the same untouched dial. Nudging
+  the picker or restarting the app were the only ways back — which is what made it read as flaky archiving.
+- Same arithmetic, bigger cut: `DuringMonth` skipped a new month's entire zip on the 1st, and `DuringYear` skipped a new year
+  folder on Jan 1.
+
+Two decisions, in `EQLogParser.Core/src/util/ChatDateRange.cs` (dispatcher-free, so it is testable without a window):
+
+- **The day is the unit, so the bound is a day edge and exclusive.** "Through Nov 7" only means what a reader thinks it means
+  if the bound is midnight ending Nov 7: the picked day stays whole (the clock time off the pick was whatever time the app
+  happened to open at, which was never part of the question) and every later day is refused. `Overlaps` is half-open against
+  half-open, so touching edges do not overlap — that single rule fixes the day, month and year cuts together.
+- **A dial nobody touched means "up to now", not "up to when this pane was built"**, so it follows the clock. The moment an
+  operator picks an end date it is theirs and stops moving; `ChatViewer` tracks that as `_endTouched`, set from the shared
+  `DateTimeChanged` handler only when the change is not one of our own stamps (`_suppressEndDial` brackets the stamp, the same
+  idiom the Identity Table uses around programmatic selections). The pane also re-stamps an untouched dial on the query path so
+  the box displays what the query means — **not from a timer**: a midnight census nobody asked for would repaint the text out
+  from under whoever is reading it, and this pane scrolls.
+
+Nothing here widens anything an operator excluded: per-line filtering never consulted time at all (channels, speaker, keyword),
+so the bound's only effect was on whole-day pruning — which is exactly why the bug could hide a day completely and show nothing
+else different.
+
+Asserted in `EQLogParser.Test/src/util/ChatDateRangeTest.cs` (10 tests): today is covered before *and* after the midnight that
+used to cut it, an untouched dial rolls with the clock for days on end without letting tomorrow in, a **picked** dial still owns
+the boundary (frozen at Nov 7 excludes Nov 8 nine days later — the one case where a stale answer is correct), the start bound is
+inclusive of its day, an empty dial means unbounded, month and year rollovers reach the new archive, and `AnUntouchedDialStampedInThePastNeverLosesToday`
+holds the belt-and-braces rule (untouched ⇒ the *later* of stamped day and today) so the frozen-instant answer cannot return
+through a caller that forgets to stamp. `ChatFilterPrunesThroughTheSharedPredicate` reads `ChatFilter.cs` and refuses any
+`During*` that goes back to its own `_endDate >=` comparison — the three callers are one call to `Overlaps` each, and if that
+drifts, the arithmetic tests would keep passing on a pane that no longer uses them.
+
+Owed on Windows: the visible half (leave the app open past midnight with the Chat pane up, confirm today appears after a Refresh
+without touching the dial or restarting, and that a deliberately picked end date still stops where it was told). `EQLogParser.Wpf.Test`
+constructs no `ChatViewer` case for this; it belongs on the real-control checklist.

@@ -34,6 +34,16 @@ namespace EQLogParser
     private double _lastEndDate;
     private bool _ready;
 
+    /*
+     * Two flags about the end dial. `_endTouched` says an operator picked it, so the range stops where they said; until
+     * then the dial means "through today" and is re-stamped to follow the clock (ChatDateRange explains why a frozen
+     * instant silently dropped yesterday's successor). `_suppressEndDial` brackets our own write so the shared
+     * DateTimeChanged handler does not read a stamp of ours as a gesture — and does not rebuild the query the stamp
+     * already accounts for.
+     */
+    private bool _endTouched;
+    private bool _suppressEndDial;
+
     public ChatViewer()
     {
       InitializeComponent();
@@ -44,8 +54,16 @@ namespace EQLogParser
       UiElementUtil.SetWatermark(toFilter, Resource.CHAT_TO_FILTER);
       UiElementUtil.SetWatermark(fromFilter, Resource.CHAT_FROM_FILTER);
 
-      startDate.DateTime = new DateTime(1999, 3, 16);
-      endDate.DateTime = DateTime.Now;
+      _suppressEndDial = true;
+      try
+      {
+        startDate.DateTime = new DateTime(1999, 3, 16);
+        endDate.DateTime = DateTime.Now;
+      }
+      finally
+      {
+        _suppressEndDial = false;
+      }
 
       var allFonts = UiElementUtil.GetSystemFontFamilies();
       fontFamily.ItemsSource = allFonts;
@@ -83,9 +101,50 @@ namespace EQLogParser
     private void ToFilterKeyDown(object sender, KeyEventArgs e) => FilterKeyDown(toFilter, Resource.CHAT_TO_FILTER, e);
     private void FromFilterKeyDown(object sender, KeyEventArgs e) => FilterKeyDown(fromFilter, Resource.CHAT_FROM_FILTER, e);
     private void TextFilterKeyDown(object sender, KeyEventArgs e) => FilterKeyDown(textFilter, Resource.CHAT_TEXT_FILTER, e);
-    private async void SelectedDatesChanged(DependencyObject d, DependencyPropertyChangedEventArgs e) => await ChangeSearchAsync();
-    private long GetEndDate() => (endDate.DateTime != null) ? endDate.DateTime.Value.Ticks / TimeSpan.TicksPerSecond : 0;
-    private long GetStartDate() => (startDate.DateTime != null) ? startDate.DateTime.Value.Ticks / TimeSpan.TicksPerSecond : 0;
+    private async void SelectedDatesChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+    {
+      if (_suppressEndDial)
+      {
+        return;
+      }
+
+      // The boxes have one shared handler, so a change here is a hand on the keyboard: only the end dial's owner
+      // gives up following the clock.
+      if (ReferenceEquals(d, endDate))
+      {
+        _endTouched = true;
+      }
+
+      await ChangeSearchAsync();
+    }
+
+    private double GetEndDate() => ChatDateRange.ResolveEnd(endDate.DateTime, _endTouched, DateTime.Now);
+    private double GetStartDate() => ChatDateRange.ResolveStart(startDate.DateTime);
+
+    /*
+     * Keeps an untouched end dial saying what the query means: through today. Without this the box would still read
+     * yesterday's date while the answer contains today, which is the same lie in the other direction. Called on the
+     * query path rather than from a timer — a midnight census nobody asked for would repaint the text out from under
+     * whoever is reading it.
+     */
+    private void FollowEndDial()
+    {
+      var today = DateTime.Now.Date;
+      if (_endTouched || endDate.DateTime is { } end && end.Date == today)
+      {
+        return;
+      }
+
+      _suppressEndDial = true;
+      try
+      {
+        endDate.DateTime = today;
+      }
+      finally
+      {
+        _suppressEndDial = false;
+      }
+    }
 
     private void UpdateCurrentTextColor()
     {
@@ -236,6 +295,7 @@ namespace EQLogParser
           var text = (textFilter.Text.Length != 0 && textFilter.Text != Resource.CHAT_TEXT_FILTER) ? textFilter.Text : null;
           var to = (toFilter.Text.Length != 0 && toFilter.Text != Resource.CHAT_TO_FILTER) ? toFilter.Text : null;
           var from = (fromFilter.Text.Length != 0 && fromFilter.Text != Resource.CHAT_FROM_FILTER) ? fromFilter.Text : null;
+          FollowEndDial();
           var startDateValue = GetStartDate();
           var endDateValue = GetEndDate();
           if (force || changed || _lastPlayerSelection != name || _lastTextFilter != text || _lastToFilter != to || _lastFromFilter != from ||
