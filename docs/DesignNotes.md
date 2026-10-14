@@ -5526,13 +5526,30 @@ ReleaseChecklist → "Damage overlay checks on Windows".
 Short timed resets keep their legacy duration: the operator confirmed in 2.4.1 that three seconds without an attack hides and
 resets the meter. There is no extra timed display grace. A separate regression came from projection lag: attacks at seconds 0
 and 2, followed by a tick at 3.1 still reading the first snapshot, advanced the reset boundary past the already captured second
-attack. Each snapshot now stamps its processed damage count under the ingest gate. If captured damage is ahead, the timed
-expiry check also considers `DamageFactTable.LatestDamageTime`, published before its count and monotonic across out-of-order
-log times. This is only a temporary quiet-clock hint, never extra records or a different accounting range. Once projection
-catches up, only qualifying projected activity decides; heal/evidence/death arrivals do not postpone damage expiry. If projection
-stalls, three seconds of actual captured silence still resets normally—polling adds no grace. Headless regressions exercise the
-delayed second hit, genuine silence, a stalled projection, out-of-order times, unrelated damage, pending deaths and explicit Reset.
-The snapshot count's immutability is covered in the Windows-only assembly; its test still needs execution on Windows.
+attack. Each snapshot stamps its processed damage count under the ingest gate. Its `OverlayPendingActivity` walks only the
+unprojected suffix on the meter worker, once per ordinal, and uses the **same admission rule as projection**
+(`FightProjection.TryCombatSides`) against that snapshot's timeline. Known NPC-on-NPC noise, self damage and friendly fire buy
+no time; unknown names remain eligible, so a new opponent need not already have a row. The initial all-damage timestamp hint
+could keep a stale board visible indefinitely under NPC-only noise; it is gone, including its ingest-path write. The replacement
+is a temporary activity hint, never extra records or a different accounting range. Fresh snapshots retire it; a changed timeline
+stamp rechecks the suffix. This uses the last available verdicts, not a second classifier: later classification can revise them.
+
+On Kill applies pending activity **per existing open life**, using sorted activity chains joined at the same 30-second gap as
+projection. Hits at 29 and 58 can continue a life last seen at zero even with a stalled snapshot; a first hit at 31 cannot. A different
+opponent cannot extend it either, and completed lives keep their original eight-second display hold. Opening/closing eligibility
+reads the same cached hint without blocking the UI on the worker's suffix walk. An empty post-Reset board can therefore wait for
+pending combat without closing prematurely, but the hint alone never manufactures totals. Heal/evidence/death arrivals buy no time.
+
+There is **no arbitrary grace cap**: capping a delayed projection can again cut away legitimate captured attacks. Genuine silence
+still expires at the selected duration. Headless tests cover stalled NPC noise, prolonged genuine pending combat, new unclassified
+opponents, out-of-order chains, separate lives, incoming damage, spell effects, verdict changes, pending deaths and explicit Reset.
+The snapshot count and pending-hint replacement have coverage in the Windows-only assembly; those tests still need execution there.
+
+Review cleanup removed the unused `LiveFights` implementation and its test-only census (the historical measurements below remain),
+`FactStart`, `LastUpdateTicks`, and the overlay calculation's unused heal parameter. The session publication guard stays: dropping it
+could let an old worker publish a closed capture's stats. Legacy On Kill did **not** accumulate dead-fight totals; that branch ran only
+in timed modes. Its retained last display is not cumulative accounting. Cold-chunk retention remains unchanged: `RetainDecoded()`
+can reduce repeated decoding, but is not required for reference safety and would need measurement before widening retained memory.
 
 `LiveDamageObserved` is static because MainWindow's subscription outlives captures. It is raised after `Derived` under its own
 exception guard, so a failing UI subscriber cannot make a successful derive look broken. Opening requests a fresh derive; closing

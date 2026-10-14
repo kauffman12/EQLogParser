@@ -4,6 +4,7 @@ using System.Collections.Generic;
 namespace EQLogParser
 {
   // Accounting is per life in On Kill mode; the completed result's display grace is not an accounting boundary.
+  // The owner serializes Select and Reset (the window uses StatsLock).
   // See docs/DesignNotes.md → Damage overlay: fight accounting and display retention.
   internal sealed class DamageOverlayLifecycle
   {
@@ -13,7 +14,7 @@ namespace EQLogParser
     private double _timedStart = double.NaN;
 
     internal DamageOverlayScope Select(int sessionId, IReadOnlyList<DerivedFight> rows, double now, int mode,
-      double pendingDamageTime = double.NaN)
+      OverlayPendingActivity pending = null)
     {
       if (_sessionId != sessionId)
       {
@@ -22,7 +23,7 @@ namespace EQLogParser
         _timedStart = double.NaN;
       }
 
-      return mode == 0 ? SelectOnKill(rows, now) : SelectTimed(rows, now, mode, pendingDamageTime);
+      return mode == 0 ? SelectOnKill(rows, now, pending) : SelectTimed(rows, now, mode, pending);
     }
 
     // A click cuts records, not lives. Reopening the window without a click leaves this state alone.
@@ -33,7 +34,8 @@ namespace EQLogParser
       _timedStart = now;
     }
 
-    internal static bool HasRecentActivity(IReadOnlyList<DerivedFight> rows, double now, int mode)
+    internal static bool HasRecentActivity(IReadOnlyList<DerivedFight> rows, double now, int mode,
+      OverlayPendingActivity pending = null)
     {
       foreach (var row in rows)
       {
@@ -44,7 +46,9 @@ namespace EQLogParser
           return true;
       }
 
-      return false;
+      // A reset can leave no materializable rows while real combat waits for projection. Keep polling;
+      // this hint alone never supplies totals or resurrects a completed life.
+      return pending?.IsRecent(now, mode == 0 ? FightProjection.EngagementGapS : mode) == true;
     }
 
     // Ordinals, not seconds: two separate arrivals in one log second are still new damage. A death-only derive
@@ -59,7 +63,7 @@ namespace EQLogParser
       return newest;
     }
 
-    private DamageOverlayScope SelectOnKill(IReadOnlyList<DerivedFight> rows, double now)
+    private DamageOverlayScope SelectOnKill(IReadOnlyList<DerivedFight> rows, double now, OverlayPendingActivity pending)
     {
       var active = new List<DerivedFight>();
       var completed = new List<DerivedFight>();
@@ -67,7 +71,8 @@ namespace EQLogParser
       foreach (var row in rows)
       {
         if (!HasDamage(row) || row.BeginTime > now || row.LastTime < _resetTime) continue;
-        if (IsActive(row, now))
+        if (IsActive(row, now) || !row.Dead && row.EndReason == DerivedFightEnd.Open
+          && pending?.Continues(row, now) == true)
         {
           active.Add(row);
         }
@@ -89,7 +94,8 @@ namespace EQLogParser
       return new DamageOverlayScope(active.Count > 0 ? active : completed, _resetTime);
     }
 
-    private DamageOverlayScope SelectTimed(IReadOnlyList<DerivedFight> rows, double now, int mode, double pendingDamageTime)
+    private DamageOverlayScope SelectTimed(IReadOnlyList<DerivedFight> rows, double now, int mode,
+      OverlayPendingActivity pending)
     {
       if (double.IsNaN(_timedStart)) _timedStart = Math.Max(_resetTime, now - mode);
       var selected = new List<DerivedFight>();
@@ -104,7 +110,7 @@ namespace EQLogParser
 
       // A stale projection cannot erase damage already captured inside the quiet period. Use that damage's
       // log time, not this tick: a stalled derive buys no extra display grace once combat really goes quiet.
-      if (selected.Count > 0 && now - latest > mode && !IsRecent(pendingDamageTime, now, mode))
+      if (selected.Count > 0 && now - latest > mode && pending?.IsRecent(now, mode) != true)
       {
         selected.Clear();
         _timedStart = now;

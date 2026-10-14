@@ -229,12 +229,12 @@ public class DerivedTotalsTest
 
         // Warm both paths once: the singletons' own handlers are one-time wiring and belong in the baseline.
         _ = DerivedTotals.For(rows, index, facts, heals);
-        _ = DerivedTotals.ForOverlay(rows, index, facts, heals, T0, T0 + 100);
+        _ = DerivedTotals.ForOverlay(rows, index, facts, T0, T0 + 100);
         var before = ActiveDataClearedSubscribers();
 
         for (var i = 0; i < 5; i++)
         {
-            _ = DerivedTotals.ForOverlay(rows, index, facts, heals, T0, T0 + 100);   // damage + tanking scope
+            _ = DerivedTotals.ForOverlay(rows, index, facts, T0, T0 + 100);   // damage + tanking scope
             _ = DerivedTotals.For(rows, index, facts, heals);                          // and the list's own scope
         }
 
@@ -409,7 +409,7 @@ public class DerivedTotalsTest
       var (rows, index, facts) = TwoPulls();
       var heals = NoHeals(facts);
 
-      var meter = DerivedTotals.ForOverlay(rows, index, facts, heals, double.NegativeInfinity, double.PositiveInfinity);
+      var meter = DerivedTotals.ForOverlay(rows, index, facts, double.NegativeInfinity, double.PositiveInfinity);
       var list = DerivedTotals.For(rows, index, facts, heals)?.CombinedStats;
 
       Assert.IsNotNull(meter?.DamageStats, "a scope with fights in it paints a damage board");
@@ -427,12 +427,12 @@ public class DerivedTotalsTest
 
       // A meter window with no seconds in it paints nothing rather than a zeroed board; the caller decides what an empty
       // board means for the surface (the overlay holds its last one until the expiry rule says otherwise).
-      Assert.IsNull(DerivedTotals.ForOverlay(rows, index, facts, heals, T0 + 9_000, double.PositiveInfinity),
+      Assert.IsNull(DerivedTotals.ForOverlay(rows, index, facts, T0 + 9_000, double.PositiveInfinity),
         "a window with nothing inside it is no scope at all");
 
       // And a windowed meter agrees with a windowed list, which is the equality to check against the fight list after a
       // reset: same rows, same seconds, one arithmetic.
-      var slicedMeter = DerivedTotals.ForOverlay(rows, index, facts, heals, T0 + 39.6, double.PositiveInfinity);
+      var slicedMeter = DerivedTotals.ForOverlay(rows, index, facts, T0 + 39.6, double.PositiveInfinity);
       var slicedList = DerivedTotals.For(rows, index, facts, heals, T0 + 39.6, double.PositiveInfinity)?.CombinedStats;
       Assert.AreEqual((long)slicedList!.RaidStats.Total, (long)slicedMeter!.DamageStats.RaidStats.Total,
         "after a reset the meter still equals the list measured over the same seconds");
@@ -455,7 +455,7 @@ public class DerivedTotalsTest
       TankingStatsBuilder.Instance.EventsGenerationStatus += WatchTank;
       try
       {
-          _ = DerivedTotals.ForOverlay(rows, index, facts, NoHeals(facts), double.NegativeInfinity, double.PositiveInfinity);
+          _ = DerivedTotals.ForOverlay(rows, index, facts, double.NegativeInfinity, double.PositiveInfinity);
       }
       finally
       {

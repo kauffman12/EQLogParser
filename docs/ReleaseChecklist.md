@@ -181,8 +181,12 @@ These checks still require Windows for popup/hide behavior. See DesignNotes → 
 - [ ] **Our own deaths do not close it**: get a party member or your own pet killed while the overlay is open and keep fighting. The
   board must not blank or reset because something on our side died.
 - [ ] **Time-based modes still behave**: set 3 s, 5 s and 10 s. Board closes ~that long after the last damage, kill seen or not;
-  a continuous fight never blanks mid-pull. At 3 s, attacks two seconds apart must both remain counted even when projection
-  briefly lags; then stop attacking and verify that three seconds of real silence hides and resets it without extra grace.
+  a continuous fight never blanks mid-pull. At 3 s, attacks two seconds apart (including a new opponent) must both remain
+  counted even when projection briefly lags; then stop attacking and verify that three seconds of real silence hides and resets
+  it without extra grace. Known NPC-only noise must not extend that timeout while projection is behind.
+- [ ] **On Kill survives a delayed refresh near 30 seconds**: hit once, then again at ~29 s. If the new hit's projection is late,
+  the board must stay visible and keep both hits when it catches up. A different opponent or a same-name life after a gap >30 s
+  must not inherit the previous life’s totals. Reset while damage is pending must still discard everything before the click.
 - [ ] **Timed accumulation matches the fight list**: start a fresh capture with the meter set to 60 seconds. Kill five mobs over
   several minutes without a 60-second quiet gap, then select exactly those five fights. Total damage and DPS must match the meter
   with equivalent filters. Idle polling must not dilute its DPS; only a real reset should discard those fights.

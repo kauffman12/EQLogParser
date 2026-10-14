@@ -134,7 +134,6 @@ namespace EQLogParser
   {
     public CombinedStats DamageStats { get; set; }
     public CombinedStats TankStats { get; set; }
-    public double LastUpdateTicks { get; set; }
   }
 
 

@@ -155,6 +155,7 @@ namespace EQLogParser
     public long FactCount;
     // Captured damage processed by this pass, not the live table's growing count or the heal/evidence tally.
     internal int DamageFactCount;
+    internal OverlayPendingActivity PendingActivity;
 
     /*
      * What a board would SEE in this pass, as opposed to what evidence the rules hold (`EntityTimeline.AnswerStamp`). The fight
@@ -275,11 +276,13 @@ namespace EQLogParser
     public static DerivedSnapshot Build(IReadOnlyList<DerivedFight> fights, EntityTimeline timeline, long factCount,
       DamageFactTable facts, FightFactIndex damageIndex, DerivedRowCarry? carry = null)
     {
+      var damageFactCount = facts?.FactCount ?? 0;
       var snapshot = new DerivedSnapshot
       {
         AnswerStamp = timeline?.AnswerStamp() ?? 0L,
         FactCount = factCount,
-        DamageFactCount = facts?.FactCount ?? 0,
+        DamageFactCount = damageFactCount,
+        PendingActivity = new OverlayPendingActivity(damageFactCount),
         DerivedAt = DateTime.Now,
         Timeline = timeline,
         Facts = facts,

@@ -43,8 +43,8 @@ namespace EQLogParser
   }
 
   // One derived fight — the re-derivable replacement for a slice of FightManager state.
-  // Aggregates are keyed by raw name. FactStart/FactEnd bound this life's facts; other lives can interleave.
-  // FightFactIndex owns exact membership; FactEnd is also the overlay's new-activity watermark.
+  // Aggregates are keyed by raw name. FightFactIndex owns exact membership; other lives can interleave.
+  // FactEnd is the overlay's new-activity watermark.
   internal sealed class DerivedFight
   {
     public string Name;                 // interned boss key (exactly as the current pipeline keys fights)
@@ -106,7 +106,6 @@ namespace EQLogParser
     public bool HasDamageActions;       // mirrors "DamageBlocks.Count > 0" (any boss-directed record)
     public bool HasTankingActions;      // any tank-directed record
 
-    public int FactStart = -1;
     public int FactEnd;                 // exclusive
 
     // roll-ups keyed by raw attacker name (player-side only, matching Fight.PlayerDamageTotals)

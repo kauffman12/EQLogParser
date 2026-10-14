@@ -287,15 +287,121 @@ public class DamageOverlayLifecycleTest
   }
 
   [TestMethod]
-  public void FreshProjectionStopsBorrowingTheRawClockForUnrelatedDamage()
+  public void KnownNpcOnlyDamageDoesNotBorrowTheClockEvenBeforeProjection()
   {
     var log = new Capture();
     var meter = new DamageOverlayLifecycle();
     log.Hit("a rat", 0, 500);
     Damage(500, log.Board(meter, 0, 3));
     log.NpcFight(2);
-    Damage(500, log.Board(meter, 3.1, 3, project: false));
+    Assert.IsNull(log.Board(meter, 3.1, 3, project: false), "known NPC-only damage is already excluded while pending");
+    Assert.IsFalse(log.HasActivity(3.1, 3));
     Assert.IsNull(log.Board(meter, 3.2, 3), "classified NPC-only damage cannot extend our accumulation");
+  }
+
+  [TestMethod]
+  public void ContinuingNpcNoiseCannotHoldAStalledThreeSecondMeterOpen()
+  {
+    var log = new Capture();
+    var meter = new DamageOverlayLifecycle();
+    log.Hit("a rat", 0, 500);
+    Damage(500, log.Board(meter, 0, 3));
+    for (var second = 2; second <= 20; second += 2)
+    {
+      log.NpcFight(second);
+      Assert.IsNull(log.Board(meter, second + 1.5, 3, project: false));
+      Assert.IsFalse(log.HasActivity(second + 1.5, 3));
+    }
+    log.Hit("a rat", 22, 200);
+    Damage(200, log.Board(meter, 22, 3));
+  }
+
+  [TestMethod]
+  public void GenuinePendingCombatHasNoArbitraryGraceCap()
+  {
+    var log = new Capture();
+    var meter = new DamageOverlayLifecycle();
+    log.Hit("a rat", 0, 500);
+    Damage(500, log.Board(meter, 0, 3));
+    for (var second = 2; second <= 20; second += 2)
+    {
+      log.Hit("a rat", second, 100);
+      Damage(500, log.Board(meter, second + 1.5, 3, project: false));
+      Assert.IsTrue(log.HasActivity(second + 1.5, 3));
+    }
+    Damage(1500, log.Board(meter, 21.5, 3));
+    Assert.IsNull(log.Board(meter, 23.1, 3));
+  }
+
+  [TestMethod]
+  public void ANewUnclassifiedOpponentCanContinueTimedAccumulationWhilePending()
+  {
+    var log = new Capture();
+    var meter = new DamageOverlayLifecycle();
+    log.Hit("a rat", 0, 500);
+    log.Die("a rat", 1);
+    Damage(500, log.Board(meter, 1, 3));
+    log.HitUnclassified("a new opponent", 2, 200);
+    Damage(500, log.Board(meter, 3.1, 3, project: false));
+    Assert.IsTrue(log.HasActivity(3.1, 3));
+    Damage(700, log.Board(meter, 3.2, 3));
+  }
+
+  [TestMethod]
+  public void OnKillKeepsTheSameLifeAndEligibilityAcrossAStaleThirtySecondBoundary()
+  {
+    var log = new Capture();
+    var meter = new DamageOverlayLifecycle();
+    log.Hit("a rat", 0, 500);
+    Damage(500, log.Board(meter, 0));
+    log.Hit("a rat", 29, 200);
+    Damage(500, log.Board(meter, 30.5, project: false));
+    Assert.IsTrue(log.HasActivity(30.5, 0));
+    Damage(700, log.Board(meter, 30.6));
+    Assert.IsNull(log.Board(meter, 59.1));
+    Assert.IsFalse(log.HasActivity(59.1, 0));
+  }
+
+  [TestMethod]
+  public void PendingActivityChainsBridgeButNeverJoinSeparateLives()
+  {
+    var log = new Capture();
+    var meter = new DamageOverlayLifecycle();
+    log.Hit("a rat", 0, 500);
+    Damage(500, log.Board(meter, 0));
+    log.Hit("a rat", 58, 100);
+    log.Hit("a rat", 29, 100); // late arrival bridges the two pending spans to the existing life
+    Damage(500, log.Board(meter, 59, project: false));
+    log.Hit("a rat", 89, 200); // more than 30 s later: cannot extend the old life
+    Assert.IsNull(log.Board(meter, 89.5, project: false));
+    Assert.IsTrue(log.HasActivity(89.5, 0), "keep polling for the new life, without showing the old one's totals");
+  }
+
+  [TestMethod]
+  public void PendingDamageToAnotherOpponentDoesNotExtendAnExpiredLife()
+  {
+    var log = new Capture();
+    var meter = new DamageOverlayLifecycle();
+    log.Hit("a rat", 0, 500);
+    Damage(500, log.Board(meter, 0));
+    log.Hit("a bat", 29, 200);
+    Assert.IsNull(log.Board(meter, 30.5, project: false));
+    Assert.IsTrue(log.HasActivity(30.5, 0));
+    Damage(200, log.Board(meter, 30.6));
+  }
+
+  [TestMethod]
+  public void PendingHitsDoNotResurrectACompletedLifePastItsDisplayHold()
+  {
+    var log = new Capture();
+    var meter = new DamageOverlayLifecycle();
+    log.Hit("a rat", 0, 500);
+    log.Die("a rat", 1);
+    Damage(500, log.Board(meter, 1));
+    log.Hit("a rat", 9, 200);
+    Assert.IsNull(log.Board(meter, 9.5, project: false));
+    Assert.IsTrue(log.HasActivity(9.5, 0));
+    Damage(200, log.Board(meter, 9.6));
   }
 
   [TestMethod]
@@ -413,7 +519,7 @@ public class DamageOverlayLifecycleTest
     private readonly DamageFactTable _facts = new(64);
     private readonly EntityTimeline _timeline = new();
     private FightFactIndex _index = new();
-    private int _projectedDamageCount;
+    private OverlayPendingActivity _pending = new(0);
     internal List<DerivedFight> Rows { get; private set; } = [];
 
     internal Capture() => _timeline.SetIdentity("Illuminai", IdentityKind.Player, RuleStrength.Manual, "manual");
@@ -421,6 +527,10 @@ public class DamageOverlayLifecycleTest
     internal void Hit(string mob, int second, uint amount) => Add("Illuminai", mob, mob, second, amount);
 
     internal void Incoming(string mob, int second, uint amount) => Add(mob, "Illuminai", mob, second, amount);
+
+    internal void HitUnclassified(string mob, int second, uint amount) => _facts.AddFact(new DamageFact(
+      _facts.FactCount, (long)(T0 + second), _facts.InternName("Illuminai"), _facts.InternName(mob),
+      amount, LabelTypes.Melee, 0, 0, ushort.MaxValue));
 
     internal void NpcFight(int second)
     {
@@ -439,12 +549,15 @@ public class DamageOverlayLifecycleTest
         ClassificationRules.Apply(_facts, _timeline);
         _index = new FightFactIndex(_timeline);
         Rows = FightProjection.Build(_facts, _timeline, _index.OnFact);
-        _projectedDamageCount = _facts.FactCount;
+        _pending = new OverlayPendingActivity(_facts.FactCount);
       }
-      var pendingDamageTime = _facts.FactCount > _projectedDamageCount ? _facts.LatestDamageTime : double.NaN;
-      var scope = lifecycle.Select(sessionId, Rows, T0 + second, mode, pendingDamageTime);
-      return DerivedTotals.ForOverlay(scope.Rows, _index, _facts, new HealFactTable(_facts), scope.FromTime, T0 + second);
+      _pending.Update(_facts, _timeline);
+      var scope = lifecycle.Select(sessionId, Rows, T0 + second, mode, _pending);
+      return DerivedTotals.ForOverlay(scope.Rows, _index, _facts, scope.FromTime, T0 + second);
     }
+
+    internal bool HasActivity(double second, int mode) =>
+      DamageOverlayLifecycle.HasRecentActivity(Rows, T0 + second, mode, _pending);
 
     internal CombinedStats? SelectedTotals() => DerivedTotals.For(Rows, _index, _facts, new HealFactTable(_facts))?.CombinedStats;
 

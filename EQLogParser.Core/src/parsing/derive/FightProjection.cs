@@ -331,8 +331,6 @@ namespace EQLogParser
 
         var defName = facts.NameOf(fact.DefIdx);
         var t = fact.TimeS;
-        var atkSide = SideAt(timeline, atkName, t);
-        var defSide = SideAt(timeline, defName, t);
 
         /*
          * Spell feedback, and the ORDER this is asked in matters more than it looks. "You have taken N damage from X."
@@ -349,7 +347,7 @@ namespace EQLogParser
          * this second is fighting, and its damage counts. Unknown names (the feedback case, where nothing else ever
          * claimed the name) stay dropped exactly as before.
          */
-        if (atkSide != Side.Player && ClassificationRules.IsSelfTargetDamageSpell(atkName)) continue;
+        if (!TryCombatSides(fact, timeline, atkName, defName, out var atkSide, out var defSide)) continue;
 
         string key;
         bool creditAttacker;  // attacker was player-side: it gets damage credit in the owner's roll-up
@@ -376,7 +374,6 @@ namespace EQLogParser
            * 75 pet-slot-spell hits across two captures, 7.4 M damage, on names that are never a mob and never a
            * listed raider - all of it formerly credited.
            */
-          if (!IsFlipped(timeline, defName, t) || IsFlipped(timeline, atkName, t)) continue;
           key = defName;
           creditAttacker = true;
         }
@@ -413,11 +410,11 @@ namespace EQLogParser
            * damage landed on - and credits nobody, because naming a caster the log never printed would put somebody's
            * evening under a spell. A genuine mob-on-mob exchange still has neither of these flags and stays out.
            */
-          else if (fact.AttackerIsSpell)
+          else
           {
+            // TryCombatSides admitted the spell exception; ordinary NPC-on-NPC damage was refused there.
             key = defName; creditAttacker = false;
           }
-          else continue;
         }
         else if (atkSide == Side.Npc && defSide == Side.Unknown)
         {
@@ -590,7 +587,6 @@ namespace EQLogParser
             target = timeline.IsRaidVictimAt(defName, t) ? FactTarget.RaidSide : FactTarget.Neither;
         }
 
-        if (row.FactStart < 0) row.FactStart = ordinal;
         row.FactEnd = ordinal + 1;
         ownerSink?.Invoke(fact, ordinal, row, target);
 
@@ -732,6 +728,22 @@ namespace EQLogParser
       if (kind is not IdentityKind.Npc and not IdentityKind.Spell)
         return Side.Player;
       return timeline.IsOurPetAt(name, t) ? Side.Player : Side.Npc;
+    }
+
+    // The same admission rule serves projection and the overlay's pending-activity hint. Unknown names remain
+    // eligible: a new opponent must not lose its first hits just because classification has not caught up.
+    internal static bool TryCombatSides(DamageFact fact, EntityTimeline timeline, string attacker, string defender,
+      out Side attackerSide, out Side defenderSide)
+    {
+      var t = fact.TimeS;
+      attackerSide = SideAt(timeline, attacker, t);
+      defenderSide = SideAt(timeline, defender, t);
+      if (fact.AtkIdx == fact.DefIdx) return false;
+      if (attackerSide != Side.Player && ClassificationRules.IsSelfTargetDamageSpell(attacker)) return false;
+      if (attackerSide == Side.Player && defenderSide == Side.Player)
+        return IsFlipped(timeline, defender, t) && !IsFlipped(timeline, attacker, t);
+      return attackerSide != Side.Npc || defenderSide != Side.Npc
+        || IsFlipped(timeline, attacker, t) || fact.AttackerIsSpell;
     }
 
     // True when a charm interval has this name on the opposite of its identity side at t.

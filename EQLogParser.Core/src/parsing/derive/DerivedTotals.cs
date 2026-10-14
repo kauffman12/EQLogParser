@@ -59,7 +59,7 @@ internal static class DerivedTotals
    * legacy builder does the same, a raid that only healed has no tank board.
    */
   internal static DamageOverlayStats? ForOverlay(IReadOnlyList<DerivedFight> rows, FightFactIndex index,
-    DamageFactTable facts, HealFactTable heals, double fromT, double toT)
+    DamageFactTable facts, double fromT, double toT)
   {
     if (rows is not { Count: > 0 })
     {

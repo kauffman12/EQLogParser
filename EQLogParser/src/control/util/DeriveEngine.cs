@@ -802,7 +802,7 @@ namespace EQLogParser
     {
       var snapshot = _snapshot;
       return !_disposed && snapshot is not null && DamageOverlayLifecycle.HasRecentActivity(snapshot.AllFights,
-        DateUtil.ToDotNetSeconds(DateTime.Now), mode);
+        DateUtil.ToDotNetSeconds(DateTime.Now), mode, snapshot.PendingActivity);
     }
 
     // Select and materialize from ONE snapshot. The lifecycle retains only scalar reset state, never this capture's rows.
@@ -811,9 +811,10 @@ namespace EQLogParser
       var snapshot = _snapshot;
       if (_disposed || snapshot is null) return null;
 
-      var pendingDamageTime = _facts.FactCount > snapshot.DamageFactCount ? _facts.LatestDamageTime : double.NaN;
-      var scope = lifecycle.Select(SessionId, snapshot.AllFights, now, mode, pendingDamageTime);
-      return DerivedTotals.ForOverlay(scope.Rows, snapshot.DamageIndex, snapshot.Facts, snapshot.Heals, scope.FromTime, now);
+      // Only the worker walks the suffix; UI eligibility checks read this snapshot's cached hint.
+      snapshot.PendingActivity.Update(snapshot.Facts, snapshot.Timeline);
+      var scope = lifecycle.Select(SessionId, snapshot.AllFights, now, mode, snapshot.PendingActivity);
+      return DerivedTotals.ForOverlay(scope.Rows, snapshot.DamageIndex, snapshot.Facts, scope.FromTime, now);
     }
 
     internal StatsGenerationEvent? BuildScopeStats(IReadOnlyList<DerivedFight> rows)
