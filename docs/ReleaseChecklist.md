@@ -276,8 +276,8 @@ pane's date dials — so it is worth ten minutes before a release goes out.
 ## Live log rollover checks on Windows
 
 The second cause of *"playing past midnight and the chats are stuck on yesterday"* — a monitored tail that cannot see its file
-renamed away (docs/DesignNotes.md → "Following the live log across a midnight rollover"). No fixture reaches any of this: it needs
-a live monitor with a file moved under it.
+renamed away (docs/DesignNotes.md → "Following the live log across a midnight rollover"). The Windows-only
+`LogReaderRolloverTest` exercises a synthetic rename; these checks still owe an actual app/game run.
 
 - [ ] **A monitored log follows a rename.** Monitor `eqlog_<Char>_<Server>.txt`, then rename that file away while the game (or an
   append against a freshly created file of the same name) keeps writing to the NEW file. Within about a second the fight list and
@@ -286,9 +286,13 @@ a live monitor with a file moved under it.
 - [ ] **The head of the new file arrives.** Those first lines used to be skipped by a seek-to-end during the reopen window: put a
   distinctive line (a /say right after the rename) at the very start of the new file and confirm it shows up in the Chat archive
   and the boards.
-- [ ] **Recovery reopen does not double count.** With a monitor running and damage on the boards, truncate or move the file while
-  nothing is writing: totals must not jump. Re-reading an unchanged file would show every number going up with no new lines in
-  the log — that is the asymmetric failure `LogFollow` is written to avoid.
+- [ ] **Copy-and-replace does not double count.** With a monitor running and damage on the boards, rename the current file
+  away and place an identical copy under the same name, with one new damage line appended. The old totals must stay put and
+  the new line must count exactly once. A new creation stamp alone does not make the copied lines new evidence.
+- [ ] **Old tail is not lost.** Append a distinctive /say to the OLD file immediately before renaming it; create the new file
+  with a different /say as its first line. Both must enter the Chat archive exactly once, in old-then-new order.
+- [ ] **Recovery reopen does not double count.** A same-file recovery with no new lines must not make board totals jump;
+  a genuine truncate/rewrite starts from the new content, not from a buffered piece of the old file.
 - [ ] **Log Management still archives.** Trigger archive-on-activity (a file over the size/age thresholds): the move + recreate
   must leave the monitor following the new empty file rather than stalling on a name that briefly does not exist.
 - [ ] **A long raid does not lose the watcher's folder.** The watcher is narrowed to `FileName | DirectoryName` with a 64 KB buffer

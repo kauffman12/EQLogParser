@@ -245,7 +245,7 @@ namespace EQLogParser
         }
 
         // Record the identity of the file this handle opened, before the tail ever asks the name who it is now.
-        _followedCreatedUtcTicks = NameIdentityOf(FileName) ?? LogFollow.UnknownIdentity;
+        _followedCreatedUtcTicks = HandleIdentityOf(_fs);
         _followedLength = _fs.Length;
 
         _reader = FileUtil.GetStreamReader(_fs, beginTime);
@@ -366,15 +366,15 @@ namespace EQLogParser
            * the followed file sits complete and unread-to while a new one takes its name, and neither the length test nor
            * the watcher can be trusted to say so, so one stat per poll asks the name directly.
            *
-           * Only RestartFromStart acts here. A name that reports nothing (WaitForFile) does NOT close a working stream —
+           * Only Reopen acts here. A name that reports nothing (WaitForFile) does NOT close a working stream —
            * a false-negative stat would stop a healthy tail, which is the failure this whole change is about — and waiting
            * for a file to appear is already what ReOpenAsync/WhenFileExistsAsync do on the watcher's own word.
            */
           if (_fileDeleted || LogFollow.DecideFor(_followedCreatedUtcTicks, NameIdentityOf(FileName), _followedLength,
-                _fs.Length) is LogFollowDecision.RestartFromStart)
+                _fs.Length) is LogFollowDecision.Reopen)
           {
             _fileDeleted = false;
-            await ReOpenAsync().ConfigureAwait(false);
+            previous = await ReOpenAsync(previous).ConfigureAwait(false);
             continue;
           }
 
@@ -419,7 +419,7 @@ namespace EQLogParser
         catch (Exception)
         {
           FlushBatch();
-          await ReOpenAsync().ConfigureAwait(false);
+          previous = await ReOpenAsync(previous).ConfigureAwait(false);
         }
       }
     }
@@ -557,15 +557,60 @@ namespace EQLogParser
       }
     }
 
-    private async Task ReOpenAsync()
+    private async Task<string> ReOpenAsync(string previous)
     {
-      await CleanupStreamsAsync().ConfigureAwait(false);
-      await Task.Delay(100).ConfigureAwait(false);
-
-      if (await WhenFileExistsAsync().ConfigureAwait(false))
+      // A rewrite in place no longer has an old file to drain: its StreamReader may still hold buffered bytes from
+      // before the truncate. On a rename, by contrast, the old handle is still valid and may contain chat from the
+      // poll interval. Drain it BEFORE handing the new file to the parser, so both sides arrive in file order.
+      var shortened = false;
+      var oldAvailable = _fs is not null;
+      try
       {
-        _fileDeleted = false;
-        _fs = new FileStream(
+        if (_fs is not null)
+        {
+          shortened = _fs.Length < _followedLength;
+        }
+      }
+      catch (Exception ex) when (ex is IOException or ObjectDisposedException)
+      {
+        // This can itself be the I/O error that sent us here. Do not ask the broken handle twice: recover at the
+        // replacement's tail rather than letting the reopen throw again and stop the monitor permanently.
+        oldAvailable = false;
+      }
+
+      var drained = false;
+      if (!shortened && oldAvailable && _reader is not null)
+      {
+        try
+        {
+          string line;
+          while ((line = await _reader.ReadLineAsync(_cts.Token).ConfigureAwait(false)) is not null)
+          {
+            HandleLine(line, ref previous, true);
+          }
+
+          FlushBatch();
+          drained = true;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+          // A broken old stream cannot prove which bytes were processed. Preserve the historical seek-to-end fallback
+          // instead of using its buffered FileStream.Position to skip or replay a line in the replacement.
+          Log.Warn($"Could not drain the old log before reopening {FileName}", ex);
+          FlushBatch();
+        }
+      }
+
+      await Task.Delay(100, _cts.Token).ConfigureAwait(false);
+      if (!await WhenFileExistsAsync().ConfigureAwait(false))
+      {
+        return previous;
+      }
+
+      FileStream next = null;
+      try
+      {
+        next = new FileStream(
           path: FileName,
           options: new FileStreamOptions
           {
@@ -576,19 +621,46 @@ namespace EQLogParser
             Options = FileOptions.Asynchronous | FileOptions.SequentialScan
           });
 
-        /*
-         * Where to start in the file that stands here now. Its own lines when the name has changed hands (or the file
-         * was rewritten shorter) — those bytes have never reached a processor, so reading them is the fix and cannot
-         * double count. The tail otherwise, which is what a plain recovery reopen has always done: re-reading an
-         * unchanged capture from line one would feed the same damage into the fact tables twice.
-         */
-        var nameId = NameIdentityOf(FileName) ?? LogFollow.UnknownIdentity;
-        var decision = LogFollow.DecideFor(_followedCreatedUtcTicks, nameId, _followedLength, _fs.Length);
-        _fs.Seek(LogFollow.ResumeOffsetFor(decision, _fs.Length), SeekOrigin.Begin);
+        // A new file object can still contain an exact copy of yesterday's bytes (an atomic replacement by a sync
+        // client). Identity only says WHEN to reopen; it is not proof that the content is new. Compare complete lines
+        // from the old, drained handle with the replacement before choosing where the NEW reader starts. A fresh daily
+        // file differs on its first line and starts at zero; a copy skips its already-ingested prefix. This comparison
+        // reads raw bytes for a decision, never parses a second lane of log records.
+        var start = shortened ? 0 : drained && _fs is not null
+          ? await LogFollowPrefix.SharedLineEndAsync(_fs, next, _fs.Position, _cts.Token).ConfigureAwait(false)
+          : next.Length;
+        next.Seek(start, SeekOrigin.Begin);
+        var reader = FileUtil.GetStreamReader(next);
+        await CleanupStreamsAsync().ConfigureAwait(false);
+        _fs = next;
+        _reader = reader;
+        next = null;
         _currentPos = _fs.Position;
-        _followedCreatedUtcTicks = nameId;
+        _followedCreatedUtcTicks = HandleIdentityOf(_fs);
         _followedLength = _fs.Length;
-        _reader = FileUtil.GetStreamReader(_fs);
+        _fileDeleted = false;
+      }
+      finally
+      {
+        if (next is not null)
+        {
+          await next.DisposeAsync().ConfigureAwait(false);
+        }
+      }
+
+      return previous;
+    }
+
+    /* Stamp the actual opened handle, not the name: a rename between Open and stat must not label the old handle new. */
+    private static long HandleIdentityOf(FileStream stream)
+    {
+      try
+      {
+        return File.GetCreationTimeUtc(stream.SafeFileHandle).Ticks;
+      }
+      catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+      {
+        return LogFollow.UnknownIdentity;
       }
     }
 

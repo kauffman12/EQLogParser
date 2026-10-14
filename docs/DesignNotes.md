@@ -13264,8 +13264,9 @@ constructs no `ChatViewer` case for this; it belongs on the real-control checkli
 The same report has a second, conditional cause — and unlike the chat-range bug this one also freezes the **boards**, not just
 the Chat pane.
 
-A reader monitoring `eqlog_Kizant_xegony.txt` holds a handle on a **file**, not on a name. When the file is renamed away — EQ's
-own date roll, or this app's Log Management doing `File.Move` then recreating an empty file (`LogArchiveManager.DoArchiveAsync`)
+A reader monitoring `eqlog_Kizant_xegony.txt` holds a handle on a **file**, not on a name. When the file is renamed away —
+by a client-side rollover (if one occurs) or by this app's Log Management doing `File.Move` then recreating an empty file
+(`LogArchiveManager.DoArchiveAsync`)
 — reading continues from the renamed-away file, which nothing writes to any more, while the new day accumulates behind the name
 unread. Three things in the old code could not see it:
 
@@ -13283,32 +13284,38 @@ unread. Three things in the old code could not see it:
   written into the new file during the 100 ms delay plus up to a 200 ms poll was skipped: the head of the new day (login/zone
   lines, early chat) went missing even in the healthy case.
 
-The rules now live in `EQLogParser.Core/src/control/util/LogFollow.cs` (`WaitForFile` / `RestartFromStart` / `KeepFollowing`,
-plus the reopen offset), and `LogReader` asks the name who it is — one `GetFileAttributesEx` per poll, i.e. five stats a second on
-a 200 ms loop — instead of trusting an event to arrive. Only `RestartFromStart` acts in the poll: a name that reports nothing
-(`WaitForFile`) never closes a working stream, because a false-negative stat would stop a healthy tail and that is precisely the
-failure being fixed — waiting for a file to appear stays the job of `ReOpenAsync`/`WhenFileExistsAsync`, driven by the watcher's
-own Deleted/Renamed word as it always was. The watcher stays wired for promptness, narrowed to
-`FileName | DirectoryName` (nothing else is subscribed) with a 64 KB buffer and an `Error` line in the log, so a flood of appends
-can no longer starve the one event that matters.
+`LogFollow` decides **when to reopen** by comparing the opened handle's creation stamp with the name's, or detecting a
+shortening in place. The watcher stays for promptness, narrowed to `FileName | DirectoryName` with a 64 KB buffer and an
+`Error` line; a false-negative stat (`WaitForFile`) cannot close a working handle. `_currentPos` remains the progress dial;
+`_followedLength` and identity belong only to the tail. The handle's stamp is asked from the handle itself, not from the
+pathname, which may already belong to a different file after a rename.
 
-The answers are deliberately asymmetric, because the two ways to be wrong are not equal:
+**A changed identity is NOT proof that the content is new.** A sync client can replace the name with a new file object
+containing an exact copy of all previously read lines, perhaps with more lines appended. The first cut treated the new
+creation stamp as a reason to read from byte zero: in that case it would count yesterday's damage twice. The repair is a
+record seam rather than an identity guess:
 
-- **Restarting on a file whose creation stamp differs reads it from line one.** Those bytes have never reached a processor —
-  this reader never opened that file — so this cannot double count, and it is the whole fix.
-- **Restarting on the *same* file would re-feed lines already in the fact tables**, i.e. boards reading high with nothing wrong
-  in the log. So a plain recovery reopen (the stream threw over an unchanged file) resumes at the tail like it always has, and an
-  unrecorded/unknown identity buys no decision at all: no evidence, no move. The cheap creation-time stamp can lie only in the
-  narrow case where a replacement inherits the same second on coarse-grained filesystems; that degrades toward the tail (a few
-  lines missing), never toward a double count.
+1. When reopening because of a rename, drain the **old** `StreamReader` to EOF before closing its handle and flush those
+   lines to the parser. The poll may have been sleeping when the last pre-rollover chat arrived; closing without draining
+   dropped it. A truncate-in-place is different: the old buffer may contain bytes from before the rewrite, so it is not
+   drained and the new file is read from zero.
+2. Open the replacement while the old handle is still open. `LogFollowPrefix` compares their raw bytes up to the old
+   reader's actual EOF (not an ahead-of-parser FileStream buffer position). Start after their last **complete matching line**:
+   a fresh daily file differs on its first line and starts at zero; an identical copy skips every old line but reads any
+   appended ones; a partial shared line skips nothing. `RandomAccess` reads at offsets without moving either reader, in
+   64 KiB pooled blocks, only on a handoff — this is not a second parse lane or a range loader. If draining the old stream
+   fails, fall back to seeking to the replacement's end rather than risk replaying a whole capture.
+3. Dispose the old stream only *after* the starting position is decided, and keep the old-to-new line order inside the one
+   reader's batch stream. Cancellation and exceptions still go through the standing cleanup path.
 
-Asserted in `EQLogParser.Test/src/control/util/LogFollowTest.cs` (7 tests), including `RecoveryOnAnUnchangedFileNeverReReadsTheCapture`
-(the double-count guard, asserted as hard as the rollover case) and `ARolloverAdvancesFromTailToNewFileInOnePass`, which walks the
-sequence — tail the old file, watch the name change hands, reopen at zero, go quiet on the new file — because the shipped failure
-was a state that never advanced, and a decision table read one row at a time looks correct forever.
+This answers the precise double-count case (a copied prefix) without claiming arbitrary overlap detection: a replacement
+that starts with a *suffix* of the old file, rather than a prefix, needs a separate content contract and is not assumed to
+be a normal EQ log rollover. A file that is rewritten in place between polls and grows beyond its prior length before the
+next poll is likewise invisible to the size check; the name did not change hands and the watcher deliberately does not
+listen to append notifications.
 
-Not tested anywhere: the wiring. `LogReader` is WPF-side and there is no fixture that renames a live log under a monitoring
-reader; **the whole path is owed on Windows** (see ReleaseChecklist) — monitor a log, rename it away while EQ keeps writing to a
-new file of the same name, and confirm the boards pick up the new file's lines instead of freezing. Untouched here on purpose:
-`_currentPos` remains the progress dial (it is what `GetProgress()` shows and what `LogArchiveManager` gates archiving on), and the
-follow decisions use their own `_followedLength`/identity pair rather than reusing it.
+`LogFollowTest` pins the identity/length gate (9 tests, including a shrink with unavailable identity), and `LogFollowPrefixTest` opens *real renamed files* on Linux to pin
+whole copied prefixes, copied prefixes with new heads, unrelated days, a shared first line, incomplete lines, read limits,
+UTF-8 and a prefix crossing the 64 KiB block seam (8 tests). `LogReaderRolloverTest` drives the actual reader over a renamed
+file, asserting exact line counts and old-tail-before-new-head ordering; it **builds here but runs only on Windows**, so the
+wiring is still owed there. The same Windows release checklist names a manual live-log rollover check.
