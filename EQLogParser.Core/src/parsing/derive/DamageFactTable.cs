@@ -461,6 +461,7 @@ namespace EQLogParser
     private readonly ColdChunks<DamageFact> _rows;
     private DamageFact[] _tail;
     private int _factCount;
+    private double _latestDamageTime = double.NegativeInfinity;
 
     // ColdChunks owns publication, growth and bounded decoded retention for both streams.
     // See docs/DesignNotes.md → "Rows go cold, and what a chunk costs to remember".
@@ -512,6 +513,8 @@ namespace EQLogParser
     /// <summary>Sequential access over [from, to) as the CHUNK SLICES covering it: zero allocation, and the inner loop runs over a
     /// contiguous span exactly as it did on the flat buffer. The hot walks use this instead of `Facts` for that reason.</summary>
     public DamageFactRange FactsIn(int from, int to) => new(this, Math.Max(0, from), Math.Min(to, _factCount));
+
+    internal double LatestDamageTime => Volatile.Read(ref _latestDamageTime);
 
     /// <summary>Bytes currently held as encoded cold blobs. Cold rows are counted here rather than as chunk bytes.</summary>
     internal long ColdBlobBytes => _rows.BlobBytes;
@@ -686,6 +689,8 @@ namespace EQLogParser
 
       if ((ordinal & FactChunkMask) == 0) _tail = _rows.NewTail(ci);
       _tail[ordinal & FactChunkMask] = fact;
+      // Publish the quiet-clock watermark before the count which tells the meter projection is behind.
+      if (fact.TimeS > _latestDamageTime) Volatile.Write(ref _latestDamageTime, fact.TimeS);
       Volatile.Write(ref _factCount, ordinal + 1);
     }
 

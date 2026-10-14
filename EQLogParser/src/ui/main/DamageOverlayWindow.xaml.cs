@@ -30,58 +30,13 @@ namespace EQLogParser
     private int _currentDamageMode;
     private int _savedDamageMode;
 
-    /*
-     * The numbers come from the capture: one calculation over the captured facts inside a window (DerivedTotals).
-     * The old running-total tally this replaced is deleted along with the engine that fed it, so no dial selects
-     * between engines any more - and none of the open/close rules can disagree about which one is on.
-     *
-     * What moves over is only WHERE the numbers come from: one calculation over the captured facts inside a window
-     * (DerivedTotals), instead of the overlay's own running totals. The meter's policy stays here, because it always was
-     * the meter's — `OverlayDamageMode` deciding when a quiet board zeroes itself (0 = on kill: 8 s after a death the engine saw,
-     * otherwise the full engagement gap; otherwise N seconds), and the window starting at the reset. That is why the engine holds no
-     * "current fight": the
-     * seconds a board covers is this component's business.
-     */
     private bool _meterWarned;
     private int _meterFailures;
+    private bool _closed;
+    private int _displayVersion;
 
-    /*
-     * The first second this board adds up, STATIC on purpose. Legacy got "the meter closed with the X and came back where it
-     * left off" for free: its running totals lived in `_stats` (also static) and in the old engine's fights,
-     * so a reopened window kept painting an accumulation it had not thrown away. A derived board holds nothing between ticks —
-     * it is recomputed from the facts inside these seconds — so if this start lived on the window instance it would be reborn
-     * at "now" and every second already spent on the pull would disappear from the numbers. Closing a window is not a reset;
-     * only two things legitimately move this: the clear button (explicit) and quiet longer than `OverlayDamageMode` (the
-     * meter's own expiry, applied by LiveFights.WindowStartFor below).
-     *
-     * Nothing runs while no window exists, so an X does not age the start either. A reopen inside the quiet range therefore
-     * shows the whole pull, and a reopen after it gets one fresh board — which is the dial deciding, not a special case here.
-     *
-     * The one remaining "legitimate mover" needs a witness: a NEW CAPTURE. That check lives in BuildMeterUpdate against
-     * _meterStartId rather than in FollowActiveSession, because a window must not be required to exist at the moment a
-     * session swaps (a board nobody is watching has no window), and a window may first listen for a session whose board had
-     * already started — which is how resetting on subscription used to throw away a reopen's seconds.
-     */
-    private static double _meterWindowT = -1;
-
-    /*
-     * Set by the build whose window just ran out (phase 2 moved the start), read by the tick to CLEAR the board. This is the one
-     * job the flag has, and it exists because "no update this tick" cannot be trusted as "the pull is over": a quiet window with
-     * nothing in it hands back the held board (see `BuildMeterUpdate`'s hold), so an expiry that was only inferred from a null
-     * update could never be told apart from a derive pass that has not landed yet. Legacy did not need it - its builder ran out of
-     * `FightManager` overlay fights and simply stopped returning a board, and the window then waited 7 s to blank.
-     */
-    private static bool _meterExpired;
-
-    /*
-     * Which session wrote the stored start; a value of -1 carries no tag worth checking (`WindowStartFor` treats it as "no window
-     * yet" and reaches back one quiet window either way). Tagged by DeriveEngine.SessionId, never by the engine itself: this is a STATIC, and the meter window is hidden rather
-     * than closed when its X is clicked, so holding the instance would keep a DISPOSED engine - every fact table in it - reachable
-     * from a window nobody is looking at, for as long as the app stays open with no log. That is precisely what DeriveEngine.Dispose
-     * promises not to allow ("must not stay the reason a closed log's records are still reachable"); an id answers the same question
-     * while retaining nothing.
-     */
-    private static int _meterStartId;
+    // X-close/reopen preserves explicit reset state, but the lifecycle retains no engine, snapshot or row references.
+    private static readonly DamageOverlayLifecycle MeterLifecycle = new();
     private int _currentShowCritRate;
     private int _savedShowCritRate;
     private bool _currentHideOthers;
@@ -256,13 +211,7 @@ namespace EQLogParser
       if (_derivedFrom is not null) _derivedFrom.Derived -= OnDerived;
       _derivedFrom = session;
 
-      /*
-       * No start reset here. "A new capture is a new board" is still the rule - but it is decided against the session that owns
-       * the stored start (BuildMeterUpdate checks _meterStartId), because subscription state is not the same thing: this ran
-       * on EVERY construction, first listen included, so a window reopened under a session whose board had already started used to
-       * reset the seconds that session was in the middle of spending. The tag makes "new capture" and "reopen keeps its seconds"
-       * both true at once.
-       */
+      // Subscribing is not Reset. The lifecycle distinguishes a reopened window from a new capture by SessionId.
       if (session is not null) session.Derived += OnDerived;
     }
 
@@ -417,102 +366,26 @@ namespace EQLogParser
 
     internal void DiscardMeterSettings() => MainActions.CloseDamageOverlay(false);
 
-    /*
-     * The same board, derived. Window = [reset moment, now]; a row that went quiet for longer than the meter's own
-     * timeout expires the board (legacy zeroes it, and the next window starts here rather than at the old reset), which
-     * is the display rule DamageMeterConfigState.DamageResetMode always encoded — kept on this side of the seam so the
-     * the engine stays free of "what a meter is showing right now".
-     *
-     * There is no fallback to the legacy tally anywhere on this path. A derived board that quietly became a legacy one
-     * is indistinguishable from correct numbers, which is the worst failure a meter can have — so failures blank the
-     * board and say so in the log instead.
-     */
-    private DamageOverlayStats BuildMeterUpdate()
+    private DamageOverlayStats BuildMeterUpdate(int sessionId, int damageMode)
     {
       var session = DeriveEngine.Active;
       if (session is null)
       {
-        // Loud, not legacy. The dial means "the derived numbers, or nothing": an empty board plus one line saying why.
-        // Falling back to the old tally would put two engines' numbers on one screen with no hint of which one is being
-        // read, and the moment the legacy path goes away that fallback becomes a silent blank.
         if (!_meterWarned)
         {
           _meterWarned = true;
-          Log.Warn("Damage meter: the derived fight list is enabled but no capture is running, so the board stays "
-                   + "empty until a log is opened (turn Derived Fight List off to use the legacy tally).");
+          Log.Warn("Damage overlay: no capture is running; waiting for a log to open.");
         }
-
         return null;
       }
-
+      if (session.SessionId != sessionId) return null;
       _meterWarned = false;
-
-      // The stored start belongs to the session that wrote it. A swapped-in session - or an old tag left behind by a capture whose
-      // window was already closed when the swap happened - starts at zero, and this is where that is paid: no window needs to have
-      // been listening to the old session for this to be true.
-      if (_meterStartId != session.SessionId)
-      {
-        _meterWindowT = -1;
-        _meterStartId = session.SessionId;
-      }
 
       try
       {
-        /*
-         * Wall time, on purpose - this is the one meter rule that must see the real world. The dial (mode 0 = `KillQuietCloseS` after
-         * a seen kill, the engagement gap when nothing died; else N seconds) is a promise in REAL seconds: how long a quiet board stays
-         * up. A lag between the fight and the
-         * file - the client buffering writes, a parse stall, a late flush - freezes the capture clock (no facts, no time), so
-         * a rule keyed to the capture's newest event would hold the board past whatever the user chose; wall now keeps counting
-         * through the lag. The split is deliberate and is not drift to "fix": whether there is a fight to show runs on capture
-         * time (LiveFights), how long a quiet board stays up runs on wall time. On an old capture this reads as quiet-forever
-         * and the board blanks - which is what the original did and what a live meter should do; boards and summaries are what
-         * old logs are for.
-         */
-        var nowT = (DateTime.Now - DateTime.MinValue).TotalSeconds;
-        _meterBuildSecond = (long)nowT;
-        /*
-         * Whether a kill was seen recently at all - the scan the refined question below needs, and cheap (rows, not facts). Timed
-         * modes ignore the answer, their window slides, so they do not pay for it.
-         */
-        var killT = _currentDamageMode == 0 ? session.LastKillT(nowT - LiveFights.GapS, nowT) : double.NaN;
-
-        // Phase 1: the seconds this board covers, from what is stored and nothing else (no lastFactT known before building). The
-        // lenient reading decides a FIRST window's width (`TimeoutFor`: the engagement gap for "on kill"), because that is how far a
-        // pull you are standing in can reach - a fresh board opened on a one-shot kill has to find it.
-        var fromT = LiveFights.WindowStartFor(_meterWindowT, double.NaN, nowT, DerivedMeter.TimeoutFor(_currentDamageMode));
-        var update = session.BuildOverlayStats(fromT, nowT, out var lastFactT);
-
-        /*
-         * Phase 2: the same rule again, now that the capture has said what it holds - this is where a pull ENDS.
-         *
-         * The quiet limit depends on whether a death was seen AND was the last thing to happen (`lastFactT <= killT`). A mob we killed
-         * and stopped fighting earns the short courtesy close; a kill followed by more damage means something is still being fought, so
-         * that fight gets the dial's full 30 s instead of inheriting a dead mob's shorter timer. Silence with no death at all always
-         * gets the 30 s: that is the same assume-dead boundary that gives the name's next swing a new fight-list row, so the damage this
-         * board counts cannot drift from what the list records - hit something, go quiet 12 s, hit it again, and it is one board with
-         * both hits (`LiveFightsTest.ALullInsideAPullKeepsOneBoardAndOneTotal`).
-         *
-         * Going quiet past the limit reopens the window HERE, so the next pull counts from now rather than from an old reset - and
-         * `_meterExpired` is what actually clears the screen, because the hold at the bottom of this method answers a null update with
-         * the board already on screen. Otherwise the start carries forward, including across this window being closed and reopened.
-         */
-        var killClosedIt = !double.IsNaN(killT) && !double.IsNaN(lastFactT) && lastFactT <= killT;
-        var quietLimit = DerivedMeter.ExpiryFor(_currentDamageMode, killClosedIt);
-        _meterExpired = LiveFights.Expired(nowT, lastFactT, quietLimit);
-        _meterWindowT = LiveFights.WindowStartFor(_meterWindowT, lastFactT, nowT, quietLimit);
-        if (_meterExpired)
-        {
-          return null;   // the tick that sees this blanks the board, whatever the dial says
-        }
-
-        /*
-         * Nothing in the window yet: hold what is on screen. A derive pass runs when the log goes quiet, so a fight in
-         * progress can be a few seconds from landing, and flickering an empty board between passes would read as "the
-         * raid stopped doing damage". This is also the one place where the derived meter differs in FEEL from the
-         * legacy one second-to-second: legacy accumulates per line as they parse, this updates per derive.
-         */
-        return update ?? _stats;
+        var now = (DateTime.Now - DateTime.MinValue).TotalSeconds;
+        _meterBuildSecond = (long)now;
+        return session.BuildOverlayStats(MeterLifecycle, damageMode, now);
       }
       catch (Exception ex)
       {
@@ -544,7 +417,9 @@ namespace EQLogParser
 
       if (!_lastUpdateTask.IsCompleted) return;
 
-      var maxRows = _currentMaxRows;
+      var sessionId = DeriveEngine.Active?.SessionId ?? 0;
+      var displayVersion = _displayVersion;
+      var damageMode = _currentDamageMode;
       DamageOverlayStats damageOverlayStats = null;
 
       _lastUpdateTask = Task.Run(() =>
@@ -553,36 +428,18 @@ namespace EQLogParser
         {
           lock (StatsLock)
           {
-            damageOverlayStats = _stats;
-            var update = BuildMeterUpdate();
-
-            if (update == null)
-            {
-              /*
-               * One rule for every dial value: the board goes when its own window ran out. The mode-0 half of the old test here
-               * ("…or 7 s since this board last painted") could not fire, because a quiet window holds the previous board and so keeps
-               * `LastUpdateTicks` current every tick - which is why "reset on kill" stopped closing and this line stopped meaning
-               * anything. A wall-clock grace is not needed either: for mode 0 the expiry IS the grace (`KillQuietCloseS`).
-               */
-              if (_stats != null && _meterExpired)
-              {
-                damageOverlayStats = _stats = null;
-              }
-            }
-            else
-            {
-              update.LastUpdateTicks = DateTime.Now.Ticks;
-              damageOverlayStats = _stats = update;
-            }
+            damageOverlayStats = BuildMeterUpdate(sessionId, damageMode);
+            if (sessionId == (DeriveEngine.Active?.SessionId ?? 0)) _stats = damageOverlayStats;
           }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-          // ignore for now
+          Log.Error("Damage overlay update failed", ex);
         }
       });
 
       await _lastUpdateTask;
+      if (_closed || displayVersion != _displayVersion || sessionId != (DeriveEngine.Active?.SessionId ?? 0)) return;
 
       if (damageOverlayStats != null)
       {
@@ -593,16 +450,9 @@ namespace EQLogParser
           _lastTopTicks = currentTicks;
         }
 
-        /* Both lists in one pass: the player sees "the meter redrew", and the two calls are the same work on two panels. */
-        if (damageOverlayStats.DamageStats is not null)
-        {
-          LoadStats(damageContent.Children, damageOverlayStats.DamageStats);
-        }
-
-        if (damageOverlayStats.TankStats is not null)
-        {
-          LoadStats(tankContent.Children, damageOverlayStats.TankStats);
-        }
+        // A missing half clears its old bars: a slain tanking fight must not remain beside a new damage-only fight.
+        LoadStats(damageContent.Children, damageOverlayStats.DamageStats);
+        LoadStats(tankContent.Children, damageOverlayStats.TankStats);
 
         if (Visibility != Visibility.Visible)
         {
@@ -636,21 +486,8 @@ namespace EQLogParser
       }
       else
       {
-        foreach (var child in damageContent.Children)
-        {
-          if (child is DamageBar damageBar)
-          {
-            damageBar.Visibility = Visibility.Collapsed;
-          }
-        }
-
-        foreach (var child in tankContent.Children)
-        {
-          if (child is DamageBar damageBar)
-          {
-            damageBar.Visibility = Visibility.Collapsed;
-          }
-        }
+        ClearStats(damageContent.Children);
+        ClearStats(tankContent.Children);
 
         damageContent.Visibility = Visibility.Collapsed;
         tankContent.Visibility = Visibility.Collapsed;
@@ -658,13 +495,8 @@ namespace EQLogParser
         HideToolbarWindow();
         Visibility = Visibility.Collapsed;
 
-        /*
-         * Hiding a meter with nothing behind it closes it for real: LiveFights answers whether any row is still going
-         * inside the window that zeroes this board. One consequence of that phrasing is worth knowing: a window hidden
-         * between pulls closes instead of waiting out the log, and comes back on the next pull through
-         * DeriveEngine.LiveDamageObserved rather than lingering invisibly until the app restarts.
-         */
-        var stillSomethingToShow = DerivedMeter.HasLiveFight(_currentDamageMode);
+        // An explicit Reset can hide a still-active fight; keep polling it for new damage.
+        var stillSomethingToShow = DerivedMeter.HasActivity(_currentDamageMode);
         if (!stillSomethingToShow)
         {
           MainActions.CloseDamageOverlay(false);
@@ -672,8 +504,22 @@ namespace EQLogParser
       }
     }
 
+    private static void ClearStats(UIElementCollection children)
+    {
+      foreach (var child in children)
+      {
+        if (child is DamageBar bar) bar.Visibility = Visibility.Collapsed;
+      }
+    }
+
     private void LoadStats(UIElementCollection children, CombinedStats localStats)
     {
+      if (localStats is null)
+      {
+        ClearStats(children);
+        return;
+      }
+
       /*
        * The display step the legacy overlay did inside its tally loop (class filter + the local player's slot), restored over the
        * derived board. `children.Count - 1` is how many PLAYER bars exist — the title bar is not one. It runs over both panels,
@@ -1117,19 +963,17 @@ namespace EQLogParser
 
     private void FullResetClick(object sender, RoutedEventArgs e)
     {
+      _displayVersion++;
       lock (StatsLock)
       {
         _stats = null;
-
-        /*
-         * The board holds nothing between ticks - it is recomputed from the facts inside its seconds - so a reset is moving the
-         * window's start to the next tick and nothing else: THIS second, deliberately, and not the `-1` a first window uses.
-         * `-1` reaches back one quiet window so a kill that already happened can show its total (see `LiveFights.WindowStartFor`);
-         * reaching back from under a Reset button would resurrect the damage the operator just asked to forget. The session swap
-         * above keeps `-1`, because arriving at a new capture is not a request to erase anything.
-         */
-        _meterWindowT = (DateTime.Now - DateTime.MinValue).TotalSeconds;
+        MeterLifecycle.Reset(DeriveEngine.Active?.SessionId ?? 0, (DateTime.Now - DateTime.MinValue).TotalSeconds);
       }
+      ClearStats(damageContent.Children);
+      ClearStats(tankContent.Children);
+      controlPanel.Visibility = Visibility.Collapsed;
+      HideToolbarWindow();
+      Visibility = Visibility.Collapsed;
     }
 
     private void WindowSizeChanged(object sender, SizeChangedEventArgs e)
@@ -1139,6 +983,7 @@ namespace EQLogParser
 
     private void WindowClosing(object sender, CancelEventArgs e)
     {
+      _closed = true;
       if (_derivedFrom is not null) _derivedFrom.Derived -= OnDerived;
       DeriveEngine.ActiveChanged -= FollowActiveSession;
       _derivedFrom = null;

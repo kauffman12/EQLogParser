@@ -289,12 +289,9 @@ public class DerivedTotalsTest
     }
 
   /*
-   * A meter reset is a TIME question, not a row question: zeroing the overlay does not choose different fights, it
-   * asks the same fights about the seconds since the reset. Legacy answers that by keeping its own running totals
-   * (DamageOverlayStatsBuilder, with `OverlayDamageMode` deciding expiry: 0 = on kill, else N seconds of quiet);
-   * the engine answers it with one extra argument to the calculation it already had. These four tests are what keeps
-   * that argument honest — a slice that silently double-counted its seam, widened its own clock, or got cached under
-   * the unwindowed row would each look plausible on screen.
+   * An explicit Reset cuts records within the selected lives. On Kill is a separate row-selection question tested in
+   * DamageOverlayLifecycleTest. These tests pin the record seam: a slice must not double-count, widen its clock,
+   * or be cached as the unwindowed row.
    */
 
   private static HealFactTable HealsAt(DamageFactTable facts, params (string Healer, string Healed, uint Amount, double T)[] heals)

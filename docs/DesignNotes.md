@@ -5477,99 +5477,66 @@ windows both go quiet — longest such pause measured 121 s — and its resumpti
 and resumes deserves to get its meter back; the alternative (remembering every name ever seen) would never re-open for that
 pull at all.
 
-### The two visible behaviour changes, stated plainly
+### Damage overlay: fight accounting and display retention (2026-11)
 
-- **Launch.** Legacy opened an enabled meter if the log contained any fight with damage *ever*. Derived opens it only if the
-  capture's last moments hold a live row; otherwise `NewFightObserved` opens it on the next pull. That is a real difference,
-  chosen because "there was a fight somewhere in this 616-day file" is not information about now.
-- **Hiding.** A hidden derived meter closes for real when nothing is live and comes back on the next announcement, instead of
-  lingering invisibly for the rest of the process.
-- **Reset.** `FullResetClick` resets each engine the way that engine keeps a board: legacy discards its builder and
-  FightManager's overlay set (those hold running totals), derived moves its window start because a derived board holds nothing at
-  all — to **this second**, not to `-1`. The two no-window values are different questions: `-1` is "this meter has never had a window"
-  and reaches back one quiet window so a kill already landed can show its total, while a Reset click must not resurrect the damage the
-  operator just asked to forget (2026-11; the same reason legacy's reset zeroed its running totals rather than re-reading them).
+The authoritative comparison is tag **2.4.1**, `DamageOverlayStatsBuilder.ComputeOverlayDamageStats`:
+`if (!fight.Dead || mode > 0)`. **Mode zero excludes dead fights. Only timed modes carry their damage into the dead-fight bucket.**
+Earlier notes incorrectly attributed that bucket to On Kill and justified resetting only after a display timeout.
 
-### The seam, and why it is one file
+The global-window repair in `827d5812` fixed an isolated kill's hide path but failed four review reproductions:
+- Kill A for 1,000 and hit B for 200 before the display timeout: it printed 1,200, not 200.
+- Hit B, then kill A: B could lose its totals after 13 seconds of silence, despite its full 30-second engagement allowance.
+- A one-shot already dead at the first derive failed the live-only opening gates.
+- A fresh completed board built from now-minus-30, then stored now-minus-8: its next refresh dropped from 1,000 to 500 unchanged.
 
-`DerivedMeter` (app) is now the only reader of `OverlayDamageFromMirror`, and the only place that answers "which engine is the
-meter reading". Before this the key was read in two components and the second still asked `FightManager`, which is how a
-half-ported surface looks finished. It holds no policy: it maps the `OverlayDamageMode` dial onto the two questions the dial
-answers — `TimeoutFor(mode)` for "is a pull still going" (0 = the 30 s engagement gap, else N seconds) and
-`ExpiryFor(mode, killObserved)` for "how long may a quiet board stay up" (0 = `LiveFights.KillQuietCloseS` 8 s **after a death the
-engine saw**, else the full gap; other modes = N seconds). `killObserved` comes from `DeriveEngine.LastKillT`, which asks the rows
-for `EndReason == Slain`. One number for both was tried, in two different wrong ways, and both are written about below;
-`LiveFights.GapS` is still that same `FightProjection.EngagementGapS`, pinned as *behaviour*
-in `LiveFightsTest` (live at 29 s, not at 31 s) because comparing two constant spellings of one number passes even when somebody
-edits it to 300.
+`DamageOverlayLifecycle` now makes a transient row selection before `DerivedTotals.ForOverlay` materializes it:
 
-#### When the damage overlay closes: three faults, all shipped in 2.4.x (2026-11)
+| mode/state | accounting/display |
+|---|---|
+| On Kill, active lives | Count each surviving life in full, subject only to explicit Reset. Drop completed lives immediately. |
+| On Kill, no active life | Show the latest completed life(s) for `CompletedDisplaySeconds = 8`; never combine them with a new pull. |
+| On Kill, no death seen | Keep each life through `FightProjection.EngagementGapS = 30`; its next post-gap row starts fresh. |
+| Timed mode | Keep completed lives inside the existing accumulation range until the configured quiet period. |
 
-Reported as "if I have reset on kill selected the damage meter never goes away… and if I one-shot a mob it doesn't popup at all".
-Not a branch regression: `b85727f7` ("Point the damage overlay at the mirror behind `OverlayDamageFromMirror`") is an ancestor of
-master, and 2.4.1 predates this code — so "the old build was fine" meant **this shipped broken**, and the target became legacy's
-observable behavior, not new policy. What users described, and what legacy actually did (`FightManager` kept a set of overlay
-fights; a dying mob left that set, so the builder ran out of data and stopped returning a board; the window then waited 7 s of
-no-updates and blanked) is: totals while you hit things, still up while other things get hit, gone ~8-10 s after the kill.
+A selection uses fight instances, never a name-only cache or one timestamp standing for every opponent. Rows with the same name
+can be different lives; another opponent's death cannot shorten a survivor's allowance. The final display is rebuilt from completed
+rows, so a one-shot is readable even when no live frame was ever painted. When multiple pulls complete between snapshots, the latest
+death supplies the final result (ties share it), not the sum of earlier killed mobs. This deterministic batch behavior also includes
+the killing blow, rather than freezing whichever pre-kill tick happened to paint last in the old UI. `DerivedFight.DeathTime` carries
+the observed death separately from last damage: display grace starts at death, not an invented timestamp based on the last exchange.
 
-1. **A hold rule defeated the only close path** — `BuildMeterUpdate` answered "no rows in my window" with the PREVIOUS board
-   (`return update ?? _stats`, a hold that exists for a real reason: see #2), and the tick blanked on "null update *and* 7 s since
-   `LastUpdateTicks`". A quiet window holding the previous board refreshes `LastUpdateTicks` every tick, so the second half of that
-   condition could never be true. The fix keeps the hold and adds the one bit it was missing: the build that moves the window start
-   sets `_meterExpired`, and the tick clears the board on THAT, for every dial value. A wall-clock grace is not needed for mode 0 —
-   the quiet window *is* the grace.
-2. **Mode 0 read as the engagement gap** (30 s) for the board's expiry. Legacy's close was not a timeout at all but a death event
-   removing the fight, and the 7 s of nothing after it.
+Opening uses the same wall-clock eligibility as selection, including recently completed one-shots. `LiveDamageObserved` advances
+by projected fact ordinal, not seconds: two arrivals within one log second are distinct, but death-only republishes do not repeatedly
+reopen the same finished board. Old-file snapshots cannot open an already expired overlay. `DerivedMeter` is only the app seam;
+there is no engine-selection setting or legacy fallback.
 
-   **What mode 0 actually means, and it is not about the meter.** The engine's law is that 30 s without a name (`EngagementGapS`)
-   means *assume it dead* and its next swing opens a new fight-list row. So an unnoticed pull is over at exactly that boundary, and
-   the damage the meter records has to agree with the fight list or the two windows disagree by construction. The ~8 s is only a
-   *usability* close — how long a finished board is allowed to sit there — and it must not decide what counts. Hence:
+The lifecycle retains only session id and scalar reset bounds, never engines or rows. X-close/reopen preserves those bounds;
+a new capture discards them. Reset cuts at the click rather than reaching backwards; a display revision rejects a pre-reset build
+that finishes afterward. UI publication also checks capture ownership and whether its window closed. A null result hides the board;
+there is no unbounded fallback to previous stats. A missing damage/tanking half clears its old bars too.
 
-   | evidence | board's quiet window | where the totals restart |
-   |---|---|---|
-   | death SEEN (`EndReason == Slain`) **and it was the last thing that happened** | `KillQuietCloseS` 8 s | at that expiry, i.e. next pull counts fresh |
-   | silence only, or a kill followed by more damage | `GapS` 30 s (legacy's `FightTimeout`) | same place the fight list starts a new row |
+`DamageOverlayLifecycleTest` runs projection, row selection and real overlay totals together: consecutive/overlapping kills,
+12-second lulls, the 30-second boundary, repeated names, same-second arrivals, one-shots, unchanged refreshes, final display timing,
+Reset, capture swaps, X-reopen and timed modes. `FreshSixtySecondMeterMatchesSelectingFiveFightsAcrossSeveralMinutes` pins the timed
+mode's accounting goal: from a fresh capture, five killed mobs over several minutes, with every quiet gap shorter than 60 seconds,
+must equal selecting those five fight-list rows. It asserts total damage, combat seconds and DPS, both aggregate and per player;
+polling the final result cannot change DPS by adding idle wall time. WPF popup/hide behavior still needs Windows verification; see
+ReleaseChecklist → "Damage overlay checks on Windows".
 
-   The second half of the first condition matters: a kill that OTHER damage follows means something is still being fought, and the new
-   pull must not inherit a dead mob's shorter timer. So the overlay asks `lastFactT <= killT` after the build — the phase split exists
-   because the kill is knowable before building (`DeriveEngine.LastKillT` over rows) and whether anything followed it is not.
+Short timed resets keep their legacy duration: the operator confirmed in 2.4.1 that three seconds without an attack hides and
+resets the meter. There is no extra timed display grace. A separate regression came from projection lag: attacks at seconds 0
+and 2, followed by a tick at 3.1 still reading the first snapshot, advanced the reset boundary past the already captured second
+attack. Each snapshot now stamps its processed damage count under the ingest gate. If captured damage is ahead, the timed
+expiry check also considers `DamageFactTable.LatestDamageTime`, published before its count and monotonic across out-of-order
+log times. This is only a temporary quiet-clock hint, never extra records or a different accounting range. Once projection
+catches up, only qualifying projected activity decides; heal/evidence/death arrivals do not postpone damage expiry. If projection
+stalls, three seconds of actual captured silence still resets normally—polling adds no grace. Headless regressions exercise the
+delayed second hit, genuine silence, a stalled projection, out-of-order times, unrelated damage, pending deaths and explicit Reset.
+The snapshot count's immutability is covered in the Windows-only assembly; its test still needs execution on Windows.
 
-   The kill is not inferred from quiet — `LiveFights.LastKillT` reads `Slain`, which only a death line can set, versus `Gap`, which
-   is the assumption; a raid member's row and our own pet's row are refused there, because a rez is not a pull ending. Killing one
-   mob while hitting another never blanks anything: damage keeps arriving, so quiet never reaches either number.
-
-   **The wrong version this replaced, recorded so it does not come back**: an intermediate cut used 8 s for *every* quiet stretch.
-   That closes a killed pull on time and also wipes a pull nobody killed — hit a mob, go quiet 12 s while running, hit it again, and
-   the first hit is gone from the totals. `LiveFightsTest.ALullInsideAPullKeepsOneBoardAndOneTotal` is that exact scenario.
-3. **A fresh window started at `now`** (`WindowStartFor(storedStartT: -1) => nowT`), so a one-shot's entire life — its only damage
-   line and its death, one second of facts — sat BEFORE the window, `BuildOverlayStats` keeps rows with `LastTime >= fromT`, there was
-   nothing to paint, no fact ever set `lastFactT`, and `Expired(…, NaN)` is false by design, so the start never moved: an empty board
-   forever. A brand-new window now reaches back a pull's worth (`nowT - TimeoutFor(mode)`, so 30 s for "on kill", N seconds for a timed
-   dial — as far as a pull you are standing in can reach). Legacy could not hit this because its totals were statics that the window
-   merely displayed.
-
-One deliberate non-change: mode 0's numbers reset when the window ends rather than being zeroed *at* the kill shot. The board you look
-at during those 8 s still carries the fight that produced the kill (legacy likewise kept a slain mob's damage in its dead-fight bucket
-and displayed it), and the next pull counts from the fresh window — which is also why no separate "move the start to the death" rule was
-needed: expiry already moves it, and a seen kill only shortens how long expiry waits.
-
-The Core rules are tested headlessly (`LiveFightsTest.ALullInsideAPullKeepsOneBoardAndOneTotal`,
-`ASeenKillClosesTheBoardAndAOneShotStillShows`, `ASlainRowIsAKill_AGapRowAndOurOwnDeadAreNot`); the tick/blank path is WPF and can only
-be confirmed on Windows — see ReleaseChecklist → "Damage overlay checks on Windows".
-
-`NewFightObserved` is **static** on `DeriveEngine` (like `ActiveChanged`) because its reader outlives a capture: the meter
-must auto-open for the next log too. It is unsubscribed with the legacy event's old call sites folded into
-`SubscribeOverlayFights()`/`UnsubscribeOverlayFights()`, so a window cannot be kept alive by a handler nobody remembers to
-detach — and it is raised in its own `try` after `Derived`, because an auto-open throwing must not make the *derive* look
-broken (the outer catch disables auto-derive; that decision belongs to the derive itself, not a subscriber).
-
-**No fallback, again.** "No session" answers `false`, and `HasLiveFight` never consults FightManager on the derived path: a
-meter that quietly started trusting legacy visibility rules looks exactly like a correct one.
-
-Re-measure with `EQLP_DERIVE_LIVE=local/<log>.txt dotnet test --filter LiveFights_RealLog --logger "console;verbosity=detailed"`.
-What is left on this path is not the wiring but the default: flip `OverlayDamageFromMirror` on and delete
-`DamageOverlayStatsBuilder`, which is the legacy tally this bypasses.
+`LiveDamageObserved` is static because MainWindow's subscription outlives captures. It is raised after `Derived` under its own
+exception guard, so a failing UI subscriber cannot make a successful derive look broken. Opening requests a fresh derive; closing
+unsubscribes the pane without discarding the scalar lifecycle state.
 
 ### One dial for both surfaces (2026-10, burn-in)
 
@@ -5623,6 +5590,10 @@ carries the out-of-lifetime taunt that belongs to nobody.
 Reported from use: the reset button behaves, but "the X is just supposed to close the window and it would open back up next time damage comes in
 and it would continue where it left off if it were within the configured time range". Both halves were broken in the port, and the interesting part is that
 the previous section of these notes argued for the broken behaviour.
+
+**Historical implementation note:** the live-only opening gate and global window described below were subsequently found incorrect
+for one-shots and reset-on-kill. The measurements are retained as history, not the current contract; see
+"Damage overlay: fight accounting and display retention" above for the replacement.
 
 **Reopen.** `FightManager.UpdateIfNewFightMap` raises `EventsNewOverlayFight` inside `if (fight.DamageHits > 0)`, *outside* the `TryAdd` branch: the event goes out on
 every damage line of a fight that has ever done damage. Legacy's X therefore lasted until the next line — milliseconds. My port announced one row per life, reasoning that

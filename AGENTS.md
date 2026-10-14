@@ -139,11 +139,13 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
 - **`DeriveCadence.Decide(...) -> { None, ProjectionOnly, Full }`** is the only rule (Core, dispatcher-free). Check order:
   nothing new ⇒ `None`; count held still ⇒ `Full`; growth rate ≥ `BulkFactsPerSecond` parks **both** lanes; full clock due ⇒
   `Full`; cheap clock due ⇒ `ProjectionOnly`. Bulk **parks**, it does not fire. Every threshold is a duration or a rate, never
-  a tick count. `BuildMeterUpdate` stays tied to `LiveFights`' two dial readings — `ExpiryFor(mode, killObserved)` for the board's own
-  quiet window and `TimeoutFor` for liveness — and the rule behind mode 0 is that **only a seen kill (`EndReason == Slain`, read by
-  `LastKillT`) earns the short 8 s close; silence alone gets the full 30 s**, the same assume-dead boundary that starts a new fight-list
-  row, so recorded damage can never depend on how long a board was visible. An expiry is announced by a flag, never inferred from a null
-  update, because a quiet window HOLDS the previous board by design. Opening a derived meter forces `RederiveAsync()`.
+  a tick count. Opening a derived meter forces `RederiveAsync()`.
+- **Overlay accounting and display retention are separate** (`DamageOverlayLifecycle`): On Kill selects live fight instances,
+  drops each completed life immediately from ongoing totals, and gives each survivor the full engagement gap. Only when no live
+  fight remains may it display the final completed result briefly; that result never joins the next pull's accounting. Timed modes
+  retain completed fights until their configured quiet period. Explicit Reset cuts records; X-close does not reset; lifecycle state
+  retains no engine or rows. Opening accepts recent completed one-shots and deduplicates by fact ordinal, not log second.
+  See `docs/DesignNotes.md` → "Damage overlay: fight accounting and display retention".
 - **Only a gesture stamps the re-derive ledger** (`DeriveRequests`); the pump dispatches through `StartPass`, which stamps
   nothing, and paying a debt may not take one out.
 - **Two clocks**: `Full` is paced by `_sinceFullPass`, the cheap lane by `_sinceAnyPass`; only a pass that classified may

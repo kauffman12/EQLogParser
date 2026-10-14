@@ -498,6 +498,7 @@ namespace EQLogParser
           {
             deaths.Dequeue();
             row.Dead = true;
+            row.DeathTime = dt;
             row.EndReason = DerivedFightEnd.Slain;
             rows.Add(row);
             open.Remove(key);
@@ -589,6 +590,8 @@ namespace EQLogParser
             target = timeline.IsRaidVictimAt(defName, t) ? FactTarget.RaidSide : FactTarget.Neither;
         }
 
+        if (row.FactStart < 0) row.FactStart = ordinal;
+        row.FactEnd = ordinal + 1;
         ownerSink?.Invoke(fact, ordinal, row, target);
 
         var isHit = LabelTypes.IsHit(fact.TypeId);
@@ -654,9 +657,10 @@ namespace EQLogParser
       {
         // Deaths after the last exchange still mark the engagement they follow.
         // A slain line lands shortly after the final exchange - inside one engagement's tail.
-        if (!row.Dead && DeathWithinTail(deathsByName, row))
+        if (!row.Dead && DeathWithinTail(deathsByName, row, out var deathTime))
         {
           row.Dead = true;
+          row.DeathTime = deathTime;
           row.EndReason = DerivedFightEnd.Slain;
         }
 
@@ -681,14 +685,17 @@ namespace EQLogParser
      * the name and is SKIPPED rather than consumed (Publish above is why consumption belongs to the loop alone); any
      * later one within EventTailWindowS says this engagement ended in death.
      */
-    private static bool DeathWithinTail(Dictionary<string, Queue<long>> deathsByName, DerivedFight row)
+    private static bool DeathWithinTail(Dictionary<string, Queue<long>> deathsByName, DerivedFight row, out double deathTime)
     {
+      deathTime = double.NaN;
       if (!deathsByName.TryGetValue(row.Name, out var deaths)) return false;
 
       foreach (var dt in deaths)
       {
         if (dt < row.BeginTime) continue;                 // an earlier holder of this name
-        return dt <= row.LastTime + EventTailWindowS;
+        if (dt > row.LastTime + EventTailWindowS) return false;
+        deathTime = dt;
+        return true;
       }
 
       return false;

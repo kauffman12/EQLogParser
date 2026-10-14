@@ -47,20 +47,8 @@ internal static class DerivedTotals
    * with no rows has no scope at all, and showing an empty board for that would be the same lie as showing stale
    * numbers — which of the two to display is the surface's decision, made with the session it owns.
    */
-  /*
-   * The optional window is the meter's reset. Zeroing a damage meter does not choose a different set of fights, it
-   * asks the same fights about a slice of their seconds, and the deleted legacy engine modeled that by accumulating
-   * its own totals since the reset (per-player sums with an activity TimeRange, zeroed on reset, expired after
-   * `mode` seconds — or the 30 s gap when mode is 0, i.e. "on kill"; the same quiet dial still decides via
-   * LiveFights.TimeoutFor). Here the slice is an argument to the one
-   * calculation instead: same rows, facts whose seconds lie in [fromT, toT], and therefore damage, hit counts and
-   * activity segments that all belong to the window together. A surface's zero point, its timeout and its blank-board
-   * rule stay where legacy put them — in the overlay — because they are a display policy; what arrives here is the
-   * window they decided on.
-   *
-   * Slicing is exact in the way that matters: For(rows, a, b) + For(rows, b, c) totals the same as For(rows, a, c),
-   * because a fact is either inside the window or not, and nothing is counted twice or lost in the seam.
-   */
+  // DamageOverlayLifecycle selects lives for On Kill and an accumulation range for timed modes. Explicit Reset
+  // additionally slices those lives. This calculation decides neither fight eligibility nor display retention.
   /*
    * The damage meter's shape for the same scope: damage and tanking halves, each built on its OWN builder instance,
    * returned in the container the overlay already paints. A window is expected here ("since I zeroed the meter") and

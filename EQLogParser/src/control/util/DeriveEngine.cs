@@ -57,8 +57,8 @@ namespace EQLogParser
      * "Damage came in", for the one surface that opens itself: the meter. Legacy raised this on **every damage line** of a
      * fight (`FightManager.UpdateIfNewFightMap` fires it whenever `fight.DamageHits > 0`, outside the new-fight branch), which
      * is why closing a meter with the X during a pull brought it back within a line or two. A derived list has no per-line
-     * moment — rows appear on a pass — so this says "newer row activity than the last announcement, and something still live"
-     * (LiveFights.HasFreshDamage), at derive rate rather than line rate. The reader no-ops while a window exists, so the extra
+     * moment — rows appear on a pass — so this announces new fact ordinals with recent overlay activity, including a completed
+     * one-shot. Death-only republishes cannot spend the same damage twice. The reader no-ops while a window exists, so the extra
      * passes cost one null check; what they buy is that the reopen happens on the damage the player can see rather than at the
      * next pull.
      *
@@ -69,7 +69,7 @@ namespace EQLogParser
     public static event Action LiveDamageObserved;
 
     // Newest row activity announced so far, so the announcement means "newer than last time" and not "still fighting".
-    private double _lastAnnouncedActivityT = double.NegativeInfinity;
+    private int _lastAnnouncedActivityOrdinal;
 
     // Liveness feedback while capture is dirty (raised on the timer, i.e. the dispatcher):
     // total captured facts since no snapshot covers them yet.
@@ -544,15 +544,13 @@ namespace EQLogParser
             catch (Exception ex) { Log.Debug("Could not trim ordinal-list slack; the derived boards are unaffected", ex); }
           }
 
-          /*
-           * Did damage arrive since the last announcement, with something still live? Asked on the capture's own clock (its
-           * newest event) rather than wall time: during a bulk load of an old log the middle of the file must not count as
-           * activity worth opening a meter for, while its tail — which does — is exactly where a reader who reopened yesterday's
-           * log wants one. Gated on the setting for the same lazy reason legacy gated its per-line event.
-           */
+          // Wall-clock freshness also gates opening: historical snapshots must not repeatedly open an already expired board.
+          // A completed one-shot is recent activity too; being dead before the first derive must not make it invisible.
+          var activityOrdinal = DamageOverlayLifecycle.LatestActivityOrdinal(snapshot.AllFights);
           var freshDamage = ConfigUtil.IfSet("IsDamageOverlayEnabled")
-                            && LiveFights.HasFreshDamage(snapshot.AllFights, _lastAnnouncedActivityT, _capture.LastEventTime,
-                                                         LiveFights.GapS);
+                            && activityOrdinal > _lastAnnouncedActivityOrdinal
+                            && DamageOverlayLifecycle.HasRecentActivity(snapshot.AllFights, DateUtil.ToDotNetSeconds(DateTime.Now),
+                              ConfigUtil.GetSettingAsInteger("OverlayDamageMode"));
 
           // Swapped before the event: a selection made from the fresh rows materializes against the pass
           // that made them, never against the previous snapshot's facts.
@@ -611,7 +609,7 @@ namespace EQLogParser
           {
             // Recorded whether or not anyone listened: the announcement's meaning is "newer than the last one we made", and a
             // meter that was open (and ignored this) must not make the NEXT pass look like news all over again.
-            _lastAnnouncedActivityT = LiveFights.LatestActivityAt(snapshot.AllFights);
+            _lastAnnouncedActivityOrdinal = activityOrdinal;
             try { LiveDamageObserved?.Invoke(); }
             catch (Exception ex) { Log.Error("Live-damage subscriber failed", ex); }
           }
@@ -800,65 +798,22 @@ namespace EQLogParser
       return FightSummarySource.Build(overlapping, snapshot.DamageIndex, snapshot.Facts).Fights.ToList();
     }
 
-    /*
-     * "Is there a fight going on?" — the question the legacy meter's overlay-fight set answered, asked here of
-     * derived rows (LiveFights) on the capture's own newest event. `gapS` comes from the caller because it is the meter's
-     * dial: `LiveFights.TimeoutFor`, i.e. the engagement gap for "on kill" and N seconds for a timed mode. Note that this is NOT
-     * the number that blanks the board (`LiveFights.ExpiryFor`, which is shorter after a seen kill): keeping a window open is the
-     * lenient question, so a board can blank while its window is still considered going — never the other way round.
-     *
-     * True for as long as the capture keeps moving, which on an old log loaded and left alone means its last moments stay
-     * "live" — the clock is not advancing, and the legacy overlay behaved the same way for a different reason (its fights
-     * only expired while a board was being built). Nothing here decides what a hidden window should do about that.
-     */
-    public bool HasLiveFight(double gapS)
+    internal bool HasOverlayActivity(int mode)
     {
       var snapshot = _snapshot;
-      return snapshot is not null && LiveFights.AnyLive(snapshot.AllFights, _capture.LastEventTime, gapS);
+      return !_disposed && snapshot is not null && DamageOverlayLifecycle.HasRecentActivity(snapshot.AllFights,
+        DateUtil.ToDotNetSeconds(DateTime.Now), mode);
     }
 
-    /*
-     * The newest KILL this capture saw inside these seconds, or NaN when nothing died. This is the difference between "the pull
-     * ended" and "nobody has swung for a while", which is what the meter's "on kill" dial needs and cannot infer from silence — see
-     * `LiveFights.LastKillT` for why a row ending `Slain` is evidence and one ending for the gap is not.
-     *
-     * Asked of the rows the last pass published, with that pass's own timeline: the same pair every board reads, so the kill the
-     * meter counts is the kill the fight list shows as slain.
-     */
-    internal double LastKillT(double fromT, double toT)
+    // Select and materialize from ONE snapshot. The lifecycle retains only scalar reset state, never this capture's rows.
+    internal DamageOverlayStats BuildOverlayStats(DamageOverlayLifecycle lifecycle, int mode, double now)
     {
       var snapshot = _snapshot;
-      return snapshot is null ? double.NaN : LiveFights.LastKillT(snapshot.AllFights, fromT, toT, snapshot.Timeline);
-    }
+      if (_disposed || snapshot is null) return null;
 
-    /*
-     * The damage meter's own question: every row this capture holds that was still alive when its window opened, measured through the
-     * window. No hidden-pet re-adding is needed (the scope is already every row, a pet's included), which is also why a capture-fed meter
-     * and a derived-list select-all can be compared at all. `lastFactT` comes back NaN when nothing was in range — the overlay decides what
-     * to paint for that, exactly as it does today.
-     */
-    internal DamageOverlayStats BuildOverlayStats(double fromT, double toT, out double lastFactT)
-    {
-      lastFactT = double.NaN;
-      var snapshot = _snapshot;
-      if (snapshot is null)
-      {
-        return null;
-      }
-
-      var rows = new List<DerivedFight>();
-      foreach (var row in snapshot.AllFights)
-      {
-        // LastTime is the last second this name did anything, so a row that finished before the reset drops out and a
-        // running one stays (its seconds before the reset are cut by the window, not by the row).
-        if (row.LastTime >= fromT)
-        {
-          rows.Add(row);
-          if (double.IsNaN(lastFactT) || row.LastTime > lastFactT) lastFactT = row.LastTime;
-        }
-      }
-
-      return DerivedTotals.ForOverlay(rows, snapshot.DamageIndex, snapshot.Facts, snapshot.Heals, fromT, toT);
+      var pendingDamageTime = _facts.FactCount > snapshot.DamageFactCount ? _facts.LatestDamageTime : double.NaN;
+      var scope = lifecycle.Select(SessionId, snapshot.AllFights, now, mode, pendingDamageTime);
+      return DerivedTotals.ForOverlay(scope.Rows, snapshot.DamageIndex, snapshot.Facts, snapshot.Heals, scope.FromTime, now);
     }
 
     internal StatsGenerationEvent? BuildScopeStats(IReadOnlyList<DerivedFight> rows)

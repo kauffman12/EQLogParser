@@ -153,6 +153,8 @@ namespace EQLogParser
     public List<DerivedFightRow> Rows = [];
     public int FightCount;
     public long FactCount;
+    // Captured damage processed by this pass, not the live table's growing count or the heal/evidence tally.
+    internal int DamageFactCount;
 
     /*
      * What a board would SEE in this pass, as opposed to what evidence the rules hold (`EntityTimeline.AnswerStamp`). The fight
@@ -277,6 +279,7 @@ namespace EQLogParser
       {
         AnswerStamp = timeline?.AnswerStamp() ?? 0L,
         FactCount = factCount,
+        DamageFactCount = facts?.FactCount ?? 0,
         DerivedAt = DateTime.Now,
         Timeline = timeline,
         Facts = facts,

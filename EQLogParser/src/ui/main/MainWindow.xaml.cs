@@ -431,13 +431,8 @@ namespace EQLogParser
       // delay opening overlay so group IDs get populated
       else if (ConfigUtil.IfSet("IsDamageOverlayEnabled"))
       {
-        /*
-         * "Was anything happening?" asked of LiveFights over the capture's rows, not an overlay-fight set: the window
-         * opens when the capture's last moments hold a fight instead of when the log ever contained one — and if
-         * nothing was live, NewFightObserved opens it on the next pull instead. No session running answers false: a
-         * capture that is not running has no facts, and this path does not fall back to have something to say.
-         */
-        if (DerivedMeter.HasLiveFight())
+        // Recent completed damage may open the overlay too: a one-shot can be dead before the first derive lands.
+        if (DerivedMeter.HasActivity())
         {
           _damageOverlay?.Close();
           _damageOverlay = new DamageOverlayWindow(false, reset);

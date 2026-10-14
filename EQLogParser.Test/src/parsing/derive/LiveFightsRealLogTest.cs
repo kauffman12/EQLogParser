@@ -11,14 +11,11 @@ namespace EQLogParser;
  * FightManager owned a set that a log line added to. Once the engine owns the answer, two questions become product
  * questions, and both are answerable from a capture:
  *
- *   1. **How much of a raid night has no fight in it?** That is how long a closed meter stays closed: the announcement that
- *      reopens it fires while damage is fresh, so the dark stretches are exactly the quiet ones. It is also how often the app
- *      refuses to open a meter at all on launch, since `HasLiveFight` gates that too.
+ *   1. **How much of a raid night has no live fight in it?** This is a capture-relative census, not an assertion about current
+ *      overlay visibility: DamageOverlayLifecycle also accepts recent completed one-shots and uses wall-clock freshness.
  *   2. **How many pulls does a night contain, and how often does one resume after the gap?** Starts per life, restarts of the
- *      same name after 30 quiet seconds, longest pause inside a row: the shape the board's own gap rule makes of a capture, and
- *      what a player reads as "pulls". It is NOT the meter's open rate — that rule fires on fresh damage at derive rate
- *      (LiveFights.HasFreshDamage), because legacy fired its event on every damage line of a fight, which is why a meter closed
- *      with the X came straight back.
+ *      same name after 30 quiet seconds, longest pause inside a row: the shape the engagement rule makes of a capture.
+ *      The historical live-row announcement census below does not model the overlay's fact-ordinal opening watermark.
  *
  * Runs only when EQLP_DERIVE_LIVE names a log:
  *   EQLP_DERIVE_LIVE=local/logs/live/eqlog_Kizant_xegony.txt dotnet test --filter LiveFights_RealLog --logger "console;verbosity=detailed"

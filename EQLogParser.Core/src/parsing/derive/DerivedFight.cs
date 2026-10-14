@@ -43,9 +43,8 @@ namespace EQLogParser
   }
 
   // One derived fight — the re-derivable replacement for a slice of FightManager state.
-  // Aggregates are keyed by RAW name (classification enters only at roll-up, D3); the fact range
-  // [FactStart, FactEnd) is contiguous in the fact table, which makes targeted re-derivation
-  // (D4 choice (b)) a sequential memory pass.
+  // Aggregates are keyed by raw name. FactStart/FactEnd bound this life's facts; other lives can interleave.
+  // FightFactIndex owns exact membership; FactEnd is also the overlay's new-activity watermark.
   internal sealed class DerivedFight
   {
     public string Name;                 // interned boss key (exactly as the current pipeline keys fights)
@@ -59,6 +58,9 @@ namespace EQLogParser
     public double BeginTime = double.PositiveInfinity;
     public double LastTime = double.NegativeInfinity;
     public bool Dead;
+
+    // The observed death may follow the last damage. Display grace must not pretend LastTime was the death timestamp.
+    public double DeathTime = double.NaN;
 
     // Why the row ended. Only meaningful next to a row that ended: an open (live) row reports Open.
     public DerivedFightEnd EndReason;
