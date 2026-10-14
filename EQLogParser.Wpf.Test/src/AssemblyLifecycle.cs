@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using EQLogParser;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Syncfusion.Licensing;
@@ -35,6 +37,25 @@ namespace EQLogParser
       // itself"; set BEFORE any control constructs and every later GetLicenseType reads null instead of a message, so
       // nothing ever displays. A valid key makes this line redundant but harmless - it never expires, so it stays.
       SyncfusionLicenseProvider.IsLicenseExceptionShown = true;
+
+      /*
+       * The class door is a HOST HOOK, not a table. `CombatRecordLookup.IsValidClassName` is a public static Func that
+       * defaults to `_ => false`, and App.OnStartup installs the real one over EQDataStore's parsed class list. A test
+       * process runs no App, so every class write was refused: PlayerRegistry.SetDefaultPlayerClass answers false before
+       * it touches anything, which is why the blank-pick take-back test died on its OWN precondition ("the saved class
+       * exists before the gesture") rather than on the gesture. This installs a stand-in with the real shape - a closed
+       * set of player classes, so a test that asks whether a bogus word is accepted still gets a refusal and the door
+       * stays a door.
+       */
+      CombatRecordLookup.IsValidClassName = name => !string.IsNullOrEmpty(name) && PlayerClassNames.Contains(name);
     }
+
+    // The 21 player classes as EQDataStore's `classes.txt` spells them, minus the pet-only and NPC-only rows.
+    private static readonly HashSet<string> PlayerClassNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+      "Berserker", "Beastlord", "Cavalier", "Champion", "Cleric", "Druid", "Enchanter", "Explorer", "Hero",
+      "Magician", "Monk", "Necromancer", "Paladin", "Ranger", "Rogue", "Shadow Knight", "Shaman", "Warrior",
+      "Wizard", "Bard", "Ninja",
+    };
   }
 }
