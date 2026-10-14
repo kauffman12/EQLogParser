@@ -270,17 +270,13 @@ namespace EQLogParser
       }
     }
 
-    /*
-     * The app's watermark idiom, which eleven filter/search boxes used to hand-roll in three variants (text test,
-     * style test, and a private bool flag). The cue word IS the Text while the box is empty and unfocused, in
-     * italics; focus clears it, blur restores it when empty. The placeholder stays the ACTUAL Text rather than a
-     * rendered hint, because readers compare against it — EventViewer's `_currentFilterText`, the trigger tree's
-     * "is this a real query" guard — and a text comparison is the honest test: the style variants lie the moment
-     * anything else touches FontStyle (the character-name box used to wipe a LOADED name on focus, because the
-     * XAML started it italic). SetWatermark owns both focus events; RestoreWatermark is what an Esc handler or a
-     * reset path calls, and reads back as "showing the placeholder" for every such reader, exactly like one that
-     * blurred. A real value in the box is never cleared: only the cue word itself clears.
-     */
+        /*
+         * The app's watermark idiom, which eleven filter boxes used to hand-roll three ways. The cue word IS the Text while the box is empty and
+         * unfocused, in italics; focus clears it, blur restores it when empty. It stays the actual Text rather than a rendered hint because readers
+         * compare against it (EventViewer's `_currentFilterText`, the trigger tree's "is this a real query" guard) — and the style variants lie the
+         * moment anything else touches FontStyle. SetWatermark owns both focus events; RestoreWatermark is what an Esc or reset path calls and reads
+         * back as "showing the placeholder". A real value is never cleared: only the cue word itself clears.
+         */
     internal static void SetWatermark(TextBox box, string placeholder)
     {
       if (string.IsNullOrEmpty(box.Text)) RestoreWatermark(box, placeholder);

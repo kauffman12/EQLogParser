@@ -19,32 +19,22 @@ using System.Windows.Input;
 
 namespace EQLogParser
 {
-  /*
-   * The Identity Table (menu name; class still NamesTable): the listable census names, what they were called, and WHY.
-   * It replaces all three of the panes this application used to keep identity state in - Verified Players, Verified Pets (which could
-   * show what somebody typed but never what the classifier concluded, so a wrong verdict had no surface to be noticed on) and Pet
-   * Owners, whose window outlived its own file: petmapping.txt froze into the ledger's ownership lane on 2026-10-09, a pair became a
-   * COLUMN of this table, and what was left of that pane was a second list of pairs held in order by an event pump.
-   *
-   * Two things this deliberately is not:
-   *
-   *   - Not a live grid, and deliberately so. A derive runs every few seconds while a log loads and a census nobody has
-   *     open would be thrown away each time; worse, a list that rearranges itself under a reader cannot be read at all.
-   *     So the census is built OFF THE UI THREAD and swapped in whole. What it does now is keep itself current: it
-   *     follows the derive while the pane is visible (at most twice a second) and rebuilds every time it becomes
-   *     visible, so opening the tab never shows yesterday's list. It was one-shot behind a "Refresh" button before, which
-   *     read as a broken pane the first time a name was missing; the subscription is taken on show and given back on
-   *     hide, so a census nobody is looking at is never built.
-   *   - Not a second source of truth. Every verb here writes through ClassificationCommands into the same per-server
-   *     files the old panes used (verdicts, roster, rejections) plus the sighting ledger. Nothing is stored here, so
-   *     closing the window loses nothing and a file edited by hand still wins on the next open.
-   *
-   * HOW A NAME IS CORRECTED: a pencil opens a ComboBox INSIDE its cell. Type offers Player / Pet / Mercenary / NPC / Spell;
-   * Class offers the class words plus blank to forget the saved class; Owner offers the names a summon can belong to.
-   * The Name column's take-back button calls ClassificationCommands.Recalculate. The editor holds census publication until
-   * its pick commits or it closes. See docs/DesignNotes.md → "A cell editor lives in the cell, because a popup you open yourself eats the pick".
-   * Batch verdicts remain in the fight grids' context menu; this table edits one name at a time.
-   */
+    /*
+     * The Identity Table (menu name; the class is still NamesTable): the listable census names, what they were called, and WHY. It replaces the
+     * three panes that used to hold identity state, and petmapping.txt is a COLUMN of it now rather than a window.
+     *
+     * Two things it deliberately is not:
+     *
+     *   - Not a live grid. A derive runs every few seconds during a load and a list that rearranges itself cannot be read, so the census is built
+     *     off the UI thread and swapped in whole — following the derive while visible (max twice a second) and rebuilding on show, so a census
+     *     nobody is looking at is never built and opening the tab never shows yesterday's list.
+     *   - Not a second source of truth. Every verb writes through ClassificationCommands into the same per-server files; nothing is stored here, so
+     *     closing loses nothing and a hand-edited file wins on the next open.
+     *
+     * HOW A NAME IS CORRECTED: a pencil opens a ComboBox INSIDE its cell — Player / Pet / Mercenary / NPC / Spell, class words plus blank to forget
+     * the saved class, and owner names for summons; take-back calls ClassificationCommands.Recalculate. The editor holds census publication until
+     * the pick commits or it closes. docs/DesignNotes.md → "A cell editor lives in the cell, because a popup you open yourself eats the pick".
+     */
   public partial class NamesTable
   {
     /*

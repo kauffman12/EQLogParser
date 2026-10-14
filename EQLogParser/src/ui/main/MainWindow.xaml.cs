@@ -1404,21 +1404,14 @@ namespace EQLogParser
           {
             statusText.Foreground = Application.Current.Resources["EQGoodForegroundBrush"] as SolidColorBrush;
 
-            /*
-             * The load's one cleanup is ARMED here and paid later (PayOwedLoadTidy), because there is nothing here left to collect. Field evidence,
-             * a 13.7 M-line capture on 2026-10-13: a pass taken at this seam measured `heap 366 to 341.8 MB` in 118 ms after a 24 s read - Server GC's
-             * concurrent collections sweep the read's split strings and per-line temporaries WHILE the read runs, so 341.8 MB was essentially the capture
-             * itself (7.5 M damage facts at 28 B + 2.9 M heals), and everything that still allocates - the first full derive (3.5 s) and its three boards -
-             * lay ahead of the collector. Numbers and both measurements: docs/DesignNotes.md -> "Garbage collection after loading a log".
-             *
-             * Arming does two things: the mark is what keeps the fight list's band up over the pause the load promised (PostLoadCleanup), and the owed id
-             * says WHICH capture owes it, so a close or a new open drops the debt at its own door instead of billing the next file. The tick does not wait:
-             * "Monitoring Log", the loading-complete event and the overlays land normally while the first full pass runs, and the words arrive with the
-             * pause itself - on the status line and on the band.
-             *
-             * Only if a load happened: following from end of file reaches 100 % having read no line, and a compacting pass then stops every thread to hand
-             * back startup allocations for nothing - LogReader.LoadAllocatedGarbage is that gate.
-             */
+                        /*
+                         * The load's cleanup is ARMED here and PAID LATER (PayOwedLoadTidy): at this seam there is nothing left to collect — Server GC swept the
+                         * read while it ran, and the first derive plus its boards (the real allocators) lie ahead. Field numbers: docs/DesignNotes.md ->
+                         * "Garbage collection after loading a log". Arming sets the mark that holds the fight list's band over the pause, and the owed session id
+                         * says WHICH capture owes it so a close or a new open drops the debt at its own door. Nothing else waits: monitoring, the
+                         * loading-complete event and the overlays land while the first pass runs. Only if a load happened — LogReader.LoadAllocatedGarbage keeps a
+                         * follow-from-end from collecting startup garbage for nothing.
+                         */
             if (LogReader.LoadAllocatedGarbage(_eqLogReader.HandedOverLines) && _engine is { } loadedSession) ArmLoadTidy(loadedSession);
 
             /*
@@ -1677,25 +1670,17 @@ namespace EQLogParser
       _ = PayLoadTidyAsync("capture cleared");
     }
 
-    /*
-     * The two moments GC law allows (GcTidyUp owns why these are the only two), paid through two doors: Clear All pays here, immediately, and a
-     * load arms at 100 % to pay at its first answered board trio (PayOwedLoadTidy).
-     *
-     * The collection runs on a POOL thread. That is not a claim that the UI keeps painting - a blocking full compaction suspends every
-     * managed thread, so nothing repaints while it runs whatever asked - it is about who sits inside the pause: a pool thread holds our own
-     * code, while a UI-thread pass would be the message loop itself, frozen with a half-painted frame and no label owner. Labelled either way,
-     * because a pause with a name reads as work.
-     *
-     * The answer says whether the capture that asked is still open. Between handing this off and the collector starting, a person can
-     * pick another log, and a pass inside the NEXT file's bulk read is the one thing GC law forbids - so ownership is asked at the
-     * collector's own door (OpenLogFile/CloseLogFile call PostLoadCleanup.Reset, and the count cannot cancel a pass already begun) and the
-     * pass is skipped rather than relocated.
-     *
-     * The mark does more than guard this call: it is what keeps the fight list's loading band up around the pause, because on a long capture
-     * the first derive starts the moment the lanes drain and its rows land exactly when threads resume - without the hold, the bar would come
-     * down and the freeze would arrive after it. Mark/Clear bracket ONE pass (two can overlap now that the UI stays live through the pause);
-     * Clear runs in a finally, so no path can strand the band, and FightTable caps the wait by itself besides.
-     */
+        /*
+         * The two moments GC law allows (GcTidyUp owns why these are the only two): Clear All pays here at once, a load arms at 100 % and pays at its
+         * first answered board trio (PayOwedLoadTidy).
+         *
+         * The collect runs on a POOL thread — not because the UI keeps painting (a blocking compaction suspends every managed thread) but so our code,
+         * not the message loop, sits inside the pause. Labelled either way: a named pause reads as work.
+         *
+         * Ownership is asked at the collector's own door, because between handoff and start a person can open another log and a pass inside the next
+         * file's bulk read is the one forbidden thing; the count cannot cancel a begun pass, so it skips instead of relocating. Mark/Clear bracket ONE
+         * pass (that mark is also what holds the fight list's band over the pause) and Clear runs in a finally; FightTable caps its wait by itself.
+         */
     private async Task<bool> PayLoadTidyAsync(string reason)
     {
       const string notice = PostLoadCleanup.Notice;
