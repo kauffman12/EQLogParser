@@ -13258,3 +13258,57 @@ drifts, the arithmetic tests would keep passing on a pane that no longer uses th
 Owed on Windows: the visible half (leave the app open past midnight with the Chat pane up, confirm today appears after a Refresh
 without touching the dial or restarting, and that a deliberately picked end date still stops where it was told). `EQLogParser.Wpf.Test`
 constructs no `ChatViewer` case for this; it belongs on the real-control checklist.
+
+## Following the live log across a midnight rollover (2026-11)
+
+The same report has a second, conditional cause — and unlike the chat-range bug this one also freezes the **boards**, not just
+the Chat pane.
+
+A reader monitoring `eqlog_Kizant_xegony.txt` holds a handle on a **file**, not on a name. When the file is renamed away — EQ's
+own date roll, or this app's Log Management doing `File.Move` then recreating an empty file (`LogArchiveManager.DoArchiveAsync`)
+— reading continues from the renamed-away file, which nothing writes to any more, while the new day accumulates behind the name
+unread. Three things in the old code could not see it:
+
+- The fallback test was `_fs.Length < _currentPos`. A complete file never shrinks, so a rename is invisible to it. (It *can*
+  still catch truncate-in-place, and does.)
+- `_currentPos` is updated only on the initial read's progress notches, never in the monitor loop, so even that test ran off a
+  position frozen at load time.
+- Everything else rode on `FileSystemWatcher` raising `Renamed` — and the watcher was built with the **default** filter, which
+  queues a LastWrite notification for every append (thousands a second in a raid log, all of them discarded) into the default
+  **8 KB** buffer. An overflowed watcher stops reporting for the rest of its life, there was no `Error` handler to say so, and
+  `Documents\EverQuest` being OneDrive-synced or on a network share makes dropped events routine. Miss one event and the reader
+  tails yesterday forever with nothing unhealthy about it: `_waiting` is false, `IsInMonitorMode()` is true, no nudge fires, and
+  only a restart clears it.
+- And when the rename *was* caught, `ReOpenAsync` reopened the name and **sought to End**, so whatever the game had already
+  written into the new file during the 100 ms delay plus up to a 200 ms poll was skipped: the head of the new day (login/zone
+  lines, early chat) went missing even in the healthy case.
+
+The rules now live in `EQLogParser.Core/src/control/util/LogFollow.cs` (`WaitForFile` / `RestartFromStart` / `KeepFollowing`,
+plus the reopen offset), and `LogReader` asks the name who it is — one `GetFileAttributesEx` per poll, i.e. five stats a second on
+a 200 ms loop — instead of trusting an event to arrive. Only `RestartFromStart` acts in the poll: a name that reports nothing
+(`WaitForFile`) never closes a working stream, because a false-negative stat would stop a healthy tail and that is precisely the
+failure being fixed — waiting for a file to appear stays the job of `ReOpenAsync`/`WhenFileExistsAsync`, driven by the watcher's
+own Deleted/Renamed word as it always was. The watcher stays wired for promptness, narrowed to
+`FileName | DirectoryName` (nothing else is subscribed) with a 64 KB buffer and an `Error` line in the log, so a flood of appends
+can no longer starve the one event that matters.
+
+The answers are deliberately asymmetric, because the two ways to be wrong are not equal:
+
+- **Restarting on a file whose creation stamp differs reads it from line one.** Those bytes have never reached a processor —
+  this reader never opened that file — so this cannot double count, and it is the whole fix.
+- **Restarting on the *same* file would re-feed lines already in the fact tables**, i.e. boards reading high with nothing wrong
+  in the log. So a plain recovery reopen (the stream threw over an unchanged file) resumes at the tail like it always has, and an
+  unrecorded/unknown identity buys no decision at all: no evidence, no move. The cheap creation-time stamp can lie only in the
+  narrow case where a replacement inherits the same second on coarse-grained filesystems; that degrades toward the tail (a few
+  lines missing), never toward a double count.
+
+Asserted in `EQLogParser.Test/src/control/util/LogFollowTest.cs` (7 tests), including `RecoveryOnAnUnchangedFileNeverReReadsTheCapture`
+(the double-count guard, asserted as hard as the rollover case) and `ARolloverAdvancesFromTailToNewFileInOnePass`, which walks the
+sequence — tail the old file, watch the name change hands, reopen at zero, go quiet on the new file — because the shipped failure
+was a state that never advanced, and a decision table read one row at a time looks correct forever.
+
+Not tested anywhere: the wiring. `LogReader` is WPF-side and there is no fixture that renames a live log under a monitoring
+reader; **the whole path is owed on Windows** (see ReleaseChecklist) — monitor a log, rename it away while EQ keeps writing to a
+new file of the same name, and confirm the boards pick up the new file's lines instead of freezing. Untouched here on purpose:
+`_currentPos` remains the progress dial (it is what `GetProgress()` shows and what `LogArchiveManager` gates archiving on), and the
+follow decisions use their own `_followedLength`/identity pair rather than reusing it.

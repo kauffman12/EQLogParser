@@ -272,3 +272,25 @@ pane's date dials — so it is worth ten minutes before a release goes out.
   move the picker to today and confirm today's messages return — that separates "follows the clock" from "ignores the dial".
 - [ ] **First day of a month / year.** On the 1st (or with the clock rolled over one), refresh the Chat pane and confirm the new
   `Chat-MM.zip` — and on Jan 1, the new year folder — is read at all. The old bound skipped the whole archive, not a few lines.
+
+## Live log rollover checks on Windows
+
+The second cause of *"playing past midnight and the chats are stuck on yesterday"* — a monitored tail that cannot see its file
+renamed away (docs/DesignNotes.md → "Following the live log across a midnight rollover"). No fixture reaches any of this: it needs
+a live monitor with a file moved under it.
+
+- [ ] **A monitored log follows a rename.** Monitor `eqlog_<Char>_<Server>.txt`, then rename that file away while the game (or an
+  append against a freshly created file of the same name) keeps writing to the NEW file. Within about a second the fight list and
+  boards must carry on with the new file's lines instead of freezing on the last line of the renamed-away one. Nothing is printed
+  either way — a stuck tail is silent too — so watch a board, not `eqlogparser.log`.
+- [ ] **The head of the new file arrives.** Those first lines used to be skipped by a seek-to-end during the reopen window: put a
+  distinctive line (a /say right after the rename) at the very start of the new file and confirm it shows up in the Chat archive
+  and the boards.
+- [ ] **Recovery reopen does not double count.** With a monitor running and damage on the boards, truncate or move the file while
+  nothing is writing: totals must not jump. Re-reading an unchanged file would show every number going up with no new lines in
+  the log — that is the asymmetric failure `LogFollow` is written to avoid.
+- [ ] **Log Management still archives.** Trigger archive-on-activity (a file over the size/age thresholds): the move + recreate
+  must leave the monitor following the new empty file rather than stalling on a name that briefly does not exist.
+- [ ] **A long raid does not lose the watcher's folder.** The watcher is narrowed to `FileName | DirectoryName` with a 64 KB buffer
+  precisely so append floods cannot overflow it; if `eqlogparser.log` ever prints `Directory watcher faulted`, say so — rollover
+  then rides on the 200 ms poll alone, which still works but loses its promptness.

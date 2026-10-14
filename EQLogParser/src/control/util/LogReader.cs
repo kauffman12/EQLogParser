@@ -68,6 +68,15 @@ namespace EQLogParser
     private long _initSize;
     private long _currentPos;
 
+    /*
+     * Which FILE this reader's handle belongs to, and how long that file was the last time the tail looked at it. The
+     * monitor loop asks the NAME who it is now: a rename takes the file away under an open handle and the followed file
+     * never shrinks, so length alone cannot see a rollover (LogFollow explains the whole rule and what each answer
+     * costs).
+     */
+    private long _followedCreatedUtcTicks = LogFollow.NoIdentity;
+    private long _followedLength;
+
     private long _nextUpdateThreshold;
     private double _lastParsedTime;
 
@@ -235,6 +244,10 @@ namespace EQLogParser
           beginTime = DateUtil.ToDotNetSeconds(minDate);
         }
 
+        // Record the identity of the file this handle opened, before the tail ever asks the name who it is now.
+        _followedCreatedUtcTicks = NameIdentityOf(FileName) ?? LogFollow.UnknownIdentity;
+        _followedLength = _fs.Length;
+
         _reader = FileUtil.GetStreamReader(_fs, beginTime);
         SearchLinear(_reader, minDate);
 
@@ -308,7 +321,20 @@ namespace EQLogParser
 
       if (Path.GetDirectoryName(FileName) is { } directory)
       {
-        _watcher = new FileSystemWatcher(directory);
+        _watcher = new FileSystemWatcher(directory)
+        {
+          /*
+           * Only Deleted and Renamed below are read, so ask for nothing else. The default filter also queues a LastWrite
+           * notification for every append — thousands of events a second in a live raid log, all of them discarded — into
+           * a buffer whose default is 8 KB; an overflowed watcher stops reporting for the rest of its life, and the event
+           * it then eats is the one this class needs. A missed Renamed used to mean tailing yesterday's rolled-away file
+           * until the app restarted, which is why the poll also asks the name directly (see LogFollow).
+           */
+          NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName,
+          InternalBufferSize = 64 * 1024
+        };
+        _watcher.Error += (_, args) => Log.Warn($"Directory watcher faulted for {directory}: "
+                                               + $"{args.GetException()?.Message}. Rollover now rides on the poll alone.");
         _watcher.Deleted += (_, args) =>
         {
           if (args?.FullPath == FileName)
@@ -335,13 +361,25 @@ namespace EQLogParser
 
         try
         {
-          // if deleted or truncated
-          if (_fileDeleted || _fs.Length < _currentPos)
+          /*
+           * Deleted, rewritten, or simply no longer the file this handle opened. The last of those is the midnight case:
+           * the followed file sits complete and unread-to while a new one takes its name, and neither the length test nor
+           * the watcher can be trusted to say so, so one stat per poll asks the name directly.
+           *
+           * Only RestartFromStart acts here. A name that reports nothing (WaitForFile) does NOT close a working stream —
+           * a false-negative stat would stop a healthy tail, which is the failure this whole change is about — and waiting
+           * for a file to appear is already what ReOpenAsync/WhenFileExistsAsync do on the watcher's own word.
+           */
+          if (_fileDeleted || LogFollow.DecideFor(_followedCreatedUtcTicks, NameIdentityOf(FileName), _followedLength,
+                _fs.Length) is LogFollowDecision.RestartFromStart)
           {
             _fileDeleted = false;
             await ReOpenAsync().ConfigureAwait(false);
             continue;
           }
+
+          // Sampled after the decision: a file that only ever grew must never look rewritten to the next pass.
+          _followedLength = _fs.Length;
 
           if (_cts == null || _cts.IsCancellationRequested)
           {
@@ -538,9 +576,36 @@ namespace EQLogParser
             Options = FileOptions.Asynchronous | FileOptions.SequentialScan
           });
 
-        _fs.Seek(0, SeekOrigin.End);
+        /*
+         * Where to start in the file that stands here now. Its own lines when the name has changed hands (or the file
+         * was rewritten shorter) — those bytes have never reached a processor, so reading them is the fix and cannot
+         * double count. The tail otherwise, which is what a plain recovery reopen has always done: re-reading an
+         * unchanged capture from line one would feed the same damage into the fact tables twice.
+         */
+        var nameId = NameIdentityOf(FileName) ?? LogFollow.UnknownIdentity;
+        var decision = LogFollow.DecideFor(_followedCreatedUtcTicks, nameId, _followedLength, _fs.Length);
+        _fs.Seek(LogFollow.ResumeOffsetFor(decision, _fs.Length), SeekOrigin.Begin);
         _currentPos = _fs.Position;
+        _followedCreatedUtcTicks = nameId;
+        _followedLength = _fs.Length;
         _reader = FileUtil.GetStreamReader(_fs);
+      }
+    }
+
+    /*
+     * The cheap id of the file standing at a name: its creation stamp, from one GetFileAttributesEx. null means nothing
+     * is there; LogFollow.UnknownIdentity means the question could not be asked (and buys no decision).
+     */
+    private static long? NameIdentityOf(string path)
+    {
+      try
+      {
+        var info = new FileInfo(path);
+        return info.Exists ? info.CreationTimeUtc.Ticks : (long?)null;
+      }
+      catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+      {
+        return LogFollow.UnknownIdentity;
       }
     }
 
