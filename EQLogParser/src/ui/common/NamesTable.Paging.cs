@@ -282,7 +282,19 @@ public partial class NamesTable
     // Closing an editor can release a newer filtered index, so clamp the gesture against that index, not the old page count.
     var decision = NamesTableView.DecidePage(_ordered.Count, CensusPageSize, e.NewPageIndex, -1, false);
     if (decision.PageCount == 0) e.Cancel = true;
-    else e.NewPageIndex = decision.PageIndex;
+    else
+    {
+      e.NewPageIndex = decision.PageIndex;
+
+      /*
+       * Stamp the numbers on THIS event too, not only on PageIndexChanged. This is the one event whose value the pane has
+       * already agreed to - a cancelled move stamps nothing - so the page number and the range cannot disagree with the
+       * control whichever of the two the vendor decides to raise, and a pager whose template has not realized yet (a headless
+       * STA body, an auto-hidden pane before it is first shown) still tells the truth about where it is going. Idempotent when
+       * both fire: PageIndexChanged recomputes the same two strings off the same arithmetic.
+       */
+      UpdateCountText(decision.PageIndex);
+    }
   }
 
   private void PagerOnDemandLoading(object sender, Syncfusion.UI.Xaml.Controls.DataPager.OnDemandLoadingEventArgs e)
