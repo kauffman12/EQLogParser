@@ -289,9 +289,11 @@ public partial class NamesTable
       /*
        * Stamp the numbers on THIS event too, not only on PageIndexChanged. This is the one event whose value the pane has
        * already agreed to - a cancelled move stamps nothing - so the page number and the range cannot disagree with the
-       * control whichever of the two the vendor decides to raise, and a pager whose template has not realized yet (a headless
-       * STA body, an auto-hidden pane before it is first shown) still tells the truth about where it is going. Idempotent when
-       * both fire: PageIndexChanged recomputes the same two strings off the same arithmetic.
+       * control whichever of the two the vendor decides to raise. Idempotent when both fire: PageIndexChanged recomputes the
+       * same two strings off the same arithmetic. One honesty note about the pager that has never been laid out: on-demand mode
+       * builds its PagedSource inside OnApplyTemplate, and MoveToPage raises THIS event and then returns without moving while
+       * that view is missing, so these two strings run ahead of a PageIndex still at zero. That state has no reader (an
+       * unshown pane shows nothing) and its first census restamps both numbers once the source exists.
        */
       UpdateCountText(decision.PageIndex);
     }

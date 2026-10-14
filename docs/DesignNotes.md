@@ -12437,6 +12437,10 @@ descriptor must not be cleared inside SortColumnsChanging: the vendor adds it ag
 custom comparator identical to `IdentityRowOrder`, including case-insensitive words, name tie breaks and full descending reversal.
 The Class grid mapping is PlayerClass and is translated to Core's Class key. Re-sorting a page by exactly the global comparison
 cannot change its order. Header arrows remain vendor-owned; CancelScroll suppresses its interim automatic reveal.
+`MoveToPage` raises `PageIndexChanging` and then **returns without moving** while `PagedSource` is null — and in on-demand mode that view
+is built inside `OnApplyTemplate` — so a pager that has never been through a layout pass keeps `PageIndex` at zero after a move nobody
+cancelled, silently. The pane's readout follows the page it agreed to (above), which is why the Windows pane test hosts the pane in a
+shown window before it claims a reader walked to page 3.
 
 The name watermark is **actual Text**, not an adornment. `NamesTableView.QueryText` treats the exact cue as no query on startup,
 blur, Escape and capture reset. Type captions use `UiElementUtil.SetComboBoxTitle` to reselect the item because SelectedText has

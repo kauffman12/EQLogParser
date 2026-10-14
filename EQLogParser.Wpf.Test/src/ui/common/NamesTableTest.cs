@@ -533,6 +533,12 @@ public class NamesTableTest
    * or it lies within one gesture. The title names the RANGE on screen for the same reason: it used to name the whole
    * filtered list while the reader was looking at one page of it (operator 2026-10-13). That a census must not move the
    * pager is pinned arithmetic in NamesTableViewTest; here the question is whether the pane and the vendor agree.
+   *
+   * SHOWN, not merely constructed — the pane has to sit in a window and be laid out. In on-demand mode the vendor builds its
+   * own PagedSource inside OnApplyTemplate (34.2.8), and MoveToPage returns WITHOUT MOVING while that view is missing: it raises
+   * PageIndexChanging, then leaves PageIndex where it was and raises nothing else. A control that has never been through a layout
+   * pass therefore cannot stand on a second page at all, so every line below about a reader who walked to page 3 would be reading
+   * numbers for a page nobody reached — the readout would agree with a gesture the control refused.
    */
   [TestMethod]
   public void ThePagerSaysWhichPageItIsOnAndTheTitleNamesTheRange()
@@ -540,30 +546,44 @@ public class NamesTableTest
     Sta.Run(() =>
     {
       var pane = CreatePane();
-      var census = Enumerable.Range(0, 2500).Select(i => CensusRow($"Name{i:D4}", IdentityKind.Player)).ToArray();
-      pane.PublishCensusForTest(census);
+      var window = new Window { Content = pane, Width = 1200, Height = 600 };
+      window.Show();
+      pane.UpdateLayout();   // the pager's template — and with it the PagedSource a page move needs — arrives on this pass
+      try
+      {
+        Assert.IsTrue(pane.idPager.PagedSource is not null,
+            "control: the shown pager holds the paged view its arrows navigate; without one a page move is dropped");
 
-      Assert.AreEqual(3, pane.PagerPageCountForTest, "two and a half thousand names are three pages of a thousand");
-      Assert.AreEqual("Page 1 of 3", pane.PagerTextForTest, "the arrows get a page number and a total beside them");
-      Assert.AreEqual($"Showing 1 to {1000:N0} of {2500:N0} Identities", pane.TitleTextForTest,
-                      "page one reads as a range, not as the whole list");
+        var census = Enumerable.Range(0, 2500).Select(i => CensusRow($"Name{i:D4}", IdentityKind.Player)).ToArray();
+        pane.PublishCensusForTest(census);
 
-      pane.PagerPageForTest = 2;
-      Assert.AreEqual("Page 3 of 3", pane.PagerTextForTest, "the arrows moved the pager by themselves; the number followed");
-      Assert.AreEqual($"Showing {2001:N0} to {2500:N0} of {2500:N0} Identities", pane.TitleTextForTest,
-                      "the last page ends where the list ends, and the title knows it moved without waiting for a build");
+        Assert.AreEqual(3, pane.PagerPageCountForTest, "two and a half thousand names are three pages of a thousand");
+        Assert.AreEqual("Page 1 of 3", pane.PagerTextForTest, "the arrows get a page number and a total beside them");
+        Assert.AreEqual($"Showing 1 to {1000:N0} of {2500:N0} Identities", pane.TitleTextForTest,
+                        "page one reads as a range, not as the whole list");
 
-      // A row on this page is selected, then an ordinary census lands: the reader stays where they are.
-      pane.SelectRowForTest("Name2100");
-      pane.PublishCensusForTest(census);
-      Assert.AreEqual(2, pane.PagerPageForTest, "a census that asks no question moves no one");
-      Assert.AreEqual($"Showing {2001:N0} to {2500:N0} of {2500:N0} Identities", pane.TitleTextForTest);
+        pane.PagerPageForTest = 2;
+        Assert.AreEqual(2, pane.PagerPageForTest, "the move the readout answered is a move the control took");
+        Assert.AreEqual("Page 3 of 3", pane.PagerTextForTest, "the arrows moved the pager by themselves; the number followed");
+        Assert.AreEqual($"Showing {2001:N0} to {2500:N0} of {2500:N0} Identities", pane.TitleTextForTest,
+                        "the last page ends where the list ends, and the title knows it moved without waiting for a build");
 
-      // Narrowing is a question, and the title says both numbers: what matched, and what the capture holds.
-      pane.SetSearchTextForTest("Name0");
-      Assert.AreEqual($"Showing 1 to {1000:N0} of {1000:N0} Identities, {2500:N0} total", pane.TitleTextForTest,
-                      "the answer AND the capture: 'my name vanished' is usually 'my filter ate it'");
-      Assert.AreEqual("Page 1 of 1", pane.PagerTextForTest);
+        // A row on this page is selected, then an ordinary census lands: the reader stays where they are.
+        pane.SelectRowForTest("Name2100");
+        pane.PublishCensusForTest(census);
+        Assert.AreEqual(2, pane.PagerPageForTest, "a census that asks no question moves no one");
+        Assert.AreEqual($"Showing {2001:N0} to {2500:N0} of {2500:N0} Identities", pane.TitleTextForTest);
+
+        // Narrowing is a question, and the title says both numbers: what matched, and what the capture holds.
+        pane.SetSearchTextForTest("Name0");
+        Assert.AreEqual($"Showing 1 to {1000:N0} of {1000:N0} Identities, {2500:N0} total", pane.TitleTextForTest,
+                        "the answer AND the capture: 'my name vanished' is usually 'my filter ate it'");
+        Assert.AreEqual("Page 1 of 1", pane.PagerTextForTest);
+      }
+      finally
+      {
+        window.Close();
+      }
     });
   }
 
