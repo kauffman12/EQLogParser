@@ -18,6 +18,8 @@ namespace EQLogParser;
  *     the UI stays live through the pass, so Clear All can mark while a load's collection is still running; a flag would let whichever
  *     finally ran first take the other one's bar down mid-pass. Each pass releases exactly its own hold, and a stuck mark is impossible:
  *     every Mark has a finally, and FightTable caps its own wait regardless (PostLoadCleanup holds the band with a deadline of its own).
+ *   - A pass releases its hold ONLY while it still owns the capture. The only way a session stops being the open one is a door, and a door
+ *     has already reset the count — clearing after that would steal the hold of the capture that replaced it.
  *   - Reset belongs to the capture doors (OpenLogFile/CloseLogFile): a debt never crosses a capture, and one in-flight pass of the file
  *     that just closed must not park the NEXT session's band for a cleanup that is not its business. Reset drops the whole count,
  *     including the hold of a pass that is still running — that pass cannot be cancelled, and the Clear in its finally stops at zero rather
@@ -25,6 +27,9 @@ namespace EQLogParser;
  */
 internal static class PostLoadCleanup
 {
+  /// <summary>The words this pause wears, in the status line and on the fight list's band — one string so the two cannot drift.</summary>
+  internal const string Notice = "Cleaning up..";
+
   private static int _passes;
 
   /// <summary>A collection is running (or about to) for this capture: hold the loading band.</summary>

@@ -1003,6 +1003,14 @@ namespace EQLogParser
       // announcing, so losing it must cost that and nothing else. It used to sit first inside the try above, where one
       // throw of its own — a dock-site read from this worker thread — silently took every board with it.
       if (succeeded) WatchBoardNames(pane, input, snapshot?.Timeline, session.SessionId);
+
+      /*
+       * The capture's owed load cleanup, if it has one: all three builders have answered and the materializer has let go, so whatever the read,
+       * the first full derive and this build allocated and dropped is dead for good - the seam with something to collect. It runs on THIS worker
+       * (a pool thread; a blocking compaction does not belong inside the message loop) and before the grids repaint, so the pause lands behind the
+       * band the load left standing. Deliberately not gated on `succeeded`: a board that threw allocated anyway.
+       */
+      PayOwedLoadTidy(session);
       return succeeded;
     }
 
@@ -1464,34 +1472,21 @@ namespace EQLogParser
             statusText.Foreground = Application.Current.Resources["EQGoodForegroundBrush"] as SolidColorBrush;
 
             /*
-             * The one collection a load pays, paid HERE because this is the last moment the operator is still looking at loading UI: the
-             * fight list's band only comes down when its first rows land, so the labelled pause lands behind a bar that says work is
-             * happening instead of in the middle of an answered grid ("it didn't garbage collect after the log finished loading",
-             * 2026-10-13). An earlier cut deferred this to the first contentful board build and kept a backstop timer for captures that
-             * build no boards; that moved the freeze to a moment with no loading UI left on screen, so both are gone - one seam, no timer.
-             * The load's own garbage (split strings, records, per-line temporaries) is dead at this seam; what the boards allocate after
-             * it is the runtime's business, which ships Server GC concurrent (GcTidyUp, docs/DesignNotes.md ->
-             * "Garbage collection after loading a log").
+             * The load's one cleanup is ARMED here and paid later (PayOwedLoadTidy), because there is nothing here left to collect. Field evidence,
+             * a 13.7 M-line capture on 2026-10-13: a pass taken at this seam measured `heap 366 to 341.8 MB` in 118 ms after a 24 s read - Server GC's
+             * concurrent collections sweep the read's split strings and per-line temporaries WHILE the read runs, so 341.8 MB was essentially the capture
+             * itself (7.5 M damage facts at 28 B + 2.9 M heals), and everything that still allocates - the first full derive (3.5 s) and its three boards -
+             * lay ahead of the collector. Numbers and both measurements: docs/DesignNotes.md -> "Garbage collection after loading a log".
              *
-             * Only if a load happened: following from end of file reaches 100 % having read no line, and a compacting pass then stops
-             * every thread to hand back startup allocations for nothing - LogReader.LoadAllocatedGarbage is that gate.
+             * Arming does two things: the mark is what keeps the fight list's band up over the pause the load promised (PostLoadCleanup), and the owed id
+             * says WHICH capture owes it, so a close or a new open drops the debt at its own door instead of billing the next file. The tick does not wait:
+             * "Monitoring Log", the loading-complete event and the overlays land normally while the first full pass runs, and the words arrive with the
+             * pause itself - on the status line and on the band.
              *
-             * The tick WAITS for it. That is not sloppiness about the await: the label has to outlive the pause (a name that disappeared
-             * before the stop-the-world is a silent pause wearing a hat), and nothing below this line may announce a load - "Monitoring Log",
-             * the loading-complete event, the overlays - while the capture is still compacting. Asking from a pool thread does NOT keep the UI
-             * running (a blocking full collection suspends every managed thread, this one included); what it keeps off the dispatcher is OUR
-             * code - no nested pump under the pause - and only this tick's tail waits for the answer.
+             * Only if a load happened: following from end of file reaches 100 % having read no line, and a compacting pass then stops every thread to hand
+             * back startup allocations for nothing - LogReader.LoadAllocatedGarbage is that gate.
              */
-            if (LogReader.LoadAllocatedGarbage(_eqLogReader.HandedOverLines) && !await PayLoadTidyAsync("log loaded"))
-            {
-              // A person picked another log while the collector ran. This tick's capture is gone, so nothing below it - status text,
-              // the loading-complete event, the overlays - may be written for it; the open that replaced this one pumps its own.
-              // Clearing the starting flag is NOT that open's job: if the next gesture is a CLOSE rather than an open, no pump ever reaches
-              // 100 % again, and a stuck true silences SaveTimerTick (settings.ini stops being written) for the rest of the session.
-              _isStarting = false;
-              Log.Debug("load: tidy landed on a closed capture - the rest of this tick is dropped");
-              return;
-            }
+            if (LogReader.LoadAllocatedGarbage(_eqLogReader.HandedOverLines) && _engine is { } loadedSession) ArmLoadTidy(loadedSession);
 
             /*
              * Two different states reach 100 %, and only one of them has read a log. Following from end of file
@@ -1565,6 +1560,7 @@ namespace EQLogParser
         if (!string.IsNullOrEmpty(theFile))
         {
           Log.Info($"Selected Log File: {theFile}");
+          Volatile.Write(ref _loadTidyOwedSessionId, 0);   // ...and neither may its unpaid cleanup be billed to this file
           PostLoadCleanup.Reset();   // a cleanup marked by the previous capture must not hold this one's band or land in its read
           FileUtil.ParseFileName(theFile, out var name, out var server);
           var changed = ConfigUtil.ServerName != server;
@@ -1678,6 +1674,7 @@ namespace EQLogParser
 
     private void CloseLogFile(bool changed)
     {
+      Volatile.Write(ref _loadTidyOwedSessionId, 0);   // a debt dies with its capture; the next file arms its own
       PostLoadCleanup.Reset();   // a close ends the cleanup mark: whatever opens next is not holding on for this capture
       try
       {
@@ -1748,7 +1745,8 @@ namespace EQLogParser
     }
 
     /*
-     * The only two callers of GcTidyUp (which owns why these are the only two): the tick a load finished on, and Clear All.
+     * The two moments GC law allows (GcTidyUp owns why these are the only two), paid through two doors: Clear All pays here, immediately, and a
+     * load arms at 100 % to pay at its first answered board trio (PayOwedLoadTidy).
      *
      * The collection runs on a POOL thread. That is not a claim that the UI keeps painting - a blocking full compaction suspends every
      * managed thread, so nothing repaints while it runs whatever asked - it is about who sits inside the pause: a pool thread holds our own
@@ -1767,7 +1765,7 @@ namespace EQLogParser
      */
     private async Task<bool> PayLoadTidyAsync(string reason)
     {
-      const string notice = "Cleaning up..";
+      const string notice = PostLoadCleanup.Notice;
       if (_engine is not { } session) return false;
 
       var prior = statusText.Text;
@@ -1788,8 +1786,9 @@ namespace EQLogParser
       }
       finally
       {
-        // Released before the status line, and whatever happens above: the fight list is waiting on this pass's hold to take its bar down.
-        PostLoadCleanup.Clear();
+        // Released only while this pass still owns the capture: a door Reset already dropped the hold, and releasing after it would take the
+        // replacement capture's hold away. Before the status line either way - the fight list waits on it to bring its bar down.
+        if (SessionStillOpen(session)) PostLoadCleanup.Clear();
 
         // Restore the words only if they are still ours to restore: another path may have answered, and a capture that closed
         // while this ran already wrote its own status line.
@@ -1797,6 +1796,62 @@ namespace EQLogParser
       }
 
       return SessionStillOpen(session);
+    }
+
+    // The capture whose load owes its cleanup pass; 0 means none. Written on the UI thread, taken once by whichever build answers first.
+    private int _loadTidyOwedSessionId;
+
+    /*
+     * Arm - do not pay - the loaded capture's cleanup. See the 100 % pump for why this seam has nothing to collect; see PayOwedLoadTidy for the
+     * seam that does. Marking here is what holds the fight list's band from this moment, so the pause cannot arrive under a grid that just answered.
+     */
+    private void ArmLoadTidy(DeriveEngine session)
+    {
+      Volatile.Write(ref _loadTidyOwedSessionId, session.SessionId);
+      PostLoadCleanup.Mark();
+      Log.Debug($"gc.tidy armed for capture {session.SessionId} - paid when its first boards answer");
+    }
+
+    /*
+     * The load's cleanup, paid where the load has stopped allocating: the first board trio of THIS capture answered (once per capture; the exchange
+     * is what makes a later pass over a held selection pay nothing).
+     *
+     * The label and the band's words go to the dispatcher BEFORE the collection starts - a name that appears after the pause is a silent pause wearing
+     * a hat - which means this worker waits on them; the gate's work always arrives here from Task.Run, so no UI thread is waiting back on us. After the
+     * pass, the hold releases and the pane brings its bar down (FightTable.ReportCleanupState), then the status line goes back if it is still ours.
+     */
+    private void PayOwedLoadTidy(DeriveEngine session)
+    {
+      if (Interlocked.Exchange(ref _loadTidyOwedSessionId, 0) != session.SessionId) return;
+
+      // Closed underneath us: the door's Reset already took the mark and this capture's band with it, so nothing here releases or collects.
+      if (!SessionStillOpen(session))
+      {
+        Log.Debug("gc.tidy log loaded skipped: the capture closed before its first boards answered");
+        return;
+      }
+
+      var prior = string.Empty;
+      Dispatcher.Invoke(() =>
+      {
+        prior = statusText.Text;
+        statusText.Text = PostLoadCleanup.Notice;
+        if (npcWindow?.Content is FightTable table) table.ReportCleanupState(true);
+      });
+
+      try
+      {
+        GcTidyUp.TidyNow("log loaded");
+      }
+      finally
+      {
+        PostLoadCleanup.Clear();
+        Dispatcher.BeginInvoke(() =>
+        {
+          if (SessionStillOpen(session) && statusText.Text == PostLoadCleanup.Notice) statusText.Text = prior;
+          if (npcWindow?.Content is FightTable table) table.ReportCleanupState(false);
+        });
+      }
     }
 
     private void UpdateRecentFiles()

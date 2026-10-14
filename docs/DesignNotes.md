@@ -12812,35 +12812,55 @@ shipped (2026-10). The branch version deferred the pass to the first contentful 
 with a 6 s one-shot backstop behind it and a gate holding tickets so two seams could not both collect; that pass had the
 best numbers of anything here — the field run paid at the backstop with the working set going **1477 → 593 MB** — and the worst
 legibility, because every moment it could fire sat *after* the fight list's loading band came down. An operator watching a bar
-get replaced by rows, then a frozen window with no bar, read exactly what they said: no collection happened. So the seam is back
-where the load ends, and what does the waiting is the **loading band** instead of a timer:
+get replaced by rows, then a frozen window with no bar, read exactly what they said: no collection happened. What replaces the timer is the **loading band** — and a third move (2026-10-13,
+field) put the *payer* where the garbage actually is: the load **arms** its cleanup at 100 % and pays it when that capture's first board
+trio answers (`ArmLoadTidy` → `PayOwedLoadTidy`, at the tail of `MainWindow.BuildBoards`, on the build's own pool worker, once per capture
+behind an `Interlocked.Exchange`).
 
-- MainWindow pays at the 100 % tick (`PayLoadTidyAsync`, gated by `LogReader.LoadAllocatedGarbage` so a follow-from-end open reads no
-  lines and pays nothing), on a **pool thread**. Read that for what it is: a blocking full compaction suspends every managed thread,
-  dispatcher included, so nothing paints during the pass on any thread — asking from a pool thread decides *who is inside* the pause
-  (our code rather than the message loop, frozen mid-frame with no label owner) and keeps only this tick's tail waiting. The old synchronous
-  pass was the other half of the hang story;
-- it brackets the pass with `PostLoadCleanup` (`Mark`, released in a `finally`), and FightTable will not hide its band while a hold stands
-  (`SettleLoadBand`, re-asked every 200 ms with an **8 s deadline** so a mark nobody clears cannot strand a bar over an answer — 8 s and not
-  less because a pass itself has been measured at 3,065 ms on a ~4.8 GB raid heap, and a hold shorter than the work it waits for is a hold
-  that fails on the biggest logs). The cadence starts the first derive as soon as the lanes drain, so its rows land in the same moment
-  threads resume: without the hold the bar comes down and the freeze arrives after it, which is the reported failure. The mark is set before
-  the collector starts precisely so the bar is standing when they do.
-  **Counted, not a flag** (review 2026-11): the UI stays live through the pass, so `Clear All` can mark while a load's collection is still
-  running — one bool let whichever `finally` ran first take the other pass's bar down mid-collection. Each pass releases exactly its own hold;
-- there is no backstop timer, no gate and no ticket, because there is only one seam again. A new open or close calls `PostLoadCleanup.Reset()`
-  — drop the whole count, not one release — so a debt cannot cross captures and an in-flight pass of the file that just closed cannot park the
-  next session's band for a cleanup that is not its business (that pass cannot be cancelled, and its own `Clear` clamps at zero).
-  `PostLoadCleanupTest` pins the counting, the clamp and the door reset.
-- **the tick's tail is a transaction** (`2026-11` review): when the pass answers that the capture closed, the pump clears `_isStarting` before
-  returning. A stuck true silences `SaveTimerTick`, so closing a log mid-cleanup — with no replacement open to reach 100 % — quietly stopped
-  writing `settings.ini` for the rest of the session.
+**Why paying at 100 % bought nothing on a big capture** (same file, 13,740,768 lines): a pass taken there measured
+`gc.tidy log loaded: heap 366 to 341.8 MB, working set 1226.9 to 655.7 MB, gen2 +1, wall 118 ms`. A 24 MB heap delta after a 24 s read is not
+a failed collection — Server GC's concurrent collections sweep the read's split strings and per-line temporaries *while the read runs*, and 341.8 MB
+was essentially the capture itself (7,466,280 damage facts × 28 B ≈ 209 MB plus 2,890,757 heals). The 571 MB it did hand back was segment return from
+LOH compaction, not objects. Everything still allocating sat ahead of the collector: `Derive done: 876 fights, 3539 ms`, then its boards — and by the
+time the operator reached for Clear All the working set was back to **1275 MB**, which that pass took to **592.3 MB** (`heap 630.3 → 251.6 MB`, 104 ms):
+the floor with no capture loaded, and proof the collector is healthy. Working-set return and object reclamation are different things — which is exactly
+why a pass *after* the derive/boards can give back hundreds of MB even when most of the heap is live.
 
-**The trade, stated with its number**: paying at 100 % reclaims the read's garbage (split strings, records, per-line temporaries — dead by
-definition at that seam) and NOT the first derive's or the three boards', which the deferred pass folded into one collection. The peak is
-unchanged; what changes is the resting working set on a capture where the boards run after the pause. If field RSS comes back as a complaint,
-re-measure against 1477 → 593 MB before moving the seam again — and if it moves, the band holds it either way, so the fix is a payer change
-rather than a new mechanism.
+- The 100 % tick arms and does not wait: `LogReader.LoadAllocatedGarbage` gates it (a follow-from-end open read no line and owes nothing),
+  `"Monitoring Log"`, the loading-complete event and the overlays land normally while the first full pass runs. The old synchronous pass at
+  "Finished" was the other half of the hang story, and the pump no longer blocks on a collector at all;
+- the collection still runs on a **pool thread** — not a claim that the UI keeps painting (a blocking full compaction suspends every managed thread,
+  dispatcher included), but a statement about *who is inside* the pause: our code, rather than the message loop frozen mid-frame with no label owner;
+- `PostLoadCleanup` is the cross-window question. The **mark** goes on at arming, so the band cannot come down between the read and the pause; the payer
+  releases it in a `finally`. FightTable will not hide its band while a hold stands (`SettleLoadBand`, re-asked every 200 ms with an **8 s deadline** —
+  8 s and not less because a pass itself has been measured at 3,065 ms on a ~4.8 GB raid heap, and a hold shorter than the work it waits for is a hold
+  that fails on the biggest logs). **Counted, not a flag** (review 2026-11): the UI stays live through the pass, so `Clear All` can mark while a load's
+  collection is still running — one bool let whichever `finally` ran first take the other pass's bar down mid-collection.
+  **A pass releases its hold only while it still owns the capture**: the only way a session stops being the open one is a door, and the door already
+  reset the count, so releasing afterwards would steal the replacement capture's hold.
+- The band says what is true at the moment you look at it. From 100 % the derive is still running, so it keeps saying *Building the Fight List…*; the
+  collector flips it to *Cleaning up…* for the pause (`FightTable.ReportCleanupState`, driven by MainWindow around the pass) and the same words come from
+  `PostLoadCleanup.Notice` in the application status line, so the two cannot drift. Payment happens before the grids repaint, so the rows arrive after
+  the freeze rather than being interrupted by it;
+- **a capture that never answers a board trio pays no load cleanup** — in practice a read whose derive yields no fights at all. Accepted deliberately, and
+  with no backstop timer: the garbage this seam exists for belongs to the first pass and its boards, so where they never ran most of it does not exist.
+  Such a band hides on its own deadline with `- cleanup still unpaid at this moment` in the Debug line, which is how you tell that case from a stuck one.
+- there is no backstop timer, no gate and no ticket. A new open or close calls `PostLoadCleanup.Reset()` — drop the whole count, not one release — and
+  zeroes the owed-capture id with it, so a debt cannot cross captures and an in-flight pass of the file that just closed cannot park the next session's
+  band for a cleanup that is not its business (that pass cannot be cancelled; `Clear` stops at zero rather than digging under the reset).
+  `PostLoadCleanupTest` pins the counting, the floor and the door reset.
+- **lesson kept from the interim design** (`2026-11` review): while the load tick awaited its collector, the early return for "the capture closed during
+  the pause" had to clear `_isStarting` on its way out, because a stuck true silences `SaveTimerTick` — closing a log mid-cleanup with no replacement open
+  quietly stopped writing `settings.ini` for the rest of the session. Arming instead of awaiting removes that whole failure mode; the rule survives, and a
+  future seam that blocks a pump on anything owes the same check.
+
+**The trade, stated plainly**: this seam holds the loading bar up through the first full derive and board build (~3.5 s on the capture measured above,
+time the operator used to get rows at) in exchange for one collection that can actually find something; the collector also marks more live objects there,
+so its wall grows from the ~118 ms measured at 100 %. The pass is self-measuring — `gc.tidy log loaded` prints heap and working-set deltas wherever it is
+paid — so the next big load answers whether this was worth it: **if that line comes back small, the payer is not the problem** and what remains is a
+retention question about the first full pass (heap 341.8 → 630.3 MB on that capture with nothing selected), not a GC-moment question. Compare against the
+old field number, **1477 → 593 MB**, before moving anything again; the band holds the pause either way, so any further change is a payer change rather
+than a new mechanism.
 
 **GC policy is not a knob this app turns (2026-10-13).** Server GC with concurrent collection and the default `Interactive` latency mode
 is what ships: background collection happens when the runtime judges it needed, and gen2 across per-core heaps pauses briefly. A short

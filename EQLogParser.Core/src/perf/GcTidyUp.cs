@@ -7,24 +7,24 @@ using System.Runtime;
 namespace EQLogParser
 {
   /*
-   * The one place this app spends a forced collection, at exactly two moments, both paid through MainWindow.PayLoadTidyAsync
-   * and both labelled in the status line as "Cleaning up.." so the stop-the-world has a name:
+   * The one place this app spends a forced collection, at exactly two moments, each labelled with PostLoadCleanup.Notice ("Cleaning up..") on the
+   * application status line and on the fight list's band, so the stop-the-world has a name:
    *
-   *   - **a load that actually read lines** (MainWindow's progress pump, at 100 %), because that is the last moment the operator is
-   *     still looking at loading UI, and the fight list keeps its loading band UP while a pass holds the mark (PostLoadCleanup), so the pause
-   *     lands behind a bar instead of under a grid the operator has begun to read. The blocking collection suspends every managed thread — the
-   *     pool thread it runs on is about who is inside the pause (our code, not the message loop), not about painting through it — and what the
-   *     mark buys is that the bar still stands when threads resume, which is when this capture's first rows land: the cadence starts the first
-   *     derive as soon as the lanes drain. LogReader.LoadAllocatedGarbage keeps a follow-from-end open (which read no line) from paying at all; and
-   *   - **Clear All** (MainWindow.ClearAllFights), after its re-open: this is the one verb that drops a whole capture while the app
-   *     keeps running, so returned segments are worth most here, and the re-open seeks to end of file and reads nothing.
+   *   - **a load that actually read lines**: ARMED at 100 % (MainWindow.ArmLoadTidy, gated by LogReader.LoadAllocatedGarbage so a follow-from-end open
+   *     that read nothing owes nothing) and PAID when that capture's first board trio answers (PayOwedLoadTidy). The arm is what holds the fight list's
+   *     band up; the wait exists because there is nothing to collect at 100 % — a measured pass there took heap 366 to 341.8 MB on a 24 s read, since
+   *     Server GC's concurrent collections sweep the read's temporaries during the read — while the first full derive and its boards allocate for seconds
+   *     after it. Collecting on the build's pool worker, before the grids repaint, keeps our code out of the message loop and puts the pause behind a bar
+   *     rather than under a grid the operator has begun to read; and
+   *   - **Clear All** (MainWindow.ClearAllFights, through PayLoadTidyAsync), after its re-open: this is the one verb that drops a whole capture while the
+   *     app keeps running, so returned segments are worth most here, and the re-open seeks to end of file and reads nothing.
    *
    * A log CLOSE pays nothing: closing is almost always the first half of an open, and a pass between them lands inside the next file's
    * bulk read — which is why a new OPEN resets the mark (PostLoadCleanup.Reset, with ownership asked again at the collector's own door).
-   * Stats builds ask for nothing and pay nothing: they win by allocating less, and what they allocate is the runtime's to collect.
-   * An earlier cut deferred the load tidy to the first contentful board build with a backstop timer behind it; that put the freeze in
-   * the middle of an already-answered grid, so the deferral, the timer and the gate holding its tickets are all gone — one seam at 100 %,
-   * and the band does the waiting. Measurements: docs/DesignNotes.md → "Garbage collection after loading a log".
+   * Stats builds ask for nothing and pay nothing; only the load's FIRST trio pays, and it pays once per capture. A deferral needs its band: an earlier
+   * cut deferred to the first contentful board build behind a backstop timer and a ticket gate with no loading UI left on screen, which read as "no cleanup
+   * happened at all", so the timer and gate are gone and the mark — not a scheduler — does the waiting. Measurements: docs/DesignNotes.md →
+   * "Garbage collection after loading a log".
    */
   internal static class GcTidyUp
   {

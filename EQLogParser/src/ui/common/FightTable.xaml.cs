@@ -392,13 +392,16 @@ namespace EQLogParser
     }
 
     /*
-     * The bar comes down when this session has an answer AND no post-load collection is still running.
+     * The bar comes down when this session has an answer AND the load's cleanup is no longer owed.
      *
-     * By the time this is asked the ROWS are already painted - only the HIDING is deferred. A long capture runs its labelled cleanup
-     * ("Cleaning up..") at the same moment as its first derive, and a stop-the-world landing on a grid whose bar just dropped reads as a hang
-     * instead of as the end of a load; the pause belongs behind the bar, which is where it was asked for (2026-10-13). The list does not own
-     * when a collection happens and never blocks on one: it asks whether a pass is in flight (PostLoadCleanup) and holds for at most
-     * CleanupHoldMs, so a mark nobody clears cannot strand the bar over the answer.
+     * By the time this is asked the ROWS are already painted - only the HIDING is deferred. A loaded capture ARMS its labelled cleanup at 100 %
+     * and pays it after that capture's first board trio answers (MainWindow.PayOwedLoadTidy), which is after the first full derive and its boards
+     * have allocated - the only moment on a long load where there is something worth collecting. A stop-the-world landing on a grid whose bar just
+     * dropped reads as a hang instead of as the end of a load, so the pause stays behind the bar that asked for it (2026-10-13), and the rows
+     * painted underneath it are the answer the bar was covering all along.
+     *
+     * The list does not own when a collection happens and never blocks on one: it asks whether one is owed (PostLoadCleanup) and holds for at most
+     * CleanupHoldMs, so a debt nobody pays cannot strand the bar over the answer - hence the expiry line naming an unpaid cleanup below.
      */
     private void SettleLoadBand(string reason)
     {
@@ -411,7 +414,35 @@ namespace EQLogParser
       StopCleanupHold();
       _loadBandSettled = true;
       SetLoadBand(null);
-      Log.Debug($"load band: hidden [{reason}]");
+      Log.Debug($"load band: hidden [{reason}]{(PostLoadCleanup.Owes ? " - cleanup still unpaid at this moment" : string.Empty)}");
+    }
+
+    /*
+     * MainWindow tells this pane when the load's collection actually starts and stops, which is the only thing that changes what the BAND SAYS.
+     * Holding the bar covers a wider window than the pause: from 100 % the derive is still running, so "Building the Fight List…" stays the honest
+     * words until the collector itself is in front of the operator, and they must appear the moment it is (PostLoadCleanup.Notice is that one word,
+     * shared with the application status line). A band this session has already put down is not brought back for a cleanup - the list answers for
+     * itself by then, which is the same rule as mid-read settles.
+     */
+    internal void ReportCleanupState(bool cleaning)
+    {
+      if (!Dispatcher.CheckAccess())
+      {
+        Dispatcher.InvokeAsync(() => ReportCleanupState(cleaning));
+        return;
+      }
+
+      if (_loadBandSettled || loadOverlay.Visibility != Visibility.Visible) return;
+
+      if (!cleaning)
+      {
+        // The pass is over and the mark went with it, so this is the settle the hold was waiting for - no 200 ms poll needed.
+        if (!PostLoadCleanup.Owes && (_sessionPainted || _readerDone)) SettleLoadBand("post-load cleanup ended");
+        else SetLoadBand("Building the Fight List\u2026");
+        return;
+      }
+
+      SetLoadBand(PostLoadCleanup.Notice);
     }
 
     private bool CleanupHoldExpired() => _cleanupHoldDeadline != 0 && Environment.TickCount64 >= _cleanupHoldDeadline;
