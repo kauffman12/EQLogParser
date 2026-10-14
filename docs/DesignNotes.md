@@ -12864,7 +12864,7 @@ legibility, because every moment it could fire sat *after* the fight list's load
 get replaced by rows, then a frozen window with no bar, read exactly what they said: no collection happened. What replaces the timer is the **loading band** — and a third move (2026-10-13,
 field) put the *payer* where the garbage actually is: the load **arms** its cleanup at 100 % and pays it when that capture's first board
 trio answers (`ArmLoadTidy` → `PayOwedLoadTidy`, at the tail of `MainWindow.BuildBoards`, on the build's own pool worker, once per capture
-behind an `Interlocked.Exchange`).
+behind a session-matching `Interlocked.CompareExchange`).
 
 **Why paying at 100 % bought nothing on a big capture** (same file, 13,740,768 lines): a pass taken there measured
 `gc.tidy log loaded: heap 366 to 341.8 MB, working set 1226.9 to 655.7 MB, gen2 +1, wall 118 ms`. A 24 MB heap delta after a 24 s read is not
@@ -12907,6 +12907,15 @@ benefit until it is measured again. If it comes back small, the seam is still ri
   zeroes the owed-capture id with it, so a debt cannot cross captures and an in-flight pass of the file that just closed cannot park the next session's
   band for a cleanup that is not its business (that pass cannot be cancelled; `Clear` stops at zero rather than digging under the reset).
   `PostLoadCleanupTest` pins the counting, the floor and the door reset.
+- **The board-to-cleanup handoff rechecks ownership at every crossing** (branch review): an unconditional exchange consumed the
+  replacement capture's debt before discovering that an old build did not own it. `PostLoadCleanup.TryTake` now compares the session
+  id atomically before clearing it. `RunOwned` guards the initial dispatcher callback, rechecks on the worker immediately before
+  collection, and posts the release and final UI update as one guarded dispatcher operation. Putting the release there matters:
+  a worker-side ownership check followed by `Clear` would still let a capture door reset/mark the replacement between those two
+  operations. A collection already started cannot be cancelled, but its completion may not touch a replacement's hold, status or band.
+  The helper retains no state and adds no timer, queue or cleanup policy; MainWindow supplies the dispatcher and ownership predicate.
+  `PostLoadCleanupOwnershipTest` exercises the actual handoff with deterministic callback interleavings, including collection failure,
+  without invoking GC. Real-window checks remain in ReleaseChecklist.
 - **lesson kept from the interim design** (`2026-11` review): while the load tick awaited its collector, the early return for "the capture closed during
   the pause" had to clear `_isStarting` on its way out, because a stuck true silences `SaveTimerTick` — closing a log mid-cleanup with no replacement open
   quietly stopped writing `settings.ini` for the rest of the session. Arming instead of awaiting removes that whole failure mode; the rule survives, and a
@@ -13071,8 +13080,9 @@ The `develop` versus `master` review found four correctness/coverage issues and 
 - **The post-load cleanup is owned by the capture that asked, and waited on by the fight list.** The gate that queued it
   (`CaptureTidyGate`, with its session id, generation and six-second fallback) is deleted along with the deferred seam it existed for;
   `PostLoadCleanup` is what remains, and it is a counted mark rather than a queue: `Mark`/`Clear` bracket one pass (released in a `finally`, so the
-  band it was holding cannot outlive it) and the capture doors call `Reset`. The pass runs on a pool thread from the 100 % tick (or Clear All),
-  skips itself if the capture closed before the collector started, and never restores status text it no longer owns. FightTable's hold deadline is the
+  band it was holding cannot outlive it) and the capture doors call `Reset`. The load arms at 100 % and pays on the first board trio's pool worker;
+  Clear All pays after its re-open. The handoff claims only its own session's debt, rechecks ownership after dispatching, and releases on the dispatcher
+  only for the still-open capture (`PostLoadCleanupOwnershipTest`). FightTable's hold deadline is the
   second guarantee that no bar sticks. No change to Server/concurrent/Interactive GC.
 - **Keyboard input ends abandoned right-press memory.** The grid's preview-key door clears the remembered selection before
   keyboard navigation, Ctrl+A or Apps/Shift+F10 can reuse an abandoned pointer gesture. It handles no key itself. Routed WPF

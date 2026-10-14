@@ -1817,7 +1817,7 @@ namespace EQLogParser
      */
     private void PayOwedLoadTidy(DeriveEngine session)
     {
-      if (Interlocked.Exchange(ref _loadTidyOwedSessionId, 0) != session.SessionId) return;
+      if (!PostLoadCleanup.TryTake(ref _loadTidyOwedSessionId, session.SessionId)) return;
 
       // Closed underneath us: the door's Reset already took the mark and this capture's band with it, so nothing here releases or collects.
       if (!SessionStillOpen(session))
@@ -1827,26 +1827,20 @@ namespace EQLogParser
       }
 
       var prior = string.Empty;
-      Dispatcher.Invoke(() =>
-      {
-        prior = statusText.Text;
-        statusText.Text = PostLoadCleanup.Notice;
-        if (npcWindow?.Content is FightTable table) table.ReportCleanupState(true);
-      });
-
-      try
-      {
-        GcTidyUp.TidyNow("log loaded");
-      }
-      finally
-      {
-        PostLoadCleanup.Clear();
-        Dispatcher.BeginInvoke(() =>
+      PostLoadCleanup.RunOwned(() => SessionStillOpen(session),
+        action => Dispatcher.Invoke(action), action => Dispatcher.BeginInvoke(action),
+        begin: () =>
         {
-          if (SessionStillOpen(session) && statusText.Text == PostLoadCleanup.Notice) statusText.Text = prior;
+          prior = statusText.Text;
+          statusText.Text = PostLoadCleanup.Notice;
+          if (npcWindow?.Content is FightTable table) table.ReportCleanupState(true);
+        },
+        end: () =>
+        {
+          if (statusText.Text == PostLoadCleanup.Notice) statusText.Text = prior;
           if (npcWindow?.Content is FightTable table) table.ReportCleanupState(false);
-        });
-      }
+        },
+        collect: () => GcTidyUp.TidyNow("log loaded"));
     }
 
     private void UpdateRecentFiles()

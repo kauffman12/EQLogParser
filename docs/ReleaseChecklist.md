@@ -152,9 +152,10 @@ operator checks with `Debug=True`, on a capture of several hundred MB or more:
 - Closing the window or opening another log MID-load leaves no wedge and no second capture alive;
   `grep -c "Error Loading File" eqlogparser.log` says whether an abort was recorded as a failed load.
 - Clear All re-opens the same file at EOF (a monitor re-open, not a re-read) and every board empties and refills.
-- **Cleanup stays with its capture:** finish a bulk load, then close or open another log before its six-second backstop.
-  Also switch captures while a board completion has queued cleanup or while the cleanup notice yields for rendering. No
-  old cleanup may run inside the next read, stop its fallback timer, or restore the prior capture's status text.
+- **Cleanup stays with its capture:** finish a bulk load, then close or open another log before its first board trio answers.
+  Also switch captures while a board completion waits to publish its cleanup notice, or after collection but before its queued completion.
+  No old cleanup may start inside the next read, change its status or band, or release its hold. If the replacement load has already
+  armed cleanup when the old build finishes, its request must survive and still collect when its own boards answer. There is no backstop timer.
 - **Preview Parse stays cleared:** leave it open or hidden during a large board build, then Clear All or switch logs. The
   old parse, available label and selected player set must not return when the worker finishes. A build in the new log
   still publishes normally.

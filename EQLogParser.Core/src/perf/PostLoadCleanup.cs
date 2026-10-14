@@ -56,4 +56,35 @@ internal static class PostLoadCleanup
 
   /// <summary>What the fight list asks before hiding its band on the first rows of a session.</summary>
   internal static bool Owes => Volatile.Read(ref _passes) > 0;
+
+  /// <summary>Take only this capture's debt; an older build must leave a replacement's request intact.</summary>
+  internal static bool TryTake(ref int owedSessionId, int sessionId)
+    => sessionId != 0 && Interlocked.CompareExchange(ref owedSessionId, 0, sessionId) == sessionId;
+
+  // Invoke and post marshal to the same UI thread as the capture doors. The completion check and Clear must run
+  // together there: checking on a worker would let a door Reset/Mark a new hold between that check and Clear.
+  // No scheduling policy or retained state here; MainWindow supplies the ownership question and dispatcher calls.
+  internal static void RunOwned(Func<bool> ownsCapture, Action<Action> invoke, Action<Action> post,
+    Action begin, Action end, Action collect)
+  {
+    try
+    {
+      invoke(() =>
+      {
+        if (ownsCapture()) begin();
+      });
+
+      // The capture may have changed while the worker waited for the dispatcher, or after the label was set.
+      if (ownsCapture()) collect();
+    }
+    finally
+    {
+      post(() =>
+      {
+        if (!ownsCapture()) return;
+        Clear();
+        end();
+      });
+    }
+  }
 }
