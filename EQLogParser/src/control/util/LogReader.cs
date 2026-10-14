@@ -264,7 +264,15 @@ namespace EQLogParser
           }
 
           // update progress during initial load
-          bytesRead += Encoding.UTF8.GetByteCount(line) + 2;
+          /*
+           * A THRESHOLD PACER, not a measurement of bytes. It exists only to step `_nextUpdateThreshold` (a 50-notch dial), and what the caller
+           * is shown comes from `_currentPos`, which every branch below takes from the real `_fs.Position`. Counting UTF-8 bytes here cost a full
+           * second length pass over every line of a big capture — 13.7 M of them, roughly 1.2 GB of re-scanned text — to drive a dial whose answer
+           * the stream already knew, and it was not even exact: the +2 assumes CRLF and the encoding was hard-coded while the reader's own comes
+           * from FileUtil.GetStreamReader. Character count plus line break paces the same dial, and a log with multi-byte names simply crosses a
+           * notch slightly late — corrected at the next sample, because the number printed is always a position.
+           */
+          bytesRead += line.Length + 2;
           if (bytesRead >= _nextUpdateThreshold)
           {
             _currentPos = _fs.Position;

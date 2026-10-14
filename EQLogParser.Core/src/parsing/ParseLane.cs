@@ -72,10 +72,15 @@ namespace EQLogParser
     // Old-format crit pairing: the swing whose spell type the next line may name.
     internal DamageLineParser.OldCritData LastCrit;
 
-    // "type|spell name" -> damage class, memoised from the immutable spell data. A plain Dictionary is safe here
-    // because exactly one thread — this lane's consumer — ever touches it; sharing one process-wide would need a
+    // Spell name -> damage class, memoised from the immutable spell data: ONE dictionary per kind of line that asks, because for a name the
+    // spell data cannot place, the answer IS the asking kind (a DoT line gets "DoT", a direct-damage line gets "Dd"). One shared table would
+    // have to encode the kind in its key — which is what this replaced: every lookup built "Dd=" + name (or "DoT=" + name) as an allocation,
+    // on hits included, to say which of these two tables it meant. Two lookups, no string.
+    //
+    // A plain Dictionary is safe here because exactly one thread — this lane's consumer — ever touches it; sharing one process-wide would need a
     // concurrent map and pay locking on every lookup for a cache that costs nothing to duplicate per stream.
-    internal Dictionary<string, string> SpellTypeCache = [];
+    internal Dictionary<string, string> SpellDdTypeCache = [];
+    internal Dictionary<string, string> SpellDotTypeCache = [];
 
     // Dice-roll follow-up: the roller named by the previous line, and its line number (the follow-up must be next).
     internal string RandomPlayer;

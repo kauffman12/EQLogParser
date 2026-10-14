@@ -1,3 +1,5 @@
+using System.Buffers;
+
 namespace EQLogParser
 {
   public static class ChatChannels
@@ -42,6 +44,19 @@ namespace EQLogParser
 
   public static class ChatLineParser
   {
+    /*
+     * One ordinal scan for the whole gate. This list is not a hint about chat — it IS the rejection condition, copied verbatim from the
+     * chain of eight IndexOf calls it replaces: a line containing none of them was never chat and still falls through to the real parsers,
+     * and a line containing any of them still goes to CheckOtherCriteria for the actual decision. Which is also the one rule to keep if this
+     * ever changes: every shape CheckOtherCriteria can recognise has to appear here too, or the gate eats a real chat line before anyone reads it.
+     *
+     * Worth doing because LogProcessor asks this question for EVERY line, and combat lines — the majority of a raid log, and all of them matching
+     * nothing here — used to pay eight separate scans over their own text to reach the same "no".
+     */
+    private static readonly SearchValues<string> ChatMarkers = SearchValues.Create(
+      [" says", " tells ", " told ", " shouts", " auctions", " auction", " -> ", "'My leader is"],
+      StringComparison.Ordinal);
+
     public static ChatType ParseChatType(string action)
     {
       if (string.IsNullOrEmpty(action) || action.Length < 5)
@@ -57,15 +72,8 @@ namespace EQLogParser
         return CheckYouCriteria(span);
       }
 
-      // Fast-path: if line doesn't contain any chat keywords, skip scanning entirely
-      if (span.IndexOf(" says") == -1 &&
-          span.IndexOf(" tells ") == -1 &&
-          span.IndexOf(" told ") == -1 &&
-          span.IndexOf(" shouts") == -1 &&
-          span.IndexOf(" auctions") == -1 &&
-          span.IndexOf(" auction") == -1 &&
-          span.IndexOf(" -> ") == -1 &&
-          span.IndexOf("'My leader is") == -1)
+      // Fast path: no marker of any kind means this cannot be chat, so do not scan for a sender at all.
+      if (span.IndexOfAny(ChatMarkers) == -1)
       {
         return null;
       }

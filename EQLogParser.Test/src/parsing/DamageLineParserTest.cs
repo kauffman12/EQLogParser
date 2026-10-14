@@ -30,6 +30,45 @@ namespace EQLogParser
       _dataStore = null;
     }
 
+    /*
+     * The spell-class memo is keyed by (kind of line, spell name) — expressed as two dictionaries rather than an allocated "Dd=name" string.
+     * The kinds may NOT share a table: for a name the spell data cannot place, the answer IS the kind that asked, so a name-only cache would
+     * remember "Dd" from the direct-damage line and then hand that word to a DoT line about the same spell. Order matters here: DD asks first.
+     */
+    [TestMethod]
+    public void TestSpellTypeMemoKeepsTheTwoKindsApart()
+    {
+      var dd = ParseAction("Hacket hit an ice giant for 500 points of magic damage by Vexfire of the Null Spire.");
+      Assert.IsNotNull(dd);
+      Assert.AreEqual(Labels.Dd, dd.Type, "a spell the data cannot place keeps the direct-damage kind");
+
+      var dot = ParseAction("You have taken 500 damage from Vexfire of the Null Spire by Nobody.");
+      Assert.IsNotNull(dot);
+      Assert.AreEqual(Labels.Dot, dot.Type,
+        "the DoT line was answered from the direct-damage memo — the two kinds share a table and 'Dd' leaked into it");
+
+      // Same name, second ask, same answer: the memo path (not just the first-miss path) still resolves per kind.
+      var ddAgain = ParseAction("Hacket hit an ice giant for 501 points of magic damage by Vexfire of the Null Spire.");
+      Assert.IsNotNull(ddAgain);
+      Assert.AreEqual(Labels.Dd, ddAgain.Type);
+    }
+
+    [TestMethod]
+    public void TestSpellTypeMemoStillAppliesDataClassification()
+    {
+      // Gnomercy carries Damaging = 2 in spells.txt, which is what turns a plain "Dd" answer into Bane.
+      var bane = ParseAction("Hacket hit an ice giant for 1200 points of magic damage by Gnomercy.");
+      Assert.IsNotNull(bane);
+      Assert.AreEqual(Labels.Bane, bane.Type);
+      Assert.AreEqual("Gnomercy", bane.SubType);
+
+      // A name on the proc list, found in the spell data: the same memo answers Proc instead of the asking kind.
+      var proc = ParseAction("Hacket hit an ice giant for 700 points of magic damage by Abolish Destruction.");
+      Assert.IsNotNull(proc);
+      Assert.AreEqual(Labels.Proc, proc.Type);
+      Assert.AreEqual("Abolish Destruction", proc.SubType);
+    }
+
     private static DamageRecord ParseAction(string? action)
     {
       return DamageLineParser.ParseLine(action);

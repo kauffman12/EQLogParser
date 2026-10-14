@@ -13092,6 +13092,36 @@ including empty tokens and long input, and pins invalid-range behavior. `DamageI
 publication for every ignored suffix, mixed case, near misses, summoned eyes and the three countable-eye exceptions. Chat rejection,
 modifier lookup, spell-tree lookup and the other allocation candidates above remain unimplemented; no new whole-load speedup is claimed.
 
+**Three subtractive trims shipped (2026-10-13) — no whole-load number is claimed for any of them.** All three delete work rather than add a cache,
+so there is nothing to invalidate; each is pinned by a test that was then **mutation-checked** (break the fix, watch the named assertion fail).
+
+- **The chat marker gate is one ordinal scan.** `ChatLineParser.ParseChatType` chained up to eight `IndexOf` calls to decide "this cannot be chat",
+  and `LogProcessor` asks that question for every line — so a combat line, which matches none of them, paid eight scans over its own text to reach
+  the same "no". The table above measured the candidate at **13.44–13.96 ms against 41.39–42.00 ms** over 649,504 sampled actions; it is now
+  `SearchValues<string>` (in `System.Buffers`, which surprised the first cut) built from those same eight literals. The list **is** the rejection
+  condition, so the rule for anyone editing either side is: every shape `CheckOtherCriteria` can recognise has to appear in the gate too, or the gate
+  eats a real chat line before a recognizer sees it. `MarkerGateRefusesNothingItShouldNot` holds one fixture per marker with its expected channel, and
+  dropping `" told "`, `" -> "` or `" shouts"` from the list fails it by name. A lesson worth keeping from that test's first version: a fixture the
+  recognizer cannot read ("told the guild") agrees even when the gate refuses the line, so it proves nothing — the marker's shape has to be a shape the
+  channel logic actually answers.
+- **The spell-class memo no longer builds its own key.** `GetTypeFromSpell` asked `StatsUtil.CreateRecordKey` for `"Dd=" + name` / `"DoT=" + name` on
+  every call, **hits included**, to say which of two tables it meant; the two tables now exist as `ParseLane.SpellDdTypeCache` and `SpellDotTypeCache`
+  and the lane chosen *is* the kind. They may not merge into one name-keyed table: for a name the spell data cannot place, **the answer is the asking
+  kind**, so a shared table would memoise "Dd" from a direct-damage line and hand that word to a DoT line about the same spell. That is exactly how
+  `TestSpellTypeMemoKeepsTheTwoKindsApart` was proven — merging the lanes fails it. `StatsUtil.CreateRecordKey` itself is untouched: its other callers
+  build board keys, which is a different contract (docs above: do not cache registry-dependent answers here either).
+- **The reader stopped re-encoding lines to estimate progress.** The bulk loop did `bytesRead += Encoding.UTF8.GetByteCount(line) + 2` per line — a
+  second full length pass over roughly 1.2 GB of text on a 13.7 M-line capture — to step a ~50-notch dial, while the number actually shown is
+  `_currentPos`, refreshed from the real `_fs.Position` at every notch (and every line inside the last ~10 KB). It now paces off `line.Length + 2`, which
+  is what it always was: a pacer, not a measurement. It was not exact before either — hard-coded UTF-8 plus an assumed CRLF — and reaching 100 % does not
+  depend on the counter, because the `_fs.Position >= _initSize` branch runs on the last line regardless. A multi-byte-heavy log crosses its notches
+  slightly late and the printed value is still a position. New Windows-only `LogReaderProgressTest` pins move-during-read / never-backwards / arrives-at-~100;
+  it **compiles here and has not been run**, so its result is owed on Windows like the band tests.
+
+Validation for this change: full non-incremental solution build **0 warnings / 0 errors** including the WPF assembly; headless suite
+**2,088 passed / 9 skipped** (2,097 total — the three above are the new tests). Modifier extraction, spell-tree probe temporaries and the
+`JoinWords` source-slice fast path stay open, in that order of value, still gated on the stage-split measurement rather than on helper ratios.
+
 **Review follow-up on the cleanup rework (2026-11):** six findings applied — `_isStarting` on the abandoned tick, the counted mark with `Reset`
 at the capture doors, and the wording of every claim about what a pool thread buys during a blocking collection (this paragraph is where that
 correction lives; the mechanism text above says it straight). Validation for this tree: full non-incremental solution build **0 warnings / 0 errors**

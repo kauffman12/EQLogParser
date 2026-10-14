@@ -602,6 +602,59 @@ namespace EQLogParser
       Assert.AreEqual(47, chatType.TextStart);
     }
 
+    /*
+     * The marker gate (one SearchValues scan in ChatLineParser) is allowed to be wrong in only one direction: a line carrying no marker may be
+     * refused without looking further, and a line carrying one must reach the recognizer that actually decides. So each of these fixtures is the
+     * shape ITS marker exists for, with the channel it must produce — a fixture the recognizer cannot read would prove nothing (it would agree even
+     * if the gate refused it), which is how a first cut of this test passed while a needle was missing from the list.
+     *
+     * " auctions" and " auction" overlap by construction (one contains the other, as in the eight-call chain this replaced), so no single fixture
+     * can prove both; removing either still leaves the auction line reaching the recognizer, which is the behaviour that matters.
+     */
+    [TestMethod]
+    public void MarkerGateRefusesNothingItShouldNot()
+    {
+      (string Action, string Channel)[] chatLines = [
+        ("Test says, 'hello'", ChatChannels.Say),                                       // " says"
+        ("Test says out of character, 'hello'", ChatChannels.Ooc),                        // " says"
+        ("Useless says, 'My leader is Incogitable.'", ChatChannels.Say),                  // "'My leader is"
+        ("Test tells the guild, 'hello'", ChatChannels.Guild),                            // " tells "
+        ("Test.Test told you, 'hello'", ChatChannels.Tell),                               // " told "
+        ("Test shouts, 'hello'", ChatChannels.Shout),                                     // " shouts"
+        ("Test auctions, 'hello'", ChatChannels.Auction),                                 // " auction(s)"
+        ("Test -> Test2: hello", ChatChannels.Tell),                                      // " -> "
+      ];
+
+      foreach (var (action, channel) in chatLines)
+      {
+        var decided = ChatLineParser.CheckOtherCriteria(action.AsSpan());
+        var gated = ChatLineParser.ParseChatType(action);
+
+        Assert.IsNotNull(decided, $"{action}: the fixture itself no longer reaches a recognizer — it proves nothing about the gate");
+        Assert.IsNotNull(gated, $"{action}: the marker gate refused a line the recognizer reads as {decided.Channel} chat");
+        Assert.AreEqual(channel, gated.Channel);
+        Assert.AreEqual(decided.TextStart, gated.TextStart);
+        Assert.AreEqual(decided.Sender, gated.Sender);
+      }
+
+      // Combat and system shapes: none of them carries a marker, so all of them must fall through to the real parsers untouched.
+      string[] notChat = [
+        "Goratoar bites Kizant for 137 damage.",
+        "Kizant is buffed by Cumlaud. (Affirmation of the Hero)",
+        "You begin casting Cancel Magic.",
+        "~ Kizant wonders.",
+        "Vex has been slain by a ghoul.",
+        "You have taken 4852 damage from Nectar of Misery by Commander Gartik.",
+        "Your pet misses a ghoul.",
+        "Kizant's pet has been slain by a ghoul.",
+      ];
+
+      foreach (var action in notChat)
+      {
+        Assert.IsNull(ChatLineParser.ParseChatType(action), $"{action}: claimed as chat by the marker gate");
+      }
+    }
+
     private static ChatType ParseText(string line)
     {
       var action = line[27..];

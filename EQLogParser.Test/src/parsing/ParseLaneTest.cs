@@ -180,7 +180,13 @@ public class ParseLaneTest
   public void EachLaneHasItsOwnSpellTypeMemo()
   {
     var auxLane = new ParseLane();
-    Assert.AreNotSame(ParseLane.Main.SpellTypeCache, auxLane.SpellTypeCache);
+
+    // One memo per damage kind (the answer for a name the spell data cannot place IS the kind that asked, so the two kinds may not share a
+    // table), and one of each per stream. Both halves are cheap to break and expensive to see: a shared table mislabels DoT lines as "Dd".
+    Assert.AreNotSame(ParseLane.Main.SpellDdTypeCache, auxLane.SpellDdTypeCache);
+    Assert.AreNotSame(ParseLane.Main.SpellDotTypeCache, auxLane.SpellDotTypeCache);
+    Assert.AreNotSame(auxLane.SpellDdTypeCache, auxLane.SpellDotTypeCache,
+      "the direct-damage and DoT memos share a table — an unknown spell's kind would leak between them");
     Assert.AreEqual(-1, auxLane.LastRolledLine, "a fresh lane arrives with clean carries — that is what 'born clean' means");
   }
 }

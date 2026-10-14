@@ -35,7 +35,10 @@ namespace EQLogParser
     // Carries of the lane parsing this line, not of the process: a second ingest stream keeps its own crit pair,
     // previous sentence and spell-type memo. PreviousAction is what a death record reads back as its `Previous`
     // field (see UpdateSlain), so it spans lines rather than belonging to one.
-    private static Dictionary<string, string> SpellTypeCache => ParseLane.Current.SpellTypeCache;
+    // The two spell-class memo lanes (see ParseLane.SpellDdTypeCache). Which one a lookup uses IS the kind of line asking, so no key string
+    // has to be built to say it — that was the old shape, and it allocated on every hit.
+    private static Dictionary<string, string> SpellDdTypeCache => ParseLane.Current.SpellDdTypeCache;
+    private static Dictionary<string, string> SpellDotTypeCache => ParseLane.Current.SpellDotTypeCache;
     private static string PreviousAction
     {
       get => ParseLane.Current.PreviousAction;
@@ -1279,28 +1282,33 @@ namespace EQLogParser
 
     private static string GetTypeFromSpell(string name, string type)
     {
-      var key = StatsUtil.CreateRecordKey(type, name);
-      if (string.IsNullOrEmpty(key) || !SpellTypeCache.TryGetValue(key, out var result))
+      // Which lane answers is the whole of the (kind, name) key: only the direct-damage and DoT shapes ask, at their own call sites. A third
+      // kind would need its own lane rather than share one, because an unplaced name's answer is the asking kind itself.
+      var cache = type == Labels.Dot ? SpellDotTypeCache : SpellDdTypeCache;
+
+      // The old key could not be empty either (it always carried its "Dd="/"DoT=" prefix), so this is a lane-safe spelling of the same
+      // lookup rather than a new case: a null name memoises under "", exactly as it memoised under the bare prefix before.
+      var key = name ?? string.Empty;
+      if (!cache.TryGetValue(key, out var result))
       {
         result = type;
-        if (!string.IsNullOrEmpty(key))
+        var spellName = EQDataStore.Instance.AbbreviateSpellName(name);
+        var data = EQDataStore.Instance.GetSpellByAbbrv(spellName);
+        if (data is not null)
         {
-          var spellName = EQDataStore.Instance.AbbreviateSpellName(name);
-          var data = EQDataStore.Instance.GetSpellByAbbrv(spellName);
-          if (data is not null)
+          if (data.Damaging == 2)
           {
-            if (data.Damaging == 2)
-            {
-              result = Labels.Bane;
-            }
-            else if (data.Proc == 1)
-            {
-              result = Labels.Proc;
-            }
+            result = Labels.Bane;
           }
-          SpellTypeCache[key] = result;
+          else if (data.Proc == 1)
+          {
+            result = Labels.Proc;
+          }
         }
+
+        cache[key] = result;
       }
+
       return result;
     }
 
