@@ -19,35 +19,17 @@ namespace EQLogParser
    * enabled character, or one over `AppSettings.CurrentLogFile` in basic mode). One word per construction, beside the file name.
    */
   /*
-   * ONE reader over ONE file in file order — the whole design in a sentence, and it is load-bearing. A whole-file
-   * open used to read on two lanes and merge (the numbers and the reasons for backing that out are in
-   * docs/DesignNotes → "Parallel loading: measured, shipped, and backed out"). Nothing here asks for that back:
-   * progress percent, HandedOverLines, the watch loop, the archive hook and the GC-tidy gate all describe a single
-   * sequential read, because that is the only thing that happens.
+   * ONE reader over ONE file in file order — load-bearing, not a preference: docs/DesignNotes.md → "Parallel loading:
+   * measured, shipped, and backed out". Percent, HandedOverLines, the watch loop and the tidy gate all describe that one read.
    */
   internal class LogReader(ILogProcessor logProcessor, string fileName, string origin, int minBack = 0)
     : IDisposable
   {
     private const int BatchSize = 5000;
     /*
-     * The bound is memory backpressure, and it is what a bulk open spends its life against: the reader runs far ahead of
-     * the parser (a capture reads at hundreds of MB/s against a parse lane an order of magnitude slower), so within a
-     * second this queue is full and every handoff parks the reader until the consumer drains. That behaviour is correct -
-     * unbounded would buffer a whole night of strings behind the parser - but it is also why WHO runs this loop matters:
-     * the thread that blocks in Add is the thread that cannot paint a window. See the note on StartAsync.
-     *
-     * The number itself is five batches deep, and it was 100,000 LINES until the memory pass asked what those slots
-     * cost: the `LogReaderItem` is 24 bytes but the STRING it carries is what pays - at ~95 characters per EverQuest line
-     * (a 973 MB capture over 10.2 M lines) that is ~200 bytes of UTF-16 per line, so 100,000 of them held ~22 MB of a bulk
-     * load's peak working set against a parser that was the bottleneck either way. Lowering it changes no throughput (a
-     * queue at its bound means the PARSE lane is the limit; a queue near empty means the reader is, and neither cares how
-     * high the ceiling is) while taking ~17 MB out of the load. It also matters for steady raid tailing far less than for
-     * an open: live traffic leaves this queue nearly empty by itself.
-     *
-     * It is stated in BATCHES now because that is the unit the queue holds: five of them is the same 25,000 lines
-     * (~5 MB of strings) that were in flight before, so the reader runs exactly as far ahead and parks at exactly the
-     * same point. What changed is only the price of getting there - one handshake per 5,000 lines instead of 5,000 of
-     * them — the handoff was measured at roughly half the CPU of the ingest loop (see the section named above).
+     * Memory backpressure: a bulk open spends its life against this bound, so the thread blocked in Add is the thread that cannot
+     * paint (see StartAsync). Five batches = 25,000 lines in flight; the size and the handoff cost behind it are measured in
+     * docs/DesignNotes.md → "Retiring probes that no longer protect production".
      */
     private const int QueueBoundBatches = 5;
     private readonly BlockingCollection<LogReaderItem[]> _lines = new(new ConcurrentQueue<LogReaderItem[]>(), QueueBoundBatches);
@@ -68,12 +50,7 @@ namespace EQLogParser
     private long _initSize;
     private long _currentPos;
 
-    /*
-     * Which FILE this reader's handle belongs to, and how long that file was the last time the tail looked at it. The
-     * monitor loop asks the NAME who it is now: a rename takes the file away under an open handle and the followed file
-     * never shrinks, so length alone cannot see a rollover (LogFollow explains the whole rule and what each answer
-     * costs).
-     */
+     // Identity and last-seen length of THIS handle's file; the tail compares them against whatever stands at the name (LogFollow).
     private long _followedCreatedUtcTicks = LogFollow.NoIdentity;
     private long _followedLength;
 
@@ -278,12 +255,8 @@ namespace EQLogParser
 
           // update progress during initial load
           /*
-           * A THRESHOLD PACER, not a measurement of bytes. It exists only to step `_nextUpdateThreshold` (a 50-notch dial), and what the caller
-           * is shown comes from `_currentPos`, which every branch below takes from the real `_fs.Position`. Counting UTF-8 bytes here cost a full
-           * second length pass over every line of a big capture — 13.7 M of them, roughly 1.2 GB of re-scanned text — to drive a dial whose answer
-           * the stream already knew, and it was not even exact: the +2 assumes CRLF and the encoding was hard-coded while the reader's own comes
-           * from FileUtil.GetStreamReader. Character count plus line break paces the same dial, and a log with multi-byte names simply crosses a
-           * notch slightly late — corrected at the next sample, because the number printed is always a position.
+           * A pacer for the 50-notch dial, not a byte count — the displayed number comes from _fs.Position. Counting UTF-8 here cost
+           * a second pass over every line; a multi-byte log crosses a notch slightly late and is corrected at the next sample.
            */
           bytesRead += line.Length + 2;
           if (bytesRead >= _nextUpdateThreshold)
@@ -324,11 +297,8 @@ namespace EQLogParser
         _watcher = new FileSystemWatcher(directory)
         {
           /*
-           * Only Deleted and Renamed below are read, so ask for nothing else. The default filter also queues a LastWrite
-           * notification for every append — thousands of events a second in a live raid log, all of them discarded — into
-           * a buffer whose default is 8 KB; an overflowed watcher stops reporting for the rest of its life, and the event
-           * it then eats is the one this class needs. A missed Renamed used to mean tailing yesterday's rolled-away file
-           * until the app restarted, which is why the poll also asks the name directly (see LogFollow).
+           * Only Deleted/Renamed are read, so nothing else is requested: the default filter queues a LastWrite event per append and an
+           * overflowed watcher stops reporting for good. The poll asks the name directly too (LogFollow).
            */
           NotifyFilter = NotifyFilters.FileName | NotifyFilters.DirectoryName,
           InternalBufferSize = 64 * 1024
@@ -362,13 +332,8 @@ namespace EQLogParser
         try
         {
           /*
-           * Deleted, rewritten, or simply no longer the file this handle opened. The last of those is the midnight case:
-           * the followed file sits complete and unread-to while a new one takes its name, and neither the length test nor
-           * the watcher can be trusted to say so, so one stat per poll asks the name directly.
-           *
-           * Only Reopen acts here. A name that reports nothing (WaitForFile) does NOT close a working stream —
-           * a false-negative stat would stop a healthy tail, which is the failure this whole change is about — and waiting
-           * for a file to appear is already what ReOpenAsync/WhenFileExistsAsync do on the watcher's own word.
+           * Deleted, rewritten, or no longer the file this handle opened — the midnight rollover, which neither the length test nor the
+           * watcher can be trusted to see. Only Reopen acts here: a name that merely reports nothing must not close a working stream.
            */
           if (_fileDeleted || LogFollow.DecideFor(_followedCreatedUtcTicks, NameIdentityOf(FileName), _followedLength,
                 _fs.Length) is LogFollowDecision.Reopen)
@@ -457,11 +422,8 @@ namespace EQLogParser
     }
 
     /*
-     * The line gate the read loop runs every candidate through: a line must be long enough to hold a standard timestamp
-     * ("Tue Apr 14 09:00:00 2026 …") and within one second — logs are second-resolution — an identical date
-     * prefix means the parse (the expensive part) can be reused. Returns false for anything that never
-     * reaches a processor; `lastTs` moves only when the second actually changed, and `previous` is updated
-     * by the CALLER only for accepted lines, exactly as HandleLine always did.
+     * The gate every candidate line passes: long enough for a standard timestamp, reusing the parse of an identical date prefix.
+     * False means the line never reaches a processor; the CALLER advances `previous` only for accepted lines.
      */
     private static bool TryStamp(string theLine, ref string previous, ref double lastTs)
     {
@@ -492,14 +454,9 @@ namespace EQLogParser
       var flushed = _batch.Count;
 
       /*
-       * ONE handoff for the whole batch. A COPY crosses, not the accumulator: the consumer can still be reading what
-       * it took when this list is cleared and refilled with the next few thousand lines, so whatever is in the queue
-       * belongs to whoever receives it.
-       *
-       * Renting the buffer from ArrayPool (and having the consumer return it once drained) measured lower still -
-       * 0.4 MB against 108 MB of transient arrays per capture - and was not taken: every path that abandons a batch
-       * (dispose, cancel mid-block, a consumer fault) would then owe that return exactly once, and getting it wrong
-       * is a double-return or a leaked buffer rather than a garbage number the GC reclaims for free.
+       * ONE handoff per batch, and a COPY crosses rather than the accumulator: the consumer may still be reading what it took while
+       * this list is refilled. ArrayPool was measured and refused (docs/DesignNotes.md → "Retiring probes that no longer protect
+       * production").
        */
       _lines.Add(_batch.ToArray(), _cts.Token);  // Blocks if queue full, but consumer keeps processing
       _batch.Clear();
@@ -559,9 +516,8 @@ namespace EQLogParser
 
     private async Task<string> ReOpenAsync(string previous)
     {
-      // A rewrite in place no longer has an old file to drain: its StreamReader may still hold buffered bytes from
-      // before the truncate. On a rename, by contrast, the old handle is still valid and may contain chat from the
-      // poll interval. Drain it BEFORE handing the new file to the parser, so both sides arrive in file order.
+      // On a rename the old handle is still valid and may hold lines from this poll interval; drain it BEFORE the new
+      // file reaches the parser so both sides arrive in file order. A truncate has nothing left to drain.
       var shortened = false;
       var oldAvailable = _fs is not null;
       try
@@ -621,15 +577,24 @@ namespace EQLogParser
             Options = FileOptions.Asynchronous | FileOptions.SequentialScan
           });
 
-        // A new file object can still contain an exact copy of yesterday's bytes (an atomic replacement by a sync
-        // client). Identity only says WHEN to reopen; it is not proof that the content is new. Compare complete lines
-        // from the old, drained handle with the replacement before choosing where the NEW reader starts. A fresh daily
-        // file differs on its first line and starts at zero; a copy skips its already-ingested prefix. This comparison
-        // reads raw bytes for a decision, never parses a second lane of log records.
-        var start = shortened ? 0 : drained && _fs is not null
+        // A new file object can be an exact copy of the old one, so identity says WHEN to reopen and never that the content
+        // is new. Cut on the last shared complete line; a fresh daily file differs on its first line and starts at zero.
+        var shared = shortened ? 0L : drained && _fs is not null
           ? await LogFollowPrefix.SharedLineEndAsync(_fs, next, _fs.Position, _cts.Token).ConfigureAwait(false)
-          : next.Length;
-        next.Seek(start, SeekOrigin.Begin);
+          : (long?)next.Length;
+        if (shared is null)
+        {
+          // Identical so far with no complete shared line: the replacement's first line has not landed yet. Replay from zero
+          // would double-count and seeking to its end could drop lines, so keep the old handle; the next poll asks again.
+          if (RepeatCap.SpeaksOnce("follow.reopen.noSharedLine"))
+          {
+            Log.Debug($"Reopen of {FileName} deferred: no shared complete line with the drained file yet.");
+          }
+
+          return previous;
+        }
+
+        next.Seek(shared.Value, SeekOrigin.Begin);
         var reader = FileUtil.GetStreamReader(next);
         await CleanupStreamsAsync().ConfigureAwait(false);
         _fs = next;
@@ -664,10 +629,7 @@ namespace EQLogParser
       }
     }
 
-    /*
-     * The cheap id of the file standing at a name: its creation stamp, from one GetFileAttributesEx. null means nothing
-     * is there; LogFollow.UnknownIdentity means the question could not be asked (and buys no decision).
-     */
+     /* The cheap id of the file standing at a name. Null: nothing is there. UnknownIdentity: the question could not be asked, so it buys no decision. */
     private static long? NameIdentityOf(string path)
     {
       try

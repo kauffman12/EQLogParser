@@ -311,11 +311,8 @@ namespace EQLogParser
           switch (e.State)
           {
             case "STARTED":
-              _busyState.Arm(() =>
-              {
-                title.Content = "Calculating Tanking DPS...";
-                dataGrid.ItemsSource = NoResultsList;
-              }, "tanking");
+              // Title only: a rebuild keeps the previous board on screen (see DamageSummary.EventsGenerationStatus).
+              _busyState.Arm(() => title.Content = "Calculating Tanking DPS...", "tanking");
               break;
             case "COMPLETED":
               CurrentStats = e.CombinedStats;

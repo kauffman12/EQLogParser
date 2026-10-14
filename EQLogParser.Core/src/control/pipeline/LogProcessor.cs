@@ -20,27 +20,16 @@ namespace EQLogParser
     private Task _readTask;
     private volatile bool _isDisposed;
 
-    /*
-     * Bound ONCE, in the constructor, because the call site below converts an INSTANCE method group, and that
-     * conversion allocates a new delegate every time it is written: measured 64 bytes per line on .NET 10 Release,
-     * which over the 10-million-line capture is ~610 MB of short-lived delegates — pure garbage, but garbage the
-     * collector still has to walk during a load.
-     *
-     * The two arguments beside it are left exactly as they were, and that asymmetry is measured rather than
-     * inconsistent: a non-capturing lambda and a STATIC method group are both cached by the compiler at 0 bytes per
-     * call (the static one lives in a generated field; the lambda captures nothing, so there is no display class to
-     * build). A processor-owned field also keeps the lifecycle explicit — this delegate dies with the processor that
-     * owns it instead of becoming another process-global reference. PlayerRegistry.Instance is a process singleton
-     * (`{ get; } = new()`), so binding here cannot outlive or bypass it: Clear() empties its contents, never its identity.
-     */
+        /*
+         * Bound ONCE because converting an instance method group allocates a fresh delegate per call (~610 MB across a 10 M line capture). The neighbours
+         * stay as they are because that asymmetry is measured: a non-capturing lambda and a static method group are compiler-cached at 0 bytes.
+         */
     private readonly Action<string> _addMerc;
 
-    /*
-     * The stream this processor feeds. Every line it consumes is parsed ON the consumer task, and the consumer
-     * binds this lane as its thread's lane for the whole run — so raises land on this processor's capture and
-     * nowhere else, and the parsers' carries (crit pairing, death's previous sentence) are per stream. Null
-     * means ParseLane.Main, which is what the app's single reader has always been.
-     */
+        /*
+         * The stream this processor feeds: every line is parsed on the consumer task, which binds this lane for the whole run so raises land on this
+         * capture only. Null means ParseLane.Main.
+         */
     private readonly ParseLane _lane;
 
     internal LogProcessor(string fileName, IChatSink chatSink, ITriggerHook triggerHook, ParseLane lane = null)
@@ -58,16 +47,11 @@ namespace EQLogParser
     // (LogReader keeps feeding long after LinkTo).
     internal Task Completion => _readTask;
 
-    /*
-     * The stream arrives in batches because crossing the thread boundary is what costs, not parsing: per-line
-     * handoff measured at ~21,460 ms CPU and 885 MB allocated for 4.5 M items against ~10,721 ms and 108 MB for the
-     * same work in batches of 5,000 (docs/DesignNotes.md → "The reader hands the parser one line at a time…").
-     *
-     * The batch shape must stay invisible downstream. Lines go to DoPreProcess one at a time, in arrival order, on
-     * THIS thread and no other — that is what keeps the cross-line carries (crit pairing, the sentence before a
-     * death, the dice roll's adjacency test) behaving exactly as they did when one line crossed at a time. How many
-     * lines a producer happened to bundle must never reach a parser.
-     */
+        /*
+         * The stream arrives in batches because the thread crossing costs, not the parse (docs/DesignNotes.md → "The reader hands the parser one line at a
+         * time…"). The batch shape must stay invisible downstream: lines go to DoPreProcess one at a time in arrival order on this thread, which is what
+         * keeps the cross-line carries working.
+         */
     public void LinkTo(BlockingCollection<LogReaderItem[]> collection)
     {
       // start archive if enabled (app side channel; no-op headless)
@@ -75,9 +59,9 @@ namespace EQLogParser
 
       _readTask = Task.Run(() =>
       {
-        // Bind for the WHOLE run, release in the finally: this is a pooled thread, and a lane left bound after
-        // the stream ends would follow the thread into whatever task runs on it next (ParseLane).
-        ParseLane.BindCurrentThread(_lane);
+        // Bind for the WHOLE run and restore what was there in the finally: this is a pooled thread, and a lane left
+        // bound after the stream ends would follow the thread into whatever task runs on it next (ParseLane).
+        var priorLane = ParseLane.BindCurrentThread(_lane);
         try
         {
           foreach (var batch in collection.GetConsumingEnumerable())
@@ -99,7 +83,7 @@ namespace EQLogParser
         }
         finally
         {
-          ParseLane.BindCurrentThread(null);
+          ParseLane.BindCurrentThread(priorLane);
           collection?.Dispose();
         }
       });
@@ -143,12 +127,10 @@ namespace EQLogParser
 
         if (PreLineParser.NeedProcessing(lineData, (name, time) => PlayerRegistry.Instance.AddVerifiedPlayer(name, time), PlayerRegistry.IsPossiblePlayerName, _addMerc))
         {
-          /*
-           * No eager Split here any more. The word view (LineData.Words) builds itself from Action on first read by
-           * a parser that needs words; the legacy string[] materializes only when Misc/Cast ask for it. This one line
-           * used to be ~374 B and 29 % of ingest stage time on every recognized line — see docs/DesignNotes →
-           * "Where ingest spends its time, stage by stage".
-           */
+                    /*
+                     * No eager Split: the word view builds itself on first read by a parser that needs words (LineData.Words). That call used to be ~374 B and
+                     * 29 % of ingest stage time on every recognized line.
+                     */
           if (!DamageLineParser.Process(lineData))
           {
             if (!HealingLineParser.Process(lineData))

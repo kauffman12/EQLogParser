@@ -85,21 +85,21 @@ namespace EQLogParser
 
     public void Start()
     {
-      _lane.DamageProcessed += HandleDamage;
-      _lane.NewDeath += HandleDeath;
-      _lane.NewTaunt += HandleTaunt;
+      ParseLane.Subscribe(ref _lane.DamageProcessed, HandleDamage);
+      ParseLane.Subscribe(ref _lane.NewDeath, HandleDeath);
+      ParseLane.Subscribe(ref _lane.NewTaunt, HandleTaunt);
 
       // Fires for every heal the parser stored, immediately after RecordsStore.Add — so "heal facts" and
       // "what the healing board reads" are the same population, which is what makes the fidelity ledger
       // (HealFactCaptureTest) an equality test rather than an approximation.
-      if (_heals is not null) _lane.HealProcessed += HandleHeal;
+      if (_heals is not null) ParseLane.Subscribe(ref _lane.HealProcessed, HandleHeal);
 
-      _lane.Evidence += OnPreLineEvidence;
-      _lane.WhoRoster += OnWhoRoster;
-      _lane.LooterIdentified += OnLooter;
-      _lane.CompanionCalled += OnCompanionCalled;
-      _lane.Charm += OnCharm;
-      _lane.CastEvidence += OnCast;
+      ParseLane.Subscribe(ref _lane.Evidence, OnPreLineEvidence);
+      ParseLane.Subscribe(ref _lane.WhoRoster, OnWhoRoster);
+      ParseLane.Subscribe(ref _lane.LooterIdentified, OnLooter);
+      ParseLane.Subscribe(ref _lane.CompanionCalled, OnCompanionCalled);
+      ParseLane.Subscribe(ref _lane.Charm, OnCharm);
+      ParseLane.Subscribe(ref _lane.CastEvidence, OnCast);
 
       var registry = PlayerRegistry.Instance;
       registry.EventsNewVerifiedPet += OnVerifiedPet;
@@ -110,18 +110,18 @@ namespace EQLogParser
 
     public void Stop()
     {
-      _lane.DamageProcessed -= HandleDamage;
-      _lane.NewDeath -= HandleDeath;
-      _lane.NewTaunt -= HandleTaunt;
+      ParseLane.Unsubscribe(ref _lane.DamageProcessed, HandleDamage);
+      ParseLane.Unsubscribe(ref _lane.NewDeath, HandleDeath);
+      ParseLane.Unsubscribe(ref _lane.NewTaunt, HandleTaunt);
 
-      if (_heals is not null) _lane.HealProcessed -= HandleHeal;
+      if (_heals is not null) ParseLane.Unsubscribe(ref _lane.HealProcessed, HandleHeal);
 
-      _lane.Evidence -= OnPreLineEvidence;
-      _lane.WhoRoster -= OnWhoRoster;
-      _lane.LooterIdentified -= OnLooter;
-      _lane.CompanionCalled -= OnCompanionCalled;
-      _lane.Charm -= OnCharm;
-      _lane.CastEvidence -= OnCast;
+      ParseLane.Unsubscribe(ref _lane.Evidence, OnPreLineEvidence);
+      ParseLane.Unsubscribe(ref _lane.WhoRoster, OnWhoRoster);
+      ParseLane.Unsubscribe(ref _lane.LooterIdentified, OnLooter);
+      ParseLane.Unsubscribe(ref _lane.CompanionCalled, OnCompanionCalled);
+      ParseLane.Unsubscribe(ref _lane.Charm, OnCharm);
+      ParseLane.Unsubscribe(ref _lane.CastEvidence, OnCast);
 
       var registry = PlayerRegistry.Instance;
       registry.EventsNewVerifiedPet -= OnVerifiedPet;

@@ -1,24 +1,16 @@
 namespace EQLogParser
 {
   /*
-   * A word view over a line's action text with the indexing of `string.Split(' ') and none of its strings.
+   * A word view over a line's action text: `Split(' ')`'s indexing, none of its strings. One Split per recognized line was
+   * ~374 B and 29 % of ingest stage time (docs/DesignNotes.md → "Where ingest spends its time, stage by stage"), and almost every
+   * word is only ever compared to a literal. A string materializes where a word becomes something a record owns.
    *
-   * Why: one Split(' ') per recognized line is ~374 B and 29 % of ingest stage time (DesignNotes → "Where ingest
-   * spends its time, stage by stage") — it is the widest single allocation in the process, and almost every word it
-   * creates is only ever COMPARED (to a literal) and thrown away. This type scans the source once for space
-   * positions, stores them in one int[], and hands out `Word` views: same ordinal comparisons, same name slicing,
-   * and a real string materializes only where a word (or a range of words) becomes something a record OWNS —
-   * which is exactly what was already being built before.
-   *
-   * The semantics are `Split(' ')`'s, empty entries included: "a  b" is THREE tokens ("a", "", "b"), a leading space
-   * starts an empty token, and a trailing space ends with one. A tokenizer that skipped double spaces would shift
-   * every index downstream and silently rewrite names — LineWordsTest pins equivalence over a corpus for that reason,
-   * not as decoration.
+   * The semantics ARE Split(' ')'s, empty entries included — "a  b" is three tokens. Skipping double spaces would shift every index
+   * downstream and silently rewrite names; LineWordsTest pins the equivalence over a corpus.
    */
   internal sealed class LineWords
   {
-    // Shared instance for null/empty action text; old code guarded `split is { Length: >= 2 }` against the null array,
-    // which reads the same as Length == 0 here.
+    /// <summary>Shared instance for a null action; it reads as zero tokens, like the null array it replaced.</summary>
     internal static readonly LineWords Empty = new(string.Empty, [], 0);
 
     private readonly string _source;
@@ -41,8 +33,7 @@ namespace EQLogParser
 
     internal static LineWords Build(string action)
     {
-      // Null only: "" must build ONE empty token because that is what "".Split(' ') returns — the equivalence
-      // this type exists on. (A null Action had no old behavior to keep; the door used to throw.)
+      // Null only: "" must build ONE empty token, because that is what "".Split(' ') returns.
       if (action is null)
       {
         return Empty;
@@ -109,7 +100,7 @@ namespace EQLogParser
     /// including its >256-char fallback which joins WITHOUT the skip (the old long path called string.Join directly;
     /// bit-identical behavior wins over tidiness here).
     /// </summary>
-    internal unsafe string JoinWords(int start, int count)
+    internal string JoinWords(int start, int count)
     {
       if (count <= 0)
       {
@@ -156,13 +147,8 @@ namespace EQLogParser
           }
         }
 
-        unsafe
-        {
-          fixed (char* p = buffer)
-          {
-            return new string(p, 0, pos);
-          }
-        }
+        // pos always ends at totalLength: one space is written before every word after the first.
+        return new string(buffer);
       }
 
       return JoinRaw(start, count);

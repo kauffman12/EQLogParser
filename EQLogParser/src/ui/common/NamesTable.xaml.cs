@@ -376,11 +376,24 @@ namespace EQLogParser
       }
 
       var session = DeriveEngine.Active;
-      if (!IsVisible || session is null) return;
+      if (session is null) return;   // no capture open yet: an empty grid is the answer, and it needs no line
+
+      // Both declines are logged: this is the seam where an operator's click used to vanish. Neither loses the ask -
+      // hidden asks are paid when the pane is shown again (FollowSession), busy ones by the running census' follow-up.
+      if (!IsVisible)
+      {
+        Log.Debug("name census: declined - the pane is hidden; showing it asks again");
+        return;
+      }
+
       var repaint = _repaint;
       var epoch = _viewEpoch;
       var requestGeneration = session.ExplicitRequestGeneration;
-      if (!repaint.TryBegin(out var stamp)) return;
+      if (!repaint.TryBegin(out var stamp))
+      {
+        Log.Debug($"name census: declined - one is already running, a follow-up is owed (gen {stamp})");
+        return;
+      }
 
       _ = Task.Run(() =>
       {
@@ -899,7 +912,6 @@ namespace EQLogParser
       return $"[{box.GetHashCode():X8} {name} items={box.Items.Count} hasItems={box.HasItems} " +
              $"sel={box.SelectedIndex} open={box.IsDropDownOpen} vis={box.IsVisible} {box.ActualWidth:0}x{box.ActualHeight:0}]";
     }
-
 
     /*
      * The editor ends when the list closes — picked, escaped, or clicked away from — and on a pane hide or capture change. One

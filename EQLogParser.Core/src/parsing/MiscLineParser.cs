@@ -18,56 +18,49 @@ namespace EQLogParser
       { "sliced", 1 }, { "stabbed", 1 }, { "surrounded", 1 }, { "struck", 1 }, { "stunned", 1 }, { "targeted", 1 }, { "withered", 1 }
     };
 
-    /*
-     * Raised for every stored "X resisted Y's spell" record, alongside the store write. Hoisted-delegate null
-     * check like the damage parser's, so a build with no subscriber pays one branch, not an allocation; FCT is
-     * the only consumer and it gates itself on Enabled.
-     *
-     * These are forwarders onto the MAIN lane: the raises land on whichever lane parsed the line (ParseLane), and
-     * every session-long subscriber belongs to the one stream the app has always had. A second ingest stream
-     * subscribes to its own ParseLane, so its lines never fan into these.
-     */
+        /*
+         * Raised alongside the store write, with the hoisted-delegate null check so an unsubscribed build pays one branch. These forward onto the MAIN
+         * lane; a second ingest stream subscribes to its own ParseLane and never fans into these.
+         */
     public static event Action<ResistEvent> EventsResistProcessed
     {
-      add => ParseLane.Main.Resist += value;
-      remove => ParseLane.Main.Resist -= value;
+      add => ParseLane.Subscribe(ref ParseLane.Main.Resist, value);
+      remove => ParseLane.Unsubscribe(ref ParseLane.Main.Resist, value);
     }
 
     public static event Action<MezBreakRecord> EventsNewMezBreak
     {
-      add => ParseLane.Main.MezBreak += value;
-      remove => ParseLane.Main.MezBreak -= value;
+      add => ParseLane.Subscribe(ref ParseLane.Main.MezBreak, value);
+      remove => ParseLane.Unsubscribe(ref ParseLane.Main.MezBreak, value);
     }
 
     // Mirror evidence (D8): fire-only recognitions, no branch consumes anything for them.
     internal static event Action<string, string, double> EventsWhoRoster   // name, class, time
     {
-      add => ParseLane.Main.WhoRoster += value;
-      remove => ParseLane.Main.WhoRoster -= value;
+      add => ParseLane.Subscribe(ref ParseLane.Main.WhoRoster, value);
+      remove => ParseLane.Unsubscribe(ref ParseLane.Main.WhoRoster, value);
     }
 
-    /*
-     * "A person loots." Loot, win-roll and corruption lines used to end in `AddVerifiedPlayer`, which filled a store the
-     * derived rules never consult; they publish here instead, so the claim reaches the rule book as evidence WITH its
-     * timestamp (R23-loot). One publisher, one verdict chain — the store is not a second authority on who is a player
-     * (docs/DesignNotes.md → "The checks that decide who is a player").
-     */
+        /*
+         * "A person loots." Loot, win-roll and corruption lines publish here rather than calling AddVerifiedPlayer, so the claim reaches the rule book as
+         * timestamped evidence (R23-loot) through one verdict chain (docs/DesignNotes.md → "The checks that decide who is a player").
+         */
     internal static event Action<string, double> EventsLooterIdentified    // name, time
     {
-      add => ParseLane.Main.LooterIdentified += value;
-      remove => ParseLane.Main.LooterIdentified -= value;
+      add => ParseLane.Subscribe(ref ParseLane.Main.LooterIdentified, value);
+      remove => ParseLane.Unsubscribe(ref ParseLane.Main.LooterIdentified, value);
     }
 
     internal static event Action<string, double> EventsCompanionCalled     // the SUMMONER whose companion arrived, time
     {
-      add => ParseLane.Main.CompanionCalled += value;
-      remove => ParseLane.Main.CompanionCalled -= value;
+      add => ParseLane.Subscribe(ref ParseLane.Main.CompanionCalled, value);
+      remove => ParseLane.Unsubscribe(ref ParseLane.Main.CompanionCalled, value);
     }
 
     internal static event Action<string, double, bool, string> EventsCharm  // name, time, is-start, owner
     {
-      add => ParseLane.Main.Charm += value;
-      remove => ParseLane.Main.Charm -= value;
+      add => ParseLane.Subscribe(ref ParseLane.Main.Charm, value);
+      remove => ParseLane.Unsubscribe(ref ParseLane.Main.Charm, value);
     }
 
     // Carries of the lane parsing this line: "the roller named by the previous line, and that line's number" —
@@ -88,14 +81,10 @@ namespace EQLogParser
     // pipeline never consumed these and still does not. Charm NEG lines ("This NPC cannot be
     // charmed.", resists) deliberately do not match these suffixes.
     //
-    // "X is called to it owner." names the OWNER, not the companion — the sentence is about where the summon
-    // went, and the client fills the subject slot with the summoner. Measured, because the grammar argues the other
-    // way: all 33 occurrences in eqlog_Kizant_xegony-09-20-25.txt and all 15 in eqlog_Kizant_xegony-01-06-24.txt
-    // sit within three lines of that same name's own `X begins casting Summon …` line, e.g.
-    //   Romance begins casting Summon Companion II.   /   Romance is called to it owner.
-    // and every subject across six captures casts player spells by the thousand (Romance 13,958 cast lines,
-    // Beorun 7,215) while none of them ever swings: `Romance joined the raid.`, `Nymera healed Romance for 0
-    // (26881) hit points` (docs/DesignNotes.md → "The companion line names the summoner").
+        // Companion and charm shapes (R5/R9 evidence). Recognition only; charm NEG lines deliberately do not match.
+        //
+        // "X is called to it owner." names the SUMMONER: the client fills the subject slot with the owner, verified across six captures where every
+        // subject casts player spells and never swings (docs/DesignNotes.md → "The companion line names the summoner").
     private const string CompanionCalledSuffix = " is called to it owner.";
     private const string CharmedSuffix = " has been charmed.";
     private const string Charmed2Suffix = " is charmed.";

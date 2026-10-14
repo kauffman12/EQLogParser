@@ -54,7 +54,8 @@ namespace EQLogParser
      * nothing here — used to pay eight separate scans over their own text to reach the same "no".
      */
     private static readonly SearchValues<string> ChatMarkers = SearchValues.Create(
-      [" says", " tells ", " told ", " shouts", " auctions", " auction", " -> ", "'My leader is"],
+      // " auction" also covers " auctions", so the longer marker would be dead weight.
+      [" says", " tells ", " told ", " shouts", " auction", " -> ", "'My leader is"],
       StringComparison.Ordinal);
 
     public static ChatType ParseChatType(string action)

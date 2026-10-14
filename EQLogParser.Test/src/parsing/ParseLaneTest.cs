@@ -77,7 +77,7 @@ public class ParseLaneTest
   {
     var hits = 0;
     Action<string, double, byte> probe = (name, time, kind) => hits++;
-    ParseLane.Main.Evidence += probe;
+    ParseLane.Subscribe(ref ParseLane.Main.Evidence, probe);
     try
     {
       ParseLane.Main.Evidence?.Invoke("Kizant", 1.0, EvidenceFact.EvJoinedRaid);
@@ -97,7 +97,7 @@ public class ParseLaneTest
     }
     finally
     {
-      ParseLane.Main.Evidence -= probe;
+      ParseLane.Unsubscribe(ref ParseLane.Main.Evidence, probe);
     }
   }
 

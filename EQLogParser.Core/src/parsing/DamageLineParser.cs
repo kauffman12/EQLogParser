@@ -14,20 +14,20 @@ namespace EQLogParser
      */
     public static event Action<DamageProcessedEvent> EventsDamageProcessed
     {
-      add => ParseLane.Main.DamageProcessed += value;
-      remove => ParseLane.Main.DamageProcessed -= value;
+      add => ParseLane.Subscribe(ref ParseLane.Main.DamageProcessed, value);
+      remove => ParseLane.Unsubscribe(ref ParseLane.Main.DamageProcessed, value);
     }
 
     public static event Action<TauntEvent> EventsNewTaunt
     {
-      add => ParseLane.Main.NewTaunt += value;
-      remove => ParseLane.Main.NewTaunt -= value;
+      add => ParseLane.Subscribe(ref ParseLane.Main.NewTaunt, value);
+      remove => ParseLane.Unsubscribe(ref ParseLane.Main.NewTaunt, value);
     }
 
     public static event Action<DeathEvent> EventsNewDeath
     {
-      add => ParseLane.Main.NewDeath += value;
-      remove => ParseLane.Main.NewDeath -= value;
+      add => ParseLane.Subscribe(ref ParseLane.Main.NewDeath, value);
+      remove => ParseLane.Unsubscribe(ref ParseLane.Main.NewDeath, value);
     }
 
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
@@ -1282,17 +1282,16 @@ namespace EQLogParser
 
     private static string GetTypeFromSpell(string name, string type)
     {
-      // Which lane answers is the whole of the (kind, name) key: only the direct-damage and DoT shapes ask, at their own call sites. A third
-      // kind would need its own lane rather than share one, because an unplaced name's answer is the asking kind itself.
+      // One lane per asking kind: an unplaced name's answer is the kind that asked, so a shared table would need the kind in its key.
       var cache = type == Labels.Dot ? SpellDotTypeCache : SpellDdTypeCache;
 
-      // The old key could not be empty either (it always carried its "Dd="/"DoT=" prefix), so this is a lane-safe spelling of the same
-      // lookup rather than a new case: a null name memoises under "", exactly as it memoised under the bare prefix before.
+      // Ask the spell store with the SAME value the cache is keyed on: AbbreviateSpellName throws on null, and a throw here is a
+      // swallowed per-line fault (record loss), not a crash.
       var key = name ?? string.Empty;
       if (!cache.TryGetValue(key, out var result))
       {
         result = type;
-        var spellName = EQDataStore.Instance.AbbreviateSpellName(name);
+        var spellName = EQDataStore.Instance.AbbreviateSpellName(key);
         var data = EQDataStore.Instance.GetSpellByAbbrv(spellName);
         if (data is not null)
         {

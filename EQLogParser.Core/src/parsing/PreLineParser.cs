@@ -11,8 +11,8 @@ namespace EQLogParser
     // subscribers (CombatCapture for the one normal stream) attach to. See ParseLane.
     internal static event Action<string, double, byte> EventsEvidence
     {
-      add => ParseLane.Main.Evidence += value;
-      remove => ParseLane.Main.Evidence -= value;
+      add => ParseLane.Subscribe(ref ParseLane.Main.Evidence, value);
+      remove => ParseLane.Unsubscribe(ref ParseLane.Main.Evidence, value);
     }
 
     /*

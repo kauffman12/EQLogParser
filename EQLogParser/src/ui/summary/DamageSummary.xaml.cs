@@ -707,15 +707,8 @@ namespace EQLogParser
     }
 
     /*
-     * "There is no board here" is an EMPTY COLLECTION (ShowNoResults), not null. Null is the grid's own word for "the data has not
-     * arrived", and SfDataGrid/SfTreeGrid answer it with a spinner in the middle of the table — so a finished build that found nothing
-     * sat under an animation claiming work was still happening (field report: "the datagrid itself puts a busy icon in the center of the
-     * table area when its empty", and "it wasnt happening before this branch" — the branch that made null the no-board value is the one
-     * that put it there). See SummaryTable.ShowNoResults for the two words and which state owns each.
-     *
-     * The placeholder never was the defect; the GUARD was. This pane used to ask `ItemsSource != null` — of the widget — whether there
-     * was an answer to re-slice, and an empty table said YES: the hourglass lit over nothing and the dial queued a rebuild of a board that
-     * does not exist. That question is asked of CurrentStats now, which is what makes handing the grid an honest empty list safe.
+     * "No board here" is an EMPTY COLLECTION, never null: SfDataGrid answers a null ItemsSource with a spinner claiming work is still
+     * happening. Safe because no guard asks the widget whether an answer exists — they read CurrentStats. See SummaryTable's note.
      */
     private void ClearData()
     {
@@ -735,11 +728,9 @@ namespace EQLogParser
         switch (e.State)
         {
           case "STARTED":
-            _busyState.Arm(() =>
-            {
-              title.Content = "Calculating DPS...";
-              dataGrid.ItemsSource = NoResultsList;
-            }, "damage");
+            // The title is the whole busy state; rows stay. An empty grid is a second indicator nobody controls, and the
+            // previous board is wrong by milliseconds rather than absent (docs/DesignNotes.md → "Where a board build's time actually goes").
+            _busyState.Arm(() => title.Content = "Calculating DPS...", "damage");
             break;
           case "COMPLETED":
             CurrentStats = e.CombinedStats;

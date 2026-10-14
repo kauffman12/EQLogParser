@@ -14,8 +14,8 @@ namespace EQLogParser
      * parsed the line; this static event is the forwarder onto the Main lane every session subscriber uses. */
     public static event Action<HealProcessedEvent> EventsHealProcessed
     {
-      add => ParseLane.Main.HealProcessed += value;
-      remove => ParseLane.Main.HealProcessed -= value;
+      add => ParseLane.Subscribe(ref ParseLane.Main.HealProcessed, value);
+      remove => ParseLane.Unsubscribe(ref ParseLane.Main.HealProcessed, value);
     }
 
     private HealingLineParser()

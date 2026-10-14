@@ -7,20 +7,20 @@ using System.Threading.Tasks;
 namespace EQLogParser
 {
   /*
-   * A renamed file is not proof that its CONTENT is new. A sync client can replace a log with an identical copy (or an
-   * identical prefix plus more lines); reading that copy from zero counts every old fight twice. Compare the bytes the
-   * old reader actually reached with the replacement before choosing a starting point. This runs only on a reopen, not
-   * on the per-line path. RandomAccess leaves both streams' positions and the old StreamReader's buffer untouched.
+   * A renamed file is not proof that its CONTENT is new: a sync client can replace a log with an identical copy, and
+   * reading that copy from zero counts every old fight twice. Compare the bytes the old reader reached with the
+   * replacement before choosing where the new reader starts. Runs only on a reopen; RandomAccess leaves both stream
+   * positions and the old StreamReader's buffer alone.
    *
-   * Stop at the last shared newline: a matching fragment of a line is not a line we can safely skip. The caller drains
-   * the old reader to EOF first and passes the old stream's position, so its buffered but not yet processed bytes are
-   * never mistaken for consumed data. See docs/DesignNotes.md → "Following the live log across a midnight rollover".
+   * Answers: bytes to skip, or null for "no usable answer yet" (the compared region matched whole but held no newline).
+   * Skip complete lines only — a matching fragment of a line is not a line we may drop. The caller drains the old reader
+   * to EOF first and passes that position, so buffered-but-unprocessed bytes are never treated as consumed.
    */
   internal static class LogFollowPrefix
   {
     private const int BlockSize = 64 * 1024;
 
-    internal static async Task<long> SharedLineEndAsync(FileStream oldFile, FileStream replacement,
+    internal static async Task<long?> SharedLineEndAsync(FileStream oldFile, FileStream replacement,
       long oldReadLength, CancellationToken cancellationToken)
     {
       var limit = Math.Min(Math.Min(oldReadLength, oldFile.Length), replacement.Length);
@@ -62,6 +62,8 @@ namespace EQLogParser
           {
             for (var i = 0; i < count; i++)
             {
+              // A difference means the replacement is genuinely new content from here: everything before the last shared
+              // newline (possibly none) is the only part proven already read.
               if (oldBlock[i] != newBlock[i])
               {
                 return lastLineEnd;
@@ -77,7 +79,12 @@ namespace EQLogParser
           offset += count;
         }
 
-        return lastLineEnd;
+        /*
+         * Whole-region match with no line boundary: the replacement is byte-identical so far but the first line has not
+         * been written (or copied) yet. Starting at 0 would replay lines the old reader already handed over, and seeking
+         * to its end could drop them, so say "no answer" and let the caller retry after the next poll.
+         */
+        return lastLineEnd > 0 ? lastLineEnd : null;
       }
       finally
       {

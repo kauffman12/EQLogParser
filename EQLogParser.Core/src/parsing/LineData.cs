@@ -2,33 +2,43 @@ namespace EQLogParser
 {
   internal class LineData
   {
+    private string _action;
     private LineWords _words;
     private string[] _split;
 
-    public string Action { get; set; }
+    /* Assigning the text invalidates both cached views: a door must not answer from a copy of the line before the glue cut. */
+    public string Action
+    {
+      get => _action;
+      set
+      {
+        _action = value;
+        _words = null;
+        _split = null;
+      }
+    }
+
     public double BeginTime { get; set; }
     public long LineNumber { get; set; }
 
-    /*
-     * The word view parsers should read: built from Action on first touch (so it always reflects the post-glue-line
-     * text), zero per-word strings — see LineWords for why this exists.
-     */
+    /// <summary>The word view parsers read — built from Action on first touch, zero strings per word (see LineWords).</summary>
     public LineWords Words => _words ??= LineWords.Build(Action);
 
-    /*
-     * The legacy door: a real string[] with empty entries, materialized only when a consumer asks — and built
-     * directly from Action, NOT through Words, so a Misc/Cast line pays exactly what it paid before (one Split,
-     * no extra scan) while a damage-only line pays no array at all. Words stays the parser's own view; both doors
-     * describe the same text because every producer sets Action (all of them do; tests set both).
-     * A setter value invalidates the cached word view so the doors cannot disagree about an assigned array.
-     */
+    /// <summary>
+    /// The legacy door: a real string[] with empty entries, materialized only when a consumer asks. Assigned arrays are returned
+    /// verbatim and rebuild Words from Action, so an assigned array is a display contract, not a second source of text.
+    /// </summary>
     public string[] Split
     {
       get => _split ??= Action.Split(' ');
-      set { _split = value; _words = null; }
+      set
+      {
+        _split = value;
+        _words = null;
+      }
     }
 
-    /* true when the line came from LogReader's live tail loop instead of the initial replay load */
+    /// <summary>True when the line came from LogReader's live tail loop instead of the initial replay load.</summary>
     public bool IsMonitor { get; set; }
   }
 }

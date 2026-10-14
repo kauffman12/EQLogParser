@@ -219,11 +219,8 @@ namespace EQLogParser
         switch (e.State)
         {
           case "STARTED":
-            _busyState.Arm(() =>
-            {
-              title.Content = "Calculating HPS...";
-              dataGrid.ItemsSource = NoResultsList;
-            }, "healing");
+            // Title only: a rebuild keeps the previous board on screen (see DamageSummary.EventsGenerationStatus).
+            _busyState.Arm(() => title.Content = "Calculating HPS...", "healing");
             break;
           case "COMPLETED":
             CurrentStats = e.CombinedStats;

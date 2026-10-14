@@ -65,7 +65,16 @@ public class LogFollowPrefixTest
     Assert.AreEqual(0, await SharedEndAsync("old\n", ""));
   }
 
-  private static async Task<long> SharedEndAsync(string oldContent, string nextContent, long? oldReadLength = null)
+  [TestMethod]
+  public async Task IdenticalRegionWithNoLineBoundaryHasNoAnswer()
+  {
+    // A replacement still being copied: identical bytes, no newline yet. Neither zero nor its end is a safe start,
+    // so the caller keeps the old handle and asks again on the next poll.
+    Assert.IsNull(await SharedEndAsync("[Sat Nov 07 23:59:58 2026] A says, 'one'\n",
+      "[Sat Nov 07 23:59:58 2026] A says", Encoding.UTF8.GetByteCount("[Sat Nov 07 23:59:58 2026] A says")));
+  }
+
+  private static async Task<long?> SharedEndAsync(string oldContent, string nextContent, long? oldReadLength = null)
   {
     var directory = Path.Combine(Path.GetTempPath(), "eqlp-follow-" + Guid.NewGuid().ToString("N"));
     Directory.CreateDirectory(directory);

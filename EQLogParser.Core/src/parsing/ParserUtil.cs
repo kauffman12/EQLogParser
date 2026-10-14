@@ -183,12 +183,10 @@ namespace EQLogParser
     }
 
     /*
-     * The one hit-type table: verb → display plural, ordinal like the == / switch it replaces. Both doors below read
-     * this dictionary (the span door is what LineWords callers use without materializing a string), so the literal
-     * list can never exist twice. One behavior note versus the old switch: the plural arms returned the input word
-     * ITSELF; this returns an equal literal. Every consumer compares by value, so the difference is invisible.
+     * The one hit-type vocabulary: verb → display plural, ordinal like the switch it replaces. Both GetHitType doors read it,
+     * so the literal list cannot exist twice. Unlike the old switch's plural arms (which returned the input word itself) this
+     * returns an equal literal; every consumer compares by value.
      */
-    // Frozen so the Word door can ask with a span and no materialized string.
     private static readonly FrozenDictionary<string, string> HitTypes = new Dictionary<string, string>(StringComparer.Ordinal)
     {
       { "bash", "bashes" }, { "backstab", "backstabs" }, { "bite", "bites" }, { "claw", "claws" },
@@ -215,14 +213,21 @@ namespace EQLogParser
     internal static string GetHitType(string word)
       => word is not null && HitTypes.TryGetValue(word, out var hitType) ? hitType : null;
 
-    // .NET 10 supports alternate span lookup, but this small table measured faster with ordinal open addressing.
-    // Both doors read the one vocabulary above. See docs/DesignNotes.md → "Branch review follow-ups".
+    // Open addressing over the vocabulary above: measured faster than .NET 10's span lookup on this table size
+    // (docs/DesignNotes.md → "Branch review follow-ups"). Both hazards below are load-bearing, hence the static-ctor check.
+    // HitSlotCount must be a power of two (it is used as a mask) and must leave an empty slot (probe termination).
     private const int HitSlotCount = 128;
     private static readonly string[] HitKeySlots = new string[HitSlotCount];
     private static readonly string[] HitPluralSlots = new string[HitSlotCount];
 
     static ParserUtil()
     {
+      if ((HitSlotCount & (HitSlotCount - 1)) != 0 || HitTypes.Count >= HitSlotCount)
+      {
+        throw new InvalidOperationException(
+          $"HitTypes needs a power-of-two slot count with at least one free slot (count {HitTypes.Count}, slots {HitSlotCount}).");
+      }
+
       foreach (var (key, plural) in HitTypes)
       {
         var slot = SpanBucket(key.AsSpan());
@@ -248,6 +253,7 @@ namespace EQLogParser
       return (int)(hash & (HitSlotCount - 1));
     }
 
+    /// <summary>Span door over a LineWords token: same answer as the string door, no materialized word.</summary>
     internal static string GetHitType(LineWords.Word word)
     {
       var span = word.Span;
@@ -263,11 +269,7 @@ namespace EQLogParser
       return null;
     }
 
-    /*
-     * LineWords door for TextUtils.ParseSpellOrNpc: raw-join from index to end of line, trim the trailing '.'.
-     * Same contract as the string[] version — one materialized name is what the record owns either way. Damage's
-     * taunt paths and CastLineParser both read this; a third caller should not re-mirror it.
-     */
+    /* LineWords door for TextUtils.ParseSpellOrNpc: same contract as the string[] version (raw-join to end of line, trim '.'). */
     internal static string ParseSpellOrNpc(LineWords split, int index) => split.JoinRaw(index, split.Length - index).Trim('.');
 
     /// <summary>

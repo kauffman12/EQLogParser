@@ -186,7 +186,6 @@
     <None Remove="icons\idle.gif" />
     <None Remove="icons\loading.png" />
     <None Remove="icons\waiting.gif" />
-    <None Remove="src\control\managers\TriggerManager.cs.bak" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="DotLiquid" Version="2.3.260" />
