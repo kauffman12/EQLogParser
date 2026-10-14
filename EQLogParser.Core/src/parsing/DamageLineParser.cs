@@ -1192,9 +1192,15 @@ namespace EQLogParser
         short modifiersMask = -1;
         if (split.Length > stop + 1)
         {
-          // improve this later so maybe the string doesn't have to be re-joined
-          var modifiers = split.JoinWords(stop + 1, split.Length - stop - 1);
-          modifiersMask = LineModifiersParser.ParseDamage(attacker, modifiers[1..^1], currentTime, !attackerIsSpell);
+          // The suffix is read off the line as it stands and trimmed by slice, exactly the `[1..^1]` this used to do on a string it had just joined: two
+          // transient allocations per hit bought a mask lookup, which the modifier door now answers from a span. A suffix shorter than '()' asks as empty.
+          var modifiers = split.RawSpan(stop + 1, split.Length - stop - 1);
+          if (modifiers.Length >= 2)
+          {
+            modifiers = modifiers[1..^1];
+          }
+
+          modifiersMask = LineModifiersParser.ParseDamage(attacker, modifiers, currentTime, !attackerIsSpell);
         }
 
         // check for pets

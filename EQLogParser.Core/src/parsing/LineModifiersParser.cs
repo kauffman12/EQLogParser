@@ -24,6 +24,10 @@ namespace EQLogParser
 
     private static readonly ConcurrentDictionary<string, short> MaskCache = new();
 
+    // The same dictionary, probed by span. A hit line already carries its suffix text; this is what keeps that text from being rebuilt into a key just to
+    // look up an answer this parser has almost certainly seen before.
+    private static readonly ConcurrentDictionary<string, short>.AlternateLookup<ReadOnlySpan<char>> MaskSpanCache = MaskCache.GetAlternateLookup<ReadOnlySpan<char>>();
+
     internal static bool IsAssassinate(int mask) => mask > -1 && (mask & Assassinate) != 0;
     internal static bool IsCrit(int mask) => mask > -1 && (mask & Crit) != 0;
     internal static bool IsDoubleBowShot(int mask) => mask > -1 && (mask & Doublebow) != 0;
@@ -232,7 +236,8 @@ namespace EQLogParser
       }
     }
 
-    internal static short ParseDamage(string player, string modifiers, double currentTime, bool isPlayer)
+    /// <param name="modifiers">The suffix WITHOUT its parentheses - a span of the line is fine, nothing here keeps it.</param>
+    internal static short ParseDamage(string player, ReadOnlySpan<char> modifiers, double currentTime, bool isPlayer)
     {
       var result = Parse(modifiers);
 
@@ -282,15 +287,18 @@ namespace EQLogParser
       return result;
     }
 
-    private static short Parse(string modifiers)
+    private static short Parse(ReadOnlySpan<char> modifiers)
     {
       short result = -1;
-      if (!string.IsNullOrEmpty(modifiers))
+      if (!modifiers.IsEmpty)
       {
-        if (!MaskCache.TryGetValue(modifiers, out result))
+        // Keyed on the text as the line spelled it, which is what a span probe can offer. A doubled space inside the parentheses therefore costs an extra
+        // entry rather than a different answer: BuildVector walks WORDS and skips empty ones, so no mask can depend on that spacing.
+        if (!MaskSpanCache.TryGetValue(modifiers, out result))
         {
-          result = BuildVector(modifiers);
-          MaskCache[modifiers] = result;
+          var key = modifiers.ToString();
+          result = BuildVector(key);
+          MaskCache[key] = result;
         }
       }
 

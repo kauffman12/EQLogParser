@@ -154,6 +154,23 @@ namespace EQLogParser
       return JoinRaw(start, count);
     }
 
+    /// <summary>
+    /// The same contiguous source slice as <see cref="JoinRaw"/>, without materializing it. Empty tokens keep every original space here too, so the raw
+    /// range IS a slice of the line - which is what lets a caller that only COMPARES the text (never re-emits it) read the suffix allocation-free.
+    /// </summary>
+    internal ReadOnlySpan<char> RawSpan(int start, int count)
+    {
+      if (count <= 0)
+      {
+        return ReadOnlySpan<char>.Empty;
+      }
+
+      // Same endpoint walk as JoinRaw, so an out-of-range last index is caught the same way rather than clamped.
+      var from = _starts[start];
+      var last = start + count - 1;
+      return _source.AsSpan(from, (_starts[last] - from) + this[last].Length);
+    }
+
     /// <summary>Plain join of a range (empty tokens included) — the `string.Join(" ", split, start, count)` contract.</summary>
     internal string JoinRaw(int start, int count)
     {

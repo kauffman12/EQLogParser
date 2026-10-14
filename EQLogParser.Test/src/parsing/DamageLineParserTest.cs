@@ -104,6 +104,21 @@ namespace EQLogParser
     }
 
     [TestMethod]
+    public void SpacingInsideTheModifierParenthesesCannotChangeTheMask()
+    {
+      // The suffix is now read off the line as a span instead of being re-joined with single spaces, so the mask door can be handed 'Riposte' and
+      // 'Riposte  ' (two spaces, as some clients write them) as different TEXT. Both must still land on one mask: BuildVector walks WORDS and skips empty
+      // ones. If a future verb ever depends on its spacing, this is the test that says so here rather than on a board.
+      var tight = ParseAction("Astralx crushes Sontalak for 126225 points of damage. (Strikethrough Critical)");
+      var loose = ParseAction("Astralx crushes Sontalak for 126225 points of damage. (Strikethrough  Critical)");
+      Assert.IsNotNull(tight);
+      Assert.IsNotNull(loose);
+      Assert.AreEqual(tight.ModifiersMask, loose.ModifiersMask, "a doubled space inside the parentheses moved the mask");
+      Assert.IsTrue(LineModifiersParser.IsStrikethrough(loose.ModifiersMask));
+      Assert.IsTrue(LineModifiersParser.IsCrit(loose.ModifiersMask));
+    }
+
+    [TestMethod]
     public void TestMelee_Crushes_NoModifiers()
     {
       var record = ParseAction("Useless crushes an abyssal terror for 9022 points of damage.");
