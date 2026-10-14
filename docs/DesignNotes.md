@@ -13322,3 +13322,49 @@ whole copied prefixes, copied prefixes with new heads, unrelated days, a shared 
 UTF-8 and a prefix crossing the 64 KiB block seam (8 tests). `LogReaderRolloverTest` drives the actual reader over a renamed
 file, asserting exact line counts and old-tail-before-new-head ordering; it **builds here but runs only on Windows**, so the
 wiring is still owed there. The same Windows release checklist names a manual live-log rollover check.
+
+## Two outside reviews of this branch: what was stale, and what is on the shelf (2026-11)
+
+Both reviews ran against a tree several commits behind HEAD, and each independently proposed re-introducing range-based loading —
+the thing already measured, shipped and backed out (see "Parallel loading"). So every finding was re-checked against current code
+before anything was applied. **Already true here when the review claimed otherwise**: `LineData.Words` was lazy; progress pacing used
+`line.Length + 2`, not `Encoding.UTF8.GetByteCount`; `ParseLane` subscribed through a CAS loop and `LogProcessor` restored the *prior*
+lane on a nested bind; the hash-table invariants were guarded at type init; `_knownPlayerNamesCache` has no declaration here; no
+`ChatFilter` call site asked `During(...)` per record; `TriggerConfigControl._filterBySelectionChecked` does not exist in this tree.
+Carried anyway, because they still reproduced: the `LogFollowPrefix` comment (it described a reader that no longer exists), and the
+null-`ItemsSource` sweep in `DamageSummary`/`TankingSummary` (now `NoResultsList`).
+
+**The caveat that governs every number either review quotes.** Both measured before `LineWords` landed, and one of them says so itself:
+the split-shaped costs (`Split[i]`, `Join("")`, the histogram's string keys) are partly or wholly gone. No ratio below is a current
+measurement — re-baseline before ranking any of it against new work.
+
+On the shelf, each needing its own decision rather than a cleanup commit:
+
+- **Facts to totals, once above a selection size.** Stop materializing `CombatRecord`s when the outcome count passes a threshold and
+  aggregate in one pass over ordinals. It targets the row-key phase (dictionary key construction), which is where the time demonstrably
+  went — and it needs `BoardFanout.MinOutcomes` retuned to the point where the old path actually loses, not chosen from a chart.
+- **Dense per-name counters** for that same key phase: names are interned, so identity lookup could index an array directly. The law does
+  not move with the representation — tie-breaks stay first-wins by insertion, *never* index order (`FightDetailsTabOrderingTest` reads
+  that as product behaviour), and `ClaimRanks` keeps running on the narrow candidate set.
+- **Tail-sharing for materialized `Fight`s**: let a growing fight share its closed blocks instead of copying direction lists and
+  `TimeSegment` objects every pass. Needs the "a published Fight is never mutated" check to survive it.
+- **`EQDataStore.SearchSpellPath`**: allocates a result object per call and materializes one string per tree level, on every spell line.
+  A span-probed dictionary plus a shared empty result removes both; the `out SpellTreeResult` contract is what makes it a real refactor
+  rather than two lines.
+- **`TextUtils.CapitalizeFirst` memo** over the melee-subtype vocabulary (a closed set), which would also retire its culture argument on
+  that path — it is always invariant, and one caller passes `null`.
+- **Histogram keys** — half taken: `HitTotalsRaw` already releases the raw amount list on first read and the materialized dictionary is
+  assign-once. What remains is the composite *string* key ("name|spell") in favour of two-level or composite-integer keys.
+- **The modifier seam — taken.** A hit line's `(...)` suffix used to be joined into a string and sliced into a second one to ask a
+  question about ~20 known phrases; it is now read as a span off the line and the mask table is probed by span. Proven equal on real
+  captures, not assumed: 1,901,078 damage + 420,110 heal facts (live) and 4,356,144 + 33,805 (emu) fingerprint identically before and
+  after, the fingerprint covering `ModMask` on every row.
+
+What the proving run surfaced is **pre-existing and open**: `ColdChunkRealLogTest`'s halving guard fails on
+`local/logs/live/eqlog_Incogitable_xegony.txt` (`EstimatedBytes >= raw/2` for damage facts) at the baseline commit exactly as it does
+here. The cold store therefore does not halve that capture's rows, and nobody has explained why; ask it as its own question rather than
+treating the guard as decoration.
+
+Finally, one review finding became a test rather than a note: re-assigning `LineData.Action` must invalidate **both** text caches — a row
+is reused, Words are asked lazily and Split eagerly, and clearing one of them is how a second reader ends up walking the previous
+capture's words.

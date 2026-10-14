@@ -685,5 +685,24 @@ namespace EQLogParser
     }
 
     #endregion
+
+    [TestMethod]
+    public void ReassigningALinesActionInvalidatesBothTextCaches()
+    {
+      // A reader row is REUSED, and its text is cached two ways: Words from a lazy door, Split from an eager one. A setter that cleared one and not the
+      // other hands a parser two answers about the same line - the second reader would walk the previous capture's words. Both caches go, including on a
+      // row whose caches were never warmed (clearing nulls must not throw on the ingest path).
+      var line = new LineData { BeginTime = 10, Action = "Kizant casts Fury" };
+      Assert.AreEqual(3, line.Words.Length);
+      Assert.AreEqual(3, line.Split!.Length);
+
+      line.Action = "Kizant casts Fury of the Ages";
+      Assert.AreEqual(6, line.Words.Length, "Words survived a new Action");
+      Assert.AreEqual(6, line.Split!.Length, "Split survived a new Action");
+
+      var cold = new LineData { BeginTime = 10 };
+      cold.Action = "Sontalak crushes Astralx";
+      Assert.AreEqual(3, cold.Words.Length);
+    }
   }
 }
