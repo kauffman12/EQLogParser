@@ -93,7 +93,6 @@
                            ContextMenuOpening="GridContextMenuOpening"
                            PreviewMouseLeftButtonDown="GridPreviewLeftButtonDown"
                            PreviewMouseRightButtonDown="GridPreviewRightButtonDown"
-                           PreviewKeyDown="GridPreviewKeyDown"
                            SelectionChanged="GridSelectionChanged"
                            SelectionMode="Extended"
                            ShowRowHeader="True"

@@ -235,6 +235,16 @@ namespace EQLogParser
 
       InitializeComponent();
 
+      /*
+       * The keyboard half of the abandoned-right-press guard has to be subscribed THIS way, not with a XAML
+       * PreviewKeyDown="" attribute. SfDataGrid registers its own class handler for the arrow keys (current-cell
+       * navigation) and marks the event handled, and an instance handler added without handledEventsToo is SKIPPED once
+       * anything earlier in the same element has handled it - so a plain attribute wired the method to an event that never
+       * reaches it, and an abandoned mouse press survived every arrow key the operator then pressed. A keyboard-opened menu
+       * (Shift+F10, the Application key) restored THAT instead of what the keys had just selected.
+       */
+      fightGrid.AddHandler(UIElement.PreviewKeyDownEvent, new KeyEventHandler(GridPreviewKeyDown), true);
+
       // The search box's watermark doubles as the empty-filter state (UiElementUtil.SetWatermark): while the cue
       // word shows, nothing is filtered - TextChanged reads that off the Text itself, not a side flag.
       UiElementUtil.SetWatermark(fightSearchBox, Resource.NPC_SEARCH_TEXT);
