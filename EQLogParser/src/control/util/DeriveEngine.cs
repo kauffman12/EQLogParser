@@ -546,10 +546,11 @@ namespace EQLogParser
 
           // Wall-clock freshness also gates opening: historical snapshots must not repeatedly open an already expired board.
           // A completed one-shot is recent activity too; being dead before the first derive must not make it invisible.
-          var activityOrdinal = DamageOverlayLifecycle.LatestActivityOrdinal(snapshot.AllFights);
+          var now = DateUtil.ToDotNetSeconds(DateTime.Now);
+          var activityOrdinal = DamageOverlayLifecycle.LatestActivityOrdinal(snapshot.AllFights, now);
           var freshDamage = ConfigUtil.IfSet("IsDamageOverlayEnabled")
                             && activityOrdinal > _lastAnnouncedActivityOrdinal
-                            && DamageOverlayLifecycle.HasRecentActivity(snapshot.AllFights, DateUtil.ToDotNetSeconds(DateTime.Now),
+                            && DamageOverlayLifecycle.HasRecentActivity(snapshot.AllFights, now,
                               ConfigUtil.GetSettingAsInteger("OverlayDamageMode"));
 
           // Swapped before the event: a selection made from the fresh rows materializes against the pass

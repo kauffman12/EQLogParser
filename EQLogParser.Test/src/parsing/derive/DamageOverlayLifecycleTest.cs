@@ -98,10 +98,10 @@ public class DamageOverlayLifecycleTest
     log.Die("a rat", 0);
     Damage(500, log.Board(meter, 1));
     Assert.IsTrue(DamageOverlayLifecycle.HasRecentActivity(log.Rows, T0 + 1, 0));
-    var announced = DamageOverlayLifecycle.LatestActivityOrdinal(log.Rows);
+    var announced = DamageOverlayLifecycle.LatestActivityOrdinal(log.Rows, double.PositiveInfinity);
     Assert.IsTrue(announced > 0);
     Damage(500, log.Board(meter, 8));
-    Assert.AreEqual(announced, DamageOverlayLifecycle.LatestActivityOrdinal(log.Rows), "republishing a death is not new damage");
+    Assert.AreEqual(announced, DamageOverlayLifecycle.LatestActivityOrdinal(log.Rows, double.PositiveInfinity), "republishing a death is not new damage");
     Assert.IsNull(log.Board(meter, 8.5));
     Assert.IsFalse(DamageOverlayLifecycle.HasRecentActivity(log.Rows, T0 + 8.5, 0));
     Assert.IsNull(log.Board(meter, 10));
@@ -113,12 +113,26 @@ public class DamageOverlayLifecycleTest
     var log = new Capture();
     log.Hit("a rat", 0, 500);
     log.Board(new DamageOverlayLifecycle(), 0);
-    var first = DamageOverlayLifecycle.LatestActivityOrdinal(log.Rows);
+    var first = DamageOverlayLifecycle.LatestActivityOrdinal(log.Rows, double.PositiveInfinity);
     log.Hit("a rat", 0, 200);
     log.Board(new DamageOverlayLifecycle(), 0);
-    Assert.IsTrue(DamageOverlayLifecycle.LatestActivityOrdinal(log.Rows) > first);
+    Assert.IsTrue(DamageOverlayLifecycle.LatestActivityOrdinal(log.Rows, double.PositiveInfinity) > first);
   }
 
+  [TestMethod]
+  public void ARowTheClockHasNotReachedYetSpendsNoWatermark()
+  {
+    var log = new Capture();
+    log.Hit("a rat", 0, 500);
+    log.Board(new DamageOverlayLifecycle(), 0);
+
+    // Every row here begins after `now`, which is what a log whose clock runs ahead of the machine's looks like. Bumping the watermark on one would
+    // spend the announcement the next REAL arrival earns, and the overlay would open a fight late with nothing in the log to explain it.
+    Assert.AreEqual(0, DamageOverlayLifecycle.LatestActivityOrdinal(log.Rows, -1),
+                    "a future-dated row moved the opening watermark");
+    Assert.IsTrue(DamageOverlayLifecycle.LatestActivityOrdinal(log.Rows, double.PositiveInfinity) > 0,
+                  "the filter swallowed an ordinary row too");
+  }
   [TestMethod]
   public void FreshCompletedBoardDoesNotShrinkOnTheSecondTickOrARebuiltSnapshot()
   {
