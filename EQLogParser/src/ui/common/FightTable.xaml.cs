@@ -73,13 +73,9 @@ namespace EQLogParser
     private DerivedFightRow _menuRow;
 
     /// <summary>
-    /// What the grid had selected when the RIGHT button went down, or null. SfDataGrid treats a right-click as
-    /// selection input like any other: its press handling (decompiled 33.1.49 shows no button guard anywhere
-    /// above it) collapses an extended selection to just the clicked row before any menu exists — operators
-    /// reported "right click clears everything", and with groups too big for one screen the theft hid until they
-    /// scrolled. A press asks this pane a question; it does not own the selection. Remembered on the way down,
-    /// put back by GridContextMenuOpening before the menu items, the boards or any gesture read what survived.
-    /// Ctrl/Shift presses ARE the operator editing the selection: nothing is remembered then, nothing restored.
+    /// What was selected when the RIGHT button went down, or null. SfDataGrid treats a right-press as selection input and collapses an
+    /// extended selection before any menu exists; this pane remembers it on the way down and puts it back at ContextMenuOpening.
+    /// A Ctrl/Shift press IS the operator editing the selection, so nothing is remembered then.
     /// </summary>
     private List<DerivedFightRow> _rightPressSelection;
 
@@ -174,31 +170,20 @@ namespace EQLogParser
     private bool _awaitingFirstRows;
 
     /*
-     * Set when THIS open's reader reports done (ReportReadFinished, fed by EventsLogLoadingComplete). It turns "the list
-     * is now the answer" from a guess into a fact: a 0-row snapshot MID-read proves nothing — an early pass can find no
-     * finished fight while rows are still landing, and settling on that left the pane blank for the rest of the load.
-     * After the reader is done, zeros ARE all this capture will say (a capture with no fights, a follow-from-end open),
-     * and the band settles. `_linesRead` is the same pump's other number, and the opening phrase only: the detail line
-     * counts CAPTURED FACTS (see UpdateLoadDetail) — lines speak just for the seconds before the first fact batch exists.
+     * Set when this open's reader reports done. A 0-row snapshot MID-read proves nothing (an early pass can find no finished fight while
+     * rows are still landing); after the read, zeros are all this capture has to say and the band may settle on them.
      */
     private bool _readerDone;
     private long _linesRead;
 
     private DispatcherTimer _bandGuard;
 
-    /*
-     * The band waits out a post-load collection (see SettleLoadBand), and this timer is the only thing that wakes it afterwards.
-     * Created once per control; its handler comes off on every stop so successive holds cannot stack ticks.
-     */
+    /// <summary>Wakes the band after the post-load collection it is waiting on (see SettleLoadBand).</summary>
     private DispatcherTimer _cleanupHold;
     private long _cleanupHoldDeadline;
 
-    /*
-     * How long the band may outlive its rows for a cleanup that never reports back - an escape hatch, not a wait. Sized from the measured
-     * wall of a pass itself: 236 ms in a real session, 3,065 ms on a ~4.8 GB raid heap (GcTidyUp; docs/DesignNotes.md -> "Garbage collection
-     * after loading a log"), so this clears the worst pass ever recorded with room, and still ends long before a bar reads as broken. The same
-     * order as _bandGuard's 8 s, which is the pane's other "something never arrived" deadline.
-     */
+    /* Escape hatch, not a wait: longer than the worst collection ever measured (docs/DesignNotes.md → "Garbage collection after loading a log")
+     * and short enough that a bar nobody pays for still comes down. */
     private const long CleanupHoldMs = 8_000;
 
     /*
@@ -360,13 +345,9 @@ namespace EQLogParser
     }
 
     /*
-     * The reader finished with this open. Internal for the WPF band test (a real engine needs a file); production arrives
-     * through OnLogLoadingComplete on the dispatcher, which is also the only thread that touches the band state.
-     *
-     * Arms one short guard when rows have still not landed: without it, a capture that produces no fights AND no derive pass
-     * after its last mid-read snapshot would keep the band up forever — nothing new arrives, so the cadence has nothing left
-     * to derive and never sends another snapshot to settle it. If rows have not painted by then, "no fights" is the answer
-     * however many facts there were, and the band comes down over whatever the list shows.
+     * The reader finished with this open; only the dispatcher touches band state. Arms one guard if rows still have not landed:
+     * a capture with no fights and no further derive pass would otherwise hold the band forever, nothing being left to derive.
+     * Internal for the WPF band test (a real engine needs a file).
      */
     internal void ReportReadFinished()
     {
@@ -392,16 +373,9 @@ namespace EQLogParser
     }
 
     /*
-     * The bar comes down when this session has an answer AND the load's cleanup is no longer owed.
-     *
-     * By the time this is asked the ROWS are already painted - only the HIDING is deferred. A loaded capture ARMS its labelled cleanup at 100 %
-     * and pays it after that capture's first board trio answers (MainWindow.PayOwedLoadTidy), which is after the first full derive and its boards
-     * have allocated - the only moment on a long load where there is something worth collecting. A stop-the-world landing on a grid whose bar just
-     * dropped reads as a hang instead of as the end of a load, so the pause stays behind the bar that asked for it (2026-10-13), and the rows
-     * painted underneath it are the answer the bar was covering all along.
-     *
-     * The list does not own when a collection happens and never blocks on one: it asks whether one is owed (PostLoadCleanup) and holds for at most
-     * CleanupHoldMs, so a debt nobody pays cannot strand the bar over the answer - hence the expiry line naming an unpaid cleanup below.
+     * The bar comes down when this session has an answer AND no load cleanup is owed. Only the HIDING is deferred here — the rows are
+     * already painted. A stop-the-world collection landing on a grid whose bar just dropped reads as a hang, so the pause stays behind
+     * the bar that asked for it; PostLoadCleanup is asked, never waited on, and CleanupHoldMs bounds the wait (MainWindow.ArmingLoadTidy).
      */
     private void SettleLoadBand(string reason)
     {
@@ -418,11 +392,8 @@ namespace EQLogParser
     }
 
     /*
-     * MainWindow tells this pane when the load's collection actually starts and stops, which is the only thing that changes what the BAND SAYS.
-     * Holding the bar covers a wider window than the pause: from 100 % the derive is still running, so "Building the Fight List…" stays the honest
-     * words until the collector itself is in front of the operator, and they must appear the moment it is (PostLoadCleanup.Notice is that one word,
-     * shared with the application status line). A band this session has already put down is not brought back for a cleanup - the list answers for
-     * itself by then, which is the same rule as mid-read settles.
+     * The collection's start/stop is the only thing that changes what the band SAYS (PostLoadCleanup.Notice is shared with the status line).
+     * A band this session already put down is not brought back for a cleanup.
      */
     internal void ReportCleanupState(bool cleaning)
     {
@@ -524,12 +495,8 @@ namespace EQLogParser
       _bandGuard?.Stop();   // a guard armed for the session that just closed must not settle this one's band
       StopCleanupHold();    // ...and neither may a hold waiting on the dead capture's cleanup
 
-      /*
-       * A right-press memory belongs to the grid it was taken in. A press whose menu never opened (released outside the grid)
-       * leaves its snapshot standing, and the next menu can be opened by the Apps key on a DIFFERENT capture — restoring then
-       * would hand the new grid row objects from the dead one, and row instances are the currency. Left-press invalidates it
-       * within a session; this invalidates it across one.
-       */
+      // A press whose menu never opened leaves its snapshot standing; restoring it into the next capture's grid would hand out
+      // row instances from the dead one (docs/DesignNotes.md → "The fight list announces when the gesture ends").
       _rightPressSelection = null;
       _reveal.Arm();
       _sessionPainted = false;
@@ -559,11 +526,7 @@ namespace EQLogParser
         _currentTimeline = snapshot.Timeline;
         _currentStamp = SelectionStamp(snapshot);
 
-        /*
-         * The list answers for the band when it HAS rows, or when the reader finished and these zeros are the whole
-         * statement (see ReportReadFinished for why a mid-read 0-row snapshot must NOT settle it). Rows landing while
-         * the pump is still under 100 % still win: real rows beat a bar, and they always will.
-         */
+        // Real rows beat a bar even mid-read; zeros only answer once the reader has finished (see ReportReadFinished).
         if (!_loadBandSettled && (snapshot.Rows.Count > 0 || _readerDone)) SettleLoadBand("first rows of the session");
 
         if (!_sessionPainted && snapshot.Rows.Count > 0)
@@ -766,12 +729,8 @@ namespace EQLogParser
     }
 
     /*
-     * The moving part under the headline, spoken in CAPTURED FACTS (operator 2026-10-13: "it's still counting lines" —
-     * thirteen million of them out loud reads as telemetry from the wrong feature, and this pane counts captures). One
-     * source: the session's own capture, answered through OnCapturing as rows land — a bulk read fills it in file order,
-     * so this number moves for as long as the load runs.
-     * Lines remain only as the opening phrase, for the seconds before the first fact batch lands (and for an open that
-     * reads no history, "waiting for first facts" holds until the monitor's first real capture).
+     * The detail line speaks in captured facts, not lines: thirteen million "lines" out loud reads as telemetry from the wrong feature.
+     * Lines are the opening phrase only, for the seconds before the first fact batch lands.
      */
     private void UpdateLoadDetail()
     {
@@ -1504,9 +1463,8 @@ namespace EQLogParser
     }
 
     /// <summary>
-    /// Replaces the selection with exactly these rows — the same instance-held clear-and-re-add RebuildVisible does
-    /// after a dial moves, so every row goes through the control's own selection-changed door. Rows that left the
-    /// projection between press and open are not chased; they stopped being on screen by the operator's own dials.
+    /// Replaces the selection with exactly these rows, through the control's own selection-changed door. Rows that left the
+    /// projection between press and open are not chased — the operator's dials removed them.
     /// </summary>
     private void RestoreSelectedRows(List<DerivedFightRow> rows)
     {

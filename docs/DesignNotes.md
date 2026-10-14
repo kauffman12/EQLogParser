@@ -2969,6 +2969,11 @@ call that makes re-selecting cheap. The old behaviour on a fast build was worse 
 select-then-settle sequence strobed three tables and a chart through an empty state to announce work that finished inside
 the frame it took to say so. During those 150 ms the previous table stays up, wrong by milliseconds and readable.
 
+**2026-10-14: the emptying went too.** The armed action in all three summary panes now writes only its title. The tick that also assigned
+`NoResultsList` made every build over 150 ms lose its rows for its whole duration — 1.4–1.9 s on a farm-night select-all — which is the same
+strobe this section was written against, just long enough to read as lost work. `SummaryTable`'s note carries the surviving law: an empty
+collection at the two doors that mean "no board", never null, and nothing at all while a build is running.
+
 `Dispatcher.Yield(DispatcherPriority.Render)` (`DamageSummary.GroupSelectionChanged`) is the sibling idiom for the case where
 the blocking work follows on the UI thread — a yield at Render sits behind the render pass it just asked for, which is exactly
 what makes the busy state visible there. It cannot help here, because nothing on this path blocks the UI thread; the answer
@@ -5695,11 +5700,9 @@ Three things fall out of that table.
 - **(c) Trim the fixed overheads.** Tail delay 200 → 50–100 ms, pump 250 → 100 ms: about 0.3 s for nearly no risk, and it helps every derived surface, not just the meter.
 - **(d) Just lower `FloorSeconds`.** One constant, but it buys latency by parking ingest — I would not do this before (a) or (b) makes passes cheap.
 
-Probe kept as `EQLogParser.Test/src/parsing/derive/MeterBoardCostRealLogTest.cs` (gated, skipped without the variable):
-```
-EQLP_DERIVE_COST=local/eqlog_Incogitable_xegony.txt dotnet test EQLogParser.Test/EQLogParser.Test.csproj \
-  --filter MeterBoardCost --logger "console;verbosity=detailed"
-```
+These numbers came from `MeterBoardCostRealLogTest` (gated on `EQLP_DERIVE_COST`), retired with the other load probes in `6f84744c` — see
+"Retiring probes that no longer protect production". They are reproducible only through a throwaway harness now; `StatsBuildTrace` still
+prints the same phases from a real session.
 
 ### What was built from that list: the cheap lane, and 125 ms of overhead (2026-09-29)
 
@@ -8934,8 +8937,8 @@ Two traps, both paid for:
 
 ## The damage parser reads word views; the per-line Split array is gone (2026-08)
 
-`docs/tokenizer-plan.md` (local note) proposed killing the 374 B `Split(' ')` that "Where ingest spends its time" named as
-the widest single allocation in ingest. Shipped first for the **damage** path; the completion for Cast
+The plan that killed the 374 B `Split(' ')` "Where ingest spends its time" named as the widest single allocation in ingest.
+Shipped first for the **damage** path; the completion for Cast
 and Misc is its own section below. Even at this step `LineData.Split` stopped being eager: it materializes from `Action`
 only for a line that actually reaches an array-consuming parser, and the eager `lineData.Split = …` in `LogProcessor` is gone.
 
@@ -9867,7 +9870,7 @@ the chart's repaint signal can no longer vanish or double silently) and **three 
 they do not ask the capture again. Invariants run alongside so a diff has a meaning: raid Total = Σ displayed rows, an
 aggregate row = Σ its children, both lists ordered by Total desc, `% Total` accounts for 100 %, and Dps = Total / seconds.
 
-**Measured cost that motivates it** (`EQLP_DERIVE_COST=local/logs/live/eqlog_Incogitable_xegony.txt`, 1,901,078 facts /
+**Measured cost that motivates it** (the retired `EQLP_DERIVE_COST` gate over `local/logs/live/eqlog_Incogitable_xegony.txt`, 1,901,078 facts /
 4,646 rows): materialize **704-831 ms** versus whole board **3,729-3,840 ms** over 1,720,467 outcomes — about
 **1.75 µs per outcome**, for what is "add a few counters"; small windows are 1-20 ms, so the enemy is the per-record
 constant, not complexity. Splitting the build into named phases (`StatsBuildTrace.Stage`, printed on the same line) says
@@ -10023,8 +10026,8 @@ annotations directive is a **public-visible change**, so the new fields were dec
 
 Three boards, one set of laws, and the phase table that says so. Measured on `local/logs/live/eqlog_Incogitable_xegony.txt`
 (1,901,078 damage facts, 403,740 heals, 4,646 rows) through a **whole-capture selection** — 4,452 fights, 1,720,467 outcomes,
-414 players — via `EQLP_DERIVE_COST=<log>` (`MeterBoardCostRealLogTest`), which prints each board's `StatsBuildTrace.Stage`
-phases beside its totals. Three passes, ranges shown because that is what repetition gave:
+414 players — through `MeterBoardCostRealLogTest`, since retired with the other load probes, which printed each board's
+`StatsBuildTrace.Stage` phases beside its totals. Three passes, ranges shown because that is what repetition gave:
 
 | phase | start of this work | now |
 |---|---|---|

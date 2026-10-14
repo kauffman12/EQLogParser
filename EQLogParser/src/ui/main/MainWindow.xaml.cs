@@ -32,18 +32,11 @@ namespace EQLogParser
     private FctOverlayWindow _fctOverlay;
     private readonly DispatcherTimer _saveTimer;
 
-    /*
-     * One summary-board build at a time (see SummaryBuildGate for the three laws). Every announcement of a selection — a
-     * command, a menu closing, the settle timer, a derive pass whose content moved — used to spawn its own task here, and a
-     * whole-capture selection materializes in seconds, so "twice" meant two full record sets allocated at once and two
-     * builder runs serialized behind them, and on a live raid it meant one per pass without bound.
-     *
-     * The key holds only what this window can name: the rows, the capture's content stamp (owned by the pane) and the tanking
-     * board's damage-type filter. The six DamageValidator settings change the answer without moving any of those — they are read
-     * fresh out of AppSettings by every build, and their door is the pane's own rebuild, not this gate. An identity event (a pet
-     * pair learned) was wired into a generation bump here until 2026-11 measurement showed it rebuilt all three boards to
-     * byte-identical totals behind one select-all — no derived board reads those stores (docs/DesignNotes.md -> "Name every door").
-     */
+        /*
+         * One summary-board build at a time (SummaryBuildGate). The key holds only what this window can name: the rows, the capture's content stamp and
+         * the tanking filter; the six DamageValidator settings are read fresh by each build at the pane's own door. An identity-event bump was wired in
+         * here until measurement showed it rebuilt all three boards to identical totals (docs/DesignNotes.md → "Name every door").
+         */
     private readonly SummaryBuildGate _summaryGate = new(static work => Task.Run(work));
     private long _summaryGestureGeneration;
 
@@ -264,14 +257,10 @@ namespace EQLogParser
           }
         }
 
-        /*
-         * The fight list IS a core window, so it docks at startup whatever the saved state says: during the experiment
-         * an operator could have hidden "the old one" and shown the derived pane instead, and arriving at a restart
-         * with no fight list at all reads as the feature breaking - the exact failure the dock-at-startup law was
-         * written for. The vestigial experimental pane (an empty ContentControl that exists only so old dockSite.xml
-         * entries still resolve - LoadDockState throws on a missing window and the catch resets EVERYTHING) is hidden
-         * again even if the saved state restored it.
-         */
+                /*
+                 * The fight list is a core window, so it docks at startup whatever the saved state says — arriving with no fight list reads as the feature
+                 * breaking. The vestigial experimental pane stays hidden; it exists only so old dockSite.xml entries still resolve.
+                 */
         DockingManager.SetState(npcWindow, DockState.Dock);
         DockingManager.SetState(mirrorFightWindow, DockState.Hidden);
 
@@ -527,13 +516,10 @@ namespace EQLogParser
     /* Asked to set up, or to stop: the overlay's lock state is the answer, so the menu never has to remember one of its own. */
     private void ToggleConfigureFctOverlayClick(object sender, RoutedEventArgs e) => SetFctOverlayConfiguring(_fctOverlay is null || _fctOverlay.Locked);
 
-    /*
-     * View -> FCT Overlay -> Reset Position: the same three steps as the Damage Meter's, in the order this overlay needs. Closing
-     * first because a closing window writes where it was, which would restore what is about to be cleared; then forgetting the
-     * geometry; then rebuilding only if it was on screen, so resetting an overlay you are not using does not switch one on.
-     * Rebuilding rather than moving is the point — the shipped size and centring live in RestoreSettings, and a reset that only
-     * moved the current window would keep a size nobody can drag back from off-screen.
-     */
+        /*
+         * View → FCT Overlay → Reset Position: close first (a closing window writes where it was), forget the geometry, then rebuild only if it was on
+         * screen. Rebuild rather than move, because the shipped size and centring live in RestoreSettings.
+         */
     private void ResetFctOverlayClick(object sender, RoutedEventArgs e)
     {
       var wasShowing = _fctOverlay?.IsVisible == true;
@@ -547,13 +533,10 @@ namespace EQLogParser
       }
     }
 
-    /*
-     * Setup is the only way in. Locked means click-through (WS_EX_TRANSPARENT) with no header and no panel — numbers over EverQuest
-     * and nothing else — and it is where the overlay always opens and what Cancel and Save return you to: a state that outlived its
-     * session would turn an overlay into a click-eating rectangle the next time the game starts, so there is no setting for it.
-     * Asking from the menu is deliberate, because while locked the window takes no input at all, and this overlay lives mid-screen,
-     * where permanent settings furniture would fight the game.
-     */
+        /*
+         * Setup is the only way in. Locked means click-through with no header and no panel, and it is where the overlay always opens and what Cancel and
+         * Save return to — a state that outlived its session would leave a click-eating rectangle, so there is no setting for it.
+         */
     private void SetFctOverlayConfiguring(bool configuring)
     {
       if (_fctOverlay is null)
@@ -663,15 +646,11 @@ namespace EQLogParser
       }
     }
 
-    /*
-     * The auto-open rule. It raises on a worker thread (the derive thread), so the window is still created through the
-     * dispatcher and re-checked there — the meter opens once, at most, however many passes announce the same pull.
-     *
-     * This is also what gives the meter's X its meaning: closing the window does not disable anything, so damage brings the
-     * board back (and back to the same numbers — a closed window does not reset the meter's start). "Disable Meter" is how you
-     * keep it shut. The old engine announced on every damage line of a fight, which is why its X behaved that way; the derive
-     * raises at cadence instead, and AutoOpenMeter's already-open check swallows all but the first.
-     */
+        /*
+         * The auto-open rule: raised on the derive thread, so creation goes through the dispatcher and is re-checked there — the meter opens at most once
+         * however many passes announce the same pull. This is also what gives the X its meaning: closing changes nothing, damage brings the board back at
+         * the same numbers; "Disable Meter" is how you keep it shut.
+         */
     private void SubscribeOverlayFights()
     {
       DeriveEngine.LiveDamageObserved += OnLiveDamage;
@@ -732,14 +711,10 @@ namespace EQLogParser
       await MainActions.CreateBackupAsync();
     }
 
-    /*
-     * A data point event arrives on a builder's thread and its redraw runs on the UI thread, so rebuilds that land close together queue
-     * full redraws behind each other - three builders can ask for three.
-     *
-     * The icon is handed over as an object and its Tag is read INSIDE the dispatched callback, never here. Reading a property of that
-     * control from this thread throws `InvalidOperationException: the calling thread cannot access this object`, because the event arrives
-     * on a stats builder's thread. Whatever else changes at this seam, the `icon.Tag as string` read stays on the UI side of the hand-off.
-     */
+        /*
+         * A data point event arrives on a builder's thread and redraws on the UI thread, so rebuilds landing close together queue full redraws. The icon
+         * crosses as an object and its Tag is read INSIDE the dispatched callback — reading that control here throws.
+         */
     private void QueueChartUpdate(FrameworkElement icon, DataPointEvent e)
     {
       Dispatcher.InvokeAsync(() => HandleChartUpdate(icon.Tag as string, e));
@@ -754,27 +729,16 @@ namespace EQLogParser
       }
     }
 
-    /*
-     * The board path, from the ONLY fight list: the builders get ordinary Fight objects whose blocks were rebuilt
-     * from captured facts, so no summary has to know anything new. Damage and tanking are both fed here, off the
-     * same materialized rows — a derived row carries what the raid did to it in DamageBlocks and what it did to
-     * the raid in TankingBlocks, which is the split TankingStatsBuilder already reads.
-     *
-     * The healing board arrives by a different door, because it reads records rather than fights: the session
-     * materializes the heal facts inside this selection's window and hands them in as options.Heals (see
-     * HealSummarySource). Same click, same AllRanges window, so all three boards answer to one clock — and when
-     * no fight is selected each of them is told to clear, healing included.
-     *
-     * An empty selection still reaches the builders: zero npcs is how they are told to clear their boards, which
-     * is what the legacy list does with an empty selection too.
-     */
+        /*
+         * The board path, from the one fight list: builders get ordinary Fight objects, damage and tanking both fed off the same materialized rows. The
+         * healing board arrives by another door (it reads records): the session materializes this window's heal facts into options.Heals
+         * (HealSummarySource). Same click, same AllRanges window; an empty selection still reaches the builders, which is how they clear.
+         */
     /// <summary>
-    /// The fight list pane as a plain reference, so the board build can ask it to watch its rows. Getting it means reading
-    /// <c>npcWindow.Content</c>, and that is a DependencyObject read: the same law the tanking filter below obeys — nothing
-    /// on the summary gate's worker thread walks the dock site. Assign ON THE UI THREAD only. (The first version read
-    /// <c>.Content</c> inside the build, threw InvalidOperationException there, and NO board shipped — "selection worked but
-    /// nothing ever built".)
-    /// </summary>
+        /// <summary>
+        /// The fight list pane as a plain reference for the board build. Reading <c>npcWindow.Content</c> is a DependencyObject read, so this is assigned
+        /// ON THE UI THREAD only — the first version read it inside the build, threw there, and no board shipped.
+        /// </summary>
     private FightTable _fightPane;
 
     private void DerivedSelectionChanged(BoardRequest request, DerivedSnapshot snapshot)
@@ -796,41 +760,30 @@ namespace EQLogParser
         tankingDamageType = ((TankingSummary)tankControl.Content).DamageType;
       }
 
-      /*
-       * Materializing allocates one record per selected fact, so it belongs on the worker with the build; the UI thread's
-       * part ends at "these fights" plus the key that says what this answer is computed FROM — the rows, the capture's
-       * content stamp (facts + identity verdicts, owned by the pane because a pass is what moves it) and the tanking board's
-       * damage-type filter. The gate drops a request whose key has already been built or is
-       * building, queues at most one newer one behind a run, and never lets two materializations overlap.
-       */
+            /*
+             * Materializing belongs on the worker with the build; the UI thread's part ends at the rows plus the key this answer is computed from. The gate
+             * drops a duplicate key, queues at most one newer request, and never overlaps two materializations.
+             */
       if (request.Reason == BoardReason.Manual) _summaryGestureGeneration++;
       var key = SummaryKeyFor(session.SessionId, request.Fights, request.ContentStamp, tankingDamageType, _summaryGestureGeneration);
       var askedAt = Stopwatch.GetTimestamp();
       var buildPane = _fightPane;
       var outcome = _summaryGate.Request(key, () => BuildBoards(session, snapshot, buildPane, request, tankingDamageType, askedAt));
 
-      /*
-       * One line per ask, whatever the gate decided, because "the damage grid filled three times" is a question about DOORS and this is
-       * the only place that sees both the door (which the pane names) and what the single-flight rule made of it. Debug rather than Info:
-       * asks are one-per-gesture and the line is diagnostic trace, not something a player needs to see — the boards on screen answer for
-       * themselves, and EQLogParser.log stays clean unless Debug=True. Asks from the panes' own doors do NOT come through here — they
-       * call the builders directly, and StatsBuildTrace is what names them.
-       */
+            /*
+             * One Debug line per ask, whatever the gate decided: this is the only place that sees both the door (named by the pane) and what single-flight
+             * made of it. Pane doors that call builders directly do not come through here — StatsBuildTrace names those.
+             */
       Log.Debug($"board ask [{request.Reason}]{(request.Detail is null ? string.Empty : $" {request.Detail}")}"
                + $": {request.Fights.Count} fight(s), stamp {request.ContentStamp}, tank type {tankingDamageType}"
                + $" -> {outcome}");
     }
 
-    /*
-     * Every input the three builders read, in one long. Order matters as much as content (a selection of rows 1,2 is the
-     * same question as 2,1 but the pane walks them in list order and so does this), and 0 is reserved for "never built" by
-     * SummaryBuildGate, so a computed 0 becomes 1.
-     *
-     * A hash means two different questions could collide and one would be skipped. At 64 bits over a session's few hundred
-     * announcements that is not a risk worth an exact key (the exact alternative is a string over up to thousands of ids,
-     * built per announcement, on the UI thread) — but it IS why the gate logs its two non-Started outcomes: a board that
-     * refuses to update while the pane says it announced is diagnosable from eqlogparser.log rather than argued about.
-     */
+        /*
+         * Every builder input in one long. Order matters as much as content (the pane walks rows in list order), and 0 is reserved for "never built", so a
+         * computed 0 becomes 1. A hash could collide in principle; at 64 bits over a session's announcements that beats an exact key built from thousands
+         * of ids on the UI thread — which is why the gate logs its non-Started outcomes instead of arguing later.
+         */
     internal static long SummaryKeyFor(int sessionId, IReadOnlyList<DerivedFight> selected, long contentStamp, int tankingDamageType,
       long gestureGeneration = 0)
     {
@@ -852,14 +805,10 @@ namespace EQLogParser
      */
     private bool SessionStillOpen(DeriveEngine session) => session.SessionId == Volatile.Read(ref _engineSessionId);
 
-    /*
-     * The worker's half of one announcement: materialize, then feed all three boards off the SAME rows. `askedAt` is the moment the
-     * pane asked, so the line shows how long this build waited behind another one — "waited 3400 ms" IS the single-flight rule working,
-     * and a triple would read as three lines that each waited on something.
-     *
-     * Below `BoardFanout.MinOutcomes` the three builds run here in today's order; above it they run side by side (see BoardFanout for
-     * what makes that safe and for the one behaviour change it carries: a throwing board no longer takes the other two with it).
-     */
+        /*
+         * The worker's half: materialize, then feed all three boards off the SAME rows. `askedAt` shows how long this build waited behind another — a
+         * waited-3400 ms line IS single-flight working. Below BoardFanout.MinOutcomes the three builds run here in order; above it, side by side.
+         */
     private bool BuildBoards(DeriveEngine session, DerivedSnapshot snapshot, FightTable pane, BoardRequest request, int tankingDamageType, long askedAt)
     {
       var waitedMs = StatsBuildTrace.ElapsedSince(askedAt);
@@ -899,13 +848,10 @@ namespace EQLogParser
           return false;
         }
 
-        /*
-         * The three option objects are built up front because they may be handed to three workers: each board gets its OWN options
-         * (including their own BuildFailed result), and all three carry ONE trace group so the
-         * siblings of this request never warn about each other (StatsBuildTrace rule 2). Building them before damage runs instead of
-         * between builds is what makes "three boards, one question" the same object graph either way; nothing observable moves, since
-         * an options object is a bag of references this method fills from `input` and no builder reads another's.
-         */
+                /*
+                 * The three option objects are built up front because they may go to three workers: each board gets its own options (and its own BuildFailed
+                 * result), all carrying ONE trace group so siblings never warn about each other (StatsBuildTrace rule 2).
+                 */
         var buildGroup = StatsBuildTrace.NextGroupId();
 
         GenerateStatsOptions damageStatsOptions = new()
@@ -943,28 +889,20 @@ namespace EQLogParser
                  + (input.WithoutDamage > 0 ? $", {input.WithoutDamage} selected fight(s) no facts at all" : string.Empty)
                  + $" | materialized in {materializeWatch.Elapsed.TotalMilliseconds:F0} ms, waited {waitedMs:F0} ms behind any earlier build");
 
-        /*
-         * Serial or fanned out — the boards are the SAME three calls over the SAME options either way; what changes is how many
-         * workers carry them (docs/DesignNotes.md → "Three boards, three workers"). The threshold is measured: below 50k outcomes the
-         * whole build is tens of milliseconds and three thread starts are the finding, above it a farm-night select-all saves
-         * hundreds of ms to seconds and a live capture's periodic re-run of a held big selection stops spending its wall time in a
-         * line. The decision reads `UnaskedRefresh.OutcomeCount` — the same meter the refresh budget prices a build with — so the two
-         * can never drift apart into different ideas of how big this selection is.
-         *
-         * Fanning out happens INSIDE this one request's work action: the gate still has one build in flight, still drops duplicates
-         * and still keeps only the newest queued question, so there is never a second materialization running (that is the regression
-         * the gate exists to refuse). Below the constant the path is today's code, in today's order.
-         */
+                /*
+                 * Serial or fanned out, the boards are the same three calls over the same options; only the worker count changes, decided at the measured
+                 * threshold (docs/DesignNotes.md → "Three boards, three workers"). The decision reads UnaskedRefresh.OutcomeCount — the same meter the refresh
+                 * budget uses — so the two cannot drift apart. Fanning happens inside this one request: the gate still has one build in flight, so there is
+                 * never a second materialization.
+                 */
         var outcomes = UnaskedRefresh.OutcomeCount(request.Fights);
         if (BoardFanout.Decide(outcomes) == BoardFanoutMode.Parallel)
         {
-          /*
-           * Each worker re-asks whether this capture is still open before it starts (a capture change can land after this method's own
-           * check and before a worker is scheduled — the abandonment law says a build that outlived its log must return BEFORE painting,
-           * since a dropped snapshot reads to `BuildSummaryInput` as "clear every board"), and each carries its own failure. That second
-           * half is the one deliberate behaviour change here: serially a damage throw suppressed tanking AND healing; fanned out, one bad
-           * record costs one grid. "A partial board beats no board," per board — see BoardFanout's law 2.
-           */
+                    /*
+                     * Each worker re-asks that the capture is still open before starting (a build that outlived its log must return before painting), and each
+                     * carries its own failure — the one deliberate behaviour change: serially a damage throw suppressed tanking and healing, fanned out one bad
+                     * record costs one grid (BoardFanout law 2).
+                     */
           Log.Debug($"board fan-out [{request.Reason}]: {outcomes:N0} outcomes over three workers");
           succeeded = BoardFanout.RunParallel([
             new("damage", request.Reason.ToString(), () => SessionStillOpen(session),

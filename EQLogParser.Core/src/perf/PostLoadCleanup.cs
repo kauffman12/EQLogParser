@@ -1,29 +1,17 @@
 namespace EQLogParser;
 
 /*
- * The one question the post-load collection has to ask across windows: IS A CLEANUP STILL ON ITS WAY?
+ * The one question the post-load collection asks across windows: IS A CLEANUP STILL ON ITS WAY? MainWindow pays the collection and owns every
+ * decision about which capture is open; FightTable owns the band, and the band is what makes a stop-the-world legible. It buys only that the bar
+ * is still standing when threads resume — a blocking full collection suspends every managed thread, so nothing paints during it and no thread
+ * choice changes that.
  *
- * MainWindow pays it (GC law's two moments — a load that read lines, and Clear All) and owns every decision about whether this
- * capture is still the open one. The fight list owns the loading band over its grid, and the band is what makes the pause legible:
- * a stop-the-world with a bar above it reads as work, the same pause in the middle of an answered grid reads as a hang ("it didn't
- * garbage collect after the log finished loading", 2026-10-13). Note what this does NOT buy: a blocking full collection suspends
- * every managed thread, dispatcher included, so nothing paints while the pass runs and no thread choice changes that — the hold makes
- * sure the bar is still standing WHEN THREADS RESUME, which is the moment the rows of a long capture land (the cadence starts the first
- * derive as soon as the lanes drain).
- *
- * So this is a counted mark, not a queue: nothing here cancels, coalesces or waits for a collection (GC.Collect is not cancellable, and
- * a second seam for it is exactly what an earlier cut built and then deleted).
- *
- *   - Mark/Clear pair one pass: MainWindow marks on the way in and clears in a finally on the way out. Counted rather than a flag because
- *     the UI stays live through the pass, so Clear All can mark while a load's collection is still running; a flag would let whichever
- *     finally ran first take the other one's bar down mid-pass. Each pass releases exactly its own hold, and a stuck mark is impossible:
- *     every Mark has a finally, and FightTable caps its own wait regardless (PostLoadCleanup holds the band with a deadline of its own).
- *   - A pass releases its hold ONLY while it still owns the capture. The only way a session stops being the open one is a door, and a door
- *     has already reset the count — clearing after that would steal the hold of the capture that replaced it.
- *   - Reset belongs to the capture doors (OpenLogFile/CloseLogFile): a debt never crosses a capture, and one in-flight pass of the file
- *     that just closed must not park the NEXT session's band for a cleanup that is not its business. Reset drops the whole count,
- *     including the hold of a pass that is still running — that pass cannot be cancelled, and the Clear in its finally stops at zero rather
- *     than digging under it.
+ * A counted mark, not a queue: GC.Collect is not cancellable, so nothing here cancels, coalesces or waits.
+ *   - Mark/Clear pair one pass (cleared in a finally), counted because the UI stays live through it and Clear All can mark while a load's
+ *     collection runs; each pass releases exactly its own hold, and FightTable caps its wait with a deadline of its own.
+ *   - A pass releases its hold only while it still owns the capture: a door already reset the count, and clearing after that steals the
+ *     replacement's hold.
+ *   - Reset belongs to the capture doors (OpenLogFile/CloseLogFile): a debt never crosses a capture.
  */
 internal static class PostLoadCleanup
 {

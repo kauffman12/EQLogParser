@@ -528,7 +528,6 @@ namespace EQLogParser
       }
     }
 
-
     private void FilterTextChanged(object sender, TextChangedEventArgs e)
     {
       _filterTimer?.Stop();

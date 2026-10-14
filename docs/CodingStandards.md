@@ -81,6 +81,23 @@ The enforced choices that differ from what most editors default to:
 - `public` is used for UI components and public interfaces
 - `private` is used for implementation details
 
+## Comments
+
+**Short, and one job each.** A comment earns its lines by stating something the code cannot say: an invariant, a trap, a measurement that
+set a constant. Everything else belongs in `docs/DesignNotes.md` with a pointer here.
+
+- **Budget: 1–3 lines at a statement, up to ~5 for a type header.** A comment needing more has become a DesignNotes section; state the
+  constraint, name the note (`// docs/DesignNotes.md → "Section title".`) and stop.
+- **One job:** the rule, *or* the reason it exists, *or* the measurement behind a number. Not all three. Field-by-field narration of what
+  the code plainly does is not a comment, it is a second thing to keep correct.
+- **No history in code.** "Used to be X, now Y", the bug report that motivated a fix, the alternatives rejected, and the date of the change
+  go in DesignNotes. Keep a sentence in code only while the trap it describes is still live in the code below it.
+- **Never cite what a fresh clone cannot read** (see **Code Organization**): no deleted type, no deleted probe, no local note. If a comment
+  names something, `rg` must find it.
+- **Update by rewriting, not appending.** When behaviour changes, the comment above it gets rewritten in the same commit — two sentences that
+  describe two versions of the code are read as one law and believed as neither.
+- **Tests are exempt from the budget in one direction only:** say what breaks if the assertion is wrong; do not restate the assert call.
+
 ## Code Organization
 
 - **Comment blocks carry prose; `///` carries a one-line contract.** `/* ... */` is the shape for narrative — why a thing

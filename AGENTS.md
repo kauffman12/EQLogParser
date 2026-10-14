@@ -241,14 +241,15 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
   page number or range that only a build restamps is wrong one click later.
 - **Nothing on a worker thread may touch a DependencyObject**: UI values enter a board build as plain data captured on the UI
   thread (`_fightPane`, `tankingDamageType` read with `Volatile`), and optional work runs *after* the builders under its own try.
-- **"No rows to show" is an empty collection, never null** (2026-11): the panes hand back `SummaryTable.NoResultsList` from `ClearData`,
-  from STARTED and from a build with no NPCs/no data. A null `ItemsSource` is SfDataGrid's own word for "the data has not arrived" and it
-  answers with an uncontrollable spinner in the middle of the table (that is what an operator saw: "the datagrid itself puts a busy icon in
-  the center … it wasnt happening before this branch" — null had become the no-board value). The **one** surviving null is Damage Summary's
-  group re-slice, where assigning null *before* the grouped list exists to make the tree grid see a change: a control workaround, not a
-  state, and do not "clean it up". Related law unchanged: no pane asks its grid whether an answer exists — those guards read `CurrentStats`.
-- **A busy state is earned** (`DeferredBusyState`: arm on STARTED, show only if still running after `PerfJournal.SlowPassMs`;
-  every event cancels first; blanking paths cancel explicitly). Where work blocks the UI thread, `await
+- **"No rows to show" is an empty collection, never null** (2026-11): the panes hand back `SummaryTable.NoResultsList` from `ClearData`
+  and from a build with no NPCs/no data. A null `ItemsSource` is SfDataGrid's word for "the data has not arrived" and it answers with an
+  uncontrollable spinner (operator: "the datagrid itself puts a busy icon in the center … it wasnt happening before this branch"). A build
+  **in progress** hands back nothing at all: it keeps its rows and changes only its title, because the previous board is milliseconds wrong
+  rather than absent. The **one** surviving null is Damage Summary's group re-slice, where assigning null *before* the grouped list exists
+  makes the tree grid see a change: a control workaround, not a state, and do not "clean it up". Related law unchanged: no pane asks its grid
+  whether an answer exists — those guards read `CurrentStats`.
+- **A busy state is earned** (`DeferredBusyState`: arm on STARTED, show only if still running after `ShowAfterMs` (150 ms); every event
+  cancels first; the paths that legitimately blank a surface cancel explicitly). Where work blocks the UI thread, `await
   Dispatcher.Yield(DispatcherPriority.Render)`.
 - **A checkbox cannot tell a click from a load**: "unsaved?" compares the model against the last saved row (see
   `TriggersView.SlidingResetUnsaved`, `TriggerPropertyGridAdapter.Coalesce`); never mark dirty from a raw widget event.

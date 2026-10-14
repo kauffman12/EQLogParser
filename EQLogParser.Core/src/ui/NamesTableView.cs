@@ -29,38 +29,19 @@ internal static class NamesTableView
 
   internal static bool IsCurrent(BuildStamp answer, BuildStamp current) => answer == current;
 
-  /*
-   * The table's UNIVERSE: which names it lists at all, decided before any question is asked.
-   *
-   * A name whose own spelling carries a summon word — "Kizant`s pet", "Beorun`s warder" (ClassificationRules.OwnerSuffixes, the
-   * one list) — is settled twice over by the log itself: the kind IS Pet at Certain, and R5 writes the owner out of the very
-   * string it read the suffix from (`R5-owner:Kizant`). Nothing a person could type improves that, so such a row already has no
-   * Type pencil (IdentityVocabulary.CanOverrule) — and listing 140 of them in a raid night (measured: 4.7% of that census, every
-   * one verdicted Pet, zero surprises; docs/DesignNotes.md → "Identity Table paging") is a wall of rows repeating names the reader
-   * already knows. An operator asked for exactly this: "thats just what the log says".
-   *
-   * DISPLAY ONLY, which is the whole point: the name is still classified, still scored on the boards, still remembered in the
-   * ledger. What disappears is an answer nobody can change, not the answer. And the fixable half of the case stays on screen: a
-   * summon whose owner is really an NPC ("A worry wraith`s pet") is corrected at the OWNER's row, which keeps its pencil.
-   *
-   * Two doors stay open by design:
-   *   - **An operator verdict is always listed.** A wrong click has to remain correctable by another one — the same reason an
-   *     override keeps its pencil on a name that spells otherwise (and it is the only way such a row can ever be taken back).
-   *   - **A custom-named pet is listed.** "Puksuu" is a Pet by spell data or petslot evidence, so its owner genuinely is a
-   *     question for a person (20 of that capture's 160 Pet rows). Only the summon-word shape is closed.
-   *
-   * NOT hidden here: R21 spell-effect rows have no pencil either, and they stay listed — a dot or proc name is worth looking up even
-   * though nobody can type a better answer for it. "Cannot be edited" and "is not worth a row" are two different decisions.
-   *
-   * THE EYE HALF ASKS ABOUT ANOTHER ROW. `Eye of <name>` names its master the way ``Kizant`s pet`` does, but the shape proves nothing
-   * about that name: NPCs are legitimately named like one, and an eye can only ever be NPC anyway (IdentityVocabulary.TypeOptionsFor).
-   * So an eye keeps its row by default and loses it ONLY while the name inside it reads Player — "Eye of Kizant" goes while Kizant is
-   * one of ours and comes back the moment he is not (an operator calling him NPC, or his name leaving the census). Measured: zero
-   * eye-shaped rows in three captures (~1.5 GB), because an eye is refused as a combatant before its name is interned; this guards a
-   * lane that exists in code rather than a population of rows, which is exactly why it is conditional instead of unconditional.
-   *
-   * `kindByName` is null when the caller offers no kinds, which reads "no eye can be resolved" — the direction that keeps rows.
-   */
+    /*
+     * The table's UNIVERSE: which names get a row at all, decided before any filter.
+     *
+     * A name whose own spelling carries a summon word ("Kizant`s pet", "Beurun`s warder" — ClassificationRules.OwnerSuffixes) is settled by the log:
+     * Pet at Certain, with the owner written out of the same string. Its row has no Type pencil, so listing ~4.7 % of a raid night's census to repeat
+     * names the reader knows is noise; those rows are hidden here. DISPLAY ONLY — still classified, still scored, still in the ledger.
+     *
+     * Still listed on purpose: an OPERATOR VERDICT (a wrong click must stay correctable), a CUSTOM-NAMED pet ("Puksuu" — its owner is a real question),
+     * and R21 spell-effect rows ("cannot be edited" is not "not worth a row"). A summon whose owner is an NPC is corrected at the OWNER's row.
+     *
+     * `Eye of <name>` is conditional: the shape proves nothing about the name inside it, so an eye keeps its row and loses it ONLY while that name reads
+     * Player, returning when it stops reading that way. `kindByName` null means no eye resolves — the direction that keeps rows.
+     */
   internal static bool IsListed(ClassificationReport.Row row, IReadOnlyDictionary<string, IdentityKind>? kindByName = null)
   {
     if (row.IsOperatorVerdict) return true;                              // a hand-written claim always keeps its row
@@ -130,16 +111,11 @@ internal static class NamesTableView
     return result;
   }
 
-  /*
-   * Where the pager stands after a rebuild: always clamped to the pages that still exist, and — ONLY when the caller says
-   * the QUESTION changed (a search, a type dial, a sort header) — moved to the page the selection lives on.
-   *
-   * `followSelection` is an argument rather than a rule inside this arithmetic because the two cases are different gestures
-   * made by different people: a reader who just narrowed the list asked "where is that name", while a reader who paged away
-   * from their selection six pages ago asked nothing, and the census landing two seconds later has no business carrying them
-   * back. Following unconditionally was exactly that bug (2026-10-13): an ordinary census yanked the pager to the selected
-   * row's page, which reads as the table moving out from under the operator.
-   */
+    /*
+     * Where the pager stands after a rebuild: always clamped to pages that still exist, and moved to the selection's page ONLY when the question
+     * changed (search, dial, sort). Following on every census reads as the table moving out from under the operator, so `followSelection` is an
+     * argument rather than a rule inside this arithmetic.
+     */
   internal static PageDecision DecidePage(int totalCount, int pageSize, int currentPageIndex, int selectedIndex,
     bool followSelection)
   {
@@ -160,16 +136,11 @@ internal static class NamesTableView
     return new PageDecision(pageCount, page, jump, start, Math.Min(pageSize, totalCount - start));
   }
 
-  /*
-   * The strip's count, in the shape an operator reads it: what THIS page shows, how many rows the current question has,
-   * and — when a dial narrowed it — how big the capture still is. The last one is the whole reason the census total is kept:
-   * "my name vanished" means "the filter ate it" far more often than "the parse lost it", and a page that says only what is
-   * on it cannot answer that.
-   *
-   * `noun` comes from the caller because the word is Resource vocabulary (the WPF assembly owns the strings; Core owns the
-   * arithmetic). An empty census is an EMPTY string, not "Showing 0 …": the pane opens before there is a capture to count,
-   * and a zero there reads as a failed read rather than a not-yet-started one.
-   */
+    /*
+     * The strip's count: what this page shows, how many rows the current question has, and — when a dial narrowed it — how big the capture still is.
+     * That last one exists because "my name vanished" usually means "the filter ate it". An empty census is an EMPTY string, not "Showing 0 …": the pane
+     * opens before there is anything to count.
+     */
   internal static string CountText(long censusTotal, int shownCount, int pageSize, int pageIndex, bool narrowed, string noun)
   {
     ArgumentOutOfRangeException.ThrowIfNegative(pageSize);
