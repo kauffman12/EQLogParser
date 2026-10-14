@@ -54,8 +54,21 @@ public class ColdChunkRealLogTest
     var rawDamage = (long)facts.FactCount * Marshal.SizeOf<DamageFact>();
     var rawHeal = (long)heals.HealCount * Marshal.SizeOf<HealFact>();
     // Tiny captures may not exceed the cache; the volume claim is only meaningful beyond it.
+    /*
+     * The claim is about ROWS, so it is measured against rows. EstimatedBytes is a bigger number ON PURPOSE: beside the blobs it carries the warm decode
+     * cache (WarmLimit chunks plus the append tail, charged at full row price because those bytes really are resident) and the four un-chunked event queues -
+     * deaths, identity events, taunts, and EVIDENCE, which takes one row per cast line. On eqlog_Incogitable_xegony.txt that queue alone held 352,673 rows in
+     * a 524,288-slot array (16.0 MB of capacity, ~11 MB trimmed) against 50.8 MB of damage rows, so the whole estimate sat at 31.8 MB over a 25.4 MB half
+     * while the FACTS themselves had gone 50.8 MB -> 6.7 MB, 7.6x. Asking the cold store to halve is the real guard; asking it to out-shrink a different
+     * queue is a question about capture shape, and it is why this assert used to fail on a capture with no defect in it.
+     */
+    var residentRows = (long)facts.FactChunksAllocated * DamageFactTable.FactChunkSize * Marshal.SizeOf<DamageFact>();
     if (facts.FactCount > DamageFactTable.FactChunkSize * 16)
-      Assert.IsTrue(facts.EstimatedBytes < rawDamage / 2, "normal reads must retain the compression saving");
+      Assert.IsTrue(residentRows + facts.ColdBlobBytes < rawDamage / 2, "cold chunks must retain less than half the rows they replaced");
+
+    // And the estimate itself stays what it is for: a whole-capture resident figure feeding the D2 revisit trigger, never less than the rows it holds.
+    Assert.IsTrue(facts.EstimatedBytes >= residentRows + facts.ColdBlobBytes,
+      "the spill trigger's number has to include what is resident, not only the backing");
     if (heals.HealCount > HealFactTable.HealChunkSize * 16)
       Assert.IsTrue(heals.EstimatedBytes < rawHeal / 2);
     Console.WriteLine($"[cold] classify {classifyMs} ms | project {projectMs} ms | materialize {materializeMs} ms | " +

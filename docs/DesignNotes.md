@@ -13360,10 +13360,23 @@ On the shelf, each needing its own decision rather than a cleanup commit:
   captures, not assumed: 1,901,078 damage + 420,110 heal facts (live) and 4,356,144 + 33,805 (emu) fingerprint identically before and
   after, the fingerprint covering `ModMask` on every row.
 
-What the proving run surfaced is **pre-existing and open**: `ColdChunkRealLogTest`'s halving guard fails on
-`local/logs/live/eqlog_Incogitable_xegony.txt` (`EstimatedBytes >= raw/2` for damage facts) at the baseline commit exactly as it does
-here. The cold store therefore does not halve that capture's rows, and nobody has explained why; ask it as its own question rather than
-treating the guard as decoration.
+**What the proving run surfaced was pre-existing, and is now answered: the halving guard was measuring the wrong thing.**
+`ColdChunkRealLogTest` asserted `EstimatedBytes < rawDamage / 2` on `local/logs/live/eqlog_Incogitable_xegony.txt` and failed there at the
+baseline commit too. Measured on that capture: 1,901,078 damage rows are 50.8 MB raw and **6.7 MB of blobs — 7.6x**, better than the 5.8x this
+file already claims, so the cold store is fine. The estimate exceeded a 25.4 MB half for reasons that have nothing to do with row compression:
+it also carries (a) the warm decode cache, `WarmLimit` chunks plus the append tail — five resident chunks, 8.8 MB, charged at full row price
+because those bytes really are resident — and (b) the four **un-chunked event queues**, where evidence dwarfs everything: **352,673 evidence rows
+in a 524,288-slot array** (16.0 MB of capacity, ~11 MB even after `CompactRows` trims it), against 3,671 deaths, 628 identity events and 5,917
+taunts. Evidence takes one row per cast line by design (`EvCast`), so on a cast-dense capture the numerator is dominated by a queue the
+denominator never mentions; trimming all slack still leaves ~26.9 MB over 25.4 MB. The guard now asserts the cold-store claim directly —
+resident chunk rows plus blobs under half the rows they replaced — with a second assert that the whole estimate stays at least as large as what
+is resident, since it feeds the D2 revisit trigger. The same run prints the other honest quirk: a capture with only 33,805 heals estimates
+1.9 MB against 0.9 MB raw, because one allocated chunk (chunkSize x 32 B) is resident whether or not it is full; the volume threshold on that
+assert is what keeps such a small table from being read as a regression.
+
+What is genuinely left, and it is now a sized question rather than a suspicion: **evidence is the largest un-chunked queue in a capture**
+(~1 row per 5.4 damage facts here, ~11 MB retained cold-store-free). It has no cold encoding at all. Either give it the chunk treatment or
+say why a cast-evidence history should stay resident for a session's whole life.
 
 Finally, one review finding became a test rather than a note: re-assigning `LineData.Action` must invalidate **both** text caches — a row
 is reused, Words are asked lazily and Split eagerly, and clearing one of them is how a second reader ends up walking the previous
