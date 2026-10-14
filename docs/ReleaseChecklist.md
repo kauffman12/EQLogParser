@@ -196,6 +196,18 @@ These checks still require Windows for popup/hide behavior. See DesignNotes → 
 - [ ] **Capture ownership:** switch logs or Clear All while an overlay build is in flight. No old-capture bars may land afterward.
   Reset during a build must likewise prevent that older result from reappearing.
 
+## Summary board rebuilds, checked on Windows
+
+A board's busy state is the one part of a build no headless run can see: an empty `ItemsSource`, a null one and a title swap look
+identical to a test. Both halves below are the same seam seen two ways.
+
+- [ ] **A rebuild does not clear the grid** (2026-10-14): on a farm-night log select all rows in Damage, then Tanking, then Healing.
+  The previous numbers stay up with only the title changing (*Calculating DPS…* / *…HPS*) and are replaced in one step when the build
+  answers. No hourglass appears in the middle of a table at any point — that spinner is SfDataGrid's answer to a null `ItemsSource`,
+  which STARTED must never hand it.
+- [ ] **A build with nothing to show still says "no board"**: leave the selection empty so a pane finishes with no rows. The table shows
+  its empty state without a spinner, and selecting rows again repaints normally.
+
 ## Identity Table paging checks on Windows
 
 Run `dotnet test EQLogParser.Wpf.Test/EQLogParser.Wpf.Test.csproj` on Windows, then use a realized Identity Table with
