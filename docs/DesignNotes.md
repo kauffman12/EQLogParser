@@ -12819,12 +12819,21 @@ behind an `Interlocked.Exchange`).
 
 **Why paying at 100 % bought nothing on a big capture** (same file, 13,740,768 lines): a pass taken there measured
 `gc.tidy log loaded: heap 366 to 341.8 MB, working set 1226.9 to 655.7 MB, gen2 +1, wall 118 ms`. A 24 MB heap delta after a 24 s read is not
-a failed collection — Server GC's concurrent collections sweep the read's split strings and per-line temporaries *while the read runs*, and 341.8 MB
-was essentially the capture itself (7,466,280 damage facts × 28 B ≈ 209 MB plus 2,890,757 heals). The 571 MB it did hand back was segment return from
+a failed collection — concurrent collections sweep the read's split strings and per-line temporaries *while the read runs*, and 341.8 MB
+was essentially the capture itself (7,466,280 damage facts × 28 B ≈ 209 MB plus 2,890,757 heals).
+The 571 MB it did hand back was segment return from
 LOH compaction, not objects. Everything still allocating sat ahead of the collector: `Derive done: 876 fights, 3539 ms`, then its boards — and by the
 time the operator reached for Clear All the working set was back to **1275 MB**, which that pass took to **592.3 MB** (`heap 630.3 → 251.6 MB`, 104 ms):
 the floor with no capture loaded, and proof the collector is healthy. Working-set return and object reclamation are different things — which is exactly
 why a pass *after* the derive/boards can give back hundreds of MB even when most of the heap is live.
+
+**Measured-build caveat on that whole run (2026-10-13).** The 24 s load, the 24 MB delta, the working set climbing back to 1275 MB and the 592.3 MB
+Clear-All floor were all read off a build running **workstation GC with `SustainedLowLatency`** — the configuration `cf69b2d4` reverted out of the same
+day, see "A clean field A/B" below. Latency mode is exactly the lever that makes a runtime *defer* gen2 compaction, so "there was nothing left to
+collect at 100 %" and "memory keeps growing after a load" are claims about a build that no longer exists; they need one re-baseline load on a
+server-GC build (`gc.tidy armed`, then the pass's own heap and working-set deltas). What survives a change of collector is the *ordering* argument —
+collect after the last big allocator rather than before it — so the seam split stands on its own, but stop citing the 24 MB as this seam's memory
+benefit until it is measured again. If it comes back small, the seam is still right (it costs nothing) and the memory question belongs to retention.
 
 - The 100 % tick arms and does not wait: `LogReader.LoadAllocatedGarbage` gates it (a follow-from-end open read no line and owes nothing),
   `"Monitoring Log"`, the loading-complete event and the overlays land normally while the first full pass runs. The old synchronous pass at
@@ -12862,7 +12871,15 @@ retention question about the first full pass (heap 341.8 → 630.3 MB on that ca
 old field number, **1477 → 593 MB**, before moving anything again; the band holds the pause either way, so any further change is a payer change rather
 than a new mechanism.
 
-**GC policy is not a knob this app turns (2026-10-13).** Server GC with concurrent collection and the default `Interactive` latency mode
+**A clean field A/B says the load time was GC mode, not parser micro-work (2026-10-13).** The same 13.7 M-line capture on the same machine:
+**the last released build 24 s cold / 22 s warm; this branch 19 s cold / 15 s warm.** The release carried *no* GC settings at all, and a .NET
+(WPF) app without them runs **workstation GC** — so that comparison measures workstation against server + concurrent, which is the one change in
+this branch with seconds attached to it (`cf69b2d4` records its own earlier measurement: 17 s vs 23 s warm on one capture). The ingest trims of
+2026-10-13 are worth roughly a fifth of that by extrapolation from their probes (~1–1.5 s), and they buy it mostly in the live path rather than in a
+bulk read. Two readings follow. **(1)** A wall-time win can come from removing *collection* rather than work: every per-line temporary deleted is
+paid twice, once as instructions and once as gen2/copy traffic over 13.7 M of them, which is why helper-level microsecond probes systematically
+under-predict load time. **(2)** The cold-over-warm gap got *wider* (2 s on the release, 4 s here) even though the wall time shrank — expected, not
+alarming: fixed cost that does not shrink becomes a larger share of a smaller number, and a faster reader outruns a cold OS cache more often. Server GC with concurrent collection and the default `Interactive` latency mode
 is what ships: background collection happens when the runtime judges it needed, and gen2 across per-core heaps pauses briefly. A short
 list of things tried and rejected, so the same three hours are not spent twice — `Batch` scoped to the bulk read (worked as designed,
 bought nothing a user could feel, and left a mechanism with no reason: removed), `SustainedLowLatency` as the steady state (field verdict:
