@@ -803,7 +803,9 @@ namespace EQLogParser
     /*
      * "Is there a fight going on?" — the question the legacy meter's overlay-fight set answered, asked here of
      * derived rows (LiveFights) on the capture's own newest event. `gapS` comes from the caller because it is the meter's
-     * dial: the same number that zeroes its board, so a window cannot be kept open by one rule and blanked by another.
+     * dial: `LiveFights.TimeoutFor`, i.e. the engagement gap for "on kill" and N seconds for a timed mode. Note that this is NOT
+     * the number that blanks the board (`LiveFights.ExpiryFor`, which is shorter after a seen kill): keeping a window open is the
+     * lenient question, so a board can blank while its window is still considered going — never the other way round.
      *
      * True for as long as the capture keeps moving, which on an old log loaded and left alone means its last moments stay
      * "live" — the clock is not advancing, and the legacy overlay behaved the same way for a different reason (its fights
@@ -813,6 +815,20 @@ namespace EQLogParser
     {
       var snapshot = _snapshot;
       return snapshot is not null && LiveFights.AnyLive(snapshot.AllFights, _capture.LastEventTime, gapS);
+    }
+
+    /*
+     * The newest KILL this capture saw inside these seconds, or NaN when nothing died. This is the difference between "the pull
+     * ended" and "nobody has swung for a while", which is what the meter's "on kill" dial needs and cannot infer from silence — see
+     * `LiveFights.LastKillT` for why a row ending `Slain` is evidence and one ending for the gap is not.
+     *
+     * Asked of the rows the last pass published, with that pass's own timeline: the same pair every board reads, so the kill the
+     * meter counts is the kill the fight list shows as slain.
+     */
+    internal double LastKillT(double fromT, double toT)
+    {
+      var snapshot = _snapshot;
+      return snapshot is null ? double.NaN : LiveFights.LastKillT(snapshot.AllFights, fromT, toT, snapshot.Timeline);
     }
 
     /*

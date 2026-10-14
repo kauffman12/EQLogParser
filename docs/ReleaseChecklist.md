@@ -159,6 +159,29 @@ operator checks with `Debug=True`, on a capture of several hundred MB or more:
   old parse, available label and selected player set must not return when the worker finishes. A build in the new log
   still publishes normally.
 
+## Damage overlay checks on Windows
+
+The overlay's rules live in Core (`LiveFights`) and are unit-tested headlessly, but the tick that paints and blanks it is WPF: no
+Linux run says anything about these. Scenario behind each line: 2.4.x shipped with "reset on kill" unable to close and one-shots
+never displaying — see DesignNotes → "When the damage overlay closes".
+
+- [ ] **A kill closes it** (2026-11): mode "On Kill", kill a mob (a real death line, not a mob you walked away from) and stop attacking.
+  The board must stay readable for a few seconds, then clear roughly 8-10 s after the last damage — not linger the rest of the session,
+  and not vanish before the total can be read. Past ~30 s it must also close on a mob that simply never died.
+- [ ] **A lull does NOT reset the numbers** (the case a purely time-based close gets wrong): damage a mob, do nothing for 12-20 s while
+  nobody else hits anything, damage the same mob again. One board, one total — both hits in it, duration measured from the first swing.
+  If the first hit disappeared, silence was treated as a kill.
+- [ ] **A one-shot shows its numbers**: kill a low-HP mob in a single hit (or open the overlay a second after a pull you already won).
+  The board must appear with that damage on it. An empty overlay here means the window opened *after* the facts, which was the fault.
+- [ ] **It stays up while things keep dying**: kill one mob and immediately attack another. No blank in between; the second pull's
+  numbers appear (and after the second death, the same ~8 s close).
+- [ ] **Our own deaths do not close it**: get a party member or your own pet killed while the overlay is open and keep fighting. The
+  board must not blank or reset because something on our side died.
+- [ ] **Time-based modes still behave**: set 5 s (and 10 s). Board closes ~that long after the last damage, kill seen or not; a
+  continuous fight never blanks mid-pull.
+- [ ] **Close with the X and reopen**: the reopened board continues onto the seconds it left off on rather than starting empty, and
+  Reset empties it immediately — including not refilling with the last few seconds of damage — while leaving the window usable.
+
 ## Identity Table paging checks on Windows
 
 Run `dotnet test EQLogParser.Wpf.Test/EQLogParser.Wpf.Test.csproj` on Windows, then use a realized Identity Table with

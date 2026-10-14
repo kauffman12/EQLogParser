@@ -5485,17 +5485,78 @@ pull at all.
 - **Hiding.** A hidden derived meter closes for real when nothing is live and comes back on the next announcement, instead of
   lingering invisibly for the rest of the process.
 - **Reset.** `FullResetClick` resets each engine the way that engine keeps a board: legacy discards its builder and
-  FightManager's overlay set (those hold running totals), derived moves its window start (`_meterWindowT = -1`) because a
-  derived board holds nothing at all.
+  FightManager's overlay set (those hold running totals), derived moves its window start because a derived board holds nothing at
+  all — to **this second**, not to `-1`. The two no-window values are different questions: `-1` is "this meter has never had a window"
+  and reaches back one quiet window so a kill already landed can show its total, while a Reset click must not resurrect the damage the
+  operator just asked to forget (2026-11; the same reason legacy's reset zeroed its running totals rather than re-reading them).
 
 ### The seam, and why it is one file
 
 `DerivedMeter` (app) is now the only reader of `OverlayDamageFromMirror`, and the only place that answers "which engine is the
 meter reading". Before this the key was read in two components and the second still asked `FightManager`, which is how a
-half-ported surface looks finished. It holds no policy: `TimeoutFor(mode)` maps the `OverlayDamageMode` dial (0 = on kill →
-the 30 s engagement gap, otherwise N seconds) so the board's expiry and the live question cannot drift into two different
-numbers. `LiveFights.GapS` is that same `FightProjection.EngagementGapS`, pinned as *behaviour* in `LiveFightsTest` (live at
-29 s, not at 31 s) because comparing two constant spellings of one number passes even when somebody edits it to 300.
+half-ported surface looks finished. It holds no policy: it maps the `OverlayDamageMode` dial onto the two questions the dial
+answers — `TimeoutFor(mode)` for "is a pull still going" (0 = the 30 s engagement gap, else N seconds) and
+`ExpiryFor(mode, killObserved)` for "how long may a quiet board stay up" (0 = `LiveFights.KillQuietCloseS` 8 s **after a death the
+engine saw**, else the full gap; other modes = N seconds). `killObserved` comes from `DeriveEngine.LastKillT`, which asks the rows
+for `EndReason == Slain`. One number for both was tried, in two different wrong ways, and both are written about below;
+`LiveFights.GapS` is still that same `FightProjection.EngagementGapS`, pinned as *behaviour*
+in `LiveFightsTest` (live at 29 s, not at 31 s) because comparing two constant spellings of one number passes even when somebody
+edits it to 300.
+
+#### When the damage overlay closes: three faults, all shipped in 2.4.x (2026-11)
+
+Reported as "if I have reset on kill selected the damage meter never goes away… and if I one-shot a mob it doesn't popup at all".
+Not a branch regression: `b85727f7` ("Point the damage overlay at the mirror behind `OverlayDamageFromMirror`") is an ancestor of
+master, and 2.4.1 predates this code — so "the old build was fine" meant **this shipped broken**, and the target became legacy's
+observable behavior, not new policy. What users described, and what legacy actually did (`FightManager` kept a set of overlay
+fights; a dying mob left that set, so the builder ran out of data and stopped returning a board; the window then waited 7 s of
+no-updates and blanked) is: totals while you hit things, still up while other things get hit, gone ~8-10 s after the kill.
+
+1. **A hold rule defeated the only close path** — `BuildMeterUpdate` answered "no rows in my window" with the PREVIOUS board
+   (`return update ?? _stats`, a hold that exists for a real reason: see #2), and the tick blanked on "null update *and* 7 s since
+   `LastUpdateTicks`". A quiet window holding the previous board refreshes `LastUpdateTicks` every tick, so the second half of that
+   condition could never be true. The fix keeps the hold and adds the one bit it was missing: the build that moves the window start
+   sets `_meterExpired`, and the tick clears the board on THAT, for every dial value. A wall-clock grace is not needed for mode 0 —
+   the quiet window *is* the grace.
+2. **Mode 0 read as the engagement gap** (30 s) for the board's expiry. Legacy's close was not a timeout at all but a death event
+   removing the fight, and the 7 s of nothing after it.
+
+   **What mode 0 actually means, and it is not about the meter.** The engine's law is that 30 s without a name (`EngagementGapS`)
+   means *assume it dead* and its next swing opens a new fight-list row. So an unnoticed pull is over at exactly that boundary, and
+   the damage the meter records has to agree with the fight list or the two windows disagree by construction. The ~8 s is only a
+   *usability* close — how long a finished board is allowed to sit there — and it must not decide what counts. Hence:
+
+   | evidence | board's quiet window | where the totals restart |
+   |---|---|---|
+   | death SEEN (`EndReason == Slain`) **and it was the last thing that happened** | `KillQuietCloseS` 8 s | at that expiry, i.e. next pull counts fresh |
+   | silence only, or a kill followed by more damage | `GapS` 30 s (legacy's `FightTimeout`) | same place the fight list starts a new row |
+
+   The second half of the first condition matters: a kill that OTHER damage follows means something is still being fought, and the new
+   pull must not inherit a dead mob's shorter timer. So the overlay asks `lastFactT <= killT` after the build — the phase split exists
+   because the kill is knowable before building (`DeriveEngine.LastKillT` over rows) and whether anything followed it is not.
+
+   The kill is not inferred from quiet — `LiveFights.LastKillT` reads `Slain`, which only a death line can set, versus `Gap`, which
+   is the assumption; a raid member's row and our own pet's row are refused there, because a rez is not a pull ending. Killing one
+   mob while hitting another never blanks anything: damage keeps arriving, so quiet never reaches either number.
+
+   **The wrong version this replaced, recorded so it does not come back**: an intermediate cut used 8 s for *every* quiet stretch.
+   That closes a killed pull on time and also wipes a pull nobody killed — hit a mob, go quiet 12 s while running, hit it again, and
+   the first hit is gone from the totals. `LiveFightsTest.ALullInsideAPullKeepsOneBoardAndOneTotal` is that exact scenario.
+3. **A fresh window started at `now`** (`WindowStartFor(storedStartT: -1) => nowT`), so a one-shot's entire life — its only damage
+   line and its death, one second of facts — sat BEFORE the window, `BuildOverlayStats` keeps rows with `LastTime >= fromT`, there was
+   nothing to paint, no fact ever set `lastFactT`, and `Expired(…, NaN)` is false by design, so the start never moved: an empty board
+   forever. A brand-new window now reaches back a pull's worth (`nowT - TimeoutFor(mode)`, so 30 s for "on kill", N seconds for a timed
+   dial — as far as a pull you are standing in can reach). Legacy could not hit this because its totals were statics that the window
+   merely displayed.
+
+One deliberate non-change: mode 0's numbers reset when the window ends rather than being zeroed *at* the kill shot. The board you look
+at during those 8 s still carries the fight that produced the kill (legacy likewise kept a slain mob's damage in its dead-fight bucket
+and displayed it), and the next pull counts from the fresh window — which is also why no separate "move the start to the death" rule was
+needed: expiry already moves it, and a seen kill only shortens how long expiry waits.
+
+The Core rules are tested headlessly (`LiveFightsTest.ALullInsideAPullKeepsOneBoardAndOneTotal`,
+`ASeenKillClosesTheBoardAndAOneShotStillShows`, `ASlainRowIsAKill_AGapRowAndOurOwnDeadAreNot`); the tick/blank path is WPF and can only
+be confirmed on Windows — see ReleaseChecklist → "Damage overlay checks on Windows".
 
 `NewFightObserved` is **static** on `DeriveEngine` (like `ActiveChanged`) because its reader outlives a capture: the meter
 must auto-open for the next log too. It is unsubscribed with the legacy event's old call sites folded into

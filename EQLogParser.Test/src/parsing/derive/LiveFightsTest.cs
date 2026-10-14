@@ -153,18 +153,128 @@ public class LiveFightsTest
         const double opened = T0 - 60;                       // the pull began a minute of facts ago
         var midPull = T0 - 1;
 
-        Assert.AreEqual(opened, LiveFights.WindowStartFor(opened, midPull, midPull + 1, LiveFights.TimeoutFor(0)),
+        Assert.AreEqual(opened, LiveFights.WindowStartFor(opened, midPull, midPull + 1, LiveFights.ExpiryFor(0, killObserved: false)),
             "still inside the range the dial allows, so the reopened board covers the same seconds as before the X");
 
-        Assert.AreEqual(T0, LiveFights.WindowStartFor(opened, T0 - 20, T0, LiveFights.TimeoutFor(15)),
+        Assert.AreEqual(T0, LiveFights.WindowStartFor(opened, T0 - 20, T0, LiveFights.ExpiryFor(15, killObserved: false)),
             "a meter configured to expire after 15 quiet seconds starts over once the pull has been over that long");
-        Assert.AreEqual(T0, LiveFights.WindowStartFor(opened, T0 - 100, T0, LiveFights.TimeoutFor(0)));
+        Assert.AreEqual(T0, LiveFights.WindowStartFor(opened, T0 - 100, T0, LiveFights.ExpiryFor(0, killObserved: false)));
 
-        // What the clear button contributes: no window at all, which begins now.
-        Assert.AreEqual(T0, LiveFights.WindowStartFor(-1, midPull, T0, LiveFights.TimeoutFor(0)));
+        // What a meter with NO window yet contributes (a first open, or a capture that swapped in): it reaches back a pull's worth
+        // rather than starting at now — see ASeenKillClosesTheBoardAndAOneShotStillShows, the bug that clause exists because of.
+        Assert.AreEqual(T0 - LiveFights.GapS,
+            LiveFights.WindowStartFor(-1, midPull, T0, LiveFights.ExpiryFor(0, killObserved: false)),
+            "a meter opening now still covers the pull it was opened for; starting at now shows nothing at all");
+        Assert.AreEqual(T0 - 15, LiveFights.WindowStartFor(-1, midPull, T0, LiveFights.ExpiryFor(15, killObserved: false)));
 
         // A capture with no facts cannot expire — nothing moves the start except a real reset.
         Assert.AreEqual(opened, LiveFights.WindowStartFor(opened, double.NaN, T0, LiveFights.TimeoutFor(0)));
+    }
+
+    /*
+     * The accounting half of "reset on kill": silence alone is NOT a kill.
+     *
+     * Hit a mob, go quiet 12 s, hit it again, and no death line ever said it died — that is one board with one total, the same
+     * answer legacy gave out of `FightManager`'s 30 s `FightTimeout`. The 30 s is not a number the meter invented: it is
+     * `FightProjection.EngagementGapS`, the rule that decides a name's next swing belongs to a NEW fight-list row, so a pull the
+     * engine never saw end is over exactly when the fight list would start a new entry for it. Anything shorter and a stretch of
+     * running, rezting or waiting for a mob to path eats damage — which is what an earlier cut of this rule did, closing every
+     * board after 8 quiet seconds whatever the reason for the quiet.
+     */
+    [TestMethod]
+    public void ALullInsideAPullKeepsOneBoardAndOneTotal()
+    {
+        const double opened = T0 - 60;                        // the pull started a minute of facts ago
+        var firstHit = T0 - 12;                               // damaged it, then 12 s of nothing
+
+        Assert.AreEqual(LiveFights.GapS, LiveFights.ExpiryFor(0, killObserved: false),
+            "with no death seen, 'on kill' tolerates the full engagement gap of silence");
+        Assert.IsFalse(LiveFights.Expired(T0, firstHit, LiveFights.ExpiryFor(0, killObserved: false)),
+            "12 quiet seconds and no kill message is a lull, not the end of the fight");
+        Assert.AreEqual(opened, LiveFights.WindowStartFor(opened, firstHit, T0, LiveFights.ExpiryFor(0, killObserved: false)),
+            "so the next swing lands in the same window: one board, one total, both hits in it");
+
+        // Past the gap with nothing dying, the assume-dead rule takes over and the totals start over — the same boundary that
+        // puts a fresh row in the fight list.
+        Assert.IsTrue(LiveFights.Expired(T0, T0 - (LiveFights.GapS + 2), LiveFights.ExpiryFor(0, killObserved: false)));
+        Assert.AreEqual(T0, LiveFights.WindowStartFor(opened, T0 - (LiveFights.GapS + 2), T0, LiveFights.ExpiryFor(0, killObserved: false)),
+            "half a minute of nothing ends the pull; the next hit opens a new one");
+    }
+
+    /*
+     * The display half: a death we SAW closes the board early, and it is a usability number, not an accounting one.
+     *
+     * Legacy blanked roughly eight seconds after the kill shot (its board stopped updating when the mob left the overlay fight set,
+     * and the window waited 7 s of no-updates) while its numbers stayed governed by the 30 s gap. Two numbers therefore, one per
+     * question — and the reach-back at the end belongs to the third fault: a mob killed in one swing did its whole life, hit AND
+     * death, before the meter had a window, so a start at `now` put every row outside it, no fact ever arrived to expire it, and
+     * nothing was ever displayed. Legacy could not hit that; its totals were statics the window merely painted.
+     */
+    [TestMethod]
+    public void ASeenKillClosesTheBoardAndAOneShotStillShows()
+    {
+        Assert.AreEqual(LiveFights.KillQuietCloseS, LiveFights.ExpiryFor(0, killObserved: true),
+            "a death we saw earns the short courtesy close so the board is not stuck up there");
+        Assert.AreEqual(LiveFights.GapS, LiveFights.TimeoutFor(0), "…while 'is a pull going on' stays the lenient question");
+
+        // Time-based modes mean the same thing to both questions — the split is mode 0's alone.
+        Assert.AreEqual(5, LiveFights.ExpiryFor(5, killObserved: true));
+        Assert.AreEqual(5, LiveFights.ExpiryFor(5, killObserved: false));
+        Assert.AreEqual(5, LiveFights.TimeoutFor(5));
+
+        // Killed 1 s ago, nothing since: the total is still readable. Past eight: it closes.
+        Assert.IsFalse(LiveFights.Expired(T0, T0 - 1, LiveFights.ExpiryFor(0, killObserved: true)),
+            "the kill shot must get to show its own numbers");
+        Assert.IsTrue(LiveFights.Expired(T0, T0 - (LiveFights.KillQuietCloseS + 2), LiveFights.ExpiryFor(0, killObserved: true)),
+            "and then close — about eight seconds after the last damage, which is what users remember");
+
+        // A one-shot's life sitting just before an opening meter is inside the window that meter opens.
+        var oneShotKill = T0 - 1;
+        Assert.IsTrue(oneShotKill >= LiveFights.WindowStartFor(-1, double.NaN, T0, LiveFights.ExpiryFor(0, killObserved: false)),
+            "a row whose only damage happened before the meter existed has to be inside its first window or it never displays");
+
+        // The two "no window" values are different questions, and only -1 reaches back. Reset writes THIS second as a real start,
+        // so the board does not refill with the damage the operator just asked to forget (DamageOverlayWindow.FullResetClick).
+        Assert.AreEqual(T0, LiveFights.WindowStartFor(T0, double.NaN, T0 + 5, LiveFights.ExpiryFor(0, killObserved: true)),
+            "an explicit reset start holds where it was written; nothing from before the click comes back");
+    }
+
+    /*
+     * What counts as having SEEN a kill, which is the evidence the short close waits for. `DerivedFightEnd` already draws this line
+     * for the fight list: `Slain` means a death line named the mob, `Gap` means an inactivity stretch merely assumed it — so silence
+     * cannot produce a kill here by construction. Two things also die without being kills we made: our own pet's row, and a raid
+     * member's (a charmed raider is an encounter row), and neither may end the meter — a rez is not a pull ending.
+     */
+    [TestMethod]
+    public void ASlainRowIsAKill_AGapRowAndOurOwnDeadAreNot()
+    {
+        var slain = Row("Venrin Slain", T0 - 3, lastTime: T0 - 2);
+        slain.Dead = true;
+        slain.EndReason = DerivedFightEnd.Slain;
+
+        var assumed = Row("Mobsomething", T0 - 3, lastTime: T0 - 2);
+        assumed.Dead = true;
+        assumed.EndReason = DerivedFightEnd.Gap;          // the gap decided, nobody saw it die
+
+        var pet = Row("Ziggy`s pet", T0 - 3, lastTime: T0 - 2);
+        pet.Dead = true;
+        pet.EndReason = DerivedFightEnd.Slain;
+        pet.RaidPet = true;                               // our own summon dying is not a pull ending
+
+        var open = Row("Still Fighting This", T0 - 3, lastTime: T0 - 2);
+
+        Assert.AreEqual(T0 - 2, LiveFights.LastKillT([slain], T0 - 30, T0, null), "a slain row is the evidence");
+        Assert.IsTrue(double.IsNaN(LiveFights.LastKillT([assumed], T0 - 30, T0, null)), "an assumed death is not");
+        Assert.IsTrue(double.IsNaN(LiveFights.LastKillT([pet], T0 - 30, T0, null)), "nor is our own pet's");
+        Assert.IsTrue(double.IsNaN(LiveFights.LastKillT([open], T0 - 30, T0, null)), "a row still being hit is not");
+        Assert.IsTrue(double.IsNaN(LiveFights.LastKillT([slain], T0 - 1, T0, null)),
+            "and a kill outside the seconds being asked about does not answer for them");
+
+        var older = Row("Earlier Kill", T0 - 20, lastTime: T0 - 19);
+        older.Dead = true;
+        older.EndReason = DerivedFightEnd.Slain;
+        Assert.AreEqual(T0 - 2, LiveFights.LastKillT([older, slain], T0 - 30, T0, null),
+            "the newest kill answers, so the meter follows the pull it is watching");
     }
 
     // Pet rows count. CharmPetRows hides them from the LIST because a summon is not an encounter; the meter shows their

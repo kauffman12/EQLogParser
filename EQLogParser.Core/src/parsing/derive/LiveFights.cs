@@ -28,9 +28,30 @@ namespace EQLogParser
      */
     internal const double GapS = FightProjection.EngagementGapS;
 
+    /*
+     * How long the board of a mob we SAW die stays readable: 8 s, and it is a usability number, not an accounting one. Legacy
+     * produced about the same: its overlay fought over `FightManager`'s fight set, a dying mob LEFT that set, so the board stopped
+     * updating at the kill shot and blanked 7 s of no-updates later — "about eight or ten seconds after the kill".
+     *
+     * What it may NOT be used for is silence alone. A quiet stretch shorter than `GapS` that no death closed is a lull — running,
+     * rezting, waiting for a mob to path — and 12 s of moving between swings must not reset damage nobody killed. So the dial's
+     * tolerance stays `GapS` unless `LastKillT` says a death was actually seen, and only that shortens the wait to this number.
+     * (An earlier cut of this rule used it for every quiet stretch, which is exactly the bug that sentence exists to prevent.)
+     */
+    internal const double KillQuietCloseS = 8;
+
     /* What a meter's quiet window is in seconds: `OverlayDamageMode` 0 means "on kill" (= the engagement gap), any other
-     * value is that many seconds. One expression for the overlay's expiry and for this question, so they cannot drift. */
+     * value is that many seconds. Answers liveness — should the meter be open, is something still going. */
     internal static double TimeoutFor(int damageMode) => damageMode == 0 ? GapS : damageMode;
+
+    /*
+     * "How long may a quiet board stay on screen", in seconds. Time-based modes are that many seconds and ask nothing else.
+     * Mode 0 ("on kill") depends on whether a DEATH was seen (`LastKillT`): a kill we saw earns the short courtesy close, while
+     * silence alone gets the full `GapS`, because the only thing that ends an unnoticed pull is the same 30 s of nothing that
+     * tells the fight list to start a new row for the next swing. So: damage tolerance is 30 s unless we watched it die.
+     */
+    internal static double ExpiryFor(int damageMode, bool killObserved)
+        => damageMode == 0 ? (killObserved ? KillQuietCloseS : GapS) : damageMode;
 
     /* The newest thing this row did in either direction. A row exists only because facts landed on it, but both windows can
      * still be empty (a row opened by something with no direction, e.g. a death marker), so its span is the fallback. */
@@ -103,10 +124,55 @@ namespace EQLogParser
      * from the board. Note what does NOT age the stored start while no window is open: nothing runs out there, so the
      * reopen asks this rule once and gets the answer the dial implies — still inside the range means the whole pull.
      */
+    /*
+     * The seconds a meter's totals cover. `timeoutS` is the dial's answer to "how long may a quiet board stay up" —
+     * `ExpiryFor`, which for "on kill" is short after a seen death and the full gap otherwise, so a lull cannot eat damage.
+     */
     internal static double WindowStartFor(double storedStartT, double lastFactT, double nowT, double timeoutS)
     {
-      if (storedStartT < 0) return nowT;
+      /*
+       * A meter that has never opened (or was just cleared) starts its window BACK by its own quiet window, not AT now.
+       * Starting at now is what made a one-shot kill invisible: the mob's whole life — its only damage line and its death —
+       * landed in the second before this window existed, `BuildOverlayStats` keeps rows whose `LastTime >= fromT`, so there was
+       * nothing to paint, no fact ever set `lastFactT`, `Expired` never fires on NaN, and the board stayed empty until some LATER
+       * swing happened to fall inside. Legacy never had this hole because its totals lived in statics the window merely displayed.
+       * Reaching back one quiet window is what makes "it should still show me the total" true: a kill you just landed is inside the
+       * window the meter opens for it, and the same reach-back costs nothing on a capture that has done nothing (an empty window is
+       * an empty board either way).
+       */
+      if (storedStartT < 0) return nowT - timeoutS;
       return Expired(nowT, lastFactT, timeoutS) ? nowT : storedStartT;
+    }
+
+    /*
+     * The newest KILL this capture saw inside these seconds, or NaN. "Saw" is the whole rule and it is already recorded: a row
+     * ends `Slain` when the death line names it, versus `Gap` when an inactivity stretch merely assumed it, so this asks about
+     * kills and never about silence — which is exactly the difference the meter needs.
+     *
+     * Not every row that dies is a kill WE made: a raid member's row (a charmed raider is an encounter row) and our own pet's row
+     * end when they die too, and a rez must not read as "the pull is over". So both are refused here — the person by what the
+     * timeline believed at the death, the pet by the flag the projection stamped for it.
+     */
+    internal static double LastKillT(IReadOnlyList<DerivedFight> rows, double fromT, double toT, EntityTimeline timeline)
+    {
+      if (rows is null) return double.NaN;
+
+      var newest = double.NaN;
+      for (var i = 0; i < rows.Count; i++)
+      {
+        var row = rows[i];
+        if (row.EndReason != DerivedFightEnd.Slain || row.RaidPet) continue;
+
+        // The death lands at the end of the row's window: a slain line follows the last exchange inside one engagement.
+        var t = row.LastTime;
+        if (double.IsNaN(t) || t < fromT || t > toT) continue;
+
+        if (timeline is not null && timeline.IsConfirmedRaidPersonAt(row.Name, t)) continue;
+
+        if (double.IsNaN(newest) || t > newest) newest = t;
+      }
+
+      return newest;
     }
 
     /* True when the board should zero: the newest fact predates `nowT` by more than the meter's quiet window. A window with
