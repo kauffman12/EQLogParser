@@ -1683,6 +1683,10 @@ namespace EQLogParser
          */
     private async Task<bool> PayLoadTidyAsync(string reason)
     {
+      // The status line and the band are Dispatcher state, and both are written before the await below: the law is "asked from a click", so say it
+      // where it can be enforced instead of in a comment someone will stop reading.
+      Dispatcher.VerifyAccess();
+
       const string notice = PostLoadCleanup.Notice;
       if (_engine is not { } session) return false;
 
