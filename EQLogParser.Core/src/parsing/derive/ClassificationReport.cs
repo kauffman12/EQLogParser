@@ -242,18 +242,11 @@ namespace EQLogParser
                                              HealFactTable? healFacts, IdentityOverrideStore? overrides,
                                              PlayerRegistry? registry, IdentityPriorStore? priors = null)
     {
-      /*
-       * ONE boundary, read in THIS order. The census runs while the parser is still naming people — BuildNameCensus takes the
-       * inline rule-book path whenever a window opens between the log opening and its first full derive, which on a big file is
-       * mid-read — so "the pool" and "the facts" are two different instants unless the code makes them one.
-       *
-       * The fact bound goes first because every id used by a fact under it was interned before that fact was published; reading
-       * the pool afterwards therefore yields a count that covers every index the walk can meet. Reading it first — which is what
-       * this did — sized the arrays behind a name the grower had not finished adding yet, and the walk indexed past the end:
-       * "Name census skipped; keeping the previous list" with an IndexOutOfRangeException out of a mid-load census
-       * (CensusGrowingPoolTest reproduces it on the first passes). A stale answer is allowed — the next pass catches up — a crash
-       * is not, because the operator's identity list silently stops updating.
-       */
+            /*
+             * ONE boundary, read in THIS order: the fact bound first, then the pool size. The census can run mid-read, and every id under that bound was
+             * interned before its fact was published, so a pool count taken afterwards covers the walk. Taking it first sized the arrays behind a name
+             * still being added and indexed past the end (CensusGrowingPoolTest). A stale answer is fine; a crash stops the list updating.
+             */
       var factLimit = damageFacts?.FactCount ?? 0;
       var healLimit = healFacts?.HealCount ?? 0;
       var names = damageFacts?.InternedNames;

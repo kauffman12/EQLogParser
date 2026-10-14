@@ -3,22 +3,12 @@ using System.Reflection;
 
 namespace EQLogParser
 {
-  // The tap (D1): subscribes to the existing parser and registry events and appends immutable
-  // facts — attacker/defender exactly as fired (parser name handling is factual normalization
-  // only), plus the raw action line carried on the event, from which ownership evidence is
-  // extracted registry-free. No parser logic changes; no classification happens here.
-  //
-  // Beyond damage/death, two pipeline inputs that could change fight state are captured in
-  // consumer order: registry verifications and taunts. The legacy engine dropped an active fight on a
-  // verification and opened one on a taunt; the fact queues keep the same arrival order so any fold
-  // sees exactly what the parse saw.
-  //
-  // Thread model: a capture taps ONE ParseLane — the stream whose lines become its rows. Parser events are
-  // raised on the lane its LogProcessor consumer bound, so a capture subscribed to a lane sees exactly that
-  // stream's facts and appends need no locking (same contract as DamageFactTable). With no lane named the tap
-  // sits on ParseLane.Main, which is the single stream this app has always had. PlayerRegistry events are the
-  // deliberate exception: identity memory is process-wide, so a verification from ANY stream reaches every
-  // subscribed capture, and the row a verification writes is keyed by name rather than by who raised it.
+    // The tap: subscribes to parser and registry events and appends immutable facts — attacker/defender exactly as fired, plus the raw action
+    // line, from which ownership evidence is extracted registry-free. Registry verifications and taunts are captured in consumer order so a fold
+    // sees what the parse saw.
+    //
+    // A capture taps ONE ParseLane, so its appends need no locking; with no lane named it sits on Main. PlayerRegistry events are the deliberate
+    // exception — identity memory is process-wide, and a verification row is keyed by name, not by who raised it.
   internal sealed class CombatCapture
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);

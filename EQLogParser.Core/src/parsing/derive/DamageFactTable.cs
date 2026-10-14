@@ -616,24 +616,12 @@ namespace EQLogParser
      * Subtype and label tables deliberately stay ordinal: those strings are vocabulary words the user's
      * settings and `Labels` constants compare against.
      */
-    /*
-     * THE ID IS AN `int`, AND THAT IS A DECISION WITH A PRICE (2026-10-13). It used to be a short, which capped a capture at
-     * short.MaxValue = 32,767 distinct names — with a message claiming 65,535, so anyone reading the error was lied to about
-     * twice. A real session can exceed it: the pool holds every unique NPC and player PLUS every spell name that ever appears
-     * as an attacker (`DamageFact.AttackerIsSpell`), and unique names across a long capture run past 100,000.
-     *
-     * What happened at the old ceiling is the part worth remembering: this throw was raised on the INGEST path, where the
-     * per-line catch swallows it. So the 32,768th name did not fail loudly — its line was dropped and the capture quietly went
-     * blind from there on, which is a data-loss bug wearing a capacity-error costume.
-     *
-     * The price is row width: `DamageFact` goes 24 → 28 bytes (+4 B per fact); cold ids use zigzag varints rather than
-     * widened fixed planes (DamageFactChunkCodec). `ushort` would have been free and gives only 65,534 slots, which is not enough. A
-     * silent clamp or a hash alias into a full table is worse than four bytes: it invents or loses entities.
-     *
-     * So there is deliberately NO capacity check here any more. An int id space cannot be reached — the pool itself would need
-     * gigabytes of strings and dictionary nodes first, and `List<T>` stops on its own — while every check that used to live here
-     * was a ceiling a real capture could hit.
-     */
+        /*
+         * The name id is an `int`, and that is a paid decision: it was a short (32,767 usable names, with an error message claiming 65,535), the pool
+         * legitimately passes that in a long capture, and the throw fired on the INGEST path where the per-line catch swallows it — so a capture went
+         * quietly blind instead of failing. Cost: a 28-byte row and zigzag varint cold ids (DamageFactChunkCodec). `ushort` is not enough and clamping
+         * invents entities. There is deliberately no capacity check here: an int space is unreachable. docs/DesignNotes.md → "A fact row is 24 bytes".
+         */
     public int InternName(string name)
     {
       if (_nameMap.TryGetValue(name, out var idx)) return idx;

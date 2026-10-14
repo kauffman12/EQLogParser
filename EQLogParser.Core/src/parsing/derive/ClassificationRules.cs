@@ -10,15 +10,11 @@ namespace EQLogParser
     public const int Strong = 60;    // behavior only your side performs: join/leave, guild/group/raid speech
     public const int Medium = 30;    // strong corroboration: multi-word NPC name hit, graph inference
 
-    /*
-     * The rung for "a shipped data table lists this exact string" — above a bare hint, below every rung that
-     * knows something about THIS capture. A dictionary entry is certain about the name and silent about the
-     * occasion: `Scorn` is a mob in npcs.txt, and if somebody on this server is called Scorn then the list is
-     * simply not talking about her. That is why it sits under Medium (the graph, heal breadth, a loot line)
-     * rather than beside it: a tie is settled by arrival order, and "who won" must not depend on stage order.
-     * Above the remembered lanes it goes for the same reason in reverse — `RegistrySeed` writes 8-10 precisely
-     * so rule output overrides it, and letting a warm cache outvote a lookup would re-create that tie.
-     */
+        /*
+         * The rung for "a shipped data table lists this exact string": above a bare hint, below every rung that knows something about THIS capture.
+         * A dictionary entry is certain about the name and silent about the occasion, so it must not tie with Medium (ties settle by stage order) and
+         * must beat the remembered lanes (RegistrySeed writes 8-10 precisely so rule output overrides it).
+         */
     public const int Listed = 20;
 
     public const int Weak = 10;      // single-source hints kept for context only
@@ -1191,31 +1187,15 @@ namespace EQLogParser
       return minted;
     }
 
-    /*
-     * R6: every log name that is an exact NPC-database entry (the engine's own npcs.txt load, matched case-blindly).
-     *
-     * Two rungs, and the divider is shape, not confidence in the file. A name with a space in it (`A bramble
-     * sentinel`, `Kratakel, Lord Misery`) cannot be worn by a character — EQ character names are one token — so
-     * the lookup asserts Npc at Medium. A bare word can be worn by anybody, so it asserts Npc at `Listed`: the
-     * file is certain about the string and says nothing about the occasion (an NPC called `Scorn` collides with a
-     * raid member called Scorn).
-     *
-     * WHAT THE LIFT ACTUALLY BUYS, stated exactly, because the interesting constraint here is stage order rather
-     * than arithmetic: almost every rule after this one reads only names that are still Unknown (R7 graph line
-     * 1449, R15, R25, R26), so a list hit is already the answer for that name at ANY strength — raising it from
-     * Weak changes no winner among the rules. What changes is the remembered lanes: `RegistrySeed` writes Player,
-     * Pet and Merc at 8-10 by design ("below the rule tiers, so rule output overrides this seed"), and at Weak a
-     * bare-word list hit beat that claim only because it happened to arrive second — an equal-strength tie settled
-     * by write order. At Listed it wins on strength, which is the same answer and no longer a coin toss about
-     * stage order (pinned both ways in `NpcDatabaseTierTest`).
-     *
-     * What still outranks it, from lines this capture actually printed: everything the evidence stage claims
-     * before R6 runs — target frames and `/who` at Certain, joins, guild/group/raid speech, guildmate
-     * announcements, a drink line and an eye summon at Strong, loot at Medium. And what outranks a WRONG list hit
-     * is the operator: R10's Manual verdict (1000) or a `Targeted (Player):` line on the name once. The bare-word
-     * tier is 3,223 of the file's 38,498 entries (8.4 %), the same share the comma-title note measured as
-     * "a shape any character could wear".
-     */
+        /*
+         * R6: a name that is an exact npc.txt entry. A spaced name cannot be worn by a character, so it is Npc at Medium; a bare word can be worn by
+         * anybody, so it is Npc at Listed — the file is certain about the string and silent about the occasion.
+         *
+         * Listed exists to win on strength rather than on write order: nearly every later rule reads only still-Unknown names (so any rung settles
+         * those), but RegistrySeed claims Player/Pet/Merc at 8-10, and at Weak a bare-word hit beat that seed only because it ran second. What still
+         * outranks a list hit is a line this capture printed, or the operator's verdict. docs/DesignNotes.md → "What the `Listed` rung is, and what
+         * it is not".
+         */
     private static void ApplyNpcDatabase(IFactTable facts, EntityTimeline timeline)
     {
       var store = EQDataStore.Instance;

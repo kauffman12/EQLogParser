@@ -199,14 +199,10 @@ namespace EQLogParser
             return null;  // short circuit over heal
           }
 
-          /*
-           * One word, one branch — the shape the old `switch (split[i])` had, kept in exactly the same order with
-           * exactly the same bodies. A switch over a materialized string is impossible when words are spans, and the
-           * equality chain is not slower: Word == literal checks length first, which is the same first move the
-           * compiler made on every case label. The migration was verified record-for-record byte-identical on all 19
-           * real captures (DesignNotes → "The damage parser reads word views"), which is why the order and every
-           * guard below are verbatim rather than "improved".
-           */
+                    /*
+                     * One word, one branch: the old `switch (split[i])` in the same order with the same bodies, because a span word view cannot switch.
+                     * Verified record-for-record identical on all 19 real captures, so order and guards are verbatim rather than improved.
+                     */
           if (word == "absorbs")
           {
             // live

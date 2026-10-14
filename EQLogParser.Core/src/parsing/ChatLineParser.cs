@@ -44,15 +44,12 @@ namespace EQLogParser
 
   public static class ChatLineParser
   {
-    /*
-     * One ordinal scan for the whole gate. This list is not a hint about chat — it IS the rejection condition, copied verbatim from the
-     * chain of eight IndexOf calls it replaces: a line containing none of them was never chat and still falls through to the real parsers,
-     * and a line containing any of them still goes to CheckOtherCriteria for the actual decision. Which is also the one rule to keep if this
-     * ever changes: every shape CheckOtherCriteria can recognise has to appear here too, or the gate eats a real chat line before anyone reads it.
-     *
-     * Worth doing because LogProcessor asks this question for EVERY line, and combat lines — the majority of a raid log, and all of them matching
-     * nothing here — used to pay eight separate scans over their own text to reach the same "no".
-     */
+        /*
+         * One ordinal scan for the whole gate. This list IS the rejection condition, copied from the chain of eight IndexOf calls it replaces: a line
+         * matching nothing is not chat and falls through, and one matching anything still goes to CheckOtherCriteria. Keep that rule: every shape
+         * CheckOtherCriteria recognises must appear here too, or the gate eats real chat. Worth doing because this question is asked of every line and
+         * combat lines used to pay eight scans to reach "no".
+         */
     private static readonly SearchValues<string> ChatMarkers = SearchValues.Create(
       // " auction" also covers " auctions", so the longer marker would be dead weight.
       [" says", " tells ", " told ", " shouts", " auction", " -> ", "'My leader is"],

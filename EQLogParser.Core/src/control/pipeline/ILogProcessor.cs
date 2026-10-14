@@ -2,14 +2,12 @@ using System.Collections.Concurrent;
 
 namespace EQLogParser;
 
-// Consumes a stream of log lines handed over by a reader. Implementations: LogProcessor (the
-// parsing pipeline — used by the app and headless tests) and TriggerProcessor (WPF trigger
-// tester). LinkTo starts consumption; Dispose must wait for it to drain.
+// Consumes a stream of log lines from a reader: LogProcessor (the parsing pipeline, app and headless tests) or TriggerProcessor (trigger
+// tester). LinkTo starts consumption; Dispose waits for the drain.
 //
-// The unit of the stream is a BATCH (LogReaderItem[]), because the handoff across threads is what
-// costs, not the parsing: one Add per line measured at roughly half the CPU of the whole ingest loop.
-// A batch is a transport shape only — a consumer hands every line to the pipeline in arrival order on
-// one thread, so nothing downstream can tell how the file was chopped up.
+// The unit is a BATCH, because the thread crossing costs and the parse does not — one Add per line measured about half the CPU of the whole
+// ingest loop. A batch is transport only: consumers hand lines to the pipeline one at a time in arrival order on one thread, so nothing
+// downstream can tell how the file was chopped up.
 internal interface ILogProcessor : IDisposable
 {
   void LinkTo(BlockingCollection<LogReaderItem[]> collection);

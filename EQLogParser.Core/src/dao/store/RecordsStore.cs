@@ -260,17 +260,13 @@ namespace EQLogParser
         return [];
       }
 
-      /*
-       * The anchor stays exactly as it was — the newest cast in the global ambiguity cache, not this spell's newest and
-       * not wall time. It is a quirk (a log whose clock jumps moves the window) and it is the behaviour every existing
-       * resolution depends on, so bounding the scan is not the day to change which casts are "recent".
-       *
-       * Anchor reads and scans share the lock with appends and horizon pruning: RemoveRange clears vacated slots,
-       * so a Count read outside the lock could index a swept entry. The current combat loader is sequential, and trigger
-       * readers feed their own TriggerProcessor, not this store; that does not make concurrent store access safe.
-       * The order remains cache → history, the order Add uses. Nothing may lock history first.
-       * RecordsStoreConcurrencyTest pins this contract.
-       */
+            /*
+             * The anchor stays what it always was — the newest cast in the global ambiguity cache, not this spell's newest and not wall time. It is a
+             * quirk, and every existing resolution depends on it; bounding the scan is not the day to change which casts count as recent.
+             *
+             * Reads share the lock with appends and pruning (RemoveRange sweeps slots), and the order stays cache → history — nothing may lock history
+             * first. RecordsStoreConcurrencyTest pins that contract.
+             */
       lock (_playerAmbiguityCastCache)
       {
         var end = _playerAmbiguityCastCache.Count - 1;

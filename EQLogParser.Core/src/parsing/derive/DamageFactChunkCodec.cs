@@ -4,34 +4,17 @@ using System.IO.Compression;
 namespace EQLogParser;
 
 /*
- * The cold-chunk encoding for damage rows (A1 step 3a): transposed planes with zigzag-varint deltas on the two monotonic columns, then
- * Deflate. Chosen by measurement over `eqlog_Kizant_xegony-2.txt` (2,286,368 rows, 52.3 MB of row bytes):
+ * The cold-chunk encoding for damage rows: transposed planes with zigzag-varint deltas on the monotonic columns, then Deflate. Chosen by
+ * measurement over a 2,286,368-row chunk set — row-major deflate 14.62 MB / planes+delta varint 9.02 MB (5.80x), and Brotli's extra 16 % costs
+ * fifteen times the encode time, which is refused because encoding runs while a raid is being captured. Decode is ~3 ms per chunk, which is what
+ * makes decode-on-read affordable.
  *
- *   row-major deflate            14.62 MB   3.58x    encode 1,300 ms
- *   row-major brotli             10.72 MB   4.88x    encode 47,870 ms
- *   planes deflate               11.68 MB   4.48x    encode 2,740 ms
- *   **planes + delta varint      9.02 MB    5.80x**  encode 2,422 ms      ← shipped
- *   planes + delta varint brotli  7.71 MB   6.79x    encode 36,179 ms
+ * Layout, compressed as one Deflate stream: zigzag varint deltas of Seq, then TimeS (epochs rebased through FactTime on the way back in), then
+ * attacker and defender ids as varints, then total u32 · type u8 · flags u8 · modifier mask u16 · subtype id u16.
  *
- * Brotli buys 16 % more for fifteen times the encode cost, and encoding runs while a raid is being captured, so it is refused — this is
- * footprint, not archival. Delta is what carried the layout past the older 4.5x estimate: `Seq` is unique per row by construction, so an
- * entropy coder sees noise where a difference sees mostly zeros. Decode runs at ~3 ms per chunk (~12 ms for the four verified chunks),
- * which is what makes decode-on-read affordable: a board that walks history pays once per chunk and every later build reads rows.
- *
- * The format, in order, compressed as one Deflate stream:
- *   1. zigzag varint deltas of Seq            (from the previous row; row 0 from 0)
- *   2. zigzag varint deltas of TimeS          (same rule; epochs rebased by FactTime on the way back in, through the row's own constructor)
- *   3. attacker id  (zigzag varint) · defender id (zigzag varint)   — with Seq and TimeS, in the row loop above
- *   4. total (u32) · type (u8) · flags (u8) · modifier mask (u16) · subtype id (u16)
- *
- * WHY THE IDS ARE VARINTS AND NOT AN i32 PLANE: the name pool outgrew 16 bits (docs/DesignNotes -> the InternName decision), and the
- * first cut of that change wrote them as fixed 4-byte planes. That is honest but expensive — it made a chunk's pre-Deflate row 30 bytes
- * instead of 26, enough that the cold-store guard ("cold rows must at least halve against their own row bytes") failed on healing. A
- * zigzag varint costs 1-3 bytes for every id a real capture reaches (a name past 100,000 is 3), and the -1 "no name" sentinel costs ONE
- * byte instead of four, so the widening is paid for by the encoding instead of by memory.
- *
- * Fields are encoded and decoded through the row's PUBLIC surface — `TimeS` and the constructor — so the codec cannot disagree with
- * `FactTime` about what a stored second means, and every field that has to survive is written by a line the struct itself owns.
+ * Ids are varints, not an i32 plane: fixed 4-byte planes made a cold row 30 bytes instead of 26 and failed the cold-store halving guard on
+ * healing, while a varint costs 1-3 bytes and spends one byte on the -1 sentinel. Fields go through the row's public surface so the codec cannot
+ * disagree with FactTime about a stored second.
  */
 internal static class DamageFactChunkCodec
 {
