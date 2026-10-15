@@ -7881,7 +7881,6 @@ a lizardman dreamwalker
 a lizardman forager
 a lizardman healer
 a lizardman mystic
-a lizardman oracle5419
 a lizardman patroller
 a lizardman robber
 a lizardman scout
