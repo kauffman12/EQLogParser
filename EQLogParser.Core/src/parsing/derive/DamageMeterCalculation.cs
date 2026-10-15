@@ -5,6 +5,7 @@ using System.Threading;
 namespace EQLogParser;
 
 // Window-owned accounting. Only the worker touches it; published stats contain no references back into this state.
+// Published rows support the meter and parse formatter only, not breakdowns, charts, or full board statistics.
 internal sealed class DamageMeterCalculation
 {
   private sealed class Life
@@ -57,8 +58,8 @@ internal sealed class DamageMeterCalculation
     cancellation.ThrowIfCancellationRequested();
     var filter = MeterDamageFilter.Current;
     if (!ReferenceEquals(_facts, input.Facts) || _from != input.From || _filter != filter || input.To < _to
-      || input.To >= _future || !AnswersMatch(input.Index)
-      || !ReferenceEquals(_index, input.Index) && !TryRebind(input))
+      || input.To >= _future || !AnswersMatch(input.Index, cancellation)
+      || !ReferenceEquals(_index, input.Index) && !TryRebind(input, cancellation))
     {
       _lives.Clear();
       _names.Clear();
@@ -89,7 +90,7 @@ internal sealed class DamageMeterCalculation
         foreach (var state in _lives.Values) retainedNames.UnionWith(state.Names);
         foreach (var name in new List<string>(_names.Keys))
           if (!retainedNames.Contains(name)) _names.Remove(name);
-        RebuildTotals();
+        RebuildTotals(cancellation);
       }
 
       var allRanges = new TimeRange();
@@ -115,15 +116,16 @@ internal sealed class DamageMeterCalculation
         if (header.Id < firstId) { firstId = header.Id; firstName = header.Name; }
         allRanges.Add(new TimeSegment(Math.Max(header.Begin, input.From), Math.Min(header.Last, input.To)));
       }
-      if (rebuild) RebuildTotals();
+      if (rebuild) RebuildTotals(cancellation);
+      cancellation.ThrowIfCancellationRequested();
       StatsBuildTrace.Stage(trace, "delta");
       if (count == 0) return null;
       var title = StatsUtil.CombinedPrefix(count, true) + firstName;
-      var result = new DamageOverlayStats
-      {
-        DamageStats = _damage.Publish(title, allRanges, damageSlices),
-        TankStats = _tank.Publish(title, allRanges, tankSlices)
-      };
+      var damage = _damage.Publish(title, allRanges, damageSlices);
+      cancellation.ThrowIfCancellationRequested();
+      var tank = _tank.Publish(title, allRanges, tankSlices);
+      cancellation.ThrowIfCancellationRequested();
+      var result = new DamageOverlayStats { DamageStats = damage, TankStats = tank };
       var raid = (result.DamageStats ?? result.TankStats)?.RaidStats;
       if (raid is not null)
       {
@@ -131,6 +133,7 @@ internal sealed class DamageMeterCalculation
         ApplySpecials(result.DamageStats, raid);
         ApplySpecials(result.TankStats, raid);
       }
+      cancellation.ThrowIfCancellationRequested();
       StatsBuildTrace.Stage(trace, "present");
       return result;
     }
@@ -192,26 +195,36 @@ internal sealed class DamageMeterCalculation
       if (raid.Specials.TryGetValue(row.OrigName, out var special)) row.Special = special;
   }
 
-  private bool TryRebind(MeterFactInput input)
+  private bool TryRebind(MeterFactInput input, CancellationToken cancellation)
   {
     if (_index is null) return false;
     var previous = new Dictionary<(string Name, int First), Life>();
-    foreach (var life in _lives.Values) previous[(life.Input.Name, life.Input.FirstOrdinal)] = life;
+    foreach (var life in _lives.Values)
+    {
+      cancellation.ThrowIfCancellationRequested();
+      previous[(life.Input.Name, life.Input.FirstOrdinal)] = life;
+    }
     var rebound = new Dictionary<DerivedFight, Life>();
     var reused = new HashSet<Life>();
     foreach (var header in input.Lives)
     {
+      cancellation.ThrowIfCancellationRequested();
       if (!previous.TryGetValue((header.Name, header.FirstOrdinal), out var life)) continue;
       if (life.DamageThrough > header.DamageCount || life.TankThrough > header.TankCount
-        || !input.Index.MeterPrefixMatches(_index, life.Input.Source, header.Source, false, life.DamageThrough)
-        || !input.Index.MeterPrefixMatches(_index, life.Input.Source, header.Source, true, life.TankThrough))
+        || !input.Index.MeterPrefixMatches(_index, life.Input.Source, header.Source,
+          false, life.DamageThrough, cancellation)
+        || !input.Index.MeterPrefixMatches(_index, life.Input.Source, header.Source,
+          true, life.TankThrough, cancellation))
         return false;
       rebound[header.Source] = life;
       reused.Add(life);
     }
     // Removed lives still need their contributions withdrawn by Update's membership comparison.
     foreach (var pair in _lives)
+    {
+      cancellation.ThrowIfCancellationRequested();
       if (!reused.Contains(pair.Value)) rebound[pair.Key] = pair.Value;
+    }
     _lives = rebound;
     return true;
   }
@@ -221,19 +234,23 @@ internal sealed class DamageMeterCalculation
     if (!_names.ContainsKey(name)) _names[name] = index.MeterAnswerFor(name);
   }
 
-  private bool AnswersMatch(FightFactIndex index)
+  private bool AnswersMatch(FightFactIndex index, CancellationToken cancellation)
   {
     foreach (var pair in _names)
+    {
+      cancellation.ThrowIfCancellationRequested();
       if (pair.Value != index.MeterAnswerFor(pair.Key)) return false;
+    }
     return true;
   }
 
-  private void RebuildTotals()
+  private void RebuildTotals(CancellationToken cancellation)
   {
     _damage = new MeterDirectionTotals(false);
     _tank = new MeterDirectionTotals(true);
     foreach (var life in _lives.Values)
     {
+      cancellation.ThrowIfCancellationRequested();
       _damage.Merge(life.Damage);
       _tank.Merge(life.Tank);
     }

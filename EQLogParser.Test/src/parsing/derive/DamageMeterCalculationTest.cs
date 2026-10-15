@@ -1,7 +1,7 @@
 namespace EQLogParser;
 
 [TestClass]
-public class DamageMeterCalculationTest
+public partial class DamageMeterCalculationTest
 {
   private const double T0 = FixtureTime.Base;
 
@@ -288,7 +288,7 @@ public class DamageMeterCalculationTest
   }
 
   [TestMethod]
-  public void ResetAndCancellationCannotResumeAPartialOldGeneration()
+  public void APreCancelledUpdateAfterResetLeavesOnlyPostResetDamage()
   {
     var log = new Capture();
     log.Add("Illuminai", "a rat", 0, 100);
@@ -361,13 +361,15 @@ public class DamageMeterCalculationTest
       return rows;
     }
 
-    internal void Check(double second, int mode = 0)
+    internal void Check(double second, int mode = 0, bool compareFresh = false)
     {
       var rows = Project();
       var scope = Lifecycle.Select(1, rows, T0 + second, mode);
       Expected = DerivedTotals.ForOverlay(scope.Rows, Cache.Index, Facts, scope.FromTime, T0 + second);
-      Last = Calculation.Update(Cache.Index.CaptureMeterInput(scope.Rows, Facts, scope.FromTime, T0 + second));
+      var input = Cache.Index.CaptureMeterInput(scope.Rows, Facts, scope.FromTime, T0 + second);
+      Last = Calculation.Update(input);
       DamageMeterAssert.Equal(Expected, Last);
+      if (compareFresh) DamageMeterAssert.Equal(Expected, new DamageMeterCalculation().Update(input));
     }
   }
 }

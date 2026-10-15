@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Threading;
 
 namespace EQLogParser;
 
@@ -53,8 +54,9 @@ internal sealed partial class FightFactIndex
 
   // An index replacement may keep every routed prefix intact. Verify ordinals, not a hash or timestamp heuristic.
   internal bool MeterPrefixMatches(FightFactIndex previous, DerivedFight oldLife, DerivedFight newLife,
-    bool tanking, int count)
+    bool tanking, int count, CancellationToken cancellation = default)
   {
+    cancellation.ThrowIfCancellationRequested();
     Span<int> oldRun = stackalloc int[2048];
     Span<int> newRun = stackalloc int[2048];
     for (var start = 0; start < count;)
@@ -62,6 +64,7 @@ internal sealed partial class FightFactIndex
       var length = Math.Min(oldRun.Length, count - start);
       previous.CopyMeterOrdinals(oldLife, tanking, start, oldRun[..length]);
       CopyMeterOrdinals(newLife, tanking, start, newRun[..length]);
+      cancellation.ThrowIfCancellationRequested();
       if (!oldRun[..length].SequenceEqual(newRun[..length])) return false;
       start += length;
     }

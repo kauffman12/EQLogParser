@@ -788,8 +788,8 @@ namespace EQLogParser
       var allDeaths = RecordsStore.Instance.GetAllDeaths().ToList();
       var temp = new HashSet<IAction>();
       var actions = new List<IAction>();
-      var usedSpecials = new List<int>();
-      var usedDeaths = new List<int>();
+      var usedSpecials = new HashSet<int>();
+      var usedDeaths = new HashSet<int>();
 
       foreach (var segment in raidStats.AllRanges.TimeSegments)
       {
@@ -806,9 +806,8 @@ namespace EQLogParser
               if (allSpecials[j].Item1 >= offsetBegin && allSpecials[j].Item1 <= segment.EndTime)
               {
                 specialStart = j + 1;
-                if (!usedSpecials.Contains(j))
+                if (usedSpecials.Add(j))
                 {
-                  usedSpecials.Add(j);
                   actions.Add(allSpecials[j].Item2);
                 }
               }
@@ -829,9 +828,8 @@ namespace EQLogParser
               if (allDeaths[j].Item1 >= offsetBegin && allDeaths[j].Item1 <= offsetEnd)
               {
                 deathStart = j + 1;
-                if (!usedDeaths.Contains(j))
+                if (usedDeaths.Add(j))
                 {
-                  usedDeaths.Add(j);
                   actions.Add(allDeaths[j].Item2);
                   raidStats.Deaths.Add(new DeathEvent
                   {

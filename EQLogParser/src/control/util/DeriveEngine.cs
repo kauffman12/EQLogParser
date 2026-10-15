@@ -822,6 +822,7 @@ namespace EQLogParser
         snapshot.PendingActivity.Update(snapshot.Facts, snapshot.Timeline, cancellation);
         var input = _capture.DeriveQuiescent(() =>
         {
+          cancellation.ThrowIfCancellationRequested();
           if (_disposed || !ReferenceEquals(snapshot, Volatile.Read(ref _meterSnapshot))) return null;
           var scope = lifecycle.Select(SessionId, snapshot.AllFights, now, mode, snapshot.PendingActivity);
           return snapshot.DamageIndex.CaptureMeterInput(scope.Rows, snapshot.Facts, scope.FromTime, now);

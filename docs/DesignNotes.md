@@ -5698,6 +5698,18 @@ fixture comparison for both views. Special/death annotation uses the shared `Sta
 record scans now stop at each range's upper bound rather than walking the remaining future records for every range.
 That helper still snapshots auxiliary history; it is not an incremental auxiliary-record store.
 
+Review hardening keeps the same accounting and cadence. Special/death index deduplication uses hash sets while
+ordered action/death lists still determine output. Cancellation is checked after acquiring the capture gate,
+while checking identity answers and ordinal prefixes, between retained-life merges, and between paired publications.
+An interrupted rebind leaves its candidate map unpublished; cancellation during counting or presentation discards
+mutable accounting. These checks do not interrupt a monitor wait, an individual decode, or an in-progress sort.
+Fixed-seed tests compare incremental, fresh compact and full-reference answers after mixed pulls, deaths, quiet
+gaps, resets, filter/owner changes and reindexing. Deterministic cancellation tests interrupt rebind between lives
+and presentation after counting, without sleep-based races or production test hooks. Gate-hold measurement and
+Windows/long-session checks remain outstanding; no retry or timer policy changed in this hardening.
+Follow-up Linux validation: **2,236 headless tests passed, 6 skipped**; the full no-incremental solution build
+and explicit WPF-test build succeeded with **zero warning/error diagnostics**. WPF runtime tests were not run.
+
 **Headless measurement, not Windows frame latency.** A disposable test harness replayed each gitignored log through
 `PipelineHarness`, settled cold chunk encoding without forcing GC, selected the entire projected history, and compared
 old/new display fields for every row in both directions. It then appended one routed hit, compared again, and forced
@@ -5725,7 +5737,7 @@ THJ append sample exceeded it. The measured win is removing repeated historical 
 not proving that every possible long session is free. Windows execution, end-to-end/GC/UI interference, high-add-count
 soak, and peak-retention measurement remain release gates in `ReleaseChecklist`.
 
-Validation on Linux: **2,228 headless tests passed, 6 skipped**, including 28 additional tests and compact/full
+Initial implementation validation on Linux: **2,228 headless tests passed, 6 skipped**, including 28 additional tests and compact/full
 comparisons inside all 35 overlay lifecycle tests. The explicit WPF-test assembly build and full no-incremental
 solution build succeeded with **zero warning/error diagnostics**. The WPF suite was not executed on Linux.
 
