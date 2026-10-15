@@ -398,6 +398,7 @@ if os.path.isfile(DBSpellsFile):
     info['resist'] = resist
     info['skill'] = skill
     info['rank'] = rank
+    info['charm'] = charm
     info['level'] = minLevel
     info['recastTime'] = recastTime
     info['spellTarget'] = spellTarget
@@ -444,7 +445,7 @@ if os.path.isfile(DBSpellsFile):
   output = open('output.txt', 'w')
   for key in sorted(spells):
     sp = spells[key]
-    data = '%s^%s^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%s^%s^%s' % (sp['intId'], sp['name'], sp['level'], sp['maxDuration'], sp['beneficial'], sp['maxHits'], sp['spellTarget'], sp['classMask'], sp['damaging'], sp['combatSkill'], sp['resist'], sp['songWindow'], sp['adps'], sp['mgb'], sp['rank'], sp['landsOnYouAmbiguity'], sp['landsOnOtherAmbiguity'], sp['landsOnYou'], sp['landsOnOther'], sp['wearOff'])
+    data = '%s^%s^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%d^%s^%s^%s' % (sp['intId'], sp['name'], sp['level'], sp['maxDuration'], sp['beneficial'], sp['maxHits'], sp['spellTarget'], sp['classMask'], sp['damaging'], sp['combatSkill'], sp['resist'], sp['songWindow'], sp['adps'], sp['mgb'], sp['rank'], sp['charm'],sp['landsOnYouAmbiguity'], sp['landsOnOtherAmbiguity'], sp['landsOnYou'], sp['landsOnOther'], sp['wearOff'])
     output.write(data)
     output.write('\n')
   output.write('900001^Glyph of Destruction I^254^20^1^0^6^65407^0^0^0^0^3^0^1^0^1^^ is infused for destruction.^Your Glyph of Destruction fades away.')
