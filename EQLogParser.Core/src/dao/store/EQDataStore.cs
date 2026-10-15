@@ -177,6 +177,7 @@ namespace EQLogParser
     private static readonly SpellAbbrvComparer AbbrvComparer = new();
     private readonly HashSet<SpellData> _allSpellData = [];
     private readonly Dictionary<string, bool> _oldSpellNamesDb = [];
+    private readonly HashSet<string> _charmSpells = new(StringComparer.OrdinalIgnoreCase);
     private readonly SpellTreeNode _landsOnOtherTree = new();
     private readonly SpellTreeNode _landsOnYouTree = new();
     private readonly SpellTreeNode _wearOffTree = new();
@@ -282,6 +283,9 @@ namespace EQLogParser
           {
             spellData.Proc = procCache.ContainsKey(spellData.Name) ? (byte)1 : (byte)0;
             spellList.Add(spellData);
+
+            // Include every variant: a newer same-named spell may have a different effect and lands-on message.
+            if (CharmSpells.IsCharmMessage(spellData.LandsOnOther)) _charmSpells.Add(spellData.Name);
 
             if (_spellsNameDb.TryGetValue(spellData.Name, out var spellDataList))
             {
@@ -456,6 +460,7 @@ namespace EQLogParser
     internal bool IsKnownNpc(string npc) => !string.IsNullOrEmpty(npc) && _allNpcs.ContainsKey(StringCache.GetOrAdd(npc));
     internal bool IsKnownMerc(string merc) => !string.IsNullOrEmpty(merc) && _allMercs.ContainsKey(StringCache.GetOrAdd(merc));
     internal bool IsPlayerSpell(string name) => GetSpellByName(name)?.ClassMask > 0;
+    internal bool IsCharmSpell(string name) => !string.IsNullOrEmpty(name) && _charmSpells.Contains(name);
 
     internal string GetClassFromTitle(string title) => _titleToClass.GetValueOrDefault(title);
     internal List<string> GetClassList() => [.. _sortedClassList];

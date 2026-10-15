@@ -117,17 +117,14 @@ namespace EQLogParser
           var npc = action[(marker + CharmEndMarker.Length)..].Trim().TrimEnd('.');
           if (npc.Length == 0) return;
 
-          // "<Owner>'s <spell> spell has worn off of <npc>." — and only a CHARM spell's wear-off line
-          // ends a charm. Every buff in the game writes this same shape (measured: 15,936 of 15,943
-          // such lines in three captures are roots, shackle dots and raid invis upkeep), so the spell
-          // name decides and everything else is dropped here rather than forwarded as a charm end.
+          // Every buff uses this wear-off shape. Only a spell whose data confirms charm may end a charm window.
           var spell = SplitCasterAndSpell(action[..marker], out var owner);
           if (CharmSpells.IsCharmSpellName(spell)) ParseLane.Current.Charm?.Invoke(npc, beginTime, false, owner);
         }
       }
     }
 
-    // "Your Charm XVII" -> ("Charm XVII", You); "Incogitable`s Compulsion IV" -> ("Compulsion IV", "Incogitable").
+    // "Your Charm XVII" -> ("Charm XVII", You); "Incogitable`s Compulsion" -> ("Compulsion", "Incogitable").
     // The possessive is scanned from the END because owner names carry apostrophes of their own
     // ("Sirmr`s pet"), and the buff belongs to whatever owns the whole phrase.
     private static string SplitCasterAndSpell(string left, out string owner)

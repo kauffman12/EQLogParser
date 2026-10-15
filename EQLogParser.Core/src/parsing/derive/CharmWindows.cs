@@ -1,10 +1,6 @@
 namespace EQLogParser
 {
-  // Why a charm window stopped being a charm window. The distribution is the finding: EQ never logs a
-  // charm expiring, so three of these five have to be inferred from behaviour. Measured over the three
-  // captures with charm text (25 windows): wear-off lines accounted for 7 (all in eqlog_Incogitable_xegony,
-  // all "Your Charm XVII spell has worn off of …"), death closed a few more, and the rest had no signal
-  // at all — which is why a cap exists instead of an infinite window.
+  // Close on an observed signal or the bounded timeout; a late signal must not stretch the window.
   internal enum CharmEndReason : byte
   {
     WearOff = 0,     // "<Owner>'s <charm spell> spell has worn off of X." (CharmSpells gates this)
@@ -25,7 +21,7 @@ namespace EQLogParser
   internal sealed class CharmWindow
   {
     public string Name;
-    public string Owner;          // null: no cast line named a caster (third-party charms write none)
+    public string Owner;          // null: neither a matching cast nor an in-window wear-off named a caster
     public double T0;
     public double T1;             // exclusive; double.PositiveInfinity when the log simply ended
     public CharmEndReason Reason;
@@ -119,7 +115,7 @@ namespace EQLogParser
      * are absent from these captures entirely; when one exists in range it pairs through this rule, and
      * when it does not the window is ownerless, which is the honest answer.
      */
-    internal const double OwnerCastLookbackS = 8;
+    internal const double OwnerCastLookbackS = 6;
 
     public static List<CharmWindow> Apply(IFactTable facts, EntityTimeline timeline)
       => Apply(facts, timeline, new CharmCarry(), frozen: false);

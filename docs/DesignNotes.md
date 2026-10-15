@@ -4162,6 +4162,41 @@ unlisted merc sightings, conflict strength, carried/fresh replay), `MercHealingB
 one row per pull with its output *and* its wound, the pre-rule vanishing documented, friendly fire still dropped). Note the direction names in that file: `DamageToOwner` /
 `DamageByOwner` are named from the **row's anchor**, not from our side.
 
+### Bloodbone protector: tanking and remaining identity-read audit
+
+A follow-up report said `A bloodbone protector` was absent from Tanking Summary. Replaying the current branch over
+`local/logs/live/eqlog_Incogitable_xegony.txt` with a disposable assertion found **486 incoming records / 6,554,690
+damage**, all present in its full tanking-summary row across **10 encounters**. Its verdict was **Merc at 80,
+R27-mercdb**, `IdentityLookup.IsPet` was false, and its class label was empty. This does not reproduce the reported
+UI omission: the tank builder has no player-name admission check, while the pane filters by Show Pets, selected classes,
+and damage type. An empty class survives Select All (16 classes), but not a narrowed class selection. Confirm the
+operator's selected log, Identity Table verdict, selected encounters and filters before changing tanking routing.
+The operator confirmed this capture and reported exactly five displayed names after Select All: **Useless, Bulgar,
+Shadow, Incogitable and Kizant**. A second disposable replay materialized every visible encounter plus overlapping hidden
+pet rows, then ran `TankingStatsBuilder` with the full selection and each damage-type option. **All Damage returned
+325 rows / 7,347,890,680 damage**, including the protector's **6,554,690**; **Melee returned 290 rows**, also including
+it; **Non-Melee returned 158 rows**, excluding it because all of its incoming damage in this capture is melee.
+This exercises full-selection Core materialization/building, not the Windows selection control, live session state or grid
+filter. The five-row UI result remains unexplained; do not infer a routing fix from the successful replay. Current-run
+application diagnostics and the actual pane/filter state are needed to distinguish stale/partial builds from visibility.
+No Windows grid execution was performed; both real-log assertions were deleted after answering their pipeline questions.
+
+The audit did find separate post-classification reads still using legacy assumptions:
+
+- `HealingStatsBuilder.CountedAsOurs` accepts derived Player/Merc, then ORs registry membership and player-name shape.
+  A disposable synthetic check confirmed a 500-point heal into a classified Merc counts, a classified Pet named
+  `A friendly summon` with no registry entry is rejected, and a classified NPC named `Bane` counts. Explicit negative
+  verdicts therefore do not end that question, and derived pets do not have their own admission path. These are current
+  observations, not an approved change to healing policy; the temporary checks were deleted.
+- `DamageBreakdown` uses letters-only name shape plus registry pet membership for Show Pets, so an article-shaped merc
+  is treated as a pet by that filter even though the summary knows it is Merc.
+- `EventViewer` still asks registry membership for death participants and lets the NPC data file preempt the classified
+  answer. `NpcStatsViewer` excludes friendly names using registry membership only. A database-only Merc has no registry
+  sighting, so those surfaces can disagree with its verdict.
+
+These display/build reads are different from ingest-time grammar checks, chat-speaker validation, the explicit swarm-pet
+heal option, and projection's Unknown-vs-Unknown anchor fallback. Do not replace those wholesale with kind lookups.
+
 ## The raid roster in `players.txt`: what Save() is allowed to throw away
 
 `PlayerRegistry` keeps four things and saves only two of them, which is the whole background for this note:
@@ -5056,6 +5091,44 @@ now close at 360 s. Total effect: **520 facts / 8,193,161 damage** of pet credit
 and is stale in a known direction: closing at the cap moves which rows a charm is allowed to end, and a 182-day window was keeping whole stretches
 of the capture out of "still going". Re-take those three numbers on the same captures before quoting them again; the measurement above is the
 window-level truth from the re-measure command in this section's own harness.
+
+### Charm ownership follows the spell's lands-on-other message
+
+The Incogitable capture exposed an owner-attribution hole: `A scalewrought terrastriker` correctly took **12,149,157**
+damage on the tanking board while charmed, but never appeared under `Incogitable +Pets`. The charm-success line opens
+Friendly allegiance independently of ownership. The owner lookup was gated by a hard-coded `Charm` / `Compulsion`
+family list, so `You begin casting Esoteric Command.` at **July 3, 2025, 15:18:21**, followed four seconds later by
+`a scalewrought terrastriker is charmed.`, opened an ownerless window. Its `Your Esoteric Command spell has worn off`
+line at **15:25:29** was also unrecognized and in any case arrived past the existing six-minute cap. Two earlier
+charms, `An abyssal terror` and `A scalewrought handler`, likewise followed `Edict of Command XL` casts by five seconds
+and lost their owner at the same gate. The candlefolk charm used the old recognized spell family and already folded.
+
+**Spell data is the authority now, not a list of spell names or rank syntax.** During `EQDataStore` construction,
+every spell row whose `LandsOnOther`, trimmed and compared without case, is exactly **`has been charmed.`** or
+**`is charmed.`** contributes its name to a case-insensitive lookup. The current data has **196 matching rows /
+192 distinct names**. All variants participate: `Beguile` also names a newer non-charm spell, so looking at just the
+single variant `GetSpellByName` selects would lose the older charm. This lookup is independent of the received-buff
+tree's beneficial/ADPS filters. Unknown names, invented ranks, stun/chance subspells and unrelated wear-offs do not
+qualify; missing spell data supplies no ownership guess.
+
+`CharmSpells.IsCharmSpellName` asks that data-derived lookup for both cast pairing and wear-off recognition. R9 still
+chooses the **latest qualifying cast in the preceding six seconds** (reduced from eight at the operator's request),
+not the latest arbitrary spell, and retains
+its existing re-charm ownership segments and six-minute ceiling. No rank parser, family-name table, permanent pet
+mapping, or cap extension is introduced. `CharmSpellDataTest` uses previously unknown synthetic spell names and
+same-name conflicting variants to assert that this really follows the data. `CharmOwnerAttributionTest` covers
+parsed cast/wear-off evidence, full-summary children, meter parity, unrelated recent casts and the lookback boundary;
+older tests now use actual data-backed ranks instead of fictional `Charm IV`, `Charm IX` and `Compulsion IV` names.
+
+**Full-capture A/B:** the terrastriker's **2,463 outgoing records / 28,113,991 damage** now appear as a child of
+`Incogitable +Pets`; the owner's total rises **85,025,009,585 → 85,053,123,576**. Overall damage remains
+**581,429,796,598**, and tanking remains **325 rows / 7,347,890,680**. The abyssal terror and handler windows now also
+name Incogitable, but neither contains captured outgoing damage, so neither manufactures a zero-damage child.
+Full-reference and compact-meter results agreed in the replay. The disposable real-log assertion was deleted after
+verification; the data-driven fixtures remain. The six-second lookback boundary is asserted with a cast at exactly
+six seconds accepted and one at seven rejected. Validation: **2,276 headless tests passed, 6 skipped**; the full
+no-incremental solution build, including the WPF test assembly, reported **zero warnings/errors**. Windows UI
+interaction was not executed on Linux.
 
 ### A raised corpse needs no rule, and two things must never be inferred from it
 
@@ -9717,6 +9790,18 @@ and the charm-anchor exception. The tanking golden restores Akira's pet's **300*
 Validation: **2,243 headless tests passed, 6 skipped**; full no-incremental solution build and explicit WPF-test build
 succeeded with **zero warning/error diagnostics**. The checkbox interaction remains a Windows release check.
 
+**Named charm-row check:** the operator subsequently confirmed the merc omission was the fight list's unchecked
+Tanking dial; enabling it produced the same **325 rows** as the full-selection replay. They then asked about
+`A scalewrought terrastriker` at roughly 12 million tanked. A disposable replay traced all **241 incoming records /
+12,149,157 damage** to **R9-charm Friendly** allegiance: **227 / 11,340,948** from `A scalewrought craftsman` and
+**14 / 808,209** from `A scalewrought artificer`, July 3, 2025, **15:18:38–15:24:24**. The log explicitly says
+`a scalewrought terrastriker is charmed.` at **15:18:25**, after `You begin casting Esoteric Command.` at 15:18:21.
+Its base identity remains NPC (`R1-target`, 70), but every counted incoming record is inside the charm window;
+these are enemy hits on a temporary ally, not ordinary hostile-vs-hostile credit. The initial replay resolved no
+named owner; the spell-data repair in "Charm ownership follows the spell's lands-on-other message" corrects that
+separate damage-folding issue. Tanking is not owner-folded in any case. The temporary assertion was deleted after
+verification.
+
 ## The fight list announces when the gesture ends (2026-11)
 
 Reported from the field after the legacy table was deleted (`bf9318fb`): *"right click … immediately selects a row"*,
@@ -13350,6 +13435,35 @@ The `develop` versus `master` review found four correctness/coverage issues and 
 Linux validation: full non-incremental solution build, **0 warnings / 0 errors**, including the WPF assembly; headless suite,
 **2,084 passed / 9 skipped**. Windows execution is still required for the WPF regressions and the realized-grid release checks;
 a Linux build is not their result.
+
+## Branch review revalidation: preserve the contracts behind the code
+
+Rechecking a second branch review found one behavioral fix and one small API cleanup worth making. Reader
+cancellation could escape `ReOpenAsync` from inside the tail's generic recovery catch and reach `StartAsync`'s
+unfiltered load-error log. A sibling cancellation catch cannot intercept an exception thrown from another catch's
+body. `StartAsync` now treats `OperationCanceledException` as expected only while its own cancellation source is
+cancelled, logging at Debug without a stack; initial-read and tail catches also handle that base exception with the
+same ownership filter. An unrelated cancellation exception still reports a load failure. `LogReaderCancellationTest`
+exercises both outcomes at the outer boundary and restores its temporary logger configuration. It builds on Linux
+but requires Windows execution. The unused `DamageOverlayLifecycle.LatestActivityOrdinal(rows)` overload was
+removed; the remaining door requires a clock and refuses future-dated rows.
+
+The review's higher-severity meter suggestions were not adopted. Its unstable sorts reproduce the full builders'
+existing shared expanded/top-level ranking; `EqualAndZeroTotalsKeepTheBoardsTimestampBlockOrdering` already covers
+40 equal/zero-total rows and `RepeatedBlockResortsKeepPetAndPlainRowRanksEquivalent` covers growth. Sorting only
+the meter stably would violate equivalence rather than fix it. The ordinal reader allocates its exact bounded batch
+and copies while holding the index lock; invalid bounds throw, and its caller loops to the captured end. There is
+no silent-short-read path to guard. Same-name lives with no routed ordinals have no contribution to double-count;
+nonempty routing changes their first-ordinal key or fails prefix validation.
+
+Other rejected claims already have contrary evidence: `RecordsStore.Add` binary-inserts out-of-order time groups,
+with `AuxiliaryRangeWalkStopsBeforeFutureRecordsWithoutLosingLaterWindows` exercising the ordered annotation scan;
+`ParsePreviewPublicationTest` disposes short-lived panes through `using`, while the app host intentionally retains
+one pane for its lifetime; and both hit-type lookup representations derive from one vocabulary, with the span
+implementation retained by measurement. The clock expressions are not interchangeable either:
+`DateUtil.ToDotNetSeconds` returns whole seconds, while `TimeSpan.TotalSeconds` retains fractions. The overlay's
+fractional reset boundary prevents replaying damage already present in the click's log second. No mechanical clock
+replacement, speculative dispatcher-shutdown machinery or broad whitespace rewrite was made.
 
 ## Ordered-ingest performance review: remaining parser work
 

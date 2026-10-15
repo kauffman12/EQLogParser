@@ -58,25 +58,14 @@ namespace EQLogParser
       return pending?.IsRecent(now, mode == 0 ? FightProjection.EngagementGapS : mode) == true;
     }
 
-        // Ordinals, not seconds: two separate arrivals in one log second are still new damage. A death-only derive changes no watermark, so an already
-        // displayed kill cannot repeatedly reopen the overlay. Future-dated rows (log clock skew) are skipped as in HasRecentActivity: a row the log says
-        // has not begun yet must not spend the watermark and swallow the next real arrival.
-        internal static int LatestActivityOrdinal(IReadOnlyList<DerivedFight> rows, double now)
-        {
-          var newest = 0;
-          foreach (var row in rows)
-          {
-            if (!HasDamage(row) || row.BeginTime > now) continue;
-            newest = Math.Max(newest, row.FactEnd);
-          }
-          return newest;
-        }
-    internal static int LatestActivityOrdinal(IReadOnlyList<DerivedFight> rows)
+    // Same-second arrivals still advance the ordinal. Future-dated rows must not spend the opening watermark.
+    internal static int LatestActivityOrdinal(IReadOnlyList<DerivedFight> rows, double now)
     {
       var newest = 0;
       foreach (var row in rows)
       {
-        if (HasDamage(row)) newest = Math.Max(newest, row.FactEnd);
+        if (!HasDamage(row) || row.BeginTime > now) continue;
+        newest = Math.Max(newest, row.FactEnd);
       }
       return newest;
     }

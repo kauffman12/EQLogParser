@@ -43,10 +43,10 @@ public class CharmWindowPolicyTest
     }
 
     [TestMethod]
-    public void TheCharmSpellVocabularyIsClosed()
+    public void OnlyKnownSpellsWithCharmMessagesIdentifyCharmCasts()
     {
-        // In: the two words measured in the captures, with and without a roman rank.
-        foreach (var spell in new[] { "Charm", "Charm XVII", "Compulsion", "Compulsion IV" })
+        PipelineHarness.EnsureDataStore();
+        foreach (var spell in new[] { "Charm", "Charm XVII", "Compulsion", "Compulsion Rk. II", "Beguile", "Allure" })
         {
             Assert.IsTrue(CharmSpells.IsCharmSpellName(spell), $"{spell} is a charm spell in the logs");
         }
@@ -122,7 +122,7 @@ public class CharmWindowPolicyTest
         // applies retroactively to the window it ends (measured shape: "<name>`s <spell> spell has worn off").
         var outcome = Run(out var timeline, out _,
             "[Sun Apr 26 18:50:00 2026] a skeleton has been charmed.",
-            "[Sun Apr 26 18:52:00 2026] Incogitable`s Charm IV spell has worn off of a skeleton.");
+            "[Sun Apr 26 18:52:00 2026] Incogitable`s Charm XVII spell has worn off of a skeleton.");
 
         Assert.AreEqual(1, outcome.Charms.Count);
         Assert.AreEqual("Incogitable", outcome.Charms[0].Owner);
@@ -182,7 +182,7 @@ public class CharmWindowPolicyTest
     [TestMethod]
     public void TheNearestSpellWasNotTheCharmer()
     {
-        // The lookback is 8 s, not "whatever was cast recently". Whatever the caster was doing sits 3-25 s
+        // The lookback is 6 s, not "whatever was cast recently". Whatever the caster was doing sits 3-25 s
         // before a success line and is unrelated (these three spell names are the top offenders measured in
         // the captures), so a wider window invents owners out of busy casters.
         var outcome = Run(out var timeline, out _,
@@ -208,7 +208,7 @@ public class CharmWindowPolicyTest
         // reads, and dropping the fallback measured 5 owned windows → 4.)
         var outcome = Run(out _, out _,
             "[Sun Apr 26 19:20:04 2026] a feral gulet has been charmed.",
-            "[Sun Apr 26 19:20:04 2026] Incogitable`s Charm IV spell has worn off of a feral gulet.");
+            "[Sun Apr 26 19:20:04 2026] Incogitable`s Charm XVII spell has worn off of a feral gulet.");
 
         Assert.AreEqual(1, outcome.Charms.Count);
         var w = outcome.Charms[0];
@@ -220,7 +220,7 @@ public class CharmWindowPolicyTest
         var ours = Run(out _, out _,
             "[Sun Apr 26 19:30:00 2026] You begin casting Charm XVII.",
             "[Sun Apr 26 19:30:04 2026] a feral gulet has been charmed.",
-            "[Sun Apr 26 19:30:04 2026] Incogitable`s Charm IV spell has worn off of a feral gulet.");
+            "[Sun Apr 26 19:30:04 2026] Incogitable`s Charm XVII spell has worn off of a feral gulet.");
         Assert.AreEqual(Self, ours.Charms[0].Owner);
     }
 
@@ -234,7 +234,7 @@ public class CharmWindowPolicyTest
         var outcome = Run(out var timeline, out _,
             "[Sun Apr 26 19:00:00 2026] You begin casting Charm XVII.",
             "[Sun Apr 26 19:00:04 2026] a feral gulet has been charmed.",
-            "[Sun Apr 26 19:02:30 2026] Incogitable begins casting Charm IX.",
+            "[Sun Apr 26 19:02:30 2026] Incogitable begins casting Compulsion Rk. II.",
             "[Sun Apr 26 19:02:34 2026] a feral gulet has been charmed.");
 
         Assert.AreEqual(1, outcome.Charms.Count, "a change of hands split the pet row");

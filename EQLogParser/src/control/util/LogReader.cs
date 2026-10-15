@@ -123,6 +123,11 @@ namespace EQLogParser
         LogArchiveManager.QueueFileArchiveAsync(this);
         await ReadFileAsync().ConfigureAwait(false);
       }
+      catch (OperationCanceledException) when (_cts.IsCancellationRequested)
+      {
+        // Recovery awaits can escape the tail's catch block when this reader is closed.
+        Log.Debug($"load: cancelled - {Path.GetFileName(FileName)}");
+      }
       catch (Exception ex)
       {
         Log.Error($"Error Loading File: {FileName}. Re-open or toggle Triggers to try again.", ex);
@@ -253,7 +258,7 @@ namespace EQLogParser
           HandleLine(line, ref previous);
         }
       }
-      catch (TaskCanceledException)
+      catch (OperationCanceledException) when (_cts.IsCancellationRequested)
       {
         return;
       }
@@ -342,9 +347,8 @@ namespace EQLogParser
            * refresh. See docs/DesignNotes.md -> "How long a meter update takes". */
           await Task.Delay(200, _cts.Token).ConfigureAwait(false);
         }
-        catch (TaskCanceledException)
+        catch (OperationCanceledException) when (_cts.IsCancellationRequested)
         {
-          // stop
           break;
         }
         catch (Exception)
