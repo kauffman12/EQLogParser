@@ -80,9 +80,9 @@ internal static class IdentityVocabulary
    *
    * Two trims, each one something the capture's own grammar decides and an opinion cannot:
    *
-   *   - **Mercenary is not a verdict you can put on a name.** A mercenary is what /target reported (R3-merc/R13-merc);
-   *     typing "Mercenary" onto a raider moves her number off the player column and onto a column nothing else fills,
-   *     and no file backs the claim afterwards. A row that already reads Mercenary keeps the entry — the popup opens on
+   *   - **Mercenary is not a verdict you can put on a name.** A mercenary is what /target reported (R3-merc/R13-merc) or what
+   *     the bot table lists (R27-mercdb); typing "Mercenary" onto a raider moves her number off the player column and onto a
+   *     column no line this capture printed backs. A row that already reads Mercenary keeps the entry — the popup opens on
    *     the current answer — and taking that verdict back is the take-back icon in the Name column
    *     (ClassificationCommands.Recalculate), which is where it has lived since 2026-11.
    *   - **An eye is not a fighter of any kind.** `Eye of Zamul` never acts (ClassificationRules.EyeSummonOwnerInName;
@@ -249,6 +249,10 @@ internal static class IdentityVocabulary
     ["R20-petspell"] = 70, ["R4-spell"] = 70, ["R15-healed"] = 70, ["R18-healedpet"] = 70, ["R24-petslot"] = 70,
     ["R7-graph"] = 60, ["R7-side"] = 60,
     ["R6-npcdb"] = 50, ["R14-shape"] = 50, ["R16-comma"] = 50, ["R23-loot"] = 50,
+    // A shipped table is a shipped table: rank weighs WHY a row reads the way it does, and this one knows a spelling no
+    // more than the creature list does. Its STRENGTH is higher (Strong, where the NPC list sits at Medium) because the two
+    // files answer different questions - see ClassificationRules.MercDatabaseStrength.
+    ["R27-mercdb"] = 50,
     ["R21-spellshape"] = 50, ["R21-spellcast"] = 50, ["R21-spelleffect"] = 50,
     /*
      * R25-roster sits with the memory lanes rather than with the behaviour rules its STRENGTH matches, and the two axes are
@@ -393,6 +397,9 @@ internal static class IdentityVocabulary
       "R5-owner" => "Owner in Pet's Name",
       // npcs.txt is the game's creature database this app ships, and "NPC DB" is what an operator calls it.
       "R6-npcdb" => "In the NPC DB",
+      // The bot table. Same phrase shape as its neighbour on purpose: a reader who knows one of these hovers knows this one,
+      // and neither points at a file the operator cannot open from here.
+      "R27-mercdb" => "In the Mercenary DB",
       // No "It " prefix (every other clause starts with what the name did) and no "mobs": the app's word is NPC.
       // R7-graph counts edges in both directions and lands on whichever side dominates; R7-side is the narrower
       // sighting that it swings at raid members at all.
@@ -540,6 +547,12 @@ internal static class IdentityVocabulary
     // ("what do you mean owner?") that this answer settles without a second column.
     ["R5-owner"] = "Owner in Pet Name",
     ["R6-npcdb"] = "NPC DB",
+
+    /*
+     * "Mercenary", not "Merc", for the same reason the Type cell spells it out: a Why column reading "Merc DB" beside a row
+     * whose Type says "Mercenary" looks like two answers about two different things.
+     */
+    ["R27-mercdb"] = "Mercenary DB",
 
     // The attack graph says which side a name fights on, so the words count who got hit rather than asserting loyalty —
     // and the noun is NPC, the word this application uses everywhere else. "Mobs" lived only in these two cells.

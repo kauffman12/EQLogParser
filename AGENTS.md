@@ -186,7 +186,14 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
   R14 article ⇒ NPC at Medium; R15 needs ≥10 heals from ≥2 Strong casters and any swing back vetoes; R17 drink/eat names a player; R21 spell shapes
   (`… by .`, seen being cast, known spell name) type as **Spell** with no pencil; R24-petslot: `Target = Pet/Pet2` in the
   spell data makes the *defender* a Pet (ask `GetSpellByName`; damage lines only; never invents an owner); R25-roster and
-  R26-savedpet claim Unknown-only names in their own folder's pool, last, at Strong.
+  R26-savedpet claim Unknown-only names in their own folder's pool, last, at Strong; **R27-mercdb** (`mercs.txt`, the bot
+  table) claims its names **Merc at Strong** and runs BEFORE R6, which then skips those names.
+- **A mercenary is player-side already, so a bot needs no second door.** `IdentityKind.Merc` answers `IsPlayerSide` and
+  `IsConfirmedRaidPersonAt`, so an R27 name never opens a fight-list row, its damage and healing are credited to it on the
+  boards beside a player's, and a swing landing on it counts as damage received. Do not add merc filters to the boards.
+  `HasIndependentIdentity` reads EVERY claim rather than the winner, which is why R6 must not restate an NPC sentence under
+  a Merc verdict. The ledger refuses `R27-` (`RememberedRules`): a shipped table restates itself every start. See
+  docs/DesignNotes.md → "The bot table in `data/mercs.txt`".
 - **Frenzy claims a class, never a person**; classes are time-windowed (`GetPlayerClass(name, t)`), low-confidence flips need
   `LowConfidenceThreshold` sightings, and headless class writes need the `App.xaml.cs` host hook.
 - **Memory lanes**: `identity-priors.txt` holds rule verdicts *and* the saved-roster lane (players.txt has **no writer**;

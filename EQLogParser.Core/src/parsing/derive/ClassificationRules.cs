@@ -197,6 +197,15 @@ namespace EQLogParser
       RunStage("R0 local player", outcome, () => ApplyLocalPlayer(timeline));
       RunStage("line evidence", outcome, () => ApplyEvidence(facts, timeline, outcome, state));
       RunStage("R5 ownership", outcome, () => ApplyOwnershipFlags(facts, timeline, state));
+
+      /*
+       * The merc table BEFORE the creature table, because the creature table lists these names too. npcs.txt is every
+       * spawn name the game knows; being in it says a thing exists with that spelling, never whose side it stands on, and
+       * R6 would otherwise hand `a clockwork soother` to the enemy column before anything asked. Both stages are ungated
+       * pool sweeps over the same name list (microseconds), so ordering them is free (docs/DesignNotes.md → "The bot table
+       * in `data/mercs.txt`").
+       */
+      RunStage("R27 mercs.txt", outcome, () => ApplyMercDatabase(facts, timeline));
       RunStage("R6 npcs.txt", outcome, () => ApplyNpcDatabase(facts, timeline));
 
       /*
@@ -1187,6 +1196,35 @@ namespace EQLogParser
       return minted;
     }
 
+    /*
+     * R27: a name the merc table lists is one of ours. These are the bots a player fights beside - `a hired bazu`,
+     * `a clockwork soother`, `Candlefolk Mender` - and every one of them is shaped like the thing R14 hands to the
+     * enemy column: an article in front, or a title behind, and no owner word inside the name for R5 to read. Without
+     * this rule a bot opened its own row in the fight list as an opponent and its swings were mob-on-mob noise, dropped;
+     * Merc is player-side everywhere it is asked (`IsPlayerSide`, `IsConfirmedRaidPersonAt`), so claiming it here takes
+     * the row away and puts that damage and healing on the boards beside a player's, which is the whole consequence.
+     *
+     * The sweep covers healers who never swing: `facts.InternedNames` is the ONE name pool both fact tables share, so a
+     * soother that only ever appears in a heal line is in it exactly as an attacker is.
+     */
+    private static void ApplyMercDatabase(IFactTable facts, EntityTimeline timeline)
+    {
+      var store = EQDataStore.Instance;
+      foreach (var name in facts.InternedNames)
+      {
+        if (!store.IsKnownMerc(name)) continue;
+        timeline.SetIdentity(name, IdentityKind.Merc, MercDatabaseStrength, "R27-mercdb", double.NegativeInfinity);
+      }
+    }
+
+    /*
+     * One rung for every shape this file lists (these are whole spawn names, so a bare word carries no less weight than a
+     * spaced one), and the rung is Strong: what chat says about a name in raid or group voice already sits there, and a
+     * shipped string may not outrank that. It is NOT Certain, which is what a line this capture printed keeps - a list knows
+     * a spelling and never met the fighter, so one `Targeted (Player):` line still answers over it for the rest of the log.
+     */
+    internal const int MercDatabaseStrength = RuleStrength.Strong;
+
         /*
          * R6: a name that is an exact npc.txt entry. A spaced name cannot be worn by a character, so it is Npc at Medium; a bare word can be worn by
          * anybody, so it is Npc at Listed — the file is certain about the string and silent about the occasion.
@@ -1202,6 +1240,16 @@ namespace EQLogParser
       foreach (var name in facts.InternedNames)
       {
         if (!store.IsKnownNpc(name)) continue;
+
+        /*
+         * A name the merc table placed is not this table's to argue with: the creature list carries both, and a second claim
+         * would sit there forever even though strength decides the answer, because `HasIndependentIdentity` - the fight list's
+         * "does this name have an NPC reason of its own" - scans every claim rather than only the winning one. Skipping is not
+         * a veto: the operator can still type NPC over it (Manual outranks both tables at read time), and taking that back
+         * returns the row to Merc on the next pass, which is what the shipped files actually say.
+         */
+        if (store.IsKnownMerc(name)) continue;
+
         var strength = NpcDatabaseStrengthFor(name);
         timeline.SetIdentity(name, IdentityKind.Npc, strength, "R6-npcdb", double.NegativeInfinity);
       }

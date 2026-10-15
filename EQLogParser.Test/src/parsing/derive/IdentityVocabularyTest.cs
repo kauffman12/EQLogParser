@@ -65,6 +65,14 @@ public class IdentityVocabularyTest
     "R26-savedpet",
 
     /*
+     * The bot table (R27): `a hired bazu`, `a clockwork soother`, `Candlefolk Mender` — names that fight for the player and
+     * are shaped exactly like the thing R14 hands to the enemy column. It joins this list because a shipped data file is not
+     * memory: it restates itself every start, so it reaches the ledger nowhere (IdentityPriorStore refuses it) and buys one
+     * Type word and one hover clause here.
+     */
+    "R27-mercdb",
+
+    /*
      * Not a rule, and it cannot come out of a fixture: PipelineHarness clears PlayerRegistry, so nothing in any test
      * seeds from it. That blind spot is how "RegistrySeed" was printable as a verdict word — the corpus guard below walks
      * real rows from a COLD registry and never sees it. It belongs in this list so the vocabulary tests hold it: a row

@@ -3976,7 +3976,7 @@ re-measured, and `HealFactCaptureTest` re-asserts each shape against the parser'
 
 ## The NPC registry in `data/npcs.txt`
 
-The file is 38,498 lines of names, one per line, and it is matched **case-blindly**: `EQDataStore` loads it into
+The file is 38,496 lines of names, one per line, and it is matched **case-blindly**: `EQDataStore` loads it into
 `_allNpcs`, a `ConcurrentDictionary` built with `StringComparer.OrdinalIgnoreCase`, so `IsKnownNpc("A Shadowstone
 Grabber")` answers for a row written in lowercase — inner case included, which is what lets the file's lowercase
 convention meet a client rendering like `Vazaelle Kaleine The Devout`. (`_allNpcs` keys go through the interned
@@ -4009,7 +4009,7 @@ Certain, joins, guild/group/raid speech, guildmate announcements, a drink line a
 at Medium. And what outranks a **wrong** list hit is the operator — an R10 verdict (Manual, 1000), or one
 `Targeted (Player):` line on the name.
 
-3,223 of the file's 38,498 rows are spaceless (8.4 %), which is the same "a shape any character could wear" share the
+3,223 of the file's 38,496 rows are spaceless (8.4 %), which is the same "a shape any character could wear" share the
 comma-title note measured. The bare word that shows this working is in the shipped file already: `Lucian` reads Npc on
 a capture where nothing else claims it (`R6-npcdb`, Listed), while `Alleza` — also in the file, and demonstrably a name
 players answer to — keeps its verdict wherever a line says something about her (`RosterMemoryClaimTest`,
@@ -4081,6 +4081,72 @@ while the client writes corpses with an **apostrophe** — across the six captur
 `` `s corpse `` in 4 — and nothing normalises either form, so those rows can never match by exact name. Do not "fix" it
 with a blanket replace: pets genuinely use the backtick (`` Kazcro`s pet ``). R13 takes the stripped base name for
 corpse identity anyway, which is why nothing has noticed.
+
+## The bot table in `data/mercs.txt` (R27)
+
+31 rows, one spawn name per line, and the list of **things that fight for the player** — bots a raid runs beside its own
+members: `a hired bazu`, `a clockwork soother DCCXII`, `Candlefolk Mender`. Like every other data file it is optional:
+`EQDataStore` loads it beside npcs.txt through `ConfigUtil.ReadList`, which returns an empty list when the file is absent,
+so a build without mercs.txt classifies exactly as the build before it did. Same ignore-case dictionary (`_allMercs`,
+`StringComparer.OrdinalIgnoreCase`, keys interned) for the same reason npcs.txt has one: the client prints an article where
+the file may not, and `InternName` capitalizes the first letter on the way in, so leading-case-only matching would look
+like it worked.
+
+**What a row buys: one thing.** R27 (`R27-mercdb`) claims the name `IdentityKind.Merc` at **`RuleStrength.Strong` = 60**, and
+Merc is *already* player-side wherever the app asks (`IsPlayerSide`, `IsConfirmedRaidPersonAt`, charm's friendly arm,
+FightSummarySource's attacker naming), so nothing else had to be written. That is the whole consequence the operator asked
+for — *the name never becomes a fight* — and its two side effects: the bot's damage and healing are credited to it on the
+boards like a player's, and a swing that lands on it counts as damage one of ours received (tank board).
+
+**Why Strong, and not Certain.** A shipped list knows a *spelling* and never met the fighter, so it sits with what raid and
+group voice say about a name (R3-merc's rung) rather than above it, and under **Certain**, which is what a line this capture
+printed keeps: one `Targeted (Player):` line answers over the file for the rest of the log (`MercDatabaseTierTest`). It
+clears everything the shape rules and the creature list can say (Medium, Listed), which is the work it exists to do. One
+rung for every entry shape — this file lists whole spawn names, so a bare word is not weaker than a spaced one, unlike
+R6's two-tier ladder.
+
+**Why the stage runs before R6, and why R6 then skips the name.** 26 of the 31 rows take the article R14 reads as the game's
+own "this is a thing" marker, so before this rule a bot was NPC at Medium: it opened its own row in the fight list *as an
+opponent*, and its own swings were mob-on-mob noise dropped before any row opened — the operator lost the output and gained
+a fake encounter in one row. The remaining 5 (`Candlefolk Mender`, `Candlefolk Assaulter`, `Candlefolk Sorcerer`,
+`Fungal Fiend Slayer`, `Fungal Fiend Arcanist`) took neither article nor an owner word, so nothing placed them at all and
+they sat Unknown. Strength alone would already answer the NPC claim, but `EntityTimeline.HasIndependentIdentity` — the fight
+list's "does this name have an NPC reason of its own", used to route a charmed row as `RaidPet` — scans **every** claim and
+not just the winning one, so a surviving R6 sentence is a routing bug three rules down the road. `ApplyNpcDatabase` therefore
+skips a name the bot table placed. That is not a veto: an operator typing NPC wins anyway (Manual, 1000, at read time), and
+the take-back returns the row to Mercenary on the next pass.
+
+**The two files do not overlap, and the skip exists for when they do.** npcs.txt is every creature the game can spawn,
+including these; at the time of writing the case-folded intersection is **empty** — it held exactly one row,
+`a bloodbone mender`, which came out of npcs.txt in the same change (deleting it cost nothing measurable: spaced names are
+Medium under R6 and Medium under R14, so only the provenance word moved). The skip is written for the next content patch,
+not for this one, and `MercDatabaseTierTest.AnArticleShapedBotIsOursAndCarriesNoEnemyClaim` asserts the *no-second-claim*
+property rather than the intersection.
+
+**The ledger refuses it, deliberately.** "R27-" is absent from `IdentityPriorStore.RememberedRules`, so a bot-table verdict
+never reaches identity-priors.txt and spends no sighting — the same law that keeps R6-npcdb out: a shipped table restates
+itself every start, and the ledger remembers what a *capture* witnessed. Exiting a wrong row is therefore file-side (edit
+mercs.txt) or operator-side (verdict / take-back), never "wait for memory to decay".
+
+**Healer bots need no special case.** The sweep walks `facts.InternedNames`, the ONE name pool both fact tables share
+(`HealFactTable` holds the damage table as its own namer), so a soother that only ever appears in a heal line is claimed
+exactly as an attacker is — asserted structurally in `MercDatabaseTierTest.AHealerThatOnlyAppearsInAHealLineIsInThePoolTheRuleSweeps`,
+because "obviously shared" is how a second table stops being shared. Words: Type cell **Mercenary**, Why cell
+**Mercenary DB**, hover **In the Mercenary DB**, claim rank 50 beside the other shipped-table lanes.
+
+**On a real capture, measured A/B** (`eqlog_Incogitable_xegony.txt`, 344 MB, where `A bloodbone fighter` appears 15 times;
+the A run is the same build with the shipped `mercs.txt` emptied out): **fight rows 4,646 → 4,647**, **tanking hits
+119,703 → 120,189 (+486)**, pets 94 and unrouted 295,827 unchanged, and identical across both parses of the reproducibility
+gate either way. Rows go **up**, which is the fix rather than a contradiction of "bots leave the fight list": this bot had no
+row to lose — its swings at mobs were NPC-on-NPC noise dropped before any row opened, and no mob's hits on it were routed
+anywhere either — so what arrives is one more real encounter (a mob whose only attacker was a bot) plus 486 incoming hits
+that now read as damage one of ours took. A capture where a bot WAS listed as an opponent loses that row; this one never had
+it, which is worth remembering before quoting a row count at anyone.
+
+Tests: `MercDatabaseTierTest` (rung, shapes, no enemy claim, target frame outranks it, case-blindness, ledger refusal) and
+`MercFightListTest` (credited on the mob's row, never a row of its own, one row per pull with its output *and* its wound,
+the pre-rule vanishing documented, friendly fire still dropped). Note the direction names in that file: `DamageToOwner` /
+`DamageByOwner` are named from the **row's anchor**, not from our side.
 
 ## The raid roster in `players.txt`: what Save() is allowed to throw away
 
