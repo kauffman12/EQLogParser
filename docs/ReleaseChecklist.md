@@ -222,6 +222,11 @@ identical to a test. Both halves below are the same seam seen two ways.
   which STARTED must never hand it.
 - [ ] **A build with nothing to show still says "no board"**: leave the selection empty so a pane finishes with no rows. The table shows
   its empty state without a spinner, and selecting rows again repaints normally.
+- [ ] **A closed capture cannot repaint the summaries:** start a large selection build, then switch logs or Clear All before
+  it finishes. Damage, Healing and Tanking must remain empty until the new capture answers; no old title, rows or busy
+  indicator may return. Select fights in the new log while the old work is winding down: a late old empty result must not
+  erase the new board, and old healing completions must not change its tanking annotations. Also close without opening
+  another log. Run `SummaryPublicationTest` on Windows for the queued-callback regression.
 
 ## Identity Table paging checks on Windows
 

@@ -59,6 +59,17 @@ namespace EQLogParser
       TheDataGrid.ItemsSource = NoResultsList;
     }
 
+    // Ownership is checked when the queued UI work runs, not when the worker hands it over.
+    // This guards every state, including tanking's healing updates, before any row or busy state is touched.
+    internal void DispatchGenerationStatus(StatsGenerationEvent generation, Action apply)
+    {
+      Dispatcher.InvokeAsync(() =>
+      {
+        if (generation.SessionId != (DeriveEngine.Active?.SessionId ?? 0)) return;
+        apply();
+      });
+    }
+
     internal virtual bool IsPetsCombined() => false;
     internal virtual void ShowBreakdown(List<PlayerStats> selected) => new object(); // need to override this method
     internal virtual void ShowBreakdown2(List<PlayerStats> selected) => new object(); // need to override this method

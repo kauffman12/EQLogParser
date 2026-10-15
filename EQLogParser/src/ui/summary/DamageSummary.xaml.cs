@@ -720,7 +720,7 @@ namespace EQLogParser
 
     private void EventsGenerationStatus(StatsGenerationEvent e)
     {
-      Dispatcher.InvokeAsync(() =>
+      DispatchGenerationStatus(e, () =>
       {
         // Any state of a build ends the promise made by the one before it; STARTED makes a new one, on its own delay.
         _busyState.Cancel();

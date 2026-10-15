@@ -13191,6 +13191,14 @@ The `develop` versus `master` review found four correctness/coverage issues and 
   their records, not the session open when a delayed build starts. STARTED/answer pairs retain the original epoch too, so both queued
   and late answers are discarded after clear. Re-slices keep their inputs' session stamp. The host keeps one pane for its lifetime;
   short-lived hosts can dispose it to detach subscriptions. WPF regressions cover queued, late and stale-session answers.
+- **The summary panes check capture ownership at publication too.** Damage, Healing and Tanking route every generation event
+  through `SummaryTable.DispatchGenerationStatus`. It compares the event's `SessionId` with the active capture inside the
+  queued dispatcher callback, before running any pane logic. A worker-side check alone cannot protect a completion already
+  queued while another UI operation closes the log. This guards STARTED, COMPLETED, NONPC and NODATA alike, including the
+  healing events that annotate the tanking board, so an old event cannot arm/cancel busy state, restore old rows or clear new
+  rows. Clear All creates a new capture id through its monitor re-open; a plain close leaves no active capture. No new build
+  cancellation or per-pane copy of capture state is needed. `SummaryPublicationTest` exercises the shared dispatch door on
+  Windows: queued answer then replacement, queued answer then close, late events of every board/state, and current-event order.
 - **The supported span lookup was tried, then rejected on measurement.** .NET 10 does support
   `GetAlternateLookup<ReadOnlySpan<char>>()`; the comment claiming otherwise was wrong. A temporary Release console probe compared
   the existing FNV/open-addressed implementation against cached alternate lookups, with 5M warmup probes, seven alternating timed
