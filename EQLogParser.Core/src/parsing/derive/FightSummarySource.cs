@@ -26,7 +26,7 @@ namespace EQLogParser
      * partitioned that way (its tank rows are named after the defender), so the derived list has no player-named tank rows by design.
      * Label note: LabelTypes.LabelOf returns the same interned Labels constants the parsers use, so record.Type is unchanged.
      */
-  internal sealed class FightFactIndex
+  internal sealed partial class FightFactIndex
   {
         /*
          * The classification this index was folded with: was this attacker inside an R9 charm window, and is a caster-less line's target one of
@@ -685,7 +685,7 @@ namespace EQLogParser
      * One fact, one record — shared by both boards so a damage record and the tanking record of the same line
      * cannot disagree about who hit whom, how much, or which modifier filters apply.
      */
-    private DamageRecord RecordFrom(DamageFact fact, DamageFactTable facts)
+    private string AttackerOf(DamageFact fact, DamageFactTable facts)
     {
       var attacker = facts.NameOf(fact.AtkIdx);
 
@@ -704,6 +704,12 @@ namespace EQLogParser
         if (target is not IdentityKind.Player and not IdentityKind.Pet and not IdentityKind.Merc) attacker = Labels.Unk;
       }
 
+      return attacker;
+    }
+
+    private DamageRecord RecordFrom(DamageFact fact, DamageFactTable facts)
+    {
+      var attacker = AttackerOf(fact, facts);
       return new DamageRecord
       {
         Attacker = attacker,

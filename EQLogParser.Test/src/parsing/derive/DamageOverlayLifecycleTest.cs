@@ -534,6 +534,7 @@ public class DamageOverlayLifecycleTest
     private readonly EntityTimeline _timeline = new();
     private FightFactIndex _index = new();
     private OverlayPendingActivity _pending = new(0);
+    private readonly DamageMeterCalculation _calculation = new();
     internal List<DerivedFight> Rows { get; private set; } = [];
 
     internal Capture() => _timeline.SetIdentity("Illuminai", IdentityKind.Player, RuleStrength.Manual, "manual");
@@ -567,7 +568,10 @@ public class DamageOverlayLifecycleTest
       }
       _pending.Update(_facts, _timeline);
       var scope = lifecycle.Select(sessionId, Rows, T0 + second, mode, _pending);
-      return DerivedTotals.ForOverlay(scope.Rows, _index, _facts, scope.FromTime, T0 + second);
+      var expected = DerivedTotals.ForOverlay(scope.Rows, _index, _facts, scope.FromTime, T0 + second);
+      var actual = _calculation.Update(_index.CaptureMeterInput(scope.Rows, _facts, scope.FromTime, T0 + second));
+      DamageMeterAssert.Equal(expected, actual);
+      return actual;
     }
 
     internal bool HasActivity(double second, int mode) =>

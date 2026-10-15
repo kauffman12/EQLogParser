@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace EQLogParser
 {
   // Accounting is per life in On Kill mode; the completed result's display grace is not an accounting boundary.
-  // The owner serializes Select and Reset (the window uses StatsLock).
+  // The owner works on a scalar copy and commits it only while its window/reset revision owns publication.
   // See docs/DesignNotes.md → Damage overlay: fight accounting and display retention.
   internal sealed class DamageOverlayLifecycle
   {
@@ -12,6 +12,13 @@ namespace EQLogParser
     private int _sessionId = -1;
     private double _resetTime = double.NegativeInfinity;
     private double _timedStart = double.NaN;
+
+    internal DamageOverlayLifecycle Copy() => new()
+    {
+      _sessionId = _sessionId,
+      _resetTime = _resetTime,
+      _timedStart = _timedStart
+    };
 
     internal DamageOverlayScope Select(int sessionId, IReadOnlyList<DerivedFight> rows, double now, int mode,
       OverlayPendingActivity pending = null)

@@ -1,34 +1,6 @@
-/*
- * DerivedTotals — one calculation, asked about a set of rows.
- *
- * Monitoring a log is storage: lines become facts, facts become rows. Nothing here runs while that happens, and
- * nothing here keeps a second tally. A surface that wants numbers asks this class about the rows it is showing —
- * the fight list's selection, or the damage overlay's current session — and gets the same arithmetic every other
- * surface gets: FightSummarySource turns those rows into records aimed at their own npcs, DamageStatsBuilder does
- * the counting (its DamageValidator filters, its pet folding, its activity segments), and the seconds behind any DPS
- * come from StatsUtil.UpdateRaidTimeRanges rather than a caller's stopwatch. So "the overlay says 4,182,300" and "I
- * selected those ten fights and pressed summary says 4,182,300" is not a discipline two components keep, it is one
- * function called twice.
- *
- * THE ONE RULE: a scope builds on its OWN DamageStatsBuilder instance.
- * The boards read DamageStatsBuilder.Instance, whose last event is what the summary tabs, charts and copy-to-clipboard
- * paths show each other. An overlay refreshes about once a second; run that through the singleton and every refresh
- * would repaint the open summary with the overlay's window, and the two numbers this class exists to keep identical
- * would diverge by construction. A private instance costs one object and a set of dictionaries per scope — against
- * the millions of per-line accumulations it replaces on the parse path, noise — and leaves the shared one untouched
- * (pinned: ARefreshLeavesTheBoardsLastAnswerAlone).
- *
- * THE SECOND RULE, which is what made the first one affordable: a scope has to be collectible when it returns, so
- * nothing here may hold or take a subscription to process-static state. A constructor subscription on an object built
- * once a second IS a permanent subscription - the static event outlives the caller - and the caller of ForOverlay is
- * the damage meter: ~118 KB of builder retained per refresh, measured through a full GC, growing for as long as the
- * board stayed open, until the builders' ActiveDataCleared wiring moved to their own singletons.
- * (pinned: ACalculationLeavesNothingWatchingTheClearSignal).
- *
- * Runs on the caller's thread and returns the event that instance produced. It does not hop to a dispatcher: where
- * the hop happens is a property of the consumer (MainWindow.OnGenerationStatus queues at Background), and doing it
- * here would put a UI assumption inside code the overlay, the summary and a test all share.
- */
+// One-shot scope queries and the full-build reference for meter equivalence tests. Private builders must never
+// replace the summary panes' singleton answers or subscribe to process-static events.
+// The live meter continues compact accounting through DamageMeterCalculation.
 // Annotations only, no null-flow analysis: the project builds with Nullable=disable, and this API speaks in
 // optional rows/fights because a scope legitimately has nothing to show.
 #nullable enable annotations
@@ -38,26 +10,8 @@ using System.Collections.Generic;
 
 internal static class DerivedTotals
 {
-  /*
-   * Stats for exactly these rows: damage, tanking and per-player activity built from the facts the rows point at,
-   * and healing windowed by the rows' own span the way the healing board has always worked (a heal belongs to no
-   * fight, so it is windowed rather than selected).
-   *
-   * Returns null when there is nothing to ask about. That is different from "an empty event" on purpose: a caller
-   * with no rows has no scope at all, and showing an empty board for that would be the same lie as showing stale
-   * numbers — which of the two to display is the surface's decision, made with the session it owns.
-   */
-  // DamageOverlayLifecycle selects lives for On Kill and an accumulation range for timed modes. Explicit Reset
-  // additionally slices those lives. This calculation decides neither fight eligibility nor display retention.
-  /*
-   * The damage meter's shape for the same scope: damage and tanking halves, each built on its OWN builder instance,
-   * returned in the container the overlay already paints. A window is expected here ("since I zeroed the meter") and
-   * both halves get the same one, so a tank column cannot show seconds the damage column excluded.
-   *
-   * Null means "this scope has nothing to show", which is also legacy's contract for the overlay builder: it returns
-   * null when neither half produced anything and the window blanks itself. One half being null is normal too — the
-   * legacy builder does the same, a raid that only healed has no tank board.
-   */
+  // Reference answer for one already-selected scope. Null means neither direction has anything to show;
+  // eligibility, expiration and reset policy belong to DamageOverlayLifecycle, not this calculation.
   internal static DamageOverlayStats? ForOverlay(IReadOnlyList<DerivedFight> rows, FightFactIndex index,
     DamageFactTable facts, double fromT, double toT)
   {
@@ -74,12 +28,7 @@ internal static class DerivedTotals
 
     CombinedStats? damage = null;
     var damageScope = new DamageStatsBuilder();
-    // Named for StatsBuildTrace: this scope runs per meter refresh on a pool thread, so its lines must not read as UNLABELLED
-    // duplicates of the fight list's builds (they are separate builder instances and never touch the panes' grids).
-    // CollectHitTotals=false: a scope's rows reach a meter grid and nothing else - no HitFreqChart can ask them - so the raw
-    // amounts the walk would append for every hit (about once a second while the overlay is open) are pure garbage by construction.
-    // ShorthandCombinedCount: the meter's title bar is one narrow row already carrying total, DPS and seconds, so it prints
-    // "C(10): Mob" where a summary pane spells "Combined (10):". Same count, different shape, asked at this door.
+    // Match the live meter's abbreviated title and omit chart-only hit amounts from this reference build.
     var damageOptions = new GenerateStatsOptions
     { Source = "damage meter overlay", AllRanges = input.AllRanges, MinSeconds = 0, CollectHitTotals = false, ShorthandCombinedCount = true };
     damageOptions.Npcs.AddRange(input.Fights);
@@ -99,8 +48,7 @@ internal static class DerivedTotals
       return null;
     }
 
-    // Healing deliberately not built here: the meter has never shown a heal column from this call, and building a
-    // third board per refresh would be new work on a once-a-second path for a number nothing paints.
+    // The meter's reference covers outgoing damage and tanking, not healing.
     return new DamageOverlayStats { DamageStats = damage, TankStats = tanking };
   }
 

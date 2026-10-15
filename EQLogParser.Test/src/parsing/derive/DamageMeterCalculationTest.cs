@@ -1,0 +1,373 @@
+namespace EQLogParser;
+
+[TestClass]
+public class DamageMeterCalculationTest
+{
+  private const double T0 = FixtureTime.Base;
+
+  [TestInitialize]
+  public void Initialize()
+  {
+    PlayerRegistry.Instance.Clear();
+    RecordsStore.Instance.Clear();
+    PipelineHarness.EnsureDataStore();
+  }
+
+  [TestMethod]
+  public void SameSecondArrivalsAndUnchangedPollsMatchTheFullCalculation()
+  {
+    var log = new Capture();
+    for (var i = 0; i < 12; i++)
+    {
+      log.Add("Illuminai", "a rat", 0, 100);
+      log.Add("a rat", "Bithika", 0, 10);
+      log.Check(0);
+    }
+    log.Check(0.5);
+    log.Check(1);
+  }
+
+  [TestMethod]
+  public void TimedFarmingRetainsCompletedPullsAndTheirExactRanges()
+  {
+    var log = new Capture();
+    for (var pull = 0; pull < 60; pull++)
+    {
+      var second = pull * 40;
+      log.Add("Illuminai", "a rat", second, 100);
+      log.Add("Bithika", "a rat", second + 3, 200);
+      log.Add("a rat", "Illuminai", second + 4, 30);
+      log.Facts.AddDeath(new DeathFact(pull, (long)(T0 + second + 5), log.Facts.InternName("a rat"), -1));
+      log.Check(second + 6, mode: 90);
+    }
+    log.Check(2399, mode: 90);
+  }
+
+  [TestMethod]
+  public void AllOutcomeWordsAndZeroTotalsKeepTheirOriginalDpsDenominators()
+  {
+    var log = new Capture();
+    byte[] types = [LabelTypes.Absorb, LabelTypes.Block, LabelTypes.Dodge, LabelTypes.Miss,
+      LabelTypes.Parry, LabelTypes.Riposte, LabelTypes.Invulnerable, LabelTypes.Melee, LabelTypes.Dd,
+      LabelTypes.Dot, LabelTypes.Ds, LabelTypes.Rs, LabelTypes.Bane, LabelTypes.Proc];
+    for (var i = 0; i < types.Length; i++)
+    {
+      log.Add("Illuminai", "a rat", i, i % 2 == 0 ? 0u : 100u, types[i]);
+      log.Add("a rat", "Bithika", i, i % 2 == 0 ? 0u : 20u, types[i]);
+      log.Check(i);
+    }
+  }
+
+  [TestMethod]
+  public void DamageFilterChangesRebuildOutgoingButDoNotFilterIncoming()
+  {
+    var previous = AppSettings.IsBaneDamageEnabled;
+    try
+    {
+      var log = new Capture();
+      log.Add("Illuminai", "a rat", 0, 100, LabelTypes.Bane);
+      log.Add("a rat", "Illuminai", 1, 50, LabelTypes.Bane);
+      AppSettings.IsBaneDamageEnabled = true;
+      log.Check(2);
+      AppSettings.IsBaneDamageEnabled = false;
+      log.Check(2);
+      AppSettings.IsBaneDamageEnabled = true;
+      log.Check(2);
+    }
+    finally
+    {
+      AppSettings.IsBaneDamageEnabled = previous;
+    }
+  }
+
+  [TestMethod]
+  public void EqualAndZeroTotalsKeepTheBoardsTimestampBlockOrdering()
+  {
+    var log = new Capture();
+    for (var i = 0; i < 40; i++)
+    {
+      var name = "Player" + i;
+      log.Timeline.SetIdentity(name, IdentityKind.Player, RuleStrength.Manual, "manual");
+      log.Add(name, i % 2 == 0 ? "a rat" : "a bat", i / 4, 0, LabelTypes.Miss);
+      log.Add("a rat", name, i / 4, 100);
+    }
+    log.Check(10);
+    for (var second = 11; second < 20; second++)
+    {
+      log.Add("Illuminai", "a rat", second, 100);
+      log.Check(second);
+    }
+  }
+
+  [TestMethod]
+  public void FallbackOwnershipChangesRegroupTheSavedAmountsWithoutNewDamage()
+  {
+    var saved = IdentityLookup.LiveOwner;
+    try
+    {
+      var owner = "Illuminai";
+      IdentityLookup.LiveOwner = name => name == "Fluffy" ? owner : null;
+      var log = new Capture();
+      log.Timeline.SetIdentity("Fluffy", IdentityKind.Pet, RuleStrength.Manual, "manual");
+      log.Add("Fluffy", "a rat", 0, 100);
+      log.Add("Illuminai", "a rat", 1, 200);
+      log.Check(2);
+      owner = "Bithika";
+      log.Check(2);
+    }
+    finally
+    {
+      IdentityLookup.LiveOwner = saved;
+    }
+  }
+
+  [TestMethod]
+  public void SpellAttackersAndPetIncomingDamageKeepTheProjectionRules()
+  {
+    var log = new Capture();
+    log.Timeline.SetIdentity("Slicing Energy", IdentityKind.Spell, RuleStrength.Manual, "manual");
+    log.Timeline.SetIdentity("Fluffy", IdentityKind.Pet, RuleStrength.Manual, "manual");
+    log.Add("Slicing Energy", "a rat", 0, 100, LabelTypes.Dd, DamageFact.FlagAttackerIsSpell);
+    log.Add("a rat", "Fluffy", 1, 500);
+    log.Check(2);
+    Assert.AreEqual(100L, log.Last!.DamageStats.RaidStats.Total);
+    Assert.IsNull(log.Last.TankStats);
+  }
+
+  [TestMethod]
+  public void RepeatedBlockResortsKeepPetAndPlainRowRanksEquivalent()
+  {
+    var log = new Capture();
+    log.Timeline.SetIdentity("Illuminai`s pet", IdentityKind.Pet, RuleStrength.Manual, "manual");
+    for (var i = 0; i < 12; i++)
+    {
+      var name = "Player" + i;
+      log.Timeline.SetIdentity(name, IdentityKind.Player, RuleStrength.Manual, "manual");
+      log.Add(name, i % 2 == 0 ? "a rat" : "a bat", i / 3, i % 3 == 0 ? 0u : 100u);
+    }
+    log.Add("Illuminai`s pet", "a rat", 0, 150, flags: DamageFact.FlagOwnerInLine);
+    log.Check(5);
+    for (var i = 6; i < 15; i++)
+    {
+      log.Add("Illuminai", "a bat", i, 200);
+      log.Check(i);
+    }
+  }
+
+  [TestMethod]
+  public void PetOwnersKeepTheirOwnDamageAndUnionTheirChildActivity()
+  {
+    var log = new Capture();
+    var pet = "Illuminai`s pet";
+    log.Timeline.SetIdentity(pet, IdentityKind.Pet, RuleStrength.Manual, "manual");
+    log.Add("Illuminai", "a rat", 0, 100);
+    log.Add(pet, "a rat", 1, 200, flags: DamageFact.FlagOwnerInLine);
+    log.Add("Bithika", "a bat", 3, 50);
+    log.Check(3);
+    log.Add(pet, "a bat", 7, 300, flags: DamageFact.FlagOwnerInLine);
+    log.Add("Illuminai", "a bat", 9, 400);
+    log.Check(10);
+  }
+
+  [TestMethod]
+  public void OneCharmedAttackerCanContributeToTwoOwners()
+  {
+    var log = new Capture();
+    log.Timeline.AddAffiliation(AffiliationKind.Friendly, "a hound", T0, T0 + 5, 9, "R9-charm", "Illuminai");
+    log.Timeline.AddAffiliation(AffiliationKind.Friendly, "a hound", T0 + 6, T0 + 12, 9, "R9-charm", "Bithika");
+    log.Add("a hound", "a rat", 1, 100);
+    log.Check(2);
+    log.Add("a hound", "a rat", 7, 200);
+    log.Check(8);
+  }
+
+  [TestMethod]
+  public void AHistoricalOwnerCorrectionInvalidatesPreviouslyCountedAmounts()
+  {
+    var log = new Capture();
+    log.Timeline.AddAffiliation(AffiliationKind.Friendly, "a hound", T0, T0 + 10, 9, "R9-charm", "Illuminai");
+    log.Add("a hound", "a rat", 1, 100);
+    log.Check(2);
+    var timeline = new EntityTimeline();
+    timeline.SetIdentity("Illuminai", IdentityKind.Player, RuleStrength.Manual, "manual");
+    timeline.SetIdentity("Bithika", IdentityKind.Player, RuleStrength.Manual, "manual");
+    timeline.SetIdentity("a rat", IdentityKind.Npc, RuleStrength.Manual, "manual");
+    timeline.AddAffiliation(AffiliationKind.Friendly, "a hound", T0, T0 + 10, 9, "R9-charm", "Bithika");
+    log.Timeline = timeline;
+    log.Check(2);
+  }
+
+  [TestMethod]
+  public void AnUnrelatedClassificationChangeCanRebindExactOrdinalPrefixes()
+  {
+    var log = new Capture();
+    log.Add("Illuminai", "a rat", 0, 100);
+    log.Check(1);
+    log.Timeline.SetIdentity("Unrelated", IdentityKind.Player, RuleStrength.Manual, "manual");
+    log.Check(1);
+    log.Add("Illuminai", "a rat", 2, 300);
+    log.Check(3);
+  }
+
+  [TestMethod]
+  public void CapturedCountsDoNotReadFactsFromALaterProjection()
+  {
+    var log = new Capture();
+    log.Add("Illuminai", "a rat", 0, 100);
+    var rows = log.Project();
+    var input = log.Cache.Index.CaptureMeterInput(rows, log.Facts, double.NegativeInfinity, T0 + 5);
+    log.Add("Illuminai", "a rat", 0, 900);
+    log.Project();
+    var result = log.Calculation.Update(input);
+    Assert.AreEqual(100L, result.DamageStats.RaidStats.Total);
+    log.Check(1);
+    Assert.AreEqual(1000L, log.Last!.DamageStats.RaidStats.Total);
+  }
+
+  [TestMethod]
+  public void AProjectedFutureFactBecomesEligibleWithoutAnotherDerive()
+  {
+    var log = new Capture();
+    log.Add("Illuminai", "a rat", 0, 100);
+    log.Add("Illuminai", "a rat", 4, 900);
+    log.Check(1);
+    log.Check(4);
+  }
+
+  [TestMethod]
+  public void ABackwardWallClockRebuildsTheUpperBoundInsteadOfKeepingFutureDamage()
+  {
+    var log = new Capture();
+    log.Add("Illuminai", "a rat", 0, 100);
+    log.Add("Illuminai", "a rat", 4, 900);
+    log.Check(4, 90);
+    log.Check(2, 90);
+    Assert.AreEqual(100L, log.Last!.DamageStats.RaidStats.Total);
+    log.Check(4, 90);
+    Assert.AreEqual(1000L, log.Last!.DamageStats.RaidStats.Total);
+  }
+
+  [TestMethod]
+  public void OutOfOrderTimestampsAndOverlappingRangesMatchMaterializedActivity()
+  {
+    var log = new Capture();
+    log.Add("Illuminai", "a rat", 0, 100);
+    log.Add("Illuminai", "a rat", 10, 100);
+    log.Add("Illuminai", "a bat", 2, 100);
+    log.Check(10);
+    log.Add("Illuminai", "a rat", 4, 100);
+    log.Check(10);
+  }
+
+  [TestMethod]
+  public void AllCopyOptionsUseDetachedResultsIncludingSpecials()
+  {
+    var log = new Capture();
+    RecordsStore.Instance.Add(new SpecialRecord { Player = "Illuminai", Code = "A" }, T0);
+    RecordsStore.Instance.Add(new DeathRecord { Killed = "Illuminai" }, T0 + 3);
+    log.Add("Illuminai", "a rat", 0, 100);
+    log.Add("Bithika", "a rat", 1, 250);
+    log.Add("a rat", "Illuminai", 2, 30);
+    log.Check(3);
+    var frozen = log.Last!;
+    for (var bits = 0; bits < 256; bits++)
+    {
+      var options = new SummaryOptions
+      {
+        ListView = (bits & 1) != 0, ShowPetLabel = (bits & 2) != 0,
+        ShowDps = (bits & 4) != 0, ShowTime = (bits & 8) != 0,
+        ShowRaidTime = (bits & 16) != 0, ShowTotals = (bits & 32) != 0,
+        RankPlayers = (bits & 64) != 0, ShowSpecial = (bits & 128) != 0
+      };
+      EqualCopy(Labels.DamageParse, log.Expected!.DamageStats, frozen.DamageStats, options);
+      EqualCopy(Labels.TankParse, log.Expected.TankStats, frozen.TankStats, options);
+    }
+    log.Add("Illuminai", "a rat", 0, 900);
+    log.Check(3);
+    Assert.AreEqual(350L, frozen.DamageStats.RaidStats.Total, "publishing cannot mutate an already copied parse");
+  }
+
+  [TestMethod]
+  public void ResetAndCancellationCannotResumeAPartialOldGeneration()
+  {
+    var log = new Capture();
+    log.Add("Illuminai", "a rat", 0, 100);
+    log.Check(1);
+    log.Lifecycle.Reset(1, T0 + 1.5);
+    log.Add("Illuminai", "a rat", 2, 900);
+    using var cancel = new CancellationTokenSource();
+    cancel.Cancel();
+    var input = log.Cache.Index.CaptureMeterInput(log.Project(), log.Facts, T0 + 1.5, T0 + 2);
+    Assert.ThrowsExactly<OperationCanceledException>(() => log.Calculation.Update(input, cancel.Token));
+    log.Check(3);
+    Assert.AreEqual(900L, log.Last!.DamageStats.RaidStats.Total);
+  }
+
+  [TestMethod]
+  public void OrdinalPrefixComparisonRefusesEqualLengthDifferentRouting()
+  {
+    var log = new Capture();
+    log.Add("Illuminai", "a rat", 0, 100);
+    log.Add("Illuminai", "a rat", 1, 200);
+    log.Add("Illuminai", "a bat", 2, 300);
+    var oldLife = new DerivedFight { Name = "a rat" };
+    var newLife = new DerivedFight { Name = "a rat" };
+    var previous = new FightFactIndex(log.Timeline);
+    var current = new FightFactIndex(log.Timeline);
+    previous.OnFact(log.Facts.At(0), 0, oldLife, FightProjection.FactTarget.AtOwner);
+    previous.OnFact(log.Facts.At(1), 1, oldLife, FightProjection.FactTarget.AtOwner);
+    current.OnFact(log.Facts.At(0), 0, newLife, FightProjection.FactTarget.AtOwner);
+    current.OnFact(log.Facts.At(2), 2, newLife, FightProjection.FactTarget.AtOwner);
+    Assert.IsTrue(current.MeterPrefixMatches(previous, oldLife, newLife, false, 1));
+    Assert.IsFalse(current.MeterPrefixMatches(previous, oldLife, newLife, false, 2));
+  }
+
+  private static void EqualCopy(string type, CombinedStats a, CombinedStats b, SummaryOptions options)
+  {
+    var expected = StatsFormatter.Build(type, a, a.StatsList, options, null);
+    var actual = StatsFormatter.Build(type, b, b.StatsList, options, null);
+    Assert.AreEqual(expected.Title, actual.Title);
+    Assert.AreEqual(expected.RankedPlayers, actual.RankedPlayers);
+  }
+
+  private sealed class Capture
+  {
+    internal readonly DamageFactTable Facts = new(64);
+    internal EntityTimeline Timeline = new();
+    internal readonly FightProjection.FightProjectionCache Cache = new();
+    internal readonly DamageMeterCalculation Calculation = new();
+    internal readonly DamageOverlayLifecycle Lifecycle = new();
+    internal DamageOverlayStats? Last;
+    internal DamageOverlayStats? Expected;
+
+    internal Capture()
+    {
+      Timeline.SetIdentity("Illuminai", IdentityKind.Player, RuleStrength.Manual, "manual");
+      Timeline.SetIdentity("Bithika", IdentityKind.Player, RuleStrength.Manual, "manual");
+      Timeline.SetIdentity("a rat", IdentityKind.Npc, RuleStrength.Manual, "manual");
+      Timeline.SetIdentity("a bat", IdentityKind.Npc, RuleStrength.Manual, "manual");
+    }
+
+    internal void Add(string attacker, string defender, int second, uint amount,
+      byte type = LabelTypes.Melee, byte flags = 0) => Facts.AddFact(new DamageFact(Facts.FactCount,
+      (long)(T0 + second), Facts.InternName(attacker), Facts.InternName(defender), amount, type,
+      flags, 0, ushort.MaxValue));
+
+    internal IReadOnlyList<DerivedFight> Project()
+    {
+      ClassificationRules.Apply(Facts, Timeline);
+      var rows = Cache.Project(Facts, Timeline);
+      Sectionizer.StampGroupIds(rows);
+      return rows;
+    }
+
+    internal void Check(double second, int mode = 0)
+    {
+      var rows = Project();
+      var scope = Lifecycle.Select(1, rows, T0 + second, mode);
+      Expected = DerivedTotals.ForOverlay(scope.Rows, Cache.Index, Facts, scope.FromTime, T0 + second);
+      Last = Calculation.Update(Cache.Index.CaptureMeterInput(scope.Rows, Facts, scope.FromTime, T0 + second));
+      DamageMeterAssert.Equal(Expected, Last);
+    }
+  }
+}

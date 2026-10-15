@@ -15,7 +15,7 @@ namespace EQLogParser
     private long _stamp = long.MinValue;
     private double _latest = double.NegativeInfinity;
 
-    internal void Update(DamageFactTable facts, EntityTimeline timeline)
+    internal void Update(DamageFactTable facts, EntityTimeline timeline, CancellationToken cancellation = default)
     {
       lock (_gate)
       {
@@ -32,6 +32,7 @@ namespace EQLogParser
         var end = facts.FactCount;
         for (; _through < end; _through++)
         {
+          if ((_through & 2047) == 0) cancellation.ThrowIfCancellationRequested();
           var fact = facts.At(_through);
           var attacker = facts.NameOf(fact.AtkIdx);
           var defender = facts.NameOf(fact.DefIdx);

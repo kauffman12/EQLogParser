@@ -2,7 +2,9 @@ using log4net;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Globalization;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -11,19 +13,21 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
 
-using EQLogParser;
-
 namespace EQLogParser
 {
   public partial class DamageOverlayWindow
   {
     private const long TopTimeout = TimeSpan.TicksPerSecond * 2;
-    private static readonly object StatsLock = new();
     private static readonly ILog Log = LogManager.GetLogger(typeof(DamageOverlayWindow));
-    private static DamageOverlayStats _stats;
+    private DamageOverlayStats _stats;
     private readonly DispatcherTimer _updateTimer;
     private readonly bool _preview;
-    private Task _lastUpdateTask = Task.CompletedTask;
+    private readonly MeterRefreshGate _refreshGate = new();
+    private readonly Stopwatch _refreshClock = Stopwatch.StartNew();
+    private readonly DamageMeterCalculation _calculation = new();
+    private CancellationTokenSource _buildCancellation;
+    private int _calculationSession;
+    private readonly long _lifecycleOwner;
     private long _lastTopTicks = long.MinValue;
     private int _savedFontSize;
     private int _savedMaxRows;
@@ -36,7 +40,7 @@ namespace EQLogParser
     private int _displayVersion;
 
     // X-close/reopen preserves explicit reset state, but the lifecycle retains no engine, snapshot or row references.
-    private static readonly DamageOverlayLifecycle MeterLifecycle = new();
+    private static readonly MeterLifecycleCheckpoint MeterLifecycle = new();
     private int _currentShowCritRate;
     private int _savedShowCritRate;
     private bool _currentHideOthers;
@@ -57,6 +61,7 @@ namespace EQLogParser
       InitializeComponent();
 
       _preview = preview;
+      _lifecycleOwner = MeterLifecycle.Open();
 
       if (reset)
       {
@@ -177,6 +182,7 @@ namespace EQLogParser
         Background = null;
         border.SetResourceReference(Border.BackgroundProperty, "DamageOverlayBackgroundBrush");
         _updateTimer.Start();
+        Loaded += (_, _) => RequestMeterUpdate(true);
 
         /*
          * Ask for a pass the moment a derived meter is opened. The board reads a snapshot, not the live pipeline, so
@@ -186,15 +192,8 @@ namespace EQLogParser
          */
         DeriveEngine.Active?.RederiveAsync();
 
-        /*
-         * Paint when the pump publishes, not on the next poll. The 1 s tick above is a repaint interval that happens to
-         * share its number with the capture's cadence, and stacking it on a pass costs up to a second of visible delay for
-         * no reason: `Derived` says exactly when the board changed. The poll stays as the path back for a window that was
-         * hidden through a derive.
-         *
-         * A session belongs to one log-open, so it is listened to through ActiveChanged rather than grabbed once: the
-         * overlay can be opened before a session exists, and survives one being swapped under it.
-         */
+        // Derive and timer asks share one gate; the timer still pays expiration when no new pass is published.
+        // Follow captures rather than retaining the engine of a log that has closed.
         DeriveEngine.ActiveChanged += FollowActiveSession;
         FollowActiveSession();
       }
@@ -205,21 +204,32 @@ namespace EQLogParser
     // Re/listens to whichever session is current. Detached in WindowClosing: ActiveChanged is static and outlives the window.
     private void FollowActiveSession()
     {
+      if (!Dispatcher.CheckAccess())
+      {
+        Dispatcher.BeginInvoke(FollowActiveSession);
+        return;
+      }
+      if (_closed) return;
       var session = DeriveEngine.Active;
       if (ReferenceEquals(session, _derivedFrom)) return;
+      _displayVersion++;
+      _buildCancellation?.Cancel();
+      if (_buildCancellation is null) _calculation.Clear();
+      _stats = null;
+      ClearStats(damageContent.Children);
+      ClearStats(tankContent.Children);
+      controlPanel.Visibility = Visibility.Collapsed;
+      HideToolbarWindow();
 
       if (_derivedFrom is not null) _derivedFrom.Derived -= OnDerived;
       _derivedFrom = session;
 
       // Subscribing is not Reset. The lifecycle distinguishes a reopened window from a new capture by SessionId.
       if (session is not null) session.Derived += OnDerived;
+      if (IsLoaded) RequestMeterUpdate(true);
     }
 
-    /*
-     * `Derived` is raised by the pump on its own thread, inside the session's gate, and this window belongs to the UI
-     * thread — so the repaint is queued there rather than run inline. No priority is specified: default (Normal) lands it
-     * behind whatever input is already queued but ahead of the Background poll, which is what a user-visible refresh wants.
-     */
+    // Derived runs on a worker. Only the coalesced request is dispatched here; accounting stays off the UI thread.
     private void OnDerived(DerivedSnapshot snapshot)
     {
       // A pass from a capture that is no longer open must not wake this board (Dispose does not join a running pass);
@@ -232,22 +242,10 @@ namespace EQLogParser
       dispatcher.BeginInvoke(new Action(RepaintAfterDerive));
     }
 
-    /// <summary>The wall-clock second a meter board was last materialized; see the check in RepaintAfterDerive.</summary>
-    private long _meterBuildSecond = -1;
-
     private void RepaintAfterDerive()
     {
-      // A hidden window gets no reason to build a board it will not show; the poll picks it up when it comes back.
-      // The tick's own `_lastUpdateTask` guard keeps a derive landing mid-repaint from starting a second one.
-      if (_preview || !IsLoaded || !IsVisible) return;
-
-      // A derive pass lands ~2/s and each one used to materialize the whole meter window: measured 3.45 s / 218.6 MB
-      // (damage) plus 1.87 s / 185 MB (healing) for a wide window that paints five bars. Nothing printed can differ
-      // inside one wall-clock second, so the second build is pure garbage. The staleness bound is the seconds column
-      // itself, and only THIS lane is suppressed - the meter's own timer still repaints at its own cadence.
-      if ((long)(DateTime.Now - DateTime.MinValue).TotalSeconds == _meterBuildSecond) return;
-
-      UpdateTimerTick(null, EventArgs.Empty);
+      if (_preview || !IsLoaded || _closed) return;
+      RequestMeterUpdate();
     }
 
     // staged-config working set (mirrors _saved* until the setup window restages it) and its companion window
@@ -366,9 +364,9 @@ namespace EQLogParser
 
     internal void DiscardMeterSettings() => MainActions.CloseDamageOverlay(false);
 
-    private DamageOverlayStats BuildMeterUpdate(int sessionId, int damageMode)
+    private DamageOverlayStats BuildMeterUpdate(DeriveEngine session, DamageOverlayLifecycle lifecycle,
+      int damageMode, CancellationToken cancellation)
     {
-      var session = DeriveEngine.Active;
       if (session is null)
       {
         if (!_meterWarned)
@@ -378,14 +376,17 @@ namespace EQLogParser
         }
         return null;
       }
-      if (session.SessionId != sessionId) return null;
+      if (session.SessionId != (DeriveEngine.Active?.SessionId ?? 0)) return null;
       _meterWarned = false;
 
       try
       {
         var now = (DateTime.Now - DateTime.MinValue).TotalSeconds;
-        _meterBuildSecond = (long)now;
-        return session.BuildOverlayStats(MeterLifecycle, damageMode, now);
+        return session.BuildOverlayStats(lifecycle, _calculation, damageMode, now, cancellation);
+      }
+      catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+      {
+        throw;
       }
       catch (Exception ex)
       {
@@ -406,41 +407,63 @@ namespace EQLogParser
       }
     }
 
-    private async void UpdateTimerTick(object sender, EventArgs e)
+    private void UpdateTimerTick(object sender, EventArgs e) => RequestMeterUpdate();
+
+    private void RequestMeterUpdate(bool force = false)
     {
-      // if turned off
+      if (_closed || _preview) return;
       if (!ConfigUtil.IfSet("IsDamageOverlayEnabled"))
       {
         Close();
         return;
       }
+      if (_refreshGate.Request(_refreshClock.Elapsed.TotalSeconds, force)) _ = RunMeterUpdatesAsync();
+    }
 
-      if (!_lastUpdateTask.IsCompleted) return;
-
-      var sessionId = DeriveEngine.Active?.SessionId ?? 0;
-      var displayVersion = _displayVersion;
-      var damageMode = _currentDamageMode;
-      DamageOverlayStats damageOverlayStats = null;
-
-      _lastUpdateTask = Task.Run(() =>
+    private async Task RunMeterUpdatesAsync()
+    {
+      do
       {
         try
         {
-          lock (StatsLock)
+          var session = DeriveEngine.Active;
+          var sessionId = session?.SessionId ?? 0;
+          if (_calculationSession != sessionId)
           {
-            damageOverlayStats = BuildMeterUpdate(sessionId, damageMode);
-            if (sessionId == (DeriveEngine.Active?.SessionId ?? 0)) _stats = damageOverlayStats;
+            _calculation.Clear();
+            _calculationSession = sessionId;
           }
+          var displayVersion = _displayVersion;
+          var damageMode = _currentDamageMode;
+          var checkpoint = MeterLifecycle.Read(_lifecycleOwner);
+          _buildCancellation = new CancellationTokenSource();
+          var cancellation = _buildCancellation.Token;
+          var result = await Task.Run(() => BuildMeterUpdate(session, checkpoint.State, damageMode, cancellation));
+          if (_closed || displayVersion != _displayVersion
+            || sessionId != (DeriveEngine.Active?.SessionId ?? 0)) continue;
+          if (!MeterLifecycle.TryCommit(checkpoint)) continue;
+          _stats = result;
+          ApplyMeterUpdate(result);
+        }
+        catch (OperationCanceledException)
+        {
+          // Reset, capture change, and close supersede work without blocking the dispatcher.
         }
         catch (Exception ex)
         {
           Log.Error("Damage overlay update failed", ex);
         }
-      });
+        finally
+        {
+          _buildCancellation?.Dispose();
+          _buildCancellation = null;
+        }
+      } while (!_closed && _refreshGate.Complete(_refreshClock.Elapsed.TotalSeconds));
+      if (_closed || _calculationSession != (DeriveEngine.Active?.SessionId ?? 0)) _calculation.Clear();
+    }
 
-      await _lastUpdateTask;
-      if (_closed || displayVersion != _displayVersion || sessionId != (DeriveEngine.Active?.SessionId ?? 0)) return;
-
+    private void ApplyMeterUpdate(DamageOverlayStats damageOverlayStats)
+    {
       if (damageOverlayStats != null)
       {
         var currentTicks = DateTime.UtcNow.Ticks;
@@ -914,10 +937,7 @@ namespace EQLogParser
 
     private void ConfigureClick(object sender, RoutedEventArgs e)
     {
-      lock (StatsLock)
-      {
-        _updateTimer.Stop();
-      }
+      _updateTimer.Stop();
 
       HideToolbarWindow();
       Hide();
@@ -926,23 +946,10 @@ namespace EQLogParser
 
     private void CopyClick(object sender, RoutedEventArgs e)
     {
-      lock (StatsLock)
-      {
-        if (_currentShowDps)
-        {
-          if (_stats.DamageStats != null)
-          {
-            MainActions.AddAndCopyDamageParse(_stats.DamageStats, _stats.DamageStats.StatsList);
-          }
-        }
-        else
-        {
-          if (_stats.TankStats != null)
-          {
-            MainActions.AddAndCopyTankParse(_stats.TankStats, _stats.TankStats.StatsList);
-          }
-        }
-      }
+      var stats = _currentShowDps ? _stats?.DamageStats : _stats?.TankStats;
+      if (stats is null) return;
+      if (_currentShowDps) MainActions.AddAndCopyDamageParse(stats, stats.StatsList);
+      else MainActions.AddAndCopyTankParse(stats, stats.StatsList);
     }
 
     private void DpsClick(object sender, RoutedEventArgs e)
@@ -950,7 +957,7 @@ namespace EQLogParser
       _currentShowDps = true;
       _toolbarWindow?.SetShowingDps(true);
       ConfigUtil.SetSetting("OverlayShowingDps", _currentShowDps);
-      UpdateTimerTick(null, null);
+      if (_stats is not null) ApplyMeterUpdate(_stats);
     }
 
     private void TankClick(object sender, RoutedEventArgs e)
@@ -958,22 +965,21 @@ namespace EQLogParser
       _currentShowDps = false;
       _toolbarWindow?.SetShowingDps(false);
       ConfigUtil.SetSetting("OverlayShowingDps", _currentShowDps);
-      UpdateTimerTick(null, null);
+      if (_stats is not null) ApplyMeterUpdate(_stats);
     }
 
     private void FullResetClick(object sender, RoutedEventArgs e)
     {
       _displayVersion++;
-      lock (StatsLock)
-      {
-        _stats = null;
-        MeterLifecycle.Reset(DeriveEngine.Active?.SessionId ?? 0, (DateTime.Now - DateTime.MinValue).TotalSeconds);
-      }
+      _buildCancellation?.Cancel();
+      _stats = null;
+      MeterLifecycle.Reset(DeriveEngine.Active?.SessionId ?? 0, (DateTime.Now - DateTime.MinValue).TotalSeconds);
       ClearStats(damageContent.Children);
       ClearStats(tankContent.Children);
       controlPanel.Visibility = Visibility.Collapsed;
       HideToolbarWindow();
       Visibility = Visibility.Collapsed;
+      RequestMeterUpdate(true);
     }
 
     private void WindowSizeChanged(object sender, SizeChangedEventArgs e)
@@ -984,6 +990,8 @@ namespace EQLogParser
     private void WindowClosing(object sender, CancelEventArgs e)
     {
       _closed = true;
+      _buildCancellation?.Cancel();
+      if (_buildCancellation is null) _calculation.Clear();
       if (_derivedFrom is not null) _derivedFrom.Derived -= OnDerived;
       DeriveEngine.ActiveChanged -= FollowActiveSession;
       _derivedFrom = null;
@@ -1002,7 +1010,7 @@ namespace EQLogParser
 
     private void EnsureToolbarWindow()
     {
-      if (_preview || _toolbarWindow is not null)
+      if (_closed || _preview || _toolbarWindow is not null)
       {
         return;
       }
@@ -1022,7 +1030,7 @@ namespace EQLogParser
 
     private void ShowToolbarWindow()
     {
-      if (_preview || controlPanel.Visibility != Visibility.Visible)
+      if (_closed || _preview || controlPanel.Visibility != Visibility.Visible)
       {
         return;
       }
@@ -1052,7 +1060,7 @@ namespace EQLogParser
 
     private void PositionToolbarWindow()
     {
-      if (_preview ||
+      if (_closed || _preview ||
           _toolbarWindow is null ||
           controlPanel.Visibility != Visibility.Visible ||
           !IsVisible)
@@ -1077,7 +1085,7 @@ namespace EQLogParser
 
     private void ScheduleToolbarPosition()
     {
-      if (_preview)
+      if (_closed || _preview)
       {
         return;
       }

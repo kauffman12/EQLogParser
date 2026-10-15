@@ -344,6 +344,9 @@ namespace EQLogParser
      * the pair. Splitting them is what lets HitRecord hold only what both kinds write; the heal half is
      * UpdateHealStats.
      */
+    internal static bool CountsAsDamageHit(string type) => type is not (Labels.Absorb or Labels.Block
+      or Labels.Dodge or Labels.Miss or Labels.Parry or Labels.Riposte or Labels.Invulnerable);
+
     internal static void UpdateDamageStats(PlayerSubStats stats, DamageRecord record, bool newFrame = false, bool isPet = false)
     {
       var newMeleeHit = false;
@@ -359,7 +362,6 @@ namespace EQLogParser
           break;
         case Labels.Bane:
           stats.BaneHits++;
-          stats.Hits += 1;
           break;
         case Labels.Block:
           stats.Blocks++;
@@ -389,18 +391,17 @@ namespace EQLogParser
         case Labels.Dot:
         case Labels.Dd:
           stats.SpellHits++;
-          stats.Hits++;
           break;
         case Labels.Ds:
         case Labels.Rs:
-          stats.Hits += 1;
           break;
         default:
-          stats.Hits += 1;
           stats.MeleeAttempts++;
           newMeleeHit = true;
           break;
       }
+
+      if (CountsAsDamageHit(record.Type)) stats.Hits++;
 
       if (newMeleeHit)
       {
@@ -801,6 +802,7 @@ namespace EQLogParser
           {
             for (var j = specialStart; j < allSpecials.Count; j++)
             {
+              if (allSpecials[j].Item1 > segment.EndTime) break;
               if (allSpecials[j].Item1 >= offsetBegin && allSpecials[j].Item1 <= segment.EndTime)
               {
                 specialStart = j + 1;
@@ -823,6 +825,7 @@ namespace EQLogParser
           {
             for (var j = deathStart; j < allDeaths.Count; j++)
             {
+              if (allDeaths[j].Item1 > offsetEnd) break;
               if (allDeaths[j].Item1 >= offsetBegin && allDeaths[j].Item1 <= offsetEnd)
               {
                 deathStart = j + 1;
@@ -850,6 +853,7 @@ namespace EQLogParser
           {
             for (var j = resistStart; j < allResists.Count; j++)
             {
+              if (allResists[j].Item1 > offsetEnd) break;
               if (allResists[j].Item1 >= offsetBegin && allResists[j].Item1 <= offsetEnd)
               {
                 var resist = allResists[j].Item2;

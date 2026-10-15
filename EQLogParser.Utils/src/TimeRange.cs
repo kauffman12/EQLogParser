@@ -100,7 +100,19 @@ namespace EQLogParser
      * through here - which is what makes "runs are always more than Offset apart" safe to rely on. Building a list by touching TimeSegments directly skips
      * that, and would leave silences nobody counted.
      */
-    public void Add(TimeSegment segment)
+    public void Add(TimeSegment segment) => AddAndMeasure(segment);
+
+    // Inclusive membership over the sorted, disjoint spans maintained by Add.
+    public bool Contains(double time)
+    {
+      if (TimeSegments.Count == 0) return false;
+
+      var index = FirstSpanReaching(time);
+      return index < TimeSegments.Count && time >= TimeSegments[index].BeginTime;
+    }
+
+    // The same union operation, reporting only the changed coverage so incremental readers need not sum old spans.
+    internal double AddAndMeasure(TimeSegment segment)
     {
       if (segment is not null && segment.BeginTime <= segment.EndTime)
       {
@@ -109,6 +121,7 @@ namespace EQLogParser
         if (index < TimeSegments.Count && segment.EndTime + Offset >= TimeSegments[index].BeginTime)
         {
           var target = TimeSegments[index];
+          var previousTotal = target.Total;
           target.BeginTime = Math.Min(target.BeginTime, segment.BeginTime);
           target.EndTime = Math.Max(target.EndTime, segment.EndTime);
 
@@ -117,6 +130,7 @@ namespace EQLogParser
 
           while (last + 1 < TimeSegments.Count && TimeSegments[last + 1].BeginTime <= target.EndTime + Offset)
           {
+            previousTotal += TimeSegments[last + 1].Total;
             target.EndTime = Math.Max(target.EndTime, TimeSegments[last + 1].EndTime);
             last++;
           }
@@ -126,13 +140,15 @@ namespace EQLogParser
             TimeSegments.RemoveRange(index + 1, last - index);
           }
 
-          return;
+          return target.Total - previousTotal;
         }
 
         /* Open ground: everything to the left ends before this span starts, and this span ends before the span at `index`.
            Insert(count) is an append, so "past the end of the list" needs no branch of its own. */
         TimeSegments.Insert(index, segment);
+        return segment.Total;
       }
+      return 0;
     }
 
     internal static bool TimeCheck(string line, double start, double end = -1)
@@ -194,25 +210,6 @@ namespace EQLogParser
       }
 
       return pass;
-    }
-
-    /*
-     * Is this instant inside one of the range's seconds? Inclusive on both ends, exactly as the linear test ever was.
-     *
-     * The halving is legal for the same reason Add()'s search is: every path that fills this list comes through Add(TimeSegment), which keeps
-     * it sorted and disjoint. That is why this is a member of TimeRange rather than a loop at a call site - a caller cannot tell from a
-     * `List<TimeSegment>` whether the law was obeyed, and a linear scan over a few thousand spans costs 1,300 comparisons per question.
-     * Measured: windowing 420k heal rows against a 2,653-span capture window went 2,159 ms -> 27 ms (docs/DesignNotes.md ->
-     * "A window is searched, never walked").
-     *
-     * Building the list by touching TimeSegments directly would break this, exactly as it breaks GetTotal()'s silence rule.
-     */
-    public bool Contains(double time)
-    {
-      if (TimeSegments.Count == 0) return false;
-
-      var index = FirstSpanReaching(time);
-      return index < TimeSegments.Count && time >= TimeSegments[index].BeginTime;
     }
 
     /*

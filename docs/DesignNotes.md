@@ -5645,6 +5645,90 @@ can reduce repeated decoding, but is not required for reference safety and would
 exception guard, so a failing UI subscriber cannot make a successful derive look broken. Opening requests a fresh derive; closing
 unsubscribes the pane without discarding the scalar lifecycle state.
 
+### Incremental damage meter: compact accounting, paired publication (2026-11)
+
+The live meter now uses `DamageMeterCalculation`, not two full summary builders per tick. `DerivedTotals.ForOverlay`
+remains the one-shot reference used by equivalence tests and other explicit queries. Damage and tanking continue
+from separate per-life ordinal cursors, keep raw totals and exact activity metadata, and publish detached, shallow
+`CombinedStats` rows for the existing display/parse formatter. There are no retained `DamageRecord`s, spell breakdown
+trees, taunt blocks, hit distributions, or chart events in this accounting. This is not the reverted `DamageCellStore`:
+no full per-player board graph is cached, and monitoring without a meter starts no extra accumulation.
+
+`MeterFactInput` captures scalar life headers and direction counts while the capture gate excludes projection.
+`DeriveEngine._meterSnapshot` is published inside that gate, rather than borrowing the later UI publication: cheap
+projection mutates carried rows/indexes, so a snapshot reference alone does not freeze their fields. The meter's
+pending-activity scan runs outside the gate and retries its capture if a pass replaced the snapshot. Only selection
+and header/count capture park ingest. The index reader copies at most 2,048 ordinals under its own lock, then releases
+it before decoding or counting. It never enumerates the projection's live List from a foreign worker.
+
+An unchanged index resumes its prefixes. An index replacement can rebind lives by name plus first routed ordinal,
+but only after checking the remembered combatants' `AnswerStampFor` values AND comparing both actual ordinal
+prefixes. Equal timestamps, counts, or a hash alone are not proof. Prefix comparison uses bounded stack buffers;
+it may revisit historical **integers**, but does not decode/recount their damage. Changed relevant verdicts, filters,
+fact tables or reset bounds rebuild conservatively. Unrelated classification can preserve accounting despite a new
+projection index. Cancellation/failure during counting discards partial state rather than acknowledging it.
+
+On Kill removes just the departing life's compact contribution and re-unions the survivors' metadata; it does not
+subtract overlapped seconds as if they were additive. Timed modes extend accumulated totals and activity unions.
+`TimeRange.AddAndMeasure` exposes the existing union's change in covered seconds, avoiding a complete sum of old
+spans on every add. Backward activity timestamps rebuild the compact unions so an old wider range cannot survive
+an end-time contraction. Future-dated facts record a re-evaluation boundary. The existing `DamageOverlayLifecycle`
+still owns selection, completed-result grace, pending-combat protection, and reset semantics.
+
+The ranking caveat is real rather than cosmetic: Damage Summary assigns ranks through shared expanded/top-level
+row objects, and sorts timestamp blocks with an unstable equal-time comparison. Merely sorting compact totals by
+value produced different ranks beside pets and among zero-total names; adding one later block could change those
+ties. `MeterOrdering` retains block clocks and first appearances, reproduces that traversal without damage records,
+and memoizes its layout. A new block can require sorting historical **block metadata** again. This work deliberately
+does not fix the board's rank semantics as a side effect of changing performance. Tests pin repeated block resorts,
+pets, plain rows and zero/equal totals.
+
+`MeterRefreshGate` coalesces derive and timer requests through one monotonic one-second cadence, with one running
+worker and one pending slot. Expiry/pending checks still run without a derive. A busy request is owed, not dropped.
+`MeterLifecycleCheckpoint` retains only scalar lifecycle state across windows; work uses a copy and commits only
+while its window owner/reset revision remains current. Reset invalidates and clears immediately, never waits for a
+record walk, and close/capture change cancel work between batches. Static state retains no capture input. DPS/Tank
+switches render the last paired answer immediately rather than scheduling another historical build. Class icons
+are recreated only when their class changes.
+
+Copy continues to hand Parse Preview the full ranked list, not only the visible/class-filtered bars. Each publication
+contains the formatter's totals, seconds, titles, class/rank and Special text already frozen as values; it does not
+re-read newer damage at click time or retain an engine for export. All 256 formatter option combinations have a
+fixture comparison for both views. Special/death annotation uses the shared `StatsUtil.PopulateSpecials`; its sorted
+record scans now stop at each range's upper bound rather than walking the remaining future records for every range.
+That helper still snapshots auxiliary history; it is not an incremental auxiliary-record store.
+
+**Headless measurement, not Windows frame latency.** A disposable test harness replayed each gitignored log through
+`PipelineHarness`, settled cold chunk encoding without forcing GC, selected the entire projected history, and compared
+old/new display fields for every row in both directions. It then appended one routed hit, compared again, and forced
+an unrelated-name classification/index replacement and compared again. Times below are single worker observations
+in Linux Debug, not p95s, end-to-end speedup claims, or a live UI soak. Allocation is process-wide allocated bytes
+across each call, not retained heap. Capture/header construction and the dispatcher/render path are outside these
+numbers. The print harness was deleted after recording the results.
+
+| capture | damage facts before appended hit | lives | reference initial / append | compact initial | compact idle (3 samples) | compact append | compact unrelated reindex |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Kizant xegony-2 | 2,286,368 | 778 | 2,224.87 / 2,071.24 ms | 1,120.22 ms | 1.36 / 0.64 / 0.61 ms | 4.10 ms | 14.06 ms |
+| Incogitable xegony | 1,901,078 | 4,836 | 1,685.82 / 1,658.74 ms | 1,139.09 ms | 7.21 / 5.45 / 5.18 ms | 31.44 ms | 49.08 ms |
+| Bulron THJ (`EQLP_EMU=1`) | 707,860 | 14,101 | 908.23 / 883.65 ms | 611.39 ms | 48.40 / 23.74 / 22.14 ms | 118.05 ms | 131.47 ms |
+
+Reference append allocations were 476.03 / 425.87 / 228.32 MiB respectively; compact append allocated
+1.15 / 13.95 / 20.40 MiB. Initial compact calls still allocated 250.16 / 222.32 / 104.15 MiB, including cold decoding
+and construction of compact metadata. The reference/new answers matched both before and after append/reindex.
+These are full-history stress queries, not wall-clock eligibility tests on old logs.
+
+**Limits and remaining validation:** lifecycle/header selection still scans rows; timed mode retains compact
+per-life metadata; new block layouts sort block clocks; auxiliary annotation snapshots its records. Work/memory
+therefore are not constant in participant/life/block count, and a relevant historical correction can still require a
+cold walk. The proposed 100 ms steady-worker target has not been established as a percentile and the whole-history
+THJ append sample exceeded it. The measured win is removing repeated historical damage reconstruction/counting,
+not proving that every possible long session is free. Windows execution, end-to-end/GC/UI interference, high-add-count
+soak, and peak-retention measurement remain release gates in `ReleaseChecklist`.
+
+Validation on Linux: **2,228 headless tests passed, 6 skipped**, including 28 additional tests and compact/full
+comparisons inside all 35 overlay lifecycle tests. The explicit WPF-test assembly build and full no-incremental
+solution build succeeded with **zero warning/error diagnostics**. The WPF suite was not executed on Linux.
+
 ### One dial for both surfaces (2026-10, burn-in)
 
 *(Names in the notes above predate 2026-11: the engine was "the combat mirror" then - `MirrorMeter` is now

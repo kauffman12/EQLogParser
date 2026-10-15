@@ -11,6 +11,8 @@ namespace EQLogParser
   {
     private readonly string _defaultColor;
     private string _lastColor;
+    private string _lastClassName;
+    private bool _iconInitialized;
 
     public DamageBar(string foregroundColor, string progressColor, bool showClassIcon)
     {
@@ -70,7 +72,12 @@ namespace EQLogParser
         Visibility = Visibility.Visible;
       }
 
-      classImage.Source = UiElementUtil.CreateAppIcon(PlayerRegistry.GetPlayerIconPath(className));
+      if (!_iconInitialized || _lastClassName != className)
+      {
+        classImage.Source = UiElementUtil.CreateAppIcon(PlayerRegistry.GetPlayerIconPath(className));
+        _lastClassName = className;
+        _iconInitialized = true;
+      }
       player.Text = playerName;
       damage.Text = damageValue;
       dps.Text = dpsValue;

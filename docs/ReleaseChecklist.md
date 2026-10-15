@@ -214,6 +214,28 @@ These checks still require Windows for popup/hide behavior. See DesignNotes → 
 - [ ] **Capture ownership:** switch logs or Clear All while an overlay build is in flight. No old-capture bars may land afterward.
   Reset during a build must likewise prevent that older result from reappearing.
 
+### Incremental damage/tanking meter release gate (2026-11)
+
+Headless equivalence and whole-history worker measurements are in DesignNotes → "Incremental damage meter:
+compact accounting, paired publication". These checks are not satisfied by a Linux solution/WPF-test build.
+
+- [ ] **Long live session:** accumulate through many pulls in timed mode, with FCT and summary panes open. Compare
+  both DPS and Tank against equivalent fight-list selections. Measure actual refresh latency, UI apply, allocation
+  interference and peak retention; do not substitute the headless worker timings for these observations.
+- [ ] **Immediate gestures:** switch DPS/Tank while a large initial build/correction is running. Reset and Configure
+  must remain responsive, and resetting must clear immediately without old bars returning. Repeat Reset then X-close
+  and reopen before the old worker finishes; scalar reset state must survive without the old worker committing it.
+- [ ] **Copy is the displayed revision:** copy both views during live growth, including more participants than bars,
+  a class filter, pet labels and Special text. Change Parse Preview formatting afterward. New damage in the same log
+  second must not change the copied totals. The open summary boards must keep their own answers.
+- [ ] **Correction and replacement:** change ownership/classification mid-fight, then switch captures/Clear All with
+  outstanding work. Corrected totals must converge; no old-capture rows, toolbar, or queued show callback may return.
+  Run the existing WPF suite on Windows, not just its build.
+- [ ] **Stress limits:** measure high-add-count On Kill and a large timed accumulation with many distinct lives.
+  Historical record reconstruction must not recur each tick, but clock-block sorting, lifecycle scans and auxiliary
+  annotations still scale with metadata. The headless 14,101-life THJ append exceeded the proposed 100 ms worker
+  target; verify the actual supported workload before calling the long-session release gate complete.
+
 ## Summary board rebuilds, checked on Windows
 
 A board's busy state is the one part of a build no headless run can see: an empty `ItemsSource`, a null one and a title swap look

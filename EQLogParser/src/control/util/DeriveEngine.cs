@@ -1,4 +1,3 @@
-using EQLogParser;
 using log4net;
 using System;
 using System.Collections.Generic;
@@ -95,6 +94,8 @@ namespace EQLogParser
     // The snapshot currently on screen (see DerivedSnapshot.Facts): a selection is materialized against
     // the pass that produced the rows, so it has to be reachable from the UI without re-deriving.
     private DerivedSnapshot _snapshot;
+    // Published under the capture gate so meter headers cannot be read between a projection and its publication.
+    private DerivedSnapshot _meterSnapshot;
 
     // Reused row objects for THIS capture only (DerivedRowCarry); nulled on Dispose so a closed log's fights are not kept alive by them.
     private DerivedRowCarry _rowCarry = new();
@@ -477,6 +478,7 @@ namespace EQLogParser
             snapshot.Heals = _heals;
             // Every announcement says which capture it came from; see DerivedSnapshot.SessionId.
             snapshot.SessionId = SessionId;
+            if (!_disposed) Volatile.Write(ref _meterSnapshot, snapshot);
             return snapshot;
           });
           sw.Stop();
@@ -682,6 +684,7 @@ namespace EQLogParser
       // The fact table is the biggest thing the engine holds; a disposed session must not stay the reason
       // a closed log's records are still reachable.
       _snapshot = null;
+      Volatile.Write(ref _meterSnapshot, null);
       _carriedTimeline = null;
 
       /*
@@ -807,15 +810,25 @@ namespace EQLogParser
     }
 
     // Select and materialize from ONE snapshot. The lifecycle retains only scalar reset state, never this capture's rows.
-    internal DamageOverlayStats BuildOverlayStats(DamageOverlayLifecycle lifecycle, int mode, double now)
+    internal DamageOverlayStats BuildOverlayStats(DamageOverlayLifecycle lifecycle, DamageMeterCalculation calculation,
+      int mode, double now, CancellationToken cancellation)
     {
-      var snapshot = _snapshot;
-      if (_disposed || snapshot is null) return null;
-
-      // Only the worker walks the suffix; UI eligibility checks read this snapshot's cached hint.
-      snapshot.PendingActivity.Update(snapshot.Facts, snapshot.Timeline);
-      var scope = lifecycle.Select(SessionId, snapshot.AllFights, now, mode, snapshot.PendingActivity);
-      return DerivedTotals.ForOverlay(scope.Rows, snapshot.DamageIndex, snapshot.Facts, scope.FromTime, now);
+      while (!_disposed)
+      {
+        cancellation.ThrowIfCancellationRequested();
+        var snapshot = Volatile.Read(ref _meterSnapshot);
+        if (snapshot is null) return null;
+        // The potentially large suffix scan is outside the ingest gate. Retry if a pass replaced its snapshot meanwhile.
+        snapshot.PendingActivity.Update(snapshot.Facts, snapshot.Timeline, cancellation);
+        var input = _capture.DeriveQuiescent(() =>
+        {
+          if (_disposed || !ReferenceEquals(snapshot, Volatile.Read(ref _meterSnapshot))) return null;
+          var scope = lifecycle.Select(SessionId, snapshot.AllFights, now, mode, snapshot.PendingActivity);
+          return snapshot.DamageIndex.CaptureMeterInput(scope.Rows, snapshot.Facts, scope.FromTime, now);
+        });
+        if (input is not null) return calculation.Update(input, cancellation);
+      }
+      return null;
     }
 
     internal StatsGenerationEvent? BuildScopeStats(IReadOnlyList<DerivedFight> rows)
