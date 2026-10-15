@@ -218,7 +218,7 @@ public class IncrementalClassificationTest
     /*
      * The carry against the real corpus: pass 1 full, pass 2 carried over an unchanged capture (the digest must
      * freeze every gated rule), then the from-zero replay - one store, three ways. Gated on
-     * EQLP_DERIVE_INCREMENT=<log> like the benchmark; the night exercises every stream the carry reads (evidence,
+     * EQLP_DERIVE_INCREMENT=<log>; the night exercises every stream the carry reads (evidence,
      * charm text, pets, graph) at a size where the from-zero walk is known to cost ~300 ms.
      */
     [TestMethod]

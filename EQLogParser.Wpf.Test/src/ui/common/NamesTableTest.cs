@@ -2,6 +2,7 @@ using EQLogParser;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Interop;
 
 namespace EQLogParser.Wpf.Test;
 
@@ -548,14 +549,16 @@ public class NamesTableTest
       var pane = CreatePane();
       var window = new Window { Content = pane, Width = 1200, Height = 600 };
       window.Show();
-      pane.UpdateLayout();   // the pager's template — and with it the PagedSource a page move needs — arrives on this pass
+      new WindowInteropHelper(window).EnsureHandle();
+      window.UpdateLayout();
       try
       {
-        Assert.IsTrue(pane.idPager.PagedSource is not null,
-            "control: the shown pager holds the paged view its arrows navigate; without one a page move is dropped");
-
         var census = Enumerable.Range(0, 2500).Select(i => CensusRow($"Name{i:D4}", IdentityKind.Player)).ToArray();
         pane.PublishCensusForTest(census);
+        pane.idPager.ApplyTemplate(); // on-demand PagedSource is built by the vendor's template, not by the pane's constructor
+        window.UpdateLayout();
+        Assert.IsTrue(pane.idPager.PagedSource is not null,
+            "control: a pager with rows must create the paged view its arrows navigate");
 
         Assert.AreEqual(3, pane.PagerPageCountForTest, "two and a half thousand names are three pages of a thousand");
         Assert.AreEqual("Page 1 of 3", pane.PagerTextForTest, "the arrows get a page number and a total beside them");

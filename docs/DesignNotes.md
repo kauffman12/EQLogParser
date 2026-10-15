@@ -4210,13 +4210,10 @@ the instance the last expensive pass published, and runs only `ClassificationRep
 [census-cost] eqlog_Kizant_xegony.txt: rule book (the half the pane no longer pays) 500 ms; report over the carried timeline 93 ms; rows 280
 ```
 
-Re-measure with `EQLP_NAMES_CENSUS_COST=<log> dotnet test --filter OnARealCapture_CarriedCensusMatchesARuleRunAndIsTheCheaperHalf`
-(add `EQLP_EMU=1` for an EMU capture). For comparison, the same rule book inside a derive pass measured 186 ms (Kizant) / 261 ms
-(Incogitable) — the census paid that per refresh while the pass had just paid it.
+The one-off timing gate was removed after these numbers were recorded. For comparison, the same rule book inside a derive pass measured 186 ms (Kizant) / 261 ms (Incogitable) — the census paid that per refresh while the pass had just paid it.
 
 **Why reuse is legitimate.** A census is a *display* of a timeline, so two timelines built from one capture must say the same thing; that
-is now asserted on the fixture and on a real capture rather than argued (`ACensusOverTheCarriedTimeline_AgreesWithAWholeRuleRun`,
-`TwoTimelinesFromOneCapture_AgreeOnEveryName`, and the gated real-log twin). Two bonuses worth as much as the time: the window can no
+is asserted on the fixture by `ACensusOverTheCarriedTimeline_AgreesWithAWholeRuleRun`: independent rule replays agree on every displayed name, kind and reason, and the display leaves the published timeline stamp unchanged. Two bonuses worth as much as the time: the window can no
 longer disagree with the grids — it used to run its rule book seconds *after* the pass behind the fight list, so a name could read Player
 in this pane while sitting under another verdict on the boards — and nothing in the census touches the carried classification
 **aggregates**. Those cursors and candidate tables remain the derive thread's alone, which is the reason the copy looked necessary in the
@@ -5245,7 +5242,7 @@ themselves rewritten from tick counts into seconds and facts/**second** (`Derive
 re-scaled, or a finer timer would have silently shortened the quiet window and the bulk-load guard.
 
 Then the projection itself. Measured on `eqlog_Incogitable_xegony.txt` (1,891,875 damage facts + 420,115 heals, 4,644
-rows) by `DeriveIncrementBenchmarkTest`:
+rows) during the incremental derive investigation (the one-off benchmark has since been removed):
 
 | pass | projection | classification (rule replay) | total |
 |---|---|---|---|
@@ -5744,9 +5741,7 @@ wait we were going to pay anyway. Polling thirteen times a second for hundredths
 **What a refresh costs now, per second of live raid**: ~2 cheap passes at 0–5 ms projection + row-building, plus one full pass per ≥3 s at
 186–261 ms → roughly **7–12 % of the ingest gate** against **6–9 %** before, in exchange for numbers moving in **~0.8–1.2 s** instead of ~3.4 s (the worst case carries the 200 ms tail delay above; a live raid's steady traffic mostly hides it behind the floor's phase).
 The unknown term in that sum is `DerivedFightRows.Build`, which runs on every lane and formats four columns per row over *every row the capture ever
-produced* (4,644 on one capture); it lives in the app assembly, so its number is `EQLogParser.Wpf.Test/src/control/util/DerivedSnapshotCostTest.cs`
-(Windows-only, 5,000 synthetic rows bound at 60 ms). If that ever climbs toward tens of milliseconds, widen the cheap lane by row count before
-touching either floor.
+produced* (4,644 on one capture); it lives in the app assembly. The Windows-only 5,000-row timing test was removed because a fixed 60 ms wall-time assertion depends on the test host rather than the row-building contract. If measured production refreshes climb toward tens of milliseconds, widen the cheap lane by row count before touching either floor.
 
 **Two tests worth naming.** `TwoCheapPassesOverOneSetOfVerdictsMatchASingleFold` (increment suite) grows a capture in three folds under one timeline
 and compares against a single fold over the same swings: staleness in this lane is allowed to mean "a verdict the next full pass has not reached", never
@@ -6650,9 +6645,7 @@ claims land; what is paid per insert is one uncontended monitor, against reads t
 `NamesWithIdentity()` hands out a live `Keys` view: it is not part of the safe set, and its only callers are tests.
 
 The per-insert lock was not benchmarked, deliberately: inserts are thousands per pass against millions of unlocked reads,
-so the arithmetic bound is far below the noise, and `DeriveIncrementBenchmarkTest` (see its header for the invocation) is
-the tool if that ever needs proving. Note that its gate takes a path the test host resolves against the test assembly's own
-directory - pass an **absolute** path, or it reports "set EQLP_DERIVE_INCREMENT=..." while your shell insists it is set.
+so the arithmetic bound is far below the noise. The one-off incremental benchmark was removed after its numbers were recorded; measure the specific path temporarily if this assumption needs revisiting.
 
 Foreign readers today: `DeriveEngine.LiveKindAt` (the seam's hop - it locks and returns a plain `IdentityKind`, so no live
 collection escapes) and `EventViewer.SaidNpc`. `EntityTimelineConcurrencyTest` pins the two laws that can be observed while
@@ -8461,8 +8454,7 @@ second implementation trips a cast loudly rather than quietly walking a copy. Co
 343), with the memory wins kept. `FactRowWalkTest` pins the equivalence that makes the speed legal — same rows, same order,
 same values across two chunk seams, from a cursor parked three rows before a seam, and nothing at all from a cursor at the end.
 
-Re-measure: `EQLP_DERIVE_INCREMENT=<log> dotnet test --logger "console;verbosity=detailed" --filter ~DeriveIncrementBenchmarkTest`
-prints load, full pass (classify + project), continued passes and the carried pass. Step 3 — columnar cold chunks with delta-encoded
+The one-off incremental timing gate was removed after recording these figures; behavioral carry equivalence remains in `FightProjectionIncrementTest` and `IncrementalClassificationTest`. Step 3 — columnar cold chunks with delta-encoded
 `Seq`/time and a codec, where the measured ~4.5×/6.8× on real captures actually lands — comes after this, so nothing is paid for twice.
 
 ## Rows go cold, and what a chunk costs to remember

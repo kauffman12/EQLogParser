@@ -1,134 +1,91 @@
 using EQLogParser;
 
-namespace EQLogParserTest
+namespace EQLogParserTest;
+
+[TestClass]
+public class DelayedActionTest
 {
-  [TestClass]
-  public class DelayedActionTest
+  private static readonly TimeSpan TimeoutBudget = TimeSpan.FromSeconds(5);
+
+  [TestMethod]
+  public void NonGenericInvocationRunsAfterTheDelay()
   {
-    [TestMethod]
-    public void DelayedAction_General_InvokesActionAfterDelay()
-    {
-      var invoked = false;
-      using var action = new DelayedAction(TimeSpan.FromMilliseconds(50), () => invoked = true);
-      action.Invoke();
-      Thread.Sleep(100);
-      Assert.IsTrue(invoked);
-    }
+    using var called = new ManualResetEventSlim();
+    using var action = new DelayedAction(TimeSpan.FromMilliseconds(30), called.Set);
 
-    [TestMethod]
-    public void DelayedAction_General_UsesLastInvokeValue()
-    {
-      var lastValue = -1;
-      using var action = new DelayedAction<int>(TimeSpan.FromMilliseconds(50), v => lastValue = v);
-      action.Invoke(1);
-      action.Invoke(2);
-      action.Invoke(3);
-      Thread.Sleep(100);
-      Assert.AreEqual(3, lastValue);
-    }
+    action.Invoke();
 
-    [TestMethod]
-    public void DelayedAction_General_InvokesOnlyOnce()
-    {
-      var invokeCount = 0;
-      using var action = new DelayedAction<int>(TimeSpan.FromMilliseconds(50), _ => invokeCount++);
-      action.Invoke(1);
-      action.Invoke(2);
-      action.Invoke(3);
-      Thread.Sleep(100);
-      Assert.AreEqual(1, invokeCount);
-    }
+    Assert.IsTrue(called.Wait(TimeoutBudget), "the non-generic wrapper never ran its callback");
+  }
 
-    [TestMethod]
-    public void DelayedAction_General_ResetDelay_ExtendsTimer()
+  [TestMethod]
+  public void RepeatedInvocationsDeliverOnlyTheLastValueOnce()
+  {
+    using var called = new ManualResetEventSlim();
+    var count = 0;
+    var received = -1;
+    using var action = new DelayedAction<int>(TimeSpan.FromMilliseconds(50), value =>
     {
-      var invokeCount = 0;
-      using var action = new DelayedAction<int>(TimeSpan.FromMilliseconds(50), _ => invokeCount++);
-      action.Invoke(1, resetDelay: true);
-      Thread.Sleep(30);
-      action.Invoke(2, resetDelay: true);
-      Thread.Sleep(30);
-      action.Invoke(3, resetDelay: true);
-      // Should not have fired yet because we reset the delay each time
-      Assert.AreEqual(0, invokeCount);
-      Thread.Sleep(100);
-      Assert.AreEqual(1, invokeCount);
-    }
+      received = value;
+      Interlocked.Increment(ref count);
+      called.Set();
+    });
 
-    [TestMethod]
-    public void DelayedAction_General_Dispose_PreventsInvocation()
-    {
-      var invoked = false;
-      var action = new DelayedAction(TimeSpan.FromMilliseconds(50), () => invoked = true);
-      action.Invoke();
-      action.Dispose();
-      Thread.Sleep(100);
-      Assert.IsFalse(invoked);
-    }
+    action.Invoke(1);
+    action.Invoke(2);
+    action.Invoke(3);
 
-    [TestMethod]
-    public void DelayedAction_General_InvokeAfterDispose_NoOp()
-    {
-      var invoked = false;
-      var action = new DelayedAction(TimeSpan.FromMilliseconds(50), () => invoked = true);
-      action.Dispose();
-      action.Invoke(); // Should not throw
-      Thread.Sleep(100);
-      Assert.IsFalse(invoked);
-    }
+    Assert.IsTrue(called.Wait(TimeoutBudget), "the generic callback never ran");
+    Assert.AreEqual(3, received, "a later invoke must replace the pending value");
+    Assert.AreEqual(1, Volatile.Read(ref count), "several invokes before the timer fires are one callback");
+  }
 
-    [TestMethod]
-    public void DelayedAction_Generic_InvokesActionAfterDelay()
+  [TestMethod]
+  public void ResetDelayDefersTheCallbackAndStillRunsOnlyOnce()
+  {
+    using var called = new ManualResetEventSlim();
+    var count = 0;
+    using var action = new DelayedAction<int>(TimeSpan.FromMilliseconds(200), _ =>
     {
-      var received = -1;
-      using var action = new DelayedAction<int>(TimeSpan.FromMilliseconds(50), v => received = v);
-      action.Invoke(42);
-      Thread.Sleep(100);
-      Assert.AreEqual(42, received);
-    }
+      Interlocked.Increment(ref count);
+      called.Set();
+    });
 
-    [TestMethod]
-    public void DelayedAction_Generic_MultipleInvokesWithoutReset_FiresOnce()
-    {
-      var invokeCount = 0;
-      using var action = new DelayedAction<int>(TimeSpan.FromMilliseconds(50), _ => invokeCount++);
-      action.Invoke(1);
-      action.Invoke(2);
-      // Without resetDelay, the timer is not reset, so it fires once
-      Thread.Sleep(100);
-      Assert.AreEqual(1, invokeCount);
-    }
+    action.Invoke(1, resetDelay: true);
+    Assert.IsFalse(called.Wait(TimeSpan.FromMilliseconds(100)), "the timer fired before its first deadline");
+    action.Invoke(2, resetDelay: true);
+    Assert.IsFalse(called.Wait(TimeSpan.FromMilliseconds(120)), "the original deadline fired despite a reset");
+    Assert.IsTrue(called.Wait(TimeoutBudget), "the reset timer never fired");
+    Assert.AreEqual(1, Volatile.Read(ref count));
+  }
 
-    [TestMethod]
-    public void DelayedAction_Generic_Dispose_CleansUp()
-    {
-      var invokeCount = 0;
-      var action = new DelayedAction<int>(TimeSpan.FromMilliseconds(50), _ => invokeCount++);
-      action.Invoke(1);
-      action.Dispose();
-      action.Dispose(); // Double dispose should not throw
-      Thread.Sleep(100);
-      Assert.AreEqual(0, invokeCount);
-    }
+  [TestMethod]
+  public void DisposePreventsPendingAndLaterInvocations()
+  {
+    using var called = new ManualResetEventSlim();
+    var action = new DelayedAction(TimeSpan.FromMilliseconds(50), called.Set);
+    action.Invoke();
+    action.Dispose();
+    action.Dispose();
+    action.Invoke();
 
-    [TestMethod]
-    public void DelayedAction_General_Constructor_ShortInterval()
-    {
-      var invoked = false;
-      using var action = new DelayedAction(TimeSpan.FromMilliseconds(10), () => invoked = true);
-      action.Invoke();
-      Thread.Sleep(50);
-      Assert.IsTrue(invoked);
-    }
+    Assert.IsFalse(called.Wait(TimeSpan.FromMilliseconds(150)), "a disposed timer invoked its callback");
+  }
 
-    [TestMethod]
-    public void DelayedAction_Generic_NullValue_IsHandled()
+  [TestMethod]
+  public void GenericCallbackCanReceiveNull()
+  {
+    using var called = new ManualResetEventSlim();
+    string? received = "not set";
+    using var action = new DelayedAction<string?>(TimeSpan.FromMilliseconds(30), value =>
     {
-      var received = "not set";
-      using var action = new DelayedAction<string?>(TimeSpan.FromMilliseconds(50), v => received = v);
-      action.Invoke(null);
-      Thread.Sleep(100);
-      Assert.IsNull(received);
-    }
+      received = value;
+      called.Set();
+    });
+
+    action.Invoke(null);
+
+    Assert.IsTrue(called.Wait(TimeoutBudget), "the null payload never reached the callback");
+    Assert.IsNull(received);
   }
 }

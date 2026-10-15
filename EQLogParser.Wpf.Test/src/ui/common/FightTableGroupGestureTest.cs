@@ -3,6 +3,7 @@ using System.Collections;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Interop;
 using System.Windows.Threading;
 
 namespace EQLogParser.Wpf.Test;
@@ -65,12 +66,16 @@ public sealed class FightTableGroupGestureTest
                 expected.AddRange(rows.Where(r => !r.IsDivider && !groupTwo.Contains(r.Name))
                                       .Select(r => r.Name).OrderBy(n => n, StringComparer.Ordinal));
 
-                // Step 1: select all.
+                // Step 1: select all. A later group assertion cannot diagnose a selection that never formed.
                 Invoke(table, "SelectAllClick", new object?[] { null, null });
+                CollectionAssert.AreEquivalent(everyFight, SelectedNames(table),
+                    "Select All did not select every fight before the group gesture");
 
                 // Steps 2-4: the group gesture on the same row, with an ADDITIVE re-select in the middle — the modifier held on
                 // the press (RememberRightPress below), which is the only way this sequence puts the rest of the list back.
                 RightClickOn(table, target);
+                CollectionAssert.AreEquivalent(everyFight, SelectedNames(table),
+                    "aiming the menu at the target changed the selection before Unselect Group ran");
                 Invoke(table, "RemoveGroupFromSelection");
                 afterStep2.AddRange(SelectedNames(table));
 
@@ -284,8 +289,7 @@ public sealed class FightTableGroupGestureTest
           System.Windows.Input.Mouse.PrimaryDevice, Environment.TickCount, System.Windows.Input.MouseButton.Right)
         { RoutedEvent = UIElement.PreviewMouseRightButtonDownEvent, Source = grid });
         // No menu opened. A later key press tunnels through the real XAML wiring.
-        var source = PresentationSource.FromVisual(window)
-          ?? throw new InvalidOperationException("The shown test window has no presentation source");
+        var source = KeyboardSource(window);
         grid.RaiseEvent(new System.Windows.Input.KeyEventArgs(System.Windows.Input.Keyboard.PrimaryDevice,
           source, Environment.TickCount, key)
         { RoutedEvent = System.Windows.Input.Keyboard.PreviewKeyDownEvent, Source = grid });
@@ -339,7 +343,7 @@ public sealed class FightTableGroupGestureTest
                 // Ctrl rode an earlier press whose menu never opened; then the keyboard takes over and opens one.
                 RememberRightPress(table, System.Windows.Input.ModifierKeys.Control);
                 grid.RaiseEvent(new System.Windows.Input.KeyEventArgs(System.Windows.Input.Keyboard.PrimaryDevice,
-                  PresentationSource.FromVisual(window)!, Environment.TickCount, System.Windows.Input.Key.F10)
+                  KeyboardSource(window), Environment.TickCount, System.Windows.Input.Key.F10)
                 { RoutedEvent = System.Windows.Input.Keyboard.PreviewKeyDownEvent, Source = grid });
 
                 RightClickOn(table, rows[12]);
@@ -357,6 +361,12 @@ public sealed class FightTableGroupGestureTest
         CollectionAssert.AreEquivalent(groupTwo, after,
           "Shift+F10 carries Shift without anybody meaning 'add this group'; the menu it opens is a plain gesture");
     }
+
+    // Show/Flush does not guarantee FromVisual can see the HWND on this test STA. The key event needs
+    // the window's input source even though the routed event itself is raised directly on the grid.
+    private static HwndSource KeyboardSource(Window window) =>
+      HwndSource.FromHwnd(new WindowInteropHelper(window).EnsureHandle())
+      ?? throw new InvalidOperationException("The test window could not create an input source");
 
     // ContextMenuEventArgs has NO reachable constructor (not even non-public), so it is allocated without running
     // one. That is safe here because the opening handler reads exactly one thing off it - OriginalSource, a plain

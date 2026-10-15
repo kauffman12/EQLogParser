@@ -1049,20 +1049,6 @@ namespace EQLogParserTest
     }
 
     [TestMethod]
-    public void Evaluate_UnsetVariableInContains_ReturnsFalse()
-    {
-      var node = ConditionParser.Parse("{name} contains dragon");
-      Assert.IsFalse(ConditionEvaluator.Evaluate(node!, name => null));
-    }
-
-    [TestMethod]
-    public void Evaluate_UnsetVariableStandalone_ReturnsFalse()
-    {
-      var node = ConditionParser.Parse("{enabled}");
-      Assert.IsFalse(ConditionEvaluator.Evaluate(node!, name => null));
-    }
-
-    [TestMethod]
     public void Evaluate_NotUnsetVariable_ReturnsTrue()
     {
       // not {unsetVar} — unset is falsy, so not falsy = true

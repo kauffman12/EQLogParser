@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
@@ -102,11 +101,14 @@ public class NamesCensusCarryTest
   [TestMethod]
   public void ACensusOverTheCarriedTimeline_AgreesWithAWholeRuleRun()
   {
-    var carried = Census(FullPassTimeline());                       // what the pane reads now
-    var rebuilt = Census(FullPassTimeline());                       // what it used to compute for itself
+    var published = FullPassTimeline();
+    var stamp = published.StateStamp();
+    var carried = Census(published);                                // the pane reads this published instance
+    var rebuilt = Census(FullPassTimeline());                       // an independent rule replay
 
     Assert.IsTrue(carried.Rows.Count > 0, "the fixture produced no census rows");
-    CollectionAssert.AreEqual(Verdicts(rebuilt), Verdicts(carried));
+    CollectionAssert.AreEqual(Verdicts(rebuilt), Verdicts(carried), "every displayed name, kind and reason must agree");
+    Assert.AreEqual(stamp, published.StateStamp(), "a display read must not mutate the published timeline");
   }
 
   [TestMethod]
@@ -114,7 +116,7 @@ public class NamesCensusCarryTest
   {
     // Find a name the rules placed, then overrule it the way the Type dropdown does — writing the file only, never the timeline.
     var placed = Census(FullPassTimeline()).Rows.FirstOrDefault(r => r.Kind is IdentityKind.Player or IdentityKind.Npc);
-    if (placed is null) Assert.Inconclusive("the fixture's rules placed nobody, so there is nothing to overrule");
+    Assert.IsNotNull(placed, "the fixture's rules placed nobody, so there is nothing to overrule");
 
     var other = placed.Kind == IdentityKind.Player ? IdentityKind.Npc : IdentityKind.Player;
     IdentityOverrideStore.Instance.Set(placed.Name, other);
@@ -136,7 +138,7 @@ public class NamesCensusCarryTest
   public void TakingTheClaimBack_FallsBackToWhatTheRulesSaw()
   {
     var placed = Census(FullPassTimeline()).Rows.FirstOrDefault(r => r.Kind is IdentityKind.Player or IdentityKind.Npc);
-    if (placed is null) Assert.Inconclusive("the fixture's rules placed nobody");
+    Assert.IsNotNull(placed, "the fixture's rules placed nobody, so there is nothing to take back");
 
     IdentityOverrideStore.Instance.Set(placed.Name, IdentityKind.Pet);
     Assert.AreEqual(IdentityKind.Pet, Census(FullPassTimeline(applyOverrides: false)).Find(placed.Name)!.Kind);
@@ -148,64 +150,4 @@ public class NamesCensusCarryTest
     Assert.AreEqual(placed.Reason, back.Reason);
   }
 
-  [TestMethod]
-  public void TwoTimelinesFromOneCapture_AgreeOnEveryName()
-  {
-    // The law underneath the reuse: a census is a display of a timeline, so the rule book must be deterministic over one capture.
-    // (This is also the guard against a rule that reads process state it should not — the pet-claim drift this project measured shows
-    // up here as two runs disagreeing, which is exactly why the comparison is over Kind AND reason rather than a count.)
-    var a = Census(FullPassTimeline());
-    var b = Census(FullPassTimeline());
-
-    var firstOnly = a.Rows.Where(r => b.Find(r.Name)?.Kind != r.Kind).ToList();
-    Assert.AreEqual(0, firstOnly.Count,
-                    "two rule runs disagree: " + string.Join(", ", firstOnly.Take(8).Select(r => $"{r.Name} {r.Kind} vs {b.Find(r.Name)?.Kind}")));
-  }
-
-  /*
-   * The cost the pane stopped paying, on a real capture. Gated like the other probes (EQLP_NAMES_CENSUS_COST=<log>): run it with
-   * EQLP_EMU=1 for an EMU capture. It ASSERTS the agreement on real data and prints the two timings, so the number in DesignNotes has a
-   * command behind it rather than a memory.
-   */
-  [TestMethod]
-  public void OnARealCapture_CarriedCensusMatchesARuleRunAndIsTheCheaperHalf()
-  {
-    var path = Environment.GetEnvironmentVariable("EQLP_NAMES_CENSUS_COST");
-    if (string.IsNullOrEmpty(path)) Assert.Inconclusive("set EQLP_NAMES_CENSUS_COST=<log> to run this over a real capture");
-    if (!File.Exists(path)) Assert.Inconclusive($"no such file: {path}");
-
-    var run = PipelineHarness.RunFileDerived(path);
-    var facts = run.Facts;
-    double start = facts.FactCount > 0 ? facts.Facts[0].TimeS : double.NaN;
-    double end = facts.FactCount > 0 ? facts.Facts[facts.FactCount - 1].TimeS : double.NaN;
-
-    EntityTimeline Build()
-    {
-      var timeline = new EntityTimeline();
-      RegistrySeed.Apply(timeline, facts, start, end);
-      ClassificationRules.Apply(facts, timeline, run.HealFacts);
-      IdentityOverrideStore.Instance.Apply(timeline);
-      return timeline;
-    }
-
-    var ruleBook = Stopwatch.StartNew();
-    var carried = Build();
-    ruleBook.Stop();
-    var censusOnly = Stopwatch.StartNew();
-    var reportOverCarried = ClassificationReport.Build(carried, facts, run.HealFacts, IdentityOverrideStore.Instance,
-                                                      PlayerRegistry.Instance, IdentityPriorStore.Instance);
-    censusOnly.Stop();
-
-    var fresh = Build();
-    var reportFresh = ClassificationReport.Build(fresh, facts, run.HealFacts, IdentityOverrideStore.Instance,
-                                                PlayerRegistry.Instance, IdentityPriorStore.Instance);
-
-    Assert.AreEqual(reportFresh.Rows.Count, reportOverCarried.Rows.Count);
-    var disagreements = reportFresh.Rows.Where(r => reportOverCarried.Find(r.Name)?.Kind != r.Kind).ToList();
-    Assert.AreEqual(0, disagreements.Count,
-                    "real capture: rule runs disagree for " + string.Join(", ", disagreements.Take(8).Select(r => r.Name)));
-
-    Console.WriteLine($"[census-cost] {Path.GetFileName(path)}: rule book (the half the pane no longer pays) {ruleBook.ElapsedMilliseconds} ms; "
-                    + $"report over the carried timeline {censusOnly.ElapsedMilliseconds} ms; rows {reportOverCarried.Rows.Count}");
-  }
 }

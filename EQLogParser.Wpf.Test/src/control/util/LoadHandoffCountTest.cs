@@ -15,7 +15,7 @@ namespace EQLogParser;
  * stays pinned here is the half still standing: the count and the two questions product code asks of it.
  *
  * THIS IS IN THE WINDOWS-ONLY ASSEMBLY because LogReader compiles into the WPF app (EQLogParser/src/control/util) while the plain assembly
- * references Core only — the same boundary DerivedSnapshotCostTest lives behind.
+ * references Core only — this is the app-side boundary for LogReader.
  */
 [TestClass]
 public sealed class LoadHandoffCountTest
