@@ -63265,7 +63265,7 @@
 75176^Discordant Melody IV^255^5^0^0^2^0^1^0^2^0^0^0^4^0^0^A cacophonous burst crushes you, slowing your movement.^^Your movement is no longer slowed.
 75177^Cacophonous Note^255^3^0^0^5^0^1^0^2^0^0^0^5^0^0^An immense weight slows your movement^^The weight lifts.
 75178^Rapid Fire^255^0^0^0^5^65407^1^0^8^0^0^0^0^1^0^A barbed arrow pierces you.^^
-75179^Rapic Fire Burst^255^0^0^0^8^0^1^0^8^0^0^0^0^1^0^An eruption of barbs draws blood.^^
+75179^Rapid Fire Burst^255^0^0^0^8^0^1^0^8^0^0^0^0^1^0^An eruption of barbs draws blood.^^
 7518^Play Dead I^254^0^1^0^6^65407^0^1^0^0^0^0^1^1^1^You slump to the ground and play dead.^ slumps to the ground, dead.^
 75180^Thorn Bindings^255^50^0^0^5^0^1^0^1^0^0^0^0^0^1^^is rooted in place by thick barbed vines.^
 75181^Limerence^255^1^0^0^5^0^0^0^1^0^0^0^0^0^0^^^
@@ -63349,12 +63349,67 @@
 7527^Gore VI^254^0^0^0^5^65407^1^0^1^0^0^0^6^1^1^You stagger back, stunned.^ staggers back, stunned.^
 75270^Artist's Fury III^255^50^0^0^5^0^0^0^2^0^0^0^0^0^1^^'s fury builds.^
 75271^Artist's Fury IV^255^50^0^0^5^0^0^0^2^0^0^0^0^0^0^^'s fury is unmatched.^
+75272^Phrygian Arpeggio^255^0^1^0^41^0^0^0^0^-1^0^0^0^1^1^You are tuned by a phrygian arpeggio.^ is tuned by a phrygian arpeggio.^The arpeggio ends.
+75273^Phrygian Root^255^2^1^45^5^65535^0^0^0^-1^0^0^0^1^1^Your body is tuned to the phrygian root.^'s body is tuned to the phrygian root.^The phrygian root can no longer be heard.
+75274^Phrygian Third^255^2^1^45^6^65535^0^0^0^-1^0^0^0^1^1^Your body is tuned to the phrygian third.^'s body is tuned to the phrygian third.^The phrygian third can no longer be heard.
+75275^Phrygian Fifth^255^2^1^45^6^65535^0^0^0^-1^0^0^0^1^1^Your body is tuned to the phrygian fifth.^'s body is tuned to the phrygian fifth.^The phrygian fifth can no longer be heard.
+75276^Phrygian Octave^255^2^1^45^6^65535^0^0^0^-1^0^0^0^1^1^Your body is tuned to the phrygian octave.^'s body is tuned to the phrygian octave.^The phrygian octave can no longer be heard.
+75277^Masterful Phrygian Root^255^2^1^45^6^65535^0^0^0^-1^0^0^0^1^1^Your body is tuned to the phrygian root.^'s body is tuned to the phrygian root.^The phrygian root can no longer be heard.
+75278^Masterful Phrygian Third^255^2^1^45^6^65535^0^0^0^-1^0^0^0^1^1^Your body is tuned to the phrygian third.^'s body is tuned to the phrygian third.^The phrygian third can no longer be heard.
+75279^Masterful Phrygian Fifth^255^2^1^45^6^65535^0^0^0^-1^0^0^0^1^1^Your body is tuned to the phrygian fifth.^'s body is tuned to the phrygian fifth.^The phrygian fifth can no longer be heard.
 7528^War Bellow^254^10^0^0^4^65407^0^0^1^0^0^0^1^0^0^Your teeth chatter uncontrollably.^ quivers in fear.^Your teeth stop chattering.
+75280^Masterful Phrygian Octave^255^2^1^45^6^65535^0^0^0^-1^0^0^0^1^1^Your body is tuned to the phrygian octave.^'s body is tuned to the phrygian octave.^The phrygian octave can no longer be heard.
+75281^Mixolydian Arpeggio^255^0^1^0^41^0^0^0^0^-1^0^0^0^1^1^You are tuned by an mixolydian arpeggio.^ is tuned by an mixolydian arpeggio.^The arpeggio ends.
+75282^Mixolydian Root^255^2^1^45^5^65535^0^0^0^-1^0^0^0^1^1^Your body is tuned to the mixolydian root.^'s body is tuned to the mixolydian root.^The mixolydian root can no longer be heard.
+75283^Mixolydian Third^255^2^1^45^6^65535^0^0^0^-1^0^0^0^1^1^Your body is tuned to the mixolydian third.^'s body is tuned to the mixolydian third.^The mixolydian third can no longer be heard.
+75284^Mixolydian Fifth^255^2^1^45^6^65535^0^0^0^-1^0^0^0^1^1^Your body is tuned to the mixolydian fifth.^'s body is tuned to the mixolydian fifth.^The mixolydian fifth can no longer be heard.
+75285^Mixolydian Octave^255^2^1^45^6^65535^0^0^0^-1^0^0^0^1^1^Your body is tuned to the mixolydian octave.^'s body is tuned to the mixolydian octave.^The mixolydian octave can no longer be heard.
+75286^Masterful Mixolydian Root^255^2^1^45^6^65535^0^0^0^-1^0^0^0^1^1^Your body is tuned to the mixolydian root.^'s body is tuned to the mixolydian root.^The mixolydian root can no longer be heard.
+75287^Masterful Mixolydian Third^255^2^1^45^6^65535^0^0^0^-1^0^0^0^1^1^Your body is tuned to the mixolydian third.^'s body is tuned to the mixolydian third.^The mixolydian third can no longer be heard.
+75288^Masterful Mixolydian Fifth^255^2^1^45^6^65535^0^0^0^-1^0^0^0^1^1^Your body is tuned to the mixolydian fifth.^'s body is tuned to the mixolydian fifth.^The mixolydian fifth can no longer be heard.
+75289^Masterful Mixolydian Octave^255^2^1^45^6^65535^0^0^0^-1^0^0^0^1^1^Your body is tuned to the mixolydian octave.^'s body is tuned to the mixolydian octave.^The mixolydian octave can no longer be heard.
 7529^War Bellow Recourse^254^40^2^0^3^65407^0^0^0^0^6^0^1^0^0^You quiver with battle lust.^'s eyes gleam with battle lust.^The battle lust dies away.
+75290^Shield of Blood^255^30^1^0^6^0^0^0^1^0^0^0^0^1^1^You guard yourself with blood of your foes.^ is covered in blood.^The blood flakes away.
+75291^Fury of the Beast^255^30^1^8^14^0^0^0^1^-1^0^0^0^0^1^^ unleashes their rage.^
+75292^Fury of the Warder^255^30^1^8^6^0^0^0^1^-1^0^0^0^0^1^^ unleashes their rage.^
+75293^Unleashed Fury^255^0^0^0^5^0^0^0^1^-1^0^0^0^1^1^You are struck by a raging blow.^ is struck by a raging blow.^
+75294^Merciful Shield^255^30^1^0^5^0^0^0^1^0^0^0^0^0^1^^ is shielded.^The shield flares.
+75295^Recurrent Merciful Shield^255^30^1^0^6^0^0^0^1^0^0^0^0^0^1^^ is shielded.^The shield falls away.
+75296^Nature's Will^255^0^1^0^6^0^0^0^0^0^0^0^0^1^1^You ponder your role in the natural order.^ ponders their role in the natural order.^
+75297^Path of Destruction^255^10^1^1^6^0^0^0^0^0^0^0^0^0^0^^^
+75298^Path of Regrowth^255^10^1^1^6^0^0^0^0^0^0^0^0^0^0^^^
+75299^Nature's Destruction^255^30^1^19^6^0^0^0^0^0^0^0^0^1^1^You have embraced the path of destruction.^ has embraced the path of destruction.^Nature is in balance once again.
 753^Beguile Plants^28^205^0^0^16^32^0^0^1^0^0^0^0^0^1^^ blinks.^
 7530^Flight^254^1200^1^0^6^65407^0^0^0^0^0^0^1^1^1^Your feet leave the ground.^ floats above the ground.^You can no longer levitate.
+75300^Nature's Regrowth^255^30^1^24^6^0^0^0^0^0^0^0^0^1^1^You have embraced the path of regrowth.^ has embraced the path of regrowth.^Nature is in balance once again.
+75301^Nature's Will^255^0^1^0^6^0^0^0^0^0^0^0^0^1^1^You ponder your role in the natural order.^ ponders their role in the natural order.^
+75302^Path of Destruction^255^10^1^1^6^0^0^0^0^0^0^0^0^0^0^^^
+75303^Path of Regrowth^255^10^1^1^6^0^0^0^0^0^0^0^0^0^0^^^
+75304^Nature's Destruction^255^30^1^19^6^0^0^0^0^0^0^0^0^1^1^You have embraced the path of destruction.^ has embraced the path of destruction.^Nature is in balance once again.
+75305^Nature's Regrowth^255^30^1^24^6^0^0^0^0^0^0^0^0^1^1^You have embraced the path of regrowth.^ has embraced the path of regrowth.^Nature is in balance once again.
+75306^Cerebral Assault^255^50^0^10^5^0^0^0^5^0^0^0^0^1^1^Your mind spasms as your willpower is siphoned.^'s mind spasms as their willpower is siphoned.^The siphoning ceases.
+75307^Cerebral Relief^255^2^1^0^3^0^0^0^5^-1^0^0^0^1^1^Your brain heats up as it gathers stolen insight.^'s brain heats up as it gathers stolen insight.^Your brain cools to its normal temperature.
+75308^Zeal of the Elements XV^255^30^1^8^14^0^0^0^0^1^0^0^0^0^1^^ wishes to show its obedience.^
+75309^Companion's Assault XXXVIII^255^0^0^0^5^0^0^0^1^-1^0^0^0^1^1^You are struck by a forceful obedient strike.^ is struck by a forceful obedient strike.^
 7531^Sleep I^254^5^0^0^5^65407^0^0^1^0^0^0^1^1^1^You fall asleep.^'s head nods.^You no longer feel sleepy.
+75310^Seven Chakras Heel Technique^255^30^1^20^6^0^0^0^1^-1^0^0^0^1^1^You focus your inner energy.^ becomes more focused.^The fury fades.
+75311^Demon Crusher^255^0^0^0^5^0^0^0^1^0^0^0^0^1^1^You are struck by a blast of chi.^ is struck by a blast of chi.^
+75312^Consuming Magic^255^30^1^10^6^0^0^0^0^0^0^0^0^1^1^You prepare consuming magic.^ attacks consuming magic.^Your magic returns to normal.
+75313^Consuming Reclamation^255^0^0^0^5^0^0^0^1^0^0^0^0^1^1^You painfully draw life from your oponent.^ twitches in pain.^
+75314^Rousing Zeal^255^20^1^30^6^0^0^0^0^0^0^0^0^1^1^You are comforted by your zeal.^ is protected by zeal.^Your zeal wanes.
+75315^Soothing Zeal^255^0^1^0^6^0^0^0^0^0^0^0^0^1^1^Your zeal soothes you^ is soothed by zeal.^
+75316^Natural Alignment^255^30^1^20^6^0^0^0^0^1^0^0^0^1^1^You harness the power of nature.^ gathers natural energy.^You release the power.
+75317^Nature's Fury^255^0^0^0^5^16384^0^0^1^0^0^0^0^1^1^You are struck by a blast of lightning.^ is struck by a blast of lightning.^
+75318^Poisoned Bladestorm^255^0^0^0^5^0^0^0^0^0^0^0^0^1^1^You are poisoned by an animated blade.^ is poisoned by an animated blade.^
+75319^Poisoned Bladestorm Attunement^255^10^1^50^5^0^0^0^4^0^0^0^0^1^1^Your blades drip with poison^'s blades drip with poison.^The poison fades from your blades.
 7532^Sleep II^254^5^0^0^5^65407^0^0^1^0^0^0^2^1^1^You fall asleep.^'s head nods.^You no longer feel sleepy.
+75320^Rousing Consumption^255^20^1^30^6^0^0^0^0^0^0^0^0^1^1^You rouse your connection to dark life.^ rouses their connection to dark life.^Your connection to dark life subsides.
+75321^Consuming Zeal^255^0^0^0^13^0^0^0^0^0^0^0^0^1^1^You drain the life of your attacker.^ drains the life of their attacker.^
+75322^Rejuvenation of the Ancestors^255^0^1^0^41^0^0^0^1^0^0^0^0^1^1^You are restored by the spirits of your ancestors.^ is restored by the spirits of their ancestors.^
+75323^Roaring Shield^255^30^1^0^6^0^0^0^1^0^0^0^0^1^1^You guard yourself with the sonic waves of your shout.^ is protected by sound.^The sound fades.
+75324^Roaring Shield^255^30^1^0^6^0^0^0^1^0^0^0^0^1^1^You guard yourself with the sonic waves of your shout.^ is protected by sound.^The sound fades.
+75325^Weave of Reclamation^255^5^1^0^6^0^0^0^0^0^0^0^0^1^1^You construct a weave of recovery.^ constructs a weave of recovery.^Your weave unravels.
+75326^Weave of Reclamation^255^5^1^0^6^0^0^0^0^0^0^0^0^1^1^You construct a weave of recovery.^ constructs a weave of recovery.^Your weave unravels.
 7533^Sleep III^254^5^0^0^5^65407^0^0^1^0^0^0^3^1^1^You fall asleep.^'s head nods.^You no longer feel sleepy.
 7534^Sleep IV^254^5^0^0^5^65407^0^0^1^0^0^0^4^1^1^You fall asleep.^'s head nods.^You no longer feel sleepy.
 7535^Sleep V^254^5^0^0^5^65407^0^0^1^0^0^0^5^1^1^You fall asleep.^'s head nods.^You no longer feel sleepy.
