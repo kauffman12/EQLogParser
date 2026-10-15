@@ -100,7 +100,7 @@ internal static class DerivedTotals
     return new DamageOverlayStats { DamageStats = damage, TankStats = tanking };
   }
 
-  internal static StatsGenerationEvent? For(IReadOnlyList<DerivedFight> rows, FightFactIndex index,
+  internal static StatsGenerationEvent? For(IReadOnlyList<DerivedFight>? rows, FightFactIndex index,
     DamageFactTable facts, HealFactTable heals, double fromT = double.NegativeInfinity, double toT = double.PositiveInfinity)
   {
     if (rows is not { Count: > 0 })

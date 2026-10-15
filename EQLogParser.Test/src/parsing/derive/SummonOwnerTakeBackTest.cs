@@ -23,7 +23,7 @@ public sealed class SummonOwnerTakeBackTest
    * RosterImportTest follow) rather than a directory this fixture owns. The store keeps the last `Init` answer, so Cleanup moves it
    * somewhere empty instead of trying to blank it.
    */
-  private string _server = null!;
+  private string _server = string.Empty;
 
   [TestInitialize]
   public void Setup()

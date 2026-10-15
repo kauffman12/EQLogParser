@@ -125,7 +125,7 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
   "Garbage collection after loading a log").
 - **GC**: forced collection runs at **two labelled moments only** — a load that actually read lines (`LogReader.LoadAllocatedGarbage`) and `Clear All` after its
   re-open — both on a **pool thread**, each labelled `PostLoadCleanup.Notice` in the status line AND on the fight list's band, because a pause with a name reads as
-  work and a silent one reads as a hang. A load **arms** at 100 % (`ArmLoadTidy`) and **pays** when that capture's first board trio answers (`PayOwedLoadTidy`, on the
+  work and a silent one reads as a hang. A load **arms** after 100 % and the parse drain (`ArmLoadTidy`) and **pays** when that capture's first board trio answers (`PayOwedLoadTidy`, on the
   build's worker, before the grids repaint): at the read's end there is nothing to collect, because concurrent GC swept the read *during* the read — the first derive
   and its boards are what allocate. A blocking collection suspends **every** managed thread, dispatcher included: never design or claim for painting *through* it. The
   **band is what waits** — `PostLoadCleanup` marks on arming and the payer releases in a `finally`; a pass releases its hold only while it still owns the capture (a door's
@@ -271,7 +271,7 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
   fights only. Range selects index `_rows` only while unsorted; search walks the grid's sorted view and resolves the matched object when scrolling.
   Restore selection by row instance (sorted too), and ask as `BoardReason.DialChange` on a toggle. See `docs/DesignNotes.md` →
   "The fight list dials filter our rows, not the grid". Real-grid checks belong in `docs/ReleaseChecklist.md`.
-- **The fight list moves its own viewport once**: one reveal per capture, owed when the capture opens and paid when the READ finishes
+- **The fight list moves its own viewport once**: one reveal per capture, owed when the capture opens and paid after the initial read and parser drain
   (`FightListReveal`: `Arm` per capture, `ReadFinished` from `EventsLogLoadingComplete`, `TryPay` asked by both doors) — not at the first snapshot,
   because a big file hands over rows mid-read. **No attention tests**: the pointer and the pane's visibility are not conditions (a list behind another
   tab gets scrolled and opens at the bottom). A one-row answer spends the reveal without scrolling; an empty grid keeps it. Live growth never scrolls,

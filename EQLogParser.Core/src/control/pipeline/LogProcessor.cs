@@ -2,6 +2,7 @@ using log4net;
 using System;
 using System.Collections.Concurrent;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace EQLogParser
@@ -17,6 +18,7 @@ namespace EQLogParser
     private readonly IChatSink _chatSink;
     private readonly ITriggerHook _triggerHook;
     private long _lineCount;
+    private long _processedLines;
     private Task _readTask;
     private volatile bool _isDisposed;
 
@@ -47,6 +49,9 @@ namespace EQLogParser
     // (LogReader keeps feeding long after LinkTo).
     internal Task Completion => _readTask;
 
+    // A batch is acknowledged only after its last line has passed through the parser.
+    internal long ProcessedLines => Interlocked.Read(ref _processedLines);
+
         /*
          * The stream arrives in batches because the thread crossing costs, not the parse (docs/DesignNotes.md → "The reader hands the parser one line at a
          * time…"). The batch shape must stay invisible downstream: lines go to DoPreProcess one at a time in arrival order on this thread, which is what
@@ -75,6 +80,7 @@ namespace EQLogParser
             }
 
             if (_isDisposed) break;
+            Interlocked.Add(ref _processedLines, batch.Length);
           }
         }
         catch (Exception ex)
@@ -160,7 +166,7 @@ namespace EQLogParser
 
         try
         {
-          _readTask.Wait(2000);
+          _readTask?.Wait(2000);
         }
         catch (Exception ex)
         {

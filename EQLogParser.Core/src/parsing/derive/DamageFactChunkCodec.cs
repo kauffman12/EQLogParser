@@ -29,12 +29,12 @@ internal static class DamageFactChunkCodec
     long prevSeq = 0, prevTime = 0;
     for (var i = 0; i < count; i++)
     {
-      p = WriteVarint(body, p, rows[i].Seq - prevSeq);
+      p = FactVarint.Write(body, p, rows[i].Seq - prevSeq);
       prevSeq = rows[i].Seq;
-      p = WriteVarint(body, p, rows[i].TimeS - prevTime);
+      p = FactVarint.Write(body, p, rows[i].TimeS - prevTime);
       prevTime = rows[i].TimeS;
-      p = WriteVarint(body, p, rows[i].AtkIdx);   // not a delta: ids are arrival order, not monotonic per row, and zigzag covers -1
-      p = WriteVarint(body, p, rows[i].DefIdx);
+      p = FactVarint.Write(body, p, rows[i].AtkIdx);   // not a delta: ids are arrival order, not monotonic per row, and zigzag covers -1
+      p = FactVarint.Write(body, p, rows[i].DefIdx);
     }
 
     for (var i = 0; i < count; i++) BinaryPrimitives.WriteUInt32LittleEndian(body.AsSpan(p + (i * 4), 4), rows[i].Total);
@@ -71,10 +71,10 @@ internal static class DamageFactChunkCodec
     // The fixed planes start where the varints stopped, so reading them is what locates them — no offset table to keep in step.
     for (var i = 0; i < count; i++)
     {
-      seq += ReadVarint(body, ref p);
-      time += ReadVarint(body, ref p);
+      seq += FactVarint.Read(body, ref p);
+      time += FactVarint.Read(body, ref p);
       // The ids land in the seed row and ride through to the rebuild below, so decoding them needs no side array of its own.
-      rows[i] = new DamageFact((int)seq, time, (int)ReadVarint(body, ref p), (int)ReadVarint(body, ref p), 0, 0, 0, 0, 0);
+      rows[i] = new DamageFact((int)seq, time, (int)FactVarint.Read(body, ref p), (int)FactVarint.Read(body, ref p), 0, 0, 0, 0, 0);
     }
 
     var total = p;
@@ -99,30 +99,4 @@ internal static class DamageFactChunkCodec
     return rows;
   }
 
-  private static int WriteVarint(byte[] buf, int p, long value)
-  {
-    var u = (ulong)((value << 1) ^ (value >> 63));      // zigzag: a small negative delta costs the same bytes as a small positive one
-    while (u >= 0x80)
-    {
-      buf[p++] = (byte)(u | 0x80);
-      u >>= 7;
-    }
-    buf[p++] = (byte)u;
-    return p;
-  }
-
-  private static long ReadVarint(byte[] buf, ref int p)
-  {
-    ulong u = 0;
-    var shift = 0;
-    byte b;
-    do
-    {
-      b = buf[p++];
-      u |= (ulong)(b & 0x7F) << shift;
-      shift += 7;
-    }
-    while ((b & 0x80) != 0);
-    return (long)((u >> 1) ^ (~(u & 1) + 1));
-  }
 }

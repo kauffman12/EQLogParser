@@ -15,7 +15,7 @@ public class LogFollowTest
   [TestMethod]
   public void MissingNameDoesNotTearDownAnOpenHandle()
   {
-    Assert.AreEqual(LogFollowDecision.WaitForFile, LogFollow.DecideFor(OldFileBorn, null, 5_000, 5_000));
+    Assert.AreEqual(LogFollowDecision.KeepFollowing, LogFollow.DecideFor(OldFileBorn, null, 5_000, 5_000));
   }
 
   [TestMethod]

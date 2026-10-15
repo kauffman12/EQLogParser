@@ -168,10 +168,8 @@ namespace EQLogParser
    * parser is mid-line would also take that table's lock from inside the parse. Those are the checks documented as KEPT in
    * docs/DesignNotes.md -> "The checks that decide who is a player", and each one is a deliberate stay, not a leftover.
    *
-   * The write side has NOT moved yet: the Pet Owners window still edits the registry (and writes petmapping.txt), so the
-     * registry stays the freshest copy of an operator's hand during a session and has to be the fallback rather than the
-     * last word. When that window writes the lane instead, this lookup narrows to timeline → lane; until then it is the one
-     * call site, and nine copies of `GetPlayerFromPet` are gone.
+   * Operator ownership writes go through PetAssignment into the registry and ledger; petmapping.txt is a read-only
+   * import feed. The registry remains the fallback for a pair the capture's timeline has not placed.
      */
     internal static string? OwnerOf(string? pet)
     {

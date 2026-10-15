@@ -11,7 +11,7 @@ namespace EQLogParser
   public sealed class EQDataStoreTest
   {
     private string? _originalCwd;
-    private Func<string, string>? _originalClassLabels;
+    private Func<string, string?>? _originalClassLabels;
 
     /*
      * Stores keyed by the label map they were BUILT with. Loading a store parses spells.txt and its siblings (~0.6 s), which
@@ -34,7 +34,7 @@ namespace EQLogParser
     {
       if (_originalCwd is not null)
       {
-        Environment.CurrentDirectory = _originalCwd!;
+        Environment.CurrentDirectory = _originalCwd;
       }
       // restore rather than reset — other test classes may carry their own wiring.
       // "" (not null): the hook's consumers only test IsNullOrEmpty, and it keeps this
@@ -226,7 +226,7 @@ namespace EQLogParser
       }
       finally
       {
-        Environment.CurrentDirectory = _originalCwd!;
+        if (_originalCwd is not null) Environment.CurrentDirectory = _originalCwd;
       }
     }
 

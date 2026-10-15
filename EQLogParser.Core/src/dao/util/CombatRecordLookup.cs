@@ -1,3 +1,6 @@
+// Annotations only, no null-flow analysis: host lookups can legitimately have no answer.
+#nullable enable annotations
+
 namespace EQLogParser
 {
   // Host-provided lookups for data owned by WPF-side stores (EQDataStore's
@@ -13,7 +16,7 @@ namespace EQLogParser
   internal static class CombatRecordLookup
   {
     // Looks up a healing spell by name (host: EQDataStore). Null when unknown.
-    public static Func<string, SpellData> HealingSpellByName { get; set; } = _ => null;
+    public static Func<string, SpellData?> HealingSpellByName { get; set; } = _ => null;
 
     // Whether the given name is a player spell (host: EQDataStore).
     public static Func<string, bool> IsPlayerSpell { get; set; } = _ => false;
@@ -25,7 +28,7 @@ namespace EQLogParser
     public static Func<string, SpellClass?> ClassEnumByName { get; set; } = _ => null;
 
     // Localized label lookup by resource name, incl. "{NAME}_COLOR" variants (host: resx). Null/empty when absent.
-    public static Func<string, string> ClassLabelByEnumName { get; set; } = _ => null;
+    public static Func<string, string?> ClassLabelByEnumName { get; set; } = _ => null;
 
     // Class name labels used when verifying player abilities (host: resx labels).
     public static string RogueClass { get; set; }

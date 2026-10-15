@@ -37,9 +37,9 @@ namespace EQLogParser
     /* The probe's own slice, after the budget: long enough for an interruptible wait to hand back what it was waiting on. */
     private const int ProbeMs = 5_000;
 
-    private sealed class Wedge
+    private sealed class Wedge(Thread thread)
     {
-      public Thread Thread = null!;
+      public Thread Thread = thread;
 
       /* When this body was FIRST REPORTED, not when it wedged: nothing can notice a wedge before its own budget has
          expired, so a report says "first reported ~N s ago" and every entry already carries TimeoutMs of silence. */
@@ -95,7 +95,7 @@ namespace EQLogParser
       // untouched and takes the exception at its NEXT wait). So "landed nowhere" describes the probe window, not eternity: a body that
       // never yields stays ARMED and can die at some later wait, after this failure has been reported. That is still the better half - a
       // wedged body stops contaminating the next one either way, and a thread that dies late belongs to no measurement anymore.
-      _wedged[id] = new Wedge { Thread = thread, At = DateTime.UtcNow };
+      _wedged[id] = new Wedge(thread) { At = DateTime.UtcNow };
       thread.Interrupt();
       var probeExited = thread.Join(ProbeMs);
 

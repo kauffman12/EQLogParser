@@ -161,7 +161,7 @@ namespace EQLogParser
       var options = Options(fight);
 
       // A null block in the selection: the grouping reads BeginTime off every one of them, so this throws inside the build.
-      fight.DamageBlocks.Add(null!);
+      fight.DamageBlocks.Add(default);
 
       StatsBuildTrace.FailFast = false;
       try

@@ -3,7 +3,6 @@ namespace EQLogParser
   /* The name of a monitored file can change hands while the reader's old handle remains valid. */
   internal enum LogFollowDecision
   {
-    WaitForFile,
     Reopen,
     KeepFollowing
   }
@@ -29,7 +28,7 @@ namespace EQLogParser
     {
       if (nameCreatedUtcTicks is null)
       {
-        return LogFollowDecision.WaitForFile;
+        return LogFollowDecision.KeepFollowing;
       }
 
       // Shortening is evidence from the open handle itself, even if the filesystem cannot answer creation-time

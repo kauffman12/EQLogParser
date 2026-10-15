@@ -66,7 +66,7 @@ public sealed class FightTableGroupGestureTest
                                       .Select(r => r.Name).OrderBy(n => n, StringComparer.Ordinal));
 
                 // Step 1: select all.
-                Invoke(table, "SelectAllClick", new object[] { null!, null! });
+                Invoke(table, "SelectAllClick", new object?[] { null, null });
 
                 // Steps 2-4: the group gesture on the same row, with an ADDITIVE re-select in the middle — the modifier held on
                 // the press (RememberRightPress below), which is the only way this sequence puts the rest of the list back.
@@ -146,7 +146,7 @@ public sealed class FightTableGroupGestureTest
 
                 RememberRightPress(table, modifiers);
                 RightClickOn(table, rows[12]);
-                Invoke(table, "SelectGroupClick", new object[] { null!, null! });
+                Invoke(table, "SelectGroupClick", new object?[] { null, null });
 
                 after.AddRange(SelectedNames(table));
                 window.Close();
@@ -343,7 +343,7 @@ public sealed class FightTableGroupGestureTest
                 { RoutedEvent = System.Windows.Input.Keyboard.PreviewKeyDownEvent, Source = grid });
 
                 RightClickOn(table, rows[12]);
-                Invoke(table, "SelectGroupClick", new object[] { null!, null! });
+                Invoke(table, "SelectGroupClick", new object?[] { null, null });
                 after.AddRange(SelectedNames(table));
                 window.Close();
             }
@@ -389,7 +389,7 @@ public sealed class FightTableGroupGestureTest
         Flush();
     }
 
-    private static void Invoke(FightTable table, string method, params object[] args)
+    private static void Invoke(FightTable table, string method, params object?[] args)
     {
         typeof(FightTable).GetMethod(method, BindingFlags.Instance | BindingFlags.NonPublic)!
           .Invoke(table, args);

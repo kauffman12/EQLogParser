@@ -31,9 +31,15 @@ namespace EQLogParser;
 [DoNotParallelize]
 public sealed class FactFlagLawTest
 {
-    private DamageFactTable _facts = null!;
-    private HealFactTable _heals = null!;
-    private CombatCapture _capture = null!;
+    private readonly DamageFactTable _facts = new(64);
+    private readonly HealFactTable _heals;
+    private readonly CombatCapture _capture;
+
+    public FactFlagLawTest()
+    {
+        _heals = new HealFactTable(_facts, 64);
+        _capture = new CombatCapture(_facts, _heals);
+    }
 
     [TestInitialize]
     public void Setup()
@@ -44,9 +50,6 @@ public sealed class FactFlagLawTest
         RecordsStore.Instance.Clear(false);
         PlayerRegistry.Instance.Clear();
 
-        _facts = new DamageFactTable(64);
-        _heals = new HealFactTable(_facts, 64);
-        _capture = new CombatCapture(_facts, _heals);
         _capture.Start();
     }
 

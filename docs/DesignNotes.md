@@ -8935,6 +8935,15 @@ Two traps, both paid for:
   calls parsers directly on one thread, so it measures no handoff; and conversely the profile's percentages mix in startup
   and UI. Both are needed: neither one alone put the queue and the pipeline work in the same frame.
 
+**Completion is not the percent dial.** The stream position can reach the original file length while `StreamReader` still
+has buffered lines, the reader still holds a partial batch, or the consumer is processing a dequeued batch. A load-complete
+event, first fight-list reveal and post-load cleanup therefore wait for the EOF batch flush **and** the parsing consumer's
+per-batch acknowledgement. The percent stays a cheap byte-position estimate; at 100 % with outstanding work the status
+says *Additional Processing*. A follow-from-end monitor has no work and completes when its initial EOF flush finishes.
+The reader and consumer publish these two milestones independently; neither queue length nor the file position proves the
+last line was parsed. `ProcessedBatchTest` checks the acknowledgement while a sink blocks; `LogReaderCompletionTest` checks
+the composed reader question on Windows.
+
 ## The damage parser reads word views; the per-line Split array is gone (2026-08)
 
 The plan that killed the 374 B `Split(' ')` "Where ingest spends its time" named as the widest single allocation in ingest.

@@ -26,7 +26,7 @@ namespace EQLogParser.Tests.Control.Builders
     private const string GroupHeal = "Ancestral Aid VI";
     private const uint PerHeal = 100;
 
-    private Func<string, SpellData>? _originalHealingSpell;
+    private Func<string, SpellData?>? _originalHealingSpell;
     private bool _aoe;
     private bool _swarm;
 
@@ -52,7 +52,7 @@ namespace EQLogParser.Tests.Control.Builders
     {
       AppSettings.IsAoEHealingEnabled = _aoe;
       AppSettings.IsHealingSwarmPetsEnabled = _swarm;
-      CombatRecordLookup.HealingSpellByName = _originalHealingSpell ?? (name => null!);
+      CombatRecordLookup.HealingSpellByName = _originalHealingSpell ?? (_ => default);
       DamageLineParser.ResetProcessState();
       RecordsStore.Instance.Clear(false);
       PlayerRegistry.Instance.Clear();

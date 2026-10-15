@@ -142,10 +142,11 @@ A whole-file open reads **one stream in file order** — one reader, one capture
 docs/DesignNotes → "Parallel loading: measured, shipped, and backed out"). Linux cannot run the app, so these are
 operator checks with `Debug=True`, on a capture of several hundred MB or more:
 
-- The progress band moves smoothly rather than sitting at 0 % and jumping to 100 %, and it reaches 100 % in step with
-  `Finished Loading Log File`. `gc.tidy armed for capture` appears at that tick, and `gc.tidy log loaded` only later — after `Derive done` and the first board build of
-  the load, on a pool thread, never inside the read (see "The load's cleanup pause sits behind the band" under Fight list checks). A tidy line during the bulk read would
-  mean someone moved the pause back into the reader; docs/DesignNotes → "Parallel loading: measured, shipped, and backed out".
+- The progress band moves smoothly rather than sitting at 0 % and jumping to 100 %. At 100 % with a parser backlog, status says
+  `Additional Processing` until the initial read's final batch is parsed; only then does `Finished Loading Log File` appear and
+  `gc.tidy armed for capture` run. `gc.tidy log loaded` comes later, after `Derive done` and the first board build, on a pool thread,
+  never inside the read (see "The load's cleanup pause sits behind the band" under Fight list checks). A tidy line during the bulk
+  read means someone moved the pause back into the reader; docs/DesignNotes → "Parallel loading: measured, shipped, and backed out".
 - The fight list shows its band while lines are arriving and hands over rows without clearing them; an empty snapshot
   mid-read must not settle it (`FightTableLoadBandTest` covers this headless for the WPF side).
 - Spot-check what a cross-line carry produces, since these are the fields a mid-file cut used to corrupt: a fight with

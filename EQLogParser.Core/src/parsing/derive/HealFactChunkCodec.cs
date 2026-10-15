@@ -33,12 +33,12 @@ internal static class HealFactChunkCodec
     long prevSeq = 0, prevTime = 0;
     for (var i = 0; i < count; i++)
     {
-      p = WriteVarint(body, p, rows[i].Seq - prevSeq);
+      p = FactVarint.Write(body, p, rows[i].Seq - prevSeq);
       prevSeq = rows[i].Seq;
-      p = WriteVarint(body, p, rows[i].TimeS - prevTime);
+      p = FactVarint.Write(body, p, rows[i].TimeS - prevTime);
       prevTime = rows[i].TimeS;
-      p = WriteVarint(body, p, rows[i].HealerIdx);   // zigzag varints, same reason as DamageFactChunkCodec: a widened id plane cost more than the ids are worth
-      p = WriteVarint(body, p, rows[i].HealedIdx);
+      p = FactVarint.Write(body, p, rows[i].HealerIdx);   // zigzag varints, same reason as DamageFactChunkCodec: a widened id plane cost more than the ids are worth
+      p = FactVarint.Write(body, p, rows[i].HealedIdx);
     }
 
     for (var i = 0; i < count; i++) BinaryPrimitives.WriteUInt32LittleEndian(body.AsSpan(p + (i * 4), 4), rows[i].Total);
@@ -75,10 +75,10 @@ internal static class HealFactChunkCodec
     // Reading the varints is what locates the fixed planes — no offset table that could drift from the encoder.
     for (var i = 0; i < count; i++)
     {
-      seq += ReadVarint(body, ref p);
-      time += ReadVarint(body, ref p);
+      seq += FactVarint.Read(body, ref p);
+      time += FactVarint.Read(body, ref p);
       // A valid seed avoids four scratch arrays and must not trip the constructor's packing guards.
-      rows[i] = new HealFact((int)seq, time, (int)ReadVarint(body, ref p), (int)ReadVarint(body, ref p),
+      rows[i] = new HealFact((int)seq, time, (int)FactVarint.Read(body, ref p), (int)FactVarint.Read(body, ref p),
         0, 0, LabelTypes.Heal, 0, LineModifiersParser.None, HealFact.NoSpell);
     }
 
@@ -106,30 +106,4 @@ internal static class HealFactChunkCodec
     return rows;
   }
 
-  private static int WriteVarint(byte[] buf, int p, long value)
-  {
-    var u = (ulong)((value << 1) ^ (value >> 63));      // zigzag: a backwards second costs the same bytes as a forwards one
-    while (u >= 0x80)
-    {
-      buf[p++] = (byte)(u | 0x80);
-      u >>= 7;
-    }
-    buf[p++] = (byte)u;
-    return p;
-  }
-
-  private static long ReadVarint(byte[] buf, ref int p)
-  {
-    ulong u = 0;
-    var shift = 0;
-    byte b;
-    do
-    {
-      b = buf[p++];
-      u |= (ulong)(b & 0x7F) << shift;
-      shift += 7;
-    }
-    while ((b & 0x80) != 0);
-    return (long)((u >> 1) ^ (~(u & 1) + 1));
-  }
 }

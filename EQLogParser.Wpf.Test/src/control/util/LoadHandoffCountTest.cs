@@ -1,4 +1,5 @@
 using EQLogParser;
+using System.Collections.Concurrent;
 
 namespace EQLogParser;
 
@@ -19,10 +20,16 @@ namespace EQLogParser;
 [TestClass]
 public sealed class LoadHandoffCountTest
 {
+  private sealed class NoopProcessor : ILogProcessor
+  {
+    public void LinkTo(BlockingCollection<LogReaderItem[]> collection) { }
+    public void Dispose() { }
+  }
+
   [TestMethod]
   public void AReaderThatHandedNothingOverSaysSo()
   {
-    var reader = new LogReader(null!, "some-capture.log", "test", -1);
+    using var reader = new LogReader(new NoopProcessor(), "some-capture.log", "test", -1);
 
     Assert.AreEqual(0L, reader.HandedOverLines, "a reader that handed nothing over says so");
     Assert.IsFalse(LogReader.LoadAllocatedGarbage(reader.HandedOverLines),

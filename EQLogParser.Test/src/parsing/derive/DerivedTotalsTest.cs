@@ -270,7 +270,7 @@ public class DerivedTotalsTest
 
         Assert.IsNull(DerivedTotals.For([], index, facts, NoHeals(facts)),
           "no rows is no scope: an empty board would be a zero the log never wrote");
-        Assert.IsNull(DerivedTotals.For(null!, index, facts, NoHeals(facts)));
+        Assert.IsNull(DerivedTotals.For(default, index, facts, NoHeals(facts)));
     }
 
     [TestMethod]

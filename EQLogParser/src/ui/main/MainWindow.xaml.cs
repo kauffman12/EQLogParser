@@ -1400,7 +1400,7 @@ namespace EQLogParser
           statusText.Text = filePercent < 100.0 ? $"Reading Log.. {filePercent}% in {seconds} seconds" : $"Additional Processing... {seconds} seconds";
           statusText.Foreground = Application.Current.Resources["EQWarnForegroundBrush"] as SolidColorBrush;
 
-          if (filePercent >= 100)
+          if (filePercent >= 100 && _eqLogReader.InitialLoadComplete)
           {
             statusText.Foreground = Application.Current.Resources["EQGoodForegroundBrush"] as SolidColorBrush;
 

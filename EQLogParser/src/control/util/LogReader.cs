@@ -4,36 +4,22 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace EQLogParser
 {
-  /*
-   * `origin` is the door that started this reader, in the words of whoever opened it. There is deliberately **no default**:
-   * naming oneself is the whole point, and an optional parameter is how a fourth lane ends up printing an anonymous line.
-   * It exists because "which session is this read loop" was unanswerable — a Windows run left three `load: read loop #N`
-   * lines against two `capture: started` lines — and the word answered it on its first outing: the extra loop was not the
-   * main window at all but **the trigger lane's own reader over the same file** (`TriggerManager` keeps a reader per
-   * enabled character, or one over `AppSettings.CurrentLogFile` in basic mode). One word per construction, beside the file name.
-   */
-  /*
-   * ONE reader over ONE file in file order — load-bearing, not a preference: docs/DesignNotes.md → "Parallel loading:
-   * measured, shipped, and backed out". Percent, HandedOverLines, the watch loop and the tidy gate all describe that one read.
-   */
+  /* One reader per file stream, in order; `origin` has no default because main and trigger readers need distinct load lines.
+   * See docs/DesignNotes.md → "Parallel loading: measured, shipped, and backed out". */
   internal class LogReader(ILogProcessor logProcessor, string fileName, string origin, int minBack = 0)
     : IDisposable
   {
     private const int BatchSize = 5000;
-    /*
-     * Memory backpressure: a bulk open spends its life against this bound, so the thread blocked in Add is the thread that cannot
-     * paint (see StartAsync). Five batches = 25,000 lines in flight; the size and the handoff cost behind it are measured in
-     * docs/DesignNotes.md → "Retiring probes that no longer protect production".
-     */
+    // Five batches cap the queue at 25,000 lines; see docs/DesignNotes.md → "Retiring probes that no longer protect production".
     private const int QueueBoundBatches = 5;
     private readonly BlockingCollection<LogReaderItem[]> _lines = new(new ConcurrentQueue<LogReaderItem[]>(), QueueBoundBatches);
     private readonly List<LogReaderItem> _batch = new(BatchSize);
+    private readonly object _lifecycleGate = new();
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private static ReadOnlySpan<char> LoadingMsg => "LOADING, PLEASE WAIT...";
     private static ReadOnlySpan<char> WelcomeMsg => "Welcome to EverQuest!";
@@ -57,14 +43,14 @@ namespace EQLogParser
     private long _nextUpdateThreshold;
     private double _lastParsedTime;
 
-    /* Lines handed to the parse lane. Ungated because it answers a PRODUCT question: MainWindow asks it (HandedOverLines) to
-       decide the load-complete line, whether the fight list's loading band may show, and whether the post-load GC tidy runs.
-       An increment per batch of 5,000 lines is not a cost worth thinking about. */
+    // The handoff count gates the load announcement, fight-list band and post-load cleanup; never gate it on logging.
     private long _handedOver;
     private bool _fileDeleted;
     private bool _waiting = true;
     private bool _ready;
-    private bool _invalid;
+    private volatile bool _initialReadFinished;
+    private long _initialLines;
+    private volatile bool _invalid;
 
     public string FileName { get; } = fileName;
     public IDisposable GetProcessor() => logProcessor;
@@ -75,15 +61,14 @@ namespace EQLogParser
      * capture legitimately reads nothing and reaches "100 %" without a single line: that is the one case where this reads
      * zero, and the open path words its announcement accordingly.
      */
-    internal long HandedOverLines => _handedOver;
+    internal long HandedOverLines => Interlocked.Read(ref _handedOver);
 
-    /*
-     * "Is there load garbage to hand back?" — the law behind which 100 % asks the collector for memory, stated here because it is a fact
-     * about what a reader did rather than about a status line. Two states reach 100 %: an open that read a file, and an open that followed
-     * from end of file (lastMins 0) having handed over nothing. Only the first allocated gigabytes of split strings and per-line
-     * temporaries — which is what makes a load expensive for the collector — so only the first is worth a blocking compacting pass.
-     * Static with the count as a parameter so the rule can be asserted without opening a file (LoadTidyTriggerTest).
-     */
+    // A file position can reach EOF while StreamReader still holds lines and the consumer still parses earlier batches.
+    // Completion belongs to the initial read AND its parser, not the read-ahead position used for the percent dial.
+    internal bool InitialLoadComplete => !_disposedValue && !_invalid && _initialReadFinished
+      && (logProcessor is not LogProcessor parser || parser.ProcessedLines >= _initialLines);
+
+    // A follow-from-end open reaches 100 % without reading lines; it owes no post-load collection.
     internal static bool LoadAllocatedGarbage(long handedOverLines) => handedOverLines > 0;
 
     public bool IsInValid() => _invalid;
@@ -106,20 +91,8 @@ namespace EQLogParser
       }
     }
 
-    /*
-     * Who runs this loop matters as much as what it does, so both halves of the rule live here.
-     *
-     * Every await in this file is ConfigureAwait(false). Without that, a caller who starts the task on the UI thread - and
-     * MainWindow's open path IS inside a dispatcher callback - captures WPF's SynchronizationContext, and every
-     * continuation comes back to the dispatcher: the read, the timestamp reuse, the batch append and FlushBatch's Add all
-     * resume on the thread that paints the window. Reads only suspend once per ~144 KB buffer (about a thousand lines), so
-     * almost every iteration continued inline there, and when one did suspend its continuation was posted back anyway. The
-     * steady state of a big open was therefore: UI thread reading lines, then parked in Add against a full queue.
-     *
-     * Nothing in this class wants a thread affinity at all - no dispatcher, no WPF type, and FileSystemWatcher already
-     * drives the same code on pool threads - so it takes none. Callers should still start it off the UI thread (MainWindow
-     * uses Task.Run) because the FIRST segment runs before any await can move it.
-     */
+    /* Starts on a pool thread: the first segment runs before any await, and continuations must not capture WPF's
+     * dispatcher or a full batch can block it. Every await here uses ConfigureAwait(false). */
     public async Task StartAsync()
     {
       /*
@@ -127,20 +100,27 @@ namespace EQLogParser
        * reader before its queued start runs, and by then the processor is gone and the queue is closed. Walk away quietly -
        * the alternative is an ObjectDisposedException/NullReference inside a fire-and-forget task that nobody observes.
        */
-      if (_disposedValue || _cts.IsCancellationRequested)
+      lock (_lifecycleGate)
       {
-        Log.Debug($"load: start skipped - the reader for {Path.GetFileName(FileName)} was closed before it began");
-        return;
-      }
-
-      if (await WhenFileExistsAsync().ConfigureAwait(false))
-      {
-        logProcessor.LinkTo(_lines);
-        LogArchiveManager.QueueFileArchiveAsync(this);
+        if (_disposedValue || _cts.IsCancellationRequested)
+        {
+          Log.Debug($"load: start skipped - the reader for {Path.GetFileName(FileName)} was closed before it began");
+          return;
+        }
       }
 
       try
       {
+        if (!await WhenFileExistsAsync().ConfigureAwait(false)) return;
+
+        // Dispose can run while the file-exists await is suspended. Link and close must agree on one owner.
+        lock (_lifecycleGate)
+        {
+          if (_disposedValue || _cts.IsCancellationRequested) return;
+          logProcessor.LinkTo(_lines);
+        }
+
+        LogArchiveManager.QueueFileArchiveAsync(this);
         await ReadFileAsync().ConfigureAwait(false);
       }
       catch (Exception ex)
@@ -151,18 +131,21 @@ namespace EQLogParser
       {
         await CleanupStreamsAsync().ConfigureAwait(false);
 
-        if (_watcher != null)
+        lock (_lifecycleGate)
         {
-          _watcher.EnableRaisingEvents = false;
-          _watcher.Dispose();
-          _watcher = null;
-        }
+          if (_watcher != null)
+          {
+            _watcher.EnableRaisingEvents = false;
+            _watcher.Dispose();
+            _watcher = null;
+          }
 
-        _cts?.Dispose();
-        _cts = null;
-        logProcessor?.Dispose();
-        logProcessor = null;
-        _invalid = true;
+          _cts?.Dispose();
+          _cts = null;
+          logProcessor?.Dispose();
+          logProcessor = null;
+          _invalid = true;
+        }
       }
     }
 
@@ -230,13 +213,7 @@ namespace EQLogParser
 
         _ready = true;
 
-        // One line per open, at Debug (a player's log never carries it; the session contract lines `capture: started` /
-        // `derive: first pass` stay at Info), and it is the answer to "is the load running on my UI thread?". Before this
-        // class was made context-free it named WPF's synchronization context here; the honest answer now is "none".
-        //
-        // It names WHICH reader too, because that was the other unanswerable question: closing one log and opening another leaves two of
-        // these lines in one file, and "four lines for two sessions" reads as a reader that will not stop. An ordinal plus the file makes
-        // each line belong to someone — which is also what tells a leftover reader from the one you just started.
+        // Identify both the stream and its thread, so main and trigger readers over one file remain distinguishable.
         Log.Debug($"load: read loop #{Interlocked.Increment(ref _readersStarted)} on thread "
                  + $"{Environment.CurrentManagedThreadId}, sync context = "
                  + $"{SynchronizationContext.Current?.GetType().Name ?? "none"} | {Path.GetFileName(FileName)}"
@@ -291,6 +268,8 @@ namespace EQLogParser
       }
 
       FlushBatch();
+      _initialLines = HandedOverLines;
+      _initialReadFinished = true;
 
       if (Path.GetDirectoryName(FileName) is { } directory)
       {
@@ -359,21 +338,8 @@ namespace EQLogParser
 
           FlushBatch();
 
-          /*
-           * This delay IS the tail latency of the whole app: the FileSystemWatcher above listens for Deleted and Renamed only, so
-           * nothing wakes this loop when EQ appends a line — it comes back on this timer. A line's wait averages half of it, and that
-           * is the only cost of the number being big; the drain above reads everything available before sleeping, so nothing queues up
-           * behind a smaller one.
-           *
-           * It was dropped to 75 ms while chasing the meter's ~3.4 s refresh, and given back afterwards: with the engine now folding on
-           * `DeriveCadence.FastFloorSeconds` (0.5 s) the wait is almost entirely inside the cadence, where this much of it overlaps
-           * with a pass that was not due yet anyway, so polling thirteen times a second buys hundredths rather than tenths of a second
-           * (docs/DesignNotes.md -> "How long a meter update takes"). If the tail ever needs to be prompter again, the order is this knob
-           * first and `FastFloorSeconds` second — the floors, not the pump.
-           *
-           * Deliberately not a Changed-event wake-up: EQ's own write buffering coalesces those notifications unpredictably, so an event
-           * would have to be backed by this same poll anyway.
-           */
+          /* Append events are not a reliable wake-up, so this poll sets tail latency; cadence dominates the meter's
+           * refresh. See docs/DesignNotes.md -> "How long a meter update takes". */
           await Task.Delay(200, _cts.Token).ConfigureAwait(false);
         }
         catch (TaskCanceledException)
@@ -462,7 +428,7 @@ namespace EQLogParser
       _batch.Clear();
 
       // Counted here rather than at the batch site because this is the one place that knows how many lines crossed.
-      _handedOver += flushed;
+      Interlocked.Add(ref _handedOver, flushed);
     }
 
     private void SearchLinear(StreamReader reader, DateTime minDate)
@@ -656,12 +622,15 @@ namespace EQLogParser
     }
 
     #region IDisposable Support
-    private bool _disposedValue; // To detect redundant calls
+    private volatile bool _disposedValue; // To detect redundant calls
 
     protected virtual void Dispose(bool disposing)
     {
-      if (!_disposedValue)
+      lock (_lifecycleGate)
       {
+        if (_disposedValue) return;
+        _disposedValue = true;
+
         if (_watcher != null)
         {
           _watcher.EnableRaisingEvents = false;
@@ -670,16 +639,11 @@ namespace EQLogParser
         }
 
         _cts?.Cancel();
-
-        if (!_lines.IsCompleted)
-        {
-          _lines.CompleteAdding();
-        }
+        if (!_lines.IsCompleted) _lines.CompleteAdding();
 
         logProcessor?.Dispose();
         logProcessor = null;
         _invalid = true;
-        _disposedValue = true;
       }
     }
 
