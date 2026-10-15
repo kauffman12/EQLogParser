@@ -668,11 +668,6 @@ namespace EQLogParser
     }
 
     /*
-     * The board's gate on who can be healed INTO a row: verified player, verified pet or mercenary, or a name that looks like a
-     * person. Memoized per build for the reason named at the call site — see there. A null/empty name is asked directly rather than
-     * cached, because there is nothing to key it under and the answer is always no anyway.
-     */
-    /*
      * How many times the LAST build had to BUILD a `healer|healed` key because the memo had not seen that pair. This is the
      * law's witness: it must be pair-sized (one per distinct healer/healed pair in the capture), never heal-sized. A number
      * approaching the record count means the per-record concatenation -- 2,647,774 strings over a night's select-all -- came
@@ -686,7 +681,9 @@ namespace EQLogParser
 
       if (memo.TryGetValue(name, out var cached)) return cached;
 
-      var ours = PlayerRegistry.Instance.IsPetOrPlayerOrMerc(name) || PlayerRegistry.IsPossiblePlayerName(name);
+      // Derived players/mercs count even without a registry sighting; retain the ingest/name fallback for silent names.
+      var ours = IdentityLookup.IsPlayerSide(name) || PlayerRegistry.Instance.IsPetOrPlayerOrMerc(name)
+        || PlayerRegistry.IsPossiblePlayerName(name);
       memo[name] = ours;
       return ours;
     }

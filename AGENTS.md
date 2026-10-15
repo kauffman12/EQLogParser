@@ -187,7 +187,8 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
   (`… by .`, seen being cast, known spell name) type as **Spell** with no pencil; R24-petslot: `Target = Pet/Pet2` in the
   spell data makes the *defender* a Pet (ask `GetSpellByName`; damage lines only; never invents an owner); R25-roster and
   R26-savedpet claim Unknown-only names in their own folder's pool, last, at Strong; **R27-mercdb** (`mercs.txt`, the bot
-  table) claims its names **Merc at Strong** and runs BEFORE R6, which then skips those names.
+  table) claims its names **Merc at `MercDatabaseStrength`**, above `TargetedNpcStrength` but below positive player proof,
+  and runs BEFORE R6, which then skips those names.
 - **A mercenary is player-side already, so a bot needs no second door.** `IdentityKind.Merc` answers `IsPlayerSide` and
   `IsConfirmedRaidPersonAt`, so an R27 name never opens a fight-list row, its damage and healing are credited to it on the
   boards beside a player's, and a swing landing on it counts as damage received. Do not add merc filters to the boards.

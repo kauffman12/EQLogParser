@@ -40,28 +40,18 @@ public sealed class MercDatabaseTierTest
 
     // ---- the rung ----
 
-    /*
-     * Strong, and that number is an argument, not a rounding. The shipped list knows a STRING and never met the fighter,
-     * so it sits with what chat says about a name (R3-merc) rather than above it, and it stays under Certain, which is
-     * what a line this capture printed keeps. It clears the shape rules (Medium) and both NPC-list rungs (Medium, Listed)
-     * outright, which is the work the rule exists to do.
-     */
+    // The table can identify a non-player the NPC frame cannot distinguish from a hostile; positive player proof still wins.
     [TestMethod]
-    public void TheBotTableSitsAboveTheShapeRulesAndBelowALinePrinted()
+    public void TheBotTableSitsAboveAnNpcFrameAndBelowPositivePlayerProof()
     {
         PipelineHarness.EnsureDataStore();
 
-        /*
-         * Ordered as a collection, because comparing the rule's own constant to `RuleStrength.Strong` by hand is two
-         * constants and the analyzer calls that no test at all (MSTEST0032). The rung itself is pinned where it can actually
-         * move — read off a derived capture, in AnArticleShapedBotIsOursAndCarriesNoEnemyClaim — and what this list holds is
-         * the SHAPE of the ladder: a bot-table hit clears both NPC rungs and stays under line evidence.
-         */
-        var ladder = new[] { RuleStrength.Weak, RuleStrength.Listed, RuleStrength.Medium,
-                             ClassificationRules.MercDatabaseStrength, RuleStrength.Certain };
+        var ladder = new[] { RuleStrength.Weak, RuleStrength.Listed, RuleStrength.Medium, RuleStrength.Strong,
+                             ClassificationRules.TargetedNpcStrength, ClassificationRules.MercDatabaseStrength,
+                             RuleStrength.Certain };
         CollectionAssert.AreEqual(ladder.OrderBy(x => x).ToList(), ladder.ToList(),
-            "a bot-table hit must clear the NPC list and the article rule while staying under line evidence");
-        Assert.AreEqual(5, new HashSet<int>(ladder).Count, "no two of these share a rung; a tie settles on write order, not on the rule book");
+            "the merc table must clear the NPC frame while staying under positive player proof");
+        Assert.AreEqual(7, new HashSet<int>(ladder).Count, "no two of these share a rung; a tie settles on write order, not on the rule book");
 
         // One rung for every shape: this file lists whole spawn names, so a bare entry is not weaker than a spaced one.
         Assert.IsTrue(EQDataStore.Instance.IsKnownMerc(BareShaped), "a title-shaped entry needs no article to earn the rung");
@@ -84,7 +74,7 @@ public sealed class MercDatabaseTierTest
         var timeline = Cold(RunDerive($"[Mon May 04 19:00:05 2026] {ArticleShaped} hits Betebeatz for 300 points of damage."));
 
         AssertIdentity(timeline, ArticleShaped, IdentityKind.Merc, "R27-mercdb");
-        Assert.AreEqual(RuleStrength.Strong, Held(timeline, ArticleShaped));
+        Assert.AreEqual(80, Held(timeline, ArticleShaped));
         Assert.IsFalse(timeline.HasIndependentIdentity(ArticleShaped, IdentityKind.Npc, double.PositiveInfinity),
             "the article rule left its claim under the bot verdict, and the fight list reads every claim");
     }
@@ -118,12 +108,12 @@ public sealed class MercDatabaseTierTest
     }
 
     /*
-     * The rung's other half: a list never outranks the capture. One target frame at Certain answers over the file for the
+     * The rung's other half: positive player proof outranks the list. A Player target frame answers over the file for the
      * rest of the log, which is the exit for a WRONG row in mercs.txt (the other two are the operator's verdict at Manual,
      * and the take-back icon that returns the name to what these files say).
      */
     [TestMethod]
-    public void ATargetFrameOutranksTheBotTable()
+    public void APlayerTargetFrameOutranksTheBotTable()
     {
         PipelineHarness.EnsureDataStore();
         var timeline = Cold(RunDerive(
@@ -131,6 +121,44 @@ public sealed class MercDatabaseTierTest
             $"[Mon May 04 19:00:05 2026] {ArticleShaped} hits Betebeatz for 300 points of damage."));
 
         AssertIdentity(timeline, ArticleShaped, IdentityKind.Player, "R1-target");
+    }
+
+    [TestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void AnNpcTargetFrameDoesNotTurnABotIntoAnOpponent(bool targetFirst)
+    {
+        var target = $"[Mon May 04 19:00:01 2026] Targeted (NPC): {ArticleShaped}";
+        var hit = $"[Mon May 04 19:00:05 2026] {ArticleShaped} hits a skeleton for 400 points of damage.";
+        var run = targetFirst ? RunDerive(target, hit) : RunDerive(hit, target);
+        var timeline = Cold(run);
+
+        AssertIdentity(timeline, ArticleShaped, IdentityKind.Merc, "R27-mercdb");
+        Assert.AreEqual(80, Held(timeline, ArticleShaped));
+        var rows = FightProjection.Build(run.Facts, timeline);
+        Assert.AreEqual(1, rows.Count, "the bot's damage must not disappear as NPC-on-NPC noise");
+        Assert.AreEqual("A skeleton", rows[0].Name);
+        Assert.AreEqual(400, rows[0].DamageToOwner);
+    }
+
+    [TestMethod]
+    public void AnNpcFrameStillPlacesAnUnlistedNameAboveBehavior()
+    {
+        var timeline = Cold(RunDerive(
+            $"[Mon May 04 19:00:01 2026] Targeted (NPC): {NotABot}",
+            $"[Mon May 04 19:00:05 2026] {NotABot} hits Betebeatz for 300 points of damage."));
+
+        AssertIdentity(timeline, NotABot, IdentityKind.Npc, "R1-target");
+        Assert.AreEqual(70, Held(timeline, NotABot));
+    }
+
+    [TestMethod]
+    public void AManualNpcVerdictStillBeatsTheBotTable()
+    {
+        var timeline = Cold(RunDerive(
+            $"[Mon May 04 19:00:05 2026] {ArticleShaped} hits a skeleton for 400 points of damage."));
+        ClassificationRules.ApplyManualOverride(timeline, ArticleShaped, IdentityKind.Npc);
+        AssertIdentity(timeline, ArticleShaped, IdentityKind.Npc, "R10-manual");
     }
 
     // ---- the file itself ----

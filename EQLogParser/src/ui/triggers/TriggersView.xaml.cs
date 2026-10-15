@@ -102,9 +102,11 @@ namespace EQLogParser
       // watcher needs to stay referenced i think
       _soundWatcher = TriggerUtil.CreateSoundsWatcher(fileList);
 
-      _topEditor = (RangeEditor)AddEditorInstance(new RangeEditor(typeof(long), 0, 9999), "Top");
+      _topEditor = (RangeEditor)AddEditorInstance(new RangeEditor(typeof(long),
+        OverlayGeometrySync.MinCoordinate, OverlayGeometrySync.MaxCoordinate), "Top");
       _heightEditor = (RangeEditor)AddEditorInstance(new RangeEditor(typeof(long), 0, 9999), "Height");
-      _leftEditor = (RangeEditor)AddEditorInstance(new RangeEditor(typeof(long), 0, 9999), "Left");
+      _leftEditor = (RangeEditor)AddEditorInstance(new RangeEditor(typeof(long),
+        OverlayGeometrySync.MinCoordinate, OverlayGeometrySync.MaxCoordinate), "Left");
       _widthEditor = (RangeEditor)AddEditorInstance(new RangeEditor(typeof(long), 0, 9999), "Width");
       _closePatternEditor = (PatternEditor)AddEditorInstance(new PatternEditor(), "ClosePattern");
       _patternEditor = (PatternEditor)AddEditorInstance(new PatternEditor(), "Pattern");
@@ -1034,20 +1036,33 @@ namespace EQLogParser
 
     private void TriggerUpdateEvent(TriggerNode node)
     {
-      if (node?.OverlayData is { } overlay)
+      UiUtil.InvokeNow(() =>
       {
-        var wasEnabled = saveButton.IsEnabled;
-        _topEditor.Update(overlay.Top);
-        _leftEditor.Update(overlay.Left);
-        _widthEditor.Update(overlay.Width);
-        _heightEditor.Update(overlay.Height);
-
-        if (!wasEnabled)
+        var model = generalPropertyGrid?.SelectedObject ?? secondaryPropertyGrid?.SelectedObject;
+        var selectedId = model switch
         {
-          saveButton.IsEnabled = false;
-          cancelButton.IsEnabled = false;
+          TextOverlayPropertyModel text => text.Node?.Id,
+          TimerOverlayPropertyModel timer => timer.Node?.Id,
+          _ => null
+        };
+        if (model is not Overlay editable || !OverlayGeometrySync.Apply(selectedId, editable, node)) return;
+
+        // Update the model even when a geometry editor is not realized. Repainting is not a new edit.
+        var saveEnabled = saveButton.IsEnabled;
+        var cancelEnabled = cancelButton.IsEnabled;
+        try
+        {
+          _topEditor.Update(editable.Top);
+          _leftEditor.Update(editable.Left);
+          _widthEditor.Update(editable.Width);
+          _heightEditor.Update(editable.Height);
         }
-      }
+        finally
+        {
+          saveButton.IsEnabled = saveEnabled;
+          cancelButton.IsEnabled = cancelEnabled;
+        }
+      });
     }
 
     private void TreeSelectionChangedEvent(Tuple<TriggerTreeViewNode, object> data)

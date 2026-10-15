@@ -328,8 +328,8 @@ renamed away (docs/DesignNotes.md → "Following the live log across a midnight 
 
 ## Bot table (`mercs.txt`) checks on Windows
 
-R27-mercdb claims every name in `data/mercs.txt` as **Mercenary** at Strong, which is the only rule a bot needs: Merc is
-already player-side, so no board carries a merc filter and none should be added (docs/DesignNotes.md → "The bot table in
+R27-mercdb claims every name in `data/mercs.txt` as **Mercenary**, above an NPC target frame but below positive player
+proof. Merc is already player-side, so no board carries a merc filter and none should be added (docs/DesignNotes.md → "The bot table in
 `data/mercs.txt`"). Everything below is a grid read, not a log line.
 
 - [ ] **A bot is never a fight.** Open a capture with a bot in it (`a bloodbone fighter`, `a gingerbread soother`, a
@@ -338,11 +338,32 @@ already player-side, so no board carries a merc filter and none should be added 
   from a mob must reach the tanking board as damage received. If it has no row anywhere, the name did not match the file:
   check the spelling (matching ignores case, so casing is never the reason).
 - [ ] **A healer bot heals on the heal board.** A soother that only ever appears in heal lines still gets its row and its
-  spell sub-rows — it is claimed from the shared name pool, not from damage facts.
+  spell sub-rows — it is claimed from the shared name pool, not from damage facts. Healing received by a listed merc and
+  its self-healing must also count without any group-join or registry sighting.
 - [ ] **The Identity Table says who told it.** Type column **Mercenary**, Why column **Mercenary DB**, hover **In the
   Mercenary DB**, one clause on the head line. No filename anywhere.
 - [ ] **A wrong row is correctable both ways.** Typing NPC over a bot sticks for that capture; the take-back icon returns it
   to Mercenary on the next pass (the table claims it again, which is what the shipped files say). Deleting the row from
   `mercs.txt` must make it read like any other name of its shape — an article-shaped one comes back as NPC.
-- [ ] **A line outranks the file.** `/target` a bot so the log writes `Targeted (Player):` on it: that name reads Player for
+- [ ] **An NPC target frame does not make a bot hostile.** Target a listed merc so the log writes `Targeted (NPC):`:
+  it stays Mercenary, has no fight-list row of its own, and its damage and damage received still reach the boards.
+- [ ] **Positive player proof outranks the file.** A `Targeted (Player):` line on a listed name makes it read Player for
   the rest of the capture, and the hover says so rather than arguing.
+
+## Text and timer overlay positions on Windows
+
+Use equal display scaling initially, to isolate desktop coordinates from DPI behavior. Repeat each placement check for
+both kinds of trigger overlay (DesignNotes → "Trigger overlay positions are signed desktop coordinates").
+
+- [ ] **Left/above monitors retain negative coordinates.** Drag a preview onto a monitor left of the primary, save in the
+  preview, change an unrelated font/color option in the properties pane and save there too. Close and reopen the preview,
+  then fire a real trigger: both windows must stay at the saved location. Repeat with a monitor above the primary and a
+  monitor above-left; the Top/Left editors must show the negative values rather than zero. Restart the app and fire again.
+- [ ] **A wide desktop is not cut off at 9999.** If the desktop extends far enough, position an overlay beyond that Left
+  value and repeat the preview/properties saves and live trigger. The numeric editor must preserve the whole coordinate.
+- [ ] **Another preview cannot move the selected overlay.** Keep overlay A selected in the properties pane with an unsaved
+  non-geometry change. Move and save preview B, then save A's properties. A must keep its own geometry and pending change;
+  B must keep its new position. Repeat with text/timer roles exchanged, and while a trigger (not an overlay) is selected.
+- [ ] **A geometry refresh is not a new edit.** Saving a preview while its properties pane is selected must refresh the
+  geometry without enabling Save/Cancel on an otherwise clean pane. If other edits were already pending, those buttons
+  must stay enabled and the pending values must survive.

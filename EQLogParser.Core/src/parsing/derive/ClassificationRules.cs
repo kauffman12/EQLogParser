@@ -6,7 +6,7 @@ namespace EQLogParser
   internal static class RuleStrength
   {
     public const int Manual = 1000;  // R10 operator override
-    public const int Certain = 100;  // line-intrinsic truth: targeted verdicts, who roster, ownership in line
+    public const int Certain = 100;  // positive line proof: player target, who roster, ownership in line
     public const int Strong = 60;    // behavior only your side performs: join/leave, guild/group/raid speech
     public const int Medium = 30;    // strong corroboration: multi-word NPC name hit, graph inference
 
@@ -25,7 +25,7 @@ namespace EQLogParser
   {
     // Names that got both Targeted (Player) and Targeted (NPC) verdicts in one run — the target
     // frame never contradicts itself in measured logs, so any hit here is genuine conflict
-    // material (illusion state, log bug) for the comparison report. NPC wins the tie.
+    // material (illusion state, log bug) for the comparison report. Keep a conservative NPC-frame claim.
     public List<string> Conflicts { get; } = [];
 
     // Every charm span the run produced, with its owner (or the fact that no caster was named), its end
@@ -71,6 +71,11 @@ namespace EQLogParser
   //    stays stats-only rather than becoming a zero-yield identity rule.
   internal static class ClassificationRules
   {
+    // The NPC frame says "not a player", not "hostile"; the curated merc table can identify that non-player.
+    // docs/DesignNotes.md → "The bot table in `data/mercs.txt`".
+    internal const int TargetedNpcStrength = 70;
+    internal const int MercDatabaseStrength = 80;
+
     // Channels whose speech proves the sender is on your side (R3). Say/tell excluded: hostile
     // mobs speak those, and a pet's "X tells you" reports would be misattribution bait. In these
     // logs group chat rides "tells the group," — ChatLineParser already classifies it as Group.
@@ -140,7 +145,7 @@ namespace EQLogParser
 
     /*
      * R18 (our pet, not their mob) tunables. R15 can only speak for names that are still UNKNOWN, and the
-     * expensive case is the one it is forbidden to touch: a name carrying `Targeted (NPC)` is Certain(100), so no
+     * expensive case is the one it is forbidden to touch: a name carrying `Targeted (NPC)` outranks heal inference, so no
      * amount of healing inference may relabel it - which is exactly why `Useless`, `Dangle`, `Bigboned`, `Muavanne`,
      * `Breshanna` and `Zarpog` keep their own fight-list rows and ~36% of the branch's cross-check mismatch mass.
      * R18 therefore never touches IDENTITY. It writes an ownership INTERVAL, which is the thing the projection
@@ -604,20 +609,22 @@ namespace EQLogParser
 
       state.EvidenceCursor = evidence.Length;
 
-      // Target-frame ladder (Certain beats everything behavioral, regardless of arrival order):
-      //  Player frame wins over NPC frame but is reported; NPC frame + player-shaped behavior
-      //  (joins, whitelisted speech, who roster) is the merc signature - the target frame knows
-      //  what the text cannot: it is not a player.
+      // An NPC frame beats behavior, but yields to the merc table and positive line proof.
+      // Conflicting frames keep a conservative NPC claim and report the conflict; NPC + behavior suggests Merc.
       foreach (var name in targetNpc)
       {
         if (targetPlayer.Contains(name))
         {
           outcome.Conflicts.Add(name);
-          timeline.SetIdentity(name, IdentityKind.Npc, RuleStrength.Certain, "R1-conflict", double.NegativeInfinity);
+          timeline.SetIdentity(name, IdentityKind.Npc, TargetedNpcStrength, "R1-conflict", double.NegativeInfinity);
           continue;
         }
-        var kind = playerBehavior.Contains(name) ? IdentityKind.Merc : IdentityKind.Npc;
-        timeline.SetIdentity(name, kind, RuleStrength.Certain, kind == IdentityKind.Merc ? "R13-merc" : "R1-target", double.NegativeInfinity);
+        // An explicit merc group sighting also identifies an unlisted merc; a weak registry seed does not.
+        var witnessedMerc = timeline.ClaimsOf(name).Any(static claim =>
+          claim.Kind == IdentityKind.Merc && claim.Strength >= RuleStrength.Strong);
+        var kind = playerBehavior.Contains(name) || witnessedMerc ? IdentityKind.Merc : IdentityKind.Npc;
+        timeline.SetIdentity(name, kind, TargetedNpcStrength,
+          kind == IdentityKind.Merc ? "R13-merc" : "R1-target", double.NegativeInfinity);
       }
       foreach (var name in targetPlayer)
       {
@@ -627,17 +634,9 @@ namespace EQLogParser
         }
       }
 
-      /*
-       * R24: a spell that can only hit a pet hit this name, so this name is a pet. Written after the ladder on
-       * purpose: `Targeted (NPC)` asserts a NEGATIVE - "not a player" - and this asserts a POSITIVE, and NPC in this
-       * application means non-pet, non-player, non-mercenary. An uncontradicted positive claim therefore removes the
-       * ground under the residual word rather than losing a strength contest to it: the target frame never says "this
-       * is not a pet", and it prints NPC for a custom-named wolf because that is the client's word for "not a person".
-       *
-       * Equal strength (Certain), equal effective time, so the tie falls to insertion order - which is why this loop
-       * sits below the ladder instead of above it. What still outranks it: a name this capture saw as a PLAYER or a
-       * MERCENARY keeps that verdict (a person is not a summon), and an operator's R10 claim beats everything, as ever.
-       */
+      // R24's positive pet proof outranks the NPC frame. Run after the ladder so the guard sees every
+      // Player/Merc claim before deciding whether this name can be a summon.
+      // docs/DesignNotes.md → "What NPC means here, and why a pet-proof line outranks `Targeted (NPC)` (2026-11)".
       foreach (var name in petSlotHits)
       {
         /*
@@ -900,7 +899,7 @@ namespace EQLogParser
      * (`Kratakel, Lord Misery` takes neither an article nor a registry entry until somebody adds one).
      *
      * Measured over the six captures (2022-2026): exactly 11 name fields carry a comma. Seven of them also
-     * arrive with a `Targeted (NPC)` line, which is Certain (R1), and one is an owned summon
+     * arrive with a `Targeted (NPC)` line, which outranks shape (R1), and one is an owned summon
      * (`Akini, Xanathan`s Warder`, R5). The remaining three rest on npcs.txt alone - `Glarubaran, the Great
      * Storm`, plus `Kratakel, Lord Misery` (71M of attack damage) and `Ogna, Artisan of War` (12M), which
      * only entered the registry in Sep 2026. Before that edit those two had no identity claim at all beyond
@@ -1082,7 +1081,7 @@ namespace EQLogParser
      *
      * Why a rule can say this at all: `Targeted (NPC)` means "not a player", which is true of a pet and does not
      * mean "the enemy's" (design doc §"Targeted (NPC) means not a player"). Identity is the wrong place to fix it -
-     * Certain evidence outranks inference by design, and it should - so this writes an AffiliationKind.PetOfPlayer
+     * Target-frame evidence outranks heal inference - so this writes an AffiliationKind.PetOfPlayer
      * interval over the heal span instead of relabelling the name. The projection reads the interval, sides the
      * name with the raid, and its damage stops keying a mob row: that is the ~4% of Incogitable-style captures and
      * roughly a third of the cross-check mismatch mass this branch carries.
@@ -1216,14 +1215,6 @@ namespace EQLogParser
         timeline.SetIdentity(name, IdentityKind.Merc, MercDatabaseStrength, "R27-mercdb", double.NegativeInfinity);
       }
     }
-
-    /*
-     * One rung for every shape this file lists (these are whole spawn names, so a bare word carries no less weight than a
-     * spaced one), and the rung is Strong: what chat says about a name in raid or group voice already sits there, and a
-     * shipped string may not outrank that. It is NOT Certain, which is what a line this capture printed keeps - a list knows
-     * a spelling and never met the fighter, so one `Targeted (Player):` line still answers over it for the rest of the log.
-     */
-    internal const int MercDatabaseStrength = RuleStrength.Strong;
 
         /*
          * R6: a name that is an exact npc.txt entry. A spaced name cannot be worn by a character, so it is Npc at Medium; a bare word can be worn by

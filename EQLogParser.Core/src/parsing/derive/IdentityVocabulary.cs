@@ -249,9 +249,7 @@ internal static class IdentityVocabulary
     ["R20-petspell"] = 70, ["R4-spell"] = 70, ["R15-healed"] = 70, ["R18-healedpet"] = 70, ["R24-petslot"] = 70,
     ["R7-graph"] = 60, ["R7-side"] = 60,
     ["R6-npcdb"] = 50, ["R14-shape"] = 50, ["R16-comma"] = 50, ["R23-loot"] = 50,
-    // A shipped table is a shipped table: rank weighs WHY a row reads the way it does, and this one knows a spelling no
-    // more than the creature list does. Its STRENGTH is higher (Strong, where the NPC list sits at Medium) because the two
-    // files answer different questions - see ClassificationRules.MercDatabaseStrength.
+    // Rank describes provenance, not strength: both shipped tables sit here even though the merc verdict beats an NPC frame.
     ["R27-mercdb"] = 50,
     ["R21-spellshape"] = 50, ["R21-spellcast"] = 50, ["R21-spelleffect"] = 50,
     /*

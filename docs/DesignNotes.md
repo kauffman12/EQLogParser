@@ -70,7 +70,7 @@ comparison that fills the index, so a materialized block cannot drift from the r
 
 ### The identity rule book (R0–R20) in one breath
 
-Evidence has a **strength ladder** (Certain > Strong > Medium), every claim names its reason, and the Names window
+Evidence has a **strength ladder** (Certain > Merc Database > NPC Target Frame > Strong > Medium), every claim names its reason, and the Names window
 shows the ledger — an identity on the board is traceable to the lines that earned it. Sketch: R0 the log's own "You",
 R1 raid-targeting, R2/R3 who-was-who chat and presence, R4 the spell DB, R5 ownership (five possessive words — `` `s
 pet/warder/ward/familiar/mount`` — swept from the name pool, not the facts), R6 the shipped NPC database, R7 the fight
@@ -4092,18 +4092,25 @@ so a build without mercs.txt classifies exactly as the build before it did. Same
 the file may not, and `InternName` capitalizes the first letter on the way in, so leading-case-only matching would look
 like it worked.
 
-**What a row buys: one thing.** R27 (`R27-mercdb`) claims the name `IdentityKind.Merc` at **`RuleStrength.Strong` = 60**, and
-Merc is *already* player-side wherever the app asks (`IsPlayerSide`, `IsConfirmedRaidPersonAt`, charm's friendly arm,
-FightSummarySource's attacker naming), so nothing else had to be written. That is the whole consequence the operator asked
+**What a row buys: one thing.** R27 (`R27-mercdb`) claims the name `IdentityKind.Merc` at **`MercDatabaseStrength` = 80**, and
+Merc is player-side in projection (`IsPlayerSide`, `IsConfirmedRaidPersonAt`, charm's friendly arm,
+FightSummarySource's attacker naming); the healing board also reads derived player-side identities before its registry/name fallback. That is the whole consequence the operator asked
 for — *the name never becomes a fight* — and its two side effects: the bot's damage and healing are credited to it on the
 boards like a player's, and a swing that lands on it counts as damage one of ours received (tank board).
 
-**Why Strong, and not Certain.** A shipped list knows a *spelling* and never met the fighter, so it sits with what raid and
-group voice say about a name (R3-merc's rung) rather than above it, and under **Certain**, which is what a line this capture
-printed keeps: one `Targeted (Player):` line answers over the file for the rest of the log (`MercDatabaseTierTest`). It
-clears everything the shape rules and the creature list can say (Medium, Listed), which is the work it exists to do. One
-rung for every entry shape — this file lists whole spawn names, so a bare word is not weaker than a spaced one, unlike
-R6's two-tier ladder.
+**The precedence is NPC frame 70 < merc table 80 < positive player proof 100 < manual 1000.** A client's
+`Targeted (NPC)` frame says *not a player*, not *hostile*: it is normal for a mercenary or a pet. Giving that frame
+Certain let one ordinary target action turn a listed bot into an opponent for the entire capture, dropping its outgoing
+NPC-on-NPC damage. R1's NPC and conflicting-frame claims, and R13's NPC-frame-plus-behavior Merc inference, now use
+`TargetedNpcStrength` (70), above Strong behavior (60) but below the curated merc list. An explicit Strong merc group
+sighting also qualifies for R13, so an unlisted merc does not become hostile merely by being targeted; weak registry
+seeds do not qualify. A conflicting pair of frames still
+reports a conflict and keeps the conservative NPC-frame claim; stronger independent proof can beat it. Positive
+`Targeted (Player)`, `/who`, class-safe casting and line ownership retain Certain (100). In particular, `/who` can no
+longer be overwritten by an NPC frame's Merc inference. Manual decisions still win above all rules.
+
+The merc table is deliberately incomplete: a miss claims nothing, and other rules still decide that name. Its single rung
+applies to every entry shape. It does not make an unlisted article-shaped name friendly by association.
 
 **Why the stage runs before R6, and why R6 then skips the name.** 26 of the 31 rows take the article R14 reads as the game's
 own "this is a thing" marker, so before this rule a bot was NPC at Medium: it opened its own row in the fight list *as an
@@ -4128,13 +4135,19 @@ never reaches identity-priors.txt and spends no sighting — the same law that k
 itself every start, and the ledger remembers what a *capture* witnessed. Exiting a wrong row is therefore file-side (edit
 mercs.txt) or operator-side (verdict / take-back), never "wait for memory to decay".
 
-**Healer bots need no special case.** The sweep walks `facts.InternedNames`, the ONE name pool both fact tables share
-(`HealFactTable` holds the damage table as its own namer), so a soother that only ever appears in a heal line is claimed
-exactly as an attacker is — asserted structurally in `MercDatabaseTierTest.AHealerThatOnlyAppearsInAHealLineIsInThePoolTheRuleSweeps`,
-because "obviously shared" is how a second table stops being shared. Words: Type cell **Mercenary**, Why cell
-**Mercenary DB**, hover **In the Mercenary DB**, claim rank 50 beside the other shipped-table lanes.
+**Healing must read the verdict, not just the registry.** The sweep walks `facts.InternedNames`, the ONE name pool both
+fact tables share, so a heal-only soother is classified too. R27 writes no registry sighting, however, and the healing
+board's old recipient gate read only that registry plus player-shaped names. A 500-point heal into `A hired bazu` was
+therefore dropped even with a Merc verdict; so were merc self-heals. `HealingStatsBuilder.CountedAsOurs` now accepts
+`IdentityLookup.IsPlayerSide` before its existing registry/name fallback, memoized once per recipient per build. This is
+not a new merc filter or a database lookup in the heal walk: every derived Player/Merc can pass the same door. The old
+fallback remains for names the capture has not classified. `MercHealingBoardTest` covers heals into article/title-shaped
+mercs, a merc's self-heal, its healing of a player, and an unlisted article-shaped negative, all without registry sightings.
+Words: Type cell **Mercenary**, Why cell **Mercenary DB**, hover **In the Mercenary DB**, claim rank 50 beside the other
+shipped-table lanes.
 
-**On a real capture, measured A/B** (`eqlog_Incogitable_xegony.txt`, 344 MB, where `A bloodbone fighter` appears 15 times;
+**Initial implementation's real-capture A/B** (merc table at 60, before the NPC-frame/healing fixes above;
+`eqlog_Incogitable_xegony.txt`, 344 MB, where `A bloodbone fighter` appears 15 times;
 the A run is the same build with the shipped `mercs.txt` emptied out): **fight rows 4,646 → 4,647**, **tanking hits
 119,703 → 120,189 (+486)**, pets 94 and unrouted 295,827 unchanged, and identical across both parses of the reproducibility
 gate either way. Rows go **up**, which is the fix rather than a contradiction of "bots leave the fight list": this bot had no
@@ -4143,9 +4156,10 @@ anywhere either — so what arrives is one more real encounter (a mob whose only
 that now read as damage one of ours took. A capture where a bot WAS listed as an opponent loses that row; this one never had
 it, which is worth remembering before quoting a row count at anyone.
 
-Tests: `MercDatabaseTierTest` (rung, shapes, no enemy claim, target frame outranks it, case-blindness, ledger refusal) and
-`MercFightListTest` (credited on the mob's row, never a row of its own, one row per pull with its output *and* its wound,
-the pre-rule vanishing documented, friendly fire still dropped). Note the direction names in that file: `DamageToOwner` /
+Tests: `MercDatabaseTierTest` (rung, shapes, no database/shape enemy claim, NPC target loses, Player target wins,
+manual override, case-blindness, ledger refusal), `TargetFrameStrengthTest` (NPC-frame inference vs positive proof,
+unlisted merc sightings, conflict strength, carried/fresh replay), `MercHealingBoardTest`, and `MercFightListTest` (credited on the mob's row, never a row of its own,
+one row per pull with its output *and* its wound, the pre-rule vanishing documented, friendly fire still dropped). Note the direction names in that file: `DamageToOwner` /
 `DamageByOwner` are named from the **row's anchor**, not from our side.
 
 ## The raid roster in `players.txt`: what Save() is allowed to throw away
@@ -9505,12 +9519,12 @@ and no possessive. The numbers here come from grep over `local/logs/` and from t
 
 ### How the precedence actually works, since "Certain" was never the whole story
 
-`Targeted (NPC)` writes Npc at **Certain (100)**; R24 also claims **Certain**, with the same `effectiveFrom = −∞`.
-Conflicts in `EntityTimeline` resolve by `(strength, effectiveFrom)` and an exact tie falls to **insertion order**, so
-the claim is written *below* the target-frame ladder inside the evidence stage — the position is the rule, not a
-number. The general principle, which is what makes this more than a tie-break hack: **a frame verdict that asserts a
-negative ("not a player") may not outvote an uncontradicted positive claim.** The frame never says "this is not a
-pet"; it prints NPC for anything that is not a person.
+`Targeted (NPC)` writes Npc at **70**; R24's positive pet proof claims **Certain (100)**. It no longer needs an exact
+strength/time tie and insertion order to beat that frame. The claim stays below the target-frame ladder so its guard
+can inspect all Player/Merc claims first. **A frame verdict that asserts a negative ("not a player") may not outvote an
+uncontradicted positive claim.** The frame never says "this is not a pet"; it prints NPC for anything that is not a
+person. The same principle puts the curated merc table at 80, above the NPC frame and below positive player proof
+(see "The bot table in `data/mercs.txt`").
 
 Three things still outrank it, and two of them are the reason the guard reads *every* assignment rather than the
 winning one:
@@ -13505,3 +13519,31 @@ Tests: `GroupSectionSelectTest` (both arms, no double-count on the overlap, iden
 cross-platform suite); `FightTableGroupGestureTest` keeps the additive sequence over a realized grid, adds the replacing case and pins that a
 Ctrl press and an unmodified press reach the two different answers through the real preview-press wiring. Windows-only, as always for that
 assembly: a Linux run says nothing about it.
+
+## Trigger overlay positions are signed desktop coordinates
+
+The text and timer windows already save and restore `Overlay.Left`/`Top` as signed values in WPF units. The properties
+pane contradicted them: its `RangeEditor` declarations allowed only 0–9999 for both coordinates, although a monitor to
+the left of the primary requires negative Left and a monitor above it requires negative Top. The Syncfusion numeric
+editor coerces out-of-range values, and those editors are two-way bound to the editable model. Dragging a preview could
+therefore reach a position that the properties pane could not faithfully represent; saving that pane could copy a
+coerced position back into the overlay. This depends on desktop arrangement, not whether Windows calls it monitor 2 or 3.
+
+Top and Left now use `OverlayGeometrySync.MinCoordinate`/`MaxCoordinate` (the signed 32-bit coordinate range), so left,
+above, and wide desktops are representable. Width and Height retain their separate nonnegative bounds. There is no new
+monitor selection, coordinate conversion, or DPI policy, and no database migration: existing negative coordinates were
+already valid stored data. A position previously overwritten with zero cannot be recovered; move and save that preview
+again after updating.
+
+There was a second cross-overlay write door: `TriggersView.TriggerUpdateEvent` fed **every** overlay update into the
+currently displayed geometry editors without checking their subject. It now marshals onto the UI thread, reads the
+current selection there, and asks `OverlayGeometrySync.Apply` to copy geometry only when that selected overlay's id
+matches the update. The editable model is updated even if its geometry editors have not been realized, so a later
+properties save cannot restore stale coordinates. Only the four geometry fields move; unsaved color/font/comment
+choices and the existing Save/Cancel button states survive the refresh. An update for another overlay or a trigger
+changes nothing in the selected overlay.
+
+`OverlayGeometrySyncTest` checks the editor range, signed geometry copying, selection isolation, and preservation of
+non-geometry edits. `OverlayPositionPersistenceTest` saves and reopens both kinds of overlay with negative Left, negative
+Top, both negative, and Left beyond the former upper bound. These tests run headlessly; actual preview dragging,
+property-grid coercion and live-window placement remain Windows checks in `ReleaseChecklist.md`.
