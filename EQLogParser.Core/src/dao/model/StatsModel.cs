@@ -52,6 +52,14 @@ namespace EQLogParser
     internal bool CollectHitTotals { get; set; } = true;
 
     /*
+     * Whether a multi-fight board writes its encounter count as "C(10)" instead of "Combined (10)" in the title. A shape question,
+     * not a number question: the meter's title bar shares one narrow row with total, DPS and seconds, so DerivedTotals.ForOverlay
+     * asks for the shorthand and the summary panes leave this false and keep the whole word. The boards' export filename and every
+     * title built off TargetTitle follow whatever the build was asked for.
+     */
+    internal bool ShorthandCombinedCount { get; set; }
+
+    /*
      * Where the HEALING board reads its records from. Null means "the record store", which is what every caller
      * does today, and that is why this lives on the options rather than behind a builder overload — the healing
      * builder never looks at a Fight (it pulls GetAllHeals and windows it by time), so the the derivation cannot

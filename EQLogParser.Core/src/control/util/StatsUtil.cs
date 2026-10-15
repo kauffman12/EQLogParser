@@ -145,6 +145,16 @@ namespace EQLogParser
       return key;
     }
 
+    /*
+     * The prefix a board puts in front of the fight name when its numbers cover more than one encounter. Two surfaces read the
+     * result and they do not have the same room: a summary pane has a title line to itself and spells the word out, while the
+     * damage meter's title bar shares its row with the total, DPS and seconds and asks for the shorthand
+     * (GenerateStatsOptions.ShorthandCombinedCount). The words live here because all three builders need them; which one a
+     * surface gets is asked at its own door, never guessed from the count.
+     */
+    internal static string CombinedPrefix(int fightCount, bool shorthand)
+      => fightCount > 1 ? (shorthand ? "C(" : "Combined (") + fightCount + "): " : "";
+
     internal static string FormatTitle(string targetTitle, string timeTitle, string damageTitle = "")
     {
       var result = targetTitle;

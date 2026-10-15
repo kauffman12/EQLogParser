@@ -121,7 +121,9 @@ public class SelectionOrderTitleTest
 
         var (title, _) = BuildTitleAndTotal(backwardOrder, range);
 
-        StringAssert.Contains(title, $"Combined ({forwardOrder.Count})", "legacy's combined-count wording survives");
+        // The whole word is what a PANE shows; the meter asks for C(n) at its own door and that half is pinned in
+        // DerivedTotalsTest.TheMeterAbbreviatesTheCountASummaryPaneSpellsOut.
+        StringAssert.Contains(title, $"Combined ({forwardOrder.Count})", "a summary pane spells the combined count out");
         StringAssert.EndsWith(title, forwardOrder[0].Name,
           "and the name beside it is the fight list's first row, not the gesture's first click");
     }

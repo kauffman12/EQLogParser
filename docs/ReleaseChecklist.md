@@ -180,6 +180,9 @@ operator checks with `Debug=True`, on a capture of several hundred MB or more:
 Accounting and display retention live in Core (`DamageOverlayLifecycle`) and are tested with projected facts and actual overlay totals.
 These checks still require Windows for popup/hide behavior. See DesignNotes → "Damage overlay: fight accounting and display retention".
 
+- [ ] **The meter abbreviates what the pane spells out** (2026-11): with several mobs on one board, the meter's title bar reads `C(10): <top mob>` while the Damage/Tanking Summary titles read
+  `Combined (10): <top mob>`. The digits and the name must agree between them; only the prefix differs. One mob on the meter prints no prefix at all,
+  and a zeroed meter over a single encounter must not grow one.
 - [ ] **A kill closes it** (2026-11): mode "On Kill", kill a mob (a real death line, not a mob you walked away from) and stop attacking.
   The board must stay readable for a few seconds, then clear roughly 8-10 s after the death — not linger the rest of the session,
   and not vanish before the total can be read. Past ~30 s it must also close on a mob that simply never died.

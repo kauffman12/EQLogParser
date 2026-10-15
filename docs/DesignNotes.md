@@ -4981,6 +4981,14 @@ sliced meter equals a sliced list) and `TheMeterBuildsOnItsOwnBuilders` (a refre
 alone and never announces on the shared tank board). What still needs watching on Windows is not the arithmetic but the
 wiring: that the timer's window advances, that expiry zeroes the board, and whether a real pull's numbers look like the pulls.
 
+**One wording casualty of that move, restored 2026-11: the encounter count.** The meter used to build its own title string and
+printed `C(10): Mob`; once its numbers came from a board it inherited that board's `Combined (10):`, which is nine characters
+longer on a title bar that already carries total, DPS and seconds. The shape is now asked at the door that reads it —
+`GenerateStatsOptions.ShorthandCombinedCount`, set only by `ForOverlay`, formatted by the one helper `StatsUtil.CombinedPrefix`
+all three builders call — so a pane keeps the whole word (it has a line to itself, and its export filename comes from the same
+string) while the meter goes back to `C(n)`. Pinned by `DerivedTotalsTest.TheMeterAbbreviatesTheCountASummaryPaneSpellsOut`
+(both meter columns abbreviated, the board spelled out, a single-row scope carrying no prefix anywhere).
+
 ## A charm takes a mob off the enemy list: what that does to the rows, the boards and a corpse (2026-11)
 
 `X has been charmed.` is not a status note, it is the raid finishing an encounter without killing anything: the mob left

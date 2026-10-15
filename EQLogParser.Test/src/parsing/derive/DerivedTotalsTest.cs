@@ -467,4 +467,31 @@ public class DerivedTotalsTest
       Assert.AreEqual(0, tankAnnouncements,
         "and the shared tank board never announced anything - a meter refresh is invisible to open tabs");
   }
+
+  /*
+   * The encounter count in front of the fight name is shaped by whoever shows it, never decided by the arithmetic. A summary pane
+   * has a title line to itself and spells "Combined (2)"; the meter's title bar shares its row with total, DPS and seconds and kept
+   * the shorthand it printed before its numbers moved here ("C(2)") until the port took the string from the board instead of from a
+   * builder of its own. Same rows, same digits - what is pinned is that each surface gets ITS shape, since both are readable only
+   * at their own door.
+   */
+  [TestMethod]
+  public void TheMeterAbbreviatesTheCountASummaryPaneSpellsOut()
+  {
+      var (rows, index, facts) = TwoPulls();
+
+      var meter = DerivedTotals.ForOverlay(rows, index, facts, double.NegativeInfinity, double.PositiveInfinity);
+      var board = DerivedTotals.For(rows, index, facts, NoHeals(facts))?.CombinedStats;
+
+      Assert.IsNotNull(meter?.DamageStats, "a scope with fights in it paints a damage board");
+      Assert.IsNotNull(board, "and the same rows through the list's own door answer too");
+      StringAssert.StartsWith(board.TargetTitle, "Combined (2): ", "the fight list's board says the whole word");
+      StringAssert.StartsWith(meter.DamageStats.TargetTitle, "C(2): ", "the meter keeps its shorthand");
+      StringAssert.StartsWith(meter.TankStats!.TargetTitle, "C(2): ", "on both of its columns");
+
+      // One encounter is not a combination on either surface: no count at all.
+      var solo = DerivedTotals.ForOverlay([Row(rows, "Grimling")], index, facts, double.NegativeInfinity, double.PositiveInfinity);
+      Assert.IsNotNull(solo?.DamageStats);
+      Assert.AreEqual("Grimling", solo.DamageStats.TargetTitle, "a single-row scope gets no prefix anywhere");
+  }
 }

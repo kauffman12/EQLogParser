@@ -766,7 +766,7 @@ namespace EQLogParser
             var combined = new CombinedStats
             {
               RaidStats = _raidTotals,
-              TargetTitle = (_selected.Count > 1 ? "Combined (" + _selected.Count + "): " : "") + _title,
+              TargetTitle = StatsUtil.CombinedPrefix(_selected.Count, options.ShorthandCombinedCount) + _title,
               TimeTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TimeFormat, _raidTotals.TotalSeconds),
               TotalTitle = string.Format(CultureInfo.CurrentCulture, StatsUtil.TotalFormat, StatsUtil.FormatTotals(_raidTotals.Total),
                 " Heals ", StatsUtil.FormatTotals(_raidTotals.Dps)),

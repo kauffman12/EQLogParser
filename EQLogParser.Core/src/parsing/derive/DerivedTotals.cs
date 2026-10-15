@@ -78,14 +78,18 @@ internal static class DerivedTotals
     // duplicates of the fight list's builds (they are separate builder instances and never touch the panes' grids).
     // CollectHitTotals=false: a scope's rows reach a meter grid and nothing else - no HitFreqChart can ask them - so the raw
     // amounts the walk would append for every hit (about once a second while the overlay is open) are pure garbage by construction.
-    var damageOptions = new GenerateStatsOptions { Source = "damage meter overlay", AllRanges = input.AllRanges, MinSeconds = 0, CollectHitTotals = false };
+    // ShorthandCombinedCount: the meter's title bar is one narrow row already carrying total, DPS and seconds, so it prints
+    // "C(10): Mob" where a summary pane spells "Combined (10):". Same count, different shape, asked at this door.
+    var damageOptions = new GenerateStatsOptions
+    { Source = "damage meter overlay", AllRanges = input.AllRanges, MinSeconds = 0, CollectHitTotals = false, ShorthandCombinedCount = true };
     damageOptions.Npcs.AddRange(input.Fights);
     damageScope.EventsGenerationStatus += generated => damage = generated.CombinedStats;
     damageScope.BuildTotalStats(damageOptions);
 
     CombinedStats? tanking = null;
     var tankScope = new TankingStatsBuilder();
-    var tankingOptions = new GenerateStatsOptions { Source = "damage meter overlay", AllRanges = input.AllRanges, MinSeconds = 0, CollectHitTotals = false };
+    var tankingOptions = new GenerateStatsOptions
+    { Source = "damage meter overlay", AllRanges = input.AllRanges, MinSeconds = 0, CollectHitTotals = false, ShorthandCombinedCount = true };
     tankingOptions.Npcs.AddRange(input.Fights);
     tankScope.EventsGenerationStatus += generated => tanking = generated.CombinedStats;
     tankScope.BuildTotalStats(tankingOptions);
