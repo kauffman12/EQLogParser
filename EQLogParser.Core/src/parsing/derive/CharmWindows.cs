@@ -10,20 +10,15 @@ namespace EQLogParser
     LogEnd = 4       // the file ran out before the ceiling did (the span still ends at the ceiling)
   }
 
-  // One span during which a name (an NPC identity, always) was somebody's charmed pet. Re-charms of the
-  // same mob name merge into the window they overlap, so six charms of "an exiled bloodhound" across an
-  // evening are one entry in the pet list rather than six rows.
-  // One charmer's hold on a name. A window can contain several: in EQ a second charm takes the mob off
-  // whoever held it, so "two necros share one evening's pet" is one span with two credit segments — not
-  // one name attached to the whole thing, and not a long-term assignment written to disk anywhere.
+  // Re-charms can change hands inside one window; each segment credits only the charmer who held it then.
   internal readonly record struct CharmOwnerSegment(double FromS, double ToS, string Owner);
 
   internal sealed class CharmWindow
   {
     public string Name;
-    public string Owner;          // null: neither a matching cast nor an in-window wear-off named a caster
+    public string Owner;          // first named charmer; Segments carries any later ownership changes
     public double T0;
-    public double T1;             // exclusive; double.PositiveInfinity when the log simply ended
+    public double T1;             // exclusive; the ceiling still bounds a window that outlives the log
     public CharmEndReason Reason;
     public int Starts;            // charm-success sightings merged into this window
     public int FactCount;         // facts with this name as attacker inside the span
@@ -36,52 +31,13 @@ namespace EQLogParser
 
   }
 
-  /*
-   * R9 policy: a charm is an OPEN window, closed by state rather than by a single expected line.
-   *
-   * The log gives one fact and no bookkeeping. "an imbued whipgrass has been charmed." says the charm
-   * landed; nothing in the file ever says it lapsed (measured over eqlog_Kizant_xegony-01-06-24: 3,825
-   * wear-off lines and not one of them a charm), and no other line mentions the pet again — so between
-   * the success line and whatever ends it, the name has to be treated as ours on the strength of the
-   * policy below, exactly as an operator would read the fight.
-   *
-   * Closes, earliest wins:
-   *   HitOurSide  the name damages a name the timeline puts on our side (the break the user describes:
-   *               the charm caster vanishes, the mob turns on the raid). This is also why an invis cast by
-   *               the owner is NOT itself a close: in the two files where the owner went invisible
-   *               mid-charm the window's own damage is what showed the break (00:41:32 group invis → the
-   *               whipgrass's next credited hit was on raid-side names), and 846 invis lines in one file
-   *               make a speculative close there far too twitchy.
-   *   Death       the name dies — first death at/after the start. Case-insensitive: charm lines print
-   *               "a X", slain lines print "A X".
-   *   WearOff     the gated spell-name wear-off line (CharmSpells), which also names the owner.
-   *   Cap         MaxWindowS since the LATEST sighting of that name (a re-charm resets the clock).
-   *   LogEnd      file ended with the charm standing.
-   *
-   * The name is the key, and that is the whole trick: it is what makes six separate charms of the same
-   * mob type read as one pet, and it is also why an ambiguity number is reported instead of hidden —
-   * another mob of the same species walking into the span is indistinguishable from the pet. SameNameFactCount
-   * counts exactly that (pet-vs-same-name hits) so the UI can show the share rather than pretend to certainty.
-   */
-  /*
-   * One-sided on purpose, and now measured: this reads the charms OUR raid casts (`has been charmed.`), because
-   * that is all the log writes. The hostile-side shape the design doc lists as unparsed - "Raidman is under the
-   * influence of ..." - occurs ZERO times across the 2022, 2024 and 2026 captures (censused alongside R18), so
-   * there is nothing to recognize; building it from a spell-name guess would flip raid members on text that only
-   * exists in trivia. If a capture ever does write one, the rule arrives with the sample line and a closed spell
-   * vocabulary (this file's CharmSpells precedent), never with a heuristic.
-   */
-  /*
-   * CharmWindowPolicy's carried memory between passes (ClassificationState holds one of these): the charm event
-   * tables the policy builds, the stream cursors that let it feed only what it has not seen, and the previous
-   * pass's window list its fact counters extend from. Nothing here is read outside the policy; a non-frozen pass
-   * clears all of it and rebuilds, so its worst case is the old full walk, never a wrong answer.
-   */
+  // Carried event tables and cursors are valid only while classification is frozen; otherwise rebuild them.
+  // docs/DesignNotes.md → "Charm ownership follows the spell's lands-on-other message".
   internal sealed class CharmCarry
   {
-    internal readonly Dictionary<string, List<double>> Starts = new(StringComparer.OrdinalIgnoreCase);
+    internal readonly Dictionary<string, List<(double T, string Owner, int Seq)>> Starts =
+      new(StringComparer.OrdinalIgnoreCase);
     internal readonly Dictionary<string, List<(double T, string Owner)>> WearOffs = new(StringComparer.OrdinalIgnoreCase);
-    internal readonly List<(double T, string Caster)> CharmCasts = [];
     internal readonly Dictionary<string, List<double>> Deaths = new(StringComparer.OrdinalIgnoreCase);
     internal readonly Dictionary<string, List<double>> Broke = new(StringComparer.OrdinalIgnoreCase);
     internal readonly List<CharmWindow> PreviousWindows = [];
@@ -103,18 +59,8 @@ namespace EQLogParser
      */
     internal const double MaxWindowS = 360;
 
-    /*
-     * How far back a charm-success line may look for the cast that caused it. Measured on our own charms
-     * (the only ones the text shows): "You begin casting Charm XVII." at 00:41:16 → charmed at 00:41:20,
-     * and 00:44:49 (+ an interrupt/resume line) → charmed at 00:44:53 — Δ = 4 s both times.
-     *
-     * It is deliberately not wider. Widening this is how a charm owner gets invented: the nearest cast of
-     * ANY spell before a success line sits at 3-25 s and is unrelated (Beguiler's Directed Banishment,
-     * Slowing Helix, Group Perfected Invisibility — whatever the caster happened to be doing), so a
-     * generous lookback attributes mobs to whoever was busy, not to the charmer. Third-party charm casts
-     * are absent from these captures entirely; when one exists in range it pairs through this rule, and
-     * when it does not the window is ownerless, which is the honest answer.
-     */
+    // The parser confirms a landing against the newest matching cast inside this inclusive lookback.
+    // A matching non-charm, interruption or absent cast refuses the start before any identity claim is made.
     internal const double OwnerCastLookbackS = 6;
 
     public static List<CharmWindow> Apply(IFactTable facts, EntityTimeline timeline)
@@ -135,13 +81,11 @@ namespace EQLogParser
     {
       var starts = carry.Starts;
       var wearOffs = carry.WearOffs;
-      var charmCasts = carry.CharmCasts;
 
       if (!frozen)
       {
         starts.Clear();
         wearOffs.Clear();
-        charmCasts.Clear();
         carry.Deaths.Clear();
         carry.Broke.Clear();
         carry.PreviousWindows.Clear();
@@ -153,18 +97,14 @@ namespace EQLogParser
       for (var i = carry.EvidenceCursor; i < evidence.Length; i++)
       {
         var e = evidence[i];
-        if (e.Kind == EvidenceFact.EvCast)
-        {
-          // R4 reads these same facts for the caster's identity; here they answer "who charmed it".
-          var spell = facts.AuxOf(e.AuxIdx);
-          if (CharmSpells.IsCharmSpellName(spell)) charmCasts.Add((e.TimeS, facts.NameOf(e.NameIdx)));
-          continue;
-        }
-
         var name = facts.NameOf(e.NameIdx);
         if (string.IsNullOrEmpty(name)) continue;
 
-        if (e.Kind == EvidenceFact.EvCharmStart) AddTime(starts, name, e.TimeS);
+        if (e.Kind == EvidenceFact.EvCharmStart)
+        {
+          if (!starts.TryGetValue(name, out var list)) starts[name] = list = [];
+          list.Add((e.TimeS, facts.AuxOf(e.AuxIdx), e.Seq));
+        }
         else if (e.Kind == EvidenceFact.EvCharmEnd)
         {
           if (!wearOffs.TryGetValue(name, out var list)) wearOffs[name] = list = [];
@@ -203,9 +143,9 @@ namespace EQLogParser
 
       foreach (var (name, startTimes) in starts)
       {
-        startTimes.Sort();
+        startTimes.Sort(static (a, b) => a.T != b.T ? a.T.CompareTo(b.T) : a.Seq.CompareTo(b.Seq));
         var closes = BuildCloses(name, wearOffs, deaths, broke);
-        windows.AddRange(BuildWindows(name, startTimes, closes, charmCasts, carry.LastTime));
+        windows.AddRange(BuildWindows(name, startTimes, closes, carry.LastTime));
       }
 
       windows.Sort(static (a, b) => a.T0.CompareTo(b.T0));
@@ -213,10 +153,8 @@ namespace EQLogParser
 
       foreach (var w in windows)
       {
-        // Identity stays Npc (set on the start sighting by R9); this is the time-scoped half: the name is
-        // ON our side for this span. Kind stays Friendly rather than PetOfPlayer on purpose — a window is
-        // not an ownership claim, and when no caster is named there is nobody to be owned by. Where a
-        // caster IS named it rides in Owner, which is what OwnerOf(name, t) answers with.
+        // Identity stays Npc; the confirmed start supplies time-scoped Friendly allegiance and its matched caster.
+        // Owner segments move credit when another caster takes over without creating permanent ownership.
         //
         // One interval per OWNER SEGMENT rather than one per window: when a second charmer takes the mob
         // over mid-span, the credit has to move at that moment. The segments tile [T0, T1), so the flip
@@ -268,9 +206,8 @@ namespace EQLogParser
     // Walk sightings and closes in time order, merging re-charms into the window they fall inside.
     private static List<CharmWindow> BuildWindows(
       string name,
-      List<double> startTimes,
+      List<(double T, string Owner, int Seq)> startTimes,
       List<(double T, CharmEndReason Reason, string Owner)> closes,
-      List<(double T, string Caster)> charmCasts,
       double lastTime)
     {
       var windows = new List<CharmWindow>();
@@ -295,9 +232,7 @@ namespace EQLogParser
       {
         if (!open) return;
         EndHold(at);
-        // The wear-off line is the one place a charm says whose it was. It lands at the END of the hold,
-        // so it claims every stretch that named no charmer; a stretch that already names somebody else
-        // keeps them — two necros are not merged into one owner by the second one's log lines.
+        // A wear-off can fill an unnamed segment but must never override an already matched charmer.
         if (closeOwner is not null)
           for (var i = 0; i < segs.Count; i++)
             if (segs[i].Owner is null) segs[i] = segs[i] with { Owner = closeOwner };
@@ -321,21 +256,20 @@ namespace EQLogParser
       var ci = 0;
       while (si < startTimes.Count || ci < closes.Count)
       {
-        var nextStart = si < startTimes.Count ? startTimes[si] : double.PositiveInfinity;
+        var nextStart = si < startTimes.Count ? startTimes[si].T : double.PositiveInfinity;
         var nextClose = ci < closes.Count ? closes[ci].T : double.PositiveInfinity;
 
         if (nextStart <= nextClose)
         {
-          var t = startTimes[si++];
+          var (t, startOwner, _) = startTimes[si++];
           if (open && t < lastStart + MaxWindowS)
           {
             // Re-charm inside the open span: one entry, clock resets from this sighting. But a cast by
             // somebody ELSE is a steal — the mob changes hands at that second, so the credit splits while
-            // the window stays one row. A sighting with no cast in range proves nothing and leaves the
-            // current holder alone.
+            // the window stays one row. Uncorroborated landing lines never reach this start list.
             lastStart = t;
             starts++;
-            var recast = OwnerFromCast(charmCasts, t);
+            var recast = startOwner;
             if (recast is not null && !string.Equals(recast, owner, StringComparison.Ordinal))
             {
               EndHold(t);
@@ -351,7 +285,7 @@ namespace EQLogParser
           t0 = t;
           lastStart = t;
           starts = 1;
-          owner = OwnerFromCast(charmCasts, t);
+          owner = startOwner;
           segStart = t;
           open = true;
         }
@@ -383,19 +317,6 @@ namespace EQLogParser
         Close(cap, cap <= lastTime ? CharmEndReason.Cap : CharmEndReason.LogEnd, null);
       }
       return windows;
-    }
-
-    // The most recent charm-spell cast inside the lookback, by whoever made it.
-    private static string OwnerFromCast(List<(double T, string Caster)> charmCasts, double t0)
-    {
-      var best = double.NegativeInfinity;
-      string owner = null;
-      foreach (var (t, caster) in charmCasts)
-      {
-        if (t > t0 || t < t0 - OwnerCastLookbackS || string.IsNullOrEmpty(caster)) continue;
-        if (t >= best) { best = t; owner = caster; }
-      }
-      return owner;
     }
 
     // Player-side defender test for the break signal. A name another charm window put on our side counts,

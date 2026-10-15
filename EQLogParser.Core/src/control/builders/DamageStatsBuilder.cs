@@ -353,7 +353,17 @@ namespace EQLogParser
           var damageValidator = new DamageValidator(
             AppSettings.IsAssassinateDamageEnabled, AppSettings.IsBaneDamageEnabled, AppSettings.IsDamageShieldDamageEnabled,
             AppSettings.IsFinishingBlowDamageEnabled, AppSettings.IsHeadshotDamageEnabled, AppSettings.IsSlayUndeadDamageEnabled);
-          var individualStats = new Dictionary<string, PlayerStats>();
+          // A pet name can occur under several charmers in one selection; never share their mutable child rows.
+          // docs/DesignNotes.md → "Charm ownership follows the spell's lands-on-other message".
+          var individualStats = new Dictionary<(string Name, string Owner), PlayerStats>();
+
+          PlayerStats GetRow(string name, string owner = null, string original = null)
+          {
+            var key = (name, owner);
+            if (!individualStats.TryGetValue(key, out var row))
+              individualStats[key] = row = StatsUtil.CreatePlayerStats(name, original);
+            return row;
+          }
 
           // always start over
           _raidTotals.Total = 0;
@@ -401,7 +411,7 @@ namespace EQLogParser
             StatsBuildTrace.Stage(trace, "window");
 
             var lastTime = double.NaN;
-            var prevPlayerTimes = new Dictionary<string, double>();
+            var prevPlayerTimes = new Dictionary<PlayerStats, double>();
 
             /*
              * Identity is a question about a NAME; this walk was asking it per RECORD. A night holds a few hundred names and
@@ -423,13 +433,16 @@ namespace EQLogParser
                   if (action is DamageRecord record)
                   {
                     var isValid = damageValidator.IsValid(record);
-                    var stats = StatsUtil.CreatePlayerStats(individualStats, record.Attacker);
+                    // Timed record ownership wins over the legacy name-only fallback, including before a charm hand-off.
+                    var player = !string.IsNullOrEmpty(record.AttackerOwner) ? record.AttackerOwner
+                      : _petToPlayer.TryGetValue(record.Attacker, out var mapped) ? mapped : null;
+                    var stats = GetRow(record.Attacker, Labels.IsUnassignedOwner(player) ? null : player);
 
                     if (record.Type == Labels.Bane && !isValid)
                     {
                       stats.BaneHits++;
 
-                      if (individualStats.TryGetValue(PetRowName(stats.OrigName), out var temp))
+                      if (individualStats.TryGetValue((PetRowName(stats.OrigName), null), out var temp))
                       {
                         temp.BaneHits++;
                       }
@@ -444,24 +457,10 @@ namespace EQLogParser
                         petAnswers[attackerKey] = isAttackerPet = IdentityLookup.IsPet(record.Attacker);
                       }
 
-                      var isNewFrame = StatsUtil.CheckNewFrame(prevPlayerTimes, stats.Name, block.BeginTime);
+                      var isNewFrame = StatsUtil.CheckNewFrame(prevPlayerTimes, stats, block.BeginTime);
 
                       _raidTotals.Total += record.Total;
                       StatsUtil.UpdateDamageStats(stats, record, isNewFrame, isAttackerPet);
-
-                      /*
-                       * Whose pet is this? The record's own answer first. A derived record carries the owner this LINE said,
-                       * or the owner of the charm window this fact fell inside (FightSummarySource.OwnerOf), and a name can be
-                       * possessed twice in one selection — a mob charmed by one raider, unfriended, recharmed by another — where
-                       * an untimed lookup answers with the LAST owner for every record of that name. Measured before this line
-                       * existed: 100 damage for Firstowner and 200 for Secondowner came out as a single "Secondowner +Pets = 300",
-                       * a number nobody did.
-                       *
-                       * The per-name map stays for records the capture never attributed (stored records from a previous session,
-                       * whose AttackerOwner is empty) — it is the fallback, not the authority.
-                       */
-                      var player = !string.IsNullOrEmpty(record.AttackerOwner) ? record.AttackerOwner
-                        : _petToPlayer.TryGetValue(record.Attacker, out var mapped) ? mapped : null;
 
                       if ((player is null && !_playerPets.ContainsKey(record.Attacker)) || Labels.IsUnassignedOwner(player))
                       {
@@ -472,9 +471,8 @@ namespace EQLogParser
                       {
                         var origName = player ?? record.Attacker;
                         var aggregateName = PetRowName(origName);
-                        isNewFrame = StatsUtil.CheckNewFrame(prevPlayerTimes, aggregateName, block.BeginTime);
-
-                        var aggregatePlayerStats = StatsUtil.CreatePlayerStats(individualStats, aggregateName, origName);
+                        var aggregatePlayerStats = GetRow(aggregateName, original: origName);
+                        isNewFrame = StatsUtil.CheckNewFrame(prevPlayerTimes, aggregatePlayerStats, block.BeginTime);
                         StatsUtil.UpdateDamageStats(aggregatePlayerStats, record, isNewFrame, isAttackerPet);
                         topLevelStats[aggregateName] = aggregatePlayerStats;
 
@@ -524,7 +522,7 @@ namespace EQLogParser
                 stats.AssignedGroup = cachedGroup;
               }
 
-              if (topLevelStats.ContainsKey(stats.Name))
+              if (stats.IsTopLevel && topLevelStats.ContainsKey(stats.Name))
               {
                 if (childrenStats.TryGetValue(stats.Name, out var children))
                 {

@@ -178,6 +178,9 @@ namespace EQLogParser
     private readonly HashSet<SpellData> _allSpellData = [];
     private readonly Dictionary<string, bool> _oldSpellNamesDb = [];
     private readonly HashSet<string> _charmSpells = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, Dictionary<string, bool>> _charmCastMessages =
+      new(StringComparer.OrdinalIgnoreCase);
+    private readonly string[] _charmMessageSuffixes;
     private readonly SpellTreeNode _landsOnOtherTree = new();
     private readonly SpellTreeNode _landsOnYouTree = new();
     private readonly SpellTreeNode _wearOffTree = new();
@@ -219,6 +222,7 @@ namespace EQLogParser
     internal EQDataStore()
     {
       var spellList = new List<SpellData>();
+      var charmMessages = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
       LifecycleManager.Register(this);
 
       RankWords = new(StringComparer.OrdinalIgnoreCase)
@@ -284,8 +288,11 @@ namespace EQLogParser
             spellData.Proc = procCache.ContainsKey(spellData.Name) ? (byte)1 : (byte)0;
             spellList.Add(spellData);
 
-            // Include every variant: a newer same-named spell may have a different effect and lands-on message.
-            if (CharmSpells.IsCharmMessage(spellData.LandsOnOther)) _charmSpells.Add(spellData.Name);
+            if (spellData.Charm)
+            {
+              _charmSpells.Add(spellData.Name);
+              if (!string.IsNullOrWhiteSpace(spellData.LandsOnOther)) charmMessages.Add(spellData.LandsOnOther.Trim());
+            }
 
             if (_spellsNameDb.TryGetValue(spellData.Name, out var spellDataList))
             {
@@ -327,6 +334,19 @@ namespace EQLogParser
           Log.Error("Error reading spell data", ex);
         }
       }
+
+      // Include non-charm variants sharing these messages: the newest matching cast can veto a charm interpretation.
+      foreach (var spell in spellList)
+      {
+        var message = spell.LandsOnOther?.Trim();
+        if (string.IsNullOrEmpty(message) || !charmMessages.Contains(message)) continue;
+        if (!_charmCastMessages.TryGetValue(spell.Name, out var messages))
+          _charmCastMessages[spell.Name] = messages = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+        messages[message] = spell.Charm && (!messages.TryGetValue(message, out var prior) || prior);
+      }
+      _charmMessageSuffixes = [.. spellList.Where(spell => spell.Charm && !string.IsNullOrWhiteSpace(spell.LandsOnOther))
+        .Select(spell => spell.LandsOnOther.TrimEnd()).Distinct(StringComparer.OrdinalIgnoreCase)
+        .OrderByDescending(suffix => suffix.Length)];
 
       var keepOut = new Dictionary<string, byte>();
 
@@ -461,6 +481,28 @@ namespace EQLogParser
     internal bool IsKnownMerc(string merc) => !string.IsNullOrEmpty(merc) && _allMercs.ContainsKey(StringCache.GetOrAdd(merc));
     internal bool IsPlayerSpell(string name) => GetSpellByName(name)?.ClassMask > 0;
     internal bool IsCharmSpell(string name) => !string.IsNullOrEmpty(name) && _charmSpells.Contains(name);
+    internal bool HasCharmCandidateMessage(string name) => _charmCastMessages.ContainsKey(name);
+
+    internal bool TryMatchCharmCast(string name, string message, out bool charm)
+    {
+      charm = false;
+      return _charmCastMessages.TryGetValue(name, out var messages) && messages.TryGetValue(message, out charm);
+    }
+
+    internal bool TryGetCharmLanding(string action, out string target, out string message)
+    {
+      target = message = null;
+      if (string.IsNullOrEmpty(action)) return false;
+      foreach (var suffix in _charmMessageSuffixes)
+      {
+        if (action.Length <= suffix.Length || !action.EndsWith(suffix, StringComparison.OrdinalIgnoreCase)) continue;
+        target = action[..^suffix.Length].Trim();
+        if (target.Length == 0) return false;
+        message = suffix.Trim();
+        return true;
+      }
+      return false;
+    }
 
     internal string GetClassFromTitle(string title) => _titleToClass.GetValueOrDefault(title);
     internal List<string> GetClassList() => [.. _sortedClassList];
@@ -787,7 +829,7 @@ namespace EQLogParser
       if (!string.IsNullOrEmpty(line))
       {
         var data = line.Split('^');
-        if (data.Length >= 11)
+        if (data.Length == 21)
         {
           var duration = int.Parse(data[3], CultureInfo.InvariantCulture) * 6; // as seconds
           var beneficial = int.Parse(data[4], CultureInfo.InvariantCulture);
@@ -825,10 +867,11 @@ namespace EQLogParser
             Adps = byte.Parse(data[12], CultureInfo.InvariantCulture),
             Mgb = data[13] == "1",
             Rank = byte.Parse(data[14], CultureInfo.InvariantCulture),
-            HasAmbiguity = data[15] == "1" || data[16] == "1",
-            LandsOnYou = StringCache.GetOrAddExact(data[17]),
-            LandsOnOther = StringCache.GetOrAddExact(data[18]),
-            WearOff = StringCache.GetOrAddExact(data[19])
+            Charm = data[15] == "1",
+            HasAmbiguity = data[16] == "1" || data[17] == "1",
+            LandsOnYou = StringCache.GetOrAddExact(data[18]),
+            LandsOnOther = StringCache.GetOrAddExact(data[19]),
+            WearOff = StringCache.GetOrAddExact(data[20])
           };
         }
       }

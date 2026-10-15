@@ -5095,30 +5095,44 @@ window-level truth from the re-measure command in this section's own harness.
 ### Charm ownership follows the spell's lands-on-other message
 
 The Incogitable capture exposed an owner-attribution hole: `A scalewrought terrastriker` correctly took **12,149,157**
-damage on the tanking board while charmed, but never appeared under `Incogitable +Pets`. The charm-success line opens
-Friendly allegiance independently of ownership. The owner lookup was gated by a hard-coded `Charm` / `Compulsion`
+damage on the tanking board while charmed, but never appeared under `Incogitable +Pets`. The original implementation
+opened Friendly allegiance independently of ownership. Its owner lookup was gated by a hard-coded `Charm` / `Compulsion`
 family list, so `You begin casting Esoteric Command.` at **July 3, 2025, 15:18:21**, followed four seconds later by
 `a scalewrought terrastriker is charmed.`, opened an ownerless window. Its `Your Esoteric Command spell has worn off`
 line at **15:25:29** was also unrecognized and in any case arrived past the existing six-minute cap. Two earlier
 charms, `An abyssal terror` and `A scalewrought handler`, likewise followed `Edict of Command XL` casts by five seconds
 and lost their owner at the same gate. The candlefolk charm used the old recognized spell family and already folded.
 
-**Spell data is the authority now, not a list of spell names or rank syntax.** During `EQDataStore` construction,
-every spell row whose `LandsOnOther`, trimmed and compared without case, is exactly **`has been charmed.`** or
-**`is charmed.`** contributes its name to a case-insensitive lookup. The current data has **196 matching rows /
-192 distinct names**. All variants participate: `Beguile` also names a newer non-charm spell, so looking at just the
-single variant `GetSpellByName` selects would lose the older charm. This lookup is independent of the received-buff
-tree's beneficial/ADPS filters. Unknown names, invented ranks, stun/chance subspells and unrelated wear-offs do not
-qualify; missing spell data supplies no ownership guess.
+**SPA 22, not the wording, now decides whether a spell charms.** An initial repair derived names from the two
+explicit charm messages (196 rows / 192 names). The operator then chose the stronger source: `createdata.py`
+already reads SPA 22, and now exports its numeric **0/1 Charm column immediately after Rank**. The format is exactly
+**21 columns**: rank at 14, charm at 15, ambiguity bits at 16/17, and messages last at 18/19/20 (zero-based).
+`SpellData.Charm` reads that field. All five appended Glyph rows include charm=0; Glyph V's misplaced ambiguity/
+message fields were normalized too. Format tests check every shipped row and all Glyph message positions.
 
-`CharmSpells.IsCharmSpellName` asks that data-derived lookup for both cast pairing and wear-off recognition. R9 still
-chooses the **latest qualifying cast in the preceding six seconds** (reduced from eight at the operator's request),
-not the latest arbitrary spell, and retains
-its existing re-charm ownership segments and six-minute ceiling. No rank parser, family-name table, permanent pet
-mapping, or cap extension is introduced. `CharmSpellDataTest` uses previously unknown synthetic spell names and
-same-name conflicting variants to assert that this really follows the data. `CharmOwnerAttributionTest` covers
-parsed cast/wear-off evidence, full-summary children, meter parity, unrelated recent casts and the lookback boundary;
-older tests now use actual data-backed ranks instead of fictional `Charm IV`, `Charm IX` and `Compulsion IV` names.
+The current data has **537 SPA-22 rows / 504 distinct names**; 485 rows supply **109 distinct nonempty landing
+messages**. `EQDataStore` caches those suffixes, plus **all** spell variants that share them, including non-charms.
+No name/rank list or list of English charm phrases remains. Original leading spaces and possessive suffixes such as
+`'s eyes glaze over.` are preserved for target extraction. A spell name alone may cover several variants: the cast
+is checked against variants with the actual observed message, not just the variant `GetSpellByName` selects. A
+same-name/same-message mixture of charm and non-charm is refused conservatively.
+
+**The newest matching cast decides, and a non-charm stops the search.** `CharmCastHistory` belongs to `ParseLane`,
+retains references to relevant `SpellCast` objects over the same 120-second log-time horizon as the existing cast
+store, and qualifies only the preceding **six seconds, inclusive**. It picks the newest eligible timestamp, breaking
+equal seconds by file arrival. An unrelated message does not compete; a matching non-charm or interrupted cast
+refuses the landing without falling back to an older charm. No matching cast means **no charm**, not an ownerless
+window. A cast later in file order cannot confirm an earlier same-second landing. Rejected lines make no R9 claim.
+The window policy receives confirmed start evidence carrying its matched owner, rather than independently guessing
+from a second cast list; equal-time re-charms retain evidence sequence order. A new stream/reset clears history.
+
+`CastLineParser` checks these landings before its received-buff path, independent of beneficial/ADPS flags.
+`MiscLineParser` still recognizes wear-offs for flagged charm spells, but a wear-off without a confirmed start cannot
+invent a window. Existing six-minute caps, re-charm segments, ordinary friendly-fire refusals and separate tanking rows
+remain. Tests cover arbitrary SPA-flagged spell names/messages, shared non-charm messages, conflicting variants,
+possessive names, interrupted casts, per-lane isolation, out-of-order timestamps, same-second ordering and the six/
+seven-second boundary. Older window-policy fixtures now include corroborating casts; unmatched-text expectations
+were changed deliberately to the new conservative rule.
 
 **Full-capture A/B:** the terrastriker's **2,463 outgoing records / 28,113,991 damage** now appear as a child of
 `Incogitable +Pets`; the owner's total rises **85,025,009,585 → 85,053,123,576**. Overall damage remains
@@ -5129,6 +5143,86 @@ verification; the data-driven fixtures remain. The six-second lookback boundary 
 six seconds accepted and one at seven rejected. Validation: **2,276 headless tests passed, 6 skipped**; the full
 no-incremental solution build, including the WPF test assembly, reported **zero warnings/errors**. Windows UI
 interaction was not executed on Linux.
+
+**SPA-flag replay checks** (live grammar unless marked EMU):
+
+| Local capture | Damage facts | Confirmed windows | Board checks |
+|---|---:|---:|---|
+| Incogitable xegony | 1,901,078 | 10 | Full raid damage **581,429,796,598**, tanking **7,347,890,680 / 325 rows** unchanged; terrastriker still **28,113,991** under Incogitable +Pets and **12,149,157** in its own tanking row |
+| Kizant xegony 01-06-24 | 5,282,363 | 12 | Every confirmed window belongs to Incogitable; full-reference/compact-meter scoped results agree for each window with captured output |
+| Kizant xegony candle | 178,156 | 0 | No uncorroborated window is invented |
+| Bulron THJ (EMU=1) | 707,860 | 0 | Emulator grammar replay completed without inventing an owner |
+| Ikkydruid THJ (EMU=1) | 1,498,088 | 0 | Nature-servant text is present, but no qualifying named charm cast supports a window; wording alone is deliberately insufficient |
+
+All five disposable replay assertions passed and were removed after recording these results. The zero-window captures
+exercise conservative refusal, not positive ownership attribution; the parsed fixtures cover both new pact/nature
+messages positively. The existing same-process reproducibility gate also passed over Incogitable twice: **4,648 rows,
+94 verified pets, 416,025 tanking-side facts and zero unrouted facts** on both reads, with identical verdicts and routed
+damage sums. Re-running `createdata.py` against the local raw spell inputs in a temporary directory reproduced every
+shipped row exactly. Final validation: **2,283 headless tests passed / 6 gated tests skipped**, plus that separately
+executed real-log reproducibility test; the full no-incremental solution build (including the WPF test assembly) had
+**zero warnings/errors**. No WPF runtime result is implied by these headless checks.
+
+**Broader live-log survey:** a disposable console harness outside the repository reused `PipelineHarness` and the
+actual classifier (not a text-only imitation), replaying each whole file in order. The compressed 2019 capture was
+expanded to a temporary file preserving its player filename. These are classified-window counts and captured outgoing
+amounts inside those windows, not newly calculated Damage Summary totals:
+
+| Capture | Confirmed windows | Distinct NPC names | Captured outgoing damage |
+|---|---:|---:|---:|
+| Kizant xegony combined (2019, gzip) | 154 | 29 | 313,749,829 |
+| Kizant xegony 9-18-22 | 16 | 6 | 56,112,478 |
+| Kizant beta | 26 | 3 | 1,249,897 |
+| Kizant beta 11-30-25 | 4 | 1 | 69,874 |
+| Kizant xegony 07-24-26 | 9 | 1 | 985,946 |
+| Kizant xegony 09-03-26 | 5 | 1 | 190,925 |
+| Kizant xegony (unsuffixed) | 3 | 1 | 478,729 |
+| Kizant xegony 2 | 3 | 1 | 0 |
+
+The 2022 pets all belong to Incogitable: **obedient servant of Luclin, obsidian fiend, wandering shadow, grim shade,
+gloaming beetle, rockfall lurker**. The 2019 capture has **102 Incogitable windows** across 28 names, including clockwork
+scavengers/maintainers/pipe cleaners, dust sages, mephits, jopals, phoenixes and elemental creatures. Its remaining
+52 windows are **fire giant lords**, with Gotcharms, Teferi, Villette, Aldryn, Sonozen, Tierwin, Kimb and Kamilah as the
+first named owners of various windows. One window has Gotcharms then Teferi ownership segments; none of its captured
+outgoing damage qualifies, so this is an ownership-sequence example, not proof of a damage-credit transfer.
+
+All five newer suispider-bearing captures use bard charm messages: **Nniki, Aldryn, Lasaman and Tooke** appear as
+owners across them. One concrete pair is Nniki beginning **Voice of Keftlik Rk. III** at **2026-09-13 19:19:07**, followed
+by the suispider's **has succumbed to the enticing call** at **19:19:09**. Beta also has two positive non-enchanter spell
+shapes: **Shennron / Servant of Death XIII → bramble sentinel** (cast **19:05:20**, landing **19:05:25**) and
+**Tuona / Beast's Beckoning XVIII Rk. III → greedy wolf** (cast **22:00:04**, landing **22:00:07**), both on **2026-10-11**.
+The spell masks identify those families as Necromancer and Druid respectively.
+
+A beta greedy-wolf window starts under **Aldryn** at **22:02:26**, then records **Hazysongs** at **22:02:27**:
+Voice of Keftlik's **has succumbed** message versus Amalithea's Demand's **succumbs** message, each paired to its own
+preceding cast. Re-charms also occur without owner changes (the 2019 flurry-mephit name has **13 starts in 3 windows**).
+Many beta windows close in their opening second when that name hits the raid, leaving no credited output. These
+examples expose the standing limitation: several identical NPCs share a log name, so an apparent hand-off or immediate
+break is a name-level interpretation, not proof that both lines describe the same individual creature. A confirmed
+zero-output charm need not produce a damage child row.
+
+**A shared charm needs a separate child row under each owner.** The ownership segments and parent totals were
+already time-correct, but the Damage Summary builder keyed its mutable individual rows by attacker name alone.
+Two owners' child dictionaries therefore referenced the SAME pet `PlayerStats`: the parent totals split correctly,
+but expanding either owner showed the pet's entire selected output (and its combined substats/percentages).
+`DamageStatsBuilder` now keys rows by **(attacker name, resolved record owner)**, preserving the ordinary pet display
+name. Aggregate rows retain their separate keys. Frame accounting keys the actual row rather than its display name,
+and presentation checks `IsTopLevel` so an owned copy cannot masquerade as an unowned same-named row.
+
+`ASharedCharmPetHasSeparateDamageUnderEachOwnersSummaryAndMeter` parses a real-shaped **A → B → A** sequence, including
+damage while the next charm is casting and at its confirmed landing second. A's pet child receives **1,100**, B's
+receives **1,000**, and the raid retains **2,100**; the children are distinct objects with separate substats and
+percentages. Scoped and whole-selection meter outputs agree with the reference builder. Returning to A accumulates
+under A's existing pet child rather than adding a duplicate or moving B's earlier credit.
+
+A separate whole-capture beta replay checks the actual greedy-wolf case: **Aldryn 226,783**, **Hazysongs 694,878** and
+**Romance 7,333**, totaling **928,994** across those separate pet children. Four hits totaling **112,863** fall in the
+handoff window's opening second before Hazysongs's following-second confirmation; they belong to Aldryn under the
+existing second-resolution ownership intervals, not to the window's later holder. All **37** owner/children groups
+sum to their parents, and the expanded rows sum to raid damage **596,119,928,818**. This checks actual summary child
+rows, unlike the earlier window-only census. The disposable console harness was removed; the parsed regression remains.
+Validation after this correction: **2,284 headless tests passed / 6 gated tests skipped**; the full no-incremental solution
+build, including the WPF test assembly, reported **zero warnings/errors**. WPF runtime checks were not executed on Linux.
 
 ### A raised corpse needs no rule, and two things must never be inferred from it
 

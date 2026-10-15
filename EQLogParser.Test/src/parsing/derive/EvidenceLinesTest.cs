@@ -255,6 +255,7 @@ public class EvidenceLinesTest
   {
     var report = Census(out _,
                         (0, "You have taken 44 damage from Frost by Claw of Frost."),
+                        (1, "You begin casting Charm XVII."),
                         (5, "Frost has been charmed."));
 
     var row = report.Find("Frost");

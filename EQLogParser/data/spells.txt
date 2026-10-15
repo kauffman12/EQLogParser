@@ -65903,8 +65903,8 @@
 9997^Tortugone's Tortoise Shell Recourse^255^4^1^0^6^512^0^0^0^0^4^0^5^0^1^1^The spirit of the tortoise Tortugone protects you.^ is guarded by the spirit of Tortugone.^The spirit of the tortoise Tortugone fades.
 9998^Tortugone's Tortoise Shell Recourse^255^4^1^0^6^0^0^0^0^0^4^0^10^0^1^1^The spirit of the tortoise Tortugone protects you.^ is guarded by the spirit of Tortugone.^The spirit of the tortoise Tortugone fades.
 9999^Feralize^72^30^0^0^5^512^0^0^0^0^0^0^1^0^1^1^Your body shifts to a more feral form.^ takes on a feral form.^
-900001^Glyph of Destruction I^254^20^1^0^6^65407^0^0^0^0^3^0^1^0^1^^ is infused for destruction.^Your Glyph of Destruction fades away.
-900002^Glyph of Destruction II^254^20^1^0^6^65407^0^0^0^0^3^0^2^0^1^^ is infused for destruction.^Your Glyph of Destruction fades away.
-900003^Glyph of Destruction III^254^20^1^0^6^65407^0^0^0^0^3^0^3^0^1^^ is infused for destruction.^Your Glyph of Destruction fades away.
-900004^Glyph of Destruction IV^254^20^1^0^6^65407^0^0^0^0^3^0^4^0^1^^ is infused for destruction.^Your Glyph of Destruction fades away.
-900005^Glyph of Destruction V^254^20^1^0^6^65407^0^0^0^0^3^0^5^^0^1^ is infused for destruction.^Your Glyph of Destruction fades away.
+900001^Glyph of Destruction I^254^20^1^0^6^65407^0^0^0^0^3^0^1^0^0^1^^ is infused for destruction.^Your Glyph of Destruction fades away.
+900002^Glyph of Destruction II^254^20^1^0^6^65407^0^0^0^0^3^0^2^0^0^1^^ is infused for destruction.^Your Glyph of Destruction fades away.
+900003^Glyph of Destruction III^254^20^1^0^6^65407^0^0^0^0^3^0^3^0^0^1^^ is infused for destruction.^Your Glyph of Destruction fades away.
+900004^Glyph of Destruction IV^254^20^1^0^6^65407^0^0^0^0^3^0^4^0^0^1^^ is infused for destruction.^Your Glyph of Destruction fades away.
+900005^Glyph of Destruction V^254^20^1^0^6^65407^0^0^0^0^3^0^5^0^0^1^^ is infused for destruction.^Your Glyph of Destruction fades away.

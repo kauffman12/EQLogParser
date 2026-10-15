@@ -76,6 +76,7 @@ namespace EQLogParser
 
     /// <summary>The sentence before a death line (DeathRecord.Previous).</summary>
     internal string PreviousAction;
+    internal readonly CharmCastHistory CharmCasts = new();
 
     /// <summary>A crit whose damage line arrives up to a second later rides here until it does.</summary>
     internal DamageLineParser.DelayRecord DelayCritRecord;

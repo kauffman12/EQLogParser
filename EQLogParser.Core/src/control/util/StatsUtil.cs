@@ -30,7 +30,7 @@ namespace EQLogParser
       return record.Type is Labels.Melee or Labels.Miss or Labels.Parry or Labels.Dodge or Labels.Block or Labels.Invulnerable or Labels.Riposte or Labels.Absorb;
     }
 
-    internal static bool CheckNewFrame(Dictionary<string, double> prevPlayerTimes, string name, double beginTime)
+    internal static bool CheckNewFrame<T>(Dictionary<T, double> prevPlayerTimes, T name, double beginTime) where T : notnull
     {
       if (!prevPlayerTimes.TryGetValue(name, out var prevTime))
       {

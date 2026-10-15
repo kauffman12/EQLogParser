@@ -108,6 +108,7 @@ public class OurPetTest
     // to keep out: the charm already explains the healing, and an ownership interval running the whole log would
     // hold a hostile mob on our side before the charm and after the wear-off.
     var lines = PetLines().ToList();
+    lines.Add($"[{Timestamp(19, 1, 56)}] Clericone begins casting Charm XVII.");
     lines.Add($"[{Timestamp(19, 2, 0)}] {Pet} has been charmed.");
     var run = RunDerive(lines.ToArray());
 

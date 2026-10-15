@@ -56,6 +56,7 @@ public class CharmRowProjectionTest
         var outcome = Run(out var timeline, out var facts,
             "[Sun Apr 26 18:00:00 2026] You hit a rune-etched warblade for 900 points of damage.",
             "[Sun Apr 26 18:00:05 2026] A rune-etched warblade hits You for 400 points of damage.",
+            "[Sun Apr 26 18:00:06 2026] You begin casting Charm XVII.",
             "[Sun Apr 26 18:00:10 2026] a rune-etched warblade has been charmed.");
 
         var rows = FightProjection.Build(facts, timeline);
@@ -89,6 +90,7 @@ public class CharmRowProjectionTest
          */
         var outcome = Run(out var timeline, out var facts,
             "[Sun Apr 26 18:00:00 2026] You hit a rune-etched warblade for 900 points of damage.",
+            "[Sun Apr 26 18:01:11 2026] You begin casting Charm XVII.",
             "[Sun Apr 26 18:01:15 2026] a rune-etched warblade has been charmed.");
 
         var rows = FightProjection.Build(facts, timeline);
@@ -107,6 +109,7 @@ public class CharmRowProjectionTest
         // on our side of the ledger.
         var outcome = Run(out var timeline, out var facts,
             "[Sun Apr 26 18:10:00 2026] You hit a bone walker for 900 points of damage.",
+            "[Sun Apr 26 18:10:06 2026] You begin casting Charm XVII.",
             "[Sun Apr 26 18:10:10 2026] a bone walker has been charmed.",
             "[Sun Apr 26 18:10:30 2026] A bone walker was slain by Illuminai.");
 
@@ -202,6 +205,7 @@ public class CharmRowProjectionTest
         // fire would quietly shrink a player's total, so they get the mob's post-charm row: our side, said out
         // loud, while the pre-charm half stays closed as the charm itself.
         _ = Run(out var timeline, out var facts,
+            "[Sun Apr 26 18:39:59 2026] You begin casting Charm XVII.",
             "[Sun Apr 26 18:40:00 2026] You hit a cave bear for 900 points of damage.",
             "[Sun Apr 26 18:40:05 2026] a cave bear has been charmed.",
             "[Sun Apr 26 18:40:20 2026] You hit a cave bear for 300 points of damage.");
@@ -221,22 +225,16 @@ public class CharmRowProjectionTest
     [TestMethod]
     public void ACharmWithNoCasterInventsNobody()
     {
-        // The other half of the credit rule: a window whose caster the log never showed (another raid member's
-        // charm, in a log without their casts) leaves AttackerOwner null. Folding that damage onto whichever
-        // raider happened to be nearby would move real credit to the wrong player.
+        // A landing without a corroborating cast proves neither friendly allegiance nor pet damage.
+        // Folding it onto whichever raider happened to be nearby would move real credit to the wrong player.
         var outcome = Run(out var timeline, out var facts,
             "[Sun Apr 26 18:20:04 2026] an imbued whipgrass has been charmed.",
             "[Sun Apr 26 18:20:20 2026] An imbued whipgrass hits a grodog thug for 400 points of damage.");
 
-        Assert.AreEqual(1, outcome.Charms.Count);
-        Assert.IsNull(outcome.Charms[0].Owner);
-
+        Assert.HasCount(0, outcome.Charms, "a landing without a matching cast proves no charm");
         var index = new FightFactIndex(timeline);
         var rows = FightProjection.Build(facts, timeline, index.OnFact);
-        var pet = Records(rows, index, facts).Where(a => a.Attacker == "An imbued whipgrass").ToList();
-
-        Assert.AreEqual(1, pet.Count);
-        Assert.IsNull(pet[0].AttackerOwner, "an unattributed charm claimed a charmer");
+        Assert.HasCount(0, Records(rows, index, facts));
     }
 
     [TestMethod]
@@ -246,6 +244,7 @@ public class CharmRowProjectionTest
         // legacy table). The mob's own row stays — closed as the charm, which is how that encounter ended — and
         // the post-charm row about the same animal does not appear.
         _ = Run(out var timeline, out var facts,
+            "[Sun Apr 26 18:39:59 2026] You begin casting Charm XVII.",
             "[Sun Apr 26 18:40:00 2026] You hit a cave bear for 900 points of damage.",
             "[Sun Apr 26 18:40:05 2026] a cave bear has been charmed.",
             "[Sun Apr 26 18:40:20 2026] You hit a cave bear for 300 points of damage.");
@@ -266,6 +265,7 @@ public class CharmRowProjectionTest
         // is built from whatever selection a click produced. Hand the hidden row back and the player who swung
         // keeps both halves.
         _ = Run(out var timeline, out var facts,
+            "[Sun Apr 26 18:39:59 2026] You begin casting Charm XVII.",
             "[Sun Apr 26 18:40:00 2026] You hit a cave bear for 900 points of damage.",
             "[Sun Apr 26 18:40:05 2026] a cave bear has been charmed.",
             "[Sun Apr 26 18:40:20 2026] You hit a cave bear for 300 points of damage.");
@@ -323,6 +323,7 @@ public class CharmRowProjectionTest
         // FightProjection requires an NPC reason stronger than the charm line before calling a row a pet.
         _ = Run(out var timeline, out var facts,
             "[Sun Apr 26 18:50:00 2026] Bithika hits a grodog thug for 500 points of damage.",
+            "[Sun Apr 26 18:50:01 2026] Othercaster begins casting Charm XVII.",
             "[Sun Apr 26 18:50:05 2026] bithika has been charmed.",
             "[Sun Apr 26 18:50:20 2026] You hit Bithika for 300 points of damage.");
 

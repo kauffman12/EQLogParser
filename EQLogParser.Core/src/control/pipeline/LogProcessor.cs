@@ -67,6 +67,7 @@ namespace EQLogParser
         // Bind for the WHOLE run and restore what was there in the finally: this is a pooled thread, and a lane left
         // bound after the stream ends would follow the thread into whatever task runs on it next (ParseLane).
         var priorLane = ParseLane.BindCurrentThread(_lane);
+        _lane.CharmCasts.Clear();
         try
         {
           foreach (var batch in collection.GetConsumingEnumerable())

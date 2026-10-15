@@ -185,10 +185,7 @@ namespace EQLogParser
 
     private void OnCompanionCalled(string name, double time) => Emit(EvidenceFact.EvCompanionCalled, name, time);
 
-    // The start line never says who charmed anything (measured: no charm cast text precedes a
-    // third-party "has been charmed." inside 20 s in any capture), so aux is null there; the wear-off
-    // line does name its caster, and that owner rides on the end fact for the window policy to apply
-    // retroactively.
+    // A start carries the caster matched against its landing message; an end carries the wear-off's owner.
     private void OnCharm(string name, double time, bool isStart, string owner) => Emit(isStart ? EvidenceFact.EvCharmStart : EvidenceFact.EvCharmEnd, name, time, owner);
 
     private void OnCast(string caster, string spell, double time) => Emit(EvidenceFact.EvCast, caster, time, spell);

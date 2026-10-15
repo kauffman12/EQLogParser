@@ -95,10 +95,11 @@ namespace EQLogParser
         "5",                          // 12 Adps
         "1",                          // 13 Mgb
         "2",                          // 14 Rank
-        "0", "0",                     // 15/16 HasAmbiguity flags
-        "you are affected by Test Spell",      // 17 LandsOnYou
-        "Test Spell lands on them",            // 18 LandsOnOther
-        "Test Spell wears off of you");        // 19 WearOff
+        "1",                          // 15 Charm (SPA 22)
+        "0", "0",                     // 16/17 HasAmbiguity flags
+        "you are affected by Test Spell",      // 18 LandsOnYou
+        "Test Spell lands on them",            // 19 LandsOnOther
+        "Test Spell wears off of you");        // 20 WearOff
 
       var spell = new EQDataStore().ParseCustomSpellData(line);
       Assert.IsNotNull(spell);
@@ -116,6 +117,7 @@ namespace EQLogParser
       Assert.AreEqual(5, spell.Adps);
       Assert.IsTrue(spell.Mgb);
       Assert.AreEqual(2, spell.Rank);
+      Assert.IsTrue(spell.Charm);
       Assert.IsFalse(spell.HasAmbiguity);
       Assert.AreEqual("you are affected by Test Spell", spell.LandsOnYou);
       Assert.AreEqual("Test Spell lands on them", spell.LandsOnOther);
@@ -125,9 +127,9 @@ namespace EQLogParser
     [TestMethod]
     public void ParseCustomSpellData_StripsRankFromAbbreviation()
     {
-      // 20 columns, exactly like the full-row test above
+      // 21 columns, with charm after rank.
       var line = string.Join("^", "8", "Focus of Arcanum VI", "100", "0", "0", "0", "5", "2", "1",
-        "0", "0", "0", "0", "0", "1", "0", "0", "", "", "");
+        "0", "0", "0", "0", "0", "1", "0", "0", "0", "", "", "");
       var spell = new EQDataStore().ParseCustomSpellData(line);
 
       Assert.IsNotNull(spell);

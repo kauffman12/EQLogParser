@@ -26,6 +26,7 @@ internal class SpellData
   public byte Proc { get; set; }
   public byte Adps { get; set; }
   public byte Rank { get; set; }
+  public bool Charm { get; set; }
   public bool Mgb { get; set; }
   public bool SeenRecently { get; set; }
   public bool IsUnknown { get; set; }

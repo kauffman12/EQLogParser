@@ -77,17 +77,8 @@ namespace EQLogParser
       set => ParseLane.Current.LastRolledLine = value;
     }
 
-    // Companion and charm line shapes (catalog R5/R9 evidence). Recognition only: the legacy
-    // pipeline never consumed these and still does not. Charm NEG lines ("This NPC cannot be
-    // charmed.", resists) deliberately do not match these suffixes.
-    //
-        // Companion and charm shapes (R5/R9 evidence). Recognition only; charm NEG lines deliberately do not match.
-        //
-        // "X is called to it owner." names the SUMMONER: the client fills the subject slot with the owner, verified across six captures where every
-        // subject casts player spells and never swings (docs/DesignNotes.md → "The companion line names the summoner").
+    // Companion evidence names the summoner. Charm starts are confirmed by CastLineParser; only wear-offs reach here.
     private const string CompanionCalledSuffix = " is called to it owner.";
-    private const string CharmedSuffix = " has been charmed.";
-    private const string Charmed2Suffix = " is charmed.";
     private const string CharmEndMarker = " spell has worn off of ";
 
     private static void ScanIdentityEvidence(string action, double beginTime)
@@ -98,16 +89,6 @@ namespace EQLogParser
       {
         var owner = action[..^CompanionCalledSuffix.Length].Trim();
         if (owner.Length > 0) ParseLane.Current.CompanionCalled?.Invoke(owner, beginTime);
-      }
-      else if (action.EndsWith(CharmedSuffix, StringComparison.OrdinalIgnoreCase))
-      {
-        var npc = action[..^CharmedSuffix.Length].Trim();
-        if (npc.Length > 0) ParseLane.Current.Charm?.Invoke(npc, beginTime, true, null);
-      }
-      else if (action.EndsWith(Charmed2Suffix, StringComparison.OrdinalIgnoreCase))
-      {
-        var npc = action[..^Charmed2Suffix.Length].Trim();
-        if (npc.Length > 0) ParseLane.Current.Charm?.Invoke(npc, beginTime, true, null);
       }
       else
       {

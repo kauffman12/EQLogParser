@@ -71,6 +71,7 @@ public class CharmWindowPolicyTest
         // 15,943 such lines across three captures. Only the charm spell's version may reach the timeline,
         // and the gate lives in the sensor: a root's wear-off must not even become an evidence fact.
         var outcome = Run(out var timeline, out var facts,
+            "[Sun Apr 26 18:00:06 2026] You begin casting Charm XVII.",
             "[Sun Apr 26 18:00:10 2026] a toughened horror has been charmed.",
             "[Sun Apr 26 18:00:20 2026] Your Frost Shackles I spell has worn off of a toughened horror.",
             "[Sun Apr 26 18:00:30 2026] Your Group Perfected Invisibility I spell has worn off of a toughened horror.",
@@ -97,6 +98,7 @@ public class CharmWindowPolicyTest
         // "Your Charm XVII spell has worn off of …" — the seven lines in eqlog_Incogitable_xegony that are
         // actual charm ends, out of 15,943 wear-offs. "Your" resolves to the log author's own key ("You").
         var outcome = Run(out var timeline, out var facts,
+            "[Sun Apr 26 18:00:06 2026] You begin casting Charm XVII.",
             "[Sun Apr 26 18:00:10 2026] a toughened horror has been charmed.",
             "[Sun Apr 26 18:00:20 2026] Your Frost Shackles I spell has worn off of a toughened horror.",
             "[Sun Apr 26 18:00:40 2026] Your Charm XVII spell has worn off of a toughened horror.");
@@ -121,6 +123,7 @@ public class CharmWindowPolicyTest
         // The success line never says who charmed anything, but a third-party wear-off line DOES — and it
         // applies retroactively to the window it ends (measured shape: "<name>`s <spell> spell has worn off").
         var outcome = Run(out var timeline, out _,
+            "[Sun Apr 26 18:49:56 2026] Incogitable begins casting Charm XVII.",
             "[Sun Apr 26 18:50:00 2026] a skeleton has been charmed.",
             "[Sun Apr 26 18:52:00 2026] Incogitable`s Charm XVII spell has worn off of a skeleton.");
 
@@ -137,6 +140,7 @@ public class CharmWindowPolicyTest
         // hit closes the window, and it is not credited as pet damage afterwards.
         var outcome = Run(out var timeline, out _,
             "[Sun Apr 26 18:09:00 2026] Targeted (Player): Verifyguy",
+            "[Sun Apr 26 18:09:56 2026] You begin casting Charm XVII.",
             "[Sun Apr 26 18:10:00 2026] a fiddlehorns apprentice has been charmed.",
             "[Sun Apr 26 18:10:20 2026] A fiddlehorns apprentice hits Verifyguy for 400 points of damage.");
 
@@ -156,6 +160,7 @@ public class CharmWindowPolicyTest
         // Unclassified names are the majority of what a pulled mob fights on the way in, and treating one
         // as a break would cut most windows short at the first swing.
         var outcome = Run(out _, out _,
+            "[Sun Apr 26 18:09:56 2026] You begin casting Charm XVII.",
             "[Sun Apr 26 18:10:00 2026] a fiddlehorns apprentice has been charmed.",
             "[Sun Apr 26 18:10:20 2026] A fiddlehorns apprentice hits Zorchmaw for 400 points of damage.",
             "[Sun Apr 26 18:20:00 2026] A grodog thug hits Zorchmaw for 400 points of damage.");
@@ -191,12 +196,7 @@ public class CharmWindowPolicyTest
             "[Sun Apr 26 18:30:00 2026] Beguiler begins casting Beguiler's Directed Banishment I.",
             "[Sun Apr 26 18:30:04 2026] an obsidian fiend has been charmed.");
 
-        Assert.AreEqual(2, outcome.Charms.Count);
-        foreach (var w in outcome.Charms)
-        {
-            Assert.IsNull(w.Owner, $"{w.Name} was attributed to {w.Owner} by a non-charm cast");
-            Assert.IsNull(timeline.OwnerOf(w.Name, w.T0 + 1));
-        }
+        Assert.HasCount(0, outcome.Charms, "unmatched messages must not open ownerless charm windows");
     }
 
     [TestMethod]
@@ -207,6 +207,7 @@ public class CharmWindowPolicyTest
         // the log ever named would be lost. (This is how one whipgrass window in eqlog_Kizant_xegony-01-06-24
         // reads, and dropping the fallback measured 5 owned windows → 4.)
         var outcome = Run(out _, out _,
+            "[Sun Apr 26 19:20:00 2026] Incogitable begins casting Charm XVII.",
             "[Sun Apr 26 19:20:04 2026] a feral gulet has been charmed.",
             "[Sun Apr 26 19:20:04 2026] Incogitable`s Charm XVII spell has worn off of a feral gulet.");
 
@@ -258,7 +259,7 @@ public class CharmWindowPolicyTest
             "[Sun Apr 26 19:04:00 2026] a feral gulet has been charmed.");
 
         Assert.AreEqual(1, same.Charms.Count);
-        Assert.AreEqual(3, same.Charms[0].Starts);
+        Assert.AreEqual(2, same.Charms[0].Starts, "an uncorroborated later sighting does not extend the window");
         Assert.AreEqual(1, same.Charms[0].Segments.Count, "the same charmer re-casting handed the mob to somebody new");
         Assert.AreEqual(Self, sameTimeline.OwnerOf("a feral gulet", T("[Sun Apr 26 19:05:00 2026]")));
     }
@@ -270,7 +271,9 @@ public class CharmWindowPolicyTest
         // the pet list. These two sightings are the shape measured at 13:11:03 / 13:12:15 in the Kizant
         // capture — the second lands inside the first window, so they merge and the clock restarts there.
         var outcome = Run(out _, out _,
+            "[Sun Apr 26 18:29:56 2026] You begin casting Charm XVII.",
             "[Sun Apr 26 18:30:00 2026] an exiled bloodhound has been charmed.",
+            "[Sun Apr 26 18:31:08 2026] You begin casting Charm XVII.",
             "[Sun Apr 26 18:31:12 2026] an exiled bloodhound has been charmed.");
 
         Assert.AreEqual(1, outcome.Charms.Count, "a re-charm split into two windows");
@@ -281,7 +284,9 @@ public class CharmWindowPolicyTest
 
         // …and a sighting past the ceiling is a separate pet span, not a merge
         var second = Run(out _, out _,
+            "[Sun Apr 26 18:29:56 2026] You begin casting Charm XVII.",
             "[Sun Apr 26 18:30:00 2026] an exiled bloodhound has been charmed.",
+            "[Sun Apr 26 18:44:56 2026] You begin casting Charm XVII.",
             "[Sun Apr 26 18:45:00 2026] an exiled bloodhound has been charmed.");
         Assert.AreEqual(2, second.Charms.Count);
     }
@@ -292,6 +297,7 @@ public class CharmWindowPolicyTest
         // Charm lines print "a X", slain lines print "A X" — the window keys case-insensitively while
         // identity keys stay ordinal.
         var outcome = Run(out var timeline, out _,
+            "[Sun Apr 26 18:45:26 2026] You begin casting Charm XVII.",
             "[Sun Apr 26 18:45:30 2026] a grimtooth matriarch has been charmed.",
             "[Sun Apr 26 18:46:10 2026] A grimtooth matriarch was slain by Sirmr!");
 
@@ -307,6 +313,7 @@ public class CharmWindowPolicyTest
         // Another mob of the same species walking into the span is indistinguishable from the pet, and the
         // UI should say so instead of pretending to certainty. Same-name hits are counted, not hidden.
         var outcome = Run(out _, out _,
+            "[Sun Apr 26 18:49:56 2026] You begin casting Charm XVII.",
             "[Sun Apr 26 18:50:00 2026] an imbued whipgrass has been charmed.",
             "[Sun Apr 26 18:50:30 2026] An imbued whipgrass hits a grodog thug for 100 points of damage.",
             "[Sun Apr 26 18:50:40 2026] An imbued whipgrass hits an imbued whipgrass for 100 points of damage.",
@@ -326,6 +333,7 @@ public class CharmWindowPolicyTest
         // the side of every later mob of that name in a re-derived log, so the ceiling still applies and
         // the reason records why no close was ever seen.
         var outcome = Run(out _, out _,
+            "[Sun Apr 26 18:59:56 2026] You begin casting Charm XVII.",
             "[Sun Apr 26 19:00:00 2026] an obsidian fiend has been charmed.");
 
         Assert.AreEqual(1, outcome.Charms.Count);
@@ -340,6 +348,7 @@ public class CharmWindowPolicyTest
         // mob died. Before the cap won that late slain line closed the window at the DEATH, re-friending every
         // later mob of that name for six more minutes and hiding the true death under "died while charmed".
         var outcome = Run(out var timeline, out _,
+            "[Sun Apr 26 13:46:56 2026] You begin casting Charm XVII.",
             "[Sun Apr 26 13:47:00 2026] an imbued whipgrass has been charmed.",
             "[Sun Apr 26 15:09:40 2026] An imbued whipgrass was slain by Sirmr!");
 
@@ -360,6 +369,7 @@ public class CharmWindowPolicyTest
         // The credit question with the same shape: a hit that lands after the ceiling belongs to whatever that
         // name is by then, not to a charm that had already expired.
         var outcome = Run(out _, out _,
+            "[Sun Apr 26 13:46:56 2026] You begin casting Charm XVII.",
             "[Sun Apr 26 13:47:00 2026] an imbued whipgrass has been charmed.",
             "[Sun Apr 26 13:54:00 2026] An imbued whipgrass hits a grodog thug for 900 points of damage.",
             "[Sun Apr 26 15:09:40 2026] An imbued whipgrass was slain by Sirmr!");

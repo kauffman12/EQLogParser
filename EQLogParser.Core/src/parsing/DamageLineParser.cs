@@ -84,6 +84,7 @@ namespace EQLogParser
     // reach every consumer as EventsNewDeath facts, which is also what the projection's death queues eat.)
     internal static void ResetProcessState()
     {
+      ParseLane.Current.CharmCasts.Clear();
       PreviousAction = null;
       DelayCritRecord = null;
       LastCrit = null;

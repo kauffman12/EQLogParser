@@ -24,6 +24,7 @@ namespace EQLogParser
     {
       try
       {
+        if (CharmSpells.TryProcessLanding(lineData.Action, lineData.BeginTime)) return true;
         var split = lineData.Words;
         if (split.Length > 1 && !split[0].Contains('.') && !split[^1].EndsWith(')') && !CheckLandsOnMessages(split, lineData.BeginTime))
         {
@@ -147,6 +148,7 @@ namespace EQLogParser
 
               var cast = new SpellCast { Caster = StringCache.GetOrAdd(player), Spell = StringCache.GetOrAdd(spellName), SpellData = spellData };
               RecordsStore.Instance.Add(cast, currentTime);
+              ParseLane.Current.CharmCasts.Add(cast, currentTime);
 
               // Mirror evidence (D8): fire-only, covers every non-interrupted cast verb form.
               ParseLane.Current.CastEvidence?.Invoke(player, spellName, currentTime);
