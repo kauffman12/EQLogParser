@@ -184,6 +184,14 @@ namespace EQLogParser
     // definitely used in single thread
     private readonly Dictionary<string, string> _titleToClass = [];
     private readonly ConcurrentDictionary<string, byte> _allNpcs = new(StringComparer.OrdinalIgnoreCase);
+
+    /*
+     * The names that fight FOR the player (a bot, a hired soother, a clockwork). Same shape as _allNpcs and the same
+     * case-insensitive key, because both files hold strings the client prints verbatim. What differs is what a hit means:
+     * npcs.txt lists every creature the game can spawn, including these, so a row in it says "a thing exists with this
+     * name" and nothing about whose side it stands on this night.
+     */
+    private readonly ConcurrentDictionary<string, byte> _allMercs = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, SpellData> _spellsAbbrvDb = new();
     private readonly ConcurrentDictionary<string, string> _spellsToClass = new();
 
@@ -431,11 +439,22 @@ namespace EQLogParser
         }
       }
 
+      // The merc table. Optional by the same rule as every other data file: ReadList hands back an empty list when the
+      // file is absent, so a build without mercs.txt classifies exactly as it did before this table existed.
+      foreach (ref var line in CollectionsMarshal.AsSpan(ConfigUtil.ReadList(@"data\mercs.txt")))
+      {
+        if (line?.Trim() is string trimmed && trimmed.Length > 0)
+        {
+          _allMercs[StringCache.GetOrAdd(trimmed)] = 1;
+        }
+      }
+
       return;
     }
 
     public bool IsOldSpell(string name) => !string.IsNullOrEmpty(name) && _oldSpellNamesDb.ContainsKey(name);
     internal bool IsKnownNpc(string npc) => !string.IsNullOrEmpty(npc) && _allNpcs.ContainsKey(StringCache.GetOrAdd(npc));
+    internal bool IsKnownMerc(string merc) => !string.IsNullOrEmpty(merc) && _allMercs.ContainsKey(StringCache.GetOrAdd(merc));
     internal bool IsPlayerSpell(string name) => GetSpellByName(name)?.ClassMask > 0;
 
     internal string GetClassFromTitle(string title) => _titleToClass.GetValueOrDefault(title);

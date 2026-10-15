@@ -196,6 +196,15 @@ namespace EQLogParser
       Assert.IsFalse(store.IsKnownNpc("TotallyBogusNpc-xyz"));
       Assert.IsTrue(store.IsOldSpell("A Gnome in Hiding"));
       Assert.IsFalse(store.IsOldSpell("NotAnOldSpellAtAll"));
+
+      /*
+       * data/mercs.txt, the bot table: same case-blind dictionary, and one row of each spelling the file actually uses
+       * (an article written lowercase, a name typed with capitals). What R27 does with a hit is MercDatabaseTierTest's;
+       * this pins only that the file got loaded and that a name absent from it answers false.
+       */
+      Assert.IsTrue(store.IsKnownMerc("a hired bazu"));
+      Assert.IsTrue(store.IsKnownMerc("CANDLEFOLK MENDER"));
+      Assert.IsFalse(store.IsKnownMerc("TotallyBogusMerc-xyz"));
     }
 
     [TestMethod]
