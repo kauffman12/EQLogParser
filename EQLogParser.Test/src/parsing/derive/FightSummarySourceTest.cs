@@ -155,27 +155,15 @@ public class FightSummarySourceTest
         Assert.AreEqual(1, rows.Count);
     }
 
-    /*
-     * The tanking half means "damage one of our people received", which is what the tank report lists — it groups by
-     * record.Defender. Three shapes that all used to be filed as tanking because they merely pointed away from an
-     * NPC row, and only one of them survives the question:
-     *
-     *   a mob hitting a raider            → RaidSide, on the row the exchange opened
-     *   a mob hitting somebody's pet      → Neither. Legacy's unfiltered board carries 428,146,449 of it across 75 pet
-     *                                       names on Incogitable (and 4.82 B on NPC names); keeping it made the raid's
-     *                                       damage-taken unauditable.
-     *   a mob hitting another mob/corpse  → Neither, same reason.
-     *
-     * A charmed raider is the fourth shape and deliberately not RaidSide: while the window holds, identity says Npc,
-     * she is fighting against us, and the hits landing on her belong to that encounter instead of to her meter.
-     */
+    // Incoming to a player or pet belongs on the tanking side under the defender's own name.
+    // Hostile NPC victims and charmed raiders must not become raid damage received.
     [TestMethod]
-    public void TheTankingHalfIsDamageOurPeopleReceived()
+    public void TheTankingHalfIncludesOurPetsButNotHostileVictims()
     {
         var facts = BuildFacts(
             ("Illuminai", "Echohead", 500, 0, LabelTypes.Melee),   // raid on the mob: AtOwner
             ("Echohead", "Illuminai", 120, 1, LabelTypes.Melee),   // mob on a raider: RaidSide
-            ("Echohead", "Swarmik`s pet", 90, 2, LabelTypes.Melee),   // mob on a pet: nobody's damage taken
+            ("Echohead", "Swarmik`s pet", 90, 2, LabelTypes.Melee),   // mob on a pet: the pet's own incoming
             ("Echohead", "A gnawed corpse", 70, 3, LabelTypes.Melee), // mob on a mob: same
             ("Illuminai", "Mysteryhost", 30, 4, LabelTypes.Melee));   // raider on an UNCLASSIFIED name
 
@@ -192,13 +180,12 @@ public class FightSummarySourceTest
         var tanking = index.TankingOrdinalsFor(echo)
             .Select(o => $"{table.Facts[o].Total}->{table.NameOf(table.Facts[o].DefIdx)}")
             .ToList();
-        CollectionAssert.AreEqual(new List<string> { "120->Illuminai" }, tanking,
-            "the tanking half carries the hits that landed on a person, and nothing else");
+        CollectionAssert.AreEqual(new List<string> { "120->Illuminai", "90->Swarmik`s pet" }, tanking,
+            "each defender keeps its own incoming hits, including pets");
 
-        Assert.AreEqual(120L, index.SummaryFightFor(echo, table).TankTotal, "the row's damage-taken is the same one number as its blocks");
-        // One unrouted, not two: mob-on-mob never reaches a row at all (the projection drops it before the sink),
-        // while a mob hitting OUR pet does — it is part of the encounter — and is then refused by both boards.
-        Assert.AreEqual(1L, index.UnroutedFactCount, "the pet hit is captured but belongs to nobody's board");
+        Assert.AreEqual(210L, index.SummaryFightFor(echo, table).TankTotal,
+            "the row's damage-taken is the same one number as its blocks");
+        Assert.AreEqual(0L, index.UnroutedFactCount, "the pet hit must reach the tanking board");
         Assert.AreEqual(4L, index.DamageFactCount + index.TankingFactCount + index.UnroutedFactCount,
             "every fact that reached a row is accounted for exactly once, in one of three places");
 
@@ -219,7 +206,8 @@ public class FightSummarySourceTest
         Assert.AreEqual(1, index.DamageOrdinalsFor(mystery).Count);
         Assert.AreEqual(0, index.TankingOrdinalsFor(mystery).Count,
             "a raid swing at an unknown name is not someone receiving damage, however unknown that name is");
-        Assert.IsFalse(timeline.IsRaidVictimAt("Swarmik`s pet", T0 + 2), "a pet is not a person");
+        Assert.IsFalse(timeline.IsRaidVictimAt("Swarmik`s pet", T0 + 2),
+            "the fallback does not infer a person; projection admits the pet by allegiance");
         Assert.IsFalse(timeline.IsRaidVictimAt(null, T0 + 2));
     }
 

@@ -67,45 +67,10 @@ namespace EQLogParser
     // name on at this second?" A test that re-implements it drifts, and a drifted census is worse than none.
     internal enum Side : byte { Unknown, Player, Npc }
 
-    /*
-     * Optional reporter: which row a fact ended up owning. The projection is the single place that
-     * decides sides, so anything that needs "the facts of this fight" (the damage summary fed from the
-     * derived list, FightSummarySource) has to be told here rather than re-deciding somewhere else —
-     * a second copy of these rules would drift the moment a rule changes, and the drift would show up
-     * as a summary that disagrees with the row it was opened from.
-     *
-     * The three targets are described next to FactTarget. Two of them are directions inside the row, and the third
-     * exists because "not aimed at the row" is NOT the same question as "landed on one of us": it used to be one
-     * bool, which quietly made every away-from-owner fact a tanking-report fact, and most of what an NPC row aims
-     * away from itself lands on a pet or another mob. Measured on Incogitable against the classification the app runs:
-     * legacy's unfiltered "damage taken" is 7,114,675,399, of which 4,823,236,582 sits on names classified as NPC and
-     * 428,146,449 on pets; what the three targets leave is 1,850,853,404 — 91,036 facts with a Player behind them and
-     * 9,480 a Merc. (The parity harnesses that used to print those figures — `RealLogBoardsTest` and the early
-     * `HitByNpcCensusTest` census — are deleted; the numbers above are what the same measurement read, kept here so a
-     * reader of this branch can see what the three targets cost. docs/DesignNotes.md → "The legacy engine is deleted".)
-     *
-     * AtOwner is the same test that splits DamageToOwner from DamageByOwner — the split legacy draws too, with
-     * FightManager putting everything aimed at the npc in DamageBlocks and the mob's own output in TankingBlocks.
-     * Note it is not "the attacker was player-side": an unclassified name hitting a known NPC aims at the owner
-     * too, and belongs in those blocks even while its per-player credit waits for a classification pass. Consumers
-     * cannot re-derive any of this later, because which side a name was on depends on the timeline at the fact's
-     * own second.
-     */
-    /*
-     * Which half of the row's record set a fact belongs to, decided once here because the two boards must be
-     * fillable from ONE answer:
-     *
-     *   AtOwner  — damage aimed at the entity the row is keyed on, i.e. the raid's output on that fight.
-     *              Same comparison DamageToOwner is built from, so an index filled here cannot drift from the row.
-     *   RaidSide — a hit that landed on one of OUR people: the tanking half, "damage the raid received".
-     *              Asked as identity rather than as "everything else", because most facts that point away from an NPC
-     *              row land on something that is not a person at all (see EntityTimeline.IsRaidVictimAt). AtOwner is
-     *              tested before this one, and that order is load-bearing: an unclassified mob being hit by a raider
-     *              satisfies "not known to be a pet or mob" and must not become somebody's damage taken.
-     *   Neither  — everything else: a mob biting another mob, a boss hitting somebody's pet. Real events kept in the
-     *              capture, but they are nobody's damage and nobody's damage-taken, so filing them anywhere would
-     *              inflate a number no grid can account for.
-     */
+    // Projection is the sole routing decision; consumers must not infer a direction again from the names.
+    // AtOwner is output on the encounter, RaidSide is incoming damage to our players, pets and mercs,
+    // and Neither excludes noncombatant effects. Tanking groups by the defender, never by a pet's owner.
+    // See docs/DesignNotes.md → "Pet tanking: the Show Pets option loses its input".
     internal enum FactTarget : byte { AtOwner = 0, RaidSide = 1, Neither = 2 }
 
     internal delegate void FactOwnershipHandler(DamageFact fact, int ordinal, DerivedFight owner, FactTarget target);
@@ -559,19 +524,14 @@ namespace EQLogParser
         // Reported after the boundary checks and row creation, so every fact is announced exactly
         // once and to the row that really carries it in its totals. The direction is the same comparison
         // DamageToOwner is built from, one expression, so an index filled here cannot disagree with the row.
-        /*
-         * AtOwner is asked FIRST, and the order carries meaning. A player swinging at an unclassified name is the
-         * common case in a fresh pull — and "the defender is not known to be a pet or a mob" is true of exactly that
-         * mob, so testing the victim question first would file the raid's own opening damage as damage somebody
-         * received. Aimed at the row's anchor wins; only what points away from the anchor can be someone getting hit.
-         */
+        // Positive Player/Merc proof precedes the anchor check. Other player-side defenders count as incoming
+        // only away from the anchor; AtOwner must still precede the Unknown-victim fallback.
         var aimedAtAnchor = string.Equals(key, defName, StringComparison.Ordinal);
         FactTarget target;
-        if (timeline.IsConfirmedRaidPersonAt(defName, t))
+        if (timeline.IsConfirmedRaidPersonAt(defName, t) || (!aimedAtAnchor && defSide == Side.Player))
         {
-            // A person got hit. True even when the row is keyed on her own name, which is what legacy's
-            // defender-key tiebreak does to an attack from a mob nobody has classified yet — filing that as the
-            // row's damage would move her incoming hits onto the outgoing side of her own number.
+            // Incoming to our side includes pets and mercs, under each defender's own name.
+            // The anchor exception keeps raid swings on a charmed mob as output, not pet tanking.
             target = FactTarget.RaidSide;
         }
         else if (aimedAtAnchor)

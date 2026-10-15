@@ -42,7 +42,7 @@ namespace EQLogParser
     private readonly Dictionary<DerivedFight, List<int>> _damageOrdinals = new();
 
         /*
-         * The tanking half: this row's facts that landed on one of our people (TankingStatsBuilder groups them by record.Defender). A separate
+         * The tanking half: this row's facts that landed on our players, pets or mercs (grouped by record.Defender). A separate
          * list rather than one with a direction flag because each board's blocks must be ascending in time — interleaving directions would split
          * one second's block on both boards.
          */
@@ -73,7 +73,7 @@ namespace EQLogParser
 
     public long DamageFactCount { get; private set; }
 
-    // Facts the tank board carries: hits that landed on one of our people (EntityTimeline.IsRaidVictimAt).
+    // Facts the tank board carries: incoming hits on our players, pets and mercs, plus unplaced victims.
     public long TankingFactCount { get; private set; }
 
     // Captured, real, and belonging to no board — see OnFact. DamageFactCount + TankingFactCount + this = the
@@ -153,9 +153,7 @@ namespace EQLogParser
 
     private void OnFactLocked(DamageFact fact, int ordinal, DerivedFight owner, FightProjection.FactTarget target)
     {
-      // Neither means "no board wants this": a mob biting another mob, a boss clearing somebody's swarm. It is
-      // counted so the routing can be audited (UnroutedFactCount is the only sign of how much of a capture is
-      // nobody's damage) and filed nowhere, which is what keeps TankTotal meaning "damage a person took".
+      // Neither keeps noncombatant effects out of both boards; retain the count for routing audits.
       if (target == FightProjection.FactTarget.Neither)
       {
         UnroutedFactCount++;

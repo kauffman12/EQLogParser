@@ -172,11 +172,13 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
 - **Direction and ownership**: a charm window is the NPC's death (`EndReason = Charmed`, pet deaths inside stay on the
   fact), a charmed mob becomes a hidden `RaidPet` row whose damage still reaches boards (`CharmPetRows`), a charm-flipped
   defender is the only exemption from the friendly-fire drop, and a row's direction windows are written by the same
-  `aimedAtOwner` comparison that splits `DamageToOwner`/`DamageByOwner`/`FightFactIndex`. **Never "fix" the derived-vs-legacy
-  pet gap.** Damage our own side earns nothing.
-- **The tank board is damage our people received**, decided by `FightTarget` (`AtOwner` / `RaidSide` / `Neither`): ask
-  `IsConfirmedRaidPersonAt` before everything, `AtOwner` before the Unknown-victim test; `IsRaidVictimAt` is exclusion, not
-  proof; a pet's incoming damage is not a player's.
+  `aimedAtOwner` comparison that splits `DamageToOwner`/`DamageByOwner`/`FightFactIndex`. **Damage our own side earns
+  nothing**, including attacks on our ordinary pets; restoring pet tanking must never restore friendly-fire credit.
+- **The tank board includes players, pets and mercs**, decided by `FightProjection.FactTarget` (`AtOwner` / `RaidSide` /
+  `Neither`): ask `IsConfirmedRaidPersonAt` first, admit other player-side defenders away from the anchor, then ask
+  `AtOwner` before the Unknown-victim fallback. `IsRaidVictimAt` is exclusion, not proof. Every defender keeps its own
+  tanking row — no owner folding — and **Show Pets** changes visibility only. See docs/DesignNotes.md →
+  "Pet tanking: the Show Pets option loses its input".
 - **Rule basics**: R4 claims a caster from a versioned class-safe family rank (rank must be the whole tail and exist in
   `spells.txt`; new content is silent, never guessed); `Life Burn` declares `SpellClass.Nec` **overriding** the file's bad
   Shaman half; a multi-bit family means "no class label", and seeding REMOVES any generic label for such a rank (Battle

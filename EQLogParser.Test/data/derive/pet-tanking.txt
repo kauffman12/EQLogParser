@@ -1,0 +1,7 @@
+[Thu Oct 15 15:05:20 2026] Tunky joined the raid.
+[Thu Oct 15 15:05:21 2026] Tunky crushes Tallongast, The Egg for 39261 points of damage. (Lucky Critical)
+[Thu Oct 15 15:05:22 2026] Tunky`s pet slashes Tallongast, The Egg for 13044 points of damage.
+[Thu Oct 15 15:05:22 2026] Tallongast, The Egg hits Tunky`s pet for 48541 points of damage. (Riposte Strikethrough)
+[Thu Oct 15 15:05:23 2026] Tallongast, The Egg hits Tunky for 900 points of damage.
+[Thu Oct 15 15:05:24 2026] a hired bazu hits Tallongast, The Egg for 200 points of damage.
+[Thu Oct 15 15:05:24 2026] Tallongast, The Egg hits a hired bazu for 700 points of damage.

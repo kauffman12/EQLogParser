@@ -236,6 +236,14 @@ compact accounting, paired publication". These checks are not satisfied by a Lin
   annotations still scale with metadata. The headless 14,101-life THJ append exceeded the proposed 100 ms worker
   target; verify the actual supported workload before calling the long-session release gate complete.
 
+## Tanking Summary pet rows
+
+- [ ] Load `eqlog_Kizant_xegony-tunky.txt` and select all fights with all classes visible. With **Show Pets** enabled,
+  verify a separate ``Tunky`s pet`` row totaling **18,818,260** incoming damage. Its owner keeps only the owner's
+  own incoming damage, and mercenaries retain their own rows too. The pet may remain hidden from the Identity Table.
+- [ ] Toggle **Show Pets** off and on. Pet rows disappear and return without a re-derive; player and merc rows remain.
+  Repeat after changing the tanking damage-type and time-window controls. Damage Summary's owner/pet folding is unchanged.
+
 ## Summary board rebuilds, checked on Windows
 
 A board's busy state is the one part of a build no headless run can see: an empty `ItemsSource`, a null one and a title swap look

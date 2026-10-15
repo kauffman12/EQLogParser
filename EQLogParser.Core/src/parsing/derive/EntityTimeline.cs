@@ -463,64 +463,20 @@ namespace EQLogParser
       return false;
     }
 
-    /*
-     * Would a hit landing on this name count as damage THE RAID TOOK? That is the tanking report's only question —
-     * it lists what each of our people had to absorb — and answering it with `!Npc` would be wrong in two directions
-     * that both show up as a raid total nobody can audit:
-     *
-     *   - A PET is not one of our people: mobs swatting somebody's swarm is real damage, it stays in the capture, and
-     *     it is not what a player received. Legacy's unfiltered board carries 428,146,449 of it across 75 pet names on
-     *     Incogitable; the derived board carries none, and the only non-Person facts left in it are the 86 Unknowns
-     *     described below. If it is ever wanted it arrives as its own decision — folded
-     *     under the owner the way the damage board does `X +Pets`, or as pet rows — with a settings word, not as a
-     *     widened predicate that silently changes every tank number.
-     *   - A CHARMED raider is, for those seconds, fighting against us. Identity says Npc while the window holds, so
-     *     her incoming hits are not raid damage taken; they belong to whichever row owns the encounter she is being
-     *     used in. This predicate deliberately does not undo the flip.
-     *
-     * So the rule is exclusion rather than proof: a hit counts unless we KNOW the name is not one of our people —
-     * Pet or Npc at that second (a name can join, die, and be raised as a servant mid capture).
-     *
-     * Measured on eqlog_Incogitable_xegony.txt through the classification the app actually runs (registry seed + rule
-     * table, which is what DeriveEngine builds inside every derive), the derived tank population is 91,036 facts /
-     * 1.6389 B on names called Player and 9,480 / 196.4 M on Merc, and proof — `Identity is Player or Merc` — would
-     * keep every one of those. What exclusion adds is **86 facts worth 15.6 M** (0.85 % of the board): defenders no
-     * rule ever placed. That is the whole price, and it buys the case proof cannot see: a raid member who never
-     * casts a database spell, never speaks and joined before the log opened stays Unknown all evening, and her damage
-     * taken is precisely what this board exists to show. The trade is deliberately lopsided the other way too — the
-     * same capture has only 4,323 unplaced-defender facts out of 1,727,942 hit facts (0.25 %) once R6/R14/R15 have run, so mob
-     * noise leaking in through an Unknown defender is bounded by that residue, not by how many mobs exist.
-     *
-     * An earlier version of this note justified exclusion with a 90 % loss for proof. That was measured against the
-     * timeline `PipelineHarness` hands back, which carries the registry seeds and NOT the rule table — on that state
-     * R6 (npcs.txt), R14 (article shape) and R15 (healed by our side) have placed nothing, so nearly every mob reads
-     * Unknown and both numbers were fiction. Ask identity questions of a classified timeline; `RealLogBoardsTest.Classified`
-     * is the helper that does it.
-     */
+    // Fallback for away-from-anchor victims not already admitted by player-side allegiance.
+    // Unknown remains eligible, but an NPC, pet or spell must never be guessed to be a person here.
+    // FightProjection routes known player-side pets separately, including ownership-only and charmed pets.
     public bool IsRaidVictimAt(string name, double t)
     {
       if (name is null) return false;
 
       var kind = IdentityAt(name, t);
-      /*
-       * Exclusion, and Spell belongs with the two it already excludes: an effect's name standing in a defender slot is not "one
-       * of us being beaten on" any more than a mob or somebody's pet is. Left out, the tanking board would have widened with
-       * DoT ticks on the same day the kind was added - silently, which is how that board's rules are written against.
-       */
       return kind is not IdentityKind.Npc and not IdentityKind.Pet and not IdentityKind.Spell;
     }
 
-    /*
-     * AFFIRMATIVE evidence that this name is one of our people at t — Player or Merc by identity, not merely "we have
-     * never said otherwise". `IsRaidVictimAt` is the exclusion test that decides what the tank board carries; this
-     * one answers the sharper question, needed where a row happens to be keyed on the person herself (an unclassified
-     * attacker hitting a known raider keeps the legacy defender key), because there "aimed at the row" and "one of us
-     * got hit" are both true and only the second one describes what the number is for.
-     *
-     * Kept apart from `IsRaidVictimAt` so neither test quietly absorbs the other: widening this to Unknown would
-     * route the raid's own opening swings at an unidentified mob into somebody's damage taken, which is the mistake
-     * `IsRaidVictimAt` exists to avoid in the opposite direction.
-     */
+    // Positive Player/Merc evidence precedes the anchor test when that name itself owns the row.
+    // Do not widen this to Unknown: the raid's first swing at an unplaced mob is output, not damage received.
+    // Pets and ownership-only allies enter tanking through FightProjection's off-anchor allegiance check.
     internal bool IsConfirmedRaidPersonAt(string name, double t)
       => name is not null && IdentityAt(name, t) is IdentityKind.Player or IdentityKind.Merc;
 

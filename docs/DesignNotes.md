@@ -9684,6 +9684,39 @@ pet proven by heal breadth instead), `IdentityVocabularyTest` (the words: cell *
 *Hit by a Pet-Only Spell*), and `CharmRowProjectionTest` unchanged — the charm exemption still credits, which is what
 its own assertions hold.
 
+### Pet tanking: the Show Pets option loses its input
+
+A comparison with tag `2.4.1` reported that ``Tunky`s pet`` appears in Damage Summary but never in Tanking Summary,
+even with **Show Pets** enabled. A disposable headless replay of `local/logs/live/eqlog_Kizant_xegony-tunky.txt`
+parsed **392 incoming combat records totaling 18,818,260 damage**, all from **Tallongast, The Egg**. All 392
+survive as damage facts, and classification correctly answers Pet / `IsOurPetAt = true`. Before the repair,
+projection routed every one to `FactTarget.Neither`; the tanking index therefore contained **zero** of that damage.
+The same pet has 10,975 outgoing records totaling 747,677,554 damage in the capture; outgoing routing is a different
+path. The diagnostic harness was deleted after answering the question.
+
+The regression came from the player-only tanking decision in `201ac091` (2026-09-28), after tag `2.4.1`, not the
+display-only Identity Table hiding change in `e64e6b87` (2026-10-13) or the incremental meter. The old `FightManager`
+accepted pets as defenders and kept their incoming records in tanking blocks keyed by the pet's name. Treating
+"a pet's incoming damage is not its owner's" as "pets get no incoming row" erased an existing feature: **Show Pets**
+already makes that display choice. Tests had frozen the omission and are corrected with the routing.
+
+**Restored contract:** players, pets and mercs each keep their own tanking row. In `FightProjection`, positive
+Player/Merc proof remains first; other player-side defenders are admitted to `RaidSide` only when the hit points
+away from the encounter's anchor. That uses the existing `SideAt` answer, so an ownership-only NPC or a charmed mob
+can tank on our side without changing its identity. The anchor restriction preserves the raid's output on a
+charmed mob, and the earlier friendly-fire gate still refuses attacks on our ordinary pets. `IsRaidVictimAt` stays
+the Unknown-victim fallback; it is not widened into a second allegiance rule. The UI filter, Identity Table hiding,
+pet-owner damage folding and Merc handling are unchanged. Tanking never folds a pet into its owner.
+
+**Replayed after the repair:** all **392 / 18,818,260** incoming records now reach the pet's tanking index and its
+own summary row; full-reference and compact-meter rows match. The disposable real-log assertion was deleted.
+`PetTankingTest` keeps a small parsed fixture containing the reported riposte/strikethrough hit and tests separate
+Player/Pet/Merc rows, defender-only pets, append/idle meter parity, ownership-only NPC pets, friendly-fire refusal
+and the charm-anchor exception. The tanking golden restores Akira's pet's **300** damage as its own row: raid total
+**16,082 → 16,382**, Akira's personal **7,905 unchanged**; percentage/rank changes follow the restored participant.
+Validation: **2,243 headless tests passed, 6 skipped**; full no-incremental solution build and explicit WPF-test build
+succeeded with **zero warning/error diagnostics**. The checkbox interaction remains a Windows release check.
+
 ## The fight list announces when the gesture ends (2026-11)
 
 Reported from the field after the legacy table was deleted (`bf9318fb`): *"right click … immediately selects a row"*,

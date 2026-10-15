@@ -131,7 +131,8 @@ public partial class DamageMeterCalculationTest
     log.Add("a rat", "Fluffy", 1, 500);
     log.Check(2);
     Assert.AreEqual(100L, log.Last!.DamageStats.RaidStats.Total);
-    Assert.IsNull(log.Last.TankStats);
+    Assert.AreEqual(500L, log.Last.TankStats.RaidStats.Total);
+    Assert.AreEqual("Fluffy", log.Last.TankStats.StatsList.Single().Name);
   }
 
   [TestMethod]

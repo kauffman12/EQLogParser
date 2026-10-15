@@ -228,15 +228,8 @@ public class TankingBoardGoldenTest
          */
         Assert.AreEqual(0, stats.Children.Count, "the tanking board folds nothing into an aggregate row");
 
-        /*
-         * Who can BE a row here is a routing decision, not an accident: the tanking half of a row holds the facts that
-         * landed on our side, and `IsRaidVictimAt` excludes pets on purpose (a pet being bitten is not its owner's damage
-         * taken, and adding it would move every tank column by whatever the raid's summons ate — see DesignNotes,
-         * "Damage our own side earns nothing"). Mobs are excluded for the opposite reason: a mob taking our hits is the
-         * raid's OUTPUT, so it rides DamageBlocks. Both halves of that are frozen by the fixture.
-         */
-        Assert.IsFalse(stats.StatsList.Any(s => s.Name.EndsWith("`s pet", StringComparison.Ordinal)),
-            "a pet being bitten is not raid damage taken (no pet row on this board)");
+        Assert.AreEqual(300L, stats.StatsList.Single(s => s.Name == "Akira`s pet").Total,
+            "the pet's incoming damage has its own row, never an owner fold");
         Assert.IsTrue(stats.StatsList.All(s => !s.Name.StartsWith("a ", StringComparison.OrdinalIgnoreCase) &&
                                                !s.Name.StartsWith("an ", StringComparison.OrdinalIgnoreCase) &&
                                                !s.Name.StartsWith("the ", StringComparison.OrdinalIgnoreCase)),
