@@ -144,10 +144,15 @@ public sealed class FightTableGroupGestureTest
                 var rows = ((IEnumerable)table.fightGrid.ItemsSource).Cast<DerivedFightRow>().ToList();
                 groupTwo.AddRange(rows.Skip(11).Take(FightsPerGroup).Select(r => r.Name));
 
-                // A working selection over two OTHER groups, then the pointer aims at group two.
-                foreach (var row in rows.Skip(1).Take(FightsPerGroup).Concat(rows.Skip(21).Take(FightsPerGroup)))
-                    table.fightGrid.SelectedItems.Add(row);
-                outside.AddRange(table.fightGrid.SelectedItems.Cast<DerivedFightRow>().Select(r => r.Name));
+                // Select two COMPLETE groups outside the target. Each ten-fight run is separated by one divider:
+                // starting at 1 or 21 includes a divider and silently drops a fight from the grid's selection.
+                var otherGroups = rows.Take(FightsPerGroup)
+                    .Concat(rows.Skip(2 * (FightsPerGroup + 1)).Take(FightsPerGroup)).ToList();
+                Assert.AreEqual(2 * FightsPerGroup, otherGroups.Count);
+                Assert.IsTrue(otherGroups.All(row => !row.IsDivider), "the setup must not select a divider");
+                foreach (var row in otherGroups) table.fightGrid.SelectedItems.Add(row);
+                outside.AddRange(SelectedNames(table));
+                Assert.AreEqual(2 * FightsPerGroup, outside.Count, "both outside groups must be selected before the gesture");
 
                 RememberRightPress(table, modifiers);
                 RightClickOn(table, rows[12]);
@@ -338,7 +343,11 @@ public sealed class FightTableGroupGestureTest
                 var grid = table.fightGrid;
                 var rows = ((IEnumerable)grid.ItemsSource).Cast<DerivedFightRow>().ToList();
                 groupTwo.AddRange(rows.Skip(11).Take(FightsPerGroup).Select(r => r.Name));
-                foreach (var row in rows.Skip(21).Take(FightsPerGroup)) grid.SelectedItems.Add(row);
+                var otherGroup = rows.Skip(2 * (FightsPerGroup + 1)).Take(FightsPerGroup).ToList();
+                Assert.AreEqual(FightsPerGroup, otherGroup.Count);
+                Assert.IsTrue(otherGroup.All(row => !row.IsDivider), "the setup must select fights, not the divider");
+                foreach (var row in otherGroup) grid.SelectedItems.Add(row);
+                Assert.AreEqual(FightsPerGroup, SelectedNames(table).Count, "the keyboard gesture starts with a full outside group");
 
                 // Ctrl rode an earlier press whose menu never opened; then the keyboard takes over and opens one.
                 RememberRightPress(table, System.Windows.Input.ModifierKeys.Control);
