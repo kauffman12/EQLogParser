@@ -13385,3 +13385,56 @@ say why a cast-evidence history should stay resident for a session's whole life.
 Finally, one review finding became a test rather than a note: re-assigning `LineData.Action` must invalidate **both** text caches — a row
 is reused, Words are asked lazily and Split eagerly, and clearing one of them is how a second reader ends up walking the previous
 capture's words.
+
+## Select Group stands alone; Ctrl or Shift on the press makes it add (2026-10-14)
+
+Operator request, one sentence: "if i right-click and select 'Select Group' … deselect everything but the group that it's about to
+select, but only if the user isnt holding control or shift — so if you want to individually select multiple groups you have to have
+control or shift held when right-clicking."
+
+**The law.** `GroupSectionSelect.SelectedAfterGesture` answers which rows a group gesture leaves selected: with no modifier, **this
+section and nothing else**; with Ctrl or Shift riding the press that opened the menu, **the union** of the section and whatever stood
+before. "Unselect Group" is untouched by it — it still removes its own section's selected rows and never toggles
+(`GroupSectionSelect.CanUnselect`).
+
+**What this retires, deliberately.** The ported legacy item was `if (!SelectedItems.Contains(fight)) Add`, and the section that
+carried it called "ADD, never replace" a law because that asymmetry made *Select All → Select Group* harmless there. It is retired with
+reason: harmless is not the same as answering. With a full night on screen the additive item could not narrow a selection to one pull at
+all — the gesture an operator actually makes after Select All — and a menu item whose result is "roughly what was already selected" reads
+as the item doing nothing. Multi-group building did not lose its door; it moved to the modifier the request names.
+
+**The modifier is read off the PRESS, not off the click.** Three reasons, all load-bearing:
+- The button is released long before a menu item is chosen, so `Keyboard.Modifiers` at Click time reports the state of a hand that has
+  already left the keyboard. `FightTable.GridPreviewRightButtonDown` → `RememberRightPress(Keyboard.Modifiers)` stamps `_rightPressAdds`
+  while the modifier is still true — the same tunnel that already remembers `_rightPressSelection` against the control collapsing it.
+- **Shift+F10 must not buy additive mode.** A keyboard-opened menu carries Shift in its own keystroke, and the Apps key arrives just as
+  happily after an abandoned right-press; so `GridPreviewKeyDown` clears `_rightPressAdds` alongside the selection memory, and a menu the
+  keyboard opened is a plain gesture. Capture change clears both (a press from the closed log may not restamp this one), as does any later
+  left press.
+- **What may NOT clear it is the menu's close.** `Select Group` reads `_menuAdds`, which `ContextMenuOpening` copies from `_rightPressAdds`
+  beside the `_menuRow` stamp: a menu item can only be clicked *after* its menu opened, so an item reading what the opening wrote cannot depend
+  on whether WPF raises `ContextMenu.Closing` or `MenuItem.Click` first, nor on a popup taking the mouse capture mid-gesture. An earlier pass
+  cleared the press memory in `GridContextMenuClosing`, which made "did Ctrl mean add?" a race that no Linux-run test can see — the Wpf assembly
+  executes only on Windows.
+
+**Both modes, one answer in Core; two mechanisms in the pane.** `ApplyGroupSelection(additive)` asks Core which rows survive and then
+pushes them the way the control takes each shape: the additive case keeps its single run walk (`SelectVisibleRuns`, one `SelectRows` range
+per run rather than a notification per row), the replacing one goes through `RestoreSelectedRows` — clear, then add by row **instance**, so
+a selection being replaced under a user sort needs no position arithmetic. Row comparison is by identity everywhere here: a derive pass hands
+out brand-new row objects, and name equality would treat two lives sharing a name as one row (see "One row per life").
+
+**One consequence, accepted.** The target row for either item follows the existing chain — pointer row, then grid cursor, then first
+selected fight (`GroupSectionSelect.TargetFor`) — so a plain right-click over a divider gap or empty space, followed by Select Group, narrows
+the selection to the group that chain names. That is the chain doing its documented job (its fall-through is a field-report fix for un-select)
+and not a second rule about modifiers. Greying Select Group out on a divider was considered on 2026-10-14 and **dropped as a non-issue**: the
+menu item is still a deliberate click, the group the chain names is the one already on screen, and "no fight row under the pointer" is also what a
+keyboard-opened menu looks like — so a rule keyed to it would take the gesture from Shift+F10 for the sake of a gesture nobody makes on purpose.
+
+**Discoverability.** The mode is invisible in the header, so the menu item's ToolTip says it in the operator's own terms ("Hold Ctrl or Shift
+when right-clicking to add them to the current selection") rather than adding a second menu row or renaming the item — the header would have
+to change while the menu is open to tell the truth about a modifier pressed earlier, and two names for one command is how menus drift.
+
+Tests: `GroupSectionSelectTest` (both arms, no double-count on the overlap, identity not name, empty-selection equivalence — executable in the
+cross-platform suite); `FightTableGroupGestureTest` keeps the additive sequence over a realized grid, adds the replacing case and pins that a
+Ctrl press and an unmodified press reach the two different answers through the real preview-press wiring. Windows-only, as always for that
+assembly: a Linux run says nothing about it.

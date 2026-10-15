@@ -89,6 +89,62 @@ public class GroupSectionSelectTest
     Assert.IsFalse(GroupSectionSelect.CanUnselect(false, 12));
   }
 
+  /*
+   * What the gesture LEAVES selected (2026-10-14, from "select group should not keep the other groups selected unless I am holding
+   * control"). The mode comes off the modifiers riding the press that opened the menu, so the headless question is only: given a
+   * standing selection and a section, which rows survive plain, and which survive additive? These are the two answers the pane has
+   * to produce; the WPF pair (FightTableGroupGestureTest) pins that a real grid reaches them and where the modifier comes from.
+   */
+  [TestMethod]
+  [Description("Without a modifier the group stands alone: the selection it replaces does not ride along")]
+  public void AGestureWithoutAModifierLeavesOnlyTheGroup()
+  {
+    var (a, b, x, y) = (new Row("A1"), new Row("A2"), new Row("B1"), new Row("B2"));
+    var section = new List<Row> { a, b };
+
+    var kept = GroupSectionSelect.SelectedAfterGesture(section, new List<Row> { x, y }, additive: false);
+
+    CollectionAssert.AreEqual(new List<Row> { a, b }, kept, "exactly this encounter, in list order");
+    Assert.IsFalse(kept.Contains(x), "a row from another group may not survive a plain 'select group'");
+  }
+
+  [TestMethod]
+  [Description("Rows already selected inside the group are not counted twice when Ctrl or Shift rode the press")]
+  public void AModifierOnThePressAddsTheGroupToTheSelection()
+  {
+    var (a, b, x, y) = (new Row("A1"), new Row("A2"), new Row("B1"), new Row("B2"));
+    var section = new List<Row> { a, b };
+
+    // The everyday additive shape: the operator held Ctrl, so part of THIS group is already in, and another group is too.
+    var kept = GroupSectionSelect.SelectedAfterGesture(section, new List<Row> { b, x, y }, additive: true);
+
+    CollectionAssert.AreEquivalent(new List<Row> { a, b, x, y }, kept, "the union, so 'select all then add my group' stays harmless");
+    Assert.AreEqual(1, kept.Count(r => ReferenceEquals(r, b)), "a row in both sets appears once");
+  }
+
+  [TestMethod]
+  [Description("Rows are compared as objects, because a derive pass replaces every row instance wholesale")]
+  public void TwoRowObjectsWithOneNameAreTwoRows()
+  {
+    var (twin1, twin2) = (new Row("Same"), new Row("Same"));
+
+    CollectionAssert.AreEquivalent(new List<Row> { twin1, twin2 },
+      GroupSectionSelect.SelectedAfterGesture([twin1], [twin2], additive: true),
+      "name equality would silently drop the second life of a name repeated in one capture");
+  }
+
+  [TestMethod]
+  [Description("An empty standing selection answers either mode the same way — the group")]
+  public void WithNothingSelectedBothModesGiveTheGroup()
+  {
+    var (a, b) = (new Row("A1"), new Row("A2"));
+    var section = new List<Row> { a, b };
+
+    foreach (var additive in new[] { false, true })
+      CollectionAssert.AreEqual(section, GroupSectionSelect.SelectedAfterGesture(section, [], additive),
+        $"additive: {additive} — 'select my group' on an empty list cannot produce anything but the group");
+  }
+
   [TestMethod]
   [Description("An empty selection with the pointer on a fight row still offers Select Group ('give me this whole pull')")]
   public void PointingAtARowIsEnoughToSelectItsGroup()
@@ -98,5 +154,13 @@ public class GroupSectionSelectTest
     var target = GroupSectionSelect.TargetFor(4, true, GroupSectionSelect.NoRow, false, GroupSectionSelect.NoRow);
     Assert.IsTrue(GroupSectionSelect.CanSelect(GroupSectionSelect.BoundsOf(Layout, target).From >= 0));
     Assert.IsFalse(GroupSectionSelect.CanUnselect(GroupSectionSelect.BoundsOf(Layout, target).From >= 0, 0));
+  }
+
+  // One displayed fight row. Identity is the whole point of this fixture: the pane compares rows by instance, because
+  // DerivedFightRows.Build hands out brand-new objects every derive pass (docs/DesignNotes.md → "Select Group stands alone").
+  private sealed class Row(string name)
+  {
+    public string Name { get; } = name;
+    public override string ToString() => Name;
   }
 }

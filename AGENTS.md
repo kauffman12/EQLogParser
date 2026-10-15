@@ -279,12 +279,17 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
   `LiveDataUpdateMode=AllowDataShaping` + `CanMaintainScrollPosition` — Syncfusion's default regenerates its view when the bound collection
   changes, and a regenerated view sits at row zero, so a source Add threw the viewport away. See `docs/DesignNotes.md` → "The fight list moves its own
   viewport once". Group gestures act on the row the pointer opened the menu on and **un-select never toggles** (an id the grid no longer has
-  clears silently).
+  clears silently). **Select Group replaces the selection; only Ctrl/Shift on the press that opened the menu makes it add**
+  (`GroupSectionSelect.SelectedAfterGesture`, `_rightPressAdds`) — the modifier is read off the PRESS, never at the click, because a
+  keyboard-opened menu carries Shift in its own keystroke and `GridPreviewKeyDown` ends both memories. Items read `_menuAdds`, copied at
+  `ContextMenuOpening`; **the close may not clear the mode** — Closing-vs-Click order is not ours to assume. See `docs/DesignNotes.md` →
+  "Select Group stands alone".
 - **The right press is a question, not a selection**: SfDataGrid treats *any* button's press as selection input — Extended mode
   without Ctrl replaces the whole selection with the pressed row before the menu exists (33.1.49, no button guard on the press path).
   `FightTable` remembers `SelectedItems` at `PreviewMouseRightButtonDown` (it tunnels ahead of the control) and puts it back at
   `ContextMenuOpening`, before any enable-check, gesture or board reads what survived; a Ctrl/Shift press IS the operator editing the
-  selection and passes through (`_rightPressSelection`). **FightTable is the only grid that guards this** (operator's call): the protection
+  selection and passes through (`_rightPressSelection`, and it stamps `_rightPressAdds` for the group gesture the menu will offer).
+  **FightTable is the only grid that guards this** (operator's call): the protection
   pays where rebuilding a selection costs minutes (Select All over a session, group gestures); every other Extended grid keeps the control's
   default right-click-selects semantics because its selections are cheap to rebuild — do not generalize the guard.
 - **One announce per gesture** (`SelectionSettle` + one DispatcherTimer at 600 ms; `MenuOpen` via

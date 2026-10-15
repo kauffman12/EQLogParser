@@ -4,8 +4,9 @@ using System.Collections.Generic;
 namespace EQLogParser;
 
 /*
- * The two decisions behind the fight list's "Select Group" / "Unselect Group", stated as numbers so they can be
- * answered outside a window.
+ * The decisions behind the fight list's "Select Group" / "Unselect Group", stated as numbers so they can be
+ * answered outside a window: which row the gesture is about, what section that row sits in, and which rows the gesture
+ * leaves selected.
  *
  * A GROUP is a SECTION: the run of fight rows between two inactivity dividers. That is the legacy meaning (the old
  * table stamped `Fight.GroupId` while it walked the list, and its menu took "every row with my current row's
@@ -81,6 +82,35 @@ internal static class GroupSectionSelect
     }
 
     return members;
+  }
+
+  /*
+   * Which rows a group gesture LEAVES selected (docs/DesignNotes.md → "Select Group stands alone").
+   *
+   * Without a modifier the section stands ALONE (2026-10-14). "Select my group" asks for one encounter, and taking it on top
+   * of whatever working selection was standing meant the item could not answer the question it is asked with a full list on
+   * screen — Select All then Select Group left the whole night selected. The legacy menu added (`if (!SelectedItems.Contains(fight))
+   * Add`) because it had no way to tell a first pick from an addition; this one can, from the modifiers riding the press that
+   * opened the menu, so plain means "this group and nothing else".
+   *
+   * Ctrl or Shift on that press keeps the ADDITIVE answer — that is how somebody builds a selection out of several groups on
+   * purpose, and it is also why the pane remembers the modifier rather than reading it at the click: by the time a menu item is
+   * clicked the button has long been released, and a menu the keyboard opened carries Shift in its own keystroke (Shift+F10),
+   * which says nothing about rows.
+   *
+   * Order is not part of the answer — the pane selects in list order either way. Rows are compared by identity, because these
+   * are row objects a derive pass replaces wholesale.
+   */
+  internal static List<T> SelectedAfterGesture<T>(List<T> section, IEnumerable<T> selected, bool additive) where T : class
+  {
+    if (!additive || selected is null) return section;
+
+    var joined = new List<T>(section);
+    var seen = new HashSet<T>(joined, ReferenceEqualityComparer.Instance);
+    foreach (var row in selected)
+      if (row is not null && seen.Add(row)) joined.Add(row);
+
+    return joined;
   }
 
   /*

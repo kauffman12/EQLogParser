@@ -89,6 +89,20 @@ These checks require a realized grid; the automated pane tests exercise bound da
   Rechecking must not silently select fights that were hidden.
 - [ ] **Group boundaries:** with Inactivity off, Select Group and Unselect Group affect only the pointed-at encounter's visible fights,
   not the whole log or other selected encounters. Repeat with Tanking off too.
+- [ ] **Select Group replaces; a modifier on the press makes it add** (2026-10-14): with fights selected in three groups, plain-right-click
+  a fight in one group and choose Select Group — **only that group's visible fights stay selected**, everything else is deselected, and the
+  boards answer for exactly that pull. Repeat holding **Ctrl** on the right-click, then again holding **Shift**: the group is **added** and the
+  other groups survive. Three traps to walk. Release the modifier before clicking the menu item: it still **adds**, because the PRESS decides
+  and the hand is expected to have moved by the time the item is clicked. Open the menu from the keyboard with a big selection standing (Apps,
+  then Shift+F10) — that is plain, and **Shift's own keystroke must not buy additive mode**. Dismiss a Ctrl menu with Esc, then plain-right-click
+  and choose Select Group: it must **replace** — an abandoned or finished Ctrl press may not leak into the next menu. Then turn Inactivity or Tanking off so part of the group is hidden: the replacing select keeps only visible fights, and an
+  unmodified Select Group after a Ctrl press still replaces. **Unselect Group is unchanged** — it takes its own encounter out and leaves every
+  other row where it was, including over a group nobody had selected (it must spend nothing). One accepted behaviour, so it is not filed as a bug:
+  right-clicking an inactivity divider or the empty space below the list still offers Select Group, acting on the group the fallback chain names
+  (cursor, then first selected fight) — raised and dropped 2026-10-14, see DesignNotes → "Select Group stands alone".
+- [ ] **A press from the closed log may not set this one's mode:** plain-right-click a fight and release outside the grid so no menu appears,
+  then open another log (or Clear All) and choose Select Group from a menu. It must replace, as an unmodified gesture does — the remembered
+  Ctrl of the abandoned press may not cross captures.
 - [ ] **Sorted search and restoration:** sort by name or damage so the order differs from time order. Search with Enter and Shift+Enter:
   the matching row must be highlighted and scrolled into view in displayed order. Toggle either box and repeat. A re-derive must preserve
   selected visible fights even while sorted.

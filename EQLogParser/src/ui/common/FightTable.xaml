@@ -154,9 +154,11 @@
             </MenuItem.Icon>
           </MenuItem>
           <!-- Group boundaries come from the complete display list, including hidden inactivity dividers.
-               Group gestures affect only the visible fights in that encounter. -->
+               Group gestures affect only the visible fights in that encounter. Hold Ctrl or Shift WHEN RIGHT-CLICKING to add
+               the group to the selection instead of selecting it alone - the modifier is read off the press that opened this menu,
+               which is why the ToolTip says "when right-clicking" and not "when clicking this row". -->
           <MenuItem x:Name="selectGroupItem" Header="Select Group" Click="SelectGroupClick"
-                    ToolTip="Every fight in the same section as the right-clicked row - between its surrounding inactivity rows">
+                    ToolTip="Every fight in the same section as the right-clicked row - between its surrounding inactivity rows. Hold Ctrl or Shift when right-clicking to add them to the current selection">
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Clone" />
             </MenuItem.Icon>

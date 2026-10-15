@@ -80,6 +80,21 @@ namespace EQLogParser
     private List<DerivedFightRow> _rightPressSelection;
 
     /*
+     * Whether Ctrl or Shift rode the press that opened this menu, which is what decides whether "Select Group" JOINS the
+     * standing selection or REPLACES it (GroupSectionSelect.SelectedAfterGesture). Stamped on the press, not at the click: the
+     * button is released long before a menu item is chosen, and a keyboard-opened menu carries Shift in its own keystroke
+     * (Shift+F10) — which is why a key press clears this alongside the selection memory above rather than setting it.
+     */
+    private bool _rightPressAdds;
+
+    /*
+     * What THIS menu's group gestures mean: copied from _rightPressAdds when the menu opened, and the only form a menu item
+     * reads. Stamped at opening because that is the one moment guaranteed to precede a click on any of its items - the press
+     * memory below it may be released (capture traffic, a key press) while the menu is still up.
+     */
+    private bool _menuAdds;
+
+    /*
      * Whether a tick may announce, or whether something is still happening under the cursor. Two parked cases (see
      * SelectionSettle for the reasoning): the right-click menu is open - where SfDataGrid's own move of the current
      * cell to the clicked row would otherwise spend a full materialization before the user has chosen anything, and a
@@ -508,6 +523,7 @@ namespace EQLogParser
       // A press whose menu never opened leaves its snapshot standing; restoring it into the next capture's grid would hand out
       // row instances from the dead one (docs/DesignNotes.md → "The fight list announces when the gesture ends").
       _rightPressSelection = null;
+      _rightPressAdds = false;
       _reveal.Arm();
       _sessionPainted = false;
       _capturedFacts = 0;
@@ -1146,6 +1162,13 @@ namespace EQLogParser
        * person actually aimed at, and the highlight on screen says which row the menu is about to act on — so "Set X as"
        * and "Select Group" answer for the line the pointer is touching rather than for whatever was clicked minutes ago.
        */
+      /*
+       * Stamp THIS menu's group mode from the press that opened it, beside the row stamp for the same reason: a menu item
+       * can only be clicked after its menu opened, so an item reading what the opening wrote cannot depend on whether
+       * ContextMenu.Closing or MenuItem.Click is raised first, nor on a popup taking the mouse capture.
+       */
+      _menuAdds = _rightPressAdds;
+
       _menuRow = RowUnderPointer(e.OriginalSource);
       if (_menuRow is { IsDivider: false }) fightGrid.CurrentItem = _menuRow;
 
@@ -1204,6 +1227,8 @@ namespace EQLogParser
      */
     private void GridContextMenuClosing(object sender, System.Windows.Controls.ContextMenuEventArgs e)
     {
+      // Deliberately releases nothing about the group gesture. The items read _menuAdds, stamped at opening, so the order
+      // of Closing vs. Click cannot decide what Ctrl meant; clearing the press memory here made it a race.
       if (_settle.CloseMenu()) AnnounceSelection(BoardReason.MenuClose);
     }
 
@@ -1211,10 +1236,18 @@ namespace EQLogParser
     /// Tunnels ahead of the control's press handling (which runs during the bubbling MouseDown below it) to
     /// remember what was selected before it can collapse. See _rightPressSelection.
     /// </summary>
-    private void GridPreviewRightButtonDown(object sender, MouseButtonEventArgs e)
+    private void GridPreviewRightButtonDown(object sender, MouseButtonEventArgs e) => RememberRightPress(Keyboard.Modifiers);
+
+    /*
+     * What the pane keeps from a right-press, split out so the modifier is an argument a test can name (Keyboard.Modifiers reads
+     * real hardware state and cannot be scripted). Ctrl/Shift means the operator IS editing the selection with this click, so two
+     * things follow: the control keeps its own answer (nothing is remembered to put back), and a group gesture offered by the menu
+     * this press opens ADDS to the selection instead of standing alone.
+     */
+    private void RememberRightPress(ModifierKeys modifiers)
     {
-      // Ctrl/Shift means the operator IS editing the selection with this click; the control keeps it then.
-      _rightPressSelection = Keyboard.Modifiers != ModifierKeys.None || fightGrid?.SelectedItems is not { } items
+      _rightPressAdds = modifiers.HasFlag(ModifierKeys.Control) || modifiers.HasFlag(ModifierKeys.Shift);
+      _rightPressSelection = _rightPressAdds || fightGrid?.SelectedItems is not { } items
         ? null
         : items.OfType<DerivedFightRow>().ToList();
     }
@@ -1224,8 +1257,16 @@ namespace EQLogParser
     /// </summary>
     private void GridPreviewLeftButtonDown(object sender, MouseButtonEventArgs e) => _rightPressSelection = null;
 
-    // Keyboard selection and keyboard-opened menus must never resurrect an abandoned mouse gesture.
-    private void GridPreviewKeyDown(object sender, KeyEventArgs e) => _rightPressSelection = null;
+    /*
+     * Keyboard selection and keyboard-opened menus must never resurrect an abandoned mouse gesture — and the group gesture's
+     * modifier comes out of a POINTER press, so a key press ends it too: Shift+F10 carries Shift without anybody meaning
+     * "add this group to what I have", and the Apps key follows an abandoned right-press just as well as a click does.
+     */
+    private void GridPreviewKeyDown(object sender, KeyEventArgs e)
+    {
+      _rightPressSelection = null;
+      _rightPressAdds = false;
+    }
 
     /*
      * Two row dials, no more - Inactivity (dividers) and Tanking (rows whose whole story is something hitting
@@ -1433,43 +1474,72 @@ namespace EQLogParser
       AnnounceSelection(BoardReason.SelectCommand, "unselect all");
     }
 
-    private void SelectGroupClick(object sender, RoutedEventArgs e) => SelectGroup(true);
+    // The selected ROWS (fights only), as plain data and in no particular order — "what stands right now", for a gesture that
+    // has to say what it leaves behind. Order never matters here: GetSelectedFights re-sorts by time before the boards see it.
+    private List<DerivedFightRow> SelectedRows()
+    {
+      var rows = new List<DerivedFightRow>();
+      if (fightGrid?.SelectedItems is { } items)
+      {
+        foreach (var item in items)
+          if (item is DerivedFightRow { IsDivider: false } row) rows.Add(row);
+      }
 
-    private void UnselectGroupClick(object sender, RoutedEventArgs e) => SelectGroup(false);
+      return rows;
+    }
 
-    // Find the encounter in the complete display list, then intersect with visibility. A hidden divider still bounds a group.
-    private void SelectGroup(bool add)
+    private void SelectGroupClick(object sender, RoutedEventArgs e) => ApplyGroupSelection(additive: _menuAdds);
+
+    private void UnselectGroupClick(object sender, RoutedEventArgs e) => RemoveGroupFromSelection();
+
+    /*
+     * "Select Group" over the encounter under the pointer. WHICH rows survive is Core's answer
+     * (GroupSectionSelect.SelectedAfterGesture): this section alone, unless Ctrl or Shift rode the press that opened the menu,
+     * in which case the section joins what the operator already had.
+     *
+     * HOW they get selected stays here, and the two cases differ because the control's own door differs. The additive one goes
+     * through a single run walk over the visible rows (SelectVisibleRuns): one SelectRows range per run rather than a selection
+     * notification per row, and it is what keeps the result independent of whether the control replaces or extends. The replacing
+     * one goes through RestoreSelectedRows — clear, then add by row INSTANCE — because the selection being replaced may sit
+     * anywhere, including under a sort where grid positions mean nothing.
+     */
+    private void ApplyGroupSelection(bool additive)
+    {
+      var members = SectionRowsOf(GroupTargetRow());   // the encounter in the complete display list, visible fights only
+      if (members.Count == 0) return;
+
+      var rows = GroupSectionSelect.SelectedAfterGesture(members, SelectedRows(), additive);
+      if (additive)
+      {
+        var keep = new HashSet<DerivedFightRow>(rows, ReferenceEqualityComparer.Instance);
+        SelectVisibleRuns(row => keep.Contains(row));
+      }
+      else
+      {
+        RestoreSelectedRows(rows);
+      }
+
+      AnnounceSelection(BoardReason.SelectCommand, additive ? "select group (added)" : "select group");
+    }
+
+    /*
+     * "Unselect Group": take this encounter out of the selection and leave every other row exactly where it was. Never a toggle —
+     * un-selecting a group nobody had selected spends nothing (GroupSectionSelect.CanUnselect keeps the item honest about that).
+     */
+    private void RemoveGroupFromSelection()
     {
       var section = new HashSet<DerivedFightRow>(SectionRowsOf(GroupTargetRow()), ReferenceEqualityComparer.Instance);
       if (section.Count == 0) return;
 
-      if (add)
+      var remove = new HashSet<DerivedFightRow>();
+      foreach (var item in fightGrid.SelectedItems)
       {
-        /*
-         * ADD, never replace — the legacy item was `if (!SelectedItems.Contains(fight)) Add`, and that asymmetry is what
-         * made "Select All, then Select Group" harmless there. So the gesture's answer is the union: keep every row the
-         * person already had (whatever they selected by hand, by drag or by Select All) and add this section to it. The
-         * kept rows go through the SAME run walk as the new ones rather than being left alone, because a single
-         * SelectRows range pass is what makes the result independent of whether the control replaces or extends here.
-         */
-        foreach (var item in fightGrid.SelectedItems)
-          if (item is DerivedFightRow row) section.Add(row);
-
-        SelectVisibleRuns(row => section.Contains(row));
-      }
-      else
-      {
-        Predicate<DerivedFightRow> inSection = row => section.Contains(row);
-        var remove = new HashSet<DerivedFightRow>();
-        foreach (var item in fightGrid.SelectedItems)
-        {
-          if (item is DerivedFightRow { IsDivider: false } row && inSection(row)) remove.Add(row);
-        }
-
-        foreach (var row in remove) fightGrid.SelectedItems.Remove(row);
+        if (item is DerivedFightRow { IsDivider: false } row && section.Contains(row)) remove.Add(row);
       }
 
-      AnnounceSelection(BoardReason.SelectCommand, add ? "select group" : "unselect group");
+      foreach (var row in remove) fightGrid.SelectedItems.Remove(row);
+
+      AnnounceSelection(BoardReason.SelectCommand, "unselect group");
     }
 
     /// <summary>
