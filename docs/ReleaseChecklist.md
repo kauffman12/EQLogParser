@@ -325,3 +325,24 @@ renamed away (docs/DesignNotes.md → "Following the live log across a midnight 
 - [ ] **A long raid does not lose the watcher's folder.** The watcher is narrowed to `FileName | DirectoryName` with a 64 KB buffer
   precisely so append floods cannot overflow it; if `eqlogparser.log` ever prints `Directory watcher faulted`, say so — rollover
   then rides on the 200 ms poll alone, which still works but loses its promptness.
+
+## Bot table (`mercs.txt`) checks on Windows
+
+R27-mercdb claims every name in `data/mercs.txt` as **Mercenary** at Strong, which is the only rule a bot needs: Merc is
+already player-side, so no board carries a merc filter and none should be added (docs/DesignNotes.md → "The bot table in
+`data/mercs.txt`"). Everything below is a grid read, not a log line.
+
+- [ ] **A bot is never a fight.** Open a capture with a bot in it (`a bloodbone fighter`, `a gingerbread soother`, a
+  `Candlefolk …`) and confirm the fight list has NO row named for it — not even a one-row engagement from its own swings.
+- [ ] **…and its number is on the boards.** The same bot must appear as a damage row like any player, and its hits landing
+  from a mob must reach the tanking board as damage received. If it has no row anywhere, the name did not match the file:
+  check the spelling (matching ignores case, so casing is never the reason).
+- [ ] **A healer bot heals on the heal board.** A soother that only ever appears in heal lines still gets its row and its
+  spell sub-rows — it is claimed from the shared name pool, not from damage facts.
+- [ ] **The Identity Table says who told it.** Type column **Mercenary**, Why column **Mercenary DB**, hover **In the
+  Mercenary DB**, one clause on the head line. No filename anywhere.
+- [ ] **A wrong row is correctable both ways.** Typing NPC over a bot sticks for that capture; the take-back icon returns it
+  to Mercenary on the next pass (the table claims it again, which is what the shipped files say). Deleting the row from
+  `mercs.txt` must make it read like any other name of its shape — an article-shaped one comes back as NPC.
+- [ ] **A line outranks the file.** `/target` a bot so the log writes `Targeted (Player):` on it: that name reads Player for
+  the rest of the capture, and the hover says so rather than arguing.
