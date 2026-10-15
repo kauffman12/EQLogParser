@@ -1,0 +1,31 @@
+a banshee soother
+a bloodbone protector
+a bloodbone mender
+a bloodbone fighter
+a gingerbread fighter
+a gingerbread caster
+a gingerbread soother
+a clockwork caster DCCXLIV
+a clockwork soother CMXCIV
+a clockwork soother DCCXII
+a clockwork soother DXLVI
+a clockwork soother XCV
+a dragorn mendicant
+a fearstone alleviator
+a fearstone channeler
+a froglok hireling
+a hired bixie
+a hired bazu
+a hired fungus
+a hired goblin
+a hired ikaav
+a hired scrykin
+a skeletal death dealer
+a lizardman oracle
+a lizardman channeler
+a zombie caster
+Candlefolk Mender
+Candlefolk Assaulter
+Candlefolk Sorcerer
+Fungal Fiend Slayer
+Fungal Fiend Arcanist

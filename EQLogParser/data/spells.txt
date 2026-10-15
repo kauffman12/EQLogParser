@@ -63224,7 +63224,7 @@
 75139^Sick 'Em^255^0^0^0^5^0^1^0^8^0^0^0^0^0^0^Sorshkah slashes and mangles you with tooth and claw.^^
 7514^Remove Curse I^254^0^1^0^5^65407^0^0^0^0^0^0^1^1^1^Your curses have been weakened.^'s curses are weakened.^
 75140^Taking Your Stuff^255^0^0^0^2^0^0^0^1^0^0^0^0^1^0^You feel drained.^^
-75141^Stronger Together^255^2^1^0^5^0^0^0^1^0^2^0^0^0^0^^attack's become faster and more aggressive.^
+75141^Stronger Together^255^2^1^0^5^0^0^0^1^0^2^0^0^0^0^^'s attacks become faster and more aggressive.^
 75142^Damage Mitigation I^255^0^1^0^6^0^0^0^1^0^4^0^0^0^0^^^The final layer of magic shielding falls away.
 75143^Damage Mitigation II^255^0^1^0^6^0^0^0^1^0^4^0^0^0^0^^^A layer of magic shielding falls away.
 75144^Damage Mitigation III^255^0^1^0^6^0^0^0^1^0^4^0^0^0^0^^^A layer of magic shielding falls away.
@@ -63343,8 +63343,12 @@
 75246^Transfer In Progress^255^0^0^0^5^0^0^0^1^0^0^0^0^0^0^^^
 7525^Gore IV^254^0^0^0^5^65407^1^0^1^0^0^0^4^1^1^You stagger back, stunned.^ staggers back, stunned.^
 7526^Gore V^254^0^0^0^5^65407^1^0^1^0^0^0^5^1^1^You stagger back, stunned.^ staggers back, stunned.^
-75267^Love's Mark^255^2^0^1^5^0^0^0^1^0^0^0^0^0^0^Love's mark wards you.^^The mark falls away.
+75267^Love's Mark^255^2^1^1^5^0^0^0^1^0^0^0^0^0^0^Love's mark wards you.^^The mark falls away.
+75268^Artist's Fury I^255^50^0^0^5^0^0^0^2^0^0^0^0^0^0^^'s fury is calm.^
+75269^Artist's Fury II^255^50^0^0^5^0^0^0^2^0^0^0^0^0^1^^'s fury builds.^
 7527^Gore VI^254^0^0^0^5^65407^1^0^1^0^0^0^6^1^1^You stagger back, stunned.^ staggers back, stunned.^
+75270^Artist's Fury III^255^50^0^0^5^0^0^0^2^0^0^0^0^0^1^^'s fury builds.^
+75271^Artist's Fury IV^255^50^0^0^5^0^0^0^2^0^0^0^0^0^0^^'s fury is unmatched.^
 7528^War Bellow^254^10^0^0^4^65407^0^0^1^0^0^0^1^0^0^Your teeth chatter uncontrollably.^ quivers in fear.^Your teeth stop chattering.
 7529^War Bellow Recourse^254^40^2^0^3^65407^0^0^0^0^6^0^1^0^0^You quiver with battle lust.^'s eyes gleam with battle lust.^The battle lust dies away.
 753^Beguile Plants^28^205^0^0^16^32^0^0^1^0^0^0^0^0^1^^ blinks.^
