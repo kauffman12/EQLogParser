@@ -55,7 +55,7 @@
       <!-- Find-next, not a filter: typing highlights and scrolls to the matching row so the user can fight
            that event and select its group - hiding rows here would hide the very fights around it. -->
       <TextBox x:Name="fightSearchBox" Margin="4,2,0,2" Width="130" KeyDown="SearchBoxKeyDown" TextChanged="SearchBoxTextChanged"
-               ToolTip="Find a fight by name (case-insensitive). Enter / Shift+Enter cycles, Esc clears the highlight"/>
+               ToolTip="Find a Fight by name (case-insensitive). Enter / Shift+Enter cycles"/>
       <CheckBox x:Name="fightShowHp" Margin="14,0,0,2" Template="{StaticResource CustomCheckBoxTemplate}" Checked="ShowHpChanged" Unchecked="ShowHpChanged"
                 IsChecked="True" Content="HP" ToolTip="Show Hit Points"/>
       <CheckBox x:Name="fightShowBreaks" Margin="8,0,0,2" Template="{StaticResource CustomCheckBoxTemplate}" Checked="ShowBreakChanged" Unchecked="ShowBreakChanged"
@@ -157,14 +157,12 @@
                Group gestures affect only the visible fights in that encounter. Hold Ctrl or Shift WHEN RIGHT-CLICKING to add
                the group to the selection instead of selecting it alone - the modifier is read off the press that opened this menu,
                which is why the ToolTip says "when right-clicking" and not "when clicking this row". -->
-          <MenuItem x:Name="selectGroupItem" Header="Select Group" Click="SelectGroupClick"
-                    ToolTip="Every fight in the same section as the right-clicked row - between its surrounding inactivity rows. Hold Ctrl or Shift when right-clicking to add them to the current selection">
+          <MenuItem x:Name="selectGroupItem" Header="Select Group" Click="SelectGroupClick">
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Clone" />
             </MenuItem.Icon>
           </MenuItem>
-          <MenuItem x:Name="unselectGroupItem" Header="Unselect Group" Click="UnselectGroupClick"
-                    ToolTip="Remove every fight in the same section as the right-clicked row">
+          <MenuItem x:Name="unselectGroupItem" Header="Unselect Group" Click="UnselectGroupClick">
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Regular_Clone" />
             </MenuItem.Icon>
@@ -183,8 +181,7 @@
             summary, and the raid is still hitting things. The new facts land inside the rows already selected, so the selection stamp
             can move without any id changing - and this re-runs the boards over them on demand instead of waiting for the next pass.
           -->
-          <MenuItem x:Name="refreshItem" Header="Refresh" Click="RefreshClick"
-                    ToolTip="Rebuild the summary boards from what is selected right now, including damage that arrived since you last looked.">
+          <MenuItem x:Name="refreshItem" Header="Refresh" Click="RefreshClick">
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_SyncAlt" />
             </MenuItem.Icon>
@@ -196,8 +193,7 @@
             was deleted rather than renamed - unclaiming a name belongs to the Type cell of the Identity Table pane,
             and one verb wants one door. It is also the larger action of the two, which is why it is last.
           -->
-          <MenuItem x:Name="clearAllItem" Header="Clear All" Click="ClearAllClick"
-                    ToolTip="Unload everything this session read and follow the same file from its end - the state a fresh Open Monitor leaves. Saved players, pets and verdicts stay; the log file itself is untouched, so opening it again reads the past back.">
+          <MenuItem x:Name="clearAllItem" Header="Clear All" Click="ClearAllClick">
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Regular_TrashAlt" />
             </MenuItem.Icon>

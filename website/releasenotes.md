@@ -1,11 +1,12 @@
-# 2.4.4 | 10/15/26
+# 2.4.4 | 10/16/26
 1. **Significantly** faster opening of large log files.
 2. Added filtering and paging to **Identity** table.
 3. Further refinements to the new identification system.
-4. Fix for Damage Meter not closing when in **Reset on Kill** mode.
-5. Fix for **Chat Archive** not rolling over properly at midnight.
-6. Possible fix for Overlays not opening on monitor to left of the main display.
-7. Latest spells and library updates.
+4. Better handling for charm pets.
+5. Fix for Damage Meter not closing when in **Reset on Kill** mode.
+6. Fix for **Chat Archive** not rolling over properly at midnight.
+7. Possible fix for Overlays not opening on monitor to left of the main display.
+8. Latest spells and library updates.
 
 # 2.4.3 | 10/11/26
 1. **Major Parsing Updates**

@@ -68,7 +68,7 @@ internal static class IdentityVerdictMenu
     if (root.Items.Count > 0) return;
 
     root.Icon ??= MakeIcon(EFontAwesomeIcon.Regular_Edit);
-    root.ToolTip ??= "Say what this name is. Written for this server and re-derived, so the boards re-read the facts under the new verdict.";
+    root.ToolTip ??= "Set the Type for this Name";
 
     foreach (var option in Offered)
     {
