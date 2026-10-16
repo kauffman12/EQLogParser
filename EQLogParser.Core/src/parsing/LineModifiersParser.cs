@@ -1,5 +1,6 @@
 using System.Buffers;
 using System.Collections.Concurrent;
+using System.Text;
 
 namespace EQLogParser
 {
@@ -40,6 +41,41 @@ namespace EQLogParser
     internal static bool IsRampage(int mask) => mask > -1 && (mask & Rampage) != 0;
     internal static bool IsRiposte(int mask) => mask > -1 && (mask & Riposte) != 0 && (mask & Strikethrough) == 0;
     internal static bool IsStrikethrough(int mask) => mask > -1 && (mask & Strikethrough) != 0;
+
+    /*
+     * Every bit the mask carries, spelled out - for a row-level export (docs/DesignNotes -> issue #191) and any debug
+     * line that has to say what a single hit was without re-reading the parser.
+     *
+     * This is the RAW mask, so Riposte is its bit and not IsRiposte(): this file's rule that a riposte with
+     * strikethrough is a striker's bonus decides SUBSETS of damage, and a row dump is not a subset - it says what the
+     * line carried. A row can therefore read "Riposte, Strikethrough"; that is the line talking, not a contradiction.
+     */
+    internal static string Words(short mask)
+    {
+      if (mask < 0) return string.Empty;
+
+      var builder = new StringBuilder();
+      void Add(string word)
+      {
+        if (builder.Length > 0) builder.Append(", ");
+        builder.Append(word);
+      }
+
+      if ((mask & Twincast) != 0) Add("Twincast");
+      if ((mask & Crit) != 0) Add("Critical");
+      if ((mask & Lucky) != 0) Add("Lucky");
+      if ((mask & Rampage) != 0) Add("Rampage");
+      if ((mask & Strikethrough) != 0) Add("Strikethrough");
+      if ((mask & Riposte) != 0) Add("Riposte");
+      if ((mask & Assassinate) != 0) Add("Assassinate");
+      if ((mask & Headshot) != 0) Add("Headshot");
+      if ((mask & Slay) != 0) Add("Slay Undead");
+      if ((mask & Doublebow) != 0) Add("Double Bow");
+      if ((mask & Flurry) != 0) Add("Flurry");
+      if ((mask & Finishing) != 0) Add("Finishing Blow");
+
+      return builder.ToString();
+    }
 
     /*
      * The events the floating-text overlay marks with a glyph: the four mask-flagged ones in priority order (a line

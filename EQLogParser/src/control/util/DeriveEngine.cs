@@ -304,6 +304,20 @@ namespace EQLogParser
     }
 
     /*
+     * The three identity questions a row-level export asks, through the SAME lock every UI question uses (see
+     * LiveKindAt): an export runs on a worker over a capture whose passes are still landing, and the law there is that
+     * nothing escapes the lock but a plain value. Boards and export therefore read one lane - a workbook cannot
+     * disagree with the grid it was exported from.
+     */
+    internal IdentityKind KindOfName(string? name) => LiveKindAt(name, double.PositiveInfinity);
+
+    /// <summary>Player, pet or mercenary: the side question the export's two damage sheets split on.</summary>
+    internal bool IsPlayerSideName(string? name) =>
+      LiveKindAt(name, double.PositiveInfinity) is IdentityKind.Player or IdentityKind.Pet or IdentityKind.Merc;
+
+    internal string OwnerOfName(string? name) => LiveOwnerOf(name);
+
+    /*
      * The name census for the Identity Table window. Built on demand rather than carried in the snapshot: a derive lands every
      * few seconds while a log loads and a census nobody has open would be thrown away each time.
      *

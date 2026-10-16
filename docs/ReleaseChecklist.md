@@ -405,3 +405,23 @@ both kinds of trigger overlay (DesignNotes → "Trigger overlay positions are si
 - [ ] **A geometry refresh is not a new edit.** Saving a preview while its properties pane is selected must refresh the
   geometry without enabling Save/Cancel on an otherwise clean pane. If other edits were already pending, those buttons
   must stay enabled and the pending values must survive.
+
+## Detailed .xlsx export checks on Windows
+
+File ▸ Save ▸ **Selected Fight to E_xcel** writes ECMA-376 SpreadsheetML by hand (`EQLogParser.Core/src/export/`,
+DesignNotes → "The detailed export is an Excel workbook, written by hand"). The structure is asserted headless; what only
+Excel can answer is whether it opens and behaves. No new dll ships with this feature, so the installer lists stay as they are.
+
+- [ ] **It opens as a workbook, not a repair prompt.** Select one fight, export, double-click the file. Seven tabs in order:
+  Player DPS, NPC DPS, Spells cast, Heals by you, Heals to you, Players, Event Info — header row bold and frozen, filter
+  buttons present on every sheet.
+- [ ] **Numbers are numbers.** In Player DPS, sort the Damage column descending: a text column sorts 1, 10, 20, 9. Insert a
+  pivot over the range and drag Damage into Values — it sums without "Number Stored as Text" warnings.
+- [ ] **The pet rows name their player.** Owner is filled on ``X`s pet``/warder/familiar rows and empty on a player's; a
+  mercenary row reads Mercenary in the Players tab, opens no fight-list row of its own, and still has its damage rows.
+- [ ] **The clock reads the way GamParse's does.** The pull's own second is `1`, the lead-in casts are negative, and Log
+  Time is the wall clock to the second. Event Info states the window, the totals and which rule the heal sheets used.
+- [ ] **A whole-night export finishes with the progress dialog open**, on a capture with hundreds of thousands of damage
+  rows, and the resulting file opens (this is the case the row-ceiling split exists for).
+- [ ] **Refusals are words, not files.** No log open, and a log open with nothing selected, each say so in the save menu
+  dialog and write no file. An existing target file is overwritten only through the save dialog's own confirm.

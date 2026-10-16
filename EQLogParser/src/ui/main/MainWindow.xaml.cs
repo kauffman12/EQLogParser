@@ -1098,6 +1098,29 @@ namespace EQLogParser
       }
     }
 
+    /*
+     * The detailed export (issue #191): the selected fights as one .xlsx workbook of rows. Selection comes from the
+     * fight list exactly as the operator filtered it, and "no selection" is refused in words rather than exporting the
+     * whole night by surprise - a 200k-row file nobody asked for is a bad default.
+     */
+    private void MenuItemExportExcelClick(object sender, RoutedEventArgs e)
+    {
+      if (string.IsNullOrEmpty(AppSettings.CurrentLogFile))
+      {
+        new MessageWindow("No Log File Opened. Nothing to Save.", Resource.FILEMENU_SAVE_FIGHTS).ShowDialog();
+        return;
+      }
+
+      var selected = GetFights(true).OrderBy(fight => fight.Id).ToList();
+      if (selected.Count == 0)
+      {
+        new MessageWindow("No Fights Selected. Nothing to Save.", Resource.FILEMENU_SAVE_FIGHTS).ShowDialog();
+        return;
+      }
+
+      MainActions.ExportWorkbook(selected);
+    }
+
     private void MenuItemExportNpcNamesClick(object sender, RoutedEventArgs e)
     {
       var pickedFile = FileDialogUtil.SaveFile(this, null, "npc names export", "Text Files (*.txt)|*.txt");

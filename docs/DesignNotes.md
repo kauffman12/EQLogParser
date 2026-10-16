@@ -13964,3 +13964,62 @@ that evidence is not justified.
 Implementation validation: **2,298 headless tests passed, 6 gated tests skipped**. The existing `ColdChunkRealLogTest` was
 also executed separately on Incogitable live and Bulron THJ (`EQLP_EMU=1`), passing both. The full non-incremental solution
 build reported **zero warning/error diagnostics**, including the WPF test assembly; WPF runtime tests were not run on Linux.
+
+## The detailed export is an Excel workbook, written by hand (2026-10-16)
+
+Issue #191 ("Request: Detailed export") asks for a **row-level** dump of the Fight List selection in the shape GamParse
+wrote — `DPS DETAILED`, a cast list with rank, a Player/Class/Pet lookup tab, an event key/value tab — explicitly so its
+users can retire GamParse and the lookup tables they maintain by hand. The question asked first was whether the capture
+keeps enough after a full parse; it does, because `DamageFactTable` and `HealFactTable` are **row stores, not aggregates**:
+every line survives with sequence, second, amount, verb/spell text and the full modifier mask. So the export reads the
+capture and touches no parser code.
+
+**The format is ECMA-376 / ISO 29500 SpreadsheetML — `.xlsx` — written by hand** in `EQLogParser.Core/src/export/`
+(`SpreadsheetWriter`, `SpreadsheetWorkbook`, `SpreadsheetSheet`, `CaptureExport`). An .xlsx is an OPC package: a ZIP of
+small XML parts, and .NET ships both halves (`ZipArchive`, in production here since `ChatDB`, plus `XmlWriter`). What was
+weighed and refused: GamParse's own Excel-2003 XML (Microsoft-published, never standardized, deprecated by Excel, cannot
+carry a real Table), NDJSON/CSV-only (no double-click, which is exactly the convenience its users are stuck on — they
+remain the machine lane), EPPlus (LGPL + commercial licence for closed-source use), Excel COM interop (requires Office),
+Syncfusion XlsIO (already in the graph through `MaterialDarkCustom`, but not installed by `.iss`, and its object model is
+whole-workbook-in-memory), `DocumentFormat.OpenXml` (MIT, Microsoft; its `OpenXmlWriter` is the same streaming shape we
+now write ourselves — one MIT package away if a part we have not needed shows up).
+
+Numbers on a real capture (290,159 damage facts, 102 names), the whole file in one workbook: **7 sheets, 86,459
+player-side + 203,700 NPC-side damage rows, 28,469 cast rows, 338/681 heal rows, 15.6 MB, 1.4 s**; one fight window
+(18:58:44..18:58:52): 1,604 + 3,508 damage rows, 622 casts, 287 KB, **27 ms**. Streaming is what buys that: rows go out
+of `FactsIn`/`HealsIn` slices straight into the sheet's ZIP entry, and a cold chunk decodes once per slice on touch.
+
+The decisions inside the writer, each of which has a test in `EQLogParser.Test/src/export/`:
+
+- **Numbers are numeric cells** (`<c><v>` with no `t`) — "numbers come in as text" is the standing complaint about XML
+  exports and a zero-padded number ("0000550447", what GamParse writes for a log line) is the same bug in disguise.
+  Localized formatting stays on the clipboard path (`ExportFormattedCsv`), never in a data file.
+- **Inline strings, no `sharedStrings.xml`.** No shared table to grow in memory and no second pass over the file.
+- **Frozen header row + `autoFilter` over the range written**, so it is filterable on open with nothing to click.
+  Excel Tables (`xl/tables/tableN.xml`, which is the pivot-one-keystroke version) sit one part away; the id/displayName
+  bookkeeping was not worth taking before the column list settles.
+- **Excel's 1,048,576-row ceiling is handled inside `SpreadsheetSheet`**: the part closes with its own filter range and a
+  continuation opens under a numbered name, invisible to the caller (`RowCount` counts across parts). `MaxRows` on the
+  spec lowers the cap so the split is testable without writing a million rows. Continuations number off the **original**
+  name ("Player DPS 3", not "Player DPS 2 2").
+- Sheet names are sanitized to Excel's rules (31 chars, no `[]:*?/\`, unique); control characters in log text are dropped
+  before they reach an attribute, because one illegal character makes a whole part unparseable.
+
+Column semantics worth keeping: `Time` is **seconds from the anchor**, 1 = the anchor's second, so a cast five seconds
+early reads **-4** (the clock GamParse's readers already read); `Log Time` is the wall clock ISO to the second. Scope is
+an **ordinal window** (`FromOrdinal`/`ToOrdinal` — the door a Fight List selection answers through) and/or a **time
+window** (`FromTimeS`/`ToTimeS`, for a caller holding a fight's begin/end). Casts and heals join on the **time span the
+window covers**, widened by `LeadInS` (default 5), because the heal stream has its own ordinal space and a fake
+alignment would be a lie. The two heal sheets filter on `ConfigUtil.PlayerName`; when there is no local player the honest
+widening is the raid side, and **Event Info prints which rule ran** — an export that needs a forum post to be read
+correctly is not finished.
+
+Identity questions enter through an injected `CaptureExport.Lens`, so this file knows no rules; the app wires it to
+`DeriveEngine.KindOfName / IsPlayerSideName / OwnerOfName`, which answer through the same timeline lock as every UI
+question. An export of a board therefore cannot disagree with the board.
+
+Not taken, and left deliberately: no `.xlsx` reader, no CSV/JSON sibling writer, and no change to the clipboard exports.
+Structural validity (parts, relationship graph, cell typing, per-part filter ranges) is asserted headless in
+`SpreadsheetExportTest`/`CaptureExportShapeTest`; "it opens in Excel" is a Windows check in
+`docs/ReleaseChecklist.md → Detailed .xlsx export checks on Windows`. Zero new dependencies, so `sign.cmd` and the
+installer list are unchanged.
