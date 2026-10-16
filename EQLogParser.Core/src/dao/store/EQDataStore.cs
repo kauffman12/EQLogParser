@@ -1,5 +1,6 @@
 using log4net;
 using System.Collections.Concurrent;
+using System.Collections.Frozen;
 using System.Globalization;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -180,7 +181,8 @@ namespace EQLogParser
     private readonly HashSet<string> _charmSpells = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, Dictionary<string, bool>> _charmCastMessages =
       new(StringComparer.OrdinalIgnoreCase);
-    private readonly string[] _charmMessageSuffixes;
+    private readonly FrozenDictionary<string, string[]> _charmSuffixBuckets;
+    private readonly int _charmSuffixWidth;
     private readonly SpellTreeNode _landsOnOtherTree = new();
     private readonly SpellTreeNode _landsOnYouTree = new();
     private readonly SpellTreeNode _wearOffTree = new();
@@ -344,9 +346,14 @@ namespace EQLogParser
           _charmCastMessages[spell.Name] = messages = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
         messages[message] = spell.Charm && (!messages.TryGetValue(message, out var prior) || prior);
       }
-      _charmMessageSuffixes = [.. spellList.Where(spell => spell.Charm && !string.IsNullOrWhiteSpace(spell.LandsOnOther))
+      var charmSuffixes = spellList.Where(spell => spell.Charm && !string.IsNullOrWhiteSpace(spell.LandsOnOther))
         .Select(spell => spell.LandsOnOther.TrimEnd()).Distinct(StringComparer.OrdinalIgnoreCase)
-        .OrderByDescending(suffix => suffix.Length)];
+        .OrderByDescending(suffix => suffix.Length).ToArray();
+      // Short tail keys reject misses cheaply; each bucket still validates full suffixes longest first.
+      _charmSuffixWidth = charmSuffixes.Length == 0 ? 1 : Math.Min(4, charmSuffixes.Min(suffix => suffix.Length));
+      _charmSuffixBuckets = charmSuffixes
+        .GroupBy(suffix => CharmSuffixKey(suffix).ToString(), StringComparer.OrdinalIgnoreCase)
+        .ToFrozenDictionary(group => group.Key, group => group.ToArray(), StringComparer.OrdinalIgnoreCase);
 
       var keepOut = new Dictionary<string, byte>();
 
@@ -492,8 +499,10 @@ namespace EQLogParser
     internal bool TryGetCharmLanding(string action, out string target, out string message)
     {
       target = message = null;
-      if (string.IsNullOrEmpty(action)) return false;
-      foreach (var suffix in _charmMessageSuffixes)
+      if (string.IsNullOrEmpty(action) || action.Length <= _charmSuffixWidth) return false;
+      if (!_charmSuffixBuckets.GetAlternateLookup<ReadOnlySpan<char>>()
+        .TryGetValue(CharmSuffixKey(action), out var suffixes)) return false;
+      foreach (var suffix in suffixes)
       {
         if (action.Length <= suffix.Length || !action.EndsWith(suffix, StringComparison.OrdinalIgnoreCase)) continue;
         target = action[..^suffix.Length].Trim();
@@ -979,6 +988,13 @@ namespace EQLogParser
       }
 
       return new SpellTreeResult { SpellData = node.SpellData, DataIndex = lastIndex };
+    }
+
+    private ReadOnlySpan<char> CharmSuffixKey(string text)
+    {
+      var key = text.AsSpan(text.Length - _charmSuffixWidth);
+      // A cut surrogate pair cannot case-fold like the full suffix. Omit its low half; EndsWith still verifies it.
+      return char.IsLowSurrogate(key[0]) ? key[1..] : key;
     }
 
     private static void BuildSpellPath(IReadOnlyList<string> data, SpellTreeNode node, SpellData spellData, int lastIndex = -1)

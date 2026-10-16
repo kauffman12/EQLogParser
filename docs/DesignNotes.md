@@ -13900,3 +13900,67 @@ changes nothing in the selected overlay.
 non-geometry edits. `OverlayPositionPersistenceTest` saves and reopens both kinds of overlay with negative Left, negative
 Top, both negative, and Left beyond the former upper bound. These tests run headlessly; actual preview dragging,
 property-grid coercion and live-window placement remain Windows checks in `ReleaseChecklist.md`.
+
+## Charm lookup, codec scratch, and meter answer-lock experiments
+
+**P1 and P3 are implemented; P5 remains deferred.** The measurements below preceded implementation. A disposable
+Release/net10.0 console host copied the then-current Core/Utils sources outside the repository and used `PipelineHarness`
+with Server/concurrent GC. Each capture had
+one collection/warmup replay, then ordered pipeline replays with candidate switches; no forced collections. Live captures
+ran with emu parsing off, Bulron THJ with it on. Times exclude spell-data initialization and post-run fingerprinting but
+include file reading, timestamp parsing, consumer drain and registry seeding. Chat archiving, trigger evaluation, WPF,
+concurrent live derivation and load-to-usable-list are outside this host, so these are not Windows file-open latency claims.
+
+**Charm lookup (review P1): implemented.** The original 109-suffix miss scan was compared with a small
+case-insensitive frozen index over the final four characters, probed by span. Each bucket retains the original longest-first
+suffix order, and the existing full EndsWith and target checks still decide. There are 76 buckets, largest five suffixes.
+The key width falls back to the shortest suffix if future data supplies one shorter than four characters; this is not a
+hard-coded punctuation gate. A low surrogate at the key's leading edge is omitted on both doors: cutting a supplementary
+case pair there must not prevent a full case-insensitive match. Shipped suffixes end in period (102), exclamation (6), or
+unpunctuated `n` (1), so period-only
+filtering would lose valid messages and last-character bucketing would leave most of the scan intact.
+
+Two original and two indexed timed replays per capture ran in original/indexed/indexed/original order:
+
+| capture | actual lookup calls in collection replay | original read-to-drain | indexed read-to-drain | paired-mean reduction |
+|---|---:|---:|---:|---:|
+| Incogitable xegony | 1,160,167 | 4.04–4.11 s | 3.74–3.81 s | 7.4 % |
+| Kizant xegony-2 | 1,172,019 | 3.81–3.86 s | 3.50–3.51 s | 8.5 % |
+| Bulron THJ | 1,055,810 | 1.30–1.33 s | 1.15–1.16 s | 12.3 % |
+
+These are small-sample warm-process observations, not percentiles. Isolated helper passes over every sixteenth actual lookup
+input were about 6–10x faster; the pipeline figures above are the useful result. Sampled-input checks plus every shipped
+suffix with a normal subject, uppercase message, bare suffix, whitespace-only subject and extra trailing text agreed on
+result/target/message. Ordered fingerprints of every damage/heal field, interned names, evidence, identity events, taunts
+and deaths matched across all pipeline variants. That includes charm evidence, not merely damage totals.
+
+**Codec scratch (P3): implemented as an allocation trim, not a speed feature.** Three varint fields have int-bounded
+values/differences and require at most five bytes each; leaving ten for the clock gives a conservative 25-byte varint budget,
+not 40. The sequence difference is computed in long, but even two extreme int values differ by at most 2^32−1, still five
+zigzag-varint bytes. Damage scratch therefore falls from 50 to 35 bytes/row (3.125 → 2.1875 MiB per full chunk), healing
+from 54 to 39 (1.6875 → 1.21875 MiB). No pooling, grow path, format change or weaker round-trip verification is needed.
+
+Over each capture's completed chunks that avoids 32.81 MiB (Incogitable), 49.69 MiB (Kizant) and 9.38 MiB (Bulron) of
+cumulative scratch allocation — **not retained heap savings**. Up to eight distributed real chunks per direction produced
+byte-identical blobs and equal decoded fields. Full chunks with random full-width ids, alternating min/max sequence ids,
+-1 sentinels and extreme/sentinel clocks also round-tripped identically. Alternating codec encode/verify passes and two
+additional tight-buffer versus two original pipeline replays per capture showed no consistent speed gain. The same ordered
+pipeline fingerprints still matched. The disposable measurement host was deleted rather than retained as a perf/allocation
+test. `FactChunkCodecBoundaryTest` keeps the extreme sequence/id/clock round trips for single rows, pairs and full chunks.
+`CharmLandingLookupTest` compares every shipped suffix against the original linear matcher, and pins longest-first matching,
+same-key false positives, punctuation-free messages, short suffixes, empty data, trailing-space normalization, duplicate-case
+messages and supplementary Unicode case pairs at the key boundary. Neither test class probes allocations or GC.
+
+**Meter answer locks (P5): leave alone absent contention evidence.** After classification and projection, the current per-name
+lock was compared with one outer timeline lock and unlocked per-name probes. Whole-history inputs remembered 1,041 names
+(Incogitable), 208 (Kizant), and 977 (Bulron), not the whole capture's name pool. Forty alternating unchanged meter updates
+per scope agreed on published totals, seconds, DPS and ranks. Median answer-check time in those actual updates was about
+0.018–0.092 ms original; whole-update medians changed 3.300 → 3.267 ms, 0.461 → 0.458 ms, and 6.412 → 6.322 ms respectively.
+Recent 90-second scopes remembered 7/96/3 names and changed about 0.241 → 0.242 / 0.303 → 0.303 / 0.554 → 0.541 ms overall.
+Isolated batched answer loops could save a few microseconds, but no material meter improvement appeared. This host had no
+concurrent classifier, so it establishes neither a contention problem nor a contention win; widening lock ownership without
+that evidence is not justified.
+
+Implementation validation: **2,298 headless tests passed, 6 gated tests skipped**. The existing `ColdChunkRealLogTest` was
+also executed separately on Incogitable live and Bulron THJ (`EQLP_EMU=1`), passing both. The full non-incremental solution
+build reported **zero warning/error diagnostics**, including the WPF test assembly; WPF runtime tests were not run on Linux.

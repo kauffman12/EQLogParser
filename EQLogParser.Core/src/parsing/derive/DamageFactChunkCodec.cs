@@ -23,7 +23,7 @@ internal static class DamageFactChunkCodec
   /// <summary>Encode `count` rows into one blob. The buffer is sized for the worst varint expansion, so the write path never bounds-checks a grow.</summary>
   internal static byte[] Encode(DamageFact[] rows, int count)
   {
-    var body = new byte[(count * ((4 * 10) + FixedWidth)) + 1];   // four varint fields worst case, then the fixed planes
+    var body = new byte[(count * (FactVarint.FactFieldsMaxBytes + FixedWidth)) + 1];
     var p = 0;
 
     long prevSeq = 0, prevTime = 0;

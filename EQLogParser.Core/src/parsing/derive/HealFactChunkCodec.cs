@@ -27,7 +27,7 @@ internal static class HealFactChunkCodec
 
   internal static byte[] Encode(HealFact[] rows, int count)
   {
-    var body = new byte[(count * ((4 * 10) + FixedWidth)) + 1];   // four varint fields worst case, then the fixed planes
+    var body = new byte[(count * (FactVarint.FactFieldsMaxBytes + FixedWidth)) + 1];
     var p = 0;
 
     long prevSeq = 0, prevTime = 0;

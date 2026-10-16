@@ -3,6 +3,10 @@ namespace EQLogParser;
 // Shared zigzag encoding for the two cold fact formats; both lanes use the same signed field widths.
 internal static class FactVarint
 {
+  // Sequence deltas and two int name ids need at most five bytes each; allow ten for the long clock delta.
+  // The difference of two int sequences still fits five zigzag-varint bytes (at most 2^33-2 unsigned).
+  internal const int FactFieldsMaxBytes = (3 * 5) + 10;
+
   internal static int Write(byte[] buf, int p, long value)
   {
     var u = (ulong)((value << 1) ^ (value >> 63));
