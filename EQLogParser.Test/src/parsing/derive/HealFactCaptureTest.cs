@@ -331,12 +331,16 @@ public class HealFactCaptureTest
     }
 
     /*
-     * Two heal shapes the current parser refuses. Pinned as measurements, not as guesses about whether they
-     * matter — counted on local/eqlog_Incogitable_xegony.txt (344 MB, 3.6M lines, ~448,600 heal-action lines):
+     * The heal shapes the parser refuses, and the one it no longer does. Pinned as measurements, not as guesses about
+     * whether they matter — counted on local/eqlog_Incogitable_xegony.txt (344 MB, 3.6M lines, ~448,600 heal-action lines):
      *
-     *   "`s pet healed itself ..."         10,194 lines  refused — the healer word is a pet name, and the
-     *                                              extraction special-cases "`s ward" but not "`s pet"
-     *   "`s pet has been healed ..."        2,688 lines  refused — same cause, the subject side this time
+     *   "`s pet healed itself ..."         10,194 lines  STORED SINCE 2026-08-03 — the healer seat used to be left
+     *                                              empty for any name with a space in it (only "`s ward" was folded),
+     *                                              so these died at the "healer is empty" guard. The pet is now its
+     *                                              own healer: a Mark of the Righteous tick is not its owner's doing.
+     *   "`s pet has been healed ..."        2,688 lines  refused — NOT the name: the amount offset assumes "for <n>"
+     *                                              follows "healed" immediately, and here it does (no space to skip),
+     *                                              so nothing parses. No healer in the line either way.
      *   "has been healed over time for"       120 lines  refused — the amount offset assumes "for <n>" follows
      *                                              "healed" immediately, and "over time" is in between
      *
@@ -357,13 +361,17 @@ public class HealFactCaptureTest
      * deleted assertion.
      */
     [TestMethod]
-    public void TheTwoRefusedHealShapesAreMeasuredRatherThanAssumed()
+    public void TheRefusedHealShapesAreMeasuredRatherThanAssumed()
     {
-        Assert.IsFalse(Parse("Nniki`s pet healed itself for 7500 hit points by Venom Claw VII."),
-            "pet self-heal lines are refused today (10,194 of them on the reference capture, all self-targeted)");
+        // Stored since 2026-08-03, under the pet's own name: the healer seat is no longer left empty for a name with a
+        // space in it, which is what threw away 10,194 lines here and 29,660 (52,124,455 landed) on the #191 capture.
+        Assert.IsTrue(Parse("Nniki`s pet healed itself for 7500 hit points by Venom Claw VII."),
+            "a pet's own tick is healing and belongs on the board, credited to the pet");
+        Assert.AreEqual("Nniki`s pet", HealTap.All().Last().Item2.Healer,
+            "the owner in the name gets no credit for a shield somebody else cast");
 
         Assert.IsFalse(Parse("Rellam has been healed over time for 900 hit points by Roar of the Lion IX."),
-            "passive over-time heals are refused today (120 lines on the reference capture)");
+            "passive over-time heals are refused today (120 lines on the reference capture) — nobody is named");
 
         // The shape that does work, and which is why "`s pet" needs no new branch to make the healing board
         // correct: wards already credit their owner.
@@ -379,7 +387,7 @@ public class HealFactCaptureTest
          * way; the damage side of the same shape is not lost, since "X`s pet" as an attacker or defender parses.
          */
         Assert.IsFalse(Parse("Bulgar`s pet has been healed for 40000 hit points by Enhanced Theft of Essence Effect XV."),
-            "2,688 lines on the reference capture, all healer-less passive effects");
+            "2,688 lines on the reference capture: no healer in the line, and the amount offset cannot find its number");
     }
 
     private static bool Parse(string action)

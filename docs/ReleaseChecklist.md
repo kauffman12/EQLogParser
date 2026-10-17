@@ -244,6 +244,24 @@ compact accounting, paired publication". These checks are not satisfied by a Lin
 - [ ] Toggle **Show Pets** off and on. Pet rows disappear and return without a re-derive; player and merc rows remain.
   Repeat after changing the tanking damage-type and time-window controls. Damage Summary's owner/pet folding is unchanged.
 
+## Healing board credit shapes, checked on Windows (2026-08-03)
+
+The heal parser's credit rules moved at parse time, so the boards that read the heal stream changed on a real capture
+(`eqlog_Kizant_xegony-selected.txt`: 134,331 → **163,677** heal facts, 908,155,103 → **979,411,016** landed).
+
+- [ ] A pet's own tick appears under the pet's full name (``Jazrakhan`s pet``), **not** folded onto Jazrakhan. Expect
+      roughly 29k such rows in a capture of this size; the pet's name should behave like any other healer row (sortable,
+      expandable, its spell breakdown intact).
+- [ ] A ward heal shows under the player who dropped it (`Nymera\`s ward healed …` → row **Nymera**), while a pet row is
+      never folded — the two cases are different on purpose.
+- [ ] Mob healers key their own rows with their spaced names (`A killer moth`, `The gods`) and their healing is attributed
+      to that name; the Spell breakdown beside it shows the proc (`Divine Interstition Rk. III`).
+- [ ] **Over Heal is never a negative number** anywhere on the healing board, the hit log's OverTotal column, or the
+      exported *Heals by you* / *Heals to you* sheets — including rows from the negative HOT print
+      (`… over time for -146133 (47344) …`, which counts as 146,133 healed).
+- [ ] Nothing new joined the Identity Table as a Player because it was seen healing: mob healers read NPC (mob table), and
+      a pet's row is a Pet.
+
 ## Summary board rebuilds, checked on Windows
 
 A board's busy state is the one part of a build no headless run can see: an empty `ItemsSource`, a null one and a title swap look
@@ -419,8 +437,21 @@ Excel can answer is whether it opens and behaves. No new dll ships with this fea
   pivot over the range and drag Damage into Values — it sums without "Number Stored as Text" warnings.
 - [ ] **The pet rows name their player.** Owner is filled on ``X`s pet``/warder/familiar rows and empty on a player's; a
   mercenary row reads Mercenary in the Players tab, opens no fight-list row of its own, and still has its damage rows.
-- [ ] **The clock reads the way GamParse's does.** The pull's own second is `1`, the lead-in casts are negative, and Log
-  Time is the wall clock to the second. Event Info states the window, the totals and which rule the heal sheets used.
+- [ ] **The clock reads the way GamParse's does.** The pull's own second is `1`, one second early is `-1` — their scale has
+  no zero, and their readers union our files with years of saved GamParse ones. Log Time is the wall clock to the second.
+  Event Info states the window, the totals and which rule the heal sheets used.
+- [ ] **The Players tab is a lookup table, not a stub.** A caster carries its class — including a class typed by hand in
+  the Identity Table, which must survive the export — `A <thing>` rows read NPC, and a summoner's row names its pet in
+  `Pets`. The headless fixture proves plumbing, not verdicts: this is where a data-store-dependent lane can be empty.
+- [ ] **The over-heal column is the healing that was not needed.** On a `for 3461 (60581)` line the sheet says Heal 3461,
+  Over Heal 57120. The gross asked-for number under that header is the bug this check exists for.
+- [ ] **The menu itself opens.** File ▸ Save shows the Excel entry with its glyph and MainWindow loads: an icon name that
+  is not a member of `FontAwesome5.EFontAwesomeIcon` builds clean and throws at window load (headless: `XamlIconNameTest`).
+- [ ] **It opens outside desktop Excel too** — Google Sheets and LibreOffice both, since the users this feature is for are
+  the ones without Office. A repair prompt in any of the three is a package bug, not a quirk.
+- [ ] **A multi-fight selection says what it covered.** Event Info prints the window; rows from pulls BETWEEN the selected
+  fights are inside it (the envelope), and no per-row fight column exists yet — the reporter is being asked whether they
+  want one file per fight instead.
 - [ ] **A whole-night export finishes with the progress dialog open**, on a capture with hundreds of thousands of damage
   rows, and the resulting file opens (this is the case the row-ceiling split exists for).
 - [ ] **Refusals are words, not files.** No log open, and a log open with nothing selected, each say so in the save menu

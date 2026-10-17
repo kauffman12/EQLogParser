@@ -42,6 +42,11 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
   store cache keyed by the label set it was built with): constructing an `EQDataStore` costs ~0.6 s and five classes used to pay
   it per test — most of the suite's wall time. A test needing a store under different conditions (missing data files, its own
   class labels) builds its own; everything mutable is still cleared per test.
+- **A `PipelineHarness` timeline is SEEDED, not classified.** `RunFileDerived` runs `RegistrySeed.Apply` and no rule stage, so
+  `IdentityAt` answers from saved memory alone — it read Player 534 / Npc 0 / Merc 0 on a capture whose real census is Player 737 /
+  Npc 644 / Merc 16. Any verdict question calls `ClassificationRules.Apply(run.Facts, run.Timeline, run.HealFacts)` over that seed
+  first (`DamageBoardGoldenTest` does). Numbers and the story: docs/DesignNotes.md → "Being healed by a group spell: measured
+  as identity evidence for the HEALED name (2026-11)".
 - **`PipelineHarness` clears the stores** (`PlayerRegistry`, `RecordsStore`, `DamageLineParser.ResetProcessState`), so
   re-parsing a fixture in one process cannot double counts, and `RegistrySeed` contributes nothing — tests that need seed
   memory must build it themselves; tests that need healers as healers must give them an evidence line (`EvJoinedRaid`), not
@@ -83,6 +88,19 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
 - **An outcome word decides; a tag never un-happens it.** Riposte/block/parry/dodge lines always produce a record;
   sub-setting happens off `record.ModifiersMask` (`LineModifiersParser.IsRiposte` = Riposte without Strikethrough), never by
   dropping the line. A name never keeps the sentence's period (`from <blank> by Y.` spell names).
+- **A heal's healer is the subject of its own sentence.** A pet's `Mark of the Righteous` tick belongs to ``X`s pet`` —
+  the owner cast nothing at that moment and the raid's cleric cast the shield minutes earlier — with the owner riding
+  beside it as `HealFact.FlagOwnerInLine`; an item `` `s ward`` folds to the player who dropped it (parse-time, so no
+  surface gets its own ownership rule); a mob keeps its spaced name, and an auxiliary is not part of one (`The gods
+  have` → `The gods`); and nobody named means nothing stored — passives, `has been`/`have been`, cast-less spell subjects
+  (`IsSubjectIsSpell`). `HealCreditLawTest`.
+- **EQ prints some HOT ticks negative** (`… over time for -146133 (47344) hit points …`) and the target was healed by that
+  magnitude: strip the sign for HOT only, and a paren sitting below the landed amount may never post a negative overheal.
+- **A heal line says almost nothing about who is a player.** Being seen healing claims nothing (R15 reads heal evidence
+  only from casters whose own identity is raid-side at `Strong`); being healed stays Medium, below a `Targeted` frame —
+  that ordering is why R18 exists; and spells.txt cannot identify a group heal (Target is 0 on 61,344 of ~63,000 rows,
+  every real raid heal included), so do not build an identity lane on it. Numbers: docs/DesignNotes.md →
+  "Every dropped heal line, named".
 - **A record's kind is one byte**: `HitLabel : byte` + `HitLabels` pairs each word with its `Labels` constant, so
   `record.Type` still returns the interned literal. `None` reads back as null; a word outside the table maps to `None` and
   is counted in `HitLabels.Unmapped`, never guessed (ordinal matching). Size is pinned by `Unsafe.SizeOf<HitLabel>()`.

@@ -100,6 +100,69 @@ namespace EQLogParser
       test[index] == '!' || (test[index] == '.' &&
         !(index >= 2 && char.ToUpperInvariant(test[index - 2]) == 'R' && char.ToUpperInvariant(test[index - 1]) == 'K'));
 
+    /*
+     * The actor named at the head of a heal sentence, with the two things that are not part of a name taken off:
+     * an active perfect auxiliary (`The gods have` -> `The gods`) and any passive shape, which has no actor in it at
+     * all (`Foob is healed by a reflected flame.` - the subject is the patient, so this answers empty and the line
+     * stays dropped the way it always was).
+     */
+    internal static string SubjectActor(string subject)
+    {
+      var s = subject.Trim();
+      if (s.Length == 0)
+      {
+        return "";
+      }
+
+      var lastSpace = s.LastIndexOf(' ');
+      if (lastSpace <= 0 || lastSpace >= s.Length - 1)
+      {
+        return IsPassiveAuxiliary(s) ? "" : s;
+      }
+
+      var tail = s[(lastSpace + 1)..];
+      if (IsPassiveAuxiliary(tail))
+      {
+        return "";
+      }
+
+      return tail is "has" or "have" or "had" ? s[..lastSpace].Trim() : s;
+    }
+
+    private static bool IsPassiveAuxiliary(string word) =>
+      word.Equals("is", StringComparison.OrdinalIgnoreCase)
+      || word.Equals("are", StringComparison.OrdinalIgnoreCase)
+      || word.Equals("was", StringComparison.OrdinalIgnoreCase)
+      || word.Equals("were", StringComparison.OrdinalIgnoreCase)
+      || word.Equals("be", StringComparison.OrdinalIgnoreCase)
+      || word.Equals("been", StringComparison.OrdinalIgnoreCase)
+      || word.Equals("am", StringComparison.OrdinalIgnoreCase);
+
+    /*
+     * Whether the subject of a heal line is the SPELL rather than a fighter: `Bastion of Divinity healed Xxuro over
+     * time for 6670 hit points by Bastion of Divinity Effect.` - the "by" clause names the same thing the subject
+     * does, which is how a cast-less line tells itself apart from `a killer moth healed Shmid … by Divine
+     * Interstition Rk. III.`. A rank tail (`Rk. II`) is not part of the name for this comparison, because the shape
+     * arrives both with and without it (see IsSentenceEnd). This is what keeps the standing law - nobody is named on
+     * a cast-less heal, so nothing is stored - while the multi-word subject fallback runs.
+     */
+    internal static bool IsSubjectIsSpell(string subject, string spell)
+    {
+      if (string.IsNullOrEmpty(spell))
+      {
+        return false;
+      }
+
+      var s = subject.Trim();
+      var rank = s.LastIndexOf(" Rk.", StringComparison.OrdinalIgnoreCase);
+      if (rank > 0)
+      {
+        s = s[..rank].Trim();
+      }
+
+      return s.Length >= 3 && spell.StartsWith(s, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static HealRecord HandleHealed(string part, int optional, double beginTime)
     {
       // [Sun Feb 24 21:00:58 2019] Foob's promised interposition is fulfilled Foob healed himself for 44238 hit points by Promised Interposition Heal V. (Lucky Critical)
@@ -120,6 +183,7 @@ namespace EQLogParser
 
       var done = false;
       var healer = "";
+      var subjectFallback = false;   // true when the healer came from the whole subject of a one-sentence line
       var healed = "";
       string spell = null;
       string subType = null;
@@ -171,6 +235,32 @@ namespace EQLogParser
             // assign owner of ward as healer
             healer = test[..wardIndex];
           }
+          else if ((healer = SubjectActor(test)) != string.Empty)
+          {
+            subjectFallback = true;
+
+            /*
+             * A multi-word subject is the actor: `a killer moth healed Shmid for 852000 hit points by Divine
+             * Interstition Rk. III.` and `Tallongast, The Egg healed Foob …` name their healer in full, and this
+             * branch used to leave `healer` empty, so the IsNullOrEmpty guard below dropped the row - 2,297 lines /
+             * 16.5 M healing, plus 29,660 lines / 52.1 M of pet self-heals (`Jazrakhan`s pet healed itself for 6109
+             * hit points by Mark of the Righteous XIV Rk. III.`), measured on one real capture. The owner of a pet
+             * is NOT the healer of a Mark of the Righteous tick: it is a reverse damage shield riding on the pet, and
+             * the pet is the thing that healed itself (operator ruling). An item ward is the opposite case and keeps
+             * folding to the player who dropped it, which is why the ward branch runs first.
+             *
+             * Three shapes must NOT get a healer from this:
+             *   - a PASSIVE line (`Foob is healed by a reflected flame.`): the subject is the patient. An auxiliary
+             *     in the subject is the tell; the "has been"/"have been"/"are" branches above own the passives they
+             *     recognise and this refuses the rest of that family.
+             *   - the active perfect (`The gods have healed Shmid for 852000 points of damage.`): the auxiliary is
+             *     not part of the name, so strip it.
+             *   - a CAST-LESS heal whose subject is the SPELL (`Bastion of Divinity healed Xxuro over time for 6670
+             *     hit points by Bastion of Divinity Effect.`): see IsSubjectIsSpell. The standing law there is that
+             *     nobody is named, and putting the spell on the healer seat would move the healing board.
+             */
+            healer = SubjectActor(test);
+          }
         }
       }
       else
@@ -218,7 +308,21 @@ namespace EQLogParser
           var amountEnd = part.IndexOf(' ', amountIndex);
           if (amountEnd > -1)
           {
-            var value = TextUtils.ParseUInt(part.AsSpan(amountIndex, amountEnd - amountIndex));
+            var digits = part.AsSpan(amountIndex, amountEnd - amountIndex);
+
+            /*
+             * EQ prints some heal-over-time ticks NEGATIVE - `Tilwedarx healed Foob over time for -146133 (47344) hit
+             * points by Abundant Healing LXIX.` - and the tick did not hurt anybody: the magnitude is what landed
+             * (operator ruling; measured at 84 lines in one capture, all of them HOT). ParseUInt refuses the sign, so
+             * before this the whole row was lost. HOT only: no other heal shape is known to print this way, and a
+             * minus on a direct heal is a line this parser does not understand, which is worth more than a guess.
+             */
+            if (digits.Length > 1 && digits[0] == '-' && type == Labels.Hot)
+            {
+              digits = digits[1..];
+            }
+
+            var value = TextUtils.ParseUInt(digits);
             if (value != uint.MaxValue)
             {
               heal = value;
@@ -262,6 +366,16 @@ namespace EQLogParser
         if (string.IsNullOrEmpty(healer) && spell?.StartsWith("Theft of Essence", StringComparison.OrdinalIgnoreCase) is true)
         {
           healer = Labels.Unk;
+        }
+
+        /*
+         * A spell subject is not a person: drop the cast-less line, per IsSubjectIsSpell. This applies to the fallback
+         * only, so every shape the branch chain used to name (the "has" branch, and the `… by Theft of Essence …`
+         * filler below) keeps the answer it has always given.
+         */
+        if (subjectFallback && IsSubjectIsSpell(test, spell))
+        {
+          return null;
         }
 
         // verify healer parsed properly

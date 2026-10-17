@@ -137,23 +137,30 @@ public sealed class FactFlagLawTest
     }
 
     [TestMethod]
-    public void APossessivePetHealLineReachesNoFactAtAll()
+    public void APossessivePetHealLineReachesAFactUnderThePetsOwnName()
     {
         /*
-         * The honest companion to the test above. HealFact.FlagOwnerInLine exists, and the shape that would set it —
-         * "Reisil`s pet healed itself for 15750 hit points by Venom Claw XVI." — never produces a record: the healing
-         * parser refuses a healer name that is not player-shaped, so over 1,243,469 heal facts on a real capture the bit
-         * is set on ZERO. That is recorded here rather than deleted because the bit costs nothing (it rides padding), and
-         * because "no line writes it today" is a measurement, not a proof: if HealingLineParser ever accepts a possessive
-         * healer, this test names the shape to come back and re-measure. Deleting a field nobody has measured across
-         * captures is how OverTotal sat on DamageFact for years reading zero.
+         * The re-measurement the old version of this test asked for. "Reisil`s pet healed itself for 15750 hit points by
+         * Venom Claw XVI." used to produce NO record — the parser refused a healer name with a space in it, so 29,660 such
+         * lines (52,124,455 landed) on one real capture were thrown away and HealFact.FlagOwnerInLine was set on ZERO
+         * facts across every capture. It is live now, and the credit rule is the operator's ruling on the shape:
+         * a Mark-of-the-Righteous/Venom Claw tick belongs to the PET. The owner named in the string cast nothing at this
+         * moment (the raid's cleric cast the shield long ago), so the healer stays the whole possessive name and the
+         * owner rides beside it as information, which is what FlagOwnerInLine means.
+         *
+         * An item ward is the opposite case and folds to its owner at parse time (`Nymera`s ward healed Soddann` →
+         * Nymera) — HealCreditLawTest holds both halves side by side.
          */
-        Assert.IsFalse(HealingLineParser.Process(Line("Reisil`s pet healed itself for 15750 hit points by Venom Claw XVI.", 20)));
-        Assert.AreEqual(0, _heals.HealCount);
+        Assert.IsTrue(HealingLineParser.Process(Line("Reisil`s pet healed itself for 15750 hit points by Venom Claw XVI.", 20)));
+        Assert.AreEqual(1, _heals.HealCount);
 
-        // And the player-shaped sibling does arrive, with no flags — so the refusal is about the healer's shape, not the line.
+        var heal = _heals.Heals[0];
+        Assert.AreEqual("Reisil`s pet", _heals.NameOf(heal.HealerIdx), "the pet healed itself; the owner gets no credit for the tick");
+        Assert.AreEqual(HealFact.FlagOwnerInLine, heal.Flags, "the bit this test measured as dead is written by this shape now");
+
+        // The plain-named sibling arrives with no flags: ownership is a fact about the sentence, not about pets.
         Assert.IsTrue(HealingLineParser.Process(Line("Stormclaw healed Ammeren for 300 hit points by Venom Claw XVI.", 21)));
-        Assert.AreEqual((byte)0, _heals.Heals[0].Flags);
+        Assert.AreEqual((byte)0, _heals.Heals[1].Flags);
     }
 
     [TestMethod]

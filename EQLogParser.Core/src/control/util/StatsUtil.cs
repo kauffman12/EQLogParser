@@ -463,7 +463,13 @@ namespace EQLogParser
         stats.BestSecTemp += record.Total;
       }
 
-      if (record.OverTotal > 0)
+      /*
+       * The paren is what the line ASKED for, so the overheal is the part above what landed - and it cannot be
+       * negative. EQ prints some HOT ticks with the paren below the landed amount (`… over time for -146133 (47344)
+       * hit points …`, where 146133 is what healed), and an unguarded subtraction posts a negative into Extra, which
+       * is the overheal column. HealFact.Overheal clamps the same way at the fact layer.
+       */
+      if (record.OverTotal > record.Total)
       {
         stats.Extra += record.OverTotal - record.Total;
       }

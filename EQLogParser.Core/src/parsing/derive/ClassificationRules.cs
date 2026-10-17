@@ -1677,5 +1677,29 @@ namespace EQLogParser
     internal static bool IsPetSlotSpell(string? spell)
       => EQDataStore.Instance.GetSpellByName(spell) is { Target: (byte) SpellTarget.Pet or (byte) SpellTarget.Pet2 };
 
+    /*
+     * Why the spell data's TARGET slot cannot decide WHO A PLAYER IS, measured on the live heal stream (asked
+     * 2026-11; numbers in docs/DesignNotes.md -> "The spell data knows an AE heal. It does not know a player.").
+     *
+     * Two halves, and an earlier note in this file had them backwards. TRUE: Target is 0 on 61,344 of ~63,000 TABLE
+     * rows, including every raid-wide heal a modern client writes (Summer's Deluge Rk. III, Mark of the Righteous XIV,
+     * Divine Interstition Rk. III), so "raid-wide" is unrepresentable in the column and R4-style family logic stays the
+     * only spell-data lane that names classes. FALSE (measured 2026-11): that the heal STREAM is silent. The AE/group
+     * codes are populated exactly where a modern raid heals - Target 8 Targetae, 36 Casterpbplayers, 40 Nearbyplayersae,
+     * 45 Targetringae (`SpellTarget`), plus 3 Castergroup / 41 Targetgroup with the mass-group-buff column set - and
+     * `HealingValidator` has used that same set for years as the board's AE-heal dial.
+     *
+     * It is a HEAL-SHAPE marker, not an identity marker, because mobs cast these spells constantly: on
+     * `eqlog_Incogitable_xegony.txt` the unplaced casters of AE/group heals are 51 names, and they read
+     * `A banshee soother`, `Enchanted Armor Mender`, `Rallosian Goblin Shaman`, `Fungal Fiend Alleviator` - healing
+     * mobs, 0-65 % of their healed names raid-side - alongside player-shaped mob names (`Brynwen` 9.3 %, `Spiiritist`
+     * 12 %) and one genuine unplaced raid cleric (`Amengi`, 80.1 % raid-side over 43 names). Claiming a caster from the
+     * shape alone types mob shamen as Players, which opens fight-list rows and credits their damage raid-side. The
+     * signal that a heal was a GROUP event is in the log, not the table: one caster, one spell, many distinct names in
+     * the same second. R15's ceiling stands - a raid AoE heal demonstrably waters the mob stack ("Yokii healed an
+     * arcborn wraith for 2 hit points by Summer's Deluge Rk. II."), which is why heal inference sits below a Targeted
+     * frame and below R18.
+     */
+
   }
 }
