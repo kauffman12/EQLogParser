@@ -4098,11 +4098,11 @@ FightSummarySource's attacker naming); the healing board also reads derived play
 for — *the name never becomes a fight* — and its two side effects: the bot's damage and healing are credited to it on the
 boards like a player's, and a swing that lands on it counts as damage one of ours received (tank board).
 
-**The precedence is NPC frame 70 < merc table 80 < positive player proof 100 < manual 1000.** A client's
+**The precedence is NPC frame 65 < merc table 80 < positive player proof 100 < manual 1000.** A client's
 `Targeted (NPC)` frame says *not a player*, not *hostile*: it is normal for a mercenary or a pet. Giving that frame
 Certain let one ordinary target action turn a listed bot into an opponent for the entire capture, dropping its outgoing
 NPC-on-NPC damage. R1's NPC and conflicting-frame claims, and R13's NPC-frame-plus-behavior Merc inference, now use
-`TargetedNpcStrength` (70), above Strong behavior (60) but below the curated merc list. An explicit Strong merc group
+`TargetedNpcStrength` (65), above Strong behavior (60) but below the curated merc list. An explicit Strong merc group
 sighting also qualifies for R13, so an unlisted merc does not become hostile merely by being targeted; weak registry
 seeds do not qualify. A conflicting pair of frames still
 reports a conflict and keeps the conservative NPC-frame claim; stronger independent proof can beat it. Positive
@@ -9790,7 +9790,8 @@ and no possessive. The numbers here come from grep over `local/logs/` and from t
 
 ### How the precedence actually works, since "Certain" was never the whole story
 
-`Targeted (NPC)` writes Npc at **70**; R24's positive pet proof claims **Certain (100)**. It no longer needs an exact
+`Targeted (NPC)` writes Npc at `TargetedNpcStrength` (**65** since 2026-12, 70 before); R24's positive pet proof
+claims **Certain (100)**. It no longer needs an exact
 strength/time tie and insertion order to beat that frame. The claim stays below the target-frame ladder so its guard
 can inspect all Player/Merc claims first. **A frame verdict that asserts a negative ("not a player") may not outvote an
 uncontradicted positive claim.** The frame never says "this is not a pet"; it prints NPC for anything that is not a
@@ -9890,7 +9891,8 @@ Tanking dial; enabling it produced the same **325 rows** as the full-selection r
 12,149,157 damage** to **R9-charm Friendly** allegiance: **227 / 11,340,948** from `A scalewrought craftsman` and
 **14 / 808,209** from `A scalewrought artificer`, July 3, 2025, **15:18:38–15:24:24**. The log explicitly says
 `a scalewrought terrastriker is charmed.` at **15:18:25**, after `You begin casting Esoteric Command.` at 15:18:21.
-Its base identity remains NPC (`R1-target`, 70), but every counted incoming record is inside the charm window;
+Its base identity remains NPC (`R1-target` at `TargetedNpcStrength`, 65), but every counted incoming record is
+inside the charm window;
 these are enemy hits on a temporary ally, not ordinary hostile-vs-hostile credit. The initial replay resolved no
 named owner; the spell-data repair in "Charm ownership follows the spell's lands-on-other message" corrects that
 separate damage-folding issue. Tanking is not owner-folded in any case. The temporary assertion was deleted after
