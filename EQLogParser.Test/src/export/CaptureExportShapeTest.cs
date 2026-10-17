@@ -9,13 +9,13 @@ namespace EQLogParser;
  * comes out, and every column the reporter asked for is checked where it lands.
  *
  * What this pins:
- *  - the seven sheets, in the order a reader looks for them;
+ *  - the eight sheets, in the order a reader looks for them;
  *  - Player DPS vs NPC DPS split on the identity answer, with the pet's PLAYER in its own column (the ask: "add a
  *    Spell and Pet Owner column") - derived per row through the lens, because a fact carries what its line said and
  *    never what the registry believed;
  *  - the cast list from captured evidence, inside the fight window and in its lead-in, with negative relative time
  *    (GamParse's readers count seconds before the pull that way);
- *  - the two heal sheets filtered on the local player;
+ *  - all captured healing in scope, with two additional views filtered on the local player;
  *  - the lookup tab, which is the "stop maintaining my own Player/Class/Pet list" ask.
  */
 [TestClass]
@@ -472,6 +472,42 @@ public sealed class CaptureExportShapeTest : IDisposable
   }
 
   [TestMethod]
+  public void AllHealsSuppliesTotalsAndLookupForNamesAbsentFromTheLocalPlayerViews()
+  {
+    var healer = _facts.InternName("Quiethealer");
+    var target = _facts.InternName("Quietowner`s pet");
+    _heals.AddHeal(new HealFact(20, T0 + 1, healer, target, 700, 900, LabelTypes.Heal, 0,
+      LineModifiersParser.None, HealFact.NoSpell));
+    _heals.AddHeal(new HealFact(21, T0 + 1000, _facts.InternName("Outsidehealer"),
+      _facts.InternName("Outsidepatient"), 9999, 0, LabelTypes.Heal, 0,
+      LineModifiersParser.None, HealFact.NoSpell));
+    var original = Lens;
+    var lens = new CaptureExport.Lens((name, time) => name == "Quietowner`s pet"
+      ? new CaptureExport.Identity(true, "Quietowner", "", "Pet") : original.At(name, time), original.CleanSpell);
+    var summary = CaptureExport.Write(Target("heal-census.xlsx"), _facts, _heals,
+      new CaptureExport.Options { Lens = lens, LocalPlayer = "Kizant" });
+    Assert.AreEqual(3, summary.HealRows);
+    Assert.AreEqual(1800, summary.Healing);
+    Assert.AreEqual(1, summary.HealsByRows);
+    Assert.AreEqual(1, summary.HealsToRows);
+    using var zip = ZipFile.OpenRead(Target("heal-census.xlsx"));
+    var all = Rows(zip, "All heals").Skip(1).Select(CellTexts).ToArray();
+    Assert.AreEqual(summary.Healing,
+      all.Sum(row => long.Parse(row[5], System.Globalization.CultureInfo.InvariantCulture)));
+    var info = Rows(zip, "Event Info").Skip(1).Select(CellTexts).ToDictionary(row => row[0], row => row[1]);
+    Assert.AreEqual("1800", info["Healing"]);
+    Assert.AreEqual("3", info["All Heal Rows"]);
+    var names = Rows(zip, "Players").Skip(1).Select(CellTexts).ToDictionary(row => row[0]);
+    Assert.IsTrue(names.ContainsKey("Quiethealer"));
+    Assert.AreEqual("Quietowner", names["Quietowner`s pet"][4]);
+    Assert.AreEqual("Quietowner`s pet", names["Quietowner"][3]);
+    Assert.AreEqual("2024-07-18T20:00:01", names["Quiethealer"][5]);
+    Assert.AreEqual(names["Quiethealer"][5], names["Quiethealer"][6]);
+    Assert.IsFalse(names.ContainsKey("Outsidehealer"));
+    Assert.IsFalse(names.ContainsKey("Outsidepatient"));
+  }
+
+  [TestMethod]
   public void SelectedMembershipExcludesSimultaneousEnemiesAndWindowsExcludeTheGap()
   {
     var player = _facts.InternName("Kizant");
@@ -492,6 +528,35 @@ public sealed class CaptureExportShapeTest : IDisposable
     Assert.AreEqual(0, summary.HealRows, "heals between disjoint selected fights are not selected");
     using var zip = ZipFile.OpenRead(Target("selection.xlsx"));
     Assert.AreEqual("2", Rows(zip, "Event Info").Skip(1).Select(CellTexts).Single(row => row[0] == "Seconds")[1]);
+  }
+
+  [TestMethod]
+  [DataRow(false)]
+  [DataRow(true)]
+  public void MembershipIsCopiedAndNormalizedBeforeAnyIdentityLookup(bool unsorted)
+  {
+    var membership = unsorted ? new[] { 3, 0, 3, 1, 0 } : new[] { 0, 0, 1, 3, 3 };
+    var changed = false;
+    var original = Lens;
+    var lens = new CaptureExport.Lens((name, time) =>
+    {
+      if (!changed)
+      {
+        changed = true;
+        Array.Fill(membership, 2);
+      }
+      return original.At(name, time);
+    }, original.CleanSpell);
+    var summary = CaptureExport.Write(Target("membership.xlsx"), _facts, _heals,
+      new CaptureExport.Options { Lens = lens, DamageOrdinals = membership });
+    Assert.IsTrue(changed);
+    Assert.AreEqual(3, summary.PlayerRows);
+    Assert.AreEqual(0, summary.NpcRows);
+    Assert.AreEqual(1950, summary.Damage);
+    using var zip = ZipFile.OpenRead(Target("membership.xlsx"));
+    var sequences = Rows(zip, "Player DPS").Skip(1).Select(CellTexts).Select(row => row[0]).ToArray();
+    CollectionAssert.AreEqual(new[] { "1", "2", "4" }, sequences,
+      "duplicate membership is exported once in ordinal order, even if the caller changes its array");
   }
 
   [TestMethod]

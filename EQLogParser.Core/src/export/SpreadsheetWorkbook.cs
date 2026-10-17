@@ -37,22 +37,6 @@ internal sealed class SpreadsheetWorkbook : IDisposable
   private SpreadsheetSheet _current;
   private bool _disposed;
 
-  /// <summary>Opens a workbook and adds every sheet up front (the shape the export callers use).</summary>
-  internal static SpreadsheetWorkbook OpenWith(string path, params SpreadsheetSpec[] specs)
-  {
-    var workbook = new SpreadsheetWorkbook(path);
-    try
-    {
-      foreach (var spec in specs) workbook.AddSheet(spec);
-      return workbook;
-    }
-    catch
-    {
-      workbook.CloseArchive();
-      throw;
-    }
-  }
-
   internal SpreadsheetWorkbook(string path)
   {
     var directory = Path.GetDirectoryName(Path.GetFullPath(path));
@@ -83,24 +67,6 @@ internal sealed class SpreadsheetWorkbook : IDisposable
     return _current;
   }
 
-  /*
-   * A sheet that hit Excel's row ceiling continues in a NEW part under a numbered name. The caller keeps the same
-   * SpreadsheetSheet handle - a row loop must not have to notice the boundary - so the workbook only mints the name
-   * and the part, and the sheet re-points its own writer.
-   */
-  internal string AddContinuation(string baseName, out ZipArchiveEntry entry)
-  {
-    var name = SpreadsheetWriter.SanitizeSheetName(baseName, _names);
-    _names.Add(name);
-
-    var part = $"worksheets/sheet{_sheets.Count + 1}.xml";
-    _sheets.Add(new SheetRef(name, part));
-    entry = NewEntry(part);
-    return name;
-  }
-
-  private ZipArchiveEntry NewEntry(string partPath) => _archive.CreateEntry($"xl/{partPath}", CompressionLevel.Optimal);
-
   public void Dispose()
   {
     if (_disposed) return;
@@ -120,6 +86,40 @@ internal sealed class SpreadsheetWorkbook : IDisposable
       CloseArchive();
     }
   }
+
+  /// <summary>Opens a workbook and adds every sheet up front (the shape the export callers use).</summary>
+  internal static SpreadsheetWorkbook OpenWith(string path, params SpreadsheetSpec[] specs)
+  {
+    var workbook = new SpreadsheetWorkbook(path);
+    try
+    {
+      foreach (var spec in specs) workbook.AddSheet(spec);
+      return workbook;
+    }
+    catch
+    {
+      workbook.CloseArchive();
+      throw;
+    }
+  }
+
+  /*
+   * A sheet that hit Excel's row ceiling continues in a NEW part under a numbered name. The caller keeps the same
+   * SpreadsheetSheet handle - a row loop must not have to notice the boundary - so the workbook only mints the name
+   * and the part, and the sheet re-points its own writer.
+   */
+  internal string AddContinuation(string baseName, out ZipArchiveEntry entry)
+  {
+    var name = SpreadsheetWriter.SanitizeSheetName(baseName, _names);
+    _names.Add(name);
+
+    var part = $"worksheets/sheet{_sheets.Count + 1}.xml";
+    _sheets.Add(new SheetRef(name, part));
+    entry = NewEntry(part);
+    return name;
+  }
+
+  private ZipArchiveEntry NewEntry(string partPath) => _archive.CreateEntry($"xl/{partPath}", CompressionLevel.Optimal);
 
   private void CloseArchive()
   {

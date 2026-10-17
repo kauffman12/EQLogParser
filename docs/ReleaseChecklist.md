@@ -501,6 +501,8 @@ Excel can answer is whether it opens and behaves. No new dll ships with this fea
   Direct/HOT Type and Requested Raw survive. The two local-player sheets remain views, not a total to add together.
 - [ ] **Live export is internally consistent.** While the log grows, export an active fight. Row sums/counts agree with
   Event Info. Change capture during saving: no replacement-capture identity or class may leak into the workbook.
+  If the capture changes before preparation, a cancellation message explains why nothing was saved and the old target
+  remains untouched; after preparation, the frozen export may finish normally.
 - [ ] **Custom title is honored.** Enter a title in Parse Preview, export, and check Event Info Event. With no custom
   title the selected NPC names supply it. Every data sheet still starts with exactly one table header.
 - [ ] **A whole-night export finishes with the progress dialog open**, on a capture with hundreds of thousands of damage
@@ -508,4 +510,5 @@ Excel can answer is whether it opens and behaves. No new dll ships with this fea
 - [ ] **Refusals are words, not files.** No log open, and a log open with nothing selected, each say so in the save menu
   dialog and write no file. An existing target file is overwritten only through the save dialog's own confirm.
 - [ ] **Failed exports release their files**: induce a write failure (for example a full test volume). The old target stays
-  intact, the error is reported, and the temporary file is not held open by the app; saving again must work after recovery.
+  intact, the message directs the operator to Error Log, and the exception appears there. The temporary file is not held
+  open by the app; saving again must work after recovery.

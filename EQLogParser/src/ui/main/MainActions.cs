@@ -488,7 +488,7 @@ namespace EQLogParser
 
       var dialog = new MessageWindow($"Saving {fights.Count} Selected Fights to Excel.", Resource.FILEMENU_SAVE_FIGHTS,
         MessageWindow.IconType.Save);
-      var failed = false;
+      string resultMessage = null;
 
       // Written beside its target under a temporary name, then moved: the chosen path is replaced only by a COMPLETE
       // package, so a throw halfway through no longer leaves a half-written .xlsx sitting where the operator clicked.
@@ -500,7 +500,12 @@ namespace EQLogParser
         {
           // Selection copying can be large too; preparation and writing both stay off the dispatcher.
           var options = engine.PrepareExport(snapshot, fights, title, sourceFile, localPlayer);
-          if (options is null) return;
+          if (options is null)
+          {
+            resultMessage = "Export canceled because the active log changed. "
+              + "Select fights in the current log and try again.";
+            return;
+          }
           var summary = CaptureExport.Write(tempFile, facts, heals, options);
           File.Move(tempFile, pickedFile, true);
           Log.Info($"detailed export: {summary} to {pickedFile}");
@@ -508,7 +513,7 @@ namespace EQLogParser
         catch (Exception ex)
         {
           Log.Error(ex);
-          failed = true;
+          resultMessage = "Problem saving workbook. Check Error Log for details.";
         }
         finally
         {
@@ -524,10 +529,10 @@ namespace EQLogParser
           UiUtil.InvokeAsync(() =>
           {
             dialog.Close();
-            if (failed)
+            if (resultMessage is not null)
             {
-              new MessageWindow("Error Saving. Can not access save file.", Resource.FILEMENU_SAVE_FIGHTS,
-                MessageWindow.IconType.Save).ShowDialog();
+              new MessageWindow(resultMessage, Resource.FILEMENU_SAVE_FIGHTS,
+                MessageWindow.IconType.Warn).ShowDialog();
             }
           });
         }

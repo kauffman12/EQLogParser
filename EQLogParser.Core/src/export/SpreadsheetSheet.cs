@@ -46,8 +46,6 @@ internal sealed class SpreadsheetSheet
   /// <summary>Data rows written across this sheet and any continuation part. Header rows are not counted.</summary>
   public long RowCount => _rowCount;
 
-  private int Ceiling => _spec.MaxRows > 0 ? _spec.MaxRows : SpreadsheetWriter.MaxSheetRows;
-
   /// <summary>Starts a row. Dispose (usually the `using`) closes it.</summary>
   public RowBuilder Row()
   {
@@ -75,6 +73,15 @@ internal sealed class SpreadsheetSheet
    */
   internal static bool PartIsFull(int partRowIndex, int partDataRows, int ceiling) =>
     partDataRows >= ceiling || partRowIndex >= SpreadsheetWriter.MaxSheetRows;
+
+  internal void Finish()
+  {
+    if (_finished) return;
+    _finished = true;
+    ClosePart();
+  }
+
+  private int Ceiling => _spec.MaxRows > 0 ? _spec.MaxRows : SpreadsheetWriter.MaxSheetRows;
 
   private void OpenPart(ZipArchiveEntry entry)
   {
@@ -166,13 +173,6 @@ internal sealed class SpreadsheetSheet
     }
   }
 
-  internal void Finish()
-  {
-    if (_finished) return;
-    _finished = true;
-    ClosePart();
-  }
-
   private void WriteCell(int column, int rowIndex, string value, CellKind kind, bool bold)
   {
     _maxColumn = Math.Max(_maxColumn, column);
@@ -184,11 +184,6 @@ internal sealed class SpreadsheetSheet
     switch (kind)
     {
       case CellKind.Number:
-        _writer.WriteElementString("v", SpreadsheetWorkbook.Main, value);
-        break;
-
-      case CellKind.Boolean:
-        _writer.WriteAttributeString("t", "b");
         _writer.WriteElementString("v", SpreadsheetWorkbook.Main, value);
         break;
 
@@ -217,7 +212,7 @@ internal sealed class SpreadsheetSheet
     _writer.WriteEndElement();
   }
 
-  internal enum CellKind { Text, Number, Boolean }
+  internal enum CellKind { Text, Number }
 
   /*
    * The per-cell door. A ref struct so a builder cannot outlive the write window (a captured one would write into a
@@ -232,24 +227,10 @@ internal sealed class SpreadsheetSheet
 
     public void Number(long value) => Cell(value.ToString(CultureInfo.InvariantCulture), CellKind.Number);
 
-    public void Number(double value) => Cell(value.ToString("0.###", CultureInfo.InvariantCulture), CellKind.Number);
-
-    /// <summary>A real TRUE/FALSE cell, so Excel filters it as a boolean (a "Yes"/"No" string sorts as text).</summary>
-    public void Flag(bool value) => Cell(value ? "1" : "0", CellKind.Boolean);
-
     public void Text(string value, bool bold = false)
     {
       var column = ++_column;
       _sheet.WriteCell(column, _rowIndex, value ?? string.Empty, CellKind.Text, bold);
-    }
-
-    /// <summary>Leaves the cell empty and moves on, so a sparse row keeps its columns lined up.</summary>
-    public void Blank() => _column++;
-
-    private void Cell(string value, CellKind kind)
-    {
-      var column = ++_column;
-      _sheet.WriteCell(column, _rowIndex, value, kind, false);
     }
 
     public void Dispose()
@@ -257,6 +238,12 @@ internal sealed class SpreadsheetSheet
       if (!_open) return;
       _open = false;
       _sheet._writer.WriteEndElement();   // row
+    }
+
+    private void Cell(string value, CellKind kind)
+    {
+      var column = ++_column;
+      _sheet.WriteCell(column, _rowIndex, value, kind, false);
     }
   }
 }

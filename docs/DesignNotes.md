@@ -17584,7 +17584,7 @@ Current scope: damage uses the selected fights' exact `FightFactIndex.CaptureOrd
 including hidden charm-pet rows), not the envelope between first and last selected fights. Explicit damage membership
 is never recut by the auxiliary windows: a linked post-charm half can start after its visible encounter closed. A regression
 selects 900 pre-charm damage plus 300 linked post-charm damage and requires all 1,200, without widening the heal window.
-Casts and heals use the union
+The writer copies and normalizes membership without sorting an already sorted array again. Casts and heals use the union
 of selected lifetimes, each widened by the five-second lead-in. Overlap is merged so auxiliary rows occur once. `Seconds`
 is the inclusive duration of the union without lead-in; relative `Time` remains one clock anchored at the first selected
 begin, with 1 at that second and -1 one second early. `Log Time` uses `yyyy-MM-ddTHH:mm:ss`, without inventing a time zone.
@@ -17606,10 +17606,14 @@ the production lens and the written workbook, keeping unowned pet damage under t
 Workbook cleanup encloses worksheet finalization as well as package writing. An invalid XML character or a failed flush
 can throw while finishing a sheet; the writer, ZIP entry, archive and file still release their resources, including when
 the initial header fails. Failed exports cannot strand an exclusive file handle and block temporary-file deletion on Windows.
+If the capture changes before preparation can freeze its inputs, the export reports cancellation without replacing the
+target. Unexpected failures retain their exception in Error Log and direct the operator there, rather than claiming every
+failure is a file-access problem.
 
 Eight logical sheets: Player DPS, NPC DPS, Spells cast, **All heals**, Heals by you, Heals to you, Players, Event Info.
 All heals is authoritative and includes NPC/other-player healing once; the two local-player sheets are overlapping views,
-falling back to raid-side views when no local player is known. `Healing` reconciles with All heals, not their sum.
+falling back to raid-side views when no local player is known. Its writing pass also collects the healing total and lookup
+names, including owners, so no separate healing census scan is needed. `Healing` reconciles with All heals, not their sum.
 Damage carries `Player` (owner or player-side attacker), grouping-player `Class`, `Kind`, raw melee `Type`, broad `Category`,
 and separate clean `Skill` / `Rank` / `Skill Full`. Cast/heal spell columns likewise carry clean names, rank and original
 text; healing also preserves direct/HOT `Type` and verbatim `Requested Raw` beside calculated `Over Heal`. Players lists

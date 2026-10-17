@@ -38,9 +38,6 @@ internal static class SpreadsheetWriter
   internal static SpreadsheetWorkbook Open(string path, string sheetName, string[] headers, int width = 12)
     => SpreadsheetWorkbook.OpenWith(path, new SpreadsheetSpec(sheetName, headers, width));
 
-  internal static SpreadsheetWorkbook OpenWith(string path, params SpreadsheetSpec[] specs)
-    => SpreadsheetWorkbook.OpenWith(path, specs);
-
   /*
    * Column number (1-based) to its A1-style letters, by hand: the alternative is interpolated string arithmetic on a
    * per-cell reference for every cell of a seven-figure export.

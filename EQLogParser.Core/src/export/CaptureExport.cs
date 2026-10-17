@@ -85,7 +85,6 @@ internal static class CaptureExport
         facts, options, window, spans);
       if (heals != null)
       {
-        window.Healing = ScanHealing(heals, options, window, spans);
         healRows = WriteHeals(book.AddSheet(new SpreadsheetSpec("All heals", HealHeaders, 14)),
           heals, options, window, spans, 0);
         healsBy = WriteHeals(book.AddSheet(new SpreadsheetSpec("Heals by you", HealHeaders, 14)),
@@ -144,20 +143,6 @@ internal static class CaptureExport
     }
     result.AnchorS = options.AnchorS != long.MinValue ? options.AnchorS : result.BeginS;
     return result;
-  }
-
-  private static long ScanHealing(HealFactTable heals, Options options, Window window, Span[] spans)
-  {
-    long total = 0;
-    foreach (var slice in heals.HealsIn(0, options.HealLimit))
-      foreach (var h in slice)
-      {
-        if (!Contains(spans, h.TimeS)) continue;
-        total += h.Total;
-        AddName(window, heals.NameOf(h.HealerIdx), h.TimeS, options);
-        AddName(window, heals.NameOf(h.HealedIdx), h.TimeS, options);
-      }
-    return total;
   }
 
   private static long WriteHits(SpreadsheetSheet sheet, DamageFactTable facts, Options options,
@@ -231,6 +216,13 @@ internal static class CaptureExport
         if (!Contains(spans, h.TimeS)) continue;
         var healer = heals.NameOf(h.HealerIdx);
         var healed = heals.NameOf(h.HealedIdx);
+        // Only the authoritative sheet contributes totals and lookup names; local-player sheets are views.
+        if (filter == 0)
+        {
+          window.Healing += h.Total;
+          AddName(window, healer, h.TimeS, options);
+          AddName(window, healed, h.TimeS, options);
+        }
         var local = options.LocalPlayer ?? string.Empty;
         if (filter != 0)
         {
@@ -400,7 +392,13 @@ internal static class CaptureExport
   {
     if (source is null) return null;
     var sorted = source.ToArray();
-    Array.Sort(sorted);
+    // Projection membership is already sorted; still normalize arbitrary callers without borrowing their array.
+    for (var i = 1; i < sorted.Length; i++)
+    {
+      if (sorted[i] >= sorted[i - 1]) continue;
+      Array.Sort(sorted);
+      break;
+    }
     var count = 0;
     foreach (var ordinal in sorted)
       if (count == 0 || ordinal != sorted[count - 1]) sorted[count++] = ordinal;
