@@ -561,9 +561,10 @@ namespace EQLogParser
     private static byte[] EncodeChunk(DamageFact[] rows)
     {
       var blob = DamageFactChunkCodec.Encode(rows, rows.Length);
-      var check = DamageFactChunkCodec.Decode(blob, rows.Length);
-      for (var i = 0; i < rows.Length; i++)
-        if (!SameRow(rows[i], check[i])) throw new InvalidOperationException($"damage codec differs at row {i}");
+
+      // Same proof as always — decode it and compare every field — through the codec's rented probe, because a second
+      // 1.75 MB row array per chunk was the single largest slice of the 363 MB this file used to allocate on its way by.
+      DamageFactChunkCodec.VerifyRoundTrip(blob, rows);
       return blob;
     }
 
@@ -571,10 +572,6 @@ namespace EQLogParser
     internal int ColdifyNow() => _rows.Settle();
 
     internal IDisposable RetainDecoded() => _rows.RetainDecoded();
-
-    private static bool SameRow(in DamageFact a, in DamageFact b) =>
-      a.Seq == b.Seq && a.TimeS == b.TimeS && a.AtkIdx == b.AtkIdx && a.DefIdx == b.DefIdx && a.Total == b.Total
-      && a.TypeId == b.TypeId && a.Flags == b.Flags && a.ModMask == b.ModMask && a.SubIdx == b.SubIdx;
 
     /// <summary>Chunks allocated (not chunks used) - the honest denominator for EstimatedBytes under chunked storage.</summary>
     internal int FactChunksAllocated => _rows.RawCount;

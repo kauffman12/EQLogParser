@@ -311,7 +311,7 @@ namespace EQLogParser
       return result;
     }
 
-    internal static short ParseHeal(string player, string modifiers, double currentTime)
+    internal static short ParseHeal(string player, ReadOnlySpan<char> modifiers, double currentTime)
     {
       var result = Parse(modifiers);
 

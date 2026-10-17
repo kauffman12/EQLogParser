@@ -270,7 +270,6 @@ namespace EQLogParser
              *     hit points by Bastion of Divinity Effect.`): see IsSubjectIsSpell. The standing law there is that
              *     nobody is named, and putting the spell on the healer seat would move the healing board.
              */
-            healer = SubjectActor(test);
           }
         }
       }
@@ -440,8 +439,11 @@ namespace EQLogParser
           var firstParen = part.LastIndexOf('(', part.Length - 4);
           if (firstParen > -1)
           {
+            // The paren text rides in as a span of the line it came from: this substring was one allocation per
+            // modifier-bearing heal line for no reason but a signature (measured together with a redundant second
+            // SubjectActor call, removed in the same pass: −16.2 MB per capture).
             record.ModifiersMask = LineModifiersParser.ParseHeal(record.Healer,
-              part.Substring(firstParen + 1, part.Length - 1 - firstParen - 1), beginTime);
+              part.AsSpan(firstParen + 1, part.Length - 1 - firstParen - 1), beginTime);
           }
         }
       }

@@ -337,6 +337,12 @@ namespace EQLogParser
         }
       }
 
+      // The word trees are written only while this data file is read; freeze them at the end of it. Freezing is what
+      // swaps in the compact read form that SearchSpellPath probes by span, and it releases the builder dictionaries.
+      _landsOnOtherTree.Freeze();
+      _landsOnYouTree.Freeze();
+      _wearOffTree.Freeze();
+
       // Include non-charm variants sharing these messages: the newest matching cast can veto a charm interpretation.
       foreach (var spell in spellList)
       {
@@ -967,8 +973,9 @@ namespace EQLogParser
 
     /// <summary>
     /// Searches for a spell path in the provided spell tree, walking the word view from `lastIndex` toward the head.
-    /// Only PROBED words materialize (one small string per tree level, and a miss at level one — the common case —
-    /// probes exactly once), which is what replaced handing the whole Split array to this walk.
+    /// A probe is the WORD SLICE itself — nothing about this walk allocates per level any more, which replaces one small
+    /// string per tree level (5.3 M of them on one capture) and the result object that used to carry the answer back.
+    /// A miss at level one, the common case, is still exactly one probe.
     /// </summary>
     public static SpellTreeResult SearchSpellPath(SpellTreeNode node, LineWords split, int lastIndex = -1)
     {
@@ -977,7 +984,7 @@ namespace EQLogParser
         lastIndex = split.Length - 1;
       }
 
-      if (node.Words.TryGetValue(split.StringAt(lastIndex), out var child))
+      if (node.TryWord(split[lastIndex].Span, out var child))
       {
         if (lastIndex > 0)
         {
@@ -1011,10 +1018,10 @@ namespace EQLogParser
       }
       else
       {
-        if (!node.Words.TryGetValue(data[lastIndex], out var child))
+        if (!node.TryBuildingWord(data[lastIndex], out var child))
         {
           child = new SpellTreeNode();
-          node.Words[data[lastIndex]] = child;
+          node.AddWord(data[lastIndex], child);
         }
 
         if (lastIndex == 0)

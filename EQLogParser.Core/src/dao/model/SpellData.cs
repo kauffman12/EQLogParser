@@ -1,3 +1,5 @@
+using System.Collections.Frozen;
+
 namespace EQLogParser;
 
 internal enum SpellResist
@@ -43,13 +45,67 @@ internal class SpellCountData
   public Dictionary<string, bool> UniquePlayers { get; set; } = [];
 }
 
-internal class SpellTreeNode
+/*
+ * One level of a spell-word tree (LandsOnOther / LandsOnYou / WearOff messages walked from their tail word).
+ *
+ * Two forms, because the two halves of its life are different: `spells.txt` INSERTS words, and after that every read is
+ * a probe by a slice of a log line. The insert side is an ordinary Dictionary; the read side is a FrozenDictionary, which
+ * is the shape whose `AlternateLookup<ReadOnlySpan<char>>` answers without materialising the key. That is worth naming:
+ * probing by `split.StringAt(i)` allocated **5,305,309 small strings — 26.9 MB of characters — per real capture**, one per
+ * tree level visited, in a walk where a miss at the first level is the common case. Ordinal matching is unchanged: both
+ * forms use the default (ordinal) string comparer, so "Renewal" still does not find "renewal".
+ *
+ * The builder dictionary is dropped on Freeze, so the capture keeps only the compact read form.
+ */
+internal sealed class SpellTreeNode
 {
+  private static readonly FrozenDictionary<string, SpellTreeNode> NoWords =
+    new Dictionary<string, SpellTreeNode>().ToFrozenDictionary();
+
+  private Dictionary<string, SpellTreeNode> _building = new(StringComparer.Ordinal);
+  private FrozenDictionary<string, SpellTreeNode> _words = NoWords;
+
   public List<SpellData> SpellData { get; set; } = [];
-  public Dictionary<string, SpellTreeNode> Words { get; set; } = [];
+
+  /// <summary>Insert during the data-file load. A write after <see cref="Freeze"/> is a bug, not a late addition: it would
+  /// never be read, since the frozen form is what every probe uses.</summary>
+  internal void AddWord(string word, SpellTreeNode child)
+  {
+    if (_building is null) throw new InvalidOperationException("spell tree written after Freeze()");
+    _building[word] = child;
+  }
+
+  /// <summary>The insert-side lookup, tolerant of a node that is already frozen (nothing builds on top of one today).</summary>
+  internal bool TryBuildingWord(string word, out SpellTreeNode child)
+  {
+    if (_building is not null) return _building.TryGetValue(word, out child);
+
+    // A node already frozen answers from its read form; nothing builds on top of one today, and AddWord refuses it.
+    return _words.TryGetValue(word, out child);
+  }
+
+  /// <summary>Freeze this level and everything below it. Called once per tree, after the data file is fully read.</summary>
+  internal void Freeze()
+  {
+    if (_building is null) return;
+
+    _words = _building.Count == 0 ? NoWords : _building.ToFrozenDictionary(StringComparer.Ordinal);
+    _building = null;
+
+    foreach (var child in _words.Values) child.Freeze();
+  }
+
+  /// <summary>The read door: a word as a slice of the line it came from, ordinal, allocating nothing on a hit.</summary>
+  internal bool TryWord(ReadOnlySpan<char> word, out SpellTreeNode child)
+    => _words.GetAlternateLookup<ReadOnlySpan<char>>().TryGetValue(word, out child);
 }
 
-internal class SpellTreeResult
+/*
+ * WHAT the walk landed on and how far back it consumed. A VALUE type: this was one heap object per spell-tree search,
+ * 2,336,056 of them over one capture, and every consumer takes a copy of the two fields by hand anyway (the three
+ * `TryGet…` doors reassign `SpellData` to their own filtered list before handing the answer to the caller).
+ */
+internal struct SpellTreeResult
 {
   public List<SpellData> SpellData { get; set; }
   public int DataIndex { get; set; }

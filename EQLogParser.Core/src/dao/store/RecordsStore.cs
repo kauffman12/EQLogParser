@@ -480,41 +480,51 @@ namespace EQLogParser
       }
     }
 
+    /*
+     * The window is LOCATED inside the list lock and only its own groups are copied out. This used to copy every group of
+     * the night and then binary-search the copy, so a question about five minutes of a raid paid for all of it — the whole
+     * capture's spell history copies 4.6 MB per call on a real log, and any narrower window was throwing that copy away.
+     * The work inside the lock is comparisons and a sized array copy, no calls out; ordering is unchanged: ascending by
+     * group time, or the same run walked backwards for `reverse`.
+     */
     private IEnumerable<(double, object)> GetDuring(string type, double beginTime, double endTime, bool reverse = false)
     {
       if (_recordDictionaries.TryGetValue(type, out var list))
       {
-        List<RecordList> listCopy;
+        RecordList[] window;
         lock (list)
         {
-          listCopy = [.. list];
+          window = WindowOf(list, beginTime, endTime, reverse);
         }
 
-        if (reverse)
+        foreach (var group in window)
         {
-          var index = CollectionUtil.BinarySearch(listCopy, item => item.BeginTime.CompareTo(endTime));
-          index = index < 0 ? Math.Min(~index, listCopy.Count - 1) : index;
-          for (var i = index; i >= 0 && i < listCopy.Count && listCopy[i].BeginTime >= beginTime && listCopy[i].BeginTime <= endTime; i--)
+          foreach (var record in ProcessRecordList(group))
           {
-            foreach (var record in ProcessRecordList(listCopy[i]))
-            {
-              yield return record;
-            }
-          }
-        }
-        else
-        {
-          var index = CollectionUtil.BinarySearch(listCopy, item => item.BeginTime.CompareTo(beginTime));
-          index = index < 0 ? ~index : index;
-          for (var i = index; i < listCopy.Count && listCopy[i].BeginTime >= beginTime && listCopy[i].BeginTime <= endTime; i++)
-          {
-            foreach (var record in ProcessRecordList(listCopy[i]))
-            {
-              yield return record;
-            }
+            yield return record;
           }
         }
       }
+    }
+
+    /// <summary>The groups whose time falls in [beginTime, endTime], in the direction the reader will walk them.</summary>
+    private static RecordList[] WindowOf(List<RecordList> list, double beginTime, double endTime, bool reverse)
+    {
+      if (list.Count == 0 || beginTime > endTime) return [];
+
+      var lo = CollectionUtil.BinarySearch(list, item => item.BeginTime.CompareTo(beginTime));
+      if (lo < 0) lo = ~lo; // the first group at or after `beginTime`
+
+      var hi = CollectionUtil.BinarySearch(list, item => item.BeginTime.CompareTo(endTime));
+      if (hi < 0) hi = ~hi - 1; // the last group at or before `endTime`
+
+      if (lo > hi || lo >= list.Count) return [];
+      hi = Math.Min(hi, list.Count - 1);
+
+      var window = new RecordList[hi - lo + 1];
+      for (var i = 0; i < window.Length; i++) window[i] = list[lo + i];
+      if (reverse) Array.Reverse(window);
+      return window;
     }
 
     private static IEnumerable<(double, object)> ProcessRecordList(RecordList recordList)

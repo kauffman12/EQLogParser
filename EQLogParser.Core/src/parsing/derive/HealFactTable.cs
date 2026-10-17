@@ -390,16 +390,10 @@ namespace EQLogParser
     private static byte[] EncodeChunk(HealFact[] rows)
     {
       var blob = HealFactChunkCodec.Encode(rows, rows.Length);
-      var probe = HealFactChunkCodec.Decode(blob, rows.Length);
-      for (var i = 0; i < rows.Length; i++)
-      {
-        var a = rows[i];
-        var b = probe[i];
-        if (a.Seq != b.Seq || a.TimeS != b.TimeS || a.HealerIdx != b.HealerIdx || a.HealedIdx != b.HealedIdx
-            || a.Total != b.Total || a.OverTotal != b.OverTotal || a.TypeId != b.TypeId || a.Flags != b.Flags
-            || a.ModMask != b.ModMask || a.SubIdx != b.SubIdx)
-          throw new InvalidOperationException("cold heal chunk round trip differs at row " + i);
-      }
+
+      // The same decode-and-compare-every-field proof, through the codec's rented probe: a second 1 MB row array per chunk
+      // was pure garbage, and verification itself is not what this trade removes.
+      HealFactChunkCodec.VerifyRoundTrip(blob, rows);
       return blob;
     }
 
