@@ -171,6 +171,15 @@ namespace EQLogParser
     {
       if (chat is null || string.IsNullOrEmpty(chat.Sender)) return;
       Emit(EvidenceFact.EvChat, chat.Sender, chat.BeginTime, chat.Channel);
+
+      /*
+       * A summon naming its master is identity evidence about the SPEAKER, not another chat event: the sentence reads
+       * ``Mgsk says, 'My leader is Xxuro.'`` and the only person it can be about is the one talking. Captured here so the
+       * fact exists in every host — the confession used to live solely in ChatDB (WPF), which headless runs replace with a
+       * no-op sink, so no test could ever see it and the rules saw only a strength-8 seed behind it.
+       */
+      if (ChatLineParser.TryPetLeaderOwner(chat, out var owner))
+        Emit(EvidenceFact.EvPetLeader, chat.Sender, chat.BeginTime, owner);
     }
 
     private void OnPreLineEvidence(string name, double time, byte kind) => Emit(kind, name, time);

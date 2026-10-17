@@ -245,7 +245,7 @@ internal static class IdentityVocabulary
     ["R1-target"] = 90, ["R3-merc"] = 90, ["R13-merc"] = 90, ["R2-who"] = 90, ["R0-local"] = 90, ["R1-conflict"] = 90,
     ["R3-chat"] = 80, ["R3-joinraid"] = 80, ["R3-leader"] = 80, ["R22-guildmate"] = 80,
     ["R3-joingroup"] = 80, ["R3-leaveraid"] = 80, ["R3-leftgroup"] = 80,
-    ["R9-charm"] = 70, ["R5-owner"] = 70, ["R5-companion"] = 70, ["R19-eyeowner"] = 70, ["R17-selffeed"] = 70,
+    ["R9-charm"] = 70, ["R5-owner"] = 70, ["R5-leader"] = 70, ["R5-companion"] = 70, ["R19-eyeowner"] = 70, ["R17-selffeed"] = 70,
     ["R20-petspell"] = 70, ["R4-spell"] = 70, ["R15-healed"] = 70, ["R18-healedpet"] = 70, ["R24-petslot"] = 70,
     ["R7-graph"] = 60, ["R7-side"] = 60,
     ["R6-npcdb"] = 50, ["R14-shape"] = 50, ["R16-comma"] = 50, ["R23-loot"] = 50,
@@ -393,6 +393,11 @@ internal static class IdentityVocabulary
       // The name itself is the evidence, and the phrase now says WHICH name: the pet's (asked directly: "instead of
       // Owner in Name can the tooltip say Owner in Pet Name to be more clear?").
       "R5-owner" => "Owner in Pet's Name",
+      /*
+       * The summon said it itself, which is why the clause quotes the sentence rather than describing a lookup; the tail is
+       * the master it named ("Named Bovon Its Leader"), and with no tail it still says what the line did.
+       */
+      "R5-leader" => detail is null ? "Said Who Its Leader Is" : $"Named {detail} Its Leader",
       // npcs.txt is the game's creature database this app ships, and "NPC DB" is what an operator calls it.
       "R6-npcdb" => "In the NPC DB",
       // The bot table. Same phrase shape as its neighbour on purpose: a reader who knows one of these hovers knows this one,
@@ -544,6 +549,8 @@ internal static class IdentityVocabulary
     // The proof is the name's own spelling: `Tuona`s ward` carries its owner in it. "Owner" alone asked a question
     // ("what do you mean owner?") that this answer settles without a second column.
     ["R5-owner"] = "Owner in Pet Name",
+    // The cell cannot print the master (that is the Owner column's job), so it says what the summon did.
+    ["R5-leader"] = "Named Its Master",
     ["R6-npcdb"] = "NPC DB",
 
     /*

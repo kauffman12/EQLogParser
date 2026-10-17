@@ -14023,3 +14023,116 @@ Structural validity (parts, relationship graph, cell typing, per-part filter ran
 `SpreadsheetExportTest`/`CaptureExportShapeTest`; "it opens in Excel" is a Windows check in
 `docs/ReleaseChecklist.md → Detailed .xlsx export checks on Windows`. Zero new dependencies, so `sign.cmd` and the
 installer list are unchanged.
+
+## A summon's own sentence about its master (2026-12-08)
+
+``[Sun Oct 11 21:53:56 2026] Mgsk says, 'My leader is Xxuro.'``
+
+This sentence has been in the logs since the beginning of the application, and until today it decided nothing. Two things
+were true at once, and neither looked like a bug from inside its own file:
+
+- `ChatDB` (WPF) read the shape, wrote `AddVerifiedPet` / `AddVerifiedPlayer` / `SetPlayerPet`, and is the reason the
+  operator-facing pet map has any pairs in it at all. It also skipped article-shaped names ("a wolf says, 'My leader is
+  X'" — a summon, not an account), which is correct behaviour wearing a store's clothes.
+- The identity rules never read `ChatDB`. The registry's only route into classification is `RegistrySeed.Apply`, which
+  seeds **both** halves of a saved pet pair at `RuleStrength.Weak` = 8 — the floor of the ladder, under everything else, on
+  both axes. So the confession was heard, filed, and then outvoted by anything with an opinion.
+
+Measured on the two real captures before this change (rules applied, cold registry):
+
+| name | what the capture says | verdict before |
+|---|---|---|
+| `Useless` (Incogitable) | 4 of its own lines are the confession; 515 heal lines landed on it; 3 `Targeted (NPC)` frames; 4 swing lines | **Npc** (`R6-npcdb`, Medium 30 beating nothing at 8) |
+| `Mgsk` (Kizant-2026) | 91 lines, of which **726 group heal events** landed on it over 45 min; its own line names `Xxuro` | **Unplaced** — a raid member's pet, invisible to the Identity Table |
+| `Dawnmist`, `Juna`, `Kismix` (Incogitable) | confession in log | Player at **8**, i.e. the seed alone |
+
+Two corrections to how I described this earlier in the same investigation, recorded so nobody re-derives them: the registry
+**does** reach classification (through `RegistrySeed`, at 8 — my first probe read the rules cold and concluded "no route",
+which was wrong), and `ChatDB` is **not** dead code — its persistence still feeds the operator's pet map and the chat
+archive. What it was is an identity door with a WPF-only hinge: `PipelineHarness` replaces the sink with a no-op, so no headless
+test could ever see the sentence, and the strength-8 seed was all that arrived.
+
+**The law now.** The sentence is *captured* on the Core ingest path (`CombatCapture.HandleChat` → `EvidenceFact.EvPetLeader`,
+aux = the owner text, recognised by `ChatLineParser.TryPetLeaderOwner`, which strips the trailing period because a name never
+keeps it), and *decided* by `R5-leader` in the evidence stage: Pet at **Certain** (100), the named master at **Medium** with a
+`PetOfPlayer` interval at Certain, under R24's unchanged guard — any Player or Merc claim this capture made refuses the
+sighting rather than being outvoted by it. Certain because `Targeted (NPC)` cannot see a pet while the pet can name its owner;
+the master is Medium because, exactly as R5-owner says, the line proves the summon and the pair, not the person. A comma in the
+owner text is one summon with two masters (`Akini, Xanathan`s Warder`): the pet claim holds, no raider is invented — same guard
+`RegistrySeed.ApplyPetMappings` applies. `ChatDB` is left alone: it keeps the chat archive and still writes `AddVerifiedPlayer` / `AddPetToPlayer`, which reach the
+rules as that strength-8 seed. What changed is that the sentence no longer *depends* on those writes, or on nothing else
+having an opinion — the claim now comes from the line, at a tier a frame cannot outvote. Folding ChatDB's registry writes
+away would be a separate decision (they are how pairs persist for the operator's pet map), not part of this one.
+
+What the two captures produce afterwards, same cold-registry run, rules applied:
+
+| capture | confession lines | distinct speakers | placed Pet by `R5-leader` | already Pet, owner newly attached |
+|---|---|---|---|---|
+| Kizant-2026 (`eqlog_Kizant_beta.txt`) | 2 | 2 | `Mgsk`→Xxuro, `Bigboned`→Goruuk | — |
+| Incogitable (`eqlog_Incogitable_xegony.txt`) | 18 | 9 | `Useless`→Incogitable, `Gonekn`→Drakyne, `Kabartik`→Bovon, `Labeker`→Arkona, `Lafayette`→Kymidei, `Stalebread`→Hardtack | `Puksuu`→Sancusx, `Fred`→Wanabe, `Hazy`→Hazyfyre (all three already Pet at Certain via `R24-petslot`) |
+
+The last column is the second half of the win and was not the one asked for: R24 can say *"this name is a pet"* from a
+pet-slot spell, but it has no owner to name, so those three rows carried no pair. The confession supplies it, and both routes
+say Pet at Certain, so nothing competes — the source word stays `R24-petslot` (it enumerates later in the same sweep) while the
+`PetOfPlayer` interval comes from the sentence. A name this capture saw as a Player or Mercenary is refused the sighting and was
+not observed among these nine.
+
+`IdentityVocabulary` gains one word (`Named Its Master`, hover `Named <owner> Its Leader`). Tests: `PetLeaderConfessionTest`
+(recogniser, the capture writing one fact named for the summoner-side speaker, Certain-over-frame, the player guard, the comma
+guard). The registry path is untouched, so warm/cold semantics and every existing `.spool` behaviour stand.
+
+## The NPC frame gets its own rung: 65 (2026-12-08)
+
+`ClassificationRules.TargetedNpcStrength` was 70 and is now **65**. What the frame actually says is "the client never saw this
+name as a player", which cannot distinguish a hostile from a mercenary or a summon — measured, the bots `Muavanne` and
+`Breshanna` carry NPC frames and no other evidence at all. So it belongs above behaviour and below the curated bot table:
+`Medium 30 < Strong 60 < frame 65 < MercDatabase 80 < Certain 100`.
+
+Why not **60**, which is where the operator asked for it: thirteen claims already sit at exactly `Strong`, and the tie arm in
+`EntityTimeline` is `Strength == best && EffectiveFrom >= bestTime` — every one of those thirteen stamps
+`double.NegativeInfinity`, so at equal strength **whichever claim enumerates last wins**. That is the failure mode
+`RuleStrength.Listed` already forbids in its own comment ("must not tie with Medium (ties settle by stage order, which is not a
+rule)"): "was this name framed, or did it raid?" would become a question about stage order.
+
+Blast radius, measured over both real captures with rules applied before the number moved: 547 names carry an NPC-frame claim
+(523 Incogitable, 24 Kizant), 543 of them have no competitor at any tier, **4** tie with a Strong-tier rule (all four are
+`R1-conflict`, unchanged by the move), and **0** verdicts change between 70 and 65. `MercDatabaseTierTest` and
+`TargetFrameStrengthTest`/`MercFightListTest` now ask the frame's strength of the rule book instead of repeating 70, and
+`PetLeaderConfessionTest.TheNpcFrameSitsOnARungOfItsOwn` asserts the ladder is ascending and pairwise distinct, so any future
+number that lands on a neighbour's rung fails there rather than settling on write order.
+
+## Which spell targets could have hit a group (2026-12-08)
+
+The question was whether `Target` in `spells.txt` can carry the "was this a group heal" signal. It cannot decide identity — and
+it can rank the claim, which is what the heal lane needed. The numbers below are from both real captures, counted per distinct
+caster→target name pair and then split by whether the *defender* was provably a creature (article-shaped, or in `npcs.txt` with
+an NPC frame).
+
+| shape | verdict | why |
+|---|---|---|
+| `Target 0` | **uninformative** | 61,344 of ~63,000 spell rows carry it, and every real raid heal in the corpus is among them — including `Issuance of Eminence III` (`HealGroupAE`) and `Call of Thunderstrike VII` (a raid-wide heal). A rule built on 0 claims nothing. |
+| `Pet2` 38, `Castergroup` 3, `Targetae` 8 | already claimed | **R18-healedpet** exists for exactly this signal, at Strong. `Elemental Conversion VI` (475 lines, 6 distinct healers, targets a *raid* in the sheet) is one of its namesakes; 96.7 % of the creature share there is already handled. |
+| `Targetgroup` 41 | already claimed | R18's other half — `Spectral Transfer V Rk. II` (60 distinct healers, 925 lines) and `Dark Lord's Gift IV` (73). |
+| **`Remotehealing` 46** | **newly named** | 732 rows (`Remote Healing Flood`, `Scorn`). Behaves like a caster-group spell on raid-side evidence: **98.7–100 %** creature share at n=234, so with the caster gated to somebody this capture already proved, its heals land on raid members and on nothing provably hostile. |
+| `PetOnly` 42-ish pet-group codes | stay excluded | **64–76 %** creature share: a third of what they heal is not creatures, and that third is precisely the ambiguity worth not claiming over. |
+
+Two things that came out of hunting for a counterexample to "spell target = group":
+
+- A `Target 45` (`Targetringae`) or `Target 3` heal can be aimed at a **creature's** group and land on the mob: `Lariiah healed
+  a bramble sentinel for 15884 … by Issuance of Eminence Effect III. Target 45`, and `Cozi healed a Woeful oracle for 0 (78084)
+  hit points by Spiritual Shower Rk. III.` The caster is a proven raider in every one of those; the *defender* decides, so any
+  lane built here must read the defender's verdict, not the spell's number.
+- **A zero-landed heal healed nobody.** `0 (181945)` shapes (`Flourishing Splash Rk. II`) are pure overheal: the fact exists and
+  would vote for a name that received nothing. A group-heal lane must skip `Total == 0`.
+
+The honest limit on those percentages: "creature" above is defined as *article-shaped, or listed in `npcs.txt` and carrying an
+NPC frame*, which is aligned with the refusals by construction. A creature with a bare name that `npcs.txt` does not list sits in
+the unjudged remainder (54–93 % depending on the spell), so a claimed set should land under 100 %, not at it. That is why any
+tier built on this belongs at **Medium**, where an NPC frame (65) or an operator's verdict still overrules it — and never at Strong.
+
+`SpellTarget` therefore gains `Remotehealing = 46` only, plus `SpellTargetCodeCoverageTest`: every Target code the shipped
+`spells.txt` uses is either named by the enum or listed there as knowingly unnamed (`0, 9, 10, 11, 13, 15, 16, 17, 18, 21, 32,
+33, 34, 37, 43, 44, 47, 48, 50, 51, 52, 53, 54, 55`; row counts for the big ones: 46:732, 13:521, 10:364, 52:274, 44:236,
+32:179). Naming one of those is a data decision that needs a capture and a reading, not a guess — but a code arriving in an
+updated file now fails a test that says which one, instead of reading as "unknown shape" for another season. **No heal-claim rule
+shipped with this**: the buckets are measured, the tier is not yet chosen, and the probes that produced them were deleted.

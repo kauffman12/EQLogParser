@@ -149,7 +149,9 @@ public sealed class MercDatabaseTierTest
             $"[Mon May 04 19:00:05 2026] {NotABot} hits Betebeatz for 300 points of damage."));
 
         AssertIdentity(timeline, NotABot, IdentityKind.Npc, "R1-target");
-        Assert.AreEqual(70, Held(timeline, NotABot));
+        // The frame's own rung, asked of the rule book (it moved 70 → 65 so it shares no rung with the Strong behaviour claims;
+        // the merc table at 80 still clears it).
+        Assert.AreEqual(ClassificationRules.TargetedNpcStrength, Held(timeline, NotABot));
     }
 
     [TestMethod]

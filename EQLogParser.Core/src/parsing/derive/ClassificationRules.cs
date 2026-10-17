@@ -71,9 +71,20 @@ namespace EQLogParser
   //    stays stats-only rather than becoming a zero-yield identity rule.
   internal static class ClassificationRules
   {
-    // The NPC frame says "not a player", not "hostile"; the curated merc table can identify that non-player.
-    // docs/DesignNotes.md → "The bot table in `data/mercs.txt`".
-    internal const int TargetedNpcStrength = 70;
+    /*
+     * The NPC frame says "not a player", not "hostile", and it cannot tell a hostile from a mercenary or a summon — measured,
+     * the bots `Muavanne` and `Breshanna` carry NPC frames and no others — so it gets its own rung: above every behaviour rule
+     * (`Strong`) and below the curated merc table, which CAN identify that non-player. docs/DesignNotes.md →
+     * "The bot table in `data/mercs.txt`".
+     *
+     * 65, not 70 — and emphatically not 60. A tie is settled by write order rather than by the rule book (EntityTimeline's
+     * `Strength == best && EffectiveFrom >= bestTime` arm, and RuleStrength.Listed's own warning about tying with Medium), and
+     * thirteen claims already sit at exactly 60: R3-joinraid, R3-leaveraid, R3-joingroup, R3-leftgroup, R3-leader, R3-chat,
+     * R3-merc, R22-guildmate, R17-selffeed, R19-eyeowner, R5-companion, R9-charm and R20-petspell. Sitting on that rung would
+     * turn "was this name framed, or did it raid?" into a question about stage order. Measured blast radius of the move
+     * (Incogitable, Kizant-2026): 547 names carry a frame, 4 of them also carry a Strong-tier claim, 0 verdicts changed.
+     */
+    internal const int TargetedNpcStrength = 65;
     internal const int MercDatabaseStrength = 80;
 
     // Channels whose speech proves the sender is on your side (R3). Say/tell excluded: hostile
@@ -574,6 +585,41 @@ namespace EQLogParser
              */
             playerBehavior.Add(name);
             Claim(timeline, state, name, IdentityKind.Player, RuleStrength.Strong, "R5-companion", double.NegativeInfinity);
+            break;
+
+          case EvidenceFact.EvPetLeader:
+            /*
+             * R5-leader: ``Mgsk says, 'My leader is Xxuro.'`` — a summon naming its own master, about itself. Certain, with
+             * R24's law unchanged: a person is not a summon, so ANY claim this capture made that the name is a Player or a
+             * Mercenary refuses the sighting instead of being outvoted by it.
+             *
+             * Certain rather than Strong because the sentence outranks `Targeted (NPC)`: a frame cannot see a pet, while the pet
+             * can name its owner. Measured before this rule existed — ``Useless`` read Npc on its frame alone with this very line
+             * in the log, and on Kizant-2026 ``Mgsk`` sat Unplaced across 726 group heal lines while naming Xxuro as its leader —
+             * because the pair only ever reached the rules as a strength-8 RegistrySeed seed written by ChatDB, which lives in the
+             * WPF project and is a no-op outside it. docs/DesignNotes.md → "A summon's own sentence about its master".
+             *
+             * The named master is corroborated, not proven, by the claim: Medium, exactly as R5-owner does for ``X`s pet`` (the
+             * sentence proves the summon and the pair, not the person). A comma in that text is one summon with two masters
+             * (`Akini, Xanathan`s Warder`): the pair still holds, but it must not invent a raider — same guard
+             * RegistrySeed.ApplyPetMappings applies.
+             */
+            {
+              var leaderOwner = facts.AuxOf(e.AuxIdx);
+              if (!timeline.HasIndependentIdentity(name, IdentityKind.Player, double.PositiveInfinity)
+                  && !timeline.HasIndependentIdentity(name, IdentityKind.Merc, double.PositiveInfinity))
+              {
+                Claim(timeline, state, name, IdentityKind.Pet, RuleStrength.Certain,
+                      string.IsNullOrEmpty(leaderOwner) ? "R5-leader" : $"R5-leader:{leaderOwner}", double.NegativeInfinity);
+
+                if (!string.IsNullOrWhiteSpace(leaderOwner) && !leaderOwner.Contains(',', StringComparison.Ordinal))
+                {
+                  Claim(timeline, state, leaderOwner, IdentityKind.Player, RuleStrength.Medium, "R5-leader");
+                  Claim(timeline, state, AffiliationKind.PetOfPlayer, name, double.NegativeInfinity, double.PositiveInfinity,
+                        RuleStrength.Certain, $"R5-leader:{leaderOwner}", leaderOwner);
+                }
+              }
+            }
             break;
 
           case EvidenceFact.EvCharmStart:
@@ -1630,5 +1676,6 @@ namespace EQLogParser
      */
     internal static bool IsPetSlotSpell(string? spell)
       => EQDataStore.Instance.GetSpellByName(spell) is { Target: (byte) SpellTarget.Pet or (byte) SpellTarget.Pet2 };
+
   }
 }

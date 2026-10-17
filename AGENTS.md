@@ -197,6 +197,13 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
   `HasIndependentIdentity` reads EVERY claim rather than the winner, which is why R6 must not restate an NPC sentence under
   a Merc verdict. The ledger refuses `R27-` (`RememberedRules`): a shipped table restates itself every start. See
   docs/DesignNotes.md → "The bot table in `data/mercs.txt`".
+- **A summon that names its master is Pet at Certain**: ``X says, 'My leader is Y.'`` is captured on the Core ingest path
+  (`EvPetLeader`) and decided by `R5-leader` — master corroborated at Medium, pair interval at Certain, comma-guard on the owner
+  text, and R24's law that a person is not a summon. `ChatDB` keeps the chat archive and the operator's pet map and opens no
+  identity door; the registry reaches the rules only as `RegistrySeed` at strength 8.
+- **The `Targeted (NPC)` frame owns its rung** (`TargetedNpcStrength`, 65): above every behaviour claim, below the bot table.
+  Never move it onto `Strong` — thirteen claims sit there and a tie settles on stage order, not on the rule book. Numbers:
+  docs/DesignNotes.md → "A summon's own sentence about its master", "The NPC frame gets its own rung: 65".
 - **Frenzy claims a class, never a person**; classes are time-windowed (`GetPlayerClass(name, t)`), low-confidence flips need
   `LowConfidenceThreshold` sightings, and headless class writes need the `App.xaml.cs` host hook.
 - **Memory lanes**: `identity-priors.txt` holds rule verdicts *and* the saved-roster lane (players.txt has **no writer**;

@@ -193,6 +193,35 @@ namespace EQLogParser
       return null;
     }
 
+    /*
+     * The confession shape: a chat body of ``My leader is <owner>.`` spoken BY the summon — the sender is the summon, the
+     * returned text is whoever it claims. Channel-agnostic on purpose: the body is the whole proof, and the shape has been
+     * seen both as ``says, 'My leader is X.'`` and inside a hireling's ``tells you,``. Which of the shapes above parsed the
+     * line decides whether TextStart lands on the opening quote, so the quote and any space are trimmed. The trailing period
+     * comes off: a name never keeps the sentence's period.
+     *
+     * This recognises a sentence and claims nothing — R5-leader decides what it means (docs/DesignNotes.md →
+     * "A summon's own sentence about its master").
+     */
+    internal static bool TryPetLeaderOwner(ChatType chat, out string owner)
+    {
+      owner = null;
+      if (chat?.Text is not { Length: > 0 } text || chat.TextStart < 0 || chat.TextStart >= text.Length) return false;
+
+      var body = text.AsSpan(chat.TextStart).TrimStart(" '");
+      const string Marker = "My leader is ";
+      if (!body.StartsWith(Marker, StringComparison.OrdinalIgnoreCase)) return false;
+
+      var rest = body[Marker.Length..].Trim();
+      var dot = rest.IndexOf('.');
+      if (dot > 2) rest = rest[..dot];
+      rest = rest.Trim();
+      if (rest.Length is < 2 or > 64) return false;
+
+      owner = rest.ToString();
+      return true;
+    }
+
     public static ChatType CheckYouCriteria(ReadOnlySpan<char> span)
     {
       span = span["You ".Length..];

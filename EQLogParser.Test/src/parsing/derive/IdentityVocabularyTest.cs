@@ -41,7 +41,7 @@ public class IdentityVocabularyTest
      */
     "R3-joinraid", "R3-leaveraid", "R3-joingroup", "R3-leftgroup", "R3-leader", "R3-merc",
 
-    "R4-spell", "R5-companion", "R5-owner", "R6-npcdb", "R7-graph", "R7-side", "R9-charm", "R10-manual",
+    "R4-spell", "R5-companion", "R5-owner", "R5-leader", "R6-npcdb", "R7-graph", "R7-side", "R9-charm", "R10-manual",
     "R13-merc", "R14-shape", "R15-healed", "R16-comma", "R17-selffeed", "R18-healedpet", "R19-eyeowner",
     "R20-petspell",
     "R21-spellshape", "R21-spellcast", "R21-spelleffect",

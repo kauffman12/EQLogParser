@@ -324,6 +324,17 @@ namespace EQLogParser
     public const byte EvLooter = 18;         // "--<name> has looted a … / wins roll …" - a person loots, a mob does not (R23)
     public const byte EvPetSlotHit = 19;     // a spell the DB aims at a pet landed on <name>: `Wanabe hit Fred for … by Elemental Conversion VI.` (R24)
 
+    /*
+     * ``Mgsk says, 'My leader is Xxuro.'`` — a summon naming its own master, about ITSELF: aux carries the owner text.
+     * Until now this sentence was an identity door only the WPF project could open: ChatDB wrote the pair straight into
+     * PlayerRegistry, whose entire route into the rule book is RegistrySeed at strength 8 — so a `Targeted (NPC)` frame
+     * (which the client also prints for every mercenary and every pet) outvoted the pet's own confession. Measured on
+     * Incogitable: ``Useless`` reads Npc with this line in the log; on Kizant-2026 ``Mgsk`` read Unplaced across 726 group
+     * heal lines while naming Xxuro as its leader. The confession is what a line SAYS, so it belongs here and R5-leader
+     * decides what it means (docs/DesignNotes.md → "A summon's own sentence about its master").
+     */
+    public const byte EvPetLeader = 20;
+
     public readonly int Seq;
     public readonly long TimeS;
     public readonly int NameIdx;
