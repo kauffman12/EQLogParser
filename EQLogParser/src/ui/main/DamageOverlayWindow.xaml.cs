@@ -1016,6 +1016,7 @@ namespace EQLogParser
       }
 
       _toolbarWindow = new DamageOverlayToolbarWindow { Owner = this };
+      _toolbarWindow.SizeChanged += (_, e) => controlPanel.MinHeight = e.NewSize.Height;
 
       _toolbarWindow.ConfigureRequested += (_, _) => ConfigureClick(null, null);
       _toolbarWindow.CopyRequested += (_, _) => CopyClick(null, null);

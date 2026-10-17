@@ -3110,6 +3110,10 @@ moved, and closes with its owner automatically because `Owner` says so. The bar 
 actually changes — measured while wiring: previewing every color-picker stop through `UpdateMaxRows` recreated and
 reseeded every `DamageBar` on each intermediate stop, which is a flicker the player never asked for.
 
+The live toolbar sizes to its content in both axes, with a 27-DIP minimum rather than a fixed height. Its measured height
+sets the meter header's minimum height so larger text/padding cannot clip DPS/Tank or cover the first data row. Check all
+supported font sizes and Windows display scaling levels visually; the sizing declaration alone is not a rendered test.
+
 ## Combat event emitters
 
 The damage meter briefly carried an event ribbon under its target row; the UI was withdrawn (a feed wants its own
