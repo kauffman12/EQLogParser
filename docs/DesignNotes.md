@@ -17958,3 +17958,58 @@ process peaks varied, so this is not a claim of zero additional memory. Windows/
 
 Validation recovered **eight missing hits totaling 40,856,041,344**, credited exactly to tanking; outgoing damage and healing
 were unchanged. Regression tests cover wide parsing, cold storage, boards, histograms, meter totals and Excel numeric cells.
+
+## Parsing allocation reductions
+
+The low-risk allocation work in `26b1967f` preserves parsed rows and board contracts:
+
+- `DamageProcessedEvent` and `HealProcessedEvent` are readonly structs with init-only properties. Typed `Action<T>`
+  publication avoids a per-line wrapper allocation; consumers still share the record reference. Properties must not become
+  ordinary setters, since one handler's wrapper changes would not reach the next handler.
+- Healing passes modifier text as a span and evaluates `SubjectActor` once. Spell-tree probes likewise consume spans;
+  their ordinal builder dictionaries freeze after data loading, and `SpellTreeResult` is a value type. Freezing drops the
+  builder; later word insertion refuses rather than silently becoming invisible to readers.
+- `FactChunkScratch<T>` parks one body, verification-row array and Deflate sink per fact kind. Atomic take/return gives
+  each renter exclusive ownership; competing returns drop their buffer. Bodies and sinks above 8 MiB and row arrays above
+  131,072 elements are not retained. Published blobs are always fresh exact-size copies, never pooled scratch.
+  Verification still decodes and compares every field before raw storage can be released. This trades a bounded amount
+  of process-wide retained scratch for lower cumulative allocation, not smaller fact rows or a GC-policy change.
+- `RecordsStore.GetDuring` locates inclusive range boundaries under the list lock and copies only matching groups.
+  Ordering and the existing per-group copy-out discipline remain unchanged. The measured saving was modest, around
+  0.1–0.2 MiB for a narrow auxiliary query; this is not a claim to eliminate the returned records' own allocation.
+
+Disposable Release prototypes on Kizant xegony-2 attributed about **164.8 MiB** to event wrappers and **16.2 MiB** to
+healing slices/repeated subject work. Those are cumulative allocations, not retained-heap savings.
+
+The combined patch was compared with `06e593c9` using fresh Linux/.NET 10 Debug processes, a preloaded data store and
+`PipelineHarness.RunFileDerived`. Allocation was read with `GC.GetTotalAllocatedBytes(precise: true)` around the run.
+Every field of every damage and heal row was then folded in ordinal order into a cross-process-stable FNV-1a checksum.
+Live captures used emulator parsing off; THJ captures used `EQLP_EMU=1`. Values below are historical measurements of
+`26b1967f`, before the subsequent unused-array correction:
+
+| capture | baseline allocated MiB | candidate allocated MiB | reduction | damage / heal rows | matching checksum |
+|---|---:|---:|---:|---:|---|
+| Kizant xegony-2, live | 5,040.0 | 4,301.3 | 14.7% | 2,286,371 / 1,575,037 | `0F645C585BD88C45` |
+| Incogitable xegony, live | 4,710.9 | 3,375.0 | 28.4% | 1,901,078 / 432,224 | `5EE0977EB19E6FE3` |
+| Roper THJ | 8,959.6 | 7,413.6 | 17.3% | 4,356,144 / 39,671 | `BC4567759757FFBD` |
+| Ikkydruid THJ | 4,323.0 | 3,327.0 | 23.0% | 1,498,088 / 22,703 | `46A6B14356D9E40B` |
+
+The live captures had two runs per tree; each THJ capture had one. Observed baseline/candidate walls were approximately
+14.2/14.1, 12.95/12.6, 29.5/29.2 and 16.0/16.0 seconds respectively. These small samples establish no speed guarantee,
+no Windows load latency, and no live-session peak-memory reduction. Combined totals do not isolate each optimization.
+
+Branch review found an unused `new HealFact[count]` inside `DecodeInto`, despite its caller-owned destination. A temporary
+warmed probe measured about **1,048,880 bytes per full heal-chunk decode** in both Debug and Release; 1,048,576 bytes
+were that unnecessary array's row payload. Removing it preserves the destination allocation in `Decode` and the rented
+verification buffer. The historical capture totals above have not been remeasured after that correction. No allocation
+or GC-probe test is retained.
+
+Standing coverage is `FactChunkScratchTest` (blob independence, reuse bounds, corruption and verification refusal),
+`SpellTreeProbeTest` (ordinal span matching and freeze), `RecordsStoreWindowTest` (range behavior), and
+`PublishedEventShapeTest` (readonly type metadata, init-only setter metadata, record references and modifier slices).
+Both the original implementation and review correction passed 2,440 headless tests with six gated tests skipped.
+After the correction, `ColdChunkRealLogTest` passed separately on Kizant live and Roper THJ, and the full non-incremental
+solution build reported zero warnings/errors. WPF runtime checks remain Windows-only.
+
+Higher-risk work was not included: broad name/spell span interning, decoded-pass lifetime changes, fact-backed board
+consumption, packed auxiliary storage and token-buffer reuse. Those need separate designs and measurements.

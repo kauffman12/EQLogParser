@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 #nullable enable annotations
@@ -27,14 +28,17 @@ public class PublishedEventShapeTest
     Assert.IsTrue(typeof(HealProcessedEvent).IsValueType,
       "a class wrapper here is one heap object per heal");
 
-    // Every field stays readable, and nothing here is a mutable box: an ordinary `set` on a published event would be a
-    // gesture that silently does nothing, because each handler receives its own copy of the fields. Reflection cannot tell
-    // an init accessor from a setter (both report CanWrite), so `init` itself is held by the publishers' contract and review.
+    // Each handler gets a copy. Readonly wrappers and init-only properties prevent writes that later handlers cannot see.
     foreach (var type in new[] { typeof(DamageProcessedEvent), typeof(HealProcessedEvent) })
     {
+      Assert.IsTrue(type.IsDefined(typeof(IsReadOnlyAttribute), inherit: false), $"{type.Name} must stay readonly");
       foreach (var prop in type.GetProperties())
       {
         Assert.IsNotNull(prop.GetGetMethod(), $"{type.Name}.{prop.Name} has to stay readable");
+        var setter = prop.GetSetMethod(nonPublic: true);
+        Assert.IsNotNull(setter, $"{type.Name}.{prop.Name} must remain initializable");
+        Assert.IsTrue(setter.ReturnParameter.GetRequiredCustomModifiers().Contains(typeof(IsExternalInit)),
+          $"{type.Name}.{prop.Name} must be init-only, not settable after publication");
         Assert.IsFalse(prop.PropertyType.IsArray, $"{type.Name}.{prop.Name} must not hand out an array a handler could write through");
       }
     }

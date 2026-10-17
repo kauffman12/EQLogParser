@@ -169,7 +169,6 @@ internal static class HealFactChunkCodec
       var wideTotal = (body[0] & HasTotalHigh) != 0;
       var wideOverTotal = (body[0] & HasOverTotalHigh) != 0;
 
-      var rows = new HealFact[count];
       var p = 1;
       long seq = 0, time = 0;
 

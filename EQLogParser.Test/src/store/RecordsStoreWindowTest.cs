@@ -133,8 +133,8 @@ public class RecordsStoreWindowTest
     var win = Query(Base + (200 * 60), Base + (201 * 60));
     Assert.AreEqual(3, win.Count, "one minute of a long night: the two casts it owns plus the next minute's first, whose stamp falls on the closing edge");
 
-    // The store holds 800 groups; the window took two. That the answer is correct at this size is the assertion —
-    // the copy it no longer makes is measured in docs/new-memory-ideas.md, not asserted from a heap probe here.
+    // The window takes three of 800 groups, including its closing edge. Allocation measurements belong in
+    // docs/DesignNotes.md → "Parsing allocation reductions", not in a heap-probe assertion here.
     Assert.AreEqual(800, Query(0, double.MaxValue).Count);
   }
 }
