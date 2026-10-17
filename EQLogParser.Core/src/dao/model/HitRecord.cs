@@ -25,13 +25,8 @@ namespace EQLogParser;
  */
 public class HitRecord : IAction
 {
-  /*
-   * A hit's amount, read as the log printed it: a magnitude up to TextUtils.MaxAmount (48 bits), not a 32-bit field.
-   * Live combat has never come near that ceiling - the widest number measured in the captured logs is a 10 digit heal -
-   * but a manglenet report, a synthetic log or an emu under test can print more, and a hit whose amount does not fit
-   * what storage carries is refused at the parse rather than written narrow. docs/DesignNotes.md →
-   * "Amount widths measured across 44 million hits".
-   */
+  // Shared by damage, healing and hit-log rows: no subclass may hide the full amount.
+  // Supported per-record magnitudes are 48 bits; see docs/DesignNotes.md → "Amount widths measured across 44 million hits".
   public long Total { get; set; }
   public short ModifiersMask { get; set; }
 

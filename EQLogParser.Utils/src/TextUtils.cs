@@ -289,12 +289,7 @@ namespace EQLogParser
       return success;
     }
 
-    /// <summary>
-    /// The widest combat amount this program carries. 48 bits is what a damage row, a heal row and their cold chunks
-    /// store, so it is the parse domain: a bigger token is not a number anyone swung (a manglenet report, a corrupted
-    /// line, an emu sending garbage) and is refused rather than carried. Measured ceilings are in
-    /// docs/DesignNotes.md → "Amount widths measured across 44 million hits".
-    /// </summary>
+    /// <summary>Largest supported per-record magnitude; the fact layouts store the same 48-bit domain.</summary>
     internal const long MaxAmount = (1L << 48) - 1;
 
     /// <summary>The digit count of <see cref="MaxAmount"/>, so a token too wide to be an amount is refused before any
@@ -326,8 +321,8 @@ namespace EQLogParser
 
       for (; i < span.Length; i++)
       {
-        var digit = (uint)(span[i] - '0');
-        if (digit > 9u) return false;
+        var digit = span[i] - '0';
+        if (digit is < 0 or > 9) return false;
         parsed = (parsed * 10L) + digit;
       }
 

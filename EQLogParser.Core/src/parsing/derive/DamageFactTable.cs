@@ -171,7 +171,7 @@ namespace EQLogParser
       _timeS = FactTime.FromEpochSeconds(timeS);
       AtkIdx = atkIdx;
       DefIdx = defIdx;
-      _totalLow = (uint)total;
+      _totalLow = unchecked((uint)total);
       _totalHigh = (ushort)(total >> 32);
       TypeId = typeId;
       Flags = flags;

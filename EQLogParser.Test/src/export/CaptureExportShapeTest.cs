@@ -154,6 +154,42 @@ public sealed class CaptureExportShapeTest : IDisposable
       .Select(s => s.Attribute("name")?.Value).OfType<string>().ToArray() ?? [];
 
   [TestMethod]
+  public void MaximumAmountsAreExactNumericCellsInTheRealWorkbook()
+  {
+    _facts = new DamageFactTable(0);
+    _heals = new HealFactTable(_facts, 0);
+    var player = _facts.InternName("Kizant");
+    var npc = _facts.InternName("A crypt broker");
+    const long maximum = TextUtils.MaxAmount;
+    _facts.AddFact(new DamageFact(1, T0, player, npc, maximum, LabelTypes.Melee, 0, 0, DamageFactTable.NoSubtype));
+    _facts.AddFact(new DamageFact(2, T0 + 1, npc, player, maximum, LabelTypes.Dd, 0, 0, DamageFactTable.NoSubtype));
+    _heals.AddHeal(new HealFact(3, T0, player, player, maximum, maximum, LabelTypes.Heal, 0, 0, HealFact.NoSpell));
+    _heals.AddHeal(new HealFact(4, T0 + 1, player, player, 0, maximum, LabelTypes.Hot, 0, 0, HealFact.NoSpell));
+    Write();
+
+    using var zip = ZipFile.OpenRead(Target("fight.xlsx"));
+    Numeric(Rows(zip, "Player DPS")[1], 9, maximum);
+    Numeric(Rows(zip, "NPC DPS")[1], 9, maximum);
+    foreach (var sheet in new[] { "All heals", "Heals by you", "Heals to you" })
+    {
+      var rows = Rows(zip, sheet);
+      Numeric(rows[1], 5, maximum);
+      Numeric(rows[1], 6, 0);
+      Numeric(rows[1], 11, maximum);
+      Numeric(rows[2], 5, 0);
+      Numeric(rows[2], 6, maximum);
+      Numeric(rows[2], 11, maximum);
+    }
+
+    static void Numeric(XElement row, int column, long expected)
+    {
+      var cell = row.Elements(Main + "c").ElementAt(column);
+      Assert.IsNull(cell.Attribute("t"), "amounts must not be exported as text");
+      Assert.AreEqual(expected.ToString(System.Globalization.CultureInfo.InvariantCulture), cell.Element(Main + "v")?.Value);
+    }
+  }
+
+  [TestMethod]
   public void TheWorkbookCarriesEverySheetTheIssueAskedFor()
   {
     Write();

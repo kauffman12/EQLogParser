@@ -17940,201 +17940,21 @@ tier built on this belongs at **Medium**, where an NPC frame (65) or an operator
 updated file now fails a test that says which one, instead of reading as "unknown shape" for another season. **No heal-claim rule
 shipped with this**: the buckets are measured, the tier is not yet chosen, and the probes that produced them were deleted.
 
-## Amount widths measured across 44 million hits: the oversized line, the ushort question, and what each candidate costs (2026-10-17)
+## Amount widths measured across 44 million hits: 48-bit damage and healing
 
-Two ideas came in together — "one damage line in ~50 million is too large for `uint`" and "a lot of the amounts we hold fit a
-`ushort`". Both were measured over `local/logs/` (9.5 GB, 16 live + 6 emulator captures): **44,133,167** live damage amounts,
-**19,241,807** live heal amounts plus **16,785,937** heal asks, **5,152,349** emulator damage amounts. The count is of *the
-amount token the parsers read* (`for N [(M)] hit points` / `points of [unresistable|non-melee] damage`) — a text census on
-purpose, because it also sees the lines today's ingest throws away. The scanners and probe tests are deleted; these are the numbers.
+Real Ironbark Hurl hits reach **5,489,999,188**, exceeding uint's range. The old parser silently dropped them, including
+valid amounts equal to its `uint.MaxValue` failure sentinel. Damage, landed healing and requested healing now support
+**0 through 2^48-1** end to end, exposed as `long`; `ParseAmount` uses -1 for failure while `ParseUInt` stays unchanged.
 
-| | live damage | live heal (landed) | heal ask (`OverTotal`) | emulator damage |
-|---|---|---|---|---|
-| max seen | **5,489,999,188** — 33 bits | 220,000,000 — 28 bits | **1,620,000,000** — 31 bits | 556,666 |
-| fits `ushort` | **53.6 %** | 97.8 % | 81.2 % | 99.999 % |
-| exceeds `uint.MaxValue` | **25 lines — 1 per 1,765,326** | 0 | 0 | 0 |
-| 65,536-token chunks wholly inside `u16` | **0 of 682** | 0 of 304 | — | 67 of 83 |
+The storage impact is modest rather than a blanket widening of every retained value:
+- **Damage facts stay 28 bytes**, using two existing padding bytes for the high word.
+- **Heal facts grow from 28 to 32 bytes**, carrying two wide amounts. Cold chunks omit zero high-word planes.
+- Histograms keep ordinary values in four-byte lists; only wide exceptions use lazy eight-byte lists.
 
-- **The oversized hits are real, and all one mechanic.** Every one of the 25 is `Xanzerok hit <name> for ~5e9 points of
-  unresistable damage by Ironbark Hurl.`, across five captures — a boss doing more than four billion to a raid member is live
-  content, not a corrupt byte. No measured combat amount exceeded **2^33**. Numerals above 2^48 appeared in chat/OOC text,
-  not measured combat amounts. Separately, an item stack (`The Mysterious Mailman hands you the stack of 4294967295 Petamorph Wand…`)
-  contains the parse-failure sentinel as real content; that stack count is below 2^48, not an example above it.
-- **What happens today, executed rather than read off a comment.** `176000` and `4294967294` produce records; `4294967295`,
-  `4294967296`, `5309597698` and `281474976710656` all come back as nothing, because `TextUtils.ParseUInt` answers overflow with
-  its `uint.MaxValue` failure sentinel and `CreateDamageRecord`'s `damage != uint.MaxValue` door reads that as a failed parse.
-  The heal path holds the same door (`if (heal == uint.MaxValue) return null`). So **no wrong number reaches a board: a real
-  five-billion hit simply never happened, with no clamp, no counter and no log line** — and an honest `4294967295` is
-  unrepresentable even though the type could hold it. One consequence for any fix: since ONE observed hit already exceeds
-  `uint`, narrowing it into a uint consumer would truncate it (or throw in checked code). The amount must travel wide end to
-  end; widening storage alone would not make such a hit read correctly. Most existing accumulators are already long.
-- **Row widths measured on this runtime with mirror structs, not predicted**: `DamageFact` **28 B**; amount split into a low
-  `uint` plus a high `ushort` → **still 28 B** (the two padding bytes absorb it); amount narrowed to `ushort` → **24 B**.
-  `HealFact` **28 B**; **one** of its two amounts narrowed → **still 28 B**; **both** narrowed → 24 B. Healing therefore gets
-  nothing unless both columns shrink, and the ask column reaches 1,620,000,000 with a 19 % `u16` escape rate. The standing
-  assertions (`FactTimeTest.BothFactRowsReadBackTheSecondTheyWereGiven`, `HealFactCaptureTest`) stay where the size claim gets
-  re-measured; a probe is not a guard.
-- **The cold amount plane**, isolated column, Deflate level 7 (the `FactChunkCompression` dial), as a fraction of what the
-  shipped fixed-u32 plane costs compressed. A real blob also carries clock, ids and masks in the same stream; the amount-only
-  effect is diluted and compression interactions can change it, so whole-blob ratios must be measured separately:
+On a 1.3 GB capture with 7.47 million damage facts and 3.45 million heals, compressed backing grew by just **2,705 bytes
+for damage and 40 bytes for healing**. The settled heal-table estimate increased about **640 KiB**, mainly its five warm
+chunks. Full decoding costs about **13.2 MiB** extra heal-row payload on that capture, plus wider materialized records;
+process peaks varied, so this is not a claim of zero additional memory. Windows/live checks remain in `ReleaseChecklist.md`.
 
-| amount encoding | live damage | live heal | emulator damage |
-|---|---|---|---|
-| fixed u32 (shipped) | 100 % — 15.27 MB | 100 % — 1.00 MB | 100 % — 4.50 MB |
-| zigzag varint | 95.9 % | **88.0 %** | **84.3 %** |
-| delta + varint | 108.5 % — worse | 118.0 % — worse | 98.4 % |
-| u16 plane + exception lane | **149.0 % — much worse** | 109.7 % — worse | 88.0 % |
-| 3-byte plane | **92.5 %** | 94.4 % | 92.5 % |
-| split 48 (u32 plane + u16 high plane) | 100.4 % | 102.2 % | 100.8 % |
-
-**What the original measurements decide.** The **damage fact layout** can widen at no additional resident bytes, and its isolated
-cold amount plane cost only +0.4%. That does not make the entire feature memory-free: records, histograms and materialized
-answers have their own widths and lifetimes. The measured `ushort` escape candidate is not recommended for live damage:
-46% of amounts escape, no examined 65,536-token chunk fits wholly in ushort, and that cold-column candidate measured 49%
-larger. These token-census chunks are not a census of production fact chunks (healing's actual chunk size is 32,768).
-The measurements do not rule out every possible adaptive resident store. Similarly, the direct small-heal-row proposal only
-shrinks if both amount columns narrow, and an unconditional ushort representation cannot hold the observed asks.
-
-The **cold encoding of the amount column** remains a separate candidate — varint or a 3-byte plane, measured 88-96% in the
-selected cases — which need not change row/reader APIs. Delta-encoding an amount plane did not save space on the live samples
-(108-118%): unlike Seq and TimeS, consecutive amounts are unrelated. Any new codec requires a whole-blob measurement; neither
-these isolated ratios nor the original +0.4% damage result predict the new two-amount healing encoding.
-
-### Reviewed scope: 48-bit healing as well as damage (implemented 2026-11 — see "What landed" at the end of this section)
-
-The requested domain is **0 through 281,474,976,710,655 inclusive (48 bits, not 48 bytes)** for damage, landed healing and the
-parenthesized heal ask. The corpus's lack of >uint heals is not a reason to refuse them under this contract. The previous
-idea of parsing healing wide and dropping/counting it at a uint storage boundary does not satisfy the requirement.
-
-Keep `ParseUInt` for bounded non-amount uses. Add a separate `ParseAmount` returning signed `long`, with -1 outside the valid
-amount domain; a bool/out wrapper may expose the same contract. Only HOT grammar removes a minus before parsing the
-magnitude. Widen the **shared** `HitRecord.Total` and `HealRecord.OverTotal`, not a hidden `DamageRecord.Total`: the hit log
-reads through the base type. Preserve OverTotal's literal zero for an absent ask, and clamp overheal to nonnegative as today.
-An invalid optional ask retains the parser's existing fallback to zero rather than dropping an otherwise valid landed heal.
-A valid ask through 48 bits must no longer take that fallback.
-
-A temporary console layout check outside the repository rechecked split-field mirror structs with `Unsafe.SizeOf<T>()`:
-
-| layout | measured bytes |
-|---|---:|
-| damage, one low uint + high ushort amount | **28** |
-| current healing, two uint amounts | **28** |
-| healing, two low uint + high ushort amounts | **32** |
-
-The mirror was checked on this runtime, not substituted for the production size tests. Damage has two padding bytes; healing
-has none. The straightforward proposed heal layout adds four bytes per raw/decoded slot. Name ids, the clock range, subtype
-ids, modifier semantics and retired flag bits must not be narrowed or reused to disguise that price.
-
-**Recommendation, subject to measured memory acceptance:** retain the simple standalone fact/ref/span contracts and use
-28-byte damage / 32-byte healing rows. Existing cold storage makes the settled cost different from the full decoded cost:
-32,768 heal slots cost an extra **128 KiB per raw chunk**, or **640 KiB** at four warm chunks plus one tail. That is arithmetic,
-not a process-memory measurement or a global bound. `RetainDecoded` temporarily prevents trimming, encoders can lag, verification
-allocates another array, and external readers can retain evicted arrays. Large-file load and select-all peaks must count all
-those slots plus wider materialized records. Four million concurrently decoded heal slots alone add about **15.3 MiB**.
-See “Rows go cold, and what a chunk costs to remember” and “Retention fixes at 35420fcf, verified on the same captures”.
-
-For ordinary histogram values, keep the current uint lists and add lazy wide-value lists only for exceptions. Histograms do
-not need positions: count both lists into the existing long-key dictionary and release both. Extra list references still have
-a per-stat object cost, but avoid doubling every ordinary retained hit amount. Keep scoped builds' no-histogram path intact.
-
-For cold amounts, the recommended representation adds a codec-local presence byte and omits an all-zero high-u16 plane;
-healing has two independently optional high planes. This is a per-chunk representation marker, not a persisted format
-migration or a fact flag. No chunk persistence exists in the current store. (Whole-blob cost, measured afterwards: +0.6 MB
-on 3.29M heal rows, i.e. one byte per 65,536 damage rows and nothing else on an ordinary capture.)
-Both codecs must decode only populated decompressed bytes, not spare MemoryStream capacity, and reject a declared missing
-plane, invalid varint or unexpected payload length before constructing/publishing rows. Existing verify-before-clear and
-bounded decoded-cache ownership remain unchanged.
-
-The original parser microbenchmark over 600,000 real tokens reported 6.35 ns/token for the shipped uint loop, 6.00 for a
-length-gated signed-wide loop, 6.93-6.99 for span built-ins and about 7.6-8.0 for string variants (best of five trials, forty
-repetitions). It supports a simple digit loop, not a guaranteed speedup for an unimplemented wrapper/leading-zero variant or
-an end-to-end load-time prediction; the shipped `ParseAmount` is the length-gated signed-wide loop, and the whole-capture load
-numbers below are its end-to-end measurement.
-
-Review corrections that constrain implementation:
-
-- `MeterAmount.Total + total` already uses long arithmetic; its uint **parameter** needs widening, not a fix to a supposed
-  32-bit addition. `NpcStatsViewer.*Total` represents spell-attempt counts, not damage amounts, and is outside this migration.
-- Compile success does not catch explicit narrowing casts. Audit the full amount paths, including FCT, grouped hit logs,
-  spell maximums, heal materialization and exports. Test NPC-to-player tanking separately from player-to-NPC outgoing damage.
-- A ParseAmount refusal above 48 bits never reaches a capture-level guard. No promise is made to distinguish/count every
-  such token. Existing `FactGuardCount` logging runs only on the first derive pass, so it is not all-session diagnostics.
-- Land records, both fact layouts/codecs, parsers and consumers together after an independently safe unused-API commit. No
-  intermediate commit may truncate newly accepted values or encode wide rows with an old codec.
-- Per-amount 48-bit support is not unlimited summation: aggregates remain long; 32,769 maximum-sized amounts exceed it.
-  Every single amount is exactly representable in double and fits Excel's 15-digit precision, unlike arbitrary aggregate sums.
-
-If the measured extra healing/record cost is unacceptable, a compact physical heal store with optional high-word storage is
-a separate design decision: it must replace the ref/span contract with a safe logical-row view and account for decoded peaks.
-Do not put a global overflow dictionary behind copied facts or silently restore the uint ceiling. Full end-to-end correctness
-and load/live/selection memory measurements are prerequisites to accepting the migration, not results already obtained.
-
-Related decisions: "A fact row is 24 bytes: the clock, the vocabulary, and what a byte of mask needed" (the last time row width
-was argued, and why the id columns cost four bytes), "Rows go cold, and what a chunk costs to remember" (the store this would
-change) and "The cold-chunk Deflate level: 9 → 7" (why the ratios above use level 7). Their numbers are history, not new
-measurements of these candidates.
-
-### What landed: 48-bit amounts end to end, and what they cost (2026-11)
-
-The reviewed scope above is implemented. `TextUtils.ParseAmount` (with `TryParseAmount`/`InAmountRange`, and the
-`LineWords`/`ParserUtil` index-form doors) reads 0 through 2^48-1 and answers **-1** outside it; `ParseUInt` was left alone
-and a test pins its refusal, because the eleven clock fields and the loot/currency counts depend on a wide token not becoming
-a timestamp. Amounts then travel wide: `HitRecord.Total`, `HealRecord.OverTotal`, `Attempt`'s totals, `PlayerSubStats`,
-`DataPoint`, `DerivedFight`, `MeterAmount`/`MeterDirectionTotals`/`MeterFactInput` parameters, `CharmWindows.CreditedTotal`,
-both fact rows, and the Excel cells (numeric, exact — a single amount is inside double's exact range and Excel's 15 digits).
-
-**Row widths, asserted rather than predicted**: `DamageFact` **28 B** — the amount took the 4-byte slot it always had plus the
-two padding bytes above `ModMask`, split into a private `_totalLow:uint` / `_totalHigh:ushort` with one composed getter, so
-"field order is layout" stayed true and nothing else moved. `HealFact` **32 B**: two amounts, no padding to borrow. The four
-bytes were paid, not hidden — narrowing name ids, the clock, subtype ids or reusing retired flag bits was considered and
-refused. Both sizes are pinned by `FactTimeTest.BothFactRowsReadBackTheSecondTheyWereGiven`.
-
-**Cold chunks pay one presence byte each**, with all-zero high planes omitted and healing's two planes optional
-independently; an ordinary capture encodes exactly what the u32 codec did plus 1 byte per 65,536 damage rows. The measured
-3-byte plane (92.5 % of the old cost) was not taken because it prices every routine amount at 1.5 bytes a row instead of
-asking once per chunk. Saturation in the histogram lanes was refused outright: `Max = 4294967295` is indistinguishable from
-a real maximum, so `HitAmountsBySpellMax` keeps its uint lists (4 B for every ordinary retained hit) and gains a separate
-wide list, both counted into the existing long-key dictionary.
-
-**The behaviour change**: an amount that does not parse or exceeds the domain now produces **no record** (the fact constructors
-throw, and the parsers already stand behind that). Previously the `ParseUInt` default of `uint.MaxValue` did double duty as a
-failure sentinel, so `CreateDamageRecord`'s `damage != uint.MaxValue` door silently discarded honest hits above 4.29e9 — including
-the measured Xanzerok/Ironbark Hurl swings near 5e9 — while any path that missed that door stored 4.29 billion as a real hit.
-Healing's own rulings are untouched: only HOT grammar strips a minus before the magnitude is read, and an unparseable
-parenthesised ask still falls back to zero rather than dropping an otherwise valid landed heal.
-
-**Measured before/after on one capture** — `eqlog_Kizant_xegony-07-24-26.txt`, 1.3 GB, 7.12M damage facts, 3.29M heal rows;
-baseline built from the pre-change commit in a throwaway worktree, two runs each side (`ColdChunkRealLogTest`):
-
-| | before | after |
-|---|---:|---:|
-| damage raw → store (backing) | 199.4 → 68.9 MB (28.1) | **identical** |
-| heal rows warm | 92.2 MB | **105.4 MB** (+4 B/row = +13.2) |
-| heal cold store | 13.5 MB | **14.1 MB** (+0.6) |
-| classify | 2044 / 2078 ms | 2239 / 2241 ms |
-| project | 1817 / 1794 ms | 1829 / 1822 ms |
-| materialize (heal board) | 2967 / 3079 ms | 3152 / 3280 ms |
-| parse + encoder drain | 44141 ms | 44232 / 44739 ms |
-| peak RSS, whole test process | 191,352 KB | **188,268 KB** |
-
-So the settled store is unmoved for damage and +0.6 MB for healing on a capture with millions of heals; the warm cost is exactly
-the arithmetic above (+4 B per decoded heal slot), and peak RSS did not rise. What did move is the seconds where heal rows are
-copied into records — classify ≈ +8 %, heal materialize ≈ +5 % — a few percent of a stage that is itself a small share of a load
-(≈ 200 ms against a 44 s parse here). Live parsing was not separately instrumented; the added per-line work is one composed getter
-and, for damage, one extra length check.
-
-**A defect class closed on the way**: both codecs used to decompress into a `MemoryStream` and hand back its whole `Capacity` as a
-`Span`, i.e. slack beyond the payload, while `FactVarint.Read` had no bound whatsoever — a truncated or corrupt chunk could read
-past its own data and shift garbage in as ids. Decoding is now bounded to the populated length (new `ReadOnlySpan` overload; the old
-`Stream` form kept for `FactBlock`), each codec validates its plane arithmetic against that length, and a decoded payload whose size
-disagrees with `rows * width` refuses before any row array exists — so verify-before-clear keeps the rows instead of publishing
-invented ones.
-
-Tests: `AmountDomainTest` (domain asserted by counting its bits at runtime, both refusal gates separately — fifteen digits inside
-the ceiling, fifteen past it, sixteen never evaluated — and `ParseUInt` pinned narrow) and `WideAmountLawTest` (rows refuse what
-they cannot carry; wide rows round-trip cold first/middle/last, since the populated length is taken from the last row's high plane;
-an all-zero-high chunk still decodes; a wrong declared row count refuses; a synthesized live-format capture run through the real
-pipeline proves ingest as well as storage).
-
-Related: "Rows go cold, and what a chunk costs to remember" (the store this changed) and "A fact row is 24 bytes…" (the last time
-row width was argued). The uint-era numbers earlier in this section are history, not current measurements.
+Validation recovered **eight missing hits totaling 40,856,041,344**, credited exactly to tanking; outgoing damage and healing
+were unchanged. Regression tests cover wide parsing, cold storage, boards, histograms, meter totals and Excel numeric cells.

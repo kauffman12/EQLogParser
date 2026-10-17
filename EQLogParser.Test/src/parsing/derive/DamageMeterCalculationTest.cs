@@ -14,6 +14,21 @@ public partial class DamageMeterCalculationTest
   }
 
   [TestMethod]
+  public void WideAmountsStayExactAcrossIncrementalAndFreshMeterBuilds()
+  {
+    var log = new Capture();
+    log.Add("Illuminai", "a rat", 0, TextUtils.MaxAmount);
+    log.Add("a rat", "Bithika", 1, uint.MaxValue + 1L);
+    log.Check(2, compareFresh: true);
+    log.Add("Illuminai", "a rat", 3, uint.MaxValue);
+    log.Add("a rat", "Bithika", 4, TextUtils.MaxAmount);
+    log.Check(5, compareFresh: true);
+    Assert.IsNotNull(log.Last);
+    Assert.AreEqual(TextUtils.MaxAmount + uint.MaxValue, log.Last.DamageStats.RaidStats.Total);
+    Assert.AreEqual(TextUtils.MaxAmount + uint.MaxValue + 1L, log.Last.TankStats.RaidStats.Total);
+  }
+
+  [TestMethod]
   public void SameSecondArrivalsAndUnchangedPollsMatchTheFullCalculation()
   {
     var log = new Capture();
@@ -349,7 +364,7 @@ public partial class DamageMeterCalculationTest
       Timeline.SetIdentity("a bat", IdentityKind.Npc, RuleStrength.Manual, "manual");
     }
 
-    internal void Add(string attacker, string defender, int second, uint amount,
+    internal void Add(string attacker, string defender, int second, long amount,
       byte type = LabelTypes.Melee, byte flags = 0) => Facts.AddFact(new DamageFact(Facts.FactCount,
       (long)(T0 + second), Facts.InternName(attacker), Facts.InternName(defender), amount, type,
       flags, 0, ushort.MaxValue));

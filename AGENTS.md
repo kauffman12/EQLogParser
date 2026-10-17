@@ -103,10 +103,11 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
   every real raid heal included), so do not build an identity lane on it. Numbers: docs/DesignNotes.md →
   "Every dropped heal line, named".
 - **An amount is a 48-bit magnitude (0 … 2^48-1) and it is refused, never clamped**: `TextUtils.ParseAmount` answers -1 outside the domain and
-  the fact constructors throw on what cannot be stored, so an oversized token makes no row. `ParseUInt` stays uint on purpose — its clock and
+  the fact constructors throw on what cannot be stored. Invalid landed amounts make no row; an invalid optional heal ask retains the zero fallback.
+  `ParseUInt` stays uint on purpose — its clock and
   loot callers need a wide token to fail. Amounts travel wide from parse to board (records, `Attempt`, `DataPoint`, `DerivedFight`, export);
   saturating a max or histogram at the old ceiling is forbidden because a fake maximum is indistinguishable from a real one. Numbers and cost:
-  docs/DesignNotes.md → "What landed: 48-bit amounts end to end, and what they cost (2026-11)".
+  docs/DesignNotes.md → "Amount widths measured across 44 million hits: 48-bit damage and healing".
 - **A record's kind is one byte**: `HitLabel : byte` + `HitLabels` pairs each word with its `Labels` constant, so
   `record.Type` still returns the interned literal. `None` reads back as null; a word outside the table maps to `None` and
   is counted in `HitLabels.Unmapped`, never guessed (ordinal matching). Size is pinned by `Unsafe.SizeOf<HitLabel>()`.

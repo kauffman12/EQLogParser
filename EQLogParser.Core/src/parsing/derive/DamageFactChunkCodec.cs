@@ -12,10 +12,8 @@ namespace EQLogParser;
  * Layout, compressed as one Deflate stream: a presence byte, then zigzag varint deltas of Seq, then TimeS (epochs rebased through FactTime on the
  * way back in), then attacker and defender ids as varints, then total u32 · [total high u16] · type u8 · flags u8 · modifier mask u16 · subtype id u16.
  *
- * The presence byte is the amount's 48th bit and up, asked once per chunk: a row whose hit fits in 32 bits (which every captured hit does, and most
- * synthetic ones too) contributes nothing but the zero its low plane already holds, so the high plane costs 2 bytes a row ONLY in a chunk that met an
- * amount needing it. The decoder validates the decoded length against that byte before reading a plane, because a blob whose capacity is wider than
- * what was written used to let a truncated read pose as an id.
+ * Bit 0 of the presence byte announces a high-u16 plane (amount bits 32–47). Narrow-only chunks omit it.
+ * Decode accepts only known presence bits and the exact populated payload length.
  *
  * Ids are varints, not an i32 plane: fixed 4-byte planes made a cold row 30 bytes instead of 26 and failed the cold-store halving guard on
  * healing, while a varint costs 1-3 bytes and spends one byte on the -1 sentinel. Fields go through the row's public surface so the codec cannot
@@ -30,11 +28,13 @@ internal static class DamageFactChunkCodec
   /// <summary>Encode `count` rows into one blob. The buffer is sized for the worst varint expansion, so the write path never bounds-checks a grow.</summary>
   internal static byte[] Encode(DamageFact[] rows, int count)
   {
+    ArgumentOutOfRangeException.ThrowIfNegative(count);
+    ArgumentOutOfRangeException.ThrowIfGreaterThan(count, rows.Length);
     // One pass to ask whether this chunk carries an amount above 32 bits at all; ordinary chunks stay the size they were.
     var wide = false;
     for (var i = 0; i < count && !wide; i++) wide = rows[i].Total > uint.MaxValue;
 
-    var body = new byte[((count * (FactVarint.FactFieldsMaxBytes + FixedWidth)) + (wide ? count * HighWidth : 0)) + 1];
+    var body = new byte[checked((count * (FactVarint.FactFieldsMaxBytes + FixedWidth + (wide ? HighWidth : 0))) + 1)];
     var p = 1;
     body[0] = (byte)(wide ? HasTotalHigh : 0);
 
@@ -49,7 +49,7 @@ internal static class DamageFactChunkCodec
       p = FactVarint.Write(body, p, rows[i].DefIdx);
     }
 
-    for (var i = 0; i < count; i++) BinaryPrimitives.WriteUInt32LittleEndian(body.AsSpan(p + (i * 4), 4), (uint)rows[i].Total);
+    for (var i = 0; i < count; i++) BinaryPrimitives.WriteUInt32LittleEndian(body.AsSpan(p + (i * 4), 4), unchecked((uint)rows[i].Total));
     p += count * 4;
     if (wide)
     {
@@ -75,13 +75,15 @@ internal static class DamageFactChunkCodec
   /// <summary>Decode a blob back into exactly `count` rows — the same objects the table would have held, field for field.</summary>
   internal static DamageFact[] Decode(byte[] blob, int count)
   {
+    ArgumentOutOfRangeException.ThrowIfNegative(count);
     using var src = new MemoryStream(blob);
     using var d = new DeflateStream(src, CompressionMode.Decompress);
-    using var ms = new MemoryStream(count * (FixedWidth + 10));
+    using var ms = new MemoryStream(checked(count * (FixedWidth + 10)));
     d.CopyTo(ms);
     var body = new ReadOnlySpan<byte>(ms.GetBuffer(), 0, (int)ms.Length);   // the POPULATED length: capacity is not data
 
     if (body.IsEmpty) throw new InvalidDataException($"damage chunk of {count} rows decoded to nothing");
+    if ((body[0] & ~HasTotalHigh) != 0) throw new InvalidDataException("unknown damage chunk presence bits");
     var wide = (body[0] & HasTotalHigh) != 0;
 
     var rows = new DamageFact[count];
@@ -98,14 +100,14 @@ internal static class DamageFactChunkCodec
     }
 
     var total = p;
-    var totalHigh = total + (count * 4);                       // only addressed when wide
-    var type = totalHigh + (wide ? count * HighWidth : 0);
-    var flags = type + count;
-    var mod = flags + count;
-    var sub = mod + (count * 2);
+    var totalHigh = checked(total + (count * 4)); // only addressed when wide
+    var type = checked(totalHigh + (wide ? count * HighWidth : 0));
+    var flags = checked(type + count);
+    var mod = checked(flags + count);
+    var sub = checked(mod + (count * 2));
 
-    // The planes are located by arithmetic, so a blob that is short (or long) by any part of one row cannot be read as rows at all.
-    var required = sub + (count * 2);
+    // Validate all fixed planes before reading any amount or metadata.
+    var required = checked(sub + (count * 2));
     if (body.Length != required)
       throw new InvalidDataException($"damage chunk of {count} rows needs {required} bytes and decoded {body.Length} (wide: {wide})");
 

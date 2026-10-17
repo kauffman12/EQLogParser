@@ -34,6 +34,8 @@ internal static class HealFactChunkCodec
 
   internal static byte[] Encode(HealFact[] rows, int count)
   {
+    ArgumentOutOfRangeException.ThrowIfNegative(count);
+    ArgumentOutOfRangeException.ThrowIfGreaterThan(count, rows.Length);
     var wideTotal = false;
     var wideOverTotal = false;
     for (var i = 0; i < count && (!wideTotal || !wideOverTotal); i++)
@@ -42,8 +44,8 @@ internal static class HealFactChunkCodec
       wideOverTotal |= rows[i].OverTotal > uint.MaxValue;
     }
 
-    var extraHighPlanes = ((wideTotal ? 1 : 0) + (wideOverTotal ? 1 : 0)) * count * HighWidth;
-    var body = new byte[(count * (FactVarint.FactFieldsMaxBytes + FixedWidth)) + extraHighPlanes + 1];
+    var highWidth = ((wideTotal ? 1 : 0) + (wideOverTotal ? 1 : 0)) * HighWidth;
+    var body = new byte[checked((count * (FactVarint.FactFieldsMaxBytes + FixedWidth + highWidth)) + 1)];
     var p = 1;
     body[0] = (byte)((wideTotal ? HasTotalHigh : 0) | (wideOverTotal ? HasOverTotalHigh : 0));
 
@@ -58,14 +60,14 @@ internal static class HealFactChunkCodec
       p = FactVarint.Write(body, p, rows[i].HealedIdx);
     }
 
-    for (var i = 0; i < count; i++) BinaryPrimitives.WriteUInt32LittleEndian(body.AsSpan(p + (i * 4), 4), (uint)rows[i].Total);
+    for (var i = 0; i < count; i++) BinaryPrimitives.WriteUInt32LittleEndian(body.AsSpan(p + (i * 4), 4), unchecked((uint)rows[i].Total));
     p += count * 4;
     if (wideTotal)
     {
       for (var i = 0; i < count; i++) BinaryPrimitives.WriteUInt16LittleEndian(body.AsSpan(p + (i * 2), 2), (ushort)(rows[i].Total >> 32));
       p += count * HighWidth;
     }
-    for (var i = 0; i < count; i++) BinaryPrimitives.WriteUInt32LittleEndian(body.AsSpan(p + (i * 4), 4), (uint)rows[i].OverTotal);
+    for (var i = 0; i < count; i++) BinaryPrimitives.WriteUInt32LittleEndian(body.AsSpan(p + (i * 4), 4), unchecked((uint)rows[i].OverTotal));
     p += count * 4;
     if (wideOverTotal)
     {
@@ -89,13 +91,16 @@ internal static class HealFactChunkCodec
 
   internal static HealFact[] Decode(byte[] blob, int count)
   {
+    ArgumentOutOfRangeException.ThrowIfNegative(count);
     using var src = new MemoryStream(blob);
     using var d = new DeflateStream(src, CompressionMode.Decompress);
-    using var ms = new MemoryStream(count * (FixedWidth + 10));
+    using var ms = new MemoryStream(checked(count * (FixedWidth + 10)));
     d.CopyTo(ms);
     var body = new ReadOnlySpan<byte>(ms.GetBuffer(), 0, (int)ms.Length);   // the POPULATED length: capacity is not data
 
     if (body.IsEmpty) throw new InvalidDataException($"heal chunk of {count} rows decoded to nothing");
+    if ((body[0] & ~(HasTotalHigh | HasOverTotalHigh)) != 0)
+      throw new InvalidDataException("unknown heal chunk presence bits");
     var wideTotal = (body[0] & HasTotalHigh) != 0;
     var wideOverTotal = (body[0] & HasOverTotalHigh) != 0;
 
@@ -114,16 +119,16 @@ internal static class HealFactChunkCodec
     }
 
     var total = p;
-    var totalHigh = total + (count * 4);                                  // addressed only when wideTotal
-    var overTotal = totalHigh + (wideTotal ? count * HighWidth : 0);
-    var overTotalHigh = overTotal + (count * 4);                          // addressed only when wideOverTotal
-    var type = overTotalHigh + (wideOverTotal ? count * HighWidth : 0);
-    var flags = type + count;
-    var mod = flags + count;
-    var sub = mod + (count * 2);
+    var totalHigh = checked(total + (count * 4)); // addressed only when wideTotal
+    var overTotal = checked(totalHigh + (wideTotal ? count * HighWidth : 0));
+    var overTotalHigh = checked(overTotal + (count * 4)); // addressed only when wideOverTotal
+    var type = checked(overTotalHigh + (wideOverTotal ? count * HighWidth : 0));
+    var flags = checked(type + count);
+    var mod = checked(flags + count);
+    var sub = checked(mod + (count * 2));
 
-    // Planes are located by arithmetic, so a blob short or long by any part of a row cannot be read as rows at all.
-    var required = sub + (count * 2);
+    // Validate all fixed planes before reading any amount or metadata.
+    var required = checked(sub + (count * 2));
     if (body.Length != required)
       throw new InvalidDataException($"heal chunk of {count} rows needs {required} bytes and decoded {body.Length} " +
         $"(wide total: {wideTotal}, wide asked-for: {wideOverTotal})");

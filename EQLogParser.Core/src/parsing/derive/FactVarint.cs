@@ -37,6 +37,8 @@ internal static class FactVarint
       if (shift > 63) throw new InvalidDataException("fact chunk varint is wider than a long");
 
       var b = data[p++];
+      // Only bit 63 remains in the tenth byte; higher payload bits would be silently shifted away.
+      if (shift == 63 && b > 1) throw new InvalidDataException("fact chunk varint overflows a long");
       u |= (ulong)(b & 0x7F) << shift;
       if ((b & 0x80) == 0) break;
       shift += 7;

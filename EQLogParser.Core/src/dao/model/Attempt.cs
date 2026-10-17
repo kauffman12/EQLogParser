@@ -14,8 +14,7 @@ internal class Attempt
   public uint Misses { get; set; }
   public uint Parries { get; set; }
   public uint Invulnerable { get; set; }
-  /* Amounts, not counts: a hit's biggest, smallest and widest-possible number, on the same 48-bit domain the record
-     carries. Sum lanes here were already long; these three are one hit each and follow the record they came from. */
+  // Min/max preserve complete amounts. A heal's potential maximum adds landed and asked amounts, so may need 49 bits.
   public long Max { get; set; }
   public long MaxPotentialHit { get; set; }
   public long Min { get; set; }
@@ -68,15 +67,12 @@ internal class Attempt
    *   - **the same distribution, exactly.** Bucketing or sampling would have been cheaper again and was refused: this chart's point is individual
    *     hit amounts. Laziness buys the time and the memory; the answer must not move by one count.
    */
-  /* The amounts are kept in TWO lanes so the wide domain costs nothing on ordinary data (docs/DesignNotes.md →
-     "Amount widths measured across 44 million hits"): everything a real log printed fits 32 bits, so it rides a List<uint>
-     exactly as before — 4 bytes per retained hit, which is what made the lazy histogram cheaper than the dictionary it
-     replaced. Only an amount above 32 bits pays a dictionary, and those are rare enough that the lane is usually null.
-     Both lanes merge into the same counts at materialization, so the chart answers exactly as it did. */
+  // Ordinary amounts retain four-byte storage; only wide values need the lazy long lists.
+  // Both lanes remain uncounted until the chart asks. See docs/DesignNotes.md → "Amount widths measured across 44 million hits".
   private List<uint>? _critRaw;
   private List<uint>? _nonCritRaw;
-  private Dictionary<long, int>? _critWide;
-  private Dictionary<long, int>? _nonCritWide;
+  private List<long>? _critWide;
+  private List<long>? _nonCritWide;
   private Dictionary<long, int>? _critFreq;
   private Dictionary<long, int>? _nonCritFreq;
 
@@ -97,31 +93,9 @@ internal class Attempt
     }
   }
 
-  // The split itself: the narrow list is the one that keeps the retained cost at 4 bytes for everything a real log prints.
-  private static void AddAmount(long total, ref List<uint>? narrow, ref Dictionary<long, int>? wide)
-  {
-    if (total <= uint.MaxValue)
-    {
-      (narrow ??= []).Add((uint)total);
-      return;
-    }
-
-    wide ??= [];
-    wide.TryGetValue(total, out var had);
-    wide[total] = had + 1;
-  }
-
-  /* How many damaging amounts are waiting to be counted (0 once a histogram exists). The cost probe reads this instead of the
-   * dictionaries, because touching a dictionary is what materializes it: a probe that asks the question eagerly measures nothing. */
-  internal int RawHitTotals => (_critRaw?.Count ?? 0) + (_nonCritRaw?.Count ?? 0) + WideCount(_critWide) + WideCount(_nonCritWide);
-
-  private static int WideCount(Dictionary<long, int>? wide)
-  {
-    if (wide is null) return 0;
-    var n = 0;
-    foreach (var kv in wide) n += kv.Value;
-    return n;
-  }
+  // Inspect retention without materializing either histogram.
+  internal int RawHitTotals => (_critRaw?.Count ?? 0) + (_nonCritRaw?.Count ?? 0)
+    + (_critWide?.Count ?? 0) + (_nonCritWide?.Count ?? 0);
 
   /* True while a row still owes its histogram to the raw amounts — the state a build leaves every row in. */
   internal bool HoldsRawHitTotals => _critRaw is not null || _nonCritRaw is not null || _critWide is not null || _nonCritWide is not null;
@@ -130,7 +104,19 @@ internal class Attempt
   internal bool HitFreqMaterialized => _critFreq is not null || _nonCritFreq is not null;
 
 
-  private static Dictionary<long, int> FreqOf(ref Dictionary<long, int>? cache, ref List<uint>? raw, ref Dictionary<long, int>? wide)
+  private static void AddAmount(long total, ref List<uint>? narrow, ref List<long>? wide)
+  {
+    if (total <= uint.MaxValue)
+    {
+      (narrow ??= []).Add((uint)total);
+    }
+    else
+    {
+      (wide ??= []).Add(total);
+    }
+  }
+
+  private static Dictionary<long, int> FreqOf(ref Dictionary<long, int>? cache, ref List<uint>? raw, ref List<long>? wide)
   {
     if (cache is not null)
       return cache;
@@ -150,10 +136,10 @@ internal class Attempt
 
     if (wide is not null)
     {
-      foreach (var kv in wide)
+      foreach (var amount in wide)
       {
-        built.TryGetValue(kv.Key, out var had);
-        built[kv.Key] = had + kv.Value;
+        built.TryGetValue(amount, out var had);
+        built[amount] = had + 1;
       }
 
       wide = null;

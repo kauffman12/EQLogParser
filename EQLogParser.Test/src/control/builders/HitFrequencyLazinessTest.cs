@@ -82,8 +82,7 @@ public class HitFrequencyLazinessTest
     var row = new Attempt();
     foreach (var amount in amounts)
     {
-      // record.Total is uint; the test's helper keeps long to mirror the chart's dictionary keys
-      row.RecordHitTotal((uint)amount, isCrit: false);
+      row.RecordHitTotal(amount, isCrit: false);
     }
 
     CollectionAssert.AreEqual(expected.Select(PairText).OrderBy(t => t).ToList(), row.NonCritFreqValues.Select(PairText).OrderBy(t => t).ToList(),
@@ -121,6 +120,32 @@ public class HitFrequencyLazinessTest
 
     // A row nobody ever opened still answers, empty rather than null: the chart iterates without a null check.
     Assert.AreEqual(0, new Attempt().CritFreqValues.Count);
+  }
+
+  [TestMethod]
+  public void MixedWidthHistogramsCountDuplicatesKeepCritsSeparateAndReleaseBothLists()
+  {
+    var row = new Attempt();
+    long[] amounts = [1, uint.MaxValue, uint.MaxValue + 1L, TextUtils.MaxAmount, uint.MaxValue + 1L];
+    foreach (var amount in amounts) row.RecordHitTotal(amount, false);
+    row.RecordHitTotal(TextUtils.MaxAmount, true);
+    row.RecordHitTotal(TextUtils.MaxAmount, true);
+    Assert.AreEqual(7, row.RawHitTotals);
+    Assert.IsFalse(row.HitFreqMaterialized);
+
+    var nonCrit = row.NonCritFreqValues;
+    Assert.AreEqual(4, nonCrit.Count);
+    Assert.AreEqual(1, nonCrit[uint.MaxValue]);
+    Assert.AreEqual(2, nonCrit[uint.MaxValue + 1L]);
+    Assert.AreEqual(1, nonCrit[TextUtils.MaxAmount]);
+    Assert.AreEqual(2, row.RawHitTotals, "reading non-crits leaves the crit list intact");
+    var crit = row.CritFreqValues;
+    Assert.AreEqual(1, crit.Count);
+    Assert.AreEqual(2, crit[TextUtils.MaxAmount]);
+    Assert.AreSame(nonCrit, row.NonCritFreqValues);
+    Assert.AreSame(crit, row.CritFreqValues);
+    Assert.AreEqual(0, row.RawHitTotals);
+    Assert.IsFalse(row.HoldsRawHitTotals);
   }
 
   [TestMethod]

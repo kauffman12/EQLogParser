@@ -4,21 +4,9 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace EQLogParser
 {
-  /*
-   * The amount domain and the two parse helpers that guard it (docs/DesignNotes.md → "Amount widths measured across 44 million hits").
-   *
-   * MEASURED CEILINGS: the widest number a captured log ever printed is a 10 digit heal (1,276,118), so this domain is not about what a raid
-   * can do. It exists so a manglenet report, a synthetic log or an emu under test is either read exactly or refused, and nobody has to decide
-   * the width again while looking at one.
-   *
-   * FAILURE IS -1 AND NOTHING ELSE. The sibling below, ParseUInt, answers its DEFAULT on a bad token, which for its callers (DateUtil's clock
-   * fields, loot counts, trigger values) means "no value" and is correct there. For an amount that default was a loaded gun: an unparseable hit
-   * became uint.MaxValue and reached the board as a 4.29 billion damage event. So ParseAmount answers -1 — a number no log can print, since the
-   * parsers read magnitudes — and the caller refuses the line instead of storing it.
-   *
-   * THE SIBLING STAYS NARROW ON PURPOSE, and its refusal is asserted here rather than trusted: widening the amounts was a decision about
-   * amounts. A clock field that silently accepted a wide token would read a garbage number as a timestamp.
-   */
+  // Amount failure (-1) must not collide with a supported magnitude, including uint.MaxValue.
+  // The bounded clock/count parser keeps its separate contract.
+  // See docs/DesignNotes.md → "Amount widths measured across 44 million hits".
   [TestClass]
   public sealed class AmountDomainTest
   {
@@ -63,10 +51,19 @@ namespace EQLogParser
       Assert.AreEqual(0L, TextUtils.ParseAmount("0000"), "all zeros is zero, not 'no number'");
 
       // One past the domain: refused, and NOT clamped to the ceiling.
-      Assert.AreEqual(-1L, TextUtils.ParseAmount(OnePast.ToString()), "a 16-digit amount is refused outright");
+      Assert.AreEqual(-1L, TextUtils.ParseAmount(OnePast.ToString()), "a fifteen-digit amount past the ceiling is refused");
       Assert.AreEqual(-1L, TextUtils.ParseAmount("99999999999999999999"), "20 digits cannot be a hit");
 
-      foreach (var junk in new[] { "", " ", "abc", "12a34", "1e5", "1,234", " 42", "1 2", "0xFF", "+42", "-5", "." })
+      foreach (var good in new[] { 65535L, 4294967294L, 5309597698L, Ceiling - 1, Ceiling })
+      {
+        var token = "0000000000000000" + good;
+        Assert.IsTrue(TextUtils.TryParseAmount(token, out var value));
+        Assert.AreEqual(good, value);
+        Assert.AreEqual(value, TextUtils.ParseAmount(token));
+      }
+
+      foreach (var junk in new[] { "", " ", "abc", "12a34", "1e5", "1,234", " 42", "1 2", "0xFF", "+42", "-5", ".",
+        "１２３", "١٢٣", "0000000000000000281474976710656", OnePast.ToString(), ulong.MaxValue.ToString() })
       {
         Assert.AreEqual(-1L, TextUtils.ParseAmount(junk), $"a token that is not a magnitude is refused, not guessed: '{junk}'");
         Assert.IsFalse(TextUtils.TryParseAmount(junk, out var value), $"'{junk}' must not claim a value");

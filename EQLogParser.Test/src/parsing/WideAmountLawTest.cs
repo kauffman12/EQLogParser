@@ -13,9 +13,8 @@ namespace EQLogParser
    * reads as a plausible smaller hit, and every total above it silently disagrees with the log. So the row refuses what it cannot carry (its
    * constructor is the door behind the parser), the blob carries both halves or says the chunk needs neither, and the sums stay signed.
    *
-   * ONE BEHAVIOUR CHANGED ON THE WAY IN, deliberately: a damage or heal line whose amount does not parse used to produce uint.MaxValue, so a
-   * corrupt token became a 4.29 billion hit on the board. Now the line makes no record. Refusing a bad line is worth more than storing a
-   * confident enormous number that no player swung.
+   * A valid uint.MaxValue must not collide with parse failure. The prior guard dropped that value and larger hits;
+   * malformed amounts still make no record.
    */
   [DoNotParallelize]
   [TestClass]
@@ -59,7 +58,7 @@ namespace EQLogParser
     [TestMethod]
     public void ADamageLineWhoseAmountIsNotAnAmountMakesNoRecordAtAll()
     {
-      // This is the behaviour change that matters: before, an unparseable amount became uint.MaxValue — a 4.29 billion hit.
+      // Malformed input must remain distinct from a valid zero or the old uint ceiling.
       var junk = DamageLineParser.ParseLine("Kilsef crushes an abyssal terror for 12a34 points of damage.");
       Assert.IsNull(junk, "junk is no record");
 
@@ -125,6 +124,60 @@ namespace EQLogParser
     }
 
     #endregion
+
+    [TestMethod]
+    public void OptionalHealAsksAndNegativeDirectHealsKeepTheirPolicy()
+    {
+      foreach (var ask in new[] { "", " (0)", " (junk)", $" ({OnePast})", " (1)", $" ({Ceiling})" })
+      {
+        HealTap.Clear();
+        Process($"Reisil healed Kilsa for {Ceiling}{ask} hit points by Greater Renewal.");
+        var record = HealTap.All().Single().Item2;
+        Assert.AreEqual(Ceiling, record.Total);
+        var expected = ask == " (1)" ? 1L : ask == $" ({Ceiling})" ? Ceiling : 0L;
+        Assert.AreEqual(expected, record.OverTotal);
+      }
+      HealTap.Clear();
+      Process($"Reisil healed Kilsa for -{Ceiling} hit points by Greater Renewal.");
+      Process("Reisil healed Kilsa for junk hit points by Greater Renewal.");
+      Assert.AreEqual(0, HealTap.All().Count);
+      Process("Reisil healed Kilsa for 0 hit points by Greater Renewal.");
+      Assert.AreEqual(0L, HealTap.All().Single().Item2.Total);
+      HealTap.Clear();
+      Process($"Reisil healed Kilsa over time for -{Ceiling} ({Ceiling}) hit points by Greater Renewal.");
+      Assert.AreEqual(Ceiling, HealTap.All().Single().Item2.Total);
+    }
+
+    [TestMethod]
+    public void EmulatorCriticalCarriesPreserveWideAmountsAndModifiers()
+    {
+      var prior = Environment.GetEnvironmentVariable("EQLP_EMU");
+      var path = Path.Combine(Path.GetTempPath(), $"wide-emu-{Guid.NewGuid():N}.txt");
+      try
+      {
+        Environment.SetEnvironmentVariable("EQLP_EMU", "1");
+        File.WriteAllLines(path,
+        [
+          $"[Sun Oct 11 18:45:18 2026] Arilyn lands a Crippling Blow!({Ceiling})",
+          $"[Sun Oct 11 18:45:18 2026] Arilyn hits a target for {Ceiling} points of damage.",
+          "[Sun Oct 11 18:45:20 2026] Vorgash scores a critical hit! (4294967295)",
+          "[Sun Oct 11 18:45:20 2026] Vorgash hits a target for 4294967295 points of damage.",
+          $"[Sun Oct 11 18:45:22 2026] Vorgash scores a critical hit! ({Wide})",
+          $"[Sun Oct 11 18:45:22 2026] Vorgash hits a target for {Wide} points of damage."
+        ]);
+        var run = PipelineHarness.RunFileDerived(path);
+        CollectionAssert.AreEqual(new long[] { Ceiling, uint.MaxValue, Wide },
+          run.Facts.Facts.Select(f => f.Total).ToArray());
+        foreach (var fact in run.Facts.Facts)
+          Assert.IsTrue(LineModifiersParser.IsCrit(fact.ModMask), $"amount {fact.Total}, mask {fact.ModMask}");
+      }
+      finally
+      {
+        Environment.SetEnvironmentVariable("EQLP_EMU", prior);
+        File.Delete(path);
+        DamageLineParser.ResetProcessState();
+      }
+    }
 
     #region row and blob
 
@@ -237,15 +290,6 @@ namespace EQLogParser
 
     #endregion
 
-    private static DamageFact DamageRow(int i, long total) => new(i, T + (i / 3), 1 + (i % 7), 2 + (i % 11), total,
-      LabelTypes.Melee, 0, 0, DamageFactTable.NoSubtype);
-
-    private static HealFact HealRow(int i, long total, long overTotal) => new(i, T + (i / 3), 1 + (i % 5), 2 + (i % 9),
-      total, overTotal, LabelTypes.Heal, 0, 0, HealFact.NoSpell);
-
-    private static void Process(string action) =>
-      HealingLineParser.Process(new LineData { Action = action, BeginTime = (double)T, Split = action.Split(' ') });
-
     /*
      * The unit tests above build rows by hand; this one walks in through the reader with a synthesized live-format capture, because a wide number has to
      * survive ingest (LogProcessor's tap, the spell lookup, the record shaping) and not only storage. Written the way the game prints it, including the
@@ -254,7 +298,7 @@ namespace EQLogParser
     [TestMethod]
     public void ACapturePrintedWideReachesTheFactTablesWide()
     {
-      var path = Path.Combine(Path.GetTempPath(), "wide-amount-capture.txt");
+      var path = Path.Combine(Path.GetTempPath(), $"wide-amount-capture-{Guid.NewGuid():N}.txt");
       try
       {
         File.WriteAllLines(path, new[]
@@ -286,5 +330,14 @@ namespace EQLogParser
         File.Delete(path);
       }
     }
+
+    private static DamageFact DamageRow(int i, long total) => new(i, T + (i / 3), 1 + (i % 7), 2 + (i % 11), total,
+      LabelTypes.Melee, 0, 0, DamageFactTable.NoSubtype);
+
+    private static HealFact HealRow(int i, long total, long overTotal) => new(i, T + (i / 3), 1 + (i % 5), 2 + (i % 9),
+      total, overTotal, LabelTypes.Heal, 0, 0, HealFact.NoSpell);
+
+    private static void Process(string action) =>
+      HealingLineParser.Process(new LineData { Action = action, BeginTime = (double)T, Split = action.Split(' ') });
   }
 }

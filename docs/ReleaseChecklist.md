@@ -175,6 +175,26 @@ operator checks with `Debug=True`, on a capture of several hundred MB or more:
   old parse, available label and selected player set must not return when the worker finishes. A build in the new log
   still publishes normally.
 
+## 48-bit amount release checks on Windows
+
+Headless arithmetic, workbook XML and before/after load/board measurements are in DesignNotes →
+"Amount widths measured across 44 million hits: 48-bit damage and healing". These are still manual release gates:
+
+- [ ] Load damage/healing lines containing `4294967295`, `5309597698` and `281474976710655`. Check damage/tanking/healing
+  grids, spell maxima, grouped hit/DPS logs, charts and FCT. Display abbreviations may round; stored totals must not wrap.
+  NPC-to-player Ironbark Hurl belongs to tanking, not outgoing player damage.
+- [ ] Open the detailed export in desktop Excel. Both damage sheets and all heal views must contain numeric cells; check
+  landed, raw requested and overheal values at the 48-bit maximum. An absent ask stays zero.
+- [ ] Compare the same large capture and selections against the pre-widening baseline using the **application process**:
+  load peak, settled idle, select-all, one-fight reselection, reopening viewers and old-fight revisits. Healing raw slots
+  cost four more bytes; compressed backing and process working set are different measurements. Agree on any memory tradeoff
+  before release; the headless results do not establish a stable peak-memory percentage.
+- [ ] Follow a log for multiple elapsed hours with regular derives and board refreshes. Append wide damage and healing late,
+  verify exact totals, and verify decoded cache occupancy returns after readers release. Accelerated log-time replay does
+  not certify an overnight session's memory behavior.
+- [ ] Close/open another capture and Clear All with wide amounts present; no old rows, histogram lists or viewer state may
+  leak into the replacement capture. WPF tests must execute on Windows, not merely build on Linux.
+
 ## Damage overlay checks on Windows
 
 Accounting and display retention live in Core (`DamageOverlayLifecycle`) and are tested with projected facts and actual overlay totals.

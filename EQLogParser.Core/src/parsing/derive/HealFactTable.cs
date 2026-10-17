@@ -98,7 +98,7 @@ namespace EQLogParser
     public readonly int HealerIdx;
     public readonly int HealedIdx;
 
-    // The halves above 32 bits of the two amounts. Zero for every amount an ordinary log prints.
+    // Bits 32–47 of each amount; each column has its own optional high plane in cold storage.
     private readonly ushort _totalHigh;
     private readonly ushort _overTotalHigh;
 
@@ -164,7 +164,7 @@ namespace EQLogParser
       byte typeId, byte flags, short modMask, ushort subIdx)
     {
       // A landed amount the row cannot carry is refused here rather than written narrow: HealingLineParser already
-      // refuses the line, so this is the door behind it for any other producer (a spool read, a test).
+      // refuses the line, so this guards other producers too (codec decoding and tests).
       if (!TextUtils.InAmountRange(total))
         throw new ArgumentOutOfRangeException(nameof(total), total, "A landed heal is a magnitude within 48 bits.");
       if (!TextUtils.InAmountRange(overTotal))
@@ -174,9 +174,9 @@ namespace EQLogParser
       _timeS = FactTime.FromEpochSeconds(timeS);
       HealerIdx = healerIdx;
       HealedIdx = healedIdx;
-      _totalLow = (uint)total;
+      _totalLow = unchecked((uint)total);
       _totalHigh = (ushort)(total >> 32);
-      _overTotalLow = (uint)overTotal;
+      _overTotalLow = unchecked((uint)overTotal);
       _overTotalHigh = (ushort)(overTotal >> 32);
 
       // The label bit: Heal is the absence of it, Hot is its presence. Anything else is a type this stream cannot hold —
