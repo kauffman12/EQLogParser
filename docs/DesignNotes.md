@@ -18000,7 +18000,7 @@ selected cases — which need not change row/reader APIs. Delta-encoding an amou
 (108-118%): unlike Seq and TimeS, consecutive amounts are unrelated. Any new codec requires a whole-blob measurement; neither
 these isolated ratios nor the original +0.4% damage result predict the new two-amount healing encoding.
 
-### Reviewed scope: 48-bit healing as well as damage (planned, not implemented)
+### Reviewed scope: 48-bit healing as well as damage (implemented 2026-11 — see "What landed" at the end of this section)
 
 The requested domain is **0 through 281,474,976,710,655 inclusive (48 bits, not 48 bytes)** for damage, landed healing and the
 parenthesized heal ask. The corpus's lack of >uint heals is not a reason to refuse them under this contract. The previous
@@ -18039,7 +18039,8 @@ a per-stat object cost, but avoid doubling every ordinary retained hit amount. K
 
 For cold amounts, the recommended representation adds a codec-local presence byte and omits an all-zero high-u16 plane;
 healing has two independently optional high planes. This is a per-chunk representation marker, not a persisted format
-migration or a fact flag. No chunk persistence exists in the current store. Its whole-blob savings/costs remain **unmeasured**.
+migration or a fact flag. No chunk persistence exists in the current store. (Whole-blob cost, measured afterwards: +0.6 MB
+on 3.29M heal rows, i.e. one byte per 65,536 damage rows and nothing else on an ordinary capture.)
 Both codecs must decode only populated decompressed bytes, not spare MemoryStream capacity, and reject a declared missing
 plane, invalid varint or unexpected payload length before constructing/publishing rows. Existing verify-before-clear and
 bounded decoded-cache ownership remain unchanged.
@@ -18047,7 +18048,8 @@ bounded decoded-cache ownership remain unchanged.
 The original parser microbenchmark over 600,000 real tokens reported 6.35 ns/token for the shipped uint loop, 6.00 for a
 length-gated signed-wide loop, 6.93-6.99 for span built-ins and about 7.6-8.0 for string variants (best of five trials, forty
 repetitions). It supports a simple digit loop, not a guaranteed speedup for an unimplemented wrapper/leading-zero variant or
-an end-to-end load-time prediction. No new runtime performance measurements accompanied this documentation review.
+an end-to-end load-time prediction; the shipped `ParseAmount` is the length-gated signed-wide loop, and the whole-capture load
+numbers below are its end-to-end measurement.
 
 Review corrections that constrain implementation:
 
@@ -18071,3 +18073,68 @@ Related decisions: "A fact row is 24 bytes: the clock, the vocabulary, and what 
 was argued, and why the id columns cost four bytes), "Rows go cold, and what a chunk costs to remember" (the store this would
 change) and "The cold-chunk Deflate level: 9 → 7" (why the ratios above use level 7). Their numbers are history, not new
 measurements of these candidates.
+
+### What landed: 48-bit amounts end to end, and what they cost (2026-11)
+
+The reviewed scope above is implemented. `TextUtils.ParseAmount` (with `TryParseAmount`/`InAmountRange`, and the
+`LineWords`/`ParserUtil` index-form doors) reads 0 through 2^48-1 and answers **-1** outside it; `ParseUInt` was left alone
+and a test pins its refusal, because the eleven clock fields and the loot/currency counts depend on a wide token not becoming
+a timestamp. Amounts then travel wide: `HitRecord.Total`, `HealRecord.OverTotal`, `Attempt`'s totals, `PlayerSubStats`,
+`DataPoint`, `DerivedFight`, `MeterAmount`/`MeterDirectionTotals`/`MeterFactInput` parameters, `CharmWindows.CreditedTotal`,
+both fact rows, and the Excel cells (numeric, exact — a single amount is inside double's exact range and Excel's 15 digits).
+
+**Row widths, asserted rather than predicted**: `DamageFact` **28 B** — the amount took the 4-byte slot it always had plus the
+two padding bytes above `ModMask`, split into a private `_totalLow:uint` / `_totalHigh:ushort` with one composed getter, so
+"field order is layout" stayed true and nothing else moved. `HealFact` **32 B**: two amounts, no padding to borrow. The four
+bytes were paid, not hidden — narrowing name ids, the clock, subtype ids or reusing retired flag bits was considered and
+refused. Both sizes are pinned by `FactTimeTest.BothFactRowsReadBackTheSecondTheyWereGiven`.
+
+**Cold chunks pay one presence byte each**, with all-zero high planes omitted and healing's two planes optional
+independently; an ordinary capture encodes exactly what the u32 codec did plus 1 byte per 65,536 damage rows. The measured
+3-byte plane (92.5 % of the old cost) was not taken because it prices every routine amount at 1.5 bytes a row instead of
+asking once per chunk. Saturation in the histogram lanes was refused outright: `Max = 4294967295` is indistinguishable from
+a real maximum, so `HitAmountsBySpellMax` keeps its uint lists (4 B for every ordinary retained hit) and gains a separate
+wide list, both counted into the existing long-key dictionary.
+
+**The behaviour change**: an amount that does not parse or exceeds the domain now produces **no record** (the fact constructors
+throw, and the parsers already stand behind that). Previously the `ParseUInt` default of `uint.MaxValue` did double duty as a
+failure sentinel, so `CreateDamageRecord`'s `damage != uint.MaxValue` door silently discarded honest hits above 4.29e9 — including
+the measured Xanzerok/Ironbark Hurl swings near 5e9 — while any path that missed that door stored 4.29 billion as a real hit.
+Healing's own rulings are untouched: only HOT grammar strips a minus before the magnitude is read, and an unparseable
+parenthesised ask still falls back to zero rather than dropping an otherwise valid landed heal.
+
+**Measured before/after on one capture** — `eqlog_Kizant_xegony-07-24-26.txt`, 1.3 GB, 7.12M damage facts, 3.29M heal rows;
+baseline built from the pre-change commit in a throwaway worktree, two runs each side (`ColdChunkRealLogTest`):
+
+| | before | after |
+|---|---:|---:|
+| damage raw → store (backing) | 199.4 → 68.9 MB (28.1) | **identical** |
+| heal rows warm | 92.2 MB | **105.4 MB** (+4 B/row = +13.2) |
+| heal cold store | 13.5 MB | **14.1 MB** (+0.6) |
+| classify | 2044 / 2078 ms | 2239 / 2241 ms |
+| project | 1817 / 1794 ms | 1829 / 1822 ms |
+| materialize (heal board) | 2967 / 3079 ms | 3152 / 3280 ms |
+| parse + encoder drain | 44141 ms | 44232 / 44739 ms |
+| peak RSS, whole test process | 191,352 KB | **188,268 KB** |
+
+So the settled store is unmoved for damage and +0.6 MB for healing on a capture with millions of heals; the warm cost is exactly
+the arithmetic above (+4 B per decoded heal slot), and peak RSS did not rise. What did move is the seconds where heal rows are
+copied into records — classify ≈ +8 %, heal materialize ≈ +5 % — a few percent of a stage that is itself a small share of a load
+(≈ 200 ms against a 44 s parse here). Live parsing was not separately instrumented; the added per-line work is one composed getter
+and, for damage, one extra length check.
+
+**A defect class closed on the way**: both codecs used to decompress into a `MemoryStream` and hand back its whole `Capacity` as a
+`Span`, i.e. slack beyond the payload, while `FactVarint.Read` had no bound whatsoever — a truncated or corrupt chunk could read
+past its own data and shift garbage in as ids. Decoding is now bounded to the populated length (new `ReadOnlySpan` overload; the old
+`Stream` form kept for `FactBlock`), each codec validates its plane arithmetic against that length, and a decoded payload whose size
+disagrees with `rows * width` refuses before any row array exists — so verify-before-clear keeps the rows instead of publishing
+invented ones.
+
+Tests: `AmountDomainTest` (domain asserted by counting its bits at runtime, both refusal gates separately — fifteen digits inside
+the ceiling, fifteen past it, sixteen never evaluated — and `ParseUInt` pinned narrow) and `WideAmountLawTest` (rows refuse what
+they cannot carry; wide rows round-trip cold first/middle/last, since the populated length is taken from the last row's high plane;
+an all-zero-high chunk still decodes; a wrong declared row count refuses; a synthesized live-format capture run through the real
+pipeline proves ingest as well as storage).
+
+Related: "Rows go cold, and what a chunk costs to remember" (the store this changed) and "A fact row is 24 bytes…" (the last time
+row width was argued). The uint-era numbers earlier in this section are history, not current measurements.
