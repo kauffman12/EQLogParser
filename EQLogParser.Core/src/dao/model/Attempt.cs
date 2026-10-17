@@ -14,9 +14,11 @@ internal class Attempt
   public uint Misses { get; set; }
   public uint Parries { get; set; }
   public uint Invulnerable { get; set; }
-  public uint Max { get; set; }
-  public uint MaxPotentialHit { get; set; }
-  public uint Min { get; set; }
+  /* Amounts, not counts: a hit's biggest, smallest and widest-possible number, on the same 48-bit domain the record
+     carries. Sum lanes here were already long; these three are one hit each and follow the record they came from. */
+  public long Max { get; set; }
+  public long MaxPotentialHit { get; set; }
+  public long Min { get; set; }
   public uint BaneHits { get; set; }
   public uint Hits { get; set; }
   public uint AssHits { get; set; }
@@ -66,43 +68,69 @@ internal class Attempt
    *   - **the same distribution, exactly.** Bucketing or sampling would have been cheaper again and was refused: this chart's point is individual
    *     hit amounts. Laziness buys the time and the memory; the answer must not move by one count.
    */
-  /* The amounts arrive as HitRecord.Total (uint) - the widest value a damage line can carry. They stay uint in
-     the raw lists, which halves the payload a histogram nobody has asked for yet; the materialized dictionary keys
-     keep the long the chart has always read, so widening the column later touches one cast and nothing else. */
+  /* The amounts are kept in TWO lanes so the wide domain costs nothing on ordinary data (docs/DesignNotes.md →
+     "Amount widths measured across 44 million hits"): everything a real log printed fits 32 bits, so it rides a List<uint>
+     exactly as before — 4 bytes per retained hit, which is what made the lazy histogram cheaper than the dictionary it
+     replaced. Only an amount above 32 bits pays a dictionary, and those are rare enough that the lane is usually null.
+     Both lanes merge into the same counts at materialization, so the chart answers exactly as it did. */
   private List<uint>? _critRaw;
   private List<uint>? _nonCritRaw;
+  private Dictionary<long, int>? _critWide;
+  private Dictionary<long, int>? _nonCritWide;
   private Dictionary<long, int>? _critFreq;
   private Dictionary<long, int>? _nonCritFreq;
 
-  public Dictionary<long, int> CritFreqValues => FreqOf(ref _critFreq, ref _critRaw);
+  public Dictionary<long, int> CritFreqValues => FreqOf(ref _critFreq, ref _critRaw, ref _critWide);
 
-  public Dictionary<long, int> NonCritFreqValues => FreqOf(ref _nonCritFreq, ref _nonCritRaw);
+  public Dictionary<long, int> NonCritFreqValues => FreqOf(ref _nonCritFreq, ref _nonCritRaw, ref _nonCritWide);
 
   /* One damaging record's amount, kept for a histogram nobody has asked for yet. Zero-damage outcomes never reach this (callers check). */
-  internal void RecordHitTotal(uint total, bool isCrit)
+  internal void RecordHitTotal(long total, bool isCrit)
   {
     if (isCrit)
     {
-      (_critRaw ??= []).Add(total);
+      AddAmount(total, ref _critRaw, ref _critWide);
     }
     else
     {
-      (_nonCritRaw ??= []).Add(total);
+      AddAmount(total, ref _nonCritRaw, ref _nonCritWide);
     }
+  }
+
+  // The split itself: the narrow list is the one that keeps the retained cost at 4 bytes for everything a real log prints.
+  private static void AddAmount(long total, ref List<uint>? narrow, ref Dictionary<long, int>? wide)
+  {
+    if (total <= uint.MaxValue)
+    {
+      (narrow ??= []).Add((uint)total);
+      return;
+    }
+
+    wide ??= [];
+    wide.TryGetValue(total, out var had);
+    wide[total] = had + 1;
   }
 
   /* How many damaging amounts are waiting to be counted (0 once a histogram exists). The cost probe reads this instead of the
    * dictionaries, because touching a dictionary is what materializes it: a probe that asks the question eagerly measures nothing. */
-  internal int RawHitTotals => (_critRaw?.Count ?? 0) + (_nonCritRaw?.Count ?? 0);
+  internal int RawHitTotals => (_critRaw?.Count ?? 0) + (_nonCritRaw?.Count ?? 0) + WideCount(_critWide) + WideCount(_nonCritWide);
+
+  private static int WideCount(Dictionary<long, int>? wide)
+  {
+    if (wide is null) return 0;
+    var n = 0;
+    foreach (var kv in wide) n += kv.Value;
+    return n;
+  }
 
   /* True while a row still owes its histogram to the raw amounts — the state a build leaves every row in. */
-  internal bool HoldsRawHitTotals => _critRaw is not null || _nonCritRaw is not null;
+  internal bool HoldsRawHitTotals => _critRaw is not null || _nonCritRaw is not null || _critWide is not null || _nonCritWide is not null;
 
   /* True once a histogram exists: lets a test see that reading built it and that building released the raw list. */
   internal bool HitFreqMaterialized => _critFreq is not null || _nonCritFreq is not null;
 
 
-  private static Dictionary<long, int> FreqOf(ref Dictionary<long, int>? cache, ref List<uint>? raw)
+  private static Dictionary<long, int> FreqOf(ref Dictionary<long, int>? cache, ref List<uint>? raw, ref Dictionary<long, int>? wide)
   {
     if (cache is not null)
       return cache;
@@ -118,6 +146,17 @@ internal class Attempt
 
       // The dictionary holds every count the list did; keeping both would cost more than the eager version this replaced.
       raw = null;
+    }
+
+    if (wide is not null)
+    {
+      foreach (var kv in wide)
+      {
+        built.TryGetValue(kv.Key, out var had);
+        built[kv.Key] = had + kv.Value;
+      }
+
+      wide = null;
     }
 
     // Assign once, then answer from the field: two racing readers may each build, but nobody ever sees a dictionary swapped out from under them.

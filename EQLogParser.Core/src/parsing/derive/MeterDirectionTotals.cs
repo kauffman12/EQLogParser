@@ -25,7 +25,7 @@ internal readonly record struct MeterFirst(string Name, string Owner, bool Valid
 
 internal readonly record struct MeterAmount(long Total, uint Hits)
 {
-  internal MeterAmount Add(uint total, bool hit) => new(Total + total, Hits + (hit ? 1u : 0u));
+  internal MeterAmount Add(long total, bool hit) => new(Total + total, Hits + (hit ? 1u : 0u));
   internal MeterAmount Add(MeterAmount other) => new(Total + other.Total, Hits + other.Hits);
 }
 

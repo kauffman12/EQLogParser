@@ -25,7 +25,14 @@ namespace EQLogParser;
  */
 public class HitRecord : IAction
 {
-  public uint Total { get; set; }
+  /*
+   * A hit's amount, read as the log printed it: a magnitude up to TextUtils.MaxAmount (48 bits), not a 32-bit field.
+   * Live combat has never come near that ceiling - the widest number measured in the captured logs is a 10 digit heal -
+   * but a manglenet report, a synthetic log or an emu under test can print more, and a hit whose amount does not fit
+   * what storage carries is refused at the parse rather than written narrow. docs/DesignNotes.md →
+   * "Amount widths measured across 44 million hits".
+   */
+  public long Total { get; set; }
   public short ModifiersMask { get; set; }
 
   /*
@@ -65,7 +72,7 @@ internal class HealRecord : HitRecord
    * What the line asked for, as opposed to what landed (Total), so OverTotal - Total is the overheal the tabs
    * print. Damage has no such number: HealingLineParser is the only writer of this field in the codebase.
    */
-  public uint OverTotal { get; set; }
+  public long OverTotal { get; set; }
 
   public string Healer
   {

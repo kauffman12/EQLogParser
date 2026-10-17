@@ -47,9 +47,9 @@ public sealed class HealWindowWalkTest
   }
 
   /// <summary>The answer this file must keep: the naive question, asked per row against every span.</summary>
-  private static List<(double Time, uint Total)> Naive(HealFactTable heals, TimeRange? range)
+  private static List<(double Time, long Total)> Naive(HealFactTable heals, TimeRange? range)
   {
-    var answer = new List<(double, uint)>();
+    var answer = new List<(double, long)>();
     var rows = heals.Heals;
 
     for (var i = 0; i < rows.Length; i++)
@@ -74,14 +74,14 @@ public sealed class HealWindowWalkTest
     return answer;
   }
 
-  private static string Signature(List<(double Time, uint Total)> rows)
+  private static string Signature(List<(double Time, long Total)> rows)
   {
     var sb = new StringBuilder();
     foreach (var row in rows) sb.Append(row.Time.ToString("F0")).Append(':').Append(row.Total).Append(';');
     return sb.ToString();
   }
 
-  private static List<(double Time, uint Total)> Window(HealFactTable heals, TimeRange? range)
+  private static List<(double Time, long Total)> Window(HealFactTable heals, TimeRange? range)
     => HealSummarySource.Materialize(heals, range!).ConvertAll(p => (p.Item1, p.Item2.Total));
 
   [TestMethod]

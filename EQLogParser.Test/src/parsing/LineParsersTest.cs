@@ -54,7 +54,7 @@ namespace EQLogParser
       var heal = HealTap.All().Single().Item2;
       Assert.AreEqual("Fllint", heal.Healer);
       Assert.AreEqual("Foob", heal.Healed);
-      Assert.AreEqual(11820UL, heal.Total);
+      Assert.AreEqual(11820L, heal.Total);
       Assert.AreEqual(Labels.Heal, heal.Type);
       Assert.AreEqual("Blessing of the Ancients III", heal.SubType);
     }
@@ -105,8 +105,8 @@ namespace EQLogParser
       var heal = HealTap.All().Single().Item2;
       Assert.AreEqual("Findawenye", heal.Healer);
       Assert.AreEqual("Mending Splash Rk. III", heal.SubType);
-      Assert.AreEqual(2823UL, heal.Total);
-      Assert.AreEqual(78079UL, heal.OverTotal);
+      Assert.AreEqual(2823L, heal.Total);
+      Assert.AreEqual(78079L, heal.OverTotal);
     }
 
     [TestMethod]
@@ -156,7 +156,7 @@ namespace EQLogParser
       var heal = HealTap.All().Single().Item2;
       Assert.AreEqual(Labels.Hot, heal.Type);
       Assert.AreEqual("Malkatar", heal.Healed);
-      Assert.AreEqual(8211UL, heal.Total);
+      Assert.AreEqual(8211L, heal.Total);
       Assert.AreEqual("Roar of the Lion 6", heal.SubType);
     }
 
@@ -168,8 +168,8 @@ namespace EQLogParser
 
       var heal = HealTap.All().Single().Item2;
       Assert.AreEqual("Findawenye", heal.Healer);
-      Assert.AreEqual(2823UL, heal.Total);
-      Assert.AreEqual(78079UL, heal.OverTotal);
+      Assert.AreEqual(2823L, heal.Total);
+      Assert.AreEqual(78079L, heal.OverTotal);
     }
 
     [TestMethod]

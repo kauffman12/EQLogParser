@@ -23,7 +23,7 @@ namespace EQLogParser
     public int Starts;            // charm-success sightings merged into this window
     public int FactCount;         // facts with this name as attacker inside the span
     public int SameNameFactCount; // …against another mob with the SAME name: genuinely ambiguous credit
-    public ulong CreditedTotal;   // sum of those facts — what moves from the NPC row to the owner's pet row
+    public long CreditedTotal;    // sum of those facts — what moves from the NPC row to the owner's pet row
 
     public List<CharmOwnerSegment> Segments = [];   // per-charmer holds; their union is [T0, T1)
 

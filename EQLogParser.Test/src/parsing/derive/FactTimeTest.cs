@@ -73,8 +73,8 @@ public class FactTimeTest
       // And the row is still the size the memory pass bought: the narrow field is real, not a property over a long.
       // 28, not the 24 of the packing pass: name ids went 32-bit because a capture really can exceed 16 bits of names, and those
       // four bytes are the price (see DamageFactTable.InternName). Change this number only with that trade re-argued.
-      Assert.AreEqual(28, Unsafe.SizeOf<DamageFact>());
-      Assert.AreEqual(28, Unsafe.SizeOf<HealFact>(), "packed: same size as a damage row");
+      Assert.AreEqual(28, Unsafe.SizeOf<DamageFact>(), "the amount's 48 bits sit in the padding above the modifier mask: no pad came back");
+      Assert.AreEqual(32, Unsafe.SizeOf<HealFact>(), "a heal row carries two 48-bit amounts and has no padding to hide them in — it is 4 bytes over a damage row by decision");
     }
 
     [TestMethod]

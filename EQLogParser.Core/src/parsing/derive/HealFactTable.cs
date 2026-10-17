@@ -80,8 +80,15 @@ namespace EQLogParser
      * MaxPotentialHit as Total + OverTotal, so an OverTotal of Total instead of 0 doubles that column on every
      * plain heal line. Keep the fact exactly as parsed and read the intent through AskedFor.
      */
-    public readonly uint Total;
-    public readonly uint OverTotal;
+    /*
+     * Both amounts are 48-bit magnitudes, split across a four-byte half and the two bytes above it, and this row is the
+     * one that pays for it: unlike a damage row it has no padding to hide the high words in, so widening both amounts
+     * grows the row from 28 bytes to 32. That trade is taken deliberately (healing has a paren to carry and no spare
+     * bytes), asserted in HealFactCaptureTest, and measured as retention before and after in docs/DesignNotes.md →
+     * "Amount widths measured across 44 million hits".
+     */
+    private readonly uint _totalLow;
+    private readonly uint _overTotalLow;
 
     // Shared sequence with the damage stream (one counter in CombatCapture), so a heal and a hit that
     // happen between two timestamps keep the order the consumer saw them in.
@@ -90,6 +97,10 @@ namespace EQLogParser
     // int ids: the shared name pool is wider than 16 bits — see DamageFactTable.InternName for the decision and its price.
     public readonly int HealerIdx;
     public readonly int HealedIdx;
+
+    // The halves above 32 bits of the two amounts. Zero for every amount an ordinary log prints.
+    private readonly ushort _totalHigh;
+    private readonly ushort _overTotalHigh;
 
     // Spell name index ("Heroic Renewal Rk. II"), which is what HealRecord.SubType holds and what
     // StatsUtil.CreateRecordKey builds its activity windows from.
@@ -149,15 +160,24 @@ namespace EQLogParser
       UnknownTypeLabels = 0;
     }
 
-    public HealFact(int seq, long timeS, int healerIdx, int healedIdx, uint total, uint overTotal,
+    public HealFact(int seq, long timeS, int healerIdx, int healedIdx, long total, long overTotal,
       byte typeId, byte flags, short modMask, ushort subIdx)
     {
+      // A landed amount the row cannot carry is refused here rather than written narrow: HealingLineParser already
+      // refuses the line, so this is the door behind it for any other producer (a spool read, a test).
+      if (!TextUtils.InAmountRange(total))
+        throw new ArgumentOutOfRangeException(nameof(total), total, "A landed heal is a magnitude within 48 bits.");
+      if (!TextUtils.InAmountRange(overTotal))
+        throw new ArgumentOutOfRangeException(nameof(overTotal), overTotal, "A heal's asked-for amount is a magnitude within 48 bits.");
+
       Seq = seq;
       _timeS = FactTime.FromEpochSeconds(timeS);
       HealerIdx = healerIdx;
       HealedIdx = healedIdx;
-      Total = total;
-      OverTotal = overTotal;
+      _totalLow = (uint)total;
+      _totalHigh = (ushort)(total >> 32);
+      _overTotalLow = (uint)overTotal;
+      _overTotalHigh = (ushort)(overTotal >> 32);
 
       // The label bit: Heal is the absence of it, Hot is its presence. Anything else is a type this stream cannot hold —
       // counted rather than silently written as Heal, because that silent write is how a new label would vanish.
@@ -186,14 +206,20 @@ namespace EQLogParser
 
     public bool OwnerInLine => (Flags & FlagOwnerInLine) != 0;
 
+    /// <summary>What landed, as the line printed it — both halves. See the field comment for the split.</summary>
+    public long Total => (long)_totalLow | ((long)_totalHigh << 32);
+
+    /// <summary>The parenthesised amount verbatim; 0 means "the line never said". See AskedFor.</summary>
+    public long OverTotal => (long)_overTotalLow | ((long)_overTotalHigh << 32);
+
     // What the line wanted, stated the way a caller means it: a heal with no "(amount)" asked for what it
     // landed. Use this for sums and ratios; use OverTotal when materializing a record, so the record behaves
     // under StatsUtil exactly like the one the parser made.
-    public uint AskedFor => OverTotal == 0 ? Total : OverTotal;
+    public long AskedFor => OverTotal == 0L ? Total : OverTotal;
 
     // Healing the target did not need, never negative: an overflowing subtraction would print straight into a
     // stats column, and this table is fed by numbers parsed out of text.
-    public uint Overheal => OverTotal > Total ? OverTotal - Total : 0;
+    public long Overheal => OverTotal > Total ? OverTotal - Total : 0L;
   }
 
   // Storage contract for the heal stream, shaped like IFactTable so a chunked spill would cover both

@@ -97,7 +97,7 @@ public class DerivedHealBoardTest
         var range = new TimeRange(new TimeSegment(time, time + 10));
         foreach (var records in new[] { HealSummarySource.Materialize(heals, range), HealSummarySource.Materialize(heals, null) })
         {
-            CollectionAssert.AreEqual(new uint[] { 2000, 3000, 1000 }, records.Select(static row => row.Item2.Total).ToArray());
+            CollectionAssert.AreEqual(new long[] { 2000, 3000, 1000 }, records.Select(static row => row.Item2.Total).ToArray());
             var board = BuildHeals([], range, records);
             Assert.IsNotNull(board);
             Assert.AreEqual(6000L, board.RaidStats.Total, "the late earlier heal cannot be left behind the builder's cursor");

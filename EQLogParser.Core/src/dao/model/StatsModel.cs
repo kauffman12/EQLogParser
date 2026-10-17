@@ -115,8 +115,11 @@ namespace EQLogParser
   public class SpellDamageStats
   {
     internal uint Count { get; set; }
-    internal ulong Total { get; set; }
-    internal uint Max { get; set; }
+
+    /* Amounts on the 48-bit domain a hit carries: Total was unsigned and Max was 32 bits, which is how a wide amount
+       would come back from a board as a wrapped number. Damage amounts are magnitudes, so signed long throughout. */
+    internal long Total { get; set; }
+    internal long Max { get; set; }
     internal string Spell { get; set; }
     internal string Caster { get; set; }
   }

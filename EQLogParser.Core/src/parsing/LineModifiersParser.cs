@@ -100,7 +100,7 @@ namespace EQLogParser
      * Callers holding a miss must not call this: whoever counts a riposte line as a miss decides its attacker
      * gets nothing.
      */
-    internal static void UpdateStats(short modifiersMask, uint total, Attempt playerStats, Attempt theHit = null)
+    internal static void UpdateStats(short modifiersMask, long total, Attempt playerStats, Attempt theHit = null)
     {
       if (modifiersMask > -1)
       {

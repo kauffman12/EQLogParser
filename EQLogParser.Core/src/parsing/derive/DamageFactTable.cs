@@ -140,7 +140,16 @@ namespace EQLogParser
     // int ids: see InternName. These two are the whole reason a damage row is 28 bytes and not 24.
     public readonly int AtkIdx;
     public readonly int DefIdx;
-    public readonly uint Total;
+
+    /*
+     * The hit's amount, 48 bits wide, split across the four-byte slot this row always had and the two padding bytes that
+     * sat above the modifier mask: an ordinary hit keeps its low half and a zero high word, and the row is still 28 bytes.
+     * Written through the constructor, which refuses anything the domain cannot carry, and read back as one number.
+     * Measured ceilings and why 48: docs/DesignNotes.md → "Amount widths measured across 44 million hits".
+     */
+    private readonly uint _totalLow;
+    private readonly ushort _totalHigh;
+
     public readonly byte TypeId;
     public readonly byte Flags;
 
@@ -153,18 +162,25 @@ namespace EQLogParser
     public readonly short ModMask;
     public readonly ushort SubIdx;   // index into the subtype table (spell/modifier name); 65535 = none
 
-    public DamageFact(int seq, long timeS, int atkIdx, int defIdx, uint total, byte typeId, byte flags, short modMask, ushort subIdx)
+    public DamageFact(int seq, long timeS, int atkIdx, int defIdx, long total, byte typeId, byte flags, short modMask, ushort subIdx)
     {
+      if (!TextUtils.InAmountRange(total))
+        throw new ArgumentOutOfRangeException(nameof(total), total, "A damage amount is a magnitude within 48 bits.");
+
       Seq = seq;
       _timeS = FactTime.FromEpochSeconds(timeS);
       AtkIdx = atkIdx;
       DefIdx = defIdx;
-      Total = total;
+      _totalLow = (uint)total;
+      _totalHigh = (ushort)(total >> 32);
       TypeId = typeId;
       Flags = flags;
       ModMask = modMask;
       SubIdx = subIdx;
     }
+
+    /// <summary>The amount the line printed, both halves of it, up to <see cref="TextUtils.MaxAmount"/>.</summary>
+    public long Total => (long)_totalLow | ((long)_totalHigh << 32);
 
     public bool AttackerIsSpell => (Flags & FlagAttackerIsSpell) != 0;
     public bool OwnerInLine => (Flags & FlagOwnerInLine) != 0;

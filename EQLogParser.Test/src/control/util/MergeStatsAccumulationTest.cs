@@ -22,8 +22,10 @@ public class MergeStatsAccumulationTest
   [TestMethod]
   public void EveryCounterAccumulatesAndOnlyExtremaDoNot()
   {
+    // Counters are uint; the three extrema are AMOUNTS and ride the 48-bit lane (long), so the sweep asks for both
+    // and still separates them by name below.
     var counters = typeof(Attempt).GetProperties(BindingFlags.Public | BindingFlags.Instance)
-      .Where(p => p.PropertyType == typeof(uint) && p.CanWrite)
+      .Where(p => p.CanWrite && (p.PropertyType == typeof(uint) || p.Name is "Max" or "MaxPotentialHit" or "Min"))
       .ToList();
 
     // The sweep is only meaningful if it actually covers the vocabulary it claims to.
@@ -33,8 +35,8 @@ public class MergeStatsAccumulationTest
     var from = new PlayerStats { Name = "Frostmaw" };
     foreach (var c in counters)
     {
-      c.SetValue(to, 3u);
-      c.SetValue(from, 4u);
+      c.SetValue(to, Convert.ChangeType(3, c.PropertyType));
+      c.SetValue(from, Convert.ChangeType(4, c.PropertyType));
     }
 
     StatsUtil.MergeStats(to, from);
@@ -42,13 +44,13 @@ public class MergeStatsAccumulationTest
     var wrong = new List<string>();
     foreach (var c in counters)
     {
-      var got = (uint)(c.GetValue(to) ?? 0u);
-      var expected = c.Name switch
+      var got = Convert.ToUInt64(c.GetValue(to) ?? 0u);
+      ulong expected = c.Name switch
       {
-        "Max" => 4u,
-        "MaxPotentialHit" => 4u,
-        "Min" => 3u,
-        _ => 7u,
+        "Max" => 4ul,
+        "MaxPotentialHit" => 4ul,
+        "Min" => 3ul,
+        _ => 7ul,
       };
 
       if (got != expected)

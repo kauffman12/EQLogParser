@@ -13,7 +13,7 @@ internal sealed record MeterFactInput(FightFactIndex Index, DamageFactTable Fact
   IReadOnlyList<MeterLifeInput> Lives, double From, double To);
 
 internal readonly record struct MeterHit(string Attacker, string Defender, string Owner, string Type,
-  short Modifiers, uint Total, double Time);
+  short Modifiers, long Total, double Time);
 
 internal sealed partial class FightFactIndex
 {

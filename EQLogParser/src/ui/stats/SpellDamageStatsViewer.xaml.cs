@@ -295,9 +295,9 @@ namespace EQLogParser
     public string Spell { get; set; }
     public string Caster { get; set; }
     public string Type { get; set; }
-    public ulong Avg { get; set; }
-    public uint Max { get; set; }
-    public ulong Total { get; set; }
+    public long Avg { get; set; }
+    public long Max { get; set; }
+    public long Total { get; set; }
     public uint Hits { get; set; }
   }
 }

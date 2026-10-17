@@ -29,7 +29,7 @@ namespace EQLogParser
     public double BeginTime = double.NaN;
     public double UpdateTime = double.NaN;
 
-    public void Add(uint total, bool isHit, string owner, double time)
+    public void Add(long total, bool isHit, string owner, double time)
     {
       if (isHit)
       {

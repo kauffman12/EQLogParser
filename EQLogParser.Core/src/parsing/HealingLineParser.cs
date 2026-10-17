@@ -194,8 +194,13 @@ namespace EQLogParser
       string spell = null;
       string subType = null;
       var type = Labels.Heal;
-      var heal = uint.MaxValue;
-      uint overHeal = 0;
+      /*
+       * Both amounts are magnitudes on the 48-bit domain: -1 is "no number printed" (the line is refused), and a landed
+       * amount of 0 with no paren is a claim nothing was asked for. The sign ruling below stays the only place a minus
+       * is interpreted. docs/DesignNotes.md → "Amount widths measured across 44 million hits".
+       */
+      var heal = -1L;
+      long overHeal = 0L;
 
       var previous = test.Length >= 2 ? test.LastIndexOf(' ', test.Length - 2) : -1;
       if (previous > -1)
@@ -319,7 +324,7 @@ namespace EQLogParser
             /*
              * EQ prints some heal-over-time ticks NEGATIVE - `Tilwedarx healed Foob over time for -146133 (47344) hit
              * points by Abundant Healing LXIX.` - and the tick did not hurt anybody: the magnitude is what landed
-             * (operator ruling; measured at 84 lines in one capture, all of them HOT). ParseUInt refuses the sign, so
+             * (operator ruling; measured at 84 lines in one capture, all of them HOT). ParseAmount refuses the sign, so
              * before this the whole row was lost. HOT only: no other heal shape is known to print this way, and a
              * minus on a direct heal is a line this parser does not understand, which is worth more than a guess.
              */
@@ -328,8 +333,8 @@ namespace EQLogParser
               digits = digits[1..];
             }
 
-            var value = TextUtils.ParseUInt(digits);
-            if (value != uint.MaxValue)
+            var value = TextUtils.ParseAmount(digits);
+            if (value >= 0L)
             {
               heal = value;
             }
@@ -340,8 +345,8 @@ namespace EQLogParser
               overEnd = part.IndexOf(')', amountEnd + 2);
               if (overEnd > -1)
               {
-                var value2 = TextUtils.ParseUInt(part.AsSpan(amountEnd + 2, overEnd - amountEnd - 2));
-                if (value2 != uint.MaxValue)
+                var value2 = TextUtils.ParseAmount(part.AsSpan(amountEnd + 2, overEnd - amountEnd - 2));
+                if (value2 >= 0L)
                 {
                   overHeal = value2;
                 }
@@ -361,8 +366,9 @@ namespace EQLogParser
           }
         }
 
-        // verify heal actually parsed
-        if (heal == uint.MaxValue)
+        // verify heal actually parsed (a landed amount the 48-bit domain cannot carry reads as -1 and is refused here,
+        // so no row, board or cell ever sees a wrapped or clamped number)
+        if (heal < 0L)
           return null;
 
         if (string.IsNullOrEmpty(healed))

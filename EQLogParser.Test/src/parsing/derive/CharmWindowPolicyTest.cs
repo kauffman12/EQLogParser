@@ -378,6 +378,6 @@ public class CharmWindowPolicyTest
         Assert.AreEqual(CharmEndReason.Cap, w.Reason);
         Assert.AreEqual(T("[Sun Apr 26 13:53:00 2026]"), w.T1);
         Assert.AreEqual(0, w.FactCount, "a hit after the cap was counted as the pet's");
-        Assert.AreEqual(0UL, w.CreditedTotal);
+        Assert.AreEqual(0L, w.CreditedTotal);
     }
 }

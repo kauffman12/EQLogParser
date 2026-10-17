@@ -564,7 +564,7 @@ namespace EQLogParser
    */
   public class HitLogRow : HitRecord
   {
-    public uint OverTotal { get; set; }
+    public long OverTotal { get; set; }
 
     public string Actor { get; set; }
     public string ActorClass { get; set; }

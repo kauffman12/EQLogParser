@@ -768,11 +768,11 @@ public class FightSummarySourceTest
         Assert.IsTrue(summary.DdDamage.TryGetValue(ddKey, out var dd), "the direct-damage entry is under its own key");
         Assert.AreEqual("Illuminai", dd.Caster);
         Assert.AreEqual(1u, dd.Count);
-        Assert.AreEqual(400ul, dd.Total);
-        Assert.AreEqual(400u, dd.Max);
+        Assert.AreEqual(400L, dd.Total);
+        Assert.AreEqual(400L, dd.Max);
 
         Assert.IsTrue(summary.DoTDamage.TryGetValue(dotKey, out var dot), "the dot entry is under its own key");
-        Assert.AreEqual(150ul, dot.Total);
+        Assert.AreEqual(150L, dot.Total);
 
         // Counting is per kind: one Dd fact and one Dot fact never land in the other dictionary.
         Assert.AreEqual(1, summary.DdDamage.Count);

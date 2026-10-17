@@ -1067,7 +1067,8 @@ namespace EQLogParser
       }
     }
 
-    private static uint GetMin(uint to, uint from)
+    // Amounts, not counts: the smallest non-zero amount seen, on the same domain a hit carries.
+    private static long GetMin(long to, long from)
     {
       if (to == 0 && from > 0)
       {

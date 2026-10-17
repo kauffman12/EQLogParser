@@ -51,10 +51,11 @@ public class HealFactCaptureTest
      * deleting OverTotal, which damage never wrote. If this ever reads 40, that was paid for instead of
      * recycled: on a 5 M-damage-fact log that is 40 MB for a field nothing reads.
      *
-     * HealFact reads 32 the same way, but through layout rather than through a deleted field: the ten fields it
-     * carries need 30 bytes, and they came to 40 purely because an int was declared before the lone long. Same
-     * fields, same widths, ordered wide-to-narrow, and a night that stores 4 M heals keeps 32 MB less. So this
-     * assertion is about padding too, and it is the only thing that can see padding change — the CLR may reorder
+     * HealFact reads its size the same way, through layout rather than through a deleted field: the fields it carries
+     * came to 40 purely because an int was declared before the lone long, ordered wide-to-narrow and rebased the clock took
+     * that to 24, name ids brought it to 28, and the two amounts going 48-bit took it to 32 — a heal row is the one place
+     * widening an amount costs memory, because a heal carries TWO of them and had no padding left to hide the high words in.
+     * So this assertion is about padding too, and it is the only thing that can see padding change — the CLR may reorder
      * fields, which makes the size a fact about this build rather than a promise, and a future field inserted in
      * the middle of that struct would widen every heal by 8 with no code reading anything differently.
      */
@@ -62,13 +63,17 @@ public class HealFactCaptureTest
     public void AFactIsItsMeasuredSizeNotWishes()
     {
         Assert.AreEqual(28, Unsafe.SizeOf<DamageFact>(),
-          "damage facts are the most numerous thing the engine holds: 28 since name ids outgrew 16 bits (DamageFactTable.InternName)");
+          "damage facts are the most numerous thing the engine holds: 28 since name ids outgrew 16 bits (DamageFactTable.InternName), and still 28 with a 48-bit amount because its high half went into the padding the row already had");
         // History of these same fields, all measured: 40 as shipped, 32 ordered wide-to-narrow, 28 with the clock rebased
         // (FactTime), 24 packed — then BACK to 28 on 2026-10-13 when the name pool proved it needs more than 65,534 entries.
         // The cold encoding pays most of it back: the id columns are zigzag varints, so a widened id costs 1-3 bytes in a blob
-        // instead of a fixed 4 (DamageFactChunkCodec). A heal row is still the same size as a damage row.
-        Assert.AreEqual(28, Unsafe.SizeOf<HealFact>(),
-          "a heal row is 28 bytes — packed label bit, one-byte mask, four-byte clock, 32-bit name ids; more means a pad came back");
+        // instead of a fixed 4 (DamageFactChunkCodec).
+        //
+        // 32 since the amounts went 48-bit (docs/DesignNotes.md → "Amount widths measured across 44 million hits"): landed and
+        // asked-for both carry their high half, and this row had no padding to put them in. The blob pays less than the row does —
+        // a chunk with no wide amount carries neither high plane (HealFactChunkCodec).
+        Assert.AreEqual(32, Unsafe.SizeOf<HealFact>(),
+          "a heal row is 32 bytes — two 48-bit amounts, packed label bit, one-byte mask, four-byte clock, 32-bit name ids; more means a pad came back");
 
         /*
          * The heal table's estimate is its own buffer at 32 B a fact. The damage table's EstimatedBytes covers

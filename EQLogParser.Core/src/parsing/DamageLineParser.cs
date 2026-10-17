@@ -397,7 +397,7 @@ namespace EQLogParser
               var span = split[i + 1].Span;
               if (span.IndexOf('(') is var index and > -1)
               {
-                crippleDamageFix = TextUtils.ParseUInt(span.Slice(index)[1..^1]);
+                crippleDamageFix = TextUtils.ParseAmount(span.Slice(index)[1..^1]);
               }
 
               oldCritIndex = i - 2;
@@ -485,7 +485,7 @@ namespace EQLogParser
         if (valid)
         {
           defender = split.JoinWords(0, isIndex);
-          var damage = split.ParseUInt(pointsOfIndex - 1);
+          var damage = split.ParseAmount(pointsOfIndex - 1);
           attacker = ParserUtil.UpdateAttacker(attacker, ConfigUtil.PlayerName, Labels.Ds);
           defender = ParserUtil.UpdateDefender(defender, attacker);
           record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Ds, Labels.Ds);
@@ -523,7 +523,7 @@ namespace EQLogParser
 
         if (isExtra)
         {
-          var damage = split.ParseUInt(extraIndex + 1);
+          var damage = split.ParseAmount(extraIndex + 1);
           var spell = split.JoinWords(fromDamage + 3, stop - fromDamage - 3);
           var spellData = EQDataStore.Instance.GetDamagingSpellByName(spell);
           resist = spellData?.Resist ?? SpellResist.Undefined;
@@ -543,7 +543,7 @@ namespace EQLogParser
         attacker = split.JoinWords(0, hitTypeIndex);
         defender = split.JoinWords(hitTypeIndex + hitTypeMod + 1, forIndex - hitTypeIndex - hitTypeMod - 1);
         subType = TextUtils.CapitalizeFirst(subType);
-        var damage = split.ParseUInt(pointsOfIndex - 1);
+        var damage = split.ParseAmount(pointsOfIndex - 1);
         attacker = ParserUtil.UpdateAttacker(attacker, ConfigUtil.PlayerName, subType);
         defender = ParserUtil.UpdateDefender(defender, attacker);
         record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Melee, subType);
@@ -580,7 +580,7 @@ namespace EQLogParser
           attacker = split.JoinWords(0, hitTypeIndex);
           defender = split.JoinWords(hitTypeIndex + 1, forIndex - hitTypeIndex - 1);
           var type = GetTypeFromSpell(spell, Labels.Dd);
-          var damage = split.ParseUInt(pointsOfIndex - 1);
+          var damage = split.ParseAmount(pointsOfIndex - 1);
           SpellResistMap.TryGetValue(split.StringAt(byDamage - 1), out resist);
 
           attacker = ParserUtil.UpdateAttacker(attacker, ConfigUtil.PlayerName, spell);
@@ -683,7 +683,7 @@ namespace EQLogParser
           }
 
           defender = split.JoinWords(0, takenIndex);
-          var damage = split.ParseUInt(fromDamage - 1);
+          var damage = split.ParseAmount(fromDamage - 1);
           resist = spellData?.Resist ?? SpellResist.Undefined;
           attacker = ParserUtil.UpdateAttacker(attacker, ConfigUtil.PlayerName, spell);
           defender = ParserUtil.UpdateDefender(defender, attacker);
@@ -694,7 +694,7 @@ namespace EQLogParser
       else if (byDamage > -1 && takenIndex == (byDamage - 3))
       {
         defender = split.JoinWords(0, takenIndex);
-        var damage = split.ParseUInt(byDamage - 1);
+        var damage = split.ParseAmount(byDamage - 1);
         var spell = split.JoinWords(byDamage + 2, stop - byDamage - 1);
         if (!string.IsNullOrEmpty(spell) && spell[^1] == '.')
         {
@@ -733,7 +733,7 @@ namespace EQLogParser
         && split[stop].StartsWith("damage", StringComparison.OrdinalIgnoreCase))
       {
         defender = split.JoinWords(0, isIndex);
-        var damage = split.ParseUInt(pointsOfIndex - 1);
+        var damage = split.ParseAmount(pointsOfIndex - 1);
         attacker = Labels.Unattributed;
         defender = ParserUtil.UpdateDefender(defender, attacker);
         record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Ds, Labels.Ds);
@@ -746,14 +746,14 @@ namespace EQLogParser
       {
         defender = split.JoinWords(0, isIndex);
         attacker = AppSettings.IsEmuParsingEnabled ? ConfigUtil.PlayerName : Labels.Unk;
-        var damage = split.ParseUInt(pointsOfIndex - 1);
+        var damage = split.ParseAmount(pointsOfIndex - 1);
         defender = ParserUtil.UpdateDefender(defender, attacker);
         record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Dd, Labels.Dd);
       }
       // falling damage? [Fri Mar 04 21:28:19 2022] You were hit by non-melee for 16 damage
       else if (isIndex > -1 && nonMeleeIndex == (isIndex + 3) && split[isIndex + 1] == "hit" && endDamage == stop && pointsOfIndex == -1)
       {
-        var damage = split.ParseUInt(endDamage - 1);
+        var damage = split.ParseAmount(endDamage - 1);
         attacker = Labels.Unk;
 
         if (isYou)
@@ -809,7 +809,7 @@ namespace EQLogParser
         }
 
         defender = split.JoinWords(hitTypeIndex + 1, forIndex - hitTypeIndex - 1);
-        var damage = split.ParseUInt(pointsOfIndex - 1);
+        var damage = split.ParseAmount(pointsOfIndex - 1);
         attacker = ParserUtil.UpdateAttacker(attacker, ConfigUtil.PlayerName, Labels.Dd);
         defender = ParserUtil.UpdateDefender(defender, attacker);
 
@@ -843,7 +843,7 @@ namespace EQLogParser
       // Old (eqemu) aura damage? [Fri Mar 04 21:28:19 2022] You are immolated by raging energy.  You have taken 179 points of damage.
       else if (AppSettings.IsEmuParsingEnabled && haveIndex > -1 && haveIndex == takenIndex && pointsOfIndex == takenIndex + 3 && split[haveIndex - 1] == "You")
       {
-        var damage = split.ParseUInt(pointsOfIndex - 1);
+        var damage = split.ParseAmount(pointsOfIndex - 1);
         attacker = Labels.Unk;
         defender = ConfigUtil.PlayerName;
         record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Dot, Labels.Dot);
@@ -874,8 +874,8 @@ namespace EQLogParser
       // [Thu Jan 23 21:37:44 2025] Arilyn lands a Crippling Blow!(244)
       else if (AppSettings.IsEmuParsingEnabled && oldCritIndex > -1 && (crippleDamageFix > -1 || (split.Length > stop + 1 && split[stop + 1].Length > 2)))
       {
-        var damage = crippleDamageFix != -1 ? (uint)crippleDamageFix : TextUtils.ParseUInt(split[stop + 1].Span.Slice(1, split[stop + 1].Length - 2));
-        if (damage != uint.MaxValue)
+        var damage = crippleDamageFix != -1 ? crippleDamageFix : TextUtils.ParseAmount(split[stop + 1].Span.Slice(1, split[stop + 1].Length - 2));
+        if (damage >= 0)
         {
           attacker = split.JoinWords(0, oldCritIndex);
           attacker = ParserUtil.UpdateAttacker(attacker, ConfigUtil.PlayerName, Labels.Unk);
@@ -1183,11 +1183,13 @@ namespace EQLogParser
     }
 
     private static DamageRecord CreateDamageRecord(LineData lineData, LineWords split, int stop, string attacker, string defender,
-      uint damage, string type, string subType, bool attackerIsSpell = false)
+      long damage, string type, string subType, bool attackerIsSpell = false)
     {
       DamageRecord record = null;
 
-      if (damage != uint.MaxValue && !string.IsNullOrEmpty(type) && !string.IsNullOrEmpty(subType))
+      // A damage amount is a magnitude within the 48-bit domain: -1 (no number parsed) and anything storage cannot
+      // carry both refuse the line, which is what `damage != uint.MaxValue' used to stand in for, wrongly.
+      if (TextUtils.InAmountRange(damage) && !string.IsNullOrEmpty(type) && !string.IsNullOrEmpty(subType))
       {
         var currentTime = lineData.BeginTime;
         short modifiersMask = -1;
