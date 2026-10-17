@@ -181,9 +181,10 @@ namespace EQLogParser
           if (start.EndsWith("'My leader is") && start.Length > "'My leader is".Length)
           {
             start = start[..^" 'My leader is".Length];
-            if (start.EndsWith(" says") && start.LastIndexOf(' ') is var last and > -1)
+            var verb = start.EndsWith(" says,") ? " says," : " says";
+            if (start.EndsWith(verb) && start.Length > verb.Length)
             {
-              sender = start[..last].ToString();
+              sender = start[..^verb.Length].ToString();
               return new ChatType(ChatChannels.Say, sender, 27 + start.Length + 2);
             }
           }
@@ -193,16 +194,9 @@ namespace EQLogParser
       return null;
     }
 
-    /*
-     * The confession shape: a chat body of ``My leader is <owner>.`` spoken BY the summon — the sender is the summon, the
-     * returned text is whoever it claims. Channel-agnostic on purpose: the body is the whole proof, and the shape has been
-     * seen both as ``says, 'My leader is X.'`` and inside a hireling's ``tells you,``. Which of the shapes above parsed the
-     * line decides whether TextStart lands on the opening quote, so the quote and any space are trimmed. The trailing period
-     * comes off: a name never keeps the sentence's period.
-     *
-     * This recognises a sentence and claims nothing — R5-leader decides what it means (docs/DesignNotes.md →
-     * "A summon's own sentence about its master").
-     */
+    // Live, older and EMU chat differ in commas, periods and whether TextStart includes the opening quote.
+    // Strip chat delimiters independently of sentence punctuation; this recognises an owner, not a pet verdict.
+    // docs/DesignNotes.md → "A summon's own sentence about its master".
     internal static bool TryPetLeaderOwner(ChatType chat, out string owner)
     {
       owner = null;
@@ -212,9 +206,9 @@ namespace EQLogParser
       const string Marker = "My leader is ";
       if (!body.StartsWith(Marker, StringComparison.OrdinalIgnoreCase)) return false;
 
-      var rest = body[Marker.Length..].Trim();
+      var rest = body[Marker.Length..].Trim().TrimEnd('\'').TrimEnd();
       var dot = rest.IndexOf('.');
-      if (dot > 2) rest = rest[..dot];
+      if (dot >= 0) rest = rest[..dot];
       rest = rest.Trim();
       if (rest.Length is < 2 or > 64) return false;
 

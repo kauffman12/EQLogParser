@@ -27,7 +27,7 @@ public class IdentityWriterInvariantTest
   {
     ["PreLineParser.cs"] = 7,
     ["LineModifiersParser.cs"] = 4,
-    ["ChatDB.cs"] = 3,
+    ["ChatDB.cs"] = 2,
     ["DamageLineParser.cs"] = 3,
     ["HealingLineParser.cs"] = 2,
     ["MiscLineParser.cs"] = 1,

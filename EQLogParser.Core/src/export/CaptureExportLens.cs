@@ -11,7 +11,7 @@ internal static class CaptureExportLens
     foreach (var name in allNames)
     {
       var owner = PlayerRegistry.Instance.GetPlayerFromPet(name);
-      if (!string.IsNullOrEmpty(owner) && !ParserUtil.IsUnattributedName(owner) && owner != Labels.Unassigned)
+      if (!string.IsNullOrEmpty(owner) && !ParserUtil.IsUnattributedName(owner) && !Labels.IsUnassignedOwner(owner))
         owners[name] = owner;
     }
 

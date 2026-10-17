@@ -154,6 +154,36 @@ public sealed class CaptureExportShapeTest : IDisposable
       .Select(s => s.Attribute("name")?.Value).OfType<string>().ToArray() ?? [];
 
   [TestMethod]
+  [DataRow(Labels.Unassigned)]
+  [DataRow(Labels.LegacyUnassigned)]
+  [DataRow("no owner")]
+  [DataRow("unknown pet owner")]
+  public void SavedNoOwnerMarkersNeverBecomeExportActors(string marker)
+  {
+    PipelineHarness.EnsureDataStore();
+    PlayerRegistry.Instance.AddPetToPlayer("Fluffy", marker, init: true);
+    var facts = new DamageFactTable(16);
+    var pet = facts.InternName("Fluffy");
+    var npc = facts.InternName("A crypt broker");
+    facts.AddFact(new DamageFact(1, T0, pet, npc, 100, LabelTypes.Melee, 0,
+      LineModifiersParser.None, DamageFactTable.NoSubtype));
+    var timeline = new EntityTimeline();
+    RegistrySeed.Apply(timeline, facts, T0, T0);
+    ClassificationRules.Apply(facts, timeline);
+    var lens = CaptureExportLens.Create(timeline, facts.InternedNames);
+    Assert.AreEqual(string.Empty, lens.At("Fluffy", T0).Owner);
+    CaptureExport.Write(Target("no-owner.xlsx"), facts, null, new CaptureExport.Options { Lens = lens });
+
+    using var zip = ZipFile.OpenRead(Target("no-owner.xlsx"));
+    var hit = CellTexts(Rows(zip, "Player DPS")[1]);
+    Assert.AreEqual(string.Empty, hit[4], "a stored no-owner marker is not an owner");
+    Assert.AreEqual("Fluffy", hit[12], "unowned pet damage must not be grouped under a placeholder");
+    var names = Rows(zip, "Players").Skip(1).Select(CellTexts).ToList();
+    Assert.IsFalse(names.Any(row => Labels.IsUnassignedOwner(row[0])), "no phantom actor in the lookup sheet");
+    Assert.AreEqual(string.Empty, names.Single(row => row[0] == "Fluffy")[4]);
+  }
+
+  [TestMethod]
   public void MaximumAmountsAreExactNumericCellsInTheRealWorkbook()
   {
     _facts = new DamageFactTable(0);

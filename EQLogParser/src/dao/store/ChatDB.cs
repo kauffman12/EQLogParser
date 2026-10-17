@@ -243,25 +243,10 @@ namespace EQLogParser
             {
               PlayerRegistry.Instance.AddVerifiedPlayer(chatType.Sender, chatType.BeginTime);
             }
-            else if (chatType.Channel is ChatChannels.Say)
+            else if (chatType.Channel is ChatChannels.Say && ChatLineParser.TryPetLeaderOwner(chatType, out var player))
             {
-              var span = chatType.Text.AsSpan()[chatType.TextStart..];
-              if (span.StartsWith("My leader is "))
-              {
-                span = span["My leader is ".Length..];
-                if (span.IndexOf(".") is var found and > 2)
-                {
-                  var player = span[..found].ToString();
-                  PlayerRegistry.Instance.AddVerifiedPlayer(player, chatType.BeginTime);
-                  PlayerRegistry.Instance.AddPetToPlayer(chatType.Sender, player); // also adds verified pet
-                }
-                else
-                {
-                  var player = span.ToString();
-                  PlayerRegistry.Instance.AddVerifiedPlayer(player, chatType.BeginTime);
-                  PlayerRegistry.Instance.AddPetToPlayer(chatType.Sender, player); // also adds verified pet
-                }
-              }
+              PlayerRegistry.Instance.AddVerifiedPlayer(player, chatType.BeginTime);
+              PlayerRegistry.Instance.AddPetToPlayer(chatType.Sender, player); // also adds verified pet
             }
           }
 

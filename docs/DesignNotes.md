@@ -17598,6 +17598,11 @@ is taken. Later capture growth, class edits or capture replacement cannot alter 
 `FightProjection.SideAt`: charm puts an NPC on the player side but flips a Player/Pet/Mercenary onto the enemy side during
 that interval. The export must not treat every charm as friendly ownership.
 
+Saved ownership fallbacks reject `Labels.IsUnassignedOwner`, not just the current display word: persisted pairs can carry
+`Unknown Pet Owner` as well as `No Owner`, in either case. Neither marker may populate Owner/Player or create a phantom
+actor on Players. `CaptureExportShapeTest.SavedNoOwnerMarkersNeverBecomeExportActors` checks all four spellings through
+the production lens and the written workbook, keeping unowned pet damage under the pet's own name.
+
 Workbook cleanup encloses worksheet finalization as well as package writing. An invalid XML character or a failed flush
 can throw while finishing a sheet; the writer, ZIP entry, archive and file still release their resources, including when
 the initial header fails. Failed exports cannot strand an exclusive file handle and block temporary-file deletion on Windows.
@@ -17851,8 +17856,8 @@ archive. What it was is an identity door with a WPF-only hinge: `PipelineHarness
 test could ever see the sentence, and the strength-8 seed was all that arrived.
 
 **The law now.** The sentence is *captured* on the Core ingest path (`CombatCapture.HandleChat` → `EvidenceFact.EvPetLeader`,
-aux = the owner text, recognised by `ChatLineParser.TryPetLeaderOwner`, which strips the trailing period because a name never
-keeps it), and collected during the evidence stage. `R5-leader` decides after the frame ladder, direct claims, name ownership and
+aux = the owner text, recognised by `ChatLineParser.TryPetLeaderOwner`, which strips chat delimiters and sentence punctuation
+because neither belongs to a name), and collected during the evidence stage. `R5-leader` decides after the frame ladder, direct claims, name ownership and
 merc table: Pet at **Certain** (100), the named master at **Medium** with a `PetOfPlayer` interval at Certain. Independent
 Player/Merc claims at **Medium or above** at that boundary refuse the sighting instead of being outvoted. Weak registry
 memory does not veto current evidence: with an NPC frame and a confession, a stale strength-8 Player seed must not change
@@ -17862,10 +17867,19 @@ carried across passes: late player/merc evidence retracts the pet interpretation
 owner is retroactive, and each subsequent confession starts a new half-open ownership interval at its log time. Certain because `Targeted (NPC)` cannot see a pet while the pet can name its owner;
 the master is Medium because, exactly as R5-owner says, the line proves the summon and the pair, not the person. A comma in the
 owner text is one summon with two masters (`Akini, Xanathan`s Warder`): the pet claim holds, no raider is invented — same guard
-`RegistrySeed.ApplyPetMappings` applies. `ChatDB` is left alone: it keeps the chat archive and still writes `AddVerifiedPlayer` / `AddPetToPlayer`, which reach the
-rules as that strength-8 seed. What changed is that the sentence no longer *depends* on those writes, or on nothing else
+`RegistrySeed.ApplyPetMappings` applies. `ChatDB` keeps the chat archive and still writes `AddVerifiedPlayer` / `AddPetToPlayer`
+for Say-channel confessions, using the same owner recognizer as the capture; those writes reach the rules as that strength-8 seed. What changed is that the sentence no longer *depends* on those writes, or on nothing else
 having an opinion — the claim now comes from the line, at a tier a frame cannot outvote. Folding ChatDB's registry writes
 away would be a separate decision (they are how pairs persist for the operator's pet map), not part of this one.
+
+**Live, older and EMU syntax remain separate accepted forms, not a setting-dependent guess.** The EMU capture prints
+`Test says 'My leader is Super.'` (2022), without the live comma; the existing older-format fixture prints
+`Test says 'My leader is hello'`, without a sentence period either. `says,`, `says`, `tells you,` and `told you,` keep
+working with or without the period. The closing chat quote is removed independently of the period, so `hello'` cannot
+become an owner. A spaced speaker also keeps its whole name: both ``Brozoll`s warder says, ...`` from a live capture and
+`A fluffy pet says ...` use the non-player-name fallback, with the optional comma accounted for in TextStart.
+`PetLeaderConfessionTest` exercises recognition and captured/classified ownership, plus refusal of an empty owner;
+ChatDB shares that normalizer so its saved pairs cannot reintroduce the quote through registry memory.
 
 What the two captures produce afterwards, same cold-registry run, rules applied:
 
@@ -17882,7 +17896,8 @@ not observed among these nine.
 
 `IdentityVocabulary` gains one word (`Named Its Master`, hover `Named <owner> Its Leader`). Tests: `PetLeaderConfessionTest`
 (recogniser, the capture writing one fact named for the summoner-side speaker, Certain-over-frame, the player guard, the comma
-guard). The registry path is untouched, so warm/cold semantics and every existing `.spool` behaviour stand.
+guard, live/older/EMU punctuation and multi-word speakers). Registry persistence is retained; owner text is normalized
+through the shared recognizer before either capture evidence or Say-channel registry writes are made.
 
 ## The NPC frame gets its own rung: 65 (2026-12-08)
 

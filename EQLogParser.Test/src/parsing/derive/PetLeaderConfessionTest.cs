@@ -25,19 +25,29 @@ public sealed class PetLeaderConfessionTest
 
   [TestMethod]
   [DataRow("Mgsk says, 'My leader is Xxuro.'", "Mgsk", "Xxuro")]
+  [DataRow("Mgsk says, 'My leader is Xxuro'", "Mgsk", "Xxuro")]
+  [DataRow("Test says 'My leader is Super.' ", "Test", "Super")]
+  [DataRow("Test says 'My leader is hello'", "Test", "hello")]
+  [DataRow("Brozoll`s warder says, 'My leader is Beheleast.'", "Brozoll`s warder", "Beheleast")]
+  [DataRow("A fluffy pet says 'My leader is Super'", "A fluffy pet", "Super")]
   [DataRow("Useless tells you, 'My leader is Incogitable.'", "Useless", "Incogitable")]
-  public void ConfessionIsRecognisedWithThePeriodStripped(string line, string sender, string expectedOwner)
+  [DataRow("Useless tells you, 'My leader is Incogitable'", "Useless", "Incogitable")]
+  [DataRow("Useless told you, 'My leader is Incogitable.'", "Useless", "Incogitable")]
+  [DataRow("Useless told you, 'My leader is Incogitable'", "Useless", "Incogitable")]
+  public void ConfessionKeepsOnlyTheOwnerAcrossLiveAndLegacyChatForms(string line, string sender, string expectedOwner)
   {
     var chat = ParseChat(line);
     Assert.IsNotNull(chat, $"the chat parser dropped [{line}]");
     Assert.AreEqual(sender, chat.Sender);
     Assert.IsTrue(ChatLineParser.TryPetLeaderOwner(chat, out var owner), "no confession read from a confession line");
-    Assert.AreEqual(expectedOwner, owner, "a name never keeps the sentence's period");
+    Assert.AreEqual(expectedOwner, owner, "neither sentence punctuation nor the chat quote belongs to the owner");
   }
 
   [TestMethod]
   [DataRow("Mgsk says, 'ready'")]
   [DataRow("Soell says, 'Plane of Love'")]
+  [DataRow("Mgsk says, 'My leader is '")]
+  [DataRow("Mgsk says, 'My leader is .'")]
   public void OrdinaryChatIsNotAConfession(string line)
   {
     var chat = ParseChat(line);
@@ -46,23 +56,37 @@ public sealed class PetLeaderConfessionTest
   }
 
   [TestMethod]
-  public void TheCaptureWritesTheConfessionAsOneFactNamedForTheSummon()
+  [DataRow("Mgsk says, 'My leader is Xxuro.'", "Mgsk", "Xxuro")]
+  [DataRow("Test says 'My leader is Super.' ", "Test", "Super")]
+  [DataRow("Test says 'My leader is hello'", "Test", "hello")]
+  [DataRow("Brozoll`s warder says, 'My leader is Beheleast.'", "Brozoll`s warder", "Beheleast")]
+  [DataRow("A fluffy pet says 'My leader is Super'", "A fluffy pet", "Super")]
+  [DataRow("Useless tells you, 'My leader is Incogitable'", "Useless", "Incogitable")]
+  [DataRow("Useless told you, 'My leader is Incogitable'", "Useless", "Incogitable")]
+  public void TheCaptureWritesAndClassifiesTheConfessionWithoutChatPunctuation(string line, string sender,
+    string expectedOwner)
   {
     PipelineHarness.EnsureDataStore();
     var facts = new DamageFactTable(16);
     var capture = new CombatCapture(facts);
-    var chat = ParseChat("Mgsk says, 'My leader is Xxuro.'");
+    var chat = ParseChat(line);
     Assert.IsNotNull(chat);
     capture.HandleChat(chat);
 
     var evidence = facts.Evidence.ToArray();
     var confession = evidence.Where(e => e.Kind == EvidenceFact.EvPetLeader).ToList();
     Assert.AreEqual(1, confession.Count, "exactly one fact for the sentence");
-    Assert.AreEqual("Mgsk", facts.NameOf(confession[0].NameIdx), "the SPEAKER is the summon, not the master it named");
-    Assert.AreEqual("Xxuro", facts.AuxOf(confession[0].AuxIdx));
+    Assert.AreEqual(sender, facts.NameOf(confession[0].NameIdx), "the SPEAKER is the summon, not the master it named");
+    Assert.AreEqual(expectedOwner, facts.AuxOf(confession[0].AuxIdx));
 
     // The same line stays a chat event: R3's channel law still gets to read it.
     Assert.IsTrue(evidence.Any(e => e.Kind == EvidenceFact.EvChat), "the chat sighting itself is still captured");
+    var timeline = new EntityTimeline();
+    ClassificationRules.Apply(facts, timeline);
+    Assert.AreEqual(IdentityKind.Pet, timeline.Identity(sender));
+    Assert.AreEqual(expectedOwner, timeline.OwnerOf(sender, T0));
+    Assert.IsFalse(timeline.NamesWithIdentity().Any(name => name.EndsWith('\'')),
+      "a chat delimiter must not become a second owner name");
   }
 
   // ---- the verdict ----
