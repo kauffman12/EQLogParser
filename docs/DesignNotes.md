@@ -17553,6 +17553,187 @@ Structural validity (parts, relationship graph, cell typing, per-part filter ran
 `docs/ReleaseChecklist.md → Detailed .xlsx export checks on Windows`. Zero new dependencies, so `sign.cmd` and the
 installer list are unchanged (`FontAwesome5` is referenced by the headless test assembly only, and ships nothing).
 
+## The detailed export, reviewed against issue #191 (2026-10-16)
+
+The first cut was measured against the reporter's own GamParse XML (`local/exports/A_strengthening_foodstuff_9132026_1858.xml`),
+the two sample workbooks, and the issue thread read end to end. Six findings, all now fixed and pinned by tests; the
+numbers are the point, because each one passed every check that existed.
+
+1. **The menu glyph would have killed MainWindow.** `Icon="Solid_File_Excel"` — the member is `Solid_FileExcel`, and the
+   enum lives in `FontAwesome5.EFontAwesomeIcon`. XAML stores an enum property as TEXT in the BAML and resolves it at
+   window LOAD, so the solution built at zero warnings (the literal was verified inside the compiled `EQLogParser.dll`),
+   2,312 headless tests passed, and the app would have thrown `XamlParseException` constructing MainWindow. Sweeping every
+   `fa:ImageAwesome Icon="…"` literal in all 239 `.xaml` files found exactly one bad value — this one. The menu now uses
+   `Solid_FileCode`, and **`XamlIconNameTest`** enumerates the literals against the enum, which is the only way this class
+   of startup crash is visible from Linux (the WPF assembly builds here; it cannot run).
+2. **"Over Heal" printed the gross asked-for, not the overheal.** `HealFact.OverTotal` is what the line asked for
+   (`for 3461 (60581)` stores Total 3461, OverTotal 60581); the overheal a healing tab prints is `Overheal`. Measured on
+   the sample capture: **15 of 338** "Heals by you" rows and **53 of 681** "Heals to you" rows carried both landed > 0 and
+   gross > 0, each printing an overheal inflated by exactly the landed amount (142,043 of that log's heal lines use the
+   parenthesised shape, so the ratio is content-dependent, not tiny). The verbatim-`OverTotal` law in
+   `HealSummarySource`/`StatsUtil` is about materialising RECORDS; a printed column answers to its header. The fixture that
+   pinned the bug used `Total 800, OverTotal 200`, a pair no log can produce.
+3. **The row ceiling was off by one, in the direction Excel refuses.** `Row()` gated on DATA rows while the header occupies
+   part row 1: writing `MaxSheetRows` rows produced one part whose last reference is **`r="1048577"`** — outside the grid,
+   i.e. exactly the whole-night case the split exists for (measured by probe: 1,048,576 rows, one part, R1048577).
+   `SpreadsheetSheet.PartIsFull` now honours both bounds — the spec's `MaxRows` keeps its data-row meaning for the split
+   test, and the grid counts the header.
+4. **The clock was a second off from GamParse on the lead-in.** Their scale has no zero (pull = 1, one second early = -1);
+   `t - anchor + 1` printed **-4** where their file prints **-5** for the same five-seconds-early cast, verified in both
+   sample workbooks. This is not nostalgia: the reporter imports every export into years of saved GamParse tables, so a
+   shifted lead-in is invisible and permanent. `RelativeTime` now reproduces their scale.
+5. **Casts and heals closed at the last DAMAGE row**, so healing that lands after the killing blow — the tail a "Heals by
+   you" reader came for — was dropped (probe: a heal one second past the window's final damage produced no row). The span
+   is `BeginS - LeadInS .. max(EndS, ToTimeS)`.
+6. **The lookup tab was not the table they asked for.** Their spec is `Player / Class / Pet` for "all players present in
+   the current Fight list selection", and the first cut listed every name in the file (102 names for a nine-second pull),
+   had only the reverse pet map, and read the capture-learned class lane. Now: names are collected during the passes that
+   already run (`ScanWindow`, `ScanHealing`, the cast sheet) into a sorted set — sorted so the file is reproducible — the
+   tab carries a forward `Pets` column, and class comes from `GetAssignedOrLastKnownPlayerClass`, the Identity Table's own
+   door: an operator's hand-typed class is the value that must survive into the export, which is their persona argument
+   verbatim. Boards keep reading `GetPlayerClass(name, t)`.
+
+**Added because the thread asked in words:** `Spell`/`Skill` and **`Rank` are separate columns** ("the clean spell name in
+Spell, and rank in a separate column"). The clean name arrives through the lens as `EQDataStore.AbbreviateSpellName`, so
+the export prints the tail that rule strips and grows no rank grammar of its own — which also means the store's own
+behaviour shows up honestly (`Reciprocal Roar Strike 6` → rank `6`). `Direction Cast|Receive` was NOT built: `EvCast` is
+the only cast evidence in the table, so "Receive" would be rows already on the damage/heal sheets, and a column blank on
+most rows is worse than none; their stated need behind it (attendance at 0 DPS) is met by the scoped Players tab.
+
+**Shape of the identity calls.** The first cut asked `IsPlayerSide`/`OwnerOf` per row — two lock acquisitions on every
+damage fact, ~600k for a 290k-row night — and worse, a capture that changes mid-write makes `LiveKindAt` start answering
+`Unknown`, which sends one pet's rows to Player DPS at row 400 and NPC DPS at row 5,000 of the same file. Identity is now
+resolved once per name (a few hundred) on the UI thread and crosses as plain values, and `Options.SessionId` travels in
+the export and prints on Event Info. The workbook is written to `<target>.eqlogtmp` and moved into place only when the
+package is complete, so a failure no longer leaves half an .xlsx at the path the operator chose.
+
+Headless suite after these fixes: **2,317 passed, 6 skipped** (real-log gates). No installer change; the test assembly's
+`FontAwesome5` reference is for `XamlIconNameTest` and ships nothing.
+
+### Column for column against GamParse's own file (measured 2026-10-16)
+
+The reporter's sample XML (`local/exports/A_strengthening_foodstuff_9132026_1858.xml`) is the per-line export, and it uses
+**our sheet names**: `Player DPS`, `NPC DPS`, `Spells cast`, `Heals by you`, `Heals to you`. Their columns, read off that
+file, next to ours:
+
+| sheet | GamParse | ours |
+|---|---|---|
+| Player DPS / NPC DPS | `LogLine`/`FilePos`, `Time`, `Attacker`, `Opponent`, `Type`, `Damage`, `Defense`, `Crit` (8) | 12: same, plus `Owner`, `Skill`, `Rank`, `Log Time`; their `Crit` is our `Modifiers`, their file position is our `Seq` |
+| Spells cast | `FilePos`, `Time`, `Caster`, `Spell cast` (4) | 6: `Seq`, `Time`, `Log Time`, `Caster`, `Spell`, `Rank` |
+| Heals by you / to you | `FilePos`, `Time`, `Caster`, `Target`, `Heal amount` (5) | 10: same, plus `Over Heal`, `Spell`, `Rank`, `Modifiers` |
+| Players, Event Info | absent in this file (their wide workbook's `Cast Lookup` is the nearest) | ours, added on purpose |
+
+Three things that measurement settled. **Their spell name keeps the rank inline** (`Bite of the Asp XXXVII`), so printing
+the verbatim name plus a stripped `Rank` column is their shape plus an extra column, not a change to it. **Their cast clock
+leads in at `-5`** for a cast five seconds early — the `RelativeTime` scale above is verified in this file too, on the same
+sheet the fix was written for. And **their heal sheets carry no overheal at all**: our `Over Heal` is additive, and it uses
+this app's own convention (`HealFact.Overheal` = what the parenthesised amount asked for, minus what landed), which on a
+modern raid slice is a big number — 16.6 M over-heal against 2.6 M landed on "Heals by you", 7.0 G against 908 M across the
+whole capture. There is no GamParse column to reconcile that against, so it is an open question for the thread, not a bug claim.
+
+Two shapes exist in their tooling and we build one of them: this per-line file, and a wide `.xlsx` with one row per
+**player × second** across ~200 columns (41,028 rows / 75,516,869 damage on their sample capture). A pivot over our `Seq`/
+`Time`/`Attacker` reproduces the wide table, and the per-line file carries what the wide one throws away. Which of the two
+their years of saved tables union into is worth asking before anyone builds a second writer.
+
+### The raw log is the witness, not the sample (measured 2026-10-16)
+
+A sample file can be missing things, so the export was reconciled against the **log text itself**
+(`local/exports/eqlog_Kizant_xegony-selected.txt`: 560,138 timestamped lines, 9.7 minutes, local player Kizant) by
+counting every shape the parsers read — `for N points of <kind> damage`, `has/have taken N damage from S by C`,
+`X is pierced/tormented by Y's thorns/frost for N`, `heals <T> for N (M) hit points` including first-person `You heal …`
+and passive `is healed for`, the cast verbs (`begins casting|begin casting|begins singing|activates`), and the
+amount-less `tries to …, but misses!|blocks!|parries!|dodges!|absorbs the blow!`. That list IS the recipe: any throwaway
+script over the text (mine sat under `local/tools/`, gitignored with the logs) plus a reader for the exported `.xlsx`
+reproduces every number below in about a minute of parsing. Do it before believing any claim about this export, ours or
+GamParse's.
+
+| metric | export | raw log | delta |
+|---|---:|---:|---:|
+| damage rows | 290,159 | 290,147 (270,164 with an amount + 19,983 miss/block/parry/dodge/absorb) | +12 |
+| damage total | 98,056,336,499 | 98,064,204,499 | −0.01 % |
+| cast rows | 28,469 | 28,505 | −36, all of it in the lead-in minute |
+| Heals by you — rows / landed / over | 338 / 2,648,813 / 16,624,770 | 338 / 2,648,813 / 16,624,770 | **exact** |
+| Heals to you — rows / landed / over | 681 / 8,585,349 / 42,084,270 | 681 / 8,585,349 / 42,084,270 | **exact** |
+
+Cast rows agree **per minute**, not just in the total: the nine full minutes match exactly (3,037 / 2,991 / 2,650 / …),
+and the only gap is the partial first minute, which is the `LeadInS` cut doing its job. Per-attacker damage agrees within
+about 1 %; the residue is first-person `You …` lines and thorns/frost procs, which a regex attributes by rule while the
+parser answers from identity.
+
+Both heal sheets reconcile **exactly**, and getting there is the lesson: the first pass of the ground-truth script said
+"Heals to you" was 23 rows / 10.5 % high. Two shapes the script had not read explain all of it, and neither is a bug.
+`X healed Y over time for N hit points by …` (the HOT shape — 21,555 lines here) hides its target behind two words, and
+`Nymera\`s ward healed Soddann for 0 (15000) hit points by Exquisite Restoration XIX.` **credits the ward's healing to its
+owner**: `HealingLineParser`'s `` `s ward`` branch takes the text before it as the healer, so the fact stores healer =
+`Nymera`, and the heal board, the hit log, the overlay meter and this export all print `Nymera` (3,019 such lines,
+7,712,567 landed, in this capture). That is parse-time, not sheet-time — which is the point of routing identity through
+the capture: no surface gets its own ownership rule.
+
+Pets are the opposite case and stay themselves. `X\`s pet` keeps its full name on the fact (the parser only registers the
+pet with the player), so a pet's 53,877 damage rows in this capture are the pet's rows, and the export's `Owner` column
+carries the player beside them — filled from the **time-scoped** ownership window (`DeriveEngine.OwnerOfName(name)`). Ask
+`EntityTimeline.OwnerOf(name, +∞)` instead and it answers empty: ownership is a window, not a permanent fact, which is how
+a headless dump ends up printing a blank `Owner` column that the app never shows.
+
+### Every dropped heal line, named, and who its credit belongs to
+
+Measured by feeding every heal-flavoured line of the #191 capture straight through `HealingLineParser.Process` with
+`ConfigUtil.PlayerName` set — the probe produced **134,331 records / 908,155,103 landed**, which is this capture's heal fact
+table and healing total *exactly*, so what it refuses is the whole gap and nothing else. 169,822 lines in, 35,491 refused:
+
+| Shape | Lines | Landed | What was done (same day) |
+|---|---:|---:|---|
+| ``X`s pet healed itself for 6109 (…) hit points by Mark of the Righteous XIV Rk. III.`` | 29,660 | 52,124,455 | **stored now.** `HandleHealed` took the healer from the text after the last sentence end and its only possessive branch was `` `s ward``, so a subject ending in `` `s pet`` matched nothing, `healer` stayed empty and the `IsNullOrEmpty(healer)` guard dropped the row. Credit goes to **the pet** — ruling below |
+| ``X`s pet has been healed for 50000 hit points by Enhanced Theft of Essence Effect XVII.`` | 111 | 4.2 M | stays dropped, and NOT because of the name: the amount offset assumes a space to skip before `for <n>`, so no number parses. No healer in the line either way |
+| Healer name contains a space: `a killer moth healed Shmid for 852000 …`, `Tallongast, The Egg healed Foob …`, `The gods have healed X for 852000 points of damage.` | 2,297 | 16,522,613 | **stored now** — a mob keeps its own spaced name (the spell column names the real cause). The actor-less `Foob is healed by a reflected flame` stays dropped, and an auxiliary is not part of a name: `The gods have` → `The gods` |
+| `Tilwedarx healed Foob over time for -146133 (47344) hit points by Abundant Healing LXIX.` — a negative HOT tick | 84 | unparseable | **stored now** as 146,133 healed. An EQ print bug: the target was healed by the magnitude. Stripped for HOT only; a minus on a direct heal stays a line we do not understand |
+| `Soell attunes their body to incoming heals.`, `X is bathed in a healing burst.` — no amount, no actor | 3,064 | 0 | correct: nothing to record |
+| `A healthy foodstuff rends Strangle\`s pet for 7800 points of damage.`, `Neclub hit a healthy foodstuff for …` | 386 | 40,408,218 (not healing) | correct: **damage** lines that merely contain the word *healthy* — an NPC pet named `a healthy foodstuff`. Beware this when grepping a log for heals |
+| Caster-less `Bastion of Divinity healed X over time for N by … Effect.` (rank and rank-free siblings) | ~0 here | 0 | stays dropped, documented at `IsSentenceEnd`: minting a healer called `II` out of a rank was the bug, and the spell's own name is not a person. `IsSubjectIsSpell` is what keeps this law while the multi-word subject fallback runs |
+
+**Who gets the credit — the operator's ruling on each shape, 2026-08-03, held by `HealCreditLawTest`:**
+
+- **A pet's own tick is the pet's.** `Mark of the Righteous` is a reverse damage shield a raid cleric put on the pet; the
+  cleric cast it long before the tick and often feeds many ticks, and the player in the pet's name did nothing at that
+  moment — so the healer is the whole possessive name (`Jazrakhan\`s pet`) and the owner rides beside it as
+  `HealFact.FlagOwnerInLine`. Hunting the original caster is a dead end by design: several clerics, minutes earlier.
+- **An item ward is its owner's.** `Nymera\`s ward` is a thing Nymera dropped in the raid, so the parse-time fold to
+  `Nymera` stands, and that is why the ward branch runs before the general subject fallback. Zero `` `s ward`` healers end
+  up in the name pool on this capture, which is the fold working.
+- **A mob that heals is its own healer** — 21 article-shaped NPC healers (`A killer moth`, `The gods`) now sit in the name
+  pool, and the reader sees `Divine Interstition` in the spell column as the real cause.
+- **Nobody named, nobody credited**: passives, the `has been`/`have been` family, and cast-less spell-subject lines.
+
+**Before and after on this capture:** 134,331 heal facts / 908,155,103 landed → **163,677 / 979,411,016** (+29,346 rows,
++71,255,913 = +7.8 % of the healing on the board), and `HealFact.FlagOwnerInLine` is written on **29,194** rows where it was
+set on **zero** across every capture in this repo's history. Parse-time, so the heal board, hit log, overlay meter and export
+all moved together. A paren sitting below the landed amount (the negative-tick print) can no longer post a negative into the
+overheal column: `StatsUtil.UpdateHealStats` guards it and `HealFact.Overheal` already clamped.
+
+**Can a heal line say who is a player? Measured answer: barely, and never from the healer seat.** A name seen only healing
+claims nothing — R15 reads heal evidence only from casters whose OWN identity is raid-side at `Strong`, which is the right
+low weight now that mob names reach the pool (pinned by `ANameSeenOnlyAsAHealerClaimsNothingForItself`), and *being* healed
+stays capped at Medium because a raid AoE demonstrably waters the mob stack (`Yokii healed an arcborn wraith for 2 hit points
+by Summer's Deluge Rk. II.`) and heal inference must stay below a `Targeted (NPC)` frame — that ordering is why R18 exists.
+**And the spell table cannot say "this was a group heal"**: Target is `0` on 61,344 of ~63,000 rows in this build's
+`spells.txt`, including every real group heal in this very log (Summer's Deluge Rk. III, Healing Splash Rk. III, Mark of the
+Righteous XIV, Divine Interstition Rk. III, the whole Abundant Healing ladder — Target 0, mass-group-buff column 0), while
+Target 3 (`SpellTarget.Castergroup`, 224 rows) is mostly group *damage* (`Concussive Flame`). A group-heal identity lane keyed
+on `Target` would fire on nukes and stay silent for the heals it was written for; recorded at `IsPetSlotSpell` so nobody
+re-derives it. The signal that does exist is in the log, not the table: one caster, one spell, many distinct names inside one
+second. Nobody has built that.
+
+One measurement note that cost me a false finding: with `ConfigUtil.PlayerName` empty (a bare test host), **every
+`X healed you for N …` line is dropped** — `ParserUtil.ReplacePlayer` maps the second-person word to the player name, gets
+`""`, and `healed` fails its non-empty check (375 lines / 5.8 M in this capture). Set the dial before measuring heals.
+Measured 2026-08-03; both probes were disposable.
+
+Why the log and not the sample: on the fight GamParse's own file covers ("a strengthening foodstuff", 18:55:17..18:58:50)
+the log carries **563 damage lines / 129,134,558 damage** and ~10,900 cast lines. GamParse's file has **one** Player DPS
+row (Tunky, 2,457,899 — 1.9 % of that damage) and 331 cast rows. Ours: 596 rows (the 563 plus 33 amount-less ones) and
+**129,134,558** — exact to the log — with the casts alongside them. "Match GamParse" is therefore the wrong target for
+this export; **"match the log"** is the standard, and ±0.01 % against 560k lines is where it stands.
 
 ## A summon's own sentence about its master (2026-12-08)
 
