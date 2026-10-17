@@ -66,7 +66,7 @@
             </MenuItem>
             <MenuItem Header="Selected Fight to E_xcel" Click="MenuItemExportExcelClick" ToolTip="Save every damage, cast and heal row of the selected fights as an .xlsx workbook (Player DPS, NPC DPS, Spells cast, Heals by you, Heals to you, Players, Event Info)">
               <MenuItem.Icon>
-                <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_File_Excel" />
+                <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_FileCode" />
               </MenuItem.Icon>
             </MenuItem>
             <!--

@@ -216,6 +216,25 @@ public sealed class SpreadsheetExportTest : IDisposable
     CollectionAssert.Contains(SheetNames(zip), "Event Info");
   }
 
+  /*
+   * The ceiling has TWO bounds and the first cut of this writer honoured one of them: MaxRows counts DATA rows, while
+   * Excel's grid counts PART rows — the header sits at row 1, so a part written to the data budget ends at
+   * r="1048577", one row outside the sheet (measured: 1,048,576 rows in one part, last reference R1048577).
+   */
+  [TestMethod]
+  public void APartStopsAtTheGridEdgeCountingTheHeaderRow()
+  {
+    const int grid = SpreadsheetWriter.MaxSheetRows;
+
+    // The spec's data budget keeps its meaning (this is what the split test above drives).
+    Assert.IsFalse(SpreadsheetSheet.PartIsFull(1, 2, ceiling: 3), "two of three data rows");
+    Assert.IsTrue(SpreadsheetSheet.PartIsFull(2, 3, ceiling: 3), "the data budget is spent");
+
+    // And the grid itself is honoured with the header inside it, which is the row the first cut wrote past.
+    Assert.IsFalse(SpreadsheetSheet.PartIsFull(grid - 1, 4, ceiling: grid), "one part-row of grid left: write it");
+    Assert.IsTrue(SpreadsheetSheet.PartIsFull(grid, 4, ceiling: grid), "row 1048576 is taken; a new row belongs to the next part");
+  }
+
   [TestMethod]
   public void SheetNamesLoseWhatExcelRefusesAndStayUnique()
   {

@@ -9,6 +9,13 @@
     <AssemblyName>EQLogParser.Test</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
+    <!--
+      Test-only, and it ships nothing: XAML stores an enum literal as TEXT in the BAML and resolves it at window load,
+      so a glyph name that is not a member of FontAwesome5.EFontAwesomeIcon builds at zero warnings and throws
+      XamlParseException when MainWindow opens. The enum lives in the portable FontAwesome5.dll, which is what lets
+      XamlIconNameTest run on Linux, where the app itself cannot.
+    -->
+    <PackageReference Include="FontAwesome5" Version="2.1.11" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
     <PackageReference Include="MSTest.TestAdapter" Version="4.5.1" />
     <PackageReference Include="MSTest.TestFramework" Version="4.5.1" />

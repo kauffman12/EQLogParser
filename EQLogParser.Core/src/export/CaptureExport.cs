@@ -12,33 +12,41 @@ namespace EQLogParser;
  * verb/spell text and full modifier mask. Nothing here re-parses a log and nothing is reconstructed from a board.
  *
  * Column mapping from GamParse's five sheets, and where we differ on purpose:
- *   Player DPS / NPC DPS   Seq, Time, Log Time, Attacker, Owner, Opponent, Type, Skill, Damage, Defense, Modifiers
- *                          "Owner" is the pet's player (the ask), derived per row from the injected lens rather than
- *                          stored on the fact - a fact carries what its line said, never what the registry believed.
- *   Spells cast            Seq, Time, Log Time, Caster, Spell
- *   Heals by you / to you  Seq, Time, Log Time, Caster, Target, Heal, Over Heal, Spell, Modifiers
- * Plus "Players" (the lookup tab) and "Event Info" (the key/value tab).
+ *   Player DPS / NPC DPS   Seq, Time, Log Time, Attacker, Owner, Opponent, Type, Skill, Rank, Damage, Defense,
+ *                          Modifiers. "Owner" is the pet's player (the ask), derived per row from the injected lens
+ *                          rather than stored on the fact - a fact carries what its line said, never what the registry
+ *                          believed.
+ *   Spells cast            Seq, Time, Log Time, Caster, Spell, Rank
+ *   Heals by you / to you  Seq, Time, Log Time, Caster, Target, Heal, Over Heal, Spell, Rank, Modifiers
+ * Plus "Players" (the lookup tab: Name, Class, Kind, Pets, Pet Of) and "Event Info" (the key/value tab).
  *
- * The clock: Time is SECONDS FROM THE FIGHT, 1 = the anchor's second, zero and negative = the lead-in. GamParse's
- * sheet does exactly this and its users read -5 as "five seconds before the pull". Log Time is the wall clock the
- * log line carried, ISO to the second, which is the other half of the same ask.
+ * Spell and Rank are TWO columns because the ask named them separately ("having the clean spell name in Spell, and
+ * rank in a separate column"). The clean name arrives through the lens - EQDataStore.AbbreviateSpellName in the app -
+ * so this file prints the tail the spell data strips and never grows a rank grammar of its own to drift from it.
+ *
+ * The clock: Time is SECONDS FROM THE FIGHT on GamParse's scale, which has no zero: 1 = the anchor's second, -1 = one
+ * second before it. Matching that exactly is not nostalgia - the reporter unions every export into years of saved
+ * GamParse files, and a one-second shift on the lead-in rows would be invisible and permanent. Log Time is the wall
+ * clock the log line carried, ISO to the second, which is the other half of the same ask.
  *
  * Scope: an ordinal window over the damage stream (the Fight List selection's own answer, which is what "what I
  * filtered out in Fight List" means), with casts and heals taken from the TIME span that window covers, widened by
- * LeadInS. The heal stream has its own ordinal space, so a time window is the honest join - no fake alignment.
+ * LeadInS and closed at the caller's requested end - healing after the last damage row of a fight is still this
+ * fight's. The heal stream has its own ordinal space, so a time window is the honest join - no fake alignment.
  */
 internal static class CaptureExport
 {
   /// <summary>Column titles, in sheet order. Kept in one place so the tests and the writer cannot drift.</summary>
   internal static readonly string[] HitHeaders =
-    ["Seq", "Time", "Log Time", "Attacker", "Owner", "Opponent", "Type", "Skill", "Damage", "Defense", "Modifiers"];
+    ["Seq", "Time", "Log Time", "Attacker", "Owner", "Opponent", "Type", "Skill", "Rank", "Damage", "Defense",
+      "Modifiers"];
 
-  internal static readonly string[] CastHeaders = ["Seq", "Time", "Log Time", "Caster", "Spell"];
+  internal static readonly string[] CastHeaders = ["Seq", "Time", "Log Time", "Caster", "Spell", "Rank"];
 
   internal static readonly string[] HealHeaders =
-    ["Seq", "Time", "Log Time", "Caster", "Target", "Heal", "Over Heal", "Spell", "Modifiers"];
+    ["Seq", "Time", "Log Time", "Caster", "Target", "Heal", "Over Heal", "Spell", "Rank", "Modifiers"];
 
-  internal static readonly string[] PlayerHeaders = ["Name", "Class", "Kind", "Pet Of"];
+  internal static readonly string[] PlayerHeaders = ["Name", "Class", "Kind", "Pets", "Pet Of"];
 
   internal static readonly string[] InfoHeaders = ["Key", "Value"];
 
@@ -48,10 +56,10 @@ internal static class CaptureExport
    * boards read and an export of a board can disagree with the board in exactly zero places.
    */
   internal sealed record Lens(Func<string, bool> IsPlayerSide, Func<string, string> OwnerOf,
-    Func<string, string> ClassOf, Func<string, string> KindOf)
+    Func<string, string> ClassOf, Func<string, string> KindOf, Func<string, string> CleanSpell)
   {
-    /// <summary>No identity lane: every name reads NPC-side, unclassed. Used by the headless tests.</summary>
-    internal static readonly Lens Blind = new(_ => false, _ => null, _ => null, _ => Labels.Unk);
+    /// <summary>No identity lane: every name reads NPC-side, unclassed, and no spell is shortenable.</summary>
+    internal static readonly Lens Blind = new(_ => false, _ => null, _ => null, _ => Labels.Unk, s => s);
   }
 
   internal sealed record Options
@@ -81,6 +89,9 @@ internal static class CaptureExport
     /// <summary>The local player for the two heal sheets. Empty means "not detected": the sheet widens to the raid side.</summary>
     public string LocalPlayer = string.Empty;
 
+    /// <summary>Which capture wrote this file, printed on Event Info: a row dump outlives the session that made it.</summary>
+    public int SessionId;
+
     public Lens Lens = Lens.Blind;
   }
 
@@ -107,12 +118,14 @@ internal static class CaptureExport
 
       if (heals != null)
       {
+        // The healing total runs FIRST: it is also the pass that files healers and healed names into the window's
+        // census, which is exactly the roster the lookup tab lists.
+        window.Healing = ScanHealing(heals, options, window);
         healsBy = WriteHeals(book.AddSheet(new SpreadsheetSpec("Heals by you", HealHeaders, 14)), heals, options, window, byLocal: true);
         healsTo = WriteHeals(book.AddSheet(new SpreadsheetSpec("Heals to you", HealHeaders, 14)), heals, options, window, byLocal: false);
-        window.Healing = ScanHealing(heals, options, window);
       }
 
-      playerNames = WritePlayers(book.AddSheet(new SpreadsheetSpec("Players", PlayerHeaders, 18)), facts, options);
+      playerNames = WritePlayers(book.AddSheet(new SpreadsheetSpec("Players", PlayerHeaders, 18)), facts, options, window);
       WriteInfo(book.AddSheet(new SpreadsheetSpec("Event Info", InfoHeaders, 26)), options, window, book,
         playerRows, npcRows, castRows, healsBy, healsTo, playerNames);
     }
@@ -142,6 +155,12 @@ internal static class CaptureExport
       foreach (var f in slice)
       {
         if (!InTime(f.TimeS, options)) continue;
+
+        // The window's roster of names, collected on the pass that already walks it: "all players present in the
+        // current Fight list selection" is what the lookup tab is for, and a name that only spoke in tonight's other
+        // eleven pulls does not belong in it.
+        result.NameIdx.Add(f.AtkIdx);
+        result.NameIdx.Add(f.DefIdx);
 
         if (f.Total > 0)
         {
@@ -181,14 +200,18 @@ internal static class CaptureExport
   // not a total and this pass is what Event Info prints).
   private static long ScanHealing(HealFactTable heals, Options options, Window window)
   {
-    var from = window.BeginS - Math.Max(0, options.LeadInS);
+    var (from, to) = SpanOf(window, options);
     long total = 0;
 
     foreach (var slice in heals.HealsIn(0, int.MaxValue))
     {
       foreach (var h in slice)
       {
-        if (h.TimeS >= from && h.TimeS <= window.EndS) total += h.Total;
+        if (h.TimeS < from || h.TimeS > to) continue;
+
+        total += h.Total;
+        window.NameIdx.Add(h.HealerIdx);
+        window.NameIdx.Add(h.HealedIdx);
       }
     }
 
@@ -217,7 +240,9 @@ internal static class CaptureExport
         row.Text(lens.OwnerOf(attacker) ?? string.Empty);
         row.Text(facts.NameOf(f.DefIdx));
         row.Text(LabelTypes.LabelOf(f.TypeId) ?? Labels.Unk);
-        row.Text(facts.SubtypeOf(f.SubIdx) ?? string.Empty);
+        var skill = facts.SubtypeOf(f.SubIdx) ?? string.Empty;
+        row.Text(skill);
+        row.Text(RankOf(skill, lens));
         row.Number(f.Total);
         row.Text(DefenseWord(f.TypeId));
         row.Text(LineModifiersParser.Words(f.ModMask));
@@ -235,20 +260,26 @@ internal static class CaptureExport
    */
   private static long WriteCasts(SpreadsheetSheet sheet, DamageFactTable facts, Options options, Window window)
   {
-    var from = window.BeginS - Math.Max(0, options.LeadInS);
+    var (from, to) = SpanOf(window, options);
+    var lens = options.Lens;
     var rows = 0L;
 
     foreach (var e in facts.Evidence)
     {
       if (e.Kind != EvidenceFact.EvCast) continue;
-      if (e.TimeS < from || e.TimeS > window.EndS) continue;
+      if (e.TimeS < from || e.TimeS > to) continue;
+
+      window.NameIdx.Add(e.NameIdx);
+
+      var spell = e.AuxIdx >= 0 ? facts.AuxOf(e.AuxIdx) : string.Empty;
 
       using var row = sheet.Row();
       row.Number(e.Seq);
       row.Number(RelativeTime(e.TimeS, window.AnchorS));
       row.Text(IsoTime(e.TimeS));
       row.Text(facts.NameOf(e.NameIdx));
-      row.Text(e.AuxIdx >= 0 ? facts.AuxOf(e.AuxIdx) : string.Empty);
+      row.Text(spell);
+      row.Text(RankOf(spell, lens));
       rows++;
     }
 
@@ -262,7 +293,7 @@ internal static class CaptureExport
    */
   private static long WriteHeals(SpreadsheetSheet sheet, HealFactTable heals, Options options, Window window, bool byLocal)
   {
-    var from = window.BeginS - Math.Max(0, options.LeadInS);
+    var (from, to) = SpanOf(window, options);
     var lens = options.Lens;
     var local = options.LocalPlayer ?? string.Empty;
     var rows = 0L;
@@ -271,7 +302,7 @@ internal static class CaptureExport
     {
       foreach (var h in slice)
       {
-        if (h.TimeS < from || h.TimeS > window.EndS) continue;
+        if (h.TimeS < from || h.TimeS > to) continue;
 
         var healer = heals.NameOf(h.HealerIdx);
         var healed = heals.NameOf(h.HealedIdx);
@@ -288,8 +319,16 @@ internal static class CaptureExport
         row.Text(healer);
         row.Text(healed);
         row.Number(h.Total);
-        row.Number(h.OverTotal);
-        row.Text(heals.SpellOf(h.SubIdx) ?? string.Empty);
+
+        // The healing the target did not need - NOT HealFact.OverTotal, which is the GROSS the line asked for
+        // ("for 3461 (60581)" stores Total 3461 and OverTotal 60581). Printing OverTotal under a header that says
+        // "Over Heal" reads as an overheal inflated by exactly the landed amount. The verbatim-OverTotal law belongs
+        // to record materialization (HealSummarySource feeding StatsUtil), not to a printed column.
+        row.Number(h.Overheal);
+
+        var spell = heals.SpellOf(h.SubIdx) ?? string.Empty;
+        row.Text(spell);
+        row.Text(RankOf(spell, lens));
         row.Text(LineModifiersParser.Words(h.ModMask));
         rows++;
       }
@@ -298,15 +337,24 @@ internal static class CaptureExport
     return rows;
   }
 
-  // The lookup tab the reporter asked for: every name this capture spoke, with what the identity rules decided.
-  private static long WritePlayers(SpreadsheetSheet sheet, DamageFactTable facts, Options options)
+  /*
+   * The lookup tab the reporter asked for - "Player / Class / Pet" - scoped to the names THIS window spoke, so a
+   * nine-second pull exports its own raid instead of the file's whole census. Class arrives as the OPERATOR's saved
+   * word first (the app wires PlayerRegistry.GetAssignedOrLastKnownPlayerClass): a hand-typed class is precisely the
+   * value that must survive into the export - their persona argument, "a static list on my local pc will assign wrong
+   * class to anyone raiding on a persona". Boards keep reading GetPlayerClass(name, t), which stays time-correct.
+   */
+  private static long WritePlayers(SpreadsheetSheet sheet, DamageFactTable facts, Options options, Window window)
   {
     var lens = options.Lens;
     var names = facts.InternedNames;
+    var petsOf = PetsByName(names, window, lens);
     long rows = 0;
 
     for (var i = 0; i < names.Count; i++)
     {
+      if (!window.NameIdx.Contains(i)) continue;
+
       var name = names[i];
       if (ParserUtil.IsUnattributedName(name)) continue;
 
@@ -314,11 +362,35 @@ internal static class CaptureExport
       row.Text(name);
       row.Text(lens.ClassOf(name) ?? string.Empty);
       row.Text(lens.KindOf(name) ?? Labels.Unk);
+      row.Text(petsOf.GetValueOrDefault(name, string.Empty));
       row.Text(lens.OwnerOf(name) ?? string.Empty);
       rows++;
     }
 
     return rows;
+  }
+
+  /*
+   * "Pet -- Players PetName": the FORWARD map. OwnerOf answers pet -> player and the ask runs the other way, so invert
+   * it once over the window's names. A summoner with three pets gets them comma-joined on its own row, walking the
+   * sorted index set because identical input must give an identical file.
+   */
+  private static Dictionary<string, string> PetsByName(IReadOnlyList<string> names, Window window, Lens lens)
+  {
+    var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+    foreach (var idx in window.NameIdx)
+    {
+      if (idx < 0 || idx >= names.Count) continue;
+
+      var pet = names[idx];
+      var owner = lens.OwnerOf(pet);
+      if (string.IsNullOrEmpty(owner) || string.Equals(owner, pet, StringComparison.OrdinalIgnoreCase)) continue;
+
+      map[owner] = map.TryGetValue(owner, out var seen) && seen.Length > 0 ? $"{seen}, {pet}" : pet;
+    }
+
+    return map;
   }
 
   /*
@@ -343,6 +415,7 @@ internal static class CaptureExport
 
     Line("Event", options.EventName);
     Line("Source Log", options.SourceFile);
+    Line("Capture Session", options.SessionId.ToString(CultureInfo.InvariantCulture));
     Line("Exported", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture));
     Line("Fight Start", IsoTime(window.AnchorS));
     Line("Window Start", IsoTime(window.BeginS));
@@ -358,7 +431,11 @@ internal static class CaptureExport
     Line("Heal Rows To Side", healsTo.ToString(CultureInfo.InvariantCulture));
     Line("Names Listed", playerNames.ToString(CultureInfo.InvariantCulture));
     Line("Sheet Names", string.Join(", ", SheetNames(book)));
-    Line("Time Column", "seconds from fight start; 1 = the anchor's second, 0 and negative = the lead-in");
+    Line("Lookup Scope", $"names seen in this window, widened {Math.Max(0, options.LeadInS)}s for casts and heals");
+    Line("Time Column", "seconds from fight start on GamParse's scale: 1 = the anchor's second, -1 = one second " +
+                        "before it (no zero)");
+    Line("Rank Column", "the tail the spell data strips off the name ('Rk. III', a level number); empty when the " +
+                        "name carries no rank");
     Line("Heal Sheets Filtered By", healRule);
   }
 
@@ -371,8 +448,40 @@ internal static class CaptureExport
   private static bool InTime(long timeS, Options options) =>
     (options.FromTimeS == 0 || timeS >= options.FromTimeS) && (options.ToTimeS == 0 || timeS <= options.ToTimeS);
 
-  // 1 = the anchor's own second, so a cast five seconds early reads -5 the way GamParse's readers expect.
-  private static long RelativeTime(long timeS, long anchorS) => anchorS == 0 ? 0 : timeS - anchorS + 1;
+  /*
+   * GamParse's clock has NO zero: the pull's own second is 1 and one second early is -1. Matching it exactly is not
+   * nostalgia - the reporter unions every export into years of saved GamParse files, and a plain `t - anchor + 1`
+   * shifts our whole lead-in one second closer to the pull than theirs (-4 where their file says -5).
+   */
+  private static long RelativeTime(long timeS, long anchorS)
+  {
+    if (anchorS == 0) return 0;
+
+    var delta = timeS - anchorS;
+    return delta >= 0 ? delta + 1 : delta;
+  }
+
+  /*
+   * The span a cast or heal must fall inside: the damage window widened by the lead-in at the front, and closed at the
+   * CALLER's requested end when it has one. Closing it at the last damage row instead dropped the healing after a kill
+   * - exactly the tail a "Heals by you" reader wants.
+   */
+  private static (long From, long To) SpanOf(Window window, Options options) =>
+    (window.BeginS - Math.Max(0, options.LeadInS), Math.Max(window.EndS, options.ToTimeS));
+
+  /*
+   * Rank is the tail the clean name does not have. The spell data owns what counts as a rank (AbbreviateSpellName,
+   * through the lens); this only reports what it removed, so the export cannot drift from the rule R4 already uses.
+   */
+  private static string RankOf(string full, Lens lens)
+  {
+    if (string.IsNullOrEmpty(full)) return string.Empty;
+
+    var clean = lens.CleanSpell(full) ?? string.Empty;
+    return clean.Length > 0 && clean.Length < full.Length && full.StartsWith(clean, StringComparison.Ordinal)
+      ? full[clean.Length..].Trim()
+      : string.Empty;
+  }
 
   private static string IsoTime(long epochSeconds) =>
     epochSeconds <= 0 ? string.Empty
@@ -396,6 +505,9 @@ internal static class CaptureExport
 
   internal sealed class Window
   {
+    // Sorted, not hashed: the lookup tab walks it, and an export must be reproducible row for row.
+    public readonly SortedSet<int> NameIdx = [];
+
     public long AnchorS;
     public long BeginS;
     public long EndS;

@@ -463,8 +463,9 @@ namespace EQLogParser
     /*
      * The row-level Excel export the detailed-export ask named (issue #191): every damage, cast and heal row of the
      * selected fights in one .xlsx, in GamParse's sheet shape - Player DPS, NPC DPS, Spells cast, Heals by you, Heals
-     * to you - plus the two things its users asked for and it never had: a Pet Owner column beside each pet's rows,
-     * and a Players tab (Name/Class/Kind/Pet Of) that replaces the lookup tables they maintained by hand.
+     * to you - plus what its users asked for and it never had: a Pet Owner column beside each pet's rows, Spell and
+     * RANK as separate columns, and a Players tab (Name/Class/Kind/Pets/Pet Of) scoped to the exported window, which is
+     * the lookup table they used to maintain by hand.
      *
      * The data is already kept. DamageFactTable and HealFactTable are row stores, so this reads the capture; nothing
      * re-parses the log and nothing is reconstructed from a board. Rows stream into SpreadsheetWriter (a hand-written
@@ -476,8 +477,9 @@ namespace EQLogParser
      */
     internal static void ExportWorkbook(List<Fight> fights)
     {
-      var snapshot = DeriveEngine.Active?.Snapshot;
-      if (snapshot?.Facts is null)
+      var engine = DeriveEngine.Active;
+      var snapshot = engine?.Snapshot;
+      if (engine is null || snapshot?.Facts is null)
       {
         new MessageWindow("No Parsed Log Opened. Nothing to Save.", Resource.FILEMENU_SAVE_FIGHTS).ShowDialog();
         return;
@@ -488,39 +490,59 @@ namespace EQLogParser
         string.Join("", fileName.Split(Path.GetInvalidFileNameChars())));
       if (pickedFile == null) return;
 
-      // Identity questions are asked of the timeline this capture published, so an export cannot disagree with the
-      // boards: same lane, same answers, read through the engine's own helpers.
-      var engine = DeriveEngine.Active;
       var facts = snapshot.Facts;
       var heals = snapshot.Heals;
       var localPlayer = ConfigUtil.PlayerName ?? string.Empty;
       var eventNames = string.Join(", ", fights.Select(f => f.Name).Distinct().Take(4));
       if (fights.Select(f => f.Name).Distinct().Count() > 4) eventNames += " \u2026";
 
+      // ONE identity answer per name, resolved here on the UI thread over the names this capture spoke - a few hundred
+      // of them. Two reasons, both from the night export: asking per row put two locks on every damage fact (~600k
+      // acquisitions for 290k rows), and a capture that changes MID-write starts answering Unknown halfway down the
+      // file, which sends one pet's rows to Player DPS at row 400 and NPC DPS at row 5,000. The answers come from the
+      // same lane the boards read; only plain values cross to the worker.
+      var identity = BuildIdentitySnapshot(engine, facts);
+
+      (bool Side, string Owner, string Class, string Kind) Ask(string name) =>
+        identity.TryGetValue(name, out var answer)
+          ? answer
+          : (false, string.Empty, string.Empty, Labels.Unk);
+
       var options = new CaptureExport.Options
       {
         EventName = eventNames,
         SourceFile = AppSettings.CurrentLogFile ?? string.Empty,
         LocalPlayer = localPlayer,
+        SessionId = snapshot.SessionId,
         FromTimeS = (long)fights.Min(f => f.BeginTime),
         ToTimeS = (long)fights.Max(f => f.LastTime),
         Lens = new CaptureExport.Lens(
-          engine.IsPlayerSideName,
-          engine.OwnerOfName,
-          name => PlayerRegistry.Instance.GetPlayerClass(name, double.PositiveInfinity),
-          name => IdentityVocabulary.TypeWord(engine.KindOfName(name)))
+          name => Ask(name).Side,
+          name => Ask(name).Owner,
+          // The SAVED class first, exactly as the Identity Table shows it: a class an operator typed by hand is the
+          // value that has to survive into the file (their persona argument), and boards keep GetPlayerClass(name, t).
+          name => Ask(name).Class,
+          name => Ask(name).Kind,
+          // The spell data owns what counts as a rank: this returns the clean name, and the export prints the tail it
+          // stripped as the Rank column. No rank grammar lives here, so none can drift from R4's.
+          spell => EQDataStore.Instance.AbbreviateSpellName(spell))
       };
 
       var dialog = new MessageWindow($"Saving {fights.Count} Selected Fights to Excel.", Resource.FILEMENU_SAVE_FIGHTS,
         MessageWindow.IconType.Save);
       var failed = false;
 
+      // Written beside its target under a temporary name, then moved: the chosen path is replaced only by a COMPLETE
+      // package, so a throw halfway through no longer leaves a half-written .xlsx sitting where the operator clicked.
+      var tempFile = pickedFile + ".eqlogtmp";
+
       Task.Delay(150).ContinueWith(_ =>
       {
         try
         {
-          // Worker thread: plain objects and numbers only - the snapshot fields are rows, not DependencyObjects.
-          var summary = CaptureExport.Write(pickedFile, facts, heals, options);
+          // Worker thread: plain objects and numbers only - the fact tables are rows, not DependencyObjects.
+          var summary = CaptureExport.Write(tempFile, facts, heals, options);
+          File.Move(tempFile, pickedFile, true);
           Log.Info($"detailed export: {summary} to {pickedFile}");
         }
         catch (Exception ex)
@@ -530,6 +552,15 @@ namespace EQLogParser
         }
         finally
         {
+          try
+          {
+            if (File.Exists(tempFile)) File.Delete(tempFile);
+          }
+          catch (Exception ex)
+          {
+            Log.Debug($"detailed export: temp file left behind: {ex.Message}");
+          }
+
           UiUtil.InvokeAsync(() =>
           {
             dialog.Close();
@@ -543,6 +574,33 @@ namespace EQLogParser
       }, TaskScheduler.Default);
 
       dialog.ShowDialog();
+    }
+
+    /*
+     * The name census an export needs: side, owner, class and kind for every name in the capture's ONE shared pool
+     * (healers included - see DamageFactTable.InternedNames), asked through the engine's timeline-lock helpers.
+     *
+     * Count-snapshot indexing, not enumeration: the pool grows while a live log parses, and an enumerator over a list
+     * that another thread is appending to is a crash, not a race.
+     */
+    private static Dictionary<string, (bool Side, string Owner, string Class, string Kind)> BuildIdentitySnapshot(
+      DeriveEngine engine, DamageFactTable facts)
+    {
+      var names = facts.InternedNames;
+      var map = new Dictionary<string, (bool, string, string, string)>(names.Count, StringComparer.OrdinalIgnoreCase);
+
+      for (var i = 0; i < names.Count; i++)
+      {
+        var name = names[i];
+        if (string.IsNullOrEmpty(name) || map.ContainsKey(name)) continue;
+
+        map[name] = (engine.IsPlayerSideName(name),
+          engine.OwnerOfName(name) ?? string.Empty,
+          PlayerRegistry.Instance.GetAssignedOrLastKnownPlayerClass(name) ?? string.Empty,
+          IdentityVocabulary.TypeWord(engine.KindOfName(name)) ?? Labels.Unk);
+      }
+
+      return map;
     }
 
     internal static void ExportAsHtml(Dictionary<string, SummaryTable> tables)

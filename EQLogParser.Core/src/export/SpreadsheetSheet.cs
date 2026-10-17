@@ -52,7 +52,7 @@ internal sealed class SpreadsheetSheet
   public RowBuilder Row()
   {
     if (_finished) throw new ObjectDisposedException(nameof(SpreadsheetSheet), $"{Name} is already written");
-    if (_partDataRows >= Ceiling) StartContinuation();
+    if (PartIsFull(_partRowIndex, _partDataRows, Ceiling)) StartContinuation();
 
     var index = ++_partRowIndex;
     _partDataRows++;
@@ -61,6 +61,20 @@ internal sealed class SpreadsheetSheet
     _writer.WriteAttributeString("r", index.ToString(CultureInfo.InvariantCulture));
     return new RowBuilder(this, index);
   }
+
+  /*
+   * When a part stops accepting rows. TWO bounds, and the second one is the bug this guards:
+   *
+   *  - `ceiling` is the spec's budget of DATA rows per part (Excel's number by default, small in a split test), and
+   *  - `MaxSheetRows` is the grid itself, counted in PART rows — the header sits at row 1, so a part that writes
+   *    `MaxSheetRows` data rows ends at `r="1048577"`, one row outside the sheet. Measured on the first cut of this
+   *    writer: 1,048,576 data rows in one part, last reference R1048577, and Excel calls that unreadable.
+   *
+   * Both stay asserted in SpreadsheetExportTest: MaxRows keeps its data-row meaning for the split test, and the grid
+   * bound is checked where it bites — at the header's one-row offset.
+   */
+  internal static bool PartIsFull(int partRowIndex, int partDataRows, int ceiling) =>
+    partDataRows >= ceiling || partRowIndex >= SpreadsheetWriter.MaxSheetRows;
 
   private void OpenPart(ZipArchiveEntry entry)
   {
