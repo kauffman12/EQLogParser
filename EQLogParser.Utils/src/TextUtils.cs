@@ -289,6 +289,58 @@ namespace EQLogParser
       return success;
     }
 
+    /// <summary>
+    /// The widest combat amount this program carries. 48 bits is what a damage row, a heal row and their cold chunks
+    /// store, so it is the parse domain: a bigger token is not a number anyone swung (a manglenet report, a corrupted
+    /// line, an emu sending garbage) and is refused rather than carried. Measured ceilings are in
+    /// docs/DesignNotes.md → "Amount widths measured across 44 million hits".
+    /// </summary>
+    internal const long MaxAmount = (1L << 48) - 1;
+
+    /// <summary>The digit count of <see cref="MaxAmount"/>, so a token too wide to be an amount is refused before any
+    /// arithmetic runs. Derived from the domain constant, never retyped.</summary>
+    private static readonly int MaxAmountDigits = MaxAmount.ToString(CultureInfo.InvariantCulture).Length;
+
+    /// <summary>
+    /// Parses a combat amount the way <see cref="ParseUInt(ReadOnlySpan&lt;char&gt;, uint)"/> parses a clock field, over
+    /// 48 bits instead of 32 and with no default to confuse: failure answers -1, and no amount a log printed is negative.
+    /// A leading '-' is not a magnitude — the negative-HOT ruling stays at <see cref="HealingLineParser"/>.
+    /// </summary>
+    internal static long ParseAmount(ReadOnlySpan<char> span) => TryParseAmount(span, out var value) ? value : -1L;
+
+    /// <summary>Whether every character of the token is a digit and its value fits <see cref="MaxAmount"/>.</summary>
+    internal static bool TryParseAmount(ReadOnlySpan<char> span, out long value)
+    {
+      // Accumulated in a local and written only on success: a refusal that leaves "12" behind from "12a34" is a partial
+      // number wearing a no, and a caller that reads the field anyway gets a confident wrong amount.
+      var parsed = 0L;
+      value = 0L;
+
+      if (span.IsEmpty) return false;
+
+      var i = 0;
+      while (i < span.Length && span[i] is '0') i++;   // leading zeros are free: "00012" is a number, and not a wide one
+
+      // Fifteen digits cannot overflow a long, so the range check runs once at the end instead of per digit.
+      if (span.Length - i > MaxAmountDigits) return false;
+
+      for (; i < span.Length; i++)
+      {
+        var digit = (uint)(span[i] - '0');
+        if (digit > 9u) return false;
+        parsed = (parsed * 10L) + digit;
+      }
+
+      if (parsed > MaxAmount) return false;
+
+      value = parsed;
+      return true;
+    }
+
+    /// <summary>Whether an amount parsed elsewhere is one this program can carry. The fact rows are the same 48-bit
+    /// domain, so a value out of range never reaches storage, a board or a cell.</summary>
+    internal static bool InAmountRange(long value) => value is >= 0L and <= MaxAmount;
+
     internal static uint ParseUInt(ReadOnlySpan<char> span, uint defValue = uint.MaxValue)
     {
       if (span.IsEmpty)

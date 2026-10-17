@@ -182,6 +182,12 @@ namespace EQLogParser
       return TextUtils.ParseUInt(split[index]);
     }
 
+    /// <summary>
+    /// Parses a combat amount from a string array element over the 48-bit domain; -1 means the token was not an amount.
+    /// Replaces the common pattern: TextUtils.ParseAmount(split[index])
+    /// </summary>
+    internal static long ParseAmount(string[] split, int index) => TextUtils.ParseAmount(split[index]);
+
     /*
      * The one hit-type vocabulary: verb → display plural, ordinal like the switch it replaces. Both GetHitType doors read it,
      * so the literal list cannot exist twice. Unlike the old switch's plural arms (which returned the input word itself) this

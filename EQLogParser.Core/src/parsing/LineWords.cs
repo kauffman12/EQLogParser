@@ -96,6 +96,13 @@ namespace EQLogParser
     internal uint ParseUInt(int index) => TextUtils.ParseUInt(this[index].Span);
 
     /// <summary>
+    /// <see cref="TextUtils.ParseAmount"/> over the token's span: a combat amount read as a magnitude, answered -1 when
+    /// the token is not all digits or is wider than the 48 bits storage carries. Amount lanes use this; <see cref="ParseUInt(int)"/>
+    /// stays on the clock fields and item counts it is correct for — docs/DesignNotes.md → "Amount widths measured across 44 million hits".
+    /// </summary>
+    internal long ParseAmount(int index) => TextUtils.ParseAmount(this[index].Span);
+
+    /// <summary>
     /// Join a range with single spaces, SKIPPING empty words — the ParserUtil.JoinWords contract, ported exactly,
     /// including its >256-char fallback which joins WITHOUT the skip (the old long path called string.Join directly;
     /// bit-identical behavior wins over tidiness here).
