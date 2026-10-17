@@ -869,6 +869,9 @@ namespace EQLogParser
      * these to the spell/taunt/death/export paths. `selected` is the grid's own selection; false is every row
      * the list shows, in list order - the same set a "select all" would pick up.
      */
+    internal (DerivedSnapshot Snapshot, IReadOnlyList<DerivedFight> Fights) GetExportSelection()
+      => (_currentSnapshot, GetSelectedFights());
+
     internal List<Fight> GetFights(bool selected)
         => DeriveEngine.MaterializeFights(_currentSnapshot, selected ? GetSelectedFights() : null);
 

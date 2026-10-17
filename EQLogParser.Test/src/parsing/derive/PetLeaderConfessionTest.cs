@@ -104,6 +104,58 @@ public sealed class PetLeaderConfessionTest
     Assert.AreNotEqual("R5-leader", source, "the player frame answers for the row");
   }
 
+  [TestMethod]
+  [DataRow(false)]
+  [DataRow(true)]
+  public void MercenaryEvidenceWinsRegardlessOfArrivalOrder(bool leaderFirst)
+  {
+    var leader = ("Probefoo", EvidenceFact.EvPetLeader, (string?)"Probeowner");
+    var merc = ("Probefoo", EvidenceFact.EvMercJoinedGroup, (string?)null);
+    var timeline = leaderFirst ? Classify(leader, merc) : Classify(merc, leader);
+    Assert.AreEqual(IdentityKind.Merc, timeline.Identity("Probefoo"));
+    Assert.IsNull(timeline.OwnerOf("Probefoo", T0));
+  }
+
+  [TestMethod]
+  public void AListedMercenaryIsNotMadeAPetByItsLeaderSentence()
+  {
+    var timeline = Classify(("Candlefolk Mender", EvidenceFact.EvPetLeader, "Probeowner"));
+    Assert.AreEqual(IdentityKind.Merc, timeline.Identity("Candlefolk Mender"));
+    Assert.IsNull(timeline.OwnerOf("Candlefolk Mender", T0));
+  }
+
+  [TestMethod]
+  public void LaterPersonEvidenceRetractsTheGuardedClaimOnACarriedPass()
+  {
+    PipelineHarness.EnsureDataStore();
+    var facts = new DamageFactTable(16);
+    var speaker = facts.InternName("Probefoo");
+    facts.AddEvidence(new EvidenceFact(1, (long)T0, speaker, EvidenceFact.EvPetLeader, facts.InternAux("Probeowner")));
+    var state = new ClassificationState();
+    var first = new EntityTimeline();
+    ClassificationRules.Apply(facts, first, state: state);
+    Assert.AreEqual(IdentityKind.Pet, first.Identity("Probefoo"));
+    facts.AddEvidence(new EvidenceFact(2, (long)T0 + 1, speaker, EvidenceFact.EvJoinedRaid, -1));
+    var carried = new EntityTimeline();
+    ClassificationRules.Apply(facts, carried, state: state);
+    var fresh = new EntityTimeline();
+    ClassificationRules.Apply(facts, fresh);
+    Assert.AreEqual(IdentityKind.Player, carried.Identity("Probefoo"));
+    Assert.IsNull(carried.OwnerOf("Probefoo", T0));
+    Assert.AreEqual(fresh.StateStamp(), carried.StateStamp(), "a guarded claim is not an unconditional replay");
+    state.Reset();
+    Assert.AreEqual(0, state.PetLeaders.Count);
+  }
+
+  [TestMethod]
+  public void ACustomNamedPetsOwnerChangeDoesNotRewriteItsEarlierOwnership()
+  {
+    var timeline = Classify(("Fluffy", EvidenceFact.EvPetLeader, "Firstowner"),
+      ("Fluffy", EvidenceFact.EvPetLeader, "Secondowner"));
+    Assert.AreEqual("Firstowner", timeline.OwnerOf("Fluffy", T0));
+    Assert.AreEqual("Secondowner", timeline.OwnerOf("Fluffy", T0 + 1));
+  }
+
   // `Akini, Xanathan`s Warder` = one summon, two masters: the pet claim holds, no raider is invented.
   [TestMethod]
   public void ACommaInOwnerTextClaimsThePetButInventsNoRaider()

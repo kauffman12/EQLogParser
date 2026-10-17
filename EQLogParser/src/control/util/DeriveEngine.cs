@@ -303,19 +303,30 @@ namespace EQLogParser
         return timeline.OwnerOf(name, double.PositiveInfinity);
     }
 
-    /*
-     * The three identity questions a row-level export asks, through the SAME lock every UI question uses (see
-     * LiveKindAt): an export runs on a worker over a capture whose passes are still landing, and the law there is that
-     * nothing escapes the lock but a plain value. Boards and export therefore read one lane - a workbook cannot
-     * disagree with the grid it was exported from.
-     */
-    internal IdentityKind KindOfName(string? name) => LiveKindAt(name, double.PositiveInfinity);
-
-    /// <summary>Player, pet or mercenary: the side question the export's two damage sheets split on.</summary>
-    internal bool IsPlayerSideName(string? name) =>
-      LiveKindAt(name, double.PositiveInfinity) is IdentityKind.Player or IdentityKind.Pet or IdentityKind.Merc;
-
-    internal string OwnerOfName(string? name) => LiveOwnerOf(name);
+    /// <summary>Freezes selection, prefixes and identity before the export worker starts.</summary>
+    internal CaptureExport.Options PrepareExport(DerivedSnapshot snapshot, IReadOnlyList<DerivedFight> selected,
+      string title, string sourceFile, string localPlayer)
+    {
+      return _capture.DeriveQuiescent(() =>
+      {
+        if (_disposed || snapshot.SessionId != SessionId) return null;
+        var scope = CharmPetRows.WithHiddenPets(selected, snapshot.AllFights);
+        return new CaptureExport.Options
+        {
+          EventName = title,
+          SourceFile = sourceFile,
+          LocalPlayer = localPlayer,
+          SessionId = SessionId,
+          AnchorS = (long)selected.Min(fight => fight.BeginTime),
+          DamageOrdinals = snapshot.DamageIndex.CaptureOrdinals(scope),
+          Windows = selected.Select(fight => new CaptureExport.Span((long)fight.BeginTime, (long)fight.LastTime)).ToArray(),
+          ToOrdinal = snapshot.Facts.FactCount,
+          HealLimit = snapshot.Heals?.HealCount ?? 0,
+          EvidenceRows = snapshot.Facts.Evidence.ToArray(),
+          Lens = CaptureExportLens.Create(snapshot.Timeline, snapshot.Facts.InternedNames)
+        };
+      });
+    }
 
     /*
      * The name census for the Identity Table window. Built on demand rather than carried in the snapshot: a derive lands every

@@ -12,7 +12,7 @@ namespace EQLogParser;
  * export of a raid night runs to hundreds of thousands of rows, which is exactly where the whole-workbook object
  * models cost most: they build a live object per cell before saving anything. Here a row becomes bytes as it is
  * produced and nothing above the current row is retained. It also keeps the format testable headless: unzip, parse
- * with XDocument, assert (SpreadsheetWriterTest) - no Excel on the box.
+ * with XDocument, assert (SpreadsheetExportTest) - no Excel on the box.
  *
  * Parts written, the minimum a strict reader accepts:
  *   [Content_Types].xml, _rels/.rels, xl/workbook.xml, xl/_rels/workbook.xml.rels, xl/styles.xml,

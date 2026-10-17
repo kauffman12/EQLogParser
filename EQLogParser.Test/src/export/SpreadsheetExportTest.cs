@@ -74,10 +74,18 @@ public sealed class SpreadsheetExportTest : IDisposable
     // Every relationship Target must name a part that exists. Excel refuses the file on either half, so "it unzips"
     // is not the assertion - the graph is.
     var parts = zip.Entries.Select(e => e.FullName).ToList();
-    foreach (var rel in Part(zip, "xl/_rels/workbook.xml.rels").Root?.Elements() ?? [])
+    foreach (var entry in zip.Entries.Where(entry => entry.FullName.EndsWith(".rels", StringComparison.Ordinal)))
     {
-      var target = rel.Attribute("Target")?.Value;
-      Assert.IsTrue(parts.Contains("xl/" + target), $"relationship target {target} is not a part");
+      var source = entry.FullName == "_rels/.rels" ? "/" :
+        "/" + entry.FullName.Replace("/_rels/", "/", StringComparison.Ordinal)[..^5];
+      foreach (var rel in Part(zip, entry.FullName).Root?.Elements() ?? [])
+      {
+        if (rel.Attribute("TargetMode")?.Value == "External") continue;
+        var target = rel.Attribute("Target")?.Value;
+        Assert.IsNotNull(target);
+        var resolved = new Uri(new Uri("https://package.invalid" + source), target).AbsolutePath[1..];
+        Assert.IsTrue(parts.Contains(resolved), $"{entry.FullName}: target {target} resolves to missing {resolved}");
+      }
     }
 
     var types = Part(zip, "[Content_Types].xml");

@@ -63,6 +63,25 @@ public class FightSummarySourceTest
     private static List<DamageRecord> TankRecords(Fight fight)
         => fight.TankingBlocks.SelectMany(b => b.Actions).Cast<DamageRecord>().ToList();
 
+    [TestMethod]
+    public void ExportMembershipCopiesBothDirectionsAndDeduplicatesSelections()
+    {
+        var facts = BuildFacts(
+            ("Illuminai", "Echohead", 500, 0, LabelTypes.Melee),
+            ("Echohead", "Illuminai", 120, 1, LabelTypes.Melee),
+            ("Illuminai", "Otherboss", 999, 1, LabelTypes.Melee));
+        var timeline = new EntityTimeline();
+        timeline.SetIdentity("Illuminai", IdentityKind.Player, RuleStrength.Certain, "R1-target");
+        timeline.SetIdentity("Echohead", IdentityKind.Npc, RuleStrength.Certain, "R1-target");
+        timeline.SetIdentity("Otherboss", IdentityKind.Npc, RuleStrength.Certain, "R1-target");
+        var (rows, index, _) = Derive(facts, timeline);
+        var selected = Row(rows, "Echohead");
+        var frozen = index.CaptureOrdinals([selected, selected]);
+        CollectionAssert.AreEqual(new[] { 0, 1 }, frozen);
+        CollectionAssert.AreEqual(Array.Empty<int>(), index.CaptureOrdinals([]));
+        Assert.AreNotSame(frozen, index.CaptureOrdinals([selected]), "membership must not escape as a live index list");
+    }
+
     // ---- what the index is allowed to hold ----
 
     [TestMethod]

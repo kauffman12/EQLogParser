@@ -214,6 +214,23 @@ namespace EQLogParser
          * mob served its first click's numbers. Every input BuildFight read must still match; identity and charm owners need no stamp because an
          * index instance belongs to one timeline state (FightProjectionCache).
          */
+    /// <summary>Copies selected fact membership once; later projection growth cannot alter an export.</summary>
+    internal int[] CaptureOrdinals(IReadOnlyList<DerivedFight> selected)
+    {
+      lock (_gate)
+      {
+        var ordinals = new List<int>();
+        foreach (var fight in selected.Distinct())
+        {
+          if (_damageOrdinals.TryGetValue(fight, out var damage)) ordinals.AddRange(damage);
+          if (_tankingOrdinals.TryGetValue(fight, out var tanking)) ordinals.AddRange(tanking);
+        }
+        // Projection assigns each ordinal to exactly one life/direction. Distinct fights cannot duplicate a row.
+        ordinals.Sort();
+        return ordinals.ToArray();
+      }
+    }
+
     internal Fight SummaryFightFor(DerivedFight fight, DamageFactTable facts)
     {
       lock (_gate)

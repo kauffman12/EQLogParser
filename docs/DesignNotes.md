@@ -17497,8 +17497,8 @@ Issue #191 ("Request: Detailed export") asks for a **row-level** dump of the Fig
 wrote — `DPS DETAILED`, a cast list with rank, a Player/Class/Pet lookup tab, an event key/value tab — explicitly so its
 users can retire GamParse and the lookup tables they maintain by hand. The question asked first was whether the capture
 keeps enough after a full parse; it does, because `DamageFactTable` and `HealFactTable` are **row stores, not aggregates**:
-every line survives with sequence, second, amount, verb/spell text and the full modifier mask. So the export reads the
-capture and touches no parser code.
+each captured row retains its sequence, second, amount, verb/spell text and modifier mask. This is not a lossless log
+copy: unnamed/passive heals and ignored entities may never become facts. The exporter reads captured rows, not boards.
 
 **The format is ECMA-376 / ISO 29500 SpreadsheetML — `.xlsx` — written by hand** in `EQLogParser.Core/src/export/`
 (`SpreadsheetWriter`, `SpreadsheetWorkbook`, `SpreadsheetSheet`, `CaptureExport`). An .xlsx is an OPC package: a ZIP of
@@ -17510,16 +17510,16 @@ Syncfusion XlsIO (already in the graph through `MaterialDarkCustom`, but not ins
 whole-workbook-in-memory), `DocumentFormat.OpenXml` (MIT, Microsoft; its `OpenXmlWriter` is the same streaming shape we
 now write ourselves — one MIT package away if a part we have not needed shows up).
 
-Numbers on a real capture (290,159 damage facts, 102 names), the whole file in one workbook: **7 sheets, 86,459
+Historical first-cut measurements (not the current schema), on 290,159 damage facts / 102 names: **7 sheets, 86,459
 player-side + 203,700 NPC-side damage rows, 28,469 cast rows, 338/681 heal rows, 15.6 MB, 1.4 s**; one fight window
 (18:58:44..18:58:52): 1,604 + 3,508 damage rows, 622 casts, 287 KB, **27 ms**. Streaming is what buys that: rows go out
-of `FactsIn`/`HealsIn` slices straight into the sheet's ZIP entry, and a cold chunk decodes once per slice on touch.
+of the fact tables straight into the sheet's ZIP entry; the workbook does not retain cell objects.
 
 The decisions inside the writer, each of which has a test in `EQLogParser.Test/src/export/`:
 
-- **Numbers are numeric cells** (`<c><v>` with no `t`) — "numbers come in as text" is the standing complaint about XML
-  exports and a zero-padded number ("0000550447", what GamParse writes for a log line) is the same bug in disguise.
-  Localized formatting stays on the clipboard path (`ExportFormattedCsv`), never in a data file.
+- **Numbers are numeric cells** (`<c><v>` with no `t`). The issue's numeric complaint concerns localized CSV thousands
+  separators; the supplied GamParse XML already declares its padded positions as `ss:Type="Number"`. Padding alone
+  does not turn a numeric cell into text. Localized formatting stays on the formatted clipboard path, not in this file.
 - **Inline strings, no `sharedStrings.xml`.** No shared table to grow in memory and no second pass over the file.
 - **Frozen header row + `autoFilter` over the range written**, so it is filterable on open with nothing to click.
   Excel Tables (`xl/tables/tableN.xml`, which is the pivot-one-keystroke version) sit one part away; the id/displayName
@@ -17531,21 +17531,31 @@ The decisions inside the writer, each of which has a test in `EQLogParser.Test/s
 - Sheet names are sanitized to Excel's rules (31 chars, no `[]:*?/\`, unique); control characters in log text are dropped
   before they reach an attribute, because one illegal character makes a whole part unparseable.
 
-Column semantics worth keeping: `Time` is **seconds from the anchor on GamParse's scale — 1 = the anchor's own second,
--1 = one second before it, no zero** (see "The detailed export, reviewed against issue #191" below for why the plain
-`+1` form was wrong); `Log Time` is the wall clock ISO to the second. Scope is
-an **ordinal window** (`FromOrdinal`/`ToOrdinal` — the door a Fight List selection answers through) and/or a **time
-window** (`FromTimeS`/`ToTimeS`, for a caller holding a fight's begin/end). Casts and heals join on the **time span the
-window covers**, widened by `LeadInS` (default 5), because the heal stream has its own ordinal space and a fake
-alignment would be a lie. The two heal sheets filter on `ConfigUtil.PlayerName`; when there is no local player the honest
-widening is the raid side, and **Event Info prints which rule ran** — an export that needs a forum post to be read
-correctly is not finished.
+Current scope: damage uses the selected fights' exact `FightFactIndex.CaptureOrdinals` membership (both directions,
+including hidden charm-pet rows), not the envelope between first and last selected fights. Casts and heals use the union
+of selected lifetimes, each widened by the five-second lead-in. Overlap is merged so auxiliary rows occur once. `Seconds`
+is the inclusive duration of the union without lead-in; relative `Time` remains one clock anchored at the first selected
+begin, with 1 at that second and -1 one second early. `Log Time` uses `yyyy-MM-ddTHH:mm:ss`, without inventing a time zone.
 
-Identity questions enter through an injected `CaptureExport.Lens`, so this file knows no rules; the app wires it to
-`DeriveEngine.KindOfName / IsPlayerSideName / OwnerOfName` plus `PlayerRegistry.GetAssignedOrLastKnownPlayerClass` and
-`EQDataStore.AbbreviateSpellName`. They are asked **once per name** on the UI thread and handed over as a dictionary of
-plain values, through the same timeline lock every UI question uses. An export of a board therefore cannot disagree with
-the board — and no row loop holds a lock (see the review section below).
+`DeriveEngine.PrepareExport` runs on the worker under the capture's quiescence gate. It copies membership, evidence,
+damage/heal prefix limits, timeline and class histories before writing. Each pass reads those same prefixes. Identity
+is queried at each row's finite log time through `CaptureExportLens`, with possessive/saved ownership fallbacks, not at
+positive infinity (the far endpoint of a half-open ownership interval is outside it). Class uses capture-time evidence
+with the saved class as fallback, not the Identity Table's saved-first presentation. No per-row registry or timeline lock
+is taken. Later capture growth, class edits or capture replacement cannot alter the frozen answers.
+
+Eight logical sheets: Player DPS, NPC DPS, Spells cast, **All heals**, Heals by you, Heals to you, Players, Event Info.
+All heals is authoritative and includes NPC/other-player healing once; the two local-player sheets are overlapping views,
+falling back to raid-side views when no local player is known. `Healing` reconciles with All heals, not their sum.
+Damage carries `Player` (owner or player-side attacker), grouping-player `Class`, `Kind`, raw melee `Type`, broad `Category`,
+and separate clean `Skill` / `Rank` / `Skill Full`. Cast/heal spell columns likewise carry clean names, rank and original
+text; healing also preserves direct/HOT `Type` and verbatim `Requested Raw` beside calculated `Over Heal`. Players lists
+observed class/owner contexts separately with first/last seen times; a multi-persona capture is not flattened to the latest
+class. Custom Title comes from Parse Preview when present, otherwise selected NPC names supply the event title.
+
+Event Info states limitations: Seq is capture order, not source-line position; cast Direction is Cast only (receive events
+are not captured here); Unknown and Spell can appear in NPC DPS and remain distinguishable by Kind. No receive records,
+source positions or unsupported aggregate tables are fabricated.
 
 Not taken, and left deliberately: no `.xlsx` reader, no CSV/JSON sibling writer, and no change to the clipboard exports.
 Structural validity (parts, relationship graph, cell typing, per-part filter ranges) is asserted headless in
@@ -17554,6 +17564,19 @@ Structural validity (parts, relationship graph, cell typing, per-part filter ran
 installer list are unchanged (`FontAwesome5` is referenced by the headless test assembly only, and ships nothing).
 
 ## The detailed export, reviewed against issue #191 (2026-10-16)
+
+Historical review: its schema and identity-lookup descriptions below are superseded by the current contract above.
+A subsequent independent read found the root relationship targeting `/workbook.xml` while the actual part is
+`/xl/workbook.xml`. The target is now `xl/workbook.xml`; the relationship test resolves **all** internal relationships,
+including `_rels/.rels`, relative to their real source parts. OpenPyXL recovering the earlier file was not validation.
+
+After these corrections, a fresh headless parse/export of `eqlog_Kizant_xegony-selected.txt` produced eight sheets,
+290,159 damage rows / 98,056,336,499 damage and **163,676 healing rows / 979,344,517 landed** inside the export window.
+All **53,877** possessive-pet damage rows carried their owner. Selecting the four lives named A strengthening foodstuff
+through the real projection/index gave **596 damage rows / 129,134,558**, 3,818 casts and 22,637 heals / 128,211,125 landed.
+An independent OpenPyXL read reconciled damage and healing sums/counts with Event Info and a package-URI walk resolved
+every relationship. This does not execute desktop Excel; that remains a Windows checklist item. The whole-file worksheet
+population differs from the capture by the documented lead-in/window boundary, not by local-player filtering.
 
 The first cut was measured against the reporter's own GamParse XML (`local/exports/A_strengthening_foodstuff_9132026_1858.xml`),
 the two sample workbooks, and the issue thread read end to end. Six findings, all now fixed and pinned by tests; the
@@ -17672,9 +17695,9 @@ the capture: no surface gets its own ownership rule.
 
 Pets are the opposite case and stay themselves. `X\`s pet` keeps its full name on the fact (the parser only registers the
 pet with the player), so a pet's 53,877 damage rows in this capture are the pet's rows, and the export's `Owner` column
-carries the player beside them — filled from the **time-scoped** ownership window (`DeriveEngine.OwnerOfName(name)`). Ask
-`EntityTimeline.OwnerOf(name, +∞)` instead and it answers empty: ownership is a window, not a permanent fact, which is how
-a headless dump ends up printing a blank `Owner` column that the app never shows.
+carries the player beside them — filled from ownership at the row's finite log time plus possessive/saved fallbacks (`CaptureExportLens`). The earlier
+app lookup also asked `EntityTimeline.OwnerOf(name, +∞)` and therefore answered empty: ownership is a half-open window,
+not a permanent fact. The production wiring was defective too; an injected owner function in a shape test hid it.
 
 ### Every dropped heal line, named, and who its credit belongs to
 
@@ -17765,9 +17788,11 @@ test could ever see the sentence, and the strength-8 seed was all that arrived.
 
 **The law now.** The sentence is *captured* on the Core ingest path (`CombatCapture.HandleChat` → `EvidenceFact.EvPetLeader`,
 aux = the owner text, recognised by `ChatLineParser.TryPetLeaderOwner`, which strips the trailing period because a name never
-keeps it), and *decided* by `R5-leader` in the evidence stage: Pet at **Certain** (100), the named master at **Medium** with a
-`PetOfPlayer` interval at Certain, under R24's unchanged guard — any Player or Merc claim this capture made refuses the
-sighting rather than being outvoted by it. Certain because `Targeted (NPC)` cannot see a pet while the pet can name its owner;
+keeps it), and collected during the evidence stage. `R5-leader` decides after the frame ladder, direct claims, name ownership and
+merc table: Pet at **Certain** (100), the named master at **Medium** with a `PetOfPlayer` interval at Certain. Independent
+Player/Merc claims at that boundary refuse the sighting instead of being outvoted. Sightings, not guarded claims, are
+carried across passes: late player/merc evidence retracts the pet interpretation on the next fresh timeline. The first
+owner is retroactive, and each subsequent confession starts a new half-open ownership interval at its log time. Certain because `Targeted (NPC)` cannot see a pet while the pet can name its owner;
 the master is Medium because, exactly as R5-owner says, the line proves the summon and the pair, not the person. A comma in the
 owner text is one summon with two masters (`Akini, Xanathan`s Warder`): the pet claim holds, no raider is invented — same guard
 `RegistrySeed.ApplyPetMappings` applies. `ChatDB` is left alone: it keeps the chat archive and still writes `AddVerifiedPlayer` / `AddPetToPlayer`, which reach the
@@ -17784,8 +17809,8 @@ What the two captures produce afterwards, same cold-registry run, rules applied:
 
 The last column is the second half of the win and was not the one asked for: R24 can say *"this name is a pet"* from a
 pet-slot spell, but it has no owner to name, so those three rows carried no pair. The confession supplies it, and both routes
-say Pet at Certain, so nothing competes — the source word stays `R24-petslot` (it enumerates later in the same sweep) while the
-`PetOfPlayer` interval comes from the sentence. A name this capture saw as a Player or Mercenary is refused the sighting and was
+say Pet at Certain. With the delayed leader stage the winning source word can be `R5-leader`; the independent pet-slot
+claim remains in the claim list, and the ownership interval comes from the sentence. A name this capture saw as a Player or Mercenary is refused the sighting and was
 not observed among these nine.
 
 `IdentityVocabulary` gains one word (`Named Its Master`, hover `Named <owner> Its Leader`). Tests: `PetLeaderConfessionTest`

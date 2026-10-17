@@ -217,8 +217,10 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
   docs/DesignNotes.md → "The bot table in `data/mercs.txt`".
 - **A summon that names its master is Pet at Certain**: ``X says, 'My leader is Y.'`` is captured on the Core ingest path
   (`EvPetLeader`) and decided by `R5-leader` — master corroborated at Medium, pair interval at Certain, comma-guard on the owner
-  text, and R24's law that a person is not a summon. `ChatDB` keeps the chat archive and the operator's pet map and opens no
-  identity door; the registry reaches the rules only as `RegistrySeed` at strength 8.
+  text, and R24's law that a person is not a summon. Sightings are collected, then evaluated after direct evidence, frames
+  and the merc table; guarded claims are recomputed on each fresh timeline, never replayed unconditionally. Ownership
+  follows successive confessions in log time. `ChatDB` still maintains the archive and registry pet map; its registry
+  writes reach classification as weak seeds, never as a replacement for the captured sentence.
 - **The `Targeted (NPC)` frame owns its rung** (`TargetedNpcStrength`, 65): above every behaviour claim, below the bot table.
   Never move it onto `Strong` — thirteen claims sit there and a tie settles on stage order, not on the rule book. Numbers:
   docs/DesignNotes.md → "A summon's own sentence about its master", "The NPC frame gets its own rung: 65".
@@ -373,6 +375,10 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
   direction's tail), and everything accumulated continues by cloning keys rather than records. A per-name board *cache* was
   built, measured and reverted — don't re-add it; the standing targets are block adoption, per-record dictionary probes, and
   materialize-before-accumulate peaks.
+- **A detailed export freezes its question before writing**: selected fact membership, union of lifetimes, stream prefixes,
+  timeline and class histories. Ownership and class are asked at each record's log time, never at positive infinity or from
+  the latest persona. All heals is the authoritative captured-heal sheet; local-player tabs are views. Seq is not a source
+  line number. The contract and reconciliation live in docs/DesignNotes.md → "The detailed export is an Excel workbook, written by hand".
 - **The heal board's door is a record seam**: `GenerateStatsOptions.Heals` from `HealSummarySource.Materialize`, with
   `null` = whole capture (read through `HealRecordSource`) and an empty list = "there was none"; the list must be time-ascending
   and `OverTotal` verbatim.

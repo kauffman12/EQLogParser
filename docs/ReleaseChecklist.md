@@ -430,28 +430,37 @@ File ▸ Save ▸ **Selected Fight to E_xcel** writes ECMA-376 SpreadsheetML by 
 DesignNotes → "The detailed export is an Excel workbook, written by hand"). The structure is asserted headless; what only
 Excel can answer is whether it opens and behaves. No new dll ships with this feature, so the installer lists stay as they are.
 
-- [ ] **It opens as a workbook, not a repair prompt.** Select one fight, export, double-click the file. Seven tabs in order:
-  Player DPS, NPC DPS, Spells cast, Heals by you, Heals to you, Players, Event Info — header row bold and frozen, filter
+- [ ] **It opens as a workbook, not a repair prompt.** Select one fight, export, double-click the file. Eight tabs in order:
+  Player DPS, NPC DPS, Spells cast, All heals, Heals by you, Heals to you, Players, Event Info — header row bold and frozen, filter
   buttons present on every sheet.
 - [ ] **Numbers are numbers.** In Player DPS, sort the Damage column descending: a text column sorts 1, 10, 20, 9. Insert a
   pivot over the range and drag Damage into Values — it sums without "Number Stored as Text" warnings.
-- [ ] **The pet rows name their player.** Owner is filled on ``X`s pet``/warder/familiar rows and empty on a player's; a
-  mercenary row reads Mercenary in the Players tab, opens no fight-list row of its own, and still has its damage rows.
+- [ ] **The pet rows name their player.** Owner is filled on possessive and custom-named pets. Player repeats a player's
+  own name and groups pet damage under its owner; damage Class follows that player. Check a charm before/during/after its
+  window. A mercenary reads Mercenary in Players, opens no fight-list row, and still has its damage rows.
 - [ ] **The clock reads the way GamParse's does.** The pull's own second is `1`, one second early is `-1` — their scale has
   no zero, and their readers union our files with years of saved GamParse ones. Log Time is the wall clock to the second.
   Event Info states the window, the totals and which rule the heal sheets used.
-- [ ] **The Players tab is a lookup table, not a stub.** A caster carries its class — including a class typed by hand in
-  the Identity Table, which must survive the export — `A <thing>` rows read NPC, and a summoner's row names its pet in
-  `Pets`. The headless fixture proves plumbing, not verdicts: this is where a data-store-dependent lane can be empty.
+- [ ] **The Players tab reflects this event's personas.** Capture-time class wins over saved/latest class, with the saved
+  class as fallback when this log has no evidence. A multi-persona selection keeps separate class rows with first/last seen
+  times. Pet names appear in Pets and Pet Of; a caster with no DPS is still listed.
+- [ ] **Spell names group across ranks.** Spell/Skill is clean, Rank is separate, and Full preserves the original text.
+  Damage Type carries the melee verb where available; Category retains the broader damage classification.
 - [ ] **The over-heal column is the healing that was not needed.** On a `for 3461 (60581)` line the sheet says Heal 3461,
   Over Heal 57120. The gross asked-for number under that header is the bug this check exists for.
 - [ ] **The menu itself opens.** File ▸ Save shows the Excel entry with its glyph and MainWindow loads: an icon name that
   is not a member of `FontAwesome5.EFontAwesomeIcon` builds clean and throws at window load (headless: `XamlIconNameTest`).
 - [ ] **It opens outside desktop Excel too** — Google Sheets and LibreOffice both, since the users this feature is for are
   the ones without Office. A repair prompt in any of the three is a package bug, not a quirk.
-- [ ] **A multi-fight selection says what it covered.** Event Info prints the window; rows from pulls BETWEEN the selected
-  fights are inside it (the envelope), and no per-row fight column exists yet — the reporter is being asked whether they
-  want one file per fight instead.
+- [ ] **Selection is membership, not an envelope.** Select two non-adjacent fights and leave an encounter between them
+  unselected. Its damage must be absent, as must simultaneous damage against another unselected NPC. Casts/heals use the
+  union of lifetimes plus each lead-in; overlaps do not duplicate rows. Event Info Seconds excludes gaps and lead-in.
+- [ ] **All heals reconciles.** Other players' and NPC heals appear there once; summed Heal equals Event Info Healing.
+  Direct/HOT Type and Requested Raw survive. The two local-player sheets remain views, not a total to add together.
+- [ ] **Live export is internally consistent.** While the log grows, export an active fight. Row sums/counts agree with
+  Event Info. Change capture during saving: no replacement-capture identity or class may leak into the workbook.
+- [ ] **Custom title is honored.** Enter a title in Parse Preview, export, and check Event Info Event. With no custom
+  title the selected NPC names supply it. Every data sheet still starts with exactly one table header.
 - [ ] **A whole-night export finishes with the progress dialog open**, on a capture with hundreds of thousands of damage
   rows, and the resulting file opens (this is the case the row-ceiling split exists for).
 - [ ] **Refusals are words, not files.** No log open, and a log open with nothing selected, each say so in the save menu

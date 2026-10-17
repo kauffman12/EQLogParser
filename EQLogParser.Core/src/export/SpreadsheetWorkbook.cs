@@ -12,8 +12,7 @@ namespace EQLogParser;
  * Ordering is forced by the format, not chosen: ZipArchive in Create mode allows exactly ONE open entry stream at a
  * time, so sheet parts are written as their rows arrive and the parts that DESCRIBE the workbook (workbook.xml, its
  * rels, [Content_Types].xml) are written last, in Dispose, when the sheet list is final. A caller who forgets to
- * dispose gets a ZIP with sheets and no workbook - which is why every call site in this repo wraps it in `using` and
- * SpreadsheetWorkbookTest asserts the missing-workbook case stays a corrupt file rather than a silent empty one.
+ * dispose gets a ZIP with sheets and no workbook, so callers must wrap it in `using`.
  */
 internal sealed class SpreadsheetWorkbook : IDisposable
 {
@@ -190,7 +189,7 @@ internal sealed class SpreadsheetWorkbook : IDisposable
     w.WriteStartElement("Relationship", RelPackage);
     w.WriteAttributeString("Id", "rId1");
     w.WriteAttributeString("Type", $"{RelDoc}/officeDocument");
-    w.WriteAttributeString("Target", "workbook.xml");
+    w.WriteAttributeString("Target", "xl/workbook.xml");
     w.WriteEndElement();
     w.WriteEndElement();
   }

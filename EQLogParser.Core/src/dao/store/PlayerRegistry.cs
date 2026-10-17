@@ -431,6 +431,35 @@ namespace EQLogParser
       }
     }
 
+    /// <summary>Freezes class windows and saved fallbacks for an export that may outlive the open capture.</summary>
+    internal Func<string, double, string> CaptureClassLookup(IEnumerable<string> names)
+    {
+      var histories = new Dictionary<string, (double Time, string Class)[]>(StringComparer.OrdinalIgnoreCase);
+      var defaults = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+      foreach (var name in names)
+      {
+        defaults[name] = GetDefaultPlayerClass(name);
+        if (!_activePlayerClass.TryGetValue(name, out var active)) continue;
+        lock (active)
+          histories[name] = active.Records.Select(record => (record.BeginTime, record.ClassName)).ToArray();
+      }
+
+      return (name, time) =>
+      {
+        if (!histories.TryGetValue(name, out var records) || records.Length == 0)
+          return defaults.GetValueOrDefault(name, string.Empty);
+        var lo = 0;
+        var hi = records.Length;
+        while (lo < hi)
+        {
+          var mid = lo + ((hi - lo) / 2);
+          if (records[mid].Time <= time) lo = mid + 1;
+          else hi = mid;
+        }
+        return records[Math.Max(0, lo - 1)].Class;
+      };
+    }
+
     internal string GetPlayerFromPet(string pet)
     {
       string player = null;

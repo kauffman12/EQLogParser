@@ -1111,14 +1111,16 @@ namespace EQLogParser
         return;
       }
 
-      var selected = GetFights(true).OrderBy(fight => fight.Id).ToList();
+      if (npcWindow?.Content is not FightTable fightTable || !fightTable.SessionActive) return;
+      var (snapshot, selected) = fightTable.GetExportSelection();
       if (selected.Count == 0)
       {
         new MessageWindow("No Fights Selected. Nothing to Save.", Resource.FILEMENU_SAVE_FIGHTS).ShowDialog();
         return;
       }
 
-      MainActions.ExportWorkbook(selected);
+      var customTitle = playerParseTextWindow.Content is ParsePreview preview ? preview.CustomTitle : null;
+      MainActions.ExportWorkbook(snapshot, selected, customTitle);
     }
 
     private void MenuItemExportNpcNamesClick(object sender, RoutedEventArgs e)

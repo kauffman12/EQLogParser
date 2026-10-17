@@ -194,6 +194,8 @@ namespace EQLogParser
 
     private void CopyToEqButtonClick(object sender = null, RoutedEventArgs e = null) => CopyToEqClick(parseList.SelectedItem?.ToString());
 
+    internal string CustomTitle => customParseTitle.FontStyle == FontStyles.Italic ? null : customParseTitle.Text;
+
     private void SetParseTextByType(string type)
     {
       if (_parses.TryGetValue(type, out var value))

@@ -161,7 +161,7 @@ public sealed class CaptureExportShapeTest : IDisposable
 
     using var zip = ZipFile.OpenRead(Target("fight.xlsx"));
     CollectionAssert.AreEqual(
-      new[] { "Player DPS", "NPC DPS", "Spells cast", "Heals by you", "Heals to you", "Players", "Event Info" },
+      new[] { "Player DPS", "NPC DPS", "Spells cast", "All heals", "Heals by you", "Heals to you", "Players", "Event Info" },
       SheetNames(zip));
   }
 
@@ -193,9 +193,13 @@ public sealed class CaptureExportShapeTest : IDisposable
     var petRow = CellTexts(playerRows[2]);
     Assert.AreEqual("Bulgar`s pet", petRow[3]);
     Assert.AreEqual("Bulgar", petRow[4], "the Pet Owner column the ask named, derived per row");
+    Assert.AreEqual("Kizant", first[12], "a player repeats its own name in the grouping column");
+    Assert.AreEqual("Bulgar", petRow[12], "pet and player output can be grouped without a lookup");
+    Assert.AreEqual("Cleric", petRow[13], "damage Class follows the grouping player, not the pet");
 
     var spellRow = CellTexts(playerRows[3]);
-    Assert.AreEqual("Frost Bite XI", spellRow[7], "the spell with its rank, verbatim");
+    Assert.AreEqual("Frost Bite", spellRow[7], "clean name groups all ranks together");
+    Assert.AreEqual("Frost Bite XI", spellRow[15], "the original text remains available");
     Assert.AreEqual("XI", spellRow[8], "and the same row's rank on its own — the ask named both");
     Assert.AreEqual("1200", spellRow[9]);
 
@@ -217,7 +221,9 @@ public sealed class CaptureExportShapeTest : IDisposable
 
     var leadIn = CellTexts(rows[1]);
     Assert.AreEqual("Kizant", leadIn[3]);
-    Assert.AreEqual("Heal VIII", leadIn[4]);
+    Assert.AreEqual("Heal", leadIn[4]);
+    Assert.AreEqual("Heal VIII", leadIn[8]);
+    Assert.AreEqual("Cast", leadIn[6]);
     // GamParse's clock has NO zero: the pull's own second is 1 and five seconds early is -5. Readers union our files
     // with years of saved GamParse ones, so one scale means one scale on both sides of the pull.
     Assert.AreEqual("-5", leadIn[1]);
@@ -229,7 +235,8 @@ public sealed class CaptureExportShapeTest : IDisposable
 
     var petSkill = CellTexts(rows[3]);
     Assert.AreEqual("Bulgar`s pet", petSkill[3]);
-    Assert.AreEqual("Reciprocal Roar Strike 6", petSkill[4], "the name verbatim, rank tail included");
+    Assert.AreEqual("Reciprocal Roar Strike", petSkill[4]);
+    Assert.AreEqual("Reciprocal Roar Strike 6", petSkill[8], "the original text remains available");
     Assert.AreEqual("6", petSkill[5], "the spell data reads an arabic tail as a level; the export prints what it strips");
   }
 
@@ -248,7 +255,8 @@ public sealed class CaptureExportShapeTest : IDisposable
     Assert.AreEqual("Bulgar", by[4]);
     Assert.AreEqual("800", by[5], "what landed");
     Assert.AreEqual("200", by[6], "the healing the target did NOT need — OverTotal - Total, never the gross (1000)");
-    Assert.AreEqual("Heal Rk. II", by[7]);
+    Assert.AreEqual("Heal", by[7]);
+    Assert.AreEqual("Heal Rk. II", by[12]);
     Assert.AreEqual("Rk. II", by[8], "the rank tail, verbatim");
 
     var to = CellTexts(Rows(zip, "Heals to you")[1]);
@@ -297,7 +305,7 @@ public sealed class CaptureExportShapeTest : IDisposable
 
     Assert.AreEqual("Kizant - xegony", Value("Event"));
     // ParseExact, invariant: a plain Parse reads this through the machine's culture and CI is not en-US.
-    var start = DateTime.ParseExact(Value("Fight Start"), "yyyy-MM-dd HH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
+    var start = DateTime.ParseExact(Value("Fight Start"), "yyyy-MM-ddTHH:mm:ss", System.Globalization.CultureInfo.InvariantCulture);
     Assert.AreEqual(T0, (long)DateUtil.ToDotNetSeconds(start), "the wall clock the fight started at");
     Assert.AreEqual("7", Value("Seconds"), "inclusive seconds, matching TimeSegment: Last - Begin + 1");
     Assert.AreEqual("Kizant", Value("Heal Sheets Filtered By"));
@@ -374,6 +382,128 @@ public sealed class CaptureExportShapeTest : IDisposable
 
     Assert.AreEqual(2, rows.Count, "the in-fight heal and the one that lands after the killing blow");
     CollectionAssert.Contains(rows.Select(r => r[1]).ToList(), "9", "on the same clock: ninth second of the fight");
+  }
+
+  [TestMethod]
+  public void AllHealsIncludesOtherPlayersAndNpcHealingExactlyOnce()
+  {
+    var npc = _facts.InternName("A crypt broker");
+    var bulgar = _facts.InternName("Bulgar");
+    _heals.AddHeal(new HealFact(20, T0 + 3, npc, bulgar, 400, 500, LabelTypes.Hot, 0,
+      LineModifiersParser.Crit, _heals.InternSpell("Heal Rk. II")));
+    var summary = Write();
+    Assert.AreEqual(3, summary.HealRows);
+    Assert.AreEqual(1500, summary.Healing);
+    using var zip = ZipFile.OpenRead(Target("fight.xlsx"));
+    var all = Rows(zip, "All heals").Skip(1).Select(CellTexts).ToList();
+    Assert.AreEqual(3, all.Count);
+    Assert.AreEqual(3, all.Select(row => row[0]).Distinct().Count());
+    var added = all.Single(row => row[0] == "20");
+    Assert.AreEqual(Labels.Hot, added[10]);
+    Assert.AreEqual("500", added[11], "gross amount retained verbatim alongside calculated overheal");
+    Assert.AreEqual("100", added[6]);
+    Assert.AreEqual(1, Rows(zip, "Heals by you").Count - 1);
+    Assert.AreEqual(1, Rows(zip, "Heals to you").Count - 1);
+  }
+
+  [TestMethod]
+  public void SelectedMembershipExcludesSimultaneousEnemiesAndWindowsExcludeTheGap()
+  {
+    var player = _facts.InternName("Kizant");
+    var other = _facts.InternName("An unselected boss");
+    _facts.AddFact(new DamageFact(30, T0, player, other, 900, LabelTypes.Melee, 0,
+      LineModifiersParser.None, DamageFactTable.NoSubtype));
+    _facts.AddEvidence(new EvidenceFact(31, T0 + 6, player, EvidenceFact.EvCast, _facts.InternAux("Cure")));
+    var summary = CaptureExport.Write(Target("selection.xlsx"), _facts, _heals, new CaptureExport.Options
+    {
+      Lens = Lens,
+      LeadInS = 0,
+      DamageOrdinals = [0, 3, 0],
+      Windows = [new(T0, T0), new(T0 + 6, T0 + 6)]
+    });
+    Assert.AreEqual(1700, summary.Damage);
+    Assert.AreEqual(2, summary.PlayerRows);
+    Assert.AreEqual(1, summary.CastRows);
+    Assert.AreEqual(0, summary.HealRows, "heals between disjoint selected fights are not selected");
+    using var zip = ZipFile.OpenRead(Target("selection.xlsx"));
+    Assert.AreEqual("2", Rows(zip, "Event Info").Skip(1).Select(CellTexts).Single(row => row[0] == "Seconds")[1]);
+  }
+
+  [TestMethod]
+  public void AppendsDuringTheFirstPassCannotChangeAnyLaterSheetOrTotal()
+  {
+    var appended = false;
+    var local = _facts.InternName("Kizant");
+    var npc = _facts.InternName("A crypt broker");
+    var original = Lens;
+    var lens = new CaptureExport.Lens((name, time) =>
+    {
+      if (!appended)
+      {
+        appended = true;
+        _facts.AddFact(new DamageFact(90, T0 + 2, local, npc, 999, LabelTypes.Melee, 0,
+          LineModifiersParser.None, DamageFactTable.NoSubtype));
+        _heals.AddHeal(new HealFact(91, T0 + 2, local, local, 999, 0, LabelTypes.Heal, 0,
+          LineModifiersParser.None, HealFact.NoSpell));
+        _facts.AddEvidence(new EvidenceFact(92, T0 + 2, local, EvidenceFact.EvCast, _facts.InternAux("Cure")));
+      }
+      return original.At(name, time);
+    }, original.CleanSpell);
+    var summary = CaptureExport.Write(Target("live.xlsx"), _facts, _heals, new CaptureExport.Options { Lens = lens });
+    Assert.IsTrue(appended);
+    Assert.AreEqual(1950, summary.Damage);
+    Assert.AreEqual(1100, summary.Healing);
+    Assert.AreEqual(3, summary.CastRows);
+    Assert.AreEqual(2, summary.HealRows);
+    using var zip = ZipFile.OpenRead(Target("live.xlsx"));
+    var damage = Rows(zip, "Player DPS").Skip(1).Concat(Rows(zip, "NPC DPS").Skip(1))
+      .Select(CellTexts).Sum(row => long.Parse(row[9], System.Globalization.CultureInfo.InvariantCulture));
+    Assert.AreEqual(summary.Damage, damage);
+    var info = Rows(zip, "Event Info").Skip(1).Select(CellTexts).ToDictionary(row => row[0], row => row[1]);
+    Assert.AreEqual("1950", info["Total Damage"]);
+  }
+
+  [TestMethod]
+  public void LookupKeepsBothEventPersonasInsteadOfReplacingThemWithTheLatestClass()
+  {
+    var original = Lens;
+    var temporal = new CaptureExport.Lens((name, time) =>
+    {
+      var identity = original.At(name, time);
+      return name == "Kizant" ? identity with { Class = time < T0 + 3 ? "Cleric" : "Bard" } : identity;
+    }, original.CleanSpell);
+    CaptureExport.Write(Target("personas.xlsx"), _facts, _heals, new CaptureExport.Options { Lens = temporal });
+    using var zip = ZipFile.OpenRead(Target("personas.xlsx"));
+    var classes = Rows(zip, "Players").Skip(1).Select(CellTexts).Where(row => row[0] == "Kizant")
+      .Select(row => row[1]).ToArray();
+    CollectionAssert.AreEquivalent(new[] { "Cleric", "Bard" }, classes);
+    var hits = Rows(zip, "Player DPS").Skip(1).Select(CellTexts).Where(row => row[3] == "Kizant").ToArray();
+    Assert.AreEqual("Cleric", hits[0][13]);
+    Assert.AreEqual("Bard", hits[1][13]);
+  }
+
+  [TestMethod]
+  public void OverlappingLeadInsDoNotDuplicateCastsOrHealing()
+  {
+    var summary = CaptureExport.Write(Target("overlap.xlsx"), _facts, _heals, new CaptureExport.Options
+    {
+      Lens = Lens,
+      DamageOrdinals = [0, 3],
+      Windows = [new(T0 + 3, T0 + 6), new(T0, T0 + 3)]
+    });
+    Assert.AreEqual(3, summary.CastRows);
+    Assert.AreEqual(2, summary.HealRows);
+    Assert.AreEqual(1100, summary.Healing);
+  }
+
+  [TestMethod]
+  public void AnEmptyExplicitSelectionDoesNotFallBackToTheWholeCapture()
+  {
+    var summary = CaptureExport.Write(Target("none.xlsx"), _facts, _heals,
+      new CaptureExport.Options { Lens = Lens, DamageOrdinals = [], Windows = [] });
+    Assert.AreEqual(0, summary.Damage);
+    Assert.AreEqual(0, summary.HealRows);
+    Assert.AreEqual(0, summary.CastRows);
   }
 
   // Every column added since the first cut gets a line on Event Info, because the file has to explain itself.

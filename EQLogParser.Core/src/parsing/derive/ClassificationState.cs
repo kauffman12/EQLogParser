@@ -89,6 +89,9 @@ namespace EQLogParser
     internal readonly List<TimelineClaim> EvidenceClaims = [];
     internal readonly HashSet<TimelineClaim> EvidenceClaimed = [];
 
+    // Re-evaluated after independent evidence on every pass; guarded claims must not replay unconditionally.
+    internal readonly List<(string Name, string Owner, long Time)> PetLeaders = [];
+
     // Carried so the ladder needs only unseen rows; it still runs (over the full carried sets) every pass.
     internal readonly HashSet<string> TargetNpc = new(StringComparer.Ordinal);
     internal readonly HashSet<string> TargetPlayer = new(StringComparer.Ordinal);
@@ -159,6 +162,7 @@ namespace EQLogParser
 
       EvidenceClaims.Clear();
       EvidenceClaimed.Clear();
+      PetLeaders.Clear();
       TargetNpc.Clear();
       TargetPlayer.Clear();
       PlayerBehavior.Clear();

@@ -544,6 +544,23 @@ namespace EQLogParser
       return Mix(hash, _affiliation.Count);
     }
 
+    /// <summary>An independent read snapshot; later classification cannot change its answers.</summary>
+    internal EntityTimeline Copy()
+    {
+      lock (SyncRoot)
+      {
+        var copy = new EntityTimeline();
+        foreach (var pair in _identity)
+          foreach (var claim in pair.Value)
+            copy.SetIdentity(pair.Key, claim.Kind, claim.Strength, claim.Source, claim.EffectiveFrom);
+        foreach (var pair in _affiliation)
+          foreach (var interval in pair.Value)
+            copy.AddAffiliation(interval.Kind, pair.Key, interval.T0, interval.T1,
+              interval.Strength, interval.Source, interval.Owner);
+        return copy;
+      }
+    }
+
     /*
      * One insertion's contribution to `_digest`. Names hash CASE-INSENSITIVELY because that is how the stores key them
      * (a `bone walker` and `A bone walker` are one entity, so recording either spelling must land on the same term);

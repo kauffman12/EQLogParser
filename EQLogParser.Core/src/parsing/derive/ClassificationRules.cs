@@ -222,6 +222,7 @@ namespace EQLogParser
        * in `data/mercs.txt`").
        */
       RunStage("R27 mercs.txt", outcome, () => ApplyMercDatabase(facts, timeline));
+      RunStage("R5 named leader", outcome, () => ApplyPetLeaders(timeline, state));
       RunStage("R6 npcs.txt", outcome, () => ApplyNpcDatabase(facts, timeline));
 
       /*
@@ -588,38 +589,7 @@ namespace EQLogParser
             break;
 
           case EvidenceFact.EvPetLeader:
-            /*
-             * R5-leader: ``Mgsk says, 'My leader is Xxuro.'`` — a summon naming its own master, about itself. Certain, with
-             * R24's law unchanged: a person is not a summon, so ANY claim this capture made that the name is a Player or a
-             * Mercenary refuses the sighting instead of being outvoted by it.
-             *
-             * Certain rather than Strong because the sentence outranks `Targeted (NPC)`: a frame cannot see a pet, while the pet
-             * can name its owner. Measured before this rule existed — ``Useless`` read Npc on its frame alone with this very line
-             * in the log, and on Kizant-2026 ``Mgsk`` sat Unplaced across 726 group heal lines while naming Xxuro as its leader —
-             * because the pair only ever reached the rules as a strength-8 RegistrySeed seed written by ChatDB, which lives in the
-             * WPF project and is a no-op outside it. docs/DesignNotes.md → "A summon's own sentence about its master".
-             *
-             * The named master is corroborated, not proven, by the claim: Medium, exactly as R5-owner does for ``X`s pet`` (the
-             * sentence proves the summon and the pair, not the person). A comma in that text is one summon with two masters
-             * (`Akini, Xanathan`s Warder`): the pair still holds, but it must not invent a raider — same guard
-             * RegistrySeed.ApplyPetMappings applies.
-             */
-            {
-              var leaderOwner = facts.AuxOf(e.AuxIdx);
-              if (!timeline.HasIndependentIdentity(name, IdentityKind.Player, double.PositiveInfinity)
-                  && !timeline.HasIndependentIdentity(name, IdentityKind.Merc, double.PositiveInfinity))
-              {
-                Claim(timeline, state, name, IdentityKind.Pet, RuleStrength.Certain,
-                      string.IsNullOrEmpty(leaderOwner) ? "R5-leader" : $"R5-leader:{leaderOwner}", double.NegativeInfinity);
-
-                if (!string.IsNullOrWhiteSpace(leaderOwner) && !leaderOwner.Contains(',', StringComparison.Ordinal))
-                {
-                  Claim(timeline, state, leaderOwner, IdentityKind.Player, RuleStrength.Medium, "R5-leader");
-                  Claim(timeline, state, AffiliationKind.PetOfPlayer, name, double.NegativeInfinity, double.PositiveInfinity,
-                        RuleStrength.Certain, $"R5-leader:{leaderOwner}", leaderOwner);
-                }
-              }
-            }
+            state.PetLeaders.Add((name, facts.AuxOf(e.AuxIdx), e.TimeS));
             break;
 
           case EvidenceFact.EvCharmStart:
@@ -694,6 +664,31 @@ namespace EQLogParser
         if (timeline.HasIndependentIdentity(name, IdentityKind.Player, double.PositiveInfinity)
           || timeline.HasIndependentIdentity(name, IdentityKind.Merc, double.PositiveInfinity)) continue;
         Claim(timeline, state, name, IdentityKind.Pet, RuleStrength.Certain, "R24-petslot", double.NegativeInfinity);
+      }
+    }
+
+    // Delayed until direct evidence, frames and the merc database are complete. Re-evaluate instead of replaying
+    // guarded claims, so late person evidence retracts the earlier pet interpretation on the next fresh timeline.
+    private static void ApplyPetLeaders(EntityTimeline timeline, ClassificationState state)
+    {
+      var candidates = state.PetLeaders.GroupBy(row => row.Name, StringComparer.OrdinalIgnoreCase)
+        .Where(rows => !timeline.HasIndependentIdentity(rows.Key, IdentityKind.Player, double.PositiveInfinity)
+          && !timeline.HasIndependentIdentity(rows.Key, IdentityKind.Merc, double.PositiveInfinity)).ToArray();
+      foreach (var sightings in candidates)
+      {
+        var name = sightings.Key;
+        var ordered = sightings.OrderBy(row => row.Time).ToArray();
+        for (var i = 0; i < ordered.Length; i++)
+        {
+          var owner = ordered[i].Owner;
+          var source = string.IsNullOrEmpty(owner) ? "R5-leader" : $"R5-leader:{owner}";
+          timeline.SetIdentity(name, IdentityKind.Pet, RuleStrength.Certain, source);
+          if (string.IsNullOrWhiteSpace(owner) || owner.Contains(',', StringComparison.Ordinal)) continue;
+          timeline.SetIdentity(owner, IdentityKind.Player, RuleStrength.Medium, "R5-leader");
+          var from = i == 0 ? double.NegativeInfinity : ordered[i].Time;
+          var to = i + 1 == ordered.Length ? double.PositiveInfinity : ordered[i + 1].Time;
+          timeline.AddAffiliation(AffiliationKind.PetOfPlayer, name, from, to, RuleStrength.Certain, source, owner);
+        }
       }
     }
 
