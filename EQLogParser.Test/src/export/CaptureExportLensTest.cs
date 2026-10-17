@@ -68,6 +68,28 @@ public sealed class CaptureExportLensTest
   }
 
   [TestMethod]
+  [DataRow(nameof(IdentityKind.Player), false)]
+  [DataRow(nameof(IdentityKind.Merc), false)]
+  [DataRow(nameof(IdentityKind.Pet), false)]
+  [DataRow(nameof(IdentityKind.Npc), true)]
+  public void CharmFlipsExportDirectionExactlyAsItFlipsProjection(string kindWord, bool duringCharm)
+  {
+    var kind = Enum.Parse<IdentityKind>(kindWord);
+    var time = (long)FixtureTime.Base;
+    var timeline = new EntityTimeline();
+    timeline.SetIdentity("Probeactor", kind, RuleStrength.Certain, "R1-target");
+    timeline.AddAffiliation(AffiliationKind.Friendly, "Probeactor", time, time + 10,
+      RuleStrength.Certain, "R9-charm", "Probecharmer");
+    var lens = CaptureExportLens.Create(timeline, ["Probeactor", "Probecharmer"]);
+    Assert.AreEqual(!duringCharm, lens.At("Probeactor", time - 1).Side);
+    Assert.AreEqual(duringCharm, lens.At("Probeactor", time).Side);
+    Assert.AreEqual(duringCharm, lens.At("Probeactor", time + 9).Side);
+    Assert.AreEqual(!duringCharm, lens.At("Probeactor", time + 10).Side);
+    Assert.AreEqual(FightProjection.SideAt(timeline, "Probeactor", time) == FightProjection.Side.Player,
+      lens.At("Probeactor", time).Side);
+  }
+
+  [TestMethod]
   public void ClassSnapshotUsesTheEventsPersonaAndSurvivesRegistryReset()
   {
     var registry = PlayerRegistry.Instance;

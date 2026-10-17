@@ -163,7 +163,10 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
   fight remains may it display the final completed result briefly; that result never joins the next pull's accounting. Timed modes
   retain completed fights until their configured quiet period. Explicit Reset cuts records; X-close does not reset; lifecycle state
   retains no engine or rows. Opening accepts recent completed one-shots and deduplicates by fact ordinal, not log second.
-  See `docs/DesignNotes.md` → "Damage overlay: fight accounting and display retention".
+  Outgoing activity obeys damage exclusions; incoming activity remains eligible. The dispatcher expires the last verified
+  presentation even while counting is busy, and late results must still be fresh. Window close requests carry their owning
+  instance; replacing a window retires the old one without allowing its callbacks to clear the replacement. See
+  `docs/DesignNotes.md` → "Damage overlay: fight accounting and display retention", "Damage meter presentation expiry and ownership".
 - **Only a gesture stamps the re-derive ledger** (`DeriveRequests`); the pump dispatches through `StartPass`, which stamps
   nothing, and paying a debt may not take one out.
 - **Two clocks**: `Full` is paced by `_sinceFullPass`, the cheap lane by `_sinceAnyPass`; only a pass that classified may

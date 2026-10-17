@@ -1,6 +1,5 @@
 using System.IO.Compression;
 using System.Xml.Linq;
-using EQLogParser;
 
 namespace EQLogParser;
 
@@ -150,6 +149,32 @@ public sealed class SpreadsheetExportTest : IDisposable
 
     // Row 1 is the header and four rows were written, so the filter range ends on row 5.
     Assert.AreEqual("A1:C5", sheet.Descendants(Main + "autoFilter").Single().Attribute("ref")?.Value);
+  }
+
+  [TestMethod]
+  public void FailedWorksheetFinalizationStillReleasesTheFile()
+  {
+    var path = Target("failed.xlsx");
+    using var book = SpreadsheetWriter.Open(path, "Sheet", ["Text"]);
+    Assert.ThrowsExactly<InvalidOperationException>(() =>
+    {
+      using var row = book.CurrentSheet.Row();
+      row.Text("bad\uffff");
+    });
+    Assert.ThrowsExactly<InvalidOperationException>(book.Dispose);
+    // An exclusive reopen also works on Windows only after every writer has released its handle.
+    using var reopened = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+    Assert.IsTrue(reopened.CanWrite);
+    book.Dispose();
+  }
+
+  [TestMethod]
+  public void FailedInitialHeaderStillReleasesTheFile()
+  {
+    var path = Target("bad-header.xlsx");
+    Assert.ThrowsExactly<ArgumentException>(() => SpreadsheetWriter.Open(path, "Sheet", ["bad\uffff"]));
+    using var reopened = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+    Assert.IsTrue(reopened.CanWrite);
   }
 
   [TestMethod]

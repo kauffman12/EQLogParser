@@ -28,7 +28,7 @@ namespace EQLogParser
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private DateTime _startLoadTime;
-    private DamageOverlayWindow _damageOverlay;
+    private readonly WindowInstanceSlot<DamageOverlayWindow> _damageOverlays = new(window => window.Close());
     private FctOverlayWindow _fctOverlay;
     private readonly DispatcherTimer _saveTimer;
 
@@ -391,31 +391,36 @@ namespace EQLogParser
       }, DispatcherPriority.Render);
     }
 
-    internal void CloseDamageOverlay(bool reopen)
+    internal void CloseDamageOverlay(bool reopen, DamageOverlayWindow expected = null)
     {
-      Dispatcher.InvokeAsync(() =>
+      var closing = expected ?? _damageOverlays.Current;
+      void CloseOwnedWindow()
       {
-        _damageOverlay?.Close();
-        _damageOverlay = null;
-        AppSettings.IsDamageOverlayOpen = false;
-
-        if (reopen)
+        if (closing is null)
         {
-          OpenDamageOverlayIfEnabled(false, true);
+          if (reopen && _damageOverlays.Current is null) OpenDamageOverlayIfEnabled(false, true);
+          return;
         }
-      });
+        if (!_damageOverlays.Close(closing)) return;
+        AppSettings.IsDamageOverlayOpen = false;
+        if (reopen) OpenDamageOverlayIfEnabled(false, true);
+      }
+      if (Dispatcher.CheckAccess()) CloseOwnedWindow();
+      else Dispatcher.InvokeAsync(CloseOwnedWindow);
+    }
+
+    internal void DamageOverlayClosed(DamageOverlayWindow window)
+    {
+      if (_damageOverlays.Forget(window)) AppSettings.IsDamageOverlayOpen = false;
     }
 
     internal void OpenDamageOverlayIfEnabled(bool reset, bool configure)
     {
       if (configure)
       {
-        _damageOverlay = new DamageOverlayWindow(true)
-        {
-          ShowActivated = false
-        };
-
-        _damageOverlay.Show();
+        var window = new DamageOverlayWindow(true) { ShowActivated = false };
+        _damageOverlays.Replace(window);
+        window.Show();
       }
       // delay opening overlay so group IDs get populated
       else if (ConfigUtil.IfSet("IsDamageOverlayEnabled"))
@@ -423,13 +428,11 @@ namespace EQLogParser
         // Recent completed damage may open the overlay too: a one-shot can be dead before the first derive lands.
         if (DerivedMeter.HasActivity())
         {
-          _damageOverlay?.Close();
-          _damageOverlay = new DamageOverlayWindow(false, reset);
-          _damageOverlay.Opacity = 0;
-          _damageOverlay.ShowActivated = false;
-          _damageOverlay.Show();
-          _damageOverlay.UpdateLayout();
-          _damageOverlay.Opacity = 1.0;
+          var window = new DamageOverlayWindow(false, reset) { Opacity = 0, ShowActivated = false };
+          _damageOverlays.Replace(window);
+          window.Show();
+          window.UpdateLayout();
+          window.Opacity = 1.0;
           AppSettings.IsDamageOverlayOpen = true;
         }
       }
@@ -671,11 +674,11 @@ namespace EQLogParser
     private void AutoOpenMeter()
     {
       // another lazy optimization to avoid extra dispatches
-      if (_damageOverlay == null && ConfigUtil.IfSet("IsDamageOverlayEnabled"))
+      if (_damageOverlays.Current is null && ConfigUtil.IfSet("IsDamageOverlayEnabled"))
       {
         Dispatcher.InvokeAsync(() =>
         {
-          if (_damageOverlay == null)
+          if (_damageOverlays.Current is null)
           {
             OpenDamageOverlayIfEnabled(false, false);
           }

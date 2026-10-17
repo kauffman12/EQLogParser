@@ -199,10 +199,29 @@ These checks still require Windows for popup/hide behavior. See DesignNotes → 
   Refreshes must not lose its early hits; the final display disappears after its grace period.
 - [ ] **Our own deaths do not close it**: get a party member or your own pet killed while the overlay is open and keep fighting. The
   board must not blank or reset because something on our side died.
-- [ ] **Time-based modes still behave**: set 3 s, 5 s and 10 s. Board closes ~that long after the last damage, kill seen or not;
+- [ ] **Time-based modes still behave**: set 3 s, 5 s and 10 s. Board closes ~that long after the last accepted combat
+  record (including avoidance), kill seen or not;
   a continuous fight never blanks mid-pull. At 3 s, attacks two seconds apart (including a new opponent) must both remain
   counted even when projection briefly lags; then stop attacking and verify that three seconds of real silence hides and resets
   it without extra grace. Known NPC-only noise must not extend that timeout while projection is behind.
+- [ ] **A blocked counting worker cannot strand the toolbar** (issue #416): use a ten-second reset, paint a board, then
+  hold only its worker with a debugger while leaving the dispatcher responsive. After verified activity expires, both
+  toolbar and body hide within the next timer tick. Releasing the worker must not flash its expired result back on screen.
+  New verified combat must recover the display. A paused dispatcher/GC cannot paint and is not this test.
+- [ ] **Paint failure clears both windows**: force one UI apply failure with the debugger after bars have been cleared.
+  No standalone toolbar may remain; the failure reaches Error Log and a subsequent successful refresh recovers normally.
+  Check zero-total/miss-only rows too: progress values must stay finite.
+- [ ] **Close/reconfigure targets its own window**: reset overlay position from the app menu while a live meter is open;
+  exactly one setup preview remains and the original meter/toolbar closes. Repeat Gear, Cancel, X, then reconfigure with
+  no meter open. A delayed close or Closed callback from the retired instance must not dismiss its replacement.
+- [ ] **Excluded output does not renew the quiet clock**: after one included hit, send only an excluded outgoing damage
+  type for longer than the reset period. The meter hides despite those lines continuing. Repeat with incoming damage of
+  that type: Tank still counts it and the meter remains active. Toggle the exclusion without adding another record and
+  verify that cached activity is recomputed. Ordinary healing, casts and taunts must not keep it visible.
+  In On Kill, kill A with included damage, then hit/kill B using only excluded damage: A keeps its original final-display
+  deadline. Included damage to B must still replace that final display immediately.
+- [ ] **Toolbar labels fit at every supported font size and DPI**: check DPS/Tank at 10, 12, 14 and 16, including mixed-DPI
+  monitors. The toolbar must neither clip its labels nor cover the first row; verify the last row still fits the saved height.
 - [ ] **On Kill survives a delayed refresh near 30 seconds**: hit once, then again at ~29 s. If the new hit's projection is late,
   the board must stay visible and keep both hits when it catches up. A different opponent or a same-name life after a gap >30 s
   must not inherit the previous life’s totals. Reset while damage is pending must still discard everything before the click.
@@ -437,7 +456,8 @@ Excel can answer is whether it opens and behaves. No new dll ships with this fea
   pivot over the range and drag Damage into Values — it sums without "Number Stored as Text" warnings.
 - [ ] **The pet rows name their player.** Owner is filled on possessive and custom-named pets. Player repeats a player's
   own name and groups pet damage under its owner; damage Class follows that player. Check a charm before/during/after its
-  window. A mercenary reads Mercenary in Players, opens no fight-list row, and still has its damage rows.
+  window. A charmed player moves to NPC DPS only during the charm; a charmed NPC moves in the opposite direction.
+  A mercenary reads Mercenary in Players, opens no fight-list row, and still has its damage rows.
 - [ ] **The clock reads the way GamParse's does.** The pull's own second is `1`, one second early is `-1` — their scale has
   no zero, and their readers union our files with years of saved GamParse ones. Log Time is the wall clock to the second.
   Event Info states the window, the totals and which rule the heal sheets used.
@@ -455,6 +475,8 @@ Excel can answer is whether it opens and behaves. No new dll ships with this fea
 - [ ] **Selection is membership, not an envelope.** Select two non-adjacent fights and leave an encounter between them
   unselected. Its damage must be absent, as must simultaneous damage against another unselected NPC. Casts/heals use the
   union of lifetimes plus each lead-in; overlaps do not duplicate rows. Event Info Seconds excludes gaps and lead-in.
+  Select a charm-closed encounter with a linked hidden post-charm row: both halves' damage must export even though the
+  hidden half falls outside the visible encounter's time window.
 - [ ] **All heals reconciles.** Other players' and NPC heals appear there once; summed Heal equals Event Info Healing.
   Direct/HOT Type and Requested Raw survive. The two local-player sheets remain views, not a total to add together.
 - [ ] **Live export is internally consistent.** While the log grows, export an active fight. Row sums/counts agree with
@@ -465,3 +487,5 @@ Excel can answer is whether it opens and behaves. No new dll ships with this fea
   rows, and the resulting file opens (this is the case the row-ceiling split exists for).
 - [ ] **Refusals are words, not files.** No log open, and a log open with nothing selected, each say so in the save menu
   dialog and write no file. An existing target file is overwritten only through the save dialog's own confirm.
+- [ ] **Failed exports release their files**: induce a write failure (for example a full test volume). The old target stays
+  intact, the error is reported, and the temporary file is not held open by the app; saving again must work after recovery.

@@ -52,7 +52,9 @@ namespace EQLogParser
     internal static void AddAndCopyTankParse(CombinedStats combined, List<PlayerStats> selected) => _mainWindow?.AddAndCopyTankParse(combined, selected);
     internal static void CopyToEqClick(string label) => _mainWindow?.CopyToEqClick(label);
     internal static void ClearAllFights() => _mainWindow?.ClearAllFights();
-    internal static void CloseDamageOverlay(bool reopen) => _mainWindow?.CloseDamageOverlay(reopen);
+    internal static void CloseDamageOverlay(bool reopen, DamageOverlayWindow expected = null) =>
+      _mainWindow?.CloseDamageOverlay(reopen, expected);
+    internal static void DamageOverlayClosed(DamageOverlayWindow window) => _mainWindow?.DamageOverlayClosed(window);
     internal static List<Fight> GetFights(bool selected) => _mainWindow?.GetFights(selected);
 
     // The scoped variant the death viewer wants - see MainWindow.GetFightsOverlapping for the rule.

@@ -1,6 +1,5 @@
-using EQLogParser;
-using System;
 using log4net;
+using System;
 using System.Reflection;
 
 namespace EQLogParser
@@ -180,10 +179,17 @@ namespace EQLogParser
 
       HealRecord record = null;
       var test = part[..optional];
+      // Proc text can precede a multi-word actor. A rank's dot is not a sentence boundary.
+      for (var i = test.Length - 2; i >= 0; i--)
+      {
+        if (!char.IsWhiteSpace(test[i + 1]) || !IsSentenceEnd(test, i)) continue;
+        test = test[(i + 1)..].TrimStart();
+        break;
+      }
 
       var done = false;
       var healer = "";
-      var subjectFallback = false;   // true when the healer came from the whole subject of a one-sentence line
+      var subjectFallback = false;   // the whole subject needs the cast-less spell guard
       var healed = "";
       string spell = null;
       string subType = null;
@@ -265,7 +271,7 @@ namespace EQLogParser
       }
       else
       {
-        healer = test[..optional];
+        healer = test;
       }
 
       if (!done)

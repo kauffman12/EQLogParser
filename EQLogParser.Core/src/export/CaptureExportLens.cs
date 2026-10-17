@@ -20,8 +20,7 @@ internal static class CaptureExportLens
     return new CaptureExport.Lens((name, time) =>
     {
       var kind = timeline.IdentityAt(name, time);
-      var owned = timeline.IsOurPetAt(name, time) || timeline.IsCharmedAt(name, time);
-      var side = owned || kind is IdentityKind.Player or IdentityKind.Pet or IdentityKind.Merc;
+      var side = FightProjection.SideAt(timeline, name, time) == FightProjection.Side.Player;
       var owner = timeline.OwnerOf(name, time);
       if (side && string.IsNullOrEmpty(owner) && kind is not (IdentityKind.Player or IdentityKind.Merc))
         owner = ClassificationRules.OwnerInName(name) ?? owners.GetValueOrDefault(name);

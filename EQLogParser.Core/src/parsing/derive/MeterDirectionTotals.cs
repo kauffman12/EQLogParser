@@ -93,6 +93,9 @@ internal readonly record struct MeterDamageFilter(bool Assassinate, bool Bane, b
 
   internal bool Allows(MeterHit hit) => DamageValidator.IsDamageValid(hit.Modifiers, hit.Type,
     Assassinate, Bane, DamageShield, FinishingBlow, Headshot, SlayUndead);
+
+  internal bool Allows(DamageFact fact) => DamageValidator.IsDamageValid(fact.ModMask, LabelTypes.LabelOf(fact.TypeId),
+    Assassinate, Bane, DamageShield, FinishingBlow, Headshot, SlayUndead);
 }
 
 internal sealed class MeterDirectionTotals(bool tanking)

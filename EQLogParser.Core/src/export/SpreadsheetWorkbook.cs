@@ -35,13 +35,22 @@ internal sealed class SpreadsheetWorkbook : IDisposable
   private readonly List<SheetRef> _sheets = [];
   private readonly HashSet<string> _names = new(StringComparer.OrdinalIgnoreCase);
   private SpreadsheetSheet _current;
+  private bool _disposed;
 
   /// <summary>Opens a workbook and adds every sheet up front (the shape the export callers use).</summary>
   internal static SpreadsheetWorkbook OpenWith(string path, params SpreadsheetSpec[] specs)
   {
     var workbook = new SpreadsheetWorkbook(path);
-    foreach (var spec in specs) workbook.AddSheet(spec);
-    return workbook;
+    try
+    {
+      foreach (var spec in specs) workbook.AddSheet(spec);
+      return workbook;
+    }
+    catch
+    {
+      workbook.CloseArchive();
+      throw;
+    }
   }
 
   internal SpreadsheetWorkbook(string path)
@@ -94,11 +103,12 @@ internal sealed class SpreadsheetWorkbook : IDisposable
 
   public void Dispose()
   {
-    _current?.Finish();
-    _current = null;
-
+    if (_disposed) return;
+    _disposed = true;
     try
     {
+      _current?.Finish();
+      _current = null;
       WritePart("xl/workbook.xml", WriteWorkbook);
       WritePart("xl/_rels/workbook.xml.rels", WriteWorkbookRels);
       WritePart("xl/styles.xml", WriteStyles);
@@ -107,7 +117,19 @@ internal sealed class SpreadsheetWorkbook : IDisposable
     }
     finally
     {
+      CloseArchive();
+    }
+  }
+
+  private void CloseArchive()
+  {
+    _disposed = true;
+    try
+    {
       _archive.Dispose();
+    }
+    finally
+    {
       _stream.Dispose();
     }
   }

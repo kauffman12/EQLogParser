@@ -23,6 +23,7 @@ namespace EQLogParser
     private readonly DispatcherTimer _updateTimer;
     private readonly bool _preview;
     private readonly MeterRefreshGate _refreshGate = new();
+    private readonly MeterPresentationState _presentation = new();
     private readonly Stopwatch _refreshClock = Stopwatch.StartNew();
     private readonly DamageMeterCalculation _calculation = new();
     private CancellationTokenSource _buildCancellation;
@@ -215,11 +216,7 @@ namespace EQLogParser
       _displayVersion++;
       _buildCancellation?.Cancel();
       if (_buildCancellation is null) _calculation.Clear();
-      _stats = null;
-      ClearStats(damageContent.Children);
-      ClearStats(tankContent.Children);
-      controlPanel.Visibility = Visibility.Collapsed;
-      HideToolbarWindow();
+      HideMeterPresentation();
 
       if (_derivedFrom is not null) _derivedFrom.Derived -= OnDerived;
       _derivedFrom = session;
@@ -359,13 +356,13 @@ namespace EQLogParser
       ConfigUtil.SetSetting("OverlayHighlightColor", s.HighlightColor);
       _savedHighlightColor = s.HighlightColor;
 
-      MainActions.CloseDamageOverlay(false);
+      MainActions.CloseDamageOverlay(false, this);
     }
 
-    internal void DiscardMeterSettings() => MainActions.CloseDamageOverlay(false);
+    internal void DiscardMeterSettings() => MainActions.CloseDamageOverlay(false, this);
 
     private DamageOverlayStats BuildMeterUpdate(DeriveEngine session, DamageOverlayLifecycle lifecycle,
-      int damageMode, CancellationToken cancellation)
+      int damageMode, CancellationToken cancellation, Action<double> publishExpiry)
     {
       if (session is null)
       {
@@ -382,7 +379,7 @@ namespace EQLogParser
       try
       {
         var now = (DateTime.Now - DateTime.MinValue).TotalSeconds;
-        return session.BuildOverlayStats(lifecycle, _calculation, damageMode, now, cancellation);
+        return session.BuildOverlayStats(lifecycle, _calculation, damageMode, now, cancellation, publishExpiry);
       }
       catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
       {
@@ -417,6 +414,9 @@ namespace EQLogParser
         Close();
         return;
       }
+      // This tick still runs when the refresh gate is occupied by a blocked worker.
+      if (_stats is not null && !_presentation.IsFresh(DeriveEngine.Active?.SessionId ?? 0, _displayVersion,
+        DateUtil.ToDotNetSeconds(DateTime.Now))) HideMeterPresentation();
       if (_refreshGate.Request(_refreshClock.Elapsed.TotalSeconds, force)) _ = RunMeterUpdatesAsync();
     }
 
@@ -438,7 +438,8 @@ namespace EQLogParser
           var checkpoint = MeterLifecycle.Read(_lifecycleOwner);
           _buildCancellation = new CancellationTokenSource();
           var cancellation = _buildCancellation.Token;
-          var result = await Task.Run(() => BuildMeterUpdate(session, checkpoint.State, damageMode, cancellation));
+          var result = await Task.Run(() => BuildMeterUpdate(session, checkpoint.State, damageMode, cancellation,
+            expiry => _presentation.Publish(sessionId, displayVersion, expiry)));
           if (_closed || displayVersion != _displayVersion
             || sessionId != (DeriveEngine.Active?.SessionId ?? 0)) continue;
           if (!MeterLifecycle.TryCommit(checkpoint)) continue;
@@ -451,6 +452,7 @@ namespace EQLogParser
         }
         catch (Exception ex)
         {
+          if (!_closed) HideMeterPresentation();
           Log.Error("Damage overlay update failed", ex);
         }
         finally
@@ -464,8 +466,26 @@ namespace EQLogParser
 
     private void ApplyMeterUpdate(DamageOverlayStats damageOverlayStats)
     {
+      try
+      {
+        _presentation.Paint(() => ApplyMeterUpdateCore(damageOverlayStats), HideMeterPresentation);
+      }
+      catch (Exception ex)
+      {
+        Log.Error("Damage overlay update failed", ex);
+      }
+    }
+
+    private void ApplyMeterUpdateCore(DamageOverlayStats damageOverlayStats)
+    {
       if (damageOverlayStats != null)
       {
+        if (!_presentation.IsFresh(DeriveEngine.Active?.SessionId ?? 0, _displayVersion,
+          DateUtil.ToDotNetSeconds(DateTime.Now)))
+        {
+          HideMeterPresentation();
+          return;
+        }
         var currentTicks = DateTime.UtcNow.Ticks;
         if (_lastTopTicks == long.MinValue || (currentTicks - _lastTopTicks) > TopTimeout)
         {
@@ -509,22 +529,29 @@ namespace EQLogParser
       }
       else
       {
-        ClearStats(damageContent.Children);
-        ClearStats(tankContent.Children);
-
-        damageContent.Visibility = Visibility.Collapsed;
-        tankContent.Visibility = Visibility.Collapsed;
-        controlPanel.Visibility = Visibility.Collapsed;
-        HideToolbarWindow();
-        Visibility = Visibility.Collapsed;
+        HideMeterPresentation();
 
         // An explicit Reset can hide a still-active fight; keep polling it for new damage.
         var stillSomethingToShow = DerivedMeter.HasActivity(_currentDamageMode);
         if (!stillSomethingToShow)
         {
-          MainActions.CloseDamageOverlay(false);
+          MainActions.CloseDamageOverlay(false, this);
         }
       }
+    }
+
+    private void HideMeterPresentation()
+    {
+      // Hide both HWNDs before touching individual bars: even a failed paint must not strand the toolbar.
+      controlPanel.Visibility = Visibility.Collapsed;
+      HideToolbarWindow();
+      Visibility = Visibility.Collapsed;
+      _stats = null;
+      _presentation.Clear();
+      damageContent.Visibility = Visibility.Collapsed;
+      tankContent.Visibility = Visibility.Collapsed;
+      ClearStats(damageContent.Children);
+      ClearStats(tankContent.Children);
     }
 
     private static void ClearStats(UIElementCollection children)
@@ -557,7 +584,7 @@ namespace EQLogParser
         if (shown.Count > statIndex)
         {
           var stat = shown[statIndex];
-          var barPercent = (statIndex == 0) ? 100.0 : stat.Total / (double)shown[0].Total * 100.0;
+          var barPercent = MeterDisplaySelection.Percentage(stat.Total, shown[0].Total);
 
           var isMe = MeterDisplaySelection.IsPlayerName(stat.Name, ConfigUtil.PlayerName);
 
@@ -595,7 +622,7 @@ namespace EQLogParser
             }
           }
 
-          var percent = (float)Math.Round((float)stat.Total / localStats.RaidStats.Total * 100, 1);
+          var percent = Math.Round(MeterDisplaySelection.Percentage(stat.Total, localStats.RaidStats.Total), 1);
           damageBar?.Update(name, className, $"{percent}%", StatsUtil.FormatTotals(stat.Total),
           StatsUtil.FormatTotals(stat.Dps, 1), stat.TotalSeconds.ToString(CultureInfo.InvariantCulture), barPercent, overrideColor);
 
@@ -651,7 +678,7 @@ namespace EQLogParser
       (damageContent.Children[^1] as DamageBar)?.Update("Example NPC", "", "", "500.2M", "490.5K", "456", 0);
     }
 
-    private void CloseClick(object sender, RoutedEventArgs e) => MainActions.CloseDamageOverlay(false);
+    private void CloseClick(object sender, RoutedEventArgs e) => MainActions.CloseDamageOverlay(false, this);
 
     private double GetOverlayHeight()
     {
@@ -941,7 +968,7 @@ namespace EQLogParser
 
       HideToolbarWindow();
       Hide();
-      MainActions.CloseDamageOverlay(true);
+      MainActions.CloseDamageOverlay(true, this);
     }
 
     private void CopyClick(object sender, RoutedEventArgs e)
@@ -972,13 +999,8 @@ namespace EQLogParser
     {
       _displayVersion++;
       _buildCancellation?.Cancel();
-      _stats = null;
       MeterLifecycle.Reset(DeriveEngine.Active?.SessionId ?? 0, (DateTime.Now - DateTime.MinValue).TotalSeconds);
-      ClearStats(damageContent.Children);
-      ClearStats(tankContent.Children);
-      controlPanel.Visibility = Visibility.Collapsed;
-      HideToolbarWindow();
-      Visibility = Visibility.Collapsed;
+      HideMeterPresentation();
       RequestMeterUpdate(true);
     }
 
@@ -990,6 +1012,8 @@ namespace EQLogParser
     private void WindowClosing(object sender, CancelEventArgs e)
     {
       _closed = true;
+      _presentation.Clear();
+      MainActions.DamageOverlayClosed(this);
       _buildCancellation?.Cancel();
       if (_buildCancellation is null) _calculation.Clear();
       if (_derivedFrom is not null) _derivedFrom.Derived -= OnDerived;
@@ -1031,7 +1055,7 @@ namespace EQLogParser
 
     private void ShowToolbarWindow()
     {
-      if (_closed || _preview || controlPanel.Visibility != Visibility.Visible)
+      if (_closed || _preview || !IsVisible || controlPanel.Visibility != Visibility.Visible)
       {
         return;
       }

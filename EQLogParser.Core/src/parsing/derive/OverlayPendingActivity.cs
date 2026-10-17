@@ -14,15 +14,22 @@ namespace EQLogParser
     private int _through = projectedCount;
     private long _stamp = long.MinValue;
     private double _latest = double.NegativeInfinity;
+    private MeterDamageFilter _filter;
+    private bool _hasFilter;
+
+    internal double Latest => Volatile.Read(ref _latest);
 
     internal void Update(DamageFactTable facts, EntityTimeline timeline, CancellationToken cancellation = default)
     {
       lock (_gate)
       {
         var stamp = timeline.StateStamp();
-        if (_stamp != stamp)
+        var filter = MeterDamageFilter.Current;
+        if (_stamp != stamp || !_hasFilter || _filter != filter)
         {
           _stamp = stamp;
+          _filter = filter;
+          _hasFilter = true;
           _through = _projectedCount;
           Volatile.Write(ref _latest, double.NegativeInfinity);
           _names.Clear();
@@ -36,7 +43,7 @@ namespace EQLogParser
           var fact = facts.At(_through);
           var attacker = facts.NameOf(fact.AtkIdx);
           var defender = facts.NameOf(fact.DefIdx);
-          if (!FightProjection.TryCombatSides(fact, timeline, attacker, defender, out _, out _)) continue;
+          if (!MeterActivityIndex.AcceptsPending(fact, timeline, attacker, defender, filter)) continue;
           Add(attacker, fact.TimeS);
           Add(defender, fact.TimeS);
           if (fact.TimeS > _latest) Volatile.Write(ref _latest, fact.TimeS);
@@ -51,19 +58,24 @@ namespace EQLogParser
       return latest <= now && now - latest <= seconds;
     }
 
-    internal bool Continues(DerivedFight row, double now)
+    internal bool Continues(DerivedFight row, double now) =>
+      double.IsFinite(ContinuedThrough(row, now));
+
+    internal double ContinuedThrough(DerivedFight row, double now) => ContinuedThrough(row.Name, row.LastTime, now);
+
+    internal double ContinuedThrough(string name, double last, double now)
     {
       lock (_gate)
       {
-        if (!_names.TryGetValue(row.Name, out var spans)) return false;
+        if (!_names.TryGetValue(name, out var spans)) return double.NegativeInfinity;
         foreach (var span in spans)
         {
           // Only a chain connected to THIS life may keep it visible. A post-gap same-name arrival is a new life.
-          if (span.Begin > row.LastTime + FightProjection.EngagementGapS) break;
-          if (span.End >= row.LastTime && span.End <= now && now - span.End <= FightProjection.EngagementGapS)
-            return true;
+          if (span.Begin > last + FightProjection.EngagementGapS) break;
+          if (span.End >= last && span.End <= now && now - span.End <= FightProjection.EngagementGapS)
+            return span.End;
         }
-        return false;
+        return double.NegativeInfinity;
       }
     }
 

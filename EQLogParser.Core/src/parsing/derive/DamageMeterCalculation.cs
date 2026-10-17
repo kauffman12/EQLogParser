@@ -29,6 +29,8 @@ internal sealed class DamageMeterCalculation
   private MeterDirectionTotals _damage = new(false);
   private MeterDirectionTotals _tank = new(true);
 
+  internal MeterActivityIndex Activity { get; } = new();
+
   internal DamageOverlayStats Update(MeterFactInput input, CancellationToken cancellation = default)
   {
     var trace = StatsBuildTrace.Begin("meter", "damage meter overlay", "incremental");
@@ -44,6 +46,7 @@ internal sealed class DamageMeterCalculation
 
   internal void Clear()
   {
+    Activity.Clear();
     _lives.Clear();
     _names.Clear();
     _index = null;

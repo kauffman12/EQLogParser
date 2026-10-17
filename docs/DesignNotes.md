@@ -7134,6 +7134,51 @@ exception guard, so a failing UI subscriber cannot make a successful derive look
 closing
 unsubscribes the pane without discarding the scalar lifecycle state.
 
+### Damage meter presentation expiry and ownership (issue #416)
+
+The report describes a toolbar without bars lingering after a mission, with a ten-second reset. Checking only DPS does
+not establish that Tank was inactive; the two panels share activity eligibility. The code nevertheless had independent
+failure paths worth fixing, without claiming which one the report exercised.
+
+`DamageOverlayScope.ExpiresAt` is a fixed deadline from accepted activity (or the final death's eight-second hold).
+`MeterPresentationState` publishes that scalar with capture/display revisions before counting. The existing dispatcher
+timer checks it even while `MeterRefreshGate` is occupied; a late result must pass the same freshness check before painting.
+A stalled worker can therefore lose its stale presentation instead of holding it indefinitely. If fresh combat cannot be
+verified while the worker is blocked, the display may hide until a new answer verifies it; this is not permission to paint
+through a blocked dispatcher or stop-the-world GC. No extra timer or arbitrary extension is added.
+
+`MeterActivityIndex` reads routed, bounded ordinal prefixes on the worker, outside the capture gate, and retains only
+per-life cursors, positive-damage eligibility and latest accepted log time. Outgoing activity obeys the same damage-type
+exclusions as the displayed damage calculation; incoming activity remains unfiltered, matching Tank accounting. Accepted
+avoidance outcomes can continue an encounter that has damage. Healing, casts, taunts and timed-mode death events do not
+renew that clock. Class selection is still a display filter, not a change in combat accounting, and genuine Tank activity
+can still keep a DPS-selected meter alive. Pending activity applies the same outgoing filter and revisits its suffix when
+filters change. A replacement projection can reuse scalar activity only after comparing both routed ordinal prefixes;
+matching counts alone is insufficient. This does not change the fight-list grouping or summary-board denominators.
+
+On Kill's activity scan takes a **superset**: active lives and every recent completed life, before exclusions decide
+which can display. Selecting active lives or only the latest death first let excluded-only damage suppress a valid
+completion. The regression kills A with included damage, then hits or kills B with excluded Bane damage: A keeps its
+original eight-second deadline, while included damage to B still replaces A immediately. Candidate selection works on
+a scalar lifecycle copy and never advances the actual reset boundary.
+
+`HideMeterPresentation` hides the toolbar and body before clearing bars. Failed painting invalidates its deadline and
+uses this cleanup path; the timer remains available for recovery. Zero-total percentage calculations return zero rather
+than forwarding NaN to the progress control. Both initial publication and DPS/Tank switches use the guarded paint path.
+
+`WindowInstanceSlot` makes close requests instance-bound. MainWindow closes synchronously when already on the dispatcher;
+foreign callers capture the target before queueing. Replacing a window retires its predecessor, and a stale close/Closed
+notification cannot close or clear the replacement. Gear, X, expiry and settings gestures name their own window. Configure
+still opens from an empty slot. This repairs the reset-position ordering that could otherwise close a newly created setup
+window while losing the previous instance.
+
+Headless regression coverage exercises a busy refresh gate with an expired deadline, late/revised results, partial-paint
+failure and recovery, queued-close replacement, direct-close notifications, filtered outgoing versus incoming activity,
+pending filter changes, avoidance, reset/backward clocks, future records and final-death grace. Actual WPF popup/render
+behavior remains a Windows release gate. Toolbar label sizing is covered separately under "Damage meter setup window".
+Linux validation after the branch-review fixes: **2,397 headless tests passed, six skipped**; full no-incremental solution build reported **zero**
+warning/error diagnostics, and the explicit WPF-test build succeeded. The WPF suite was not executed on Linux.
+
 ### Incremental damage meter: compact accounting, paired publication (2026-11)
 
 The live meter now uses `DamageMeterCalculation`, not two full summary builders per tick. `DerivedTotals.ForOverlay`
@@ -17536,7 +17581,10 @@ The decisions inside the writer, each of which has a test in `EQLogParser.Test/s
   before they reach an attribute, because one illegal character makes a whole part unparseable.
 
 Current scope: damage uses the selected fights' exact `FightFactIndex.CaptureOrdinals` membership (both directions,
-including hidden charm-pet rows), not the envelope between first and last selected fights. Casts and heals use the union
+including hidden charm-pet rows), not the envelope between first and last selected fights. Explicit damage membership
+is never recut by the auxiliary windows: a linked post-charm half can start after its visible encounter closed. A regression
+selects 900 pre-charm damage plus 300 linked post-charm damage and requires all 1,200, without widening the heal window.
+Casts and heals use the union
 of selected lifetimes, each widened by the five-second lead-in. Overlap is merged so auxiliary rows occur once. `Seconds`
 is the inclusive duration of the union without lead-in; relative `Time` remains one clock anchored at the first selected
 begin, with 1 at that second and -1 one second early. `Log Time` uses `yyyy-MM-ddTHH:mm:ss`, without inventing a time zone.
@@ -17546,7 +17594,13 @@ damage/heal prefix limits, timeline and class histories before writing. Each pas
 is queried at each row's finite log time through `CaptureExportLens`, with possessive/saved ownership fallbacks, not at
 positive infinity (the far endpoint of a half-open ownership interval is outside it). Class uses capture-time evidence
 with the saved class as fallback, not the Identity Table's saved-first presentation. No per-row registry or timeline lock
-is taken. Later capture growth, class edits or capture replacement cannot alter the frozen answers.
+is taken. Later capture growth, class edits or capture replacement cannot alter the frozen answers. Direction uses
+`FightProjection.SideAt`: charm puts an NPC on the player side but flips a Player/Pet/Mercenary onto the enemy side during
+that interval. The export must not treat every charm as friendly ownership.
+
+Workbook cleanup encloses worksheet finalization as well as package writing. An invalid XML character or a failed flush
+can throw while finishing a sheet; the writer, ZIP entry, archive and file still release their resources, including when
+the initial header fails. Failed exports cannot strand an exclusive file handle and block temporary-file deletion on Windows.
 
 Eight logical sheets: Player DPS, NPC DPS, Spells cast, **All heals**, Heals by you, Heals to you, Players, Event Info.
 All heals is authoritative and includes NPC/other-player healing once; the two local-player sheets are overlapping views,
@@ -17738,6 +17792,12 @@ set on **zero** across every capture in this repo's history. Parse-time, so the 
 all moved together. A paren sitting below the landed amount (the negative-tick print) can no longer post a negative into the
 overheal column: `StatsUtil.UpdateHealStats` guards it and `HealFact.Overheal` already clamped.
 
+A proc preamble is not part of the healer. The subject is sliced after the last real sentence boundary before applying
+ward ownership, passive/auxiliary handling or the spell-subject guard; `Rk.` never ends a sentence. Synthetic regression
+``Foob glows with holy light. Jazrakhan`s pet healed Foob ...`` must credit only ``Jazrakhan`s pet``, not the 43-character
+prefix the first fallback stored. Long preambles cannot trip the healer-length guard, and rank-bearing spell subjects
+remain actor-less even after a preamble.
+
 **Can a heal line say who is a player? Measured answer: barely, and never from the healer seat.** A name seen only healing
 claims nothing — R15 reads heal evidence only from casters whose OWN identity is raid-side at `Strong`, which is the right
 low weight now that mob names reach the pool (pinned by `ANameSeenOnlyAsAHealerClaimsNothingForItself`), and *being* healed
@@ -17794,7 +17854,10 @@ test could ever see the sentence, and the strength-8 seed was all that arrived.
 aux = the owner text, recognised by `ChatLineParser.TryPetLeaderOwner`, which strips the trailing period because a name never
 keeps it), and collected during the evidence stage. `R5-leader` decides after the frame ladder, direct claims, name ownership and
 merc table: Pet at **Certain** (100), the named master at **Medium** with a `PetOfPlayer` interval at Certain. Independent
-Player/Merc claims at that boundary refuse the sighting instead of being outvoted. Sightings, not guarded claims, are
+Player/Merc claims at **Medium or above** at that boundary refuse the sighting instead of being outvoted. Weak registry
+memory does not veto current evidence: with an NPC frame and a confession, a stale strength-8 Player seed must not change
+the cold Pet verdict into NPC. `PetLeaderEvidenceGuardTest` checks warm/cold agreement and preserves positive person guards.
+Sightings, not guarded claims, are
 carried across passes: late player/merc evidence retracts the pet interpretation on the next fresh timeline. The first
 owner is retroactive, and each subsequent confession starts a new half-open ownership interval at its log time. Certain because `Targeted (NPC)` cannot see a pet while the pet can name its owner;
 the master is Medium because, exactly as R5-owner says, the line proves the summon and the pair, not the person. A comma in the

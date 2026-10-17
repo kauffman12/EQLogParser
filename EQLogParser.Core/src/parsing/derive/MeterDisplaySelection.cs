@@ -21,6 +21,8 @@ namespace EQLogParser;
  */
 internal static class MeterDisplaySelection
 {
+  internal static double Percentage(long value, long total) => total > 0 ? value * 100.0 / total : 0;
+
   /*
    * Whether this stat row is the operator's own character. The meter highlights that bar with a different brush, and the
    * highlight and the slot must never disagree about WHO it is — which is why this one predicate serves both, instead of the

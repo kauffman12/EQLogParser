@@ -836,7 +836,7 @@ namespace EQLogParser
 
     // Select and materialize from ONE snapshot. The lifecycle retains only scalar reset state, never this capture's rows.
     internal DamageOverlayStats BuildOverlayStats(DamageOverlayLifecycle lifecycle, DamageMeterCalculation calculation,
-      int mode, double now, CancellationToken cancellation)
+      int mode, double now, CancellationToken cancellation, Action<double> publishExpiry = null)
     {
       while (!_disposed)
       {
@@ -845,11 +845,23 @@ namespace EQLogParser
         if (snapshot is null) return null;
         // The potentially large suffix scan is outside the ingest gate. Retry if a pass replaced its snapshot meanwhile.
         snapshot.PendingActivity.Update(snapshot.Facts, snapshot.Timeline, cancellation);
+        var candidates = _capture.DeriveQuiescent(() =>
+        {
+          cancellation.ThrowIfCancellationRequested();
+          if (_disposed || !ReferenceEquals(snapshot, Volatile.Read(ref _meterSnapshot))) return null;
+          var scope = lifecycle.SelectCandidates(SessionId, snapshot.AllFights, now, mode, snapshot.PendingActivity);
+          return snapshot.DamageIndex.CaptureMeterInput(scope.Rows, snapshot.Facts, scope.FromTime, now);
+        });
+        if (candidates is null) continue;
+        calculation.Activity.Update(candidates, cancellation);
         var input = _capture.DeriveQuiescent(() =>
         {
           cancellation.ThrowIfCancellationRequested();
           if (_disposed || !ReferenceEquals(snapshot, Volatile.Read(ref _meterSnapshot))) return null;
-          var scope = lifecycle.Select(SessionId, snapshot.AllFights, now, mode, snapshot.PendingActivity);
+          var scope = lifecycle.Select(SessionId, snapshot.AllFights, now, mode, snapshot.PendingActivity,
+            calculation.Activity.For);
+          // Publish before counting: a blocked build cannot hold its prior presentation past this deadline.
+          publishExpiry?.Invoke(scope.ExpiresAt);
           return snapshot.DamageIndex.CaptureMeterInput(scope.Rows, snapshot.Facts, scope.FromTime, now);
         });
         if (input is not null) return calculation.Update(input, cancellation);

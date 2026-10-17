@@ -671,9 +671,10 @@ namespace EQLogParser
     // guarded claims, so late person evidence retracts the earlier pet interpretation on the next fresh timeline.
     private static void ApplyPetLeaders(EntityTimeline timeline, ClassificationState state)
     {
+      // Weak registry memory cannot veto a sentence in this capture; positive person evidence still can.
       var candidates = state.PetLeaders.GroupBy(row => row.Name, StringComparer.OrdinalIgnoreCase)
-        .Where(rows => !timeline.HasIndependentIdentity(rows.Key, IdentityKind.Player, double.PositiveInfinity)
-          && !timeline.HasIndependentIdentity(rows.Key, IdentityKind.Merc, double.PositiveInfinity)).ToArray();
+        .Where(rows => !timeline.ClaimsOf(rows.Key).Any(claim =>
+          claim.Kind is IdentityKind.Player or IdentityKind.Merc && claim.Strength >= RuleStrength.Medium)).ToArray();
       foreach (var sightings in candidates)
       {
         var name = sightings.Key;

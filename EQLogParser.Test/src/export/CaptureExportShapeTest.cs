@@ -1,7 +1,6 @@
 using System.IO.Compression;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
-using EQLogParser;
 
 namespace EQLogParser;
 
@@ -427,6 +426,42 @@ public sealed class CaptureExportShapeTest : IDisposable
     Assert.AreEqual(0, summary.HealRows, "heals between disjoint selected fights are not selected");
     using var zip = ZipFile.OpenRead(Target("selection.xlsx"));
     Assert.AreEqual("2", Rows(zip, "Event Info").Skip(1).Select(CellTexts).Single(row => row[0] == "Seconds")[1]);
+  }
+
+  [TestMethod]
+  public void ExactMembershipKeepsTheHiddenPostCharmHalfOutsideAuxiliaryWindows()
+  {
+    var facts = new DamageFactTable(16);
+    var player = facts.InternName("Probeplayer");
+    var bear = facts.InternName("a cave bear");
+    facts.AddFact(new DamageFact(0, T0, player, bear, 900, LabelTypes.Melee, 0, -1, DamageFactTable.NoSubtype));
+    facts.AddFact(new DamageFact(1, T0 + 20, player, bear, 300, LabelTypes.Melee, 0, -1, DamageFactTable.NoSubtype));
+    var timeline = new EntityTimeline();
+    timeline.SetIdentity("Probeplayer", IdentityKind.Player, RuleStrength.Certain, "R1-target");
+    timeline.SetIdentity("a cave bear", IdentityKind.Npc, RuleStrength.Certain, "R1-target");
+    timeline.AddAffiliation(AffiliationKind.Friendly, "a cave bear", T0 + 5, T0 + 100,
+      RuleStrength.Certain, "R9-charm", "Probeplayer");
+    var index = new FightFactIndex(timeline);
+    var rows = FightProjection.Build(facts, timeline, index.OnFact);
+    var visible = CharmPetRows.Visible(rows);
+    Assert.HasCount(2, rows);
+    Assert.HasCount(1, visible);
+    var ordinals = index.CaptureOrdinals(CharmPetRows.WithHiddenPets(visible, rows));
+    CollectionAssert.AreEqual(new[] { 0, 1 }, ordinals);
+    var heals = new HealFactTable(facts);
+    heals.AddHeal(new HealFact(2, T0 + 20, player, player, 400, 0, LabelTypes.Heal, 0, -1, HealFact.NoSpell));
+    var summary = CaptureExport.Write(Target("charm.xlsx"), facts, heals, new CaptureExport.Options
+    {
+      DamageOrdinals = ordinals,
+      Windows = visible.Select(row => new CaptureExport.Span((long)row.BeginTime, (long)row.LastTime)).ToArray(),
+      Lens = CaptureExportLens.Create(timeline, facts.InternedNames)
+    });
+    Assert.AreEqual(1200, summary.Damage);
+    Assert.AreEqual(2, summary.PlayerRows);
+    Assert.AreEqual(0, summary.HealRows, "exact damage membership must not widen auxiliary healing windows");
+    using var zip = ZipFile.OpenRead(Target("charm.xlsx"));
+    Assert.AreEqual(1200, Rows(zip, "Player DPS").Skip(1).Select(CellTexts)
+      .Sum(row => long.Parse(row[9], System.Globalization.CultureInfo.InvariantCulture)));
   }
 
   [TestMethod]

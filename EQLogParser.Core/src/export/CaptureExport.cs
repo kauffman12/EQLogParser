@@ -363,9 +363,10 @@ internal static class CaptureExport
     Line("NPC DPS", "non-player-side damage, including Unknown and Spell identities; Kind disambiguates them");
   }
 
-  private static bool InTime(long time, Options options) =>
-    (options.FromTimeS == 0 || time >= options.FromTimeS) && (options.ToTimeS == 0 || time <= options.ToTimeS)
-    && (options.Windows is null || Contains(options.Windows, time));
+  // Explicit membership includes linked post-charm lives outside the visible selection's auxiliary windows.
+  private static bool InTime(long time, Options options) => options.DamageOrdinals is not null
+    || ((options.FromTimeS == 0 || time >= options.FromTimeS) && (options.ToTimeS == 0 || time <= options.ToTimeS)
+      && (options.Windows is null || Contains(options.Windows, time)));
 
   private static Span[] AuxiliarySpans(Window window, Options options) => Merge(
     (options.Windows ?? [new Span(window.BeginS, window.EndS)])

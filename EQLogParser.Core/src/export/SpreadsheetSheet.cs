@@ -148,20 +148,22 @@ internal sealed class SpreadsheetSheet
    */
   private void ClosePart()
   {
-    _writer.WriteEndElement();   // sheetData
-
-    if (_partRowIndex > 0 && _maxColumn > 0)
+    using (_stream)
+    using (_writer)
     {
-      _writer.WriteStartElement("autoFilter", SpreadsheetWorkbook.Main);
-      _writer.WriteAttributeString("ref", $"A1:{SpreadsheetWriter.ColumnLetter(_maxColumn)}{_partRowIndex}");
-      _writer.WriteEndElement();
-    }
+      _writer.WriteEndElement();   // sheetData
 
-    _writer.WriteEndElement();   // worksheet
-    _writer.WriteEndDocument();
-    _writer.Flush();
-    _writer.Dispose();
-    _stream.Dispose();
+      if (_partRowIndex > 0 && _maxColumn > 0)
+      {
+        _writer.WriteStartElement("autoFilter", SpreadsheetWorkbook.Main);
+        _writer.WriteAttributeString("ref", $"A1:{SpreadsheetWriter.ColumnLetter(_maxColumn)}{_partRowIndex}");
+        _writer.WriteEndElement();
+      }
+
+      _writer.WriteEndElement();   // worksheet
+      _writer.WriteEndDocument();
+      _writer.Flush();
+    }
   }
 
   internal void Finish()
