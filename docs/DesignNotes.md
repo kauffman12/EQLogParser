@@ -16738,7 +16738,14 @@ Table, spell counts/casts, trigger log, loot/hit/death/event logs, spell-damage/
 history grid (not its unfrozen trust grid). No additional matching patterns or column/style settings changed.
 `AnimationOptInMarkupTest` checks every literal frozen/footer-column grid declaration has its explicit setup call.
 `FrozenCellAnimationsTest` exercises the closed match, current/re-entered states, new containers, unload/reload, replacement
-templates and opt-in isolation with ordinary WPF templates; it builds on Linux but runs only on Windows. Real Syncfusion-grid
+templates and opt-in isolation with ordinary WPF templates; it builds on Linux but runs only on Windows. A Windows run
+reported failures in all four clock/lifecycle tests, including the unconfigured negative control never becoming Active.
+The original fixture had only disconnected controls, a dispatcher timer and manually raised Loaded/Unloaded events—not a
+presentation source. The clock tests now show a non-activating, taskbar-hidden Window, use real attachment/removal and
+template load/unload, and give the cells a nonzero height. The first state still begins before the window loads, while a
+second container is created after the host is already running. Every state transition checks GoToState's return value
+rather than turning a missing state into an opaque timeout. No production matcher, animation duration or expected outcome
+was relaxed. These fixture changes require a fresh Windows run; a Linux build is not that verification. Real Syncfusion-grid
 checks remain in ReleaseChecklist. The temporary runtime inspection used to verify the fix has been removed.
 
 ## Character-status GIFs start paused until effectively visible

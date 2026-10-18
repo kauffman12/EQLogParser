@@ -102,29 +102,33 @@ namespace EQLogParser.Wpf.Test
         FrozenCellAnimations.Configure(scope);
         FrozenCellAnimations.Configure(scope);
         var first = AddCell(scope);
-        var second = AddCell(scope);
+        using var host = new CellHost(scope);
         try
         {
           // VSM can enter the state before the template's Loaded event.
-          VisualStateManager.GoToState(first.Cell, "FrozenColumnCell", false);
-          RaiseLoaded(first.Border);
+          EnterState(first.Cell, "FrozenColumnCell");
+          host.Show();
           firstFilled = WaitForFill(first.Storyboard, first.Root);
           borderPreserved = first.Border.BorderThickness == new Thickness(0, 0, 1, 0);
 
-          VisualStateManager.GoToState(first.Cell, "NormalCell", false);
-          VisualStateManager.GoToState(first.Cell, "FrozenColumnCell", false);
+          EnterState(first.Cell, "NormalCell");
+          EnterState(first.Cell, "FrozenColumnCell");
           reentryFilled = WaitForFill(first.Storyboard, first.Root);
 
-          RaiseLoaded(second.Border);
-          VisualStateManager.GoToState(second.Cell, "FrozenColumnCell", false);
-          newCellFilled = WaitForFill(second.Storyboard, second.Root);
+          var second = AddCell(scope);
+          try
+          {
+            EnterState(second.Cell, "FrozenColumnCell");
+            newCellFilled = WaitForFill(second.Storyboard, second.Root);
+          }
+          finally
+          {
+            second.Storyboard.Remove(second.Root);
+          }
         }
         finally
         {
           first.Storyboard.Remove(first.Root);
-          second.Storyboard.Remove(second.Root);
-          RaiseUnloaded(first.Border);
-          RaiseUnloaded(second.Border);
         }
       });
       Assert.IsTrue(firstFilled);
@@ -145,23 +149,25 @@ namespace EQLogParser.Wpf.Test
         var scope = new StackPanel();
         FrozenCellAnimations.Configure(scope);
         var cell = AddCell(scope);
+        using var host = new CellHost(scope);
         try
         {
-          RaiseLoaded(cell.Border);
-          VisualStateManager.GoToState(cell.Cell, "FrozenColumnCell", false);
+          host.Show();
+          EnterState(cell.Cell, "FrozenColumnCell");
           initiallyFilled = WaitForFill(cell.Storyboard, cell.Root);
-          RaiseUnloaded(cell.Border);
-          VisualStateManager.GoToState(cell.Cell, "NormalCell", false);
-          VisualStateManager.GoToState(cell.Cell, "FrozenColumnCell", false);
+          scope.Children.Remove(cell.Cell);
+          PumpUntil(() => !cell.Border.IsLoaded);
+          if (cell.Border.IsLoaded) throw new InvalidOperationException("The fixture cell did not unload.");
+          EnterState(cell.Cell, "NormalCell");
+          EnterState(cell.Cell, "FrozenColumnCell");
           PumpUntil(() => cell.Storyboard.GetCurrentState(cell.Root) == ClockState.Active);
           detachedActive = cell.Storyboard.GetCurrentState(cell.Root) == ClockState.Active;
-          RaiseLoaded(cell.Border);
+          scope.Children.Add(cell.Cell);
           reloadedFilled = WaitForFill(cell.Storyboard, cell.Root);
         }
         finally
         {
           cell.Storyboard.Remove(cell.Root);
-          RaiseUnloaded(cell.Border);
         }
       });
       Assert.IsTrue(initiallyFilled);
@@ -178,21 +184,21 @@ namespace EQLogParser.Wpf.Test
         var scope = new StackPanel();
         FrozenCellAnimations.Configure(scope);
         var old = AddCell(scope);
-        RaiseLoaded(old.Border);
-        RaiseUnloaded(old.Border);
+        using var host = new CellHost(scope);
+        host.Show();
+        PumpUntil(() => old.Border.IsLoaded);
+        if (!old.Border.IsLoaded) throw new InvalidOperationException("The original template did not load.");
         old.Cell.Template = (ControlTemplate)XamlReader.Parse(CellTemplate);
         old.Cell.ApplyTemplate();
         var replacement = Parts(old.Cell);
         try
         {
-          RaiseLoaded(replacement.Border);
-          VisualStateManager.GoToState(replacement.Cell, "FrozenColumnCell", false);
+          EnterState(replacement.Cell, "FrozenColumnCell");
           replacementFilled = WaitForFill(replacement.Storyboard, replacement.Root);
         }
         finally
         {
           replacement.Storyboard.Remove(replacement.Root);
-          RaiseUnloaded(replacement.Border);
         }
       });
       Assert.IsTrue(replacementFilled);
@@ -204,18 +210,19 @@ namespace EQLogParser.Wpf.Test
       var stillActive = false;
       Sta.Run(() =>
       {
-        var cell = AddCell(new StackPanel());
+        var scope = new StackPanel();
+        var cell = AddCell(scope);
+        using var host = new CellHost(scope);
         try
         {
-          RaiseLoaded(cell.Border);
-          VisualStateManager.GoToState(cell.Cell, "FrozenColumnCell", false);
+          host.Show();
+          EnterState(cell.Cell, "FrozenColumnCell");
           PumpUntil(() => cell.Storyboard.GetCurrentState(cell.Root) == ClockState.Active);
           stillActive = cell.Storyboard.GetCurrentState(cell.Root) == ClockState.Active;
         }
         finally
         {
           cell.Storyboard.Remove(cell.Root);
-          RaiseUnloaded(cell.Border);
         }
       });
       Assert.IsTrue(stillActive);
@@ -237,7 +244,7 @@ namespace EQLogParser.Wpf.Test
 
     private static (Control Cell, FrameworkElement Root, Border Border, Storyboard Storyboard) AddCell(Panel scope)
     {
-      var cell = new Control { Template = (ControlTemplate)XamlReader.Parse(CellTemplate) };
+      var cell = new Control { Height = 20, Template = (ControlTemplate)XamlReader.Parse(CellTemplate) };
       scope.Children.Add(cell);
       cell.ApplyTemplate();
       return Parts(cell);
@@ -255,16 +262,37 @@ namespace EQLogParser.Wpf.Test
       return (cell, root, border, storyboard);
     }
 
-    private static void RaiseLoaded(Border border) =>
-      border.RaiseEvent(new RoutedEventArgs(FrameworkElement.LoadedEvent));
-
-    private static void RaiseUnloaded(Border border) =>
-      border.RaiseEvent(new RoutedEventArgs(FrameworkElement.UnloadedEvent));
+    private static void EnterState(Control cell, string state)
+    {
+      if (!VisualStateManager.GoToState(cell, state, false))
+      {
+        throw new InvalidOperationException($"The fixture could not enter {state}.");
+      }
+    }
 
     private static bool WaitForFill(Storyboard storyboard, FrameworkElement root)
     {
       PumpUntil(() => storyboard.GetCurrentState(root) == ClockState.Filling);
       return storyboard.GetCurrentState(root) == ClockState.Filling;
+    }
+
+    // A dispatcher alone is not a presentation source for animation timing; use real load/unload events too.
+    private sealed class CellHost(Panel scope) : IDisposable
+    {
+      private readonly Window _window = new()
+      {
+        Content = scope,
+        Width = 160,
+        Height = 100,
+        ShowActivated = false,
+        ShowInTaskbar = false,
+        WindowStyle = WindowStyle.None,
+        ResizeMode = ResizeMode.NoResize
+      };
+
+      public void Dispose() => _window.Close();
+
+      internal void Show() => _window.Show();
     }
 
     private static void PumpUntil(Func<bool> done)
