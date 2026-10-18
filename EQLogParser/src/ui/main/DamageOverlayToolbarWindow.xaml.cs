@@ -16,6 +16,7 @@ namespace EQLogParser
     public event EventHandler CloseRequested;
     public event EventHandler DpsRequested;
     public event EventHandler TankRequested;
+    internal event EventHandler ContentHeightChanged;
 
     public DamageOverlayToolbarWindow()
     {
@@ -28,6 +29,7 @@ namespace EQLogParser
       closeButton.Click += (_, _) => CloseRequested?.Invoke(this, EventArgs.Empty);
       dpsButton.Click += (_, _) => DpsRequested?.Invoke(this, EventArgs.Empty);
       tankButton.Click += (_, _) => TankRequested?.Invoke(this, EventArgs.Empty);
+      toolbarPanel.SizeChanged += (_, _) => ContentHeightChanged?.Invoke(this, EventArgs.Empty);
 
       SetShowingDps(true);
     }
@@ -89,6 +91,8 @@ namespace EQLogParser
       }
     }
 
+    internal double ContentHeight => toolbarPanel.ActualHeight + toolbarPanel.Margin.Top + toolbarPanel.Margin.Bottom;
+
     protected override void OnSourceInitialized(EventArgs e)
     {
       base.OnSourceInitialized(e);
@@ -106,7 +110,7 @@ namespace EQLogParser
                | (int)NativeMethods.ExtendedWindowStyles.WsExNoActive;
 
       NativeMethods.SetWindowLong(source.Handle, (int)NativeMethods.GetWindowLongFields.GwlExstyle, exStyle);
-      // Force a native resize to replace the minimum WPF cached before this hook was installed.
+      // Request a native resize after installing the hook; header spacing measures the panel independently.
       Height = MinHeight;
     }
   }

@@ -3119,11 +3119,19 @@ Increasing the header to fit that strip preserved the words but did not make a s
 The aligned version still looked too loose to the operator: roughly ten pixels above the header and twelve below,
 with about four requested on either side. A borderless WPF Window has another floor besides XAML MinHeight:
 `Window.GetWindowMinMax` takes the larger of MinHeight and Win32's cached minimum tracking height. Propagating that native
-floor through `ToolbarSizeChanged` can make both aligned strips tall again. Merely reducing their XAML heights is not enough.
-Only the toolbar installs `NativeMethods.ContentSizedHeightHook`: it clears the native minimum tracking **height**, leaving
-width, maximums and positioning untouched, and leaves the message unhandled so WPF caches the relaxed floor and still
-applies its own MinHeight. A native resize via Height in `OnSourceInitialized` refreshes the minimum cached during HWND
-creation; SizeToContent remains enabled, so actual content can still demand more space.
+floor through the companion Window's `SizeChanged` can make both aligned strips tall again. Merely reducing their XAML
+heights is not enough. The toolbar installs `NativeMethods.ContentSizedHeightHook` to clear native minimum tracking
+**height**, leaving width, maximums and positioning untouched and allowing WPF to process the message. It also requests a
+resize in `OnSourceInitialized`. Neither is a reliable measurement of the controls: the operator's subsequent white-backed
+screenshot (`local/meter2.png`, local evidence, not a tracked fixture) still showed a roughly row-sized blank strip below
+the aligned header. The layout must not depend on the HWND losing its native minimum.
+
+`DamageOverlayToolbarWindow.ContentHeight` now measures `toolbarPanel.ActualHeight` plus its top/bottom margins, not
+`Window.ActualHeight`. The panel is top-aligned, so spare native window height does not stretch that measurement.
+Its own `SizeChanged` raises `ContentHeightChanged`; `ToolbarContentHeightChanged` uses that content measurement for both
+the meter header minimum and the existing outer-height reserve. Native-window-only height changes cannot add a blank row.
+The native hook remains a window policy, not the source of header spacing. No negative margins or fixed screenshot-sized
+subtractions are used; real font/DPI-driven content growth still earns room.
 
 The Grid header's font-specific floor is now 16/18/20/22 DIPs for body fonts 10/12/14/16. `UpdateColumnSizes` owns that
 floor and passes it to the toolbar's `UpdateFontSize`; its column widths, right margins, class-icon sizes and existing
@@ -3140,15 +3148,15 @@ and missing payloads are left alone, and the hook never consumes the message. Th
 assertions. All six cases passed on Linux in a temporary net10.0 test project linking the production and test sources;
 the WPF assembly itself still requires Windows, and the HWND/layout behavior remains a Windows release check.
 
-The measured toolbar height still sets the meter header's minimum, so an unexpected larger measurement cannot clip its
+The measured toolbar **content** height sets the meter header's minimum, so genuinely larger controls cannot clip their
 labels or cover the first data row. That alone was incomplete: the operator reported the bottom target/totals row cut in
 half after the earlier size-to-content change. Raising a header's minimum inside a window with an unchanged saved height
 takes the extra space from the rows below it.
 
-`ToolbarSizeChanged` now reserves the excess in the **outer window too**. `MeterHeaderReserve` calculates
-`extra = max(0, measured toolbar height - baseline header height)` and changes the live window by `new extra - previous
+`ToolbarContentHeightChanged` reserves the excess in the **outer window too**. `MeterHeaderReserve` calculates
+`extra = max(0, measured toolbar content height - baseline header height)` and changes the live window by `new extra - previous
 extra`. The baseline is the font-specific `controlPanel.Height` already included in the saved geometry; for a fixed
-baseline, `window height - max(baseline, toolbar height)` stays unchanged. Repeated size/width notifications spend nothing,
+baseline, `window height - max(baseline, toolbar content height)` stays unchanged. Repeated size/width notifications spend nothing,
 and a smaller toolbar returns only the reserve it no longer needs. The ledger belongs to the window, not the session or
 settings file: hide/show retains it, reopening starts fresh, and `OverlayHeight` is never rewritten with this runtime
 addition. An automatic Height uses ActualHeight as its measured starting point. Preview/Save keep their existing canonical

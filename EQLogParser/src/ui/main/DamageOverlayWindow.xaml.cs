@@ -1038,7 +1038,8 @@ namespace EQLogParser
       }
 
       _toolbarWindow = new DamageOverlayToolbarWindow { Owner = this };
-      _toolbarWindow.SizeChanged += ToolbarSizeChanged;
+      _toolbarWindow.SizeChanged += WindowSizeChanged;
+      _toolbarWindow.ContentHeightChanged += ToolbarContentHeightChanged;
 
       _toolbarWindow.ConfigureRequested += (_, _) => ConfigureClick(null, null);
       _toolbarWindow.CopyRequested += (_, _) => CopyClick(null, null);
@@ -1051,13 +1052,16 @@ namespace EQLogParser
       _toolbarWindow.UpdateFontSize(_savedFontSize, controlPanel.Height);
     }
 
-    private void ToolbarSizeChanged(object sender, SizeChangedEventArgs e)
+    private void ToolbarContentHeightChanged(object sender, EventArgs e)
     {
-      if (_closed || _preview || !double.IsFinite(e.NewSize.Height) || e.NewSize.Height <= 0) return;
+      if (_closed || _preview || _toolbarWindow is null) return;
+      // Reserve the controls and their inset, not unused space imposed on the companion HWND by Windows.
+      var contentHeight = _toolbarWindow.ContentHeight;
+      if (!double.IsFinite(contentHeight) || contentHeight <= 0) return;
 
       var currentHeight = double.IsFinite(Height) ? Height : ActualHeight;
-      var adjusted = _toolbarHeaderReserve.Update(currentHeight, controlPanel.Height, e.NewSize.Height);
-      controlPanel.MinHeight = e.NewSize.Height;
+      var adjusted = _toolbarHeaderReserve.Update(currentHeight, controlPanel.Height, contentHeight);
+      controlPanel.MinHeight = contentHeight;
       // The header and the window grow together; the excess must not consume the last row or enter OverlayHeight.
       if (!adjusted.Equals(currentHeight)) Height = adjusted;
       ScheduleToolbarPosition();
