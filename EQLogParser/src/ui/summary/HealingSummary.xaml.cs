@@ -282,6 +282,7 @@ namespace EQLogParser
           string className = null;
           if (stats is PlayerStats playerStats)
           {
+            if (!HealingStatsBuilder.IsHealerListed(playerStats.OrigName)) return false;
             className = playerStats.ClassName;
           }
 

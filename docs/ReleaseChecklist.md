@@ -322,13 +322,14 @@ compact accounting, paired publication". These checks are not satisfied by a Lin
 The heal parser's credit rules moved at parse time, so the boards that read the heal stream changed on a real capture
 (`eqlog_Kizant_xegony-selected.txt`: 134,331 → **163,677** heal facts, 908,155,103 → **979,411,016** landed).
 
-- [ ] A pet's own tick appears under the pet's full name (``Jazrakhan`s pet``), **not** folded onto Jazrakhan. Expect
-      roughly 29k such rows in a capture of this size; the pet's name should behave like any other healer row (sortable,
-      expandable, its spell breakdown intact).
-- [ ] A ward heal shows under the player who dropped it (`Nymera\`s ward healed …` → row **Nymera**), while a pet row is
-      never folded — the two cases are different on purpose.
-- [ ] Mob healers key their own rows with their spaced names (`A killer moth`, `The gods`) and their healing is attributed
-      to that name; the Spell breakdown beside it shows the proc (`Divine Interstition Rk. III`).
+- [ ] **Healing Summary visibility:** Player, Mercenary and Unknown healers appear; Pet, NPC and Spell healers do not.
+      Change an Unknown healer to Pet, then take the verdict back: it disappears and returns on the next answer. Repeat
+      with Mercenary/Player and verify that class filtering still works independently.
+- [ ] A pet's own tick keeps the pet's full name (``Jazrakhan`s pet``), **not** Jazrakhan, in healing-received details,
+      the healing log and detailed export. Hiding its summary row must not remove its healing from those surfaces or totals.
+- [ ] A ward heal still shows under the player who dropped it (`Nymera\`s ward healed …` → row **Nymera**).
+- [ ] NPC healers keep their spaced names (`A killer moth`, `The gods`) and spell details in captured records, healing
+      received and exports, without appearing as healers in the summary.
 - [ ] **Over Heal is never a negative number** anywhere on the healing board, the hit log's OverTotal column, or the
       exported *Heals by you* / *Heals to you* sheets — including rows from the negative HOT print
       (`… over time for -146133 (47344) …`, which counts as 146,133 healed).

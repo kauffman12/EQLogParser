@@ -18005,6 +18005,15 @@ ward ownership, passive/auxiliary handling or the spell-subject guard; `Rk.` nev
 prefix the first fallback stored. Long preambles cannot trip the healer-length guard, and rank-bearing spell subjects
 remain actor-less even after a preamble.
 
+**Healing Summary visibility is separate from heal credit.** The summary's existing class filter also asks
+`HealingStatsBuilder.IsHealerListed`, which uses `IdentityLookup.KindAt`: Player, Merc and Unknown are visible;
+Pet, NPC and Spell are hidden. Operator verdicts therefore take precedence over capture verdicts and remembered kinds,
+without guessing from a name's spelling or letting old registry membership defeat an NPC verdict. This is display-only:
+summary totals, captured facts, healing-received details and detailed exports retain the same records. `master` had only
+the class display filter and a recipient-admission check in the builder, not a healer-kind filter; the old parser's
+refusal of many pet/multiword healer sentences had obscured that difference. `HealingSummaryVisibilityTest` checks all six
+classified kinds, manual changes/take-back and retention of healing received. The class dropdown remains an independent filter.
+
 **Can a heal line say who is a player? Measured answer: barely, and never from the healer seat.** A name seen only healing
 claims nothing — R15 reads heal evidence only from casters whose OWN identity is raid-side at `Strong`, which is the right
 low weight now that mob names reach the pool (pinned by `ANameSeenOnlyAsAHealerClaimsNothingForItself`), and *being* healed

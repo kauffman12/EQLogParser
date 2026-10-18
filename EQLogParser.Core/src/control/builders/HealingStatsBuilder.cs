@@ -69,6 +69,10 @@ namespace EQLogParser
       }
     };
 
+    // Visibility only: retained heals still feed totals, healing-received details and exports.
+    internal static bool IsHealerListed(string name) =>
+      IdentityLookup.KindAt(name) is IdentityKind.Player or IdentityKind.Merc or IdentityKind.Unknown;
+
     internal StatsGenerationEvent GetLastStats()
     {
       lock (_lock)
