@@ -59,12 +59,9 @@ internal static class RegistrySeed
    * which nothing in this file used to write. Same argument for `Bigboned`/Goruuk, `Triumph`/Jazrakhan and the
    * other 95 pairs the file holds while the log's own possessive lines prove only 18 of them.
    *
-   * Strength: RuleStrength.Strong, NOT a seed strength. The seed tiers (8/10) exist so that a run's rules can
-   * outvote an old registry entry, and that stays true for IDENTITY - who a name IS. Whether a named summon
-   * belongs to a named raider is not something any rule contradicts: the log either prints the owner (`Sancus`s
-   * pet` writes the same interval at Certain, which outranks this) or prints nothing at all. Strong also keeps
-   * the pair under R9-charm's Certain, so a window - which is time-scoped evidence about this very run - still
-   * wins where both speak.
+   * Remembered ownership uses Strong, below captured owner evidence and charm windows. An explicit operator
+   * pair is replayed separately by IdentityOverrideStore at Certain strength; this seed never upgrades memory
+   * into a manual decision. docs/DesignNotes.md → "A summon's own sentence about its master".
    *
    * The pet claim itself is unconditional; the OWNER name is only registered as a raider when it is shaped like
    * one. A mapping whose owner text carries a comma (`Akini, Xanathan`s Warder` = one summon, two masters) still

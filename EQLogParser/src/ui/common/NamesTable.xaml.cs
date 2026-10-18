@@ -712,30 +712,18 @@ namespace EQLogParser
 
       if (!row.OwnerEditable) { Refuse(DoorOwner, $"{row.Name} no longer reads Pet, so it has no Owner pencil"); return; }
 
-      // The click that opened the popup, and a pick of what the cell already says: both write nothing.
-      if (string.Equals(owner, row.Owner, StringComparison.OrdinalIgnoreCase))
-      {
-        RefuseDebug(DoorOwner, $"{row.Name} already belongs to {owner}");
-        return;
-      }
-
-      /*
-       * Setting an owner goes through the SAME seam the summary panes' `Assign … as Pet of` uses — `PetAssignment.Assign` — rather than
-       * poking `PlayerRegistry.AddPetToPlayer`: that call refuses to reassign a name the parser verified as a player (which is exactly what
-       * an operator contradicts), leaves the KIND alone, and logs nothing. The seam forgets every earlier claim, asserts Pet, writes the
-       * pair, records the owner as roster, refuses a pair already in effect by asking BOTH stores case-insensitively, and asks for the pass
-       * that folds the summon's facts under its person (`+Pets`).
-       *
-       * The list no longer offers a take-back entry (2026-11: it is the take-back click now, and wider on purpose), but a value that names
-       * nobody must still never be written AS an owner — a restored row or a stale pick feeding this handler is exactly the shape that guard
-       * was bought for. Taking an owner back is a forget (live map AND ledger lane, Pet verdict standing); only a person is an assign.
-       */
+      // The assignment seam compares explicit claims, not census text: an inferred owner can be accepted as manual.
+      // Programmatic preselection is suppressed by the cell editor; a clear marker never names an owner.
       if (PetOwnership.IsClear(owner))
       {
         PlayerRegistry.Instance.ForgetPetMapping(row.Name);
         Log.Info($"identity cell: owner of {row.Name} taken back (the Pet verdict stands)");
       }
-      else PetAssignment.Assign(row.Name, owner);
+      else if (!PetAssignment.Assign(row.Name, owner))
+      {
+        RefuseDebug(DoorOwner, $"{row.Name} already belongs to {owner}");
+        return;
+      }
 
       Reconcile();
     }

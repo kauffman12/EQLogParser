@@ -34,6 +34,7 @@ public class PetAssignmentTest
         DamageLineParser.ResetProcessState();
         RecordsStore.Instance.Clear(false);
         PlayerRegistry.Instance.Clear();
+        IdentityOverrideStore.Instance.Init(string.Empty);
 
         _originalReroute = PetAssignment.Reroute;
         _passes = 0;
@@ -47,6 +48,7 @@ public class PetAssignmentTest
         DamageLineParser.ResetProcessState();
         RecordsStore.Instance.Clear(false);
         PlayerRegistry.Instance.Clear();
+        IdentityOverrideStore.Instance.Init(string.Empty);
     }
 
     [TestMethod]
@@ -147,6 +149,7 @@ public class PetAssignmentTest
         var last = facts.Facts.Length > 0 ? facts.Facts[^1].TimeS : 0;
         RegistrySeed.Apply(timeline, facts, first, last);
         ClassificationRules.Apply(facts, timeline, run.HealFacts);
+        IdentityOverrideStore.Instance.Apply(timeline);
 
         var index = new FightFactIndex(timeline);
         var rows = FightProjection.Build(facts, timeline, index.OnFact);

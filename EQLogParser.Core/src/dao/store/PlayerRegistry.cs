@@ -1,9 +1,9 @@
+using log4net;
 using System.Collections.Concurrent;
 using System.Collections.Frozen;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Reflection;
-using log4net;
 
 /*
  * Annotations only, no null-flow analysis (the project builds with Nullable=disable): TryReadRosterLine answers with an
@@ -1032,10 +1032,8 @@ namespace EQLogParser
     private void SaveTimerTick(object state) => Save();
 
     /*
-     * Take the owner off one name and nothing else: "I do not know whose summon this is" is a different act from "this is not a pet"
-     * (which is what `Reset` on the Type column says) and from "stop remembering this name at all" (ForgetName). The live pair and
-     * the ledger's Owner column both go; `_verifiedPets` stays, because the name was seen fighting as a summon this session whatever its
-     * owner turns out to be. No event fires — ownership folds off the line's own possessive word, so no board subscribes to this store.
+     * Withdraw the live, remembered and explicit manual owner, keeping the Pet verdict. This narrow verb does not
+     * erase captured ownership evidence; ClassificationCommands.Recalculate is the UI's full take-back door.
      */
     internal void ForgetPetMapping(string name)
     {
@@ -1045,6 +1043,7 @@ namespace EQLogParser
       {
         TryRemovePetMappingNoLock(name);
       }
+      IdentityOverrideStore.Instance.ForgetOwner(name);
     }
 
     private bool TryRemovePetMappingNoLock(string name)
@@ -1078,6 +1077,9 @@ namespace EQLogParser
     {
       if (string.IsNullOrEmpty(pet) || string.IsNullOrEmpty(player))
         return false;
+
+      // Captured chat and ledger imports may refresh a pair, but only another operator can replace a manual owner.
+      if (IdentityOverrideStore.Instance.TryGetOwner(pet, out var manualOwner)) player = manualOwner;
 
       if ((!_petToPlayer.TryGetValue(pet, out var value) || value != player) && !IsVerifiedPlayer(pet))
       {

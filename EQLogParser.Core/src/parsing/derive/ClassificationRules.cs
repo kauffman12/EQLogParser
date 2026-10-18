@@ -86,6 +86,7 @@ namespace EQLogParser
      */
     internal const int TargetedNpcStrength = 65;
     internal const int MercDatabaseStrength = 80;
+    internal const int PetLeaderStrength = 80;
 
     // Channels whose speech proves the sender is on your side (R3). Say/tell excluded: hostile
     // mobs speak those, and a pet's "X tells you" reports would be misattribution bait. In these
@@ -683,12 +684,12 @@ namespace EQLogParser
         {
           var owner = ordered[i].Owner;
           var source = string.IsNullOrEmpty(owner) ? "R5-leader" : $"R5-leader:{owner}";
-          timeline.SetIdentity(name, IdentityKind.Pet, RuleStrength.Certain, source);
+          timeline.SetIdentity(name, IdentityKind.Pet, PetLeaderStrength, source);
           if (string.IsNullOrWhiteSpace(owner) || owner.Contains(',', StringComparison.Ordinal)) continue;
           timeline.SetIdentity(owner, IdentityKind.Player, RuleStrength.Medium, "R5-leader");
           var from = i == 0 ? double.NegativeInfinity : ordered[i].Time;
           var to = i + 1 == ordered.Length ? double.PositiveInfinity : ordered[i + 1].Time;
-          timeline.AddAffiliation(AffiliationKind.PetOfPlayer, name, from, to, RuleStrength.Certain, source, owner);
+          timeline.AddAffiliation(AffiliationKind.PetOfPlayer, name, from, to, PetLeaderStrength, source, owner);
         }
       }
     }

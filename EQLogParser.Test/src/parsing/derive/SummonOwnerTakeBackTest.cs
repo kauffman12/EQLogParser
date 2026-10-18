@@ -29,6 +29,7 @@ public sealed class SummonOwnerTakeBackTest
   public void Setup()
   {
     PlayerRegistry.Instance.Clear();
+    IdentityOverrideStore.Instance.Init(string.Empty);
     _server = "takeback-" + Guid.NewGuid().ToString("N");
     IdentityPriorStore.Instance.Init(_server);
   }
@@ -38,6 +39,7 @@ public sealed class SummonOwnerTakeBackTest
   {
     IdentityPriorStore.Instance.Init("takeback-cleanup-" + Guid.NewGuid().ToString("N"));
     PlayerRegistry.Instance.Clear();
+    IdentityOverrideStore.Instance.Init(string.Empty);
   }
 
   /// <summary>The answer the Owner cell prints: the live map, which is what the dropdown preselects from too.</summary>
@@ -72,8 +74,8 @@ public sealed class SummonOwnerTakeBackTest
   /*
    * The take-back is about the PAIR, so everything else about the name survives it: the Pet verdict (the row must stay off the enemy
    * column and off a person's line), the Owner pencil, and the ability to name an owner again — including the same one, because nothing
-   * about the pair is in effect any more. That last part is what `PetAssignment`'s "already in effect" refusal must not mistake for a
-   * request to re-do: it asks both stores, and a take-back has to have emptied both for the refusal to be honest.
+   * about the pair is in effect any more. The explicit manual owner must leave with the live pair, so accepting
+   * the same owner again is a fresh decision rather than a no-op.
    */
   [TestMethod]
   public void LosingAnOwnerLeavesAPetThatCanBeOwnedAgain()

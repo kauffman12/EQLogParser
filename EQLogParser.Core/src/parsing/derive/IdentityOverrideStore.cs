@@ -34,7 +34,9 @@ namespace EQLogParser
     public static IdentityOverrideStore Instance { get; } = new();
 
     private readonly object _gate = new();
-    private readonly Dictionary<string, IdentityKind> _byName = new(StringComparer.OrdinalIgnoreCase);
+    private readonly record struct Verdict(IdentityKind Kind, string Owner);
+
+    private readonly Dictionary<string, Verdict> _byName = new(StringComparer.OrdinalIgnoreCase);
     private string _serverName = string.Empty;
 
     /// <summary>Loads the file for the current ConfigUtil.ServerName (MainWindow calls this where the
@@ -43,14 +45,23 @@ namespace EQLogParser
 
     public void Init(string serverName)
     {
-      var loaded = new Dictionary<string, IdentityKind>(StringComparer.OrdinalIgnoreCase);
+      var loaded = new Dictionary<string, Verdict>(StringComparer.OrdinalIgnoreCase);
       _serverName = serverName ?? string.Empty;
 
       // A server name is part of the path, so without one there is nothing to read: stay empty rather than
       // guessing at a folder. The in-memory behaviour below still works for a session.
       if (!string.IsNullOrEmpty(_serverName))
+      {
         foreach (var (name, value) in ConfigUtil.ReadIdentityOverrides(_serverName))
-          if (!string.IsNullOrEmpty(name) && Enum.TryParse<IdentityKind>(value, out var kind)) loaded[name] = kind;
+        {
+          // Kind[|Owner]: legacy kind-only rows carry no explicit ownership decision.
+          var parts = value.Split('|');
+          if (string.IsNullOrEmpty(name) || parts.Length is < 1 or > 2
+            || !Enum.TryParse<IdentityKind>(parts[0], out var kind)) continue;
+          var owner = kind == IdentityKind.Pet && parts.Length == 2 ? parts[1] : null;
+          loaded[name] = new Verdict(kind, KnownOwner(owner));
+        }
+      }
 
       lock (_gate)
       {
@@ -67,7 +78,25 @@ namespace EQLogParser
     public bool TryGet(string name, out IdentityKind kind)
     {
       if (string.IsNullOrEmpty(name)) { kind = default; return false; }
-      lock (_gate) return _byName.TryGetValue(name, out kind);
+      lock (_gate)
+      {
+        var found = _byName.TryGetValue(name, out var verdict);
+        kind = verdict.Kind;
+        return found;
+      }
+    }
+
+    /// <summary>The owner's explicit manual claim, never an inferred or remembered pair.</summary>
+    public bool TryGetOwner(string name, out string owner)
+    {
+      owner = null;
+      if (string.IsNullOrEmpty(name)) return false;
+      lock (_gate)
+      {
+        if (!_byName.TryGetValue(name, out var verdict) || verdict.Owner is null) return false;
+        owner = verdict.Owner;
+        return true;
+      }
     }
 
     /// <summary>Snapshot for display/tooltips, sorted by name.</summary>
@@ -75,22 +104,49 @@ namespace EQLogParser
     {
       lock (_gate)
       {
-        var list = new List<KeyValuePair<string, IdentityKind>>(_byName);
+        var list = new List<KeyValuePair<string, IdentityKind>>(_byName.Count);
+        foreach (var (name, verdict) in _byName) list.Add(new(name, verdict.Kind));
         list.Sort(static (a, b) => string.CompareOrdinal(a.Key, b.Key));
         return list;
       }
     }
 
-    public void Set(string name, IdentityKind kind) => Apply([name], kind);
+    public void Set(string name, IdentityKind kind, string owner = null) => Apply([name], kind, owner);
 
     public void Remove(string name) => Apply([name], null);
+
+    /// <summary>Withdraw explicit ownership without withdrawing the kind verdict.</summary>
+    public void ForgetOwner(string name)
+    {
+      lock (_gate)
+      {
+        if (string.IsNullOrEmpty(name) || !_byName.TryGetValue(name, out var verdict)
+          || verdict.Owner is null) return;
+        _byName[name] = verdict with { Owner = null };
+      }
+      Save();
+    }
+
+    // Manual kind outranks all rules. Explicit ownership is Certain; later-starting charm windows still win ties.
+    public void Apply(EntityTimeline timeline)
+    {
+      List<KeyValuePair<string, Verdict>> snapshot;
+      lock (_gate) snapshot = new(_byName);
+      foreach (var (name, verdict) in snapshot)
+      {
+        ClassificationRules.ApplyManualOverride(timeline, name, verdict.Kind);
+        if (verdict.Owner is not null)
+          timeline.AddAffiliation(AffiliationKind.PetOfPlayer, name, double.NegativeInfinity,
+            double.PositiveInfinity, RuleStrength.Certain, "R10-manual", verdict.Owner);
+      }
+    }
 
     /*
      * Set/Remove's shared write: memory first, then ONE file rewrite. No door offers a multi-name verdict any more (the one-row law in
      * IdentityVerdictMenu refuses a ctrl-clicked block, because a verdict re-routes sides, rows and +Pets folding with no undo), so this is
      * not an API — making it private is what keeps someone from wiring the refused gesture back up.
      */
-    private void Apply(IReadOnlyCollection<string> names, IdentityKind? kind)
+    private void Apply(IReadOnlyCollection<string> names, IdentityKind? kind, string owner = null)
     {
       if (names is not { Count: > 0 }) return;
 
@@ -100,7 +156,7 @@ namespace EQLogParser
         foreach (var name in names)
         {
           if (string.IsNullOrEmpty(name)) continue;
-          if (kind is { } k) _byName[name] = k;
+          if (kind is { } k) _byName[name] = new Verdict(k, k == IdentityKind.Pet ? KnownOwner(owner) : null);
           else if (_byName.Remove(name)) changed = true;
           else continue;
           changed = true;
@@ -110,16 +166,8 @@ namespace EQLogParser
       if (changed) Save();
     }
 
-    // Replays every saved verdict into a freshly built timeline. Manual strength means order does not
-    // matter - nothing in ClassificationRules or RegistrySeed can outvote it - but this runs last anyway so a
-    // reader sees the override as the final word on the name.
-    public void Apply(EntityTimeline timeline)
-    {
-      List<KeyValuePair<string, IdentityKind>> snapshot;
-      lock (_gate) snapshot = new List<KeyValuePair<string, IdentityKind>>(_byName);
-      foreach (var (name, kind) in snapshot)
-        ClassificationRules.ApplyManualOverride(timeline, name, kind);
-    }
+    private static string KnownOwner(string owner) =>
+      string.IsNullOrWhiteSpace(owner) || Labels.IsUnassignedOwner(owner) ? null : owner;
 
     private void Save()
     {
@@ -128,7 +176,8 @@ namespace EQLogParser
       lock (_gate)
       {
         lines = new List<KeyValuePair<string, string>>(_byName.Count);
-        foreach (var (name, kind) in _byName) lines.Add(new KeyValuePair<string, string>(name, kind.ToString()));
+        foreach (var (name, verdict) in _byName)
+          lines.Add(new(name, verdict.Owner is null ? verdict.Kind.ToString() : $"{verdict.Kind}|{verdict.Owner}"));
       }
       ConfigUtil.SaveIdentityOverrides(lines, _serverName);
     }

@@ -44,14 +44,15 @@ namespace EQLogParser
       if (string.IsNullOrWhiteSpace(name)) return false;
       var n = name!;
 
+      IdentityOverrideStore.Instance.TryGetOwner(n, out var existingOwner);
       if (IdentityOverrideStore.Instance.TryGet(n, out var existing) && existing == kind
-          && (kind != IdentityKind.Pet || string.Equals(IdentityLookup.OwnerOf(n), petOf, StringComparison.OrdinalIgnoreCase)))
+          && (kind != IdentityKind.Pet || string.Equals(existingOwner, petOf, StringComparison.OrdinalIgnoreCase)))
         return false;
 
       Forget(n);
 
       if (kind == IdentityKind.Unknown) IdentityOverrideStore.Instance.Remove(n);
-      else IdentityOverrideStore.Instance.Set(n, kind);
+      else IdentityOverrideStore.Instance.Set(n, kind, petOf);
 
       // The owner is the operator's claim too, and it lands on the pair — never invented: no petOf means "a pet of nobody I know".
       if (kind == IdentityKind.Pet && !string.IsNullOrWhiteSpace(petOf)) PlayerRegistry.Instance.AddPetToPlayer(n, petOf!);

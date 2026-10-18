@@ -4,7 +4,7 @@ namespace EQLogParser.Tests.Derive;
  * R5-leader: ``Mgsk says, 'My leader is Xxuro.'`` — a summon naming its own master.
  *
  * The law this holds: the sentence is captured as a fact (EvPetLeader, written by CombatCapture on ANY host, not only by
- * the WPF ChatDB) and claimed at Certain with R24's guard, so it outranks `Targeted (NPC)` — which the client prints for
+ * the WPF ChatDB) and claimed at 80 with R24's guard, so it outranks `Targeted (NPC)` — which the client prints for
  * every mercenary and pet — while a name this capture saw as a person keeps being one. Before the rule existed, the pair
  * reached classification only as a strength-8 RegistrySeed seed: measured, `Useless` read Npc with this line in the log and
  * `Mgsk` read Unplaced across 726 group heal lines while naming Xxuro.
@@ -114,7 +114,9 @@ public sealed class PetLeaderConfessionTest
                             ("Useless", EvidenceFact.EvTargetedNpc, null));
 
     Assert.AreEqual(IdentityKind.Pet, timeline.IdentityAt("Useless", double.PositiveInfinity, out var strength, out _));
-    Assert.AreEqual(RuleStrength.Certain, strength);
+    Assert.AreEqual(80, strength);
+    Assert.IsTrue(strength < RuleStrength.Certain);
+    Assert.IsTrue(strength < RuleStrength.Manual);
   }
 
   // …and its guard, R24's law unchanged: a person is not a summon.
@@ -209,8 +211,8 @@ public sealed class PetLeaderConfessionTest
     CollectionAssert.AreEqual(ladder.OrderBy(x => x).ToList(), ladder.ToList(),
                               "the frame sits between behaviour and the bot table");
 
-    // The ordering that matters is asserted as behaviour, not as arithmetic: TheConfessionOutranksAnNpcFrame (Certain beats the
-    // frame) and TargetFrameStrengthTest (the frame still beats a Strong behaviour claim).
+    // The ordering that matters is asserted as behaviour: TheConfessionOutranksAnNpcFrame and TargetFrameStrengthTest
+    // (the frame still beats a Strong behaviour claim).
   }
 
   // ---- helpers ----

@@ -225,8 +225,8 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
   `HasIndependentIdentity` reads EVERY claim rather than the winner, which is why R6 must not restate an NPC sentence under
   a Merc verdict. The ledger refuses `R27-` (`RememberedRules`): a shipped table restates itself every start. See
   docs/DesignNotes.md → "The bot table in `data/mercs.txt`".
-- **A summon that names its master is Pet at Certain**: ``X says, 'My leader is Y.'`` is captured on the Core ingest path
-  (`EvPetLeader`) and decided by `R5-leader` — master corroborated at Medium, pair interval at Certain, comma-guard on the owner
+- **A summon that names its master is Pet at `PetLeaderStrength`**: ``X says, 'My leader is Y.'`` is captured on the Core ingest path
+  (`EvPetLeader`) and decided by `R5-leader` — master corroborated at Medium, pair interval at `PetLeaderStrength`, comma-guard on the owner
   text, and R24's law that a person is not a summon. Sightings are collected, then evaluated after direct evidence, frames
   and the merc table; guarded claims are recomputed on each fresh timeline, never replayed unconditionally. Ownership
   follows successive confessions in log time. `ChatDB` still maintains the archive and registry pet map; its registry
@@ -250,7 +250,9 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
   **verb** (forget the saved class; the cell returns to what this log says), and `SetDefaultPlayerClass` answers whether the word was accepted so a
   refusal spends no derive pass. **The class door prints nothing on success** (operator: "i want the log quiet again") — the row shows the word, so a
   session does not need a line to prove a click landed; refusals stay Debug. There is **no** "assert Unknown" entry in any dropdown and no permanent ban mechanism;
-  reverting restores the rules' own answer. Ownership writes go through `PetAssignment.Assign` (and ask for a full pass), never into a file.
+  reverting restores the rules' own answer. Ownership writes go through `PetAssignment.Assign` (and ask for a full pass), never into a file. Explicit owners live with the manual
+  verdict and replay as ownership intervals at Certain, above leader evidence; automatic registry updates cannot replace them.
+  Charm windows retain their temporary ownership and side flips. Remembered pairs remain weaker.
   **A take-back keeps its row** (2026-11): `Recalculate` notes the name in `TakenBackNames` and `ClassificationReport.Build` lists it as its
   LAST source — `Kind = Unknown`, `Row.Reason = TakenBackNames.Word` (cell *Taken Back*, hover *Claim Taken Back*) — because a verb whose
   result is that its subject vanishes out of the window the click happened in reads as a delete. Display state only: it claims nothing, asks

@@ -14982,7 +14982,7 @@ at it, and the click did nothing at all. Measured on a live capture before the f
 **The door now** (`ClassificationCommands.ApplyVerdict(name, kind, petOf)`): forget the ledger row + all six registry claims,
 then write the override (and, for a pet with an owner named, the pair). Forgetting first is load-bearing twice over: it removes
 the answers that would otherwise be read underneath, and it removes the verified-player entry so `AddPetToPlayer` accepts the
-pair. Order asserted by behaviour, not by review. The override itself is Certain and applied after the rule book every pass, so
+pair. Order asserted by behaviour, not by review. The override itself uses `RuleStrength.Manual` and is applied after the rule book every pass, so
 it outranks what the rules conclude *and* what they learn afterwards — "my rule would override" is a strength fact, and
 `OperatorVerdictForgetsTest.TheManualWordOutranksKnowledgeLearnedAfterIt` pins it by re-learning the name after the verdict.
 
@@ -18060,13 +18060,13 @@ test could ever see the sentence, and the strength-8 seed was all that arrived.
 **The law now.** The sentence is *captured* on the Core ingest path (`CombatCapture.HandleChat` → `EvidenceFact.EvPetLeader`,
 aux = the owner text, recognised by `ChatLineParser.TryPetLeaderOwner`, which strips chat delimiters and sentence punctuation
 because neither belongs to a name), and collected during the evidence stage. `R5-leader` decides after the frame ladder, direct claims, name ownership and
-merc table: Pet at **Certain** (100), the named master at **Medium** with a `PetOfPlayer` interval at Certain. Independent
+merc table: Pet at **`PetLeaderStrength` (80)**, the named master at **Medium** with a `PetOfPlayer` interval at 80. Independent
 Player/Merc claims at **Medium or above** at that boundary refuse the sighting instead of being outvoted. Weak registry
 memory does not veto current evidence: with an NPC frame and a confession, a stale strength-8 Player seed must not change
 the cold Pet verdict into NPC. `PetLeaderEvidenceGuardTest` checks warm/cold agreement and preserves positive person guards.
 Sightings, not guarded claims, are
 carried across passes: late player/merc evidence retracts the pet interpretation on the next fresh timeline. The first
-owner is retroactive, and each subsequent confession starts a new half-open ownership interval at its log time. Certain because `Targeted (NPC)` cannot see a pet while the pet can name its owner;
+owner is retroactive, and each subsequent confession starts a new half-open ownership interval at its log time. The leader's 80 outranks the NPC frame's 65, but remains below Certain line proof (100) and manual decisions (1000);
 the master is Medium because, exactly as R5-owner says, the line proves the summon and the pair, not the person. A comma in the
 owner text is one summon with two masters (`Akini, Xanathan`s Warder`): the pet claim holds, no raider is invented — same guard
 `RegistrySeed.ApplyPetMappings` applies. `ChatDB` keeps the chat archive and still writes `AddVerifiedPlayer` / `AddPetToPlayer`
@@ -18091,15 +18091,37 @@ What the two captures produce afterwards, same cold-registry run, rules applied:
 | Incogitable (`eqlog_Incogitable_xegony.txt`) | 18 | 9 | `Useless`→Incogitable, `Gonekn`→Drakyne, `Kabartik`→Bovon, `Labeker`→Arkona, `Lafayette`→Kymidei, `Stalebread`→Hardtack | `Puksuu`→Sancusx, `Fred`→Wanabe, `Hazy`→Hazyfyre (all three already Pet at Certain via `R24-petslot`) |
 
 The last column is the second half of the win and was not the one asked for: R24 can say *"this name is a pet"* from a
-pet-slot spell, but it has no owner to name, so those three rows carried no pair. The confession supplies it, and both routes
-say Pet at Certain. With the delayed leader stage the winning source word can be `R5-leader`; the independent pet-slot
-claim remains in the claim list, and the ownership interval comes from the sentence. A name this capture saw as a Player or Mercenary is refused the sighting and was
+pet-slot spell, but it has no owner to name, so those three rows carried no pair. The confession supplies it; R24's Certain
+identity remains stronger than the leader's 80, while the ownership interval comes from the sentence. A name this capture saw as a Player or Mercenary is refused the sighting and was
 not observed among these nine.
 
 `IdentityVocabulary` gains one word (`Named Its Master`, hover `Named <owner> Its Leader`). Tests: `PetLeaderConfessionTest`
-(recogniser, the capture writing one fact named for the summoner-side speaker, Certain-over-frame, the player guard, the comma
+(recogniser, the capture writing one fact named for the summoner-side speaker, leader-over-frame, the player guard, the comma
 guard, live/older/EMU punctuation and multi-word speakers). Registry persistence is retained; owner text is normalized
 through the shared recognizer before either capture evidence or Say-channel registry writes are made.
+
+### Explicit manual ownership outranks a leader sentence
+
+The branch review reproduced `Fluffy` naming Firstowner, then the operator assigning Chosenowner: the registry kept
+Chosenowner but the classified timeline still returned Firstowner. Lowering the leader to 80 alone cannot fix that:
+`RegistrySeed` gives remembered pairs Strong (60), and the old manual override stored only the kind.
+
+Explicit pet assignments now save `Name=Pet|Owner` in `identity-overrides.txt`. Kind-only rows still load unchanged;
+no owner is guessed for them from the ledger, because a remembered pair is not necessarily an operator's decision.
+`IdentityOverrideStore.Apply` replays the explicit pair over all time at `RuleStrength.Certain` (100), alongside the
+kind verdict at Manual (1000). Ownership therefore beats leader evidence (80) but retains the charm exception: a charm
+window at Certain starts later than the all-time manual interval, so its owner and side flip win for that window only. Ordinary remembered pairs stay at 60. Assignment no-op checks compare explicit manual claims, not the
+registry or census text: accepting a remembered owner through the assignment seam makes it manual even if its text
+matches. The Identity Table defers this decision to the same seam; programmatic editor preselection stays suppressed.
+Automatic chat writes and ledger imports retain a manually chosen
+owner instead of replacing it. Changing the manual owner replaces both claims; changing kind or recalculating removes
+the explicit owner. The narrow `ForgetPetMapping` verb also withdraws that owner while preserving the Pet kind.
+Older builds do not understand the new owner-bearing override values; retaining them requires this version or newer.
+
+`ManualPetOwnershipTest` covers fresh/carried passes, materialized damage and export identity, the temporary charm
+exception, later automatic mappings,
+reloading the override file, replacement, take-back, and legacy kind-only rows. Assignment/take-back fixtures now reset
+the override singleton as well as the registry; materialized-board tests apply the manual override stage just as the host does.
 
 ## The NPC frame gets its own rung: 65 (2026-12-08)
 

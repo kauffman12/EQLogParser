@@ -26,18 +26,13 @@ namespace EQLogParser;
  * pair — the eviction being what makes the write land at all (see `Assign`).
  *
  * A re-derive is what makes it land, not a grid patch. An ownership claim decides WHICH ROW a fact belongs to:
- * `RegistrySeed.ApplyPetMappings` writes the pair as an OWNERSHIP interval (Strong, over all time), and `FightSummarySource`
- * folds a fact's `AttackerOwner` from `EntityTimeline.OwnerOf` — so the next full pass moves that summon's damage under its
- * person (`+Pets`), and the identity digest moves with it, which is what tells every surface to repaint. Re-implementing the
- * fold inside a click handler would mean two answers to "whose is this", drifting the first time ownership rules change — same
- * reason `IdentityVerdictMenu.Write` patches nothing and lets the pass answer.
+ * `IdentityOverrideStore.Apply` replays the explicit pair as an all-time ownership interval at Certain strength;
+ * remembered pairs from `RegistrySeed` stay weaker. `FightSummarySource` reads `EntityTimeline.OwnerOf`, so the next
+ * full pass moves the summon's damage under its person (`+Pets`) and the changed digest asks every surface to repaint.
+ * Later-starting charm windows keep their temporary ownership and side flips.
  *
- * A pair already in effect is refused before anything is spent: no file write, no derive pass. Picking the owner that is
- * already on screen is a click on nothing. Two stores are asked, because two stores hold the claim: `IdentityLookup.OwnerOf`
- * answers the chain the fold will read (the open session's charm owners, then petmapping.txt), and the store's OWN keys are
- * ordinal — operator data, kept exactly as written — so its rows are also scanned case-insensitively. A second row for the same
- * summon under a second spelling would give one pet two owners depending on which line spelled it which way — the twin failure
- * mode the fact tables' own name pool has already had to be cured of, so a claim mints at most one row per summon.
+ * Only an identical explicit manual pair is a no-op. Accepting an inferred or remembered owner makes it manual,
+ * even when the text is unchanged; ClassificationCommands owns that comparison and its case-insensitive lookup.
  */
 internal static class PetAssignment
 {
@@ -55,16 +50,8 @@ internal static class PetAssignment
   {
     if (string.IsNullOrWhiteSpace(pet) || string.IsNullOrWhiteSpace(owner)) return false;
 
-    if (AlreadyClaimed(pet!, owner!)) return false;
-
-    /*
-     * The same door a Set-as-NPC uses (ClassificationCommands.ApplyVerdict), and that is the whole fix: FORGET what this
-     * application believed about `pet`, then assert Kind = Pet and write the pair. Going straight to AddPetToPlayer used to be a
-     * silent no-op for exactly the names an operator assigns — AddPetToPlayerNoLock refuses to reassign a VERIFIED PLAYER, and a
-     * summon the parser verified as a player (it cast spells, it took heals) is precisely what "this is somebody's pet" is said
-     * ABOUT. It also left the kind alone, so the name kept its own row on every board.
-     */
-    ClassificationCommands.ApplyVerdict(pet, IdentityKind.Pet, owner);
+    // The command owns both explicit-owner deduplication and forget-before-assert ordering.
+    if (!ClassificationCommands.ApplyVerdict(pet, IdentityKind.Pet, owner)) return false;
 
     // Which claim was made, in the file that carries the raid: a pair appearing in petmapping.txt with no line beside it is
     // the kind of thing that needs a name-shaped explanation later. Debug would be the wrong level — this is an operator act,
@@ -79,19 +66,4 @@ internal static class PetAssignment
     return true;
   }
 
-  /// <summary>Did somebody already make this exact claim? Read both stores, ignore case in both.</summary>
-  private static bool AlreadyClaimed(string pet, string owner)
-  {
-    if (string.Equals(IdentityLookup.OwnerOf(pet), owner, StringComparison.OrdinalIgnoreCase)) return true;
-
-    // Operator-sized list (tens of pairs), read on a click: no index needed, and an index here would be a second copy of the
-    // store's case rules — the thing this loop exists to not have.
-    foreach (var mapping in PlayerRegistry.Instance.GetPetMappings())
-    {
-      if (string.Equals(mapping.Pet, pet, StringComparison.OrdinalIgnoreCase)
-          && string.Equals(mapping.Owner, owner, StringComparison.OrdinalIgnoreCase)) return true;
-    }
-
-    return false;
-  }
 }
