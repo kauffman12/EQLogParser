@@ -124,8 +124,11 @@ These checks require a realized grid; the automated pane tests exercise bound da
   eqlogparser.log. Separately check whether memory growth continues; this guard is not a proven fix for that report.
 - [ ] **Temporary animation diagnostic:** while post-load memory growth is occurring, choose Tools → Scan UI Animations.
   Wait for the menu item to re-enable, then repeat after the activity settles. Each request must write two `animation scan`
-  samples and a completion line to eqlogparser.log without requiring Debug=True. Do not open View Error Log until both runs
-  finish. Preserve the complete blocks (including owner paths), not just their header lines.
+  samples and a completion line to eqlogparser.log without requiring Debug=True. The request must say `reportVersion=2`.
+  Check that `property-clock` lines include state/time/repeat details (including trigger layers) and `timing-tree`/`timing-clock`
+  lines include parent/identity labels and matches to scanned properties. `clockInspectionErrors=0` confirms the runtime's
+  private lookup layout was recognized; `clock inspection unavailable` means lookup failed, not that no clocks exist.
+  Do not open View Error Log until both runs finish. Preserve the complete blocks, not just their header lines.
 - [ ] **The load's cleanup pause sits behind the band, and actually returns memory** (2026-10-13): open a large log (several million lines) and watch the fight list.
   At 100 % the band stays up — *Building the Fight List…* while the first full derive and its boards run — then both the band and the application status line say
   *"Cleaning up.."* for the pause, and the grids appear **after** it. Three things to confirm: (a) no freeze lands on an already-readable grid (that is how the old

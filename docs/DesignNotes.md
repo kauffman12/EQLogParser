@@ -16626,14 +16626,32 @@ that animation vanished, and the attribution to the fight-list loading bar, were
 repairs a missing production call, but the operator reports that it did not resolve the growth. Neither a loading-bar root
 cause nor an old-binary explanation is established.
 
+The first operator run of **Tools → Scan UI Animations** found 22 animated properties ~18 seconds after load completion,
+then 54 at ~58 and ~98 seconds. The latter two scans' targets and values were identical although memory growth had stopped
+by the third. The added 32 properties were Damage Summary cell border thicknesses; all samples showed the ordinary
+fight-list progress bar indeterminate but effectively invisible. These observations identify candidates, not active clocks.
+
 Temporary **Tools → Scan UI Animations** writes two Info-level snapshots one second apart to `eqlogparser.log`, after a
 250 ms menu-close delay. It walks open windows' visual/logical trees (including collapsed elements and popup children),
 common brushes/transforms, and reports animated dependency properties with owner paths, values and visibility. It also
-reports ordinary WPF progress bars' indeterminate state. An animated property can be holding its final value, and two
-identical samples can also catch a periodic animation at the same phase; neither proves an active clock. Detached clocks
-are outside this scan. Run once during growth and once after it settles; do not open the Error Log window between samples.
-This is requested, one-shot instrumentation, not background monitoring; remove the menu, helper and its tests when the
-owning control is identified. No collector or animation settings are changed.
+reports ordinary WPF progress bars' indeterminate state. **Report version 2** adds the property clocks from both local
+animation storage and style/template trigger layers, including identity labels, Active/Filling/Stopped state, paused flag,
+current time/progress/iteration/global speed, duration/natural duration, repeat/autoreverse, begin/fill settings and next-tick
+time. Each snapshot also lists the current dispatcher's existing timing tree, with parent labels, manager time, target-name/
+property hints and whether each clock matched a scanned property. This can expose active clocks whose targets the tree walk
+missed; unmatched does not prove detached, and Active alone does not imply a moving property (paused, zero-speed and constant
+animations are possible). Filling denotes a held result, not proof that some ancestor or sibling needs no ticks.
+
+WPF has no public property-to-clock or timing-root lookup: the temporary helper uses guarded, read-only reflection over
+.NET 10 AnimationStorage/AnimationLayer and the dispatcher's existing MediaContext/TimeManager. It never creates a media
+context, invokes a clock controller, subscribes to clock events, or ticks the timing engine. Runtime layout changes produce
+`clock inspection unavailable` plus an error count, not a misleading zero-clock result. Clock objects are retained only
+within one snapshot; the identity labels allow comparing live clocks across the two samples without retaining them across
+the delay. Compare time **and iteration**, since a periodic animation can return to the same value/phase one second later.
+
+Run once during growth and once after it settles; do not open the Error Log window between samples. This is requested,
+one-shot instrumentation, not background monitoring; remove the menu, helpers and their tests when the owning control is
+identified. No collector or animation settings are changed.
 
 ## Garbage collection after loading a log
 

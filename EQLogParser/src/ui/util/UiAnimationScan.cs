@@ -27,19 +27,20 @@ namespace EQLogParser
     {
       Application.Current.Dispatcher.VerifyAccess();
       var id = ++_nextId;
-      Log.Info($"animation scan #{id}: requested; two snapshots one second apart (animated does not imply ticking)");
+      Log.Info($"animation scan #{id}: requested; reportVersion=2; two snapshots one second apart with clock states");
       // Let the Tools menu close before inspecting its window tree.
       await Task.Delay(250);
       Log.Info($"animation scan #{id}, sample 1:\n{CaptureOpenWindows()}");
       await Task.Delay(1000);
       Log.Info($"animation scan #{id}, sample 2:\n{CaptureOpenWindows()}");
-      Log.Info($"animation scan #{id}: complete; snapshots cover reachable elements, not detached animation clocks");
+      Log.Info($"animation scan #{id}: complete; includes the current dispatcher's timing tree; unmatched clocks need not be detached");
     }
 
     internal static string Capture(IEnumerable<DependencyObject> roots)
     {
       var elapsed = Stopwatch.StartNew();
       var report = new StringBuilder();
+      var clocks = new UiAnimationClocks();
       var seen = new HashSet<DependencyObject>(ReferenceEqualityComparer.Instance);
       var propertiesByType = new Dictionary<Type, DependencyProperty[]>();
       var pending = new Stack<(DependencyObject Node, string Path)>();
@@ -80,6 +81,7 @@ namespace EQLogParser
               animatedProperties++;
               report.AppendLine($"animated: {path} | property={property.OwnerType.Name}.{property.Name}"
                 + $" | value={Format(node.GetValue(property))} | source={source.BaseValueSource} | {VisibilityOf(node)}");
+              clocks.AppendProperty(report, node, property);
             }
           }
 
@@ -141,6 +143,7 @@ namespace EQLogParser
         }
       }
 
+      clocks.AppendTimingTree(report);
       return $"visited={seen.Count}; animatedProperties={animatedProperties}; errors={errors}; scanMs={elapsed.ElapsedMilliseconds}\n"
         + report;
     }

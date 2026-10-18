@@ -41,6 +41,8 @@ namespace EQLogParser.Wpf.Test
       StringAssert.Contains(report, "source=Style");
       StringAssert.Contains(report, "visibility=Collapsed; isVisible=False");
       StringAssert.Contains(report, "animatedProperties=1; errors=0");
+      StringAssert.Contains(report, "property-clock: layer=local");
+      StringAssert.Contains(report, "clockInspectionErrors=0");
       Assert.IsTrue(stillAnimated, "A diagnostic must not remove the animation it is inspecting.");
       Assert.IsTrue(stillCollapsed);
     }
@@ -70,6 +72,117 @@ namespace EQLogParser.Wpf.Test
       StringAssert.Contains(report, "Border[BrushOwner].Background/SolidColorBrush");
       StringAssert.Contains(report, "property=SolidColorBrush.Color");
       StringAssert.Contains(report, "animatedProperties=1; errors=0");
+    }
+
+    [TestMethod]
+    public void DistinguishesActiveRepeatingAndFillingClocksWithoutControllingThem()
+    {
+      var report = string.Empty;
+      var unchanged = false;
+      Sta.Run(() =>
+      {
+        var border = new Border { Name = "ClockTarget" };
+        var repeating = new ThicknessAnimation(new Thickness(0), new Thickness(10), TimeSpan.FromSeconds(1))
+        {
+          RepeatBehavior = RepeatBehavior.Forever,
+          AutoReverse = true
+        }.CreateClock();
+        var filling = new DoubleAnimation(0, 1, TimeSpan.FromSeconds(1)).CreateClock();
+        border.ApplyAnimationClock(FrameworkElement.MarginProperty, repeating);
+        border.ApplyAnimationClock(UIElement.OpacityProperty, filling);
+        try
+        {
+          var repeatController = repeating.Controller
+            ?? throw new InvalidOperationException("Missing test clock controller");
+          var fillController = filling.Controller
+            ?? throw new InvalidOperationException("Missing test clock controller");
+          repeatController.SeekAlignedToLastTick(TimeSpan.FromMilliseconds(250), TimeSeekOrigin.BeginTime);
+          fillController.SeekAlignedToLastTick(TimeSpan.FromSeconds(2), TimeSeekOrigin.BeginTime);
+          var beforeTime = repeating.CurrentTime;
+          report = UiAnimationScan.Capture([border]);
+          unchanged = repeating.CurrentState == ClockState.Active && repeating.CurrentTime == beforeTime
+            && filling.CurrentState == ClockState.Filling;
+        }
+        finally
+        {
+          border.BeginAnimation(FrameworkElement.MarginProperty, null);
+          border.BeginAnimation(UIElement.OpacityProperty, null);
+        }
+      });
+
+      StringAssert.Contains(report, "state=Active");
+      StringAssert.Contains(report, "state=Filling");
+      StringAssert.Contains(report, "repeat=Forever | autoReverse=True");
+      StringAssert.Contains(report, "time=00:00:00.2500000");
+      StringAssert.Contains(report, "duration=00:00:01");
+      StringAssert.Contains(report, "reachableProperty=True");
+      StringAssert.Contains(report, "clockInspectionErrors=0");
+      Assert.IsTrue(unchanged, "Inspection may not tick, seek, pause or remove the clocks it reads.");
+    }
+
+    [TestMethod]
+    public void TimingTreeIncludesAnActiveClockWithNoScannedTarget()
+    {
+      var report = string.Empty;
+      var stillActive = false;
+      Sta.Run(() =>
+      {
+        var clock = new DoubleAnimation(0, 1, TimeSpan.FromSeconds(1))
+        {
+          RepeatBehavior = RepeatBehavior.Forever
+        }.CreateClock();
+        var controller = clock.Controller ?? throw new InvalidOperationException("Missing test clock controller");
+        try
+        {
+          controller.SeekAlignedToLastTick(TimeSpan.FromMilliseconds(250), TimeSeekOrigin.BeginTime);
+          report = UiAnimationScan.Capture([]);
+          stillActive = clock.CurrentState == ClockState.Active;
+        }
+        finally
+        {
+          controller.Remove();
+        }
+      });
+
+      StringAssert.Contains(report, "unmatchedActiveAnimations=1");
+      StringAssert.Contains(report, "timing-clock: reachableProperty=False");
+      StringAssert.Contains(report, "state=Active");
+      StringAssert.Contains(report, "clockInspectionErrors=0");
+      Assert.IsTrue(stillActive);
+    }
+
+    [TestMethod]
+    public void FindsClocksInAStyleTriggerLayer()
+    {
+      var report = string.Empty;
+      Sta.Run(() =>
+      {
+        var animation = new DoubleAnimation(0, 1, TimeSpan.FromSeconds(10));
+        Storyboard.SetTargetProperty(animation, new PropertyPath(UIElement.OpacityProperty));
+        var storyboard = new Storyboard();
+        storyboard.Children.Add(animation);
+        var trigger = new System.Windows.Trigger { Property = UIElement.IsEnabledProperty, Value = false };
+        trigger.EnterActions.Add(new BeginStoryboard { Storyboard = storyboard });
+        var style = new Style(typeof(Border));
+        style.Triggers.Add(trigger);
+        var border = new Border { Name = "StyledTarget", Style = style };
+        border.BeginInit();
+        border.EndInit();
+        border.IsEnabled = false;
+        try
+        {
+          report = UiAnimationScan.Capture([border]);
+        }
+        finally
+        {
+          border.Style = null;
+        }
+      });
+
+      StringAssert.Contains(report, "property=UIElement.Opacity");
+      StringAssert.Contains(report, "property-clock: layer=trigger:");
+      StringAssert.Contains(report, "type=DoubleAnimation");
+      StringAssert.Contains(report, "clockInspectionErrors=0");
     }
 
     [TestMethod]
