@@ -1,5 +1,7 @@
 using EQLogParser;
 
+#nullable enable annotations
+
 namespace EQLogParser;
 
 /*
@@ -61,7 +63,7 @@ public class FightProjectionIncrementTest
         => $"{r.Name}@{r.BeginTime}-{r.LastTime} {(r.Dead ? "dead" : "live")}/{r.EndReason} " +
            $"dmg={r.DamageTotal} hits={r.DamageHits} toOwner={r.DamageToOwner} byOwner={r.DamageByOwner} " +
            $"dmgWin={r.BeginDamageTime}/{r.LastDamageTime} tankWin={r.BeginTankingTime}/{r.LastTankingTime} " +
-           $"pet={r.RaidPet} owned={r.CharmedOwned} " +
+           $"pet={r.RaidPet} owned={r.CharmedOwned} group={r.GroupId} " +
            $"encounter={(r.EncounterRow is null ? "-" : $"{r.EncounterRow.Name}@{r.EncounterRow.BeginTime}")} " +
            $"rollup=[{Rollup(r)}]";
 
@@ -540,18 +542,20 @@ public class FightProjectionIncrementTest
     public void GrowingAParsedLogOnePassAtATimeEndsAtTheSameFightList(string fixture)
     {
         var lines = File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "mini-data", "derive", fixture));
-        if (lines.Length < 8) Assert.Inconclusive($"{fixture} is too short to split meaningfully");
+        Assert.IsTrue(lines.Length >= 2, $"{fixture} needs at least two lines for prefix replay.");
 
         var cache = new FightProjection.FightProjectionCache();
         IReadOnlyList<DerivedFight> live = [];
-        var continuedPasses = 0;
+        var runs = new Dictionary<(string Name, double Begin), int[]>();
         var cuts = Cuts(lines.Length);
 
         foreach (var cut in cuts)
         {
             var pass = ParseAndClassify(lines[..cut], fixture);
             live = cache.Project(pass.Facts, pass.Timeline);
-            if (cache.LastPassContinued) continuedPasses++;
+            runs = AssertOrdinalRuns(cache.Index, live, runs, cache.LastPassContinued);
+            AssertSameRows(FightProjection.Build(pass.Facts, pass.Timeline), live,
+              $"{fixture}: prefix {cut} equals a fresh projection");
         }
 
         var whole = ParseAndClassify(lines, fixture);
@@ -592,6 +596,28 @@ public class FightProjectionIncrementTest
             "mechanism buys nothing");
         Assert.IsTrue(ContinuedPasses("rules-fixture.txt") <= 2,
             "rules-fixture restates identities every few lines; carrying rows through THAT is the unsafe direction");
+    }
+
+    private static Dictionary<(string Name, double Begin), int[]> AssertOrdinalRuns(FightFactIndex index,
+      IReadOnlyList<DerivedFight> rows, Dictionary<(string Name, double Begin), int[]> previous, bool continued)
+    {
+        var next = new Dictionary<(string Name, double Begin), int[]>();
+        var seen = new HashSet<int>();
+        foreach (var row in rows)
+        {
+            var key = (row.Name, row.BeginTime);
+            var current = index.DamageOrdinalsFor(row).ToArray();
+            foreach (var ordinal in current)
+                Assert.IsTrue(seen.Add(ordinal), $"damage ordinal {ordinal} was assigned to two rows");
+            if (continued && previous.TryGetValue(key, out var before))
+            {
+                Assert.IsTrue(current.Length >= before.Length, $"{key}: continued rows may not lose ordinals");
+                Assert.IsTrue(current.AsSpan(0, before.Length).SequenceEqual(before),
+                  $"{key}: a continued ordinal run must extend its previous prefix");
+            }
+            next.Add(key, current);
+        }
+        return next;
     }
 
     // Cuts at line boundaries. Any cut is fair: a parser handed half a log simply has less to say about it.

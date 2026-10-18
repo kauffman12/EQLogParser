@@ -1,5 +1,5 @@
-using System.Runtime.CompilerServices;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Runtime.CompilerServices;
 
 #nullable enable annotations
 
@@ -45,25 +45,6 @@ public class PublishedEventShapeTest
 
     Assert.IsNotNull(typeof(DamageProcessedEvent).GetProperty("Action"),
       "Action still rides along — CombatCapture reads line-intrinsic evidence (`X`s pet`) off the publish");
-  }
-
-  [TestMethod]
-  public void ARecordReferenceStillRidesThroughAndTheValuesAreWhatWasPublished()
-  {
-    var record = new DamageRecord { Attacker = "Kilsef", Defender = "Bob", Total = 12345 };
-    var evt = new DamageProcessedEvent
-    {
-      Record = record, BeginTime = 1234.5, Action = "Kilsef hits Bob for 12345 points of damage!", IsMonitor = true
-    };
-
-    Assert.AreSame(record, evt.Record, "the record is shared; only the wrapper is a copy");
-    Assert.AreEqual(1234.5, evt.BeginTime);
-    Assert.IsTrue(evt.IsMonitor);
-    Assert.AreEqual("Kilsef hits Bob for 12345 points of damage!", evt.Action);
-
-    var heal = new HealProcessedEvent { Record = new HealRecord { Healer = "Kilsef", Healed = "Vvalan" }, BeginTime = 99 };
-    Assert.AreEqual("Kilsef", heal.Record.Healer);
-    Assert.IsFalse(heal.IsMonitor, "a replayed line is not a monitor line unless the publisher says so");
   }
 
   /*

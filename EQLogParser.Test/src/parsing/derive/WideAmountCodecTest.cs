@@ -40,22 +40,38 @@ public class WideAmountCodecTest
   {
     foreach (var position in new[] { 0, 8, 16 })
     {
-      for (var presence = 0; presence < 4; presence++)
+      foreach (var total in new[] { (long)uint.MaxValue, uint.MaxValue + 1L, 5_309_597_698L, TextUtils.MaxAmount })
+      foreach (var asked in new[] { 0L, (long)uint.MaxValue, uint.MaxValue + 1L, 5_309_597_698L, TextUtils.MaxAmount })
       {
-        var damage = Enumerable.Range(0, 17).Select(i => Damage(i, uint.MaxValue)).ToArray();
-        var heals = Enumerable.Range(0, 17).Select(i => Heal(i, uint.MaxValue, uint.MaxValue)).ToArray();
-        var total = (presence & 1) == 0 ? uint.MaxValue : TextUtils.MaxAmount;
-        var asked = (presence & 2) == 0 ? uint.MaxValue : TextUtils.MaxAmount;
+        var damage = Enumerable.Range(0, 17).Select(i => Damage(i, 1000 + i)).ToArray();
+        var heals = Enumerable.Range(0, 17).Select(i => Heal(i, 500 + i, 25)).ToArray();
         damage[position] = Damage(position, total);
         heals[position] = Heal(position, total, asked);
         var d = DamageFactChunkCodec.Encode(damage, damage.Length);
         var h = HealFactChunkCodec.Encode(heals, heals.Length);
+        var presence = (total > uint.MaxValue ? 1 : 0) | (asked > uint.MaxValue ? 2 : 0);
         Assert.AreEqual((byte)(presence & 1), Inflate(d)[0]);
         Assert.AreEqual((byte)presence, Inflate(h)[0]);
         CollectionAssert.AreEqual(damage, DamageFactChunkCodec.Decode(d, damage.Length));
         CollectionAssert.AreEqual(heals, HealFactChunkCodec.Decode(h, heals.Length));
       }
     }
+  }
+
+  [TestMethod]
+  [DataRow(5)]
+  [DataRow(7)]
+  [DataRow(9)]
+  public void BothCodecsRefuseAnIncorrectRowCountEvenWithoutHighPlanes(int count)
+  {
+    var damage = Enumerable.Range(0, 6).Select(i => Damage(i, 1000 + i)).ToArray();
+    var heals = Enumerable.Range(0, 6).Select(i => Heal(i, 500 + i, 25)).ToArray();
+    var damageBlob = DamageFactChunkCodec.Encode(damage, damage.Length);
+    var healBlob = HealFactChunkCodec.Encode(heals, heals.Length);
+    CollectionAssert.AreEqual(damage, DamageFactChunkCodec.Decode(damageBlob, damage.Length));
+    CollectionAssert.AreEqual(heals, HealFactChunkCodec.Decode(healBlob, heals.Length));
+    Assert.ThrowsExactly<InvalidDataException>(() => DamageFactChunkCodec.Decode(damageBlob, count));
+    Assert.ThrowsExactly<InvalidDataException>(() => HealFactChunkCodec.Decode(healBlob, count));
   }
 
   [TestMethod]

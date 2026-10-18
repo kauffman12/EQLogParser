@@ -1,6 +1,7 @@
+using EQLogParser;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-using EQLogParser;
+#nullable enable annotations
 
 namespace EQLogParser.Tests.Ui;
 
@@ -27,18 +28,6 @@ namespace EQLogParser.Tests.Ui;
 public class IdentityRowOrderTest
 {
   private sealed record Fake(string Name, string Type = "", string? PlayerClass = null, string Owner = "", string Why = "") : IIdentityRowKeys;
-
-  [TestMethod]
-  public void TheColumnsAreTheFiveWordsTheTableShows()
-  {
-    CollectionAssert.AreEqual(new[] { "Name", "Type", "Class", "Owner", "Why" }, IdentityRowOrder.Columns.ToList(),
-                              "the sortable vocabulary, in header order: a sixth column has to say so here before it can sort");
-    // The default is the FIRST column — which is what the pane's markup declares as its initial SortColumnDescription, so
-    // an operator who never clicks opens a table read by name. ("Name" is literal here on purpose: the markup says Name.)
-    Assert.AreEqual("Name", IdentityRowOrder.Columns[0], "the first header is the one the table opens sorted by");
-    CollectionAssert.AreEqual(IdentityRowOrder.Columns.ToList(), new[] { IdentityRowOrder.DefaultColumn, "Type", "Class", "Owner", "Why" },
-                              "and the default is that first column, so markup and rule cannot disagree about what 'nobody clicked' means");
-  }
 
   [TestMethod]
   public void NobodyHavingClickedAnythingMeansNamesAscending()

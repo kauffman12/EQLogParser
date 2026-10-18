@@ -10,6 +10,7 @@ using WpfAnimatedGif;
 namespace EQLogParser.Wpf.Test
 {
   [TestClass]
+  [TestCategory("WindowsIntegration")]
   public class VisibleGifAnimationTest
   {
     [TestMethod]

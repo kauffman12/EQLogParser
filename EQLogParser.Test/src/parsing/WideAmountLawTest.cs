@@ -222,60 +222,6 @@ namespace EQLogParser
     }
 
     [TestMethod]
-    public void WideRowsComeHomeFromAColdChunkFirstMiddleAndLast()
-    {
-      var rows = new DamageFact[8];
-      for (var i = 0; i < rows.Length; i++) rows[i] = DamageRow(i, 4096 + i);
-
-      // One wide row in each structural position: the first row of a chunk, the last, and one between two narrow ones.
-      rows[0] = DamageRow(0, Ceiling);
-      rows[3] = DamageRow(3, Wide);
-      rows[rows.Length - 1] = DamageRow(rows.Length - 1, uint.MaxValue + 1L);
-
-      var back = DamageFactChunkCodec.Decode(DamageFactChunkCodec.Encode(rows, rows.Length), rows.Length);
-      for (var i = 0; i < rows.Length; i++)
-      {
-        Assert.AreEqual(rows[i].Total, back[i].Total, $"row {i} came home with a different amount");
-        Assert.AreEqual(rows[i].Seq, back[i].Seq, $"row {i} kept its sequence");
-      }
-
-      var heals = new HealFact[8];
-      for (var i = 0; i < heals.Length; i++) heals[i] = HealRow(i, 900 + i, 100);
-      heals[0] = HealRow(0, Ceiling, Ceiling);
-      heals[4] = HealRow(4, 5_000L, Wide);          // narrow landed, wide ask: the lanes are independent
-      heals[heals.Length - 1] = HealRow(heals.Length - 1, Wide, 0L);   // wide landed, no ask at all
-
-      var healedBack = HealFactChunkCodec.Decode(HealFactChunkCodec.Encode(heals, heals.Length), heals.Length);
-      for (var i = 0; i < heals.Length; i++)
-      {
-        Assert.AreEqual(heals[i].Total, healedBack[i].Total, $"heal {i} landed a different number");
-        Assert.AreEqual(heals[i].OverTotal, healedBack[i].OverTotal, $"heal {i}'s paren came home different");
-      }
-    }
-
-    [TestMethod]
-    public void AChunkThatPaidForNoHighPlaneStillDecodesAndAWrongRowCountRefuses()
-    {
-      var narrow = new DamageFact[6];
-      for (var i = 0; i < narrow.Length; i++) narrow[i] = DamageRow(i, 1000 + i);
-
-      // Nothing above 32 bits in this chunk: the presence byte stays clear and the rows still round-trip.
-      var blob = DamageFactChunkCodec.Encode(narrow, narrow.Length);
-      var back = DamageFactChunkCodec.Decode(blob, narrow.Length);
-      for (var i = 0; i < narrow.Length; i++) Assert.AreEqual(narrow[i].Total, back[i].Total);
-
-      // The guard that replaced reading capacity as data: a count that disagrees with the blob's length cannot produce rows.
-      // (This used to read whatever bytes followed and hand back invented ids and amounts.)
-      Assert.ThrowsExactly<System.IO.InvalidDataException>(() => DamageFactChunkCodec.Decode(blob, narrow.Length - 1));
-      Assert.ThrowsExactly<System.IO.InvalidDataException>(() => DamageFactChunkCodec.Decode(blob, narrow.Length + 3));
-
-      var heals = new HealFact[6];
-      for (var i = 0; i < heals.Length; i++) heals[i] = HealRow(i, 500 + i, 25);
-      var healBlob = HealFactChunkCodec.Encode(heals, heals.Length);
-      Assert.ThrowsExactly<System.IO.InvalidDataException>(() => HealFactChunkCodec.Decode(healBlob, heals.Length + 1));
-    }
-
-    [TestMethod]
     public void AWideRowStoredInATableReadsBackThroughTheOrdinaryDoor()
     {
       var facts = new DamageFactTable(0);

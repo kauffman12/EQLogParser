@@ -1,286 +1,124 @@
 using EQLogParser;
 
+#nullable enable annotations
+
 namespace EQLogParserTest
 {
   [TestClass]
   public class ExceptionUtilTest
   {
     [TestMethod]
-    public void CatchIoExceptions_Action_NoException_PassesThrough()
+    [DataRow(typeof(IOException), true)]
+    [DataRow(typeof(UnauthorizedAccessException), true)]
+    [DataRow(typeof(ArgumentException), false)]
+    [DataRow(typeof(NullReferenceException), false)]
+    public void IoActionLogsOnlyItsOwnExceptionsAndRethrowsTheOriginalWhenAsked(Type type, bool io)
     {
-      var executed = false;
-      ExceptionUtil.CatchIoExceptions(() => executed = true);
-      Assert.IsTrue(executed);
+      foreach (var rethrow in new[] { false, true })
+      {
+        var error = Error(type);
+        Exception? logged = null;
+        var observed = Capture(() => ExceptionUtil.CatchIoExceptions(() => throw error,
+          ex => logged = ex, rethrow));
+        Assert.AreSame(io ? error : null, logged);
+        Assert.AreSame(rethrow || !io ? error : null, observed);
+      }
     }
 
     [TestMethod]
-    public void CatchIoExceptions_Action_IOException_CatchesAndLogs()
+    [DataRow(typeof(IOException), true)]
+    [DataRow(typeof(UnauthorizedAccessException), true)]
+    [DataRow(typeof(NullReferenceException), false)]
+    public void IoFunctionReturnsTheFallbackOrRethrowsWithoutReplacingTheException(Type type, bool io)
     {
-      Exception? caught = null;
-      ExceptionUtil.CatchIoExceptions(
-        () => throw new IOException("test"),
-        ex => caught = ex);
-      Assert.IsInstanceOfType(caught, typeof(IOException));
+      foreach (var rethrow in new[] { false, true })
+      {
+        var error = Error(type);
+        Exception? logged = null;
+        var value = 0;
+        var observed = Capture(() => value = ExceptionUtil.CatchIoExceptions<int>(() => throw error, -99,
+          ex => logged = ex, rethrow));
+        Assert.AreSame(io ? error : null, logged);
+        Assert.AreSame(rethrow || !io ? error : null, observed);
+        if (io && !rethrow) Assert.AreEqual(-99, value);
+      }
     }
 
     [TestMethod]
-    public void CatchIoExceptions_Action_UnauthorizedAccessException_CatchesAndLogs()
+    [DataRow(typeof(IOException))]
+    [DataRow(typeof(UnauthorizedAccessException))]
+    public void SecurityWrappersLogTheOriginalAndFunctionsReturnTheirFallback(Type type)
     {
-      Exception? caught = null;
-      ExceptionUtil.CatchIoExceptions(
-        () => throw new UnauthorizedAccessException("test"),
-        ex => caught = ex);
-      Assert.IsInstanceOfType(caught, typeof(UnauthorizedAccessException));
+      var error = Error(type);
+      Exception? logged = null;
+      ExceptionUtil.CatchSecurityExceptions(() => throw error, ex => logged = ex);
+      Assert.AreSame(error, logged);
+      logged = null;
+      Assert.AreEqual("fallback", ExceptionUtil.CatchSecurityExceptions<string>(
+        () => throw error, "fallback", ex => logged = ex));
+      Assert.AreSame(error, logged);
     }
 
     [TestMethod]
-    public void CatchIoExceptions_Action_NullLogger_SwallowsException()
+    [DataRow(typeof(DivideByZeroException))]
+    [DataRow(typeof(InvalidOperationException))]
+    [DataRow(typeof(StackOverflowException))]
+    public void CatchAllWrappersAcceptNonIoExceptions(Type type)
     {
-      // Should not throw
-      ExceptionUtil.CatchIoExceptions(
-        () => throw new IOException("test"),
-        logError: null);
+      var error = Error(type);
+      Exception? logged = null;
+      ExceptionUtil.CatchAllExceptions(() => throw error, ex => logged = ex);
+      Assert.AreSame(error, logged);
+      logged = null;
+      Assert.AreEqual("safe", ExceptionUtil.CatchAllExceptions<string>(() => throw error, "safe", ex => logged = ex));
+      Assert.AreSame(error, logged);
     }
 
     [TestMethod]
-    public void CatchIoExceptions_Action_Rethrow_RethrowsIOException()
+    public void ActionWrappersRunSuccessfulActionsAndAllowNoLogger()
     {
-      var threw = false;
+      var count = 0;
+      ExceptionUtil.CatchIoExceptions(() => { count++; });
+      ExceptionUtil.CatchSecurityExceptions(() => { count++; });
+      ExceptionUtil.CatchAllExceptions(() => { count++; });
+      Assert.AreEqual(3, count);
+      ExceptionUtil.CatchIoExceptions(() => throw new IOException(), logError: null);
+      ExceptionUtil.CatchAllExceptions(() => throw new InvalidOperationException(), logError: null);
+    }
+
+    [TestMethod]
+    public void FunctionWrappersKeepSuccessfulValues()
+    {
+      Assert.AreEqual(42, ExceptionUtil.CatchIoExceptions(() => 42, -1));
+      Assert.AreEqual("hello", ExceptionUtil.CatchSecurityExceptions(() => "hello", "fallback"));
+      Assert.AreEqual(123, ExceptionUtil.CatchAllExceptions(() => 123, 0));
+    }
+
+    [TestMethod]
+    [DataRow(typeof(IOException), true)]
+    [DataRow(typeof(UnauthorizedAccessException), true)]
+    [DataRow(typeof(DirectoryNotFoundException), true)]
+    [DataRow(typeof(ArgumentException), false)]
+    [DataRow(null, false)]
+    public void IoClassificationIncludesDerivedExceptionsButNotNull(Type? type, bool expected)
+    {
+      Assert.AreEqual(expected, ExceptionUtil.IsIoException(type is null ? null : Error(type)));
+    }
+
+    private static Exception Error(Type type) => Activator.CreateInstance(type, "test") is Exception error
+      ? error : throw new AssertFailedException($"Cannot construct {type.Name}.");
+
+    private static Exception? Capture(Action action)
+    {
       try
       {
-        ExceptionUtil.CatchIoExceptions(
-          () => throw new IOException("test"),
-          logError: null,
-          rethrow: true);
+        action();
+        return null;
       }
-      catch (IOException)
+      catch (Exception error)
       {
-        threw = true;
+        return error;
       }
-      Assert.IsTrue(threw);
-    }
-
-    [TestMethod]
-    public void CatchIoExceptions_Action_Rethrow_RethrowsUnauthorizedAccessException()
-    {
-      var threw = false;
-      try
-      {
-        ExceptionUtil.CatchIoExceptions(
-          () => throw new UnauthorizedAccessException("test"),
-          logError: null,
-          rethrow: true);
-      }
-      catch (UnauthorizedAccessException)
-      {
-        threw = true;
-      }
-      Assert.IsTrue(threw);
-    }
-
-    [TestMethod]
-    public void CatchIoExceptions_Action_NonIoException_PassesThrough()
-    {
-      var threw = false;
-      try
-      {
-        ExceptionUtil.CatchIoExceptions(
-          () => throw new ArgumentException("not io"),
-          logError: null);
-      }
-      catch (ArgumentException)
-      {
-        threw = true;
-      }
-      Assert.IsTrue(threw);
-    }
-
-    [TestMethod]
-    public void CatchIoExceptions_Func_NoException_ReturnsValue()
-    {
-      var result = ExceptionUtil.CatchIoExceptions(() => 42, -1);
-      Assert.AreEqual(42, result);
-    }
-
-    [TestMethod]
-    public void CatchIoExceptions_Func_IOException_ReturnsDefault()
-    {
-      var result = ExceptionUtil.CatchIoExceptions(
-        () => throw new IOException("test"),
-        -1);
-      Assert.AreEqual(-1, result);
-    }
-
-    [TestMethod]
-    public void CatchIoExceptions_Func_UnauthorizedAccessException_ReturnsDefault()
-    {
-      var result = ExceptionUtil.CatchIoExceptions(
-        () => throw new UnauthorizedAccessException("test"),
-        -99);
-      Assert.AreEqual(-99, result);
-    }
-
-    [TestMethod]
-    public void CatchIoExceptions_Func_Rethrow_RethrowsIOException()
-    {
-      var threw = false;
-      try
-      {
-        ExceptionUtil.CatchIoExceptions(
-          () => throw new IOException("test"),
-          -1,
-          rethrow: true);
-      }
-      catch (IOException)
-      {
-        threw = true;
-      }
-      Assert.IsTrue(threw);
-    }
-
-    [TestMethod]
-    public void CatchIoExceptions_Func_NonIoException_PassesThrough()
-    {
-      var threw = false;
-      try
-      {
-        ExceptionUtil.CatchIoExceptions(
-          () => throw new NullReferenceException("not io"),
-          -1);
-      }
-      catch (NullReferenceException)
-      {
-        threw = true;
-      }
-      Assert.IsTrue(threw);
-    }
-
-    [TestMethod]
-    public void CatchSecurityExceptions_Action_NoException_PassesThrough()
-    {
-      var executed = false;
-      ExceptionUtil.CatchSecurityExceptions(() => executed = true);
-      Assert.IsTrue(executed);
-    }
-
-    [TestMethod]
-    public void CatchSecurityExceptions_Action_IOException_CatchesAndLogs()
-    {
-      Exception? caught = null;
-      ExceptionUtil.CatchSecurityExceptions(
-        () => throw new IOException("test"),
-        ex => caught = ex);
-      Assert.IsInstanceOfType(caught, typeof(IOException));
-    }
-
-    [TestMethod]
-    public void CatchSecurityExceptions_Action_UnauthorizedAccessException_CatchesAndLogs()
-    {
-      Exception? caught = null;
-      ExceptionUtil.CatchSecurityExceptions(
-        () => throw new UnauthorizedAccessException("test"),
-        ex => caught = ex);
-      Assert.IsInstanceOfType(caught, typeof(UnauthorizedAccessException));
-    }
-
-    [TestMethod]
-    public void CatchSecurityExceptions_Func_NoException_ReturnsValue()
-    {
-      var result = ExceptionUtil.CatchSecurityExceptions(() => "hello", "default");
-      Assert.AreEqual("hello", result);
-    }
-
-    [TestMethod]
-    public void CatchSecurityExceptions_Func_IOException_ReturnsDefault()
-    {
-      var result = ExceptionUtil.CatchSecurityExceptions(
-        () => throw new IOException("test"),
-        "fallback");
-      Assert.AreEqual("fallback", result);
-    }
-
-    [TestMethod]
-    public void CatchAllExceptions_Action_CatchesAllTypes()
-    {
-      Exception? caught = null;
-      ExceptionUtil.CatchAllExceptions(
-        () => throw new DivideByZeroException("math"),
-        ex => caught = ex);
-      Assert.IsInstanceOfType(caught, typeof(DivideByZeroException));
-    }
-
-    [TestMethod]
-    public void CatchAllExceptions_Action_NullLogger_SwallowsException()
-    {
-      // Should not throw
-      ExceptionUtil.CatchAllExceptions(
-        () => throw new InvalidOperationException("test"),
-        logError: null);
-    }
-
-    [TestMethod]
-    public void CatchAllExceptions_Func_CatchesAllTypes()
-    {
-      var result = ExceptionUtil.CatchAllExceptions(
-        () => throw new StackOverflowException("oops"),
-        "safe");
-      Assert.AreEqual("safe", result);
-    }
-
-    [TestMethod]
-    public void CatchAllExceptions_Func_NoException_ReturnsValue()
-    {
-      var result = ExceptionUtil.CatchAllExceptions(() => 123, 0);
-      Assert.AreEqual(123, result);
-    }
-
-    [TestMethod]
-    public void IsIoException_IOException_ReturnsTrue()
-    {
-      Assert.IsTrue(ExceptionUtil.IsIoException(new IOException()));
-    }
-
-    [TestMethod]
-    public void IsIoException_UnauthorizedAccessException_ReturnsTrue()
-    {
-      Assert.IsTrue(ExceptionUtil.IsIoException(new UnauthorizedAccessException()));
-    }
-
-    [TestMethod]
-    public void IsIoException_ArgumentException_ReturnsFalse()
-    {
-      Assert.IsFalse(ExceptionUtil.IsIoException(new ArgumentException()));
-    }
-
-    [TestMethod]
-    public void IsIoException_Null_ReturnsFalse()
-    {
-      Assert.IsFalse(ExceptionUtil.IsIoException(null));
-    }
-
-    [TestMethod]
-    public void IsIoException_DirectoryNotFoundException_ReturnsTrue()
-    {
-      // DirectoryNotFoundException derives from IOException
-      Assert.IsTrue(ExceptionUtil.IsIoException(new DirectoryNotFoundException()));
-    }
-
-    [TestMethod]
-    public void CatchIoExceptions_Action_LogErrorCalledBeforeRethrow()
-    {
-      var logCalled = false;
-      try
-      {
-        ExceptionUtil.CatchIoExceptions(
-          () => throw new IOException("test"),
-          ex => logCalled = true,
-          rethrow: true);
-      }
-      catch (IOException)
-      {
-        // expected
-      }
-      Assert.IsTrue(logCalled);
     }
   }
 }

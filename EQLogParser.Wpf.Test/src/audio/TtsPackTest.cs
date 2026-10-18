@@ -1,6 +1,8 @@
 using EQLogParser.Audio;
 using System.Text.RegularExpressions;
 
+#nullable enable annotations
+
 namespace EQLogParser.Wpf.Test
 {
   /*
@@ -301,6 +303,7 @@ namespace EQLogParser.Wpf.Test
      * of a SHA-256, and nothing else in either file looks like one.
      */
     [TestMethod]
+    [TestCategory("RepositoryValidation")]
     public void PinnedPackDigests_AreTheOnesTheDocumentationPublishes()
     {
       var root = FindRepositoryRoot();
@@ -330,6 +333,7 @@ namespace EQLogParser.Wpf.Test
      * A pack that grew without the docs being re-read tells people one thing and downloads another.
      */
     [TestMethod]
+    [TestCategory("RepositoryValidation")]
     public void PackSizes_QuotedInTheDocumentationMatchTheTable()
     {
       var root = FindRepositoryRoot();

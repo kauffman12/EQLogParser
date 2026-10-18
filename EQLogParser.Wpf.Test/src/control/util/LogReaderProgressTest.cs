@@ -4,6 +4,8 @@ using System.Diagnostics;
 using System.Text;
 using System.Threading;
 
+#nullable enable annotations
+
 namespace EQLogParser.Wpf.Test
 {
   /*
@@ -81,7 +83,8 @@ namespace EQLogParser.Wpf.Test
       try
       {
         // minBack in years: the reader seeks to that date, and this capture is dated 2025-10-01 (same trick as LogReaderThreadTest).
-        var reader = new LogReader(processor, file, minBack: 60 * 24 * 365 * 10, origin: "test");
+        using var reader = new LogReader(processor, file, minBack: 60 * 24 * 365 * 10, origin: "test");
+        Assert.AreEqual(0L, reader.HandedOverLines);
         var running = reader.StartAsync();
 
         double last = -1.0;
@@ -108,7 +111,8 @@ namespace EQLogParser.Wpf.Test
         var final = reader.GetProgress();
         Assert.IsTrue(final >= 99.5, $"the whole file was read ({samples} samples) but progress stopped at {final} %");
 
-        reader.Dispose();
+        Assert.IsTrue(SpinWait.SpinUntil(() => reader.HandedOverLines == Lines, TimeSpan.FromSeconds(5)),
+          "The product handoff counter must match the lines actually delivered, even without diagnostic logging.");
       }
       finally
       {

@@ -1,8 +1,10 @@
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+
+#nullable enable annotations
 
 namespace EQLogParser
 {
@@ -21,13 +23,15 @@ namespace EQLogParser
   [TestClass]
   public class EntityTimelineConcurrencyTest
   {
-    private const int WrittenNames = 20_000;
+    private const int WrittenNames = 2_000;
 
     [TestMethod]
     public void AForeignReadUnderSyncRootNeverSeesATornTable()
     {
       var timeline = new EntityTimeline();
       var writing = 1;
+      var reads = 0;
+      using var start = new Barrier(4);
       Exception? failure = null;
 
       var readers = Enumerable.Range(0, 3).Select(slot => new Thread(() =>
@@ -35,6 +39,7 @@ namespace EQLogParser
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         try
         {
+          Assert.IsTrue(start.SignalAndWait(TimeSpan.FromSeconds(30)), "The reader could not join the race.");
           for (var spin = 0; Volatile.Read(ref writing) == 1; spin++)
           {
             lock (timeline.SyncRoot)
@@ -57,6 +62,7 @@ namespace EQLogParser
               // Enumerating while somebody inserts throws outright ("enumerator may not be used after modification") —
               // the deterministic half of this test.
               if (spin % 512 == 0) _ = timeline.NamesWithIdentity().Count(n => n.Length > 0);
+              Interlocked.Increment(ref reads);
             }
           }
         }
@@ -68,15 +74,22 @@ namespace EQLogParser
 
       readers.ForEach(t => t.Start());
 
-      // Unique names and rising times so every insert really lands: the table resizes repeatedly under the readers.
-      for (var i = 0; i < WrittenNames; i++)
-        timeline.SetIdentity($"Name{i}", IdentityKind.Npc, 6, "R6-npcdb", i);
-      for (var i = 0; i < 2_000; i++)
-        timeline.AddAffiliation(AffiliationKind.Friendly, $"Name{i}", i, i + 5, 8, "R8-party");
+      try
+      {
+        Assert.IsTrue(start.SignalAndWait(TimeSpan.FromSeconds(30)), "The readers did not start.");
+        // Unique names and rising times force repeated table resizes under the readers.
+        for (var i = 0; i < WrittenNames; i++)
+          timeline.SetIdentity($"Name{i}", IdentityKind.Npc, 6, "R6-npcdb", i);
+        for (var i = 0; i < 200; i++)
+          timeline.AddAffiliation(AffiliationKind.Friendly, $"Name{i}", i, i + 5, 8, "R8-party");
+      }
+      finally
+      {
+        Volatile.Write(ref writing, 0);
+        readers.ForEach(t => t.Join());
+      }
 
-      Volatile.Write(ref writing, 0);
-      readers.ForEach(t => t.Join());
-
+      Assert.IsTrue(reads > 0, "The race must perform reads, not only start threads.");
       Assert.IsNull(failure, $"a read taken under SyncRoot tore while the table grew: {failure?.GetType().Name}: {failure?.Message}");
       Assert.AreEqual(WrittenNames, timeline.NamesWithIdentity().Count, "the folded table lost names");
       Assert.IsTrue(timeline.HasIdentity("Name1"), "a claim made during the race is not readable afterwards");

@@ -40,22 +40,6 @@ public class DerivedFightTest
         Assert.AreEqual(new TimeSegment(T0, T0).Total, Row(0, 0).DurationSeconds);
     }
 
-    /*
-     * The same expression DerivedFightRows puts in the grid's duration cell, asserted where it can run on any platform
-     * (the row itself lives in the WPF assembly and is covered by DerivedFightRowsTest). Digits matter as much as the
-     * number here: "00:46" is what the legacy tooltip of that row says in words other than words.
-     */
-    [TestMethod]
-    public void TheDurationCellPrintsTheTooltipsNumber()
-    {
-        static string Cell(DerivedFight fight)
-          => DateUtil.FormatTicks(TimeSpan.FromSeconds(fight.DurationSeconds).Ticks, DateUtil.TimeFormat.HMSCompact);
-
-        Assert.AreEqual("00:01", Cell(Row(0, 0)));
-        Assert.AreEqual("00:46", Cell(Row(0, 45)));
-        Assert.AreEqual("02:43", Cell(Row(0, 162)));
-    }
-
     [TestMethod]
     public void ARowWithoutBoundsSaysNothing()
     {

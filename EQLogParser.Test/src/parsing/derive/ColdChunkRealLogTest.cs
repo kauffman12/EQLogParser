@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 namespace EQLogParser;
@@ -13,38 +12,29 @@ public class ColdChunkRealLogTest
   {
     var path = Environment.GetEnvironmentVariable("EQLP_COLD_REALLOG");
     if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) Assert.Inconclusive("set EQLP_COLD_REALLOG to a real capture");
-    var watch = Stopwatch.StartNew();
     var run = PipelineHarness.RunFileDerived(path);
     var facts = run.Facts;
     var heals = run.HealFacts;
     facts.ColdifyNow();
     heals.ColdifyNow();
-    Console.WriteLine($"[cold] parse + encoder drain {watch.ElapsedMilliseconds} ms");
     var before = Fingerprint(facts, heals);
 
-    long classifyMs, projectMs, materializeMs;
     var index = new FightFactIndex(run.Timeline);
     IReadOnlyList<DerivedFight> rows;
     using (facts.RetainDecoded())
     using (heals.RetainDecoded())
     {
-      watch.Restart();
       ClassificationRules.Apply(facts, run.Timeline, heals);
-      classifyMs = watch.ElapsedMilliseconds;
-      watch.Restart();
       rows = FightProjection.Build(facts, run.Timeline, index.OnFact);
       Sectionizer.StampGroupIds(rows);
-      projectMs = watch.ElapsedMilliseconds;
     }
     SummaryInput input;
     List<(double, HealRecord)> healRecords;
     using (facts.RetainDecoded())
     using (heals.RetainDecoded())
     {
-      watch.Restart();
       input = FightSummarySource.Build(rows, index, facts);
       healRecords = HealSummarySource.Materialize(heals, input.AllRanges);
-      materializeMs = watch.ElapsedMilliseconds;
     }
 
     Assert.AreEqual(before, Fingerprint(facts, heals), "every field survives all the normal read doors");
@@ -71,11 +61,7 @@ public class ColdChunkRealLogTest
       "the spill trigger's number has to include what is resident, not only the backing");
     if (heals.HealCount > HealFactTable.HealChunkSize * 16)
       Assert.IsTrue(heals.EstimatedBytes < rawHeal / 2);
-    Console.WriteLine($"[cold] classify {classifyMs} ms | project {projectMs} ms | materialize {materializeMs} ms | " +
-      $"{rows.Count} fights, {healRecords.Count} heals in selection");
-    Console.WriteLine($"[cold] after normal reads: damage {rawDamage / 1048576d:F1} MB raw -> {facts.EstimatedBytes / 1048576d:F1} MB store " +
-      $"({facts.ColdBlobBytes / 1048576d:F1} MB backing); heals {rawHeal / 1048576d:F1} -> {heals.EstimatedBytes / 1048576d:F1} MB " +
-      $"({heals.ColdBlobBytes / 1048576d:F1} MB backing)");
+    Assert.IsTrue(healRecords.Count <= heals.HealCount, "Materialization may not duplicate captured heals.");
   }
 
   private static (long Damage, long Heal) Fingerprint(DamageFactTable facts, HealFactTable heals)

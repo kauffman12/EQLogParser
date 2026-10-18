@@ -1,5 +1,7 @@
 using System.Text.RegularExpressions;
 
+#nullable enable annotations
+
 namespace EQLogParser;
 
 /*
@@ -20,6 +22,7 @@ namespace EQLogParser;
  * write sites came out wrong.
  */
 [TestClass]
+[TestCategory("RepositoryValidation")]
 public class IdentityWriterInvariantTest
 {
   /// <summary>Files still claiming identity directly on the store. Key = file name, value = call sites. Empty = migrated.</summary>

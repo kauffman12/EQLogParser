@@ -4,11 +4,11 @@ namespace EQLogParser;
 public class TargetFrameStrengthTest
 {
   [TestMethod]
-  [DataRow(EvidenceFact.EvJoinedGroup, (int)IdentityKind.Merc, ClassificationRules.TargetedNpcStrength, "R13-merc")]
-  [DataRow(EvidenceFact.EvMercJoinedGroup, (int)IdentityKind.Merc, ClassificationRules.TargetedNpcStrength, "R13-merc")]
-  [DataRow(EvidenceFact.EvWhoRoster, (int)IdentityKind.Player, 100, "R2-who")]
-  public void AnNpcFrameBeatsBehaviorButNotPositivePlayerProof(
-    byte evidence, int expectedKind, int expectedStrength, string expectedSource)
+  [DataRow(EvidenceFact.EvJoinedGroup, (int)IdentityKind.Merc, "R13-merc")]
+  [DataRow(EvidenceFact.EvMercJoinedGroup, (int)IdentityKind.Merc, "R13-merc")]
+  [DataRow(EvidenceFact.EvWhoRoster, (int)IdentityKind.Player, "R2-who")]
+  public void NpcTargetFramesOutrankBehaviorButNotPositivePlayerEvidence(
+    byte evidence, int expectedKind, string expectedSource)
   {
     PipelineHarness.EnsureDataStore();
     PlayerRegistry.Instance.Clear();
@@ -22,6 +22,7 @@ public class TargetFrameStrengthTest
 
     var kind = timeline.IdentityAt(facts.NameOf(name), double.PositiveInfinity, out var strength, out var source);
     Assert.AreEqual((IdentityKind)expectedKind, kind);
+    var expectedStrength = evidence == EvidenceFact.EvWhoRoster ? 100 : ClassificationRules.TargetedNpcStrength;
     Assert.AreEqual(expectedStrength, strength);
     Assert.AreEqual(expectedSource, source);
   }
@@ -42,7 +43,6 @@ public class TargetFrameStrengthTest
     CollectionAssert.Contains(outcome.Conflicts, facts.NameOf(name));
     Assert.AreEqual(IdentityKind.Npc,
       timeline.IdentityAt(facts.NameOf(name), double.PositiveInfinity, out var strength, out var source));
-    // The frame's own rung, asked of the rule book rather than repeated here (it moved 70 → 65; see its comment).
     Assert.AreEqual(ClassificationRules.TargetedNpcStrength, strength);
     Assert.AreEqual("R1-conflict", source);
   }

@@ -1,6 +1,8 @@
 using System.Text;
 using System.Text.RegularExpressions;
 
+#nullable enable annotations
+
 namespace EQLogParser;
 
 /*
@@ -19,6 +21,7 @@ namespace EQLogParser;
  * that claim a source nobody can open.
  */
 [TestClass]
+[TestCategory("RepositoryValidation")]
 public class DocsPointerTest
 {
   private static readonly Regex Pointer = new(@"docs/DesignNotes\.md\s*(?:→|->)\s*""([^""]+)""", RegexOptions.Compiled);

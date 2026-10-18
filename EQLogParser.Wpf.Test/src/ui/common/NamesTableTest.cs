@@ -6,29 +6,8 @@ using System.Windows.Interop;
 
 namespace EQLogParser.Wpf.Test;
 
-/*
- * The Names window's one piece of logic: turning a census row into what an operator reads. Nothing here needs WPF - no
- * element is constructed, so no Sta.Run - because the interesting part is which short line the WHY tooltip composes and
- * which rows get an edit icon, not how SfDataGrid paints them.
- *
- * The grid shows five columns in one order — Name, Type, Class, Owner, Why: the cells you edit sit together after the name and the
- * read-only explanation goes last. Damage/Healing stay absent on purpose (an identity list should not rank names by output). Owner came
- * BACK in 2026-10-09: it was removed because "Pet Owners lists the same pairs", and that argument died with Pet Owners' write side when
- * petmapping.txt froze — see NamesTable's column comment and docs/DesignNotes.md → "petmapping.txt is a feed now".
- *
- * The WORDS themselves - "Chosen" for R10-manual, "Healed" for R15-healed, the dropdown's five entries - are asserted in
- * IdentityVocabularyTest (EQLogParser.Test), including the corpus check that no rule code reaches the screen. What is
- * pinned here is the part only this file owns: which LINES a row's tooltip gets, since each one tells a person whether to
- * ACT. A verdict resting on their own click needs no correction; one resting on an older log might; a claim that was taken
- * back leaves the list when memory was the only claim on the name (that removal is the repair tool — see
- * "TakingAClaimBackTakesTheLegacyMemoryWithIt"); and NOTHING names a file any more —
- * players.txt used to ride behind the proof as a second verdict from a source the operator cannot open from here, which
- * read as a contradiction nobody had explained on rows the rules had merely classified. The pane's own shape is pinned too: the column order, and the fact that a row which offers
- * no pencil still reserves its width (PlaceholderVisibilityConverter), so the words in the column line up.
- *
- * Most of this needs no WPF — RowFrom is a plain mapping — so only the column-order test constructs the pane, through
- * Sta.Run like every other UIElement here.
- */
+// Core owns vocabulary, row visibility and sort decisions. These tests cover the row adapter and census/editor wiring.
+// RowFrom is a plain mapping; tests constructing panes run all DependencyObject access inside Sta.Run.
 [TestClass]
 public class NamesTableTest
 {
@@ -207,51 +186,18 @@ public class NamesTableTest
     Assert.IsFalse(row.Provenance.Contains("\n"), $"a disagreement is not a tooltip section, got: {row.Provenance}");
   }
 
-  /*
-   * No hover in this pane names a file. Four of them sit behind these rows (players.txt, npcs.txt, identity-priors.txt,
-   * identity-overrides.txt), and naming one answers "which file said so" rather than the question a tooltip is for; worst of
-   * all was the roster flag on a row whose Type came from a rule, where "in players.txt" looked like an unresolved
-   * contradiction. The two proof clauses that used to quote filenames say what the file IS instead — "On the NPC List",
-   * "Name of a Known Spell". The app's word for a hostile name is NPC and for a cast-side spell is
-   * Player Spell — no "monster", no "mob", no "our", nowhere on this pane.
-   */
-  /*
-   * The Type dropdown belongs to the ROW, not to the window. One ComboBox serves every cell and its list comes from
-   * IdentityVocabulary.TypeOptionsFor — the same recognizer that hides a pencil — so what a row refuses is what its NAME decides,
-   * never a guess about which kinds are typeable: an eye is NPC or nothing, a summon whose spelling names its master has one
-   * verdict, and Unknown is in no list at all (the take-back is the take-back icon beside the name, where an operator can see it).
-   * Mercenary is offered on any row that gets a pencil — one vocabulary with the "Set … as" cascade, since 2026-11.
-   * RowFrom carries the list, which is what the editor binds when a cell opens, so this is checked without constructing a pane;
-   * IdentityVocabularyTest holds the same law in Core, this pins that the PANE hands the row that list.
-   */
   [TestMethod]
-  public void ARowOffersOnlyTheKindsItsNameAllows()
+  [DataRow("Berta", (int)IdentityKind.Player, "R3-joinraid")]
+  [DataRow("Eye of Zamul", (int)IdentityKind.Npc, "R6-npcdb")]
+  [DataRow("Sancus`s pet", (int)IdentityKind.Pet, "R5-owner:Sancus")]
+  public void TheRowAdapterCarriesCoresTypeChoices(string name, int kind, string reason)
   {
-    static string[] Words(NamesTable.NameRow row) => [.. row.TypeChoices.Select(o => o.Word)];
-
-    var raider = NamesTable.RowFrom(new ClassificationReport.Row
-    { Name = "Berta", Kind = IdentityKind.Player, Reason = "R3-joinraid" });
-    CollectionAssert.Contains(Words(raider), "Player", "the popup opens on the row's own answer");
-    CollectionAssert.Contains(Words(raider), "Pet", "a person may still be overruled about a summon");
-    CollectionAssert.Contains(Words(raider), "Mercenary",
-                              "one vocabulary, one reach: the cascade offers Mercenary in four panes, so this dropdown may not hide the word");
-    Assert.IsFalse(raider.TypeChoices.Any(o => o.Kind == IdentityKind.Unknown),
-                   "no entry writes Unknown — an asserted silence at Manual strength would outrank what this capture watched");
-
-    var merc = NamesTable.RowFrom(new ClassificationReport.Row
-    { Name = "Stormpaw", Kind = IdentityKind.Merc, Reason = "R13-merc" });
-    CollectionAssert.Contains(Words(merc), "Mercenary", "what the row already is stays in its list");
-    Assert.IsFalse(merc.TypeChoices.Count(o => o.Kind == IdentityKind.Merc) > 1, "one entry per answer, never two");
-
-    // An eye: never a person, never somebody's pet row (that would split its owner's output beside the real pets).
-    var eye = NamesTable.RowFrom(new ClassificationReport.Row
-    { Name = "Eye of Zamul", Kind = IdentityKind.Npc, Reason = "R6-npcdb" });
-    CollectionAssert.AreEquivalent(new[] { "NPC" }, Words(eye), "the eye's list is exactly its own answer");
-
-    var pet = NamesTable.RowFrom(new ClassificationReport.Row
-    { Name = "Sancus`s pet", Kind = IdentityKind.Pet, Reason = "R5-owner:Sancus" });
-    // The spelling settles the answer, so the list is exactly what it already is.
-    CollectionAssert.AreEquivalent(new[] { "Pet" }, Words(pet));
+    var expected = IdentityVocabulary.TypeOptionsFor(name, (IdentityKind)kind, reason).Select(o => o.Kind).ToArray();
+    var row = NamesTable.RowFrom(new ClassificationReport.Row
+    { Name = name, Kind = (IdentityKind)kind, Reason = reason });
+    CollectionAssert.AreEqual(expected, row.TypeChoices.Select(o => o.Kind).ToArray());
+    row.Recalculating = true;
+    Assert.AreEqual(name, row.Name, "Temporary presentation may not replace the name/sort key.");
   }
 
   /*
@@ -684,41 +630,14 @@ public class NamesTableTest
       }
   }
 
-  /*
-   * A row that offers no pencil still reserves its width. Hidden keeps the element's box; Collapsed — what
-   * BooleanToVisibilityConverter answers — hands it back, and the words in a column stop lining up: the exceptions (spell
-   * effects and self-naming summons on Type, everything not yet a Player on Class) punched a ragged left edge through the
-   * middle of both columns, so a difference in what a row ALLOWS was rendered as a difference in where its text begins.
-   */
   [TestMethod]
-  public void ARowWithoutAPencilStillPaysForOne()
+  public void TemporaryPresentationStateNeverChangesTheIdentityKey()
   {
-    var converter = new PlaceholderVisibilityConverter();
-    var culture = CultureInfo.CurrentCulture;
-
-    Assert.AreEqual(Visibility.Visible, converter.Convert(true, typeof(Visibility), null, culture));
-    Assert.AreEqual(Visibility.Hidden, converter.Convert(false, typeof(Visibility), null, culture),
-                    "a missing pencil collapsed and took the column's alignment with it");
-  }
-
-  /*
-   * Name, Type, Class, Owner, Why. The order is the interaction: Name identifies, the next cells are the ones that answer with a
-   * click, and WHY is the read-only sentence that explains them — which used to sit between the two things you edit.
-   * Owner joined on 2026-10-09 when petmapping.txt froze and this window became the only door left to an owner (docs/DesignNotes.md).
-   * Read inside Sta.Run like every DependencyObject (the grid's Columns belong to the thread that built them).
-   */
-  [TestMethod]
-  public void TheColumnsGoNameTypeClassOwnerWhy()
-  {
-
-    var order = new List<string>();
-    Sta.Run(() =>
-    {
-      foreach (var column in CreatePane().namesGrid.Columns) order.Add(column.MappingName ?? string.Empty);
-    });
-
-    CollectionAssert.AreEqual(new[] { "Name", "Type", "PlayerClass", "Owner", "Why" }, order,
-                              $"column order changed: {string.Join(", ", order)}");
+    var row = new NamesTable.NameRow { Name = "Probera", Kind = IdentityKind.Player };
+    row.Recalculating = true;
+    Assert.AreEqual("Probera", row.Name, "Sort and search keep the identity key during the transient label.");
+    row.Recalculating = false;
+    Assert.AreEqual("Probera", row.Name);
   }
 
   /*

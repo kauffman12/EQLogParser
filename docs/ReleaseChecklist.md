@@ -80,6 +80,8 @@ Nothing else holds a version: the `<Version>` entries in the `.csproj` files are
 Use a loaded app with a log containing multiple encounters, inactivity dividers, and NPCs that dealt damage but received none.
 These checks require a realized grid; the automated pane tests exercise bound data, not mouse selection or scrolling.
 
+- [ ] **Initial Hit Time:** on a cold start the time column is visible; re-dock the pane and change theme/font scale.
+  Its width follows the current theme without disappearing or requiring a log reload.
 - [ ] **Checkbox combinations:** both checked shows every display row; Inactivity off hides only dividers; Tanking off hides NPC rows
   with no damage received from players. Both off applies both rules. Rechecking restores the rows without reloading the log.
 - [ ] **Click after filtering:** with Tanking off, click several remaining rows, including ones below hidden rows. Each highlight and
@@ -353,6 +355,9 @@ identical to a test. Both halves below are the same seam seen two ways.
 Run `dotnet test EQLogParser.Wpf.Test/EQLogParser.Wpf.Test.csproj` on Windows, then use a realized Identity Table with
 more than 1,000 names and a capture that is still growing. A Linux build does not exercise the pager or in-cell ComboBoxes.
 
+- [ ] **Column order and take-back notice:** columns remain Name, Type, Class, Owner, Why. A take-back briefly shows
+  `Recalculating…` over the name without moving its row; another click clears the previous notice and the notice clears
+  after the answer or its cap. Core timing decisions are tested; this visible presentation is checked here.
 - [ ] **Startup and empty states:** the grid follows the pager when its template creates PagedSource. A capture with no names,
   zero search matches and no types checked shows no stale rows or indefinite spinner. Clearing the dials restores names.
 - [ ] **Whole-census lookup:** find a name originally on a later page; clear the query and recover the full list without a

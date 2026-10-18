@@ -1,3 +1,5 @@
+#nullable enable annotations
+
 namespace EQLogParser
 {
   /* Direct tests for EQDataStore (the combat-log knowledge base) + ConfigUtil.ReadList.
@@ -101,7 +103,7 @@ namespace EQLogParser
         "Test Spell lands on them",            // 19 LandsOnOther
         "Test Spell wears off of you");        // 20 WearOff
 
-      var spell = new EQDataStore().ParseCustomSpellData(line);
+      var spell = StoreWithClasses().ParseCustomSpellData(line);
       Assert.IsNotNull(spell);
       Assert.AreEqual("7", spell.Id);
       Assert.AreEqual("Test Spell Rk. II", spell.Name);
@@ -130,7 +132,7 @@ namespace EQLogParser
       // 21 columns, with charm after rank.
       var line = string.Join("^", "8", "Focus of Arcanum VI", "100", "0", "0", "0", "5", "2", "1",
         "0", "0", "0", "0", "0", "1", "0", "0", "0", "", "", "");
-      var spell = new EQDataStore().ParseCustomSpellData(line);
+      var spell = StoreWithClasses().ParseCustomSpellData(line);
 
       Assert.IsNotNull(spell);
       // roman-numeral ranks are stripped for the abbreviation index
@@ -141,7 +143,7 @@ namespace EQLogParser
     [TestMethod]
     public void ParseCustomSpellData_ShortOrEmptyLine_ReturnsNull()
     {
-      var store = new EQDataStore();
+      var store = StoreWithClasses();
       Assert.IsNull(store.ParseCustomSpellData("1^2^3^4^5^6^7^8^9^10")); // < 11 columns
       Assert.IsNull(store.ParseCustomSpellData(""));
       Assert.IsNull(store.ParseCustomSpellData(null));
@@ -176,7 +178,7 @@ namespace EQLogParser
     [TestMethod]
     public void GetHealingSpellByName_ReturnsNegativeDamagingVariantOnly()
     {
-      var store = new EQDataStore();
+      var store = StoreWithClasses();
 
       // Soothing Wave is a known beneficial spell (damaging < 0) in spells.txt
       var healing = store.GetHealingSpellByName("Soothing Wave");
@@ -191,7 +193,7 @@ namespace EQLogParser
     [TestMethod]
     public void NpcAndOldSpellLookups_UseRealData()
     {
-      var store = new EQDataStore();
+      var store = StoreWithClasses();
 
       // straight from data/npcs.txt / data/oldspells.txt (first entries, stable)
       Assert.IsTrue(store.IsKnownNpc("A bomb"));
@@ -212,7 +214,7 @@ namespace EQLogParser
     [TestMethod]
     public void GetClassFromTitle_MapsClassParenthesizedTitles()
     {
-      var store = new EQDataStore();
+      var store = StoreWithClasses();
 
       // data/titles.txt: Cleric=Vicar,Templar,High Priest,...
       Assert.AreEqual("Cleric", store.GetClassFromTitle("Cleric"));

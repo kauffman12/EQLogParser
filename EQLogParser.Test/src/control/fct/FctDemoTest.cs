@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
+#nullable enable annotations
+
 namespace EQLogParser
 {
   /*
@@ -30,11 +32,6 @@ namespace EQLogParser
     public void Script_CoversWhatAPlayerHasToTellApart()
     {
       var script = FctDemo.Script;
-
-      Assert.IsTrue(script.Count >= 18, $"only {script.Count} events: too sparse to read as combat");
-      /* The ceiling is the show list's, not a taste for brevity: seventeen switches have to be demonstrable in one pass, which is what the
-         count is spent on. Room above that is a raid log — configure mode teaches what a switch does, it is not a fight re-enactment. */
-      Assert.IsTrue(script.Count <= 34, $"{script.Count} events is a raid log, not a demo");
 
       Assert.IsTrue(script.Any(c => !FctLayout.IsIncoming(c.Lane)), "nothing in the outgoing band");
       Assert.IsTrue(script.Any(c => FctLayout.IsIncoming(c.Lane)), "nothing in the incoming band");

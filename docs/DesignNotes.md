@@ -7709,18 +7709,10 @@ constructed by MainWindow **and** by the headless test host, and an unhooked `Lo
 theme fan-out.
 `ApplyTimeColumnWidth` is the single expression both hooks call, so they cannot drift.
 
-**What the test can and cannot prove.** `FightTableTimeColumnTest` (Wpf.Test) pins that the constructor writes nothing (a
-theme value no
-vendor default produces is absent until applied, then present) and that a later theme still lands — i.e. no width is banked
-from the
-early read. It deliberately does **not** fire either hook: raising `FrameworkElement.LoadedEvent` on an `SfDataGrid` walks
-the grid's own
-load path with no `PresentationSource` behind it, which is the same class of windowless-thread path that already cost this
-suite two 60 s
-`Sta` wedges; and no headless process can raise `EventsThemeChanged` at all, because every raiser runs
-`SetThemeFontSizes`/`SetThemeResources`, which dereference `_mainWindow.npcWindow` and `main.statusText`. The event plumbing
-is therefore
-documented rather than measured — the arithmetic the hooks hand over is what is asserted.
+**Verification boundary.** The former time-column test checked an explicitly called setter, not either lifecycle hook,
+and was removed during test consolidation. Raising `FrameworkElement.LoadedEvent` on an unrealized `SfDataGrid` can wedge
+inside vendor load handling; firing a whole-app theme change also requires MainWindow. Startup visibility, re-docking and
+font-scale changes therefore belong to the Windows checks in `docs/ReleaseChecklist.md`, not to a vendor property round-trip.
 
 **Windows run afterwards: green, 1,698 passed / 8 gated skips across both assemblies** (1,545 cross-platform + 153 in
 `Wpf.Test`). That counts for two things beyond the new class passing. First, 6440d845's
@@ -8007,10 +7999,8 @@ players.txt`), which read as
   back.
 * **Columns are Name, Type, Class, Why.** The two cells you edit now sit together right after the name and the read-only WHY
 sentence goes last.
-  `ApplyColumnWidths` maps by `MappingName`, so widths followed without touching; `TheColumnsGoNameTypeClassWhy` reads
-  `namesGrid.Columns`
-  inside `Sta.Run` (the grid's columns belong to the thread that built them) with `EQIconStyle`/`EQTitleStyle` stubbed the way
-  `FightTableStartupTest` stubs them.
+  `ApplyColumnWidths` maps by `MappingName`, so widths followed without touching. Column order is a Windows visual check;
+  the former declaration-only test was removed during consolidation.
 
 Tests touched: `IdentityRulesTest` (Frobum → Player/`R5-companion`, and the comment now says why the two R5 shapes point at
 different names),
@@ -9417,8 +9407,8 @@ enumeration order still cannot move it on its own. And **the memory-applying pas
 replaying memory over
 `eqlog_Incogitable_xegony.txt` flips `HasIndependentIdentity` for **7 of 1,649** names while no name's resolved kind moves at
 all — a remembered verdict enters at -infinity and thereby creates an
-*earlier independent reason*, which is precisely what the charm/hidden-pet decision reads. So `ProjectionCarryRealLogTest`
-now states three laws instead of two: growth may rebuild, a pass that first applies
+*earlier independent reason*, which is precisely what the charm/hidden-pet decision reads. The retired real-log carry gate
+established three laws: growth may rebuild, a pass that first applies
 freshly written memory may rebuild (Kizant-2 continues there, Incogitable rebuilds), and a genuinely **quiet** pass — same
 facts, memory the previous pass already folded — must continue (4/4 on both captures, 0 ms).
 Fixture mirror: `ARememberedVerdictThatMakesAnEarlierReasonRefusesTheCarry`. Cost of the stricter fold is inside noise
@@ -9489,14 +9479,15 @@ a compatible refresh must take the full path. "A partial release can still use f
 honestly" says the plan, and these numbers
 are what makes the label true rather than decorative.
 
-**And the reuse question Phase 2 stands on, measured on a second capture** (`ProjectionCarryRealLogTest` over
+**And the reuse question Phase 2 stands on, measured on a second capture** (the retired real-log carry gate over
 `eqlog_Kizant_xegony-01-06-24.txt`, five growing
 prefixes to 5,277,426 facts): verdicts moved on every pass after the first — as they do whenever a rule book re-runs on more
 evidence — and even so **only 1 row
 in 2,552** had a run of fact ordinals that was not the old list with more appended, and **no row ever lost facts**. So re-routing across a moved verdict is rare
 but real (one `A warblood` row), which is exactly why the tail path must *check* rather than assume, and why it can: a guard
 cheap enough to afford will reject
-one row per capture, not a whole build. Two laws are now asserted there every pass: no fact ordinal ever appears in two rows'
+one row per capture, not a whole build. Two laws are now asserted by `FightProjectionIncrementTest` on fixture prefixes:
+no fact ordinal ever appears in two rows'
 damage runs (a board's arithmetic
 cannot survive that, verdicts moved or not), and the strict append-only law is asserted whenever the verdicts did NOT move —
 where it held with zero violations.
@@ -13404,9 +13395,10 @@ as good as that fold, which `EntityAnswerStampTest` holds field by field (and wh
 first: with it open,
 this change would have widened the same bug into the engine itself).
 
-**Proven on a real capture, not argued.** `ProjectionCarryRealLogTest` (`EQLP_PROJECTION_CARRY=<log>
-[EQLP_PROJECTION_CARRY_PASSES=n]`) replays
-`eqlog_Kizant_xegony-2.txt` as growing prefixes and, at each one, runs the two passes that matter:
+**Proven on a real capture, not argued.** The retired real-log carry gate replayed
+`eqlog_Kizant_xegony-2.txt` as growing prefixes and, at each one, ran the two passes that matter.
+Its measurements remain here; fixture prefix/full equivalence and ordinal-extension assertions now live in
+`FightProjectionIncrementTest`, alongside the quiet-pass and moved-answer carry checks:
 
 ```
 [carry] pass 1: facts 1,165,998 rows 182 | growth rebuilt 257 ms | settle over 190 re-remembered names: continued 0 ms
@@ -14351,9 +14343,9 @@ memo
 was written for it, measured, and removed: identical numbers with it gone (132.7 → 132.4 MB). The lesson is the same one this
 file
 keeps re-learning — measure the shape before writing the rule; a plausible allocation story is not a measurement, and the A/B is
-what tells you your fix fixed nothing. `HealingWindowKeyTest` now pins the EXISTING memo instead: 30,000 heals over 60 pairs
-must
-build exactly **60** key strings (verified to have teeth — restoring the per-record concat fails it at 30,000).
+what tells you your fix fixed nothing. A temporary probe verified the EXISTING memo: 30,000 heals over 60 pairs built
+exactly **60** key strings (restoring the per-record concat made 30,000). The count-only test and its production probe
+fields were removed during consolidation; healing values remain covered by the golden and replay suites.
 
 Both branches of pass 1 — everything accepted, and rejections present (the no-swarm-pets setting drops pet heals, which is
 where the
@@ -15847,8 +15839,9 @@ takes
 the previous row's word off (nothing else could); and a pass landing **inside** the floor armed nothing, so the answer sat
 under the
 label until the 5 s cap — the remaining floor now gets its own one-shot, armed once and only while the floor is unpaid.
-Pinned by `RecalcOverlayTest` (floor / pass / cap / monotonicity over plain longs) and, in
-`EQLogParser.Wpf.Test`, `RecalcOverlayRowWordTest`.
+Pinned by `RecalcOverlayTest` (floor / pass / cap / monotonicity over plain longs). The former row-word-only test was
+removed during consolidation; `NamesTableTest` retains the invariant that temporary presentation leaves the name/sort key
+unchanged, and the visible notice is a Windows checklist item.
 
 **What did not change.** The verb is still forget-then-the-capture-answers, so the memory-vs-evidence table from when `Reset`
 was renamed stands word for word — a name whose only claim was memory leaves the list, and a name this capture places comes
@@ -18226,3 +18219,43 @@ solution build reported zero warnings/errors. WPF runtime checks remain Windows-
 
 Higher-risk work was not included: broad name/spell span interning, decoded-pass lifetime changes, fact-backed board
 consumption, packed auxiliary storage and token-buffer reuse. Those need separate designs and measurements.
+
+## Test consolidation: keep decisions, retire reconstructions (2026-11)
+
+The cleanup removes private-field inventories, DTO property round-trips, copy-harness self-tests, incidental exception
+contracts, cosmetic assertions and manual vendor-property setter tests. Frozen-cell coverage keeps the owned static-state
+recognizer and refusal table; the four window/clock fixtures are gone. Production animation fixes remain. The pair-key
+measurement counter and its dedicated test are removed, not the healing memoization.
+
+Scalar parsing, condition evaluation, validators, modifiers, dates, exception policy and range cases share readable tables
+instead of repeated fixtures. Condition evaluation asserts successful parsing first: `Evaluate(null)` deliberately returns
+true and must not hide a broken positive parse. Copy sentinels now differ in boolean fields too. Wide codec consolidation
+retains intermediate/max amounts, independent landed/asked planes, positional cases, wrong counts and corruption refusal.
+The small `gap-fight.txt` prefix case now executes instead of being permanently inconclusive.
+
+Projection carry's real-log measurement gate is retired after moving ordinal uniqueness and continued-prefix checks into
+`FightProjectionIncrementTest`; each fixture prefix also compares to a from-zero build. Historical capture measurements stay
+in this document. Reproducibility and cold-storage volume gates remain. The additional incremental-classification gate is
+retained pending a demonstrated all-stage fixture replacement; it was a conditional review candidate, not a proven duplicate.
+Cold-storage timing prints are removed while its row fingerprints, compression budgets and warm-cache limits remain.
+
+The real row adapter owns the duration table. The real reader progress test now compares delivered lines to the product
+handoff counter, while one boundary table owns load-cleanup eligibility. Core owns selection arithmetic; Windows grid tests
+retain actual preview-press/context-opening/keyboard wiring. Names retains census/editor/page wiring and representative
+adapter checks rather than repeating the Core dropdown grammar. Repository checks use `RepositoryValidation`; live-window
+GIF and selection suites use `WindowsIntegration`. Categories do not skip tests in a default run.
+
+Read-only store tests reuse the label-keyed fixture. The census race meets a fresh writer batch at each boundary rather than
+rebuilding hundreds of times after growth finished. Timeline readers meet the writer before mutation and must actually read;
+a smaller input still crosses repeated dictionary resizes without turning lazy digest reads into a contention benchmark.
+Target-frame expected strength is calculated inside the test, not stored in discovery arguments, and the parameterized
+method has a fresh name to invalidate older discovery identities. This preserves the identity/strength/source assertions;
+it does not prove the operator's particular Windows Test Explorer cache was the original failure.
+
+Validation on Linux: two fresh headless runs each passed **2,519**, with **3 gated skips**, in approximately **10 seconds**;
+three additional target-frame/concurrency runs each passed all **8** cases. The non-incremental solution build reported
+**zero warnings/errors**, including the WPF test project. Separately, Kizant live passed the cold-storage and same-process
+reproducibility gates, Kizant live passed the retained incremental-classification gate, and Roper THJ passed cold storage
+with `EQLP_EMU=1`. These are executed counts, not source-method counts.
+WPF runtime tests were not executed here. Startup/theme sizing, column order, take-back presentation and frozen-grid visuals
+remain Windows checks in `docs/ReleaseChecklist.md`.

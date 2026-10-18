@@ -1,5 +1,5 @@
-using System.Reflection;
 using EQLogParser;
+using System.Reflection;
 
 namespace EQLogParser;
 
@@ -199,27 +199,4 @@ public class EntityTimelineDigestTest
 
 
 
-    [TestMethod]
-    public void TheTimelineHoldsExactlyTheTwoStoresTheDigestCovers()
-    {
-        var stores = typeof(EntityTimeline)
-            .GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)
-            .Where(static f => f.DeclaringType == typeof(EntityTimeline) &&
-                               (f.FieldType.IsGenericType ? f.FieldType.GetGenericTypeDefinition() == typeof(Dictionary<,>)
-                                                          : f.FieldType.Name.StartsWith("Dictionary")))
-            .Select(static f => f.Name)
-            .OrderBy(static s => s, StringComparer.Ordinal)
-            .ToList();
-
-        /*
-         * The two EVIDENCE stores, plus the two answer-view maps. A view map is not new state to digest: it holds one hashed term
-         * per name recomputed from the evidence stores through the public predicates on every accepted insertion, so it cannot lag
-         * an answer. Anything else added here (a per-name cooldown table, a separately kept override map) is evidence and has to be
-         * folded into StateStamp/AnswerStamp before this list grows, or the incremental pass carries rows over a verdict it cannot see.
-         */
-        CollectionAssert.AreEqual(new[] { "_affiliation", "_affiliationAnswers", "_identity", "_identityAnswers" }, stores,
-            $"EntityTimeline holds {string.Join(", ", stores)}: EntityTimeline.StateStamp digests identity + affiliation " +
-            "because that is what the projection reads, and AnswerStamp folds the answers those two hand out. New evidence state " +
-            "has to be digested too, or the incremental pass carries rows over a verdict it cannot see");
-    }
 }

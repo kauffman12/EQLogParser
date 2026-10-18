@@ -229,11 +229,6 @@ namespace EQLogParser
               healedByHealerTimeSegments = [], healedBySpellTimeSegments = [], healedByHealerSpellsTimeSegments = [],
               healerHealedTimeSegments = [], healerSpellTimeSegments = [], healerHealedSpellTimeSegments = [];
 
-            // Witness for `HealingWindowKeyTest`: this build's key-memo misses. Reset per build; incremented on a MISS only (see
-            // HealerHealedKey), where the string is actually built -- the memo itself is `_healerHealedKeys`, which has existed here
-            // a while and is the reason a night's 2.65 M heal lines do not cost 2.65 M key strings.
-            PairKeyBuilds = 0;
-
             foreach (var segment in CollectionsMarshal.AsSpan(_raidTotals.Ranges.TimeSegments))
             {
               var beginTime = segment.BeginTime;
@@ -667,14 +662,6 @@ namespace EQLogParser
       FireChartEvent("CLEAR");
     }
 
-    /*
-     * How many times the LAST build had to BUILD a `healer|healed` key because the memo had not seen that pair. This is the
-     * law's witness: it must be pair-sized (one per distinct healer/healed pair in the capture), never heal-sized. A number
-     * approaching the record count means the per-record concatenation -- 2,647,774 strings over a night's select-all -- came
-     * back; `HealingWindowKeyTest` reads it. Incremented once per MISS, so it costs a hot loop nothing.
-     */
-    internal long PairKeyBuilds { get; private set; }
-
     private static bool CountedAsOurs(Dictionary<string, bool> memo, string name)
     {
       if (string.IsNullOrEmpty(name)) return false;
@@ -818,7 +805,6 @@ namespace EQLogParser
       if (!_healerHealedKeys.TryGetValue((healer, healed), out var key))
       {
         _healerHealedKeys[(healer, healed)] = key = healer + "|" + healed;
-        PairKeyBuilds++;
       }
       return key;
     }

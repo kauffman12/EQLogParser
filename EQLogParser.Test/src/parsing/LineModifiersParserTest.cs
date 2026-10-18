@@ -1,205 +1,82 @@
+#nullable enable annotations
+
 namespace EQLogParser
 {
   [TestClass]
   public class LineModifiersParserTest
   {
     [TestMethod]
-    public void TestBuildVector_Critical()
+    [DataRow("Critical", 2)]
+    [DataRow("Lucky Critical", 6)]
+    [DataRow("Riposte Strikethrough", 48)]
+    [DataRow("Riposte", 32)]
+    [DataRow("Flurry", 1024)]
+    [DataRow("Lucky Critical Flurry", 1030)]
+    [DataRow("Twincast", 1)]
+    [DataRow("Twincast Critical", 3)]
+    [DataRow("Assassinate", 64)]
+    [DataRow("Headshot", 128)]
+    [DataRow("Double Bow Shot", 512)]
+    [DataRow("Finishing Blow", 2050)]
+    [DataRow("Slay Undead", 256)]
+    [DataRow("Rampage", 8)]
+    [DataRow("Wild Rampage", 8)]
+    [DataRow("Crippling Blow", 2)]
+    [DataRow("Deadly Strike", 2)]
+    [DataRow("Strikethrough", 16)]
+    [DataRow("", 0)]
+    [DataRow(null, 0)]
+    [DataRow("No Modifier", 0)]
+    public void ModifierWordsAndPredicatesAgreeWithTheMask(string? words, int expected)
     {
-      var result = LineModifiersParser.BuildVector("Critical");
-      Assert.AreEqual(LineModifiersParser.Crit, result);
-      Assert.IsTrue(LineModifiersParser.IsCrit(result));
-      Assert.IsFalse(LineModifiersParser.IsTwincast(result));
-      Assert.IsFalse(LineModifiersParser.IsLucky(result));
+      var mask = LineModifiersParser.BuildVector(words);
+      Assert.AreEqual((short)expected, mask);
+      Assert.AreEqual((expected & 1) != 0, LineModifiersParser.IsTwincast(mask));
+      Assert.AreEqual((expected & 2) != 0, LineModifiersParser.IsCrit(mask));
+      Assert.AreEqual((expected & 4) != 0, LineModifiersParser.IsLucky(mask));
+      Assert.AreEqual((expected & 8) != 0, LineModifiersParser.IsRampage(mask));
+      Assert.AreEqual((expected & 16) != 0, LineModifiersParser.IsStrikethrough(mask));
+      Assert.AreEqual((expected & 32) != 0 && (expected & 16) == 0, LineModifiersParser.IsRiposte(mask));
+      Assert.AreEqual((expected & 64) != 0, LineModifiersParser.IsAssassinate(mask));
+      Assert.AreEqual((expected & 128) != 0, LineModifiersParser.IsHeadshot(mask));
+      Assert.AreEqual((expected & 256) != 0, LineModifiersParser.IsSlayUndead(mask));
+      Assert.AreEqual((expected & 512) != 0, LineModifiersParser.IsDoubleBowShot(mask));
+      Assert.AreEqual((expected & 1024) != 0, LineModifiersParser.IsFlurry(mask));
+      Assert.AreEqual((expected & 2048) != 0, LineModifiersParser.IsFinishingBlow(mask));
     }
 
     [TestMethod]
-    public void TestBuildVector_LuckyCritical()
+    public void MaskMarksTakePrecedenceOverSpellNameMarks()
     {
-      var result = LineModifiersParser.BuildVector("Lucky Critical");
-      Assert.IsTrue(LineModifiersParser.IsCrit(result));
-      Assert.IsTrue(LineModifiersParser.IsLucky(result));
-      Assert.IsFalse(LineModifiersParser.IsTwincast(result));
+      Assert.AreEqual(FctSpecial.Assassinate,
+        LineModifiersParser.SpecialFor(LineModifiersParser.BuildVector("Assassinate Critical"), null));
+      Assert.AreEqual(FctSpecial.Headshot,
+        LineModifiersParser.SpecialFor(LineModifiersParser.BuildVector("Headshot"), null));
+      Assert.AreEqual(FctSpecial.SlayUndead,
+        LineModifiersParser.SpecialFor(LineModifiersParser.BuildVector("Slay Undead"), null));
+      Assert.AreEqual(FctSpecial.FinishingBlow,
+        LineModifiersParser.SpecialFor(LineModifiersParser.BuildVector("Finishing Blow Critical"), null));
+      Assert.AreEqual(FctSpecial.None,
+        LineModifiersParser.SpecialFor(LineModifiersParser.BuildVector("Critical Flurry"), "Incendiary"));
+      Assert.AreEqual(FctSpecial.Assassinate,
+        LineModifiersParser.SpecialFor(LineModifiersParser.BuildVector("Assassinate"), "Decapitation XVIII"));
     }
 
     [TestMethod]
-    public void TestBuildVector_RiposteStrikethrough()
+    public void SpellMarksUseTheWholeLeadingSpellFamilyRatherThanASubstring()
     {
-      var result = LineModifiersParser.BuildVector("Riposte Strikethrough");
-      Assert.IsFalse(LineModifiersParser.IsRiposte(result));
-      Assert.IsTrue(LineModifiersParser.IsStrikethrough(result));
-    }
-
-    [TestMethod]
-    public void TestBuildVector_Flurry()
-    {
-      var result = LineModifiersParser.BuildVector("Flurry");
-      Assert.IsTrue(LineModifiersParser.IsFlurry(result));
-      Assert.IsFalse(LineModifiersParser.IsCrit(result));
-    }
-
-    [TestMethod]
-    public void TestBuildVector_LuckyCriticalFlurry()
-    {
-      var result = LineModifiersParser.BuildVector("Lucky Critical Flurry");
-      Assert.IsTrue(LineModifiersParser.IsCrit(result));
-      Assert.IsTrue(LineModifiersParser.IsLucky(result));
-      Assert.IsTrue(LineModifiersParser.IsFlurry(result));
-      Assert.IsFalse(LineModifiersParser.IsTwincast(result));
-    }
-
-    [TestMethod]
-    public void TestBuildVector_Twincast()
-    {
-      var result = LineModifiersParser.BuildVector("Twincast");
-      Assert.IsTrue(LineModifiersParser.IsTwincast(result));
-      Assert.IsFalse(LineModifiersParser.IsCrit(result));
-    }
-
-    [TestMethod]
-    public void TestBuildVector_TwincastCritical()
-    {
-      var result = LineModifiersParser.BuildVector("Twincast Critical");
-      Assert.IsTrue(LineModifiersParser.IsTwincast(result));
-      Assert.IsTrue(LineModifiersParser.IsCrit(result));
-    }
-
-    [TestMethod]
-    public void TestBuildVector_Assassinate()
-    {
-      var result = LineModifiersParser.BuildVector("Assassinate");
-      Assert.IsTrue(LineModifiersParser.IsAssassinate(result));
-    }
-
-    [TestMethod]
-    public void TestBuildVector_Headshot()
-    {
-      var result = LineModifiersParser.BuildVector("Headshot");
-      Assert.IsTrue(LineModifiersParser.IsHeadshot(result));
-    }
-
-    [TestMethod]
-    public void TestBuildVector_DoubleBowShot()
-    {
-      var result = LineModifiersParser.BuildVector("Double Bow Shot");
-      Assert.IsTrue(LineModifiersParser.IsDoubleBowShot(result));
-    }
-
-    [TestMethod]
-    public void TestBuildVector_FinishingBlow()
-    {
-      var result = LineModifiersParser.BuildVector("Finishing Blow");
-      Assert.IsTrue(LineModifiersParser.IsFinishingBlow(result));
-    }
-
-    [TestMethod]
-    public void TestBuildVector_SlayUndead()
-    {
-      var result = LineModifiersParser.BuildVector("Slay Undead");
-      Assert.IsTrue(LineModifiersParser.IsSlayUndead(result));
-    }
-
-    [TestMethod]
-    public void TestBuildVector_Rampage()
-    {
-      var result = LineModifiersParser.BuildVector("Rampage");
-      Assert.IsTrue(LineModifiersParser.IsRampage(result));
-    }
-
-    [TestMethod]
-    public void TestBuildVector_WildRampage()
-    {
-      var result = LineModifiersParser.BuildVector("Wild Rampage");
-      Assert.IsTrue(LineModifiersParser.IsRampage(result));
-    }
-
-    [TestMethod]
-    public void TestBuildVector_CripplingBlow()
-    {
-      var result = LineModifiersParser.BuildVector("Crippling Blow");
-      Assert.IsTrue(LineModifiersParser.IsCrit(result));
-    }
-
-    [TestMethod]
-    public void TestBuildVector_DeadlyStrike()
-    {
-      var result = LineModifiersParser.BuildVector("Deadly Strike");
-      Assert.IsTrue(LineModifiersParser.IsCrit(result));
-    }
-
-    [TestMethod]
-    public void TestBuildVector_StrikethroughOnly()
-    {
-      var result = LineModifiersParser.BuildVector("Strikethrough");
-      Assert.IsTrue(LineModifiersParser.IsStrikethrough(result));
-      Assert.IsFalse(LineModifiersParser.IsRiposte(result));
-    }
-
-    [TestMethod]
-    public void TestBuildVector_EmptyString()
-    {
-      var result = LineModifiersParser.BuildVector("");
-      Assert.AreEqual(0, result);
-    }
-
-    [TestMethod]
-    public void TestBuildVector_NullModifiers()
-    {
-      var result = LineModifiersParser.BuildVector(null);
-      Assert.AreEqual(0, result);
-    }
-
-    [TestMethod]
-    public void TestBuildVector_NoModifiers()
-    {
-      var result = LineModifiersParser.BuildVector("No Modifier");
-      Assert.AreEqual(0, result);
-    }
-
-    /* The overlay's mark rule: the four mask events in priority order — a line carries one, the order only decides
-       which wins if a log ever lies about two. */
-    [TestMethod]
-    public void TestSpecialFor_MaskEvents()
-    {
-      Assert.AreEqual(FctSpecial.Assassinate, LineModifiersParser.SpecialFor(LineModifiersParser.BuildVector("Assassinate Critical"), null));
-      Assert.AreEqual(FctSpecial.Headshot, LineModifiersParser.SpecialFor(LineModifiersParser.BuildVector("Headshot"), null));
-      Assert.AreEqual(FctSpecial.SlayUndead, LineModifiersParser.SpecialFor(LineModifiersParser.BuildVector("Slay Undead"), null));
-      Assert.AreEqual(FctSpecial.FinishingBlow, LineModifiersParser.SpecialFor(LineModifiersParser.BuildVector("Finishing Blow Critical"), null));
-      Assert.AreEqual(FctSpecial.None, LineModifiersParser.SpecialFor(LineModifiersParser.BuildVector("Critical Flurry"), "Incendiary"));
-    }
-
-    /* Decapitation is the Berserker two-hander spell: logged as ordinary damage named in the line ("... by Decapitation
-       XVIII") with no modifier of its own, so its only tell is the spell's name. Everything else — including things
-       that merely start like it — stays unmarked. */
-    [TestMethod]
-    public void TestSpecialFor_DecapitationIsANameNotAMask()
-    {
-      Assert.AreEqual(FctSpecial.Decapitation, LineModifiersParser.SpecialFor(LineModifiersParser.None, "Decapitation XVIII"));
-      Assert.AreEqual(FctSpecial.Decapitation, LineModifiersParser.SpecialFor(LineModifiersParser.Crit, "Decapitation XVIII"));
-
-      // the burns follow the same rule: ordinary damage records, class spells, resolved by name
-      Assert.AreEqual(FctSpecial.ManaBurn, LineModifiersParser.SpecialFor(LineModifiersParser.None, "Mana Burn"));
-      Assert.AreEqual(FctSpecial.ManaBurn, LineModifiersParser.SpecialFor(LineModifiersParser.Crit, "Mana Burn AB"));
-      Assert.AreEqual(FctSpecial.LifeBurn, LineModifiersParser.SpecialFor(LineModifiersParser.None, "Life Burn"));
-      Assert.AreEqual(FctSpecial.LifeBurn, LineModifiersParser.SpecialFor(LineModifiersParser.Crit, "Life Burn AB"));
-
-      // prefixes of the right word: a name merely CONTAINING the spell is not the spell
-      Assert.AreEqual(FctSpecial.None, LineModifiersParser.SpecialFor(LineModifiersParser.None, "Greater Mana Burn Potion"));
-      Assert.AreEqual(FctSpecial.None, LineModifiersParser.SpecialFor(LineModifiersParser.None, "Burn Mana"));
-      Assert.AreEqual(FctSpecial.None, LineModifiersParser.SpecialFor(LineModifiersParser.Crit, "Crown of Stars"));
-      Assert.AreEqual(FctSpecial.None, LineModifiersParser.SpecialFor(LineModifiersParser.None, "Decrees of Kurn"));
-
-      // a real mask event outranks the name rule when one log somehow carries both
-      Assert.AreEqual(FctSpecial.Assassinate, LineModifiersParser.SpecialFor(LineModifiersParser.BuildVector("Assassinate"), "Decapitation XVIII"));
-    }
-
-    [TestMethod]
-    public void TestMaskCache_CacheHit()
-    {
-      var modifiers = "Lucky Critical Flurry";
-      var first = LineModifiersParser.BuildVector(modifiers);
-      var second = LineModifiersParser.BuildVector(modifiers);
-      Assert.AreEqual(first, second);
+      foreach (var mask in new[] { LineModifiersParser.None, LineModifiersParser.Crit })
+      {
+        Assert.AreEqual(FctSpecial.Decapitation, LineModifiersParser.SpecialFor(mask, "Decapitation XVIII"));
+        Assert.AreEqual(FctSpecial.ManaBurn, LineModifiersParser.SpecialFor(mask, "Mana Burn"));
+        Assert.AreEqual(FctSpecial.ManaBurn, LineModifiersParser.SpecialFor(mask, "Mana Burn AB"));
+        Assert.AreEqual(FctSpecial.LifeBurn, LineModifiersParser.SpecialFor(mask, "Life Burn"));
+        Assert.AreEqual(FctSpecial.LifeBurn, LineModifiersParser.SpecialFor(mask, "Life Burn AB"));
+      }
+      foreach (var spell in new[] { "Greater Mana Burn Potion", "Burn Mana", "Crown of Stars", "Decrees of Kurn" })
+      {
+        Assert.AreEqual(FctSpecial.None, LineModifiersParser.SpecialFor(LineModifiersParser.None, spell));
+      }
     }
   }
 }

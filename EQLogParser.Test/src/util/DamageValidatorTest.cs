@@ -4,116 +4,48 @@ namespace EQLogParser
   public class DamageValidatorTest
   {
     [TestMethod]
-    public void IsValid_AllEnabled_AcceptsAllDamageTypes()
+    [DataRow(Labels.Melee, 0)]
+    [DataRow(Labels.Bane, 0)]
+    [DataRow(Labels.Ds, 0)]
+    [DataRow(Labels.Melee, 64)]
+    [DataRow(Labels.Melee, 128)]
+    [DataRow(Labels.Melee, 2048)]
+    [DataRow(Labels.Melee, 256)]
+    public void AllEnabledAcceptsEveryDamageKindThroughBothDoors(string type, int mask)
     {
       var validator = new DamageValidator(true, true, true, true, true, true);
-      Assert.IsTrue(validator.IsValid(CreateDamageRecord(type: Labels.Melee, mask: 0)));
-      Assert.IsTrue(validator.IsValid(CreateDamageRecord(type: Labels.Bane, mask: 0)));
-      Assert.IsTrue(validator.IsValid(CreateDamageRecord(type: Labels.Ds, mask: 0)));
-      Assert.IsTrue(validator.IsValid(CreateDamageRecord(type: Labels.Melee, mask: 64)));   // assassinate
-      Assert.IsTrue(validator.IsValid(CreateDamageRecord(type: Labels.Melee, mask: 128)));  // headshot
-      Assert.IsTrue(validator.IsValid(CreateDamageRecord(type: Labels.Melee, mask: 2048))); // finishing blow
-      Assert.IsTrue(validator.IsValid(CreateDamageRecord(type: Labels.Melee, mask: 256)));  // slay undead
-    }
-
-    [TestMethod]
-    public void IsValid_AssassinateDisabled_RejectsAssassinate()
-    {
-      var validator = new DamageValidator(false, true, true, true, true, true);
-      Assert.IsFalse(validator.IsValid(CreateDamageRecord(type: Labels.Melee, mask: 64)));
-      Assert.IsTrue(validator.IsValid(CreateDamageRecord(type: Labels.Melee, mask: 0)));
-    }
-
-    [TestMethod]
-    public void IsValid_BaneDisabled_RejectsBane()
-    {
-      var validator = new DamageValidator(true, false, true, true, true, true);
-      Assert.IsFalse(validator.IsValid(CreateDamageRecord(type: Labels.Bane, mask: 0)));
-      Assert.IsTrue(validator.IsValid(CreateDamageRecord(type: Labels.Melee, mask: 0)));
-    }
-
-    [TestMethod]
-    public void IsValid_DsDisabled_RejectsDs()
-    {
-      var validator = new DamageValidator(true, true, false, true, true, true);
-      Assert.IsFalse(validator.IsValid(CreateDamageRecord(type: Labels.Ds, mask: 0)));
-      Assert.IsTrue(validator.IsValid(CreateDamageRecord(type: Labels.Melee, mask: 0)));
-    }
-
-    [TestMethod]
-    public void IsValid_FinishingBlowDisabled_RejectsFinishingBlow()
-    {
-      var validator = new DamageValidator(true, true, true, false, true, true);
-      Assert.IsFalse(validator.IsValid(CreateDamageRecord(type: Labels.Melee, mask: 2048)));
-      Assert.IsTrue(validator.IsValid(CreateDamageRecord(type: Labels.Melee, mask: 0)));
-    }
-
-    [TestMethod]
-    public void IsValid_HeadshotDisabled_RejectsHeadshot()
-    {
-      var validator = new DamageValidator(true, true, true, true, false, true);
-      Assert.IsFalse(validator.IsValid(CreateDamageRecord(type: Labels.Melee, mask: 128)));
-      Assert.IsTrue(validator.IsValid(CreateDamageRecord(type: Labels.Melee, mask: 0)));
-    }
-
-    [TestMethod]
-    public void IsValid_SlayUndeadDisabled_RejectsSlayUndead()
-    {
-      var validator = new DamageValidator(true, true, true, true, true, false);
-      Assert.IsFalse(validator.IsValid(CreateDamageRecord(type: Labels.Melee, mask: 256)));
-      Assert.IsTrue(validator.IsValid(CreateDamageRecord(type: Labels.Melee, mask: 0)));
-    }
-
-    [TestMethod]
-    public void IsValid_NullRecord_ReturnsFalse()
-    {
-      var validator = new DamageValidator(true, true, true, true, true, true);
-      Assert.IsFalse(validator.IsValid(null));
-    }
-
-    [TestMethod]
-    public void IsDamageLimited_AllEnabled_ReturnsFalse()
-    {
-      var validator = new DamageValidator(true, true, true, true, true, true);
+      Assert.IsTrue(validator.IsValid(Record(type, (short)mask)));
+      Assert.IsTrue(DamageValidator.IsDamageValid((short)mask, type, true, true, true, true, true, true));
       Assert.IsFalse(validator.IsDamageLimited());
     }
 
     [TestMethod]
-    public void IsDamageLimited_OneDisabled_ReturnsTrue()
+    [DataRow(false, true, true, true, true, true, Labels.Melee, 64)]
+    [DataRow(true, false, true, true, true, true, Labels.Bane, 0)]
+    [DataRow(true, true, false, true, true, true, Labels.Ds, 0)]
+    [DataRow(true, true, true, false, true, true, Labels.Melee, 2048)]
+    [DataRow(true, true, true, true, false, true, Labels.Melee, 128)]
+    [DataRow(true, true, true, true, true, false, Labels.Melee, 256)]
+    public void EachDisabledOptionRejectsOnlyItsOwnKind(bool assassinate, bool bane, bool ds, bool finishing,
+      bool headshot, bool slay, string type, int mask)
     {
-      var validator = new DamageValidator(false, true, true, true, true, true);
+      var validator = new DamageValidator(assassinate, bane, ds, finishing, headshot, slay);
+      Assert.IsFalse(validator.IsValid(Record(type, (short)mask)));
+      Assert.IsFalse(DamageValidator.IsDamageValid((short)mask, type, assassinate, bane, ds, finishing, headshot, slay));
+      Assert.IsTrue(validator.IsValid(Record(Labels.Melee, 0)));
       Assert.IsTrue(validator.IsDamageLimited());
     }
 
     [TestMethod]
-    public void IsDamageLimited_AllDisabled_ReturnsTrue()
+    public void NoRecordIsRefusedAndAllDisabledIsLimited()
     {
-      var validator = new DamageValidator(false, false, false, false, false, false);
-      Assert.IsTrue(validator.IsDamageLimited());
+      Assert.IsFalse(new DamageValidator(true, true, true, true, true, true).IsValid(null));
+      Assert.IsTrue(new DamageValidator(false, false, false, false, false, false).IsDamageLimited());
     }
 
-    [TestMethod]
-    public void StaticIsDamageValid_AssassinateDisabled_ReturnsFalse()
+    private static DamageRecord Record(string type, short mask) => new()
     {
-      Assert.IsFalse(DamageValidator.IsDamageValid(64, Labels.Melee, false, true, true, true, true, true));
-    }
-
-    [TestMethod]
-    public void StaticIsDamageValid_AllEnabled_ReturnsTrue()
-    {
-      Assert.IsTrue(DamageValidator.IsDamageValid(0, Labels.Melee, true, true, true, true, true, true));
-    }
-
-    private static DamageRecord CreateDamageRecord(string type, short mask)
-    {
-      return new DamageRecord
-      {
-        Attacker = "TestAttacker",
-        Defender = "TestDefender",
-        Type = type,
-        ModifiersMask = mask,
-        Total = 100,
-      };
-    }
+      Attacker = "TestAttacker", Defender = "TestDefender", Type = type, ModifiersMask = mask, Total = 100
+    };
   }
 }

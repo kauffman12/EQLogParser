@@ -321,12 +321,8 @@ namespace EQLogParser
       _paneReady = true;
     }
 
-    /*
-     * The ONE place that decides the time column's width, so the two hooks below cannot drift apart. internal for
-     * FightTableTimeColumnTest: neither hook can be raised from a windowless host (that class says why), so the test
-     * measures this method and the fact that a constructor run under a themeless ThemeConfig leaves the column at 0.
-     */
-    internal void ApplyTimeColumnWidth() => beginColumn.Width = ThemeConfig.CurrentDateTimeWidth;
+    // Loaded and theme changes share the same width rule; neither may bank the constructor's uninitialized theme.
+    private void ApplyTimeColumnWidth() => beginColumn.Width = ThemeConfig.CurrentDateTimeWidth;
 
     /*
      * The time column's width comes from ThemeConfig, and MainWindow initializes that only AFTER this pane's

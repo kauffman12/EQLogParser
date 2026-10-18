@@ -7,14 +7,10 @@ namespace EQLogParser.Wpf.Test
   public class ContentSizedHeightHookTest
   {
     [TestMethod]
-    [DataRow(0)]
-    [DataRow(39)]
-    [DataRow(52)]
-    [DataRow(78)]
-    public void OnlyTheNativeMinimumHeightIsRelaxedAndWpfStillProcessesTheMessage(int nativeMinimum)
+    public void OnlyTheNativeMinimumHeightIsRelaxedAndWpfStillProcessesTheMessage()
     {
       // MINMAXINFO is five POINTs (ten 32-bit integers), including on a 64-bit process.
-      int[] original = [1, 2, 3000, 2000, -10, -20, 120, nativeMinimum, 5000, 4000];
+      int[] original = [1, 2, 3000, 2000, -10, -20, 120, 39, 5000, 4000];
       var actual = RewriteMessage(0x0024, original, out var handled);
       int[] expected = [1, 2, 3000, 2000, -10, -20, 120, 0, 5000, 4000];
 

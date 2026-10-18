@@ -6,179 +6,19 @@ using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Threading;
 
+#nullable enable annotations
+
 namespace EQLogParser.Wpf.Test;
 
-/*
- * Field report: with a large selection, "unselect group" on a fight works the first time, but right-click -> select group
- * -> unselect group on the SAME row then clears the WHOLE list instead of taking that group.
- *
- * This test drives the real pane and the real SfDataGrid through exactly that sequence - Select All, then the group
- * gesture twice with a re-select in between, each right-click replaying what GridContextMenuOpening does (name the row
- * under the pointer and point the grid's cursor at it) - and asks for the selection after every step.
- *
- *
- * The sequence passed while the field fault was live, which is what localised the fault OUTSIDE this pane: SfDataGrid's
- * own press handling collapses an extended selection to the clicked row the moment the button goes down (no button guard
- * on the press path - decompiled 33.1.49), before any menu or method runs. Scripted gestures cannot reach a press
- * handler, so this test guards the arithmetic behind the menu items; RightPressOnUnselectedRow_LeavesTheOperatorsSelectionAlone
- * pins the theft itself and the pane's remember-and-restore answer.
- *
- * Windows only: it is the one place an actual grid may be poked, and the answer must hold in a shown window with real
- * rows arranged, not in a windowless control.
- */
+// Exercise preview-press, context-opening and keyboard wiring on a real grid.
+// Group membership and additive selection arithmetic live in GroupSectionSelectTest.
 [TestClass]
+[TestCategory("WindowsIntegration")]
 public sealed class FightTableGroupGestureTest
 {
     private const double T0 = 1_000;
     private const int Groups = 5;
     private const int FightsPerGroup = 10;
-
-    [TestMethod]
-    public void UnselectSelectUnselect_TakesOnlyTheClickedGroup()
-    {
-        var afterStep2 = new List<string>();
-        var afterStep3 = new List<string>();
-        var afterStep4 = new List<string>();
-        var expected = new List<string>();
-        var everyFight = new List<string>();
-        string? failure = null;
-
-        Sta.Run(() =>
-        {
-            try
-            {
-                var app = Application.Current ?? new Application();
-                app.Resources["CustomCheckBoxTemplate"] ??= new ControlTemplate(typeof(CheckBox));
-                app.Resources["TemplateToolTip"] ??= new DataTemplate();
-                app.Resources["EQIconStyle"] ??= new Style(typeof(System.Windows.Controls.Image));
-
-                var table = Paint(Snapshot());
-                var window = new Window { Content = table, Width = 640, Height = 480 };
-                window.Show();
-                Flush();
-
-                var rows = ((IEnumerable)table.fightGrid.ItemsSource).Cast<DerivedFightRow>().ToList();
-                everyFight.AddRange(rows.Where(r => !r.IsDivider).Select(r => r.Name).OrderBy(n => n, StringComparer.Ordinal));
-
-                // Group two is the second block of ten (index 10 is the divider after group one).
-                var target = rows[12];
-                var groupTwo = rows.Skip(11).Take(FightsPerGroup).Select(r => r.Name).ToHashSet();
-                expected.AddRange(rows.Where(r => !r.IsDivider && !groupTwo.Contains(r.Name))
-                                      .Select(r => r.Name).OrderBy(n => n, StringComparer.Ordinal));
-
-                // Step 1: select all. A later group assertion cannot diagnose a selection that never formed.
-                Invoke(table, "SelectAllClick", new object?[] { null, null });
-                CollectionAssert.AreEquivalent(everyFight, SelectedNames(table),
-                    "Select All did not select every fight before the group gesture");
-
-                // Steps 2-4: the group gesture on the same row, with an ADDITIVE re-select in the middle — the modifier held on
-                // the press (RememberRightPress below), which is the only way this sequence puts the rest of the list back.
-                RightClickOn(table, target);
-                CollectionAssert.AreEquivalent(everyFight, SelectedNames(table),
-                    "aiming the menu at the target changed the selection before Unselect Group ran");
-                Invoke(table, "RemoveGroupFromSelection");
-                afterStep2.AddRange(SelectedNames(table));
-
-                RememberRightPress(table, System.Windows.Input.ModifierKeys.Control);
-                RightClickOn(table, target);
-                Invoke(table, "ApplyGroupSelection", true);
-                afterStep3.AddRange(SelectedNames(table));
-
-                RightClickOn(table, target);
-                Invoke(table, "RemoveGroupFromSelection");
-                afterStep4.AddRange(SelectedNames(table));
-
-                window.Close();
-            }
-            catch (Exception ex)
-            {
-                failure = ex.ToString();
-            }
-        });
-
-        Assert.IsNull(failure, "the gesture sequence must run on a shown grid");
-        CollectionAssert.AreEqual(expected, afterStep2, "step 2: unselect group takes the clicked group only");
-        CollectionAssert.AreEqual(everyFight, afterStep3, "step 3: an additive select group puts the whole list back");
-        CollectionAssert.AreEqual(expected, afterStep4, "step 4: the second unselect must take the clicked group, not the list");
-    }
-
-    /*
-     * The modifier rule itself (2026-10-14, operator: "select group should deselect everything but that group, unless i am holding
-     * control or shift when right-clicking"). Two panes of one grid, same starting selection across two other groups:
-     *
-     *   plain press  -> Select Group leaves ONLY the clicked encounter (this is what changed; it used to add);
-     *   Ctrl press   -> Select Group adds it, so several groups can be assembled on purpose.
-     *
-     * The press goes in through RememberRightPress, the same method GridPreviewRightButtonDown calls with Keyboard.Modifiers:
-     * real modifier state cannot be scripted, and the alternative — reading the flag inside the handler — would leave the actual
-     * rule untested. RightClickOn is the opening that follows it, because a menu item reads the mode the OPENING stamped.
-     * That a Ctrl press ALSO stops the pane restoring its remembered selection is pinned by
-     * RightPressOnUnselectedRow_LeavesTheOperatorsSelectionAlone's neighbours in this file; what matters here is that the same
-     * menu item answers differently, and only from the press.
-     */
-    [TestMethod]
-    [DataRow(System.Windows.Input.ModifierKeys.None, false)]
-    [DataRow(System.Windows.Input.ModifierKeys.Control, true)]
-    [DataRow(System.Windows.Input.ModifierKeys.Shift, true)]
-    public void OnlyAModifiedPressKeepsTheOtherGroupsSelected(System.Windows.Input.ModifierKeys modifiers, bool additive)
-    {
-        var after = new List<string>();
-        var groupTwo = new List<string>();
-        var outside = new List<string>();
-        string? failure = null;
-
-        Sta.Run(() =>
-        {
-            try
-            {
-                var app = Application.Current ?? new Application();
-                app.Resources["CustomCheckBoxTemplate"] ??= new ControlTemplate(typeof(CheckBox));
-                app.Resources["TemplateToolTip"] ??= new DataTemplate();
-                app.Resources["EQIconStyle"] ??= new Style(typeof(System.Windows.Controls.Image));
-
-                var table = Paint(Snapshot());
-                var window = new Window { Content = table, Width = 640, Height = 480 };
-                window.Show();
-                Flush();
-
-                var rows = ((IEnumerable)table.fightGrid.ItemsSource).Cast<DerivedFightRow>().ToList();
-                groupTwo.AddRange(rows.Skip(11).Take(FightsPerGroup).Select(r => r.Name));
-
-                // Select two COMPLETE groups outside the target. Each ten-fight run is separated by one divider:
-                // starting at 1 or 21 includes a divider and silently drops a fight from the grid's selection.
-                var otherGroups = rows.Take(FightsPerGroup)
-                    .Concat(rows.Skip(2 * (FightsPerGroup + 1)).Take(FightsPerGroup)).ToList();
-                Assert.AreEqual(2 * FightsPerGroup, otherGroups.Count);
-                Assert.IsTrue(otherGroups.All(row => !row.IsDivider), "the setup must not select a divider");
-                foreach (var row in otherGroups) table.fightGrid.SelectedItems.Add(row);
-                outside.AddRange(SelectedNames(table));
-                Assert.AreEqual(2 * FightsPerGroup, outside.Count, "both outside groups must be selected before the gesture");
-
-                RememberRightPress(table, modifiers);
-                RightClickOn(table, rows[12]);
-                Invoke(table, "SelectGroupClick", new object?[] { null, null });
-
-                after.AddRange(SelectedNames(table));
-                window.Close();
-            }
-            catch (Exception ex)
-            {
-                failure = ex.ToString();
-            }
-        });
-
-        Assert.IsNull(failure, "the gesture must run on a shown grid");
-        if (additive)
-        {
-            CollectionAssert.AreEquivalent(groupTwo.Concat(outside).ToList(), after,
-              $"{modifiers} on the press means the group joins what was selected");
-        }
-        else
-        {
-            CollectionAssert.AreEquivalent(groupTwo, after,
-              "a plain press means this group and nothing else — the rest of the selection is deselected");
-        }
-    }
 
     /*
      * The field fault itself, pinned. Report: with a big selection standing, right-clicking an UNSELECTED fight "unselects
