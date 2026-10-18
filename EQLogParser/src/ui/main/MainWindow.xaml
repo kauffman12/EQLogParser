@@ -65,7 +65,7 @@
                   <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_FileCode" />
                 </MenuItem.Icon>
               </MenuItem>
-              <MenuItem Header="As Log _File" Click="MenuItemExportFightsClick" ToolTip="A plain log file, without chat">
+              <MenuItem Header="As Log _File" Click="MenuItemExportFightsClick" ToolTip="Raw log lines from each selected fight's time window, without known chats">
                 <MenuItem.Icon>
                   <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_File" />
                 </MenuItem.Icon>
