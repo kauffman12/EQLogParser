@@ -119,9 +119,13 @@ These checks require a realized grid; the automated pane tests exercise bound da
   Clear All and reopening the same log get the reveal again (a new load). Nothing about the pointer counts: leave it inside the grid while the log
   reads and the jump still happens. If the fight list sits behind another tab when the read finishes, opening that tab should show the newest row.
 - [ ] **A zero-fight load takes the band down** (2026-10-17): open a log (or Clear All into one) whose derive yields no fight
-  rows. The *Building the Fight List…* band must be gone within ~8 s of the read finishing - `load band: hidden [read finished
-  with no fights]` in eqlogparser.log under Debug=True - and the process's commit size must stop climbing: a parked bar animates
-  ~1.5 MiB/s for the rest of the session, which RAMMap shows as the app working forever.
+  rows. The *Building the Fight List…* band must go away without another gesture: the read-finished guard runs after ~8 s,
+  and an owed cleanup can hold it for up to another ~8 s. Under Debug=True, look for `load band: hidden` and its reason in
+  eqlogparser.log. Separately check whether memory growth continues; this guard is not a proven fix for that report.
+- [ ] **Temporary animation diagnostic:** while post-load memory growth is occurring, choose Tools → Scan UI Animations.
+  Wait for the menu item to re-enable, then repeat after the activity settles. Each request must write two `animation scan`
+  samples and a completion line to eqlogparser.log without requiring Debug=True. Do not open View Error Log until both runs
+  finish. Preserve the complete blocks (including owner paths), not just their header lines.
 - [ ] **The load's cleanup pause sits behind the band, and actually returns memory** (2026-10-13): open a large log (several million lines) and watch the fight list.
   At 100 % the band stays up — *Building the Fight List…* while the first full derive and its boards run — then both the band and the application status line say
   *"Cleaning up.."* for the pause, and the grids appear **after** it. Three things to confirm: (a) no freeze lands on an already-readable grid (that is how the old

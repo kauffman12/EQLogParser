@@ -16613,6 +16613,28 @@ matching `" an "` inside names (`Jazrakhan begins casting Cannibalization XXVII.
 Life Burn work above used the 2022 capture for that); the counts here are cast-line and data counts, which is all the
 entry rule asks for.
 
+## Post-load animation churn: investigation in progress
+
+The `eqlp.alloc3.nettrace` allocation capture shows UI churn, but does **not** identify the owning control. A corrected
+per-event timestamp analysis measures ~1.5 MiB/s total allocations during seconds 60–115, of which ~1.1 MiB/s has WPF
+animation frames. During seconds 125–173.3 those rates fall to ~0.64 MiB/s total and ~0.18 MiB/s animation: activity drops
+near the reported selection gesture, but animation does not disappear. UI Automation/layout allocations also persist.
+These are allocation rates, not working-set growth or retained-heap measurements.
+
+The earlier before/after analyzer incorrectly assigned all occurrences of each stack to its first timestamp. Its claim
+that animation vanished, and the attribution to the fight-list loading bar, were unsupported. Wiring `ReportReadFinished`
+repairs a missing production call, but the operator reports that it did not resolve the growth. Neither a loading-bar root
+cause nor an old-binary explanation is established.
+
+Temporary **Tools → Scan UI Animations** writes two Info-level snapshots one second apart to `eqlogparser.log`, after a
+250 ms menu-close delay. It walks open windows' visual/logical trees (including collapsed elements and popup children),
+common brushes/transforms, and reports animated dependency properties with owner paths, values and visibility. It also
+reports ordinary WPF progress bars' indeterminate state. An animated property can be holding its final value, and two
+identical samples can also catch a periodic animation at the same phase; neither proves an active clock. Detached clocks
+are outside this scan. Run once during growth and once after it settles; do not open the Error Log window between samples.
+This is requested, one-shot instrumentation, not background monitoring; remove the menu, helper and its tests when the
+owning control is identified. No collector or animation settings are changed.
+
 ## Garbage collection after loading a log
 
 A forced collection happens at exactly two moments — **a load that actually handed lines over**, and **Clear All** (after its
@@ -16718,12 +16740,10 @@ read and the pause; the payer
 - **a capture that never answers a board trio pays no load cleanup** — in practice a read whose derive yields no fights at
 all. Accepted deliberately: the garbage this seam exists for belongs to the first pass and its boards, so where they never ran
   most of it does not exist. The band's backstop in this case is the 8-second read-finished guard, armed by `ReportReadFinished`
-  at the pump's 100 % seam - measured 2026-10-17 while that call was missing in production (the door ran only in
-  `FightTableLoadBandTest`): `_readerDone` stayed false, every hide door reads it and all three stayed shut, and a zero-fight
-  load parked the indeterminate bar for the whole session. A parked bar is not cosmetic: its repeating animation allocates
-  ~1.5 MiB/s (`TimeManager.Tick` -> `ClockGroup.ComputeTreeState` -> `TimeIntervalCollection` on a gc-verbose trace; 65 s
-  parked measured at ~97 MiB), and with nothing else rendering it reads as the whole process working - until any unrelated
-  gesture whose snapshot settles the session happens to take the bar down.
+  at the pump's 100 % seam. That call was missing in production (the door ran only in `FightTableLoadBandTest`), so the
+  read-finished guard never armed and the empty-snapshot/cleanup-end paths could not use `_readerDone`. The missing call
+  is repaired, but it has not been established as the cause of the reported post-load allocation growth; see
+  "Post-load animation churn: investigation in progress".
   Such a band hides on its own deadline with `-cleanup still unpaid at this moment` in the Debug line, which is how you tell
   that case from a stuck one.
 - there is no backstop timer, no gate and no ticket. A new open or close calls `PostLoadCleanup.Reset()` — drop the whole
