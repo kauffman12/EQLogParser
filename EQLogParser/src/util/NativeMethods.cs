@@ -41,6 +41,19 @@ namespace EQLogParser
       return IntPtr.Zero;
     }
 
+    // Let WPF cache a relaxed native floor, then enforce its own MinHeight. Do not consume the message.
+    internal static IntPtr ContentSizedHeightHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+      const int WM_GETMINMAXINFO = 0x0024;
+      if (msg == WM_GETMINMAXINFO && lParam != IntPtr.Zero)
+      {
+        var mmi = Marshal.PtrToStructure<MINMAXINFO>(lParam);
+        mmi.ptMinTrackSize.y = 0;
+        Marshal.StructureToPtr(mmi, lParam, false);
+      }
+      return IntPtr.Zero;
+    }
+
     /// <summary>
     /// Adjusts the maximized window size to fit within the monitor work area (excludes taskbar).
     /// Call this in your Window's HwndSource hook to handle WM_GETMINMAXINFO.

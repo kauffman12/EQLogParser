@@ -98,6 +98,7 @@ namespace EQLogParser
         return;
       }
 
+      source.AddHook(NativeMethods.ContentSizedHeightHook);
       var exStyle = (int)NativeMethods.GetWindowLongPtr(source.Handle, (int)NativeMethods.GetWindowLongFields.GwlExstyle);
 
       // Hide from Alt+Tab and prevent stealing focus from the game
@@ -105,6 +106,8 @@ namespace EQLogParser
                | (int)NativeMethods.ExtendedWindowStyles.WsExNoActive;
 
       NativeMethods.SetWindowLong(source.Handle, (int)NativeMethods.GetWindowLongFields.GwlExstyle, exStyle);
+      // Force a native resize to replace the minimum WPF cached before this hook was installed.
+      Height = MinHeight;
     }
   }
 }

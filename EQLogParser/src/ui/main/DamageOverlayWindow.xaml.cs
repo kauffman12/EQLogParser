@@ -902,7 +902,7 @@ namespace EQLogParser
 
     private void UpdateColumnSizes(int fontSize)
     {
-      controlPanel.Height = fontSize + 10;
+      controlPanel.Height = fontSize + 6;
       switch (fontSize)
       {
         case 10:

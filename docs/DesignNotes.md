@@ -3116,13 +3116,29 @@ last-player-to-footer gap. `UpdateColumnSizes` imposed a five-DIP top margin on 
 of 27/27/29/31; independently, themed buttons, their padding and their asymmetric margins determined the left strip.
 Increasing the header to fit that strip preserved the words but did not make a single, compact header row.
 
-The header now uses a centered Grid row with a font-specific floor of 20/22/24/26 DIPs for body fonts 10/12/14/16.
-`UpdateColumnSizes` owns that floor and passes it to the toolbar's `UpdateFontSize`; its column widths, right margins,
-class-icon sizes and the existing header fonts remain unchanged. Both strips center their content with the same two-DIP
-bottom inset and Display text formatting. The toolbar owns a small Button template rather than inheriting theme chrome;
-vertical button padding is one DIP, with no per-button top offsets. Its almost-transparent background retains a hit area
-throughout each button, not just on the glyph. The intended spacing is approximately a data row, like the footer, rather
-than reserving a second empty line below the header. Thin-bar/data-row sizing remains in `UpdateMiniBars`/`DamageBar`.
+The aligned version still looked too loose to the operator: roughly ten pixels above the header and twelve below,
+with about four requested on either side. A borderless WPF Window has another floor besides XAML MinHeight:
+`Window.GetWindowMinMax` takes the larger of MinHeight and Win32's cached minimum tracking height. Propagating that native
+floor through `ToolbarSizeChanged` can make both aligned strips tall again. Merely reducing their XAML heights is not enough.
+Only the toolbar installs `NativeMethods.ContentSizedHeightHook`: it clears the native minimum tracking **height**, leaving
+width, maximums and positioning untouched, and leaves the message unhandled so WPF caches the relaxed floor and still
+applies its own MinHeight. A native resize via Height in `OnSourceInitialized` refreshes the minimum cached during HWND
+creation; SizeToContent remains enabled, so actual content can still demand more space.
+
+The Grid header's font-specific floor is now 16/18/20/22 DIPs for body fonts 10/12/14/16. `UpdateColumnSizes` owns that
+floor and passes it to the toolbar's `UpdateFontSize`; its column widths, right margins, class-icon sizes and existing
+header fonts remain unchanged. Both strips top-align with a two-DIP top inset and Display text formatting, rather than
+centering inside spare height. The toolbar owns a small Button template rather than inheriting theme chrome; buttons
+have horizontal padding only, with no per-button top offsets or extra bottom inset. Its almost-transparent background
+retains a hit area throughout each button, not just on the glyph. Font leading and the first data row's own inset provide
+the rest of the visible spacing: the target is roughly four pixels, not four additional pixels on top of those existing
+insets. Exact ink spacing varies with font/DPI and remains a Windows visual check. Thin-bar/data-row sizing remains in
+`UpdateMiniBars`/`DamageBar`; no data rows or footer are compressed to recover header space.
+
+`ContentSizedHeightHookTest` checks the native message payload: only minimum tracking height changes, unrelated messages
+and missing payloads are left alone, and the hook never consumes the message. These are native-policy tests, not pixel
+assertions. All six cases passed on Linux in a temporary net10.0 test project linking the production and test sources;
+the WPF assembly itself still requires Windows, and the HWND/layout behavior remains a Windows release check.
 
 The measured toolbar height still sets the meter header's minimum, so an unexpected larger measurement cannot clip its
 labels or cover the first data row. That alone was incomplete: the operator reported the bottom target/totals row cut in
