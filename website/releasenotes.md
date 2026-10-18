@@ -1,3 +1,10 @@
+# 2.4.5 | 10/18/26
+1. Support parsing of very large numbers like Xanzerok hitting for 4.9 billion.
+2. Renamed **Save** menu to **Export** and added an option for Excel.
+3. Made more refinements to the new identification system.
+4. Damage Meter UI cleanup.
+5. Latest spells from beta.
+
 # 2.4.4 | 10/16/26
 1. **Significantly** faster opening of large log files.
 2. Added filtering and paging to **Identity** table.
