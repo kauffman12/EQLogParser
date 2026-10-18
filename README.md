@@ -2,7 +2,7 @@
 Everquest Log Parser for Live/TLP servers with basic support for P99/EMU Servers.
 
 Link to DOWNLOAD the latest Installer:</br>
-https://github.com/kauffman12/EQLogParser/releases/download/2.4.5/EQLogParser-install-2.4.5.exe
+https://github.com/kauffman12/EQLogParser/releases/download/2.4.6/EQLogParser-install-2.4.6.exe
 
 Minimum Requirements:
 1. Windows 10 x64
