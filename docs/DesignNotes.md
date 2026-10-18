@@ -3111,8 +3111,22 @@ actually changes — measured while wiring: previewing every color-picker stop t
 reseeded every `DamageBar` on each intermediate stop, which is a flicker the player never asked for.
 
 The live toolbar sizes to its content in both axes, with a 27-DIP minimum rather than a fixed height. Its measured height
-sets the meter header's minimum height so larger text/padding cannot clip DPS/Tank or cover the first data row. Check all
-supported font sizes and Windows display scaling levels visually; the sizing declaration alone is not a rendered test.
+sets the meter header's minimum height so larger text/padding cannot clip DPS/Tank or cover the first data row. That alone
+was incomplete: the operator reported the bottom target/totals row cut in half after this change. Raising a header's minimum
+inside a window with an unchanged saved height takes the extra space from the rows below it.
+
+`ToolbarSizeChanged` now reserves the excess in the **outer window too**. `MeterHeaderReserve` calculates
+`extra = max(0, measured toolbar height - baseline header height)` and changes the live window by `new extra - previous
+extra`. The baseline is the font-specific `controlPanel.Height` already included in the saved geometry; for a fixed
+baseline, `window height - max(baseline, toolbar height)` stays unchanged. Repeated size/width notifications spend nothing,
+and a smaller toolbar returns only the reserve it no longer needs. The ledger belongs to the window, not the session or
+settings file: hide/show retains it, reopening starts fresh, and `OverlayHeight` is never rewritten with this runtime
+addition. An automatic Height uses ActualHeight as its measured starting point. Preview/Save keep their existing canonical
+geometry path; this repairs the live-toolbar regression without forcing all rows into an intentionally smaller viewport.
+
+`MeterHeaderReserveTest` exercises row-space preservation, fractional measurements, repeat notifications, grow/shrink,
+changed baselines, reopening, an external resize and invalid measurements. The UI handler and WPF assembly build on Linux,
+but actual toolbar, footer, font and mixed-DPI rendering remain Windows release checks—not a claimed rendered test pass.
 
 ## Combat event emitters
 

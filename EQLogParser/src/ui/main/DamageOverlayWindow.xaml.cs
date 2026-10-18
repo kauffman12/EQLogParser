@@ -23,6 +23,7 @@ namespace EQLogParser
     private readonly DispatcherTimer _updateTimer;
     private readonly bool _preview;
     private readonly MeterRefreshGate _refreshGate = new();
+    private readonly MeterHeaderReserve _toolbarHeaderReserve = new();
     private readonly MeterPresentationState _presentation = new();
     private readonly Stopwatch _refreshClock = Stopwatch.StartNew();
     private readonly DamageMeterCalculation _calculation = new();
@@ -292,8 +293,8 @@ namespace EQLogParser
     }
 
     // The stage hugs its content while configuring: rows, font size and thin bars all move the bottom edge, so each
-    // preview re-fits the window (dispatched behind layout, so it measures the NEW bar heights). Live meters never
-    // hear from it — their height is a saved setting and stays exactly where the player left it.
+    // preview re-fits the window (dispatched behind layout, so it measures the NEW bar heights). Live meters preserve
+    // the saved row-space budget, with their measured toolbar reserve accounted for separately.
     private void AdjustHeight()
     {
       if (!_preview)
@@ -1040,7 +1041,7 @@ namespace EQLogParser
       }
 
       _toolbarWindow = new DamageOverlayToolbarWindow { Owner = this };
-      _toolbarWindow.SizeChanged += (_, e) => controlPanel.MinHeight = e.NewSize.Height;
+      _toolbarWindow.SizeChanged += ToolbarSizeChanged;
 
       _toolbarWindow.ConfigureRequested += (_, _) => ConfigureClick(null, null);
       _toolbarWindow.CopyRequested += (_, _) => CopyClick(null, null);
@@ -1051,6 +1052,18 @@ namespace EQLogParser
 
       _toolbarWindow.SetShowingDps(_currentShowDps);
       _toolbarWindow.UpdateFontSize(_savedFontSize);
+    }
+
+    private void ToolbarSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+      if (_closed || _preview || !double.IsFinite(e.NewSize.Height) || e.NewSize.Height <= 0) return;
+
+      var currentHeight = double.IsFinite(Height) ? Height : ActualHeight;
+      var adjusted = _toolbarHeaderReserve.Update(currentHeight, controlPanel.Height, e.NewSize.Height);
+      controlPanel.MinHeight = e.NewSize.Height;
+      // The header and the window grow together; the excess must not consume the last row or enter OverlayHeight.
+      if (!adjusted.Equals(currentHeight)) Height = adjusted;
+      ScheduleToolbarPosition();
     }
 
     private void ShowToolbarWindow()

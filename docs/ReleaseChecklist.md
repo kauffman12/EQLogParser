@@ -258,8 +258,13 @@ These checks still require Windows for popup/hide behavior. See DesignNotes → 
   verify that cached activity is recomputed. Ordinary healing, casts and taunts must not keep it visible.
   In On Kill, kill A with included damage, then hit/kill B using only excluded damage: A keeps its original final-display
   deadline. Included damage to B must still replace that final display immediately.
-- [ ] **Toolbar labels fit at every supported font size and DPI**: check DPS/Tank at 10, 12, 14 and 16, including mixed-DPI
-  monitors. The toolbar must neither clip its labels nor cover the first row; verify the last row still fits the saved height.
+- [ ] **Toolbar and footer both fit at every supported font size and DPI**: check DPS/Tank at 10, 12, 14 and 16,
+  normal/thin bars and both damage/tanking views, including mixed-DPI monitors. The taller measured toolbar must neither
+  clip its labels nor cover the first row, and the bottom raid-target/totals row must remain fully readable—not just its
+  top half. Test an existing saved height without reopening Setup: live compensation must preserve its old row-space
+  budget. Hide/show, switch views, resize/re-measure the toolbar by moving across DPI boundaries, and close/reopen several
+  times: compensation must not accumulate or shrink the rows. Reconfigure and Save, then reopen again; the runtime reserve
+  must not have been baked into OverlayHeight. Compare the actual last row, not only the toolbar's sizing declaration.
 - [ ] **On Kill survives a delayed refresh near 30 seconds**: hit once, then again at ~29 s. If the new hit's projection is late,
   the board must stay visible and keep both hits when it catches up. A different opponent or a same-name life after a gap >30 s
   must not inherit the previous life’s totals. Reset while damage is pending must still discard everything before the click.
