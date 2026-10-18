@@ -33,6 +33,7 @@ namespace EQLogParser
     public TankingSummary()
     {
       InitializeComponent();
+      SyncFusionUtil.ConfigureFrozenCellAnimations(dataGrid);
 
       // One builder for the four identity words, shared with the other summaries and the fight list (IdentityVerdictMenu).
       IdentityVerdictMenu.Populate(menuItemSetKind, ApplyVerdict);

@@ -8,8 +8,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
-
-using EQLogParser;
 using System.Windows.Threading;
 
 namespace EQLogParser
@@ -37,6 +35,7 @@ namespace EQLogParser
     public EventViewer()
     {
       InitializeComponent();
+      SyncFusionUtil.ConfigureFrozenCellAnimations(dataGrid);
       EventData = [];
       DataContext = this;
 

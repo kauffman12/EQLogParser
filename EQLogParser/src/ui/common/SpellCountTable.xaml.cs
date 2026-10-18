@@ -42,6 +42,7 @@ namespace EQLogParser
     public SpellCountTable()
     {
       InitializeComponent();
+      SyncFusionUtil.ConfigureFrozenCellAnimations(dataGrid);
       dataGrid.IsEnabled = false;
       UiElementUtil.SetEnabled(controlPanel.Children, false);
       countTypes.ItemsSource = _countTypes;

@@ -19,6 +19,7 @@ namespace EQLogParser
     public DeathLogViewer()
     {
       InitializeComponent();
+      SyncFusionUtil.ConfigureFrozenCellAnimations(dataGrid);
       DeathData = [];
       DataContext = this;
       ThemeConfig.EventsThemeChanged += EventsThemeChanged;

@@ -19,6 +19,7 @@ namespace EQLogParser
     public NpcStatsViewer()
     {
       InitializeComponent();
+      SyncFusionUtil.ConfigureFrozenCellAnimations(dataGrid);
       NpcStatsData = [];
       DataContext = this;
 

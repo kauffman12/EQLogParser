@@ -256,6 +256,7 @@
           </TextBlock>
         </StackPanel>
         <Image Height="{DynamicResource EQTitleSize}" HorizontalAlignment="Right" Margin="0,0,15,0"
+               gif:ImageBehavior.AutoStart="False" local:VisibleGifAnimation.Enabled="True"
                Visibility="{Binding Character.IsEnabled, Converter={StaticResource BooleanToVisibilityConverter}}">
           <Image.Style>
             <Style TargetType="Image">

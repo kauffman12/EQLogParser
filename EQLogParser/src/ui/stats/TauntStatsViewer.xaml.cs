@@ -21,6 +21,7 @@ namespace EQLogParser
     public TauntStatsViewer()
     {
       InitializeComponent();
+      SyncFusionUtil.ConfigureFrozenCellAnimations(dataGrid);
       TauntData = [];
       DataContext = this;
 

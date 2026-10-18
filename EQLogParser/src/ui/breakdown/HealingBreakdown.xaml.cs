@@ -22,6 +22,7 @@ namespace EQLogParser
     public HealBreakdown()
     {
       InitializeComponent();
+      SyncFusionUtil.ConfigureFrozenCellAnimations(dataGrid);
       InitBreakdownTable(titleLabel, dataGrid, selectedColumns);
     }
 

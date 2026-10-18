@@ -24,6 +24,7 @@ namespace EQLogParser
       _batchRefresh = new DelayedAction(TimeSpan.FromSeconds(1), RefreshGrid);
 
       InitializeComponent();
+      SyncFusionUtil.ConfigureFrozenCellAnimations(dataGrid);
 
       // default these columns to descending
       var desc = new[] { "Eval", "BeginTime", "LogTime" };

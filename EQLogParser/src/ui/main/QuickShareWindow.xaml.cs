@@ -21,6 +21,7 @@ namespace EQLogParser
     {
       ThemeConfig.SetCurrentTheme(this);
       InitializeComponent();
+      SyncFusionUtil.ConfigureFrozenCellAnimations(dataGrid);
       Owner = MainActions.GetOwner();
       QuickShareData = QuickShareManager.Instance.Records;
       QuickShareData.CollectionChanged += EnableStats;

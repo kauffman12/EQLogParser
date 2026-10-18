@@ -23,6 +23,7 @@ namespace EQLogParser
     public SpellDamageStatsViewer()
     {
       InitializeComponent();
+      SyncFusionUtil.ConfigureFrozenCellAnimations(dataGrid);
       SpellDamageData = [];
       typeList.ItemsSource = _types;
       spellList.ItemsSource = _spells;

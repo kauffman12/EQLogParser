@@ -129,15 +129,22 @@ These checks require a realized grid; the automated pane tests exercise bound da
   lines include parent/identity labels and matches to scanned properties. `clockInspectionErrors=0` confirms the runtime's
   private lookup layout was recognized; `clock inspection unavailable` means lookup failed, not that no clocks exist.
   Do not open View Error Log until both runs finish. Preserve the complete blocks, not just their header lines.
-- [ ] **Frozen-border animation trial (Damage Summary and Identity Table only):** load a log and run Tools → Scan UI
-  Animations after rows land. Their matched `PART_FrozenCellBorder.BorderThickness` one-day clocks must be Filling rather
-  than advancing; unrelated clocks need not stop. Compare memory growth separately. Scroll horizontally: name columns
-  must remain frozen with their boundary intact. Scroll vertically, expand/collapse summary rows, change fight selection,
-  page/filter Identity Table, and repeat after switching dark/light themes and hiding/showing the panes. New/recycled
-  containers and replacement templates must not reintroduce advancing one-day border clocks. Selection visuals and
-  existing expander styles must survive. Other frozen tables are not opted in yet. Check for no
-  `Unable to finish the static frozen-column border animation` warning. This needs a realized Windows Syncfusion grid;
-  the helper's synthetic-template tests cannot establish these integration results.
+- [ ] **Frozen-border animation rollout:** load a log and run Tools → Scan UI Animations after rows land. Matched
+  `PART_FrozenCellBorder.BorderThickness` one-day clocks must be Filling rather than advancing; unrelated clocks need not
+  stop. Compare memory growth separately. Exercise all frozen-column surfaces: summaries, breakdowns, Identity Table,
+  spell counts/casts, trigger log, loot/hit/death/event logs, spell-damage/resist/taunt statistics and Quick Share history.
+  Scroll horizontally: name/time columns must remain frozen with their boundary intact. Scroll vertically, expand/collapse
+  rows, change fights, page/filter Identity Table, and repeat after switching dark/light themes and hiding/showing panes.
+  New/recycled containers and replacement templates must not reintroduce advancing one-day border clocks. Selection visuals
+  and expander styles must survive. Check for no `Unable to finish the static frozen-column border animation` warning.
+  This needs realized Windows Syncfusion grids; synthetic-template tests cannot establish these integration results.
+- [ ] **Character-status GIF visibility:** start with Trigger Manager hidden and enabled characters configured. Load a log
+  and capture a scan before opening that pane: hidden status GIF clocks should stay paused. Open Trigger Manager and verify
+  visible waiting/active/idle icons animate; hide the pane, collapse character folders, disable a character or minimize the
+  main window and check hidden icons pause. Show them again and verify playback resumes. Change reader status while hidden
+  so a different GIF/controller is initialized, then repeat; no new hidden controller should autostart. The four previously
+  unmatched 5.2 s clocks are candidates, not a proven identity: compare the new timing-tree states and memory behavior
+  separately. Do not interpret a legitimate visible status animation as a regression.
 - [ ] **The load's cleanup pause sits behind the band, and actually returns memory** (2026-10-13): open a large log (several million lines) and watch the fight list.
   At 100 % the band stays up — *Building the Fight List…* while the first full derive and its boards run — then both the band and the application status line say
   *"Cleaning up.."* for the pause, and the grids appear **after** it. Three things to confirm: (a) no freeze lands on an already-readable grid (that is how the old

@@ -18,6 +18,7 @@ namespace EQLogParser
     public SpellCastTable()
     {
       InitializeComponent();
+      SyncFusionUtil.ConfigureFrozenCellAnimations(dataGrid);
       dataGrid.IsEnabled = false;
       UiElementUtil.SetEnabled(controlPanel.Children, false);
       InitCastTable(dataGrid, titleLabel, selectedCastTypes, selectedSpellRestrictions);

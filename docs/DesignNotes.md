@@ -16669,8 +16669,9 @@ active. The same markup appears in the local 2021 manuals (part 1, page 1793) an
 [DataGrid styles guide](https://help.syncfusion.com/wpf/datagrid/styles-and-templates). This is a frozen-column boundary,
 not a request to remove frozen columns or disable unrelated animations. Both opted-in tables keep `FrozenColumnCount=1`.
 
-**Initial targeted trial:** Damage Summary and Identity Table call
-`SyncFusionUtil.ConfigureFrozenCellAnimations(grid)` immediately after `InitializeComponent`. The utility delegates to
+Each frozen-column table calls `SyncFusionUtil.ConfigureFrozenCellAnimations(grid)` immediately after
+`InitializeComponent`. The initial trial opted in Damage Summary and Identity Table only; following the operator's
+confirmation below, the same call now covers all 18 frozen-column grid declarations. The utility delegates to
 `FrozenCellAnimations`. Configuration sets an idempotent inheritable attached opt-in on that grid; it does not replace
 styles/templates, set a global class handler, scan the table on each layout/source change, or keep a static list of tables.
 The inherited marker installs static load/unload handlers on descendant borders. Only a loaded border named
@@ -16688,12 +16689,49 @@ both the state already current at load and subsequent `CurrentStateChanged` entr
 because WPF assigns the group's `CurrentState` only after raising that event. Unexpected skip failures warn once per
 process through `RepeatCap`; success stays quiet.
 
-This trial opts in **two tables only**; 18 grid declarations currently freeze columns. Confirm their matched clocks become
-Filling and borders/selection/expanders survive scrolling, source replacement and theme changes before extending the same
-one-call setup elsewhere. Other active clocks remain outside this trial. The temporary scan stays for that verification;
-no claim that this resolves all post-load working-set growth has been made. `FrozenCellAnimationsTest` exercises the closed
-match, current/re-entered states, new containers, unload/reload, replacement templates and opt-in isolation with ordinary
-WPF templates; it builds on Linux but runs only on Windows. Real Syncfusion-grid checks remain in ReleaseChecklist.
+**Operator confirmation and rollout:** the next report had zero active one-day thickness animations in all six samples
+across three scans. Its second/third scans showed 32 Damage Summary row borders and its header, plus Identity Table's
+header, Filling; replaced row clocks were Stopped. No skip-to-fill warnings or inspection errors appeared. The operator
+reported less memory growth but the episode still occurring: this verifies the border fix, not a complete allocation or
+working-set cure. Four unpaused repeating object clocks and two paused ones remained outside it.
+
+The same initialization call now covers all 18 frozen-column declarations: the three summaries and breakdowns, Identity
+Table, spell counts/casts, trigger log, loot/hit/death/event logs, spell-damage/resist/taunt statistics and Quick Share's
+history grid (not its unfrozen trust grid). No additional matching patterns or column/style settings changed.
+`AnimationOptInMarkupTest` checks every literal frozen/footer-column grid declaration has its explicit setup call.
+`FrozenCellAnimationsTest` exercises the closed match, current/re-entered states, new containers, unload/reload, replacement
+templates and opt-in isolation with ordinary WPF templates; it builds on Linux but runs only on Windows. Real Syncfusion-grid
+checks remain in ReleaseChecklist, and the temporary scan stays available for rollout verification.
+
+## Character-status GIFs start paused until effectively visible
+
+The remaining object-clock timing has a specific candidate: `waiting.gif` is 52 frames at 100 ms, a **5.2 s** loop, matching
+the unpaused `ObjectAnimationUsingKeyFrames` clocks (5.2 s duration, 5.1 s last-frame/natural duration, Forever). The other
+character-status GIFs have the same 52 frames at 80 ms (`idle.gif`, 4.16 s) and 60 ms (`active.gif`, 3.12 s). This timing and
+the installed WpfAnimatedGif implementation are strong evidence, not an established mapping of every unmatched clock to an
+image or a measurement of their contribution to the working set.
+
+`CharacterNodeTemplate` in App.xaml is the only animated-GIF use in the app. Its status image now sets
+`gif:ImageBehavior.AutoStart=False` and opts into `VisibleGifAnimation.Enabled`. The helper also sets AutoStart's current
+value false when enabled, so every new controller starts paused. WpfAnimatedGif 2.0.2 initializes according to AutoStart but
+does not initialize its internal visibility-suspension flag from `Image.IsVisible`; it reacts only to later visibility
+changes. Thus initializing an already-hidden image can otherwise start a repeating clock without a later event to stop it.
+
+The helper synchronizes playback after **every AnimationLoaded event**, including waiting/active/idle source replacements:
+play only when `IsLoaded && IsVisible`, pause otherwise. Effective visibility includes ancestors; enabled/disabled character
+visibility and pane/folder visibility keep their existing rules. Visibility changes synchronize again without polling or
+creating new controllers. Unload pauses the known initialized controller and clears a per-image readiness flag. The library
+leaves a disposed controller attached until its next initialization, so an early visibility notification during reload may
+not resume it; only the next AnimationLoaded event restores readiness. Opting out removes all helper handlers and pauses any
+ready controller. The library remains responsible for decoding, caching and disposal. No global image/controller registry,
+clock reflection, frame rewinding, collector changes or new dependency is introduced.
+
+`AnimationOptInMarkupTest` pins the status template's paused-start opt-in. Windows-only `VisibleGifAnimationTest` covers
+initially hidden loading, effective ancestor visibility, source replacement, unload/reload and late enable/disable using a
+two-frame in-memory GIF. The fixture uses a small off-screen WPF window to exercise real IsLoaded/IsVisible semantics rather
+than asserting a hand-supplied visibility value. These tests build on Linux and require Windows to execute. Confirm real
+Trigger Manager status icons animate only while visible, and compare the clock report and memory separately; this change
+has not yet been confirmed as the complete cause or cure of the reported post-load growth.
 
 ## Garbage collection after loading a log
 

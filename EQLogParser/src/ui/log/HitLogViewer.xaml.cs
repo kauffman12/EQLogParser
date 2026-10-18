@@ -36,6 +36,7 @@ namespace EQLogParser
     public HitLogViewer()
     {
       InitializeComponent();
+      SyncFusionUtil.ConfigureFrozenCellAnimations(dataGrid);
       dataGrid.IsEnabled = false;
       UiElementUtil.SetEnabled(controlPanel.Children, false);
 

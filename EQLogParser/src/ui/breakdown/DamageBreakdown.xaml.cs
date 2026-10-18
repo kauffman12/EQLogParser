@@ -23,6 +23,7 @@ namespace EQLogParser
     public DamageBreakdown()
     {
       InitializeComponent();
+      SyncFusionUtil.ConfigureFrozenCellAnimations(dataGrid);
       dataGrid.IsEnabled = false;
       UiElementUtil.SetEnabled(controlPanel.Children, false);
       InitBreakdownTable(titleLabel, dataGrid, selectedColumns);

@@ -35,6 +35,7 @@ namespace EQLogParser
     public LootViewer()
     {
       InitializeComponent();
+      SyncFusionUtil.ConfigureFrozenCellAnimations(dataGrid);
       optionsList.ItemsSource = _options;
       optionsList.SelectedIndex = 0;
 
