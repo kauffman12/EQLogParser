@@ -468,7 +468,7 @@ namespace EQLogParser
       var engine = DeriveEngine.Active;
       if (engine is null || snapshot?.Facts is null)
       {
-        new MessageWindow("No Parsed Log Opened. Nothing to Save.", Resource.FILEMENU_SAVE_FIGHTS).ShowDialog();
+        new MessageWindow("No Parsed Log Opened. Nothing to Export.", Resource.FILEMENU_SAVE_FIGHTS).ShowDialog();
         return;
       }
 

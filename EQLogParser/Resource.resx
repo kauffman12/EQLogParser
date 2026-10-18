@@ -193,7 +193,7 @@
     <value>Open Log File</value>
   </data>
   <data name="FILEMENU_SAVE_FIGHTS" xml:space="preserve">
-    <value>Save Selected Fights</value>
+    <value>Export Selected Fights</value>
   </data>
   <data name="IMPORT_ERROR" xml:space="preserve">
     <value>Import Failed</value>

@@ -358,7 +358,7 @@ namespace EQLogParser {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Save Selected Fights.
+        ///   Looks up a localized string similar to Export Selected Fights.
         /// </summary>
         public static string FILEMENU_SAVE_FIGHTS {
             get {

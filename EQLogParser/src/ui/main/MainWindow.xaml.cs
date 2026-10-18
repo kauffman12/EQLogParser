@@ -1089,7 +1089,7 @@ namespace EQLogParser
 
       if (string.IsNullOrEmpty(AppSettings.CurrentLogFile))
       {
-        new MessageWindow("No Log File Opened. Nothing to Save.", Resource.FILEMENU_SAVE_FIGHTS).ShowDialog();
+        new MessageWindow("No Log File Opened. Nothing to Export.", Resource.FILEMENU_SAVE_FIGHTS).ShowDialog();
       }
       else if (filtered.Count > 0)
       {
@@ -1097,7 +1097,7 @@ namespace EQLogParser
       }
       else
       {
-        new MessageWindow("No Fights Selected. Nothing to Save.", Resource.FILEMENU_SAVE_FIGHTS).ShowDialog();
+        new MessageWindow("No Fights Selected. Nothing to Export.", Resource.FILEMENU_SAVE_FIGHTS).ShowDialog();
       }
     }
 
@@ -1110,7 +1110,7 @@ namespace EQLogParser
     {
       if (string.IsNullOrEmpty(AppSettings.CurrentLogFile))
       {
-        new MessageWindow("No Log File Opened. Nothing to Save.", Resource.FILEMENU_SAVE_FIGHTS).ShowDialog();
+        new MessageWindow("No Log File Opened. Nothing to Export.", Resource.FILEMENU_SAVE_FIGHTS).ShowDialog();
         return;
       }
 
@@ -1118,7 +1118,7 @@ namespace EQLogParser
       var (snapshot, selected) = fightTable.GetExportSelection();
       if (selected.Count == 0)
       {
-        new MessageWindow("No Fights Selected. Nothing to Save.", Resource.FILEMENU_SAVE_FIGHTS).ShowDialog();
+        new MessageWindow("No Fights Selected. Nothing to Export.", Resource.FILEMENU_SAVE_FIGHTS).ShowDialog();
         return;
       }
 
