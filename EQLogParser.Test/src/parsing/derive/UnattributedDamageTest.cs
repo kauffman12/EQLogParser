@@ -1,26 +1,9 @@
-using EQLogParser;
-
 namespace EQLogParser;
 
 /*
- * A damage line that names no source, and the "actor" the parser used to put in its place (docs/DesignNotes.md → "Damage the
- * capture never saw, and damage it invented").
- *
- *   `<X> was chilled to the bone for N points of non-melee damage.`
- *
- * The attacker field was filled with `Labels.Rs` — **"Reverse DS", a damage-TYPE word standing where an entity's name belongs** —
- * and it read as one: **69,651 facts and 5,741,957,900 damage** on a row beside the raiders on `eqlog_Kizant_beta-11-30-25.txt`,
- * holding `Player · A Spell · No Caster in Line`, verdicts no rule signed (R21's spell-shape check matched a parser constant). The
- * number is real and stays; the actor is now called what the line says, and `ParserUtil.IsUnattributedName` refuses those
- * placeholders identity — R7 skips them as attacker and treats them as unclassified as defender, because a name that reliably
- * "hits" monsters is exactly the evidence `R7-graph` reads as one of ours.
- *
- * The file also pins the shape that LOOKED like the same bug and wasn't: `<boss> is pierced by <raider>'s thorns for N points of
- * non-melee damage.` (68,680 lines on beta, every live capture has them). Those facts were never lost — the parser's first
- * `is … by …` branch takes everything between "by" and a trailing `'s` as the attacker, so they are credited to the owner under
- * that player's own name. The claim that 9.6 billion points went missing came from a probe that fed `DamageLineParser.ParseLine`
- * a line WITH its `[timestamp]`: that method takes the action alone, and a stamped line yields a record whose "defender" is the
- * stamp — or nothing at all. Pin both, because the wrong conclusion was drawn twice in this repository from a probe nobody ran.
+ * Reverse DS is a source-less damage bucket, not an entity. Keep its damage and its familiar label without
+ * allowing combat inference to identify it as a person. Named thorns/frost still belong to the named attacker.
+ * docs/DesignNotes.md → "Damage the capture never saw, and damage it invented".
  */
 [TestClass]
 public class UnattributedDamageTest
@@ -56,8 +39,8 @@ public class UnattributedDamageTest
   }
 
   /*
-   * The line with nothing in its attacker slot: the damage is kept, and what stands in for the source says "no source was named"
-   * instead of borrowing a damage-type word. ParseLine takes the ACTION - no `[timestamp]` - which is the seam trap above.
+   * The source-less damage bucket keeps its exact display name, amount and damage-shield classification.
+   * ParseLine takes the ACTION without its timestamp.
    */
   [TestMethod]
   public void ASourceLessLineKeepsItsNumberAndNamesNoActor()
@@ -67,10 +50,12 @@ public class UnattributedDamageTest
     Assert.IsNotNull(r);
     Assert.AreEqual(1234u, r.Total);
     Assert.AreEqual("Tallongast, The Egg", r.Defender);
-    Assert.AreEqual(Labels.Unattributed, r.Attacker);
+    Assert.AreEqual("Reverse DS", r.Attacker);
+    Assert.AreEqual(Labels.Ds, r.Type);
+    Assert.AreEqual(Labels.Ds, r.SubType);
 
-    // old spelling and new are both refused; a real name never is
-    Assert.IsTrue(ParserUtil.IsUnattributedName(Labels.Rs), "\"Reverse DS\" is still in old captures and old memory");
+    // Current and legacy spellings are both refused; a real name never is.
+    Assert.IsTrue(ParserUtil.IsUnattributedName(Labels.Rs));
     Assert.IsTrue(ParserUtil.IsUnattributedName(Labels.Unattributed));
     Assert.IsTrue(ParserUtil.IsUnattributedName(Labels.Unk));
     Assert.IsFalse(ParserUtil.IsUnattributedName("Piemastaj"));
@@ -90,10 +75,10 @@ public class UnattributedDamageTest
                      (45, "A kobold was chilled to the bone for 1234 points of non-melee damage."),
                      (80, "A skeleton was chilled to the bone for 1234 points of non-melee damage."));
 
-    Assert.AreEqual(IdentityKind.Unknown, timeline.IdentityAt(Labels.Unattributed, double.PositiveInfinity),
+    Assert.AreEqual(IdentityKind.Unknown, timeline.IdentityAt(Labels.Rs, double.PositiveInfinity),
                     "the placeholder must not read as one of ours just because it reliably hits monsters");
 
-    var facts = run.Facts.Facts.ToArray().Where(f => run.Facts.NameOf(f.AtkIdx) == Labels.Unattributed).ToList();
+    var facts = run.Facts.Facts.ToArray().Where(f => run.Facts.NameOf(f.AtkIdx) == Labels.Rs).ToList();
     Assert.HasCount(4, facts);
     Assert.AreEqual(4936d, facts.Sum(f => (double)f.Total), "the damage is real and stays on the board");
   }

@@ -10405,13 +10405,17 @@ the number was never the problem — and before it, the identity census rendered
 Line`**: R21's spell-shape recognizer matched a parser constant, so an
 invented actor came pre-equipped with the verdict the game writes for caster-less spells. The number was never the problem,
 so the
-number stays. What changed is the name — `Labels.Unattributed`, "Unattributed Damage" — and `ParserUtil.IsUnattributedName`
-(which also answers for the old `"Reverse DS"` spelling and for `Labels.Unk`, the other no-source shape) refuses those names
-identity: **R7 skips them as attacker**, and as defender it counts them as unclassified rather than letting a placeholder hand a
-side to whatever hit it. That guard matters because the placeholder reliably "attacked three mob instances over a minute" — the
-exact evidence `R7-graph` reads as one of ours. Expect an "Unattributed Damage" row on any capture with this shape: it is the
-honest version of a name that was never there. `ParserUtil.ReplacePlayer` reads the same recognizer, so a third-person defender
-is no longer renamed into the placeholder either.
+number stays. `ParserUtil.IsUnattributedName` refuses `"Reverse DS"`, the intermediate `"Unattributed Damage"` wording and
+`Labels.Unk` identity: **R7 skips them as attacker**, and as defender it counts them as unclassified rather than letting a
+placeholder hand a side to whatever hit it. That guard matters because the placeholder reliably "attacked three mob instances
+over a minute" — the exact evidence `R7-graph` reads as one of ours. `ParserUtil.ReplacePlayer` reads the same recognizer, so a
+third-person defender is no longer renamed into the placeholder either.
+
+**The bucket's display name is Reverse DS**, matching tag 2.4.1. The temporary rename to **Unattributed Damage** was reverted
+on the operator's request: it obscured a familiar bucket without adding information. The fix for imaginary identity is the
+placeholder guard, not a new label. Only the same source-less non-melee branch writes `Labels.Rs`; its type and subtype remain
+Damage Shield. Other missing-source spell damage stays Unknown, and named thorns/frost stays credited to the named attacker.
+`Labels.Unattributed` remains a read-only legacy spelling for the recognizer. The damage golden changes only the bucket's name.
 
 **The nine billion that were never lost.** `<boss> is pierced by <raider>'s thorns for N points of non-melee damage.` is 68,680
 lines on beta and is present in **all eleven live captures** (15,700 to 282,377 lines per file; 9.6 billion points on beta). I
@@ -10465,10 +10469,9 @@ is self-only**, which is the point: "Damaged Itself" is reserved for a name with
 `Bjpotratz` was on
 `xegony-2`.
 
-**What re-parsing an old capture shows.** A row named "Unattributed Damage" wherever "Reverse DS" used to be (same points,
-honest
-label); hovers that say Pets or Itself instead of Players; and nothing at all different about thorns damage, because nothing was
-wrong with it. Pinned by `UnattributedDamageTest` (the placeholder keeps its number while earning no side; the possessive
+**What re-parsing an old capture shows.** The familiar "Reverse DS" row with the same points, but no invented player
+identity; hovers that say Pets or Itself instead of Players; and nothing at all different about thorns damage, because nothing
+was wrong with it. Pinned by `UnattributedDamageTest` (the placeholder keeps its number while earning no side; the possessive
 shape is
 already credited to its owner; `ParseLine` takes the action without its stamp) and `EvidenceLinesTest` (the eight-sentence
 table,
@@ -12772,7 +12775,7 @@ holds ~400 distinct names — that memo table is also §7's "bound the builder l
 **Two grammar facts, pinned because they read like parser bugs otherwise.** `A stone sentinel is tormented by Bryn's
 frost for 1750 points of non-melee damage.` attributes to **Bryn** (a DoT tick landing on its owner's row), while the
 sibling shape `A training dummy is aflame, burning from Bryn's flame for 950 points of non-melee damage.` lands as
-**Unattributed Damage** — the placeholder name the capture left empty, kept on the board as its own row and never
+**Reverse DS** — the source-less damage bucket, kept on the board as its own row and never
 mistaken for a person. And an owner-less name gets no aggregate: `Kuro has been charmed.` with no line naming who
 charmed it leaves Kuro's swings on **`Kuro`**, never `Kuro +Pets`, because inventing a master is how one player's row
 gets split in half.

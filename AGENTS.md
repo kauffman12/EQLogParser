@@ -116,8 +116,9 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
 - **Entity names are looked up without case** (`PlayerRegistry`, `EntityTimeline` identity/affiliation keys,
   `DamageFactTable.InternName`, which stores `CapitalizeFirst(name)`); subtype/label tables stay ordinal. A name comes from
   a subject span, never "the token after some punctuation" — `Rk. II` is not a sentence end (`IsSentenceEnd`).
-- **A parser placeholder is never a person**: `ParserUtil.IsUnattributedName` (`Labels.Unattributed`, legacy `"Reverse DS"`,
-  `Labels.Unk`) is the one recognizer; R7 skips those names as attacker, counts them unclassified as defender.
+- **A parser placeholder is never a person**: `ParserUtil.IsUnattributedName` (`Labels.Rs`, legacy `Labels.Unattributed`,
+  `Labels.Unk`) is the one recognizer; R7 skips those names as attacker, counts them unclassified as defender. The source-less
+  damage-shield bucket keeps its familiar **Reverse DS** name; its records remain Damage Shield.
 - **Chat is a closed claim list**: R3-chat claims a speaker only on guild/raid/group/fellowship — never tell/shout/ooc/zone
   chatter (bazaar hailers, and those names sit in `npcs.txt`), never `begins singing`. The one announcement shape is
   **R22-guildmate** (`Your guildmate X has completed …`, fire-only, letters-only name). Display words say *Achievement*, never

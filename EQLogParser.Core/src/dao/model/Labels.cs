@@ -9,12 +9,7 @@ namespace EQLogParser
     public const string Ds = "Damage Shield";
     public const string Rs = "Reverse DS";
 
-    /*
-     * The attacker a line does not name. `<X> was chilled to the bone for N points of non-melee damage.` has no source in it,
-     * and this branch used to answer with Labels.Rs - "Reverse DS", a DAMAGE-TYPE word that then sat on the board among entity
-     * names and read as one (5.74 billion damage under "Reverse DS" on one capture, while no rule claimed it). This word says
-     * what the line says. ClassificationRules.IsUnattributedName is the recognizer; Labels.Rs stays in it for the old spelling.
-     */
+    // Legacy source-less attacker wording: recognized by ParserUtil.IsUnattributedName, never written by the parser.
     public const string Unattributed = "Unattributed Damage";
     public const string Bane = "Bane Damage";
     public const string OtherDmg = "Other Damage";
