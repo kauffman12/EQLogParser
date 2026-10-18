@@ -1,5 +1,6 @@
 using log4net;
 using Syncfusion.Licensing;
+using Syncfusion.UI.Xaml.Grid;
 using Syncfusion.Windows.Tools.Controls;
 using System;
 using System.Collections.Generic;
@@ -21,6 +22,8 @@ namespace EQLogParser
     private const string LicenseKey = "";
 
     internal static void LoadLicense() => SyncfusionLicenseProvider.RegisterLicense(LicenseKey);
+
+    internal static void ConfigureFrozenCellAnimations(SfGridBase grid) => FrozenCellAnimations.Configure(grid);
 
     internal static void AddDocument(DockingManager dockSite, Type type, string name, string title, bool show = false)
     {

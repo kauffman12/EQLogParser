@@ -16650,8 +16650,50 @@ within one snapshot; the identity labels allow comparing live clocks across the 
 the delay. Compare time **and iteration**, since a periodic animation can return to the same value/phase one second later.
 
 Run once during growth and once after it settles; do not open the Error Log window between samples. This is requested,
-one-shot instrumentation, not background monitoring; remove the menu, helpers and their tests when the owning control is
-identified. No collector or animation settings are changed.
+one-shot instrumentation, not background monitoring; remove the menu, diagnostic helpers and their tests when the
+investigation and Windows validation are complete. The diagnostic itself changes no collector or animation settings.
+
+## Frozen-column borders: finish the static state, keep the column frozen
+
+The version-2 operator report identified advancing `ThicknessAnimationUsingKeyFrames` clocks with a **one-day** duration,
+unpaused at speed 1, in the `FrozenColumnCell` state. The four scans had 2, 35, 32 and 32 such animation clocks. In scan 4,
+28 matched Damage Summary's `TreeGridExpanderCell` instances, one its `TreeGridHeaderCell`, and one Identity Table's
+`GridHeaderCellControl`; two had no scanned target. These animate `PART_FrozenCellBorder.BorderThickness`. A representative
+row clock advanced from 00:01:20.481 to 00:01:21.484 between the fourth scan's samples, despite reported working-set growth
+having stopped. Four unmatched, unpaused forever-repeating object animations also continued (two others were paused).
+A flat working set does not prove allocations have stopped, and these snapshots alone do not price each clock's churn.
+
+The installed MaterialDark theme's grid templates contain `Duration="1"` with a single thickness keyframe at time zero.
+The bare value parses as one day, not one second; the state writes a fixed border immediately and then its clock remains
+active. The same markup appears in the local 2021 manuals (part 1, page 1793) and the live
+[DataGrid styles guide](https://help.syncfusion.com/wpf/datagrid/styles-and-templates). This is a frozen-column boundary,
+not a request to remove frozen columns or disable unrelated animations. Both opted-in tables keep `FrozenColumnCount=1`.
+
+**Initial targeted trial:** Damage Summary and Identity Table call
+`SyncFusionUtil.ConfigureFrozenCellAnimations(grid)` immediately after `InitializeComponent`. The utility delegates to
+`FrozenCellAnimations`. Configuration sets an idempotent inheritable attached opt-in on that grid; it does not replace
+styles/templates, set a global class handler, scan the table on each layout/source change, or keep a static list of tables.
+The inherited marker installs static load/unload handlers on descendant borders. Only a loaded border named
+`PART_FrozenCellBorder` in a control template with a `BorderStates` group gets a state subscription. Template replacement
+and virtualization bring new borders through that same lifecycle even when the parent control stays loaded. Unload or
+leaving the opted-in scope detaches the group subscription; a later load examines the current state again.
+
+The finish rule is deliberately closed: `FrozenColumnCell`, exactly one thickness animation targeting that named border's
+`BorderThickness`, exactly one keyframe at time zero, explicit one-day child duration, automatic or one-day parent duration,
+zero begin times, speed 1, one iteration, no autoreverse, and HoldEnd on both timelines. Anything else is left alone. WPF VSM
+begins its storyboards controllably on the template root, so the helper uses the public `Storyboard.SkipToFill(root)` to
+finish this static state while retaining its boundary value. It does not remove the animation (which would restore the
+base border), modify a shared/frozen timeline, copy theme templates, use reflection, force GC, or run a timer. It handles
+both the state already current at load and subsequent `CurrentStateChanged` entries: the event's `NewState` is authoritative
+because WPF assigns the group's `CurrentState` only after raising that event. Unexpected skip failures warn once per
+process through `RepeatCap`; success stays quiet.
+
+This trial opts in **two tables only**; 18 grid declarations currently freeze columns. Confirm their matched clocks become
+Filling and borders/selection/expanders survive scrolling, source replacement and theme changes before extending the same
+one-call setup elsewhere. Other active clocks remain outside this trial. The temporary scan stays for that verification;
+no claim that this resolves all post-load working-set growth has been made. `FrozenCellAnimationsTest` exercises the closed
+match, current/re-entered states, new containers, unload/reload, replacement templates and opt-in isolation with ordinary
+WPF templates; it builds on Linux but runs only on Windows. Real Syncfusion-grid checks remain in ReleaseChecklist.
 
 ## Garbage collection after loading a log
 

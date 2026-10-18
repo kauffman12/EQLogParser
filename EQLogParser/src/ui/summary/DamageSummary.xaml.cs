@@ -45,6 +45,7 @@ namespace EQLogParser
     public DamageSummary()
     {
       InitializeComponent();
+      SyncFusionUtil.ConfigureFrozenCellAnimations(dataGrid);
 
       // The four identity words come from one builder (IdentityVerdictMenu) rather than from markup, so the three summary panes and the
       // fight list cannot drift about their spelling or their write.

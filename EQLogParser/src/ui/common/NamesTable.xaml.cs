@@ -227,6 +227,7 @@ namespace EQLogParser
     public NamesTable()
     {
       InitializeComponent();
+      SyncFusionUtil.ConfigureFrozenCellAnimations(namesGrid);
 
       InitializePaging();
       // The Type list is NOT set here: one ComboBox serves every cell, so it is filled per row when that cell's popup opens
