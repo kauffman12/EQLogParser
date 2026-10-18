@@ -75,7 +75,8 @@ namespace EQLogParser
       var height = ConfigUtil.GetSettingAsDouble("OverlayHeight", int.MaxValue);
       var top = ConfigUtil.GetSettingAsDouble("OverlayTop", 20);
       var left = ConfigUtil.GetSettingAsDouble("OverlayLeft", 100);
-      SetWindowSizes(height, width, top, left);
+      // Keep the saved row budget intact when adding the header-to-row gap.
+      SetWindowSizes(height + controlPanel.Margin.Bottom, width, top, left);
 
       // fonts
       var fontSizeString = ConfigUtil.GetSetting("OverlayFontSize");
@@ -304,7 +305,7 @@ namespace EQLogParser
 
       Dispatcher.InvokeAsync(() =>
       {
-        var needed = damageContent.ActualHeight + 8;
+        var needed = damageContent.ActualHeight + 8 + controlPanel.Margin.Bottom;
         if (!needed.Equals(Height))
         {
           Height = needed;
@@ -684,7 +685,7 @@ namespace EQLogParser
     private double GetOverlayHeight()
     {
       var pos = heightRectangle.TransformToAncestor(this).Transform(new Point(0, 0));
-      return pos.Y - 2;
+      return pos.Y - 2 - controlPanel.Margin.Bottom;
     }
 
     private void OverlayMouseLeftDown(object sender, MouseButtonEventArgs e)

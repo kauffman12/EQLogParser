@@ -36,7 +36,7 @@
     <StackPanel Grid.Row="0" Orientation="Vertical">
       <Border x:Name="border" CornerRadius="2">
         <StackPanel Orientation="Vertical">
-          <Grid x:Name="controlPanel" Height="18" Visibility="Collapsed">
+          <Grid x:Name="controlPanel" Height="18" Margin="0,0,0,2" Visibility="Collapsed">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,2,0,0">
               <TextBlock x:Name="titlePercent" Text="" FontFamily="Tahoma" FontSize="14" Foreground="White" />
               <TextBlock x:Name="titleDamage" Text="Damage" FontFamily="Tahoma" FontSize="14" Foreground="White" />

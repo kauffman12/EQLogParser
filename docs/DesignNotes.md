@@ -3140,7 +3140,10 @@ centering inside spare height. The toolbar owns a small Button template rather t
 have horizontal padding only, with no per-button top offsets or extra bottom inset. Its almost-transparent background
 retains a hit area throughout each button, not just on the glyph. Font leading and the first data row's own inset provide
 the rest of the visible spacing: the target is roughly four pixels, not four additional pixels on top of those existing
-insets. Exact ink spacing varies with font/DPI and remains a Windows visual check. Thin-bar/data-row sizing remains in
+insets. After the content-height correction, the operator requested two more pixels between the header and the first row:
+`controlPanel` now has a two-DIP bottom margin. Both live and preview window heights include that gap; preview fitting also
+keeps it, and `GetOverlayHeight` subtracts it when saving so reopening cannot accumulate it or consume the footer's space.
+Exact ink spacing varies with font/DPI and remains a Windows visual check. Thin-bar/data-row sizing remains in
 `UpdateMiniBars`/`DamageBar`; no data rows or footer are compressed to recover header space.
 
 `ContentSizedHeightHookTest` checks the native message payload: only minimum tracking height changes, unrelated messages
