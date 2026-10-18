@@ -1430,6 +1430,15 @@ namespace EQLogParser
 
           if (filePercent >= 100 && _eqLogReader.InitialLoadComplete)
           {
+            /*
+             * The band's read-finished door: arms its 8-second guard so a capture whose first snapshot lands no rows
+             * (an empty fight list) still gets the bar taken down. Without this call the guard only ever armed in the
+             * WPF test, and every hide door that reads _readerDone stayed shut - a zero-fight load parked the indeterminate
+             * bar for the session at ~1.5 MB/s of animation garbage (measured: 65 s parked, ~97 MB). The pump stops here,
+             * so this is the one 100 % seam, not a per-tick call.
+             */
+            if (npcWindow?.Content is FightTable finishedTable) finishedTable.ReportReadFinished();
+
             statusText.Foreground = Application.Current.Resources["EQGoodForegroundBrush"] as SolidColorBrush;
 
                         /*

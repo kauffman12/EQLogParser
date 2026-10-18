@@ -16716,9 +16716,14 @@ read and the pause; the payer
   so the rows arrive after
   the freeze rather than being interrupted by it;
 - **a capture that never answers a board trio pays no load cleanup** — in practice a read whose derive yields no fights at
-all. Accepted deliberately, and
-  with no backstop timer: the garbage this seam exists for belongs to the first pass and its boards, so where they never ran
-  most of it does not exist.
+all. Accepted deliberately: the garbage this seam exists for belongs to the first pass and its boards, so where they never ran
+  most of it does not exist. The band's backstop in this case is the 8-second read-finished guard, armed by `ReportReadFinished`
+  at the pump's 100 % seam - measured 2026-10-17 while that call was missing in production (the door ran only in
+  `FightTableLoadBandTest`): `_readerDone` stayed false, every hide door reads it and all three stayed shut, and a zero-fight
+  load parked the indeterminate bar for the whole session. A parked bar is not cosmetic: its repeating animation allocates
+  ~1.5 MiB/s (`TimeManager.Tick` -> `ClockGroup.ComputeTreeState` -> `TimeIntervalCollection` on a gc-verbose trace; 65 s
+  parked measured at ~97 MiB), and with nothing else rendering it reads as the whole process working - until any unrelated
+  gesture whose snapshot settles the session happens to take the bar down.
   Such a band hides on its own deadline with `-cleanup still unpaid at this moment` in the Debug line, which is how you tell
   that case from a stuck one.
 - there is no backstop timer, no gate and no ticket. A new open or close calls `PostLoadCleanup.Reset()` — drop the whole

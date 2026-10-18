@@ -118,6 +118,10 @@ These checks require a realized grid; the automated pane tests exercise bound da
   once. Then fight: new rows and cell updates must not move the viewport, and scrolling up to read an old encounter must hold through a whole pull.
   Clear All and reopening the same log get the reveal again (a new load). Nothing about the pointer counts: leave it inside the grid while the log
   reads and the jump still happens. If the fight list sits behind another tab when the read finishes, opening that tab should show the newest row.
+- [ ] **A zero-fight load takes the band down** (2026-10-17): open a log (or Clear All into one) whose derive yields no fight
+  rows. The *Building the Fight List…* band must be gone within ~8 s of the read finishing - `load band: hidden [read finished
+  with no fights]` in eqlogparser.log under Debug=True - and the process's commit size must stop climbing: a parked bar animates
+  ~1.5 MiB/s for the rest of the session, which RAMMap shows as the app working forever.
 - [ ] **The load's cleanup pause sits behind the band, and actually returns memory** (2026-10-13): open a large log (several million lines) and watch the fight list.
   At 100 % the band stays up — *Building the Fight List…* while the first full derive and its boards run — then both the band and the application status line say
   *"Cleaning up.."* for the pause, and the grids appear **after** it. Three things to confirm: (a) no freeze lands on an already-readable grid (that is how the old
