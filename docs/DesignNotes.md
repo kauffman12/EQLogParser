@@ -10980,6 +10980,31 @@ answers a one-time question is disposable, the numbers above are the durable hal
 inflate a
 production blob, re-compress at each level, and read `ColdBlobBytes` for the store-wide figure.
 
+**zstd was measured against level 7 and refused (2026-11).** The question came with an unmeasured "2–4× smaller" claim
+borrowed from generic-data benchmarks; on a real cold-chunk body the claim does not survive. Method: one 65,536-row
+damage chunk body built through `DamageFactChunkCodec.BuildBody` (the seam Encode uses, so both compressors saw
+byte-identical input), rows synthetic but shaped like the capture measurements above (~50 facts/s time deltas, tens of
+thousands of ids with a hot inner circle, ~1 in 500 amounts over 2^32); Deflate-7 timed in-process with the production
+options (median of 9), zstd single-threaded native libzstd 1.5.7 — an upper bound, since a managed port is slower:
+
+| compressor | blob | vs Deflate-7 | encode |
+|---|---|---|---|
+| **Deflate 7 (now)** | 547.2 KiB | — | 9.0 ms |
+| zstd -1 | 564.3 KiB | **+3.1 %** | 0.8 ms |
+| zstd -3 | 490.7 KiB | −10.3 % | 1.9 ms |
+| zstd -6 | 483.4 KiB | −11.7 % | 4.5 ms |
+| zstd -9 | 477.0 KiB | −12.8 % | 3.9 ms |
+| zstd -15 | 470.9 KiB | −13.9 % | 23.3 ms |
+| zstd -19 | 461.4 KiB | −15.7 % | 63.1 ms |
+
+Decode is ~0.5 ms at every level against Deflate's ~3 ms, and native encode is 5× faster — the speed axis genuinely
+favors zstd. It does not change the decision: the body arrives pre-filtered (transposed planes + varint deltas), so most
+of what a stronger LZ would find is already gone; the size win is single-digit-to-16 % with the native library, worth
+roughly 1–2 MB of retained memory on a whole capture's cold chunks. Against that sits a new dependency and a change to
+the unversioned blob format — old `.spool` cold chunks would stop reading on a newer build, the same class of break as a
+retired flag bit. A dial like the level change above costs nothing old; this one does not. `BuildBody` stays as the seam
+a future re-measurement (on a real store body, if ever worth it) will reuse.
+
 ## The room a load reserves before it reads, and what parallelism would cost
 
 Two questions got measured on the same capture (`eqlog_Kizant_xegony-09-03-26.txt`, 998 MB, 10,015,348 lines), because

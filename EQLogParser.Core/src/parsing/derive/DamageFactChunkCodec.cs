@@ -33,8 +33,6 @@ internal static class DamageFactChunkCodec
    */
   internal static byte[] Encode(DamageFact[] rows, int count)
   {
-    ArgumentOutOfRangeException.ThrowIfNegative(count);
-    ArgumentOutOfRangeException.ThrowIfGreaterThan(count, rows.Length);
     // One pass to ask whether this chunk carries an amount above 32 bits at all; ordinary chunks stay the size they were.
     var wide = false;
     for (var i = 0; i < count && !wide; i++) wide = rows[i].Total > uint.MaxValue;
@@ -44,35 +42,7 @@ internal static class DamageFactChunkCodec
     MemoryStream sink = null;
     try
     {
-      var p = 1;
-      body[0] = (byte)(wide ? HasTotalHigh : 0);
-
-      long prevSeq = 0, prevTime = 0;
-      for (var i = 0; i < count; i++)
-      {
-        p = FactVarint.Write(body, p, rows[i].Seq - prevSeq);
-        prevSeq = rows[i].Seq;
-        p = FactVarint.Write(body, p, rows[i].TimeS - prevTime);
-        prevTime = rows[i].TimeS;
-        p = FactVarint.Write(body, p, rows[i].AtkIdx);   // not a delta: ids are arrival order, not monotonic per row, and zigzag covers -1
-        p = FactVarint.Write(body, p, rows[i].DefIdx);
-      }
-
-      for (var i = 0; i < count; i++) BinaryPrimitives.WriteUInt32LittleEndian(body.AsSpan(p + (i * 4), 4), unchecked((uint)rows[i].Total));
-      p += count * 4;
-      if (wide)
-      {
-        for (var i = 0; i < count; i++) BinaryPrimitives.WriteUInt16LittleEndian(body.AsSpan(p + (i * 2), 2), (ushort)(rows[i].Total >> 32));
-        p += count * HighWidth;
-      }
-      for (var i = 0; i < count; i++) body[p + i] = rows[i].TypeId;
-      p += count;
-      for (var i = 0; i < count; i++) body[p + i] = rows[i].Flags;
-      p += count;
-      for (var i = 0; i < count; i++) BinaryPrimitives.WriteUInt16LittleEndian(body.AsSpan(p + (i * 2), 2), (ushort)rows[i].ModMask);
-      p += count * 2;
-      for (var i = 0; i < count; i++) BinaryPrimitives.WriteUInt16LittleEndian(body.AsSpan(p + (i * 2), 2), rows[i].SubIdx);
-      p += count * 2;
+      var p = BuildBody(body, rows, count);
 
       sink = FactChunkScratch<DamageFact>.RentSink(Math.Max(1024, p / 4));
       // Level lives in FactChunkCompression (shared with the heal lane): the blob format is plain Deflate either way,
@@ -87,6 +57,52 @@ internal static class DamageFactChunkCodec
       FactChunkScratch<DamageFact>.ReturnBody(body);
       if (sink is not null) FactChunkScratch<DamageFact>.ReturnSink(sink);
     }
+  }
+
+  /*
+   * The uncompressed body: presence byte, varint deltas and fixed planes exactly as Encode writes them. Split out so a codec
+   * comparison can hand the IDENTICAL bytes to any compressor; Encode compresses this with Deflate at FactChunkCompression's level.
+   */
+  internal static int BuildBody(byte[] body, DamageFact[] rows, int count)
+  {
+    ArgumentOutOfRangeException.ThrowIfNegative(count);
+    ArgumentOutOfRangeException.ThrowIfGreaterThan(count, rows.Length);
+
+    // One pass to ask whether this chunk carries an amount above 32 bits at all; ordinary chunks stay the size they were.
+    var wide = false;
+    for (var i = 0; i < count && !wide; i++) wide = rows[i].Total > uint.MaxValue;
+
+    var p = 1;
+    body[0] = (byte)(wide ? HasTotalHigh : 0);
+
+    long prevSeq = 0, prevTime = 0;
+    for (var i = 0; i < count; i++)
+    {
+      p = FactVarint.Write(body, p, rows[i].Seq - prevSeq);
+      prevSeq = rows[i].Seq;
+      p = FactVarint.Write(body, p, rows[i].TimeS - prevTime);
+      prevTime = rows[i].TimeS;
+      p = FactVarint.Write(body, p, rows[i].AtkIdx);   // not a delta: ids are arrival order, not monotonic per row, and zigzag covers -1
+      p = FactVarint.Write(body, p, rows[i].DefIdx);
+    }
+
+    for (var i = 0; i < count; i++) BinaryPrimitives.WriteUInt32LittleEndian(body.AsSpan(p + (i * 4), 4), unchecked((uint)rows[i].Total));
+    p += count * 4;
+    if (wide)
+    {
+      for (var i = 0; i < count; i++) BinaryPrimitives.WriteUInt16LittleEndian(body.AsSpan(p + (i * 2), 2), (ushort)(rows[i].Total >> 32));
+      p += count * HighWidth;
+    }
+    for (var i = 0; i < count; i++) body[p + i] = rows[i].TypeId;
+    p += count;
+    for (var i = 0; i < count; i++) body[p + i] = rows[i].Flags;
+    p += count;
+    for (var i = 0; i < count; i++) BinaryPrimitives.WriteUInt16LittleEndian(body.AsSpan(p + (i * 2), 2), (ushort)rows[i].ModMask);
+    p += count * 2;
+    for (var i = 0; i < count; i++) BinaryPrimitives.WriteUInt16LittleEndian(body.AsSpan(p + (i * 2), 2), rows[i].SubIdx);
+    p += count * 2;
+
+    return p;
   }
 
   /// <summary>Decode a blob back into exactly `count` rows — the same objects the table would have held, field for field.</summary>
