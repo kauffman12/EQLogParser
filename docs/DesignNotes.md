@@ -16613,7 +16613,7 @@ matching `" an "` inside names (`Jazrakhan begins casting Cannibalization XXVII.
 Life Burn work above used the 2022 capture for that); the counts here are cast-line and data counts, which is all the
 entry rule asks for.
 
-## Post-load animation churn: investigation in progress
+## Post-load animation churn: measurements and findings
 
 The `eqlp.alloc3.nettrace` allocation capture shows UI churn, but does **not** identify the owning control. A corrected
 per-event timestamp analysis measures ~1.5 MiB/s total allocations during seconds 60–115, of which ~1.1 MiB/s has WPF
@@ -16626,32 +16626,26 @@ that animation vanished, and the attribution to the fight-list loading bar, were
 repairs a missing production call, but the operator reports that it did not resolve the growth. Neither a loading-bar root
 cause nor an old-binary explanation is established.
 
-The first operator run of **Tools → Scan UI Animations** found 22 animated properties ~18 seconds after load completion,
-then 54 at ~58 and ~98 seconds. The latter two scans' targets and values were identical although memory growth had stopped
-by the third. The added 32 properties were Damage Summary cell border thicknesses; all samples showed the ordinary
-fight-list progress bar indeterminate but effectively invisible. These observations identify candidates, not active clocks.
+Temporary property-only reports found 22 animated properties ~18 seconds after load completion, then 54 at ~58 and ~98
+seconds. The latter two reports' targets and values were identical although memory growth had stopped by the third. The
+added 32 properties were Damage Summary cell border thicknesses; the ordinary fight-list progress bar was indeterminate
+but effectively invisible. Properties alone identified candidates, not running clocks. Follow-up paired snapshots of the
+UI dispatcher's timing tree compared clock state, pause flag, speed, time and iteration, identifying the advancing border
+clocks and the repeating GIF pattern described below. A periodic animation can return to the same value/phase between
+samples, so iteration matters too; Active with paused=True and speed 0 does not mean playing. A clock not matched to a
+scanned visual-tree property was not thereby proven detached, and the total clock count was not a retained-heap measurement.
 
-Temporary **Tools → Scan UI Animations** writes two Info-level snapshots one second apart to `eqlogparser.log`, after a
-250 ms menu-close delay. It walks open windows' visual/logical trees (including collapsed elements and popup children),
-common brushes/transforms, and reports animated dependency properties with owner paths, values and visibility. It also
-reports ordinary WPF progress bars' indeterminate state. **Report version 2** adds the property clocks from both local
-animation storage and style/template trigger layers, including identity labels, Active/Filling/Stopped state, paused flag,
-current time/progress/iteration/global speed, duration/natural duration, repeat/autoreverse, begin/fill settings and next-tick
-time. Each snapshot also lists the current dispatcher's existing timing tree, with parent labels, manager time, target-name/
-property hints and whether each clock matched a scanned property. This can expose active clocks whose targets the tree walk
-missed; unmatched does not prove detached, and Active alone does not imply a moving property (paused, zero-speed and constant
-animations are possible). Filling denotes a held result, not proof that some ancestor or sibling needs no ticks.
+**Final operator verification:** after both fixes, all four paired reports showed no animation clock advancing between
+samples. The frozen-border clocks were Filling at speed 0; all six repeating object clocks were paused at speed 0. In the
+fourth report two changed to the idle GIF's 4.16 s duration and remained paused, covering source replacement. A separate
+report had 117 clocks: six paused, 52 Filling and 59 Stopped, again with none advancing. Inspection reported no errors.
+The operator confirmed visible GIFs still animated, working-set growth was substantially slower overall, and it stopped
+and recovered some memory. This is observed improvement, not an end-to-end allocation benchmark or proof of a complete
+leak cure. GC settings were not changed.
 
-WPF has no public property-to-clock or timing-root lookup: the temporary helper uses guarded, read-only reflection over
-.NET 10 AnimationStorage/AnimationLayer and the dispatcher's existing MediaContext/TimeManager. It never creates a media
-context, invokes a clock controller, subscribes to clock events, or ticks the timing engine. Runtime layout changes produce
-`clock inspection unavailable` plus an error count, not a misleading zero-clock result. Clock objects are retained only
-within one snapshot; the identity labels allow comparing live clocks across the two samples without retaining them across
-the delay. Compare time **and iteration**, since a periodic animation can return to the same value/phase one second later.
-
-Run once during growth and once after it settles; do not open the Error Log window between samples. This is requested,
-one-shot instrumentation, not background monitoring; remove the menu, diagnostic helpers and their tests when the
-investigation and Windows validation are complete. The diagnostic itself changes no collector or animation settings.
+The temporary menu, property/timing-tree inspection helpers (including their read-only WPF-internal reflection), and their
+Windows-only diagnostic tests were removed after this verification at the operator's request. The functional fixes and
+their regression tests remain; the app retains no animation-reporting or clock-enumeration instrumentation.
 
 ## Frozen-column borders: finish the static state, keep the column frozen
 
@@ -16667,7 +16661,7 @@ The installed MaterialDark theme's grid templates contain `Duration="1"` with a 
 The bare value parses as one day, not one second; the state writes a fixed border immediately and then its clock remains
 active. The same markup appears in the local 2021 manuals (part 1, page 1793) and the live
 [DataGrid styles guide](https://help.syncfusion.com/wpf/datagrid/styles-and-templates). This is a frozen-column boundary,
-not a request to remove frozen columns or disable unrelated animations. Both opted-in tables keep `FrozenColumnCount=1`.
+not a request to remove frozen columns or disable unrelated animations. The configured frozen-column counts are unchanged.
 
 Each frozen-column table calls `SyncFusionUtil.ConfigureFrozenCellAnimations(grid)` immediately after
 `InitializeComponent`. The initial trial opted in Damage Summary and Identity Table only; following the operator's
@@ -16701,7 +16695,7 @@ history grid (not its unfrozen trust grid). No additional matching patterns or c
 `AnimationOptInMarkupTest` checks every literal frozen/footer-column grid declaration has its explicit setup call.
 `FrozenCellAnimationsTest` exercises the closed match, current/re-entered states, new containers, unload/reload, replacement
 templates and opt-in isolation with ordinary WPF templates; it builds on Linux but runs only on Windows. Real Syncfusion-grid
-checks remain in ReleaseChecklist, and the temporary scan stays available for rollout verification.
+checks remain in ReleaseChecklist. The temporary runtime inspection used to verify the fix has been removed.
 
 ## Character-status GIFs start paused until effectively visible
 
@@ -16730,8 +16724,9 @@ clock reflection, frame rewinding, collector changes or new dependency is introd
 initially hidden loading, effective ancestor visibility, source replacement, unload/reload and late enable/disable using a
 two-frame in-memory GIF. The fixture uses a small off-screen WPF window to exercise real IsLoaded/IsVisible semantics rather
 than asserting a hand-supplied visibility value. These tests build on Linux and require Windows to execute. Confirm real
-Trigger Manager status icons animate only while visible, and compare the clock report and memory separately; this change
-has not yet been confirmed as the complete cause or cure of the reported post-load growth.
+Trigger Manager status icons animate only while visible. Subsequent operator verification found the hidden repeating
+clocks paused, including after source replacement, while visible GIFs still animated. Memory behavior improved as recorded
+above; this does not establish a complete cause or cure of every post-load allocation. The temporary report code is removed.
 
 ## Garbage collection after loading a log
 
@@ -16841,7 +16836,7 @@ all. Accepted deliberately: the garbage this seam exists for belongs to the firs
   at the pump's 100 % seam. That call was missing in production (the door ran only in `FightTableLoadBandTest`), so the
   read-finished guard never armed and the empty-snapshot/cleanup-end paths could not use `_readerDone`. The missing call
   is repaired, but it has not been established as the cause of the reported post-load allocation growth; see
-  "Post-load animation churn: investigation in progress".
+  "Post-load animation churn: measurements and findings".
   Such a band hides on its own deadline with `-cleanup still unpaid at this moment` in the Debug line, which is how you tell
   that case from a stuck one.
 - there is no backstop timer, no gate and no ticket. A new open or close calls `PostLoadCleanup.Reset()` — drop the whole

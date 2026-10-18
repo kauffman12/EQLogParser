@@ -1,4 +1,3 @@
-using EQLogParser;
 using FontAwesome5;
 using log4net;
 using Microsoft.Win32;
@@ -1156,23 +1155,6 @@ namespace EQLogParser
 
       _resetWindowState = true;
       new MessageWindow("Window State will be reset after application restart.", Resource.RESET_WINDOW_STATE).ShowDialog();
-    }
-
-    private async void ScanUiAnimationsClick(object sender, RoutedEventArgs e)
-    {
-      scanUiAnimations.IsEnabled = false;
-      try
-      {
-        await UiAnimationScan.RunAsync();
-      }
-      catch (Exception ex)
-      {
-        Log.Error("UI animation scan failed", ex);
-      }
-      finally
-      {
-        scanUiAnimations.IsEnabled = true;
-      }
     }
 
     private void ViewErrorLogClick(object sender, RoutedEventArgs e) => MainActions.ViewErrorLog();
