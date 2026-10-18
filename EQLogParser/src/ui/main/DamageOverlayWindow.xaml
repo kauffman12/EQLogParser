@@ -36,14 +36,14 @@
     <StackPanel Grid.Row="0" Orientation="Vertical">
       <Border x:Name="border" CornerRadius="2">
         <StackPanel Orientation="Vertical">
-          <StackPanel x:Name="controlPanel" Orientation="Vertical" Height="27" Visibility="Collapsed">
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+          <Grid x:Name="controlPanel" Height="22" Visibility="Collapsed">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,0,2">
               <TextBlock x:Name="titlePercent" Text="" FontFamily="Tahoma" FontSize="14" Foreground="White" />
               <TextBlock x:Name="titleDamage" Text="Damage" FontFamily="Tahoma" FontSize="14" Foreground="White" />
               <TextBlock x:Name="titleDPS" Text="DPS" FontFamily="Tahoma" FontSize="14" Foreground="White" />
               <TextBlock x:Name="titleTime" Text="Sec" FontFamily="Tahoma" FontSize="14" Foreground="White" />
             </StackPanel>
-          </StackPanel>
+          </Grid>
           <StackPanel x:Name="damageContent" Orientation="Vertical" Visibility="Collapsed" />
           <StackPanel x:Name="tankContent" Orientation="Vertical" Visibility="Collapsed" />
         </StackPanel>

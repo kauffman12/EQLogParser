@@ -3110,10 +3110,24 @@ moved, and closes with its owner automatically because `Owner` says so. The bar 
 actually changes — measured while wiring: previewing every color-picker stop through `UpdateMaxRows` recreated and
 reseeded every `DamageBar` on each intermediate stop, which is a flicker the player never asked for.
 
-The live toolbar sizes to its content in both axes, with a 27-DIP minimum rather than a fixed height. Its measured height
-sets the meter header's minimum height so larger text/padding cannot clip DPS/Tank or cover the first data row. That alone
-was incomplete: the operator reported the bottom target/totals row cut in half after this change. Raising a header's minimum
-inside a window with an unchanged saved height takes the extra space from the rows below it.
+The live toolbar sizes to its content in both axes. The operator's screenshot exposed two separate layout problems:
+DPS/Tank and the left controls sat below Damage/DPS/Sec, and the header-to-first-player gap was much larger than the
+last-player-to-footer gap. `UpdateColumnSizes` imposed a five-DIP top margin on the right labels and fixed header heights
+of 27/27/29/31; independently, themed buttons, their padding and their asymmetric margins determined the left strip.
+Increasing the header to fit that strip preserved the words but did not make a single, compact header row.
+
+The header now uses a centered Grid row with a font-specific floor of 20/22/24/26 DIPs for body fonts 10/12/14/16.
+`UpdateColumnSizes` owns that floor and passes it to the toolbar's `UpdateFontSize`; its column widths, right margins,
+class-icon sizes and the existing header fonts remain unchanged. Both strips center their content with the same two-DIP
+bottom inset and Display text formatting. The toolbar owns a small Button template rather than inheriting theme chrome;
+vertical button padding is one DIP, with no per-button top offsets. Its almost-transparent background retains a hit area
+throughout each button, not just on the glyph. The intended spacing is approximately a data row, like the footer, rather
+than reserving a second empty line below the header. Thin-bar/data-row sizing remains in `UpdateMiniBars`/`DamageBar`.
+
+The measured toolbar height still sets the meter header's minimum, so an unexpected larger measurement cannot clip its
+labels or cover the first data row. That alone was incomplete: the operator reported the bottom target/totals row cut in
+half after the earlier size-to-content change. Raising a header's minimum inside a window with an unchanged saved height
+takes the extra space from the rows below it.
 
 `ToolbarSizeChanged` now reserves the excess in the **outer window too**. `MeterHeaderReserve` calculates
 `extra = max(0, measured toolbar height - baseline header height)` and changes the live window by `new extra - previous

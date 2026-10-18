@@ -896,69 +896,66 @@ namespace EQLogParser
 
       UpdateMiniBars(_currentMiniBars);
 
-      _toolbarWindow?.UpdateFontSize(fontSize);
+      _toolbarWindow?.UpdateFontSize(fontSize, controlPanel.Height);
       ScheduleToolbarPosition();
     }
 
     private void UpdateColumnSizes(int fontSize)
     {
+      controlPanel.Height = fontSize + 10;
       switch (fontSize)
       {
         case 10:
           Application.Current.Resources["DamageOverlayImageSize"] = 13.0;
           Application.Current.Resources["DamageOverlayDamageColDef1"] = new GridLength(50.0);
           Application.Current.Resources["DamageOverlayDamageColDef2"] = new GridLength(40.0);
-          titlePercent.Margin = new Thickness(0, 5, 20, 0);
-          titleDamage.Margin = new Thickness(0, 5, 18, 0);
-          titleDPS.Margin = new Thickness(0, 5, 19, 0);
-          titleTime.Margin = new Thickness(0, 5, 6, 0);
+          titlePercent.Margin = new Thickness(0, 0, 20, 0);
+          titleDamage.Margin = new Thickness(0, 0, 18, 0);
+          titleDPS.Margin = new Thickness(0, 0, 19, 0);
+          titleTime.Margin = new Thickness(0, 0, 6, 0);
           titlePercent.FontSize = 11;
           titleDamage.FontSize = 11;
           titleDPS.FontSize = 11;
           titleTime.FontSize = 11;
-          controlPanel.Height = 27;
           break;
         case 12:
           Application.Current.Resources["DamageOverlayImageSize"] = 14.0;
           Application.Current.Resources["DamageOverlayDamageColDef1"] = new GridLength(60.0);
           Application.Current.Resources["DamageOverlayDamageColDef2"] = new GridLength(45.0);
-          titlePercent.Margin = new Thickness(0, 5, 22, 0);
-          titleDamage.Margin = new Thickness(0, 5, 25, 0);
-          titleDPS.Margin = new Thickness(0, 5, 21, 0);
-          titleTime.Margin = new Thickness(0, 5, 6, 0);
+          titlePercent.Margin = new Thickness(0, 0, 22, 0);
+          titleDamage.Margin = new Thickness(0, 0, 25, 0);
+          titleDPS.Margin = new Thickness(0, 0, 21, 0);
+          titleTime.Margin = new Thickness(0, 0, 6, 0);
           titlePercent.FontSize = 13;
           titleDamage.FontSize = 13;
           titleDPS.FontSize = 13;
           titleTime.FontSize = 13;
-          controlPanel.Height = 27;
           break;
         case 14:
           Application.Current.Resources["DamageOverlayImageSize"] = 15.0;
           Application.Current.Resources["DamageOverlayDamageColDef1"] = new GridLength(70.0);
           Application.Current.Resources["DamageOverlayDamageColDef2"] = new GridLength(50.0);
-          titlePercent.Margin = new Thickness(0, 5, 28, 0);
-          titleDamage.Margin = new Thickness(0, 5, 33, 0);
-          titleDPS.Margin = new Thickness(0, 5, 21, 0);
-          titleTime.Margin = new Thickness(0, 5, 6, 0);
+          titlePercent.Margin = new Thickness(0, 0, 28, 0);
+          titleDamage.Margin = new Thickness(0, 0, 33, 0);
+          titleDPS.Margin = new Thickness(0, 0, 21, 0);
+          titleTime.Margin = new Thickness(0, 0, 6, 0);
           titlePercent.FontSize = 15;
           titleDamage.FontSize = 15;
           titleDPS.FontSize = 15;
           titleTime.FontSize = 15;
-          controlPanel.Height = 29;
           break;
         case 16:
           Application.Current.Resources["DamageOverlayImageSize"] = 16.0;
           Application.Current.Resources["DamageOverlayDamageColDef1"] = new GridLength(75.0);
           Application.Current.Resources["DamageOverlayDamageColDef2"] = new GridLength(55.0);
-          titlePercent.Margin = new Thickness(0, 5, 28, 0);
-          titleDamage.Margin = new Thickness(0, 5, 32, 0);
-          titleDPS.Margin = new Thickness(0, 5, 25, 0);
-          titleTime.Margin = new Thickness(0, 5, 6, 0);
+          titlePercent.Margin = new Thickness(0, 0, 28, 0);
+          titleDamage.Margin = new Thickness(0, 0, 32, 0);
+          titleDPS.Margin = new Thickness(0, 0, 25, 0);
+          titleTime.Margin = new Thickness(0, 0, 6, 0);
           titlePercent.FontSize = 17;
           titleDamage.FontSize = 17;
           titleDPS.FontSize = 17;
           titleTime.FontSize = 17;
-          controlPanel.Height = 31;
           break;
       }
     }
@@ -1051,7 +1048,7 @@ namespace EQLogParser
       _toolbarWindow.TankRequested += (_, _) => TankClick(null, null);
 
       _toolbarWindow.SetShowingDps(_currentShowDps);
-      _toolbarWindow.UpdateFontSize(_savedFontSize);
+      _toolbarWindow.UpdateFontSize(_savedFontSize, controlPanel.Height);
     }
 
     private void ToolbarSizeChanged(object sender, SizeChangedEventArgs e)

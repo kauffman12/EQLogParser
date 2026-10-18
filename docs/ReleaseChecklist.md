@@ -258,8 +258,13 @@ These checks still require Windows for popup/hide behavior. See DesignNotes → 
   verify that cached activity is recomputed. Ordinary healing, casts and taunts must not keep it visible.
   In On Kill, kill A with included damage, then hit/kill B using only excluded damage: A keeps its original final-display
   deadline. Included damage to B must still replace that final display immediately.
+- [ ] **Header is one compact, level row**: check fonts 10, 12, 14 and 16, normal/thin bars, damage/tanking, percent on/off
+  and light/dark themes. Left controls and DPS/Tank must sit level with Damage/DPS/Sec. The gap to the first player should
+  resemble the last-player-to-footer gap, not an extra blank row. Check all six toolbar buttons, including padding around
+  their glyphs: clicks/tooltips work, the active view stays orange, and the game does not lose focus. Check Setup preview,
+  Cancel/Save and the live meter, including mixed-DPI moves.
 - [ ] **Toolbar and footer both fit at every supported font size and DPI**: check DPS/Tank at 10, 12, 14 and 16,
-  normal/thin bars and both damage/tanking views, including mixed-DPI monitors. The taller measured toolbar must neither
+  normal/thin bars and both damage/tanking views, including mixed-DPI monitors. The measured toolbar must neither
   clip its labels nor cover the first row, and the bottom raid-target/totals row must remain fully readable—not just its
   top half. Test an existing saved height without reopening Setup: live compensation must preserve its old row-space
   budget. Hide/show, switch views, resize/re-measure the toolbar by moving across DPI boundaries, and close/reopen several

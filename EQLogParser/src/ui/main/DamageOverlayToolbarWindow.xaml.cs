@@ -38,8 +38,9 @@ namespace EQLogParser
       tankButton.Foreground = showingDps ? InactiveBrush : ActiveBrush;
     }
 
-    public void UpdateFontSize(int fontSize)
+    public void UpdateFontSize(int fontSize, double headerHeight)
     {
+      MinHeight = headerHeight;
       switch (fontSize)
       {
         case 10:
