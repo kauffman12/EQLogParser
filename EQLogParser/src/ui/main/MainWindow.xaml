@@ -54,7 +54,7 @@
             <MenuItem.Icon>
               <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_FileExport" />
             </MenuItem.Icon>
-            <MenuItem Header="_Summary Tables as HTML" Click="MenuItemExportHtmlClick" ToolTip="The open summary boards, as HTML">
+            <MenuItem Header="_Summary Tables as HTML" Click="MenuItemExportHtmlClick" ToolTip="The open summary tables, as HTML">
               <MenuItem.Icon>
                 <fa:ImageAwesome Style="{StaticResource EQIconStyle}" Icon="Solid_Table" />
               </MenuItem.Icon>
