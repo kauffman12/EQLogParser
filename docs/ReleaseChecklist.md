@@ -459,6 +459,23 @@ renamed away (docs/DesignNotes.md → "Following the live log across a midnight 
   precisely so append floods cannot overflow it; if `eqlogparser.log` ever prints `Directory watcher faulted`, say so — rollover
   then rides on the 200 ms poll alone, which still works but loses its promptness.
 
+## Log Management Save and reopen checks on Windows
+
+Use a disposable log/configuration for archive and write-failure checks. The headless settings round-trips cannot prove
+real window events or filesystem permissions; `LogManagementWindowTest` also needs a Windows run.
+
+- [ ] **Each field sticks.** Change the folder, size, age, compression, organization, mode, day, hour, minute and AM/PM;
+  Save and reopen, then restart the app and reopen again. Repeat with an existing drive root, a UNC share, and a folder
+  containing `=`. Scheduled mode with both **Any Size / Any Age** must retain both, not the previous thresholds.
+- [ ] **Reverting is not an unsaved change.** Change compression and restore it, or select the existing folder again:
+  Save returns to disabled and Archive Now must not warn about unsaved edits. A real pending edit must still block Archive Now.
+- [ ] **Enable transitions revalidate.** In enabled Activity mode choose both Any thresholds: Save is disabled. Disable
+  management: Save becomes available. Re-enable it: Save is disabled again. Repeat with no folder selected; saving while
+  disabled must not store the literal folder hint.
+- [ ] **A failed write is not a successful Save.** Make the test settings file unwritable, edit a value and Save: the
+  dialog remains open with the draft and a warning, the Error Log contains the failure, and the active settings/schedule
+  remain unchanged. Restore write access and retry without another edit: Save succeeds and reopen retains the draft.
+
 ## Bot table (`mercs.txt`) checks on Windows
 
 R27-mercdb claims every name in `data/mercs.txt` as **Mercenary**, above an NPC target frame but below positive player

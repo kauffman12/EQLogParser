@@ -18304,3 +18304,29 @@ reproducibility gates, Kizant live passed the retained incremental-classificatio
 with `EQLP_EMU=1`. These are executed counts, not source-method counts.
 WPF runtime tests were not executed here. Startup/theme sizing, column order, take-back presentation and frozen-grid visuals
 remain Windows checks in `docs/ReleaseChecklist.md`.
+
+## Log Management saves the displayed settings
+
+A report of changing a value, pressing Save, and reopening to the old value has a concrete matching path: selecting both
+**Any Size** and **Any Age** skipped both writes, even though those selections are valid for scheduled archiving or while
+management is disabled. Existing drive-root archive folders were also discarded by `Path.GetDirectoryName(root) == null`.
+The archive manager accepts an existing root; the dialog displays the saved folder without requiring a parent directory.
+
+`LogManagementSettings` is the dialog's immutable snapshot and the single load/store mapping for all eleven fields.
+Save and Archive Now compare the current snapshot to the opening snapshot, not to a latched widget event: reverting a
+selection, or selecting the same folder again, leaves no unsaved change. Both enable-checkbox transitions revalidate the
+whole form, even when returning to the originally saved check state. Enabled activity archiving still requires at least
+one threshold, and enabled management needs a folder; the italic folder hint is never a stored path. Every accepted save
+writes both thresholds, including their Any values, and flushes settings before replacing the schedule and closing.
+
+`ConfigUtil.Save` now reports write failure and retains the pending-save flag for retry. The dialog restores the previous
+active log-management settings on failure, retains the user's draft, and displays an Error Log warning rather than closing
+as though Save worked. The properties reader splits on the first `=` only: `=` is legal in a folder name, and splitting
+on every occurrence lost such paths after restarting, despite an otherwise successful write. This is failure reporting
+and retry support, not a new transactional or atomic-file persistence protocol.
+
+`LogManagementSettingsTest` exercises every offered field value through the actual settings writer and a disk reload,
+both Any thresholds together, root/UNC/equals-containing paths, refusal, and failed-write rollback/retry. The headless
+suite passed **2,546 tests with 3 gated skips**; the non-incremental solution build reported **zero warnings/errors**.
+`LogManagementWindowTest` covers the checkbox/revert handlers and combo-to-setting wiring, but only built on Linux;
+its runtime checks and the live Save/reopen checks remain owed on Windows in `docs/ReleaseChecklist.md`.

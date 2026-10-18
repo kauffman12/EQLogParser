@@ -660,8 +660,14 @@ namespace EQLogParser
         return true;
       }
 
-      return !_lastConfig.Characters.Select(character => character.Id + character.Parent + character.Index + character.Name)
-        .SequenceEqual(config.Characters.Select(character => character.Id + character.Parent + character.Index + character.Name));
+      // Settings-only edits also need fresh tree nodes; Modify reads the character held by the selected node.
+      return _lastConfig.Characters.Zip(config.Characters).Any(pair =>
+        pair.First.Id != pair.Second.Id || pair.First.Parent != pair.Second.Parent ||
+        pair.First.Index != pair.Second.Index || pair.First.Name != pair.Second.Name ||
+        pair.First.FilePath != pair.Second.FilePath || pair.First.Voice != pair.Second.Voice ||
+        pair.First.VoiceRate != pair.Second.VoiceRate || pair.First.CustomVolume != pair.Second.CustomVolume ||
+        pair.First.ActiveColor != pair.Second.ActiveColor || pair.First.IdleColor != pair.Second.IdleColor ||
+        pair.First.ResetColor != pair.Second.ResetColor || pair.First.FontColor != pair.Second.FontColor);
     }
 
     private void SyncEnabledFromConfig(TriggerConfig config)

@@ -97,6 +97,7 @@ namespace EQLogParser
       }
 
       _ready = true;
+      EnableSave();
     }
 
     private void CancelClicked(object sender, RoutedEventArgs e) => Close();

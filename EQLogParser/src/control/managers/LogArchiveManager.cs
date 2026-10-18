@@ -238,7 +238,8 @@ namespace EQLogParser
       var creationTime = fileInfo.CreationTimeUtc;
 
       var archiveFolder = ConfigUtil.GetSetting("LogManagementArchiveFolder");
-      if (string.IsNullOrEmpty(archiveFolder) || Path.GetDirectoryName(archiveFolder) == null)
+      if (string.IsNullOrEmpty(archiveFolder) ||
+        (Path.GetDirectoryName(archiveFolder) == null && !Directory.Exists(archiveFolder)))
       {
         return;
       }

@@ -248,7 +248,7 @@ namespace EQLogParser
       SaveProperties(Path.Combine(overrideDir, IdentityOverridesFileName), list);
     }
 
-    internal static void Save()
+    internal static bool Save()
     {
       if (_settingsUpdated)
       {
@@ -275,9 +275,15 @@ namespace EQLogParser
         ApplicationSettings.TryRemove("ShowDamageSummaryAtStartup", out _); // not used anymore);
         ApplicationSettings.TryRemove("ShowHealingSummaryAtStartup", out _); // not used anymore);
         ApplicationSettings.TryRemove("ShowTankingSummaryAtStartup", out _); // not used anymore);
-        SaveProperties(_settingsFile, ApplicationSettings);
+        if (!SaveProperties(_settingsFile, ApplicationSettings))
+        {
+          return false;
+        }
+
         _settingsUpdated = false;
       }
+
+      return true;
     }
 
     internal static List<string> ReadList(string fileName)
@@ -326,7 +332,7 @@ namespace EQLogParser
           continue;
         }
 
-        var parts = line.Split('=');
+        var parts = line.Split('=', 2);
         if (parts is { Length: 2 } && parts[0].Length > 0 && parts[1].Length > 0)
         {
           properties[parts[0]] = parts[1];
@@ -334,7 +340,7 @@ namespace EQLogParser
       }
     }
 
-    private static void SaveProperties(string fileName, IEnumerable<KeyValuePair<string, string>> enumeration)
+    private static bool SaveProperties(string fileName, IEnumerable<KeyValuePair<string, string>> enumeration)
     {
       var lines = new List<string>();
       foreach (var keypair in enumeration)
@@ -342,7 +348,13 @@ namespace EQLogParser
         lines.Add(keypair.Key + "=" + keypair.Value);
       }
 
-      ExceptionUtil.SafeWriteAllLines(fileName, lines, Log.Error);
+      var saved = true;
+      ExceptionUtil.SafeWriteAllLines(fileName, lines, ex =>
+      {
+        saved = false;
+        Log.Error(ex);
+      });
+      return saved;
     }
   }
 }
