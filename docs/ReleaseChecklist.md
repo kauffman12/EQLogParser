@@ -138,8 +138,9 @@ These checks require a realized grid; the automated pane tests exercise bound da
   status while hidden so a different GIF/controller is initialized, then repeat. Compare idle CPU/memory with the pane
   hidden and visible; do not interpret legitimate visible-animation allocations as a regression. The helper's Windows
   tests target hidden-controller pause state; the temporary runtime clock-inspection menu has been removed.
-  Re-run `VisibleGifAnimationTest` on Windows after its fixture switched to the packaged `waiting.gif`. If any constructor
-  still times out, report its new window/image/animation/controller diagnostics before changing the playback helper.
+  Re-run `VisibleGifAnimationTest` on Windows after switching its off-screen fixture from `Window` to an STA-owned
+  `HwndSource`. If a constructor still times out, report its new hwnd/attachment/image/animation/controller diagnostics
+  before changing the playback helper.
 - [ ] **The load's cleanup pause sits behind the band, and actually returns memory** (2026-10-13): open a large log (several million lines) and watch the fight list.
   At 100 % the band stays up — *Building the Fight List…* while the first full derive and its boards run — then both the band and the application status line say
   *"Cleaning up.."* for the pause, and the grids appear **after** it. Three things to confirm: (a) no freeze lands on an already-readable grid (that is how the old

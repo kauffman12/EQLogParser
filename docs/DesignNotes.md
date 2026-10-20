@@ -16781,11 +16781,13 @@ clock reflection, frame rewinding, collector changes or new dependency is introd
 `AnimationOptInMarkupTest` pins the status template's paused-start opt-in. Windows-only `VisibleGifAnimationTest` covers
 initially hidden loading, effective ancestor visibility, source replacement, unload/reload and late enable/disable using the
 app's packaged `waiting.gif`. A Windows report showed all four tests timing out in their common fixture constructor before
-any playback assertion: the former hand-encoded 1×1 GIF did not yield a controller in that environment. The fixture now
-uses the production animation resource and timeout diagnostics distinguish window/image load from animation initialization;
-this change still needs a Windows run. The fixture uses a small off-screen WPF window to exercise real IsLoaded/IsVisible
-semantics rather than asserting a hand-supplied visibility value. These tests build on Linux and require Windows to execute. Confirm real
-Trigger Manager status icons animate only while visible. Subsequent operator verification found the hidden repeating
+any playback assertion. Switching the old 1×1 in-memory GIF to the packaged resource did not resolve this: the next
+Windows report showed `window loaded=False, image loaded=False, animation loaded=False, controller=False`. Decoding had
+not begun, so the GIF format was not the established cause. The fixture now roots its visual on a directly owned, visible
+but off-screen `HwndSource` on the test STA, avoiding the off-screen Window that never raised Loaded. It still asks real
+IsLoaded/IsVisible and ancestor transitions rather than supplying a fake visibility value. Timeout diagnostics distinguish
+native host attachment from image loading and controller creation. This change builds on Linux but requires a Windows run.
+Confirm real Trigger Manager status icons animate only while visible. Subsequent operator verification found the hidden repeating
 clocks paused, including after source replacement, while visible GIFs still animated. Memory behavior improved as recorded
 above; this does not establish a complete cause or cure of every post-load allocation. The temporary report code is removed.
 
