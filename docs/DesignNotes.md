@@ -18330,3 +18330,65 @@ both Any thresholds together, root/UNC/equals-containing paths, refusal, and fai
 suite passed **2,546 tests with 3 gated skips**; the non-incremental solution build reported **zero warnings/errors**.
 `LogManagementWindowTest` covers the checkbox/revert handlers and combo-to-setting wiring, but only built on Linux;
 its runtime checks and the live Save/reopen checks remain owed on Windows in `docs/ReleaseChecklist.md`.
+
+## Line-chart rolling rates count seconds, not samples
+
+The rolling chart keeps its existing sparse plot points: adding a zero point for every idle second would increase the
+vendor chart's rendering load. `ChartAggregation.PopulateRolling` instead treats missing seconds as zero implicitly.
+At timestamp t it sums buckets from t−5 through t, inclusive, and divides by six, shortened only during the series'
+initial warm-up (`min(6, t − first timestamp + 1)`). Two 600-damage buckets five seconds apart therefore give 200 DPS,
+not 600. Dense per-second series keep their existing results. Damage, tanking and healing use the same calculation.
+
+The window's membership is unchanged; its six inclusive one-second buckets are now explicit in the implementation.
+Existing long-gap zero markers still expire earlier damage. A gap does not restart the initial warm-up, and no trailing
+points, extra redraws or new encounter-boundary policy were added. Values are correct at the retained timestamps;
+the chart's line between those samples remains an interpolation, not a newly sampled per-second trace.
+
+Groups now sum members' per-timestamp amounts first and calculate their own rolling window. Summing only the member
+rolling rates present at a group timestamp discarded contributions from members with no point at that exact second
+and mixed different warm-up denominators. The separate cumulative-statistic repairs are described below.
+
+The pure `ChartAggregation` helper lives in Core. The former reflection-based WPF rolling tests moved to the headless
+`ChartRollingTest`, with sparse-window, boundary, existing-marker and staggered-member regressions. This changes the
+chart calculation only, not the live damage meter or its sampling, ranking and lifecycle rules.
+
+### Sparse chart buckets: cumulative correctness and calculation cost
+
+Review found four numeric defects and one lost-selection path. `LineChart` extended its duration before publishing the
+previous bucket, so a later hit changed the earlier point's DPS. It counted misses in `FightHits`, diluting average hit,
+crit and twincast rates. Its long-gap markers zeroed cumulative damage as well as instantaneous activity. Group DPS
+used exclusive wall time, making its first point zero and its second point twice the proper rate. Finally an UPDATE
+saved the group selection and immediately discarded it through `Clear()`; the selection is now restored after that clear.
+
+`ChartSeriesBuilder` owns a series' bucket, cumulative amounts and inclusive activity clock. A bucket publishes before
+new time enters the clock. Only landed outcomes increment hit/crit/twincast counters; every outcome remains an attempt.
+Gaps greater than the existing 30-second threshold still produce exactly two markers, at previous+6 and next−6, but
+markers retain cumulative amounts, hit counts and rates. They have zero attempts and therefore cannot buy activity time.
+Short gaps count their elapsed seconds; a long gap adds only the next occupied second. A finished bucket is detached from
+the input record and from future publications. Damage, healing, tanking, player-plus-pets and raid share this calculation.
+
+Group merging uses the same inclusive clock over actual group activity, ignoring marker-only timestamps. Cumulative
+member values carry forward, while bucket amounts/counts contribute only at their own timestamp. Rolling values are
+recomputed from merged amounts. Groups can bridge a member's silence when another member is active. No dense zero-filled
+series, trailing points, new timer or vendor-rendering change was introduced.
+
+The correctness extraction also removes per-record last-time/accounting/range dictionary lookups. Since inputs are
+sorted, the activity clock needs just its last timestamp and accumulated seconds, rather than a growing `TimeRange`
+whose total was re-summed at every point. Group input lists already ascend too: a cursor per member replaces the sorted
+set of all timestamps and the per-member timestamp dictionaries; cumulative totals update only for members advancing.
+The cursor merge still scans the member cursors per output timestamp, appropriate for the small group lists.
+
+A disposable Release-mode Linux comparison used four warm-up pairs and nine alternating timed pairs, reporting medians,
+without forced collections. Compared against the pre-repair calculation, with equal output counts and final totals:
+
+| Synthetic calculation | Before | After | Ratio |
+|---|---:|---:|---:|
+| One series, 1,000,000 records, 500 separated lives, including rolling calculation | 28.65 ms | 13.40 ms | 2.14× |
+| Six-member group merge, 120,000 input points, dense seconds | 11.44 ms | 1.80 ms | 6.36× |
+| Six-member group merge, 120,000 input points, staggered 11-second spacing | 40.04 ms | 21.53 ms | 1.86× |
+
+These are calculation timings, not end-to-end redraw or UI-speed claims. Earlier erroneous rates are deliberately not
+an equivalence oracle. `ChartSeriesBuilderTest` checks the repaired arithmetic, gaps, zero/missed outcomes, immutable
+publications and group lookup, plus a seeded multi-member merge against independent raw-record accounting at every
+output timestamp. `LineChartSelectionTest` exercises the actual UPDATE path on Windows. Linux ran **2,578 headless tests
+with three gated skips**; the Windows-only selection test built but was not run. The temporary measurement code was removed.

@@ -1,38 +1,8 @@
-using System.Reflection;
-
-namespace EQLogParser.Wpf.Test
+namespace EQLogParser
 {
   [TestClass]
-  public class LineChartTest
+  public class ChartRollingTest
   {
-    private static MethodInfo? _populateRollingMethod;
-
-    [ClassInitialize]
-    public static void ClassInitialize(TestContext context)
-    {
-      var lineChartType = typeof(LineChart);
-      _populateRollingMethod = lineChartType.GetMethod("PopulateRolling", BindingFlags.NonPublic | BindingFlags.Static);
-
-      if (_populateRollingMethod == null)
-      {
-        throw new InvalidOperationException("Could not find PopulateRolling method via reflection");
-      }
-    }
-
-    private static void RunPopulateRolling(Dictionary<string, List<DataPoint>> data)
-    {
-      _populateRollingMethod?.Invoke(null, [data]);
-    }
-
-    private static DataPoint CreatePoint(double currentTime, long totalPerSecond)
-    {
-      return new DataPoint
-      {
-        CurrentTime = currentTime,
-        TotalPerSecond = totalPerSecond
-      };
-    }
-
     [TestMethod]
     public void TestPopulateRolling_EmptyData()
     {
@@ -86,9 +56,9 @@ namespace EQLogParser.Wpf.Test
       Assert.AreEqual(100, points[0].RollingTotal);
       Assert.AreEqual(100, points[0].RollingDps);
       Assert.AreEqual(300, points[1].RollingTotal);
-      Assert.AreEqual(150, points[1].RollingDps);
+      Assert.AreEqual(75, points[1].RollingDps);
       Assert.AreEqual(500, points[2].RollingTotal);
-      Assert.AreEqual(250, points[2].RollingDps);
+      Assert.AreEqual(83, points[2].RollingDps);
     }
 
     [TestMethod]
@@ -112,9 +82,11 @@ namespace EQLogParser.Wpf.Test
       Assert.AreEqual(300, points[2].RollingTotal);
       Assert.AreEqual(100, points[2].RollingDps);
       Assert.AreEqual(500, points[3].RollingTotal);
-      Assert.AreEqual(125, points[3].RollingDps);
+      Assert.AreEqual(100, points[3].RollingDps);
       Assert.AreEqual(700, points[4].RollingTotal);
-      Assert.AreEqual(140, points[4].RollingDps);
+      Assert.AreEqual(116, points[4].RollingDps);
+      Assert.AreEqual(650, points[5].RollingTotal);
+      Assert.AreEqual(108, points[5].RollingDps);
     }
 
     [TestMethod]
@@ -228,7 +200,7 @@ namespace EQLogParser.Wpf.Test
       Assert.AreEqual(100, points[0].RollingTotal);
       Assert.AreEqual(100, points[0].RollingDps);
       Assert.AreEqual(300, points[1].RollingTotal);
-      Assert.AreEqual(150, points[1].RollingDps);
+      Assert.AreEqual(50, points[1].RollingDps);
     }
 
     [TestMethod]
@@ -245,9 +217,9 @@ namespace EQLogParser.Wpf.Test
       Assert.AreEqual(100, points[0].RollingTotal);
       Assert.AreEqual(100, points[0].RollingDps);
       Assert.AreEqual(300, points[1].RollingTotal);
-      Assert.AreEqual(150, points[1].RollingDps);
+      Assert.AreEqual(50, points[1].RollingDps);
       Assert.AreEqual(500, points[2].RollingTotal);
-      Assert.AreEqual(250, points[2].RollingDps);
+      Assert.AreEqual(83, points[2].RollingDps);
     }
 
     [TestMethod]
@@ -288,6 +260,10 @@ namespace EQLogParser.Wpf.Test
       Assert.AreEqual(100, points[2].RollingTotal);
       Assert.AreEqual(200, points[3].RollingTotal);
       Assert.AreEqual(100, points[4].RollingTotal);
+      Assert.AreEqual(16, points[2].RollingDps);
+      Assert.AreEqual(33, points[3].RollingDps);
+      Assert.AreEqual(16, points[4].RollingDps);
+      Assert.AreEqual(5, points.Count, "Idle seconds must not allocate extra plot points");
     }
 
     [TestMethod]
@@ -323,6 +299,7 @@ namespace EQLogParser.Wpf.Test
       Assert.AreEqual(100, points[0].RollingTotal);
       Assert.AreEqual(300, points[1].RollingTotal);
       Assert.AreEqual(600, points[2].RollingTotal);
+      Assert.AreEqual(600, points[2].RollingDps, "One timestamp is one second, not three");
     }
 
     [TestMethod]
@@ -352,5 +329,71 @@ namespace EQLogParser.Wpf.Test
       Assert.AreEqual(13500, points[6].RollingTotal);
       Assert.AreEqual(13500, points[7].RollingTotal);
     }
+
+    [TestMethod]
+    public void SparseSixSecondWindowCountsIdleSecondsWithoutAddingPoints()
+    {
+      var points = new List<DataPoint> { CreatePoint(100, 600), CreatePoint(105, 600) };
+      var original = points.ToArray();
+      RunPopulateRolling(new Dictionary<string, List<DataPoint>> { { "test", points } });
+
+      Assert.AreEqual(1200, points[1].RollingTotal);
+      Assert.AreEqual(200, points[1].RollingDps);
+      Assert.AreEqual(original.Length, points.Count);
+      for (var i = 0; i < original.Length; i++) Assert.AreSame(original[i], points[i]);
+    }
+
+    [TestMethod]
+    public void WideBucketTotalsKeepIntegerPrecision()
+    {
+      var total = (1L << 53) + 1;
+      var points = new List<DataPoint> { CreatePoint(0, total), CreatePoint(5, total) };
+      RunPopulateRolling(new Dictionary<string, List<DataPoint>> { { "test", points } });
+
+      Assert.AreEqual(total, points[0].RollingDps);
+      Assert.AreEqual(total * 2, points[1].RollingTotal);
+      Assert.AreEqual(total * 2 / 6, points[1].RollingDps);
+    }
+
+    [TestMethod]
+    public void ExistingZeroMarkersExpireDamageWithoutRestartingTheDenominator()
+    {
+      var points = new List<DataPoint>
+      {
+        CreatePoint(0, 600), CreatePoint(6, 0), CreatePoint(94, 0), CreatePoint(100, 600)
+      };
+      RunPopulateRolling(new Dictionary<string, List<DataPoint>> { { "test", points } });
+
+      Assert.AreEqual(0, points[1].RollingTotal);
+      Assert.AreEqual(0, points[1].RollingDps);
+      Assert.AreEqual(0, points[2].RollingDps);
+      Assert.AreEqual(100, points[3].RollingDps);
+      Assert.AreEqual(4, points.Count);
+    }
+
+    [TestMethod]
+    public void GroupRollingRecalculatesFromBucketsIncludingMembersWithoutAPointAtThisTick()
+    {
+      var first = new List<DataPoint> { CreatePoint(0, 600), CreatePoint(6, 0) };
+      var second = new List<DataPoint> { CreatePoint(5, 600) };
+      RunPopulateRolling(new Dictionary<string, List<DataPoint>> { { "first", first }, { "second", second } });
+
+      var merged = ChartAggregation.MergeSeries("Group 1", [first, second]);
+      Assert.IsNotNull(merged);
+      Assert.AreEqual(3, merged.Count);
+      Assert.AreEqual(1200, merged[1].RollingTotal);
+      Assert.AreEqual(200, merged[1].RollingDps);
+      Assert.AreEqual(600, merged[2].RollingTotal);
+      Assert.AreEqual(100, merged[2].RollingDps);
+    }
+
+    private static void RunPopulateRolling(Dictionary<string, List<DataPoint>> data) =>
+      ChartAggregation.PopulateRolling(data);
+
+    private static DataPoint CreatePoint(double currentTime, long totalPerSecond) => new()
+    {
+      CurrentTime = currentTime,
+      TotalPerSecond = totalPerSecond
+    };
   }
 }

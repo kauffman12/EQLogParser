@@ -7,11 +7,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows;
-using System.Text;
 using System.Windows.Controls;
-using System.Windows.Threading;
-
-using EQLogParser;
 
 namespace EQLogParser
 {
@@ -159,6 +155,7 @@ namespace EQLogParser
             else
             {
               Clear();
+              _selectedGroups = e.SelectedGroups;
               AddDataPoints(e.Iterator, e.Selected);
               _lastUpdateKey = key;
               _hasAppliedData = true;
@@ -190,7 +187,6 @@ namespace EQLogParser
     private void AutoSelectViewOption(List<GroupEntry> selectedGroups, List<PlayerStats> selected)
     {
       var hasGroups = selectedGroups != null && selectedGroups.Count > 0;
-      var hasPlayers = selected != null && selected.Count > 0;
 
       if (hasGroups)
       {
@@ -215,18 +211,10 @@ namespace EQLogParser
 
     private void AddDataPoints(RecordGroupCollection recordIterator, List<PlayerStats> selected = null)
     {
-
-      const string raidName = "Raid";
-      var lastTimes = new Dictionary<string, double>();
-      var timeRanges = new Dictionary<string, TimeRange>();
-      var petData = new Dictionary<string, DataPoint>();
-      var playerData = new Dictionary<string, DataPoint>();
-      var totalPlayerData = new Dictionary<string, DataPoint>();
-      var raidData = new Dictionary<string, DataPoint>();
-      var needTotalAccounting = new Dictionary<string, DataPoint>();
-      var needPlayerAccounting = new Dictionary<string, DataPoint>();
-      var needPetAccounting = new Dictionary<string, DataPoint>();
-      var needRaidAccounting = new Dictionary<string, DataPoint>();
+      var petData = new Dictionary<string, ChartSeriesBuilder>();
+      var playerData = new Dictionary<string, ChartSeriesBuilder>();
+      var totalPlayerData = new Dictionary<string, ChartSeriesBuilder>();
+      var raid = new ChartSeriesBuilder("Raid");
 
       foreach (var dataPoint in recordIterator)
       {
@@ -242,47 +230,32 @@ namespace EQLogParser
 
         var totalName = _petTotalName;
 
-        /*
-         * Every series is measured against the previous record carrying its own name, and the three names this loop cares about are known right
-         * here, so their last time and gap are read once. Aggregate used to look both up again by name for each of the four series, which is how
-         * a walk that only sums numbers was spending its time hashing strings: eleven dictionary probes per record where three carry information.
-         */
-        var raidDiff = lastTimes.TryGetValue(raidName, out var raidLast) ? dataPoint.CurrentTime - raidLast : 0;
-        var totalDiff = lastTimes.TryGetValue(totalName, out var totalLast) ? dataPoint.CurrentTime - totalLast : 0;
-        var oneDiff = lastTimes.TryGetValue(dataPoint.Name, out var oneLast) ? dataPoint.CurrentTime - oneLast : 0;
-
         /* Tested once for the record instead of once per series: two bit tests and a string lookup that four series were each repeating. */
         var isCrit = LineModifiersParser.IsCrit(dataPoint.ModifiersMask);
         var isTwincast = LineModifiersParser.IsTwincast(dataPoint.ModifiersMask);
         var isHit = !MissTypes.ContainsKey(dataPoint.Type);
 
-        if (!raidData.TryGetValue(raidName, out var raidAggregate))
-        {
-          raidAggregate = new DataPoint { Name = raidName };
-          raidData[raidName] = raidAggregate;
-        }
-
-        Aggregate(_raidValues, needRaidAccounting, dataPoint, raidAggregate, timeRanges, raidLast, raidDiff, isCrit, isTwincast, isHit);
+        raid.Add(dataPoint, isCrit, isTwincast, isHit);
 
         if (!totalPlayerData.TryGetValue(totalName, out var totalAggregate))
         {
-          totalAggregate = new DataPoint { Name = totalName, PlayerName = playerName };
+          totalAggregate = new ChartSeriesBuilder(totalName, playerName);
           totalPlayerData[totalName] = totalAggregate;
         }
 
-        Aggregate(_playerPetValues, needTotalAccounting, dataPoint, totalAggregate, timeRanges, totalLast, totalDiff, isCrit, isTwincast, isHit);
+        totalAggregate.Add(dataPoint, isCrit, isTwincast, isHit);
 
         if (dataPoint.PlayerName == null)
         {
           if (!playerData.TryGetValue(dataPoint.Name, out var aggregate))
           {
-            aggregate = new DataPoint { Name = dataPoint.Name, PlayerName = dataPoint.Name };
+            aggregate = new ChartSeriesBuilder(dataPoint.Name, dataPoint.Name);
             playerData[dataPoint.Name] = aggregate;
           }
 
-          Aggregate(_playerValues, needPlayerAccounting, dataPoint, aggregate, timeRanges, oneLast, oneDiff, isCrit, isTwincast, isHit);
+          aggregate.Add(dataPoint, isCrit, isTwincast, isHit);
         }
-        else if (dataPoint.PlayerName != null)
+        else
         {
           if (!_hasPets.TryGetValue(totalName, out var value))
           {
@@ -293,61 +266,26 @@ namespace EQLogParser
           value.Add(dataPoint.Name);
           if (!petData.TryGetValue(dataPoint.Name, out var petAggregate))
           {
-            petAggregate = new DataPoint { Name = dataPoint.Name, PlayerName = playerName };
+            petAggregate = new ChartSeriesBuilder(dataPoint.Name, playerName);
             petData[dataPoint.Name] = petAggregate;
           }
 
-          Aggregate(_petValues, needPetAccounting, dataPoint, petAggregate, timeRanges, oneLast, oneDiff, isCrit, isTwincast, isHit);
+          petAggregate.Add(dataPoint, isCrit, isTwincast, isHit);
         }
-
-        lastTimes[dataPoint.Name] = dataPoint.CurrentTime;
-        lastTimes[raidName] = dataPoint.CurrentTime;
-        lastTimes[totalName] = dataPoint.CurrentTime;
       }
 
-      /* The 5 second rolling window walks every point a second time, which is a different thing to fix than the walk above. */
-      UpdateRemaining(_raidValues, needRaidAccounting, lastTimes, timeRanges);
-      UpdateRemaining(_playerPetValues, needTotalAccounting, lastTimes, timeRanges);
-      UpdateRemaining(_playerValues, needPlayerAccounting, lastTimes, timeRanges);
-      UpdateRemaining(_petValues, needPetAccounting, lastTimes, timeRanges);
+      raid.Finish();
+      if (raid.Points.Count > 0) _raidValues["Raid"] = raid.Points;
+      FinishSeries(totalPlayerData, _playerPetValues);
+      FinishSeries(playerData, _playerValues);
+      FinishSeries(petData, _petValues);
 
-      PopulateRolling(_raidValues);
-      PopulateRolling(_playerPetValues);
-      PopulateRolling(_playerValues);
-      PopulateRolling(_petValues);
+      ChartAggregation.PopulateRolling(_raidValues);
+      ChartAggregation.PopulateRolling(_playerPetValues);
+      ChartAggregation.PopulateRolling(_playerValues);
+      ChartAggregation.PopulateRolling(_petValues);
 
       Plot(selected);
-    }
-
-    private static void PopulateRolling(Dictionary<string, List<DataPoint>> data)
-    {
-      foreach (var points in data.Values)
-      {
-        var count = points.Count;
-        if (count == 0)
-          continue;
-
-        var left = 0;
-        var windowTotal = 0L;
-
-        for (var right = 0; right < count; right++)
-        {
-          windowTotal += points[right].TotalPerSecond;
-
-          while (left < right && (points[right].CurrentTime - points[left].CurrentTime) > 5)
-          {
-            windowTotal -= points[left].TotalPerSecond;
-            left++;
-          }
-
-          var windowCount = right - left + 1;
-          points[right].RollingTotal = windowTotal;
-          if (windowCount > 0)
-          {
-            points[right].RollingDps = windowTotal / windowCount;
-          }
-        }
-      }
     }
 
     private void Plot(List<PlayerStats> selected)
@@ -689,140 +627,13 @@ namespace EQLogParser
       }
     }
 
-    /*
-     * lastTime and diff arrive as arguments instead of being looked up from dictionaries by aggregate.Name: the caller knows the name it is
-     * folding this record into and has already read both, so looking them up again here only cost hashing. isCrit, isTwincast and isHit arrive
-     * the same way - one test per record rather than one per series. Same values in, same values out; see DesignNotes for what it measured.
-     */
-    private static void Aggregate(Dictionary<string, List<DataPoint>> theValues,
-      Dictionary<string, DataPoint> needAccounting, DataPoint dataPoint, DataPoint aggregate,
-      Dictionary<string, TimeRange> timeRanges, double lastTime, double diff, bool isCrit, bool isTwincast, bool isHit)
+    private static void FinishSeries(Dictionary<string, ChartSeriesBuilder> builders,
+      Dictionary<string, List<DataPoint>> values)
     {
-      if (!timeRanges.TryGetValue(aggregate.Name, out var value))
+      foreach (var (name, builder) in builders)
       {
-        value = new TimeRange(new TimeSegment(dataPoint.CurrentTime, dataPoint.CurrentTime));
-        timeRanges[aggregate.Name] = value;
-      }
-
-      // The segment-gap number by its neutral name: one silence threshold across the app, owned by the projection
-      // rather than read off a manager this chart otherwise knows nothing about.
-      if (diff > FightProjection.EngagementGapS)
-      {
-        value.Add(new TimeSegment(dataPoint.CurrentTime, dataPoint.CurrentTime));
-        Insert(aggregate, theValues, timeRanges);
-        aggregate.CritsPerSecond = 0;
-        aggregate.TcPerSecond = 0;
-        aggregate.AttemptsPerSecond = 0;
-        aggregate.HitsPerSecond = 0;
-        aggregate.TotalPerSecond = 0;
-
-        // is this good? i don't know
-        // trying to insert null for time not seen
-        var noData = new DataPoint
-        {
-          Name = aggregate.Name,
-          PlayerName = aggregate.PlayerName,
-          CurrentTime = lastTime + 6
-        };
-
-        Insert(noData, theValues, timeRanges);
-        noData.CurrentTime = dataPoint.CurrentTime - 6;
-        Insert(noData, theValues, timeRanges);
-      }
-      else if (diff >= 1)
-      {
-        timeRanges[aggregate.Name].Add(new TimeSegment(aggregate.CurrentTime, dataPoint.CurrentTime));
-        Insert(aggregate, theValues, timeRanges);
-        aggregate.CritsPerSecond = 0;
-        aggregate.TcPerSecond = 0;
-        aggregate.AttemptsPerSecond = 0;
-        aggregate.HitsPerSecond = 0;
-        aggregate.TotalPerSecond = 0;
-      }
-      else
-      {
-        needAccounting[aggregate.Name] = aggregate;
-      }
-
-      aggregate.CurrentTime = dataPoint.CurrentTime;
-      aggregate.CritsPerSecond += isCrit ? (uint)1 : 0;
-      aggregate.TcPerSecond += isTwincast ? (uint)1 : 0;
-      aggregate.AttemptsPerSecond += 1;
-      aggregate.HitsPerSecond += isHit ? 1 : 0;
-      aggregate.TotalPerSecond += dataPoint.Total;
-      aggregate.Total += dataPoint.Total;
-      aggregate.FightTotal += dataPoint.Total;
-      aggregate.FightHits += 1;
-      aggregate.FightCritHits += isCrit ? (uint)1 : 0;
-      aggregate.FightTcHits += isTwincast ? (uint)1 : 0;
-    }
-
-    private static void UpdateRemaining(Dictionary<string, List<DataPoint>> chartValues, Dictionary<string, DataPoint> needAccounting,
-      Dictionary<string, double> lastTimes, Dictionary<string, TimeRange> timeRanges)
-    {
-      foreach (var remaining in needAccounting.Values)
-      {
-        var lastTime = lastTimes[remaining.Name];
-        var lastSegment = timeRanges[remaining.Name].TimeSegments.Last();
-        timeRanges[remaining.Name].Add(new TimeSegment(lastSegment.BeginTime, lastTime));
-        remaining.CurrentTime = lastTime;
-        Insert(remaining, chartValues, timeRanges);
-      }
-
-      needAccounting.Clear();
-    }
-
-    private static void Insert(DataPoint aggregate, Dictionary<string, List<DataPoint>> chartValues,
-      Dictionary<string, TimeRange> timeRanges)
-    {
-      var newEntry = new DataPoint
-      {
-        Name = aggregate.Name,
-        PlayerName = aggregate.PlayerName,
-        CurrentTime = aggregate.CurrentTime,
-        Total = aggregate.Total,
-        FightTotal = aggregate.FightTotal,
-        FightHits = aggregate.FightHits,
-        FightCritHits = aggregate.FightCritHits,
-        FightTcHits = aggregate.FightTcHits,
-        CritsPerSecond = aggregate.CritsPerSecond,
-        TcPerSecond = aggregate.TcPerSecond,
-        AttemptsPerSecond = aggregate.AttemptsPerSecond,
-        HitsPerSecond = aggregate.HitsPerSecond,
-        TotalPerSecond = aggregate.TotalPerSecond,
-        DateTime = DateUtil.FromDotNetSeconds(aggregate.CurrentTime)
-      };
-
-      var totalSeconds = timeRanges[aggregate.Name].GetTotal();
-      newEntry.ValuePerSecond = (long)Math.Round(aggregate.FightTotal / totalSeconds, 2);
-
-      if (aggregate.FightHits > 0)
-      {
-        newEntry.Avg = (long)Math.Round(Convert.ToDecimal(aggregate.FightTotal) / aggregate.FightHits, 2);
-        newEntry.CritRate = Math.Round(Convert.ToDouble(aggregate.FightCritHits) / aggregate.FightHits * 100, 2);
-        newEntry.TcRate = Math.Round(Convert.ToDouble(aggregate.FightTcHits) / aggregate.FightHits * 100, 2);
-      }
-
-      if (!chartValues.TryGetValue(aggregate.Name, out var playerValues))
-      {
-        playerValues = [];
-        chartValues[aggregate.Name] = playerValues;
-      }
-
-      if (playerValues.Count != 0 && playerValues.LastOrDefault() is { } test)
-      {
-        if (test.CurrentTime.Equals(newEntry.CurrentTime))
-        {
-          playerValues[^1] = newEntry;
-        }
-        else if (newEntry.CurrentTime > test.CurrentTime)
-        {
-          playerValues.Add(newEntry);
-        }
-      }
-      else
-      {
-        playerValues.Add(newEntry);
+        builder.Finish();
+        values[name] = builder.Points;
       }
     }
   }

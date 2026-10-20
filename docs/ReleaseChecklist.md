@@ -418,6 +418,16 @@ Two behaviours depend on state a headless test cannot build; both have shipped b
   windows have no line (different door, `SyncFusionUtil.OpenWindow`). If one still opens wrong, record WHICH window and whether
   **Reset Window State** (drops `dockSite.xml`) changes it — that separates the code path from a saved layout.
 
+## Line-chart calculation checks on Windows
+
+- [ ] Run `LineChartSelectionTest`: opening DPS Trends with group rows selected must immediately show their group lines,
+  and a subsequent UPDATE must keep them rather than showing No Data. Also exercise this through the actual summary pane.
+- [ ] On a short known fight, compare player-only, player-plus-pets, raid and group charts: the first occupied second has
+  nonzero aggregate DPS, missed attacks do not dilute average hit/crit rate, and a single-member group agrees with its player.
+- [ ] Across a gap over 30 seconds, instantaneous/rolling lines reach the existing zero markers, while aggregate damage
+  never falls to zero. Check Damage, Tanking and Healing, CSV output, and responsiveness on a long multi-fight selection.
+  Sparse point counts are unchanged; measured headless calculation improvements do not verify vendor rendering performance.
+
 ## Chat archive range checks on Windows
 
 *"Playing past midnight and the chats are stuck on yesterday"* had two causes; this is the first (docs/DesignNotes.md →
