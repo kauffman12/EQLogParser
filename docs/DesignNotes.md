@@ -16779,9 +16779,12 @@ ready controller. The library remains responsible for decoding, caching and disp
 clock reflection, frame rewinding, collector changes or new dependency is introduced.
 
 `AnimationOptInMarkupTest` pins the status template's paused-start opt-in. Windows-only `VisibleGifAnimationTest` covers
-initially hidden loading, effective ancestor visibility, source replacement, unload/reload and late enable/disable using a
-two-frame in-memory GIF. The fixture uses a small off-screen WPF window to exercise real IsLoaded/IsVisible semantics rather
-than asserting a hand-supplied visibility value. These tests build on Linux and require Windows to execute. Confirm real
+initially hidden loading, effective ancestor visibility, source replacement, unload/reload and late enable/disable using the
+app's packaged `waiting.gif`. A Windows report showed all four tests timing out in their common fixture constructor before
+any playback assertion: the former hand-encoded 1×1 GIF did not yield a controller in that environment. The fixture now
+uses the production animation resource and timeout diagnostics distinguish window/image load from animation initialization;
+this change still needs a Windows run. The fixture uses a small off-screen WPF window to exercise real IsLoaded/IsVisible
+semantics rather than asserting a hand-supplied visibility value. These tests build on Linux and require Windows to execute. Confirm real
 Trigger Manager status icons animate only while visible. Subsequent operator verification found the hidden repeating
 clocks paused, including after source replacement, while visible GIFs still animated. Memory behavior improved as recorded
 above; this does not establish a complete cause or cure of every post-load allocation. The temporary report code is removed.

@@ -1,6 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media.Imaging;
@@ -81,7 +79,9 @@ namespace EQLogParser.Wpf.Test
         fixture.Parent.Visibility = Visibility.Collapsed;
         fixture.Parent.Child = fixture.Image;
         PumpUntil(() => fixture.Image.IsLoaded
-          && ImageBehavior.GetAnimationController(fixture.Image) is { } current && !ReferenceEquals(original, current));
+          && ImageBehavior.GetAnimationController(fixture.Image) is { } current && !ReferenceEquals(original, current),
+          () => $"image loaded={fixture.Image.IsLoaded}, animation loaded={ImageBehavior.GetIsAnimationLoaded(fixture.Image)}, "
+            + $"controller replaced={!ReferenceEquals(original, ImageBehavior.GetAnimationController(fixture.Image))}");
         newHiddenPaused = fixture.Controller.IsPaused;
         fixture.Parent.Visibility = Visibility.Visible;
         newVisiblePlaying = !fixture.Controller.IsPaused;
@@ -113,7 +113,7 @@ namespace EQLogParser.Wpf.Test
       Assert.IsTrue(disabledPaused);
     }
 
-    private static void PumpUntil(Func<bool> done)
+    private static void PumpUntil(Func<bool> done, Func<string>? describe = null)
     {
       var frame = new DispatcherFrame();
       var deadline = Environment.TickCount64 + 2000;
@@ -131,15 +131,14 @@ namespace EQLogParser.Wpf.Test
       {
         timer.Stop();
       }
-      if (!done()) throw new InvalidOperationException("The GIF fixture did not finish its load/unload lifecycle");
+      if (!done()) throw new InvalidOperationException("The GIF fixture did not finish its load/unload lifecycle: "
+        + (describe?.Invoke() ?? "no diagnostics"));
     }
 
     private sealed class GifWindow : IDisposable
     {
-      // Two full 1x1 frames, red/blue, 100 ms each, looping. No repository files or pack-URI application state needed.
-      private const string Gif = "R0lGODlhAQABAIEAAP8AAAAAAAAAAAAAACH/C05FVFNDQVBFMi4wAwEAAAAh+QQECgAAACwAAAAA"
-        + "AQABAAAIBAABBAQAIfkEBQoAAQAsAAAAAAEAAQCBAAD/AAAAAAAAAAAACAQAAQQEADs=";
-      private readonly List<MemoryStream> _streams = [];
+      // Use the same packaged animation as CharacterNodeTemplate; an in-memory 1x1 GIF is not a reliable WPF decoder fixture.
+      private static readonly Uri StatusGif = new("pack://application:,,,/EQLogParser;component/icons/waiting.gif");
       private readonly Window _window;
 
       public void Dispose()
@@ -147,7 +146,6 @@ namespace EQLogParser.Wpf.Test
         VisibleGifAnimation.SetEnabled(Image, false);
         ImageBehavior.SetAnimatedSource(Image, null);
         _window.Close();
-        foreach (var stream in _streams) stream.Dispose();
       }
 
       internal Image Image { get; } = new() { Width = 16, Height = 16 };
@@ -170,7 +168,10 @@ namespace EQLogParser.Wpf.Test
         try
         {
           _window.Show();
-          PumpUntil(() => Image.IsLoaded && ImageBehavior.GetAnimationController(Image) is not null);
+          PumpUntil(() => Image.IsLoaded && ImageBehavior.GetAnimationController(Image) is not null,
+            () => $"window loaded={_window.IsLoaded}, image loaded={Image.IsLoaded}, visible={Image.IsVisible}, "
+              + $"source={ImageBehavior.GetAnimatedSource(Image)}, animation loaded={ImageBehavior.GetIsAnimationLoaded(Image)}, "
+              + $"controller={ImageBehavior.GetAnimationController(Image) is not null}");
         }
         catch
         {
@@ -181,14 +182,7 @@ namespace EQLogParser.Wpf.Test
 
       internal void ReplaceSource()
       {
-        var stream = new MemoryStream(Convert.FromBase64String(Gif));
-        _streams.Add(stream);
-        var source = new BitmapImage();
-        source.BeginInit();
-        source.CacheOption = BitmapCacheOption.OnLoad;
-        source.StreamSource = stream;
-        source.EndInit();
-        ImageBehavior.SetAnimatedSource(Image, source);
+        ImageBehavior.SetAnimatedSource(Image, new BitmapImage(StatusGif));
       }
     }
   }
