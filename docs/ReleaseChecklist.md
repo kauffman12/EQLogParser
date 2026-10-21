@@ -398,7 +398,9 @@ elapsed seconds always draw. The table, the defaults and the zero-width law are 
   raise of the minimum pushes the stage's right edge out, and the panel must follow rather than being covered or overlapping. Turn them back off: the panel does not chase
   a narrowing stage. Repeat with the panel docked left (the stage grows away from it and it must not move) and after dragging the panel somewhere of your own choosing.
   Repeat initial opening and width increases on secondary monitors **right and left** of the primary, including different DPI scales: Setup must stay on the chosen
-  monitor, never jump back to the primary, and keep its gap until its own work-area edge requires clamping. Drag the pair between those monitors and resize again.
+  monitor, never jump back to the primary, and keep its gap until its own work-area edge requires clamping. Drag the pair between those monitors and resize again. Drag the stage down toward the taskbar and back: Setup keeps its bottom edge on
+  the monitor the pair is on rather than trailing off screen, and it moves again when the stage comes back up (a clamp that parked it
+  would read as a stuck panel).
   Where a work area is too narrow for stage plus panel on **both** sides (a small secondary monitor with a wide meter), the panel pins to that work area's LEFT edge and
   overlaps the stage — reachable beats tidy, and it must never come out off screen. With a debugger, force rectangle-read, work-area-read
   and native-move failures separately: configure stays usable, the failed attempt leaves the panel stationary, and subsequent successful

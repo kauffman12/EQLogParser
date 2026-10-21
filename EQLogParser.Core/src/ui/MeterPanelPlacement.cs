@@ -34,4 +34,13 @@ internal static class MeterPanelPlacement
 
     return Math.Clamp(panelLeft + growth, workLeft, Math.Max(workLeft, workRight - panelWidth));
   }
+
+  /*
+   * A follow moves by the drag delta and then keeps its bottom edge on the monitor it is following, exactly as the opening dock does.
+   * Without this half the panel trails off the taskbar's bottom while the stage is dragged down — a delta has no opinion about where
+   * the screen ends. The caller passes the work area of whichever window the pair now shares, so a drag onto a second monitor clamps
+   * against that one rather than the monitor it left.
+   */
+  internal static int FollowTop(int panelTop, int panelHeight, int workTop, int workBottom)
+    => Math.Clamp(panelTop, workTop, Math.Max(workTop, workBottom - panelHeight));
 }

@@ -135,7 +135,6 @@ namespace EQLogParser
       _lastStageBounds = stage;
 
       var left = panel.Left + dx;
-      var top = panel.Top + dy;
       var monitorWindow = dx != 0 || dy != 0 ? _stageHandle : _panelHandle;
       if (!NativeMethods.TryGetMonitorWorkArea(monitorWindow, out var work))
       {
@@ -145,6 +144,7 @@ namespace EQLogParser
 
       left = MeterPanelPlacement.FollowWidth(left, panel.Right - panel.Left, stage.Left, growth,
         work.Left, work.Right);
+      var top = MeterPanelPlacement.FollowTop(panel.Top + dy, panel.Bottom - panel.Top, work.Top, work.Bottom);
       if (left != panel.Left || top != panel.Top) MovePanel(left, top);
       else ResetNativeFailure();
     }

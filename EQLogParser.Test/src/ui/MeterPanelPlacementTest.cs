@@ -114,6 +114,35 @@ public sealed class MeterPanelPlacementTest
     Assert.AreEqual(2000, MeterPanelPlacement.FollowWidth(2000, PanelWidth, 2400, 60, 1920, 3840));
   }
 
+  /*
+   * The vertical half of a follow. A drag delta has no opinion about where the screen ends, so following the stage downward used to
+   * walk the panel off the taskbar; the clamp is the same shape the opening dock uses, and it must release when the stage comes back
+   * rather than parking the panel at the bottom forever.
+   */
+  [TestMethod]
+  public void FollowingTheStageDownStopsAtTheWorkAreaAndComesBack()
+  {
+    Assert.AreEqual(350, MeterPanelPlacement.FollowTop(300 + 50, PanelHeight, 0, 1080), "an ordinary drag follows one for one");
+    Assert.AreEqual(680, MeterPanelPlacement.FollowTop(900 + 300, PanelHeight, 0, 1080),
+      "the bottom edge stays on the monitor instead of trailing off it");
+    Assert.AreEqual(630, MeterPanelPlacement.FollowTop(1000, PanelHeight, 0, 1030), "the taskbar counts as the bottom");
+
+    // Dragging back up starts from the clamped top: it must move again rather than stay pinned.
+    Assert.AreEqual(380, MeterPanelPlacement.FollowTop(680 - 300, PanelHeight, 0, 1080));
+  }
+
+  [TestMethod]
+  public void TheVerticalClampFollowsWhicheverMonitorThePairIsOn()
+  {
+    // A monitor stacked below the primary has its own work area; a panel dragged down onto it clamps there, not at the primary's bottom.
+    Assert.AreEqual(1760, MeterPanelPlacement.FollowTop(2000 + 100, PanelHeight, 1080, 2160));
+    Assert.AreEqual(1080, MeterPanelPlacement.FollowTop(500, PanelHeight, 1080, 2160),
+      "and it cannot be dragged above that monitor either");
+
+    // Taller than the work area: keep the top edge reachable, which is what the opening dock does for the same shape.
+    Assert.AreEqual(0, MeterPanelPlacement.FollowTop(50, 1200, 0, 1080));
+  }
+
   [TestMethod]
   public void PixelPlacementScalesWithoutMixingDipWidthsIntoScreenBounds()
   {
