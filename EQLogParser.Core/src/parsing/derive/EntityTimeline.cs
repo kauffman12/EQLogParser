@@ -85,8 +85,9 @@ namespace EQLogParser
   }
 
   // Per-name identity + time-scoped affiliation intervals (D3 choice (b)). Written by evidence
-  // (manual in Phase 1, rules from Phase 2), read by the deriver. Thread model: single writer
-  // (rules/manual) before derivation; reads during derivation are lock-free.
+  // (manual in Phase 1, rules from Phase 2), read by the deriver. Thread model: one writer per instance while it is being
+  // built, then FROZEN - publication is by replacement (Freeze + a rebuilt timeline every expensive pass), so reads during
+  // derivation are lock-free and cross-thread reads of a published instance need no lock at all.
   internal sealed class EntityTimeline
   {
     /*
@@ -112,28 +113,44 @@ namespace EQLogParser
     private readonly Dictionary<string, List<AffiliationInterval>> _affiliation = new(StringComparer.OrdinalIgnoreCase);
 
     /*
-     * CROSS-THREAD READS TAKE THIS. A timeline is built and folded on the derive worker (DeriveEngine's pass runs under
-     * Task.Run off a DispatcherTimer tick), but verdicts are asked from elsewhere: IdentityLookup.LiveVerdict answers menu
-     * enables on the UI thread, EventViewer walks the snapshot for its kill rows, and SpellDamageStatsViewer filters its
-     * "players only" grid inside a Task.Run. A plain Dictionary read racing an insert that resizes is not a benign miss — it
-     * throws (IndexOutOfRange on a bucket walk) or reports a name as absent, and a menu handler that throws is a crash.
+     * WHY A FOREIGN READER IS SAFE, AND WHAT WOULD BREAK IT. Verdicts are asked from several threads: IdentityLookup.LiveVerdict
+     * answers menu enables on the UI thread, EventViewer walks the snapshot for its kill rows, SpellDamageStatsViewer filters its
+     * "players only" grid inside a Task.Run, and the meter's suffix scans (MeterArrivals.Read, OverlayPendingActivity,
+     * MeterActivityIndex) answer side questions off `DerivedSnapshot.Timeline`. None of them can be allowed to meet a writer,
+     * because a plain Dictionary read racing an insert that resizes is not a benign miss — it throws (IndexOutOfRange on a bucket
+     * walk) or reports a name as absent.
      *
-     * The convention, therefore: **mutators lock here, and any caller from another thread takes SyncRoot around its own
-     * read** (Monitor is reentrant, so a caller may hold it across several lookups). Nothing on the read side of this class
-     * locks, and that is deliberate rather than an omission: the rule book asks a name's identity millions of times per
-     * classify pass, and an uncontended lock costs enough to move a pass by tens of percent — paying it to protect a
-     * handful of UI reads is the wrong trade. The trade holds only because there is exactly one mutator at any moment (the
-     * pass that owns the instance: a cheap lane folds into the carried timeline, a full pass swaps a fresh one in under the
-     * engine's gate) and readers never mutate, so the only race is writer-against-foreign-reader — which the two sides
-     * above do exclude. A second writer, or a reader that runs on the derive thread while another pass might run, breaks the
-     * argument and would need read-side locking for real.
+     * What excludes the writer is **publication by replacement**, not locking: every expensive pass builds a NEW timeline
+     * (DeriveEngine.Classify), fills it while it is reachable by nobody, calls Freeze() on it, and only then hands it out —
+     * `_carriedTimeline = classified` and `DerivedSnapshot.Timeline`. Cheap passes run no rule book at all (the carry holds rule
+     * AGGREGATES, never a timeline: see "The classification half joins the carry"), so from the moment a reader can name an
+     * instance, nothing will ever write it again. That is what makes lock-free reads correct here — and it is also why an operator's
+     * verdict goes to IdentityOverrideStore and asks for a fresh pass rather than being written into the instance on screen.
      *
-     * DeriveEngine._liveKindAt (the seam's live hop) and EventViewer's kill rows are the two foreign readers today; both
-     * take the lock. NamesWithIdentity() is NOT part of the safe set — it hands out a live Keys view and belongs to the
-     * folding thread (its only callers are tests).
+     * Freeze() turns that from a habit into a check: a write into a published timeline throws instead of racing. So the rule for
+     * new code is one sentence — **never mutate a timeline you did not just build**; fold into the next pass. (An earlier shape of
+     * this class folded cheap passes INTO the carried instance; comments claiming that were what made foreign readers look unsafe,
+     * and they were wrong.)
      *
+     * SyncRoot still guards writes against a reader of a timeline that is still being BUILT — the only state in which a writer and
+     * a foreign reader can coexist, and the state EntityTimelineConcurrencyTest races. Mutators take it; a caller that reads an
+     * instance it knows is under construction takes it around its own read (Monitor is reentrant). Nothing on the read side locks:
+     * the rule book asks a name's identity millions of times per pass, and an uncontended lock costs enough to move a pass by tens
+     * of percent. NamesWithIdentity() hands out a live Keys view, so it belongs to the building thread (its only callers are tests).
      */
     internal readonly object SyncRoot = new();
+
+    /*
+     * Set once by Freeze(): this instance has been published and is being read by other threads. Guarded mutators refuse the write,
+     * because an in-place edit of a published timeline is both a torn-read risk and a silent state-stamp move under a carried pass.
+     */
+    private bool _frozen;
+
+    /// <summary>
+    /// Publish this instance: it becomes read-only, and every guarded mutator throws from here on. Called once per expensive pass,
+    /// after the rule book and the override replay are finished and before the instance reaches `_carriedTimeline`/a snapshot.
+    /// </summary>
+    internal void Freeze() => _frozen = true;
 
     /*
      * An INCREMENTAL digest of everything this store holds, summed in at insert time. Both mutators below drop a
@@ -214,8 +231,18 @@ namespace EQLogParser
       lock (SyncRoot) SetIdentityLocked(name, kind, strength, source, effectiveFrom);
     }
 
+    // The one law this store cannot enforce any cheaper way: a published timeline is read by other threads and never edited.
+    private void RefuseIfFrozen()
+    {
+      if (!_frozen) return;
+      throw new InvalidOperationException(
+        "This timeline was published (Freeze) and is read by other threads; verdicts fold into the next pass's own "
+        + "instance, never into a carried one. See EntityTimeline.SyncRoot.");
+    }
+
     private void SetIdentityLocked(string name, IdentityKind kind, int strength, string source, double effectiveFrom)
     {
+      RefuseIfFrozen();
       var list = GetOrCreate(_identity, name);
 
       // Dedupe identical assignments: hot callers (owner-line damage facts, join-line churn)
@@ -245,6 +272,7 @@ namespace EQLogParser
 
     private void AddAffiliationLocked(AffiliationKind kind, string name, double t0, double t1, int strength, string source, string owner)
     {
+      RefuseIfFrozen();
       var list = GetOrCreate(_affiliation, name);
 
       // Same dedupe rationale as SetIdentity (identical interval = no new read-time information).

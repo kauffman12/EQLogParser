@@ -181,8 +181,9 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
 - **Only a gesture stamps the re-derive ledger** (`DeriveRequests`); the pump dispatches through `StartPass`, which stamps
   nothing, and paying a debt may not take one out.
 - **Two clocks**: `Full` is paced by `_sinceFullPass`, the cheap lane by `_sinceAnyPass`; only a pass that classified may
-  restart the full clock, write the ledger, or emit an Info line. The cheap lane folds over the `EntityTimeline` INSTANCE the
-  last full pass produced, so `StateStamp()` stays put and the stamp gate keeps folding from its watermark.
+  restart the full clock, write the ledger, or emit an Info line. The cheap lane runs no rule book: it projects over the
+  `EntityTimeline` INSTANCE the last full pass published — frozen and never mutated (docs/DesignNotes.md → "A published timeline is
+  frozen") — so `StateStamp()` stays put and the stamp gate keeps folding from its watermark.
 - **A pass continues where the last stopped** (`FightProjectionCache`: rows, open/closed per name, death queues, and the
   `FightFactIndex` travelling with them). A carry needs `ProjectionState.Covers(facts)` **and** a matching
   `EntityTimeline.StateStamp()`; a moved verdict buys a full rebuild. The digest is incremental (added, commutative; never

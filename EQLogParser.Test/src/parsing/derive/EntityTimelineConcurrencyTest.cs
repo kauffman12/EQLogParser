@@ -9,11 +9,16 @@ using System.Threading;
 namespace EQLogParser
 {
   /// <summary>
-  /// A timeline is folded on the derive worker while other threads ask it questions — the identity seam answers menu
-  /// enables on the UI thread, EventViewer reads verdicts for its kill rows, SpellDamageStatsViewer filters a grid inside
-  /// a Task.Run. The convention (docs/DesignNotes.md → "The one seam that answers") is: mutators take
-  /// EntityTimeline.SyncRoot and a caller from another thread takes it around its own read; the rule book's own reads stay
-  /// unlocked, because there is exactly one mutator at a time and paying a lock per per-fact lookup would move a pass.
+  /// A timeline can have a foreign reader while it is still being BUILT — that is the only window in which a writer and a reader
+  /// meet, and this races it (the identity seam answers menu enables on the UI thread, EventViewer reads verdicts for its kill rows,
+  /// SpellDamageStatsViewer filters a grid inside a Task.Run). The convention (docs/DesignNotes.md →
+  /// "The one seam that answers") is: mutators take EntityTimeline.SyncRoot and a caller reading an instance that may still be
+  /// growing takes it around its own read; the rule book's own reads stay unlocked, because there is exactly one mutator at a time
+  /// and paying a lock per per-fact lookup would move a pass.
+  ///
+  /// A PUBLISHED timeline has no writer at all: every expensive pass builds a fresh instance, fills it while unreachable, and publishes
+  /// it frozen by replacement, so the census, the boards and the meter's suffix scans read it lock-free (docs/DesignNotes.md →
+  /// "A published timeline is frozen"). The tests at the bottom of this file pin that half of the law.
   ///
   /// Two observable laws of a read taken under that lock, both raced against a table that is resizing underneath:
   /// **a claim once visible stays visible** (nothing removes from this store, so a name going missing mid-flight is a torn
@@ -113,6 +118,79 @@ namespace EQLogParser
 
       Assert.AreEqual(stamp, timeline.StateStamp(), "re-asserting an identical claim moved the digest");
       Assert.AreEqual(IdentityKind.Player, timeline.Identity("kilsa"));
+    }
+
+    [TestMethod]
+    public void APublishedTimelineRefusesEveryVerdictWrite()
+    {
+      /*
+       * Publication is by replacement: Classify fills a fresh instance, calls Freeze, and only then does the instance reach
+       * `_carriedTimeline`/a snapshot. Every reader from another thread (menu enables, the census, the boards, the meter's suffix scans)
+       * reads it WITHOUT a lock on the strength of that, so a write after publication is not merely untidy — it is the torn read this
+       * file's opening test races, and it would also move the state stamp out from under a carried pass. Freeze makes it a refusal.
+       */
+      var timeline = new EntityTimeline();
+      timeline.SetIdentity("Kilsa", IdentityKind.Player, 90, "R1-target", 10);
+      timeline.AddAffiliation(AffiliationKind.PetOfPlayer, "Fluffy", 10, 20, 80, "R5-owner", "Kilsa");
+      timeline.Freeze();
+      var stamp = timeline.StateStamp();
+
+      Assert.ThrowsExactly<InvalidOperationException>(
+        () => timeline.SetIdentity("Bithika", IdentityKind.Npc, 20, "R6-npcdb"));
+      Assert.ThrowsExactly<InvalidOperationException>(
+        () => timeline.AddAffiliation(AffiliationKind.Friendly, "Kilsa", 1, 2, 5, "R8-party"));
+
+      // The refusal is a refusal: a half-applied write would be worse than the race it prevents.
+      Assert.AreEqual(stamp, timeline.StateStamp(), "a refused write still moved the digest");
+      Assert.IsFalse(timeline.HasIdentity("Bithika"), "a refused claim was recorded anyway");
+      Assert.AreEqual(IdentityKind.Player, timeline.Identity("kilsa"), "freezing must not cost a read its answer");
+    }
+
+    [TestMethod]
+    public void FreezingThePublishedInstanceLeavesTheNextPassAndEveryCopyWritable()
+    {
+      // CaptureExportLens copies the snapshot's timeline to ask ownership per record; the copy must still take writes.
+      var published = new EntityTimeline();
+      published.SetIdentity("Kilsa", IdentityKind.Player, 90, "R1-target", 10);
+      published.Freeze();
+
+      var copy = published.Copy();
+      copy.SetIdentity("Bithika", IdentityKind.Npc, 20, "R6-npcdb");
+      copy.AddAffiliation(AffiliationKind.PetOfPlayer, "Fluffy", 1, 2, 80, "R5-owner", "Kilsa");
+
+      Assert.AreEqual(IdentityKind.Npc, copy.Identity("bithika"));
+      Assert.AreEqual(IdentityKind.Player, published.Identity("kilsa"), "the copy's work reached the published instance");
+      Assert.AreNotEqual(published.StateStamp(), copy.StateStamp());
+    }
+
+    [TestMethod]
+    public void ARuleBookFoldedIntoAPublishedTimelineFailsLoudly()
+    {
+      /*
+       * The shape a future "optimisation" would take: run the rules again over the carried timeline instead of building a fresh one.
+       * It looks free (no allocation, no re-seed) and it is exactly the mutation foreign readers cannot see — so it has to throw on the
+       * first claim rather than quietly restamp a published store. ClassificationRules.RunStage would otherwise swallow a stage throw as
+       * "that rule found nothing"; the harness sets FailFastStages, which is what lets this assert the refusal instead of an absence.
+       */
+      var facts = new DamageFactTable(64);
+      var timeline = new EntityTimeline();
+      facts.AddFact(new DamageFact(facts.FactCount, FixtureTime.BaseL + 5, facts.InternName("Illuminai"),
+        facts.InternName("a rat"), 500, LabelTypes.Melee, 0, LineModifiersParser.None, DamageFactTable.NoSubtype));
+      ClassificationRules.Apply(facts, timeline);
+      Assert.IsTrue(timeline.HasIdentity("a rat"), "the fixture reached no verdict; the refusal below would prove nothing");
+
+      timeline.Freeze();
+      InvalidOperationException? refusal = null;
+      try
+      {
+        ClassificationRules.Apply(facts, timeline);
+      }
+      catch (InvalidOperationException ex)
+      {
+        refusal = ex;
+      }
+
+      Assert.IsNotNull(refusal, "a rule book folded a published timeline instead of refusing it");
     }
   }
 }

@@ -279,10 +279,10 @@ namespace EQLogParser
      * IdentityLookup's view of the carried verdicts. Unknown means "this log never said", which is the seam's cue to ask
      * memory rather than an answer about the name; PositiveInfinity means "as far as we know".
      *
-     * The lock is the whole point of this method's shape (docs/DesignNotes.md → "The one seam that answers"): the carried
-     * timeline is mutated by passes on a task thread while this answers menu enables on the UI thread, and a Dictionary read
-     * racing an insert can throw or answer "nobody here" for a name that is in the table. Keeping the hop inside a lock (and
-     * returning a plain IdentityKind) also means no live collection ever escapes to the caller.
+     * The lock is kept as cheap insurance, not as the load-bearing part of the design (docs/DesignNotes.md → "A published timeline is
+     * frozen"): the carried instance was published by replacement and frozen by Classify, so this UI-thread read has no writer to race,
+     * locked or not. What still matters here is the SHAPE — hop inside one lock and hand back a plain IdentityKind, so no live
+     * collection escapes to a menu handler that might walk it after the pass moves on.
      */
     private IdentityKind LiveKindAt(string? name, double t)
     {
@@ -295,8 +295,8 @@ namespace EQLogParser
     /*
      * "Whose pet, according to this capture?" — the charm window's owner (docs/DesignNotes.md -> "A charm takes a mob off
      * the enemy list"), which lives nowhere else: no file records that tonight's `a bone walker` belonged to Kylo. Same
-     * locking law as LiveKindAt above, for the same reason: this answers UI-thread questions while a pass mutates the
-     * table on a task thread, and nothing may escape the lock but a string.
+     * locking law as LiveKindAt above: this answers UI-thread questions, and nothing may escape the lock but a string. The frozen
+     * carried timeline means there is no writer to race; the lock stays so the two hops have one shape and one rule.
      */
     private string? LiveOwnerOf(string? name)
     {
@@ -1032,6 +1032,13 @@ namespace EQLogParser
        */
       IdentityOverrideStore.Instance.Apply(timeline);
 
+      /*
+       * Publish by replacement, and publish FROZEN: from the next line this instance is reachable by the UI thread (menu enables),
+       * the census, the boards and the meter's suffix scans, none of which take a read lock. Cheap passes run no rule book at all, so
+       * nothing would ever write it — freezing makes that an executable check instead of a habit, so a future in-place fold fails here
+       * with a stack instead of racing a reader (docs/DesignNotes.md → "A published timeline is frozen").
+       */
+      timeline.Freeze();
       return timeline;
     }
 

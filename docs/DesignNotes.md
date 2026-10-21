@@ -6948,6 +6948,32 @@ Measured on Incogitable (1,891,875 damage facts, 420,115 heals): from-zero class
 gate allows. `RegistrySeed` deliberately seeds at strength 8 — below R15/R18's Strong healer gate — so a registry name
 alone never launders other verdicts, and tests must reach for an evidence line (`EvJoinedRaid`), not `AddVerifiedPlayer`.
 
+### A published timeline is frozen: replacement, not editing, is what makes cross-thread reads safe
+
+Verdicts are asked from several threads at once — menu enables on the UI thread (`DeriveEngine.LiveKindAt`/`LiveOwnerOf`), the Names
+census, a "players only" grid inside a `Task.Run`, and the meter's suffix scans (`MeterArrivals.Read`, `OverlayPendingActivity`,
+`MeterActivityIndex`) deciding sides off `DerivedSnapshot.Timeline`. None of them takes a read lock, and they must not: the rule book
+asks a name's identity millions of times per pass and an uncontended lock moves a pass by tens of percent. What protects them is that
+**no published timeline has a writer**. Every expensive pass builds a fresh `EntityTimeline` (the carry holds rule *aggregates*, never
+a store), fills it while nothing else can reach it, calls `Freeze()`, and publishes it by reassignment into `_carriedTimeline` and the
+snapshot; cheap passes run no rule book at all. An operator's verdict follows the same law: it goes to `IdentityOverrideStore` and asks
+for a fresh pass, so it is replayed into the *next* timeline rather than edited into the one on screen — which is also why writing one
+would have cost a state-stamp move and a full rebuild anyway.
+
+`Freeze()` turns that from habit into a check: `SetIdentity`/`AddAffiliation` throw on a frozen instance, so an in-place fold fails with
+a stack instead of racing a reader's bucket walk or silently restamping under a carried pass. **The rule for new code is one sentence:
+never mutate a timeline you did not just build.** The tripwire is real — an "optimisation" that reruns the rules over the carried
+timeline to skip a re-seed looks free and is exactly the mutation these readers cannot see. `CaptureExportLens` is the legitimate
+pattern instead: `Copy()` the published store (the copy is writable) and answer per record against that.
+
+Pinned by `APublishedTimelineRefusesEveryVerdictWrite` (both mutators refused, digest unmoved, reads still answer),
+`FreezingThePublishedInstanceLeavesTheNextPassAndEveryCopyWritable`, and `ARuleBookFoldedIntoAPublishedTimelineFailsLoudly` (a
+`ClassificationRules.Apply` against a frozen store throws rather than reading as "the rules found nothing" — which needs the harness's
+`FailFastStages`, since `RunStage` normally swallows a stage throw). `EntityTimelineConcurrencyTest`'s racing test covers the one state
+where a writer and a foreign reader really can meet: an instance still under construction. Comments claiming that cheap passes *fold into
+the carried timeline* described a superseded shape of this class and were removed; readers of those comments concluded the meter scans
+were racing, and they were not.
+
 ## A mob's victim is never noise: how the tank board lost raiders
 
 Asked whether legacy can be removed yet, the honest answer needed more than the fight-row count, so the boards bar was

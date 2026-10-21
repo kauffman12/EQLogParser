@@ -169,8 +169,11 @@ namespace EQLogParser
     public double ElapsedMs;
     public DateTime DerivedAt;
 
-    // Kept for the interactive step: identity overrides call ClassificationRules.ApplyManualOverride
-    // against this timeline, then trigger a re-derive.
+    /*
+     * The verdicts this pass answered with, published FROZEN (DeriveEngine.Classify calls Freeze before handing the instance out):
+     * boards, panes and the meter's suffix scans read it from other threads without a lock. An operator's verdict therefore does not
+     * edit this object — it goes to IdentityOverrideStore and asks for a fresh pass, which replays it into the NEXT timeline.
+     */
     internal EntityTimeline Timeline;
 
     // What a selection needs in order to become stats input: the captured facts of THIS pass and, per
