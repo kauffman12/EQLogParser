@@ -769,6 +769,12 @@ namespace EQLogParser
       }
     }
 
+    /*
+     * The window's floor belongs to this method alone — the markup carries no MinWidth, deliberately. A number in XAML is either
+     * overridden by the table or contradicts it: this window used to declare 300 while the shipped default columns need 261 at 12 pt
+     * and every column switched off needs 141 (MeterColumnLayoutTest pins the latter), so the attribute was a floor nobody ever got to.
+     * Lowering it never shrinks a window the operator dragged wide, which is the behaviour the column switches rely on.
+     */
     private void UpdateMinimumWidth()
     {
       if (_columnLayout is null) return;

@@ -20,7 +20,6 @@
         BorderThickness="1"
         MaxWidth="1500"
         MaxHeight="1000"
-        MinWidth="300"
         MouseLeftButtonDown="OverlayMouseLeftDown"
         SizeChanged="WindowSizeChanged"
         ContentRendered="WindowContentRendered"
