@@ -123,9 +123,10 @@ internal static class ChartAggregation
         left++;
       }
 
-      // Match the meter: six labelled log seconds, including idle seconds, even at the first hit.
+      // Match the meter: six labelled log seconds, including idle seconds, even at the first hit, divided the same way the meter
+      // divides them (StatsUtil.RateOverWholeSeconds) — a chart line and the meter cell describing it share one arithmetic.
       point.RollingTotal = windowTotal;
-      point.RollingDps = windowTotal / RollingSeconds;
+      point.RollingDps = StatsUtil.RateOverWholeSeconds(windowTotal, RollingSeconds);
     }
   }
 }

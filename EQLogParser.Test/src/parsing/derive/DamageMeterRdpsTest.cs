@@ -65,6 +65,28 @@ public partial class DamageMeterCalculationTest
     Assert.AreEqual(MeterRecentWindow.NoSecond, log.Last.TankRdps.WindowSecond, "an empty direction says so");
   }
 
+  /*
+   * The meter's half of a law the chart lane already pins (ChartRollingSeriesTest.WideAmountsAreNeverRoundedThroughFloatingPoint):
+   * a six-second sum can be carried past 2^53, where a double no longer holds every integer, so RDPS divides as integers
+   * (StatsUtil.RateOverWholeSeconds). Borrowing the elapsed-duration formula (StatsUtil.RatePerSecond) here prints a whole-damage-per-second
+   * figure this capture does not contain, and no smaller amount shows it.
+   */
+  [TestMethod]
+  public void AWideWindowSumDividesWithoutLosingAUnit()
+  {
+    var log = new Capture();
+    const long max = TextUtils.MaxAmount;                     // one line's ceiling; the SUM is what leaves exact double range
+    const int lines = 70;                                     // 1.97e16: past 2^53, so the dividend itself needs more than a double holds
+    for (var i = 0; i < lines; i++) log.Add("Illuminai", "a rat", 0, max);
+    log.Check(0);
+
+    var window = (long)lines * max;
+    Assert.IsNotNull(log.Last);
+    Assert.AreEqual(window, log.Last.DamageStats.RaidStats.Total, "the amounts themselves survive the walk");
+    Assert.AreEqual(window / MeterRecentWindow.WindowSeconds, DamageRdps(log, "Illuminai"),
+      "the quotient stays exact; rounding through floating point comes out short");
+  }
+
   [TestMethod]
   public void RdpsRidesLogTimeWhenLinesArriveLate()
   {

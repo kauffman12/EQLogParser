@@ -318,7 +318,7 @@ namespace EQLogParser
 
             StatsBuildTrace.Stage(trace, "walk");
 
-            _raidTotals.Dps = (long)Math.Round(_raidTotals.Total / _raidTotals.TotalSeconds, 2);
+            _raidTotals.Dps = StatsUtil.RatePerSecond(_raidTotals.Total, _raidTotals.TotalSeconds);
             StatsUtil.PopulateSpecials(_raidTotals);
 
             var uniqueClasses = new HashSet<string>();

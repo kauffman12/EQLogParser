@@ -38,7 +38,7 @@ internal static class ChartRollingSeries
       if (previous.CurrentTime == time)
       {
         previous.RollingTotal = total;
-        previous.RollingDps = total / ChartAggregation.RollingSeconds;
+        previous.RollingDps = StatsUtil.RateOverWholeSeconds(total, ChartAggregation.RollingSeconds);
       }
       else if (previous.RollingTotal != total)
       {
@@ -59,6 +59,6 @@ internal static class ChartRollingSeries
     CurrentTime = time,
     DateTime = DateUtil.FromDotNetSeconds(time),
     RollingTotal = total,
-    RollingDps = total / ChartAggregation.RollingSeconds
+    RollingDps = StatsUtil.RateOverWholeSeconds(total, ChartAggregation.RollingSeconds)
   });
 }

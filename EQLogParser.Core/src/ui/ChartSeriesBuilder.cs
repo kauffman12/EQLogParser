@@ -65,7 +65,7 @@ internal sealed class ChartSeriesBuilder(string name, string playerName = null)
 
   internal static void SetRates(DataPoint point, double seconds)
   {
-    point.ValuePerSecond = seconds > 0 ? (long)Math.Round(point.FightTotal / seconds, 2) : 0;
+    point.ValuePerSecond = seconds > 0 ? StatsUtil.RatePerSecond(point.FightTotal, seconds) : 0;
     if (point.FightHits == 0) return;
     point.Avg = (long)Math.Round((decimal)point.FightTotal / point.FightHits, 2);
     point.CritRate = Math.Round((double)point.FightCritHits / point.FightHits * 100, 2);

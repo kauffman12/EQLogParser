@@ -224,7 +224,7 @@ internal sealed class MeterDirectionTotals(bool tanking)
     var raid = StatsUtil.CreatePlayerStats(Labels.RaidTotals);
     raid.Total = total;
     raid.TotalSeconds = _raid.Seconds;
-    raid.Dps = (long)Math.Round(total / raid.TotalSeconds, 2);
+    raid.Dps = StatsUtil.RatePerSecond(total, raid.TotalSeconds);
     raid.AllRanges.Add(allRanges);
     var combined = new CombinedStats
     {
@@ -277,12 +277,12 @@ internal sealed class MeterDirectionTotals(bool tanking)
       // Dividing a value while enumerating the keys is legal; the copy only keeps "divide once, after the sum" obvious.
       var rowNames = new string[byRow.Count];
       byRow.Keys.CopyTo(rowNames, 0);
-      foreach (var rowName in rowNames) byRow[rowName] /= MeterRecentWindow.WindowSeconds;
+      foreach (var rowName in rowNames) byRow[rowName] = StatsUtil.RateOverWholeSeconds(byRow[rowName], MeterRecentWindow.WindowSeconds);
     }
 
     // Do not retain a separate empty map in every published result.
     IReadOnlyDictionary<string, long> rateRows = byRow.Count > 0 ? byRow : MeterDirectionRates.EmptyByRow;
-    rates = new MeterDirectionRates(rateRows, recentTotal / MeterRecentWindow.WindowSeconds, windowEdge);
+    rates = new MeterDirectionRates(rateRows, StatsUtil.RateOverWholeSeconds(recentTotal, MeterRecentWindow.WindowSeconds), windowEdge);
 
     string Resolve(string name, string explicitOwner)
     {

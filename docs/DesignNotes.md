@@ -7278,7 +7278,10 @@ recentDamage = eligible damage in log seconds [edge - 5, edge], inclusive
 RDPS = recentDamage / 6
 ```
 
-Include the current partly elapsed second and divide by six from the first hit, not by active seconds or hit count. A 60,000
+Include the current partly elapsed second and divide by six from the first hit, not by active seconds or hit count. That division is
+`StatsUtil.RateOverWholeSeconds` — integer, like every other six-second window (`StatsUtil.RatePerSecond` is for a rate over an elapsed
+duration and rounds through a double). The two arms differ on purpose: RDPS stays exact past 2^53, which
+`WideAmountsAreNeverRoundedThroughFloatingPoint` pins, and a window holding under one damage per logged second prints `0`. A 60,000
 hit at log second 100 contributes 10,000 while the edge is 100–105, then zero at edge 106. **With no new data the edge does not
 move:** RDPS, like encounter DPS, holds its value until new data changes it or the lifecycle hides the board. If other players
 continue fighting, their data advances the shared edge and an idle player's buckets age out. Zero prints as `0`.
@@ -18532,7 +18535,8 @@ its runtime checks and the live Save/reopen checks remain owed on Windows in `do
 **Goal:** the rolling chart and meter use the same six-second arithmetic, and a quiet interval must not disappear between
 chart samples. At log second t, sum amounts in t−5 through t inclusive and divide by **six from the first hit**. Missing
 seconds contribute zero. Whole-second labels, integer amounts and sum-before-division match the meter; no PC clock enters
-either calculation. Damage, tanking and healing share the chart implementation.
+either calculation. Both lanes divide through `StatsUtil.RateOverWholeSeconds`, never an in-place `/ 6`: a window sum may exceed
+2^53, where rounding through a double would drop units the amounts still carry. Damage, tanking and healing share the chart implementation.
 
 The earlier sparse chart evaluated only occupied timestamps, with zero markers for gaps over 30 seconds and a shortened
 startup denominator. That could conceal a real zero: two six-million bursts at seconds 100 and 110 each answer one million
