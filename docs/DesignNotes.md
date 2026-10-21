@@ -7087,38 +7087,30 @@ pull at all.
 
 ### Damage overlay: fight accounting and display retention (2026-11)
 
-The authoritative comparison is tag **2.4.1**, `DamageOverlayStatsBuilder.ComputeOverlayDamageStats`:
-`if (!fight.Dead || mode > 0)`. **Mode zero excludes dead fights. Only timed modes carry their damage into the dead-fight
-bucket.**
-Earlier notes incorrectly attributed that bucket to On Kill and justified resetting only after a display timeout.
+**Goal:** show a stable account of captured combat, and hide it after a quiet period. Log timestamps determine the numbers;
+elapsed time since receiving eligible damage determines visibility. The meter must not change damage, DPS, duration or RDPS
+merely because the PC clock advances. A timeout can end a timed accumulation, but its next record boundary is a captured
+ordinal, never a PC timestamp.
 
-The global-window repair in `827d5812` fixed an isolated kill's hide path but failed four review reproductions:
-- Kill A for 1,000 and hit B for 200 before the display timeout: it printed 1,200, not 200.
-- Hit B, then kill A: B could lose its totals after 13 seconds of silence, despite its full 30-second engagement allowance.
-- A one-shot already dead at the first derive failed the live-only opening gates.
-- A fresh completed board built from now-minus-30, then stored now-minus-8: its next refresh dropped from 1,000 to 500
-unchanged.
+Keep three decisions separate: **which NPC lives count**, **what their records calculate**, and **which columns are drawn**.
+The six-second RDPS column and clock separation are implemented in `9ae9e53d`. Independent column switches/shared layout are
+next; *only my fights* follows. Neither feature is implemented yet. Column visibility must not change accounting or lifecycle;
+local-player scope must include everyone's admitted records for qualifying lives and exclude unrelated combat from receipt
+renewal as well as totals. Detailed participation/default choices remain open, not part of the implemented contract.
 
-`DamageOverlayLifecycle` now makes a transient row selection before `DerivedTotals.ForOverlay` materializes it:
+`DamageOverlayLifecycle` selects lives before `DamageMeterCalculation` counts them (`DerivedTotals.ForOverlay` is the reference):
 
 | mode/state | accounting/display |
 |---|---|
 | On Kill, active lives | Count each surviving life in full, subject only to explicit Reset. Drop completed lives immediately. |
-| On Kill, no active life | Show the latest completed life(s) for `CompletedDisplaySeconds = 8`; never combine them with a new pull. |
-| On Kill, no death seen | Keep each life through `FightProjection.EngagementGapS = 30` **measured from the capture's newest second**; its next post-gap row starts fresh. |
-| Timed mode | Keep completed lives inside the existing accumulation range until the configured quiet period. |
+| On Kill, no active life | Show the latest eligible completed life(s), with an eight-second deadline from the last eligible damage receipt; never combine them with a new pull. |
+| On Kill, no death seen | Keep each life through the 30-second engagement gap, measured against the eligible log-time edge; its next post-gap row starts fresh. |
+| Timed mode | Keep completed lives inside a sticky accumulation range until the configured quiet period. This is not a sliding last-N-seconds window. |
 
-A selection uses fight instances, never a name-only cache or one timestamp standing for every opponent. Rows with the same name
-can be different lives; another opponent's death cannot shorten a survivor's allowance. The final display is rebuilt from
-completed
-rows, so a one-shot is readable even when no live frame was ever painted. When multiple pulls complete between snapshots, the
-latest
-death supplies the final result (ties share it), not the sum of earlier killed mobs. This deterministic batch behavior also
-includes
-the killing blow, rather than freezing whichever pre-kill tick happened to paint last in the old UI. `DerivedFight.DeathTime`
-carries the observed death separately from last damage, so completed-life selection is based on the actual death. Visibility
-is separate: the completed result uses an eight-second timeout from the last eligible damage **receipt**, not from death time.
-A death selects the completed result but does not renew the damage receipt.
+A selection uses fight instances, not names: a later life with the same name must not inherit an earlier one's totals.
+Another opponent's death cannot shorten a survivor's allowance. With no survivors, the latest completed life supplies the final
+result (ties share it), including its killing blow even if no live frame was painted. `DerivedFight.DeathTime` records death
+separately from last damage. A death selects the result but does not renew its eight-second **damage-receipt** deadline.
 
 **Accounting uses log time; visibility uses receipt time.** `DamageOverlayLifecycle.CaptureEdge` is the newest accepted log second
 (or an eligible life's death). On Kill membership asks that data edge, never the PC clock. Pending damage can advance that edge or
@@ -7149,23 +7141,13 @@ second are distinct, while a death-only republish or a rebuild spends no new rec
 engine-selection setting or legacy fallback.
 
 The lifecycle retains only session id and scalar reset bounds, never engines or rows. X-close/reopen preserves those bounds;
-a new capture discards them. Reset cuts at the click rather than reaching backwards; a display revision rejects a pre-reset
-build
-that finishes afterward. UI publication also checks capture ownership and whether its window closed. A null result hides the
-board;
-there is no unbounded fallback to previous stats. A missing damage/tanking half clears its old bars too.
+a new capture discards them. Reset cuts at the click; display/capture revisions reject obsolete worker results. A null answer
+hides the board rather than retaining old stats indefinitely, and a missing damage/tanking half clears its old bars.
 
-`DamageOverlayLifecycleTest` runs projection, row selection and real overlay totals together: consecutive/overlapping kills,
-12-second lulls, the 30-second boundary, repeated names, same-second arrivals, one-shots, unchanged refreshes, final display
-timing,
-Reset, capture swaps, X-reopen and timed modes. `FreshSixtySecondMeterMatchesSelectingFiveFightsAcrossSeveralMinutes` pins
-the timed
-mode's accounting goal: from a fresh capture, five killed mobs over several minutes, with every quiet gap shorter than 60
-seconds,
-must equal selecting those five fight-list rows. It asserts total damage, combat seconds and DPS, both aggregate and per player;
-polling the final result cannot change DPS by adding idle wall time. WPF popup/hide behavior still needs Windows
-verification; see
-ReleaseChecklist → "Damage overlay checks on Windows".
+`DamageOverlayLifecycleTest` covers kills, overlapping lives, gaps, repeated names, one-shots, Reset, capture swaps and reopen.
+Its timed-mode example selects five killed mobs over several minutes with every quiet gap shorter than 60 seconds: a fresh
+60-second meter must match selecting those five fight-list rows in total damage, combat seconds and DPS. Polling cannot add
+idle wall time to the denominator. Windows popup/hide verification remains in ReleaseChecklist → "Damage overlay checks on Windows".
 
 Short timed resets keep their legacy duration: the operator confirmed in 2.4.1 that three seconds without an attack hides and
 resets the meter. There is no extra timed display grace. A separate regression came from projection lag: attacks at seconds 0
@@ -7183,30 +7165,19 @@ different opponent cannot bridge its data gap either. Receipt of pending combat 
 manufacture totals; the existing rows remain unchanged until projection incorporates those records. A new pending pull never revives
 a completed pull's result. An empty post-Reset board may wait for pending combat. Heal/evidence/death arrivals buy no time.
 
-There is **no arbitrary grace cap**: capping a delayed projection can again cut away legitimate captured attacks. Genuine
-silence
-still expires at the selected duration. Headless tests cover stalled NPC noise, prolonged genuine pending combat, new
-unclassified
-opponents, out-of-order chains, separate lives, incoming damage, spell effects, verdict changes, pending deaths and explicit
-Reset.
-The snapshot count and pending-hint replacement have coverage in the Windows-only assembly; those tests still need execution
-there.
+There is no arbitrary projection grace cap: it could cut away legitimate captured attacks. Genuine receipt silence still
+expires at the selected duration. Headless tests cover pending chains, noise, incoming damage, verdict changes, deaths and Reset;
+snapshot-watermark/pending-handoff tests in the WPF assembly still need Windows execution.
 
-Review cleanup removed the unused `LiveFights` implementation and its test-only census (the historical measurements below
-remain),
-`FactStart`, `LastUpdateTicks`, and the overlay calculation's unused heal parameter. The session publication guard stays:
-dropping it
-could let an old worker publish a closed capture's stats. Legacy On Kill did **not** accumulate dead-fight totals; that
-branch ran only
-in timed modes. Its retained last display is not cumulative accounting. Cold-chunk retention remains unchanged:
-`RetainDecoded()`
-can reduce repeated decoding, but is not required for reference safety and would need measurement before widening retained
-memory.
+**Why life selection matters.** Tag 2.4.1 excluded dead fights in On Kill (`if (!fight.Dead || mode > 0)`); its dead-fight bucket
+belonged to timed modes. The global-window repair in `827d5812` lost that distinction: kill A for 1,000 then hit B for 200
+printed 1,200; killing A could remove B after 13 seconds instead of its 30-second allowance; a completed one-shot could fail
+to open; and inconsistent initial/retained bounds changed an unchanged result from 1,000 to 500. Per-life selection repairs
+these cases without making a completed presentation part of the next pull's accounting.
 
-`LiveDamageObserved` is static because MainWindow's subscription outlives captures. It is raised after `Derived` under its own
-exception guard, so a failing UI subscriber cannot make a successful derive look broken. Opening requests a fresh derive;
-closing
-unsubscribes the pane without discarding the scalar lifecycle state.
+`LiveDamageObserved` is static because MainWindow's subscription outlives captures, and is raised after `Derived` under its own
+exception guard. Opening requests a fresh derive; closing unsubscribes without discarding scalar lifecycle state. Cold-chunk
+retention is unchanged: `RetainDecoded()` is not required for reference safety and would need measurement before widening memory.
 
 ### Damage meter presentation expiry and ownership (issue #416)
 
@@ -7225,8 +7196,8 @@ through a blocked dispatcher or stop-the-world GC. No extra timer or arbitrary e
 `MeterActivityIndex` reads routed, bounded ordinal prefixes on the worker, outside the capture gate, and retains only
 per-life cursors, positive-damage eligibility and latest accepted log time. Outgoing activity obeys the same damage-type
 exclusions as the displayed damage calculation; incoming activity remains unfiltered, matching Tank accounting. Accepted
-avoidance outcomes can continue an encounter that has damage. Healing, casts, taunts and timed-mode death events do not
-renew that clock. Class selection is still a display filter, not a change in combat accounting, and genuine Tank activity
+avoidance outcomes can continue an encounter that has damage. Healing, casts, taunts and death events do not
+renew the damage receipt. Class selection is still a display filter, not a change in combat accounting, and genuine Tank activity
 can still keep a DPS-selected meter alive. Pending activity applies the same outgoing filter and revisits its suffix when
 filters change. A replacement projection can reuse scalar activity only after comparing both routed ordinal prefixes;
 matching counts alone is insufficient. This does not change the fight-list grouping or summary-board denominators.
@@ -7255,107 +7226,73 @@ warning/error diagnostics, and the explicit WPF-test build succeeded. The WPF su
 
 ### Six-second RDPS: per-life buckets beside the meter's own amounts (2026-10-20)
 
-The overlay gained one informational column — a six-second rolling rate drawn between DPS and Sec — and it changed nothing else.
-RDPS is not a ranking mode: membership, totals, encounter DPS, durations, sorting, bar lengths, percentages and Copy Parse keep their
-existing meanings, and no board, chart or export reads the rolling lane. Two halves of the same request remain unimplemented:
-per-column visibility switches (every numeric column is drawn today) and *only my fights*.
+**Goal:** show the same admitted damage as encounter DPS, measured over the latest six logged seconds instead of the encounter.
+RDPS is informational, not a ranking mode. It does not change membership, totals, encounter DPS, duration, sorting, bars,
+percentages or Copy Parse; boards, charts and exports do not read it. Its column is currently always drawn between DPS and Sec.
 
-**The calculation is six second-labelled buckets, including the current partly elapsed one, divided by six from the first hit.**
-`windowEdge = floor(newest second this meter has read)`; `recentDamage = sum of eligible damage in seconds windowEdge - 5 … windowEdge`,
-both ends inclusive; `RDPS = recentDamage / 6`. Idle seconds count: never divide by active seconds or hit count, so a burst does not fade —
-it holds while its label is inside the six and then leaves whole (60,000 in second 100 answers 10,000 while the window ends anywhere from
-100 to 105, and zero once it ends at 106).
+```text
+edge = floor(newest LastTime among the lives counted), advancing within a calculation run
+recentDamage = eligible damage in log seconds [edge - 5, edge], inclusive
+RDPS = recentDamage / 6
+```
 
-**One clock, and it is the data's — exactly like the columns beside it.** `windowEdge` is **log time**: the newest `LastTime` among the lives
-this update counts — projected data, never `DateTime.Now`. Encounter DPS already divides captured amounts by captured seconds (`MeterCoverage`
-over each life's own `Begin`/`Last`), so when a capture stops producing lines both halves freeze and every number on the meter stands still.
-RDPS is that same measure over a six-second span and freezes for the same reason: no line arriving means no edge moving means no label aging
-out, so the column repeats its last answer rather than inventing a new one (`NothingArrivingLeavesEveryValueStandingStillAndNewDataAgesIt`).
-How long a quiet board stays up at all is the overlay lifecycle's decision (its engagement gap and timed retention), not this column's.
+Include the current partly elapsed second and divide by six from the first hit, not by active seconds or hit count. A 60,000
+hit at log second 100 contributes 10,000 while the edge is 100–105, then zero at edge 106. **With no new data the edge does not
+move:** RDPS, like encounter DPS, holds its value until new data changes it or the lifecycle hides the board. If other players
+continue fighting, their data advances the shared edge and an idle player's buckets age out. Zero prints as `0`.
 
-**Nothing in this lane may read a build instant, not even as a timeout**, because an EQ log arrives behind the fight (game lag, OS buffering, a
-derive cadence of 0.5 s floor / 3 s full floor / 15 s ceiling). A window hung on wall time would end in buckets no captured line has filled yet
-and report about `(6 − lag) / 6` of the real rate — roughly two thirds at a two-second lag — and read zero whenever ingest stalls six seconds in
-the middle of a raid hitting as hard as ever; a *timeout* on wall time would do the same to a lagged-but-live pull, which is why an earlier pass
-of this feature carried one and dropped it. The host now supplies **no upper time ceiling**: `input.To` is positive infinity. Explicit
-bounded reference queries can still supply log-time bounds, but no PC timestamp is passed into the meter's accounting. `WindowSecond` published with the rates names the LOG second the window ends at, which is what
-makes an answer checkable against the lines it came from. A delayed fact counts only if its own stamp is still inside the window, so reading old
-history cannot invent damage that no line carries. An idle player needs no special rule: while anybody in scope keeps dealing damage the shared
-edge advances and their labels fall out on schedule, which is a zero within six seconds of their last hit. Amounts are summed across pets and lives separately for each direction before any divide; integer division follows the complete sum;
-formatting happens once, in the UI.
+Neither RDPS nor encounter accounting reads a build instant. The host supplies `input.To = positive infinity`; explicit
+reference queries may supply finite **log-time** bounds. Delayed records contribute only on their own second labels; already
+captured future-dated records count immediately. `MeterDirectionRates.WindowSecond` identifies the log second behind the result.
+A wall-time window would understate a steady stream by roughly `(6 − lag) / 6` (two-thirds at two seconds of lag) and show zero
+after a six-second ingest stall. Receipt-based **visibility**, described above, avoids this without changing the arithmetic.
 
-**Storage is per life and per direction, inside `MeterDirectionSlice`** (`EQLogParser.Core/src/parsing/derive/MeterRecentWindow.cs`),
-keyed by exactly the `(name, ownerKey)` the encounter amounts use — so On Kill withdrawal, membership rebuild and a compatible-prefix
-rebind carry the rolling window with its life and no subtraction ledger exists. A bucket keeps its **absolute .NET-epoch second** (an
-`int` cannot hold it) because modulo six only selects storage; the stamp is what proves which second the contents are. Bucket
-dictionaries are allocated lazily, cleared and reused on rotation, and discarded with their life/capture — a reused dictionary keeps a
-previous high-water capacity, so this lane has a bounded *entry* count (six seconds per retained life) and no byte bound, and nothing
-trims it per tick. Only aggregated amounts live there: no records, hit lists, histograms or chart rows.
+**Implementation invariants.** `MeterRecentWindow` belongs to each `MeterDirectionSlice`, alongside that life's encounter amounts:
+- Keep six absolute-second-labelled buckets per direction, keyed by the same actor/owner pair as encounter accounting. Modulo six
+  selects storage, not time identity; .NET-epoch seconds need a wide stamp. Refuse out-of-window facts before touching a slot,
+  replace stale colliding labels, and keep in-window late arrivals on their own labels.
+- Advance every retained life before reading, even when its cursor is unchanged: another life may have moved the common edge.
+  Summation independently checks `[edge - 5, edge]`. A repeated life in one input is counted only once.
+- The edge moves forward within a run. Removing a life or rebuilding aggregates does not rewind it. Invalidation (capture,
+  prefix/bounds, filter or relevant verdict change) can re-anchor it. Projection's `LastTime` covers both directions, so in-order
+  facts do not lie ahead of their own captured header. An unusable edge contributes nothing.
+- Removing a life removes its rolling contribution too. Compatible projection rebinding retains its buckets; incompatible state
+  reconstructs from facts. Reset applies the same captured-ordinal cut to encounter and rolling amounts. Cancellation/failure
+  discards partial state. No warm-up or second history reader is needed.
+- Resolve recent amounts through `MeterDirectionTotals`' existing row resolver and log-time ownership. Sum across lives and pets
+  **before** integer division; Tank keeps each defender separate. The direction total uses the complete eligible scope, not rounded
+  or visible rows. Unresolved amounts are counted per build as `RecentUnresolved`/`rdpsUnresolved=`, not silently dropped.
+- Publish detached `MeterDirectionRates` on `DamageOverlayStats`, not general-purpose `PlayerStats`. The UI only formats them,
+  on the existing one-second serialized refresh. There is no new timer or RDPS-specific timeout.
 
-Two modulo hazards are the reason the stamp exists, and both are pinned by tests: an out-of-window stamp is refused **before a slot is
-touched** (S−6 shares S's slot; taking it for the newest second would erase a live bucket), and a stale stamp sharing a slot is replaced
-outright rather than merged. An in-window late arrival still lands on its own label and ages out on its own schedule.
+Only aggregated amounts are retained: no records, hit lists, histograms or chart rows. Bucket dictionaries are lazy and reused;
+six seconds bounds logical entries per retained life, **not allocated bytes**, because dictionary capacity keeps its high-water
+mark. Publication allocates temporary sum/rate dictionaries and a detached result; existing bucket keys need no per-hit object.
 
-**Expiry runs once per update per retained life, before reading.** `DamageMeterCalculation.Read` early-returns when a direction's cursor
-has not moved, so aging cannot live inside it: a life with no new facts still loses labels the moment ANOTHER life moves the shared edge, and its
-sum has to be recomputed on that pass. The edge is one value for both directions of an update, and it **only moves forward inside a run** — a late batch cannot
-make yesterday's labels young again. Only the invalidation reset (new capture, changed captured-prefix or log-time bounds, changed filter, changed answers)
-re-anchors it from the lives then in scope; the membership rebuild that drops a withdrawn life deliberately does not, so after the life holding the newest second
-leaves, the edge stays ahead until log time catches up — and a fact more than six seconds behind that stale edge is refused from the window, never relabelled as
-current. What makes that safe for in-order data is `FightProjection` writing `row.LastTime` from every fact of the life in BOTH directions: a header's `Last`
-always covers every fact its own `DamageCount`/`TankCount` will hand to `Read`, so no current fact can be refused as being ahead of the edge. An
-unusable edge (`NoSecond`) means no window: nothing is accepted, nothing is held, and a direction with no rows publishes `MeterDirectionRates.None`.
+**Current geometry.** Fixed numeric widths leave the remaining space to names/icons. `MinimumWindowWidth` adds a 96-DIP
+name/icon allowance (`NameAreaMinWidthDip`) to that font's numeric block; it replaces the markup's initial 300-DIP minimum.
 
-**Aging and summing both ask the edge question.** `SumInto` skips labels outside `[edge - 5, edge]` rather than trusting that somebody called
-`Advance` first — the two live in different classes, and a sum that served an aged label would put seconds-old damage into a rate presented as
-current with nothing left to blame (pinned by `ASumIgnoresLabelsTheEdgeHasLeftBehindEvenWithoutAnAdvance`). One window slice per life is held the same way: `Update`
-skips a repeated `DerivedFight` rather than summing that life's window twice — amounts alone would have looked right, since the second `Read` stops at its own
-cursor, but the repeat also doubles that life's time range and its share of the target title, so the skip is presentation-side too and not RDPS-only.
-Rebuilding the aggregates (`ResetTotals`) leaves the edge and every slice's buckets alone: a reconstruction is not new log seconds, so it may
-neither age the window nor refresh it; only `Clear()` — a capture ending — drops the edge.
+| Font (pt) | RDPS column (DIP) | Numeric block (DIP) | Window minimum (DIP) |
+|---|---:|---:|---:|
+| 10 | 46 | 226 | 322 |
+| 12 | 52 | 262 | 358 |
+| 14 | 60 | 300 | 396 |
+| 16 | 66 | 326 | 422 |
 
-**Publication keeps one row-grouping interpretation.** After the existing rows exist, the six buckets of every selected life are summed and
-each actor is resolved through `MeterDirectionTotals`' own row resolver — explicit log-time ownership plus the same fallbacks — so a pet
-folds into `X +Pets` exactly once and its rate is the folded sum divided once. A rate is only ever credited to a row that exists in the
-counted set (recent damage is a subset of counted damage by construction: reset moves `FromTime`, which already rebuilds everything) — and
-what cannot be placed is *counted* (`RecentUnresolved`, surfaced on the build's Debug line as `rdpsUnresolved=` only when non-zero, and answered per build rather
-than carried) rather than dropped in silence, because an omitted amount in an informational column is invisible by design.
-The result leaves as detached `MeterDirectionRates` (per final row name, plus the direction total and the log second the window ends at) on
-`DamageOverlayStats`, never as a `PlayerStats` field — live-only meaning has no business in a general board/chart row. It is a plain class,
-not a record: its dictionary is compared by reference and mutating it after publication would be a bug, so it claims no value equality. The totals-row rate is
-divided from the whole eligible scope's own sum, not added up from rounded or visible rows; class/top-row filtering stays a display choice
-(pinned with five damage per row, where every row truncates to zero and the scope still answers six).
-The window publishes on the existing one-second refresh and worker serialization with no new timer. Opening reconstructs from the captured
-facts; it does not need six seconds of warm-up. Cancellation/exception discards partial rolling state through the same catch-all `Clear()`
-as everything else. A compatible projection rebind retains buckets with their life; incompatible state reconstructs from the fact path.
+Before RDPS, numerics already consumed 210 DIP at 12 pt and 260 at 16 pt against the old 250-DIP floor. A flat 300-DIP floor
+with RDPS left no name space at 14 pt and overflowed by 26 at 16 pt. A saved narrow window now widens to its font's minimum;
+Save persists the coerced width, and nothing auto-shrinks. Column switches and matching header/row grids are still pending:
+the existing percent switch hides text but leaves its width, while RDPS has no switch. Windows alignment remains unverified.
 
-**Column geometry, measured rather than wished:** at 12 pt the four numeric columns already consumed **210 DIP of the window's 250-DIP
-floor**, before names and icons, so a fifth column cannot be added without moving that floor. The RDPS column carries its own width key
-(`DamageOverlayDamageColDefRdps`, 46/52/60/66 at 10/12/14/16 pt). **The window's minimum is computed per font**, not one constant: the numeric
-block is fixed-width columns and the name/icon area gets whatever is left, so a floor under the block's own width draws names underneath the
-numbers. The block measures 226/262/300/**326** DIP at 10/12/14/16 pt, which a single 300 floor covered at 10 and 12 only — exactly zero room
-for names at 14 and an overflow of 26 at 16 (the four-column block measured 260 there, already 10 over the old 250). `DamageOverlayWindow.MinimumWindowWidth(narrowColumn,
-wideColumn, rollingColumn)` therefore sums that font's own presets and adds `NameAreaMinWidthDip` (96 — the class icon plus roughly six characters
-of the row font), giving **322/358/396/422**, assigned to `MinWidth` in each case of `UpdateColumnSizes`. The markup's static `MinWidth="300"` is
-only the pre-theme default that first assignment replaces. A saved width below the figure widens on the next open — WPF coerces `Window.Width` up to
-`MinWidth` by itself, and since `CommitMeterState` saves `Width`, the widened value is what gets persisted; nothing ever shrinks automatically, and
-`NameAreaMinWidthDip` is the one knob for the trade. Expect a 14/16 pt user with a narrow window to come back wider.
-Each publication builds temporary bucket-sum and row-rate dictionaries, a key array for division when needed, and a detached rates object.
-Bucket dictionaries allocate lazily and may grow when new actor/owner keys arrive; existing in-window keys need no per-hit object.
+**Known separate defect:** a fact earlier than a row's first sighting can invert its activity span: the full-build reference
+returned **−1 seconds**, versus **0 seconds / DPS `long.MaxValue`** in the meter. The result was byte-identical with RDPS stashed.
+`MeterDirectionSlice.Add` moves `Last` backwards without moving `MeterActivity.Begin` back. Fixing both calculation paths is
+separate work; the RDPS late-arrival test stays inside the already-seen span and does not claim this case is fixed.
 
-**Recorded while testing, unfixed, and NOT caused by this change:** an out-of-order fact whose second is *earlier than that row's first
-sighting in the fight* inverts the row's activity span. Against `DerivedTotals.ForOverlay` the full build then answers **−1 seconds** for
-the row while the meter answers **0 seconds** with DPS `long.MaxValue`. Re-running with the RDPS change stashed reproduced byte-identical
-numbers, so the rolling lane is exonerated; the mechanism is that `MeterDirectionSlice.Add` never moves `MeterActivity.Begin` backwards
-while still writing `Last` backwards. The RDPS late-arrival test deliberately stays inside the already-seen range and says so in a comment.
-Fixing the inversion is separate work, on both sides of the comparison.
-
-**The window cost, measured on a copy of `MeterRecentWindow` outside the tree (scratch project, nothing committed, no probe test):** an
-in-window `Add` is **≈50 ns and 0 B allocated**; an out-of-window stamp costs **≈1.5 ns and 0 B** because it is refused before any dictionary
-is touched; `Advance` is six compares per life per direction; a publication sum over 40 lives × 24 participants is ≈115 µs (a realistic one-to-three-life
-meter: single-digit µs), once per direction per second. So the lane is invisible on a live tail and near-free on the meter's full rebuild paths,
-which re-walk millions of facts and refuse almost all of them. That is an isolated micro-measurement, **not** an end-to-end one: the busy-raid
-figure this proposal demands has still not been taken, and no speed or memory claim about a raid is made here.
+**Isolated measurement, not a raid result:** a scratch copy of `MeterRecentWindow` measured in-window `Add` at **≈50 ns / 0 B**,
+out-of-window refusal at **≈1.5 ns / 0 B**, and summation over 40 lives × 24 participants at **≈115 µs** per direction
+(single-digit µs for one to three lives). Advance is six comparisons per life/direction. No probe code was retained.
+Representative end-to-end busy-raid time and allocation still need measurement; these figures establish no whole-meter claim.
 
 **Clock-separation review found three counterexamples before the fix.** With an already-captured future-dated hit, advancing only the PC
 clock changed RDPS **100 → 0** through the upper-bound clamp. First opening over identical damage at different instants changed a timed
@@ -7367,19 +7304,12 @@ Tests independently vary log time and receipt time, keep every published number 
 same-second Reset, filter reconsideration and rebuilds. Zero still prints as `0`: it means no damage in the six logged seconds.
 `_recentUnresolved` remains answered per build, including early returns, so Debug cannot repeat another build's omitted amount.
 
-**Validation (Linux).** **2,617 headless tests passed, 3 skipped**; no-incremental solution build reported **zero** warning/error
-diagnostics; the WPF test assembly built and was **not executed**. `EQLogParser.Test/src/parsing/derive/MeterRecentWindowTest.cs`
-(16 window-boundary tests — labels, collisions, expiry, and that nothing takes a build instant, with no projection in the way) and `DamageMeterRdpsTest.cs` (12 tests through the meter's
-incremental walk, declared as a partial of `DamageMeterCalculationTest` so every check still compares against the full-build reference — which
-is how they also hold that no encounter number moved; several additionally re-run the same input through a **cold** `DamageMeterCalculation`
-and require identical rates, which is what makes retained window state safe to trust). Covered: six-label hold then drop, fixed denominator from
-the first hit, both collision directions, exact-six on advance, clock jump, fractional times sharing a label, wide (48-bit) amounts,
-non-positive amounts costing nothing, a sum taken without aging skipping aged labels, **rates surviving eight seconds of ingest lag** (data at
-second 12 while the build runs at 18 → window 7…12, encounter total untouched), the hold while nothing arrives and the lifecycle retiring the board
-past it, each label falling on its own day as newer data slides the window, owner+pet summed before dividing, **one actor's damage across two lives in scope summed
-into one rate**, Tank per defender without folding, **a slain life taking its rolling damage out of the pull that replaced it** (retention would answer 150 where
-the scope answers 50), filter change rebuilding both answers, scope totals over visible rows. Header-label offsets and every live rendering question are Windows
-gates in `ReleaseChecklist`.
+**Validation at `9ae9e53d` (Linux): 2,617 headless tests passed, 3 skipped; zero warning/error diagnostics** in the
+no-incremental solution build. WPF tests compiled but were **not executed**. `MeterRecentWindowTest` covers bucket boundaries,
+collisions and log-time aging; `DamageMeterRdpsTest` checks incremental/reference encounter equivalence and cold-rebuild rates,
+including lag, frozen silence, wide amounts, owner/pet and cross-life sums, Tank attribution, life removal and filter changes.
+`MeterClockSeparationTest` and `MeterArrivalsTest` cover accounting versus receipt deadlines. Rendering, delayed-worker behavior
+and header alignment remain Windows gates in `docs/ReleaseChecklist.md`.
 
 ### Incremental damage meter: compact accounting, paired publication (2026-11)
 
@@ -7408,8 +7338,9 @@ On Kill removes just the departing life's compact contribution and re-unions the
 subtract overlapped seconds as if they were additive. Timed modes extend accumulated totals and activity unions.
 `TimeRange.AddAndMeasure` exposes the existing union's change in covered seconds, avoiding a complete sum of old
 spans on every add. Backward activity timestamps rebuild the compact unions so an old wider range cannot survive
-an end-time contraction. Future-dated facts record a re-evaluation boundary. The existing `DamageOverlayLifecycle`
-still owns selection, completed-result grace, pending-combat protection, and reset semantics.
+an end-time contraction. Explicit finite log-time queries retain an upper-bound re-evaluation boundary; the live meter uses
+no upper ceiling, so future-dated captured facts count immediately. `DamageOverlayLifecycle` still owns selection,
+completed-result retention, pending-combat protection, and reset semantics.
 
 The ranking caveat is real rather than cosmetic: Damage Summary assigns ranks through shared expanded/top-level
 row objects, and sorts timestamp blocks with an unstable equal-time comparison. Merely sorting compact totals by
