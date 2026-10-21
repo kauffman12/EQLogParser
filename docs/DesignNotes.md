@@ -6321,29 +6321,21 @@ matter and I had them backwards):
 The unwindowed path is unchanged by construction (delegation + a null case that cannot arise when unbounded), so the real-log parity bars
 measured earlier still stand; they get re-run with the overlay swap, which is the next step and needs a Windows run.
 
-## The meter reads the derived engine now, and only its source moved
+## The meter reads the derived engine
 
-`OverlayDamageFromMirror` (settings.txt, off by default) points `DamageOverlayWindow`'s once-a-second build at
-`DerivedTotals.ForOverlay(rows, index, facts, heals, fromT, toT)` — damage and tanking halves, each on its own builder
-instance, returned as the `DamageOverlayStats` container the overlay already paints. What did NOT move: the meter's
-policy. `_meterWindowT` is stamped at open/reset (`ResetOverlayFights` moves it too), and the expiry test is still
-legacy's — quiet for longer than `mode == 0 ? FightManager.FightTimeout : mode` and the board zeroes with the window
-reopening here. That split is the whole point of the seam: *which seconds* is the surface's business, *what they add up
-to* is the derivation's, and it is why no "current fight" concept had to be invented inside the capture.
+`DamageOverlayWindow` reads paired damage/tanking publications from `DamageMeterCalculation`. `DerivedTotals.ForOverlay`
+is the full-build reference for the same selected lives and record bounds, not the live once-a-second implementation.
+There is no engine-selection setting or legacy fallback. Selection and receipt expiry belong to `DamageOverlayLifecycle`;
+Reset uses a captured ordinal, never an opening/reset timestamp. See "Damage overlay: fight accounting and display retention"
+and "Incremental damage meter: compact accounting, paired publication" for those contracts.
 
-Two decisions worth keeping: a scope with nothing in it **holds the previous board** rather than painting zero (a derive
-runs when the log goes quiet, so an in-progress fight can be seconds from landing, and a blank board would read as
-"nobody is doing damage"); and an exception on this path blanks the board and logs it (first at once, then every 30th tick
-with a count),
-because — as the operator put it — a fallback to code we intend to delete hides errors: a derived board that quietly became
-a legacy board looks exactly like a correct one. `OverlayDamageFromMirror` therefore means "derived numbers or nothing".
-`ForOverlay` is pinned by `TheMeterAndASelectionOfTheSameRowsPrintTheSameNumber` (the meter's column equals a select-all of
-the same rows per player and in total; its tank half counts the 120 + 90 the mobs landed; an empty window is no scope; a
-sliced meter equals a sliced list) and `TheMeterBuildsOnItsOwnBuilders` (a refresh leaves the shared damage builder's answer
-alone and never announces on the shared tank board). What still needs watching on Windows is not the arithmetic but the
-wiring: that the timer's window advances, that expiry zeroes the board, and whether a real pull's numbers look like the pulls.
+An empty scope **hides the previous presentation** rather than retaining stale numbers or painting a fake zero. A build
+exception follows that same cleanup path and logs first at once, then every thirtieth failure with its running count.
+`TheMeterAndASelectionOfTheSameRowsPrintTheSameNumber` pins reference totals against selecting the same rows, including
+incoming damage and bounded slices. `TheMeterBuildsOnItsOwnBuilders` ensures the reference does not change shared boards
+or announce on them. Windows popup/hide and timer wiring remain release checks.
 
-**One wording casualty of that move, restored 2026-11: the encounter count.** The meter used to build its own title string and
+**The encounter count stays abbreviated.** The meter used to build its own title string and
 printed `C(10): Mob`; once its numbers came from a board it inherited that board's `Combined (10):`, which is nine characters
 longer on a title bar that already carries total, DPS and seconds. The shape is now asked at the door that reads it —
 `GenerateStatsOptions.ShorthandCombinedCount`, set only by `ForOverlay`, formatted by the one helper `StatsUtil.CombinedPrefix`
@@ -7035,8 +7027,10 @@ tables, `NpcStatsViewer`, `Timeline`), which are a separate workstream because t
 
 ## A fight that is still going: porting the meter's show/reset rule
 
-The damage meter's *numbers* moved to the derived engine first (`OverlayDamageFromMirror`, see "The meter reads the derived
-engine now"),
+**Historical measurements of the retired live-only opening rule.** Current opening and visibility use ingest receipts;
+see "Damage overlay: fight accounting and display retention" for the implemented contract.
+
+The damage meter's *numbers* moved to the derived engine first (see "The meter reads the derived engine"),
 and that left the meter in the worst intermediate state a surface can be in: it painted derived numbers while the three
 questions that decide whether you ever see them were still answered by `FightManager` —
 
@@ -7121,11 +7115,25 @@ accumulation starts after the captured prefix, including pending records; no wal
 The app passes positive infinity as the upper accounting bound. Future-dated log records count immediately; neither totals nor RDPS
 wait for the PC clock to reach their timestamps.
 
+The initial timed bound must apply to **activity eligibility as well as amounts on the first publication**. `TrySelect` returns
+false when it first establishes that bound; the worker recaptures candidates and refreshes bounded activity before selecting again.
+Otherwise an old positive hit followed by a recent miss could admit a life on the first poll and lose it on the next, changing
+600 damage from five seconds / 120 DPS to one second / 600 DPS during silence. Candidate inspection still never expires or resets
+an accumulation. `TimedInitialBoundIsAppliedBeforeTheFirstPublication` pins first opening, Reset and timed expiry in both directions.
+
 **Receipt is recorded at ingest, not at recount.** `CombatCapture` notifies the host after a damage fact is published. `MeterArrivals`
 records its ordinal range against `Stopwatch` time, grouped into millisecond batches with sub-millisecond truncation, retaining 120 seconds
 (longer than the longest supported 90-second mode). Workers find the newest eligible receipt using the same admission predicate as pending
 combat. Filters/verdict changes can reconsider eligibility but use the original receipt time; polling, rebuilding, and reopening cannot
 restamp it. NPC-only noise and excluded outgoing damage do not renew it; incoming damage and accepted avoidance remain eligible.
+`BeginRead` copies only unchecked receipt-batch metadata under the receipt lock; `Read.Complete` decodes and checks a fixed
+ordinal prefix outside both that lock and the capture gate, with cancellation checks between bounded batches. Ingest can extend even
+the copied read's last millisecond batch without changing its question. Completion acknowledges only that prefix; an older read cannot
+overwrite a newer read's publication, changed verdict/filter inputs invalidate the read, and pruned receipts cannot be published fresh.
+An expiry cuts at the **checked** captured prefix, including its pending records, never damage appended while that scan ran.
+`MeterArrivalsTest` pins these interleavings without timing probes; `ExpiryCannotDiscardAReceiptThatArrivedWhileThePreviousPrefixWasBeingChecked`
+pins the accounting cutoff. This is an ingest-lock ownership guarantee, not an end-to-end raid timing claim.
+
 The dispatcher reads the last worker-verified receipt without waiting on a scan. Its existing presentation lease still expires while a
 worker is blocked, and late results must be fresh before painting.
 
@@ -17363,8 +17371,8 @@ body. `StartAsync` now treats `OperationCanceledException` as expected only whil
 cancelled, logging at Debug without a stack; initial-read and tail catches also handle that base exception with the
 same ownership filter. An unrelated cancellation exception still reports a load failure. `LogReaderCancellationTest`
 exercises both outcomes at the outer boundary and restores its temporary logger configuration. It builds on Linux
-but requires Windows execution. The unused `DamageOverlayLifecycle.LatestActivityOrdinal(rows)` overload was
-removed; the remaining door requires a clock and refuses future-dated rows.
+but requires Windows execution. Meter opening now uses `MeterArrivals`' original ingest receipts, not row timestamp freshness;
+captured future-dated records count immediately. The current clock contract is under "Damage overlay: fight accounting and display retention".
 
 The review's higher-severity meter suggestions were not adopted. Its unstable sorts reproduce the full builders'
 existing shared expanded/top-level ranking; `EqualAndZeroTotalsKeepTheBoardsTimestampBlockOrdering` already covers
@@ -17378,10 +17386,9 @@ Other rejected claims already have contrary evidence: `RecordsStore.Add` binary-
 with `AuxiliaryRangeWalkStopsBeforeFutureRecordsWithoutLosingLaterWindows` exercising the ordered annotation scan;
 `ParsePreviewPublicationTest` disposes short-lived panes through `using`, while the app host intentionally retains
 one pane for its lifetime; and both hit-type lookup representations derive from one vocabulary, with the span
-implementation retained by measurement. The clock expressions are not interchangeable either:
-`DateUtil.ToDotNetSeconds` returns whole seconds, while `TimeSpan.TotalSeconds` retains fractions. The overlay's
-fractional reset boundary prevents replaying damage already present in the click's log second. No mechanical clock
-replacement, speculative dispatcher-shutdown machinery or broad whitespace rewrite was made.
+implementation retained by measurement. Meter Reset now cuts at a captured fact ordinal, so it distinguishes two arrivals in the
+same log second without a fractional timestamp boundary. Log seconds still determine amounts and durations; monotonic receipt time
+determines visibility. No speculative dispatcher-shutdown machinery or broad whitespace rewrite was made.
 
 ## Ordered-ingest performance review: remaining parser work
 

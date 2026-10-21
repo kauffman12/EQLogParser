@@ -256,7 +256,10 @@ These checks still require Windows for popup/hide behavior. See DesignNotes → 
   Damage, DPS, RDPS and Sec must agree, without waiting for the clock to reach future-dated hits. With a ten-second reset, a line received
   eight seconds late must still buy ten seconds from receipt. During silence, filter/rebuild requests must not renew that deadline.
   Repeat Reset with a new hit in the same log second: only the post-click ordinal counts. Reading a historical file is receipt of data;
-  merely reopening or re-deriving an expired capture is not.
+  merely reopening or re-deriving an expired capture is not. On a five-second timed opening, feed A damage at log second 0, B damage at 6,
+  then an A miss at 10, all received together. The first board must already show only B, with unchanged seconds/DPS on subsequent silent
+  ticks. Repeat after Reset and timed expiry, and for Tank. Pause a receipt worker after `BeginRead`, append fresh damage, then resume it:
+  expiry must not cut away the appended, unchecked receipt.
 - [ ] **A blocked counting worker cannot strand the toolbar** (issue #416): use a ten-second reset, paint a board, then
   hold only its worker with a debugger while leaving the dispatcher responsive. After verified activity expires, both
   toolbar and body hide within the next timer tick. Releasing the worker must not flash its expired result back on screen.

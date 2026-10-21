@@ -389,11 +389,14 @@ public partial class DamageMeterCalculationTest
     internal void Check(double second, int mode = 0, bool compareFresh = false)
     {
       var rows = Project();
-      var candidates = Lifecycle.SelectCandidates(1, rows, mode);
-      Calculation.Activity.Update(Cache.Index.CaptureMeterInput(candidates.Rows, Facts, candidates.FromTime,
-        double.PositiveInfinity, candidates.FirstOrdinal));
-      var scope = Lifecycle.Select(1, rows, T0 + second, mode, Arrivals.Latest(Facts, Timeline), Facts.FactCount,
-        activity: Calculation.Activity.For);
+      DamageOverlayScope scope;
+      do
+      {
+        var candidates = Lifecycle.SelectCandidates(1, rows, mode);
+        Calculation.Activity.Update(Cache.Index.CaptureMeterInput(candidates.Rows, Facts, candidates.FromTime,
+          double.PositiveInfinity, candidates.FirstOrdinal));
+      } while (!Lifecycle.TrySelect(1, rows, T0 + second, mode, Arrivals.Latest(Facts, Timeline), Facts.FactCount,
+        out scope, activity: Calculation.Activity.For));
       Expected = DerivedTotals.ForOverlay(scope.Rows, Cache.Index, Facts, scope.FromTime,
         double.PositiveInfinity, scope.FirstOrdinal);
       var input = Cache.Index.CaptureMeterInput(scope.Rows, Facts, scope.FromTime,

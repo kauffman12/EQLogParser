@@ -70,6 +70,65 @@ public partial class DamageMeterCalculationTest
   }
 
   [TestMethod]
+  [DataRow(false, 0)]
+  [DataRow(true, 0)]
+  [DataRow(false, 1)]
+  [DataRow(true, 1)]
+  [DataRow(false, 2)]
+  [DataRow(true, 2)]
+  public void TimedInitialBoundIsAppliedBeforeTheFirstPublication(bool incoming, int boundary)
+  {
+    var log = new Capture();
+    if (boundary != 0)
+    {
+      log.Add("Illuminai", "a rat", -10, 600, receivedAt: 80);
+      log.Check(80, 5);
+      if (boundary == 1) log.Lifecycle.Reset(1, log.Facts.FactCount);
+      else log.Check(86, 5);
+    }
+    log.Add(incoming ? "a rat" : "Illuminai", incoming ? "Illuminai" : "a rat", 0, 600, receivedAt: 100);
+    log.Add(incoming ? "a bat" : "Bithika", incoming ? "Bithika" : "a bat", 6, 600, receivedAt: 100);
+    log.Add(incoming ? "a rat" : "Illuminai", incoming ? "Illuminai" : "a rat", 10, 0,
+      LabelTypes.Miss, receivedAt: 100);
+
+    log.Check(100, 5, compareFresh: true);
+    var first = log.Last;
+    Assert.IsNotNull(first);
+    var stats = incoming ? first.TankStats : first.DamageStats;
+    Assert.IsNotNull(stats);
+    Assert.AreEqual(600L, stats.RaidStats.Total, "only the damage inside the initial bound belongs to the first board");
+    Assert.AreEqual(1d, stats.RaidStats.TotalSeconds);
+    Assert.AreEqual(600L, stats.RaidStats.Dps);
+    Assert.AreEqual("A bat", stats.TargetTitle, "the rat has no positive damage inside the initial bound");
+    AssertRatesAgreeWithAColdBuild(log);
+    foreach (var now in new[] { 101d, 104.9 })
+    {
+      log.Check(now, 5, compareFresh: true);
+      DamageMeterAssert.Equal(first, log.Last);
+      AssertRatesAgreeWithAColdBuild(log);
+    }
+  }
+
+  [TestMethod]
+  public void ExpiryCannotDiscardAReceiptThatArrivedWhileThePreviousPrefixWasBeingChecked()
+  {
+    var log = new Capture();
+    log.Add("Illuminai", "a rat", 0, 600, receivedAt: 100);
+    log.Check(100, 5);
+    var rows = log.Project();
+    var receipts = log.Arrivals.BeginRead(log.Timeline);
+    log.Add("Illuminai", "a rat", 1, 300, receivedAt: 140);
+    var oldArrival = receipts.Complete(log.Facts);
+    Assert.IsTrue(log.Lifecycle.TrySelect(1, rows, T0 + 140, 5, oldArrival, receipts.Through,
+      out var expired, activity: log.Calculation.Activity.For));
+    Assert.AreEqual(0, expired.Rows.Count);
+    Assert.AreEqual(1, expired.FirstOrdinal, "only the checked receipt prefix can be retired");
+    log.Check(140, 5, compareFresh: true);
+    Assert.IsNotNull(log.Last);
+    Assert.AreEqual(300L, log.Last.DamageStats.RaidStats.Total);
+  }
+
+  [TestMethod]
   public void ResetCutsAtTheCapturedOrdinalIncludingWithinOneLogSecond()
   {
     var log = new Capture();

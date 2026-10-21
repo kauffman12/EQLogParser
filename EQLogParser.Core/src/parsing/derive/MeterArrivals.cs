@@ -10,8 +10,8 @@ internal readonly record struct MeterArrival(int Through, double Time)
   internal static readonly MeterArrival None = new(0, double.NegativeInfinity);
 }
 
-// Visibility-only receipt times, never log timestamps. Millisecond batches avoid a timestamp on every fact.
-// Keep longer than the longest supported reset mode (90 s); expired receipts cannot open a board.
+// Visibility-only receipt times, never log timestamps. Retain batches longer than every supported reset mode.
+// docs/DesignNotes.md → "Damage overlay: fight accounting and display retention".
 internal sealed class MeterArrivals
 {
   private const double RetentionSeconds = 120;
@@ -20,6 +20,7 @@ internal sealed class MeterArrivals
   private int _head;
   private int _through;
   private int _checkedThrough = -1;
+  private long _revision;
   private long _stamp = long.MinValue;
   private MeterDamageFilter _filter;
   private MeterArrival _answer = MeterArrival.None;
@@ -49,39 +50,92 @@ internal sealed class MeterArrivals
     }
   }
 
-  internal MeterArrival Latest(DamageFactTable facts, EntityTimeline timeline)
+  internal MeterArrival Latest(DamageFactTable facts, EntityTimeline timeline,
+    CancellationToken cancellation = default)
   {
+    /*
+     * Verified prefix still current: answer from the memo, which may legitimately be None (nothing eligible arrived). Polling must
+     * not restamp a receipt or walk facts again. Pruning only happens inside Record, which moves _through, so an equal
+     * _checkedThrough already means the stored answer was checked against the retention window when it was published.
+     */
     lock (_gate)
     {
-      var stamp = timeline.StateStamp();
-      var filter = MeterDamageFilter.Current;
-      if (_checkedThrough == _through && _stamp == stamp && _filter == filter) return _answer;
+      if (_checkedThrough == _through && _stamp == timeline.StateStamp() && _filter == MeterDamageFilter.Current)
+        return _answer;
+    }
+    return BeginRead(timeline).Complete(facts, cancellation);
+  }
+
+  // Only receipt metadata is copied under the ingest lock. A read owns a fixed prefix even if its last batch grows.
+  internal Read BeginRead(EntityTimeline timeline)
+  {
+    var stamp = timeline.StateStamp();
+    var filter = MeterDamageFilter.Current;
+    lock (_gate)
+    {
       var from = _stamp == stamp && _filter == filter ? Math.Max(0, _checkedThrough) : 0;
-      if (from == 0 || _head < _batches.Count && _answer.Through <= _batches[_head].From)
-        _answer = MeterArrival.None;
-      _checkedThrough = _through;
-      _stamp = stamp;
-      _filter = filter;
-      for (var i = _batches.Count - 1; i >= _head; i--)
+      var answer = from == 0 || !IsRetained(_answer) ? MeterArrival.None : _answer;
+      var lo = _head;
+      var hi = _batches.Count;
+      while (lo < hi)
       {
-        var batch = _batches[i];
-        if (batch.Through <= from) break;
-        for (var ordinal = batch.Through - 1; ordinal >= Math.Max(batch.From, from); ordinal--)
-        {
-          var fact = facts.At(ordinal);
-          if (!MeterActivityIndex.AcceptsPending(fact, timeline, facts.NameOf(fact.AtkIdx),
-              facts.NameOf(fact.DefIdx), filter)) continue;
-          _answer = new MeterArrival(ordinal + 1, batch.Time);
-          Volatile.Write(ref _published, new Published(_answer));
-          return _answer;
-        }
+        var mid = lo + ((hi - lo) / 2);
+        if (_batches[mid].Through <= from) lo = mid + 1;
+        else hi = mid;
       }
-      Volatile.Write(ref _published, new Published(_answer));
-      return _answer;
+      var batches = new Batch[_batches.Count - lo];
+      _batches.CopyTo(lo, batches, 0, batches.Length);
+      return new Read(this, timeline, ++_revision, _through, stamp, filter, from, answer, batches);
     }
   }
 
-  private sealed record Published(MeterArrival Arrival);
+  private MeterArrival Publish(Read read, MeterArrival answer, CancellationToken cancellation)
+  {
+    lock (_gate)
+    {
+      cancellation.ThrowIfCancellationRequested();
+      if (read.Stamp != read.Timeline.StateStamp() || read.Filter != MeterDamageFilter.Current)
+        return MeterArrival.None;
+      if (!IsRetained(answer)) answer = MeterArrival.None;
+      if (read.Revision != _revision) return answer;
+      _checkedThrough = read.Through;
+      _stamp = read.Stamp;
+      _filter = read.Filter;
+      _answer = answer;
+      if (_published.Arrival != answer) Volatile.Write(ref _published, new Published(answer));
+      return answer;
+    }
+  }
 
-  private readonly record struct Batch(int From, int Through, double Time);
+  private bool IsRetained(MeterArrival answer) =>
+    _head < _batches.Count && answer.Through > _batches[_head].From;
+
+  // A paused/cancelled read owns no ingest lock and acknowledges nothing until its complete answer is published.
+  internal readonly record struct Read(MeterArrivals Owner, EntityTimeline Timeline, long Revision, int Through,
+    long Stamp, MeterDamageFilter Filter, int From, MeterArrival Fallback, Batch[] Batches)
+  {
+    internal MeterArrival Complete(DamageFactTable facts, CancellationToken cancellation = default)
+    {
+      cancellation.ThrowIfCancellationRequested();
+      var answer = Fallback;
+      for (var i = Batches.Length - 1; i >= 0; i--)
+      {
+        var batch = Batches[i];
+        for (var ordinal = batch.Through - 1; ordinal >= Math.Max(batch.From, From); ordinal--)
+        {
+          if ((ordinal & 2047) == 0) cancellation.ThrowIfCancellationRequested();
+          var fact = facts.At(ordinal);
+          if (!MeterActivityIndex.AcceptsPending(fact, Timeline, facts.NameOf(fact.AtkIdx),
+              facts.NameOf(fact.DefIdx), Filter)) continue;
+          answer = new MeterArrival(ordinal + 1, batch.Time);
+          return Owner.Publish(this, answer, cancellation);
+        }
+      }
+      return Owner.Publish(this, answer, cancellation);
+    }
+  }
+
+  internal readonly record struct Batch(int From, int Through, double Time);
+
+  private sealed record Published(MeterArrival Arrival);
 }

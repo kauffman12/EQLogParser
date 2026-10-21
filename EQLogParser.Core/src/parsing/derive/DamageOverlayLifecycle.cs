@@ -19,16 +19,22 @@ internal sealed class DamageOverlayLifecycle
     _timedStart = _timedStart
   };
 
-  internal DamageOverlayScope Select(int sessionId, IReadOnlyList<DerivedFight> rows, double now, int mode,
-    MeterArrival arrival, int capturedCount, OverlayPendingActivity pending = null,
+  // False means the initial timed bound changed: refresh activity from SelectCandidates before selecting again.
+  internal bool TrySelect(int sessionId, IReadOnlyList<DerivedFight> rows, double now, int mode,
+    MeterArrival arrival, int capturedCount, out DamageOverlayScope scope, OverlayPendingActivity pending = null,
     Func<DerivedFight, MeterLifeActivity> activity = null)
   {
+    scope = null;
     EnsureSession(sessionId);
     var selected = new List<DerivedFight>();
     var edge = CaptureEdge(rows, activity);
     if (mode != 0)
     {
-      if (double.IsNaN(_timedStart) && double.IsFinite(edge)) _timedStart = edge - mode;
+      if (double.IsNaN(_timedStart) && double.IsFinite(edge))
+      {
+        _timedStart = edge - mode;
+        return false;
+      }
       foreach (var row in rows)
         if (Eligible(row, activity) && Activity(row, activity).Last >= _timedStart) selected.Add(row);
     }
@@ -70,7 +76,8 @@ internal sealed class DamageOverlayLifecycle
         _timedStart = double.NaN;
       }
     }
-    return new DamageOverlayScope(selected, FromTime(mode), deadline, _firstOrdinal);
+    scope = new DamageOverlayScope(selected, FromTime(mode), deadline, _firstOrdinal);
+    return true;
   }
 
   // Inspect all post-reset lives before exclusions choose a data edge. An excluded newer life must not hide an older accepted one.

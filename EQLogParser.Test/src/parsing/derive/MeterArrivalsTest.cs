@@ -91,6 +91,79 @@ public sealed class MeterArrivalsTest
     }
   }
 
+  [TestMethod]
+  public void APausedReceiptReadDoesNotOwnIngestOrChaseItsGrowingBatch()
+  {
+    Add(100, LabelTypes.Melee);
+    var read = _arrivals.BeginRead(_timeline);
+    // Ingest can extend the same millisecond batch and start another while this worker question is paused.
+    Add(100, LabelTypes.Melee);
+    Add(101, LabelTypes.Melee);
+    Assert.AreEqual(1, read.Through);
+    Assert.AreEqual(new MeterArrival(1, 100), read.Complete(_facts));
+    Assert.AreEqual(new MeterArrival(3, 101), _arrivals.Latest(_facts, _timeline),
+      "completing an old prefix must not acknowledge the damage received during its scan");
+  }
+
+  [TestMethod]
+  public void AnOlderReadCannotOverwriteANewerVerifiedReceipt()
+  {
+    Add(100, LabelTypes.Melee);
+    var old = _arrivals.BeginRead(_timeline);
+    Add(101, LabelTypes.Melee);
+    var newest = _arrivals.Latest(_facts, _timeline);
+    old.Complete(_facts);
+    Assert.AreEqual(newest, _arrivals.Observed);
+    Assert.AreEqual(newest, _arrivals.Latest(_facts, _timeline));
+  }
+
+  [TestMethod]
+  public void CancellationAcknowledgesNothingAndTheSamePrefixCanBeRetried()
+  {
+    Add(100, LabelTypes.Melee);
+    var read = _arrivals.BeginRead(_timeline);
+    using var cancelled = new CancellationTokenSource();
+    cancelled.Cancel();
+    Assert.ThrowsExactly<OperationCanceledException>(() => read.Complete(_facts, cancelled.Token));
+    Assert.AreEqual(MeterArrival.None, _arrivals.Observed);
+    Assert.AreEqual(new MeterArrival(1, 100), _arrivals.Latest(_facts, _timeline));
+  }
+
+  [TestMethod]
+  public void AReadCannotPublishReceiptsPrunedWhileItWasPaused()
+  {
+    Add(0, LabelTypes.Melee);
+    var read = _arrivals.BeginRead(_timeline);
+    Add(200, LabelTypes.Melee);
+    Assert.AreEqual(MeterArrival.None, read.Complete(_facts));
+    Assert.AreEqual(MeterArrival.None, _arrivals.Observed);
+    Assert.AreEqual(new MeterArrival(2, 200), _arrivals.Latest(_facts, _timeline));
+  }
+
+  [TestMethod]
+  public void AChangedVerdictInvalidatesAnUnfinishedReadWithoutRestampingItsRetry()
+  {
+    Add(100, LabelTypes.Melee);
+    var read = _arrivals.BeginRead(_timeline);
+    _timeline.SetIdentity("Illuminai", IdentityKind.Npc, RuleStrength.Manual, "manual");
+    Assert.AreEqual(MeterArrival.None, read.Complete(_facts));
+    Assert.AreEqual(MeterArrival.None, _arrivals.Observed);
+    Assert.AreEqual(MeterArrival.None, _arrivals.Latest(_facts, _timeline));
+    _timeline.SetIdentity("Illuminai", IdentityKind.Player, RuleStrength.Manual, "correction");
+    Assert.AreEqual(new MeterArrival(1, 100), _arrivals.Latest(_facts, _timeline));
+  }
+
+  [TestMethod]
+  public void AChangedFilterInvalidatesAnUnfinishedReadWithoutRestampingItsRetry()
+  {
+    Add(100, LabelTypes.Bane);
+    var read = _arrivals.BeginRead(_timeline);
+    AppSettings.IsBaneDamageEnabled = true;
+    Assert.AreEqual(MeterArrival.None, read.Complete(_facts));
+    Assert.AreEqual(MeterArrival.None, _arrivals.Observed);
+    Assert.AreEqual(new MeterArrival(1, 100), _arrivals.Latest(_facts, _timeline));
+  }
+
   private void Add(double receipt, byte type)
   {
     _facts.AddFact(new DamageFact(_facts.FactCount, FixtureTime.BaseL, _facts.InternName("Illuminai"),

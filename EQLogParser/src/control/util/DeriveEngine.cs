@@ -857,13 +857,15 @@ namespace EQLogParser
         });
         if (candidates is null) continue;
         calculation.Activity.Update(candidates, cancellation);
+        var receipts = _meterArrivals.BeginRead(snapshot.Timeline);
+        var arrival = receipts.Complete(snapshot.Facts, cancellation);
         var input = _capture.DeriveQuiescent(() =>
         {
           cancellation.ThrowIfCancellationRequested();
           if (_disposed || !ReferenceEquals(snapshot, Volatile.Read(ref _meterSnapshot))) return null;
-          var arrival = _meterArrivals.Latest(_facts, snapshot.Timeline);
-          var scope = lifecycle.Select(SessionId, snapshot.AllFights, now, mode, arrival, _facts.FactCount,
-            snapshot.PendingActivity, calculation.Activity.For);
+          // An expiry may cut only the receipt prefix we checked; ingest may have appended fresh damage during the scan.
+          if (!lifecycle.TrySelect(SessionId, snapshot.AllFights, now, mode, arrival, receipts.Through, out var scope,
+            snapshot.PendingActivity, calculation.Activity.For)) return null;
           // Publish before counting: a blocked build cannot hold its prior presentation past this deadline.
           publishExpiry?.Invoke(scope.ExpiresAt);
           return snapshot.DamageIndex.CaptureMeterInput(scope.Rows, snapshot.Facts, scope.FromTime,

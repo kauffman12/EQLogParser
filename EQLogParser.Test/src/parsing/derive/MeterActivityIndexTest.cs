@@ -253,11 +253,15 @@ public sealed class MeterActivityIndexTest
       ClassificationRules.Apply(Facts, Timeline);
       var rows = _projection.Project(Facts, Timeline);
       var now = T0 + second;
-      var candidates = lifecycle.SelectCandidates(1, rows, mode);
-      _activity.Update(_projection.Index.CaptureMeterInput(candidates.Rows, Facts, candidates.FromTime,
-        double.PositiveInfinity, candidates.FirstOrdinal));
-      return lifecycle.Select(1, rows, now, mode, _arrivals.Latest(Facts, Timeline), Facts.FactCount,
-        activity: _activity.For);
+      DamageOverlayScope scope;
+      do
+      {
+        var candidates = lifecycle.SelectCandidates(1, rows, mode);
+        _activity.Update(_projection.Index.CaptureMeterInput(candidates.Rows, Facts, candidates.FromTime,
+          double.PositiveInfinity, candidates.FirstOrdinal));
+      } while (!lifecycle.TrySelect(1, rows, now, mode, _arrivals.Latest(Facts, Timeline), Facts.FactCount,
+        out scope, activity: _activity.For));
+      return scope;
     }
   }
 }
