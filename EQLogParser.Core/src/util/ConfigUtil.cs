@@ -269,6 +269,7 @@ namespace EQLogParser
         ApplicationSettings.TryRemove("OverlayRankColor9", out _); // not used anymore);
         ApplicationSettings.TryRemove("OverlayRankColor10", out _); // not used anymore);
         ApplicationSettings.TryRemove("OverlayShowCritRate", out _); // not used anymore);
+        ApplicationSettings.TryRemove("OverlayShowDamagePercent", out _); // meter columns now save as OverlayShow<What>Column (MeterColumns); the old choice is abandoned on purpose
         ApplicationSettings.TryRemove("EnableHardwareAcceleration", out _); // not used anymore);
         ApplicationSettings.TryRemove("TriggersVoiceRate", out _); // not used anymore);
         ApplicationSettings.TryRemove("TriggersSelectedVoice", out _); // not used anymore);

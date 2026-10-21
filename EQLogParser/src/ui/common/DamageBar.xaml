@@ -35,13 +35,16 @@
       </TextBlock>
     </StackPanel>
     <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,4,0">
+      <!-- One column per numeric slot, widths and right insets handed over by DamageBar.ApplyColumns from the meter's own
+           MeterColumnLayout, which the header shares. A switched-off column gets width zero: nothing is reserved for it. The widths
+           below are the 12pt default for the designer only — every one is overwritten before a row paints. -->
       <Grid>
         <Grid.ColumnDefinitions>
-          <ColumnDefinition Width="{DynamicResource DamageOverlayDamageColDef2}" />
-          <ColumnDefinition Width="{DynamicResource DamageOverlayDamageColDef1}" />
-          <ColumnDefinition Width="{DynamicResource DamageOverlayDamageColDef1}" />
-          <ColumnDefinition Width="{DynamicResource DamageOverlayDamageColDefRdps}" />
-          <ColumnDefinition Width="{DynamicResource DamageOverlayDamageColDef2}" />
+          <ColumnDefinition x:Name="colPercent" Width="0" />
+          <ColumnDefinition x:Name="colDamage" Width="60" />
+          <ColumnDefinition x:Name="colDps" Width="60" />
+          <ColumnDefinition x:Name="colRdps" Width="0" />
+          <ColumnDefinition x:Name="colSec" Width="45" />
         </Grid.ColumnDefinitions>
         <TextBlock x:Name="percent" Grid.Column="0" Text="2.2%" VerticalAlignment="Center" TextAlignment="Right" 
           FontSize="{DynamicResource DamageOverlayFontSize}" FontFamily="Tahoma" Foreground="White" Margin="0,0,0,2">

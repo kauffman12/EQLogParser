@@ -166,7 +166,12 @@ namespace EQLogParser
         ConfigUtil.SetSetting("TriggersWatchForQuickShare", true);
       }
 
-      // upgrade
+      /*
+       * One-way upgrade from the era when crit display was a yes/no flag: a settings file still carrying OverlayShowCritRate gets the newest
+       * mode (both DoT and nuke), OVERWRITING whatever OverlayEnableCritRate already holds — an old flag wins over a newer value, which is what
+       * it meant to do back then. This runs at startup, before anything saves, so it is not deafened by ConfigUtil.Save() dropping that key as
+       * retired; the effect is at most one more migration for anyone who has not started the app since.
+       */
       if (ConfigUtil.IfSet("OverlayShowCritRate"))
       {
         ConfigUtil.SetSetting("OverlayEnableCritRate", "3");

@@ -653,7 +653,7 @@ namespace EQLogParser
 
       // R24's positive pet proof outranks the NPC frame. Run after the ladder so the guard sees every
       // Player/Merc claim before deciding whether this name can be a summon.
-      // docs/DesignNotes.md → "What NPC means here, and why a pet-proof line outranks `Targeted (NPC)` (2026-11)".
+      // docs/DesignNotes.md → "What NPC means here, and why a pet-proof line outranks `Targeted (NPC)`".
       foreach (var name in petSlotHits)
       {
         /*

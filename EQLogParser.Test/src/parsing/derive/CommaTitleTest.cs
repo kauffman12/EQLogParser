@@ -10,7 +10,7 @@ namespace EQLogParser;
  * after it, and the two markers do not overlap — `Kratakel, Lord Misery` takes neither an article nor (until Sep
  * 2026) a registry entry, while carrying 71M of attack damage across our captures.
  *
- * Measured over the six captures 2022-2026 (docs/DesignNotes.md → "The NPC registry in data/npcs.txt"):
+ * Measured over the six captures 2022-2026 (docs/DesignNotes.md → "The NPC registry in `data/npcs.txt`"):
  * exactly 11 name fields carry a comma, seven of them also arrive with `Targeted (NPC)` (Certain), one is an owned
  * summon, and none — not once in four years — ever appears under `Targeted (Player)`. The three left over rest on
  * npcs.txt alone, which is the arrangement this rule backs up for content newer than any list we ship.

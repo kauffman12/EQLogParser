@@ -10,7 +10,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
-using System.Windows.Media;
 using System.Windows.Threading;
 
 namespace EQLogParser
@@ -48,7 +47,6 @@ namespace EQLogParser
     private bool _currentHideOthers;
     private bool _savedHideOthers;
     private bool _savedMiniBars;
-    private bool _savedShowDamagePercent;
     private bool _savedStreamerMode;
     private bool _currentShowDps;
     private string _currentSelectedClass;
@@ -56,6 +54,7 @@ namespace EQLogParser
     private string _savedProgressColor;
     private string _savedHighlightColor;
     private DamageOverlayToolbarWindow _toolbarWindow;
+    private MeterColumnLayout _columnLayout;
 
     internal DamageOverlayWindow(bool preview = false, bool reset = false)
     {
@@ -78,56 +77,41 @@ namespace EQLogParser
       // Keep the saved row budget intact when adding the header-to-row gap.
       SetWindowSizes(height + controlPanel.Margin.Bottom, width, top, left);
 
-      // fonts
-      var fontSizeString = ConfigUtil.GetSetting("OverlayFontSize");
-      if (fontSizeString == null || !int.TryParse(fontSizeString, out _savedFontSize) || (_savedFontSize != 10 &&
-        _savedFontSize != 12 && _savedFontSize != 14 && _savedFontSize != 16))
-      {
-        _savedFontSize = 12;
-      }
+      /*
+       * Every staged value comes from DamageMeterConfigState.Load() rather than from its own parse of each key: that is the same guard set
+       * the setup window opens on, so an unreadable or out-of-range settings line cannot give this meter one answer and configure another.
+       * Crit rate is the reason the law exists — this file used to read OverlayEnableCritRate with no 0..3 clamp while Load() clamped it, so
+       * a foreign settings.txt put the panel and the live meter out of step. Geometry stays read key by key on purpose: dragging and resizing
+       * the stage is the geometry editor, not a staged setting.
+       */
+      var config = DamageMeterConfigState.Load();
 
+      /* Which numeric columns are drawn, read before the first font asks for widths: the header and both bar pools lay out from
+         the same answer. Elapsed seconds is not one of these switches (MeterColumns carries the list and its defaults). */
+      _currentColumns = config.Columns;
+
+      _savedFontSize = config.FontSize;
       UpdateFontSize(_savedFontSize);
 
-      // color
-      _savedProgressColor = ConfigUtil.GetSetting("OverlayRankColor");
-      if (_savedProgressColor == null || ColorConverter.ConvertFromString(_savedProgressColor) == null)
-      {
-        _savedProgressColor = "#FF1D397E";
-      }
-
+      _savedProgressColor = config.ProgressColor;
       UpdateProgressBrush(_savedProgressColor);
 
-      // highlight color
-      _savedHighlightColor = ConfigUtil.GetSetting("OverlayHighlightColor");
-      if (_savedHighlightColor == null || ColorConverter.ConvertFromString(_savedHighlightColor) == null)
-      {
-        _savedHighlightColor = _savedProgressColor;
-      }
-
+      // Highlight falls back to the progress colour, which Load() already settled.
+      _savedHighlightColor = config.HighlightColor;
       UpdateHighlightBrush(_savedHighlightColor);
 
-      // Max Rows
-      var maxRowsString = ConfigUtil.GetSetting("OverlayMaxRows");
-      if (maxRowsString == null || !int.TryParse(maxRowsString, out _savedMaxRows) || _savedMaxRows < 1 || _savedMaxRows > 10)
-      {
-        _savedMaxRows = 5;
-      }
+      _savedMaxRows = config.MaxRows;
 
-      // damage mode
-      _savedDamageMode = ConfigUtil.GetSettingAsInteger("OverlayDamageMode");
-      if (_savedDamageMode < 0 || _savedDamageMode > 100)
-      {
-        _savedDamageMode = 0;
-      }
-
+      _savedDamageMode = config.DamageResetMode;
       UpdateDamageMode(_savedDamageMode);
 
       var list = EQDataStore.Instance.GetClassList();
       list.Insert(0, Resource.ANY_CLASS);
 
-      // selected class
-      var selectedClass = ConfigUtil.GetSetting("OverlaySelectedClass");
-      if (selectedClass == null || !list.Contains(selectedClass))
+      /* The one staged value this window re-checks: "is that class still in the game" needs the data store, which the staged
+         object deliberately does not touch. A name no longer offered reads as ANY_CLASS here and on the next Save. */
+      var selectedClass = config.SelectedClass;
+      if (!list.Contains(selectedClass))
       {
         selectedClass = Resource.ANY_CLASS;
       }
@@ -135,26 +119,18 @@ namespace EQLogParser
       UpdateSelectedClass(selectedClass);
       _savedSelectedClass = _currentSelectedClass;
 
-      // Hide other player names on overlay
-      _savedHideOthers = ConfigUtil.IfSet("OverlayHideOtherPlayers");
+      _savedHideOthers = config.HideOtherPlayers;
       UpdateHideOthers(_savedHideOthers);
 
-      // Hide/Show crit rate
-      _savedShowCritRate = ConfigUtil.GetSettingAsInteger("OverlayEnableCritRate");
+      _savedShowCritRate = config.CritRateDisplay;
       UpdateShowCritRate(_savedShowCritRate);
 
-      // Mini bars
-      _savedMiniBars = ConfigUtil.IfSet("OverlayMiniBars");
+      _savedMiniBars = config.MiniBars;
       UpdateMiniBars(_savedMiniBars);
-
-      // Damage Percent
-      _savedShowDamagePercent = ConfigUtil.IfSet("OverlayShowDamagePercent");
-      UpdateShowDamagePercent(_savedShowDamagePercent);
 
       UpdateMaxRows(_savedMaxRows);
 
-      // Streamer Mode
-      _savedStreamerMode = ConfigUtil.IfSet("OverlayStreamerMode");
+      _savedStreamerMode = config.StreamerMode;
       _currentMaxRows = _savedMaxRows;
       _currentStreamerMode = _savedStreamerMode;
 
@@ -251,7 +227,7 @@ namespace EQLogParser
     private DamageMeterSettingsWindow _meterSettings;
     private int _currentFontSize = 12;
     private bool _currentMiniBars;
-    private bool _currentShowDamagePercent;
+    private MeterColumn _currentColumns = MeterColumns.Default;
     private bool _currentStreamerMode;
     private int _currentMaxRows = 5;
     private string _currentProgressColor = "#FF1D397E";
@@ -275,7 +251,7 @@ namespace EQLogParser
       UpdateHideOthers(s.HideOtherPlayers);
       UpdateShowCritRate(s.CritRateDisplay);
       _currentStreamerMode = s.StreamerMode;
-      UpdateShowDamagePercent(s.ShowDamagePercent);
+      UpdateColumns(s.Columns);
       UpdateMiniBars(s.MiniBars);
       UpdateProgressBrush(s.ProgressColor);
       UpdateHighlightBrush(s.HighlightColor);
@@ -342,8 +318,7 @@ namespace EQLogParser
       ConfigUtil.SetSetting("OverlayMiniBars", s.MiniBars);
       _savedMiniBars = s.MiniBars;
 
-      ConfigUtil.SetSetting("OverlayShowDamagePercent", s.ShowDamagePercent);
-      _savedShowDamagePercent = s.ShowDamagePercent;
+      MeterColumns.Save(s.Columns);
 
       ConfigUtil.SetSetting("OverlayStreamerMode", s.StreamerMode);
       _savedStreamerMode = s.StreamerMode;
@@ -610,7 +585,8 @@ namespace EQLogParser
             className = stat.ClassName;
           }
 
-          var overrideColor = isMe ? "DamageOverlayHighlightBrush" : null;
+          // A resource KEY, not a colour: "my own row" is drawn with the meter's highlight brush, whichever value it currently publishes.
+          var overrideColorKey = isMe ? "DamageOverlayHighlightBrush" : null;
 
           if (_currentShowCritRate > 0)
           {
@@ -635,7 +611,7 @@ namespace EQLogParser
           damageBar?.Update(name, className, $"{percent}%", StatsUtil.FormatTotals(stat.Total),
             StatsUtil.FormatTotals(stat.Dps, 1), rdpsValue: StatsUtil.FormatTotals(rates.RateFor(stat.Name), 1),
             timeValue: stat.TotalSeconds.ToString(CultureInfo.InvariantCulture), barPercent: barPercent,
-            colorOverride: overrideColor);
+            colorOverrideKey: overrideColorKey);
 
           if (damageBar?.Visibility == Visibility.Collapsed)
           {
@@ -679,7 +655,7 @@ namespace EQLogParser
           if (i == 0)
           {
             bar.Update("Your Player Name", classList[i], "5.2%", "120.5M", "100.1K", rdpsValue: "96.4K",
-              timeValue: "123", barPercent: 120 - (i * 10), colorOverride: "DamageOverlayHighlightBrush");
+              timeValue: "123", barPercent: 120 - (i * 10), colorOverrideKey: "DamageOverlayHighlightBrush");
           }
           else
           {
@@ -752,13 +728,35 @@ namespace EQLogParser
       _currentSelectedClass = selectedClass;
     }
 
-    private void UpdateShowDamagePercent(bool isChecked)
+    /*
+     * Which numeric columns the meter draws: rows, totals and their header in one gesture. Columns are presentation only —
+     * RDPS keeps being calculated while its column is off, so showing it again asks for no warm-up and no replay — and a column
+     * gesture never re-fits the window, rebuilds the bar pool or resets the calculation.
+     */
+    private void UpdateColumns(MeterColumn columns)
     {
+      _currentColumns = columns;
+      ApplyColumnLayout();
+    }
+
+    // One layout per font/column change feeds the header and both bar pools. MinWidth is the only geometry it moves: hiding a
+    // column never narrows a wide window, and one saved under the new floor is coerced up by the floor itself.
+    private void ApplyColumnLayout()
+    {
+      var layout = _columnLayout = new MeterColumnLayout(_currentFontSize, _currentColumns);
+      UpdateMinimumWidth();
+
+      SetHeaderCell(headPercent, titlePercent, layout, MeterSlot.Percent);
+      SetHeaderCell(headDamage, titleDamage, layout, MeterSlot.Damage);
+      SetHeaderCell(headDPS, titleDPS, layout, MeterSlot.Dps);
+      SetHeaderCell(headRDPS, titleRDPS, layout, MeterSlot.Rdps);
+      SetHeaderCell(headTime, titleTime, layout, MeterSlot.Seconds);
+
       foreach (var child in damageContent.Children)
       {
         if (child is DamageBar damageBar)
         {
-          damageBar.SetShowDamagePercent(isChecked);
+          damageBar.ApplyColumns(layout);
         }
       }
 
@@ -766,11 +764,41 @@ namespace EQLogParser
       {
         if (child is DamageBar damageBar)
         {
-          damageBar.SetShowDamagePercent(isChecked);
+          damageBar.ApplyColumns(layout);
         }
       }
+    }
 
-      _currentShowDamagePercent = isChecked;
+    private void UpdateMinimumWidth()
+    {
+      if (_columnLayout is null) return;
+
+      var toolbarWidth = _toolbarWindow?.ContentWidth ?? 0;
+      if (_toolbarWindow is not null
+        && PresentationSource.FromVisual(_toolbarWindow)?.CompositionTarget is { } toolbarTarget
+        && PresentationSource.FromVisual(this)?.CompositionTarget is { } meterTarget)
+      {
+        var pixels = toolbarTarget.TransformToDevice.Transform(new Vector(toolbarWidth, 0));
+        toolbarWidth = meterTarget.TransformFromDevice.Transform(pixels).X;
+      }
+
+      var chrome = BorderThickness.Left + BorderThickness.Right + headerRow.Margin.Left + headerRow.Margin.Right;
+      MinWidth = _columnLayout.MinimumWindowWidthFor(toolbarWidth, chrome);
+    }
+
+    /*
+     * A header word shares its column's width and its digits' right inset — zero when the column is off, which is why hiding takes
+     * the word with it. That sharing is what keeps the header true at every font and over any set of columns without a table of
+     * hand-tuned margins behind it. The WORD comes from MeterColumns rather than the markup, so each one exists exactly once and the
+     * picker row, the ini key and the cell above the digits cannot be renamed separately.
+     */
+    private static void SetHeaderCell(ColumnDefinition cell, TextBlock title, MeterColumnLayout layout, MeterSlot slot)
+    {
+      cell.Width = new GridLength(layout.WidthOf(slot));
+      title.Text = MeterColumns.HeaderOf(slot);
+      title.Visibility = layout.Shows(slot) ? Visibility.Visible : Visibility.Collapsed;
+      title.FontSize = layout.HeaderFontPt;
+      title.Margin = new Thickness(0, 0, layout.InsetOf(slot), 0);
     }
 
     private void UpdateMiniBars(bool isChecked)
@@ -873,7 +901,7 @@ namespace EQLogParser
 
       _currentMaxRows = maxRows;
 
-      UpdateShowDamagePercent(_currentShowDamagePercent);
+      ApplyColumnLayout();
       UpdateMiniBars(_currentMiniBars);
 
       if (_preview)
@@ -915,90 +943,24 @@ namespace EQLogParser
     }
 
     /*
-     * The numeric block is fixed-width columns and names/icons get whatever the window has left, so a floor under the block's
-     * own width draws names underneath the numbers. Each font asks for a minimum built from its own presets plus this name/icon
-     * allowance, and hiding columns is unimplemented, so every numeric column is in the sum. Measured figures: docs/DesignNotes.md
-     * → "Six-second RDPS: per-life buckets beside the meter's own amounts".
+     * The column widths and insets come from this window's own layout, so a staged preview cannot restyle another meter's columns. Font size, bar height and the
+     * class icon stay application resource keys (`DamageOverlayFontSize`, `BarHeight`, `ImageSize`) that `DamageBar` resolves through DynamicResource — that is the app's
+     * mechanism for style state, and it is safe here only because one overlay is alive at a time and every constructor republishes these values; the day a second meter
+     * can open, they move to this window's own Resources and DamageBar never notices. See docs/DesignNotes.md →
+     * "Style state lives in the application resource dictionary".
      */
-    private const double NameAreaMinWidthDip = 96; // icon + ~six row-font characters; window border and header margins not subtracted
-
-    private static double MinimumWindowWidth(double narrowColumn, double wideColumn, double rollingColumn) =>
-      2 * narrowColumn + 2 * wideColumn + rollingColumn + NameAreaMinWidthDip;
-
     private void UpdateColumnSizes(int fontSize)
     {
       controlPanel.Height = fontSize + 6;
-      switch (fontSize)
+      Application.Current.Resources["DamageOverlayImageSize"] = fontSize switch
       {
-        case 10:
-          Application.Current.Resources["DamageOverlayImageSize"] = 13.0;
-          Application.Current.Resources["DamageOverlayDamageColDef1"] = new GridLength(50.0);
-          Application.Current.Resources["DamageOverlayDamageColDef2"] = new GridLength(40.0);
-          Application.Current.Resources["DamageOverlayDamageColDefRdps"] = new GridLength(46.0);
-          MinWidth = MinimumWindowWidth(narrowColumn: 40.0, wideColumn: 50.0, rollingColumn: 46.0);
-          titlePercent.Margin = new Thickness(0, 0, 20, 0);
-          titleDamage.Margin = new Thickness(0, 0, 18, 0);
-          titleDPS.Margin = new Thickness(0, 0, 19, 0);
-          titleRDPS.Margin = new Thickness(0, 0, 12, 0);
-          titleTime.Margin = new Thickness(0, 0, 6, 0);
-          titlePercent.FontSize = 11;
-          titleDamage.FontSize = 11;
-          titleDPS.FontSize = 11;
-          titleRDPS.FontSize = 11;
-          titleTime.FontSize = 11;
-          break;
-        case 12:
-          Application.Current.Resources["DamageOverlayImageSize"] = 14.0;
-          Application.Current.Resources["DamageOverlayDamageColDef1"] = new GridLength(60.0);
-          Application.Current.Resources["DamageOverlayDamageColDef2"] = new GridLength(45.0);
-          Application.Current.Resources["DamageOverlayDamageColDefRdps"] = new GridLength(52.0);
-          MinWidth = MinimumWindowWidth(narrowColumn: 45.0, wideColumn: 60.0, rollingColumn: 52.0);
-          titlePercent.Margin = new Thickness(0, 0, 22, 0);
-          titleDamage.Margin = new Thickness(0, 0, 25, 0);
-          titleDPS.Margin = new Thickness(0, 0, 21, 0);
-          titleRDPS.Margin = new Thickness(0, 0, 12, 0);
-          titleTime.Margin = new Thickness(0, 0, 6, 0);
-          titlePercent.FontSize = 13;
-          titleDamage.FontSize = 13;
-          titleDPS.FontSize = 13;
-          titleRDPS.FontSize = 13;
-          titleTime.FontSize = 13;
-          break;
-        case 14:
-          Application.Current.Resources["DamageOverlayImageSize"] = 15.0;
-          Application.Current.Resources["DamageOverlayDamageColDef1"] = new GridLength(70.0);
-          Application.Current.Resources["DamageOverlayDamageColDef2"] = new GridLength(50.0);
-          Application.Current.Resources["DamageOverlayDamageColDefRdps"] = new GridLength(60.0);
-          MinWidth = MinimumWindowWidth(narrowColumn: 50.0, wideColumn: 70.0, rollingColumn: 60.0);
-          titlePercent.Margin = new Thickness(0, 0, 28, 0);
-          titleDamage.Margin = new Thickness(0, 0, 33, 0);
-          titleDPS.Margin = new Thickness(0, 0, 21, 0);
-          titleRDPS.Margin = new Thickness(0, 0, 15, 0);
-          titleTime.Margin = new Thickness(0, 0, 6, 0);
-          titlePercent.FontSize = 15;
-          titleDamage.FontSize = 15;
-          titleDPS.FontSize = 15;
-          titleRDPS.FontSize = 15;
-          titleTime.FontSize = 15;
-          break;
-        case 16:
-          Application.Current.Resources["DamageOverlayImageSize"] = 16.0;
-          Application.Current.Resources["DamageOverlayDamageColDef1"] = new GridLength(75.0);
-          Application.Current.Resources["DamageOverlayDamageColDef2"] = new GridLength(55.0);
-          Application.Current.Resources["DamageOverlayDamageColDefRdps"] = new GridLength(66.0);
-          MinWidth = MinimumWindowWidth(narrowColumn: 55.0, wideColumn: 75.0, rollingColumn: 66.0);
-          titlePercent.Margin = new Thickness(0, 0, 28, 0);
-          titleDamage.Margin = new Thickness(0, 0, 32, 0);
-          titleDPS.Margin = new Thickness(0, 0, 25, 0);
-          titleRDPS.Margin = new Thickness(0, 0, 14, 0);
-          titleTime.Margin = new Thickness(0, 0, 6, 0);
-          titlePercent.FontSize = 17;
-          titleDamage.FontSize = 17;
-          titleDPS.FontSize = 17;
-          titleRDPS.FontSize = 17;
-          titleTime.FontSize = 17;
-          break;
-      }
+        10 => 13.0,
+        12 => 14.0,
+        14 => 15.0,
+        _ => 16.0,
+      };
+
+      ApplyColumnLayout();
     }
 
     private void ConfigureClick(object sender, RoutedEventArgs e)
@@ -1081,7 +1043,7 @@ namespace EQLogParser
 
       _toolbarWindow = new DamageOverlayToolbarWindow { Owner = this };
       _toolbarWindow.SizeChanged += WindowSizeChanged;
-      _toolbarWindow.ContentHeightChanged += ToolbarContentHeightChanged;
+      _toolbarWindow.ContentSizeChanged += ToolbarContentSizeChanged;
 
       _toolbarWindow.ConfigureRequested += (_, _) => ConfigureClick(null, null);
       _toolbarWindow.CopyRequested += (_, _) => CopyClick(null, null);
@@ -1094,9 +1056,10 @@ namespace EQLogParser
       _toolbarWindow.UpdateFontSize(_savedFontSize, controlPanel.Height);
     }
 
-    private void ToolbarContentHeightChanged(object sender, EventArgs e)
+    private void ToolbarContentSizeChanged(object sender, EventArgs e)
     {
       if (_closed || _preview || _toolbarWindow is null) return;
+      UpdateMinimumWidth();
       // Reserve the controls and their inset, not unused space imposed on the companion HWND by Windows.
       var contentHeight = _toolbarWindow.ContentHeight;
       if (!double.IsFinite(contentHeight) || contentHeight <= 0) return;
@@ -1162,6 +1125,8 @@ namespace EQLogParser
 
       _toolbarWindow.Left = screenDips.X;
       _toolbarWindow.Top = screenDips.Y;
+      // Moving between DPI scales can change the toolbar's width in meter DIPs without changing its content width.
+      UpdateMinimumWidth();
     }
 
     private void ScheduleToolbarPosition()

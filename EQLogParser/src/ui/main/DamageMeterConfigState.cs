@@ -1,8 +1,10 @@
 // The staged configuration of the damage meter, carried between the settings window and the preview stage.
-// Load() reads the ini with exactly the guards the overlay constructor uses, so a fresh copy is the truth the user
-// started from; the settings window mutates this copy, every change previews it onto the stage, and only Save writes
-// it back (CommitMeterState). Geometry deliberately stays OUT of this object: dragging and resizing the stage is the
-// geometry editor, and Save captures whatever rectangle the stage ended on.
+// Load() is the ONE reader of these settings keys and the one place their ranges are judged: the overlay constructor opens from it as well
+// as the setup window, so a meter and its configure panel cannot disagree about what settings.txt says (each kept its own parse until one of
+// them forgot the crit-rate clamp). A fresh copy is the truth the user started from; the settings window mutates its copy, every change
+// previews it onto the stage, and only Save writes it back (CommitMeterState). Geometry deliberately stays OUT of this object: dragging and
+// resizing the stage is the geometry editor, and Save captures whatever rectangle the stage ended on. Column keys are not read here twice —
+// MeterColumns.Load() owns that fold, and FromSwitches is the same fold for a window full of checkboxes.
 
 namespace EQLogParser
 {
@@ -11,7 +13,7 @@ namespace EQLogParser
     internal int MaxRows = 5;                    // 1..10 ranked rows
     internal int FontSize = 12;                  // one of 10/12/14/16
     internal bool MiniBars;                      // slim ranking bars
-    internal bool ShowDamagePercent;             // each row's share of the total
+    internal MeterColumn Columns = MeterColumns.Default;  // which numeric columns are drawn (% Damage DPS RDPS)
     internal bool HideOtherPlayers;              // mask everyone but me
     internal bool StreamerMode;                  // own window style for OBS
     internal int CritRateDisplay;                // 0 off, 1 DoT, 2 nuke, 3 both
@@ -20,8 +22,8 @@ namespace EQLogParser
     internal string ProgressColor = "#FF1D397E";
     internal string HighlightColor = "Gold";
 
-    // Same keys, same fallbacks the overlay constructor honours, so opening setup always starts from what is on
-    // screen right now.
+    // Every guard lives here and nowhere else: out-of-range or unreadable values fall back to what a meter without that key would
+    // draw, which is what both the setup window and a freshly opened overlay show.
     internal static DamageMeterConfigState Load()
     {
       var s = new DamageMeterConfigState();
@@ -48,7 +50,7 @@ namespace EQLogParser
       s.CritRateDisplay = crit is >= 0 and <= 3 ? crit : 0;
 
       s.MiniBars = ConfigUtil.IfSet("OverlayMiniBars");
-      s.ShowDamagePercent = ConfigUtil.IfSet("OverlayShowDamagePercent");
+      s.Columns = MeterColumns.Load();
       s.HideOtherPlayers = ConfigUtil.IfSet("OverlayHideOtherPlayers");
       s.StreamerMode = ConfigUtil.IfSet("OverlayStreamerMode");
 

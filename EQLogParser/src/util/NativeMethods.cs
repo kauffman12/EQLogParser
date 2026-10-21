@@ -10,6 +10,7 @@ namespace EQLogParser
     private const int HWND_TOPMOST = -1;
     private const uint SWP_NOSIZE = 0x0001;
     private const uint SWP_NOMOVE = 0x0002;
+    private const uint SWP_NOZORDER = 0x0004;
     private const uint SWP_NOACTIVATE = 0x0010;
     private const int WM_WINDOWPOSCHANGING = 0x0046;
     private const int GWL_STYLE = -16;
@@ -157,6 +158,39 @@ namespace EQLogParser
       }
     }
 
+    // Companion-window placement stays in native screen pixels across monitors with different DPI scales.
+    internal static bool TryGetMonitorWorkArea(IntPtr hwnd, out RECT workArea)
+    {
+      var monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+      var info = new MONITORINFO { cbSize = Marshal.SizeOf<MONITORINFO>() };
+      if (monitor != IntPtr.Zero && GetMonitorInfo(monitor, ref info))
+      {
+        workArea = info.rcWork;
+        return true;
+      }
+
+      workArea = default;
+      return false;
+    }
+
+    /*
+     * A companion-window move is asked for from move/size notifications, where a transient failure (the owner closing under the
+     * event, a monitor mid-change) must cost one missed follow and a log line, not an exception thrown out of a layout handler. So
+     * this answers instead of throwing, and hands back the error code for whoever cares.
+     */
+    internal static bool TryMoveWindow(IntPtr hwnd, int left, int top, out int errorCode)
+    {
+      SetLastError(0);
+      if (SetWindowPos(hwnd, IntPtr.Zero, left, top, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE))
+      {
+        errorCode = 0;
+        return true;
+      }
+
+      errorCode = Marshal.GetLastWin32Error();
+      return false;
+    }
+
     internal static IntPtr GetWindowLongPtr(IntPtr hWnd, int nIndex)
     {
       return IntPtr.Size == 8 ? GetWindowLongPtr64(hWnd, nIndex) : GetWindowLongPtr32(hWnd, nIndex);
@@ -302,7 +336,7 @@ namespace EQLogParser
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    private struct RECT
+    internal struct RECT
     {
       public int Left, Top, Right, Bottom;
     }
@@ -319,7 +353,7 @@ namespace EQLogParser
     [DllImport("kernel32.dll", SetLastError = true)] private static extern void SetLastError(int dwErrorCode);
     [DllImport("kernel32.dll")] private static extern int IntPtrToInt32(IntPtr ptr);
     [DllImport("shell32.dll", CharSet = CharSet.Unicode, ExactSpelling = true)] private static extern int SHGetKnownFolderPath(ref Guid rfid, uint dwFlags, IntPtr hToken, out IntPtr ppszPath);
-    [DllImport("user32.dll")] private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+    [DllImport("user32.dll")] internal static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern IntPtr FindWindowEx(IntPtr parent, IntPtr after, string className, string windowTitle);
     [DllImport("user32.dll", SetLastError = true)] private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int x, int y, int cx, int cy, uint uFlags);
     [DllImport("user32.dll")] private static extern IntPtr MonitorFromWindow(IntPtr hwnd, int flags);

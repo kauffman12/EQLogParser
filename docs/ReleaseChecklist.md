@@ -273,8 +273,8 @@ These checks still require Windows for popup/hide behavior. See DesignNotes → 
   verify that cached activity is recomputed. Ordinary healing, casts and taunts must not keep it visible.
   In On Kill, kill A with included damage, then hit/kill B using only excluded damage: A keeps its original final-display
   deadline. Included damage to B must still replace that final display immediately.
-- [ ] **Header is one compact, level row**: check fonts 10, 12, 14 and 16, normal/thin bars, damage/tanking, percent on/off
-  and light/dark themes. Left controls and DPS/Tank must sit level with Damage/DPS/Sec, with roughly four pixels of visible
+- [ ] **Header is one compact, level row**: check fonts 10, 12, 14 and 16, normal/thin bars, damage/tanking, `%` shown and hidden (Setup → STYLE → **columns**,
+  since the old *show % damage* checkbox folded into that picker) and light/dark themes. Left controls and DPS/Tank must sit level with Damage/DPS/Sec, with roughly four pixels of visible
   space above the header and before the first player—not a native-window-sized empty band. Check the first opening too:
   header spacing follows the controls' content height even if Windows keeps the companion window taller; its native
   minimum must not become space above the player rows. Content must still fit at every font/DPI.
@@ -326,18 +326,20 @@ compact accounting, paired publication". These checks are not satisfied by a Lin
 
 The window arithmetic (six labels, divide by six from the first hit, the window riding **log** time and reading no build instant anywhere, pet folding, Tank
 attribution) is pinned headless; see DesignNotes → "Six-second RDPS: per-life buckets beside the meter's own amounts". Everything below is rendering or live behavior
-no headless run can see. The column is drawn unconditionally today — there is no visibility switch yet, and a zero prints as `0` (a dash for "no damage in the window"
-is an open preference, not current behavior).
+no headless run can see. The column now has its own switch (`OverlayShowRdpsColumn`, **off** until somebody turns it on — see "Damage meter column switches, checked
+on Windows" below), and a zero prints as `0` (a dash for "no damage in the window" is an open preference, not current behavior).
 
 - [ ] **The header lands over its columns at every font and DPI**: fonts 10, 12, 14 and 16, normal and mini bars, light/dark, damage and
   tanking, mixed-DPI monitors. `RDPS` must sit over its own column, `%`/`Damage`/`DPS` must not have moved from before the column existed,
-  and `Sec` stays where it was. These offsets are hand-tuned per-font margins in `DamageOverlayWindow.UpdateColumnSizes`, so this check is
-  what decides them; a drifting label is corrected there (and the RDPS column's width in the same switch), not by changing any value path.
+  and `Sec` stays where it was. The header no longer has hand-tuned per-font margins: it is a grid sharing every row's column widths and right
+  insets (`MeterColumnLayout` → `DamageOverlayWindow.ApplyColumnLayout`), which is why this check still decides anything that looks off. Correct a
+  drifting word in the layout's inset/width presets, never by moving a value path or nudging one label.
 - [ ] **Digits stay put as they grow**: watch one row cross 999 → `1.0K` → `1.0M` in RDPS. Nothing may reflow the table, clip into DPS or
   overlap `Sec`, and the name/icon area must not be covered — including the longest name you can produce (hidden-player rows, `[DoT +n]`
   crit-rate suffix) at a narrow saved width.
 - [ ] **A narrow window widens at every font; nothing shrinks**: the minimum is computed per font — numeric block plus a 96-DIP name/icon
-  allowance — so it is **322/358/396/422** DIP at 10/12/14/16 pt (a flat 300 left zero room for names at 14 and overflowed at 16). At each font
+  allowance — so with **every column visible** it is **322/358/396/422** DIP at 10/12/14/16 pt (a flat 300 left zero room for names at 14 and
+  overflowed at 16); the floor follows the column switches, so turn them all on before measuring these figures. At each font
   size, start from a saved `OverlayWidth` under that figure (the old floor was 250), reopen the overlay, and confirm the window returns at its
   minimum with names still readable left of the class icon. Then widen and narrow by hand: the meter never auto-shrinks, the widened value is
   what gets saved, and neither `OverlayHeight` nor the toolbar reserve changes because a column was added. Report crowding **with the font size**.
@@ -362,6 +364,68 @@ is an open preference, not current behavior).
   keeps both its totals and its last rolling rate while nothing newer arrives; what it may never do is lend that damage to the next pull's rate.
 - [ ] **Nothing else moved**: copied parse contains no RDPS anywhere, the summary boards' DPS/duration/share are unchanged during the same
   raid, and the meter's numbers still agree with an equivalent fight-list selection.
+
+### Damage meter column switches, checked on Windows
+
+`% / Damage / DPS / RDPS` each hide through their own key, driven by the **columns** picker in Damage Meter Setup → STYLE; names, ranking bars and
+elapsed seconds always draw. The table, the defaults and the zero-width law are pinned headless (`MeterColumnLayoutTest`) and described in DesignNotes →
+"Damage meter column switches: four hideable numbers, zero width when off". What follows is what only a screen can answer.
+
+- [ ] **It looks like it did before you touched anything**: on an install that predates this change (no `OverlayShow*` column keys), the meter shows
+  `Damage`, `DPS`, `Sec` and no percent — the pre-RDPS look. Somebody who had RDPS on this branch sees that column disappear and nothing else move; turning it
+  back on via the picker must show full numbers immediately, with no six-second warm-up and no half-windowed rate. A `settings.txt` written by an earlier build of this
+  branch may hold `OverlayShowRdps` / `OverlayShowDamage` / `OverlayShowDps` — names that never shipped and now read as **nothing**, which is why RDPS returns off rather
+  than broken; the next Save writes only the `…Column` keys and those three lines die with it (they are not migrated, and nothing should migrate them).
+- [ ] **The `%` reset is the only thing a returning user should notice**: the switch left the OPTIONS page (it was *show % damage*) and lives in the columns picker as
+  `OverlayShowPercentColumn`. The old choice deliberately does **not** carry over — `OverlayShowDamagePercent` is read by nothing and vanishes from `settings.txt` at the next
+  save — so an install that had it on opens with no percent digits. Confirm all three halves: ticking the box once brings the digits back immediately, that tick survives a restart
+  (the new key was written), and nothing crashes or misbehaves because a line they had for years disappeared. Losing it permanently is not expected to matter; if it does, the fix
+  is one extra read of the old name in `MeterColumns.Load()`, not a migration pass.
+- [ ] **A hidden column reserves nothing**: hide `Damage`, then `%`, then each of the four in turn. No gap may sit where the number was, the remaining numbers must
+  not move closer together or further apart, and names must not gain or lose room unevenly. **Check this in thin bars too** — mini mode has its own per-column text
+  margins, and a hidden column that keeps one leaves a hole nothing else can explain.
+- [ ] **The header goes with its column and lands over its digits**: `%` now prints a literal `%` where the header used to be blank — every header word is spelled by
+  `MeterColumns` and applied at layout time, so the markup carries none and a wrong or missing word is corrected in that table, never in this window's XAML. With any
+  subset of columns on, each remaining word sits over its own numbers at fonts 10/12/14/16, normal and thin bars, light and dark. A word that no longer has a column
+  must not leave a ghost.
+- [ ] **A number ending past its cell does not land on the next one**: the right insets are per column and several are negative, so a `%` or `Damage` figure ends outside
+  its own cell inside the neighbour's empty space. Hide that neighbour (`%` + `DPS` with `Damage` off at 10 pt is the tightest case; then `DPS` + `RDPS` with everything
+  else off) and check the widest digits you can produce still do not touch. Correct it in the inset preset, not by moving a value path.
+- [ ] **The setup panel stays clear of a widening stage**: dock Setup to the right of the meter at a narrow saved width, then turn columns **on** one at a time — each
+  raise of the minimum pushes the stage's right edge out, and the panel must follow rather than being covered or overlapping. Turn them back off: the panel does not chase
+  a narrowing stage. Repeat with the panel docked left (the stage grows away from it and it must not move) and after dragging the panel somewhere of your own choosing.
+  Repeat initial opening and width increases on secondary monitors **right and left** of the primary, including different DPI scales: Setup must stay on the chosen
+  monitor, never jump back to the primary, and keep its gap until its own work-area edge requires clamping. Drag the pair between those monitors and resize again.
+  Where a work area is too narrow for stage plus panel on **both** sides (a small secondary monitor with a wide meter), the panel pins to that work area's LEFT edge and
+  overlaps the stage — reachable beats tidy, and it must never come out off screen. If a native move is refused or the stage's rectangle cannot be read, configure still
+  works and the panel follows from the next stage move, with at most one WARN line in `eqlogparser.log` about it.
+- [ ] **A narrow window still widens, and nothing shrinks**: with only `Sec` left the floor is small (141 DIP at 12 pt), so start from a saved `OverlayWidth` of ~150
+  and turn columns **on** — the window grows to the new floor and names stay left of the numbers. Then widen by hand and hide a column: the window must keep the width it has.
+  Save persists the width the gesture ended on; Cancel leaves both the saved mask and the saved geometry untouched. The live header may widen a saved stage further
+  to accommodate its toolbar; Setup has no toolbar and retains the row-only floor.
+- [ ] **The live toolbar never covers the remaining header**: in Setup turn all four columns off, resize to the minimum, Save, and reopen live. `Sec` must sit to the
+  right of Setup/Copy/Reset/Close/DPS/Tank, not underneath them, and the toolbar must not extend past the meter. Repeat with each single column, then all columns,
+  fonts 10/12/14/16 and mixed-DPI monitor moves. A wider measured toolbar raises the horizontal floor only: no extra row-height reserve or lost footer space.
+- [ ] **A long name still clears the numbers at the lowered floor**: hiding columns lowers what you can drag the window to (141 DIP at 12 pt with
+  only `Sec` left), so at that narrowest width check the longest name you can produce (masked hidden-player rows, the `[DoT +n]` crit-rate suffix) —
+  names are not ellipsised, and nothing may sit *under* the remaining digits. If it collides, the fix is the name allowance, not a new switch.
+- [ ] **Tank reads the same words**: switch DPS → Tank with any subset of columns hidden. Headers stay `Damage / DPS / RDPS / Sec` (operator decision: tanking DPS is DPS
+  done to you, it did not earn new terms), and hiding a column hides it in both panels at once — the two pools share one layout.
+- [ ] **Nothing but pixels moved**: during one fight, toggle every column on and off. Totals, DPS, RDPS, `Sec`, ranking, bar lengths, percentages, the copied parse, the
+  selected life and the meter's quiet deadline must all be unmoved; the meter must not rebuild its rows, jump vertically, or re-derive anything. Hiding every hideable column
+  still leaves a working meter (names, bars, seconds) — it is not "no data", and it must not close or blank itself.
+- [ ] **Picker honesty**: the combo's closed face counts what is on; opening it changes nothing until it closes, and one close previews one layout. Each row's tooltip
+  explains its rate (encounter vs the latest six logged seconds) and no row's wording contradicts the header word it sits beside. Cancel from Setup restores
+  both the previous column set and the previous window size; Save keeps them and reopens live.
+- [ ] **A hostile `settings.txt` is answered the same way twice**: with the app closed, write `OverlayEnableCritRate = 7`, `OverlayFontSize = 13`, `OverlayMaxRows = 22`,
+  `OverlayDamageMode = 4000`, `OverlayRankColor = chartreuse-ish`, `OverlayHighlightColor` absent; start, open the meter, then open Setup. Every field in Setup must show
+  exactly what the live meter is drawing (crit off, 12 pt, 5 rows, on-kill reset, the default bar colour, highlight following the bar colour) — one reader
+  (`DamageMeterConfigState.Load()`) answers for both surfaces, and the constructor used to keep its own copy of these guards with one clamp missing, which is the state this
+  gate reproduces. Then Save without touching anything: the file must come back holding those settled values, not the junk.
+- [ ] **The bar colour really comes out of the application dictionary**: change bar colour and highlight in Setup and press Save, then switch the app theme (light ↔ dark)
+  with a meter open. Rows must repaint through `DamageOverlayProgressBrush` / `DamageOverlayHighlightBrush` — including *your own* row keeping the highlight key — and Cancel
+  must leave the reopened meter on the saved colours, not the previewed ones, because the reopened constructor republishes all five meter keys from disk. A row that keeps an old
+  colour after a theme switch means something grabbed a `Brush` instead of following its key (see DesignNotes → "Style state lives in the application resource dictionary").
 
 ## Tanking Summary pet rows
 

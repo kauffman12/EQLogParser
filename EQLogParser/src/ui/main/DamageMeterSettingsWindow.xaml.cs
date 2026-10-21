@@ -3,9 +3,13 @@
 // starts; owned by the stage so it closes with it by the same gesture that ends configure (Save or Cancel). ✕ and Esc
 // deliberately do not exist here: the way out is two named decisions, exactly like the FCT panel.
 
+using log4net;
+using System;
+using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
 using Syncfusion.Windows.Shared;
 
@@ -13,10 +17,24 @@ namespace EQLogParser
 {
   public sealed partial class DamageMeterSettingsWindow : Window
   {
+    private static readonly ILog Log = LogManager.GetLogger(typeof(DamageMeterSettingsWindow));
+
+    // The gap the panel keeps from the stage, in DIPs: it is converted through the stage's DPI like every other size here.
+    private const double PanelGapDip = 12;
+
     private readonly DamageOverlayWindow _stage;
+
+    // The column picker is built from MeterColumns rather than a checkbox per column, so the table, the ini keys and this combo
+    // cannot drift apart; _columnCheck maps an entry back to its row in the dropdown for the two passes that fill and read it.
+    private readonly List<ComboBoxItemDetails> _columnItems = [];
+    private readonly Dictionary<MeterColumn, ComboBoxItemDetails> _columnCheck = new();
+
     private bool _loading = true;
-    private double _lastStageLeft;
-    private double _lastStageTop;
+    private IntPtr _stageHandle;
+    private IntPtr _panelHandle;
+    private NativeMethods.RECT _lastStageBounds;
+    private bool _stageBoundsKnown;
+    private int _moveFailures;
 
     internal DamageMeterSettingsWindow(DamageOverlayWindow stage)
     {
@@ -31,57 +49,116 @@ namespace EQLogParser
       Closed += (_, _) => ThemeConfig.EventsThemeChanged -= EventsThemeChanged;
 
       _stage = stage;
-      _lastStageLeft = stage.Left;
-      _lastStageTop = stage.Top;
+      Closed += (_, _) =>
+      {
+        _stage.LocationChanged -= FollowStage;
+        _stage.SizeChanged -= FollowStage;
+      };
 
       var list = EQDataStore.Instance.GetClassList();
       list.Insert(0, Resource.ANY_CLASS);
       classCombo.ItemsSource = list;
+
+      foreach (var column in MeterColumns.All)
+      {
+        var item = new ComboBoxItemDetails(column.DefaultOn, column.Header) { ToolTip = column.Tip };
+        _columnItems.Add(item);
+        _columnCheck[column.Bit] = item;
+      }
+
+      columnCombo.ItemsSource = _columnItems;
 
       FillFrom(DamageMeterConfigState.Load());
 
       Loaded += OnLoaded;
     }
 
-    // Dock beside the stage: right when the work area has room there, left otherwise, and clamped into the work area
-    // vertically so a meter parked at a screen edge never pushes this panel off it.
+    // Docking and following speak native screen pixels end to end (MeterPanelPlacement carries the law). The panel's own DIP size
+    // is converted through the STAGE's DPI, because that is the monitor the panel is about to land on.
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
-      var wa = SystemParameters.WorkArea;
-      var gap = 12.0;
+      _stageHandle = new WindowInteropHelper(_stage).Handle;
+      _panelHandle = new WindowInteropHelper(this).Handle;
 
-      Left = _stage.Left + _stage.ActualWidth + gap;
-      if (Left + ActualWidth > wa.Right)
-      {
-        Left = _stage.Left - ActualWidth - gap;
-      }
+      // Subscribed before any placement attempt: a rectangle read that fails at opening costs the initial dock only, and the panel
+      // still follows from the stage's next move rather than sitting deaf for the rest of configure.
+      _stage.LocationChanged += FollowStage;
+      _stage.SizeChanged += FollowStage;
 
-      Top = _stage.Top;
-      if (Top + ActualHeight > wa.Bottom)
-      {
-        Top = wa.Bottom - ActualHeight;
-      }
-
-      if (Top < wa.Top)
-      {
-        Top = wa.Top;
-      }
-
-      _stage.LocationChanged += (_, _) => FollowStage();
+      DockBesideStage();
     }
 
-    // The stage moves by dragging; move this window by the same delta so the pairing the user chose (which side, how
-    // far apart) survives the drag rather than snapping to a fixed dock.
-    private void FollowStage()
+    private void DockBesideStage()
     {
-      var dLeft = _stage.Left - _lastStageLeft;
-      var dTop = _stage.Top - _lastStageTop;
+      if (!NativeMethods.GetWindowRect(_stageHandle, out var stage)
+        || !NativeMethods.TryGetMonitorWorkArea(_stageHandle, out var work))
+      {
+        Log.Warn("Damage Meter Setup: could not read the meter's rectangle or its monitor's work area; "
+          + "the panel opens where WPF put it and follows from the next stage move.");
+        return;
+      }
 
-      _lastStageLeft = _stage.Left;
-      _lastStageTop = _stage.Top;
+      var dpi = VisualTreeHelper.GetDpi(_stage);
+      var (left, top) = MeterPanelPlacement.PlaceBesideStage(stage.Left, stage.Right, stage.Top,
+        (int)Math.Ceiling(ActualWidth * dpi.DpiScaleX), (int)Math.Ceiling(ActualHeight * dpi.DpiScaleY),
+        (int)Math.Ceiling(PanelGapDip * dpi.DpiScaleX), work.Left, work.Top, work.Right, work.Bottom);
 
-      Left += dLeft;
-      Top += dTop;
+      _lastStageBounds = stage;
+      _stageBoundsKnown = true;
+      MovePanel(left, top);
+    }
+
+    // Both events read the same native rectangle: a move/resize notification pair spends each delta only once.
+    // A width-only change clamps on the panel's own monitor; a drag follows the stage onto its new monitor.
+    private void FollowStage(object sender, EventArgs e)
+    {
+      if (!NativeMethods.GetWindowRect(_stageHandle, out var stage)
+        || !NativeMethods.GetWindowRect(_panelHandle, out var panel)) return;
+
+      // A dock that never read the stage's rectangle has no "before" to subtract: adopt this one and move nothing, so the NEXT event
+      // moves by its real delta instead of by the distance from a zeroed rectangle.
+      if (!_stageBoundsKnown)
+      {
+        _lastStageBounds = stage;
+        _stageBoundsKnown = true;
+        return;
+      }
+
+      var dx = stage.Left - _lastStageBounds.Left;
+      var dy = stage.Top - _lastStageBounds.Top;
+      var growth = (stage.Right - stage.Left) - (_lastStageBounds.Right - _lastStageBounds.Left);
+      _lastStageBounds = stage;
+
+      var left = panel.Left + dx;
+      var top = panel.Top + dy;
+      var monitorWindow = dx != 0 || dy != 0 ? _stageHandle : _panelHandle;
+      if (NativeMethods.TryGetMonitorWorkArea(monitorWindow, out var work))
+      {
+        left = MeterPanelPlacement.FollowWidth(left, panel.Right - panel.Left, stage.Left, growth,
+          work.Left, work.Right);
+      }
+
+      if (left != panel.Left || top != panel.Top) MovePanel(left, top);
+    }
+
+    /*
+     * A refused move is the companion sitting still for one gesture, so it is reported and nothing else. This runs from the stage's
+     * move/size notifications: a native failure there (the owner closing under the event, a monitor mid-change) must not throw out
+     * of a layout handler, and a wedged case gets one WARN rather than a line per drag event.
+     */
+    private void MovePanel(int left, int top)
+    {
+      if (NativeMethods.TryMoveWindow(_panelHandle, left, top, out var error)) return;
+
+      _moveFailures++;
+      if (_moveFailures == 1)
+      {
+        Log.Warn($"Damage Meter Setup: could not move the panel to ({left},{top}) — error {error}; it stays put until a move lands.");
+      }
+      else
+      {
+        Log.Debug($"Damage Meter Setup: panel move still failing (error {error}; {_moveFailures} time(s)).");
+      }
     }
 
     private void EventsThemeChanged(string _) => ThemeConfig.SetCurrentTheme(this);
@@ -112,6 +189,18 @@ namespace EQLogParser
       _stage.PreviewMeterState(Snapshot());
     }
 
+    // Like every other multi-pick in the app, closing the dropdown is what commits — four width decisions preview as one layout.
+    private void ColumnsDropDownClosed(object sender, EventArgs e)
+    {
+      if (_loading || columnCombo is null)
+      {
+        return;
+      }
+
+      UiElementUtil.SetComboBoxTitle(columnCombo, "columns");
+      _stage.PreviewMeterState(Snapshot());
+    }
+
     private void ColourPicked(object sender, SelectedColorChangedEventArgs e)
     {
       if (_loading || barColor is null)
@@ -135,7 +224,7 @@ namespace EQLogParser
         MaxRows = (int)rowsUpDown.Value,
         FontSize = TagOf(fontCombo.SelectedItem, 12),
         MiniBars = miniCheck.IsChecked == true,
-        ShowDamagePercent = percentCheck.IsChecked == true,
+        Columns = ReadColumns(),
         HideOtherPlayers = hideCheck.IsChecked == true,
         StreamerMode = streamerCheck.IsChecked == true,
         CritRateDisplay = critCombo.SelectedIndex is >= 0 ? critCombo.SelectedIndex : 0,
@@ -155,7 +244,12 @@ namespace EQLogParser
       rowsUpDown.Value = s.MaxRows;
       SelectByTag(fontCombo, s.FontSize);
       miniCheck.IsChecked = s.MiniBars;
-      percentCheck.IsChecked = s.ShowDamagePercent;
+      foreach (var column in MeterColumns.All)
+      {
+        _columnCheck[column.Bit].IsChecked = MeterColumns.Includes(s.Columns, column.Bit);
+      }
+
+      UiElementUtil.SetComboBoxTitle(columnCombo, "columns");
       hideCheck.IsChecked = s.HideOtherPlayers;
       streamerCheck.IsChecked = s.StreamerMode;
       critCombo.SelectedIndex = s.CritRateDisplay is >= 0 and <= 3 ? s.CritRateDisplay : 0;
@@ -169,6 +263,10 @@ namespace EQLogParser
 
       _loading = false;
     }
+
+    // The dropdown read back into the column set, through the same fold MeterColumns.Load() uses — so a tick that is previewed and a tick
+    // that gets saved cannot come to mean different things, and a new column needs no change here.
+    private MeterColumn ReadColumns() => MeterColumns.FromSwitches(c => _columnCheck[c.Bit].IsChecked);
 
     private static int TagOf(object item, int fallback)
     {
