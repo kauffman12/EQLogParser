@@ -574,13 +574,23 @@ namespace EQLogParser
             catch (Exception ex) { Log.Debug("Could not trim ordinal-list slack; the derived boards are unaffected", ex); }
           }
 
-          // Only receipt at ingest renews visibility; deriving the same facts never creates a new arrival.
-          var arrival = _meterArrivals.Latest(_facts, snapshot.Timeline);
-          var activityOrdinal = arrival.Through;
-          var freshDamage = ConfigUtil.IfSet("IsDamageOverlayEnabled")
-                            && activityOrdinal > _lastAnnouncedActivityOrdinal
-                            && DamageOverlayLifecycle.HasRecentActivity(arrival, MeterArrivals.Now,
-                              ConfigUtil.GetSettingAsInteger("OverlayDamageMode"));
+          /*
+           * Only receipt at ingest renews visibility; deriving the same facts never creates a new arrival. Asked only while a meter
+           * can be listening: `Latest` walks back from the newest fact to the newest ELIGIBLE one, so a capture whose tail is city
+           * chatter, NPC-on-NPC noise or damage a filter excludes pays that walk on every pass of a load - uncancellable, since it
+           * carries no token - to answer a question nobody is asking while the overlay is switched off. Nothing else in this pass
+           * reads the arrival: `activityOrdinal` exists only for the announcement below.
+           */
+          var freshDamage = false;
+          var activityOrdinal = 0;
+          if (ConfigUtil.IfSet("IsDamageOverlayEnabled"))
+          {
+            var arrival = _meterArrivals.Latest(_facts, snapshot.Timeline);
+            activityOrdinal = arrival.Through;
+            freshDamage = activityOrdinal > _lastAnnouncedActivityOrdinal
+                          && DamageOverlayLifecycle.HasRecentActivity(arrival, MeterArrivals.Now,
+                            ConfigUtil.GetSettingAsInteger("OverlayDamageMode"));
+          }
 
           // Swapped before the event: a selection made from the fresh rows materializes against the pass
           // that made them, never against the previous snapshot's facts.
