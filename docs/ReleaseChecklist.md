@@ -400,8 +400,10 @@ elapsed seconds always draw. The table, the defaults and the zero-width law are 
   Repeat initial opening and width increases on secondary monitors **right and left** of the primary, including different DPI scales: Setup must stay on the chosen
   monitor, never jump back to the primary, and keep its gap until its own work-area edge requires clamping. Drag the pair between those monitors and resize again.
   Where a work area is too narrow for stage plus panel on **both** sides (a small secondary monitor with a wide meter), the panel pins to that work area's LEFT edge and
-  overlaps the stage — reachable beats tidy, and it must never come out off screen. If a native move is refused or the stage's rectangle cannot be read, configure still
-  works and the panel follows from the next stage move, with at most one WARN line in `eqlogparser.log` about it.
+  overlaps the stage — reachable beats tidy, and it must never come out off screen. With a debugger, force rectangle-read, work-area-read
+  and native-move failures separately: configure stays usable, the failed attempt leaves the panel stationary, and subsequent successful
+  moves recover. Repeated failures in one episode produce one WARN in `eqlogparser.log`; after recovery, a new failure may warn again.
+  A failed work-area read must never fall through to an unchecked move.
 - [ ] **A narrow window still widens, and nothing shrinks**: with only `Sec` left the floor is small (141 DIP at 12 pt), so start from a saved `OverlayWidth` of ~150
   and turn columns **on** — the window grows to the new floor and names stay left of the numbers. Then widen by hand and hide a column: the window must keep the width it has.
   Save persists the width the gesture ended on; Cancel leaves both the saved mask and the saved geometry untouched. The live header may widen a saved stage further

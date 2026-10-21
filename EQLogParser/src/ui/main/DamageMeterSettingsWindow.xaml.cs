@@ -34,7 +34,8 @@ namespace EQLogParser
     private IntPtr _panelHandle;
     private NativeMethods.RECT _lastStageBounds;
     private bool _stageBoundsKnown;
-    private int _moveFailures;
+    private bool _nativeFailure;
+    private int _nativeFailures;
 
     internal DamageMeterSettingsWindow(DamageOverlayWindow stage)
     {
@@ -93,8 +94,7 @@ namespace EQLogParser
       if (!NativeMethods.GetWindowRect(_stageHandle, out var stage)
         || !NativeMethods.TryGetMonitorWorkArea(_stageHandle, out var work))
       {
-        Log.Warn("Damage Meter Setup: could not read the meter's rectangle or its monitor's work area; "
-          + "the panel opens where WPF put it and follows from the next stage move.");
+        WarnNativeFailure("could not read the meter's rectangle or its monitor's work area");
         return;
       }
 
@@ -113,7 +113,11 @@ namespace EQLogParser
     private void FollowStage(object sender, EventArgs e)
     {
       if (!NativeMethods.GetWindowRect(_stageHandle, out var stage)
-        || !NativeMethods.GetWindowRect(_panelHandle, out var panel)) return;
+        || !NativeMethods.GetWindowRect(_panelHandle, out var panel))
+      {
+        WarnNativeFailure("could not read the meter's or panel's rectangle");
+        return;
+      }
 
       // A dock that never read the stage's rectangle has no "before" to subtract: adopt this one and move nothing, so the NEXT event
       // moves by its real delta instead of by the distance from a zeroed rectangle.
@@ -121,6 +125,7 @@ namespace EQLogParser
       {
         _lastStageBounds = stage;
         _stageBoundsKnown = true;
+        ResetNativeFailure();
         return;
       }
 
@@ -132,13 +137,16 @@ namespace EQLogParser
       var left = panel.Left + dx;
       var top = panel.Top + dy;
       var monitorWindow = dx != 0 || dy != 0 ? _stageHandle : _panelHandle;
-      if (NativeMethods.TryGetMonitorWorkArea(monitorWindow, out var work))
+      if (!NativeMethods.TryGetMonitorWorkArea(monitorWindow, out var work))
       {
-        left = MeterPanelPlacement.FollowWidth(left, panel.Right - panel.Left, stage.Left, growth,
-          work.Left, work.Right);
+        WarnNativeFailure("could not read the monitor's work area");
+        return;
       }
 
+      left = MeterPanelPlacement.FollowWidth(left, panel.Right - panel.Left, stage.Left, growth,
+        work.Left, work.Right);
       if (left != panel.Left || top != panel.Top) MovePanel(left, top);
+      else ResetNativeFailure();
     }
 
     /*
@@ -148,18 +156,35 @@ namespace EQLogParser
      */
     private void MovePanel(int left, int top)
     {
-      if (NativeMethods.TryMoveWindow(_panelHandle, left, top, out var error)) return;
+      if (NativeMethods.TryMoveWindow(_panelHandle, left, top, out var error))
+      {
+        ResetNativeFailure();
+        return;
+      }
 
-      _moveFailures++;
-      if (_moveFailures == 1)
-      {
-        Log.Warn($"Damage Meter Setup: could not move the panel to ({left},{top}) — error {error}; it stays put until a move lands.");
-      }
-      else
-      {
-        Log.Debug($"Damage Meter Setup: panel move still failing (error {error}; {_moveFailures} time(s)).");
-      }
+      WarnNativeFailure($"could not move the panel to ({left},{top}) — error {error}");
     }
+
+    /*
+     * One WARN per failure EPISODE, because a drag fires move/size events at pointer rate and an alarm per event is a metric wearing
+     * an alarm. The episode's count still grows on the Debug line: coalescing the WARN may not delete the number that says how many
+     * attempts one condition cost. A placement that works ends the episode, so a later failure is allowed a WARN of its own.
+     */
+    private void WarnNativeFailure(string detail)
+    {
+      _nativeFailures++;
+      if (_nativeFailure)
+      {
+        Log.Debug($"Damage Meter Setup: placement still failing ({_nativeFailures} time(s)) — {detail}.");
+        return;
+      }
+
+      _nativeFailure = true;
+      Log.Warn($"Damage Meter Setup: {detail}; the panel stays put until placement can be checked.");
+    }
+
+    // A placement that worked ends the episode, so the next distinct failure is allowed one WARN of its own.
+    private void ResetNativeFailure() => (_nativeFailure, _nativeFailures) = (false, 0);
 
     private void EventsThemeChanged(string _) => ThemeConfig.SetCurrentTheme(this);
 

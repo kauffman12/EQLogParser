@@ -7394,7 +7394,10 @@ not the primary screen (what was removed read `SystemParameters.WorkArea`: the P
 Drag deltas, window rectangles, work areas and native moves all use screen pixels, including negative desktop coordinates, so different DPI scales cannot mix a DIP width
 with a pixel boundary. Move/size events share one previous rectangle and cannot spend a delta twice; both subscriptions detach on close — and they attach **before** any
 docking attempt, so a rectangle read that fails at opening costs the initial dock only rather than deafening the panel for the rest of configure. A failed native read or
-move is one WARN and a companion that sits still until the next move lands: it never throws out of a move/size handler.
+move costs one WARN per failure episode (repeats raise only a Debug count) and leaves the companion stationary for that attempt: it
+never throws out of a move/size handler and never moves against an unchecked work area — a work-area read that fails while both
+rectangles read cleanly means the desktop is mid-change, so following without a clamp is the wrong answer. A placement that succeeds
+ends the episode, so a later failure is allowed one WARN of its own.
 The right insets are per cell, so a negative one ends past its own edge into whatever cell comes **next**;
 hiding a neighbour moves that overflow onto the following column (`%` against wide `DPS` digits at 10 pt is the tightest case), which is corrected in the inset preset
 and never by handing a number its own switch. Remember what that floor going down means: the meter can be dragged narrower than it used to go and names are not
