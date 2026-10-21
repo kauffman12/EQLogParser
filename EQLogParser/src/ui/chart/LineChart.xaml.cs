@@ -450,10 +450,15 @@ namespace EQLogParser
 
       /* What the control was asked to draw, since line count and point count are what its own work scales with. */
       var points = 0;
+      var rolling = yPath is "RollingDps" or "RollingTotal";
+      var through = _raidValues.TryGetValue("Raid", out var raid) && raid.Count > 0
+        ? raid[^1].CurrentTime : double.NegativeInfinity;
 
       foreach (var value in CollectionsMarshal.AsSpan(sortedValues))
       {
-        points += value.Count;
+        // Rolling-only points show quiet tails through the selected data edge, never through the PC clock.
+        var plotted = rolling ? ChartRollingSeries.Build(value, through) : value;
+        points += plotted.Count;
 
         var name = value.First().Name;
         name = ((_currentViewOption == Labels.PetPlayerOption) && !_hasPets.ContainsKey(name)) ? name.Split(' ')[0] : name;
@@ -462,7 +467,7 @@ namespace EQLogParser
           Label = name,
           XBindingPath = "DateTime",
           YBindingPath = yPath,
-          ItemsSource = value,
+          ItemsSource = plotted,
           ShowTooltip = false,
           /*
            * Nobody ever asked for a tween, and the default one is not free: during a live tail the chart's own data pass measured 2-6 ms

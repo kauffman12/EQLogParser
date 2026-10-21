@@ -23,7 +23,7 @@ namespace EQLogParser
 
       RunPopulateRolling(data);
       Assert.AreEqual(100, points[0].RollingTotal);
-      Assert.AreEqual(100, points[0].RollingDps);
+      Assert.AreEqual(16, points[0].RollingDps);
     }
 
     [TestMethod]
@@ -37,9 +37,9 @@ namespace EQLogParser
 
       RunPopulateRolling(new Dictionary<string, List<DataPoint>> { { "test", points } });
       Assert.AreEqual(100, points[0].RollingTotal);
-      Assert.AreEqual(100, points[0].RollingDps);
+      Assert.AreEqual(16, points[0].RollingDps);
       Assert.AreEqual(300, points[1].RollingTotal);
-      Assert.AreEqual(150, points[1].RollingDps);
+      Assert.AreEqual(50, points[1].RollingDps);
     }
 
     [TestMethod]
@@ -54,9 +54,9 @@ namespace EQLogParser
 
       RunPopulateRolling(new Dictionary<string, List<DataPoint>> { { "test", points } });
       Assert.AreEqual(100, points[0].RollingTotal);
-      Assert.AreEqual(100, points[0].RollingDps);
+      Assert.AreEqual(16, points[0].RollingDps);
       Assert.AreEqual(300, points[1].RollingTotal);
-      Assert.AreEqual(75, points[1].RollingDps);
+      Assert.AreEqual(50, points[1].RollingDps);
       Assert.AreEqual(500, points[2].RollingTotal);
       Assert.AreEqual(83, points[2].RollingDps);
     }
@@ -76,13 +76,13 @@ namespace EQLogParser
 
       RunPopulateRolling(new Dictionary<string, List<DataPoint>> { { "test", points } });
       Assert.AreEqual(100, points[0].RollingTotal);
-      Assert.AreEqual(100, points[0].RollingDps);
+      Assert.AreEqual(16, points[0].RollingDps);
       Assert.AreEqual(200, points[1].RollingTotal);
-      Assert.AreEqual(100, points[1].RollingDps);
+      Assert.AreEqual(33, points[1].RollingDps);
       Assert.AreEqual(300, points[2].RollingTotal);
-      Assert.AreEqual(100, points[2].RollingDps);
+      Assert.AreEqual(50, points[2].RollingDps);
       Assert.AreEqual(500, points[3].RollingTotal);
-      Assert.AreEqual(100, points[3].RollingDps);
+      Assert.AreEqual(83, points[3].RollingDps);
       Assert.AreEqual(700, points[4].RollingTotal);
       Assert.AreEqual(116, points[4].RollingDps);
       Assert.AreEqual(650, points[5].RollingTotal);
@@ -122,15 +122,15 @@ namespace EQLogParser
 
       RunPopulateRolling(new Dictionary<string, List<DataPoint>> { { "test", points } });
       Assert.AreEqual(10, points[0].RollingTotal);
-      Assert.AreEqual(10, points[0].RollingDps);
+      Assert.AreEqual(1, points[0].RollingDps);
       Assert.AreEqual(30, points[1].RollingTotal);
-      Assert.AreEqual(15, points[1].RollingDps);
+      Assert.AreEqual(5, points[1].RollingDps);
       Assert.AreEqual(60, points[2].RollingTotal);
-      Assert.AreEqual(20, points[2].RollingDps);
+      Assert.AreEqual(10, points[2].RollingDps);
       Assert.AreEqual(100, points[3].RollingTotal);
-      Assert.AreEqual(25, points[3].RollingDps);
+      Assert.AreEqual(16, points[3].RollingDps);
       Assert.AreEqual(150, points[4].RollingTotal);
-      Assert.AreEqual(30, points[4].RollingDps);
+      Assert.AreEqual(25, points[4].RollingDps);
     }
 
     [TestMethod]
@@ -148,15 +148,15 @@ namespace EQLogParser
 
       RunPopulateRolling(new Dictionary<string, List<DataPoint>> { { "test", points } });
       Assert.AreEqual(50, points[0].RollingTotal);
-      Assert.AreEqual(50, points[0].RollingDps);
+      Assert.AreEqual(8, points[0].RollingDps);
       Assert.AreEqual(90, points[1].RollingTotal);
-      Assert.AreEqual(45, points[1].RollingDps);
+      Assert.AreEqual(15, points[1].RollingDps);
       Assert.AreEqual(120, points[2].RollingTotal);
-      Assert.AreEqual(40, points[2].RollingDps);
+      Assert.AreEqual(20, points[2].RollingDps);
       Assert.AreEqual(140, points[3].RollingTotal);
-      Assert.AreEqual(35, points[3].RollingDps);
+      Assert.AreEqual(23, points[3].RollingDps);
       Assert.AreEqual(150, points[4].RollingTotal);
-      Assert.AreEqual(30, points[4].RollingDps);
+      Assert.AreEqual(25, points[4].RollingDps);
       Assert.AreEqual(180, points[5].RollingTotal);
       Assert.AreEqual(30, points[5].RollingDps);
     }
@@ -198,7 +198,7 @@ namespace EQLogParser
 
       RunPopulateRolling(new Dictionary<string, List<DataPoint>> { { "test", points } });
       Assert.AreEqual(100, points[0].RollingTotal);
-      Assert.AreEqual(100, points[0].RollingDps);
+      Assert.AreEqual(16, points[0].RollingDps);
       Assert.AreEqual(300, points[1].RollingTotal);
       Assert.AreEqual(50, points[1].RollingDps);
     }
@@ -215,7 +215,7 @@ namespace EQLogParser
 
       RunPopulateRolling(new Dictionary<string, List<DataPoint>> { { "test", points } });
       Assert.AreEqual(100, points[0].RollingTotal);
-      Assert.AreEqual(100, points[0].RollingDps);
+      Assert.AreEqual(16, points[0].RollingDps);
       Assert.AreEqual(300, points[1].RollingTotal);
       Assert.AreEqual(50, points[1].RollingDps);
       Assert.AreEqual(500, points[2].RollingTotal);
@@ -263,7 +263,7 @@ namespace EQLogParser
       Assert.AreEqual(16, points[2].RollingDps);
       Assert.AreEqual(33, points[3].RollingDps);
       Assert.AreEqual(16, points[4].RollingDps);
-      Assert.AreEqual(5, points.Count, "Idle seconds must not allocate extra plot points");
+      Assert.AreEqual(5, points.Count, "Rate annotation keeps source buckets intact; rolling geometry is built separately");
     }
 
     [TestMethod]
@@ -299,7 +299,7 @@ namespace EQLogParser
       Assert.AreEqual(100, points[0].RollingTotal);
       Assert.AreEqual(300, points[1].RollingTotal);
       Assert.AreEqual(600, points[2].RollingTotal);
-      Assert.AreEqual(600, points[2].RollingDps, "One timestamp is one second, not three");
+      Assert.AreEqual(100, points[2].RollingDps, "One occupied second still uses the fixed six-second denominator");
     }
 
     [TestMethod]
@@ -350,7 +350,7 @@ namespace EQLogParser
       var points = new List<DataPoint> { CreatePoint(0, total), CreatePoint(5, total) };
       RunPopulateRolling(new Dictionary<string, List<DataPoint>> { { "test", points } });
 
-      Assert.AreEqual(total, points[0].RollingDps);
+      Assert.AreEqual(total / 6, points[0].RollingDps);
       Assert.AreEqual(total * 2, points[1].RollingTotal);
       Assert.AreEqual(total * 2 / 6, points[1].RollingDps);
     }

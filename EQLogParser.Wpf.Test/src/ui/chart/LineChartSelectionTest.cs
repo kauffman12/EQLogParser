@@ -48,15 +48,75 @@ public sealed class LineChartSelectionTest
       }
       finally
       {
-        chart.Clear();
-        var method = typeof(LineChart).GetMethod("EventsThemeChanged", BindingFlags.Instance | BindingFlags.NonPublic)
-          ?? throw new MissingMethodException("EventsThemeChanged");
-        ThemeConfig.EventsThemeChanged -= method.CreateDelegate<Action<string>>(chart);
-        ThemeConfig.CurrentFontSize = previousFont;
+        CloseChart(chart, previousFont);
       }
     });
     CollectionAssert.AreEqual(new[] { 1, 1 }, counts);
     CollectionAssert.AreEqual(new[] { "Group 1", "Group 1" }, labels);
     CollectionAssert.AreEqual(new long[] { 600, 1200 }, totals);
+  }
+
+  [TestMethod]
+  public void RollingModesPlotQuietSecondsButAggregateModesKeepTheirOriginalBuckets()
+  {
+    double[] rollingTimes = [];
+    long[] rates = [];
+    long[] rollingAmounts = [];
+    double[] aggregateTimes = [];
+    long[] aggregateAmounts = [];
+    Sta.Run(() =>
+    {
+      var app = Application.Current ?? new Application();
+      app.Resources["EQTitleStyle"] ??= new Style(typeof(Label));
+      app.Resources["EQIconStyle"] ??= new Style(typeof(ImageAwesome));
+      var previousFont = ThemeConfig.CurrentFontSize;
+      ThemeConfig.CurrentFontSize = 12;
+      var chart = new LineChart(["Rolling HPS", "Rolling Healing", "Aggregate Healing"]);
+      try
+      {
+        var blocks = new List<ActionGroup>();
+        foreach (var (time, name) in new[] { (100, "Player"), (108, "Other"), (110, "Player"), (118, "Other") })
+        {
+          var block = new ActionGroup { BeginTime = time };
+          block.Actions.Add(new HealRecord { Healer = name, Type = Labels.Heal, Total = 6_000_000 });
+          blocks.Add(block);
+        }
+        chart.HandleUpdateEvent(new DataPointEvent
+        {
+          Action = "UPDATE", DataGeneration = 1, Iterator = new HealGroupCollection([blocks])
+        });
+        var points = PlayerPoints(chart);
+        rollingTimes = points.Select(p => p.CurrentTime).ToArray();
+        rates = points.Select(p => p.RollingDps).ToArray();
+        chart.choicesList.SelectedIndex = 1;
+        rollingAmounts = PlayerPoints(chart).Select(p => p.RollingTotal).ToArray();
+        chart.choicesList.SelectedIndex = 2;
+        points = PlayerPoints(chart);
+        aggregateTimes = points.Select(p => p.CurrentTime).ToArray();
+        aggregateAmounts = points.Select(p => p.Total).ToArray();
+      }
+      finally
+      {
+        CloseChart(chart, previousFont);
+      }
+    });
+    CollectionAssert.AreEqual(new[] { 100d, 105d, 106d, 109d, 110d, 115d, 116d, 118d }, rollingTimes);
+    CollectionAssert.AreEqual(new long[] { 1_000_000, 1_000_000, 0, 0, 1_000_000, 1_000_000, 0, 0 }, rates);
+    CollectionAssert.AreEqual(rates.Select(rate => rate * 6).ToArray(), rollingAmounts);
+    CollectionAssert.AreEqual(new[] { 100d, 110d }, aggregateTimes);
+    CollectionAssert.AreEqual(new long[] { 6_000_000, 12_000_000 }, aggregateAmounts);
+  }
+
+  private static List<DataPoint> PlayerPoints(LineChart chart) =>
+    chart.sfLineChart.Series.First(series => series.Label == "Player").ItemsSource is List<DataPoint> points
+      ? points : throw new InvalidOperationException("Player series has no chart data");
+
+  private static void CloseChart(LineChart chart, double previousFont)
+  {
+    chart.Clear();
+    var method = typeof(LineChart).GetMethod("EventsThemeChanged", BindingFlags.Instance | BindingFlags.NonPublic)
+      ?? throw new MissingMethodException("EventsThemeChanged");
+    ThemeConfig.EventsThemeChanged -= method.CreateDelegate<Action<string>>(chart);
+    ThemeConfig.CurrentFontSize = previousFont;
   }
 }

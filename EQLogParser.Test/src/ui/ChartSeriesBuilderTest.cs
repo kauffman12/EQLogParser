@@ -224,7 +224,7 @@ public sealed class ChartSeriesBuilderTest
       Assert.AreEqual(bucket.Sum(r => r.Amount), point.TotalPerSecond);
       Assert.AreEqual((long)bucket.Count, point.AttemptsPerSecond);
       Assert.AreEqual(rolling, point.RollingTotal);
-      Assert.AreEqual(rolling / (long)Math.Min(6, point.CurrentTime - merged[0].CurrentTime + 1), point.RollingDps);
+      Assert.AreEqual(rolling / 6, point.RollingDps);
     }
   }
 

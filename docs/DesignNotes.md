@@ -18413,24 +18413,38 @@ its runtime checks and the live Save/reopen checks remain owed on Windows in `do
 
 ## Line-chart rolling rates count seconds, not samples
 
-The rolling chart keeps its existing sparse plot points: adding a zero point for every idle second would increase the
-vendor chart's rendering load. `ChartAggregation.PopulateRolling` instead treats missing seconds as zero implicitly.
-At timestamp t it sums buckets from t−5 through t, inclusive, and divides by six, shortened only during the series'
-initial warm-up (`min(6, t − first timestamp + 1)`). Two 600-damage buckets five seconds apart therefore give 200 DPS,
-not 600. Dense per-second series keep their existing results. Damage, tanking and healing use the same calculation.
+**Goal:** the rolling chart and meter use the same six-second arithmetic, and a quiet interval must not disappear between
+chart samples. At log second t, sum amounts in t−5 through t inclusive and divide by **six from the first hit**. Missing
+seconds contribute zero. Whole-second labels, integer amounts and sum-before-division match the meter; no PC clock enters
+either calculation. Damage, tanking and healing share the chart implementation.
 
-The window's membership is unchanged; its six inclusive one-second buckets are now explicit in the implementation.
-Existing long-gap zero markers still expire earlier damage. A gap does not restart the initial warm-up, and no trailing
-points, extra redraws or new encounter-boundary policy were added. Values are correct at the retained timestamps;
-the chart's line between those samples remains an interpolation, not a newly sampled per-second trace.
+The earlier sparse chart evaluated only occupied timestamps, with zero markers for gaps over 30 seconds and a shortened
+startup denominator. That could conceal a real zero: two six-million bursts at seconds 100 and 110 each answer one million
+RDPS, but seconds 106–109 answer zero. Connecting just the two occupied points drew a million-DPS bridge across that trough.
+A large nonzero low point is not itself wrong; no magnitude threshold or forced-zero rule is involved.
 
-Groups now sum members' per-timestamp amounts first and calculate their own rolling window. Summing only the member
-rolling rates present at a group timestamp discarded contributions from members with no point at that exact second
-and mixed different warm-up denominators. The separate cumulative-statistic repairs are described below.
+`ChartAggregation` annotates source buckets with the fixed-denominator rate. For rolling modes only, `ChartRollingSeries`
+merges arrivals and their six-second expirations, sums simultaneous changes, and emits value changes plus the preceding
+second's held value. Long empty stretches need only endpoints, not one point per second. Every integer log second agrees
+with the six-bucket calculation; the line between adjacent seconds remains ordinary linear interpolation.
 
-The pure `ChartAggregation` helper lives in Core. The former reflection-based WPF rolling tests moved to the headless
-`ChartRollingTest`, with sparse-window, boundary, existing-marker and staggered-member regressions. This changes the
-chart calculation only, not the live damage meter or its sampling, ranking and lifecycle rules.
+Each plotted rolling series ends at the selected record stream's latest log second (the raid series' edge). Another player's
+activity therefore exposes a quiet player's trailing zero. With no later captured data, there is no invented future decay.
+Player/pet, group and raid amounts are combined before division. Group rolling values are recomputed from merged amounts,
+not summed from rounded member rates. The chart and meter can still differ when their fight scopes, Reset bounds or pet
+views differ; this change does not make a historical selection follow the overlay's lifecycle.
+
+Synthetic rolling points are detached and never fed back into cumulative totals, activity durations, ranking or another
+merge. Aggregate and instantaneous modes retain their original source buckets. CSV uses the plotted rolling points, including
+quiet transitions. There is no extra timer or historical record walk; the added work is linear in the selected series' bucket
+counts, not the length of silence. Vendor rendering cost still needs Windows validation.
+
+`ChartRollingTest` pins the fixed denominator and bucket arithmetic. `ChartRollingSeriesTest` checks the missing trough,
+legitimate nonzero lows, shared data-edge tails, simultaneous arrival/expiry, fractional labels, wide amounts, group sums,
+source immutability and a seeded comparison against `MeterRecentWindow` at every integer second. The Windows-only
+`LineChartSelectionTest` checks rolling-mode wiring and that switching back preserves aggregate buckets; rendering remains
+in `docs/ReleaseChecklist.md`. Linux validation: **2,630 headless tests passed, 3 skipped**, and the no-incremental solution
+build reported **zero warning/error diagnostics**. The WPF assembly compiled but was not executed.
 
 ### Sparse chart buckets: cumulative correctness and calculation cost
 
@@ -18449,8 +18463,9 @@ the input record and from future publications. Damage, healing, tanking, player-
 
 Group merging uses the same inclusive clock over actual group activity, ignoring marker-only timestamps. Cumulative
 member values carry forward, while bucket amounts/counts contribute only at their own timestamp. Rolling values are
-recomputed from merged amounts. Groups can bridge a member's silence when another member is active. No dense zero-filled
-series, trailing points, new timer or vendor-rendering change was introduced.
+recomputed from merged amounts. Groups can bridge a member's silence when another member is active. These source buckets
+remain sparse and have no trailing padding. Rolling-only plotting now adds the log-time transitions described above without
+changing cumulative accounting or adding a timer.
 
 The correctness extraction also removes per-record last-time/accounting/range dictionary lookups. Since inputs are
 sorted, the activity clock needs just its last timestamp and accumulated seconds, rather than a growing `TimeRange`

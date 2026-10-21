@@ -113,21 +113,19 @@ internal static class ChartAggregation
     if (points.Count == 0) return;
     var left = 0;
     var windowTotal = 0L;
-    var start = points[0].CurrentTime;
     for (var right = 0; right < points.Count; right++)
     {
       var point = points[right];
       windowTotal += point.TotalPerSecond;
-      while (left < right && point.CurrentTime - points[left].CurrentTime > RollingSeconds - 1)
+      while (left < right && Math.Floor(point.CurrentTime) - Math.Floor(points[left].CurrentTime) > RollingSeconds - 1)
       {
         windowTotal -= points[left].TotalPerSecond;
         left++;
       }
 
-      // Missing seconds count as zero; only the series' initial warm-up shortens the six-bucket denominator.
-      var seconds = (long)Math.Min(RollingSeconds, point.CurrentTime - start + 1);
+      // Match the meter: six labelled log seconds, including idle seconds, even at the first hit.
       point.RollingTotal = windowTotal;
-      point.RollingDps = windowTotal / seconds;
+      point.RollingDps = windowTotal / RollingSeconds;
     }
   }
 }

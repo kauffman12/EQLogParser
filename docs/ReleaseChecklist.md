@@ -478,9 +478,18 @@ Two behaviours depend on state a headless test cannot build; both have shipped b
   and a subsequent UPDATE must keep them rather than showing No Data. Also exercise this through the actual summary pane.
 - [ ] On a short known fight, compare player-only, player-plus-pets, raid and group charts: the first occupied second has
   nonzero aggregate DPS, missed attacks do not dilute average hit/crit rate, and a single-member group agrees with its player.
-- [ ] Across a gap over 30 seconds, instantaneous/rolling lines reach the existing zero markers, while aggregate damage
-  never falls to zero. Check Damage, Tanking and Healing, CSV output, and responsiveness on a long multi-fight selection.
-  Sparse point counts are unchanged; measured headless calculation improvements do not verify vendor rendering performance.
+- [ ] **Rolling troughs:** two six-million bursts ten log seconds apart must show one million RDPS at each burst and zero
+  from the first burst's second +6 through +9. Check a shorter gap with a genuinely nonzero low too: it must not be forced
+  to zero. Verify Damage, Tanking and Healing, player-plus-pets, group and raid views, and rolling amount as well as rate.
+- [ ] **Startup and quiet tails:** the first 600-point bucket answers 100 rolling DPS/HPS, not 600. When another player
+  continues, a stopped player's line reaches zero at its last amount's second +6. When everyone stops, the plotted range
+  stops at the last captured second; waiting or changing the PC clock must not extend it.
+- [ ] **Mode switches and CSV:** run `LineChartSelectionTest` on Windows. Switching between rolling and aggregate modes
+  must preserve original aggregate totals and buckets. Rolling CSV includes the quiet transition points shown on the chart.
+  Across a gap over 30 seconds, instantaneous lines retain their existing zero markers and aggregate damage never drops to zero.
+- [ ] **Rendering cost:** zoom in on quiet transitions and check responsiveness on a long multi-fight selection. Rolling
+  modes add transition/endpoints, not every empty second; aggregate/instantaneous point counts are unchanged. Linux tests
+  cannot verify Syncfusion rendering performance.
 
 ## Chat archive range checks on Windows
 
