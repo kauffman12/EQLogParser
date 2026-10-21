@@ -36,6 +36,13 @@ internal sealed class MeterArrivals
     lock (_gate)
     {
       if (through <= _through) return;
+
+      /*
+       * Millisecond resolution, and the ordinal ranges still cannot overlap or leave a hole: a new batch begins at the previous
+       * batch's Through (_through), never at a timestamp. So truncating two arrivals that fell inside one millisecond merges them,
+       * and an arrival in a later millisecond continues the chain exactly. Seeding From from `time`, or re-deriving it per batch, is
+       * the edit that would let one ordinal be covered twice — a receipt read would then call damage newer or older than it arrived.
+       */
       var time = Math.Floor(now * 1000) / 1000;
       if (_batches.Count > _head && _batches[^1].Time == time)
         _batches[^1] = _batches[^1] with { Through = through };

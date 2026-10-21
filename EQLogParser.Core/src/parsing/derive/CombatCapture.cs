@@ -241,6 +241,7 @@ namespace EQLogParser
       if (r.AttackerIsSpell) flags |= DamageFact.FlagAttackerIsSpell;
       if (HasOwnershipInLine(e.Action, r.Attacker)) flags |= DamageFact.FlagOwnerInLine;
 
+      int receiptThrough;
       lock (_gate)
       {
         MarkTs(e.BeginTime);
@@ -262,8 +263,18 @@ namespace EQLogParser
           // those filters was switched off, which is what FightSummarySource used to have to warn about.
           modMask: r.ModifiersMask,
           subIdx: subIdx));
-        _damageArrived?.Invoke(_facts.FactCount);
+        receiptThrough = _facts.FactCount;   // read where it is exact; credited below, outside this gate
       }
+
+      /*
+       * The receipt is taken OUTSIDE the capture gate. One damage line is one event, so this is the hottest path in the application,
+       * and the receipt store keeps its own lock: nesting them would make "capture gate first, then arrivals gate" an ordering law
+       * visible from neither class, and any future callback out of MeterArrivals would deadlock over it. Reading the count inside the
+       * gate and crediting outside it costs nothing the store does not already absorb — Record drops a value that does not advance,
+       * and a reader can be at most one derive pass between seeing the fact and seeing its receipt, which is how damage arriving
+       * mid-scan already behaves. Docs: "Damage overlay: fight accounting and display retention".
+       */
+      _damageArrived?.Invoke(receiptThrough);
     }
 
     /*
