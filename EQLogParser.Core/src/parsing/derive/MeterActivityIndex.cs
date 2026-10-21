@@ -26,6 +26,7 @@ internal sealed class MeterActivityIndex
   private double _from = double.NaN;
   private double _future = double.PositiveInfinity;
   private double _to = double.NegativeInfinity;
+  private int _firstOrdinal;
 
   internal MeterLifeActivity For(DerivedFight row) =>
     _lives.TryGetValue(row, out var life) ? life.Activity : MeterLifeActivity.None;
@@ -42,12 +43,14 @@ internal sealed class MeterActivityIndex
   internal void Update(MeterFactInput input, CancellationToken cancellation = default)
   {
     var filter = MeterDamageFilter.Current;
-    if (input.From != _from || filter != _filter || input.To >= _future || input.To < _to) Clear();
+    if (input.FirstOrdinal != _firstOrdinal || input.From != _from || filter != _filter
+      || double.IsFinite(_future) && input.To >= _future || input.To < _to) Clear();
     if (_index is not null && !ReferenceEquals(input.Index, _index)) Rebind(input, cancellation);
     _index = input.Index;
     _filter = filter;
     _from = input.From;
     _to = input.To;
+    _firstOrdinal = input.FirstOrdinal;
     var selected = new HashSet<DerivedFight>();
     foreach (var header in input.Lives)
     {
@@ -105,6 +108,7 @@ internal sealed class MeterActivityIndex
       var ordinals = input.Index.ReadMeterOrdinals(header.Source, incoming, through, end);
       foreach (var ordinal in ordinals)
       {
+        if (ordinal < input.FirstOrdinal) continue;
         var fact = input.Facts.At(ordinal);
         if (fact.TimeS < input.From) continue;
         if (fact.TimeS > input.To)

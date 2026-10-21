@@ -380,7 +380,7 @@ namespace EQLogParser
 
       try
       {
-        var now = (DateTime.Now - DateTime.MinValue).TotalSeconds;
+        var now = MeterArrivals.Now;
         return session.BuildOverlayStats(lifecycle, _calculation, damageMode, now, cancellation, publishExpiry);
       }
       catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
@@ -418,7 +418,7 @@ namespace EQLogParser
       }
       // This tick still runs when the refresh gate is occupied by a blocked worker.
       if (_stats is not null && !_presentation.IsFresh(DeriveEngine.Active?.SessionId ?? 0, _displayVersion,
-        DateUtil.ToDotNetSeconds(DateTime.Now))) HideMeterPresentation();
+        MeterArrivals.Now)) HideMeterPresentation();
       if (_refreshGate.Request(_refreshClock.Elapsed.TotalSeconds, force)) _ = RunMeterUpdatesAsync();
     }
 
@@ -483,7 +483,7 @@ namespace EQLogParser
       if (damageOverlayStats != null)
       {
         if (!_presentation.IsFresh(DeriveEngine.Active?.SessionId ?? 0, _displayVersion,
-          DateUtil.ToDotNetSeconds(DateTime.Now)))
+          MeterArrivals.Now))
         {
           HideMeterPresentation();
           return;
@@ -496,8 +496,8 @@ namespace EQLogParser
         }
 
         // A missing half clears its old bars: a slain tanking fight must not remain beside a new damage-only fight.
-        LoadStats(damageContent.Children, damageOverlayStats.DamageStats);
-        LoadStats(tankContent.Children, damageOverlayStats.TankStats);
+        LoadStats(damageContent.Children, damageOverlayStats.DamageStats, damageOverlayStats.DamageRdps);
+        LoadStats(tankContent.Children, damageOverlayStats.TankStats, damageOverlayStats.TankRdps);
 
         if (Visibility != Visibility.Visible)
         {
@@ -564,13 +564,20 @@ namespace EQLogParser
       }
     }
 
-    private void LoadStats(UIElementCollection children, CombinedStats localStats)
+    /*
+     * `rates` is the detached six-second answer for THIS build's rows, keyed by the same row names as `localStats`
+     * (pet folding included) and formatted here and nowhere else. The window rides log time end to end, so the UI holds no
+     * clock over these numbers: a value stands still while no new lines arrive, exactly like the DPS beside it.
+     */
+    private void LoadStats(UIElementCollection children, CombinedStats localStats, MeterDirectionRates rates)
     {
       if (localStats is null)
       {
         ClearStats(children);
         return;
       }
+
+      rates ??= MeterDirectionRates.None;
 
       /*
        * The display step the legacy overlay did inside its tally loop (class filter + the local player's slot), restored over the
@@ -626,7 +633,9 @@ namespace EQLogParser
 
           var percent = Math.Round(MeterDisplaySelection.Percentage(stat.Total, localStats.RaidStats.Total), 1);
           damageBar?.Update(name, className, $"{percent}%", StatsUtil.FormatTotals(stat.Total),
-          StatsUtil.FormatTotals(stat.Dps, 1), stat.TotalSeconds.ToString(CultureInfo.InvariantCulture), barPercent, overrideColor);
+            StatsUtil.FormatTotals(stat.Dps, 1), rdpsValue: StatsUtil.FormatTotals(rates.RateFor(stat.Name), 1),
+            timeValue: stat.TotalSeconds.ToString(CultureInfo.InvariantCulture), barPercent: barPercent,
+            colorOverride: overrideColor);
 
           if (damageBar?.Visibility == Visibility.Collapsed)
           {
@@ -637,7 +646,7 @@ namespace EQLogParser
         {
           if (damageBar?.Visibility == Visibility.Visible)
           {
-            damageBar.Update("", "", "", "", "", "", 0);
+            damageBar.Update("", "", "", "", "", "", "", 0);
             damageBar.Visibility = Visibility.Collapsed;
           }
         }
@@ -645,7 +654,8 @@ namespace EQLogParser
 
       var titleBar = children[^1] as DamageBar;
       titleBar?.Update(localStats.TargetTitle, "", "", StatsUtil.FormatTotals(localStats.RaidStats.Total),
-        StatsUtil.FormatTotals(localStats.RaidStats.Dps, 1), localStats.RaidStats.TotalSeconds.ToString(CultureInfo.InvariantCulture), 0);
+        StatsUtil.FormatTotals(localStats.RaidStats.Dps, 1), rdpsValue: StatsUtil.FormatTotals(rates.Total, 1),
+        timeValue: localStats.RaidStats.TotalSeconds.ToString(CultureInfo.InvariantCulture), barPercent: 0);
 
       if (titleBar?.Visibility == Visibility.Collapsed)
       {
@@ -668,16 +678,19 @@ namespace EQLogParser
         {
           if (i == 0)
           {
-            bar.Update("Your Player Name", classList[i], "5.2%", "120.5M", "100.1K", "123", 120 - (i * 10), "DamageOverlayHighlightBrush");
+            bar.Update("Your Player Name", classList[i], "5.2%", "120.5M", "100.1K", rdpsValue: "96.4K",
+              timeValue: "123", barPercent: 120 - (i * 10), colorOverride: "DamageOverlayHighlightBrush");
           }
           else
           {
-            bar.Update(i + 1 + ". Example Player " + i, classList[i], "3.1%", "120.5M", "100.1K", "123", 120 - (i * 10));
+            bar.Update(i + 1 + ". Example Player " + i, classList[i], "3.1%", "120.5M", "100.1K", rdpsValue: "72.8K",
+              timeValue: "123", barPercent: 120 - (i * 10));
           }
         }
       }
 
-      (damageContent.Children[^1] as DamageBar)?.Update("Example NPC", "", "", "500.2M", "490.5K", "456", 0);
+      (damageContent.Children[^1] as DamageBar)?.Update("Example NPC", "", "", "500.2M", "490.5K",
+        rdpsValue: "487.1K", timeValue: "456", barPercent: 0);
     }
 
     private void CloseClick(object sender, RoutedEventArgs e) => MainActions.CloseDamageOverlay(false, this);
@@ -901,6 +914,17 @@ namespace EQLogParser
       ScheduleToolbarPosition();
     }
 
+    /*
+     * The numeric block is fixed-width columns and names/icons get whatever the window has left, so a floor under the block's
+     * own width draws names underneath the numbers. Each font asks for a minimum built from its own presets plus this name/icon
+     * allowance, and hiding columns is unimplemented, so every numeric column is in the sum. Measured figures: docs/DesignNotes.md
+     * → "Six-second RDPS: per-life buckets beside the meter's own amounts".
+     */
+    private const double NameAreaMinWidthDip = 96; // icon + ~six row-font characters; window border and header margins not subtracted
+
+    private static double MinimumWindowWidth(double narrowColumn, double wideColumn, double rollingColumn) =>
+      2 * narrowColumn + 2 * wideColumn + rollingColumn + NameAreaMinWidthDip;
+
     private void UpdateColumnSizes(int fontSize)
     {
       controlPanel.Height = fontSize + 6;
@@ -910,52 +934,68 @@ namespace EQLogParser
           Application.Current.Resources["DamageOverlayImageSize"] = 13.0;
           Application.Current.Resources["DamageOverlayDamageColDef1"] = new GridLength(50.0);
           Application.Current.Resources["DamageOverlayDamageColDef2"] = new GridLength(40.0);
+          Application.Current.Resources["DamageOverlayDamageColDefRdps"] = new GridLength(46.0);
+          MinWidth = MinimumWindowWidth(narrowColumn: 40.0, wideColumn: 50.0, rollingColumn: 46.0);
           titlePercent.Margin = new Thickness(0, 0, 20, 0);
           titleDamage.Margin = new Thickness(0, 0, 18, 0);
           titleDPS.Margin = new Thickness(0, 0, 19, 0);
+          titleRDPS.Margin = new Thickness(0, 0, 12, 0);
           titleTime.Margin = new Thickness(0, 0, 6, 0);
           titlePercent.FontSize = 11;
           titleDamage.FontSize = 11;
           titleDPS.FontSize = 11;
+          titleRDPS.FontSize = 11;
           titleTime.FontSize = 11;
           break;
         case 12:
           Application.Current.Resources["DamageOverlayImageSize"] = 14.0;
           Application.Current.Resources["DamageOverlayDamageColDef1"] = new GridLength(60.0);
           Application.Current.Resources["DamageOverlayDamageColDef2"] = new GridLength(45.0);
+          Application.Current.Resources["DamageOverlayDamageColDefRdps"] = new GridLength(52.0);
+          MinWidth = MinimumWindowWidth(narrowColumn: 45.0, wideColumn: 60.0, rollingColumn: 52.0);
           titlePercent.Margin = new Thickness(0, 0, 22, 0);
           titleDamage.Margin = new Thickness(0, 0, 25, 0);
           titleDPS.Margin = new Thickness(0, 0, 21, 0);
+          titleRDPS.Margin = new Thickness(0, 0, 12, 0);
           titleTime.Margin = new Thickness(0, 0, 6, 0);
           titlePercent.FontSize = 13;
           titleDamage.FontSize = 13;
           titleDPS.FontSize = 13;
+          titleRDPS.FontSize = 13;
           titleTime.FontSize = 13;
           break;
         case 14:
           Application.Current.Resources["DamageOverlayImageSize"] = 15.0;
           Application.Current.Resources["DamageOverlayDamageColDef1"] = new GridLength(70.0);
           Application.Current.Resources["DamageOverlayDamageColDef2"] = new GridLength(50.0);
+          Application.Current.Resources["DamageOverlayDamageColDefRdps"] = new GridLength(60.0);
+          MinWidth = MinimumWindowWidth(narrowColumn: 50.0, wideColumn: 70.0, rollingColumn: 60.0);
           titlePercent.Margin = new Thickness(0, 0, 28, 0);
           titleDamage.Margin = new Thickness(0, 0, 33, 0);
           titleDPS.Margin = new Thickness(0, 0, 21, 0);
+          titleRDPS.Margin = new Thickness(0, 0, 15, 0);
           titleTime.Margin = new Thickness(0, 0, 6, 0);
           titlePercent.FontSize = 15;
           titleDamage.FontSize = 15;
           titleDPS.FontSize = 15;
+          titleRDPS.FontSize = 15;
           titleTime.FontSize = 15;
           break;
         case 16:
           Application.Current.Resources["DamageOverlayImageSize"] = 16.0;
           Application.Current.Resources["DamageOverlayDamageColDef1"] = new GridLength(75.0);
           Application.Current.Resources["DamageOverlayDamageColDef2"] = new GridLength(55.0);
+          Application.Current.Resources["DamageOverlayDamageColDefRdps"] = new GridLength(66.0);
+          MinWidth = MinimumWindowWidth(narrowColumn: 55.0, wideColumn: 75.0, rollingColumn: 66.0);
           titlePercent.Margin = new Thickness(0, 0, 28, 0);
           titleDamage.Margin = new Thickness(0, 0, 32, 0);
           titleDPS.Margin = new Thickness(0, 0, 25, 0);
+          titleRDPS.Margin = new Thickness(0, 0, 14, 0);
           titleTime.Margin = new Thickness(0, 0, 6, 0);
           titlePercent.FontSize = 17;
           titleDamage.FontSize = 17;
           titleDPS.FontSize = 17;
+          titleRDPS.FontSize = 17;
           titleTime.FontSize = 17;
           break;
       }
@@ -998,7 +1038,8 @@ namespace EQLogParser
     {
       _displayVersion++;
       _buildCancellation?.Cancel();
-      MeterLifecycle.Reset(DeriveEngine.Active?.SessionId ?? 0, (DateTime.Now - DateTime.MinValue).TotalSeconds);
+      var session = DeriveEngine.Active;
+      MeterLifecycle.Reset(session?.SessionId ?? 0, session?.MeterCapturedCount ?? 0);
       HideMeterPresentation();
       RequestMeterUpdate(true);
     }

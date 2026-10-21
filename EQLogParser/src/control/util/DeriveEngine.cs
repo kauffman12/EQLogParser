@@ -90,6 +90,9 @@ namespace EQLogParser
      */
     private readonly HealFactTable _heals;
     private readonly CombatCapture _capture;
+    private readonly MeterArrivals _meterArrivals = new();
+
+    internal int MeterCapturedCount => _facts.FactCount;
 
     // The snapshot currently on screen (see DerivedSnapshot.Facts): a selection is materialized against
     // the pass that produced the rows, so it has to be reachable from the UI without re-deriving.
@@ -233,7 +236,7 @@ namespace EQLogParser
 
       _facts = new DamageFactTable(captureBytes > 0 ? FactCapacity.DamageForBytes(captureBytes) : UnhintedDamageSlots);
       _heals = new HealFactTable(_facts, FactCapacity.HealForBytes(captureBytes));
-      _capture = new CombatCapture(_facts, _heals);
+      _capture = new CombatCapture(_facts, _heals, damageArrived: MeterDamageArrived);
       ChatSink = new IdentityChatSink(_capture);
       _liveKindAt = LiveKindAt;
       _liveOwner = LiveOwnerOf;
@@ -571,13 +574,12 @@ namespace EQLogParser
             catch (Exception ex) { Log.Debug("Could not trim ordinal-list slack; the derived boards are unaffected", ex); }
           }
 
-          // Wall-clock freshness also gates opening: historical snapshots must not repeatedly open an already expired board.
-          // A completed one-shot is recent activity too; being dead before the first derive must not make it invisible.
-          var now = DateUtil.ToDotNetSeconds(DateTime.Now);
-          var activityOrdinal = DamageOverlayLifecycle.LatestActivityOrdinal(snapshot.AllFights, now);
+          // Only receipt at ingest renews visibility; deriving the same facts never creates a new arrival.
+          var arrival = _meterArrivals.Latest(_facts, snapshot.Timeline);
+          var activityOrdinal = arrival.Through;
           var freshDamage = ConfigUtil.IfSet("IsDamageOverlayEnabled")
                             && activityOrdinal > _lastAnnouncedActivityOrdinal
-                            && DamageOverlayLifecycle.HasRecentActivity(snapshot.AllFights, now,
+                            && DamageOverlayLifecycle.HasRecentActivity(arrival, MeterArrivals.Now,
                               ConfigUtil.GetSettingAsInteger("OverlayDamageMode"));
 
           // Swapped before the event: a selection made from the fresh rows materializes against the pass
@@ -830,8 +832,8 @@ namespace EQLogParser
     internal bool HasOverlayActivity(int mode)
     {
       var snapshot = _snapshot;
-      return !_disposed && snapshot is not null && DamageOverlayLifecycle.HasRecentActivity(snapshot.AllFights,
-        DateUtil.ToDotNetSeconds(DateTime.Now), mode, snapshot.PendingActivity);
+      return !_disposed && snapshot is not null && DamageOverlayLifecycle.HasRecentActivity(
+        _meterArrivals.Observed, MeterArrivals.Now, mode);
     }
 
     // Select and materialize from ONE snapshot. The lifecycle retains only scalar reset state, never this capture's rows.
@@ -849,8 +851,9 @@ namespace EQLogParser
         {
           cancellation.ThrowIfCancellationRequested();
           if (_disposed || !ReferenceEquals(snapshot, Volatile.Read(ref _meterSnapshot))) return null;
-          var scope = lifecycle.SelectCandidates(SessionId, snapshot.AllFights, now, mode, snapshot.PendingActivity);
-          return snapshot.DamageIndex.CaptureMeterInput(scope.Rows, snapshot.Facts, scope.FromTime, now);
+          var scope = lifecycle.SelectCandidates(SessionId, snapshot.AllFights, mode);
+          return snapshot.DamageIndex.CaptureMeterInput(scope.Rows, snapshot.Facts, scope.FromTime,
+            double.PositiveInfinity, scope.FirstOrdinal);
         });
         if (candidates is null) continue;
         calculation.Activity.Update(candidates, cancellation);
@@ -858,11 +861,13 @@ namespace EQLogParser
         {
           cancellation.ThrowIfCancellationRequested();
           if (_disposed || !ReferenceEquals(snapshot, Volatile.Read(ref _meterSnapshot))) return null;
-          var scope = lifecycle.Select(SessionId, snapshot.AllFights, now, mode, snapshot.PendingActivity,
-            calculation.Activity.For);
+          var arrival = _meterArrivals.Latest(_facts, snapshot.Timeline);
+          var scope = lifecycle.Select(SessionId, snapshot.AllFights, now, mode, arrival, _facts.FactCount,
+            snapshot.PendingActivity, calculation.Activity.For);
           // Publish before counting: a blocked build cannot hold its prior presentation past this deadline.
           publishExpiry?.Invoke(scope.ExpiresAt);
-          return snapshot.DamageIndex.CaptureMeterInput(scope.Rows, snapshot.Facts, scope.FromTime, now);
+          return snapshot.DamageIndex.CaptureMeterInput(scope.Rows, snapshot.Facts, scope.FromTime,
+            double.PositiveInfinity, scope.FirstOrdinal);
         });
         if (input is not null) return calculation.Update(input, cancellation);
       }
@@ -900,6 +905,8 @@ namespace EQLogParser
      * A log without combat damage (login/city logs) still derives — an empty fight list is an honest answer,
      * "capturing forever" is not.
      */
+    private void MeterDamageArrived(int through) => _meterArrivals.Record(through, MeterArrivals.Now);
+
     private long CapturedTotal =>
       _facts.FactCount + _heals.HealCount + _facts.DeathCount + _facts.TauntCount
       + _facts.IdentityEventCount + _facts.EvidenceCount;

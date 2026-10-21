@@ -106,7 +106,7 @@ public sealed class SpreadsheetExportTest : IDisposable
       using var row = book.CurrentSheet!.Row();
       row.Text("Kizant");
       row.Number(1234567);
-      row.Number(558492);   // GamParse writes this one as "0000550447", i.e. a string to everything downstream
+      row.Number(558492);   // Record positions must be numeric cells too.
     }
 
     using var zip = ZipFile.OpenRead(Target("types.xlsx"));

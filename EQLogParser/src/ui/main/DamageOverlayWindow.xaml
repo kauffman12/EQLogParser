@@ -20,7 +20,7 @@
         BorderThickness="1"
         MaxWidth="1500"
         MaxHeight="1000"
-        MinWidth="250"
+        MinWidth="300"
         MouseLeftButtonDown="OverlayMouseLeftDown"
         SizeChanged="WindowSizeChanged"
         ContentRendered="WindowContentRendered"
@@ -41,6 +41,7 @@
               <TextBlock x:Name="titlePercent" Text="" FontFamily="Tahoma" FontSize="14" Foreground="White" />
               <TextBlock x:Name="titleDamage" Text="Damage" FontFamily="Tahoma" FontSize="14" Foreground="White" />
               <TextBlock x:Name="titleDPS" Text="DPS" FontFamily="Tahoma" FontSize="14" Foreground="White" />
+              <TextBlock x:Name="titleRDPS" Text="RDPS" FontFamily="Tahoma" FontSize="14" Foreground="White" />
               <TextBlock x:Name="titleTime" Text="Sec" FontFamily="Tahoma" FontSize="14" Foreground="White" />
             </StackPanel>
           </Grid>

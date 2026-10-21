@@ -311,10 +311,11 @@ namespace EQLogParser
          * storing a sliced Fight there would let a zeroed meter serve truncated numbers to a plain row click. Rebuilding costs one walk of this row's
          * own ordinal run, which a once-a-second meter can pay; what the cache would save is correctness.
          */
-    internal Fight? SummaryFightInWindow(DerivedFight fight, DamageFactTable facts, double fromT, double toT)
+    internal Fight? SummaryFightInWindow(DerivedFight fight, DamageFactTable facts, double fromT, double toT,
+      int firstOrdinal = 0)
     {
       // Same boundary as SummaryFightFor: a pass appending while the meter slices would tear this walk.
-      lock (_gate) return BuildFight(fight, facts, fromT, toT);
+      lock (_gate) return BuildFight(fight, facts, fromT, toT, firstOrdinal);
     }
 
         /*
@@ -353,7 +354,7 @@ namespace EQLogParser
          * Cold materialization: every ordinal from zero — what a rebuilt pass, the meter's windowed slice and a row's first click pay. A live row that
          * merely grew takes ContinueFight instead; both share AddDamage/AddTank, so "same facts in same blocks" is structural.
          */
-    private Fight? BuildFight(DerivedFight fight, DamageFactTable facts, double fromT, double toT)
+    private Fight? BuildFight(DerivedFight fight, DamageFactTable facts, double fromT, double toT, int firstOrdinal = 0)
     {
       var walk = new RowWalk { Summary = NewSummary(fight, fromT, toT) };
 
@@ -363,10 +364,12 @@ namespace EQLogParser
              */
 
       if (_damageOrdinals.TryGetValue(fight, out var damageRun))
-        foreach (var ordinal in damageRun) AddDamage(walk, facts.RefAt(ordinal), facts, fromT, toT);   // ordinals through the door
+        foreach (var ordinal in damageRun)
+          if (ordinal >= firstOrdinal) AddDamage(walk, facts.RefAt(ordinal), facts, fromT, toT);
 
       if (_tankingOrdinals.TryGetValue(fight, out var tankRun))
-        foreach (var ordinal in tankRun) AddTank(walk, facts.RefAt(ordinal), facts, fromT, toT);   // ordinals through the door
+        foreach (var ordinal in tankRun)
+          if (ordinal >= firstOrdinal) AddTank(walk, facts.RefAt(ordinal), facts, fromT, toT);
 
       AddTaunts(walk, fight, facts, fromT, toT);
       return FinishFight(walk);
@@ -779,10 +782,10 @@ namespace EQLogParser
          * click-a-row path keeps its cached materialization untouched.
          */
     public static SummaryInput Build(IReadOnlyList<DerivedFight> selected, FightFactIndex index,
-      DamageFactTable facts, double fromT, double toT)
+      DamageFactTable facts, double fromT, double toT, int firstOrdinal = 0)
     {
       var result = new List<Fight>(selected.Count);
-      var bounded = fromT > double.NegativeInfinity || toT < double.PositiveInfinity;
+      var bounded = firstOrdinal > 0 || fromT > double.NegativeInfinity || toT < double.PositiveInfinity;
       var allRanges = new TimeRange();
       var withoutDamage = 0;
 
@@ -798,7 +801,8 @@ namespace EQLogParser
           continue;
         }
 
-        var built = bounded ? index.SummaryFightInWindow(fight, facts, fromT, toT) : index.SummaryFightFor(fight, facts);
+        var built = bounded ? index.SummaryFightInWindow(fight, facts, fromT, toT, firstOrdinal)
+          : index.SummaryFightFor(fight, facts);
 
         // A row with nothing inside the window contributes no numbers, so it must not contribute a clock or a heal
         // span either; counted the same way as a row with no facts at all.

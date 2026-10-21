@@ -39,6 +39,7 @@ namespace EQLogParser
         percent.Margin = new Thickness(0, 1, -13, 2);
         damage.Margin = new Thickness(0, 1, -12, 2);
         dps.Margin = new Thickness(0, 1, -6, 2);
+        rdps.Margin = new Thickness(0, 1, -6, 2);
         time.Margin = new Thickness(0, 1, 2, 2);
       }
       else
@@ -49,12 +50,13 @@ namespace EQLogParser
         percent.Margin = new Thickness(0, 0, -13, 1);
         damage.Margin = new Thickness(0, 0, -12, 1);
         dps.Margin = new Thickness(0, 0, -6, 1);
+        rdps.Margin = new Thickness(0, 0, -6, 1);
         time.Margin = new Thickness(0, 0, 2, 1);
       }
     }
 
     internal void Update(string playerName, string className, string percentValue, string damageValue, string dpsValue,
-      string timeValue, double barPercent, string colorOverride = null)
+      string rdpsValue, string timeValue, double barPercent, string colorOverride = null)
     {
       if (colorOverride != null && _lastColor != colorOverride)
       {
@@ -81,6 +83,7 @@ namespace EQLogParser
       player.Text = playerName;
       damage.Text = damageValue;
       dps.Text = dpsValue;
+      rdps.Text = rdpsValue;
       percent.Text = percentValue;
       time.Text = timeValue;
       progress.Progress = barPercent;

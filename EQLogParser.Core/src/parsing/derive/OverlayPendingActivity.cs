@@ -5,7 +5,7 @@ using System.Threading;
 namespace EQLogParser
 {
   // One snapshot's unprojected suffix. No facts, rows or timeline are retained. Update runs on the meter worker;
-  // opening/closing checks only read the cached hint. A new snapshot starts a new cursor and retires these hints.
+  // it answers data continuity only, never receipt freshness. A new snapshot starts a new cursor and retires these hints.
   internal sealed class OverlayPendingActivity(int projectedCount)
   {
     private readonly object _gate = new();
@@ -51,19 +51,7 @@ namespace EQLogParser
       }
     }
 
-    internal bool IsRecent(double now, double seconds)
-    {
-      // The UI must not wait for a worker scanning a bulk suffix.
-      var latest = Volatile.Read(ref _latest);
-      return latest <= now && now - latest <= seconds;
-    }
-
-    internal bool Continues(DerivedFight row, double now) =>
-      double.IsFinite(ContinuedThrough(row, now));
-
-    internal double ContinuedThrough(DerivedFight row, double now) => ContinuedThrough(row.Name, row.LastTime, now);
-
-    internal double ContinuedThrough(string name, double last, double now)
+    internal double ContinuedThrough(string name, double last)
     {
       lock (_gate)
       {
@@ -72,7 +60,7 @@ namespace EQLogParser
         {
           // Only a chain connected to THIS life may keep it visible. A post-gap same-name arrival is a new life.
           if (span.Begin > last + FightProjection.EngagementGapS) break;
-          if (span.End >= last && span.End <= now && now - span.End <= FightProjection.EngagementGapS)
+          if (span.End >= last)
             return span.End;
         }
         return double.NegativeInfinity;

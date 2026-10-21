@@ -17,6 +17,7 @@ namespace EQLogParser
 
     private readonly ParseLane _lane;
     private readonly IFactTable _facts;
+    private readonly Action<int> _damageArrived;
 
     /*
      * The heal stream, or null when the caller did not ask for one. Own table by choice — see HealFact's
@@ -36,11 +37,13 @@ namespace EQLogParser
     private long _lastSeenTs = -1;
     private long _firstSeenTs = -1;
 
-    public CombatCapture(IFactTable facts, IHealFactTable heals = null, ParseLane lane = null)
+    public CombatCapture(IFactTable facts, IHealFactTable heals = null, ParseLane lane = null,
+      Action<int> damageArrived = null)
     {
       _facts = facts ?? throw new ArgumentNullException(nameof(facts));
       _heals = heals;
       _lane = lane ?? ParseLane.Main;
+      _damageArrived = damageArrived;
 
       // One capture, one tally of the fact-packing guards (FactTime's clamp counter, HealFact's mask/label counters). They
       // are process statics because a row is a struct with no session to hang them on, and a fresh capture is the point
@@ -259,6 +262,7 @@ namespace EQLogParser
           // those filters was switched off, which is what FightSummarySource used to have to warn about.
           modMask: r.ModifiersMask,
           subIdx: subIdx));
+        _damageArrived?.Invoke(_facts.FactCount);
       }
     }
 

@@ -28,6 +28,15 @@ internal sealed class DamageMeterCalculation
   private MeterDamageFilter _filter;
   private MeterDirectionTotals _damage = new(false);
   private MeterDirectionTotals _tank = new(true);
+  /*
+   * The rolling window's right edge in LOG seconds. Forward-only inside a run; only the invalidation reset in UpdateCore
+   * re-anchors it, so a life leaving scope can leave the edge ahead of the data (a late fact behind it is refused, never
+   * mistaken for a current one).
+   */
+  private long _windowEdge = MeterRecentWindow.NoSecond;
+  // Unresolved rolling damage from the last publish, kept out of the totals objects because Clear() throws those away.
+  private long _recentUnresolved;
+  private int _firstOrdinal;
 
   internal MeterActivityIndex Activity { get; } = new();
 
@@ -40,7 +49,14 @@ internal sealed class DamageMeterCalculation
     }
     finally
     {
-      StatsBuildTrace.End(trace, $"lives={input.Lives.Count}");
+      /*
+       * Unplaced recent damage is a bug signal, not a state: the column would quietly omit it. Debug only, and only when
+       * non-zero, so a healthy raid build says nothing new.
+       */
+      var unresolved = _recentUnresolved;
+      StatsBuildTrace.End(trace, unresolved > 0
+        ? $"lives={input.Lives.Count} rdpsUnresolved={unresolved}"
+        : $"lives={input.Lives.Count}");
     }
   }
 
@@ -51,6 +67,7 @@ internal sealed class DamageMeterCalculation
     _names.Clear();
     _index = null;
     _facts = null;
+    _windowEdge = MeterRecentWindow.NoSecond;
     _damage = new MeterDirectionTotals(false);
     _tank = new MeterDirectionTotals(true);
   }
@@ -58,23 +75,36 @@ internal sealed class DamageMeterCalculation
   private DamageOverlayStats UpdateCore(MeterFactInput input, CancellationToken cancellation,
     in StatsBuildTrace.Handle trace)
   {
+    // Answered for itself even when this build returns before publishing, so the trace line cannot repeat an old count.
+    _recentUnresolved = 0;
     cancellation.ThrowIfCancellationRequested();
     var filter = MeterDamageFilter.Current;
-    if (!ReferenceEquals(_facts, input.Facts) || _from != input.From || _filter != filter || input.To < _to
-      || input.To >= _future || !AnswersMatch(input.Index, cancellation)
+    if (!ReferenceEquals(_facts, input.Facts) || _firstOrdinal != input.FirstOrdinal
+      || _from != input.From || _filter != filter || input.To < _to
+      || double.IsFinite(_future) && input.To >= _future || !AnswersMatch(input.Index, cancellation)
       || !ReferenceEquals(_index, input.Index) && !TryRebind(input, cancellation))
     {
       _lives.Clear();
       _names.Clear();
-      _damage = new MeterDirectionTotals(false);
-      _tank = new MeterDirectionTotals(true);
+      ResetTotals();
       _future = double.PositiveInfinity;
+      _windowEdge = MeterRecentWindow.NoSecond;
     }
     _index = input.Index;
     _facts = input.Facts;
     _from = input.From;
     _to = input.To;
     _filter = filter;
+    _firstOrdinal = input.FirstOrdinal;
+
+    // Log time alone advances RDPS. The host never passes a PC timestamp as an accounting bound.
+    var dataEdge = MeterRecentWindow.NoSecond;
+    foreach (var header in input.Lives)
+    {
+      var last = MeterRecentWindow.SecondOf(header.Last);
+      if (last > dataEdge) dataEdge = last;
+    }
+    if (dataEdge > _windowEdge) _windowEdge = dataEdge;
 
     try
     {
@@ -101,17 +131,28 @@ internal sealed class DamageMeterCalculation
       orderedLives.Sort(static (a, b) => a.Id.CompareTo(b.Id));
       var damageSlices = new List<MeterDirectionSlice>();
       var tankSlices = new List<MeterDirectionSlice>();
+      DerivedFight previousSource = null;
       var count = 0;
       var firstId = int.MaxValue;
       string firstName = null;
       foreach (var header in orderedLives)
       {
+        /*
+         * One slice per life, whatever the scope hands out: a repeated DerivedFight would double that life's rolling buckets,
+         * its time range and its share of the target title, though not its amounts — the second Read stops at its own cursor.
+         * The lives arrive sorted by Id, so a repeat can only ever be the next row.
+         */
+        if (ReferenceEquals(previousSource, header.Source)) continue;
+        previousSource = header.Source;
         if (!_lives.TryGetValue(header.Source, out var life))
           _lives[header.Source] = life = new Life();
         life.Input = header;
         cancellation.ThrowIfCancellationRequested();
-        rebuild |= Read(life, input, false, cancellation);
-        rebuild |= Read(life, input, true, cancellation);
+        // Age the retained windows before reading: a life with no new facts still loses the seconds that fell out.
+        life.Damage.Recent.Advance(_windowEdge);
+        life.Tank.Recent.Advance(_windowEdge);
+        rebuild |= Read(life, input, false, _windowEdge, cancellation);
+        rebuild |= Read(life, input, true, _windowEdge, cancellation);
         if (life.Damage.Activity.Count == 0 && life.Tank.Activity.Count == 0) continue;
         count++;
         damageSlices.Add(life.Damage);
@@ -124,11 +165,15 @@ internal sealed class DamageMeterCalculation
       StatsBuildTrace.Stage(trace, "delta");
       if (count == 0) return null;
       var title = StatsUtil.CombinedPrefix(count, true) + firstName;
-      var damage = _damage.Publish(title, allRanges, damageSlices);
+      var damage = _damage.Publish(title, allRanges, damageSlices, _windowEdge, out var damageRates);
       cancellation.ThrowIfCancellationRequested();
-      var tank = _tank.Publish(title, allRanges, tankSlices);
+      var tank = _tank.Publish(title, allRanges, tankSlices, _windowEdge, out var tankRates);
       cancellation.ThrowIfCancellationRequested();
-      var result = new DamageOverlayStats { DamageStats = damage, TankStats = tank };
+      _recentUnresolved = _damage.RecentUnresolved + _tank.RecentUnresolved;
+      var result = new DamageOverlayStats
+      {
+        DamageStats = damage, TankStats = tank, DamageRdps = damageRates, TankRdps = tankRates
+      };
       var raid = (result.DamageStats ?? result.TankStats)?.RaidStats;
       if (raid is not null)
       {
@@ -148,7 +193,7 @@ internal sealed class DamageMeterCalculation
     }
   }
 
-  private bool Read(Life life, MeterFactInput input, bool tanking, CancellationToken cancellation)
+  private bool Read(Life life, MeterFactInput input, bool tanking, long windowEdge, CancellationToken cancellation)
   {
     var slice = tanking ? life.Tank : life.Damage;
     var totals = tanking ? _tank : _damage;
@@ -164,6 +209,7 @@ internal sealed class DamageMeterCalculation
       var ordinals = input.Index.ReadMeterOrdinals(life.Input.Source, tanking, through, end);
       foreach (var ordinal in ordinals)
       {
+        if (ordinal < input.FirstOrdinal) continue;
         var fact = input.Facts.At(ordinal);
         if (fact.TimeS > input.To)
         {
@@ -178,7 +224,7 @@ internal sealed class DamageMeterCalculation
         RememberName(attacker, input.Index);
         RememberName(defender, input.Index);
         var hit = input.Index.ReadMeterHit(fact, input.Facts);
-        backwards |= slice.Add(hit, tanking, _filter);
+        backwards |= slice.Add(hit, tanking, _filter, windowEdge);
         totals.AddAmounts(hit, _filter);
         changed.Add(tanking ? hit.Defender : hit.Attacker);
       }
@@ -247,10 +293,19 @@ internal sealed class DamageMeterCalculation
     return true;
   }
 
-  private void RebuildTotals(CancellationToken cancellation)
+  /*
+   * Replacing the aggregates is not time passing: `_windowEdge` and each slice's buckets ride across it in either direction,
+   * so a reconstruction may not age the window. Clear() drops the edge — that is a capture ending.
+   */
+  private void ResetTotals()
   {
     _damage = new MeterDirectionTotals(false);
     _tank = new MeterDirectionTotals(true);
+  }
+
+  private void RebuildTotals(CancellationToken cancellation)
+  {
+    ResetTotals();
     foreach (var life in _lives.Values)
     {
       cancellation.ThrowIfCancellationRequested();

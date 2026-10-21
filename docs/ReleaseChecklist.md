@@ -227,11 +227,16 @@ These checks still require Windows for popup/hide behavior. See DesignNotes → 
   `Combined (10): <top mob>`. The digits and the name must agree between them; only the prefix differs. One mob on the meter prints no prefix at all,
   and a zeroed meter over a single encounter must not grow one.
 - [ ] **A kill closes it** (2026-11): mode "On Kill", kill a mob (a real death line, not a mob you walked away from) and stop attacking.
-  The board must stay readable for a few seconds, then clear roughly 8-10 s after the death — not linger the rest of the session,
-  and not vanish before the total can be read. Past ~30 s it must also close on a mob that simply never died.
+  The completed board closes about eight seconds after receipt of the last eligible damage. The death selects the final result but
+  does not renew the damage receipt. With no death, On Kill closes about 30 seconds after that receipt.
 - [ ] **A lull does NOT reset the numbers** (the case a purely time-based close gets wrong): damage a mob, do nothing for 12-20 s while
   nobody else hits anything, damage the same mob again. One board, one total — both hits in it, duration measured from the first swing.
   If the first hit disappeared, silence was treated as a kill.
+- [ ] **A silent board is frozen, then ends in one step** (2026-12): have two or three mobs on the board, then stop all damage and watch
+  for a full 30 seconds. No row may leave and no total, rate or percentage may move — membership is measured from the capture's newest
+  second, so with nothing arriving the board is static — and then the whole board must close at once when that deadline passes (On Kill:
+  ~30 s after receipt of the last accepted record, regardless of its log timestamp). Rows dropping out one by one, or a raid total shrinking while nobody is hitting anything, is the
+  old wall-clock pruning coming back.
 - [ ] **A one-shot shows its numbers**: kill a low-HP mob in a single hit (or open the overlay a second after a pull you already won).
   The board must appear with the killing blow included, even if no live frame was ever painted. It must not reopen repeatedly for that kill.
 - [ ] **The next pull starts fresh before the display hold ends**: kill A and attack B within eight seconds. B's totals/time must exclude A,
@@ -242,11 +247,16 @@ These checks still require Windows for popup/hide behavior. See DesignNotes → 
   Refreshes must not lose its early hits; the final display disappears after its grace period.
 - [ ] **Our own deaths do not close it**: get a party member or your own pet killed while the overlay is open and keep fighting. The
   board must not blank or reset because something on our side died.
-- [ ] **Time-based modes still behave**: set 3 s, 5 s and 10 s. Board closes ~that long after the last accepted combat
+- [ ] **Time-based modes still behave**: set 3 s, 5 s and 10 s. Board closes ~that long after receipt of the last accepted combat
   record (including avoidance), kill seen or not;
   a continuous fight never blanks mid-pull. At 3 s, attacks two seconds apart (including a new opponent) must both remain
   counted even when projection briefly lags; then stop attacking and verify that three seconds of real silence hides and resets
   it without extra grace. Known NPC-only noise must not extend that timeout while projection is behind.
+- [ ] **Log time and receipt time are independent**: feed identical damage with timestamps behind and ahead of the PC clock.
+  Damage, DPS, RDPS and Sec must agree, without waiting for the clock to reach future-dated hits. With a ten-second reset, a line received
+  eight seconds late must still buy ten seconds from receipt. During silence, filter/rebuild requests must not renew that deadline.
+  Repeat Reset with a new hit in the same log second: only the post-click ordinal counts. Reading a historical file is receipt of data;
+  merely reopening or re-deriving an expired capture is not.
 - [ ] **A blocked counting worker cannot strand the toolbar** (issue #416): use a ten-second reset, paint a board, then
   hold only its worker with a debugger while leaving the dispatcher responsive. After verified activity expires, both
   toolbar and body hide within the next timer tick. Releasing the worker must not flash its expired result back on screen.
@@ -311,6 +321,47 @@ compact accounting, paired publication". These checks are not satisfied by a Lin
   Historical record reconstruction must not recur each tick, but clock-block sorting, lifecycle scans and auxiliary
   annotations still scale with metadata. The headless 14,101-life THJ append exceeded the proposed 100 ms worker
   target; verify the actual supported workload before calling the long-session release gate complete.
+
+### Six-second RDPS column, checked on Windows (2026-10-20)
+
+The window arithmetic (six labels, divide by six from the first hit, the window riding **log** time and reading no build instant anywhere, pet folding, Tank
+attribution) is pinned headless; see DesignNotes → "Six-second RDPS: per-life buckets beside the meter's own amounts". Everything below is rendering or live behavior
+no headless run can see. The column is drawn unconditionally today — there is no visibility switch yet, and a zero prints as `0` (a dash for "no damage in the window"
+is an open preference, not current behavior).
+
+- [ ] **The header lands over its columns at every font and DPI**: fonts 10, 12, 14 and 16, normal and mini bars, light/dark, damage and
+  tanking, mixed-DPI monitors. `RDPS` must sit over its own column, `%`/`Damage`/`DPS` must not have moved from before the column existed,
+  and `Sec` stays where it was. These offsets are hand-tuned per-font margins in `DamageOverlayWindow.UpdateColumnSizes`, so this check is
+  what decides them; a drifting label is corrected there (and the RDPS column's width in the same switch), not by changing any value path.
+- [ ] **Digits stay put as they grow**: watch one row cross 999 → `1.0K` → `1.0M` in RDPS. Nothing may reflow the table, clip into DPS or
+  overlap `Sec`, and the name/icon area must not be covered — including the longest name you can produce (hidden-player rows, `[DoT +n]`
+  crit-rate suffix) at a narrow saved width.
+- [ ] **A narrow window widens at every font; nothing shrinks**: the minimum is computed per font — numeric block plus a 96-DIP name/icon
+  allowance — so it is **322/358/396/422** DIP at 10/12/14/16 pt (a flat 300 left zero room for names at 14 and overflowed at 16). At each font
+  size, start from a saved `OverlayWidth` under that figure (the old floor was 250), reopen the overlay, and confirm the window returns at its
+  minimum with names still readable left of the class icon. Then widen and narrow by hand: the meter never auto-shrinks, the widened value is
+  what gets saved, and neither `OverlayHeight` nor the toolbar reserve changes because a column was added. Report crowding **with the font size**.
+- [ ] **Quiet freezes it, like every other column**: hit once, then everyone stops. RDPS keeps showing its last value while Damage, DPS and Sec do the same thing
+  (nothing decays on a capture that stopped producing lines), and the whole board retires on the meter's own quiet period — On Kill's engagement gap or the timed mode's
+  seconds. Then keep the raid hitting while you stop: your RDPS must fall to 0 within about six seconds as the shared window slides past your last hit, in steps rather
+  than a fade. Repeat after a burst of several hits.
+- [ ] **Late lines still read full — the honesty gate**: with damage flowing, compare RDPS against what the log says the last six logged seconds
+  did, while lines visibly arrive late (chat behind the fight, a burst landing in one clump). The column must read the damage that *exists*, not
+  shrink because the file is lagging. The failure to report is a rate about `(6 − lag)/6` of what it should be while hits flow, or one that reaches 0 while damage is
+  still landing on screen — either means something reads the PC clock for the window instead of the log's own seconds.
+- [ ] **A stalled worker resumes rather than corrupting**: hold the counting worker (debugger) for several seconds and release it. Values sitting where they were *is*
+  the freeze law, not a bug; what must happen is that the released worker resumes normally, the first pass after release reads full (no half-windowed rate), and a board
+  whose data went far enough back still retires. Report a meter that never recovers or never goes away.
+- [ ] **Tank reads incoming, per defender**: check a pet tanking alongside its owner — the pet keeps its own row and its own rate, the owner is
+  not charged for it, and switching DPS/Tank shows one rate per view without either number moving the other's accounting.
+- [ ] **Pets fold once on the damage side**: with a pet out, RDPS appears on the `X +Pets` row as one value summed before the divide — not a
+  rate per pet row and not the visible bars' rates added together. Hide other players and class-filter the panel: the totals row's RDPS must
+  not shrink with what is on screen. If any actor shows **two rows**, or a pet's rate sits beside the pet's own name, report it — the rolling
+  lane resolves rows through the encounter column's own resolver and has to agree with it.
+- [ ] **The window belongs to this pull**: kill A, then pull B within six seconds — A's rolling damage must not join B. In a timed mode, a retained completed fight
+  keeps both its totals and its last rolling rate while nothing newer arrives; what it may never do is lend that damage to the next pull's rate.
+- [ ] **Nothing else moved**: copied parse contains no RDPS anywhere, the summary boards' DPS/duration/share are unchanged during the same
+  raid, and the meter's numbers still agree with an equivalent fight-list selection.
 
 ## Tanking Summary pet rows
 
@@ -546,8 +597,8 @@ Excel can answer is whether it opens and behaves. No new dll ships with this fea
   own name and groups pet damage under its owner; damage Class follows that player. Check a charm before/during/after its
   window. A charmed player moves to NPC DPS only during the charm; a charmed NPC moves in the opposite direction.
   A mercenary reads Mercenary in Players, opens no fight-list row, and still has its damage rows.
-- [ ] **The clock reads the way GamParse's does.** The pull's own second is `1`, one second early is `-1` — their scale has
-  no zero, and their readers union our files with years of saved GamParse ones. Log Time is the wall clock to the second.
+- [ ] **Relative time matches the captured event.** The pull's own second is `1`, one second early is `-1`, and five seconds
+  early is `-5`; the scale has no zero. Log Time is the timestamp from the log, not the PC clock at export time.
   Event Info states the window, the totals and which rule the heal sheets used.
 - [ ] **The Players tab reflects this event's personas.** Capture-time class wins over saved/latest class, with the saved
   class as fallback when this log has no evidence. A multi-persona selection keeps separate class rows with first/last seen

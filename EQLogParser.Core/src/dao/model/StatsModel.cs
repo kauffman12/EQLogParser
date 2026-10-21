@@ -145,6 +145,15 @@ namespace EQLogParser
   {
     public CombinedStats DamageStats { get; set; }
     public CombinedStats TankStats { get; set; }
+
+    /*
+     * Six-second rolling rates beside the stats they belong to. Overlay presentation only: no board, chart, ranking or Copy
+     * Parse input reads them, and they carry no reference back into the worker's accounting. Null only from a producer with
+     * no rolling lane — the meter publishes None beside null stats. docs/DesignNotes.md → "Six-second RDPS: per-life buckets
+     * beside the meter's own amounts".
+     */
+    public MeterDirectionRates DamageRdps { get; set; }
+    public MeterDirectionRates TankRdps { get; set; }
   }
 
 

@@ -48,7 +48,8 @@ public class MeterRefreshGateTest
     old.State.Reset(1, 100);
     Assert.IsFalse(checkpoint.TryCommit(old));
     var row = new DerivedFight { Name = "a rat", BeginTime = 150, LastTime = 160, DamageTotal = 100 };
-    Assert.HasCount(0, checkpoint.Read(owner).State.Select(1, [row], 160, 0).Rows);
+    row.FactEnd = 160;
+    Assert.HasCount(0, checkpoint.Read(owner).State.Select(1, [row], 160, 0, new(160, 160), 160).Rows);
   }
 
   [TestMethod]
@@ -63,7 +64,8 @@ public class MeterRefreshGateTest
     Assert.IsFalse(checkpoint.TryCommit(old));
     var current = checkpoint.Read(currentOwner);
     var row = new DerivedFight { Name = "a rat", BeginTime = 150, LastTime = 160, DamageTotal = 100 };
-    Assert.HasCount(1, current.State.Select(1, [row], 160, 0).Rows);
+    row.FactEnd = 160;
+    Assert.HasCount(1, current.State.Select(1, [row], 160, 0, new(160, 160), 160).Rows);
     Assert.IsTrue(checkpoint.TryCommit(current));
     Assert.IsFalse(checkpoint.TryCommit(current), "an already consumed checkpoint cannot overwrite a newer answer");
   }
@@ -76,7 +78,8 @@ public class MeterRefreshGateTest
     var worker = saved.Copy();
     worker.Reset(1, 200);
     var row = new DerivedFight { Name = "a rat", BeginTime = 150, LastTime = 160, DamageTotal = 100 };
-    Assert.HasCount(1, saved.Select(1, [row], 160, 0).Rows);
-    Assert.HasCount(0, worker.Select(1, [row], 160, 0).Rows);
+    row.FactEnd = 160;
+    Assert.HasCount(1, saved.Select(1, [row], 160, 0, new(160, 160), 160).Rows);
+    Assert.HasCount(0, worker.Select(1, [row], 160, 0, new(160, 160), 160).Rows);
   }
 }

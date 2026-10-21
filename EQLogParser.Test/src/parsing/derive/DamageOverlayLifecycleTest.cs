@@ -97,13 +97,13 @@ public class DamageOverlayLifecycleTest
     log.Hit("a rat", 0, 500);
     log.Die("a rat", 0);
     Damage(500, log.Board(meter, 1));
-    Assert.IsTrue(DamageOverlayLifecycle.HasRecentActivity(log.Rows, T0 + 1, 0));
-    var announced = DamageOverlayLifecycle.LatestActivityOrdinal(log.Rows, double.PositiveInfinity);
+    Assert.IsTrue(log.HasActivity(1, 0));
+    var announced = log.Arrival.Through;
     Assert.IsTrue(announced > 0);
     Damage(500, log.Board(meter, 8));
-    Assert.AreEqual(announced, DamageOverlayLifecycle.LatestActivityOrdinal(log.Rows, double.PositiveInfinity), "republishing a death is not new damage");
+    Assert.AreEqual(announced, log.Arrival.Through, "republishing a death is not new damage");
     Assert.IsNull(log.Board(meter, 8.5));
-    Assert.IsFalse(DamageOverlayLifecycle.HasRecentActivity(log.Rows, T0 + 8.5, 0));
+    Assert.IsFalse(log.HasActivity(30.5, 0));
     Assert.IsNull(log.Board(meter, 10));
   }
 
@@ -113,25 +113,21 @@ public class DamageOverlayLifecycleTest
     var log = new Capture();
     log.Hit("a rat", 0, 500);
     log.Board(new DamageOverlayLifecycle(), 0);
-    var first = DamageOverlayLifecycle.LatestActivityOrdinal(log.Rows, double.PositiveInfinity);
+    var first = log.Arrival.Through;
     log.Hit("a rat", 0, 200);
     log.Board(new DamageOverlayLifecycle(), 0);
-    Assert.IsTrue(DamageOverlayLifecycle.LatestActivityOrdinal(log.Rows, double.PositiveInfinity) > first);
+    Assert.IsTrue(log.Arrival.Through > first);
   }
 
   [TestMethod]
-  public void ARowTheClockHasNotReachedYetSpendsNoWatermark()
+  public void ARowWatermarkDoesNotConsultThePcClock()
   {
     var log = new Capture();
     log.Hit("a rat", 0, 500);
     log.Board(new DamageOverlayLifecycle(), 0);
 
-    // Every row here begins after `now`, which is what a log whose clock runs ahead of the machine's looks like. Bumping the watermark on one would
-    // spend the announcement the next REAL arrival earns, and the overlay would open a fight late with nothing in the log to explain it.
-    Assert.AreEqual(0, DamageOverlayLifecycle.LatestActivityOrdinal(log.Rows, -1),
-                    "a future-dated row moved the opening watermark");
-    Assert.IsTrue(DamageOverlayLifecycle.LatestActivityOrdinal(log.Rows, double.PositiveInfinity) > 0,
-                  "the filter swallowed an ordinary row too");
+    Assert.IsTrue(log.Arrival.Through > 0,
+      "captured membership does not depend on whether the PC clock has reached a log timestamp");
   }
   [TestMethod]
   public void FreshCompletedBoardDoesNotShrinkOnTheSecondTickOrARebuiltSnapshot()
@@ -157,16 +153,16 @@ public class DamageOverlayLifecycleTest
   }
 
   [TestMethod]
-  public void CompletedDisplayUsesTheObservedDeathNotTheLastExchange()
+  public void ADeathSelectsTheCompletedResultButDoesNotRenewTheDamageReceipt()
   {
     var log = new Capture();
     var meter = new DamageOverlayLifecycle();
     log.Hit("a rat", 0, 500);
-    log.Die("a rat", 10);
-    Damage(500, log.Board(meter, 11));
-    Assert.AreEqual(T0 + 10, log.Rows.Single().DeathTime);
-    Damage(500, log.Board(meter, 18));
-    Assert.IsNull(log.Board(meter, 18.5));
+    log.Die("a rat", 1);
+    Damage(500, log.Board(meter, 2));
+    Assert.AreEqual(T0 + 1, log.Rows.Single().DeathTime);
+    Damage(500, log.Board(meter, 8));
+    Assert.IsNull(log.Board(meter, 8.5), "only receipt of new damage can renew the deadline");
   }
 
   [TestMethod]
@@ -198,7 +194,7 @@ public class DamageOverlayLifecycleTest
     var meter = new DamageOverlayLifecycle();
     log.Hit("a rat", 0, 500);
     Damage(500, log.Board(meter, 0));
-    meter.Reset(1, T0 + 0.5);
+    meter.Reset(1, log.Count);
     Assert.IsNull(log.Board(meter, 1));
     log.Hit("a rat", 2, 200);
     Damage(200, log.Board(meter, 2));
@@ -391,17 +387,53 @@ public class DamageOverlayLifecycleTest
     Assert.IsTrue(log.HasActivity(89.5, 0), "keep polling for the new life, without showing the old one's totals");
   }
 
+  // Receipt renews the overlay's visibility even while projection lags; only data can move membership.
   [TestMethod]
-  public void PendingDamageToAnotherOpponentDoesNotExtendAnExpiredLife()
+  public void PendingDamageRenewsVisibilityWithoutRecountingTheOldRows()
   {
     var log = new Capture();
     var meter = new DamageOverlayLifecycle();
     log.Hit("a rat", 0, 500);
     Damage(500, log.Board(meter, 0));
     log.Hit("a bat", 29, 200);
-    Assert.IsNull(log.Board(meter, 30.5, project: false));
+    Damage(500, log.Board(meter, 30.5, project: false));
     Assert.IsTrue(log.HasActivity(30.5, 0));
-    Damage(200, log.Board(meter, 30.6));
+    Damage(700, log.Board(meter, 30.6));
+  }
+
+  /*
+   * The reason membership is measured from the capture and not the wall clock: a board holding several lives must not shed rows
+   * or move its totals while no line arrives. Only one thing may end it — the newest captured second plus the gap — and it ends
+   * all of them in a single step.
+   */
+  [TestMethod]
+  public void ASilentBoardHoldsEveryRowAndTotalUntilItsDeadline()
+  {
+    var log = new Capture();
+    var meter = new DamageOverlayLifecycle();
+    log.Hit("a rat", 0, 500);
+    log.Hit("a bat", 20, 300);
+    Damage(800, log.Board(meter, 20));
+
+    // Thirty polls of nothing arriving: the rat used to leave at second 30 and the total with it.
+    for (var second = 21; second <= 49; second++) Damage(800, log.Board(meter, second));
+
+    Assert.IsNull(log.Board(meter, 50.5), "second 20 plus the 30 s gap is the deadline, then the board is gone");
+  }
+
+  [TestMethod]
+  public void ALifeIdleBeyondTheGapLeavesWhenNewDataMovesTheCaptureForward()
+  {
+    var log = new Capture();
+    var meter = new DamageOverlayLifecycle();
+    log.Hit("a rat", 0, 500);
+    log.Hit("a bat", 10, 300);
+    Damage(800, log.Board(meter, 10));
+
+    // Data moves the newest second to 39 (still one bat life: 29 s after its own last swing), and the rat is 39 seconds behind
+    // it — so the rat leaves on the capture's own clock while the bat keeps its whole total.
+    log.Hit("a bat", 39, 100);
+    Damage(400, log.Board(meter, 39));
   }
 
   [TestMethod]
@@ -426,7 +458,7 @@ public class DamageOverlayLifecycleTest
     log.Hit("a rat", 0, 500);
     Damage(500, log.Board(meter, 0, 3));
     log.Hit("a rat", 2, 200);
-    meter.Reset(1, T0 + 2.5);
+    meter.Reset(1, log.Count);
     Assert.IsNull(log.Board(meter, 3.1, 3, project: false));
     Assert.IsNull(log.Board(meter, 3.2, 3));
     log.Hit("a rat", 4, 100);
@@ -489,8 +521,8 @@ public class DamageOverlayLifecycleTest
     log.Hit("a rat", 0, 500);
     log.Die("a rat", 0);
     Damage(500, log.Board(new DamageOverlayLifecycle(), 1, 5));
-    Assert.IsTrue(DamageOverlayLifecycle.HasRecentActivity(log.Rows, T0 + 1, 5));
-    Assert.IsFalse(DamageOverlayLifecycle.HasRecentActivity(log.Rows, T0 + 6, 5));
+    Assert.IsTrue(log.HasActivity(1, 5));
+    Assert.IsFalse(log.HasActivity(6, 5));
   }
 
   [TestMethod]
@@ -522,6 +554,28 @@ public class DamageOverlayLifecycleTest
     Assert.AreEqual(50L, (long)board.TankStats.RaidStats.Total);
   }
 
+  [TestMethod]
+  public void PendingMembershipStaysFrozenUntilTheWholeBoardExpires()
+  {
+    var log = new Capture();
+    var meter = new DamageOverlayLifecycle();
+    log.Hit("a rat", 0, 500);
+    log.Hit("a bat", 35, 200);
+    Damage(200, log.Board(meter, 35));
+    log.Hit("a rat", 29, 100); // delayed data bridges the rat, received after the bat
+    var initial = log.Board(meter, 36, project: false);
+    Damage(700, initial);
+    Assert.IsNotNull(initial);
+    for (var second = 37; second <= 65; second++)
+    {
+      var next = log.Board(meter, second, project: false);
+      DamageMeterAssert.Equal(initial, next);
+      Assert.IsNotNull(next);
+      Assert.AreEqual(initial.DamageRdps.Total, next.DamageRdps.Total);
+    }
+    Assert.IsNull(log.Board(meter, 65.1, project: false));
+  }
+
   private static void Damage(long expected, DamageOverlayStats? board)
   {
     Assert.IsNotNull(board?.DamageStats);
@@ -535,6 +589,10 @@ public class DamageOverlayLifecycleTest
     private FightFactIndex _index = new();
     private OverlayPendingActivity _pending = new(0);
     private readonly DamageMeterCalculation _calculation = new();
+    private readonly MeterArrivals _arrivals = new();
+    private double _lastReceipt = double.NegativeInfinity;
+    internal int Count => _facts.FactCount;
+    internal MeterArrival Arrival => _arrivals.Latest(_facts, _timeline);
     internal List<DerivedFight> Rows { get; private set; } = [];
 
     internal Capture() => _timeline.SetIdentity("Illuminai", IdentityKind.Player, RuleStrength.Manual, "manual");
@@ -543,9 +601,12 @@ public class DamageOverlayLifecycleTest
 
     internal void Incoming(string mob, int second, uint amount) => Add(mob, "Illuminai", mob, second, amount);
 
-    internal void HitUnclassified(string mob, int second, uint amount) => _facts.AddFact(new DamageFact(
-      _facts.FactCount, (long)(T0 + second), _facts.InternName("Illuminai"), _facts.InternName(mob),
-      amount, LabelTypes.Melee, 0, 0, ushort.MaxValue));
+    internal void HitUnclassified(string mob, int second, uint amount)
+    {
+      _facts.AddFact(new DamageFact(_facts.FactCount, (long)(T0 + second), _facts.InternName("Illuminai"),
+        _facts.InternName(mob), amount, LabelTypes.Melee, 0, 0, ushort.MaxValue));
+      Receipt(second);
+    }
 
     internal void NpcFight(int second)
     {
@@ -567,15 +628,21 @@ public class DamageOverlayLifecycleTest
         _pending = new OverlayPendingActivity(_facts.FactCount);
       }
       _pending.Update(_facts, _timeline);
-      var scope = lifecycle.Select(sessionId, Rows, T0 + second, mode, _pending);
-      var expected = DerivedTotals.ForOverlay(scope.Rows, _index, _facts, scope.FromTime, T0 + second);
-      var actual = _calculation.Update(_index.CaptureMeterInput(scope.Rows, _facts, scope.FromTime, T0 + second));
+      var candidates = lifecycle.SelectCandidates(sessionId, Rows, mode);
+      _calculation.Activity.Update(_index.CaptureMeterInput(candidates.Rows, _facts, candidates.FromTime,
+        double.PositiveInfinity, candidates.FirstOrdinal));
+      var scope = lifecycle.Select(sessionId, Rows, T0 + second, mode, _arrivals.Latest(_facts, _timeline), Count,
+        _pending, _calculation.Activity.For);
+      var expected = DerivedTotals.ForOverlay(scope.Rows, _index, _facts, scope.FromTime,
+        double.PositiveInfinity, scope.FirstOrdinal);
+      var actual = _calculation.Update(_index.CaptureMeterInput(scope.Rows, _facts, scope.FromTime,
+        double.PositiveInfinity, scope.FirstOrdinal));
       DamageMeterAssert.Equal(expected, actual);
       return actual;
     }
 
     internal bool HasActivity(double second, int mode) =>
-      DamageOverlayLifecycle.HasRecentActivity(Rows, T0 + second, mode, _pending);
+      DamageOverlayLifecycle.HasRecentActivity(_arrivals.Latest(_facts, _timeline), T0 + second, mode);
 
     internal CombinedStats? SelectedTotals() => DerivedTotals.For(Rows, _index, _facts, new HealFactTable(_facts))?.CombinedStats;
 
@@ -584,6 +651,13 @@ public class DamageOverlayLifecycleTest
       _timeline.SetIdentity(mob, IdentityKind.Npc, RuleStrength.Manual, "manual");
       _facts.AddFact(new DamageFact(_facts.FactCount, (long)(T0 + second), _facts.InternName(attacker),
         _facts.InternName(defender), amount, LabelTypes.Melee, 0, 0, ushort.MaxValue));
+      Receipt(second);
+    }
+
+    private void Receipt(double second)
+    {
+      _lastReceipt = Math.Max(_lastReceipt, T0 + second);
+      _arrivals.Record(Count, _lastReceipt);
     }
   }
 }

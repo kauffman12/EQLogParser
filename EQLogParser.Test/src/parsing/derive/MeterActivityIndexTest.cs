@@ -93,11 +93,11 @@ public sealed class MeterActivityIndexTest
     Assert.AreEqual(0, log.Select(new DamageOverlayLifecycle(), 1, 10).Rows.Count);
     var pending = new OverlayPendingActivity(0);
     pending.Update(log.Facts, log.Timeline);
-    Assert.IsFalse(pending.IsRecent(T0 + 1, 10));
+    Assert.IsFalse(double.IsFinite(pending.Latest));
     AppSettings.IsBaneDamageEnabled = true;
     Assert.AreEqual(1, log.Select(new DamageOverlayLifecycle(), 1, 10).Rows.Count);
     pending.Update(log.Facts, log.Timeline);
-    Assert.IsTrue(pending.IsRecent(T0 + 1, 10));
+    Assert.AreEqual(T0, pending.Latest);
   }
 
   [TestMethod]
@@ -108,10 +108,10 @@ public sealed class MeterActivityIndexTest
     var pending = new OverlayPendingActivity(log.Facts.FactCount);
     log.Add(9, 100, LabelTypes.Bane);
     pending.Update(log.Facts, log.Timeline);
-    Assert.IsFalse(pending.IsRecent(T0 + 11, 10));
+    Assert.IsFalse(double.IsFinite(pending.Latest));
     log.Add(10, 100, LabelTypes.Bane, incoming: true);
     pending.Update(log.Facts, log.Timeline);
-    Assert.IsTrue(pending.IsRecent(T0 + 11, 10));
+    Assert.AreEqual(T0 + 10, pending.Latest);
   }
 
   [TestMethod]
@@ -127,16 +127,16 @@ public sealed class MeterActivityIndexTest
   }
 
   [TestMethod]
-  public void ResetAndBackwardClocksCannotReuseActivityOutsideTheRequestedWindow()
+  public void ResetCutsTheCapturedPrefixAndPresentationTimeCannotChangeItsActivity()
   {
     var log = new Combat();
     log.Add(0, 100);
     log.Add(9, 100);
     var lifecycle = new DamageOverlayLifecycle();
-    Assert.AreEqual(T0 + 10, log.Select(lifecycle, 0, 10).ExpiresAt);
+    Assert.AreEqual(T0 + 19, log.Select(lifecycle, 0, 10).ExpiresAt);
     Assert.AreEqual(T0 + 19, log.Select(lifecycle, 11, 10).ExpiresAt);
-    Assert.AreEqual(T0 + 10, log.Select(lifecycle, 1, 10).ExpiresAt);
-    lifecycle.Reset(1, T0 + 10);
+    Assert.AreEqual(T0 + 19, log.Select(lifecycle, 1, 10).ExpiresAt);
+    lifecycle.Reset(1, log.Facts.FactCount);
     Assert.AreEqual(0, log.Select(lifecycle, 11, 10).Rows.Count);
   }
 
@@ -166,14 +166,14 @@ public sealed class MeterActivityIndexTest
   }
 
   [TestMethod]
-  public void OnKillPublishesTheFinalDeathGraceAsAFixedDeadline()
+  public void OnKillPublishesACompletedDeadlineFromTheLastDamageReceipt()
   {
     var log = new Combat();
     log.Add(0, 100);
     log.Facts.AddDeath(new DeathFact(1, (long)(T0 + 1), log.Facts.InternName("a rat"), -1));
     var lifecycle = new DamageOverlayLifecycle();
-    Assert.AreEqual(T0 + 9, log.Select(lifecycle, 1, 0).ExpiresAt);
-    Assert.AreEqual(T0 + 9, log.Select(lifecycle, 5, 0).ExpiresAt);
+    Assert.AreEqual(T0 + 8, log.Select(lifecycle, 1, 0).ExpiresAt);
+    Assert.AreEqual(T0 + 8, log.Select(lifecycle, 5, 0).ExpiresAt);
     Assert.AreEqual(0, log.Select(lifecycle, 9.1, 0).Rows.Count);
   }
 
@@ -193,7 +193,7 @@ public sealed class MeterActivityIndexTest
     var scope = log.Select(lifecycle, 3, 0);
     Assert.HasCount(1, scope.Rows);
     Assert.AreEqual("A rat", scope.Rows[0].Name);
-    Assert.AreEqual(T0 + 9, scope.ExpiresAt);
+    Assert.AreEqual(T0 + 8, scope.ExpiresAt);
     Assert.HasCount(1, log.Select(lifecycle, 8, 0).Rows, "polling must retain the eligible completion");
     Assert.HasCount(0, log.Select(lifecycle, 9.1, 0).Rows);
   }
@@ -213,12 +213,12 @@ public sealed class MeterActivityIndexTest
   }
 
   [TestMethod]
-  public void FutureActivityIsRevisitedWhenTheClockReachesIt()
+  public void AlreadyCapturedActivityDoesNotWaitForThePresentationClock()
   {
     var log = new Combat();
     log.Add(0, 100);
     log.Add(9, 100);
-    Assert.AreEqual(T0 + 10, log.Select(new DamageOverlayLifecycle(), 1, 10).ExpiresAt);
+    Assert.AreEqual(T0 + 19, log.Select(new DamageOverlayLifecycle(), 1, 10).ExpiresAt);
     Assert.AreEqual(T0 + 19, log.Select(new DamageOverlayLifecycle(), 9, 10).ExpiresAt);
   }
 
@@ -228,6 +228,8 @@ public sealed class MeterActivityIndexTest
     internal readonly EntityTimeline Timeline = new();
     private readonly FightProjection.FightProjectionCache _projection = new();
     private readonly MeterActivityIndex _activity = new();
+    private readonly MeterArrivals _arrivals = new();
+    private double _lastReceipt = double.NegativeInfinity;
 
     internal Combat()
     {
@@ -242,6 +244,8 @@ public sealed class MeterActivityIndexTest
       var defender = Facts.InternName(incoming ? "Illuminai" : opponent);
       Facts.AddFact(new DamageFact(Facts.FactCount, (long)(T0 + second), attacker, defender,
         total, type, 0, LineModifiersParser.None, DamageFactTable.NoSubtype));
+      _lastReceipt = Math.Max(_lastReceipt, T0 + second);
+      _arrivals.Record(Facts.FactCount, _lastReceipt);
     }
 
     internal DamageOverlayScope Select(DamageOverlayLifecycle lifecycle, double second, int mode)
@@ -249,9 +253,11 @@ public sealed class MeterActivityIndexTest
       ClassificationRules.Apply(Facts, Timeline);
       var rows = _projection.Project(Facts, Timeline);
       var now = T0 + second;
-      var candidates = lifecycle.SelectCandidates(1, rows, now, mode);
-      _activity.Update(_projection.Index.CaptureMeterInput(candidates.Rows, Facts, candidates.FromTime, now));
-      return lifecycle.Select(1, rows, now, mode, activity: _activity.For);
+      var candidates = lifecycle.SelectCandidates(1, rows, mode);
+      _activity.Update(_projection.Index.CaptureMeterInput(candidates.Rows, Facts, candidates.FromTime,
+        double.PositiveInfinity, candidates.FirstOrdinal));
+      return lifecycle.Select(1, rows, now, mode, _arrivals.Latest(Facts, Timeline), Facts.FactCount,
+        activity: _activity.For);
     }
   }
 }

@@ -31,12 +31,12 @@ internal sealed class MeterLifecycleCheckpoint
     }
   }
 
-  internal void Reset(int sessionId, double now)
+  internal void Reset(int sessionId, int capturedCount)
   {
     lock (_gate)
     {
       _revision++;
-      _state.Reset(sessionId, now);
+      _state.Reset(sessionId, capturedCount);
     }
   }
 }

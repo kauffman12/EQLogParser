@@ -24,9 +24,9 @@ public class OverlayPendingActivityTest
     ClassificationRules.Apply(facts, timeline);
     var pending = new OverlayPendingActivity(0);
     pending.Update(facts, timeline);
-    Assert.IsFalse(pending.IsRecent(T0 + 2, 3));
+    Assert.IsFalse(double.IsFinite(pending.Latest));
     pending.Update(facts, timeline);
-    Assert.IsFalse(pending.IsRecent(T0 + 2, 3), "polling is not activity");
+    Assert.IsFalse(double.IsFinite(pending.Latest), "polling is not activity");
   }
 
   [TestMethod]
@@ -46,10 +46,10 @@ public class OverlayPendingActivityTest
     ClassificationRules.Apply(facts, timeline);
     var incoming = new OverlayPendingActivity(0);
     incoming.Update(facts, timeline);
-    Assert.IsTrue(incoming.Continues(new DerivedFight { Name = "a guard", LastTime = T0 }, T0 + 2));
+    Assert.AreEqual(T0 + 1, incoming.ContinuedThrough("a guard", T0));
     var spellOnly = new OverlayPendingActivity(1);
     spellOnly.Update(facts, timeline);
-    Assert.IsTrue(spellOnly.IsRecent(T0 + 2, 3), "an unnamed caster's damage is not NPC-on-NPC noise");
+    Assert.AreEqual(T0 + 1, spellOnly.Latest, "an unnamed caster's damage is not NPC-on-NPC noise");
   }
 
   [TestMethod]
@@ -65,10 +65,10 @@ public class OverlayPendingActivityTest
     ClassificationRules.Apply(facts, timeline);
     var pending = new OverlayPendingActivity(0);
     pending.Update(facts, timeline);
-    Assert.IsTrue(pending.IsRecent(T0 + 1, 3));
+    Assert.AreEqual(T0, pending.Latest);
     timeline.SetIdentity("Stranger", IdentityKind.Npc, RuleStrength.Manual, "manual");
     pending.Update(facts, timeline);
-    Assert.IsFalse(pending.IsRecent(T0 + 1, 3), "a cached hint must not survive a verdict that excludes it");
+    Assert.IsFalse(double.IsFinite(pending.Latest), "a cached hint must not survive a verdict that excludes it");
   }
 
   private static DamageFact Hit(int sequence, int attacker, int defender) =>

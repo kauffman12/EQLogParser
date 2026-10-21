@@ -13,14 +13,14 @@ internal static class DerivedTotals
   // Reference answer for one already-selected scope. Null means neither direction has anything to show;
   // eligibility, expiration and reset policy belong to DamageOverlayLifecycle, not this calculation.
   internal static DamageOverlayStats? ForOverlay(IReadOnlyList<DerivedFight> rows, FightFactIndex index,
-    DamageFactTable facts, double fromT, double toT)
+    DamageFactTable facts, double fromT, double toT, int firstOrdinal = 0)
   {
     if (rows is not { Count: > 0 })
     {
       return null;
     }
 
-    var input = FightSummarySource.Build(rows, index, facts, fromT, toT);
+    var input = FightSummarySource.Build(rows, index, facts, fromT, toT, firstOrdinal);
     if (input.Fights.Count == 0)
     {
       return null;

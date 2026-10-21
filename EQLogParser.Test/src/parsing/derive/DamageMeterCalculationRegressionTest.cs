@@ -17,7 +17,7 @@ public partial class DamageMeterCalculationTest
       log.Add("Illuminai", "a rat", 2, 900);
       log.Add("a rat", "Bithika", 2, 90);
       var rows = log.Project();
-      var input = log.Cache.Index.CaptureMeterInput(rows, log.Facts, double.NegativeInfinity, T0 + 3);
+      var input = log.Cache.Index.CaptureMeterInput(rows, log.Facts, double.NegativeInfinity, double.PositiveInfinity);
       var lookups = 0;
       // Fallback owners are read during publication, after both direction cursors have advanced.
       IdentityLookup.LiveOwner = _ =>
@@ -53,7 +53,7 @@ public partial class DamageMeterCalculationTest
     log.Timeline.SetIdentity("Unrelated", IdentityKind.Player, RuleStrength.Manual, "manual");
     var rows = log.Project();
     Assert.AreNotSame(oldIndex, log.Cache.Index);
-    var input = log.Cache.Index.CaptureMeterInput(rows, log.Facts, double.NegativeInfinity, T0 + 1);
+    var input = log.Cache.Index.CaptureMeterInput(rows, log.Facts, double.NegativeInfinity, double.PositiveInfinity);
     Assert.HasCount(2, input.Lives);
     using var cancel = new CancellationTokenSource();
     var lives = new CancellingLifeList(input.Lives, cancel);
@@ -108,7 +108,7 @@ public partial class DamageMeterCalculationTest
         if (step is 18 or 37) log.Timeline = MeterTimeline(step == 18 ? "Bithika" : "Illuminai");
         if (step % 10 == 0)
           log.Timeline.SetIdentity("Unrelated" + step, IdentityKind.Player, RuleStrength.Manual, "manual");
-        if (step is 13 or 31) log.Lifecycle.Reset(1, T0 + second);
+        if (step is 13 or 31) log.Lifecycle.Reset(1, log.Facts.FactCount);
 
         var target = random.Next(2) == 0 ? "a rat" : "a bat";
         var hits = random.Next(1, 8);

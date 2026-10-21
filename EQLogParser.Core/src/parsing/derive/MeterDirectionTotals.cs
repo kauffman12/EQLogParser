@@ -37,13 +37,18 @@ internal sealed class MeterDirectionSlice
   internal readonly Dictionary<string, (string Owner, double Time)> Owners = new(StringComparer.Ordinal);
   internal readonly List<double> Blocks = [];
   internal readonly Dictionary<(string Name, string Owner, bool Valid), List<MeterFirst>> First = [];
+  /*
+   * Six seconds of the same amounts, keyed the same way, so a withdrawn life loses both together; windowed against the
+   * capture's newest second, never against the instant this update ran.
+   */
+  internal readonly MeterRecentWindow Recent = new();
   internal int OrderVersion;
   private int _position;
   internal double Begin = double.NaN;
   internal double Last = double.NaN;
   internal double Latest = double.NegativeInfinity;
 
-  internal bool Add(MeterHit hit, bool tanking, MeterDamageFilter filter)
+  internal bool Add(MeterHit hit, bool tanking, MeterDamageFilter filter, long windowEdge)
   {
     var name = tanking ? hit.Defender : hit.Attacker;
     if (Blocks.Count == 0 || Blocks[^1] != hit.Time)
@@ -75,9 +80,11 @@ internal sealed class MeterDirectionSlice
 
     if (valid)
     {
-      var key = (name, tanking ? string.Empty : hit.Owner ?? string.Empty);
+      var ownerKey = tanking ? string.Empty : hit.Owner ?? string.Empty;
+      var key = (name, ownerKey);
       Amounts.TryGetValue(key, out var amount);
       Amounts[key] = amount.Add(hit.Total, StatsUtil.CountsAsDamageHit(hit.Type));
+      Recent.Add(name, ownerKey, hit.Time, hit.Total, windowEdge);
     }
     return backwards;
   }
@@ -109,6 +116,10 @@ internal sealed class MeterDirectionTotals(bool tanking)
   private readonly Dictionary<string, List<MeterCoverage>> _memberGroups = new(StringComparer.Ordinal);
   private double _last = double.NaN;
   private readonly MeterOrdering _ordering = new();
+
+  // Recent damage the row resolver could not place on the last publish, reported on the build's Debug line. Zero is the
+  // only sane answer: every counted recent amount comes from a hit that already earned its encounter row.
+  internal long RecentUnresolved { get; private set; }
 
   internal void AddAmounts(MeterHit hit, MeterDamageFilter filter)
   {
@@ -151,8 +162,11 @@ internal sealed class MeterDirectionTotals(bool tanking)
     AddBounds(slice);
   }
 
-  internal CombinedStats Publish(string target, TimeRange allRanges, IReadOnlyList<MeterDirectionSlice> slices)
+  internal CombinedStats Publish(string target, TimeRange allRanges, IReadOnlyList<MeterDirectionSlice> slices,
+    long windowEdge, out MeterDirectionRates rates)
   {
+    rates = MeterDirectionRates.None;
+    RecentUnresolved = 0;
     if (double.IsNaN(_last)) return null;
     var rows = new Dictionary<string, PlayerStats>(StringComparer.Ordinal);
     var groups = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
@@ -230,6 +244,45 @@ internal sealed class MeterDirectionTotals(bool tanking)
       combined.StatsList.Add(row);
     }
     _ordering.Assign(combined, slices, groups, _amounts, tanking, Resolve);
+
+    /*
+     * Rolling RDPS: sum the six buckets of every selected life, resolve each actor through the SAME row resolver as the
+     * encounter amounts (one pet grouping interpretation, never a second one), then divide once per row and once for the
+     * whole scope — that total from its own sum, never added up from rounded rows.
+     */
+    var recentAmounts = new Dictionary<(string Name, string Owner), long>();
+    for (var i = 0; i < slices.Count; i++) slices[i].Recent.SumInto(recentAmounts, windowEdge);
+
+    var byRow = new Dictionary<string, long>(StringComparer.Ordinal);
+    var recentTotal = 0L;
+    foreach (var pair in recentAmounts)
+    {
+      var rowName = Resolve(pair.Key.Name, pair.Key.Owner);
+      /*
+       * Recent damage is a subset of counted damage by construction — same hit, same key, same admitted branch — so an
+       * unplaceable amount is a bug the column would hide. Counted for the build's Debug line rather than hushed.
+       */
+      if (!rows.ContainsKey(rowName))
+      {
+        RecentUnresolved += pair.Value;
+        continue;
+      }
+      byRow.TryGetValue(rowName, out var prior);
+      byRow[rowName] = prior + pair.Value;
+      recentTotal += pair.Value;
+    }
+
+    if (byRow.Count > 0)
+    {
+      // Dividing a value while enumerating the keys is legal; the copy only keeps "divide once, after the sum" obvious.
+      var rowNames = new string[byRow.Count];
+      byRow.Keys.CopyTo(rowNames, 0);
+      foreach (var rowName in rowNames) byRow[rowName] /= MeterRecentWindow.WindowSeconds;
+    }
+
+    // Do not retain a separate empty map in every published result.
+    IReadOnlyDictionary<string, long> rateRows = byRow.Count > 0 ? byRow : MeterDirectionRates.EmptyByRow;
+    rates = new MeterDirectionRates(rateRows, recentTotal / MeterRecentWindow.WindowSeconds, windowEdge);
 
     string Resolve(string name, string explicitOwner)
     {

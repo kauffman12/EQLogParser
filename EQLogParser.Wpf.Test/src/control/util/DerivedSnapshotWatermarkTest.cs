@@ -6,12 +6,7 @@ namespace EQLogParser.Wpf.Test
     [TestMethod]
     public void SnapshotKeepsItsProcessedDamageCountWhenTheLiveCaptureGrows()
     {
-      /*
-       * Fact clocks are .NET-epoch SECONDS, the same constant the headless suite builds every fixture on
-       * (EQLogParser.Test/src/parsing/derive/FixtureTime.cs). Written with bare literals this test asked
-       * "is 1_003 within 3 seconds of the newest fact" about a timestamp near 1970, which no amount of
-       * pending-activity logic can answer yes to: the ask and the fact have to share the calendar.
-       */
+      // Pending continuity uses log seconds, never receipt or PC time. The next snapshot retires its suffix.
       const long T0 = 63_871_286_400L;
       var facts = new DamageFactTable(8);
       var attacker = facts.InternName("Illuminai");
@@ -25,11 +20,11 @@ namespace EQLogParser.Wpf.Test
       Assert.AreEqual(1, snapshot.DamageFactCount);
       Assert.AreEqual(2, facts.FactCount);
       snapshot.PendingActivity.Update(facts, snapshot.Timeline);
-      Assert.IsTrue(snapshot.PendingActivity.IsRecent(T0 + 3, 3), "the unprojected suffix is recent activity");
+      Assert.AreEqual(T0 + 2, snapshot.PendingActivity.Latest, "the suffix carries its captured timestamp");
       var next = DerivedFightRows.Build([], timeline, 21, facts, new FightFactIndex());
       Assert.AreEqual(2, next.DamageFactCount);
       next.PendingActivity.Update(facts, next.Timeline);
-      Assert.IsFalse(next.PendingActivity.IsRecent(T0 + 3, 3), "a fresh snapshot retires the pending hint");
+      Assert.IsFalse(double.IsFinite(next.PendingActivity.Latest), "a fresh snapshot retires the pending hint");
     }
   }
 }

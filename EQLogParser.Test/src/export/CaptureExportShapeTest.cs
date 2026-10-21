@@ -14,7 +14,7 @@ namespace EQLogParser;
  *    Spell and Pet Owner column") - derived per row through the lens, because a fact carries what its line said and
  *    never what the registry believed;
  *  - the cast list from captured evidence, inside the fight window and in its lead-in, with negative relative time
- *    (GamParse's readers count seconds before the pull that way);
+ *    for seconds before the pull;
  *  - all captured healing in scope, with two additional views filtered on the local player;
  *  - the lookup tab, which is the "stop maintaining my own Player/Class/Pet list" ask.
  */
@@ -289,8 +289,7 @@ public sealed class CaptureExportShapeTest : IDisposable
     Assert.AreEqual("Heal", leadIn[4]);
     Assert.AreEqual("Heal VIII", leadIn[8]);
     Assert.AreEqual("Cast", leadIn[6]);
-    // GamParse's clock has NO zero: the pull's own second is 1 and five seconds early is -5. Readers union our files
-    // with years of saved GamParse ones, so one scale means one scale on both sides of the pull.
+    // Relative time has no zero: the pull's first second is 1; five seconds before it is -5.
     Assert.AreEqual("-5", leadIn[1]);
     Assert.AreEqual("VIII", leadIn[5], "rank split out of the name");
 

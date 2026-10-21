@@ -251,14 +251,14 @@ public partial class DamageMeterCalculationTest
   }
 
   [TestMethod]
-  public void ABackwardWallClockRebuildsTheUpperBoundInsteadOfKeepingFutureDamage()
+  public void ABackwardPresentationClockCannotRemoveCapturedDamage()
   {
     var log = new Capture();
     log.Add("Illuminai", "a rat", 0, 100);
     log.Add("Illuminai", "a rat", 4, 900);
     log.Check(4, 90);
     log.Check(2, 90);
-    Assert.AreEqual(100L, log.Last!.DamageStats.RaidStats.Total);
+    Assert.AreEqual(1000L, log.Last!.DamageStats.RaidStats.Total);
     log.Check(4, 90);
     Assert.AreEqual(1000L, log.Last!.DamageStats.RaidStats.Total);
   }
@@ -309,7 +309,7 @@ public partial class DamageMeterCalculationTest
     var log = new Capture();
     log.Add("Illuminai", "a rat", 0, 100);
     log.Check(1);
-    log.Lifecycle.Reset(1, T0 + 1.5);
+    log.Lifecycle.Reset(1, log.Facts.FactCount);
     log.Add("Illuminai", "a rat", 2, 900);
     using var cancel = new CancellationTokenSource();
     cancel.Cancel();
@@ -353,8 +353,12 @@ public partial class DamageMeterCalculationTest
     internal readonly FightProjection.FightProjectionCache Cache = new();
     internal readonly DamageMeterCalculation Calculation = new();
     internal readonly DamageOverlayLifecycle Lifecycle = new();
+    internal readonly MeterArrivals Arrivals = new();
+    private double _lastReceipt = double.NegativeInfinity;
     internal DamageOverlayStats? Last;
     internal DamageOverlayStats? Expected;
+    // A cold calculation over the SAME input, kept when a test asks for it: what the incremental state must agree with.
+    internal DamageOverlayStats? Fresh;
 
     internal Capture()
     {
@@ -365,9 +369,14 @@ public partial class DamageMeterCalculationTest
     }
 
     internal void Add(string attacker, string defender, int second, long amount,
-      byte type = LabelTypes.Melee, byte flags = 0) => Facts.AddFact(new DamageFact(Facts.FactCount,
-      (long)(T0 + second), Facts.InternName(attacker), Facts.InternName(defender), amount, type,
-      flags, 0, ushort.MaxValue));
+      byte type = LabelTypes.Melee, byte flags = 0, double? receivedAt = null)
+    {
+      Facts.AddFact(new DamageFact(Facts.FactCount,
+        (long)(T0 + second), Facts.InternName(attacker), Facts.InternName(defender), amount, type,
+        flags, 0, ushort.MaxValue));
+      _lastReceipt = Math.Max(_lastReceipt, T0 + (receivedAt ?? second));
+      Arrivals.Record(Facts.FactCount, _lastReceipt);
+    }
 
     internal IReadOnlyList<DerivedFight> Project()
     {
@@ -380,12 +389,22 @@ public partial class DamageMeterCalculationTest
     internal void Check(double second, int mode = 0, bool compareFresh = false)
     {
       var rows = Project();
-      var scope = Lifecycle.Select(1, rows, T0 + second, mode);
-      Expected = DerivedTotals.ForOverlay(scope.Rows, Cache.Index, Facts, scope.FromTime, T0 + second);
-      var input = Cache.Index.CaptureMeterInput(scope.Rows, Facts, scope.FromTime, T0 + second);
+      var candidates = Lifecycle.SelectCandidates(1, rows, mode);
+      Calculation.Activity.Update(Cache.Index.CaptureMeterInput(candidates.Rows, Facts, candidates.FromTime,
+        double.PositiveInfinity, candidates.FirstOrdinal));
+      var scope = Lifecycle.Select(1, rows, T0 + second, mode, Arrivals.Latest(Facts, Timeline), Facts.FactCount,
+        activity: Calculation.Activity.For);
+      Expected = DerivedTotals.ForOverlay(scope.Rows, Cache.Index, Facts, scope.FromTime,
+        double.PositiveInfinity, scope.FirstOrdinal);
+      var input = Cache.Index.CaptureMeterInput(scope.Rows, Facts, scope.FromTime,
+        double.PositiveInfinity, scope.FirstOrdinal);
       Last = Calculation.Update(input);
       DamageMeterAssert.Equal(Expected, Last);
-      if (compareFresh) DamageMeterAssert.Equal(Expected, new DamageMeterCalculation().Update(input));
+      if (compareFresh)
+      {
+        Fresh = new DamageMeterCalculation().Update(input);
+        DamageMeterAssert.Equal(Expected, Fresh);
+      }
     }
   }
 }
