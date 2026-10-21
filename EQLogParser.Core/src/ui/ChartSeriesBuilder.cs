@@ -1,5 +1,7 @@
+using log4net;
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 
 namespace EQLogParser;
 
@@ -96,16 +98,37 @@ internal sealed class ChartSeriesBuilder(string name, string playerName = null)
   }
 }
 
-// Sorted buckets need only their previous timestamp, not a growing TimeRange scanned at every publication.
+/*
+ * Sorted buckets need only their previous timestamp, not a growing TimeRange scanned at every publication.
+ *
+ * A record behind its own series' previous second is a producer fault (the walk hands out one name's groups in log order), but it
+ * is not allowed to cost the chart: LineChart calls this from inside a paint path that has no catch, so throwing here reached the
+ * application handler and left the plot at whatever it drew last — and with the update key unset, every repeated gesture re-walked
+ * the whole selection. So the second is refused rather than obeyed (a backwards gap would subtract duration from the denominator),
+ * the first sighting logs the pair that made it and repeats only raise `OutOfOrder` — a producer that is out of order is out of order
+ * for a whole stretch, and a Warn per record would bury the one line that names it (the same shape as RepeatCap elsewhere).
+ * ChartSeriesBuilderTest.OutOfOrderRecordsDegradeTheClockInsteadOfThrowing pins the refusal, the untouched denominator and the count.
+ */
 internal sealed class ChartActivityClock
 {
+  private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
+
   private double _last = double.NaN;
   internal double Seconds { get; private set; }
+
+  /// <summary>Records refused for arriving behind the series' newest second. Zero is the only healthy answer.</summary>
+  internal int OutOfOrder { get; private set; }
 
   internal void Add(double time)
   {
     if (!double.IsNaN(_last) && time < _last)
-      throw new InvalidOperationException("Chart records must be time-ordered");
+    {
+      if (OutOfOrder++ == 0)
+        Log.Warn($"chart clock: a record at {time:0.###} arrived behind this series' newest second ({_last:0.###}) "
+                 + "- the line is drawn from the newer second and further out-of-order records are counted, not printed");
+      return;
+    }
+
     var gap = time - _last;
     Seconds += double.IsNaN(_last) || gap > FightProjection.EngagementGapS ? 1 : gap;
     _last = time;

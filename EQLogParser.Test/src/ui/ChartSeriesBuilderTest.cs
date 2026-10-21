@@ -13,6 +13,37 @@ public sealed class ChartSeriesBuilderTest
     Assert.AreEqual(600, points[0].Total);
   }
 
+  /*
+   * The clock's own failure mode: the walk hands one name's groups over in log order, so a record behind the newest second is a
+   * producer fault rather than data. It used to throw, from inside LineChart's paint path, which had no catch — the whole chart then
+   * fell to the application handler and kept its previous plot with its update key unset, so every repeated gesture walked the night
+   * again. Now the second is refused, the denominator cannot shrink, and the count carries how much of the line was affected.
+   */
+  [TestMethod]
+  public void OutOfOrderRecordsDegradeTheClockInsteadOfThrowing()
+  {
+    var clock = new ChartActivityClock();
+
+    clock.Add(100);
+    Assert.AreEqual(1, clock.Seconds, "the first second of a series counts as one");
+
+    clock.Add(104);          // ordinary advance: the first second plus four of activity
+    Assert.AreEqual(5, clock.Seconds);
+    Assert.AreEqual(0, clock.OutOfOrder);
+
+    clock.Add(102);          // behind its own newest second: refused, so no duration is subtracted or added
+    Assert.AreEqual(5, clock.Seconds, "a backwards record cannot move the denominator either way");
+    Assert.AreEqual(1, clock.OutOfOrder);
+
+    clock.Add(103);          // still behind, because the newest second stayed where it was: counted again, silently
+    Assert.AreEqual(5, clock.Seconds);
+    Assert.AreEqual(2, clock.OutOfOrder);
+
+    clock.Add(140);          // forward again across the engagement gap: one second, the same law as ever
+    Assert.AreEqual(6, clock.Seconds);
+    Assert.AreEqual(2, clock.OutOfOrder, "recovering is not a new fault");
+  }
+
   [TestMethod]
   public void MissesCountAsAttemptsButNeverAsHitsCritsOrTwincasts()
   {
