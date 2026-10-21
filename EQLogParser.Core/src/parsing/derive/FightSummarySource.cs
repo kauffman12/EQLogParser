@@ -812,8 +812,12 @@ namespace EQLogParser
           continue;
         }
 
-        // Legacy's _allRanges: the wall-clock span of each selected fight, inactivity included.
-        if (!double.IsNaN(built.BeginTime) && !double.IsNaN(built.LastTime))
+        // Ordinal slices use retained records for annotations; ordinary queries keep the full lifetime, inactivity included.
+        if (firstOrdinal > 0)
+        {
+          allRanges.Add(IncludedRange(built));
+        }
+        else if (!double.IsNaN(built.BeginTime) && !double.IsNaN(built.LastTime))
         {
           allRanges.Add(new TimeSegment(built.BeginTime, built.LastTime));
         }
@@ -822,6 +826,23 @@ namespace EQLogParser
       }
 
       return new SummaryInput(result, allRanges) { WithoutDamage = withoutDamage };
+    }
+
+    private static TimeSegment IncludedRange(Fight fight)
+    {
+      var range = new TimeSegment(double.PositiveInfinity, double.NegativeInfinity);
+      Include(fight.DamageBlocks, range);
+      Include(fight.TankingBlocks, range);
+      return range;
+
+      static void Include(List<ActionGroup> blocks, TimeSegment range)
+      {
+        foreach (var block in blocks)
+        {
+          range.BeginTime = Math.Min(range.BeginTime, block.BeginTime);
+          range.EndTime = Math.Max(range.EndTime, block.BeginTime);
+        }
+      }
     }
   }
 }

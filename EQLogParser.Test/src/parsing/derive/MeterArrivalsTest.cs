@@ -146,6 +146,7 @@ public sealed class MeterArrivalsTest
     Add(100, LabelTypes.Melee);
     var read = _arrivals.BeginRead(_timeline);
     _timeline.SetIdentity("Illuminai", IdentityKind.Npc, RuleStrength.Manual, "manual");
+    Assert.IsFalse(read.InputsCurrent, "an invalidated scan must be retried before retiring an accumulation");
     Assert.AreEqual(MeterArrival.None, read.Complete(_facts));
     Assert.AreEqual(MeterArrival.None, _arrivals.Observed);
     Assert.AreEqual(MeterArrival.None, _arrivals.Latest(_facts, _timeline));
@@ -159,6 +160,7 @@ public sealed class MeterArrivalsTest
     Add(100, LabelTypes.Bane);
     var read = _arrivals.BeginRead(_timeline);
     AppSettings.IsBaneDamageEnabled = true;
+    Assert.IsFalse(read.InputsCurrent, "a filter change is not proof that the checked prefix expired");
     Assert.AreEqual(MeterArrival.None, read.Complete(_facts));
     Assert.AreEqual(MeterArrival.None, _arrivals.Observed);
     Assert.AreEqual(new MeterArrival(1, 100), _arrivals.Latest(_facts, _timeline));

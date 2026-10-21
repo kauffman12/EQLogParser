@@ -16,6 +16,8 @@ internal sealed class DamageMeterCalculation
     internal readonly MeterDirectionSlice Damage = new();
     internal readonly MeterDirectionSlice Tank = new();
     internal readonly HashSet<string> Names = new(StringComparer.OrdinalIgnoreCase);
+    internal double FirstIncluded = double.PositiveInfinity;
+    internal double LastIncluded = double.NegativeInfinity;
   }
 
   private Dictionary<DerivedFight, Life> _lives = [];
@@ -158,7 +160,10 @@ internal sealed class DamageMeterCalculation
         damageSlices.Add(life.Damage);
         tankSlices.Add(life.Tank);
         if (header.Id < firstId) { firstId = header.Id; firstName = header.Name; }
-        allRanges.Add(new TimeSegment(Math.Max(header.Begin, input.From), Math.Min(header.Last, input.To)));
+        // An ordinal cut cannot borrow the original lifetime for death/special annotations.
+        var begin = input.FirstOrdinal > 0 ? life.FirstIncluded : Math.Max(header.Begin, input.From);
+        var last = input.FirstOrdinal > 0 ? life.LastIncluded : Math.Min(header.Last, input.To);
+        allRanges.Add(new TimeSegment(begin, last));
       }
       if (rebuild) RebuildTotals(cancellation);
       cancellation.ThrowIfCancellationRequested();
@@ -217,6 +222,11 @@ internal sealed class DamageMeterCalculation
           continue;
         }
         if (fact.TimeS < input.From) continue;
+        if (input.FirstOrdinal > 0)
+        {
+          life.FirstIncluded = Math.Min(life.FirstIncluded, fact.TimeS);
+          life.LastIncluded = Math.Max(life.LastIncluded, fact.TimeS);
+        }
         var attacker = input.Facts.NameOf(fact.AtkIdx);
         var defender = input.Facts.NameOf(fact.DefIdx);
         life.Names.Add(attacker);

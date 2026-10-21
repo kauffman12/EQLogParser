@@ -863,6 +863,8 @@ namespace EQLogParser
         {
           cancellation.ThrowIfCancellationRequested();
           if (_disposed || !ReferenceEquals(snapshot, Volatile.Read(ref _meterSnapshot))) return null;
+          // Retry invalidated inputs rather than treating their None answer as a verified expired prefix.
+          if (!receipts.InputsCurrent) return null;
           // An expiry may cut only the receipt prefix we checked; ingest may have appended fresh damage during the scan.
           if (!lifecycle.TrySelect(SessionId, snapshot.AllFights, now, mode, arrival, receipts.Through, out var scope,
             snapshot.PendingActivity, calculation.Activity.For)) return null;

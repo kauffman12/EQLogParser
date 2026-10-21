@@ -94,8 +94,7 @@ internal sealed class MeterArrivals
     lock (_gate)
     {
       cancellation.ThrowIfCancellationRequested();
-      if (read.Stamp != read.Timeline.StateStamp() || read.Filter != MeterDamageFilter.Current)
-        return MeterArrival.None;
+      if (!read.InputsCurrent) return MeterArrival.None;
       if (!IsRetained(answer)) answer = MeterArrival.None;
       if (read.Revision != _revision) return answer;
       _checkedThrough = read.Through;
@@ -114,6 +113,9 @@ internal sealed class MeterArrivals
   internal readonly record struct Read(MeterArrivals Owner, EntityTimeline Timeline, long Revision, int Through,
     long Stamp, MeterDamageFilter Filter, int From, MeterArrival Fallback, Batch[] Batches)
   {
+    // An invalidated scan is not a verified absence of receipts and must not retire a timed accumulation.
+    internal bool InputsCurrent => Stamp == Timeline.StateStamp() && Filter == MeterDamageFilter.Current;
+
     internal MeterArrival Complete(DamageFactTable facts, CancellationToken cancellation = default)
     {
       cancellation.ThrowIfCancellationRequested();

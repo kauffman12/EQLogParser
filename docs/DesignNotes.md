@@ -7138,6 +7138,11 @@ a time during silence. Timed modes initialize their sticky start from **data edg
 window. Reset cuts at the current captured **fact ordinal**, including within one log second. When a timed board expires, its next
 accumulation starts after the captured prefix, including pending records; no wall-clock timestamp becomes an accounting bound.
 `MeterFactInput.FirstOrdinal` carries that cut to both activity and amount walks, and the materialized reference supports the same cut.
+An ordinal-cut query also builds each life's auxiliary annotation span from its retained routed records, not the original life header:
+otherwise one post-Reset hit can carry an old death and its `X` back into Copy Parse. The compact calculation retains just the included
+minimum/maximum log times; the materialized reference takes the bounds from its surviving blocks. The shared special lead-in and death
+tail remain unchanged, and ordinary whole-life queries retain their original spans. `OrdinalCutAnnotationRangesUseOnlyTheRetainedRecords`
+pins Reset and timed expiry, both directions, continued/cold/reference results, and the untouched whole-life query.
 The app passes positive infinity as the upper accounting bound. Future-dated log records count immediately; neither totals nor RDPS
 wait for the PC clock to reach their timestamps.
 
@@ -7157,8 +7162,13 @@ ordinal prefix outside both that lock and the capture gate, with cancellation ch
 the copied read's last millisecond batch without changing its question. Completion acknowledges only that prefix; an older read cannot
 overwrite a newer read's publication, changed verdict/filter inputs invalidate the read, and pruned receipts cannot be published fresh.
 An expiry cuts at the **checked** captured prefix, including its pending records, never damage appended while that scan ran.
-`MeterArrivalsTest` pins these interleavings without timing probes; `ExpiryCannotDiscardAReceiptThatArrivedWhileThePreviousPrefixWasBeingChecked`
-pins the accounting cutoff. This is an ingest-lock ownership guarantee, not an end-to-end raid timing claim.
+The lifecycle checkpoint also carries the last verified receipt as a scalar: if pruning later returns `None`, its original deadline still
+retires the expired accumulation. `None` from exclusions is not permission to cut early; restoring a filter within that deadline may
+restore its damage, but cannot restamp receipt. Invalidated receipt inputs are retried before selection rather than mistaken for a verified
+absence. `PrunedReceiptsStillRetireTheExpiredTimedAccumulation` pins the cutoff and checkpoint copy; `AFilterHidingEveryReceiptDoesNotPretendTheTimedBoardExpired`
+pins temporary exclusions. `MeterArrivalsTest` pins read interleavings without timing probes;
+`ExpiryCannotDiscardAReceiptThatArrivedWhileThePreviousPrefixWasBeingChecked` and `PruningDuringAReceiptReadCannotRetireTheNewerReceipt`
+pin the accounting cutoff with both retained and pruned receipts. This is an ingest-lock ownership guarantee, not an end-to-end raid timing claim.
 
 The dispatcher reads the last worker-verified receipt without waiting on a scan. Its existing presentation lease still expires while a
 worker is blocked, and late results must be fresh before painting.
@@ -7173,7 +7183,7 @@ Opening uses receipt freshness. `LiveDamageObserved` advances by the newest elig
 second are distinct, while a death-only republish or a rebuild spends no new receipt. `DerivedMeter` is only the app seam; there is no
 engine-selection setting or legacy fallback.
 
-The lifecycle retains only session id and scalar reset bounds, never engines or rows. X-close/reopen preserves those bounds;
+The lifecycle retains only session id, scalar reset bounds and the last verified receipt, never engines or rows. X-close/reopen preserves those bounds;
 a new capture discards them. Reset cuts at the click; display/capture revisions reject obsolete worker results. A null answer
 hides the board rather than retaining old stats indefinitely, and a missing damage/tanking half clears its old bars.
 

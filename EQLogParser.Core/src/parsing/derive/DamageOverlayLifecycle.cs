@@ -11,12 +11,15 @@ internal sealed class DamageOverlayLifecycle
   private int _sessionId = -1;
   private int _firstOrdinal;
   private double _timedStart = double.NaN;
+  // Pruning or exclusions can answer None. Keep the last verified receipt's deadline, never a new receipt time.
+  private MeterArrival _lastArrival = MeterArrival.None;
 
   internal DamageOverlayLifecycle Copy() => new()
   {
     _sessionId = _sessionId,
     _firstOrdinal = _firstOrdinal,
-    _timedStart = _timedStart
+    _timedStart = _timedStart,
+    _lastArrival = _lastArrival
   };
 
   // False means the initial timed bound changed: refresh activity from SelectCandidates before selecting again.
@@ -26,6 +29,7 @@ internal sealed class DamageOverlayLifecycle
   {
     scope = null;
     EnsureSession(sessionId);
+    if (arrival.Through > _firstOrdinal) _lastArrival = arrival;
     var selected = new List<DerivedFight>();
     var edge = CaptureEdge(rows, activity);
     if (mode != 0)
@@ -65,13 +69,14 @@ internal sealed class DamageOverlayLifecycle
 
     var completedOnly = mode == 0 && selected.Count > 0 && IsCompleted(selected[0]);
     var timeout = mode != 0 ? mode : completedOnly ? CompletedDisplaySeconds : FightProjection.EngagementGapS;
-    var deadline = arrival.Time + timeout;
+    var deadline = _lastArrival.Time + timeout;
     if (arrival.Through <= _firstOrdinal || now > deadline)
     {
       selected.Clear();
-      if (mode != 0 && arrival.Through > _firstOrdinal && now > deadline)
+      if (mode != 0 && _lastArrival.Through > _firstOrdinal && now > deadline)
       {
-        // A closed timed board starts its next accumulation after the captured prefix, including unprojected damage.
+        // A pruned receipt still expires, but exclusions alone do not spend its remaining time.
+        // Retire only the checked prefix, never records appended while the receipt scan ran.
         _firstOrdinal = Math.Max(_firstOrdinal, capturedCount);
         _timedStart = double.NaN;
       }
@@ -95,6 +100,7 @@ internal sealed class DamageOverlayLifecycle
     _sessionId = sessionId;
     _firstOrdinal = capturedCount;
     _timedStart = double.NaN;
+    _lastArrival = MeterArrival.None;
   }
 
   internal static bool HasRecentActivity(MeterArrival arrival, double now, int mode) =>
