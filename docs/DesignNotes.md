@@ -7481,10 +7481,19 @@ and memoizes its layout. A new block can require sorting historical **block meta
 does not fix the board's rank semantics as a side effect of changing performance. Tests pin repeated block resorts,
 pets, plain rows and zero/equal totals.
 
+`MeterBuildRetry` bounds each overlay ask to three attempts, including snapshot replacement, invalidated receipt inputs and the intentional
+retry after initializing a timed bound. `MeterBuildResult.Completed` may hold null (a verified empty answer); `Deferred` is not an empty
+answer. Exhaustion commits no lifecycle checkpoint, replaces no displayed stats and publishes no new presentation deadline. The next
+ask recaptures current inputs; the activity cache still invalidates against its bounds, prefixes and verdict/filter inputs. This bounds
+attempts, not wall time: a single scan, decode, gate wait or sort can still take time, with existing cancellation checks unchanged.
+`MeterBuildRetryTest` pins exhaustion, early success, empty answers, cancellation, timed initialization and discarded checkpoint state.
+
 `MeterRefreshGate` coalesces derive and timer requests through one monotonic one-second cadence, with one running
 worker and one pending slot. Expiry/pending checks still run without a derive. A busy request is owed, not dropped.
-`MeterLifecycleCheckpoint` retains only scalar lifecycle state across windows; work uses a copy and commits only
-while its window owner/reset revision remains current. Reset invalidates and clears immediately, never waits for a
+A deferred completion releases the worker and preserves pending work but cannot immediately drain another retry budget, even after a long
+scan or a queued forced gesture. The next existing request can start it; no extra timer is added and the old presentation still expires.
+`MeterRefreshGateTest` pins that yield and the pending gesture. `MeterLifecycleCheckpoint` retains only scalar lifecycle state across windows;
+work uses a copy and commits only a completed result while its window owner/reset revision remains current. Reset invalidates and clears immediately, never waits for a
 record walk, and close/capture change cancel work between batches. Static state retains no capture input. DPS/Tank
 switches render the last paired answer immediately rather than scheduling another historical build. Class icons
 are recreated only when their class changes.
@@ -7504,7 +7513,7 @@ mutable accounting. These checks do not interrupt a monitor wait, an individual 
 Fixed-seed tests compare incremental, fresh compact and full-reference answers after mixed pulls, deaths, quiet
 gaps, resets, filter/owner changes and reindexing. Deterministic cancellation tests interrupt rebind between lives
 and presentation after counting, without sleep-based races or production test hooks. Gate-hold measurement and
-Windows/long-session checks remain outstanding; no retry or timer policy changed in this hardening.
+Windows/long-session checks remain outstanding; cancellation checks do not impose a wall-time limit on an individual attempt.
 
 **Headless measurement, not Windows frame latency.** A disposable test harness replayed each gitignored log through
 `PipelineHarness`, settled cold chunk encoding without forcing GC, selected the entire projected history, and compared

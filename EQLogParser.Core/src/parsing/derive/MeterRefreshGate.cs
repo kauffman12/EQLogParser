@@ -16,10 +16,12 @@ internal sealed class MeterRefreshGate
     return TryStart(now);
   }
 
-  internal bool Complete(double now)
+  internal bool Complete(double now, bool deferred = false)
   {
     _running = false;
-    return TryStart(now);
+    _pending |= deferred;
+    // A deferred ask yields until another request, even if its scans outlasted the cadence or a gesture is pending.
+    return !deferred && TryStart(now);
   }
 
   private bool TryStart(double now)

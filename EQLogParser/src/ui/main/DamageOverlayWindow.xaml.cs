@@ -338,7 +338,7 @@ namespace EQLogParser
 
     internal void DiscardMeterSettings() => MainActions.CloseDamageOverlay(false, this);
 
-    private DamageOverlayStats BuildMeterUpdate(DeriveEngine session, DamageOverlayLifecycle lifecycle,
+    private MeterBuildResult BuildMeterUpdate(DeriveEngine session, DamageOverlayLifecycle lifecycle,
       int damageMode, CancellationToken cancellation, Action<double> publishExpiry)
     {
       if (session is null)
@@ -348,9 +348,9 @@ namespace EQLogParser
           _meterWarned = true;
           Log.Warn("Damage overlay: no capture is running; waiting for a log to open.");
         }
-        return null;
+        return MeterBuildResult.Completed();
       }
-      if (session.SessionId != (DeriveEngine.Active?.SessionId ?? 0)) return null;
+      if (session.SessionId != (DeriveEngine.Active?.SessionId ?? 0)) return MeterBuildResult.Completed();
       _meterWarned = false;
 
       try
@@ -377,7 +377,7 @@ namespace EQLogParser
             ex);
         }
 
-        return null;
+        return MeterBuildResult.Completed();
       }
     }
 
@@ -399,8 +399,10 @@ namespace EQLogParser
 
     private async Task RunMeterUpdatesAsync()
     {
+      var deferred = false;
       do
       {
+        deferred = false;
         try
         {
           var session = DeriveEngine.Active;
@@ -417,11 +419,12 @@ namespace EQLogParser
           var cancellation = _buildCancellation.Token;
           var result = await Task.Run(() => BuildMeterUpdate(session, checkpoint.State, damageMode, cancellation,
             expiry => _presentation.Publish(sessionId, displayVersion, expiry)));
+          deferred = result.IsDeferred;
           if (_closed || displayVersion != _displayVersion
             || sessionId != (DeriveEngine.Active?.SessionId ?? 0)) continue;
-          if (!MeterLifecycle.TryCommit(checkpoint)) continue;
-          _stats = result;
-          ApplyMeterUpdate(result);
+          if (!MeterLifecycle.TryCommit(checkpoint, result)) continue;
+          _stats = result.Stats;
+          ApplyMeterUpdate(result.Stats);
         }
         catch (OperationCanceledException)
         {
@@ -437,7 +440,7 @@ namespace EQLogParser
           _buildCancellation?.Dispose();
           _buildCancellation = null;
         }
-      } while (!_closed && _refreshGate.Complete(_refreshClock.Elapsed.TotalSeconds));
+      } while (!_closed && _refreshGate.Complete(_refreshClock.Elapsed.TotalSeconds, deferred));
       if (_closed || _calculationSession != (DeriveEngine.Active?.SessionId ?? 0)) _calculation.Clear();
     }
 

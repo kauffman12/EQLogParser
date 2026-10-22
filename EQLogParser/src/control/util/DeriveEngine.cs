@@ -847,14 +847,14 @@ namespace EQLogParser
     }
 
     // Select and materialize from ONE snapshot. The lifecycle retains only scalar reset state, never this capture's rows.
-    internal DamageOverlayStats BuildOverlayStats(DamageOverlayLifecycle lifecycle, DamageMeterCalculation calculation,
+    internal MeterBuildResult BuildOverlayStats(DamageOverlayLifecycle lifecycle, DamageMeterCalculation calculation,
       int mode, double now, CancellationToken cancellation, Action<double> publishExpiry = null)
     {
-      while (!_disposed)
+      return MeterBuildRetry.Run(() =>
       {
-        cancellation.ThrowIfCancellationRequested();
+        if (_disposed) return MeterBuildResult.Completed();
         var snapshot = Volatile.Read(ref _meterSnapshot);
-        if (snapshot is null) return null;
+        if (snapshot is null) return MeterBuildResult.Completed();
         // The potentially large suffix scan is outside the ingest gate. Retry if a pass replaced its snapshot meanwhile.
         snapshot.PendingActivity.Update(snapshot.Facts, snapshot.Timeline, cancellation);
         var candidates = _capture.DeriveQuiescent(() =>
@@ -865,7 +865,7 @@ namespace EQLogParser
           return snapshot.DamageIndex.CaptureMeterInput(scope.Rows, snapshot.Facts, scope.FromTime,
             double.PositiveInfinity, scope.FirstOrdinal);
         });
-        if (candidates is null) continue;
+        if (candidates is null) return MeterBuildResult.Deferred;
         calculation.Activity.Update(candidates, cancellation);
         var receipts = _meterArrivals.BeginRead(snapshot.Timeline);
         var arrival = receipts.Complete(snapshot.Facts, cancellation);
@@ -883,9 +883,9 @@ namespace EQLogParser
           return snapshot.DamageIndex.CaptureMeterInput(scope.Rows, snapshot.Facts, scope.FromTime,
             double.PositiveInfinity, scope.FirstOrdinal);
         });
-        if (input is not null) return calculation.Update(input, cancellation);
-      }
-      return null;
+        return input is null ? MeterBuildResult.Deferred
+          : MeterBuildResult.Completed(calculation.Update(input, cancellation));
+      }, cancellation);
     }
 
     internal StatsGenerationEvent? BuildScopeStats(IReadOnlyList<DerivedFight> rows)

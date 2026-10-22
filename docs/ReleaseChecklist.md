@@ -314,6 +314,11 @@ compact accounting, paired publication". These checks are not satisfied by a Lin
 - [ ] **Immediate gestures:** switch DPS/Tank while a large initial build/correction is running. Reset and Configure
   must remain responsive, and resetting must clear immediately without old bars returning. Repeat Reset then X-close
   and reopen before the old worker finishes; scalar reset state must survive without the old worker committing it.
+- [ ] **Input churn yields instead of trapping a refresh:** hold only the meter worker between its scan and snapshot validation,
+  allow a derive to replace that snapshot, and repeat through three attempts. The ask must defer and release its worker without
+  clearing still-fresh bars, changing the saved reset boundary or renewing the old presentation deadline. Continued churn must not
+  prevent normal expiry; once inputs settle, an existing timer/derive request must recover. Repeat with exclusions changing and
+  with timed-mode opening/Reset; a superseded capture or closed window must never paint afterward.
 - [ ] **Copy is the displayed revision:** copy both views during live growth, including more participants than bars,
   a class filter, pet labels and Special text. Change Parse Preview formatting afterward. New damage in the same log
   second must not change the copied totals. The open summary boards must keep their own answers.

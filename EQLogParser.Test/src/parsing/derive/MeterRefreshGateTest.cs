@@ -39,17 +39,30 @@ public class MeterRefreshGateTest
   }
 
   [TestMethod]
-  public void ResetImmediatelyRejectsAnOlderWorkerCheckpoint()
+  public void DeferralKeepsThePendingGestureButCannotRestartFromCompletion()
+  {
+    var gate = new MeterRefreshGate();
+    Assert.IsTrue(gate.Request(0));
+    Assert.IsFalse(gate.Request(0.1, true));
+    Assert.IsFalse(gate.Complete(0.2, deferred: true));
+    Assert.IsTrue(gate.Request(0.3), "the next request can still pay the pending gesture before the ordinary cadence");
+    Assert.IsFalse(gate.Complete(0.4));
+  }
+
+  [TestMethod]
+  [DataRow(1)]
+  [DataRow(2)]
+  public void ResetOrCaptureChangeImmediatelyRejectsAnOlderWorkerCheckpoint(int sessionId)
   {
     var checkpoint = new MeterLifecycleCheckpoint();
     var owner = checkpoint.Open();
     var old = checkpoint.Read(owner);
-    checkpoint.Reset(1, 200);
+    checkpoint.Reset(sessionId, 200);
     old.State.Reset(1, 100);
-    Assert.IsFalse(checkpoint.TryCommit(old));
+    Assert.IsFalse(checkpoint.TryCommit(old, MeterBuildResult.Completed()));
     var row = new DerivedFight { Name = "a rat", BeginTime = 150, LastTime = 160, DamageTotal = 100 };
     row.FactEnd = 160;
-    Assert.IsTrue(checkpoint.Read(owner).State.TrySelect(1, [row], 160, 0, new(160, 160), 160, out var scope));
+    Assert.IsTrue(checkpoint.Read(owner).State.TrySelect(sessionId, [row], 160, 0, new(160, 160), 160, out var scope));
     Assert.HasCount(0, scope.Rows);
   }
 
@@ -62,14 +75,15 @@ public class MeterRefreshGateTest
     var old = checkpoint.Read(oldOwner);
     var currentOwner = checkpoint.Open();
     old.State.Reset(1, 200);
-    Assert.IsFalse(checkpoint.TryCommit(old));
+    Assert.IsFalse(checkpoint.TryCommit(old, MeterBuildResult.Completed()));
     var current = checkpoint.Read(currentOwner);
     var row = new DerivedFight { Name = "a rat", BeginTime = 150, LastTime = 160, DamageTotal = 100 };
     row.FactEnd = 160;
     Assert.IsTrue(current.State.TrySelect(1, [row], 160, 0, new(160, 160), 160, out var scope));
     Assert.HasCount(1, scope.Rows);
-    Assert.IsTrue(checkpoint.TryCommit(current));
-    Assert.IsFalse(checkpoint.TryCommit(current), "an already consumed checkpoint cannot overwrite a newer answer");
+    Assert.IsTrue(checkpoint.TryCommit(current, MeterBuildResult.Completed()));
+    Assert.IsFalse(checkpoint.TryCommit(current, MeterBuildResult.Completed()),
+      "an already consumed checkpoint cannot overwrite a newer answer");
   }
 
   [TestMethod]

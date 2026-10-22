@@ -20,8 +20,9 @@ internal sealed class MeterLifecycleCheckpoint
     lock (_gate) return new Work(owner, _revision, _state.Copy());
   }
 
-  internal bool TryCommit(Work work)
+  internal bool TryCommit(Work work, MeterBuildResult result)
   {
+    if (result.IsDeferred) return false;
     lock (_gate)
     {
       if (work.Owner != _owner || work.Revision != _revision) return false;
