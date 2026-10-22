@@ -6565,6 +6565,36 @@ A named corpse therefore belongs in the fight list only because facts put it the
 names keep the suffix), and a corpse DoT that hits us is an ordinary hostile under its stripped name. All four cases are pinned
 by `EQLogParser.Test/src/parsing/derive/RaisedCorpseTest.cs`.
 
+## A You line needs a local player, and not out of whoever ran first
+
+`You hit X.`, `You begin casting Charm XVII.`, `You loot 3 platinum coins.` put **ConfigUtil.PlayerName** in the subject slot, and that
+name is load-bearing rather than cosmetic: `CastLineParser` builds its cast record only `if (!string.IsNullOrEmpty(player) …)`, so with an
+empty name a begin-casting line registers nothing and the charm confirm that pairs with it inside `CharmWindowPolicy.OwnerCastLookbackS`
+(6 s) has nothing to pair with — no `EvCharmStart`, therefore no R9 window, therefore a charmed mob that stays an enemy row while its own
+damage keeps landing. R0-local's claim of the operator and the looter on a loot line go the same way. Nothing throws; the capture is just
+quietly missing a person. In production the name always exists because `MainWindow` takes it from `eqlog_(Player)_(Server).txt` before the
+first line is read.
+
+The test harness has no such filename for most fixtures, so `PipelineHarness.RunCore` decides the local player once per capture:
+
+- a file named `eqlog_<Player>_<Server>.txt` seeds its own player — that is the mechanism `IdentityRulesTest` writes
+  `eqlog_Feedbackone_Eqgate.txt` to use;
+- otherwise, if nothing has been said since the last capture (no name yet, an empty one, or still the name the harness itself stamped),
+  the capture gets `PipelineHarness.FixturePlayerName`, a word no fixture uses;
+- otherwise the standing name is one a test chose and it stands — that is how `HealCreditLawTest` parses as **Kizant**. A class wanting
+  *no* local player states it around its own classifications (as `IncrementalClassificationTest` does, which builds facts directly),
+  because an empty name is indistinguishable from "nobody spoke".
+
+The chosen name survives the run on purpose: rules read PlayerName while **classifying** too, and classification happens after the capture
+returns. It is re-decided at the next capture rather than restored afterwards, which is what makes "which pull owns this charm" independent
+of execution order.
+
+Why this is pinned and not just tidied: nine tests took their local player from whatever `eqlog_*` fixture happened to run earlier in the
+process, so the same suite read green from `dotnet test` and red in Visual Studio — class order is not identical between the two runners —
+and every one of them also failed when run alone, which is the only reproducible form. `PipelineHarnessPlayerNameTest` pins all three
+branches by reading what the **parser recorded** (the attacker on a `You hit …` row, and a charm window over a fixture parsed with nothing
+else in the process), not the field; `EntityNameKeyTest` is the test whose question depends on it.
+
 ## One row per life: what the engagement gap splits, and what a duration column owes
 
 Reported on `local/eqlog_Kizant_xegony.txt` (the pull is `Waxwork Abolishion`, with an h): the old fight list showed the

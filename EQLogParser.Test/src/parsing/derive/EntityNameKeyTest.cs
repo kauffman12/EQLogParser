@@ -27,6 +27,14 @@ public class EntityNameKeyTest
 {
     private static string FixturePath => Path.Combine(AppContext.BaseDirectory, "mini-data", "derive", "namekey-fixture.txt");
 
+    /*
+     * The fixture's charm is cast by "You", and a `You …` sentence only means somebody once ConfigUtil.PlayerName exists —
+     * CastLineParser attributes both the cast and the "has been charmed" confirm that pairs with it inside 6 s to that name.
+     * PipelineHarness stamps a defined local player on every capture (docs/DesignNotes.md → "A You line needs a local
+     * player, and not out of whoever ran first"), which is why this class sets none: the fixture asserts the same thing run
+     * alone or in the middle of the suite.
+     */
+
     // Direct store behaviour: identity, affiliation, ownership, and the two charm questions the display list asks.
     [TestMethod]
     public void EntityStoresKeyNamesWithoutCaringAboutCase()

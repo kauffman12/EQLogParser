@@ -12,6 +12,14 @@ namespace EQLogParser;
 // them (FightProjection.Build is the call the app's DeriveEngine makes).
 internal static class PipelineHarness
 {
+    // The local player a capture gets when neither its filename nor its test names one. Deliberately a word no fixture
+    // uses, so a row or verdict built under it cannot be mistaken for a log's own name.
+    internal const string FixturePlayerName = "Localplayer";
+
+    // The last name this harness stamped. It is how an inherited name gets told apart from one a test set on purpose: a value the
+    // harness wrote is drift and is replaced, a value nobody else wrote is a stated condition.
+    private static string? _playerNameWrittenByHarness;
+
     private static EQDataStore? _dataStore;
 
     internal sealed record DeriveRunResult(
@@ -144,10 +152,29 @@ internal static class PipelineHarness
 
         // The app derives the local player from the log filename (eqlog_(Player)_(Server).txt);
         // do the same so You-mapping and the R0-local rule behave as they will in production.
-        // Fixture names never match, so synthetic runs keep PlayerName untouched.
+        // Who "You" is, decided for EVERY capture rather than inherited: a `You …` sentence names nobody until
+        // ConfigUtil.PlayerName exists (CastLineParser stamps that name as the caster, and drops the record when it is empty),
+        // so an unnamed capture loses its charm evidence, its R0-local claims and its looting silently. The suite used to get the
+        // name from whatever eqlog_(Player)_(Server).txt fixture happened to run earlier, which made nine tests pass from the
+        // command line and fail in Visual Studio — class order is not the same on both runners, and each of them failed alone too.
+        //
+        //   1. the filename names a player -> that name (IdentityRulesTest writes eqlog_Feedbackone_Eqgate.txt for exactly this);
+        //   2. nothing since the last capture -> no name yet, empty, or still the one the harness stamped: FixturePlayerName, so two
+        //      orders of this suite agree about what "You" means (drift is recognised by remembering the last stamp — every leak of a
+        //      name here comes from a stamp of this method's own, which is why the test is "nothing at all or what I wrote");
+        //   3. a test set ConfigUtil.PlayerName to some other name -> left alone, because that is a stated condition, not drift
+        //      (how HealCreditLawTest parses as "Kizant"). A class wanting NO local player therefore states it around its own
+        //      classifications rather than around a capture: an empty name cannot be told apart from case 2.
+        //
+        // The chosen name deliberately SURVIVES the run: rules read PlayerName while classifying too, and classification happens
+        // after this returns, so a capture and its own verdicts must answer for the same player.
         var selfMatch = System.Text.RegularExpressions.Regex.Match(
             Path.GetFileNameWithoutExtension(path), @"^eqlog_(.+?)_.+$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
         if (selfMatch.Success) ConfigUtil.PlayerName = selfMatch.Groups[1].Value;
+        else if (string.IsNullOrEmpty(ConfigUtil.PlayerName)
+                 || string.Equals(ConfigUtil.PlayerName, _playerNameWrittenByHarness, StringComparison.Ordinal))
+            ConfigUtil.PlayerName = FixturePlayerName;
+        _playerNameWrittenByHarness = ConfigUtil.PlayerName;
 
         // Clear parser state left by other tests in this process (assembly is serialized, not isolated).
         DamageLineParser.ResetProcessState();
