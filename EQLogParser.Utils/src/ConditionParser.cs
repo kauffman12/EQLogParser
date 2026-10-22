@@ -133,7 +133,8 @@ namespace EQLogParser
             while (i < len && char.IsDigit(input[i])) i++;
           }
           var numStr = input.Substring(start, i - start);
-          if (double.TryParse(numStr, out var numVal))
+          var numVal = TextUtils.ParseDouble(numStr.AsSpan());
+          if (!double.IsNaN(numVal))
           {
             tokens.Add(new ConditionToken(ConditionTokenType.Number, numStr, numVal));
           }

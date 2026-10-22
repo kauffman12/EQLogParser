@@ -1,4 +1,5 @@
 using EQLogParser;
+using System.Globalization;
 
 #nullable enable annotations
 
@@ -7,6 +8,37 @@ namespace EQLogParserTest
   [TestClass]
   public class ConditionScalarTest
   {
+    [TestMethod]
+    [DataRow("en-US")]
+    [DataRow("de-DE")]
+    [DataRow("fr-FR")]
+    public void DecimalLiteralsParseAndCompareIndependentlyOfCulture(string culture)
+    {
+      var original = CultureInfo.CurrentCulture;
+      try
+      {
+        CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo(culture);
+        var node = ConditionParser.Parse("{value} > 12.5");
+        Assert.IsInstanceOfType<ConditionBinaryNode>(node);
+        var literal = ((ConditionBinaryNode)node).Right;
+        Assert.IsInstanceOfType<ConditionLiteralNode>(literal);
+        Assert.AreEqual(12.5, ((ConditionLiteralNode)literal).NumberValue);
+        Assert.IsTrue(ConditionEvaluator.Evaluate(node, _ => "13.0"));
+        Assert.IsFalse(ConditionEvaluator.Evaluate(node, _ => "12.5"));
+
+        foreach (var token in new[] { "3.5", "0.3", "12.12" })
+        {
+          var equality = ConditionParser.Parse("{value} = " + token);
+          Assert.IsNotNull(equality);
+          Assert.IsTrue(ConditionEvaluator.Evaluate(equality, _ => token), token);
+        }
+      }
+      finally
+      {
+        CultureInfo.CurrentCulture = original;
+      }
+    }
+
     [TestMethod]
     [DataRow(null, false)]
     [DataRow("", false)]

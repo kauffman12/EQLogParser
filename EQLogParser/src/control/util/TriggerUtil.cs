@@ -5,7 +5,6 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -517,8 +516,7 @@ namespace EQLogParser
             Application.Current.Resources["TextOverlayFontFamily-" + toTextModel.Node.Id] = new FontFamily(toTextModel.FontFamily);
           }
 
-          if (!string.IsNullOrEmpty(fromOverlay.FontSize) && fromOverlay.FontSize.Split("pt") is { Length: 2 } split &&
-            double.TryParse(split[0], NumberStyles.Any, CultureInfo.InvariantCulture, out var newFontSize))
+          if (UiElementUtil.TryParseFontSize(fromOverlay.FontSize, out var newFontSize))
           {
             Application.Current.Resources["TextOverlayFontSize-" + toTextModel.Node.Id] = newFontSize;
           }

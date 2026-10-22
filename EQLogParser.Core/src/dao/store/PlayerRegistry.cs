@@ -2,7 +2,6 @@ using log4net;
 using System.Collections.Concurrent;
 using System.Collections.Frozen;
 using System.Diagnostics.CodeAnalysis;
-using System.Globalization;
 using System.Reflection;
 
 /*
@@ -718,7 +717,8 @@ namespace EQLogParser
       var bar = value.IndexOf('|');
       if (bar >= 0)
       {
-        if (double.TryParse(value.AsSpan(bar + 1), out var stamped) && stamped > 0) seenAtS = stamped;
+        var stamped = TextUtils.ParseDouble(value.AsSpan(bar + 1).Trim(), 0);
+        if (stamped > 0) seenAtS = stamped;
         value = value[..bar];
       }
 
@@ -760,7 +760,7 @@ namespace EQLogParser
         // one is not a thing EQ writes, so split[0] is the whole name either way.
         name = split[0].Trim();
         var value = split[1].Split(',');
-        double.TryParse(value[0], NumberStyles.Any, CultureInfo.InvariantCulture, out seenAtS);
+        seenAtS = TextUtils.ParseDouble(value[0].AsSpan().Trim(), 0);
         if (value.Length >= 2 && value[1].Length > 0) className = value[1];
       }
 

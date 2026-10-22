@@ -602,12 +602,15 @@ internal static class NagUtil
       if (parts.Length == 4 &&
           int.TryParse(parts[0].Trim(), out var r) &&
           int.TryParse(parts[1].Trim(), out var g) &&
-          int.TryParse(parts[2].Trim(), out var b) &&
-          double.TryParse(parts[3].Trim(), out var a))
+          int.TryParse(parts[2].Trim(), out var b))
       {
-        var alpha = (int)Math.Round(a * 255);
-        alpha = Math.Clamp(alpha, 0, 255);
-        return $"#{alpha:X2}{r:X2}{g:X2}{b:X2}";
+        var a = TextUtils.ParseDouble(parts[3].AsSpan().Trim());
+        if (!double.IsNaN(a))
+        {
+          var alpha = (int)Math.Round(a * 255);
+          alpha = Math.Clamp(alpha, 0, 255);
+          return $"#{alpha:X2}{r:X2}{g:X2}{b:X2}";
+        }
       }
     }
 

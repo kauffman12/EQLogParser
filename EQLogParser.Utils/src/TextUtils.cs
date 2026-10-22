@@ -359,9 +359,8 @@ namespace EQLogParser
       return value;
     }
 
-    /* Fast allocation-free double parser for condition evaluation. Handles optional
-     * leading sign, integer part, and fractional part. Returns defValue (NaN) on
-     * any parse failure — no CultureInfo or exception overhead like double.TryParse. */
+    /* Invariant signed-decimal reader; no grouping, exponents or whitespace. Integer parts must fit ulong.
+     * Invalid tokens return defValue (NaN). See docs/DesignNotes.md → "Plain decimal input uses one invariant parser". */
     internal static double ParseDouble(ReadOnlySpan<char> span, double defValue = double.NaN)
     {
       if (span.IsEmpty)
@@ -384,7 +383,7 @@ namespace EQLogParser
       if (index >= span.Length)
         return defValue;
 
-      // Integer part — parse as ulong to avoid precision loss on large integers
+      // Accumulate integers exactly before converting once, and enforce the token's magnitude limit.
       ulong intPart = 0;
       var hasDigits = false;
 
@@ -403,13 +402,13 @@ namespace EQLogParser
         index++;
       }
 
-      double result = intPart;
+      if (index == span.Length)
+        return negative ? -(double)intPart : intPart;
 
-      // Fractional part
+      // Validate the fractional grammar before asking the runtime to round the complete decimal once.
       if (index < span.Length && span[index] == '.')
       {
         index++;
-        var scale = 0.1;
 
         while (index < span.Length)
         {
@@ -417,8 +416,6 @@ namespace EQLogParser
           if (digit > 9)
             return defValue;
 
-          result += digit * scale;
-          scale *= 0.1;
           hasDigits = true;
           index++;
         }
@@ -428,7 +425,8 @@ namespace EQLogParser
       if (index < span.Length || !hasDigits)
         return defValue;
 
-      return negative ? -result : result;
+      return double.TryParse(span, NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint,
+        CultureInfo.InvariantCulture, out var result) ? result : defValue;
     }
 
     internal static string ReplaceWholeWords(string input, IReadOnlyDictionary<string, string> replacements)

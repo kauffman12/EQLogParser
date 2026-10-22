@@ -233,16 +233,17 @@ namespace EQLogParser
       return common.OrderBy(name => name).ToList().AsReadOnly();
     }
 
-    internal static double ParseFontSize(string fontSize)
+    internal static double ParseFontSize(string fontSize) => TryParseFontSize(fontSize, out var size) ? size : 12;
+
+    internal static bool TryParseFontSize(string fontSize, out double size)
     {
-      if (!string.IsNullOrEmpty(fontSize) && fontSize.Split("pt") is { Length: 2 } split && double.TryParse(split[0], NumberStyles.Any,
-            CultureInfo.InvariantCulture, out var newFontSize))
+      size = double.NaN;
+      if (!string.IsNullOrEmpty(fontSize) && fontSize.Split("pt") is { Length: 2 } split)
       {
-        return newFontSize;
+        size = TextUtils.ParseDouble(split[0].AsSpan().Trim());
       }
 
-      // original default
-      return 12;
+      return !double.IsNaN(size);
     }
 
     internal static double GetDpi()

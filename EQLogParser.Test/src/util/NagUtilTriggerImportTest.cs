@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -47,6 +48,29 @@ namespace EQLogParser
     }
 
     #region Basic Trigger Conversion
+
+    [TestMethod]
+    [DataRow("en-US", "0.75", "#BF300707")]
+    [DataRow("de-DE", "0.75", "#BF300707")]
+    [DataRow("fr-FR", " 0.5 ", "#80300707")]
+    [DataRow("en-US", "0.3", "#4C300707")]
+    [DataRow("de-DE", "invalid", "#FF000000")]
+    public void RgbaAlphaUsesDecimalSyntaxRatherThanTheCurrentCulture(string culture, string alpha, string expected)
+    {
+      var original = CultureInfo.CurrentCulture;
+      try
+      {
+        CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo(culture);
+        var json = LoadFixture("counter-physical.json")
+          .Replace("rgba(48,7,7,0.75)", $"rgba(48,7,7,{alpha})", StringComparison.Ordinal);
+        var (nodes, _) = ConvertTriggersUnwrapped(json);
+        Assert.AreEqual(expected, nodes[0].TriggerData.IdleColor);
+      }
+      finally
+      {
+        CultureInfo.CurrentCulture = original;
+      }
+    }
 
     [TestMethod]
     public void ConvertTriggers_SingleTextOverlay_ReturnsNode()

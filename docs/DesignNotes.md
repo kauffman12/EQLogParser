@@ -18606,6 +18606,29 @@ Separately, Kizant live passes the cold-storage, same-process reproducibility an
 and Roper THJ passes cold storage with `EQLP_EMU=1`. Startup/theme sizing, column order, take-back presentation and frozen-grid visuals
 remain Windows checks in `docs/ReleaseChecklist.md`.
 
+## Plain decimal input uses one invariant parser
+
+`TextUtils.ParseDouble` is the shared reader for signed, dot-decimal tokens. Condition literals and comparisons,
+legacy roster/pet-map timestamps, NAG rgba alpha and overlay font sizes use it. Invalid input returns `NaN` or the
+caller's explicit fallback; the reader rejects grouping, exponents, non-finite words and integer parts beyond `ulong`.
+Whitespace belongs to the caller's grammar: file timestamps, alpha and font sizes trim it; condition tokens do not need to.
+Integer tokens accumulate as `ulong` and convert once. Fractional tokens pass the same grammar checks, then use invariant
+span-based runtime conversion for correctly rounded results: summing digit × scale gave `0.30000000000000004` for `0.3`,
+breaking string equality against a number literal and moving rgba alpha across a midpoint. No per-digit floating-point fold.
+`UiElementUtil.TryParseFontSize` serves both overlay update paths and the defaulting `ParseFontSize` door.
+
+Invariant formatting alone cannot fix a culture-dependent parse: German `double.TryParse` reads `12.5` as 125 before
+an evaluator ever formats it. `ConditionScalarTest` checks both the AST value and evaluation under English, German and
+French cultures; `LegacyIdentityNumberTest` pins timestamp carry and invalid-stamp fallback, and
+`NagUtilTriggerImportTest` pins rgba alpha under those cultures. `FontSizeParsingTest` covers the shared WPF-side reader.
+`TextUtilsParseUIntTest` also pins the shared double reader's deliberate grammar limits and exact rounding, including
+fractions beyond the exact-integer range of a double.
+
+This is not a blanket replacement for framework numeric conversion. `ConfigUtil` must round-trip invariant general-format
+doubles, including exponent notation. The trigger `number` modifier and `ZeroConverter.ConvertBack` retain their broader
+formatted-number grammar. Spell-count header sorting reads current-culture display text and must match its writer.
+Those paths keep framework parsing; numeric-object `Convert.ToDouble` calls and JSON numeric readers are not text-token parsers.
+
 ## Log Management saves the displayed settings
 
 A report of changing a value, pressing Save, and reopening to the old value has a concrete matching path: selecting both

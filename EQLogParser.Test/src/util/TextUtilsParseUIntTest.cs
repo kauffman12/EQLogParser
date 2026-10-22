@@ -56,9 +56,17 @@ namespace EQLogParserTest
     [DataRow(".5", 0.5)]
     [DataRow("5.", 5.0)]
     [DataRow("+42", 42.0)]
+    [DataRow("0.3", 0.3)]
+    [DataRow("12.12", 12.12)]
+    [DataRow("0.10000000000000001", 0.1)]
+    [DataRow("9007199254740993", 9007199254740992d)]
+    [DataRow("9007199254740993.5", 9007199254740994d)]
+    [DataRow("-9007199254740993.5", -9007199254740994d)]
+    [DataRow("18446744073709551615", 18446744073709551616d)]
     public void DecimalTokensKeepTheirSignAndFraction(string token, double expected)
     {
-      Assert.AreEqual(expected, TextUtils.ParseDouble(token.AsSpan()), 1e-9);
+      // Exact equality: a one-ULP error can change condition equality and midpoint alpha rounding.
+      Assert.AreEqual(expected, TextUtils.ParseDouble(token.AsSpan()));
     }
 
     [TestMethod]
@@ -67,6 +75,13 @@ namespace EQLogParserTest
     [DataRow("-")]
     [DataRow("abc")]
     [DataRow("12a34")]
+    [DataRow("12,5")]
+    [DataRow("1,234")]
+    [DataRow("1e3")]
+    [DataRow(" 12.5 ")]
+    [DataRow("NaN")]
+    [DataRow("Infinity")]
+    [DataRow("18446744073709551616")]
     public void InvalidDecimalTokensUseNaNOrTheRequestedFallback(string? token)
     {
       Assert.IsTrue(double.IsNaN(TextUtils.ParseDouble(token.AsSpan())));
