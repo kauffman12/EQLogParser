@@ -62,7 +62,9 @@ namespace EQLogParser
 
       foreach (var column in MeterColumns.All)
       {
-        var item = new ComboBoxItemDetails(column.DefaultOn, column.Header) { ToolTip = column.Tip };
+        // PickerLabel, not Header: the dropdown explains the one word that is not self-evident ("RDPS (6s rolling)"), while the meter's header cell
+        // keeps the bare word — both come from this table, so they cannot drift into naming the same column two different things.
+        var item = new ComboBoxItemDetails(column.DefaultOn, column.PickerLabel) { ToolTip = column.Tip };
         _columnItems.Add(item);
         _columnCheck[column.Bit] = item;
       }

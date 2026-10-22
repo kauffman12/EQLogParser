@@ -374,6 +374,10 @@ on Windows" below), and a zero prints as `0` (a dash for "no damage in the windo
 elapsed seconds always draw. The table, the defaults and the zero-width law are pinned headless (`MeterColumnLayoutTest`) and described in DesignNotes →
 "Damage meter column switches: four hideable numbers, zero width when off". What follows is what only a screen can answer.
 
+- [ ] **The dropdown explains RDPS and nothing else**: its rows read `%`, `Damage`, `DPS`, `RDPS (6s rolling)`, and the meter's header cell still reads bare
+  `RDPS` over its own digits. The wording is headless-pinned (`MeterColumnLayoutTest.ThePickerExplainsRdpsWhileTheMeterKeepsTheBareWord`); what only a screen can
+  answer is that the longer phrase does not clip or wrap inside the box at fonts 10-16, on either panel (damage and tanking share the same four switches), and that
+  ticking it still lands `OverlayShowRdpsColumn`.
 - [ ] **It looks like it did before you touched anything**: on an install that predates this change (no `OverlayShow*` column keys), the meter shows
   `Damage`, `DPS`, `Sec` and no percent — the pre-RDPS look. Somebody who had RDPS on this branch sees that column disappear and nothing else move; turning it
   back on via the picker must show full numbers immediately, with no six-second warm-up and no half-windowed rate. A `settings.txt` written by an earlier build of this

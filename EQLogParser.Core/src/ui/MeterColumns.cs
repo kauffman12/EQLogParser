@@ -24,17 +24,28 @@ namespace EQLogParser;
  */
 internal static class MeterColumns
 {
-  internal readonly record struct Column(string Header, string Key, bool DefaultOn, MeterColumn Bit, MeterSlot Slot, string Tip);
+  internal readonly record struct Column(string Header, string Key, bool DefaultOn, MeterColumn Bit, MeterSlot Slot, string Tip, string PickerNote)
+  {
+    /*
+     * The word the setup picker prints on its row. Three of these four say what they are; RDPS does not — it is a rolling window while every other
+     * number on the row is measured over the whole encounter, and that difference is the first question somebody has after switching the column on, so
+     * the picker spells the window out in parentheses. A column without a note prints its bare header word. The qualifier belongs to this table rather
+     * than to the panel for the same reason the tips do: one list owns every word the meter and its settings speak, so the picker cannot rename what the
+     * header prints and Save cannot store a column under a third name. It reaches the dropdown ONLY — `HeaderOf` still gives the meter its "RDPS", and
+     * matching is by bit, never by label.
+     */
+    internal string PickerLabel => string.IsNullOrEmpty(PickerNote) ? Header : $"{Header} ({PickerNote})";
+  };
 
   // Drawn left to right, and each row names its own rendered cell so the layout cannot order the columns one way and the picker another. The percent header is the
   // bare glyph because the meter has never had a word for it, and the tips ride here rather than in the picker so the word on the meter and the sentence
   // explaining it cannot disagree.
   internal static readonly IReadOnlyList<Column> All = new[]
   {
-    new Column("%", "OverlayShowPercentColumn", false, MeterColumn.Percent, MeterSlot.Percent, "This row's share of all the damage counted"),
-    new Column("Damage", "OverlayShowDamageColumn", true, MeterColumn.Damage, MeterSlot.Damage, "Damage dealt in the encounter"),
-    new Column("DPS", "OverlayShowDpsColumn", true, MeterColumn.Dps, MeterSlot.Dps, "Damage per second over the encounter"),
-    new Column("RDPS", "OverlayShowRdpsColumn", false, MeterColumn.Rdps, MeterSlot.Rdps, "Damage per second over the latest six logged seconds"),
+    new Column("%", "OverlayShowPercentColumn", false, MeterColumn.Percent, MeterSlot.Percent, "This row's share of all the damage counted", ""),
+    new Column("Damage", "OverlayShowDamageColumn", true, MeterColumn.Damage, MeterSlot.Damage, "Damage dealt in the encounter", ""),
+    new Column("DPS", "OverlayShowDpsColumn", true, MeterColumn.Dps, MeterSlot.Dps, "Damage per second over the encounter", ""),
+    new Column("RDPS", "OverlayShowRdpsColumn", false, MeterColumn.Rdps, MeterSlot.Rdps, "Damage per second over the latest six logged seconds", "6s rolling"),
   };
 
   // The columns a meter draws before anybody has switched anything.

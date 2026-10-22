@@ -90,6 +90,31 @@ public sealed class MeterColumnLayoutTest
   }
 
   /*
+   * The dropdown gets to explain the one word that is not self-evident — RDPS is a rolling window while every other number on the row covers the whole
+   * encounter, which is the first question after somebody switches the column on — and the meter's header cell keeps printing the bare word, because a row of
+   * digits has no room for a parenthesis. Both halves still come from this table, so the picker cannot rename a column out of its own header or its settings key,
+   * and the fold stays by bit. Exactly one qualifier is allowed: four parenthesised phrases in a four-item list is the wall of text the bare list avoided.
+   */
+  [TestMethod]
+  public void ThePickerExplainsRdpsWhileTheMeterKeepsTheBareWord()
+  {
+    CollectionAssert.AreEqual(new[] { "%", "Damage", "DPS", "RDPS (6s rolling)" },
+      MeterColumns.All.Select(c => c.PickerLabel).ToArray());
+
+    Assert.AreEqual(1, MeterColumns.All.Count(c => !string.IsNullOrEmpty(c.PickerNote)),
+      "only a word that genuinely needs explaining carries one");
+
+    foreach (var column in MeterColumns.All)
+    {
+      Assert.IsTrue(column.PickerLabel.StartsWith(column.Header, StringComparison.Ordinal),
+        $"{column.Header}: the picker may not call a column something its own header does not say");
+    }
+
+    // And the qualifier stops at the dropdown: HeaderOf is what the meter draws.
+    Assert.AreEqual("RDPS", MeterColumns.HeaderOf(MeterSlot.Rdps));
+  }
+
+  /*
    * A cell the table does not know about echoes itself instead of throwing: HeaderOf runs inside the meter's window constructor, so a
    * new MeterSlot added without a table row must cost one odd header word on a development screen, not the whole board. (The tests
    * above are what make that state unreachable in shipped code; this is what it degrades to.) The same law `HitLabels.Unmapped` follows.

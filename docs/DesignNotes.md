@@ -7368,6 +7368,13 @@ a word written twice is a word that can be renamed alone. **`Sec` is not a switc
 it carries only its word, kept in this same file. Names, icons and ranking bars always draw. The picker is the app's own
 checkbox-in-a-dropdown (`ComboBoxItemTemplateSelector`, committing on `DropDownClosed`), so four width decisions preview as one gesture.
 
+**A column may carry a `PickerNote`, and it reaches the dropdown only**: that list reads `%`, `Damage`, `DPS`, **`RDPS (6s rolling)`**, because RDPS is the one word
+that is not self-evident — every other number on the row covers the whole encounter, this one covers the latest six logged seconds, and that is the first question
+somebody has after switching it on. Everything else prints its bare header word, and `HeaderOf` still gives the meter its short `RDPS` (a row of digits has no room
+for a parenthesis). The note is not a name: it keys nothing, saves nothing, and matching stays by bit — `PickerLabel` is built from `Header`, so a longer label cannot
+rename a column out of its header or its key. Exactly one qualifier is allowed (`ThePickerExplainsRdpsWhileTheMeterKeepsTheBareWord`); four parenthesised phrases in a
+four-item list is the wall of text the bare list existed to avoid.
+
 `Load()` reads every key with `ConfigUtil.IfSetOrElse(key, that column's default)` — never a blanket "missing means false", which would blank `Damage` and `DPS`
 over one bad ini line — and Save writes every key, the off ones too, so an absent key only ever means nobody has chosen. Both doors — that ini read and a window
 full of checkboxes — fold their yes/no answers through **`MeterColumns.FromSwitches`**, because two loops that "both" turn checks into a mask is how a preview and
