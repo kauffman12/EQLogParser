@@ -77,7 +77,29 @@ namespace EQLogParser
             foreach (var data in batch)
             {
               if (_isDisposed) break;
-              DoPreProcess(data.Line, data.Ts, data.IsMonitor);
+
+              /*
+               * One line, not one file. The four combat parsers each own a per-line catch with a capped voice, but this step does more than call
+               * them: it slices line[27..] before anything checks the length again, runs the chat classifier, hands the chat type to the archive sink,
+               * and asks the trigger hook about quick-share — none of which is inside those catches. A fault in any of it used to reach the catch around
+               * this whole loop, which logs "Problem loading log file." once and stops reading: one malformed line at minute nine cost the remaining five
+               * hours, every board and identity verdict with it, and the only clue was a stack trace at the top of the log.
+               */
+              try
+              {
+                DoPreProcess(data.Line, data.Ts, data.IsMonitor);
+              }
+              catch (Exception ex) when (!_isDisposed)
+              {
+                /*
+                 * Not ThreadBoundary.Note, on purpose: a capped message has to carry everything the reader needs ONCE (RepeatCap's rule), and here that
+                 * is the offending text — without it the fault is unfalsifiable. The key is still site + exception type, so one shape costs one line and
+                 * the count behind it stays in RepeatCap.
+                 */
+                if (RepeatCap.SpeaksOnce($"lane line {ex.GetType().Name}"))
+                  Log.Error($"a line faulted outside the parsers' own guards and was skipped (this kind repeats silently, counted): "
+                            + $"{ex.Message} | line: {RepeatCap.Clip(data.Line)}", ex);
+              }
             }
 
             if (_isDisposed) break;

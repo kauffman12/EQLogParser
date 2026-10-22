@@ -10153,6 +10153,8 @@ the style bits it had, and the code reports one Warn per error code. They threw 
 repaint plus an Error every time the window moved; companion placement already refused this way ("Damage meter column switches…", where the panel sits still on
 a failed move) and these two now match it.
 
+One case sits between the two, and it is a data-loss bug rather than a crash: the reader lane's own step per line — slicing `line[27..]`, classifying chat, handing the chat type to the archive sink, asking the trigger hook about quick-share — runs outside all four parsers' catches, so a fault there reached the catch wrapped around the entire loop: one `Problem loading log file.` and every remaining line of the capture unread. That step is now guarded per line, with RepeatCap naming the offending text (a capped message must carry its evidence once, and without the line the fault is unfalsifiable), so a malformed line costs itself.
+
 Deliberately unchanged: the four line parsers keep their own per-line catch with RepeatCap'd voice — that is the parse law, not this one, and it costs a bad line
 rather than the night. The fact constructors still refuse an unrepresentable amount instead of clamping it (a refusal inside a line the parser already caught is
 contained by that catch, and a fake maximum is indistinguishable from a real one). `MeterColumnLayout`'s unknown-slot `ArgumentException` stays a developer-facing
