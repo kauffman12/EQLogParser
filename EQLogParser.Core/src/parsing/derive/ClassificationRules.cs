@@ -477,32 +477,32 @@ namespace EQLogParser
            */
           case EvidenceFact.EvJoinedRaid:
             playerBehavior.Add(name);
-            Claim(timeline, state, name, IdentityKind.Player, RuleStrength.Strong, "R3-joinraid", double.NegativeInfinity);
+            Claim(timeline, state, name, IdentityKind.Player, RuleStrength.Strong, "R3-joinraid");
             break;
 
           case EvidenceFact.EvLeftRaid:
             playerBehavior.Add(name);
-            Claim(timeline, state, name, IdentityKind.Player, RuleStrength.Strong, "R3-leaveraid", double.NegativeInfinity);
+            Claim(timeline, state, name, IdentityKind.Player, RuleStrength.Strong, "R3-leaveraid");
             break;
 
           case EvidenceFact.EvJoinedGroup:
             playerBehavior.Add(name);
-            Claim(timeline, state, name, IdentityKind.Player, RuleStrength.Strong, "R3-joingroup", double.NegativeInfinity);
+            Claim(timeline, state, name, IdentityKind.Player, RuleStrength.Strong, "R3-joingroup");
             break;
 
           case EvidenceFact.EvLeftGroup:
             playerBehavior.Add(name);
-            Claim(timeline, state, name, IdentityKind.Player, RuleStrength.Strong, "R3-leftgroup", double.NegativeInfinity);
+            Claim(timeline, state, name, IdentityKind.Player, RuleStrength.Strong, "R3-leftgroup");
             break;
 
           case EvidenceFact.EvRaidLeader:
             playerBehavior.Add(name);
-            Claim(timeline, state, name, IdentityKind.Player, RuleStrength.Strong, "R3-leader", double.NegativeInfinity);
+            Claim(timeline, state, name, IdentityKind.Player, RuleStrength.Strong, "R3-leader");
             break;
 
           case EvidenceFact.EvMercJoinedGroup:
             // legacy isPossiblePlayerName said no - an oddly-named hireling, authoritative enough.
-            Claim(timeline, state,name, IdentityKind.Merc, RuleStrength.Strong, "R3-merc", double.NegativeInfinity);
+            Claim(timeline, state,name, IdentityKind.Merc, RuleStrength.Strong, "R3-merc");
             break;
 
           case EvidenceFact.EvLooter:
@@ -515,12 +515,12 @@ namespace EQLogParser
              * (docs/DesignNotes.md → "The checks that decide who is a player").
              */
             if (!LooksLikeEntityName(name) && !PlayerRegistry.IsPersonWord(name))
-              Claim(timeline, state, name, IdentityKind.Player, RuleStrength.Medium, "R23-loot", double.NegativeInfinity);
+              Claim(timeline, state, name, IdentityKind.Player, RuleStrength.Medium, "R23-loot");
             break;
 
           case EvidenceFact.EvWhoRoster:
             playerBehavior.Add(name);
-            Claim(timeline, state,name, IdentityKind.Player, RuleStrength.Certain, "R2-who", double.NegativeInfinity);
+            Claim(timeline, state,name, IdentityKind.Player, RuleStrength.Certain, "R2-who");
             break;
 
           case EvidenceFact.EvChat:
@@ -528,7 +528,7 @@ namespace EQLogParser
             if (PlayerChannels.Contains(facts.AuxOf(e.AuxIdx) ?? string.Empty) && name != ChatType.You)
             {
               playerBehavior.Add(name);
-              Claim(timeline, state,name, IdentityKind.Player, RuleStrength.Strong, "R3-chat", double.NegativeInfinity);
+              Claim(timeline, state,name, IdentityKind.Player, RuleStrength.Strong, "R3-chat");
             }
             break;
 
@@ -546,7 +546,7 @@ namespace EQLogParser
              * two of them, and not one of those names reads Npc or Pet under the rule book.
              */
             playerBehavior.Add(name);
-            Claim(timeline, state, name, IdentityKind.Player, RuleStrength.Strong, "R22-guildmate", double.NegativeInfinity);
+            Claim(timeline, state, name, IdentityKind.Player, RuleStrength.Strong, "R22-guildmate");
             break;
 
           case EvidenceFact.EvSelfFeeds:
@@ -554,7 +554,7 @@ namespace EQLogParser
             // player character carries a flask or a loaf. Strong rather than Certain, so a Targeted (NPC) verdict
             // on the same name still wins (docs/DesignNotes.md → "The identity rule book").
             playerBehavior.Add(name);
-            Claim(timeline, state,name, IdentityKind.Player, RuleStrength.Strong, "R17-selffeed", double.NegativeInfinity);
+            Claim(timeline, state,name, IdentityKind.Player, RuleStrength.Strong, "R17-selffeed");
             break;
 
           case EvidenceFact.EvPetSlotHit:
@@ -570,7 +570,7 @@ namespace EQLogParser
              * the parser only reports a striker whose name is INSIDE the eye).
              */
             playerBehavior.Add(name);
-            Claim(timeline, state,name, IdentityKind.Player, RuleStrength.Strong, "R19-eyeowner", double.NegativeInfinity);
+            Claim(timeline, state,name, IdentityKind.Player, RuleStrength.Strong, "R19-eyeowner");
             break;
 
           case EvidenceFact.EvCompanionCalled:
@@ -586,7 +586,7 @@ namespace EQLogParser
              * companion, but a `Targeted (NPC)` frame on the same name still outranks a behaviour.
              */
             playerBehavior.Add(name);
-            Claim(timeline, state, name, IdentityKind.Player, RuleStrength.Strong, "R5-companion", double.NegativeInfinity);
+            Claim(timeline, state, name, IdentityKind.Player, RuleStrength.Strong, "R5-companion");
             break;
 
           case EvidenceFact.EvPetLeader:
@@ -599,7 +599,7 @@ namespace EQLogParser
             // charm confirm line writes "a skeleton" and every line where that mob is the SUBJECT writes
             // "A skeleton": EntityTimeline keys identity case-insensitively, so SideAt finds this assignment
             // whichever spelling it was asked with (docs/DesignNotes.md → "The parsing direction").
-            Claim(timeline, state,name, IdentityKind.Npc, RuleStrength.Strong, "R9-charm", double.NegativeInfinity);
+            Claim(timeline, state,name, IdentityKind.Npc, RuleStrength.Strong, "R9-charm");
             break;
 
           case EvidenceFact.EvCharmEnd:
@@ -611,14 +611,14 @@ namespace EQLogParser
             var castSpell = facts.AuxOf(e.AuxIdx);
             if (IsClassSafeCast(castSpell))
             {
-              Claim(timeline, state, name, IdentityKind.Player, RuleStrength.Certain, "R4-spell", double.NegativeInfinity);
+              Claim(timeline, state, name, IdentityKind.Player, RuleStrength.Certain, "R4-spell");
             }
             else if (IsPetCastSpell(castSpell))
             {
               // Strong, not Certain: the spell proves the caster is somebody's pet, but says nothing
               // about WHOSE - a verified owner claim (R5, Certain) still outranks this, and a name
               // that is also a verified player keeps Player.
-              Claim(timeline, state, name, IdentityKind.Pet, RuleStrength.Strong, "R20-petspell", double.NegativeInfinity);
+              Claim(timeline, state, name, IdentityKind.Pet, RuleStrength.Strong, "R20-petspell");
             }
             break;
         }
@@ -664,7 +664,7 @@ namespace EQLogParser
          */
         if (timeline.HasIndependentIdentity(name, IdentityKind.Player, double.PositiveInfinity)
           || timeline.HasIndependentIdentity(name, IdentityKind.Merc, double.PositiveInfinity)) continue;
-        Claim(timeline, state, name, IdentityKind.Pet, RuleStrength.Certain, "R24-petslot", double.NegativeInfinity);
+        Claim(timeline, state, name, IdentityKind.Pet, RuleStrength.Certain, "R24-petslot");
       }
     }
 
@@ -707,18 +707,10 @@ namespace EQLogParser
      * pass, so they need no list.
      */
     private static void Claim(EntityTimeline timeline, ClassificationState state, string name, IdentityKind kind,
-                              int strength, string source, double effectiveFrom = double.NegativeInfinity)
+                              int strength, string source)
     {
-      timeline.SetIdentity(name, kind, strength, source, effectiveFrom);
-      var claim = new TimelineClaim(false, name, (int)kind, strength, source, effectiveFrom, 0d, null);
-      if (state.EvidenceClaimed.Add(claim)) state.EvidenceClaims.Add(claim);
-    }
-
-    private static void Claim(EntityTimeline timeline, ClassificationState state, AffiliationKind kind, string name,
-                              double t0, double t1, int strength, string source, string owner = null)
-    {
-      timeline.AddAffiliation(kind, name, t0, t1, strength, source, owner);
-      var claim = new TimelineClaim(true, name, (int)kind, strength, source, t0, t1, owner);
+      timeline.SetIdentity(name, kind, strength, source);
+      var claim = new TimelineClaim(name, kind, strength, source);
       if (state.EvidenceClaimed.Add(claim)) state.EvidenceClaims.Add(claim);
     }
 
@@ -777,7 +769,7 @@ namespace EQLogParser
 
         // Effective from -∞ like every other evidence claim. The ledger's own stamp is dotnet-epoch seconds, a DIFFERENT clock from
         // the capture's, and mixing them into a timeline position would put the claim centuries in its own future.
-        Claim(timeline, state, name, IdentityKind.Player, RuleStrength.Strong, "R25-roster", double.NegativeInfinity);
+        Claim(timeline, state, name, IdentityKind.Player, RuleStrength.Strong, "R25-roster");
       }
     }
 
@@ -832,7 +824,7 @@ namespace EQLogParser
         // Ask the ANSWER, not the claim list: a name any rule already placed — at any strength — is a name this capture spoke about.
         if (timeline.IdentityAt(pet, double.PositiveInfinity) is not IdentityKind.Unknown) continue;
 
-        Claim(timeline, state, pet, IdentityKind.Pet, RuleStrength.Strong, "R26-savedpet", double.NegativeInfinity);
+        Claim(timeline, state, pet, IdentityKind.Pet, RuleStrength.Strong, "R26-savedpet");
       }
     }
 

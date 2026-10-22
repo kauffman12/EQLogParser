@@ -8,17 +8,18 @@ namespace EQLogParser
    * One replayable assertion the evidence stage wrote, so a later pass can re-create the store without
    * re-walking the evidence it came from. The digest EntityTimeline folds is a commutative sum, so replaying
    * these in append order — or any order — lands the same value a full walk would.
+   *
+   * IDENTITY ONLY, and that is the design rather than a gap: an affiliation interval never travels as a
+   * claim, because an interval's correctness depends on verdicts that can move and replaying it unconditionally
+   * would assert an earlier pass's side into today's stage order. R9's charm windows and R18's healed-pet
+   * intervals rebuild from their own carried aggregates every pass instead (see this class's header), and a
+   * summon's confessed master is re-derived through PetLeaders for the same reason. So a claim needs exactly
+   * what SetIdentity takes — name, kind, strength, the rule that said it — and no time bounds: every claim this
+   * stage makes is effective for the whole capture, which is also SetIdentity's own default.
    */
-  internal readonly record struct TimelineClaim(bool IsAffiliation, string Name, int Kind, int Strength,
-                                                string Source, double T0, double T1, string Owner)
+  internal readonly record struct TimelineClaim(string Name, IdentityKind Kind, int Strength, string Source)
   {
-    public void Apply(EntityTimeline timeline)
-    {
-      if (IsAffiliation)
-        timeline.AddAffiliation((AffiliationKind)Kind, Name, T0, T1, Strength, Source, Owner);
-      else
-        timeline.SetIdentity(Name, (IdentityKind)Kind, Strength, Source, T0);
-    }
+    public void Apply(EntityTimeline timeline) => timeline.SetIdentity(Name, Kind, Strength, Source);
   }
 
   /*
