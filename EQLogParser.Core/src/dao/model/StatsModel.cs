@@ -192,6 +192,11 @@ namespace EQLogParser
     public string Name { get; set; }
     public string Type { get; set; }
     public double TotalSeconds { get; set; }
+
+    /* Mark-based active seconds (BusyTimePolicy): the seconds this lane carried accepted records in. A row whose role is not an
+       entity is never stamped and so reads 0, exactly like TotalSeconds beside it - no surface here binds a nullable numeric. */
+    public double BusySeconds { get; set; }
+
     public long Dps { get; set; }
     public long Sdps { get; set; }
     public long Pdps { get; set; }
@@ -283,6 +288,12 @@ namespace EQLogParser
 
     /// <summary>The same for the secondary breakdown (the healing board's "who healed me" view).</summary>
     internal PlayerSubStats SubStat2Of(string subType, string type) => StatsUtil.SubStatLookup(ref SubStats2Index, SubStats2, subType, type);
+
+    /* Scratch for BusyTimePolicy: the seconds this row saw an accepted record in. Allocated on first mark, released by Apply before
+       the row is published, because rows live on in CombinedStats and a retained set is a build's worth of heap per name. */
+    internal HashSet<long> ActivityMarks;
+    internal long LastMarkSec = long.MinValue;
+
     public PlayerStats MoreStats { get; set; }
     public bool IsTopLevel { get; set; } = true;
     public string OrigName { get; set; }

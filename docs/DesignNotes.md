@@ -18740,3 +18740,70 @@ an equivalence oracle. `ChartSeriesBuilderTest` checks the repaired arithmetic, 
 publications and group lookup, plus a seeded multi-member merge against independent raw-record accounting at every
 output timestamp. `LineChartSelectionTest` exercises the actual UPDATE path on Windows, so it compiles here and answers only
 there. The temporary measurement code was removed.
+
+## Busy seconds: activity is measured from marks, never from a stored span
+
+**Goal:** a player who does nothing during a fight must not be allocated the same time as one casting the whole way through. **Busy** sits
+beside **Sec** on Damage, Healing and Tanking Summary. It reads logged lane output, not button presses: long casts, lag, DoTs, pets, mana and
+waiting for a target all move it legitimately, so it is an approximation of activity rather than a diagnosis.
+
+**The rule in one sentence:** collect the seconds this lane actually credited this row with, weld them across pauses of ten seconds or less,
+and cut that against the same covered range the row's `TotalSeconds` was read from — **Busy is Sec minus the idle stretches inside it**.
+
+A **mark** is a whole log second that carried at least one record accepted by that lane's existing walk, taken from the containing
+`ActionGroup.BeginTime` — neither record type carries a time of its own, so nothing may add timestamps to them or use the wall clock. Marks are
+`long` in a `HashSet<long>` on the row (`PlayerStats`), plus a last-second gate as a cheap skip: these are .NET-epoch seconds (~64 billion for a
+modern capture) and an `int` truncates silently while still producing plausible numbers. The set is the deduplicator, so repeats, simultaneous
+actions and overlapping selected fights each contribute one mark and insertion order is irrelevant.
+
+**The weld** (`BusyTimePolicy`) sorts the marks and extends a run while `next - end <= GapSeconds` (10), closing it with the inclusive length
+`end - start + 1`. The boundary is the **distance between timestamps**, not the count of unmarked seconds between them: `{0,10}` measures 11 and
+`{0,11}` measures 2. One mark measures one second, with no allowance before the first or after the last — this is emphatically not "ten seconds
+per action". Ten is a heuristic from measured cadence, not a proven idle threshold, and both header tooltips name it: changing `GapSeconds` moves
+both strings in the same change.
+
+**The cut is what keeps the column honest.** A run extends only while both ends sit inside ONE span of the row's covered range — the very
+`TimeRange` its Sec came from, which `UpdateAllStatsTimeRanges` and the healing builder's `UpdateStats` hand back rather than a second merge
+being built. `TimeRange` joins its own spans up to 6 seconds apart — five seconds of dead air — which is less than this column's 10, so an uncut
+weld claims ground no measurement made: two selected one-hit fights 7-10 seconds apart, or two different spells of one healer that far apart
+inside a pull, are 2 seconds of Sec and would read up to 11. From the cut follow the invariants: **Busy ≤ Sec on every published row in every lane**, equal when nothing sat idle; an idle stretch inside
+one covered span is still removed (`Sec 21`, `Busy 2`); a mark outside every span counts nothing; and a row with no coverage measures 0, which is
+the same row Sec reports as zero. If a builder's marks come from ground its range did not measure, fix the hand-off — never paper over it with a
+`Math.Min` against Sec, which hides that while making the two columns disagree about which seconds exist.
+
+**Each summary measures its own lane** — damage dealt, healing done, incoming attempts — and only rows whose *role* is an entity are stamped:
+spell/proc/damage-type breakdowns, healed-target detail, `PopulateHealing`'s received-healing pass, raid totals and synthetic group-view headers
+read **0**, the way every other unearned total does. Keep `BusySeconds` a plain `double` beside `TotalSeconds`: a `double?` reopens blank versus
+zero in every grid, sort and CSV to say what `0` already says. Nothing in this column runs a classification or a visibility rule.
+
+**Aggregate (`X +Pets`) rows union their members' marks**, collected at the walk site that already decides which owner receives each amount —
+timed charm ownership included, so a mark lands with the row its amount lands on — cut against the union of those children's ranges. A pair can
+exceed the sum of its children (owner `{0}` plus pet `{3}` is one second each and four for the row, because their spans merge and Sec counts 0-3
+as active too) and never further than those ranges reach (`{0}` plus `{10}` is `2`).
+
+**Marks follow the question, not the capture:** whatever the existing selection, ordinal slicing, time window and lane filters accept supplies
+them and everything else supplies none — excluded damage buys no seconds while a valid zero-amount attempt (a miss, a fully-overhealed heal) buys
+its second. A narrowed question is re-measured from its surviving marks rather than clipped from the old scalar: `{0,8}` inside one span answers 9,
+and keeping only the mark at 8 answers 1, carrying no bridging credit. Totals, rates and denominators, ranking, bar percentages, row membership
+and record selection are untouched, and nothing here commits to changing a rate denominator later.
+
+Rows outlive the build inside `CombinedStats`, so `Apply` publishes the scalar **and releases the scratch set and gate**, child and aggregate rows
+alike — a retained set is a build's worth of heap per name. Busy is an ordinary column: no settings knob, and an operator who does not want it hides
+it with the picker. Order and visibility are independent saved preferences; an unknown Busy is inserted once beside Sec (even when only an order was
+saved) and a fresh layout records it immediately, so hiding it before ever dragging a column is not mistaken for an old layout on restart — after
+that the operator's choice wins.
+
+Prior measurements over `eqlog_Kizant_xegony-2.txt` (classification + projection + the real builders): re-welding the stored per-fight spans at
+wider tolerances did **not** remove their internal silence, which is why this needs block timestamps rather than another operation on
+`DamageSegments`. One 25-fight group's damage marks ran a raid-wide median gap of 1 s and p90 of 4 s, with sparse named rows at p90 6-7 s; around
+the chosen tolerance one row kept ~93 % of its window at gap 8 and ~97 % at gap 12, another 78 % and 82 %. Slack for normal casting — no maximum,
+no false-idle promise, not a regression expectation.
+
+Pinned headlessly: `BusyTimePolicyTest` (the weld table including exactly-ten joins and eleven splits, insertion order, real .NET-epoch
+magnitudes, the cut from both sides — a bridge inside one span kept and across two refused, a mark outside every span counting nothing, no
+coverage measuring nothing, a welded total never outgrowing its span — union-vs-sum, a gap below 1 refused, gate versus set, `Apply` releasing
+scratch, an unmarked row at zero) and `BusyTimeTest` (the three builder seams: own accepted marks, misses counted and excluded damage not, strict
+children under a joining aggregate that still cannot exceed its coverage, marks following per-record ownership, healer-not-recipient, zero-landed
+heals, the damage-type dial, one name answering differently per lane, narrowing and widening, `Busy == Sec` across fight gaps of 5/6/7/10 seconds,
+unstamped rows at 0, scratch released with `Busy <= Sec` asserted on every published row, and the empty-answer path intact). Grid behaviour is owed
+on Windows in `docs/ReleaseChecklist.md`.

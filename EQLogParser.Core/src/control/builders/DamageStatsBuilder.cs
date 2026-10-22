@@ -461,6 +461,7 @@ namespace EQLogParser
 
                       _raidTotals.Total += record.Total;
                       StatsUtil.UpdateDamageStats(stats, record, isNewFrame, isAttackerPet);
+                      BusyTimePolicy.Note(stats, block.BeginTime);
 
                       if ((player is null && !_playerPets.ContainsKey(record.Attacker)) || Labels.IsUnassignedOwner(player))
                       {
@@ -474,6 +475,7 @@ namespace EQLogParser
                         var aggregatePlayerStats = GetRow(aggregateName, original: origName);
                         isNewFrame = StatsUtil.CheckNewFrame(prevPlayerTimes, aggregatePlayerStats, block.BeginTime);
                         StatsUtil.UpdateDamageStats(aggregatePlayerStats, record, isNewFrame, isAttackerPet);
+                        BusyTimePolicy.Note(aggregatePlayerStats, block.BeginTime);
                         topLevelStats[aggregateName] = aggregatePlayerStats;
 
                         if (childrenStats.TryGetValue(aggregateName, out var children))
@@ -517,6 +519,10 @@ namespace EQLogParser
             var playerClasses = new Dictionary<string, string>();
             foreach (var stats in individualStats.Values)
             {
+              // The span this row's Sec is read from, which is also what Busy gets cut inside of (see BusyTimePolicy). An aggregate cuts
+              // against the union of its children; a child row asks for its own below, outside the IsTopLevel branch.
+              TimeRange covered;
+
               if (_playerGroupAssignments.TryGetValue(stats.OrigName, out var cachedGroup))
               {
                 stats.AssignedGroup = cachedGroup;
@@ -557,11 +563,12 @@ namespace EQLogParser
 
                   var filteredTimeRange = StatsUtil.FilterTimeRange(timeRange, startTime, stopTime);
                   stats.TotalSeconds = filteredTimeRange.GetTotal();
+                  covered = filteredTimeRange;
                 }
                 else
                 {
                   expandedStats.Add(stats);
-                  StatsUtil.UpdateAllStatsTimeRanges(stats, _playerTimeRanges, _playerSubTimeRanges, startTime, stopTime);
+                  covered = StatsUtil.UpdateAllStatsTimeRanges(stats, _playerTimeRanges, _playerSubTimeRanges, startTime, stopTime);
                   // Store time segments on player for Group View and other view modes
                   if (_playerTimeRanges.TryGetValue(stats.Name, out var range))
                   {
@@ -577,6 +584,13 @@ namespace EQLogParser
                   stats.Special = special2;
                 }
               }
+              else
+              {
+                // An expanded child: timed already by its parent's pass, and asked again only for the span to cut against.
+                covered = StatsUtil.UpdateAllStatsTimeRanges(stats, _playerTimeRanges, _playerSubTimeRanges, startTime, stopTime);
+              }
+
+              BusyTimePolicy.Apply(stats, covered);
 
               var playerClass = PlayerRegistry.Instance.GetPlayerClass(stats.OrigName, lastTime);
               stats.ClassName = playerClass;

@@ -592,13 +592,16 @@ namespace EQLogParser
       return _isLimited;
     }
 
-    private static void UpdateStats(PlayerStats raidTotals, PlayerStats stats,
+    /* Returns the healer's own covered span - what TotalSeconds is divided by, and what Busy is cut inside of - or null when this name has none. */
+    private static TimeRange UpdateStats(PlayerStats raidTotals, PlayerStats stats,
       ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> healedBySpell,
       ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> healedByHealer,
       ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> healedByHealerSpells,
       bool populate,
       double minTime = double.NaN, double maxTime = double.NaN)
     {
+      TimeRange covered = null;
+
       if (healedBySpell.TryGetValue(stats.Name, out var ranges))
       {
         // base the total time range off the sub times ranges since healing doesn't have good Fight segments to work with
@@ -610,6 +613,7 @@ namespace EQLogParser
 
         var filteredRange = StatsUtil.FilterTimeRange(totalRange, minTime, maxTime);
         stats.TotalSeconds = filteredRange.GetTotal();
+        covered = filteredRange;
       }
 
       StatsUtil.UpdateSubStatsTimeRanges(stats, healedBySpell, minTime, maxTime);
@@ -625,6 +629,8 @@ namespace EQLogParser
       }
 
       StatsUtil.UpdateCalculations(stats, raidTotals);
+
+      return covered;
     }
 
     /*
@@ -704,6 +710,7 @@ namespace EQLogParser
                     _raidTotals.Total += record.Total;
                     var stats = StatsUtil.CreatePlayerStats(individualStats, record.Healer);
                     StatsUtil.UpdateHealStats(stats, record);
+                    BusyTimePolicy.Note(stats, block.BeginTime);
 
                     var spellStatName = record.SubType ?? Labels.SelfHeal;
                     var spellStats = stats.SubStatOf(spellStatName, record.Type);
@@ -736,7 +743,10 @@ namespace EQLogParser
                 stats.Special = special2;
               }
 
-              UpdateStats(_raidTotals, stats, _healerSpellTimeRanges, _healerHealedTimeRanges, _healerHealedSpellTimeRanges, false);
+              var covered = UpdateStats(_raidTotals, stats, _healerSpellTimeRanges, _healerHealedTimeRanges, _healerHealedSpellTimeRanges, false);
+
+              // Healing has no fight segments to lean on, so the coverage is the healer's own spell spans - the same ones Sec divides by.
+              BusyTimePolicy.Apply(stats, covered);
               var playerClass = PlayerRegistry.Instance.GetPlayerClass(stats.OrigName, lastTime);
               stats.ClassName = playerClass;
               playerClasses.TryAdd(stats.OrigName, playerClass);

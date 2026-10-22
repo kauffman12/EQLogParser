@@ -284,16 +284,22 @@ namespace EQLogParser
       }
     }
 
-    internal static void UpdateAllStatsTimeRanges(PlayerStats stats, ConcurrentDictionary<string, TimeRange> playerTimeRanges,
+    /* Returns the span TotalSeconds was read out of (null when this name has none), so a reader that needs the same coverage - BusyTimePolicy -
+       can cut against it instead of building a second one. */
+    internal static TimeRange UpdateAllStatsTimeRanges(PlayerStats stats, ConcurrentDictionary<string, TimeRange> playerTimeRanges,
       ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> playerSubTimeRanges, double minTime = double.NaN, double maxTime = double.NaN)
     {
+      TimeRange covered = null;
+
       if (playerTimeRanges.TryGetValue(stats.Name, out var range))
       {
-        var filteredRange = FilterTimeRange(range, minTime, maxTime);
-        stats.TotalSeconds = filteredRange.GetTotal();
+        covered = FilterTimeRange(range, minTime, maxTime);
+        stats.TotalSeconds = covered.GetTotal();
       }
 
       UpdateSubStatsTimeRanges(stats, playerSubTimeRanges, minTime, maxTime);
+
+      return covered;
     }
 
     internal static void UpdateSubStatsTimeRanges(PlayerStats stats, ConcurrentDictionary<string, ConcurrentDictionary<string, TimeRange>> playerSubTimeRanges,

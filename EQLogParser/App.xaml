@@ -340,6 +340,12 @@
     <DataTemplate x:Key="HeaderBestSecondTemplateToolTip">
       <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Max Amount of Damage done in a single Second" />
     </DataTemplate>
+    <DataTemplate x:Key="HeaderBusyTemplateToolTip">
+      <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Seconds Active, ignoring Idle Gaps over 10 Seconds" />
+    </DataTemplate>
+    <DataTemplate x:Key="HeaderBusyTakenTemplateToolTip">
+      <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Seconds taking Damage, ignoring Idle Gaps over 10 Seconds" />
+    </DataTemplate>
     <DataTemplate x:Key="HeaderSpellCountsTemplateToolTip">
       <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Cast Count (# Interrupted)" />
     </DataTemplate>

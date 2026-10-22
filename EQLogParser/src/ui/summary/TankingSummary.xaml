@@ -216,6 +216,7 @@
         <syncfusion:GridNumericColumn MappingName="Dps" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderDPSTemplateToolTip}" TextAlignment="Right" HeaderText="DPS" />
         <syncfusion:GridNumericColumn MappingName="Sdps" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderSDPSTemplateToolTip}" TextAlignment="Right" HeaderText="SDPS" />
         <syncfusion:GridNumericColumn MappingName="TotalSeconds" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Sec" />
+        <syncfusion:GridNumericColumn MappingName="BusySeconds" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderBusyTakenTemplateToolTip}" TextAlignment="Right" HeaderText="Busy" />
         <syncfusion:GridNumericColumn MappingName="Hits" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Hits" />
         <syncfusion:GridNumericColumn MappingName="Max" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Max Hit" />
         <syncfusion:GridNumericColumn MappingName="BestSec" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderBestSecondTemplateToolTip}" TextAlignment="Right" HeaderText="Best Sec" />

@@ -34,7 +34,7 @@ namespace EQLogParser
       TheTitle.Content = Labels.NoNpcs;
 
       // default these columns to descending
-      var desc = new[] { "PercentOfRaid", "Total", "Extra", "Potential", "DPS", "SDPS", "TotalSeconds", "Hits", "Max",
+      var desc = new[] { "PercentOfRaid", "Total", "Extra", "Potential", "DPS", "SDPS", "TotalSeconds", "BusySeconds", "Hits", "Max",
         "Avg", "AvgCrit", "AvgLucky", "ExtraRate", "CritRate", "LuckRate", "MeleeHitRate", "MeleeAccRate", "RampageRate", "Special"};
 
       if (TheDataGrid is SfTreeGrid treeGrid)

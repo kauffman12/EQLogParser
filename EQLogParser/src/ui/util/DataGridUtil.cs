@@ -533,6 +533,7 @@ namespace EQLogParser
 
       // check for new columns that didn't exist when preferences were saved
       dynamic addAssignedGroupColumn = null;
+      dynamic addBusyColumn = null;
       for (var i = 0; columns != null && i < columns.Count; i++)
       {
         if (!found.Contains(columns[i].MappingName))
@@ -542,6 +543,13 @@ namespace EQLogParser
           if (visible != null && columns[i].MappingName == "AssignedGroup")
           {
             addAssignedGroupColumn = columns[i];
+            continue;
+          }
+
+          // Order and visibility are saved independently; even a fresh layout must record Busy as known.
+          if (columns[i].MappingName == BusyTimePolicy.ColumnMappingName)
+          {
+            addBusyColumn = columns[i];
             continue;
           }
 
@@ -575,7 +583,34 @@ namespace EQLogParser
         SaveIndex(columnCombo, visible);
       }
 
+      if (addBusyColumn != null)
+      {
+        var at = updated.Count;
+        for (var i = 0; i < updated.Count; i++)
+        {
+          if (updated[i].MappingName == "TotalSeconds")
+          {
+            at = i + 1;
+            break;
+          }
+        }
+
+        updated.Insert(Math.Min(at, updated.Count), addBusyColumn);
+        addBusyColumn.IsHidden = false;
+        if (visible != null)
+        {
+          visible.Insert(Math.Min(at, visible.Count), addBusyColumn.MappingName);
+        }
+      }
+
       columns = SetColumns(columnCombo, gridBase, updated);
+
+      // Saved after SetColumns so the restored order (with Busy inside it) is what gets written, not the raw XAML order.
+      if (addBusyColumn != null)
+      {
+        SaveDisplayIndex(columnCombo, gridBase);
+        SaveIndex(columnCombo, visible);
+      }
 
       var selectedCount = 0;
       var list = new List<ComboBoxItemDetails>();
@@ -629,7 +664,7 @@ namespace EQLogParser
       }
 
       if (mappingName is "TimeSince" or "Hits" or "Lucky" or "Critical" or "Twincast" or
-          "Rampage" or "Riposte" or "Percent" or "PercentOfRaid" or "TotalSeconds" or "CritRate" or
+          "Rampage" or "Riposte" or "Percent" or "PercentOfRaid" or "TotalSeconds" or "BusySeconds" or "CritRate" or
           "LuckRate" or "ExtraRate" or "BaneHits" or "MeleeAccRate" or "MeleeHitRate" or
           "TwincastRate" or "TwincastHits")
       {

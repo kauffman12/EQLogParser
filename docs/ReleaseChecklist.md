@@ -504,6 +504,38 @@ identical to a test. Both halves below are the same seam seen two ways.
   erase the new board, and old healing completions must not change its tanking annotations. Also close without opening
   another log. Run `SummaryPublicationTest` on Windows for the queued-callback regression.
 
+## Busy seconds on the three summaries, checked on Windows
+
+**Busy** (beside **Sec** on Damage, Healing and Tanking Summary) is a mark-based activity measurement; its arithmetic and builder
+seams are pinned headlessly by `BusyTimePolicyTest` and `BusyTimeTest`. What follows is the grid half, which no Linux run can see.
+The contract lives in `docs/DesignNotes.md` → "Busy seconds: activity is measured from marks, never from a stored span".
+
+- [ ] **Whole seconds beside Sec:** all three summaries show Busy as an integer column next to Sec. Expanded owner/pet rows are
+      strict (owner-only, pet-only) and the `X +Pets` row reflects both; rows whose role is not an entity (synthetic Group View
+      headers, spell/detail breakdown rows) read 0 because nothing was ever stamped for them. Switch summary view modes — no
+      ownership is recomputed and no number moves.
+- [ ] **Both grid types treat it as a number** (SfTreeGrid on Damage, SfDataGrid on Healing and Tanking): the first header click
+      sorts largest first with the 0-valued non-entity rows at the bottom, and the column picker, Copy CSV/image and hiding Busy
+      behave exactly as they do for Sec.
+- [ ] **Tooltips:** Damage and Healing read *Seconds Active, ignoring Idle Gaps over 10 Seconds*; Tanking reads *Seconds taking
+      Damage, ignoring Idle Gaps over 10 Seconds*. Both fit and stay readable at the supported fonts/themes, and the threshold they
+      name matches `BusyTimePolicy.GapSeconds`.
+- [ ] **Saved layouts:** a fresh profile shows Busy beside Sec; hide it before ever dragging a column, restart, and verify it stays
+      hidden. With an older saved layout (including order-only, visibility-only and header-name preferences), Busy appears once beside
+      Sec without losing any other column's order or visibility; then hide it, reorder it, restart and verify those choices persist on
+      each of the three summaries. Nobody's columns may be reset, and Busy must not force itself back on. Run
+      `BusyColumnPreferencesTest` on Windows for the loader regression checks in both grid types.
+- [ ] **The answer follows the question:** filter the time window and damage type, widen again, change the selected fights, reopen
+      the capture. Values track the new question with no stale seconds left behind. Clear All keeps its existing re-open behaviour
+      and carries no previous Busy state into the new board.
+- [ ] **Busy never reads larger than Sec** on any row of the three summaries — it removes idle seconds from the range Sec counts and adds
+      none. Where they must agree: two selected pulls 7-10 seconds apart (nothing covers the pause, so neither column claims it) and a row that
+      worked the whole selection. Where they must differ: an interior stretch with no activity for this row, which is the point of the column.
+- [ ] **A real raid reads sensibly:** on a substantial fight group, walk away mid-fight and watch this row's Busy drop while a normal
+      slow-casting rotation is not routinely marked idle. Outgoing ticks and pet activity can legitimately keep their credited rows
+      high; per-class cadence was never measured headlessly (no class host hook), so this is the check that says whether ten seconds
+      is the right slack.
+
 ## Identity Table paging checks on Windows
 
 Run `dotnet test EQLogParser.Wpf.Test/EQLogParser.Wpf.Test.csproj` on Windows, then use a realized Identity Table with
