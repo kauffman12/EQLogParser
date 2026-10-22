@@ -1,11 +1,15 @@
+using log4net;
 using System;
-using System.ComponentModel;
+using System.Reflection;
 using System.Runtime.InteropServices;
 
 namespace EQLogParser
 {
   internal static class NativeMethods
   {
+    // Only for the two calls that used to throw: a window manager that refuses a style change is reported once and then left alone.
+    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
+
     private const int MONITOR_DEFAULTTONEAREST = 0x00000002;
     private const int HWND_TOPMOST = -1;
     private const uint SWP_NOSIZE = 0x0001;
@@ -148,14 +152,19 @@ namespace EQLogParser
 
     #region Native Methods
 
+    /*
+     * Being top-most is cosmetic, and when the call is refused the window simply keeps the z-order it has until the next assertion (the overlays
+     * re-assert on a tick and on activation). Throwing here sent that through whoever called it — the text overlay's tick, the meter's and toolbar's
+     * SourceChanged — where it cost a repaint and an Error per gesture. Same law as the placement helpers below: a failed native call is reported
+     * once per error code and the window sits still.
+     */
     internal static void SetWindowTopMost(IntPtr hWnd)
     {
-      var result = SetWindowPos(hWnd, new IntPtr(HWND_TOPMOST), 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE);
-      if (!result)
-      {
-        var errorCode = Marshal.GetLastWin32Error();
-        throw new InvalidOperationException($"SetWindowPos failed with error code {errorCode}");
-      }
+      if (SetWindowPos(hWnd, new IntPtr(HWND_TOPMOST), 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE)) return;
+
+      var errorCode = Marshal.GetLastWin32Error();
+      if (RepeatCap.SpeaksOnce($"native SetWindowPos {errorCode}"))
+        Log.Warn($"SetWindowPos failed with error code {errorCode}; the window keeps its current z-order (further failures of this code are silent)");
     }
 
     // Companion-window placement stays in native screen pixels across monitors with different DPI scales.
@@ -214,8 +223,13 @@ namespace EQLogParser
         error = Marshal.GetLastWin32Error();
       }
 
-      if (result == IntPtr.Zero && error != 0)
-        throw new Win32Exception(error);
+      /*
+       * As above: every caller here writes extended style bits during window setup and ignores the returned value, so a refusal means the window
+       * keeps the style it had. A throw on this path reached a SourceChanged handler (and any handler that had not finished its own work).
+       */
+      if (result == IntPtr.Zero && error != 0
+        && RepeatCap.SpeaksOnce($"native SetWindowLong {error}"))
+        Log.Warn($"SetWindowLong failed with error {error}; the window keeps its previous style bits (further failures of this code are silent)");
 
       return result;
     }
