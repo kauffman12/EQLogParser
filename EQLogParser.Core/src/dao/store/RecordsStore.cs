@@ -542,14 +542,30 @@ namespace EQLogParser
     }
 
 
+    /*
+     * A System.Threading.Timer callback, so this runs on a thread-pool thread with no unhandled-exception net under it — an escaping
+     * fault ends the process rather than costing one refresh. It also fans out to whoever happens to have a records window open, and those
+     * handlers are not this class's business to trust: each one is therefore called on its own, so a subscriber that throws loses its own
+     * refresh (named once, counted after that) without stopping the other windows or taking the application with it.
+     */
     private void SendEvents(object state)
     {
-      var keys = _recordNeedsEvent.Keys.ToArray();
-      _recordNeedsEvent.Clear();
-      foreach (var key in keys)
+      ThreadBoundary.Guard("records store event timer", () =>
       {
-        RecordsUpdatedEvent?.Invoke(key);
-      }
+        var keys = _recordNeedsEvent.Keys.ToArray();
+        _recordNeedsEvent.Clear();
+
+        if (RecordsUpdatedEvent is null) return;
+        var subscribers = RecordsUpdatedEvent.GetInvocationList();
+        foreach (var key in keys)
+        {
+          foreach (var subscriber in subscribers)
+          {
+            var notify = (Action<string>)subscriber;
+            ThreadBoundary.Guard($"records-updated subscriber {subscriber.Method.Name}", () => notify(key));
+          }
+        }
+      });
     }
 
     private static void Remove(ICollection<RecordList> list, RecordList group, object item)

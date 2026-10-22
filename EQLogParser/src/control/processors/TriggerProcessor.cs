@@ -187,15 +187,25 @@ namespace EQLogParser
             {
               HandleChat(data);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-              // ignore
+              /*
+               * These lanes each used to end with `// ignore`, so a trigger that threw on its own condition stopped working for the rest of the
+               * session with nothing in the log: the operator noticed "no sound" and had no clue where. Held per take, because one bad line must
+               * not stop the lane (this loop is the only thing feeding chat triggers), and named once per kind of fault rather than per line.
+               */
+              if (!_isDisposed) ThreadBoundary.Note("trigger chat take", ex);
             }
           }
         }
-        catch (Exception)
+        // Dispose closes the collection, so a take that lands after it is the normal end of this lane, not a fault worth an Error.
+        catch (Exception ex) when (_isDisposed)
         {
-          // ignore (should only be cancel requests)
+          Log.Debug("trigger chat lane ended while stopping", ex);
+        }
+        catch (Exception ex)
+        {
+          ThreadBoundary.Note("trigger chat lane", ex);
         }
       });
 
@@ -227,15 +237,19 @@ namespace EQLogParser
 
               HandleLog([.. _triggerLogBuffer]);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-              // ignore
+              if (!_isDisposed) ThreadBoundary.Note("trigger log take", ex);
             }
           }
         }
-        catch (Exception)
+        catch (Exception ex) when (_isDisposed)
         {
-          // ignore (should only be cancel requests)
+          Log.Debug("trigger log lane ended while stopping", ex);
+        }
+        catch (Exception ex)
+        {
+          ThreadBoundary.Note("trigger log lane", ex);
         }
       });
 
@@ -250,15 +264,19 @@ namespace EQLogParser
             {
               HandleSpeech(data);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-              // ignore
+              if (!_isDisposed) ThreadBoundary.Note("trigger speech take", ex);
             }
           }
         }
-        catch (Exception)
+        catch (Exception ex) when (_isDisposed)
         {
-          // ignore (should only be cancel requests)
+          Log.Debug("trigger speech lane ended while stopping", ex);
+        }
+        catch (Exception ex)
+        {
+          ThreadBoundary.Note("trigger speech lane", ex);
         }
       }, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
 
@@ -283,17 +301,21 @@ namespace EQLogParser
                 {
                   DoProcessAsync(data.Line, data.Ts).GetAwaiter().GetResult();
                 }
-                catch
+                catch (Exception ex)
                 {
-                  // ignore
+                  if (!_isDisposed) ThreadBoundary.Note("trigger line take", ex);
                 }
               }
             }
           }
         }
-        catch (Exception)
+        catch (Exception ex) when (_isDisposed)
         {
-          // ignore (should only be cancel requests)
+          Log.Debug("trigger main lane ended while stopping", ex);
+        }
+        catch (Exception ex)
+        {
+          ThreadBoundary.Note("trigger main lane", ex);
         }
         finally
         {

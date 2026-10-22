@@ -807,7 +807,24 @@ namespace EQLogParser
        * clock) to BOTH of its lanes itself — including dropping a pet's owner column when that summon has not been in any log this
        * application read. This class no longer decides who stays in memory; it reports sightings.
        */
-      if (flushMemory) IdentityPriorStore.Instance.FlushChanges();
+      if (!flushMemory) return;
+
+      /*
+       * A failed write puts the dirty flag back. Save clears it before flushing (so two callers cannot start the same flush twice), and a
+       * file locked for one tick is usually unlocked a minute later — dropping the flag there would mean identity memory saves only when
+       * something else happens to change, which is how a night of verdicts stays on disk nowhere after one IOException. The exception still
+       * travels to whoever asked for the save (the timer holds it at SaveTimerTick and logs it once); only the retry scheduling belongs here.
+       */
+      try
+      {
+        IdentityPriorStore.Instance.FlushChanges();
+      }
+      catch
+      {
+        // Nothing printed here on purpose: the exception continues to whoever asked for the save, and that is where it gets named.
+        lock (_lock) _ledgerDirty = true;
+        throw;
+      }
     }
 
     internal void SetActivePlayerClass(string name, string className, byte confidence, double beginTime)
@@ -1029,7 +1046,15 @@ namespace EQLogParser
       return -1;
     }
 
-    private void SaveTimerTick(object state) => Save();
+    /*
+     * A System.Threading.Timer callback runs on a thread-pool thread, which has no unhandled-exception net: the runtime takes whatever
+     * escapes to AppDomain.UnhandledException with IsTerminating = true and the application ends. This one writes identity-priors.txt and
+     * petmapping.txt through a roaming profile that antivirus, backup agents and a full disk all touch, so "the save failed" has always been
+     * a realistic night — it just used to be a fatal one. Held here instead: one Error naming the fault, later failures of the same kind
+     * counted silently (the timer is on a period, so an uncapped line would print one per interval until shutdown), and the ledger stays
+     * dirty for the next tick rather than being cleared as if it had landed.
+     */
+    private void SaveTimerTick(object state) => ThreadBoundary.Guard("registry save timer", Save);
 
     /*
      * Withdraw the live, remembered and explicit manual owner, keeping the Pet verdict. This narrow verb does not

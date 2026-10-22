@@ -352,9 +352,14 @@ namespace EQLogParser
           }
         }
       }
+      /*
+       * An async void Elapsed handler on a timer thread: nothing catches what escapes, and the archive is retried from scratch on the next tick
+       * (2 s away while chat is flowing). A locked zip, a full disk or one bad line therefore used to be either fatal or — with Log.Error(ex)
+       * uncapped here — one stack trace every two seconds for the rest of the night. One line per kind of fault, then the count.
+       */
       catch (Exception ex)
       {
-        Log.Error(ex);
+        ThreadBoundary.Note("chat archive", ex);
       }
     }
 

@@ -109,6 +109,16 @@ namespace EQLogParser
             await LogArchiveManager.ArchiveNowAsync(logFiles);
           }
         }
+        /*
+         * Archiving a log the game still holds open is exactly the kind of thing that fails sometimes (share violation, a rollover mid-read),
+         * and it runs from a timer on a thread-pool thread. Without this arm the fault left the async lambda as an unobserved task exception,
+         * which the application reports only when the garbage collector finalises the task — a diagnosis that can arrive minutes later or never.
+         * Named here, once per kind of failure; the finally below already reschedules, so the next window retries.
+         */
+        catch (Exception ex)
+        {
+          ThreadBoundary.Note("log archive timer", ex);
+        }
         finally
         {
           lock (_lock)

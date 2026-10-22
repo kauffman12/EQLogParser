@@ -351,8 +351,15 @@ namespace EQLogParser
         {
           break;
         }
-        catch (Exception)
+        /*
+         * The tail is expected to fail regularly — the game rolls the file, a write lands half-way, a volume blinks — so recovering here is the
+         * design. What was missing was any voice: a follow that never came back (a rename it cannot resolve, a permission change, any fault that
+         * is not cancellation) looked exactly like an idle raid instead of a dead reader. The first fault of each kind is named; the reopen stays
+         * quiet because this poll runs every 200 ms and a rollover can fail it hundreds of times — RepeatCap keeps that count.
+         */
+        catch (Exception ex)
         {
+          ThreadBoundary.Note("log follow", ex);
           FlushBatch();
           previous = await ReOpenAsync(previous).ConfigureAwait(false);
         }

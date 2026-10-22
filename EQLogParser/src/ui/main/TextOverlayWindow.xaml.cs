@@ -160,6 +160,16 @@ namespace EQLogParser
           }
         });
       }
+      /*
+       * async void on a System.Threading.Timer: the continuation after this await has no SynchronizationContext, so an exception escaping here
+       * has no dispatcher net and ends the process. Render guards its own body (the Debug arm above, right because a 150 ms tick that cannot
+       * draw is not an alarm); what this arm covers is the dispatch itself — InvokeAsync against a window whose dispatcher is going down — plus
+       * any line a future edit adds outside that inner try.
+       */
+      catch (Exception ex)
+      {
+        ThreadBoundary.Note("text overlay tick", ex);
+      }
       finally
       {
         Interlocked.Exchange(ref _isTicking, 0);
