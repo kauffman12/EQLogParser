@@ -4,47 +4,20 @@ using System.Collections.Generic;
 namespace EQLogParser;
 
 /*
- * Which of the damage meter's numeric columns are drawn, in one table: what each is called on the meter, the sentence that explains
- * it, the settings key that remembers it, what it does when no key exists yet, and WHICH CELL it is drawn in. One table because three
- * doors read the same list — the setup dropdown builds itself from it, Save writes it, the overlay lays out from it — so a column
- * cannot be saved under one name, read back under another, or ordered differently by the picker and the meter. Elapsed seconds is
- * deliberately NOT in here: duration is not a decoration, every other number on the row is read against it, and nothing may add a
- * switch or a key for it — only its header word, below, because the header still has to print something.
- *
- * Defaults matter more than they look: a missing key is what every existing install has. `%` stays off (its shipped behavior),
- * Damage and DPS stay on (they were never hideable), and RDPS arrives opt-in rather than in front of everybody.
- *
- * The three rate columns are not alternatives and none of them implies another: DPS divides by the time this name was ACTIVE, RDPS by the
- * last six logged seconds, and SDPS by the time the RAID was — so a parser who joined late leads on DPS and says something quite different
- * over the raid's clock. All three come off the meter's own per-row fold (MeterDirectionTotals calls CalculateRates), including on the
- * tanking panel, whose SDPS denominator is the same raid span.
- *
- * **A column key is named `OverlayShow<What>Column`.** The suffix is not decoration: `OverlayShowing…` already belongs to a different switch —
- * `OverlayShowingDps` remembers WHICH PANEL IS OPEN (damage or tanking) — and a column key spelled like it invites somebody to merge two settings that have
- * nothing to do with each other. Every column follows it, `%` included: `%` used to save as `OverlayShowDamagePercent`, and that name is abandoned rather than
- * read — a meter whose columns are now configurable may reset one rarely-used switch to its default, which is an operator decision, not an oversight.
- * `ConfigUtil.Save()` retires the old line. Any column added later takes the suffix.
- *
- * docs/DesignNotes.md → "Damage meter column switches: hiding one reserves no width".
+ * Owns column words, cells, keys and defaults for the picker, persistence and meter layout. Seconds has no switch.
+ * Missing keys preserve the default Damage/DPS view; added rates are opt-in. Keys follow OverlayShow<What>Column,
+ * separate from the OverlayShowingDps panel selector.
+ * docs/DesignNotes.md → "Damage meter column switches: hiding one reserves no width" and "Three rates, three denominators".
  */
 internal static class MeterColumns
 {
   internal readonly record struct Column(string Header, string Key, bool DefaultOn, MeterColumn Bit, MeterSlot Slot, string Tip, string PickerNote)
   {
-    /*
-     * The word the setup picker prints on its row. Four of these five say what they are; RDPS does not — it is a rolling window while every other
-     * number on the row is measured over the whole encounter, and that difference is the first question somebody has after switching the column on, so
-     * the picker spells the window out in parentheses. A column without a note prints its bare header word. The qualifier belongs to this table rather
-     * than to the panel for the same reason the tips do: one list owns every word the meter and its settings speak, so the picker cannot rename what the
-     * header prints and Save cannot store a column under a third name. It reaches the dropdown ONLY — `HeaderOf` still gives the meter its "RDPS", and
-     * matching is by bit, never by label.
-     */
+    // Explain RDPS's unusual window in the picker only; meter headers keep the bare word.
     internal string PickerLabel => string.IsNullOrEmpty(PickerNote) ? Header : $"{Header} ({PickerNote})";
   };
 
-  // Drawn left to right, and each row names its own rendered cell so the layout cannot order the columns one way and the picker another. The percent header is the
-  // bare glyph because the meter has never had a word for it, and the tips ride here rather than in the picker so the word on the meter and the sentence
-  // explaining it cannot disagree.
+  // Drawn left to right; the picker and layout must use the same cell order.
   internal static readonly IReadOnlyList<Column> All = new[]
   {
     new Column("%", "OverlayShowPercentColumn", false, MeterColumn.Percent, MeterSlot.Percent, "This row's share of all the damage counted", ""),
@@ -52,23 +25,15 @@ internal static class MeterColumns
     new Column("DPS", "OverlayShowDpsColumn", true, MeterColumn.Dps, MeterSlot.Dps, "Damage per second over the encounter", ""),
     new Column("RDPS", "OverlayShowRdpsColumn", false, MeterColumn.Rdps, MeterSlot.Rdps, "Damage per second over the latest six logged seconds", "6s rolling"),
 
-    // Raid-time rate, opt-in like RDPS was, drawn to its right so the two rates read as a pair and elapsed seconds stays last. The word is not spelled
-    // out anywhere — not here, not in the tip, not on the boards — because SDPS is what operators call it; what the tip owns is the denominator.
     new Column("SDPS", "OverlayShowSdpsColumn", false, MeterColumn.Sdps, MeterSlot.Sdps, "Damage per second over the total elapsed time of the raid", ""),
   };
 
-  // The columns a meter draws before anybody has switched anything.
   internal const MeterColumn Default = MeterColumn.Damage | MeterColumn.Dps;
 
-  // The word above elapsed seconds. Duration earns no table row (no bit, no key, no switch), so its word is the one constant here —
-  // and it stays in this file so every header word on the meter has exactly one home.
+  // Seconds has no switchable row, but its header word still belongs to this vocabulary.
   internal const string SecondsHeader = "Sec";
 
-  /*
-   * The word a rendered cell wears: the five switchable words come from the table, `Sec` is the slot no switch owns. A cell with no
-   * row in the table ECHOES ITSELF rather than throwing — this runs on the meter's layout path, inside the window constructor, where
-   * an unmapped new cell must cost one odd header word and not the whole board (the same law `HitLabels.Unmapped` follows).
-   */
+  // Echo an unmapped cell rather than aborting the window's layout path.
   internal static string HeaderOf(MeterSlot slot)
   {
     if (slot == MeterSlot.Seconds) return SecondsHeader;
@@ -81,11 +46,7 @@ internal static class MeterColumns
     return slot.ToString();
   }
 
-  /*
-   * The one fold from "is this column on" to the mask the meter lays out with and the ini keys speak. Both doors use it: `Load` asks the
-   * settings file, the setup window asks its checkboxes — so a previewed tick and a saved tick cannot come to mean different things, and a
-   * a new column needs no change in either caller because this walks the table.
-   */
+  // Both the settings read and checkbox picker use this fold, so their masks cannot drift apart.
   internal static MeterColumn FromSwitches(Func<Column, bool> on)
   {
     var shown = MeterColumn.None;
@@ -125,6 +86,6 @@ internal enum MeterColumn
   Dps = 4,
   Rdps = 8,
 
-  /// <summary>Raid-time rate: total divided by the raid's elapsed seconds, never by this name's (see MeterColumns' rate paragraph).</summary>
+  /// <summary>Raid-time rate: total divided by the raid's elapsed seconds, never by this name's.</summary>
   Sdps = 16,
 }

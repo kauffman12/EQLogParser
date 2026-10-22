@@ -277,12 +277,12 @@ internal sealed class MeterDirectionTotals(bool tanking)
       // Dividing a value while enumerating the keys is legal; the copy only keeps "divide once, after the sum" obvious.
       var rowNames = new string[byRow.Count];
       byRow.Keys.CopyTo(rowNames, 0);
-      foreach (var rowName in rowNames) byRow[rowName] = StatsUtil.RateOverWholeSeconds(byRow[rowName], MeterRecentWindow.WindowSeconds);
+      foreach (var rowName in rowNames) byRow[rowName] = StatsUtil.RateOverWholeSeconds(byRow[rowName], RollingWindow.Seconds);
     }
 
     // Do not retain a separate empty map in every published result.
     IReadOnlyDictionary<string, long> rateRows = byRow.Count > 0 ? byRow : MeterDirectionRates.EmptyByRow;
-    rates = new MeterDirectionRates(rateRows, StatsUtil.RateOverWholeSeconds(recentTotal, MeterRecentWindow.WindowSeconds), windowEdge);
+    rates = new MeterDirectionRates(rateRows, StatsUtil.RateOverWholeSeconds(recentTotal, RollingWindow.Seconds), windowEdge);
 
     string Resolve(string name, string explicitOwner)
     {

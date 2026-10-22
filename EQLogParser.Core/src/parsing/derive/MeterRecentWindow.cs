@@ -4,30 +4,24 @@ using System.Collections.Generic;
 namespace EQLogParser;
 
 /*
- * Six second-labelled buckets of counted damage for one life and direction, including the current partly elapsed one and
- * always divided by six. A bucket keeps its absolute .NET-epoch second because modulo six only picks storage: adds outside
- * [edge - 5, edge] are refused BEFORE a bucket is touched, and `SumInto` asks that edge question itself instead of trusting
- * that somebody called `Advance` first. The edge is LOG time — the newest second the meter read — never the wall clock.
+ * Counted damage for one life and direction, keyed by absolute log second rather than arrival time.
+ * Refuse out-of-window adds before touching a bucket; summation checks labels independently of Advance.
  * docs/DesignNotes.md → "Six-second RDPS: per-life buckets beside the meter's own amounts".
  */
 internal sealed class MeterRecentWindow
 {
-  internal const int WindowSeconds = 6;
-
   // No usable window second. A window with no edge holds nothing and sums nothing.
   internal const long NoSecond = long.MinValue;
 
-  private readonly Bucket[] _buckets = new Bucket[WindowSeconds];
+  private readonly Bucket[] _buckets = new Bucket[RollingWindow.Seconds];
 
   internal MeterRecentWindow()
   {
-    for (var i = 0; i < WindowSeconds; i++) _buckets[i] = new Bucket();
+    for (var i = 0; i < RollingWindow.Seconds; i++) _buckets[i] = new Bucket();
   }
 
   // The first whole second at or before a captured time; non-finite means "no usable second".
   internal static long SecondOf(double timeS) => double.IsFinite(timeS) ? (long)Math.Floor(timeS) : NoSecond;
-
-  internal static bool HasWindow(long edge) => edge != NoSecond;
 
   // Age against the window's right edge, including on an update that read nothing: expiry IS the answer.
   internal void Advance(long edge)
@@ -38,7 +32,7 @@ internal sealed class MeterRecentWindow
       return;
     }
 
-    var oldest = edge - (WindowSeconds - 1);
+    var oldest = edge - (RollingWindow.Seconds - 1);
     for (var i = 0; i < _buckets.Length; i++)
       if (_buckets[i].Second < oldest) _buckets[i].Clear();
   }
@@ -48,7 +42,7 @@ internal sealed class MeterRecentWindow
     if (edge == NoSecond || amount <= 0 || !double.IsFinite(timeS)) return;
     var second = SecondOf(timeS);
     // Refused before touching a bucket: an out-of-window stamp must not rotate a live one out.
-    if (second > edge || second < edge - (WindowSeconds - 1)) return;
+    if (second > edge || second < edge - (RollingWindow.Seconds - 1)) return;
 
     var bucket = _buckets[SlotOf(second)];
     if (bucket.Second != second)
@@ -65,7 +59,7 @@ internal sealed class MeterRecentWindow
   internal void SumInto(Dictionary<(string Name, string Owner), long> totals, long edge)
   {
     if (edge == NoSecond) return;
-    var oldest = edge - (WindowSeconds - 1);
+    var oldest = edge - (RollingWindow.Seconds - 1);
     for (var i = 0; i < _buckets.Length; i++)
     {
       // Stale labels are skipped here as well as cleared by Advance: the sum must not depend on somebody aging first.
@@ -87,8 +81,8 @@ internal sealed class MeterRecentWindow
 
   private static int SlotOf(long second)
   {
-    var slot = (int)(second % WindowSeconds);
-    return slot < 0 ? slot + WindowSeconds : slot;
+    var slot = (int)(second % RollingWindow.Seconds);
+    return slot < 0 ? slot + RollingWindow.Seconds : slot;
   }
 
   private sealed class Bucket
@@ -106,12 +100,8 @@ internal sealed class MeterRecentWindow
 }
 
 /*
- * The detached rolling answer for one direction, keyed by the FINAL row name (pet folding already applied): overlay
- * presentation only — RDPS is informational, not a ranking mode. A class rather than a record because ByRow is compared by
- * reference and mutating it after publication would be a bug, so it claims no value equality.
- *
- * No second clock: WindowSecond is the newest SECOND THE CAPTURE HOLDS, so once the lines stop nothing ages out and this
- * answer stands still exactly like the encounter columns beside it. Retiring a quiet board is the overlay lifecycle's job.
+ * Detached rolling rates keyed by final row name, with pet folding already applied. Published maps must not be mutated.
+ * WindowSecond is the captured log-time edge; silence cannot age the rates. The lifecycle owns display expiry.
  */
 internal sealed class MeterDirectionRates
 {

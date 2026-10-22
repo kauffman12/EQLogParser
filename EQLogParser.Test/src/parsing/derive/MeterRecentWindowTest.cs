@@ -23,7 +23,7 @@ public class MeterRecentWindowTest
     var window = new MeterRecentWindow();
     window.Add("Illuminai", string.Empty, S, 60_000, S);
 
-    Assert.AreEqual(10_000L, Sum(window, S) / MeterRecentWindow.WindowSeconds);
+    Assert.AreEqual(10_000L, Sum(window, S) / RollingWindow.Seconds);
     for (var second = S; second <= S + 5; second++)
     {
       window.Advance(second);
@@ -158,7 +158,7 @@ public class MeterRecentWindowTest
     window.Add("Illuminai", string.Empty, S + 1, 3_000_000_000L, S + 1);
 
     Assert.AreEqual(6_000_000_000L, Sum(window, S + 1), "the rolling lane carries the same widths as the encounter total");
-    Assert.AreEqual(1_000_000_000L, Sum(window, S + 1) / MeterRecentWindow.WindowSeconds);
+    Assert.AreEqual(1_000_000_000L, Sum(window, S + 1) / RollingWindow.Seconds);
   }
 
   [TestMethod]
@@ -191,7 +191,7 @@ public class MeterRecentWindowTest
     for (var offset = 0; offset <= 5; offset++) window.Add("Illuminai", string.Empty, S + offset, 101, S + 5);
 
     Assert.AreEqual(606L, Sum(window, S + 5));
-    Assert.AreEqual(101L, Sum(window, S + 5) / MeterRecentWindow.WindowSeconds);
+    Assert.AreEqual(101L, Sum(window, S + 5) / RollingWindow.Seconds);
   }
 
   // The whole point of the type: one clock, and it is the data's. Nothing here takes a build instant, so there is no wall

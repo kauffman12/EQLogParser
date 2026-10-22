@@ -8,6 +8,8 @@ namespace EQLogParser;
 /// <summary>Folds time-ordered records into sparse chart buckets without retaining the input records.</summary>
 internal sealed class ChartSeriesBuilder(string name, string playerName = null)
 {
+  private const int GapMarkerOffsetSeconds = 6;
+
   private readonly DataPoint _current = new() { Name = name, PlayerName = playerName };
   private readonly ChartActivityClock _clock = new();
   private bool _pending;
@@ -22,8 +24,8 @@ internal sealed class ChartSeriesBuilder(string name, string playerName = null)
       if (record.CurrentTime - _current.CurrentTime > FightProjection.EngagementGapS)
       {
         // Gap markers zero the bucket, never the cumulative amounts or their denominators.
-        Points.Add(Snapshot(_current.CurrentTime + ChartAggregation.RollingSeconds, true));
-        Points.Add(Snapshot(record.CurrentTime - ChartAggregation.RollingSeconds, true));
+        Points.Add(Snapshot(_current.CurrentTime + GapMarkerOffsetSeconds, true));
+        Points.Add(Snapshot(record.CurrentTime - GapMarkerOffsetSeconds, true));
       }
       _current.TotalPerSecond = 0;
       _current.AttemptsPerSecond = 0;
@@ -99,15 +101,9 @@ internal sealed class ChartSeriesBuilder(string name, string playerName = null)
 }
 
 /*
- * Sorted buckets need only their previous timestamp, not a growing TimeRange scanned at every publication.
- *
- * A record behind its own series' previous second is a producer fault (the walk hands out one name's groups in log order), but it
- * is not allowed to cost the chart: LineChart calls this from inside a paint path that has no catch, so throwing here reached the
- * application handler and left the plot at whatever it drew last — and with the update key unset, every repeated gesture re-walked
- * the whole selection. So the second is refused rather than obeyed (a backwards gap would subtract duration from the denominator),
- * the first sighting logs the pair that made it and repeats only raise `OutOfOrder` — a producer that is out of order is out of order
- * for a whole stretch, and a Warn per record would bury the one line that names it (the same shape as RepeatCap elsewhere).
- * ChartSeriesBuilderTest.OutOfOrderRecordsDegradeTheClockInsteadOfThrowing pins the refusal, the untouched denominator and the count.
+ * Sorted buckets need only the previous timestamp. Refuse backwards clock movement without aborting the paint path;
+ * report the first offending pair and count repeats. ChartSeriesBuilderTest.OutOfOrderRecordsDegradeTheClockInsteadOfThrowing
+ * pins the unchanged denominator and count. docs/DesignNotes.md → "Sparse chart buckets: cumulative correctness and calculation cost".
  */
 internal sealed class ChartActivityClock
 {

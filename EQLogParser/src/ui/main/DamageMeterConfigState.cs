@@ -1,10 +1,6 @@
-// The staged configuration of the damage meter, carried between the settings window and the preview stage.
-// Load() is the ONE reader of these settings keys and the one place their ranges are judged: the overlay constructor opens from it as well
-// as the setup window, so a meter and its configure panel cannot disagree about what settings.txt says (each kept its own parse until one of
-// them forgot the crit-rate clamp). A fresh copy is the truth the user started from; the settings window mutates its copy, every change
-// previews it onto the stage, and only Save writes it back (CommitMeterState). Geometry deliberately stays OUT of this object: dragging and
-// resizing the stage is the geometry editor, and Save captures whatever rectangle the stage ended on. Column keys are not read here twice —
-// MeterColumns.Load() owns that fold, and FromSwitches is the same fold for a window full of checkboxes.
+// Shared settings reader for the meter and its staged preview; only Save persists changes.
+// Geometry is edited on the stage and captured at Save. MeterColumns owns the column-key fold.
+// docs/DesignNotes.md → "Damage meter column switches: hiding one reserves no width".
 
 namespace EQLogParser
 {
@@ -13,7 +9,7 @@ namespace EQLogParser
     internal int MaxRows = 5;                    // 1..10 ranked rows
     internal int FontSize = 12;                  // one of 10/12/14/16
     internal bool MiniBars;                      // slim ranking bars
-    internal MeterColumn Columns = MeterColumns.Default;  // which numeric columns are drawn (% Damage DPS RDPS)
+    internal MeterColumn Columns = MeterColumns.Default;
     internal bool HideOtherPlayers;              // mask everyone but me
     internal bool StreamerMode;                  // own window style for OBS
     internal int CritRateDisplay;                // 0 off, 1 DoT, 2 nuke, 3 both

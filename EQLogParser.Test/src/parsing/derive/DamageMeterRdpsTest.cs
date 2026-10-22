@@ -46,7 +46,7 @@ public partial class DamageMeterCalculationTest
     log.Add("Bithika", "a rat", 35, 1_200);
     log.Check(35);
     Assert.AreEqual(0L, DamageRdps(log, "Illuminai"), "second 0 is far behind the edge the new line carried");
-    Assert.AreEqual(1_200L / MeterRecentWindow.WindowSeconds, DamageRdps(log, "Bithika"));
+    Assert.AreEqual(1_200L / RollingWindow.Seconds, DamageRdps(log, "Bithika"));
     Assert.AreEqual(1_200L, log.Last.DamageStats.RaidStats.Total,
       "35 s apart is a new life to the projection: the retired fight's damage is out of this scope, its labels too");
   }
@@ -59,7 +59,7 @@ public partial class DamageMeterCalculationTest
     log.Check(3);
 
     Assert.IsNotNull(log.Last);
-    Assert.AreEqual(100L / MeterRecentWindow.WindowSeconds, DamageRdps(log, "Illuminai"),
+    Assert.AreEqual(100L / RollingWindow.Seconds, DamageRdps(log, "Illuminai"),
       "a one-second-old fight is still divided by six, never by its age or hit count");
     Assert.AreEqual((long)(T0 + 3), log.Last.DamageRdps.WindowSecond, "the window says which LOG second it ends at");
     Assert.AreEqual(MeterRecentWindow.NoSecond, log.Last.TankRdps.WindowSecond, "an empty direction says so");
@@ -83,7 +83,7 @@ public partial class DamageMeterCalculationTest
     var window = (long)lines * max;
     Assert.IsNotNull(log.Last);
     Assert.AreEqual(window, log.Last.DamageStats.RaidStats.Total, "the amounts themselves survive the walk");
-    Assert.AreEqual(window / MeterRecentWindow.WindowSeconds, DamageRdps(log, "Illuminai"),
+    Assert.AreEqual(window / RollingWindow.Seconds, DamageRdps(log, "Illuminai"),
       "the quotient stays exact; rounding through floating point comes out short");
   }
 
@@ -120,13 +120,13 @@ public partial class DamageMeterCalculationTest
     log.Add("Illuminai", "a rat", 3, 4000);
 
     log.Check(3);
-    Assert.AreEqual(10_000L / MeterRecentWindow.WindowSeconds, DamageRdps(log, "Illuminai"), "all four labels held");
+    Assert.AreEqual(10_000L / RollingWindow.Seconds, DamageRdps(log, "Illuminai"), "all four labels held");
 
     // Second 6 is the only new damage. The window slides to 1 through 6, so label 0's 1000 leaves whole while 1, 2 and 3
     // stay: a fall per label, never a fade across the column.
     log.Add("Illuminai", "a rat", 6, 6000);
     log.Check(6);
-    Assert.AreEqual((2000L + 3000L + 4000L + 6000L) / MeterRecentWindow.WindowSeconds, DamageRdps(log, "Illuminai"),
+    Assert.AreEqual((2000L + 3000L + 4000L + 6000L) / RollingWindow.Seconds, DamageRdps(log, "Illuminai"),
       "the oldest label left; the rest are untouched");
     Assert.AreEqual(16_000L, log.Last!.DamageStats.RaidStats.Total);
   }
@@ -144,7 +144,7 @@ public partial class DamageMeterCalculationTest
     Assert.IsNotNull(log.Last);
     var row = log.Last.DamageStats.StatsList.Single();
     Assert.AreEqual("Illuminai +Pets", row.Name);
-    Assert.AreEqual(300L / MeterRecentWindow.WindowSeconds, DamageRdps(log, row.Name),
+    Assert.AreEqual(300L / RollingWindow.Seconds, DamageRdps(log, row.Name),
       "one rate for the folded row, summed before the divide");
     Assert.AreEqual(row.Total, log.Last.DamageStats.RaidStats.Total);
     AssertRatesAgreeWithAColdBuild(log);
@@ -164,7 +164,7 @@ public partial class DamageMeterCalculationTest
     log.Check(1, compareFresh: true);
     Assert.IsNotNull(log.Last);
     Assert.AreEqual(1_200L, log.Last.DamageStats.RaidStats.Total, "both lives are in scope");
-    Assert.AreEqual(1_200L / MeterRecentWindow.WindowSeconds, DamageRdps(log, "Illuminai"),
+    Assert.AreEqual(1_200L / RollingWindow.Seconds, DamageRdps(log, "Illuminai"),
       "one rate for the actor across both lives, summed before the divide");
     AssertRatesAgreeWithAColdBuild(log);
   }
@@ -206,7 +206,7 @@ public partial class DamageMeterCalculationTest
 
     log.Add("Illuminai", "a rat", 3, 1800);
     log.Check(5);
-    Assert.AreEqual((600L + 600L + 1800L) / MeterRecentWindow.WindowSeconds, DamageRdps(log, "Illuminai"),
+    Assert.AreEqual((600L + 600L + 1800L) / RollingWindow.Seconds, DamageRdps(log, "Illuminai"),
       "the late amount joins ITS OWN label, not the current one");
 
     // Still nothing arriving: the window is where second 5 put it, so all three labels remain at any later build instant.
@@ -221,7 +221,7 @@ public partial class DamageMeterCalculationTest
     // A line carrying second 12 is what moves the edge, and it ages 0, 3 and 5 out together: the data decides, in its own time.
     log.Add("Illuminai", "a rat", 12, 600);
     log.Check(12);
-    Assert.AreEqual(600L / MeterRecentWindow.WindowSeconds, DamageRdps(log, "Illuminai"),
+    Assert.AreEqual(600L / RollingWindow.Seconds, DamageRdps(log, "Illuminai"),
       "edge 12 covers seconds 7 through 12, so only the new label is inside it");
   }
 
@@ -248,7 +248,7 @@ public partial class DamageMeterCalculationTest
     // The pull that replaces it is judged on its own damage: the retained rat's second 0 is long gone from any live window.
     log.Add("Illuminai", "a bat", 22, 300);
     log.Check(22, mode: 90);
-    Assert.AreEqual(300L / MeterRecentWindow.WindowSeconds, DamageRdps(log, "Illuminai"),
+    Assert.AreEqual(300L / RollingWindow.Seconds, DamageRdps(log, "Illuminai"),
       "the new pull inherits no rolling damage from the retained one");
   }
 
@@ -268,7 +268,7 @@ public partial class DamageMeterCalculationTest
     log.Add("Illuminai", "a bat", 2, 300);
     log.Check(2, compareFresh: true);
     Assert.IsNotNull(log.Last);
-    Assert.AreEqual(300L / MeterRecentWindow.WindowSeconds, DamageRdps(log, "Illuminai"),
+    Assert.AreEqual(300L / RollingWindow.Seconds, DamageRdps(log, "Illuminai"),
       "the slain rat is out of scope and its second-0 damage went with it");
     Assert.AreEqual(300L, log.Last.DamageStats.RaidStats.Total, "the encounter side already agreed");
     AssertRatesAgreeWithAColdBuild(log);
@@ -286,7 +286,7 @@ public partial class DamageMeterCalculationTest
 
       AppSettings.IsBaneDamageEnabled = true;
       log.Check(1);
-      Assert.AreEqual(160L / MeterRecentWindow.WindowSeconds, DamageRdps(log, "Illuminai"));
+      Assert.AreEqual(160L / RollingWindow.Seconds, DamageRdps(log, "Illuminai"));
 
       AppSettings.IsBaneDamageEnabled = false;
       log.Check(1);
@@ -320,7 +320,7 @@ public partial class DamageMeterCalculationTest
     Assert.AreEqual(0L, DamageRdps(log, "Nobody Here"), "an unseen name carries no rate");
     foreach (var row in log.Last.DamageStats.StatsList)
       Assert.AreEqual(0L, log.Last.DamageRdps.RateFor(row.Name), $"{row.Name} rounds to nothing on its own");
-    Assert.AreEqual(8 * 5L / MeterRecentWindow.WindowSeconds, log.Last.DamageRdps.Total,
+    Assert.AreEqual(8 * 5L / RollingWindow.Seconds, log.Last.DamageRdps.Total,
       "40 across the scope divided once beats eight zeros");
   }
 

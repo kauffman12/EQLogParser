@@ -6,8 +6,6 @@ namespace EQLogParser;
 /// <summary>Combines sparse chart series and calculates their rolling rates.</summary>
 internal static class ChartAggregation
 {
-  internal const int RollingSeconds = 6;
-
   public static void PopulateRolling(Dictionary<string, List<DataPoint>> data)
   {
     foreach (var points in data.Values) PopulateRolling(points);
@@ -117,16 +115,16 @@ internal static class ChartAggregation
     {
       var point = points[right];
       windowTotal += point.TotalPerSecond;
-      while (left < right && Math.Floor(point.CurrentTime) - Math.Floor(points[left].CurrentTime) > RollingSeconds - 1)
+      while (left < right
+        && Math.Floor(point.CurrentTime) - Math.Floor(points[left].CurrentTime) > RollingWindow.Seconds - 1)
       {
         windowTotal -= points[left].TotalPerSecond;
         left++;
       }
 
-      // Match the meter: six labelled log seconds, including idle seconds, even at the first hit, divided the same way the meter
-      // divides them (StatsUtil.RateOverWholeSeconds) — a chart line and the meter cell describing it share one arithmetic.
+      // Include idle labels and divide by the full window even at the first hit, matching meter RDPS.
       point.RollingTotal = windowTotal;
-      point.RollingDps = StatsUtil.RateOverWholeSeconds(windowTotal, RollingSeconds);
+      point.RollingDps = StatsUtil.RateOverWholeSeconds(windowTotal, RollingWindow.Seconds);
     }
   }
 }

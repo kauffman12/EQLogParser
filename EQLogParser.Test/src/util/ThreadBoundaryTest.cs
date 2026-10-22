@@ -1,3 +1,7 @@
+using System.Diagnostics;
+
+#nullable enable annotations
+
 namespace EQLogParser;
 
 /*
@@ -56,6 +60,35 @@ public sealed class ThreadBoundaryTest
   }
 
   [TestMethod]
+  [DataRow(false)]
+  [DataRow(true)]
+  public void ReportingFailuresCannotEscapeEvenWhenTheTraceFallbackAlsoFails(bool failTrace)
+  {
+    using var listener = new ReportingTraceListener(failTrace);
+    Trace.Listeners.Add(listener);
+    try
+    {
+      // Formatting the primary report fails before the logger is called; no logger replacement is needed.
+      ThreadBoundary.Guard("test reporting", () => throw new ThrowingMessageException());
+      ThreadBoundary.Note("test direct reporting", new ThrowingMessageException());
+      ThreadBoundary.Note("test direct reporting", new ThrowingMessageException());
+    }
+    finally
+    {
+      Trace.Listeners.Remove(listener);
+    }
+
+    Assert.IsGreaterThanOrEqualTo(2, listener.Attempts, "both fault boundaries must try the fallback");
+    Assert.AreEqual(1, RepeatCap.Silenced, "a reporting failure must not reopen the fault's voice cap");
+    if (!failTrace)
+    {
+      StringAssert.Contains(listener.Output, "test reporting");
+      StringAssert.Contains(listener.Output, nameof(ThrowingMessageException));
+      StringAssert.Contains(listener.Output, "reporting failed");
+    }
+  }
+
+  [TestMethod]
   public void NoteCapsAnExistingCatchBlockTheSameWay()
   {
     // The form used by lanes that already own a catch (chat archive, follow poll, trigger lanes): same voice, same cap.
@@ -72,5 +105,25 @@ public sealed class ThreadBoundaryTest
     }
 
     Assert.AreEqual(2, RepeatCap.Silenced);
+  }
+
+  private sealed class ThrowingMessageException : Exception
+  {
+    public override string Message => throw new IOException("reporting failed");
+  }
+
+  private sealed class ReportingTraceListener(bool fail) : TraceListener
+  {
+    public override void Write(string? message)
+    {
+      Attempts++;
+      if (fail) throw new IOException("trace failed");
+      Output += message;
+    }
+
+    public override void WriteLine(string? message) => Write(message);
+
+    internal int Attempts { get; private set; }
+    internal string Output { get; private set; } = string.Empty;
   }
 }

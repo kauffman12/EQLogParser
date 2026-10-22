@@ -25,11 +25,11 @@ internal static class ChartRollingSeries
       while (expired < source.Count && source[expired].TotalPerSecond == 0) expired++;
       var nextAdd = added < source.Count ? Math.Floor(source[added].CurrentTime) : double.PositiveInfinity;
       var nextExpiry = expired < source.Count
-        ? Math.Floor(source[expired].CurrentTime) + ChartAggregation.RollingSeconds : double.PositiveInfinity;
+        ? Math.Floor(source[expired].CurrentTime) + RollingWindow.Seconds : double.PositiveInfinity;
       var time = Math.Min(nextAdd, nextExpiry);
       if (time > through) break;
 
-      while (expired < source.Count && Math.Floor(source[expired].CurrentTime) + ChartAggregation.RollingSeconds <= time)
+      while (expired < source.Count && Math.Floor(source[expired].CurrentTime) + RollingWindow.Seconds <= time)
         total -= source[expired++].TotalPerSecond;
       while (added < source.Count && Math.Floor(source[added].CurrentTime) <= time)
         total += source[added++].TotalPerSecond;
@@ -38,7 +38,7 @@ internal static class ChartRollingSeries
       if (previous.CurrentTime == time)
       {
         previous.RollingTotal = total;
-        previous.RollingDps = StatsUtil.RateOverWholeSeconds(total, ChartAggregation.RollingSeconds);
+        previous.RollingDps = StatsUtil.RateOverWholeSeconds(total, RollingWindow.Seconds);
       }
       else if (previous.RollingTotal != total)
       {
@@ -59,6 +59,6 @@ internal static class ChartRollingSeries
     CurrentTime = time,
     DateTime = DateUtil.FromDotNetSeconds(time),
     RollingTotal = total,
-    RollingDps = StatsUtil.RateOverWholeSeconds(total, ChartAggregation.RollingSeconds)
+    RollingDps = StatsUtil.RateOverWholeSeconds(total, RollingWindow.Seconds)
   });
 }

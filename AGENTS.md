@@ -314,7 +314,7 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
   (`NamesTable.DesiredPaneWidth()`), fed by `ThemeConfig`.
 - **No window may keep its own copy of identity state**, and **no window holds a `DeriveEngine` past its session** — tag state
   with `DeriveEngine.SessionId`; a `Dispose`d engine keeps every fact table of the closed log.
-- **Style state goes in `Application.Current.Resources`** — 157 writes there and zero to any window's own `.Resources`, and that is the mechanism: a reader holds a key, a
+- **Style state goes in `Application.Current.Resources`**, never a window's own `.Resources`: a reader holds a key, a
   publisher overwrites it, a theme change repaints everybody. Key names belong to the writing pane (`DamageOverlay…`, `EQ…`, runtime-built `TimerBar…`/`TextOverlay…`); two
   writers on one key is legal only as *`ThemeConfig` default + owning pane's user value*, and **a colour travels as a key, never a `Brush`**. What keeps the meter's five global
   keys safe is one overlay alive plus every constructor republishing all five. See docs/DesignNotes.md → "Style state lives in the application resource dictionary".

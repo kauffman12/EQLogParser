@@ -7318,12 +7318,12 @@ mark. Publication allocates temporary sum/rate dictionaries and a detached resul
 name/icon allowance (`NameAreaMinWidthDip`) to that font's numeric block; it replaces the markup's initial 300-DIP minimum.
 These are row-only floors (also used in Setup); the live header additionally reserves its measured toolbar width as described below.
 
-| Font (pt) | RDPS column (DIP) | Numeric block (DIP) | Window minimum (DIP) |
+| Font (pt) | RDPS/SDPS each (DIP) | Numeric block (DIP) | Window minimum (DIP) |
 |---|---:|---:|---:|
-| 10 | 46 | 226 | 322 |
-| 12 | 52 | 262 | 358 |
-| 14 | 60 | 300 | 396 |
-| 16 | 66 | 326 | 422 |
+| 10 | 46 | 272 | 368 |
+| 12 | 52 | 314 | 410 |
+| 14 | 60 | 360 | 456 |
+| 16 | 66 | 392 | 488 |
 
 Before RDPS, numerics already consumed 210 DIP at 12 pt and 260 at 16 pt against the old 250-DIP floor. A flat 300-DIP floor
 with RDPS left no name space at 14 pt and overflowed by 26 at 16 pt. A saved narrow window widens to its font's minimum;
@@ -7426,7 +7426,7 @@ and never by handing a number its own switch. Remember what that floor going dow
 ellipsised — a long name against the remaining digits is a Windows check, and the fix is the name allowance, never a new switch. Tanking shares both the switches
 and the header words by operator decision: `DPS` on the tank board is DPS done *to* you and earns no new terms.
 
-Pinned headless by `MeterColumnLayoutTest` (all sixteen masks × every font, defaults, fallback, keys, cell order, words, the single check→mask fold and toolbar separation) and
+Pinned headless by `MeterColumnLayoutTest` (every column mask × every font, defaults, fallback, keys, cell order, words, the single check→mask fold and toolbar separation) and
 `MeterPanelPlacementTest` (growth, narrowing, left docking, secondary/negative work areas and pixel scaling). `DamageBarColumnTest` (Windows-only assembly)
 puts a real row through measure/arrange. Live toolbar/header separation, mini-bar margins, mixed-DPI docking/following, Save/Cancel and the upgrade sight remain
 Windows gates under "Damage meter column switches, checked on Windows" in docs/ReleaseChecklist.md.
@@ -7890,8 +7890,8 @@ for launching the built app before shipping UI code.
 
 ## Style state lives in the application resource dictionary
 
-Every style value that has to travel between files travels as `Application.Current.Resources[key]`: **157 writes in the app project, and exactly zero
-writes to any window's or element's own `.Resources`**. That is not debt waiting to be tidied — it is how repainting works here. A reader holds a *key*
+Every style value that has to travel between files travels as `Application.Current.Resources[key]`, never a window's or element's own `.Resources`.
+That is not debt waiting to be tidied — it is how repainting works here. A reader holds a *key*
 (`{DynamicResource EQLogFontSize}` in markup, `SetResourceReference(prop, "DamageOverlayProgressBrush")` in code) and the publisher overwrites the value, so a
 theme switch or a user's new bar colour repaints every reader with no window holding a reference to another and no event per styled thing. Window-scoped
 dictionaries would mean every pane re-publishing on every theme change, which is the fan-out `ThemeConfig` exists to remove; the only per-window styling in the
@@ -10161,7 +10161,9 @@ silent — because a timer that fails once fails every interval for the rest of 
 diagnosis under forty thousand copies of itself. Two different kinds of fault still get two lines, and the cap never re-opens on a timer (that is `RepeatCap`'s
 law, with the reason). The records store's fan-out goes one step further and guards **per subscriber**, so a window whose handler throws loses its own refresh
 rather than the other windows'. Pinned by `ThreadBoundaryTest`: the fault never comes back out, a faultless tick says nothing, five of one kind cost one line,
-two kinds cost two.
+two kinds cost two. Reporting is guarded too: a formatting or logging failure falls back to `Trace`, and even a throwing Trace listener cannot
+escape `Note`. The original site/type cap remains spent, so a failed reporter does not retry noisily on every tick.
+`ReportingFailuresCannotEscapeEvenWhenTheTraceFallbackAlsoFails` pins both `Guard` and direct `Note`, with working and throwing fallback listeners.
 
 **The nets themselves may not need a net.** In all three handlers the statement that keeps the application alive (`Handled`, `SetObserved`) is executed before
 any reporting, and a failure while reporting goes to `Trace` rather than propagating: a locked log file or a full disk must not turn into a second crash that
@@ -18593,7 +18595,9 @@ its runtime checks and the live Save/reopen checks remain owed on Windows in `do
 **Goal:** the rolling chart and meter use the same six-second arithmetic, and a quiet interval must not disappear between
 chart samples. At log second t, sum amounts in t−5 through t inclusive and divide by **six from the first hit**. Missing
 seconds contribute zero. Whole-second labels, integer amounts and sum-before-division match the meter; no PC clock enters
-either calculation. Both lanes divide through `StatsUtil.RateOverWholeSeconds`, never an in-place `/ 6`: a window sum may exceed
+either calculation. `RollingWindow.Seconds` is the shared window definition for meter buckets, chart aggregation and rolling transitions;
+chart gap-marker spacing has its own `GapMarkerOffsetSeconds` because it is presentation, not the rate window.
+Both lanes divide through `StatsUtil.RateOverWholeSeconds`, never an in-place `/ 6`: a window sum may exceed
 2^53, where rounding through a double would drop units the amounts still carry. Damage, tanking and healing share the chart implementation.
 
 The earlier sparse chart evaluated only occupied timestamps, with zero markers for gaps over 30 seconds and a shortened
@@ -18637,6 +18641,8 @@ Gaps greater than the existing 30-second threshold still produce exactly two mar
 markers retain cumulative amounts, hit counts and rates. They have zero attempts and therefore cannot buy activity time.
 Short gaps count their elapsed seconds; a long gap adds only the next occupied second. A finished bucket is detached from
 the input record and from future publications. Damage, healing, tanking, player-plus-pets and raid share this calculation.
+A backwards timestamp cannot subtract activity time or abort painting: `ChartActivityClock` keeps its last timestamp and duration,
+warns on the first offending pair and counts every refusal in `OutOfOrder`. `OutOfOrderRecordsDegradeTheClockInsteadOfThrowing` pins this boundary.
 
 Group merging uses the same inclusive clock over actual group activity, ignoring marker-only timestamps. Cumulative
 member values carry forward, while bucket amounts/counts contribute only at their own timestamp. Rolling values are

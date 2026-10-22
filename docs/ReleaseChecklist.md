@@ -341,10 +341,10 @@ on Windows" below), and a zero prints as `0` (a dash for "no damage in the windo
   overlap `Sec`, and the name/icon area must not be covered — including the longest name you can produce (hidden-player rows, `[DoT +n]`
   crit-rate suffix) at a narrow saved width.
 - [ ] **A narrow window widens at every font; nothing shrinks**: the minimum is computed per font — numeric block plus a 96-DIP name/icon
-  allowance — so with **every column visible** it is **322/358/396/422** DIP at 10/12/14/16 pt (a flat 300 left zero room for names at 14 and
-  overflowed at 16); the floor follows the column switches, so turn them all on before measuring these figures. At each font
-  size, start from a saved `OverlayWidth` under that figure (the old floor was 250), reopen the overlay, and confirm the window returns at its
-  minimum with names still readable left of the class icon. Then widen and narrow by hand: the meter never auto-shrinks, the widened value is
+  allowance — so the row-only floor with **every column visible** is **368/410/456/488** DIP at 10/12/14/16 pt. The live toolbar may raise
+  that floor further; the floor follows the column switches, so turn them all on before measuring these figures. At each font
+  size, start from a saved `OverlayWidth` under that figure, reopen the overlay, and confirm the window returns at or above that
+  floor with names still readable left of the class icon. Then widen and narrow by hand: the meter never auto-shrinks, the widened value is
   what gets saved, and neither `OverlayHeight` nor the toolbar reserve changes because a column was added. Report crowding **with the font size**.
 - [ ] **Quiet freezes it, like every other column**: hit once, then everyone stops. RDPS keeps showing its last value while Damage, DPS and Sec do the same thing
   (nothing decays on a capture that stopped producing lines), and the whole board retires on the meter's own quiet period — On Kill's engagement gap or the timed mode's
@@ -386,7 +386,7 @@ elapsed seconds always draw. The table, the defaults and the zero-width law are 
   `Damage`, `DPS`, `Sec` and no percent — the pre-RDPS look. Somebody who had RDPS on this branch sees that column disappear and nothing else move; turning it
   back on via the picker must show full numbers immediately, with no six-second warm-up and no half-windowed rate. A `settings.txt` written by an earlier build of this
   branch may hold `OverlayShowRdps` / `OverlayShowDamage` / `OverlayShowDps` — names that never shipped and now read as **nothing**, which is why RDPS returns off rather
-  than broken; the next Save writes only the `…Column` keys and those three lines die with it (they are not migrated, and nothing should migrate them).
+  than broken. Save writes the `…Column` keys; those three ignored lines may remain in the file. They are neither read nor migrated.
 - [ ] **The `%` reset is the only thing a returning user should notice**: the switch left the OPTIONS page (it was *show % damage*) and lives in the columns picker as
   `OverlayShowPercentColumn`. The old choice deliberately does **not** carry over — `OverlayShowDamagePercent` is read by nothing and vanishes from `settings.txt` at the next
   save — so an install that had it on opens with no percent digits. Confirm all three halves: ticking the box once brings the digits back immediately, that tick survives a restart
