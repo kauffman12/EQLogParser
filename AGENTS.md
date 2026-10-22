@@ -411,13 +411,16 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
 
 ## Damage meter
 - **Its numeric columns are a closed set**: `MeterColumns` (Core) carries the rendered cell, header word, tooltip, settings key and missing-key default of
-  `% / Damage / DPS / RDPS`; **hiding means the column's WIDTH becomes zero** (a collapsed text inside a fixed-width cell still reserves the cell), `Sec` has no switch
-  and no key, and tanking shares both the switches and the words. Columns are presentation only — no flag reaches `MeterFactInput`, the lifecycle question, totals,
+  `% / Damage / DPS / RDPS / SDPS`; **hiding means the column's WIDTH becomes zero** (a collapsed text inside a fixed-width cell still reserves the cell), `Sec` has no switch
+  and no key, and tanking shares both the switches and the words.
+- **Three rates, three clocks**: DPS divides by this name's active seconds, RDPS by the latest six logged seconds, SDPS by the raid's span (`CalculateRates(row, raid, null)`,
+  the same call the summaries' SDPS column uses). An SDPS that reads like DPS on a late joiner is wrong; the raid/title row prints its DPS twice by definition, since the raid
+  over its own span is its average. See docs/DesignNotes.md → "Three rates, three denominators". Columns are presentation only — no flag reaches `MeterFactInput`, the lifecycle question, totals,
   ranking or Copy Parse, and RDPS keeps being calculated while its column is off, so showing it asks for no warm-up. One `MeterColumnLayout` feeds header and rows
-  together. See docs/DesignNotes.md → "Damage meter column switches: four hideable numbers, zero width when off".
+  together. See docs/DesignNotes.md → "Damage meter column switches: hiding one reserves no width".
 - **Meter settings have ONE reader**: `DamageMeterConfigState.Load()` judges every key and range and the overlay constructor opens from it rather than parsing keys
   itself (its own copy once read `OverlayEnableCritRate` with no 0..3 clamp, so the meter and its Setup panel disagreed). Likewise `MeterColumns.FromSwitches` is the only
-  check→mask fold — the ini read and the picker's checkboxes both go through it. **Every column key is `OverlayShow<What>Column`**, all four of them; `OverlayShowingDps` is a
+  check→mask fold — the ini read and the picker's checkboxes both go through it. **Every column key is `OverlayShow<What>Column`**, every one of them; `OverlayShowingDps` is a
   different switch (which panel is open) and may not be reused for a column. `%`'s shipped `OverlayShowDamagePercent` is NOT read any more — accepted breaking change, the column
   comes back at its default and `ConfigUtil.Save()` retires the line; no compatibility read, no migration.
 - **The meter's per-cell tables refuse an unnamed cell**: `MeterColumnLayout`'s width-preset and inset switches name every `MeterSlot` and throw on one they do not,

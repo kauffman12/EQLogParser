@@ -3114,7 +3114,7 @@ when it doesn't, clamps into the screen, moves by the stage's drag delta so a pa
 moved, and closes with its owner automatically because `Owner` says so. That arithmetic is desktop-pixel only and lives in
 `MeterPanelPlacement` (`PlaceBesideStage`, `FollowWidth`); do not move it back into this window over `SystemParameters.WorkArea`,
 which is the primary monitor's work area in DIPs and landed the panel on the wrong screen — the full law is under
-"Damage meter column switches: four hideable numbers, zero width when off". The bar pool rebuilds only when the row count
+"Damage meter column switches: hiding one reserves no width". The bar pool rebuilds only when the row count
 actually changes — measured while wiring: previewing every color-picker stop through `UpdateMaxRows` recreated and
 reseeded every `DamageBar` on each intermediate stop, which is a flicker the player never asked for.
 
@@ -3144,7 +3144,7 @@ subtractions are used; real font/DPI-driven content growth still earns room.
 The Grid header's font-specific floor is now 16/18/20/22 DIPs for body fonts 10/12/14/16. `UpdateColumnSizes` owns that
 floor (and the class-icon size, still an app-global resource) and passes it to the toolbar's `UpdateFontSize`; the numeric
 column widths, their right insets and the header's one-point-over-rows font come from `MeterColumnLayout` through
-`ApplyColumnLayout`, shared with every row — see "Damage meter column switches: four hideable numbers, zero width when off".
+`ApplyColumnLayout`, shared with every row — see "Damage meter column switches: hiding one reserves no width".
 Both strips top-align with a two-DIP top inset and Display text formatting, rather than centering inside spare height. The toolbar owns a small Button template rather than inheriting theme chrome; buttons
 have horizontal padding only, with no per-button top offsets or extra bottom inset. Its almost-transparent background
 retains a hit area throughout each button, not just on the glyph. Font leading and the first data row's own inset provide
@@ -7358,35 +7358,37 @@ cross-life sums, Tank attribution, life removal, filter changes), and `MeterCloc
 (accounting versus receipt deadlines). Rendering, delayed-worker behavior and header alignment remain Windows gates in
 `docs/ReleaseChecklist.md`.
 
-### Damage meter column switches: four hideable numbers, zero width when off
+### Damage meter column switches: hiding one reserves no width
 
-`MeterColumns` (Core) is the whole vocabulary — rendered cell, header word, tooltip, settings key and missing-key default of `% / Damage / DPS / RDPS` — because
+`MeterColumns` (Core) is the whole vocabulary — rendered cell, header word, tooltip, settings key and missing-key default of `% / Damage / DPS / RDPS / SDPS` — because
 three doors read one list: the setup picker builds itself from it, `CommitMeterState` writes it, the overlay lays out from it. **A column names its own `MeterSlot`**,
 so the picker's order and the block's cell order are one answer rather than two that happen to agree; widths and insets are indexed by that ordinal, so inserting a
-cell anywhere but the end is a test failure rather than a silent reorder. **`HeaderOf(slot)` spells all five words** and the header markup ships empty `TextBlocks` —
+cell anywhere but the end is a test failure rather than a silent reorder (`TheTableNamesEveryCellItSwitchesAndSpellsEveryHeaderWord` pins the drawn order of all six
+cells, which is how "add SDPS to the right of RDPS" stays one row in one table). **`HeaderOf(slot)` spells every word** and the header markup ships empty `TextBlocks` —
 a word written twice is a word that can be renamed alone. **`Sec` is not a switch and has no key** (duration is what every other number on the row is read against);
 it carries only its word, kept in this same file. Names, icons and ranking bars always draw. The picker is the app's own
-checkbox-in-a-dropdown (`ComboBoxItemTemplateSelector`, committing on `DropDownClosed`), so four width decisions preview as one gesture.
+checkbox-in-a-dropdown (`ComboBoxItemTemplateSelector`, committing on `DropDownClosed`), so every width decision previews as one gesture.
 
 **A column may carry a `PickerNote`, and it reaches the dropdown only**: that list reads `%`, `Damage`, `DPS`, **`RDPS (6s rolling)`**, because RDPS is the one word
 that is not self-evident — every other number on the row covers the whole encounter, this one covers the latest six logged seconds, and that is the first question
 somebody has after switching it on. Everything else prints its bare header word, and `HeaderOf` still gives the meter its short `RDPS` (a row of digits has no room
 for a parenthesis). The note is not a name: it keys nothing, saves nothing, and matching stays by bit — `PickerLabel` is built from `Header`, so a longer label cannot
-rename a column out of its header or its key. Exactly one qualifier is allowed (`ThePickerExplainsRdpsWhileTheMeterKeepsTheBareWord`); four parenthesised phrases in a
-four-item list is the wall of text the bare list existed to avoid.
+rename a column out of its header or its key. Exactly one qualifier is allowed (`ThePickerExplainsRdpsWhileTheMeterKeepsTheBareWord`); a parenthesised phrase on every
+item is the wall of text the bare list existed to avoid. **SDPS deliberately carries no note**, even though it is the other rate: operators already say the letters, and what
+needs explaining about a rate is its denominator, which the tooltip says rather than the label.
 
 `Load()` reads every key with `ConfigUtil.IfSetOrElse(key, that column's default)` — never a blanket "missing means false", which would blank `Damage` and `DPS`
 over one bad ini line — and Save writes every key, the off ones too, so an absent key only ever means nobody has chosen. Both doors — that ini read and a window
 full of checkboxes — fold their yes/no answers through **`MeterColumns.FromSwitches`**, because two loops that "both" turn checks into a mask is how a preview and
-a save come to mean different things; a fifth column needs no change in either caller since the fold walks the table. **A column key is `OverlayShow<What>Column`**
-and *all four* follow it — `OverlayShowPercentColumn`, `OverlayShowDamageColumn`, `OverlayShowDpsColumn`, `OverlayShowRdpsColumn` — because `OverlayShowing…` already belongs
+a save come to mean different things; a new column needs no change in either caller since the fold walks the table. **A column key is `OverlayShow<What>Column`**
+and *every one* follows it — `OverlayShowPercentColumn`, `OverlayShowDamageColumn`, `OverlayShowDpsColumn`, `OverlayShowRdpsColumn`, `OverlayShowSdpsColumn` — because `OverlayShowing…` already belongs
 to another switch: `OverlayShowingDps` remembers *which panel is open*, damage or tanking, and a column key spelled like a panel selector invites merging two settings that
 have nothing in common. Pinned by `EveryColumnKeyIsASuffixedColumnSwitch`. **The one accepted breaking change:** `%` used to save as `OverlayShowDamagePercent`; nothing reads
-that name any more and `ConfigUtil.Save()` retires the line, so an install that had the digits on opens without them and turns the column back on once. The meter gained four
-configurable columns in this release, and resetting one rarely-used switch was cheaper than carrying a compatibility read forever — if that ever reverses, the cheap form is one
+that name any more and `ConfigUtil.Save()` retires the line, so an install that had the digits on opens without them and turns the column back on once. The meter gained its
+configurable columns in that release, and resetting one rarely-used switch was cheaper than carrying a compatibility read forever — if that ever reverses, the cheap form is one
 extra read of the old name inside `MeterColumns.Load()` for that row, not a pass over `settings.txt`. **The defaults are the upgrade story**, because a
 missing key is what every install already has: `%` off, `Damage`/`DPS` on (never hideable before this), and
-**`RDPS` off** — a column added after the fact arrives opt-in, so the shipped look is the pre-RDPS meter.
+**`RDPS` and `SDPS` off** — a column added after the fact arrives opt-in, so an untouched install keeps the meter it already had.
 
 Two laws:
 
@@ -7428,6 +7430,17 @@ Pinned headless by `MeterColumnLayoutTest` (all sixteen masks × every font, def
 `MeterPanelPlacementTest` (growth, narrowing, left docking, secondary/negative work areas and pixel scaling). `DamageBarColumnTest` (Windows-only assembly)
 puts a real row through measure/arrange. Live toolbar/header separation, mini-bar margins, mixed-DPI docking/following, Save/Cancel and the upgrade sight remain
 Windows gates under "Damage meter column switches, checked on Windows" in docs/ReleaseChecklist.md.
+
+### Three rates, three denominators
+
+The meter can print three numbers per second for one name and none of them is interchangeable: **DPS** divides by the time *this name* was active (`PlayerSubStats.TotalSeconds`),
+**RDPS** by the latest six logged seconds (`MeterRecentWindow`, per-life buckets), and **SDPS** by the time the *raid* was — `CalculateRates(row, raid, null)`,
+the same call the damage and tanking summaries use for their SDPS column. The gap is the point: a parser who joined late leads on DPS and reads far lower over the raid's clock,
+and the two columns side by side are what says so. `TheRaidTimeRateDividesByTheRaidsSpanNotTheNamesOwn` pins it, and `DamageMeterAssert.Equal` compares SDPS between the board's
+`DerivedTotals` path and the meter's own fold, so the two cannot drift apart in either direction. Two consequences worth knowing before touching this:
+**the raid/title row repeats its own DPS**, because the raid divided by its own span is its average (`RaidStats.Sdps` is never assigned — an empty cell there reads as a broken
+column, so the window prints the true figure twice); and the tanking panel needs no special case, since `MeterDirectionTotals.Publish` runs the same rate fold for both directions
+with the same raid span. Like every other column, SDPS is computed whether or not it is shown — no switch reaches `MeterFactInput`.
 
 ### Incremental damage meter: compact accounting, paired publication
 

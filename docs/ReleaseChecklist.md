@@ -370,14 +370,18 @@ on Windows" below), and a zero prints as `0` (a dash for "no damage in the windo
 
 ### Damage meter column switches, checked on Windows
 
-`% / Damage / DPS / RDPS` each hide through their own key, driven by the **columns** picker in Damage Meter Setup → STYLE; names, ranking bars and
+`% / Damage / DPS / RDPS / SDPS` each hide through their own key, driven by the **columns** picker in Damage Meter Setup → STYLE; names, ranking bars and
 elapsed seconds always draw. The table, the defaults and the zero-width law are pinned headless (`MeterColumnLayoutTest`) and described in DesignNotes →
-"Damage meter column switches: four hideable numbers, zero width when off". What follows is what only a screen can answer.
+"Damage meter column switches: hiding one reserves no width". What follows is what only a screen can answer.
 
-- [ ] **The dropdown explains RDPS and nothing else**: its rows read `%`, `Damage`, `DPS`, `RDPS (6s rolling)`, and the meter's header cell still reads bare
-  `RDPS` over its own digits. The wording is headless-pinned (`MeterColumnLayoutTest.ThePickerExplainsRdpsWhileTheMeterKeepsTheBareWord`); what only a screen can
-  answer is that the longer phrase does not clip or wrap inside the box at fonts 10-16, on either panel (damage and tanking share the same four switches), and that
-  ticking it still lands `OverlayShowRdpsColumn`.
+- [ ] **The dropdown explains RDPS and nothing else**: its rows read `%`, `Damage`, `DPS`, `RDPS (6s rolling)`, `SDPS` — SDPS stays bare on purpose, the word is what
+  operators say and the tooltip carries the denominator — and the meter's header cell still reads bare `RDPS` over its own digits. The wording is headless-pinned
+  (`MeterColumnLayoutTest.ThePickerExplainsRdpsWhileTheMeterKeepsTheBareWord`); what only a screen can answer is that the longer phrase does not clip or wrap inside the box at
+  fonts 10-16, on either panel (damage and tanking share the same five switches), and that ticking a row lands its own `OverlayShow…Column` key.
+- [ ] **SDPS is the raid's clock while DPS is the player's**: on a capture where somebody joined late or died for a while, that name reads its true rate under DPS and a
+  clearly smaller figure under SDPS, sitting immediately right of RDPS with `Sec` still last. On the raid/title row the two rate cells agree by definition (the raid divides by
+  its own span) — repeat is correct there, a blank cell is not. Ranking, totals and duration must not move when the column comes on (`MeterColumns` reaches no calculation);
+  a name that was there the whole capture shows the same number in both rate columns.
 - [ ] **It looks like it did before you touched anything**: on an install that predates this change (no `OverlayShow*` column keys), the meter shows
   `Damage`, `DPS`, `Sec` and no percent — the pre-RDPS look. Somebody who had RDPS on this branch sees that column disappear and nothing else move; turning it
   back on via the picker must show full numbers immediately, with no six-second warm-up and no half-windowed rate. A `settings.txt` written by an earlier build of this
@@ -388,7 +392,7 @@ elapsed seconds always draw. The table, the defaults and the zero-width law are 
   save — so an install that had it on opens with no percent digits. Confirm all three halves: ticking the box once brings the digits back immediately, that tick survives a restart
   (the new key was written), and nothing crashes or misbehaves because a line they had for years disappeared. Losing it permanently is not expected to matter; if it does, the fix
   is one extra read of the old name in `MeterColumns.Load()`, not a migration pass.
-- [ ] **A hidden column reserves nothing**: hide `Damage`, then `%`, then each of the four in turn. No gap may sit where the number was, the remaining numbers must
+- [ ] **A hidden column reserves nothing**: hide `Damage`, then `%`, then each of the five in turn. No gap may sit where the number was, the remaining numbers must
   not move closer together or further apart, and names must not gain or lose room unevenly. **Check this in thin bars too** — mini mode has its own per-column text
   margins, and a hidden column that keeps one leaves a hole nothing else can explain.
 - [ ] **The header goes with its column and lands over its digits**: `%` now prints a literal `%` where the header used to be blank — every header word is spelled by
@@ -396,8 +400,8 @@ elapsed seconds always draw. The table, the defaults and the zero-width law are 
   subset of columns on, each remaining word sits over its own numbers at fonts 10/12/14/16, normal and thin bars, light and dark. A word that no longer has a column
   must not leave a ghost.
 - [ ] **A number ending past its cell does not land on the next one**: the right insets are per column and several are negative, so a `%` or `Damage` figure ends outside
-  its own cell inside the neighbour's empty space. Hide that neighbour (`%` + `DPS` with `Damage` off at 10 pt is the tightest case; then `DPS` + `RDPS` with everything
-  else off) and check the widest digits you can produce still do not touch. Correct it in the inset preset, not by moving a value path.
+  its own cell inside the neighbour's empty space. Hide that neighbour (`%` + `DPS` with `Damage` off at 10 pt is the tightest case; then `RDPS` + `SDPS` with everything
+  else off — two negative-inset rate cells now sit side by side) and check the widest digits you can produce still do not touch. Correct it in the inset preset, not by moving a value path.
 - [ ] **The setup panel stays clear of a widening stage**: dock Setup to the right of the meter at a narrow saved width, then turn columns **on** one at a time — each
   raise of the minimum pushes the stage's right edge out, and the panel must follow rather than being covered or overlapping. Turn them back off: the panel does not chase
   a narrowing stage. Repeat with the panel docked left (the stage grows away from it and it must not move) and after dragging the panel somewhere of your own choosing.
@@ -414,7 +418,7 @@ elapsed seconds always draw. The table, the defaults and the zero-width law are 
   and turn columns **on** — the window grows to the new floor and names stay left of the numbers. Then widen by hand and hide a column: the window must keep the width it has.
   Save persists the width the gesture ended on; Cancel leaves both the saved mask and the saved geometry untouched. The live header may widen a saved stage further
   to accommodate its toolbar; Setup has no toolbar and retains the row-only floor.
-- [ ] **The live toolbar never covers the remaining header**: in Setup turn all four columns off, resize to the minimum, Save, and reopen live. `Sec` must sit to the
+- [ ] **The live toolbar never covers the remaining header**: in Setup turn every column off, resize to the minimum, Save, and reopen live. `Sec` must sit to the
   right of Setup/Copy/Reset/Close/DPS/Tank, not underneath them, and the toolbar must not extend past the meter. Repeat with each single column, then all columns,
   fonts 10/12/14/16 and mixed-DPI monitor moves. A wider measured toolbar raises the horizontal floor only: no extra row-height reserve or lost footer space.
 - [ ] **A long name still clears the numbers at the lowered floor**: hiding columns lowers what you can drag the window to (141 DIP at 12 pt with

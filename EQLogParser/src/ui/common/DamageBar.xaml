@@ -44,6 +44,7 @@
           <ColumnDefinition x:Name="colDamage" Width="60" />
           <ColumnDefinition x:Name="colDps" Width="60" />
           <ColumnDefinition x:Name="colRdps" Width="0" />
+          <ColumnDefinition x:Name="colSdps" Width="0" />
           <ColumnDefinition x:Name="colSec" Width="45" />
         </Grid.ColumnDefinitions>
         <TextBlock x:Name="percent" Grid.Column="0" Text="2.2%" VerticalAlignment="Center" TextAlignment="Right" 
@@ -70,7 +71,13 @@
             <DropShadowEffect ShadowDepth="2" Direction="330" Color="Black" Opacity="0.75" BlurRadius="2"/>
           </TextBlock.Effect>
         </TextBlock>
-        <TextBlock x:Name="time" Grid.Column="4" Text="12456" VerticalAlignment="Center" TextAlignment="Right"
+        <TextBlock x:Name="sdps" Grid.Column="4" Text="100.2K" VerticalAlignment="Center" TextAlignment="Right"
+          FontSize="{DynamicResource DamageOverlayFontSize}" FontFamily="Tahoma" Foreground="White" Margin="0,0,0,2">
+          <TextBlock.Effect>
+            <DropShadowEffect ShadowDepth="2" Direction="330" Color="Black" Opacity="0.75" BlurRadius="2"/>
+          </TextBlock.Effect>
+        </TextBlock>
+        <TextBlock x:Name="time" Grid.Column="5" Text="12456" VerticalAlignment="Center" TextAlignment="Right"
           FontSize="{DynamicResource DamageOverlayFontSize}" FontFamily="Tahoma" Foreground="White" Margin="0,0,0,2">
           <TextBlock.Effect>
             <DropShadowEffect ShadowDepth="2" Direction="330" Color="Black" Opacity="0.75" BlurRadius="2"/>

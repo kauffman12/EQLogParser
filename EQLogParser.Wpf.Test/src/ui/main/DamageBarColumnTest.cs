@@ -67,10 +67,11 @@ public sealed class DamageBarColumnTest
     const MeterColumn shown = MeterColumn.Damage | MeterColumn.Dps;
     var layout = new MeterColumnLayout(12, shown);
 
-    double percentCell = -1, rdpsCell = -1, damageCell = -1, secCell = -1, blockUsed = -1;
-    double percentText = -1, rdpsText = -1, damageText = -1, secText = -1, nameText = -1;
+    double percentCell = -1, rdpsCell = -1, sdpsCell = -1, damageCell = -1, secCell = -1, blockUsed = -1;
+    double percentText = -1, rdpsText = -1, sdpsText = -1, damageText = -1, secText = -1, nameText = -1;
     var percentHidden = false;
     var rdpsHidden = false;
+    var sdpsHidden = false;
 
     Sta.Run(() =>
     {
@@ -78,15 +79,18 @@ public sealed class DamageBarColumnTest
 
       percentCell = bar.colPercent.ActualWidth;
       rdpsCell = bar.colRdps.ActualWidth;
+      sdpsCell = bar.colSdps.ActualWidth;
       damageCell = bar.colDamage.ActualWidth;
       secCell = bar.colSec.ActualWidth;
       blockUsed = bar.colPercent.ActualWidth + bar.colDamage.ActualWidth + bar.colDps.ActualWidth
-        + bar.colRdps.ActualWidth + bar.colSec.ActualWidth;
+        + bar.colRdps.ActualWidth + bar.colSdps.ActualWidth + bar.colSec.ActualWidth;
 
       percentHidden = bar.percent.Visibility == Visibility.Collapsed;
       rdpsHidden = bar.rdps.Visibility == Visibility.Collapsed;
+      sdpsHidden = bar.sdps.Visibility == Visibility.Collapsed;
       percentText = bar.percent.ActualWidth;
       rdpsText = bar.rdps.ActualWidth;
+      sdpsText = bar.sdps.ActualWidth;
       damageText = bar.damage.ActualWidth;
       secText = bar.time.ActualWidth;
       nameText = bar.player.ActualWidth;
@@ -94,10 +98,13 @@ public sealed class DamageBarColumnTest
 
     Assert.AreEqual(0, percentCell, "a hidden % column still cost cell width on the row");
     Assert.AreEqual(0, rdpsCell, "a hidden RDPS column still cost cell width on the row");
+    Assert.AreEqual(0, sdpsCell, "a hidden SDPS column still cost cell width on the row");
     Assert.IsTrue(percentHidden);
     Assert.IsTrue(rdpsHidden);
+    Assert.IsTrue(sdpsHidden, "SDPS draws before anybody asks for it");
     Assert.AreEqual(0, percentText, "hidden text still took room");
     Assert.AreEqual(0, rdpsText, "hidden text still took room");
+    Assert.AreEqual(0, sdpsText, "hidden SDPS text still took room");
 
     Assert.AreEqual(layout.WidthOf(MeterSlot.Damage), damageCell);
     Assert.AreEqual(layout.WidthOf(MeterSlot.Seconds), secCell);
@@ -113,17 +120,17 @@ public sealed class DamageBarColumnTest
   [TestMethod]
   public void TextInsetsFollowTheLayoutInBothGestureOrders()
   {
-    const MeterColumn shown = MeterColumn.Percent | MeterColumn.Damage | MeterColumn.Dps | MeterColumn.Rdps;
+    const MeterColumn shown = MeterColumn.Percent | MeterColumn.Damage | MeterColumn.Dps | MeterColumn.Rdps | MeterColumn.Sdps;
 
     foreach (var miniBars in new[] { false, true })
     {
-      foreach (var hidden in new MeterColumn[] { MeterColumn.None, MeterColumn.Rdps, MeterColumn.Percent })
+      foreach (var hidden in new MeterColumn[] { MeterColumn.None, MeterColumn.Rdps, MeterColumn.Sdps, MeterColumn.Percent })
       {
         var layout = new MeterColumnLayout(12, shown & ~hidden);
 
         foreach (var miniFirst in new[] { false, true })
         {
-          double percent = 0, damage = 0, dps = 0, rdps = 0, sec = 0;
+          double percent = 0, damage = 0, dps = 0, rdps = 0, sdps = 0, sec = 0;
 
           Sta.Run(() =>
           {
@@ -132,15 +139,16 @@ public sealed class DamageBarColumnTest
             damage = bar.damage.Margin.Right;
             dps = bar.dps.Margin.Right;
             rdps = bar.rdps.Margin.Right;
+            sdps = bar.sdps.Margin.Right;
             sec = bar.time.Margin.Right;
           });
 
           var expected = new[]
           {
             layout.InsetOf(MeterSlot.Percent), layout.InsetOf(MeterSlot.Damage), layout.InsetOf(MeterSlot.Dps),
-            layout.InsetOf(MeterSlot.Rdps), layout.InsetOf(MeterSlot.Seconds),
+            layout.InsetOf(MeterSlot.Rdps), layout.InsetOf(MeterSlot.Sdps), layout.InsetOf(MeterSlot.Seconds),
           };
-          var actual = new[] { percent, damage, dps, rdps, sec };
+          var actual = new[] { percent, damage, dps, rdps, sdps, sec };
 
           CollectionAssert.AreEqual(expected, actual,
             $"mini={miniBars} miniFirst={miniFirst} hidden={hidden}: a right inset does not match the shared layout");
@@ -161,7 +169,7 @@ public sealed class DamageBarColumnTest
     {
       var bar = LaidOut(12, MeterColumn.None, miniBars: false, miniFirst: false);
       blockUsed = bar.colPercent.ActualWidth + bar.colDamage.ActualWidth + bar.colDps.ActualWidth
-        + bar.colRdps.ActualWidth + bar.colSec.ActualWidth;
+        + bar.colRdps.ActualWidth + bar.colSdps.ActualWidth + bar.colSec.ActualWidth;
       secCell = bar.colSec.ActualWidth;
       secText = bar.time.ActualWidth;
       nameText = bar.player.ActualWidth;

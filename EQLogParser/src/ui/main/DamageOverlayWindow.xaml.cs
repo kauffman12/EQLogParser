@@ -610,6 +610,7 @@ namespace EQLogParser
           var percent = Math.Round(MeterDisplaySelection.Percentage(stat.Total, localStats.RaidStats.Total), 1);
           damageBar?.Update(name, className, $"{percent}%", StatsUtil.FormatTotals(stat.Total),
             StatsUtil.FormatTotals(stat.Dps, 1), rdpsValue: StatsUtil.FormatTotals(rates.RateFor(stat.Name), 1),
+            sdpsValue: StatsUtil.FormatTotals(stat.Sdps, 1),
             timeValue: stat.TotalSeconds.ToString(CultureInfo.InvariantCulture), barPercent: barPercent,
             colorOverrideKey: overrideColorKey);
 
@@ -622,7 +623,7 @@ namespace EQLogParser
         {
           if (damageBar?.Visibility == Visibility.Visible)
           {
-            damageBar.Update("", "", "", "", "", "", "", 0);
+            damageBar.Update("", "", "", "", "", "", "", "", 0);
             damageBar.Visibility = Visibility.Collapsed;
           }
         }
@@ -631,6 +632,10 @@ namespace EQLogParser
       var titleBar = children[^1] as DamageBar;
       titleBar?.Update(localStats.TargetTitle, "", "", StatsUtil.FormatTotals(localStats.RaidStats.Total),
         StatsUtil.FormatTotals(localStats.RaidStats.Dps, 1), rdpsValue: StatsUtil.FormatTotals(rates.Total, 1),
+
+        // The raid's own sustained rate is its average — the raid divides by nothing but its own span — so this cell repeats DPS by definition
+        // rather than printing the zero RaidStats.Sdps never gets assigned. An empty cell would read as a column that failed to fill.
+        sdpsValue: StatsUtil.FormatTotals(localStats.RaidStats.Dps, 1),
         timeValue: localStats.RaidStats.TotalSeconds.ToString(CultureInfo.InvariantCulture), barPercent: 0);
 
       if (titleBar?.Visibility == Visibility.Collapsed)
@@ -655,18 +660,18 @@ namespace EQLogParser
           if (i == 0)
           {
             bar.Update("Your Player Name", classList[i], "5.2%", "120.5M", "100.1K", rdpsValue: "96.4K",
-              timeValue: "123", barPercent: 120 - (i * 10), colorOverrideKey: "DamageOverlayHighlightBrush");
+              sdpsValue: "92.3K", timeValue: "123", barPercent: 120 - (i * 10), colorOverrideKey: "DamageOverlayHighlightBrush");
           }
           else
           {
             bar.Update(i + 1 + ". Example Player " + i, classList[i], "3.1%", "120.5M", "100.1K", rdpsValue: "72.8K",
-              timeValue: "123", barPercent: 120 - (i * 10));
+              sdpsValue: "58.6K", timeValue: "123", barPercent: 120 - (i * 10));
           }
         }
       }
 
       (damageContent.Children[^1] as DamageBar)?.Update("Example NPC", "", "", "500.2M", "490.5K",
-        rdpsValue: "487.1K", timeValue: "456", barPercent: 0);
+        rdpsValue: "487.1K", sdpsValue: "465.2K", timeValue: "456", barPercent: 0);
     }
 
     private void CloseClick(object sender, RoutedEventArgs e) => MainActions.CloseDamageOverlay(false, this);
@@ -750,6 +755,7 @@ namespace EQLogParser
       SetHeaderCell(headDamage, titleDamage, layout, MeterSlot.Damage);
       SetHeaderCell(headDPS, titleDPS, layout, MeterSlot.Dps);
       SetHeaderCell(headRDPS, titleRDPS, layout, MeterSlot.Rdps);
+      SetHeaderCell(headSdps, titleSDPS, layout, MeterSlot.Sdps);
       SetHeaderCell(headTime, titleTime, layout, MeterSlot.Seconds);
 
       foreach (var child in damageContent.Children)

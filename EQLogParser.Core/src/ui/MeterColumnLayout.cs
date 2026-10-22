@@ -10,6 +10,9 @@ internal enum MeterSlot
   Damage,
   Dps,
   Rdps,
+
+  /// <summary>The raid-time rate, drawn to the right of the rolling one so the two rates sit together and elapsed seconds stays last.</summary>
+  Sdps,
   Seconds,
 }
 
@@ -35,7 +38,7 @@ internal sealed class MeterColumnLayout
   // Icon plus ~six row-font characters. A round allowance, not a promise of exactly this many free DIPs: it is also what the
   // window's own border and the header's right margin come out of (see MinimumWindowWidthFor).
   internal const double NameAreaMinWidthDip = 96;
-  internal const int MeterSlotCount = 5;
+  internal const int MeterSlotCount = 6;
 
   private readonly double[] _width = new double[MeterSlotCount];
 
@@ -105,7 +108,7 @@ internal sealed class MeterColumnLayout
    * Which of the three presets a cell draws from: percent and elapsed seconds share the narrow one, Damage and DPS share the wide
    * one, and the rolling rate has its own. Both tables below name every cell they handle and REFUSE anything else, so a new MeterSlot
    * fails the first meter open with its own name in the message rather than drawing itself narrow-and-flush into the block and being
-   * found later as "the new column looks squished" on a Windows gate. `MeterColumnLayoutTest` pins the drawn block to exactly five
+   * found later as "the new column looks squished" on a Windows gate. `MeterColumnLayoutTest` pins the drawn block to exactly six
    * named cells, so the refusal is a programmer-error tripwire and no shipped mask can reach it — unlike an unreadable FONT size,
    * which is a state players do reach and therefore still lays out like the ceiling (PresetFor).
    */
@@ -113,6 +116,7 @@ internal sealed class MeterColumnLayout
   {
     MeterSlot.Damage or MeterSlot.Dps => preset.Wide,
     MeterSlot.Rdps => preset.Rolling,
+    MeterSlot.Sdps => preset.Rolling, // the same digit budget as the other rates: it is a share of what DPS shows, never wider
     MeterSlot.Percent or MeterSlot.Seconds => preset.Narrow,
     _ => throw new ArgumentException($"MeterSlot {slot} has no width preset", nameof(slot)),
   };
@@ -125,6 +129,7 @@ internal sealed class MeterColumnLayout
     MeterSlot.Damage => -12,
     MeterSlot.Dps => -6,
     MeterSlot.Rdps => -6,
+    MeterSlot.Sdps => -6,
     MeterSlot.Seconds => 2,
     _ => throw new ArgumentException($"MeterSlot {slot} has no right inset", nameof(slot)),
   };

@@ -38,7 +38,7 @@
           <!-- The header is the same five columns as every row, with the same widths, the same right insets and the same words, so a word sits
                over its digits at any font and a switched-off column takes its word with it. DamageOverlayWindow.ApplyColumnLayout hands over all
                three from one MeterColumnLayout, and the words come from MeterColumns — these TextBlocks ship empty because a second copy of
-               "% / Damage / DPS / RDPS / Sec" here is a word that can be renamed on its own. The widths below are the 12pt default for the
+               "% / Damage / DPS / RDPS / SDPS / Sec" here is a word that can be renamed on its own. The widths below are the 12pt default for the
                designer only; every one is overwritten before the window paints. -->
           <Grid x:Name="controlPanel" Height="18" Margin="0,0,0,2" Visibility="Collapsed">
             <Grid x:Name="headerRow" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,2,4,0">
@@ -47,6 +47,7 @@
                 <ColumnDefinition x:Name="headDamage" Width="60" />
                 <ColumnDefinition x:Name="headDPS" Width="60" />
                 <ColumnDefinition x:Name="headRDPS" Width="0" />
+                <ColumnDefinition x:Name="headSdps" Width="0" />
                 <ColumnDefinition x:Name="headTime" Width="45" />
               </Grid.ColumnDefinitions>
               <TextBlock x:Name="titlePercent" Grid.Column="0" Text="" TextAlignment="Right" FontFamily="Tahoma"
@@ -57,7 +58,9 @@
                 Foreground="White" />
               <TextBlock x:Name="titleRDPS" Grid.Column="3" Text="" TextAlignment="Right" FontFamily="Tahoma"
                 Foreground="White" />
-              <TextBlock x:Name="titleTime" Grid.Column="4" Text="" TextAlignment="Right" FontFamily="Tahoma"
+              <TextBlock x:Name="titleSDPS" Grid.Column="4" Text="" TextAlignment="Right" FontFamily="Tahoma"
+                Foreground="White" />
+              <TextBlock x:Name="titleTime" Grid.Column="5" Text="" TextAlignment="Right" FontFamily="Tahoma"
                 Foreground="White" />
             </Grid>
           </Grid>

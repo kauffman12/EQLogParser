@@ -8,7 +8,7 @@ namespace EQLogParser;
  * boundary is how the panel used to jump to the primary monitor and land half off a secondary one, because SystemParameters.WorkArea
  * is the PRIMARY work area in DIPs. The caller converts the panel's own DIP size through the STAGE's DPI (the monitor it is about to
  * land on) and every screen figure comes from MonitorFromWindow; both halves below stay pure arithmetic so they are headless-tested.
- * docs/DesignNotes.md → "Damage meter column switches: four hideable numbers, zero width when off".
+ * docs/DesignNotes.md → "Damage meter column switches: hiding one reserves no width".
  */
 internal static class MeterPanelPlacement
 {

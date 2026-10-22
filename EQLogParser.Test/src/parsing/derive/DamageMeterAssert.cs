@@ -37,6 +37,10 @@ internal static class DamageMeterAssert
       Assert.AreEqual(a.Total, b.Total, a.Name);
       Assert.AreEqual(a.TotalSeconds, b.TotalSeconds, $"{a.Name} seconds");
       Assert.AreEqual(a.Dps, b.Dps, $"{a.Name} DPS");
+
+      // Compared because two independent paths compute it: the board's DerivedTotals and the meter's own fold. A denominator that
+      // moves on one of them (the raid's span versus the name's active span) is exactly the drift this harness exists to catch.
+      Assert.AreEqual(a.Sdps, b.Sdps, $"{a.Name} SDPS");
       Assert.AreEqual(a.ClassName, b.ClassName, $"{a.Name} class");
       Assert.AreEqual(a.Rank, b.Rank, $"{a.Name} rank");
     }

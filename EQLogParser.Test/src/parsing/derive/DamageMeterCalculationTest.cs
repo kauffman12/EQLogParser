@@ -28,6 +28,43 @@ public partial class DamageMeterCalculationTest
     Assert.AreEqual(TextUtils.MaxAmount + uint.MaxValue + 1L, log.Last.TankStats.RaidStats.Total);
   }
 
+  /*
+   * SDPS divides by the RAID's clock. Bithika joins with six seconds left on a minute-long capture: her DPS is the rate she actually
+   * played at and her SDPS is a tenth of it, and that gap IS the information the column exists to carry. Pinned because CalculateRates
+   * takes its denominator as an argument — passing the row's own span there would read as a tidy refactor and quietly turn the meter's
+   * SDPS into a second DPS column, with nothing else in the build disagreeing. Illuminai swung the whole capture, so his two rates must
+   * be the same number: same denominator, same quotient.
+   */
+  [TestMethod]
+  public void TheRaidTimeRateDividesByTheRaidsSpanNotTheNamesOwn()
+  {
+    var log = new Capture();
+    for (var second = 0; second < 60; second++)
+    {
+      log.Add("Illuminai", "a rat", second, 100);
+    }
+
+    for (var second = 54; second < 60; second++)
+    {
+      log.Add("Bithika", "a rat", second, 100);
+    }
+
+    log.Check(60);
+
+    var damage = log.Last!.DamageStats;
+    var late = damage.StatsList.First(row => row.Name == "Bithika");
+    var throughout = damage.StatsList.First(row => row.Name == "Illuminai");
+
+    Assert.AreEqual(600, late.Total);
+    Assert.AreEqual(100, late.Dps, "DPS divides by the six seconds she was swinging");
+    Assert.AreEqual(StatsUtil.RatePerSecond(600, damage.RaidStats.TotalSeconds), late.Sdps,
+      "SDPS divides by the raid's elapsed span");
+    Assert.IsTrue(late.Sdps < late.Dps, "a name on screen for a tenth of the capture cannot rate the same in both columns");
+
+    Assert.AreEqual(throughout.Dps, throughout.Sdps,
+      "the raid's span and this name's own span are the same clock, so the two columns must agree");
+  }
+
   [TestMethod]
   public void SameSecondArrivalsAndUnchangedPollsMatchTheFullCalculation()
   {

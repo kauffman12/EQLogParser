@@ -40,12 +40,14 @@ namespace EQLogParser
       colDamage.Width = new GridLength(layout.WidthOf(MeterSlot.Damage));
       colDps.Width = new GridLength(layout.WidthOf(MeterSlot.Dps));
       colRdps.Width = new GridLength(layout.WidthOf(MeterSlot.Rdps));
+      colSdps.Width = new GridLength(layout.WidthOf(MeterSlot.Sdps));
       colSec.Width = new GridLength(layout.WidthOf(MeterSlot.Seconds));
 
       percent.Visibility = VisibilityFor(layout, MeterSlot.Percent);
       damage.Visibility = VisibilityFor(layout, MeterSlot.Damage);
       dps.Visibility = VisibilityFor(layout, MeterSlot.Dps);
       rdps.Visibility = VisibilityFor(layout, MeterSlot.Rdps);
+      sdps.Visibility = VisibilityFor(layout, MeterSlot.Sdps);
       time.Visibility = VisibilityFor(layout, MeterSlot.Seconds);
 
       ApplyTextMargins();
@@ -71,7 +73,7 @@ namespace EQLogParser
     }
 
     internal void Update(string playerName, string className, string percentValue, string damageValue, string dpsValue,
-      string rdpsValue, string timeValue, double barPercent, string colorOverrideKey = null)
+      string rdpsValue, string sdpsValue, string timeValue, double barPercent, string colorOverrideKey = null)
     {
       if (colorOverrideKey != null && _activeColorKey != colorOverrideKey)
       {
@@ -100,6 +102,7 @@ namespace EQLogParser
       damage.Text = damageValue;
       dps.Text = dpsValue;
       rdps.Text = rdpsValue;
+      sdps.Text = sdpsValue;
       percent.Text = percentValue;
       time.Text = timeValue;
       progress.Progress = barPercent;
@@ -121,6 +124,7 @@ namespace EQLogParser
       damage.Margin = new Thickness(0, top, _layout.InsetOf(MeterSlot.Damage), bottom);
       dps.Margin = new Thickness(0, top, _layout.InsetOf(MeterSlot.Dps), bottom);
       rdps.Margin = new Thickness(0, top, _layout.InsetOf(MeterSlot.Rdps), bottom);
+      sdps.Margin = new Thickness(0, top, _layout.InsetOf(MeterSlot.Sdps), bottom);
       time.Margin = new Thickness(0, top, _layout.InsetOf(MeterSlot.Seconds), bottom);
     }
 

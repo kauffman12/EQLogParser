@@ -11,11 +11,11 @@ namespace EQLogParser;
 public sealed class MeterColumnLayoutTest
 {
   // The whole key vocabulary, exactly — every one of them an OverlayShow<What>Column key.
-  private static readonly string[] Keys = ["OverlayShowPercentColumn", "OverlayShowDamageColumn", "OverlayShowDpsColumn", "OverlayShowRdpsColumn"];
+  private static readonly string[] Keys = ["OverlayShowPercentColumn", "OverlayShowDamageColumn", "OverlayShowDpsColumn", "OverlayShowRdpsColumn", "OverlayShowSdpsColumn"];
 
-  // Every combination of the four switches, 0 (nothing) through 15 (% Damage DPS RDPS all on). The top mask is what a meter with
-  // nothing hidden looks like, so a loop that stopped at RDPS's own bit would skip seven of them.
-  private const int MaskCount = 16;
+  // Every combination of the five switches, 0 (nothing) through 31 (% Damage DPS RDPS SDPS all on). The top mask is what a meter with
+  // nothing hidden looks like, so a loop that stopped at RDPS's own bit would skip fifteen of them.
+  private const int MaskCount = 32;
 
   private readonly string?[] _saved = new string?[Keys.Length];
 
@@ -43,14 +43,14 @@ public sealed class MeterColumnLayoutTest
   [TestMethod]
   public void TheShippedTableIsDrawnOrderWithOneKeyAndDefaultEach()
   {
-    Assert.HasCount(4, MeterColumns.All);
-    CollectionAssert.AreEqual(new[] { "%", "Damage", "DPS", "RDPS" }, MeterColumns.All.Select(c => c.Header).ToArray());
+    Assert.HasCount(5, MeterColumns.All);
+    CollectionAssert.AreEqual(new[] { "%", "Damage", "DPS", "RDPS", "SDPS" }, MeterColumns.All.Select(c => c.Header).ToArray());
 
     var bits = MeterColumns.All.Select(c => c.Bit).ToArray();
     Assert.HasCount(bits.Length, bits.Distinct().ToArray());
     Assert.HasCount(bits.Length, MeterColumns.All.Select(c => c.Key).Distinct().ToArray());
 
-    // The whole key vocabulary, exactly. `Sec` has no key by decision, and a fifth key would be a fifth switch nobody asked for —
+    // The whole key vocabulary, exactly. `Sec` has no key by decision, and another key would be another switch nobody asked for —
     // which is also why this compares the set rather than asking whether some key "mentions seconds".
     CollectionAssert.AreEqual(Keys, MeterColumns.All.Select(c => c.Key).ToArray());
   }
@@ -64,19 +64,19 @@ public sealed class MeterColumnLayoutTest
   public void TheTableNamesEveryCellItSwitchesAndSpellsEveryHeaderWord()
   {
     CollectionAssert.AreEqual(
-      new[] { MeterSlot.Percent, MeterSlot.Damage, MeterSlot.Dps, MeterSlot.Rdps },
+      new[] { MeterSlot.Percent, MeterSlot.Damage, MeterSlot.Dps, MeterSlot.Rdps, MeterSlot.Sdps },
       MeterColumns.All.Select(c => c.Slot).ToArray());
 
     Assert.IsFalse(MeterColumns.All.Any(c => c.Slot == MeterSlot.Seconds), "elapsed seconds is not a switch and may not join the table");
 
     // Widths and insets are indexed by the slot's own ordinal, so inserting a cell anywhere but the end silently reorders the block.
-    var drawnOrder = new[] { MeterSlot.Percent, MeterSlot.Damage, MeterSlot.Dps, MeterSlot.Rdps, MeterSlot.Seconds };
+    var drawnOrder = new[] { MeterSlot.Percent, MeterSlot.Damage, MeterSlot.Dps, MeterSlot.Rdps, MeterSlot.Sdps, MeterSlot.Seconds };
     for (var i = 0; i < drawnOrder.Length; i++)
     {
       Assert.AreEqual(i, (int)drawnOrder[i], $"{drawnOrder[i]} is no longer the {i + 1}th cell of the numeric block");
     }
 
-    // And the block is EXACTLY these five cells. MeterColumnLayout names every one in its width and inset tables and refuses any other,
+    // And the block is EXACTLY these six cells. MeterColumnLayout names every one in its width and inset tables and refuses any other,
     // so this is the assertion that turns "somebody added a MeterSlot" into a named failure here instead of an exception on the first
     // meter open: a new cell arrives with a preset, an inset, a header word and expectations, all at once.
     CollectionAssert.AreEqual(drawnOrder, Enum.GetValues<MeterSlot>(),
@@ -86,6 +86,7 @@ public sealed class MeterColumnLayoutTest
     Assert.AreEqual("Damage", MeterColumns.HeaderOf(MeterSlot.Damage));
     Assert.AreEqual("DPS", MeterColumns.HeaderOf(MeterSlot.Dps));
     Assert.AreEqual("RDPS", MeterColumns.HeaderOf(MeterSlot.Rdps));
+    Assert.AreEqual("SDPS", MeterColumns.HeaderOf(MeterSlot.Sdps));
     Assert.AreEqual("Sec", MeterColumns.HeaderOf(MeterSlot.Seconds));
   }
 
@@ -93,12 +94,12 @@ public sealed class MeterColumnLayoutTest
    * The dropdown gets to explain the one word that is not self-evident — RDPS is a rolling window while every other number on the row covers the whole
    * encounter, which is the first question after somebody switches the column on — and the meter's header cell keeps printing the bare word, because a row of
    * digits has no room for a parenthesis. Both halves still come from this table, so the picker cannot rename a column out of its own header or its settings key,
-   * and the fold stays by bit. Exactly one qualifier is allowed: four parenthesised phrases in a four-item list is the wall of text the bare list avoided.
+   * and the fold stays by bit. Exactly one qualifier is allowed: a parenthesised phrase on every item is the wall of text the bare list avoided.
    */
   [TestMethod]
   public void ThePickerExplainsRdpsWhileTheMeterKeepsTheBareWord()
   {
-    CollectionAssert.AreEqual(new[] { "%", "Damage", "DPS", "RDPS (6s rolling)" },
+    CollectionAssert.AreEqual(new[] { "%", "Damage", "DPS", "RDPS (6s rolling)", "SDPS" },
       MeterColumns.All.Select(c => c.PickerLabel).ToArray());
 
     Assert.AreEqual(1, MeterColumns.All.Count(c => !string.IsNullOrEmpty(c.PickerNote)),
@@ -134,12 +135,14 @@ public sealed class MeterColumnLayoutTest
     Assert.AreEqual(MeterColumns.Default, MeterColumns.Load());
   }
 
-  // A missing key is what every install predating RDPS has, so opt-in is what they all get: the rolling column cannot appear
-  // in front of somebody who never asked for it.
+  // A missing key is what every install predating a rate column has, so opt-in is what they all get: neither an extra rate nor the
+  // rolling one can appear in front of somebody who never asked for it.
   [TestMethod]
-  public void RollingRatesAreOptInAndPercentStaysOff()
+  public void ExtraRateColumnsAreOptInAndPercentStaysOff()
   {
     Assert.IsFalse(MeterColumns.Includes(MeterColumns.Default, MeterColumn.Rdps));
+    Assert.IsFalse(MeterColumns.Includes(MeterColumns.Default, MeterColumn.Sdps));
+    Assert.IsFalse(MeterColumns.All.First(c => c.Bit == MeterColumn.Sdps).DefaultOn);
     Assert.IsFalse(MeterColumns.Includes(MeterColumns.Default, MeterColumn.Percent));
     Assert.IsFalse(MeterColumns.All.First(c => c.Bit == MeterColumn.Rdps).DefaultOn);
     Assert.IsFalse(MeterColumns.All.First(c => c.Bit == MeterColumn.Percent).DefaultOn);
@@ -187,7 +190,7 @@ public sealed class MeterColumnLayoutTest
     }
 
     Assert.AreEqual(MeterColumn.None, MeterColumns.FromSwitches(_ => false));
-    Assert.AreEqual(MeterColumn.Percent | MeterColumn.Damage | MeterColumn.Dps | MeterColumn.Rdps,
+    Assert.AreEqual(MeterColumn.Percent | MeterColumn.Damage | MeterColumn.Dps | MeterColumn.Rdps | MeterColumn.Sdps,
       MeterColumns.FromSwitches(_ => true));
 
     MeterColumns.Save(MeterColumn.Damage | MeterColumn.Rdps);
@@ -225,12 +228,14 @@ public sealed class MeterColumnLayoutTest
   [TestMethod]
   public void TheShippedRightInsetsAreTheMeasuredOnes()
   {
-    var all = new MeterColumnLayout(12, MeterColumn.Percent | MeterColumn.Damage | MeterColumn.Dps | MeterColumn.Rdps);
+    const MeterColumn allOn = MeterColumn.Percent | MeterColumn.Damage | MeterColumn.Dps | MeterColumn.Rdps | MeterColumn.Sdps;
+    var all = new MeterColumnLayout(12, allOn);
 
     Assert.AreEqual(-13, all.InsetOf(MeterSlot.Percent));
     Assert.AreEqual(-12, all.InsetOf(MeterSlot.Damage));
     Assert.AreEqual(-6, all.InsetOf(MeterSlot.Dps));
     Assert.AreEqual(-6, all.InsetOf(MeterSlot.Rdps));
+    Assert.AreEqual(-6, all.InsetOf(MeterSlot.Sdps), "the two rate cells end at the same edge as DPS does");
     Assert.AreEqual(2, all.InsetOf(MeterSlot.Seconds));
   }
 
@@ -252,6 +257,7 @@ public sealed class MeterColumnLayoutTest
             MeterSlot.Damage => MeterColumns.Includes(shown, MeterColumn.Damage),
             MeterSlot.Dps => MeterColumns.Includes(shown, MeterColumn.Dps),
             MeterSlot.Rdps => MeterColumns.Includes(shown, MeterColumn.Rdps),
+            MeterSlot.Sdps => MeterColumns.Includes(shown, MeterColumn.Sdps),
             _ => true, // duration is always drawn
           };
 
@@ -274,7 +280,7 @@ public sealed class MeterColumnLayoutTest
       for (var value = 0; value < MaskCount; value++)
       {
         var layout = new MeterColumnLayout(font, (MeterColumn)value);
-        var slots = new[] { MeterSlot.Percent, MeterSlot.Damage, MeterSlot.Dps, MeterSlot.Rdps, MeterSlot.Seconds };
+        var slots = new[] { MeterSlot.Percent, MeterSlot.Damage, MeterSlot.Dps, MeterSlot.Rdps, MeterSlot.Sdps, MeterSlot.Seconds };
         Assert.AreEqual(slots.Sum(layout.WidthOf), layout.NumericWidth, $"font {font}, mask {(MeterColumn)value}");
         Assert.AreEqual(layout.NumericWidth + MeterColumnLayout.NameAreaMinWidthDip, layout.MinimumWindowWidth);
       }
@@ -288,6 +294,7 @@ public sealed class MeterColumnLayoutTest
     Assert.AreEqual(0, rdpsOnly.WidthOf(MeterSlot.Damage));
     Assert.AreEqual(0, rdpsOnly.WidthOf(MeterSlot.Percent));
     Assert.AreEqual(52, rdpsOnly.WidthOf(MeterSlot.Rdps));
+    Assert.AreEqual(0, rdpsOnly.WidthOf(MeterSlot.Sdps), "asking for one rate column must not hand over the other");
     Assert.AreEqual(45, rdpsOnly.WidthOf(MeterSlot.Seconds));
     Assert.AreEqual(97 + MeterColumnLayout.NameAreaMinWidthDip, rdpsOnly.MinimumWindowWidth);
 
@@ -307,14 +314,14 @@ public sealed class MeterColumnLayoutTest
   [TestMethod]
   public void AColumnGestureNeverResizesTheColumnsThatStay()
   {
-    const MeterColumn all = MeterColumn.Percent | MeterColumn.Damage | MeterColumn.Dps | MeterColumn.Rdps;
+    const MeterColumn all = MeterColumn.Percent | MeterColumn.Damage | MeterColumn.Dps | MeterColumn.Rdps | MeterColumn.Sdps;
 
     foreach (var font in new[] { 10, 12, 14, 16 })
     {
       var full = new MeterColumnLayout(font, all);
       Assert.AreEqual(font + 1, full.HeaderFontPt);
 
-      foreach (var hidden in new[] { MeterColumn.Percent, MeterColumn.Damage, MeterColumn.Dps, MeterColumn.Rdps })
+      foreach (var hidden in new[] { MeterColumn.Percent, MeterColumn.Damage, MeterColumn.Dps, MeterColumn.Rdps, MeterColumn.Sdps })
       {
         var layout = new MeterColumnLayout(font, all & ~hidden);
         foreach (MeterSlot slot in Enum.GetValues<MeterSlot>())
@@ -378,14 +385,15 @@ public sealed class MeterColumnLayoutTest
 
   private static void AssertBlock(int font, double narrow, double wide, double rolling)
   {
-    var layout = new MeterColumnLayout(font, MeterColumn.Percent | MeterColumn.Damage | MeterColumn.Dps | MeterColumn.Rdps);
+    var layout = new MeterColumnLayout(font, MeterColumn.Percent | MeterColumn.Damage | MeterColumn.Dps | MeterColumn.Rdps | MeterColumn.Sdps);
     Assert.AreEqual(narrow, layout.WidthOf(MeterSlot.Percent), $"{font}pt percent");
     Assert.AreEqual(wide, layout.WidthOf(MeterSlot.Damage), $"{font}pt damage");
     Assert.AreEqual(wide, layout.WidthOf(MeterSlot.Dps), $"{font}pt dps");
     Assert.AreEqual(rolling, layout.WidthOf(MeterSlot.Rdps), $"{font}pt rolling");
+    Assert.AreEqual(rolling, layout.WidthOf(MeterSlot.Sdps), $"{font}pt raid-time rate");
     Assert.AreEqual(narrow, layout.WidthOf(MeterSlot.Seconds), $"{font}pt seconds");
 
-    var expected = narrow * 2 + wide * 2 + rolling;
+    var expected = narrow * 2 + wide * 2 + rolling * 2;
     Assert.AreEqual(expected, layout.NumericWidth, $"{font}pt numeric block");
     Assert.AreEqual(expected + MeterColumnLayout.NameAreaMinWidthDip, layout.MinimumWindowWidth, $"{font}pt minimum");
   }

@@ -4,7 +4,7 @@
 // are pure pixel arithmetic on purpose: the window that calls them converts its own DIP size through the stage's DPI and reads every
 // screen figure from MonitorFromWindow, which is Windows-only plumbing (`DamageMeterSettingsWindow`); the arithmetic is what decides
 // whether the panel is on screen and how far apart the pair sits.
-// docs/DesignNotes.md → "Damage meter column switches: four hideable numbers, zero width when off".
+// docs/DesignNotes.md → "Damage meter column switches: hiding one reserves no width".
 
 namespace EQLogParser;
 
