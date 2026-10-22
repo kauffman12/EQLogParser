@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 
 namespace EQLogParser
 {
@@ -92,7 +93,10 @@ namespace EQLogParser
       return node.Type switch
       {
         ConditionTokenType.String => node.StringValue,
-        ConditionTokenType.Number => node.NumberValue.ToString(),
+        /* Invariant on purpose: the string comes back through TextUtils.ParseDouble, which accepts only '.'.
+         * A comma-decimal locale used to render 3.5 as "3,5", parse to NaN and make every numeric comparison
+         * against a number literal answer false. */
+        ConditionTokenType.Number => node.NumberValue.ToString(CultureInfo.InvariantCulture),
         ConditionTokenType.Boolean => node.BooleanValue ? "true" : "false",
         ConditionTokenType.Null => null,
         _ => null,

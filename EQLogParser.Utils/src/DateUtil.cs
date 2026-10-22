@@ -178,7 +178,7 @@ namespace EQLogParser
             return 0;
           }
 
-          var label = char.ToLower(segment[^1]);
+          var label = char.ToLowerInvariant(segment[^1]);
           var valueStr = segment.Length > 1 ? segment[..^1] : "0";
           var value = TextUtils.ParseUInt(valueStr, uint.MaxValue);
 
