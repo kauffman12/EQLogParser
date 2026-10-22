@@ -89,6 +89,40 @@ public sealed class ThreadBoundaryTest
   }
 
   [TestMethod]
+  [DataRow(false, false)]
+  [DataRow(true, false)]
+  [DataRow(false, true)]
+  [DataRow(true, true)]
+  public void ApplicationFallbackHoldsBothFormattingAndListenerFailures(bool failTrace, bool failFormatting)
+  {
+    using var listener = new ReportingTraceListener(failTrace);
+    Trace.Listeners.Add(listener);
+    try
+    {
+      Exception failure = failFormatting ? new ThrowingMessageException() : new IOException("disk unavailable");
+      ThreadBoundary.TraceFailure("application exception report", failure);
+    }
+    finally
+    {
+      Trace.Listeners.Remove(listener);
+    }
+
+    if (failFormatting)
+    {
+      Assert.AreEqual(0, listener.Attempts, "formatting must be inside the non-throwing boundary too");
+    }
+    else
+    {
+      Assert.IsGreaterThanOrEqualTo(1, listener.Attempts);
+      if (!failTrace)
+      {
+        StringAssert.Contains(listener.Output, "application exception report");
+        StringAssert.Contains(listener.Output, "disk unavailable");
+      }
+    }
+  }
+
+  [TestMethod]
   public void NoteCapsAnExistingCatchBlockTheSameWay()
   {
     // The form used by lanes that already own a catch (chat archive, follow poll, trigger lanes): same voice, same cap.

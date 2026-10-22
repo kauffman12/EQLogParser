@@ -30,11 +30,7 @@ internal sealed class DamageMeterCalculation
   private MeterDamageFilter _filter;
   private MeterDirectionTotals _damage = new(false);
   private MeterDirectionTotals _tank = new(true);
-  /*
-   * The rolling window's right edge in LOG seconds. Forward-only inside a run; only the invalidation reset in UpdateCore
-   * re-anchors it, so a life leaving scope can leave the edge ahead of the data (a late fact behind it is refused, never
-   * mistaken for a current one).
-   */
+  // The last input's log-time edge. The lifecycle owns its continuity across windows; accounting only caches it.
   private long _windowEdge = MeterRecentWindow.NoSecond;
   // Unresolved rolling damage from the last publish, kept out of the totals objects because Clear() throws those away.
   private long _recentUnresolved;
@@ -82,7 +78,7 @@ internal sealed class DamageMeterCalculation
     cancellation.ThrowIfCancellationRequested();
     var filter = MeterDamageFilter.Current;
     if (!ReferenceEquals(_facts, input.Facts) || _firstOrdinal != input.FirstOrdinal
-      || _from != input.From || _filter != filter || input.To < _to
+      || _from != input.From || _filter != filter || input.To < _to || input.WindowSecond < _windowEdge
       || double.IsFinite(_future) && input.To >= _future || !AnswersMatch(input.Index, cancellation)
       || !ReferenceEquals(_index, input.Index) && !TryRebind(input, cancellation))
     {
@@ -99,14 +95,8 @@ internal sealed class DamageMeterCalculation
     _filter = filter;
     _firstOrdinal = input.FirstOrdinal;
 
-    // Log time alone advances RDPS. The host never passes a PC timestamp as an accounting bound.
-    var dataEdge = MeterRecentWindow.NoSecond;
-    foreach (var header in input.Lives)
-    {
-      var last = MeterRecentWindow.SecondOf(header.Last);
-      if (last > dataEdge) dataEdge = last;
-    }
-    if (dataEdge > _windowEdge) _windowEdge = dataEdge;
+    // A cold build and a continued build answer the same captured log-time question.
+    _windowEdge = input.WindowSecond;
 
     try
     {
@@ -303,10 +293,7 @@ internal sealed class DamageMeterCalculation
     return true;
   }
 
-  /*
-   * Replacing the aggregates is not time passing: `_windowEdge` and each slice's buckets ride across it in either direction,
-   * so a reconstruction may not age the window. Clear() drops the edge — that is a capture ending.
-   */
+  // Replacing aggregates does not move the input's log-time edge or the retained slices' buckets.
   private void ResetTotals()
   {
     _damage = new MeterDirectionTotals(false);

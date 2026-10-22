@@ -28,6 +28,10 @@ internal static class MeterPanelPlacement
     return Math.Clamp(panelLeft + growth, workLeft, Math.Max(workLeft, workRight - panelWidth));
   }
 
+  // A drag must clamp even when width did not grow or the companion is docked to the left.
+  internal static int FollowLeft(int panelLeft, int panelWidth, int workLeft, int workRight)
+    => Math.Clamp(panelLeft, workLeft, Math.Max(workLeft, workRight - panelWidth));
+
   // Clamp after applying the drag delta so the panel cannot trail below its current monitor's work area.
   internal static int FollowTop(int panelTop, int panelHeight, int workTop, int workBottom)
     => Math.Clamp(panelTop, workTop, Math.Max(workTop, workBottom - panelHeight));

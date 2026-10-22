@@ -4,6 +4,7 @@
 // deliberately do not exist here: the way out is two named decisions, exactly like the FCT panel.
 
 using log4net;
+using Syncfusion.Windows.Shared;
 using System;
 using System.Collections.Generic;
 using System.Windows;
@@ -11,7 +12,6 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
-using Syncfusion.Windows.Shared;
 
 namespace EQLogParser
 {
@@ -146,6 +146,8 @@ namespace EQLogParser
 
       left = MeterPanelPlacement.FollowWidth(left, panel.Right - panel.Left, stage.Left, growth,
         work.Left, work.Right);
+      if (dx != 0 || dy != 0)
+        left = MeterPanelPlacement.FollowLeft(left, panel.Right - panel.Left, work.Left, work.Right);
       var top = MeterPanelPlacement.FollowTop(panel.Top + dy, panel.Bottom - panel.Top, work.Top, work.Bottom);
       if (left != panel.Left || top != panel.Top) MovePanel(left, top);
       else ResetNativeFailure();

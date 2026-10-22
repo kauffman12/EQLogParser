@@ -237,12 +237,19 @@ These checks still require Windows for popup/hide behavior. See DesignNotes → 
   second, so with nothing arriving the board is static — and then the whole board must close at once when that deadline passes (On Kill:
   ~30 s after receipt of the last accepted record, regardless of its log timestamp). Rows dropping out one by one, or a raid total shrinking while nobody is hitting anything, is the
   old wall-clock pruning coming back.
+- [ ] **Enable verifies a settled disabled capture:** disable the meter, capture eligible combat, and let derivation settle with no
+  further input. Enable before the receipt's timeout: the worker must verify and open it without needing another log line. Repeat
+  after the timeout: enabling must not renew the receipt or show expired damage. Disabling again before verification finishes must
+  prevent opening. This checks the real gesture wiring; the headless receipt test checks only cache/freshness semantics.
 - [ ] **A one-shot shows its numbers**: kill a low-HP mob in a single hit (or open the overlay a second after a pull you already won).
   The board must appear with the killing blow included, even if no live frame was ever painted. It must not reopen repeatedly for that kill.
 - [ ] **The next pull starts fresh before the display hold ends**: kill A and attack B within eight seconds. B's totals/time must exclude A,
   without needing the overlay to hide first. Repeat with A and B sharing a name and with both appearing in one log second.
 - [ ] **A survivor keeps its own totals**: damage A and B, then kill A. B retains all of its earlier damage/time. Wait 12 seconds and hit
   B again without a death: it is still the same total. Check the tanking view too; A's incoming-damage contribution must disappear.
+- [ ] **Reopening cannot revive old RDPS:** hit A for 600 at log second 100, hit B at 110, then kill B while A remains alive.
+  A retains its encounter damage but contributes zero RDPS at the established second-110 edge. Reopen the meter and force a filter
+  recount without new damage: it must still contribute zero. Repeat for Tank; a death itself must not advance the RDPS edge.
 - [ ] **An unchanged completed board stays unchanged**: finish a fight longer than eight seconds and reopen the overlay promptly.
   Refreshes must not lose its early hits; the final display disappears after its grace period.
 - [ ] **Our own deaths do not close it**: get a party member or your own pet killed while the overlay is open and keep fighting. The
@@ -252,6 +259,10 @@ These checks still require Windows for popup/hide behavior. See DesignNotes → 
   a continuous fight never blanks mid-pull. At 3 s, attacks two seconds apart (including a new opponent) must both remain
   counted even when projection briefly lags; then stop attacking and verify that three seconds of real silence hides and resets
   it without extra grace. Known NPC-only noise must not extend that timeout while projection is behind.
+- [ ] **A missed timed gap still resets**: at 3 s, close the meter after an attack, wait more than three seconds, then attack
+  continuously for longer than three seconds before reopening. Only the entire new run counts, not the old attack and not just its
+  last three seconds. Repeat with Tank and with two receipts sharing a log timestamp. Pause the receipt worker for over 120 seconds:
+  continuous eligible arrivals preserve the accumulation; a genuine quiet gap removes only the earlier run. A quiet log adds no backlog.
 - [ ] **Log time and receipt time are independent**: feed identical damage with timestamps behind and ahead of the PC clock.
   Damage, DPS, RDPS and Sec must agree, without waiting for the clock to reach future-dated hits. With a ten-second reset, a line received
   eight seconds late must still buy ten seconds from receipt. During silence, filter/rebuild requests must not renew that deadline.
@@ -413,7 +424,9 @@ elapsed seconds always draw. The table, the defaults and the zero-width law are 
   Repeat initial opening and width increases on secondary monitors **right and left** of the primary, including different DPI scales: Setup must stay on the chosen
   monitor, never jump back to the primary, and keep its gap until its own work-area edge requires clamping. Drag the pair between those monitors and resize again. Drag the stage down toward the taskbar and back: Setup keeps its bottom edge on
   the monitor the pair is on rather than trailing off screen, and it moves again when the stage comes back up (a clamp that parked it
-  would read as a stuck panel).
+  would read as a stuck panel). Drag horizontally without resizing toward each screen edge and back, with the panel on either side:
+  its left/right edges must clamp to the stage monitor's work area and release on reversal. Repeat with negative desktop coordinates
+  and mixed DPI; width-only narrowing and growth away from a left-docked panel must still leave it stationary.
   Where a work area is too narrow for stage plus panel on **both** sides (a small secondary monitor with a wide meter), the panel pins to that work area's LEFT edge and
   overlaps the stage — reachable beats tidy, and it must never come out off screen. With a debugger, force rectangle-read, work-area-read
   and native-move failures separately: configure stays usable, the failed attempt leaves the panel stationary, and subsequent successful
@@ -571,6 +584,9 @@ Two behaviours depend on state a headless test cannot build; both have shipped b
 - [ ] **Mode switches and CSV:** run `LineChartSelectionTest` on Windows. Switching between rolling and aggregate modes
   must preserve original aggregate totals and buckets. Rolling CSV includes the quiet transition points shown on the chart.
   Across a gap over 30 seconds, instantaneous lines retain their existing zero markers and aggregate damage never drops to zero.
+- [ ] **Out-of-order recovery:** exercise a chart UPDATE with bucket timestamps 100, 104, 102, 105. Group/player plots and CSV must
+  ascend, preserve every amount and expire the second-102 contribution at 108. Previously drawn point objects must remain unchanged;
+  a late hit that bridges a long gap must cause cumulative rates and synthetic gap markers to be rebuilt together.
 - [ ] **Rendering cost:** zoom in on quiet transitions and check responsiveness on a long multi-fight selection. Rolling
   modes add transition/endpoints, not every empty second; aggregate/instantaneous point counts are unchanged. Linux tests
   cannot verify Syncfusion rendering performance.

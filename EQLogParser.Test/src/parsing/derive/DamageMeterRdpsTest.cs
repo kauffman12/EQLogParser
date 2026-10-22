@@ -275,6 +275,55 @@ public partial class DamageMeterCalculationTest
   }
 
   [TestMethod]
+  [DataRow(false)]
+  [DataRow(true)]
+  public void WithdrawingTheNewestLifeCannotReviveOlderDamageAfterAColdBuildOrReopen(bool incoming)
+  {
+    var log = new Capture();
+    log.Add(incoming ? "a rat" : "Illuminai", incoming ? "Illuminai" : "a rat", 100, 600);
+    log.Add(incoming ? "a bat" : "Illuminai", incoming ? "Illuminai" : "a bat", 110, 600);
+    log.Check(110, compareFresh: true);
+    log.Facts.AddDeath(new DeathFact(0, (long)(T0 + 111), log.Facts.InternName("a bat"), -1));
+    log.Check(111, compareFresh: true);
+    AssertRatesAgreeWithAColdBuild(log);
+    Assert.IsNotNull(log.Last);
+    var rates = incoming ? log.Last.TankRdps : log.Last.DamageRdps;
+    Assert.AreEqual(0L, rates.Total);
+    Assert.AreEqual((long)(T0 + 110), rates.WindowSecond, "death and withdrawal cannot rewind or advance the damage edge");
+
+    var state = log.Lifecycle.Copy();
+    log.Calculation.Clear();
+    var rows = log.Project();
+    Assert.IsTrue(state.TrySelect(1, rows, T0 + 112, 0, log.Arrivals.Latest(log.Facts, log.Timeline),
+      log.Facts.FactCount, out var scope));
+    var rebuilt = log.Calculation.Update(log.Cache.Index.CaptureMeterInput(scope.Rows, log.Facts, scope.FromTime,
+      double.PositiveInfinity, scope.FirstOrdinal, scope.WindowSecond));
+    Assert.IsNotNull(rebuilt);
+    Assert.AreEqual(0L, (incoming ? rebuilt.TankRdps : rebuilt.DamageRdps).Total);
+    DamageMeterAssert.Equal(log.Last, rebuilt);
+
+    // A filter recount is also a cold walk, not permission to move log time backwards.
+    var bane = AppSettings.IsBaneDamageEnabled;
+    try
+    {
+      AppSettings.IsBaneDamageEnabled = !bane;
+      log.Check(112, compareFresh: true);
+      AssertRatesAgreeWithAColdBuild(log);
+      Assert.AreEqual(0L, incoming ? TankRdps(log, "Illuminai") : DamageRdps(log, "Illuminai"));
+    }
+    finally
+    {
+      AppSettings.IsBaneDamageEnabled = bane;
+    }
+
+    log.Lifecycle.Reset(1, log.Facts.FactCount);
+    log.Add(incoming ? "a rat" : "Illuminai", incoming ? "Illuminai" : "a rat", 100, 300, receivedAt: 113);
+    log.Check(113, compareFresh: true);
+    AssertRatesAgreeWithAColdBuild(log);
+    Assert.AreEqual(50L, incoming ? TankRdps(log, "Illuminai") : DamageRdps(log, "Illuminai"));
+  }
+
+  [TestMethod]
   public void ChangingTheDamageFilterRebuildsTheRollingAnswerWithTheEncounterAnswer()
   {
     var previous = AppSettings.IsBaneDamageEnabled;

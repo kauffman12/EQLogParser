@@ -6952,8 +6952,8 @@ alone never launders other verdicts, and tests must reach for an evidence line (
 
 Verdicts are asked from several threads at once — menu enables on the UI thread (`DeriveEngine.LiveKindAt`/`LiveOwnerOf`), the Names
 census, a "players only" grid inside a `Task.Run`, and the meter's suffix scans (`MeterArrivals.Read`, `OverlayPendingActivity`,
-`MeterActivityIndex`) deciding sides off `DerivedSnapshot.Timeline`. None of them takes a read lock, and they must not: the rule book
-asks a name's identity millions of times per pass and an uncontended lock moves a pass by tens of percent. What protects them is that
+`MeterActivityIndex`) deciding sides off `DerivedSnapshot.Timeline`. Published reads require no lock; `LiveKindAt` and `LiveOwnerOf`
+still take `SyncRoot` as defensive wrappers. The rule book's millions of lookups remain lock-free. What protects these reads is that
 **no published timeline has a writer**. Every expensive pass builds a fresh `EntityTimeline` (the carry holds rule *aggregates*, never
 a store), fills it while nothing else can reach it, calls `Freeze()`, and publishes it by reassignment into `_carriedTimeline` and the
 snapshot; cheap passes run no rule book at all. An operator's verdict follows the same law: it goes to `IdentityOverrideStore` and asks
@@ -7153,14 +7153,22 @@ Otherwise an old positive hit followed by a recent miss could admit a life on th
 an accumulation. `TimedInitialBoundIsAppliedBeforeTheFirstPublication` pins first opening, Reset and timed expiry in both directions.
 
 **Receipt is recorded at ingest, not at recount.** `CombatCapture` notifies the host after a damage fact is published. `MeterArrivals`
-records its ordinal range against `Stopwatch` time, grouped into millisecond batches with sub-millisecond truncation, retaining 120 seconds
-(longer than the longest supported 90-second mode). Workers find the newest eligible receipt using the same admission predicate as pending
-combat. Filters/verdict changes can reconsider eligibility but use the original receipt time; polling, rebuilding, and reopening cannot
-restamp it. NPC-only noise and excluded outgoing damage do not renew it; incoming damage and accepted avoidance remain eligible.
+records its ordinal range against `Stopwatch` time, grouped into millisecond batches with sub-millisecond truncation. **Unexamined batches
+never age out.** A stalled or disabled worker may accumulate metadata only while new damage facts arrive; a quiet log and duplicate notifications
+add nothing. After successful verification, batches older than 120 seconds relative to the newest receipt fold into a compact checkpoint
+before retirement. The recent window exceeds every supported mode (configuration accepts 1–100 seconds); long-backlog list capacity is released too.
+Workers inspect each batch's first and last eligible ordinal using the same admission predicate as pending combat. `MeterReceiptRuns` keeps the
+latest eligible receipt and one reset cut for each supported quiet period, so changing modes needs no discarded history. A gap must be strictly
+longer than the mode to cut; the cut keeps the first eligible ordinal after that gap, not merely the newest hit. The summaries copy with each read,
+and only a completed, still-current read acknowledges its prefix. Cancellation, failure and input invalidation retire nothing.
+Filters/verdict changes recheck the retained window from the historical checkpoint using original receipt times, not the time of reconsideration.
+Already-retired history keeps its verified boundaries; it cannot be retrospectively reclassified from discarded receipt metadata. Polling,
+rebuilding, and reopening never restamp receipt. NPC-only noise and excluded outgoing damage do not renew it; incoming damage and accepted avoidance
+remain eligible.
 `BeginRead` copies only unchecked receipt-batch metadata under the receipt lock; `Read.Complete` decodes and checks a fixed
 ordinal prefix outside both that lock and the capture gate, with cancellation checks between bounded batches. Ingest can extend even
 the copied read's last millisecond batch without changing its question. Completion acknowledges only that prefix; an older read cannot
-overwrite a newer read's publication, changed verdict/filter inputs invalidate the read, and pruned receipts cannot be published fresh.
+overwrite a newer read's publication, changed verdict/filter inputs invalidate the read, and receipts outside the recent window cannot be published fresh.
 An expiry cuts at the **checked** captured prefix, including its pending records, never damage appended while that scan ran.
 The lifecycle checkpoint also carries the last verified receipt as a scalar: if pruning later returns `None`, its original deadline still
 retires the expired accumulation. `None` from exclusions is not permission to cut early; restoring a filter within that deadline may
@@ -7180,10 +7188,13 @@ from the former log-timestamp-age gate. Heal, cast, taunt, death, filter and re-
 `MeterClockSeparationTest`, `MeterArrivalsTest`, and `PendingMembershipStaysFrozenUntilTheWholeBoardExpires` pin these boundaries.
 
 Opening uses receipt freshness. `LiveDamageObserved` advances by the newest eligible received ordinal: two arrivals within one log
-second are distinct, while a death-only republish or a rebuild spends no new receipt. `DerivedMeter` is only the app seam; there is no
+second are distinct, while a death-only republish or a rebuild spends no new receipt. Enabling with an empty/stale verified cache asks
+for a full pass before attempting to open: verification is skipped while disabled, and an unchanged capture otherwise owes no pass.
+That worker verifies the original receipts; enabling never restamps them. `EnablingNeedsWorkerVerificationBeforeAnUnobservedReceiptCanOpenTheMeter`
+pins the cache/freshness contract; the actual Enable gesture is a Windows release check. `DerivedMeter` is only the app seam; there is no
 engine-selection setting or legacy fallback.
 
-The lifecycle retains only session id, scalar reset bounds and the last verified receipt, never engines or rows. X-close/reopen preserves those bounds;
+The lifecycle retains only session id, scalar reset bounds, the established RDPS log-time edge and the last verified receipt, never engines or rows. X-close/reopen preserves those values;
 a new capture discards them. Reset cuts at the click; display/capture revisions reject obsolete worker results. A null answer
 hides the board rather than retaining old stats indefinitely, and a missing damage/tanking half clears its old bars.
 
@@ -7193,7 +7204,14 @@ Its timed-mode example selects five killed mobs over several minutes with every 
 idle wall time to the denominator. Windows popup/hide verification remains in ReleaseChecklist → "Damage overlay checks on Windows".
 
 Short timed resets keep their legacy duration: the operator confirmed in 2.4.1 that three seconds without an attack hides and
-resets the meter. There is no extra timed display grace. A separate regression came from projection lag: attacks at seconds 0
+resets the meter. There is no extra timed display grace. **A quiet gap resets even if no poll saw it.** Receipt at 100 followed by 110
+with a three-second mode cuts before the latter run, whether the window was closed, the worker was stalled, or this is its first opening.
+The lifecycle applies that ordinal cut and refreshes bounded activity before counting. Unlike an initial log-time slice, an observed receipt-run
+boundary retains the entire new run, even when it already spans longer than the mode; equal or backwards log timestamps cannot blur the cut.
+An explicit Reset or an already-observed expiry remains a forward-only floor. `MeterQuietGapTest.cs` covers missed gaps in both directions,
+first opening, same-second records, exact threshold equality, long uninterrupted backlogs, and pending new damage. `MeterArrivalsTest` pins
+retention/compaction, per-mode history, quiet logs, filter reconsideration, partial-batch growth and cancelled retries.
+A separate regression came from projection lag: attacks at seconds 0
 and 2, followed by a tick at 3.1 still reading the first snapshot, advanced the reset boundary past the already captured second
 attack. Each snapshot stamps its processed damage count under the ingest gate. Its `OverlayPendingActivity` walks only the
 unprojected suffix on the meter worker, once per ordinal, and uses the **same admission rule as projection**
@@ -7273,7 +7291,7 @@ percentages or Copy Parse; boards, charts and exports do not read it. Its column
 column (see "Damage meter column switches" below); the rate itself keeps being calculated while its column is off.
 
 ```text
-edge = floor(newest LastTime among the lives counted), advancing within a calculation run
+edge = max(previous established edge, floor(newest LastTime among the lives counted))
 recentDamage = eligible damage in log seconds [edge - 5, edge], inclusive
 RDPS = recentDamage / 6
 ```
@@ -7298,9 +7316,12 @@ after a six-second ingest stall. Receipt-based **visibility**, described above, 
   replace stale colliding labels, and keep in-window late arrivals on their own labels.
 - Advance every retained life before reading, even when its cursor is unchanged: another life may have moved the common edge.
   Summation independently checks `[edge - 5, edge]`. A repeated life in one input is counted only once.
-- The edge moves forward within a run. Removing a life or rebuilding aggregates does not rewind it. Invalidation (capture,
-  prefix/bounds, filter or relevant verdict change) can re-anchor it. Projection's `LastTime` covers both directions, so in-order
-  facts do not lie ahead of their own captured header. An unusable edge contributes nothing.
+- The lifecycle owns the forward-only edge and copies it through `MeterLifecycleCheckpoint`; `DamageOverlayScope.WindowSecond`
+  reaches `MeterFactInput` beside the selected lives. Removing a life, rebuilding accounting, changing a filter or reopening a window
+  cannot rewind it. Explicit Reset, timed expiry and a new capture clear it. Death does not advance it. Projection's `LastTime` covers
+  both directions, so in-order facts do not lie ahead of their own captured header. An unusable edge contributes nothing.
+  Standalone bounded calculation queries derive their edge from their captured headers and upper log-time bound; a changed question
+  that moves that edge backwards rebuilds buckets rather than trying to recover amounts already aged out.
 - Removing a life removes its rolling contribution too. Compatible projection rebinding retains its buckets; incompatible state
   reconstructs from facts. Reset applies the same captured-ordinal cut to encounter and rolling amounts. Cancellation/failure
   discards partial state. No warm-up or second history reader is needed.
@@ -7331,6 +7352,12 @@ Save persists the coerced width, and nothing auto-shrinks. Those figures are the
 from the visible set, so a meter showing `Damage`/`DPS`/`Sec` (the shipped default) floors at 165 + 96 = **261 DIP** at 12 pt.
 The live header may raise those floors to keep its toolbar beside the numbers. Header alignment remains a Windows gate,
 and switching columns is its own section below.
+
+**An old hit cannot become recent when another opponent dies.** With A's 600 at second 100 and B's 600 at 110, withdrawing B
+leaves the established edge at 110: A still contributes zero RDPS. Keeping that edge only in the disposable calculator once made
+reopening reconstruct edge 100 and revive A's old 600. The lifecycle now supplies the same edge to cold and continued calculations.
+`WithdrawingTheNewestLifeCannotReviveOlderDamageAfterAColdBuildOrReopen` pins both directions, lifecycle copy, calculator clearing,
+filter recount and explicit Reset; encounter totals remain unchanged.
 
 **Known separate defect:** a fact earlier than a row's first sighting can invert its activity span: the full-build reference
 returned **−1 seconds**, versus **0 seconds / DPS `long.MaxValue`** in the meter. The result was byte-identical with RDPS stashed.
@@ -7403,7 +7430,7 @@ Two laws:
 The row-only minimum is the **visible** block plus `MeterColumnLayout.NameAreaMinWidthDip`, and that figure is deliberately **chrome-free**: it is what the Setup stage
 and a windowless meter ask for, with the border coming out of the rounded allowance. The live header also needs room for its separate toolbar:
 `MinimumWindowWidthFor` uses the larger of that name allowance and **measured toolbar content width + horizontal chrome + four DIP gap**, and chrome is spent against
-whichever branch wins, never twice. Because the window derives `MinWidth` from these figures, the `MinWidth="300"` in the overlay's markup no longer binds: with columns
+whichever branch wins, never twice. The window derives `MinWidth` from these figures; the overlay markup declares no minimum width. With columns
 hidden the meter goes narrower than it ever used to, which is a Windows gate to look at, not a floor to re-tighten. The toolbar's content
 `SizeChanged` re-asks the floor; positioning re-asks after DPI changes, converting toolbar width through physical pixels into meter DIPs. No guessed button widths
 or native-window minimums enter the measurement. Setup has no live toolbar and keeps the row-only floor; reopening live may widen a narrow saved stage. Nothing
@@ -7414,7 +7441,10 @@ a left-docked panel alone. Both halves of that arithmetic are **pure pixel funct
 for growth — pinned by `MeterPanelPlacementTest`, so a monitor-geometry question is answered there instead of on a screen. Initial docking uses the **stage's monitor**,
 not the primary screen (what was removed read `SystemParameters.WorkArea`: the PRIMARY work area, in DIPs); width-only following clamps to the **panel's monitor**.
 Drag deltas, window rectangles, work areas and native moves all use screen pixels, including negative desktop coordinates, so different DPI scales cannot mix a DIP width
-with a pixel boundary. Move/size events share one previous rectangle and cannot spend a delta twice; both subscriptions detach on close — and they attach **before** any
+with a pixel boundary. A drag clamps both axes to the stage monitor's work area, even without width growth or with a left-docked panel;
+`FollowLeft` and `FollowTop` keep the panel reachable and release it when the drag reverses. Width-only changes retain the separate
+`FollowWidth` rule: neither narrowing nor growth away from a left-docked panel moves it. `MeterPanelPlacementTest` pins both axes,
+negative monitor origins, oversized panels and pixel scaling. Move/size events share one previous rectangle and cannot spend a delta twice; both subscriptions detach on close — and they attach **before** any
 docking attempt, so a rectangle read that fails at opening costs the initial dock only rather than deafening the panel for the rest of configure. A failed native read or
 move costs one WARN per failure episode (repeats raise only a Debug count) and leaves the companion stationary for that attempt: it
 never throws out of a move/size handler and never moves against an unchecked work area — a work-area read that fails while both
@@ -10175,7 +10205,9 @@ escape `Note`. The original site/type cap remains spent, so a failed reporter do
 `ReportingFailuresCannotEscapeEvenWhenTheTraceFallbackAlsoFails` pins both `Guard` and direct `Note`, with working and throwing fallback listeners.
 
 **The nets themselves may not need a net.** In all three handlers the statement that keeps the application alive (`Handled`, `SetObserved`) is executed before
-any reporting, and a failure while reporting goes to `Trace` rather than propagating: a locked log file or a full disk must not turn into a second crash that
+any reporting, and a failure while reporting goes through `ThreadBoundary.TraceFailure` rather than propagating. Both exception formatting and Trace listeners
+are inside its catch; passing an already-formatted interpolated exception would leave formatting outside the boundary. Splash-report failures use the same door.
+`ApplicationFallbackHoldsBothFormattingAndListenerFailures` pins this fallback. A locked log file or a full disk must not turn into a second crash that
 carries the first exception's context away with it. (`SetObserved()` used to sit below the Syncfusion EditControl early-return, so that case — the one this
 handler exists to swallow — was never actually marked.)
 
@@ -18650,8 +18682,14 @@ Gaps greater than the existing 30-second threshold still produce exactly two mar
 markers retain cumulative amounts, hit counts and rates. They have zero attempts and therefore cannot buy activity time.
 Short gaps count their elapsed seconds; a long gap adds only the next occupied second. A finished bucket is detached from
 the input record and from future publications. Damage, healing, tanking, player-plus-pets and raid share this calculation.
-A backwards timestamp cannot subtract activity time or abort painting: `ChartActivityClock` keeps its last timestamp and duration,
-warns on the first offending pair and counts every refusal in `OutOfOrder`. `OutOfOrderRecordsDegradeTheClockInsteadOfThrowing` pins this boundary.
+`ChartActivityClock` keeps its last timestamp and duration when an input goes backwards, warns on the first offending pair and counts
+regressions in `OutOfOrder`. That guard alone cannot make a backwards bucket safe for the ascending group/rolling walkers.
+`ChartSeriesBuilder` switches to `ChartSeriesRecovery` on the first backwards record: seed per-timestamp amount/count buckets from
+real published points, exclude synthetic markers, merge further records at their actual timestamps, and rebuild in sorted order on
+`Finish`. The rebuild uses the ordinary bucket fold, recomputing cumulative amounts, durations, rates and gap markers together.
+Only this anomalous path allocates the recovery dictionary or sorts; ordinary input keeps its streaming path. No record is retained,
+dropped or relabelled, and previously published point objects are never mutated. `ChartSeriesRecoveryTest` pins the full builder → group
+merge → rolling path, real expiry seconds, late hits bridging gaps, same-time merges, misses, fractional times and repeated flushes.
 
 Group merging uses the same inclusive clock over actual group activity, ignoring marker-only timestamps. Cumulative
 member values carry forward, while bucket amounts/counts contribute only at their own timestamp. Rolling values are

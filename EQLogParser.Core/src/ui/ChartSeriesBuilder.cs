@@ -5,7 +5,7 @@ using System.Reflection;
 
 namespace EQLogParser;
 
-/// <summary>Folds time-ordered records into sparse chart buckets without retaining the input records.</summary>
+/// <summary>Folds records into ordered sparse chart buckets without retaining the input records.</summary>
 internal sealed class ChartSeriesBuilder(string name, string playerName = null)
 {
   private const int GapMarkerOffsetSeconds = 6;
@@ -13,53 +13,35 @@ internal sealed class ChartSeriesBuilder(string name, string playerName = null)
   private readonly DataPoint _current = new() { Name = name, PlayerName = playerName };
   private readonly ChartActivityClock _clock = new();
   private bool _pending;
+  private ChartSeriesRecovery _recovery;
 
   internal List<DataPoint> Points { get; } = [];
 
   internal void Add(DataPoint record, bool isCrit, bool isTwincast, bool isHit)
   {
-    if (_clock.Seconds > 0 && record.CurrentTime != _current.CurrentTime)
+    var bucket = new ChartBucket(record.CurrentTime, record.Total, 1, isHit ? 1 : 0,
+      isHit && isCrit ? 1 : 0, isHit && isTwincast ? 1 : 0);
+    if (_recovery is null && _clock.Seconds > 0 && record.CurrentTime < _current.CurrentTime)
     {
       Finish();
-      if (record.CurrentTime - _current.CurrentTime > FightProjection.EngagementGapS)
-      {
-        // Gap markers zero the bucket, never the cumulative amounts or their denominators.
-        Points.Add(Snapshot(_current.CurrentTime + GapMarkerOffsetSeconds, true));
-        Points.Add(Snapshot(record.CurrentTime - GapMarkerOffsetSeconds, true));
-      }
-      _current.TotalPerSecond = 0;
-      _current.AttemptsPerSecond = 0;
-      _current.HitsPerSecond = 0;
-      _current.CritsPerSecond = 0;
-      _current.TcPerSecond = 0;
+      _recovery = new ChartSeriesRecovery(_current.Name, _current.PlayerName, Points);
     }
-
-    _clock.Add(record.CurrentTime);
-    _current.CurrentTime = record.CurrentTime;
-    _current.Total += record.Total;
-    _current.FightTotal += record.Total;
-    _current.TotalPerSecond += record.Total;
-    _current.AttemptsPerSecond++;
-    if (isHit)
+    if (_recovery is not null)
     {
-      _current.HitsPerSecond++;
-      _current.FightHits++;
-      if (isCrit)
-      {
-        _current.CritsPerSecond++;
-        _current.FightCritHits++;
-      }
-      if (isTwincast)
-      {
-        _current.TcPerSecond++;
-        _current.FightTcHits++;
-      }
+      _clock.Add(record.CurrentTime);
+      _recovery.Add(bucket);
+      return;
     }
-    _pending = true;
+    AddBucket(bucket);
   }
 
   internal void Finish()
   {
+    if (_recovery is not null)
+    {
+      _recovery.Finish(Points);
+      return;
+    }
     if (!_pending) return;
     var point = Snapshot(_current.CurrentTime, false);
     if (Points.Count > 0 && Points[^1].CurrentTime == point.CurrentTime) Points[^1] = point;
@@ -74,6 +56,38 @@ internal sealed class ChartSeriesBuilder(string name, string playerName = null)
     point.Avg = (long)Math.Round((decimal)point.FightTotal / point.FightHits, 2);
     point.CritRate = Math.Round((double)point.FightCritHits / point.FightHits * 100, 2);
     point.TcRate = Math.Round((double)point.FightTcHits / point.FightHits * 100, 2);
+  }
+
+  // The ordinary stream and the rare reordered rebuild use exactly the same bucket fold.
+  internal void AddBucket(ChartBucket bucket)
+  {
+    if (_clock.Seconds > 0 && bucket.Time != _current.CurrentTime)
+    {
+      Finish();
+      if (bucket.Time - _current.CurrentTime > FightProjection.EngagementGapS)
+      {
+        Points.Add(Snapshot(_current.CurrentTime + GapMarkerOffsetSeconds, true));
+        Points.Add(Snapshot(bucket.Time - GapMarkerOffsetSeconds, true));
+      }
+      _current.TotalPerSecond = 0;
+      _current.AttemptsPerSecond = 0;
+      _current.HitsPerSecond = 0;
+      _current.CritsPerSecond = 0;
+      _current.TcPerSecond = 0;
+    }
+    _clock.Add(bucket.Time);
+    _current.CurrentTime = bucket.Time;
+    _current.Total += bucket.Total;
+    _current.FightTotal += bucket.Total;
+    _current.TotalPerSecond += bucket.Total;
+    _current.AttemptsPerSecond += bucket.Attempts;
+    _current.HitsPerSecond += bucket.Hits;
+    _current.FightHits += (uint)bucket.Hits;
+    _current.CritsPerSecond += bucket.Crits;
+    _current.FightCritHits += (uint)bucket.Crits;
+    _current.TcPerSecond += bucket.Twins;
+    _current.FightTcHits += (uint)bucket.Twins;
+    _pending = true;
   }
 
   private DataPoint Snapshot(double time, bool gap)
@@ -112,7 +126,7 @@ internal sealed class ChartActivityClock
   private double _last = double.NaN;
   internal double Seconds { get; private set; }
 
-  /// <summary>Records refused for arriving behind the series' newest second. Zero is the only healthy answer.</summary>
+  /// <summary>Timestamp regressions refused by this clock; the series builder preserves and reorders their amounts.</summary>
   internal int OutOfOrder { get; private set; }
 
   internal void Add(double time)
@@ -121,7 +135,7 @@ internal sealed class ChartActivityClock
     {
       if (OutOfOrder++ == 0)
         Log.Warn($"chart clock: a record at {time:0.###} arrived behind this series' newest second ({_last:0.###}) "
-                 + "- the line is drawn from the newer second and further out-of-order records are counted, not printed");
+                 + "- the activity clock keeps its last second; further out-of-order records are counted, not printed");
       return;
     }
 

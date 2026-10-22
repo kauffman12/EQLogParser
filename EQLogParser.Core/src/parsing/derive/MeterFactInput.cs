@@ -10,7 +10,7 @@ internal sealed record MeterLifeInput(DerivedFight Source, string Name, int Id, 
   int DamageCount, int TankCount, int FirstOrdinal);
 
 internal sealed record MeterFactInput(FightFactIndex Index, DamageFactTable Facts,
-  IReadOnlyList<MeterLifeInput> Lives, double From, double To, int FirstOrdinal = 0);
+  IReadOnlyList<MeterLifeInput> Lives, double From, double To, int FirstOrdinal, long WindowSecond);
 
 internal readonly record struct MeterHit(string Attacker, string Defender, string Owner, string Type,
   short Modifiers, long Total, double Time);
@@ -18,11 +18,12 @@ internal readonly record struct MeterHit(string Attacker, string Defender, strin
 internal sealed partial class FightFactIndex
 {
   internal MeterFactInput CaptureMeterInput(IReadOnlyList<DerivedFight> lives, DamageFactTable facts,
-    double from, double to, int firstOrdinal = 0)
+    double from, double to, int firstOrdinal = 0, long windowSecond = MeterRecentWindow.NoSecond)
   {
     lock (_gate)
     {
       var result = new List<MeterLifeInput>(lives.Count);
+      var edge = windowSecond;
       foreach (var life in lives)
       {
         var damage = _damageOrdinals.TryGetValue(life, out var run) ? run.Count : 0;
@@ -30,8 +31,9 @@ internal sealed partial class FightFactIndex
         var tank = _tankingOrdinals.TryGetValue(life, out run) ? run.Count : 0;
         if (tank > 0) first = Math.Min(first, run[0]);
         result.Add(new MeterLifeInput(life, life.Name, life.Id, life.BeginTime, life.LastTime, damage, tank, first));
+        edge = Math.Max(edge, MeterRecentWindow.SecondOf(Math.Min(life.LastTime, to)));
       }
-      return new MeterFactInput(this, facts, result, from, to, firstOrdinal);
+      return new MeterFactInput(this, facts, result, from, to, firstOrdinal, edge);
     }
   }
 

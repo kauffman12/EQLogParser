@@ -40,14 +40,20 @@ internal static class ThreadBoundary
     }
     catch (Exception reporting)
     {
-      try
-      {
-        Trace.TraceError($"Could not report {ex.GetType().Name} at {site}: {reporting}");
-      }
-      catch (Exception)
-      {
-        // Trace listeners are extensible too; a last-resort reporter cannot depend on another reporter.
-      }
+      TraceFailure($"Could not report {ex.GetType().Name} at {site}", reporting);
+    }
+  }
+
+  /// <summary>Last-resort reporting: neither exception formatting nor a Trace listener may throw back to a caller.</summary>
+  internal static void TraceFailure(string message, Exception exception)
+  {
+    try
+    {
+      Trace.TraceError($"{message}: {exception}");
+    }
+    catch (Exception)
+    {
+      // Trace listeners are extensible too; a last-resort reporter cannot depend on another reporter.
     }
   }
 }

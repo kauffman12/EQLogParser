@@ -132,6 +132,36 @@ public sealed class MeterPanelPlacementTest
   }
 
   [TestMethod]
+  public void DraggingWithoutResizingClampsBothHorizontalEdgesAndReleasesOnReturn()
+  {
+    foreach (var origin in new[] { -1920, 0, 1920 })
+    {
+      var left = MeterPanelPlacement.FollowLeft(origin + 1910, PanelWidth, origin, origin + 1920);
+      Assert.AreEqual(origin + 1570, left, "rightward movement without width growth must stay reachable");
+      Assert.AreEqual(left - 100, MeterPanelPlacement.FollowLeft(left - 100, PanelWidth, origin, origin + 1920));
+      Assert.AreEqual(origin, MeterPanelPlacement.FollowLeft(origin - 100, PanelWidth, origin, origin + 1920));
+      Assert.AreEqual(origin + 100, MeterPanelPlacement.FollowLeft(origin + 100, PanelWidth, origin, origin + 1920));
+    }
+  }
+
+  [TestMethod]
+  public void DraggingAnOversizedPanelKeepsItsLeftEdgeReachable()
+  {
+    Assert.AreEqual(-400, MeterPanelPlacement.FollowLeft(-200, 600, -400, 0));
+    Assert.AreEqual(1920, MeterPanelPlacement.FollowLeft(2500, 600, 1920, 2300));
+  }
+
+  [TestMethod]
+  public void HorizontalDragClampingScalesInPixels()
+  {
+    foreach (var scale in new[] { 1.0, 1.5, 2.0 })
+    {
+      Assert.AreEqual((int)(1570 * scale), MeterPanelPlacement.FollowLeft((int)(1910 * scale),
+        (int)(PanelWidth * scale), 0, (int)(1920 * scale)));
+    }
+  }
+
+  [TestMethod]
   public void TheVerticalClampFollowsWhicheverMonitorThePairIsOn()
   {
     // A monitor stacked below the primary has its own work area; a panel dragged down onto it clamps there, not at the primary's bottom.

@@ -22,6 +22,20 @@ public sealed class MeterArrivalsTest
   public void Cleanup() => AppSettings.IsBaneDamageEnabled = _bane;
 
   [TestMethod]
+  public void EnablingNeedsWorkerVerificationBeforeAnUnobservedReceiptCanOpenTheMeter()
+  {
+    Add(100, LabelTypes.Melee);
+    Assert.IsFalse(DamageOverlayLifecycle.HasRecentActivity(_arrivals.Observed, 105, 10),
+      "a disabled meter may have fresh captured damage but no verified opening cache");
+
+    _ = _arrivals.Latest(_facts, _timeline);
+    Assert.IsTrue(DamageOverlayLifecycle.HasRecentActivity(_arrivals.Observed, 105, 10));
+    Assert.AreEqual(new MeterArrival(1, 100), _arrivals.Observed, "verification must keep the ingest timestamp");
+    Assert.IsFalse(DamageOverlayLifecycle.HasRecentActivity(_arrivals.Observed, 111, 10),
+      "enabling is not a fresh receipt");
+  }
+
+  [TestMethod]
   public void ReadingRebuildingAndChangingFiltersNeverRestampAReceipt()
   {
     Add(100, LabelTypes.Melee);
@@ -124,13 +138,13 @@ public sealed class MeterArrivalsTest
     var read = _arrivals.BeginRead(_timeline);
     using var cancelled = new CancellationTokenSource();
     cancelled.Cancel();
-    Assert.ThrowsExactly<OperationCanceledException>(() => read.Complete(_facts, cancelled.Token));
+    Assert.ThrowsExactly<OperationCanceledException>(() => read.Complete(_facts, cancellation: cancelled.Token));
     Assert.AreEqual(MeterArrival.None, _arrivals.Observed);
     Assert.AreEqual(new MeterArrival(1, 100), _arrivals.Latest(_facts, _timeline));
   }
 
   [TestMethod]
-  public void AReadCannotPublishReceiptsPrunedWhileItWasPaused()
+  public void AReadCannotPublishAReceiptAgedOutWhileItWasPaused()
   {
     Add(0, LabelTypes.Melee);
     var read = _arrivals.BeginRead(_timeline);
@@ -164,6 +178,78 @@ public sealed class MeterArrivalsTest
     Assert.AreEqual(MeterArrival.None, read.Complete(_facts));
     Assert.AreEqual(MeterArrival.None, _arrivals.Observed);
     Assert.AreEqual(new MeterArrival(1, 100), _arrivals.Latest(_facts, _timeline));
+  }
+
+  [TestMethod]
+  public void UnexaminedBatchesSurviveRetentionThenCompactWithoutLosingTheGap()
+  {
+    Add(0, LabelTypes.Melee);
+    for (var second = 10; second <= 3010; second += 2) Add(second, LabelTypes.Melee);
+    var read = _arrivals.BeginRead(_timeline);
+    Assert.HasCount(1502, read.Batches, "no unchecked receipt can age out, even during a long stall");
+    Assert.AreEqual(new MeterArrival(1502, 3010, 1), read.Complete(_facts, mode: 3));
+
+    _timeline.SetIdentity("Unrelated", IdentityKind.Player, RuleStrength.Manual, "manual");
+    var retained = _arrivals.BeginRead(_timeline);
+    Assert.HasCount(61, retained.Batches, "checked metadata outside the recent window is retired");
+    Assert.AreEqual(new MeterArrival(1502, 3010, 1), retained.Complete(_facts, mode: 3),
+      "rechecking retained data starts from the compact historical boundary");
+    Assert.AreEqual(new MeterArrival(1502, 3010), _arrivals.Latest(_facts, _timeline, mode: 10),
+      "each mode retains its own boundary, even when nobody was using that mode during the gap");
+  }
+
+  [TestMethod]
+  public void AQuietLogAndDuplicateNotificationsAddNoReceiptMetadata()
+  {
+    Add(100, LabelTypes.Melee);
+    _ = _arrivals.Latest(_facts, _timeline);
+    for (var second = 101; second < 1000; second++)
+    {
+      _arrivals.Record(1, second);
+      Assert.AreEqual(new MeterArrival(1, 100), _arrivals.Latest(_facts, _timeline));
+    }
+    _timeline.SetIdentity("Unrelated", IdentityKind.Player, RuleStrength.Manual, "manual");
+    Assert.HasCount(1, _arrivals.BeginRead(_timeline).Batches);
+  }
+
+  [TestMethod]
+  public void ExclusionsAreRecheckedBeforeDecidingWhetherReceiptsBridgeAGap()
+  {
+    Add(0, LabelTypes.Melee);
+    Add(2, LabelTypes.Bane);
+    Add(4, LabelTypes.Melee);
+    Assert.AreEqual(new MeterArrival(3, 4, 2), _arrivals.Latest(_facts, _timeline, mode: 3));
+    AppSettings.IsBaneDamageEnabled = true;
+    Assert.AreEqual(new MeterArrival(3, 4), _arrivals.Latest(_facts, _timeline, mode: 3),
+      "an eligible intermediate receipt bridges the gap without changing its timestamp");
+    AppSettings.IsBaneDamageEnabled = false;
+    Assert.AreEqual(new MeterArrival(3, 4, 2), _arrivals.Latest(_facts, _timeline, mode: 3));
+  }
+
+  [TestMethod]
+  public void APartialMillisecondBatchKeepsItsNewSuffixAndTheEarlierGap()
+  {
+    Add(0, LabelTypes.Melee);
+    Add(10, LabelTypes.Bane);
+    Add(10, LabelTypes.Melee);
+    var read = _arrivals.BeginRead(_timeline);
+    Add(10, LabelTypes.Melee);
+    Assert.AreEqual(new MeterArrival(3, 10, 2), read.Complete(_facts, mode: 3));
+    Assert.AreEqual(new MeterArrival(4, 10, 2), _arrivals.Latest(_facts, _timeline, mode: 3));
+  }
+
+  [TestMethod]
+  public void CancelledLongStallReadsCannotDiscardTheUnexaminedGap()
+  {
+    Add(0, LabelTypes.Melee);
+    Add(200, LabelTypes.Melee);
+    var read = _arrivals.BeginRead(_timeline);
+    using var cancelled = new CancellationTokenSource();
+    cancelled.Cancel();
+    Assert.ThrowsExactly<OperationCanceledException>(() => read.Complete(_facts, 3, cancelled.Token));
+    var retry = _arrivals.BeginRead(_timeline);
+    Assert.HasCount(2, retry.Batches);
+    Assert.AreEqual(new MeterArrival(2, 200, 1), retry.Complete(_facts, mode: 3));
   }
 
   private void Add(double receipt, byte type)

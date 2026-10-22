@@ -259,7 +259,7 @@ public sealed class MeterActivityIndexTest
         var candidates = lifecycle.SelectCandidates(1, rows, mode);
         _activity.Update(_projection.Index.CaptureMeterInput(candidates.Rows, Facts, candidates.FromTime,
           double.PositiveInfinity, candidates.FirstOrdinal));
-      } while (!lifecycle.TrySelect(1, rows, now, mode, _arrivals.Latest(Facts, Timeline), Facts.FactCount,
+      } while (!lifecycle.TrySelect(1, rows, now, mode, _arrivals.Latest(Facts, Timeline, mode: mode), Facts.FactCount,
         out scope, activity: _activity.For));
       return scope;
     }

@@ -1172,6 +1172,8 @@ namespace EQLogParser
 
       if (enabled)
       {
+        // Disabled meters do not verify receipts. An empty opening cache must not prevent the worker that fills it from running.
+        if (!DerivedMeter.HasActivity()) DeriveEngine.Active?.RederiveAsync();
         OpenDamageOverlayIfEnabled(true, false);
       }
       else

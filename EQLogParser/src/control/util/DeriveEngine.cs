@@ -574,13 +574,8 @@ namespace EQLogParser
             catch (Exception ex) { Log.Debug("Could not trim ordinal-list slack; the derived boards are unaffected", ex); }
           }
 
-          /*
-           * Only receipt at ingest renews visibility; deriving the same facts never creates a new arrival. Asked only while a meter
-           * can be listening: `Latest` walks back from the newest fact to the newest ELIGIBLE one, so a capture whose tail is city
-           * chatter, NPC-on-NPC noise or damage a filter excludes pays that walk on every pass of a load - uncancellable, since it
-           * carries no token - to answer a question nobody is asking while the overlay is switched off. Nothing else in this pass
-           * reads the arrival: `activityOrdinal` exists only for the announcement below.
-           */
+          // Verify receipts only while the meter is enabled. Disabled captures retain unchecked metadata for later,
+          // but do not decode facts to answer an opening question nobody is asking. Deriving never restamps receipt.
           var freshDamage = false;
           var activityOrdinal = 0;
           if (ConfigUtil.IfSet("IsDamageOverlayEnabled"))
@@ -868,7 +863,7 @@ namespace EQLogParser
         if (candidates is null) return MeterBuildResult.Deferred;
         calculation.Activity.Update(candidates, cancellation);
         var receipts = _meterArrivals.BeginRead(snapshot.Timeline);
-        var arrival = receipts.Complete(snapshot.Facts, cancellation);
+        var arrival = receipts.Complete(snapshot.Facts, mode, cancellation);
         var input = _capture.DeriveQuiescent(() =>
         {
           cancellation.ThrowIfCancellationRequested();
@@ -881,7 +876,7 @@ namespace EQLogParser
           // Publish before counting: a blocked build cannot hold its prior presentation past this deadline.
           publishExpiry?.Invoke(scope.ExpiresAt);
           return snapshot.DamageIndex.CaptureMeterInput(scope.Rows, snapshot.Facts, scope.FromTime,
-            double.PositiveInfinity, scope.FirstOrdinal);
+            double.PositiveInfinity, scope.FirstOrdinal, scope.WindowSecond);
         });
         return input is null ? MeterBuildResult.Deferred
           : MeterBuildResult.Completed(calculation.Update(input, cancellation));

@@ -634,12 +634,12 @@ public class DamageOverlayLifecycleTest
         var candidates = lifecycle.SelectCandidates(sessionId, Rows, mode);
         _calculation.Activity.Update(_index.CaptureMeterInput(candidates.Rows, _facts, candidates.FromTime,
           double.PositiveInfinity, candidates.FirstOrdinal));
-      } while (!lifecycle.TrySelect(sessionId, Rows, T0 + second, mode, _arrivals.Latest(_facts, _timeline), Count,
-        out scope, _pending, _calculation.Activity.For));
+      } while (!lifecycle.TrySelect(sessionId, Rows, T0 + second, mode,
+        _arrivals.Latest(_facts, _timeline, mode: mode), Count, out scope, _pending, _calculation.Activity.For));
       var expected = DerivedTotals.ForOverlay(scope.Rows, _index, _facts, scope.FromTime,
         double.PositiveInfinity, scope.FirstOrdinal);
       var actual = _calculation.Update(_index.CaptureMeterInput(scope.Rows, _facts, scope.FromTime,
-        double.PositiveInfinity, scope.FirstOrdinal));
+        double.PositiveInfinity, scope.FirstOrdinal, scope.WindowSecond));
       DamageMeterAssert.Equal(expected, actual);
       return actual;
     }

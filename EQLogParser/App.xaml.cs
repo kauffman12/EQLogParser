@@ -417,13 +417,8 @@ namespace EQLogParser
       main.Top = primary.Top + ((primary.Height - main.Height) / 2);
     }
 
-    /*
-     * The three handlers below are the application's last line, so they have to be the code that least can go wrong. Two rules apply to all of
-     * them, and both exist because the usual failure is the one this handler cannot report by the usual means: the log file is locked, the disk is
-     * full or the logger itself threw, which is exactly when a reporting statement inside the handler becomes a SECOND crash — on this path, with
-     * IsTerminating already set, killing the process and taking the first exception's context with it. So (1) whatever keeps the application alive
-     * is set before any reporting happens, and (2) reporting failures go to Trace, which needs no file, and are never allowed to propagate.
-     */
+    // Mark recoverable exceptions handled before reporting. Even the Trace fallback must not escape these last-resort handlers.
+    // docs/DesignNotes.md → "Nothing escapes a thread that has no net, and a fault speaks once".
     private void DomainUnhandledException(object sender, UnhandledExceptionEventArgs ex)
     {
       // Nothing here can stop the termination — that is what IsTerminating means — so the whole job is saying something before the process goes,
@@ -438,7 +433,7 @@ namespace EQLogParser
       }
       catch (Exception reporting)
       {
-        System.Diagnostics.Trace.TraceError($"Could not write the terminating exception to the log: {reporting}");
+        ThreadBoundary.TraceFailure("Could not write the terminating exception to the log", reporting);
       }
 
       try
@@ -447,7 +442,7 @@ namespace EQLogParser
       }
       catch (Exception splash)
       {
-        System.Diagnostics.Trace.TraceError($"Could not mark the splash window failed: {splash}");
+        ThreadBoundary.TraceFailure("Could not mark the splash window failed", splash);
       }
     }
 
@@ -464,7 +459,7 @@ namespace EQLogParser
       }
       catch (Exception reporting)
       {
-        System.Diagnostics.Trace.TraceError($"Could not write the dispatcher exception to the log: {reporting}");
+        ThreadBoundary.TraceFailure("Could not write the dispatcher exception to the log", reporting);
       }
 
       try
@@ -473,7 +468,7 @@ namespace EQLogParser
       }
       catch (Exception splash)
       {
-        System.Diagnostics.Trace.TraceError($"Could not mark the splash window failed: {splash}");
+        ThreadBoundary.TraceFailure("Could not mark the splash window failed", splash);
       }
     }
 
@@ -482,24 +477,22 @@ namespace EQLogParser
       // Observed before anything is printed: that marking is what stops the runtime escalating this later, and a logging fault must not cost it.
       ex.SetObserved();
 
-      if (ex.Exception.InnerException is Exception { } inner)
-      {
-        if (inner.StackTrace?.Contains("EditControl") == true && inner.Message?.StartsWith("Index", StringComparison.OrdinalIgnoreCase) == true)
-        {
-          // Ignore EditControl index out of range exceptions
-          // May be fixed in Syncfusion updates
-          return;
-        }
-      }
-
       try
       {
+        if (ex.Exception.InnerException is Exception { } inner
+          && inner.StackTrace?.Contains("EditControl") == true
+          && inner.Message?.StartsWith("Index", StringComparison.OrdinalIgnoreCase) == true)
+        {
+          // Ignore the known EditControl index failure after marking the task observed.
+          return;
+        }
+
         Log.Error($"TaskSchedulerUnobservedTaskException: {ex.Exception.Message}");
         LogDetails(ex.Exception);
       }
       catch (Exception reporting)
       {
-        System.Diagnostics.Trace.TraceError($"Could not write the unobserved task exception to the log: {reporting}");
+        ThreadBoundary.TraceFailure("Could not write the unobserved task exception to the log", reporting);
       }
 
       try
@@ -508,7 +501,7 @@ namespace EQLogParser
       }
       catch (Exception splash)
       {
-        System.Diagnostics.Trace.TraceError($"Could not mark the splash window failed: {splash}");
+        ThreadBoundary.TraceFailure("Could not mark the splash window failed", splash);
       }
     }
 

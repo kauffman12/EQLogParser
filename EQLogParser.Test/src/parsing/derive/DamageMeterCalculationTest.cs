@@ -432,12 +432,12 @@ public partial class DamageMeterCalculationTest
         var candidates = Lifecycle.SelectCandidates(1, rows, mode);
         Calculation.Activity.Update(Cache.Index.CaptureMeterInput(candidates.Rows, Facts, candidates.FromTime,
           double.PositiveInfinity, candidates.FirstOrdinal));
-      } while (!Lifecycle.TrySelect(1, rows, T0 + second, mode, Arrivals.Latest(Facts, Timeline), Facts.FactCount,
-        out scope, activity: Calculation.Activity.For));
+      } while (!Lifecycle.TrySelect(1, rows, T0 + second, mode, Arrivals.Latest(Facts, Timeline, mode: mode),
+        Facts.FactCount, out scope, activity: Calculation.Activity.For));
       Expected = DerivedTotals.ForOverlay(scope.Rows, Cache.Index, Facts, scope.FromTime,
         double.PositiveInfinity, scope.FirstOrdinal);
       var input = Cache.Index.CaptureMeterInput(scope.Rows, Facts, scope.FromTime,
-        double.PositiveInfinity, scope.FirstOrdinal);
+        double.PositiveInfinity, scope.FirstOrdinal, scope.WindowSecond);
       Last = Calculation.Update(input);
       DamageMeterAssert.Equal(Expected, Last);
       if (compareFresh)

@@ -11,6 +11,8 @@ internal sealed class DamageOverlayLifecycle
   private int _sessionId = -1;
   private int _firstOrdinal;
   private double _timedStart = double.NaN;
+  // Scalar log-time high-water mark survives calculator/window replacement, never a PC timestamp.
+  private long _windowSecond = MeterRecentWindow.NoSecond;
   // Pruning or exclusions can answer None. Keep the last verified receipt's deadline, never a new receipt time.
   private MeterArrival _lastArrival = MeterArrival.None;
 
@@ -19,10 +21,11 @@ internal sealed class DamageOverlayLifecycle
     _sessionId = _sessionId,
     _firstOrdinal = _firstOrdinal,
     _timedStart = _timedStart,
+    _windowSecond = _windowSecond,
     _lastArrival = _lastArrival
   };
 
-  // False means the initial timed bound changed: refresh activity from SelectCandidates before selecting again.
+  // False means an accounting bound changed: refresh activity from SelectCandidates before selecting again.
   internal bool TrySelect(int sessionId, IReadOnlyList<DerivedFight> rows, double now, int mode,
     MeterArrival arrival, int capturedCount, out DamageOverlayScope scope, OverlayPendingActivity pending = null,
     Func<DerivedFight, MeterLifeActivity> activity = null)
@@ -30,6 +33,14 @@ internal sealed class DamageOverlayLifecycle
     scope = null;
     EnsureSession(sessionId);
     if (arrival.Through > _firstOrdinal) _lastArrival = arrival;
+    if (mode != 0 && arrival.FirstOrdinal > _firstOrdinal)
+    {
+      // A missed quiet interval cuts BEFORE the new run, even if every receipt shares one log second.
+      _firstOrdinal = arrival.FirstOrdinal;
+      _timedStart = double.NegativeInfinity;
+      _windowSecond = MeterRecentWindow.NoSecond;
+      return false;
+    }
     var selected = new List<DerivedFight>();
     var edge = CaptureEdge(rows, activity);
     if (mode != 0)
@@ -79,9 +90,12 @@ internal sealed class DamageOverlayLifecycle
         // Retire only the checked prefix, never records appended while the receipt scan ran.
         _firstOrdinal = Math.Max(_firstOrdinal, capturedCount);
         _timedStart = double.NaN;
+        _windowSecond = MeterRecentWindow.NoSecond;
       }
     }
-    scope = new DamageOverlayScope(selected, FromTime(mode), deadline, _firstOrdinal);
+    foreach (var row in selected)
+      _windowSecond = Math.Max(_windowSecond, MeterRecentWindow.SecondOf(row.LastTime));
+    scope = new DamageOverlayScope(selected, FromTime(mode), deadline, _firstOrdinal, _windowSecond);
     return true;
   }
 
@@ -100,6 +114,7 @@ internal sealed class DamageOverlayLifecycle
     _sessionId = sessionId;
     _firstOrdinal = capturedCount;
     _timedStart = double.NaN;
+    _windowSecond = MeterRecentWindow.NoSecond;
     _lastArrival = MeterArrival.None;
   }
 
@@ -137,10 +152,11 @@ internal sealed class DamageOverlayLifecycle
 }
 
 internal sealed class DamageOverlayScope(IReadOnlyList<DerivedFight> rows, double fromTime,
-  double expiresAt = double.NegativeInfinity, int firstOrdinal = 0)
+  double expiresAt = double.NegativeInfinity, int firstOrdinal = 0, long windowSecond = MeterRecentWindow.NoSecond)
 {
   internal IReadOnlyList<DerivedFight> Rows { get; } = rows;
   internal double FromTime { get; } = fromTime;
   internal double ExpiresAt { get; } = expiresAt;
   internal int FirstOrdinal { get; } = firstOrdinal;
+  internal long WindowSecond { get; } = windowSecond;
 }
