@@ -10123,6 +10123,42 @@ panes' doors as children of the selection they re-slice, or removing the load-ti
 next three lines of
 log rather than by argument — which is the entire reason it was built in this order.
 
+## Nothing escapes a thread that has no net, and a fault speaks once
+
+Two of the application's exception nets are nets and one is not. `DispatcherUnhandledException` logs and sets `Handled`, so an exception from a click,
+a XAML-fired handler or anything else queued on the dispatcher is survived. `TaskScheduler.UnobservedTaskException` marks observed and logs, so a
+fire-and-forget task is survived — but it fires whenever the garbage collector gets round to finalising that task, which is why a lane that owns a loop
+reports its own faults instead of leaning on it. **`AppDomain.UnhandledException` is not a net**: `IsTerminating` is already set, so it gets to say one
+sentence before the process ends. Every timer callback (`System.Threading.Timer`, and a `System.Timers.Timer.Elapsed` handler), every work item, and
+every `async void` continuation that resumes without a `SynchronizationContext` lands there. In this program that means an `IOException` from the identity
+save, one window's handler throwing behind the records store's 1.5 s fan-out, or a fault in a trigger lane ends the application mid-capture, with the last
+minutes of verdicts unwritten and no explanation the operator can act on.
+
+**So nothing may escape one of those bodies.** `ThreadBoundary.Guard(site, work)` holds the exception, names what was attempted, and lets the loop carry on;
+`ThreadBoundary.Note(site, ex)` is the same voice for a catch block that already exists (the follow poll's reopen arm, the chat archive, each trigger lane and
+its per-take arm). Both speak through `RepeatCap` keyed on site + exception type: the first sighting at Error with its stack, everything behind it counted and
+silent — because a timer that fails once fails every interval for the rest of the night, and an uncapped Error there buries the one sentence that is the
+diagnosis under forty thousand copies of itself. Two different kinds of fault still get two lines, and the cap never re-opens on a timer (that is `RepeatCap`'s
+law, with the reason). The records store's fan-out goes one step further and guards **per subscriber**, so a window whose handler throws loses its own refresh
+rather than the other windows'. Pinned by `ThreadBoundaryTest`: the fault never comes back out, a faultless tick says nothing, five of one kind cost one line,
+two kinds cost two.
+
+**The nets themselves may not need a net.** In all three handlers the statement that keeps the application alive (`Handled`, `SetObserved`) is executed before
+any reporting, and a failure while reporting goes to `Trace` rather than propagating: a locked log file or a full disk must not turn into a second crash that
+carries the first exception's context away with it. (`SetObserved()` used to sit below the Syncfusion EditControl early-return, so that case — the one this
+handler exists to swallow — was never actually marked.)
+
+The same shape applies to native window calls whose refusal is cosmetic. `SetWindowTopMost` and `SetWindowLong` no longer throw: the window keeps the z-order or
+the style bits it had, and the code reports one Warn per error code. They threw into `SourceChanged` handlers and overlay ticks, where a refusal cost a lost
+repaint plus an Error every time the window moved; companion placement already refused this way ("Damage meter column switches…", where the panel sits still on
+a failed move) and these two now match it.
+
+Deliberately unchanged: the four line parsers keep their own per-line catch with RepeatCap'd voice — that is the parse law, not this one, and it costs a bad line
+rather than the night. The fact constructors still refuse an unrepresentable amount instead of clamping it (a refusal inside a line the parser already caught is
+contained by that catch, and a fake maximum is indistinguishable from a real one). `MeterColumnLayout`'s unknown-slot `ArgumentException` stays a developer-facing
+refusal: no setting reaches it, every `MeterSlot` has an entry pinned by `MeterColumnLayoutTest`, and a silently defaulted column width is the kind of layout bug
+nobody finds.
+
 ## A rank formulation is not a sentence end
 
 The operator's report was the alarming kind: rows called **"II"** and **"III"** in the identity list.

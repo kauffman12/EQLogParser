@@ -444,7 +444,12 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
 - **The fight pane shows no status text at all**; failures reach `eqlogparser.log`, triage by `grep -E "board ask|stats build"`,
   and `grep -c "Derived damage summary error"` is the first question when a board looks stale (a swallowed exception froze every
   grid once — a field a dictionary keys on must be non-null at BOTH ends when stored data can be old).
-- **`EQLogParser.Wpf.Test`** is the Windows-only assembly; build it explicitly (`EnableWindowsTargeting`) when touching UI code.
+- **Nothing may escape a thread that has no net**: a timer callback, a work item or a context-less `async void` fault reaches
+  `AppDomain.UnhandledException` with `IsTerminating`, which ends the process — hold it at `ThreadBoundary.Guard`/`Note` (Error once per site+kind through
+  `RepeatCap`, counted after that; per subscriber for an event fan-out, so one window's handler cannot starve the others). The three App nets set
+  `Handled`/`SetObserved` **before** reporting and send a reporting failure to Trace. A cosmetic native refusal (`SetWindowTopMost`, `SetWindowLong`) keeps the
+  window as it was with one Warn per error code instead of throwing into a handler. See docs/DesignNotes.md →
+  "Nothing escapes a thread that has no net, and a fault speaks once".
 - **Releases**: when touching `sign.cmd` or `EQLogParserInstall/*.iss`, read `docs/ReleaseChecklist.md`.
 
 ## Post-Implementation Checklist
