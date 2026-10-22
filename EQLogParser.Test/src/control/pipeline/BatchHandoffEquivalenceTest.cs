@@ -90,7 +90,7 @@ public class BatchHandoffEquivalenceTest
     try
     {
       using var items = new BlockingCollection<LogReaderItem[]>(new ConcurrentQueue<LogReaderItem[]>());
-      using var processor = new LogProcessor("batches.txt", new NullSinks(), new NullSinks());
+      using var processor = new LogProcessor(new NullSinks(), new NullSinks());
       processor.LinkTo(items);
 
       for (var start = 0; start < lines.Length; start += batchSize)

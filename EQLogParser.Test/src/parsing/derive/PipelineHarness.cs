@@ -198,7 +198,7 @@ internal static class PipelineHarness
         using var items = new BlockingCollection<LogReaderItem[]>(new ConcurrentQueue<LogReaderItem[]>(), 20);
         // capture came from `new` three lines up: an `is not null` check here would not just be
         // dead, it poisons the flow analysis and makes every later `capture.` a CS8602.
-        using var processor = new LogProcessor(path, new CaptureSinks(capture), new NoOpSinks());
+        using var processor = new LogProcessor(new CaptureSinks(capture), new NoOpSinks());
         processor.LinkTo(items);
 
         const int batchSize = 5000;

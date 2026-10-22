@@ -1,7 +1,5 @@
-using log4net;
 using System.Collections.Concurrent;
 using System.Globalization;
-using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -17,8 +15,6 @@ namespace EQLogParser
     internal static readonly CompositeFormat SpecialFormat = CompositeFormat.Parse("{0} {{{1}}}");
     internal const int SpecialOffset = 15;
     internal const int DeathOffset = 15;
-
-    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
 
     private static readonly ConcurrentDictionary<string, byte> RegularMeleeTypes = new(new Dictionary<string, byte>
     {

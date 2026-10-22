@@ -24,7 +24,7 @@ public sealed class ProcessedBatchTest
   {
     var sink = new BlockingSink();
     using var queue = new BlockingCollection<LogReaderItem[]>();
-    using var processor = new LogProcessor("test", sink, sink);
+    using var processor = new LogProcessor(sink, sink);
     processor.LinkTo(queue);
     try
     {

@@ -58,7 +58,7 @@ public class LogProcessorIdentityCallbackTest
     private static void Process(params string[] lines)
     {
         using var items = new BlockingCollection<LogReaderItem[]>(new ConcurrentQueue<LogReaderItem[]>());
-        using var processor = new LogProcessor("callbacks.txt", new NullSinks(), new NullSinks());
+        using var processor = new LogProcessor(new NullSinks(), new NullSinks());
         processor.LinkTo(items);
 
         // One batch per shape change is not what the reader does, but a stream of one-line batches is the

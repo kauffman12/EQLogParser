@@ -116,7 +116,7 @@ public class ParseLaneTest
     try
     {
       using var items = new BlockingCollection<LogReaderItem[]>(new ConcurrentQueue<LogReaderItem[]>());
-      using var processor = new LogProcessor("auxLane.txt", new NullSinks(), new NullSinks(), auxLane);
+      using var processor = new LogProcessor(new NullSinks(), new NullSinks(), auxLane);
       processor.LinkTo(items);
 
       const string line = "[Sun Apr 26 18:41:02 2026] Bithika joined the raid.";

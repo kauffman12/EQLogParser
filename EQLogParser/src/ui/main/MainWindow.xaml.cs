@@ -1614,7 +1614,7 @@ namespace EQLogParser
 
             // One reader, one lane, file order: the session's own capture is what the processor fills (see LogReader's
             // class comment for why reading stays single-threaded).
-            _eqLogReader = new LogReader(new LogProcessor(theFile, chatSink, new TriggerHookAdapter()), theFile, origin, lastMins);
+            _eqLogReader = new LogReader(new LogProcessor(chatSink, new TriggerHookAdapter()), theFile, origin, lastMins);
             /*
              * Start the read loop OFF this thread - and Task.Run is needed even though LogReader made all of its own
              * awaits context-free, because the first segment runs on whoever called and everything here is already inside a

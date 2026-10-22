@@ -9,12 +9,10 @@ namespace EQLogParser
 {
   // The per-line parsing pipeline. Moved out of the WPF project (Phase 0) so headless runs can
   // execute it in tests: chat archiving and quick-share triggering are injected as sinks instead
-  // of calling ChatDB / TriggerUtil directly. Everything else is byte-identical to the old
-  // EQLogParser/src/control/processors/LogProcessor.cs.
+  // of calling ChatDB / TriggerUtil directly.
   internal class LogProcessor : ILogProcessor
   {
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
-    private readonly string _fileName;
     private readonly IChatSink _chatSink;
     private readonly ITriggerHook _triggerHook;
     private long _lineCount;
@@ -34,9 +32,8 @@ namespace EQLogParser
          */
     private readonly ParseLane _lane;
 
-    internal LogProcessor(string fileName, IChatSink chatSink, ITriggerHook triggerHook, ParseLane lane = null)
+    internal LogProcessor(IChatSink chatSink, ITriggerHook triggerHook, ParseLane lane = null)
     {
-      _fileName = fileName ?? string.Empty;
       _chatSink = chatSink ?? throw new ArgumentNullException(nameof(chatSink));
       _triggerHook = triggerHook ?? throw new ArgumentNullException(nameof(triggerHook));
       _lane = lane ?? ParseLane.Main;

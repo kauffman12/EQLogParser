@@ -26,7 +26,7 @@ public sealed class LogReaderCompletionTest
     var file = Path.Combine(Path.GetTempPath(), $"eqlp-completion-{Guid.NewGuid():N}.txt");
     File.WriteAllText(file, "[Wed Oct 01 12:00:00 2025] Test says, 'hello'\n");
     var sink = new BlockingChatSink();
-    var reader = new LogReader(new LogProcessor(file, sink, sink), file, "test", -1);
+    var reader = new LogReader(new LogProcessor(sink, sink), file, "test", -1);
     try
     {
       var running = Task.Run(reader.StartAsync);
@@ -54,7 +54,7 @@ public sealed class LogReaderCompletionTest
   {
     var file = Path.Combine(Path.GetTempPath(), $"eqlp-missing-{Guid.NewGuid():N}.txt");
     var sink = new BlockingChatSink();
-    var reader = new LogReader(new LogProcessor(file, sink, sink), file, "test", -1);
+    var reader = new LogReader(new LogProcessor(sink, sink), file, "test", -1);
     var running = Task.Run(reader.StartAsync);
     try
     {

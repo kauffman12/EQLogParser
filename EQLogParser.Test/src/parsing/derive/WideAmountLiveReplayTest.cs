@@ -20,7 +20,7 @@ public class WideAmountLiveReplayTest
     var capture = new CombatCapture(facts, heals);
     var sink = new Sink(capture);
     using var queue = new BlockingCollection<LogReaderItem[]>();
-    using var processor = new LogProcessor("wide-live.txt", sink, sink);
+    using var processor = new LogProcessor(sink, sink);
     var origin = new DateTime(2026, 10, 11, 0, 0, 0);
     long sent = 0;
     var refreshes = 0;
