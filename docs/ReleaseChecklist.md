@@ -573,9 +573,9 @@ The contract lives in `docs/DesignNotes.md` → "Busy seconds: activity is measu
 - [ ] **Both grid types treat it as a number** (SfTreeGrid on Damage, SfDataGrid on Healing and Tanking): the first header click
       sorts largest first with the 0-valued non-entity rows at the bottom, and the column picker, Copy CSV/image and hiding Busy
       behave exactly as they do for Sec.
-- [ ] **Tooltips:** Damage and Healing read *Seconds Active, ignoring Idle Gaps over 10 Seconds*; Tanking reads *Seconds taking
-      Damage, ignoring Idle Gaps over 10 Seconds*. Both fit and stay readable at the supported fonts/themes, and the threshold they
-      name matches `BusyTimePolicy.GapSeconds`.
+- [ ] **Tooltips:** all three summaries show Sec as *Recorded combat duration, including pauses. Used to calculate DPS or HPS*
+      and Busy as *Estimated active time within Sec, excluding pauses over 10 seconds. Does not affect DPS or HPS*.
+      Both fit and stay readable at the supported fonts/themes, and Busy's threshold matches `BusyTimePolicy.GapSeconds`.
 - [ ] **Saved layouts:** a fresh profile shows Busy beside Sec; hide it before ever dragging a column, restart, and verify it stays
       hidden. With an older saved layout (including order-only, visibility-only and header-name preferences), Busy appears once beside
       Sec without losing any other column's order or visibility; then hide it, reorder it, restart and verify those choices persist on

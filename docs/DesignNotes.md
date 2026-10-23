@@ -18916,8 +18916,9 @@ actions and overlapping selected fights each contribute one mark and insertion o
 **The weld** (`BusyTimePolicy`) sorts the marks and extends a run while `next - end <= GapSeconds` (10), closing it with the inclusive length
 `end - start + 1`. The boundary is the **distance between timestamps**, not the count of unmarked seconds between them: `{0,10}` measures 11 and
 `{0,11}` measures 2. One mark measures one second, with no allowance before the first or after the last — this is emphatically not "ten seconds
-per action". Ten is a heuristic from measured cadence, not a proven idle threshold, and both header tooltips name it: changing `GapSeconds` moves
-both strings in the same change.
+per action". Ten is a heuristic from measured cadence, not a proven idle threshold, and the shared Busy header tooltip names it:
+changing `GapSeconds` updates that tooltip in the same change. All three summaries share the Sec and Busy tooltips: Sec includes pauses
+and supplies the DPS/HPS denominator; Busy estimates active time within Sec and changes no rate.
 
 **The cut is what keeps the column honest.** A run extends only while both ends sit inside ONE span of the row's covered range — the very
 `TimeRange` its Sec came from, which `UpdateAllStatsTimeRanges` and the healing builder's `UpdateStats` hand back rather than a second merge
