@@ -83,7 +83,7 @@ namespace EQLogParser
      * Whether Ctrl or Shift rode the press that opened this menu, which is what decides whether "Select Group" JOINS the
      * standing selection or REPLACES it (GroupSectionSelect.SelectedAfterGesture). Stamped on the press, not at the click: the
      * button is released long before a menu item is chosen, and a keyboard-opened menu carries Shift in its own keystroke
-     * (Shift+F10) — which is why a key press clears this alongside the selection memory above rather than setting it.
+     * (Shift+F10). Non-modifier keys end the press memory; holding Ctrl or Shift must not erase it.
      */
     private bool _rightPressAdds;
 
@@ -1167,6 +1167,7 @@ namespace EQLogParser
        * ContextMenu.Closing or MenuItem.Click is raised first, nor on a popup taking the mouse capture.
        */
       _menuAdds = _rightPressAdds;
+      _rightPressAdds = false;
 
       _menuRow = RowUnderPointer(e.OriginalSource);
       if (_menuRow is { IsDivider: false }) fightGrid.CurrentItem = _menuRow;
@@ -1254,15 +1255,18 @@ namespace EQLogParser
     /// <summary>
     /// A left gesture ends any unconsumed right-press memory.
     /// </summary>
-    private void GridPreviewLeftButtonDown(object sender, MouseButtonEventArgs e) => _rightPressSelection = null;
+    private void GridPreviewLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+      _rightPressSelection = null;
+      _rightPressAdds = false;
+    }
 
-    /*
-     * Keyboard selection and keyboard-opened menus must never resurrect an abandoned mouse gesture — and the group gesture's
-     * modifier comes out of a POINTER press, so a key press ends it too: Shift+F10 carries Shift without anybody meaning
-     * "add this group to what I have", and the Apps key follows an abandoned right-press just as well as a click does.
-     */
+    // Modifier key-downs belong to the held mouse gesture, not a new keyboard selection. F10/Apps and
+    // navigation keys still invalidate abandoned presses so keyboard menus cannot inherit additive mode.
     private void GridPreviewKeyDown(object sender, KeyEventArgs e)
     {
+      if (e.Key is Key.LeftCtrl or Key.RightCtrl or Key.LeftShift or Key.RightShift) return;
+
       _rightPressSelection = null;
       _rightPressAdds = false;
     }
