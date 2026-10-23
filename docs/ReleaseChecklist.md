@@ -499,13 +499,18 @@ elapsed seconds always draw. The table, the defaults and the zero-width law are 
   that is only tanking) and the meter must stay up with its empty board and both tabs intact until you clear the lens; it went away for a moment
   in earlier builds and read as a broken overlay. An explicit Reset mid-fight must still keep the meter polling rather than closing on its own
   zeroed board.
-- [ ] **The busy tab nudges, quietly**: same setup as above — sitting on an empty Tanking tab while the raid is dealing damage. The **Damage**
-  tab should take the app's good green for a moment about every five seconds and go back on its own: one moment per cycle, not a fast blink and
-  not a standing highlight. Clicking that tab must clear it immediately, and so must the visible half getting rows of its own or the meter hiding
-  itself; the Damage-only / Tanking-only settings must never nudge anything (no second tab exists). Under a class filter the nudge follows what
-  you would SEE — an empty-looking tab whose lane is busy only for other classes must not light up. If the green reads too dim against your meter
-  background, say so — it is `EQGoodForegroundBrush` (`Colors.DarkGreen`), read by key so a theme change follows it, and brightening it belongs to
-  that key rather than to a meter-only colour.
+- [ ] **The busy tab nudges, quietly**: with Both enabled, start fresh on an empty Tanking tab while the raid is dealing damage. The **Damage**
+  tab should pulse immediately, including when the toolbar is first created: **1 s green, 4.5 s normal** (5.5 s between pulse starts;
+  `AttentionHoldMs` / `AttentionWaitMs`). Dispatcher work can delay a phase; it must not become a fast blink or standing highlight.
+  During green, click the already-selected empty Tanking tab: the Damage pulse must survive without restarting the timer. Click Damage instead:
+  the nudge must clear immediately. Mirror this with Damage empty and Tanking populated. Hiding the meter clears it immediately; the visible half
+  gaining rows clears it on the next board answer (normally the one-second refresh plus build time, longer if deferred). Damage-only / Tanking-only
+  must never nudge anything. Under a class filter it follows what you would SEE — a lane busy only for other classes must not light up.
+  If the theme's `EQGoodForegroundBrush` reads too dim against the meter background, report it rather than adding a meter-only colour.
+- [ ] **Settings autosave without a power resume or normal exit**: start a fresh process, change a meter setting in Setup and Save, then wait
+  at least 35 s with the dispatcher responsive. Check the changed value in `%AppData%\\EQLogParser\\config\\settings.txt`, terminate the process
+  from Task Manager (no normal shutdown save), and relaunch. The change must survive. Do not suspend/resume or use another explicit settings
+  flush during the wait: this checks the main window's 30-second timer, not those other save paths.
 - [ ] **A self-opening meter never shows an empty frame**: with the meter enabled and a log closed, load a log whose combat is over (or walk
   away until the meter has closed itself, then pull). The overlay must appear only when one of its enabled halves has a row — no blank box,
   however brief —

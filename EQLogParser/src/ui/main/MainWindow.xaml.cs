@@ -631,7 +631,7 @@ namespace EQLogParser
       // save once loaded but also if backup isnt trying to shutdown
       if (!_isStarting && Application.Current.ShutdownMode != ShutdownMode.OnExplicitShutdown)
       {
-        /* Writes settings.ini from the UI thread, once a half minute. */
+        // Flush pending settings on the dispatcher; unchanged settings do not rewrite the file.
         ConfigUtil.Save();
       }
     }

@@ -474,11 +474,8 @@ namespace EQLogParser
 
     private bool _revealOnPaint;
 
-    /*
-     * The nudge for a tab that is busy while the one on screen is not: ONE timer with TWO intervals -- 5 s of waiting, then 0.7 s of colour --
-     * so it reads as one moment every five seconds rather than a blink machine, and it stops the instant the reason goes away (the visible half
-     * gets rows, the tabs swap, the window hides). The colour itself lives with the toolbar, which owns the tab buttons.
-     */
+    // Pulse immediately, then alternate 1 s of colour with 4.5 s at rest; board answers retire the reason, hides retire it immediately.
+    // docs/DesignNotes.md → "Which panels the meter shows decides what may wake it and what is worth displaying".
     private DispatcherTimer _attentionTimer;
     private bool _attentionIsOn;
 
@@ -498,7 +495,7 @@ namespace EQLogParser
       _attentionTimer ??= UiUtil.CreateTimer((_, _) => AttentionTick(), AttentionWaitMs, false);
       if (_attentionTimer.IsEnabled) return;
       _attentionTimer.Start();
-      AttentionTick(); // say it now rather than five seconds after the reason appeared
+      AttentionTick(); // The first pulse does not wait for the next timer tick.
     }
 
     private void AttentionTick()
@@ -509,8 +506,8 @@ namespace EQLogParser
         _attentionTimer.Interval = TimeSpan.FromMilliseconds(_attentionIsOn ? AttentionHoldMs : AttentionWaitMs);
     }
 
-    private const int AttentionWaitMs = 5000;
-    private const int AttentionHoldMs = 700;
+    private const int AttentionWaitMs = 4500;
+    private const int AttentionHoldMs = 1000;
 
     private void ApplyMeterUpdate(DamageOverlayStats damageOverlayStats)
     {
@@ -573,8 +570,7 @@ namespace EQLogParser
 
         // The half NOT on screen lists somebody while the half on screen lists nobody: nudge that tab quietly every few seconds instead of
         // moving anyone. These counts obey the class filter, which is the whole point -- it is a nudge about what the operator would SEE.
-        var hiddenHalfExists = drawsDamage ? (_panels & MeterPanels.Tanking) != 0 : (_panels & MeterPanels.Damage) != 0;
-        SetTabAttention(!(drawsDamage ? damageRows : tankRows) && hiddenHalfExists && (drawsDamage ? tankRows : damageRows));
+        SetTabAttention(NeedsTabAttention(_panels, _currentShowDps, damageRows, tankRows));
 
         if (_revealOnPaint)
         {
@@ -615,6 +611,14 @@ namespace EQLogParser
      */
     internal static bool DrawsDamagePanel(MeterPanels panels, bool showingDps) =>
       (panels & MeterPanels.Tanking) == 0 || ((panels & MeterPanels.Damage) != 0 && showingDps);
+
+    // Counts describe the filtered bars; a disabled lane never has a tab to nudge.
+    internal static bool NeedsTabAttention(MeterPanels panels, bool showingDps, bool damageHasRows, bool tankHasRows)
+    {
+      var drawsDamage = DrawsDamagePanel(panels, showingDps);
+      var hiddenHalfEnabled = drawsDamage ? (panels & MeterPanels.Tanking) != 0 : (panels & MeterPanels.Damage) != 0;
+      return hiddenHalfEnabled && (drawsDamage ? !damageHasRows && tankHasRows : !tankHasRows && damageHasRows);
+    }
 
     // Hide now; whether this window still has a reason to exist is the receipts' answer, asked with THIS window's panels. An explicit
     // Reset can hide a still-active fight and must keep polling it, which is why this asks rather than closes -- and a lane the operator
@@ -1216,6 +1220,8 @@ namespace EQLogParser
 
       _toolbarWindow.SetAvailableViews(_panels);
       _toolbarWindow.SetShowingDps(_currentShowDps);
+      // The first paint can arm attention before the deferred toolbar creation runs.
+      _toolbarWindow.SetTabAttention(_attentionIsOn);
       _toolbarWindow.UpdateFontSize(_savedFontSize, controlPanel.Height);
     }
 

@@ -7510,13 +7510,16 @@ means no window" was wrong precisely because the emptiness was *chosen* rather t
 of reusing `LoadStats`' answer for both questions.
 
 **A half that is busy while you are looking at the other one nudges its tab, and does nothing else.** `SetTabAttention` on the window owns
-the rhythm — ONE `DispatcherTimer` with TWO intervals, 5 s of waiting then 0.7 s of colour, so it is one moment every five seconds rather than
-a blink machine — and it paints through the toolbar's `SetTabAttention`, which colours the tab that is *not* on screen with
-`EQGoodForegroundBrush` read **by key** (the green the title bar's finished-loading message uses) rather than a cached brush, so a theme change
-is followed. It arms only when the drawn half has no rows and an enabled hidden half does, fires once immediately so the nudge is not five
-seconds late, and stops the instant the reason disappears: rows arrive on the visible half, the tabs swap, or the window hides. Not a board
-switch, not a standing highlight, not a faster flash. That key resolves to `Colors.DarkGreen`; if it reads too dim against a meter background,
-that is one line to change — report it rather than inventing a second green.
+the rhythm — ONE `DispatcherTimer` with TWO intervals, **1 s green then 4.5 s normal** (`AttentionHoldMs` / `AttentionWaitMs`), a **5.5 s**
+start-to-start cycle. The first pulse starts immediately. Dispatcher work may delay either interval; these are not real-time deadlines.
+It paints through the toolbar's `SetTabAttention`, which colours the tab that is *not* on screen with `EQGoodForegroundBrush` read **by key**
+(the green the title bar's finished-loading message uses) rather than a cached brush. It arms only when the drawn half has no rows and an
+enabled hidden half does. Hide and switching to the populated tab clear it immediately; newly arriving visible rows clear it when the next
+board answer paints (normally the one-second refresh plus build time, longer while builds defer). Not a board switch or a standing highlight.
+The toolbar retains the current phase across repaints and reselecting the same tab; changing tabs clears that phase before repainting.
+A toolbar created after the first board paint inherits the meter's current phase, so its deferred creation cannot swallow the first pulse.
+`NeedsTabAttention` owns the full panel/selection/lane mapping, pinned by `MeterPanelChoiceTest`; actual colour and rhythm remain Windows gates
+in `ReleaseChecklist.md`. If the theme's green reads too dim against the meter background, report it rather than inventing a second green.
 
 **A meter that opens itself is not visible until an enabled, unfiltered board has a row.** `MainWindow.OpenDamageOverlayIfEnabled` shows such a window at
 opacity 0 and calls `RevealOnFirstContent()`; the window raises its own opacity on the first `ApplyMeterUpdateCore` that answers
@@ -18785,6 +18788,15 @@ This is not a blanket replacement for framework numeric conversion. `ConfigUtil`
 doubles, including exponent notation. The trigger `number` modifier and `ZeroConverter.ConvertBack` retain their broader
 formatted-number grammar. Spell-count header sorting reads current-culture display text and must match its writer.
 Those paths keep framework parsing; numeric-object `Convert.ToDouble` calls and JSON numeric readers are not text-token parsers.
+
+## Settings autosave starts with the main window
+
+`UiUtil.CreateTimer` honours its `start` argument after attaching the tick handler. MainWindow's settings timer requests immediate start;
+its 30-second dispatcher ticks call `SaveTimerTick`, which flushes pending settings through `ConfigUtil.Save` once startup is complete.
+Power suspend stops the timer and flushes settings; resume restarts it; window close flushes and stops it. Other timer callers request
+`false` and start on their own lifecycle paths. Ignoring the flag silently disables ordinary autosave until a power resume, leaving settings
+changes exposed to a crash or forced exit until another explicit save. This is periodic persistence, not a guarantee against losing the
+last unsaved interval. `UiUtilTimerTest` pins both start modes in the Windows-only assembly; the disk/relaunch check is in `ReleaseChecklist.md`.
 
 ## Log Management saves the displayed settings
 

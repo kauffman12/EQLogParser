@@ -433,7 +433,7 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
   directions keep computing, so boards and export are untouched and coming back needs no warm-up; Copy Parse copies the tab you are on, which is
   the same half that is drawn. **Three questions, three doors**: the TAB PAIR comes from the setting alone, WHAT IS DRAWN is the tab that was picked (`DrawsDamagePanel`) — nothing may move the operator to the
   other half because it has data — and the WINDOW exists while at least one ENABLED half has a row (`AnyPanelHasEntries`), with a busy hidden
-  half nudging its tab (`SetTabAttention`, ~1 green pulse per 5 s, never a board switch); an entry is any listed row (player, `X +Pets`,
+  half nudging its tab (`SetTabAttention`, never a board switch; timing in DesignNotes); an entry is any listed row (player, `X +Pets`,
   mercenary, Reverse DS) counted **before the class filter** (`HasRowEntries` — a lens may not delete the window, only an empty lane does, while
   the bars and the nudge do obey the filter), and rows cannot time a close — only the
   receipts can. A meter that opens itself stays transparent until a paint has a row (`RevealOnFirstContent`); one opened from the menu appears at once. See docs/DesignNotes.md → "Which panels the meter shows decides what may wake it and what is worth displaying".

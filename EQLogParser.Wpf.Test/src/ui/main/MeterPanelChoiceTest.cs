@@ -98,6 +98,27 @@ public class MeterPanelChoiceTest
     Assert.IsFalse(DamageOverlayWindow.DrawsDamagePanel(MeterPanels.Tanking, false));
   }
 
+  [TestMethod]
+  [DataRow((int)MeterPanels.Both, true, false, true, true)]
+  [DataRow((int)MeterPanels.Both, true, true, false, false)]
+  [DataRow((int)MeterPanels.Both, true, false, false, false)]
+  [DataRow((int)MeterPanels.Both, true, true, true, false)]
+  [DataRow((int)MeterPanels.Both, false, true, false, true)]
+  [DataRow((int)MeterPanels.Both, false, false, true, false)]
+  [DataRow((int)MeterPanels.Both, false, false, false, false)]
+  [DataRow((int)MeterPanels.Both, false, true, true, false)]
+  [DataRow((int)MeterPanels.Damage, true, false, true, false)]
+  [DataRow((int)MeterPanels.Damage, false, false, true, false)]
+  [DataRow((int)MeterPanels.Tanking, true, true, false, false)]
+  [DataRow((int)MeterPanels.Tanking, false, true, false, false)]
+  public void OnlyAnEnabledHiddenHalfWithRowsNudges(int panels, bool showingDps,
+    bool damageHasRows, bool tankHasRows, bool expected)
+  {
+    // Exercise the lane mapping too: testing three preselected booleans would miss a swapped damage/tanking input.
+    Assert.AreEqual(expected,
+      DamageOverlayWindow.NeedsTabAttention((MeterPanels)panels, showingDps, damageHasRows, tankHasRows));
+  }
+
   /*
    * The window's right to exist: at least one half the operator ENABLED has a board that lists anyone. Both on with an empty visible half and a
    * busy hidden half keeps the meter up (the tab is right there; nudging it is `SetTabAttention`'s quiet answer), while both empty means no meter

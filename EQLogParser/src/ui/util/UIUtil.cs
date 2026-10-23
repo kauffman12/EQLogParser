@@ -61,6 +61,7 @@ namespace EQLogParser
     {
       var timer = new DispatcherTimer(priority) { Interval = TimeSpan.FromMilliseconds(interval) };
       timer.Tick += tickHandler;
+      if (start) timer.Start();
       return timer;
     }
 
