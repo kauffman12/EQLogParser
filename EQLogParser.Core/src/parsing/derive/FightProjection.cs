@@ -93,7 +93,7 @@ namespace EQLogParser
       internal readonly Dictionary<string, DerivedFight> Open = new(StringComparer.Ordinal);
       internal readonly Dictionary<string, DerivedFight> LastClosed = new(StringComparer.Ordinal);
       internal readonly List<DerivedFight> Completed = [];
-      internal readonly Dictionary<string, Queue<long>> DeathsByName = new(StringComparer.Ordinal);
+      internal readonly Dictionary<string, Queue<DeathFact>> DeathsByName = new(StringComparer.Ordinal);
 
       /*
        * How far each event stream has been folded in. Facts and deaths are append-only within a log-open, but ordinal 500
@@ -264,7 +264,7 @@ namespace EQLogParser
       Dictionary<string, DerivedFight> lastClosed = state.LastClosed;
       List<DerivedFight> rows = state.Completed;
 
-      Dictionary<string, Queue<long>> deathsByName = state.DeathsByName;
+      Dictionary<string, Queue<DeathFact>> deathsByName = state.DeathsByName;
       var allDeaths = facts.Deaths;
       for (var d = state.ThroughDeath; d < allDeaths.Length; d++)
       {
@@ -281,8 +281,8 @@ namespace EQLogParser
          */
         if (DiedWhileCharmed(timeline, killed, death.TimeS)) continue;
 
-        if (!deathsByName.TryGetValue(killed, out var q)) deathsByName[killed] = q = new Queue<long>();
-        q.Enqueue(death.TimeS);
+        if (!deathsByName.TryGetValue(killed, out var q)) deathsByName[killed] = q = new Queue<DeathFact>();
+        q.Enqueue(death);
       }
 
       state.ThroughDeath = allDeaths.Length;
@@ -314,110 +314,9 @@ namespace EQLogParser
          */
         if (!TryCombatSides(fact, timeline, atkName, defName, out var atkSide, out var defSide)) continue;
 
-        string key;
-        bool creditAttacker;  // attacker was player-side: it gets damage credit in the owner's roll-up
-        bool charmed = false;
-
-        if (atkSide == Side.Player && defSide == Side.Player)
-        {
-          /*
-           * Friendly fire is dropped — EXCEPT when the defender is a CHARMED mob. A mob under charm reads
-           * player-side, but it is not a raider: swings that land on it come from the raid's own mistake (AoE
-           * splash, or an add the charm did not take out of the fight) and they are real damage a meter has to
-           * keep. They key on the mob's name, so the row that opens is the mob's post-charm half; nobody gets
-           * credit for being hit by their allies.
-           *
-           * A charmed RAIDER attacking us reads the other way (her identity flips to Npc-side, she owns her own
-           * row).
-           *
-           * Everything else that merely reads player-side is friendly fire, and that includes our OWN PETS -
-           * whether ownership came from the raid healing it from fifteen directions (R18), from the spell
-           * database saying this one can only hit a pet (R24: Elemental Conversion, Valiant Symbiosis, Warder's
-           * Gift), or from petmapping.txt. Damage a raider deals to their own summon is not output: it pads a
-           * meter with a mechanic the raid chose to run, and the same policy already drops raider-on-raider and
-           * raider-on-mercenary facts. Census (docs/DesignNotes.md → "Damage our own side earns nothing"):
-           * 75 pet-slot-spell hits across two captures, 7.4 M damage, on names that are never a mob and never a
-           * listed raider - all of it formerly credited.
-           */
-          key = defName;
-          creditAttacker = true;
-        }
-        else if (atkSide == Side.Player && (defSide == Side.Npc || defSide == Side.Unknown))
-        {
-          key = defName; creditAttacker = true;
-        }
-        else if (defSide == Side.Player && (atkSide == Side.Npc || atkSide == Side.Unknown))
-        {
-          key = atkName; creditAttacker = false;
-        }
-        else if (atkSide == Side.Npc && defSide == Side.Npc)
-        {
-          // Both sides NPC-side happens when a Friendly interval flips a player into the enemy
-          // column: the charmed raider owns that row herself. Two mobs on each other (a mob pet,
-          // or boss-vs-boss noise) is not a raid fight at all and stays out of the list.
-          if (IsFlipped(timeline, atkName, t))
-          {
-            key = atkName; creditAttacker = false; charmed = true;
-          }
-          /*
-           * ... except when the attacker is not a creature at all. `Goratoar has taken 18724 damage from Slicing Energy
-           * by .` carries NO caster in the line, so the parser puts the SPELL where the attacker belongs (DamageFact.
-           * AttackerIsSpell) and R21 reasonably says "that name is a spell effect, not an NPC". SideOf then reads both
-           * endpoints NPC-side, and this branch - which exists to drop mob-on-mob noise - was deleting the raid's own
-           * damage with it: measured on eqlog_Incogitable_xegony.txt, 382 facts / 32,932,003 damage sat in exactly this
-           * condition, and a synthetic one-fact capture produced no row at all. That is the raid's dot doing the raid's
-           * job on the raid's own target, and legacy counted it (FightManager's `record.AttackerIsSpell && defender`
-           * re-decision, which also renamed the caster to Labels.Unk - see FightSummarySource.RecordFrom for the other
-           * half of that choice).
-           *
-           * Asked THIS way round matters: an R21 spell name is NPC-side because it is not a person, which is a different
-           * statement from "this exchange involves no raid damage". The fact keys on its DEFENDER - the encounter the
-           * damage landed on - and credits nobody, because naming a caster the log never printed would put somebody's
-           * evening under a spell. A genuine mob-on-mob exchange still has neither of these flags and stays out.
-           */
-          else
-          {
-            // TryCombatSides admitted the spell exception; ordinary NPC-on-NPC damage was refused there.
-            key = defName; creditAttacker = false;
-          }
-        }
-        else if (atkSide == Side.Npc && defSide == Side.Unknown)
-        {
-          /*
-           * A mob hitting a name NO RULE PLACED used to be dropped with the mob-on-mob noise above. Measured on
-           * eqlog_Incogitable_xegony.txt that cost the tank board every point of damage several raiders took:
-           * `Worthless` 159 facts / 1,479,310, `Boner` 186 / 1,389,581, `Morris` 68 / 1,360,995 — and in the same
-           * minutes each of those names spends 200-300 of its own swings on the raid's enemies, which the branch
-           * below happily files. It also swallows `Ddread`, a raider the roster DOES know: 80 of her 85 incoming
-           * facts land before her registry verification replays (RegistrySeed starts an in-log verification at that
-           * instant rather than retroactively), so her column reads 12,275 against legacy's 181,670.
-           *
-           * Dropping is not a neutral choice here. The same name at the same second was a combatant while it swung
-           * and becomes noise while it is hit, and who got hit is the entire subject of the tank grid — where
-           * legacy lists all of these names today. So the fact is announced like any other, keyed on the mob that
-           * is doing the hitting (the raid's encounter), and IsRaidVictimAt — the engine's own exclusion, which until
-           * this branch existed could only ever be reached by facts that arrived on some other route — decides
-           * whether it counts as damage somebody received. Genuine mob-on-mob stays out: that defender reads Npc.
-           */
-          key = atkName; creditAttacker = false;
-        }
-        else if (defSide == Side.Npc && atkSide == Side.Unknown)
-        {
-          // known NPC defending against an unclassified attacker: our side is the anchor
-          key = defName; creditAttacker = false;
-        }
-        else
-        {
-          // Unknown vs Unknown: nobody classified. Legacy's last-resort tiebreak keys on the
-          // defender unless one name reads as obviously not-a-player, so nothing goes missing -
-          // and a later classification pass redistributes these facts to real rows anyway.
-          if (!PlayerRegistry.IsPossiblePlayerName(defName)) key = defName;
-          else if (!PlayerRegistry.IsPossiblePlayerName(atkName)) key = atkName;
-          else key = defName;
-          // Nobody is classified: crediting an unclassified attacker as "player" would poison the
-          // roll-up. A later pass that classifies it re-attributes the credit.
-          creditAttacker = false;
-        }
+        var key = CombatAnchor(timeline, atkName, defName, t, atkSide, defSide);
+        // Only a player-side attacker earns roll-up credit; Unknown remains uncredited.
+        var creditAttacker = atkSide == Side.Player;
 
         open.TryGetValue(key, out var row);
 
@@ -454,13 +353,14 @@ namespace EQLogParser
          */
         if (row is not null && deathsByName.TryGetValue(key, out var deaths))
         {
-          while (deaths.TryPeek(out var stale) && stale < row.BeginTime) deaths.Dequeue();
+          while (deaths.TryPeek(out var stale) && stale.TimeS < row.BeginTime) deaths.Dequeue();
 
-          if (deaths.TryPeek(out var dt) && dt < t)
+          if (deaths.TryPeek(out var death) && death.TimeS < t)
           {
             deaths.Dequeue();
             row.Dead = true;
-            row.DeathTime = dt;
+            row.DeathTime = death.TimeS;
+            row.DeathSequence = death.Seq;
             row.EndReason = DerivedFightEnd.Slain;
             rows.Add(row);
             open.Remove(key);
@@ -487,7 +387,7 @@ namespace EQLogParser
           };
           open[key] = row;
         }
-        if (charmed || IsFlipped(timeline, key, t))
+        if (IsFlipped(timeline, key, t))
         {
           row.CharmedOwned = true;
 
@@ -524,30 +424,11 @@ namespace EQLogParser
         // Reported after the boundary checks and row creation, so every fact is announced exactly
         // once and to the row that really carries it in its totals. The direction is the same comparison
         // DamageToOwner is built from, one expression, so an index filled here cannot disagree with the row.
-        // Positive Player/Merc proof precedes the anchor check. Other player-side defenders count as incoming
-        // only away from the anchor; AtOwner must still precede the Unknown-victim fallback.
         var aimedAtAnchor = string.Equals(key, defName, StringComparison.Ordinal);
-        FactTarget target;
-        if (timeline.IsConfirmedRaidPersonAt(defName, t) || (!aimedAtAnchor && defSide == Side.Player))
-        {
-            // Incoming to our side includes pets and mercs, under each defender's own name.
-            // The anchor exception keeps raid swings on a charmed mob as output, not pet tanking.
-            target = FactTarget.RaidSide;
-        }
-        else if (aimedAtAnchor)
-        {
-            // Aimed at the anchor: the raid's output on this fight. Asked before the victim question below, because
-            // an unidentified mob satisfies "not known to be a pet or a mob" and must not become damage taken.
-            target = FactTarget.AtOwner;
-        }
-        else
-        {
-            // Points away from the anchor at a name we have never called a pet or a mob — the Unknown residue, in on
-            // the reasoning that whatever is taking a mob's hits is one of ours (EntityTimeline.IsRaidVictimAt).
-            target = timeline.IsRaidVictimAt(defName, t) ? FactTarget.RaidSide : FactTarget.Neither;
-        }
+        var target = CombatTarget(timeline, defName, t, defSide, aimedAtAnchor);
 
         row.FactEnd = ordinal + 1;
+        row.LastSequence = Math.Max(row.LastSequence, fact.Seq);
         ownerSink?.Invoke(fact, ordinal, row, target);
 
         var isHit = LabelTypes.IsHit(fact.TypeId);
@@ -613,10 +494,11 @@ namespace EQLogParser
       {
         // Deaths after the last exchange still mark the engagement they follow.
         // A slain line lands shortly after the final exchange - inside one engagement's tail.
-        if (!row.Dead && DeathWithinTail(deathsByName, row, out var deathTime))
+        if (!row.Dead && DeathWithinTail(deathsByName, row, out var death))
         {
           row.Dead = true;
-          row.DeathTime = deathTime;
+          row.DeathTime = death.TimeS;
+          row.DeathSequence = death.Seq;
           row.EndReason = DerivedFightEnd.Slain;
         }
 
@@ -641,16 +523,17 @@ namespace EQLogParser
      * the name and is SKIPPED rather than consumed (Publish above is why consumption belongs to the loop alone); any
      * later one within EventTailWindowS says this engagement ended in death.
      */
-    private static bool DeathWithinTail(Dictionary<string, Queue<long>> deathsByName, DerivedFight row, out double deathTime)
+    private static bool DeathWithinTail(Dictionary<string, Queue<DeathFact>> deathsByName, DerivedFight row,
+      out DeathFact death)
     {
-      deathTime = double.NaN;
+      death = default;
       if (!deathsByName.TryGetValue(row.Name, out var deaths)) return false;
 
-      foreach (var dt in deaths)
+      foreach (var candidate in deaths)
       {
-        if (dt < row.BeginTime) continue;                 // an earlier holder of this name
-        if (dt > row.LastTime + EventTailWindowS) return false;
-        deathTime = dt;
+        if (candidate.TimeS < row.BeginTime) continue;                 // an earlier holder of this name
+        if (candidate.TimeS > row.LastTime + EventTailWindowS) return false;
+        death = candidate;
         return true;
       }
 
@@ -689,6 +572,34 @@ namespace EQLogParser
         return Side.Player;
       return timeline.IsOurPetAt(name, t) ? Side.Player : Side.Npc;
     }
+
+    // For admitted combat only: projection and receipts must choose the same encounter anchor.
+    // A charmed raider owns its NPC-side row; source-less spell damage instead stays on its defender.
+    internal static string CombatAnchor(EntityTimeline timeline, string attacker, string defender, double t,
+      Side attackerSide, Side defenderSide)
+    {
+      if (attackerSide == Side.Player) return defender;
+      if (defenderSide == Side.Player) return attacker;
+      if (attackerSide == Side.Npc)
+        return defenderSide == Side.Unknown || IsFlipped(timeline, attacker, t) ? attacker : defender;
+      if (defenderSide == Side.Npc) return defender;
+      return UnknownCombatTargetsDefender(attacker, defender) ? defender : attacker;
+    }
+
+    // Positive person proof precedes the anchor, and the anchor precedes the Unknown-victim fallback.
+    // A charmed NPC at the anchor stays output; an off-anchor NPC victim can earn neither board.
+    internal static FactTarget CombatTarget(EntityTimeline timeline, string defender, double t, Side defenderSide,
+      bool aimedAtAnchor)
+    {
+      if (timeline.IsConfirmedRaidPersonAt(defender, t) || (!aimedAtAnchor && defenderSide == Side.Player))
+        return FactTarget.RaidSide;
+      if (aimedAtAnchor) return FactTarget.AtOwner;
+      return timeline.IsRaidVictimAt(defender, t) ? FactTarget.RaidSide : FactTarget.Neither;
+    }
+
+    // Projection and receipts share the Unknown/Unknown anchor decision; neither name gains an identity from it.
+    internal static bool UnknownCombatTargetsDefender(string attacker, string defender) =>
+      !PlayerRegistry.IsPossiblePlayerName(defender) || PlayerRegistry.IsPossiblePlayerName(attacker);
 
     // The same admission rule serves projection and the overlay's pending-activity hint. Unknown names remain
     // eligible: a new opponent must not lose its first hits just because classification has not caught up.

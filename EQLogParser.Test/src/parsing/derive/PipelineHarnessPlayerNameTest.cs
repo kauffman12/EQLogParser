@@ -12,7 +12,7 @@ namespace EQLogParser;
  * Class order is not the same on `dotnet test` and on Visual Studio's runner, which is how one spelling of this suite showed nine green
  * and the other showed nine failures (each of them failing in isolation as well).
  *
- * These four assert the replacement rule in PipelineHarness.RunCore from both ends: what the parser recorded, not just the field.
+ * These tests assert the replacement rule in PipelineHarness.RunCore from both ends: what the parser recorded, not just the field.
  * docs/DesignNotes.md → "A You line needs a local player, and not out of whoever ran first".
  */
 [TestClass]
@@ -84,14 +84,19 @@ public class PipelineHarnessPlayerNameTest
     }
 
     [TestMethod]
-    public void ALogFileNameNamesItsOwnPlayer()
+    [DataRow("eqlog_Feedbackone_Eqgate.txt", "Feedbackone")]
+    [DataRow("EQLOG_Feedbackone_Eqgate.LOG", "Feedbackone")]
+    [DataRow("eqlog_Feedbackone_Eqgate_20260426_1.txt", "Feedbackone")]
+    [DataRow("eqlog_Player123_Eqgate.txt", PipelineHarness.FixturePlayerName)]
+    [DataRow("eqlog_Feedbackone_Eqgate.csv", PipelineHarness.FixturePlayerName)]
+    public void ALogFileNameUsesTheProductionPlayerGrammar(string fileName, string expected)
     {
         ConfigUtil.PlayerName = "";
 
-        var run = PipelineHarness.RunFileDerived(Write("eqlog_Feedbackone_Eqgate.txt", YouHitLine));
+        var run = PipelineHarness.RunFileDerived(Write(fileName, YouHitLine));
 
-        Assert.AreEqual("Feedbackone", ConfigUtil.PlayerName);
-        Assert.AreEqual("Feedbackone", FirstAttacker(run.Facts),
+        Assert.AreEqual(expected, ConfigUtil.PlayerName);
+        Assert.AreEqual(expected, FirstAttacker(run.Facts),
             "You-mapping and R0-local must behave as they do in production, where the name comes from the filename");
     }
 
@@ -106,6 +111,36 @@ public class PipelineHarnessPlayerNameTest
 
         Assert.AreEqual(chosen, ConfigUtil.PlayerName, "a stated condition is not drift");
         Assert.AreEqual(chosen, FirstAttacker(run.Facts));
+    }
+
+    [TestMethod]
+    public void ANameTheTestSetSurvivesConsecutiveUnnamedCaptures()
+    {
+        const string chosen = "Persistentfixture";
+        ConfigUtil.PlayerName = chosen;
+
+        var first = PipelineHarness.RunFileDerived(Write("first.txt", YouHitLine));
+        var second = PipelineHarness.RunFileDerived(Write("second.txt", YouHitLine));
+
+        Assert.AreEqual(chosen, FirstAttacker(first.Facts));
+        Assert.AreEqual(chosen, FirstAttacker(second.Facts),
+            "reading a capture must not turn an explicit test name into an inherited harness default");
+        Assert.AreEqual(chosen, ConfigUtil.PlayerName);
+    }
+
+    [TestMethod]
+    public void AnExplicitChoiceCanReassertThePreviousFilenamesPlayer()
+    {
+        ConfigUtil.PlayerName = "";
+        _ = PipelineHarness.RunFileDerived(Write("eqlog_Querulous_Eqgate.txt", YouHitLine));
+        PipelineHarness.SetFixturePlayerName("Querulous");
+
+        var first = PipelineHarness.RunFileDerived(Write("first.txt", YouHitLine));
+        var second = PipelineHarness.RunFileDerived(Write("second.txt", YouHitLine));
+
+        Assert.AreEqual("Querulous", FirstAttacker(first.Facts));
+        Assert.AreEqual("Querulous", FirstAttacker(second.Facts),
+            "a deliberate name must remain explicit across captures, even when it matches the last harness stamp");
     }
 
     /*

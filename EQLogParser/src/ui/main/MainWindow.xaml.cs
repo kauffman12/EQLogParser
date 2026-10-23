@@ -418,7 +418,12 @@ namespace EQLogParser
       if (_damageOverlays.Forget(window)) AppSettings.IsDamageOverlayOpen = false;
     }
 
-    internal void OpenDamageOverlayIfEnabled(bool reset, bool configure)
+    /*
+     * `revealOnContent` is for the times a meter opens itself — after a load, on resume, on the auto-open that follows fresh combat: it
+     * must not be seen before its first build has anything to list, so it appears transparent and the window raises itself once a paint
+     * drew rows. A meter the operator opened from the menu appears at once, because a click with no feedback reads as a broken menu.
+     */
+    internal void OpenDamageOverlayIfEnabled(bool reset, bool configure, bool revealOnContent = false)
     {
       if (configure)
       {
@@ -436,7 +441,9 @@ namespace EQLogParser
           _damageOverlays.Replace(window);
           window.Show();
           window.UpdateLayout();
-          window.Opacity = 1.0;
+
+          if (revealOnContent) window.RevealOnFirstContent();
+          else window.Opacity = 1.0;
           AppSettings.IsDamageOverlayOpen = true;
         }
       }
@@ -647,7 +654,7 @@ namespace EQLogParser
           Log.Info("system: resumed - triggers restarted, monitor overlays re-opened");
           _saveTimer?.Start();
           await TriggerManager.Instance.StartAsync();
-          OpenDamageOverlayIfEnabled(true, false);
+          OpenDamageOverlayIfEnabled(true, false, revealOnContent: true);
           SubscribeOverlayFights();
           break;
       }
@@ -684,7 +691,7 @@ namespace EQLogParser
         {
           if (_damageOverlays.Current is null)
           {
-            OpenDamageOverlayIfEnabled(false, false);
+            OpenDamageOverlayIfEnabled(false, false, revealOnContent: true);
           }
         });
       }
@@ -1481,7 +1488,7 @@ namespace EQLogParser
             {
               closeLogFile.IsEnabled = true;
               saveLogFile.IsEnabled = true;
-              OpenDamageOverlayIfEnabled(true, false);
+              OpenDamageOverlayIfEnabled(true, false, revealOnContent: true);
               SubscribeOverlayFights();
             }, DispatcherPriority.DataBind);
           }

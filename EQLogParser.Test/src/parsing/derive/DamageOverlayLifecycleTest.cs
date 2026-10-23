@@ -2,7 +2,7 @@
 namespace EQLogParser;
 
 [TestClass]
-public class DamageOverlayLifecycleTest
+public partial class DamageOverlayLifecycleTest
 {
   private const double T0 = FixtureTime.Base;
 
@@ -591,19 +591,24 @@ public class DamageOverlayLifecycleTest
     private readonly DamageMeterCalculation _calculation = new();
     private readonly MeterArrivals _arrivals = new();
     private double _lastReceipt = double.NegativeInfinity;
+    private int _sequence;
     internal int Count => _facts.FactCount;
     internal MeterArrival Arrival => _arrivals.Latest(_facts, _timeline);
     internal List<DerivedFight> Rows { get; private set; } = [];
 
     internal Capture() => _timeline.SetIdentity("Illuminai", IdentityKind.Player, RuleStrength.Manual, "manual");
 
-    internal void Hit(string mob, int second, uint amount) => Add("Illuminai", mob, mob, second, amount);
+    internal void Hit(string mob, int second, uint amount, byte type = LabelTypes.Melee) =>
+      Add("Illuminai", mob, mob, second, amount, type);
 
     internal void Incoming(string mob, int second, uint amount) => Add(mob, "Illuminai", mob, second, amount);
 
+    internal void Avoid(string mob, int second, bool incoming, double? receivedAt = null) => Add(incoming ? mob : "Illuminai",
+      incoming ? "Illuminai" : mob, mob, second, 0, incoming ? LabelTypes.Dodge : LabelTypes.Miss, receivedAt);
+
     internal void HitUnclassified(string mob, int second, uint amount)
     {
-      _facts.AddFact(new DamageFact(_facts.FactCount, (long)(T0 + second), _facts.InternName("Illuminai"),
+      _facts.AddFact(new DamageFact(++_sequence, (long)(T0 + second), _facts.InternName("Illuminai"),
         _facts.InternName(mob), amount, LabelTypes.Melee, 0, 0, ushort.MaxValue));
       Receipt(second);
     }
@@ -614,8 +619,11 @@ public class DamageOverlayLifecycleTest
       Add("a guard", "a bat", "a guard", second, 200);
     }
 
-    internal void Die(string name, int second) => _facts.AddDeath(new DeathFact(second, (long)(T0 + second),
+    internal void Die(string name, int second) => _facts.AddDeath(new DeathFact(++_sequence, (long)(T0 + second),
       _facts.InternName(name), -1));
+
+    internal void Charm(string name, int second) => _timeline.AddAffiliation(AffiliationKind.Friendly, name,
+      T0 + second, T0 + second + 30, RuleStrength.Manual, "R9-charm", "Illuminai");
 
     internal DamageOverlayStats? Board(DamageOverlayLifecycle lifecycle, double second, int mode = 0, int sessionId = 1,
       bool project = true)
@@ -649,12 +657,13 @@ public class DamageOverlayLifecycleTest
 
     internal CombinedStats? SelectedTotals() => DerivedTotals.For(Rows, _index, _facts, new HealFactTable(_facts))?.CombinedStats;
 
-    private void Add(string attacker, string defender, string mob, int second, uint amount)
+    private void Add(string attacker, string defender, string mob, int second, uint amount,
+      byte type = LabelTypes.Melee, double? receivedAt = null)
     {
       _timeline.SetIdentity(mob, IdentityKind.Npc, RuleStrength.Manual, "manual");
-      _facts.AddFact(new DamageFact(_facts.FactCount, (long)(T0 + second), _facts.InternName(attacker),
-        _facts.InternName(defender), amount, LabelTypes.Melee, 0, 0, ushort.MaxValue));
-      Receipt(second);
+      _facts.AddFact(new DamageFact(++_sequence, (long)(T0 + second), _facts.InternName(attacker),
+        _facts.InternName(defender), amount, type, 0, 0, ushort.MaxValue));
+      Receipt(receivedAt ?? second);
     }
 
     private void Receipt(double second)

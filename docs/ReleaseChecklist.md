@@ -245,6 +245,10 @@ These checks still require Windows for popup/hide behavior. See DesignNotes → 
   The board must appear with the killing blow included, even if no live frame was ever painted. It must not reopen repeatedly for that kill.
 - [ ] **The next pull starts fresh before the display hold ends**: kill A and attack B within eight seconds. B's totals/time must exclude A,
   without needing the overlay to hide first. Repeat with A and B sharing a name and with both appearing in one log second.
+- [ ] **Avoidance cannot revive another pull:** after A's On Kill result expires, miss B or dodge B's attack before any positive
+  damage on B. A's amounts must not return, before or after projection catches up. Repeat with A killed, B's attempt stamped in the
+  same log second as A's death, and delayed receipt of that attempt. An attempt before A's death and same-second killing blows must
+  still leave A's legitimate final result readable. B's first positive hit opens only B's result.
 - [ ] **A survivor keeps its own totals**: damage A and B, then kill A. B retains all of its earlier damage/time. Wait 12 seconds and hit
   B again without a death: it is still the same total. Check the tanking view too; A's incoming-damage contribution must disappear.
 - [ ] **Reopening cannot revive old RDPS:** hit A for 600 at log second 100, hit B at 110, then kill B while A remains alive.
@@ -270,7 +274,8 @@ These checks still require Windows for popup/hide behavior. See DesignNotes → 
   merely reopening or re-deriving an expired capture is not. On a five-second timed opening, feed A damage at log second 0, B damage at 6,
   then an A miss at 10, all received together. The first board must already show only B, with unchanged seconds/DPS on subsequent silent
   ticks. Repeat after Reset and timed expiry, and for Tank. Pause a receipt worker after `BeginRead`, append fresh damage, then resume it:
-  expiry must not cut away the appended, unchecked receipt.
+  expiry must not cut away the appended, unchecked receipt. Also pause after the pending scan but before `BeginRead`, then append
+  B's miss in A's death second: the newer receipt must trigger a refreshed pending scan, not reopen A's completed amounts.
 - [ ] **A blocked counting worker cannot strand the toolbar** (issue #416): use a ten-second reset, paint a board, then
   hold only its worker with a debugger while leaving the dispatcher responsive. After verified activity expires, both
   toolbar and body hide within the next timer tick. Releasing the worker must not flash its expired result back on screen.
@@ -287,6 +292,10 @@ These checks still require Windows for popup/hide behavior. See DesignNotes → 
   verify that cached activity is recomputed. Ordinary healing, casts and taunts must not keep it visible.
   In On Kill, kill A with included damage, then hit/kill B using only excluded damage: A keeps its original final-display
   deadline. Included damage to B must still replace that final display immediately.
+- [ ] **Partial exclusions hide without prematurely retiring amounts:** with a ten-second mode, receive ordinary damage at 0
+  and Bane damage at 9. Disable Bane at 11: the older ordinary receipt cannot keep the board visible. Restore Bane and reopen before
+  19: both amounts remain available. Leave it excluded past 19 instead: the old accumulation retires and the next hit starts fresh.
+  Repeat Damage-only and Both; narrowing from Both to Damage-only must use Damage's own timeout, not the hidden Tanking receipt.
 - [ ] **Header is one compact, level row**: check fonts 10, 12, 14 and 16, normal/thin bars, damage/tanking, `%` shown and hidden (Setup → STYLE → **columns**,
   since the old *show % damage* checkbox folded into that picker) and light/dark themes. Left controls and DPS/Tank must sit level with Damage/DPS/Sec, with roughly four pixels of visible
   space above the header and before the first player—not a native-window-sized empty band. Check the first opening too:
@@ -430,7 +439,8 @@ elapsed seconds always draw. The table, the defaults and the zero-width law are 
   Where a work area is too narrow for stage plus panel on **both** sides (a small secondary monitor with a wide meter), the panel pins to that work area's LEFT edge and
   overlaps the stage — reachable beats tidy, and it must never come out off screen. With a debugger, force rectangle-read, work-area-read
   and native-move failures separately: configure stays usable, the failed attempt leaves the panel stationary, and subsequent successful
-  moves recover. Repeated failures in one episode produce one WARN in `eqlogparser.log`; after recovery, a new failure may warn again.
+  moves recover **without a leftover offset** — a refused move does not spend the stage delta, so the next gesture brings the panel all the way
+  back to its gap rather than stopping short by the distance that was refused. Repeated failures in one episode produce one WARN in `eqlogparser.log`; after recovery, a new failure may warn again.
   A failed work-area read must never fall through to an unchecked move.
 - [ ] **A narrow window still widens, and nothing shrinks**: with only `Sec` left the floor is small (141 DIP at 12 pt), so start from a saved `OverlayWidth` of ~150
   and turn columns **on** — the window grows to the new floor and names stay left of the numbers. Then widen by hand and hide a column: the window must keep the width it has.
@@ -451,10 +461,53 @@ elapsed seconds always draw. The table, the defaults and the zero-width law are 
   explains its rate (encounter vs the latest six logged seconds) and no row's wording contradicts the header word it sits beside. Cancel from Setup restores
   both the previous column set and the previous window size; Save keeps them and reopens live.
 - [ ] **A hostile `settings.txt` is answered the same way twice**: with the app closed, write `OverlayEnableCritRate = 7`, `OverlayFontSize = 13`, `OverlayMaxRows = 22`,
-  `OverlayDamageMode = 4000`, `OverlayRankColor = chartreuse-ish`, `OverlayHighlightColor` absent; start, open the meter, then open Setup. Every field in Setup must show
-  exactly what the live meter is drawing (crit off, 12 pt, 5 rows, on-kill reset, the default bar colour, highlight following the bar colour) — one reader
+  `OverlayDamageMode = 4000`, `OverlayMeterPanels = 0`, `OverlayRankColor = chartreuse-ish`, `OverlayHighlightColor` absent; start, open the meter, then open Setup. Every field in Setup must show
+  exactly what the live meter is drawing (crit off, 12 pt, 5 rows, on-kill reset, **both panels**, the default bar colour, highlight following the bar colour) — one reader
   (`DamageMeterConfigState.Load()`) answers for both surfaces, and the constructor used to keep its own copy of these guards with one clamp missing, which is the state this
   gate reproduces. Then Save without touching anything: the file must come back holding those settled values, not the junk.
+- [ ] **The panel choice decides what may wake the meter**: with a log open and combat arriving on both sides (someone taking hits AND
+  someone dealing them), set Setup → meter panels to **Damage only**, then have a stretch where only you get hit and nobody in the raid
+  deals damage: after saving and the last outgoing receipt's quiet deadline, the window must neither open nor stay up for incoming alone.
+  Save **Tanking only** and repeat with pure outgoing damage — same answer. With one panel the toolbar shows that tab alone with no trailing divider
+  and does not resize oddly; the Setup stage previews its sample rows under whichever panel is chosen (Tanking only must not preview an
+  empty board) and hugs them to the same height as the damage panel does. In Setup, select Damage only, change the row count, then
+  switch to Tanking only: the rebuilt tanking bars must still contain sample names and numbers. Cancel from Setup preserves the previously saved panels.
+  Setup is a sample preview, not a live activity test. See DesignNotes → "Which panels the meter shows decides what may wake it and what is worth displaying".
+- [ ] **Hiding a panel loses no numbers**: on Damage only, take a hit and check the Tanking Summary board still records it; on Tanking only,
+  deal damage and check Damage Summary is unchanged. Switch back to Both mid-fight, before any reset or timed accumulation expires — the
+  returning tab must show the current accumulation without warm-up, and Copy Parse must copy the selected tab. Narrowing selects the surviving
+  panel in preview; widening back to Both must NOT move off it. Save remembers that selection (`OverlayShowingDps`). Panel changes do not
+  resurrect an accumulation already retired by Reset or a timed expiry.
+- [ ] **Panel preview cannot spend Cancel**: start on DPS with Both saved. Preview Tanking only, then Cancel. The next live meter must still
+  have Both and select DPS. Repeat in the opposite direction. Then preview the same narrowing and Save: the next meter must have only the
+  surviving panel selected. Widen to Both and Save; it stays on that tab rather than restoring the formerly hidden one.
+- [ ] **Unrelated previews preserve manual height**: resize the Setup stage by hand, then change bar colour, class filter, crit display and
+  hide-other-players without changing panels. Its height must stay put, including after the dispatcher has settled; Save must preserve the
+  chosen row-space budget on reopening. Changing panels, font size, thin bars or row count may refit the content; another unrelated preview
+  must not refit again.
+- [ ] **The tabs never move; only the window comes and goes**: with panels on **Both**, sit on **Tanking** through a stretch where the raid
+  deals damage and nobody of ours gets hit. Both tabs must stay visible, Tanking must stay drawn and stay highlighted, `OverlayShowingDps`
+  unchanged (reopen afterwards and your pick is still the one that comes up) — the meter must never turn the board over because the other half
+  got busy. Then **Damage**-only activity with **Damage** selected and nobody hit: same, mirrored. When *neither* enabled half's board lists
+  anyone the window goes away rather than showing an empty frame — including a one-panel meter whose single half is empty however busy the other
+  lane is. **A class filter must never be what closes it**: with combat running, filter the meter to a class that has done nothing (or to one
+  that is only tanking) and the meter must stay up with its empty board and both tabs intact until you clear the lens; it went away for a moment
+  in earlier builds and read as a broken overlay. An explicit Reset mid-fight must still keep the meter polling rather than closing on its own
+  zeroed board.
+- [ ] **The busy tab nudges, quietly**: same setup as above — sitting on an empty Tanking tab while the raid is dealing damage. The **Damage**
+  tab should take the app's good green for a moment about every five seconds and go back on its own: one moment per cycle, not a fast blink and
+  not a standing highlight. Clicking that tab must clear it immediately, and so must the visible half getting rows of its own or the meter hiding
+  itself; the Damage-only / Tanking-only settings must never nudge anything (no second tab exists). Under a class filter the nudge follows what
+  you would SEE — an empty-looking tab whose lane is busy only for other classes must not light up. If the green reads too dim against your meter
+  background, say so — it is `EQGoodForegroundBrush` (`Colors.DarkGreen`), read by key so a theme change follows it, and brightening it belongs to
+  that key rather than to a meter-only colour.
+- [ ] **A self-opening meter never shows an empty frame**: with the meter enabled and a log closed, load a log whose combat is over (or walk
+  away until the meter has closed itself, then pull). The overlay must appear only when one of its enabled halves has a row — no blank box,
+  however brief —
+  and if the first answer is empty it must stay out of the way (not ghost-visible, not stealing clicks) and appear on its own the next time
+  something worth listing happens. Enabling it from the menu without recent enabled-lane activity leaves it closed until combat arrives;
+  Setup still opens its sample stage without combat. An eligible direct menu opening may appear before its first board. A class filter
+  that hides all rows does not prevent reveal when the enabled, unfiltered board has entries.
 - [ ] **The bar colour really comes out of the application dictionary**: change bar colour and highlight in Setup and press Save, then switch the app theme (light ↔ dark)
   with a meter open. Rows must repaint through `DamageOverlayProgressBrush` / `DamageOverlayHighlightBrush` — including *your own* row keeping the highlight key — and Cancel
   must leave the reopened meter on the saved colours, not the previewed ones, because the reopened constructor republishes all five meter keys from disk. A row that keeps an old

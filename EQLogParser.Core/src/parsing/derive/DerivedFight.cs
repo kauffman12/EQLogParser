@@ -61,6 +61,8 @@ namespace EQLogParser
 
     // The observed death may follow the last damage. Display grace must not pretend LastTime was the death timestamp.
     public double DeathTime = double.NaN;
+    // Capture order breaks same-second ties without splitting the projection's killing-blow bucket.
+    public int DeathSequence = -1;
 
     // Why the row ended. Only meaningful next to a row that ended: an open (live) row reports Open.
     public DerivedFightEnd EndReason;
@@ -107,6 +109,7 @@ namespace EQLogParser
     public bool HasTankingActions;      // any tank-directed record
 
     public int FactEnd;                 // exclusive
+    public int LastSequence = -1;
 
     // roll-ups keyed by raw attacker name (player-side only, matching Fight.PlayerDamageTotals)
     public Dictionary<string, NameAgg> PlayerRollup { get; } = [];

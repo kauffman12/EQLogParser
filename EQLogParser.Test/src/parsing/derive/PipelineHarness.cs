@@ -16,8 +16,7 @@ internal static class PipelineHarness
     // uses, so a row or verdict built under it cannot be mistaken for a log's own name.
     internal const string FixturePlayerName = "Localplayer";
 
-    // The last name this harness stamped. It is how an inherited name gets told apart from one a test set on purpose: a value the
-    // harness wrote is drift and is replaced, a value nobody else wrote is a stated condition.
+    // Track only names assigned here; retaining a test's choice must not turn it into harness drift.
     private static string? _playerNameWrittenByHarness;
 
     private static EQDataStore? _dataStore;
@@ -77,6 +76,13 @@ internal static class PipelineHarness
     {
         var (facts, heals, timeline) = RunCore(path, onEvent);
         return new DeriveRunResult(facts, timeline, heals);
+    }
+
+    // An explicit choice can equal the previous filename's player; a raw field write cannot express that distinction.
+    internal static void SetFixturePlayerName(string name)
+    {
+        ConfigUtil.PlayerName = name;
+        _playerNameWrittenByHarness = null;
     }
 
     // CWD so EQDataStore's data/ lookup resolves (the test csproj copies the repo data/ into bin).
@@ -150,31 +156,19 @@ internal static class PipelineHarness
         var priorEmu = AppSettings.IsEmuParsingEnabled;
         AppSettings.IsEmuParsingEnabled = Environment.GetEnvironmentVariable("EQLP_EMU") == "1";
 
-        // The app derives the local player from the log filename (eqlog_(Player)_(Server).txt);
-        // do the same so You-mapping and the R0-local rule behave as they will in production.
-        // Who "You" is, decided for EVERY capture rather than inherited: a `You …` sentence names nobody until
-        // ConfigUtil.PlayerName exists (CastLineParser stamps that name as the caster, and drops the record when it is empty),
-        // so an unnamed capture loses its charm evidence, its R0-local claims and its looting silently. The suite used to get the
-        // name from whatever eqlog_(Player)_(Server).txt fixture happened to run earlier, which made nine tests pass from the
-        // command line and fail in Visual Studio — class order is not the same on both runners, and each of them failed alone too.
-        //
-        //   1. the filename names a player -> that name (IdentityRulesTest writes eqlog_Feedbackone_Eqgate.txt for exactly this);
-        //   2. nothing since the last capture -> no name yet, empty, or still the one the harness stamped: FixturePlayerName, so two
-        //      orders of this suite agree about what "You" means (drift is recognised by remembering the last stamp — every leak of a
-        //      name here comes from a stamp of this method's own, which is why the test is "nothing at all or what I wrote");
-        //   3. a test set ConfigUtil.PlayerName to some other name -> left alone, because that is a stated condition, not drift
-        //      (how HealCreditLawTest parses as "Kizant"). A class wanting NO local player therefore states it around its own
-        //      classifications rather than around a capture: an empty name cannot be told apart from case 2.
-        //
-        // The chosen name deliberately SURVIVES the run: rules read PlayerName while classifying too, and classification happens
-        // after this returns, so a capture and its own verdicts must answer for the same player.
-        var selfMatch = System.Text.RegularExpressions.Regex.Match(
-            Path.GetFileNameWithoutExtension(path), @"^eqlog_(.+?)_.+$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-        if (selfMatch.Success) ConfigUtil.PlayerName = selfMatch.Groups[1].Value;
+        // Keep the chosen name through classification, but replace inherited harness names on the next capture.
+        // docs/DesignNotes.md → "A You line needs a local player, and not out of whoever ran first".
+        if (FileUtil.ParseFileName(path, out var playerName, out _))
+        {
+            ConfigUtil.PlayerName = playerName;
+            _playerNameWrittenByHarness = playerName;
+        }
         else if (string.IsNullOrEmpty(ConfigUtil.PlayerName)
                  || string.Equals(ConfigUtil.PlayerName, _playerNameWrittenByHarness, StringComparison.Ordinal))
+        {
             ConfigUtil.PlayerName = FixturePlayerName;
-        _playerNameWrittenByHarness = ConfigUtil.PlayerName;
+            _playerNameWrittenByHarness = FixturePlayerName;
+        }
 
         // Clear parser state left by other tests in this process (assembly is serialized, not isolated).
         DamageLineParser.ResetProcessState();

@@ -3087,7 +3087,7 @@ preview instance whose face carried eleven controls, three dropdowns deep, with 
 themselves only after something moved. The FCT panel had already proved the better shape — the overlay stays nothing
 but numbers while a companion window holds every decision — so the inline panel is gone and `DamageMeterSettingsWindow`
 took its job: two accordion sections that each answer one question — STYLE (thin bars, then the columns dropdown, font size and rows, then bar color
-and highlight) and OPTIONS (hide other players, streamer mode, class filter, crit rate, reset) — Save and
+and highlight) and OPTIONS (hide other players, streamer mode, class filter, crit rate, meter panels, reset) — Save and
 Cancel as the entire exit vocabulary, everything previewed live on the sample stage and nothing written to ini until Save.
 
 `DamageMeterConfigState.Load()` is the **one** reader of these settings keys and the only place their ranges are judged: the overlay constructor opens from it
@@ -3098,8 +3098,8 @@ the game" needs `EQDataStore`, which the staged object deliberately does not tou
 next Save. No headless test reaches these guards (app assembly, `ColorConverter`), so "a hostile settings.txt is answered the same way twice" is a Windows gate
 in `docs/ReleaseChecklist.md`. The overlay grew three internal verbs — `PreviewMeterState` (apply without
 persisting), `CommitMeterState` (apply, persist the same ini keys the old panel wrote, hand back to the game) and
-`DiscardMeterSettings` (just end: MainWindow reopens a live meter that reads the untouched values back off disk, so
-discarding restores itself and no undo code exists). The `_current*` fields stopped being half-state/half-control —
+`DiscardMeterSettings` (just end: the next live meter reads the untouched saved values, so
+discarding needs no undo writes). The `_current*` fields stopped being half-state/half-control —
 rows, font, mini bars, columns, streamer and both colors now have working-set fields the Update methods maintain, and
 the update tick reads those instead of asking a ComboBox that no longer exists.
 
@@ -3117,6 +3117,9 @@ which is the primary monitor's work area in DIPs and landed the panel on the wro
 "Damage meter column switches: hiding one reserves no width". The bar pool rebuilds only when the row count
 actually changes — measured while wiring: previewing every color-picker stop through `UpdateMaxRows` recreated and
 reseeded every `DamageBar` on each intermediate stop, which is a flicker the player never asked for.
+`PreviewMeterState` also owns the height-refit decision: font, thin bars, row count or panel choice can change the content geometry;
+class, colour and other unrelated previews preserve a manually resized stage. `UpdatePanels` never independently requests a refit.
+The Save/Cancel and manual-height sequences are Windows gates in `ReleaseChecklist.md`.
 
 The live toolbar sizes to its content in both axes. The operator's screenshot exposed two separate layout problems:
 DPS/Tank and the left controls sat below Damage/DPS/Sec, and the header-to-first-player gap was much larger than the
@@ -6577,13 +6580,15 @@ first line is read.
 
 The test harness has no such filename for most fixtures, so `PipelineHarness.RunCore` decides the local player once per capture:
 
-- a file named `eqlog_<Player>_<Server>.txt` seeds its own player — that is the mechanism `IdentityRulesTest` writes
-  `eqlog_Feedbackone_Eqgate.txt` to use;
+- a filename accepted by production's `FileUtil.ParseFileName` seeds its own player — that is the mechanism `IdentityRulesTest` writes
+  `eqlog_Feedbackone_Eqgate.txt` to use; the harness shares the same name, extension and archive-suffix grammar;
 - otherwise, if nothing has been said since the last capture (no name yet, an empty one, or still the name the harness itself stamped),
   the capture gets `PipelineHarness.FixturePlayerName`, a word no fixture uses;
-- otherwise the standing name is one a test chose and it stands — that is how `HealCreditLawTest` parses as **Kizant**. A class wanting
-  *no* local player states it around its own classifications (as `IncrementalClassificationTest` does, which builds facts directly),
-  because an empty name is indistinguishable from "nobody spoke".
+- otherwise the standing name is one a test chose and it stands across unnamed captures, until the test changes or restores it.
+  Only a name actually assigned by the harness is marked as inherited; retaining an explicit choice must not consume it.
+  `PipelineHarness.SetFixturePlayerName` makes intent explicit even when the chosen name equals the last harness-written name.
+  A filename still names its own capture first. A class wanting *no* local player states it around its own classifications
+  (as `IncrementalClassificationTest` does, which builds facts directly), because an empty name is indistinguishable from "nobody spoke".
 
 The chosen name survives the run on purpose: rules read PlayerName while **classifying** too, and classification happens after the capture
 returns. It is re-decided at the next capture rather than restored afterwards, which is what makes "which pull owns this charm" independent
@@ -6593,7 +6598,8 @@ Why this is pinned and not just tidied: nine tests took their local player from 
 process, so the same suite read green from `dotnet test` and red in Visual Studio — class order is not identical between the two runners —
 and every one of them also failed when run alone, which is the only reproducible form. `PipelineHarnessPlayerNameTest` pins all three
 branches by reading what the **parser recorded** (the attacker on a `You hit …` row, and a charm window over a fixture parsed with nothing
-else in the process), not the field; `EntityNameKeyTest` is the test whose question depends on it.
+else in the process), not the field. It also pins production filename grammar and explicit names across consecutive captures, including
+reasserting the preceding filename's name; `EntityNameKeyTest` is the test whose question depends on it.
 
 ## One row per life: what the engagement gap splits, and what a duration column owes
 
@@ -7161,11 +7167,24 @@ Another opponent's death cannot shorten a survivor's allowance. With no survivor
 result (ties share it), including its killing blow even if no live frame was painted. `DerivedFight.DeathTime` records death
 separately from last damage. A death selects the result but does not renew its eight-second **damage-receipt** deadline.
 
-**Accounting uses log time; visibility uses receipt time.** `DamageOverlayLifecycle.CaptureEdge` is the newest accepted log second
-(or an eligible life's death). On Kill membership asks that data edge, never the PC clock. Pending damage can advance that edge or
-continue its own life through `ContinuedThrough`; pending membership has no clock-based expiration. Thus rows cannot disappear one at
-a time during silence. Timed modes initialize their sticky start from **data edge minus mode**, not `now - mode`; this is not a sliding
-window. Reset cuts at the current captured **fact ordinal**, including within one log second. When a timed board expires, its next
+**Accounting uses log time; visibility uses receipt time.** On Kill membership asks the newest accepted activity or an eligible life's
+death, never the PC clock. Accepted zero-amount attempts advance that edge even when their life has no positive damage to display;
+accepted activity after a completion suppresses its final result. Otherwise a new opponent's miss renews the receipt deadline while
+selection stays on an expired open or killed opponent. Pending and projected attempts obey the same rule: projection cannot bring back
+what pending activity already hid. Excluded outgoing damage still supplies no activity, and avoidance on the same live encounter still
+continues its existing amounts. `MeterAvoidanceLifecycleTest.cs` pins both directions, open/killed expiry, completion hold, the 30-second
+boundary, pending handoff, copied/cold lifecycle state and recovery on the new encounter's first positive hit.
+Second-resolution timestamps cannot settle a new attempt tied with a death. Projection therefore carries the slain fact's
+`DeathSequence` and the row's `LastSequence`; accepted activity carries its own sequence through both projected and pending scans.
+After choosing the latest completed life(s), On Kill rejects combat captured after their final completion boundary, including delayed
+records whose timestamps tie or precede the death. The boundary includes those lives' same-second killing blows, so deferred slain
+bucketing is unchanged and simultaneous final deaths can still share their result. An attempt before the final death cannot suppress
+that result. Only a captured slain event supplies death order: inferred charm completions keep their timestamp policy rather than
+inventing a sequence from the last hit. `MeterAvoidanceLifecycleTest.cs` pins those controls, and `FightProjectionIncrementTest` compares
+sequence markers across continued/full projections and the next life of the same name.
+Pending activity can also continue its own life through `ContinuedThrough`; pending membership has no clock-based expiration. Thus rows
+cannot disappear one at a time during silence. Timed modes retain their positive-damage eligibility edge and initialize their sticky
+start from **data edge minus mode**, not `now - mode`; this is not a sliding window. Reset cuts at the current captured **fact ordinal**, including within one log second. When a timed board expires, its next
 accumulation starts after the captured prefix, including pending records; no wall-clock timestamp becomes an accounting bound.
 `MeterFactInput.FirstOrdinal` carries that cut to both activity and amount walks, and the materialized reference supports the same cut.
 An ordinal-cut query also builds each life's auxiliary annotation span from its retained routed records, not the original life header:
@@ -7187,8 +7206,8 @@ records its ordinal range against `Stopwatch` time, grouped into millisecond bat
 never age out.** A stalled or disabled worker may accumulate metadata only while new damage facts arrive; a quiet log and duplicate notifications
 add nothing. After successful verification, batches older than 120 seconds relative to the newest receipt fold into a compact checkpoint
 before retirement. The recent window exceeds every supported mode (configuration accepts 1–100 seconds); long-backlog list capacity is released too.
-Workers inspect each batch's first and last eligible ordinal using the same admission predicate as pending combat. `MeterReceiptRuns` keeps the
-latest eligible receipt and one reset cut for each supported quiet period, so changing modes needs no discarded history. A gap must be strictly
+Workers inspect each lane's first and last eligible ordinal in a batch using the same admission predicate as pending combat. `MeterReceiptRuns` keeps the
+latest eligible receipt and one reset cut for each supported quiet period for Damage, Tanking and Both, so changing modes or panels needs no discarded receipt history. A gap must be strictly
 longer than the mode to cut; the cut keeps the first eligible ordinal after that gap, not merely the newest hit. The summaries copy with each read,
 and only a completed, still-current read acknowledges its prefix. Cancellation, failure and input invalidation retire nothing.
 Filters/verdict changes recheck the retained window from the historical checkpoint using original receipt times, not the time of reconsideration.
@@ -7200,11 +7219,15 @@ ordinal prefix outside both that lock and the capture gate, with cancellation ch
 the copied read's last millisecond batch without changing its question. Completion acknowledges only that prefix; an older read cannot
 overwrite a newer read's publication, changed verdict/filter inputs invalidate the read, and receipts outside the recent window cannot be published fresh.
 An expiry cuts at the **checked** captured prefix, including its pending records, never damage appended while that scan ran.
-The lifecycle checkpoint also carries the last verified receipt as a scalar: if pruning later returns `None`, its original deadline still
-retires the expired accumulation. `None` from exclusions is not permission to cut early; restoring a filter within that deadline may
-restore its damage, but cannot restamp receipt. Invalidated receipt inputs are retried before selection rather than mistaken for a verified
-absence. `PrunedReceiptsStillRetireTheExpiredTimedAccumulation` pins the cutoff and checkpoint copy; `AFilterHidingEveryReceiptDoesNotPretendTheTimedBoardExpired`
-pins temporary exclusions. `MeterArrivalsTest` pins read interleavings without timing probes;
+The lifecycle checkpoint also carries a receipt-time high-water mark for its panel choice. **Display and retirement ask different
+receipts:** the current eligible receipt sets the display deadline, while the high-water mark prevents an exclusion from expiring the
+accumulation early. Both `None` and an older surviving receipt may hide the board, but neither rewinds its retirement clock. Restoring
+an exclusion within the original deadline may restore its amounts without restamping receipt; after that deadline, the checked prefix
+still retires. Narrowing or replacing panels starts that protection from the newly selected lanes' own receipt, never a hidden lane's
+newer one; widening preserves it because every previously enabled lane is still enabled. Already-applied ordinal cuts remain forward-only. Invalidated receipt inputs are retried before selection rather than mistaken for a
+verified absence. `PrunedReceiptsStillRetireTheExpiredTimedAccumulation` pins pruning and checkpoint copy;
+`AFilterHidingEveryReceiptDoesNotPretendTheTimedBoardExpired` and `MeterExclusionLifecycleTest.cs` pin complete/partial exclusions,
+copied single-panel state, the unchanged display timeout, eventual retirement, recovery and panel narrowing/widening. `MeterArrivalsTest` pins read interleavings without timing probes;
 `ExpiryCannotDiscardAReceiptThatArrivedWhileThePreviousPrefixWasBeingChecked` and `PruningDuringAReceiptReadCannotRetireTheNewerReceipt`
 pin the accounting cutoff with both retained and pruned receipts. This is an ingest-lock ownership guarantee, not an end-to-end raid timing claim.
 
@@ -7224,7 +7247,7 @@ That worker verifies the original receipts; enabling never restamps them. `Enabl
 pins the cache/freshness contract; the actual Enable gesture is a Windows release check. `DerivedMeter` is only the app seam; there is no
 engine-selection setting or legacy fallback.
 
-The lifecycle retains only session id, scalar reset bounds, the established RDPS log-time edge and the last verified receipt, never engines or rows. X-close/reopen preserves those values;
+The lifecycle retains only session id, scalar reset bounds, the established RDPS log-time edge, panel choice and receipt high-water mark, never engines or rows. X-close/reopen preserves those values;
 a new capture discards them. Reset cuts at the click; display/capture revisions reject obsolete worker results. A null answer
 hides the board rather than retaining old stats indefinitely, and a missing damage/tanking half clears its old bars.
 
@@ -7249,6 +7272,11 @@ unprojected suffix on the meter worker, once per ordinal, and uses the **same ad
 no time; unknown names remain eligible, so a new opponent need not already have a row. These data-continuity hints carry no receipt
 clock and cannot prolong visibility by being reread. Fresh snapshots retire them; a changed timeline stamp rechecks the suffix.
 This uses the last available verdicts, not a second classifier: later classification can revise them.
+A receipt read may outrun the preceding pending scan. Before selection, the worker requires pending coverage through the newest
+**eligible** receipt ordinal and matching timeline/exclusions; irrelevant newer noise does not require another scan. Projected activity
+must still answer the current exclusions too, and exclusions are checked again after counting. An uncovered or invalidated question
+returns Deferred through the existing bounded retry gate, never a freshly renewed old result or an expiry cut. `MeterPendingPrefixTest`
+pins an arrival between scans, noise that needs no retry, and unchanged-count exclusion changes.
 
 On Kill applies pending activity **per existing open life**, using sorted activity chains joined at the same 30-second gap as
 projection. Hits at 29 and 58 can continue a life last seen at zero even with a stalled snapshot; a first hit at 31 cannot. A
@@ -7273,7 +7301,7 @@ retention is unchanged: `RetainDecoded()` is not required for reference safety a
 ### Damage meter presentation expiry and ownership (issue #416)
 
 The report describes a toolbar without bars lingering after a mission, with a ten-second reset. Checking only DPS does
-not establish that Tank was inactive; the two panels share activity eligibility. The code nevertheless had independent
+not establish that Tank was inactive; with Both enabled, either panel earns activity. The code nevertheless had independent
 failure paths worth fixing, without claiming which one the report exercised.
 
 `DamageOverlayScope.ExpiresAt` is a monotonic deadline from the last accepted damage receipt, using the mode's timeout (eight seconds
@@ -7289,7 +7317,7 @@ per-life cursors, positive-damage eligibility and latest accepted log time. Outg
 exclusions as the displayed damage calculation; incoming activity remains unfiltered, matching Tank accounting. Accepted
 avoidance outcomes can continue an encounter that has damage. Healing, casts, taunts and death events do not
 renew the damage receipt. Class selection is still a display filter, not a change in combat accounting, and genuine Tank activity
-can still keep a DPS-selected meter alive. Pending activity applies the same outgoing filter and revisits its suffix when
+can still keep a DPS-selected meter alive when Both panels are enabled, never when it is Damage-only. Pending activity applies the same outgoing filter and revisits its suffix when
 filters change. A replacement projection can reuse scalar activity only after comparing both routed ordinal prefixes;
 matching counts alone is insufficient. This does not change the fight-list grouping or summary-board denominators.
 
@@ -7415,6 +7443,92 @@ cross-life sums, Tank attribution, life removal, filter changes), and `MeterCloc
 (accounting versus receipt deadlines). Rendering, delayed-worker behavior and header alignment remain Windows gates in
 `docs/ReleaseChecklist.md`.
 
+### Which panels the meter shows decides what may wake it and what is worth displaying
+
+The operator picks which panels a damage meter has — Damage, Tanking or Both. `OverlayMeterPanels` stores the `MeterPanels` flags
+value (1, 2, 3) and **`None` is not storable**: `DamageMeterConfigState.Load()` folds an absent key, junk, or a hand-written 0 back to
+Both, and no surface offers "none" — a meter cannot be configured into having no tabs. One word answers two questions, which is the
+point of it: which tabs exist, and **which activity may open the window or keep it on screen**. A player who only watches damage must
+not have the overlay pop for a pull where nobody hit anything but the tank, and a tank's window must not hold the screen because the
+raid's damage board is busy. Both interlocks read the same receipts: the opening announcement in `DeriveEngine` asks with the saved
+panels (that announcement *is* an open) and `DamageOverlayWindow` asks with its own `_panels`. Setup previews sample data, not a live
+activity decision; the saved choice governs the next live meter. Rebuilding its sample bars seeds both pools even when one is hidden;
+changing panels can reveal that pool without another rebuild. The row-count-then-panel-switch regression stays a Windows release gate.
+
+A panel is EARNED per fact, in `MeterActivityIndex.AcceptsPending`, using projection's admission, `CombatAnchor` and `CombatTarget`:
+`RaidSide` earns Tanking without outgoing exclusions; `AtOwner` earns Damage only when the exclusion filter allows it; `Neither` earns
+nothing. `MeterDamageFilter.Allows` is direction-blind — it asks only what KIND of damage a fact is — so passing it is not proof of
+output, and being hit must never count as damage we did. Incoming stays exempt from those exclusions: a bane hit landing on us moves
+the Tanking lane even with bane damage switched off. `MeterArrivalsTest` pins that exemption. Unknown/Unknown exchanges share the
+same name-shape anchor decision without claiming either name's identity: a spaced attacker hitting a letters-only defender earns
+Tanking, not Damage, even before classification catches up. `MeterUnplacedReceiptsTest` compares the receipt lane to the projected
+board, pins incoming exclusions and the Damage-only quiet cut, and keeps both names Unknown throughout.
+
+**Not incoming does not mean outgoing.** A charmed player, pet or mercenary striking an NPC can own an encounter row while the hit
+is routed to `Neither`; it contributes to neither board and may supply neither a receipt nor pending continuity. Otherwise that
+uncounted combat can extend a still-visible board or reopen its old amounts after expiry. `MeterRoutingTest` pins receipt/board
+agreement across identity kinds, charm pairs, name shapes and source-less spell flags, plus empty opening, unchanged deadlines,
+missed quiet-gap cuts, expired/cold/reopened scopes and recovery on real combat in On Kill and timed modes. Sharing the anchor and
+target decisions keeps this rule on the same side of the projection seam as the board's actual routing.
+
+Panel choice is answered **at read time** without rescanning facts. `MeterReceiptRuns` caches the newest receipt AND per-mode quiet-gap cuts
+for Damage, Tanking and Both. Hidden activity must not bridge a selected lane's quiet gap: outgoing at 100 and 108 with incoming at
+102/104/106 resets a three-second Damage-only accumulation, even if no worker observed the expiry; Both stays continuous. Each lane keeps
+its own first/last ordinal inside a mixed millisecond batch. Copies and retired-history checkpoints preserve all three summaries.
+`MeterPanelReceiptsTest` pins missed gaps, exact-threshold equality, mixed/partial batches and compaction; `MeterQuietGapTest` pins the
+resulting amounts. Retention still gates on the union (`RetainedAnswer` compares `runs.Last` against the newest batch), but retention is
+not a quiet-gap cut: the requested lane's receipt still supplies its own visibility deadline.
+
+**Three questions, three answers, and none of them is "switch the operator to another tab".** *Which tabs exist* is the setting alone: Both
+shows DPS and Tanking whether or not either has rows, and a one-panel choice collapses the absent tab and the divider between the two
+(`SizeToContent` plus `ContentSizeChanged`, which the window already follows). *What is drawn* is the tab that was picked, or the single half
+a one-sided meter has — `DrawsDamagePanel(panels, pickedTab)`. Tab clicks change the live selection. Narrowing the panel choice selects the
+survivor in staged state; widening keeps that selection. Preview writes neither `OverlayMeterPanels` nor `OverlayShowingDps`: Cancel
+preserves both saved choices, while Save persists the preview's panel choice and selected tab. An operator
+who wanted tanking clicked Tanking; a board that turns itself over because the other half got busy is the app deciding for them, which they
+rejected in as many words. *Whether the window exists at all* is entries: `AnyPanelHasEntries(board, board, panels)` — at least one half the
+operator ENABLED has a board that lists anyone. So Both with an empty visible half and a busy hidden half keeps the meter up (the tab is right
+there), while a Damage-only meter with nothing in it has no reason to be on screen and asks the receipts whether to close. An entry is any listed
+row — a player, an ``X +Pets`` group, a mercenary, or the source-less Reverse DS bucket: what matters is that something would be listed, not that
+it is a person or that it opened a fight-list row.
+
+**The class filter is a lens, not a fact, so it may not decide whether the window exists.** `HasRowEntries` reads the builder's ranked list
+*before* the filter and the row cap; only the bars and the nudge counts (`LoadStats`) obey the lens. Metering to a class that has done nothing
+yet therefore leaves the meter standing with an empty board, as it did for years, instead of deleting the window over somebody who forgot the
+filter was on: an empty board they can clear is information, while no meter at all reads as a broken overlay. This is the one place where "empty
+means no window" was wrong precisely because the emptiness was *chosen* rather than measured — and it is why the two counts are kept apart instead
+of reusing `LoadStats`' answer for both questions.
+
+**A half that is busy while you are looking at the other one nudges its tab, and does nothing else.** `SetTabAttention` on the window owns
+the rhythm — ONE `DispatcherTimer` with TWO intervals, 5 s of waiting then 0.7 s of colour, so it is one moment every five seconds rather than
+a blink machine — and it paints through the toolbar's `SetTabAttention`, which colours the tab that is *not* on screen with
+`EQGoodForegroundBrush` read **by key** (the green the title bar's finished-loading message uses) rather than a cached brush, so a theme change
+is followed. It arms only when the drawn half has no rows and an enabled hidden half does, fires once immediately so the nudge is not five
+seconds late, and stops the instant the reason disappears: rows arrive on the visible half, the tabs swap, or the window hides. Not a board
+switch, not a standing highlight, not a faster flash. That key resolves to `Colors.DarkGreen`; if it reads too dim against a meter background,
+that is one line to change — report it rather than inventing a second green.
+
+**A meter that opens itself is not visible until an enabled, unfiltered board has a row.** `MainWindow.OpenDamageOverlayIfEnabled` shows such a window at
+opacity 0 and calls `RevealOnFirstContent()`; the window raises its own opacity on the first `ApplyMeterUpdateCore` that answers
+`AnyPanelHasEntries`. This exists because the open decision is made from activity, and the first build lands afterwards — revealing on creation showed
+an empty frame for up to a second, which is the exact thing this rule forbids. The request stays armed if the answer is empty (the window is
+collapsed by `HideMeterPresentation`, so it is inert rather than ghost-visible and clickable), meaning the meter appears on the next real pull
+without anyone reopening it; whether it survives at all is still the receipts' answer, so a quiet capture ends it. The three callers that
+open a meter by themselves (log load, power resume, auto-open after fresh damage) pass `revealOnContent: true`. Every live opening still
+requires recent activity in an enabled lane, including the menu's Enable action; enabling a quiet meter arms it for later combat rather
+than showing an empty window. An eligible direct menu opening does not wait for its first board before becoming visible. Setup is a
+separate sample-data stage and can open without combat.
+
+Rows and receipts are therefore two different questions and neither replaces the other. Rows say *what is worth showing right now*; only
+the receipts can time anything, because rows do not age — the empty-answer path calls `HideAndReask`, which hides immediately and lets
+`HasActivity(mode, panels)` decide whether the window survives, so "on kill" still means an ongoing fight keeps its meter (and an explicit
+Reset still keeps polling a still-active fight rather than closing on its own zeroed board). Both directions keep computing whatever is
+displayed, so boards, healing and export are untouched and widening the choice needs no receipt rescan. Explicit Reset and already-applied
+timed cuts remain forward-only: changing panels does not resurrect a retired accumulation. Copy Parse copies the selected tab, which is
+the same half that is drawn — the two could only part company while the app was allowed to move the board out from under the selection. Tab
+layout, the nudge and the preview's sample rows are Windows gates in `docs/ReleaseChecklist.md`; nothing in the WPF assembly is run from
+Linux.
+
 ### Damage meter column switches: hiding one reserves no width
 
 `MeterColumns` (Core) is the whole vocabulary — rendered cell, header word, tooltip, settings key and missing-key default of `% / Damage / DPS / RDPS / SDPS` — because
@@ -7479,7 +7593,10 @@ docking attempt, so a rectangle read that fails at opening costs the initial doc
 move costs one WARN per failure episode (repeats raise only a Debug count) and leaves the companion stationary for that attempt: it
 never throws out of a move/size handler and never moves against an unchecked work area — a work-area read that fails while both
 rectangles read cleanly means the desktop is mid-change, so following without a clamp is the wrong answer. A placement that succeeds
-ends the episode, so a later failure is allowed one WARN of its own.
+ends the episode, so a later failure is allowed one WARN of its own. The previous rectangle is **adopted only once a move lands** (or the
+panel already sits where the clamp puts it): a refused `MovePanel` returns before adopting it, so the next move/size event carries the whole
+outstanding displacement instead of losing the part that was refused — spending the base before the native call made one refused gesture a
+permanent offset, since only a completed follow is entitled to forget what it moved by.
 The right insets are per cell, so a negative one ends past its own edge into whatever cell comes **next**;
 hiding a neighbour moves that overflow onto the following column (`%` against wide `DPS` digits at 10 pt is the tightest case), which is corrected in the inset preset
 and never by handing a number its own switch. Remember what that floor going down means: the meter can be dragged narrower than it used to go and names are not

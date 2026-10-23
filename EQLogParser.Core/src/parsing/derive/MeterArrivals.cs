@@ -28,10 +28,23 @@ internal sealed class MeterArrivals
   private MeterDamageFilter _filter;
   private MeterReceiptRuns _runs = new();
   private MeterReceiptRuns _checkpoint = new();
-  private Published _published = new(MeterArrival.None);
+  private Published _published = new(MeterArrival.None, MeterArrival.None, MeterArrival.None);
 
-  // Dispatcher readers must never wait for a worker classifying a newly received prefix.
-  internal MeterArrival Observed => Volatile.Read(ref _published).Arrival;
+  /*
+   * Dispatcher readers must never wait for a worker classifying a newly received prefix, so what gets published is the answer per
+   * panel (already retention-gated) rather than the runs object. A window asks for its own panels and reads one volatile reference.
+   */
+  internal MeterArrival Observed(MeterPanels panels)
+  {
+    var published = Volatile.Read(ref _published);
+    return panels switch
+    {
+      MeterPanels.Damage => published.Damage,
+      MeterPanels.Tanking => published.Tanking,
+      MeterPanels.Both => published.Both,
+      _ => MeterArrival.None
+    };
+  }
 
   internal static double Now => Stopwatch.GetTimestamp() / (double)Stopwatch.Frequency;
 
@@ -50,15 +63,16 @@ internal sealed class MeterArrivals
     }
   }
 
+  // `panels` answers for one window; the cached run beneath it holds both, so a different choice needs no rescan.
   internal MeterArrival Latest(DamageFactTable facts, EntityTimeline timeline,
-    int mode = 0, CancellationToken cancellation = default)
+    int mode = 0, MeterPanels panels = MeterPanels.Both, CancellationToken cancellation = default)
   {
     lock (_gate)
     {
       if (_checkedThrough == _through && _stamp == timeline.StateStamp() && _filter == MeterDamageFilter.Current)
-        return RetainedAnswer(_runs, mode);
+        return RetainedAnswer(_runs, mode, panels);
     }
-    return BeginRead(timeline).Complete(facts, mode, cancellation);
+    return BeginRead(timeline).Complete(facts, mode, panels, cancellation);
   }
 
   // Only receipt metadata is copied under the ingest lock. A read owns a fixed prefix even if its last batch grows.
@@ -86,13 +100,13 @@ internal sealed class MeterArrivals
   }
 
   private MeterArrival Publish(Read read, MeterReceiptRuns runs, List<MeterReceipt> recent,
-    int mode, CancellationToken cancellation)
+    int mode, MeterPanels panels, CancellationToken cancellation)
   {
     lock (_gate)
     {
       cancellation.ThrowIfCancellationRequested();
       if (!read.InputsCurrent) return MeterArrival.None;
-      var answer = RetainedAnswer(runs, mode);
+      var answer = RetainedAnswer(runs, mode, panels);
       if (read.Revision != _revision) return answer;
       _checkedThrough = read.Through;
       _stamp = read.Stamp;
@@ -105,15 +119,18 @@ internal sealed class MeterArrivals
       }
       _recent.AddRange(recent);
       RetireCheckedHistory();
-      var observed = RetainedAnswer(runs, 0);
-      if (_published.Arrival != observed) Volatile.Write(ref _published, new Published(observed));
+      // Per panel rather than one scalar: two windows may display different choices over one capture.
+      var published = new Published(RetainedAnswer(runs, 0, MeterPanels.Damage),
+        RetainedAnswer(runs, 0, MeterPanels.Tanking), RetainedAnswer(runs, 0, MeterPanels.Both));
+      if (_published != published) Volatile.Write(ref _published, published);
       return answer;
     }
   }
 
-  private MeterArrival RetainedAnswer(MeterReceiptRuns runs, int mode) =>
+  // Retention asks whether this run still speaks for the newest batch at all; which panel answered is a separate question.
+  private MeterArrival RetainedAnswer(MeterReceiptRuns runs, int mode, MeterPanels panels) =>
     _batches.Count > _head && runs.Last.Time >= _batches[^1].Time - RetentionSeconds
-      ? runs.ForMode(mode) : MeterArrival.None;
+      ? runs.ForMode(mode, panels) : MeterArrival.None;
 
   private void RetireCheckedHistory()
   {
@@ -150,7 +167,8 @@ internal sealed class MeterArrivals
     // An invalidated scan is not a verified absence of receipts and must not retire a timed accumulation.
     internal bool InputsCurrent => Stamp == Timeline.StateStamp() && Filter == MeterDamageFilter.Current;
 
-    internal MeterArrival Complete(DamageFactTable facts, int mode = 0, CancellationToken cancellation = default)
+    internal MeterArrival Complete(DamageFactTable facts, int mode = 0, MeterPanels panels = MeterPanels.Both,
+      CancellationToken cancellation = default)
     {
       cancellation.ThrowIfCancellationRequested();
       var runs = Seed.Copy();
@@ -159,18 +177,28 @@ internal sealed class MeterArrivals
       {
         cancellation.ThrowIfCancellationRequested();
         var first = Math.Max(batch.From, From);
-        while (first < batch.Through && !Accepts(facts, first, cancellation)) first++;
-        if (first == batch.Through) continue;
-        var last = batch.Through - 1;
-        while (last > first && !Accepts(facts, last, cancellation)) last--;
-        var receipt = new MeterReceipt(first, last + 1, batch.Time);
+        var receipt = new MeterReceipt(
+          LaneReceipt(facts, first, batch, MeterPanels.Damage, cancellation),
+          LaneReceipt(facts, first, batch, MeterPanels.Tanking, cancellation));
+        if (receipt.Through == 0) continue;
         runs.Add(receipt);
         recent.Add(receipt);
       }
-      return Owner.Publish(this, runs, recent, mode, cancellation);
+      return Owner.Publish(this, runs, recent, mode, panels, cancellation);
     }
 
-    private bool Accepts(DamageFactTable facts, int ordinal, CancellationToken cancellation)
+    // Only the endpoints matter; a mixed batch's other lane must not move this lane's reset or arrival ordinal.
+    private MeterArrival LaneReceipt(DamageFactTable facts, int first, Batch batch, MeterPanels panel,
+      CancellationToken cancellation)
+    {
+      while (first < batch.Through && (Accepts(facts, first, cancellation) & panel) == 0) first++;
+      if (first == batch.Through) return MeterArrival.None;
+      var last = batch.Through - 1;
+      while (last > first && (Accepts(facts, last, cancellation) & panel) == 0) last--;
+      return new MeterArrival(last + 1, batch.Time, first);
+    }
+
+    private MeterPanels Accepts(DamageFactTable facts, int ordinal, CancellationToken cancellation)
     {
       if ((ordinal & 2047) == 0) cancellation.ThrowIfCancellationRequested();
       var fact = facts.At(ordinal);
@@ -181,5 +209,5 @@ internal sealed class MeterArrivals
 
   internal readonly record struct Batch(int From, int Through, double Time);
 
-  private sealed record Published(MeterArrival Arrival);
+  private sealed record Published(MeterArrival Damage, MeterArrival Tanking, MeterArrival Both);
 }

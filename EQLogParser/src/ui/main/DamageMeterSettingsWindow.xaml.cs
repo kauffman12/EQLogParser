@@ -134,7 +134,6 @@ namespace EQLogParser
       var dx = stage.Left - _lastStageBounds.Left;
       var dy = stage.Top - _lastStageBounds.Top;
       var growth = (stage.Right - stage.Left) - (_lastStageBounds.Right - _lastStageBounds.Left);
-      _lastStageBounds = stage;
 
       var left = panel.Left + dx;
       var monitorWindow = dx != 0 || dy != 0 ? _stageHandle : _panelHandle;
@@ -149,8 +148,14 @@ namespace EQLogParser
       if (dx != 0 || dy != 0)
         left = MeterPanelPlacement.FollowLeft(left, panel.Right - panel.Left, work.Left, work.Right);
       var top = MeterPanelPlacement.FollowTop(panel.Top + dy, panel.Bottom - panel.Top, work.Top, work.Bottom);
-      if (left != panel.Left || top != panel.Top) MovePanel(left, top);
+      // Only spend the stage delta after the panel moved (or was already at its clamped destination).
+      // A refused native call must leave the delta available to the next move/size event.
+      if (left != panel.Left || top != panel.Top)
+      {
+        if (!MovePanel(left, top)) return;
+      }
       else ResetNativeFailure();
+      _lastStageBounds = stage;
     }
 
     /*
@@ -158,15 +163,16 @@ namespace EQLogParser
      * move/size notifications: a native failure there (the owner closing under the event, a monitor mid-change) must not throw out
      * of a layout handler, and a wedged case gets one WARN rather than a line per drag event.
      */
-    private void MovePanel(int left, int top)
+    private bool MovePanel(int left, int top)
     {
       if (NativeMethods.TryMoveWindow(_panelHandle, left, top, out var error))
       {
         ResetNativeFailure();
-        return;
+        return true;
       }
 
       WarnNativeFailure($"could not move the panel to ({left},{top}) — error {error}");
+      return false;
     }
 
     /*
@@ -242,6 +248,13 @@ namespace EQLogParser
 
     private void SaveClick(object sender, RoutedEventArgs e) => _stage.CommitMeterState(Snapshot());
 
+    // Preview the panel choice on the sample stage; Save alone changes the live meter's activity setting.
+    private void PanelsChanged(object sender, SelectionChangedEventArgs e)
+    {
+      if (_loading || panelsCombo is null) return;
+      _stage.PreviewMeterState(Snapshot());
+    }
+
     private void CancelClick(object sender, RoutedEventArgs e) => _stage.DiscardMeterSettings();
 
     // Read every control into a fresh state copy. Colors travel as #AARRGGBB strings, the same shape the ini keys and
@@ -257,6 +270,7 @@ namespace EQLogParser
         HideOtherPlayers = hideCheck.IsChecked == true,
         StreamerMode = streamerCheck.IsChecked == true,
         CritRateDisplay = critCombo.SelectedIndex is >= 0 ? critCombo.SelectedIndex : 0,
+        Panels = (MeterPanels) TagOf(panelsCombo.SelectedItem, (int) MeterPanels.Both),
         DamageResetMode = TagOf(resetCombo.SelectedItem, 0),
         SelectedClass = classCombo.SelectedItem?.ToString() ?? Resource.ANY_CLASS,
         ProgressColor = ToHex(barColor.Color),
@@ -282,6 +296,9 @@ namespace EQLogParser
       hideCheck.IsChecked = s.HideOtherPlayers;
       streamerCheck.IsChecked = s.StreamerMode;
       critCombo.SelectedIndex = s.CritRateDisplay is >= 0 and <= 3 ? s.CritRateDisplay : 0;
+
+      // Load() already refused anything that is not Damage, Tanking or Both, so this always lands on an item.
+      SelectByTag(panelsCombo, (int) s.Panels);
       SelectByTag(resetCombo, s.DamageResetMode);
 
       var classes = (System.Collections.Generic.IList<string>)classCombo.ItemsSource;

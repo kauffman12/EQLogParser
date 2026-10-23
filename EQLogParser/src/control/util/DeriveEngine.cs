@@ -580,7 +580,10 @@ namespace EQLogParser
           var activityOrdinal = 0;
           if (ConfigUtil.IfSet("IsDamageOverlayEnabled"))
           {
-            var arrival = _meterArrivals.Latest(_facts, snapshot.Timeline);
+            // Asked with the displayed panels, because this announcement IS the auto-open path: an unwatched lane must not
+            // open a window. Receipts still record both lanes, so widening the choice later needs no rescan.
+            var panels = DamageMeterConfigState.LoadPanels();
+            var arrival = _meterArrivals.Latest(_facts, snapshot.Timeline, panels: panels);
             activityOrdinal = arrival.Through;
             freshDamage = activityOrdinal > _lastAnnouncedActivityOrdinal
                           && DamageOverlayLifecycle.HasRecentActivity(arrival, MeterArrivals.Now,
@@ -834,16 +837,18 @@ namespace EQLogParser
       return FightSummarySource.Build(overlapping, snapshot.DamageIndex, snapshot.Facts).Fights.ToList();
     }
 
-    internal bool HasOverlayActivity(int mode)
+    // The panels this window displays: activity on a lane it does not show answers None, which is what closes or keeps shut a
+    // meter whose only busy lane is the hidden one.
+    internal bool HasOverlayActivity(int mode, MeterPanels panels)
     {
       var snapshot = _snapshot;
       return !_disposed && snapshot is not null && DamageOverlayLifecycle.HasRecentActivity(
-        _meterArrivals.Observed, MeterArrivals.Now, mode);
+        _meterArrivals.Observed(panels), MeterArrivals.Now, mode);
     }
 
     // Select and materialize from ONE snapshot. The lifecycle retains only scalar reset state, never this capture's rows.
     internal MeterBuildResult BuildOverlayStats(DamageOverlayLifecycle lifecycle, DamageMeterCalculation calculation,
-      int mode, double now, CancellationToken cancellation, Action<double> publishExpiry = null)
+      int mode, MeterPanels panels, double now, CancellationToken cancellation, Action<double> publishExpiry = null)
     {
       return MeterBuildRetry.Run(() =>
       {
@@ -863,23 +868,27 @@ namespace EQLogParser
         if (candidates is null) return MeterBuildResult.Deferred;
         calculation.Activity.Update(candidates, cancellation);
         var receipts = _meterArrivals.BeginRead(snapshot.Timeline);
-        var arrival = receipts.Complete(snapshot.Facts, mode, cancellation);
+        // The arrival a build selects on is the displayed panels' answer, so an unwatched lane can neither extend this window's
+        // quiet deadline nor rescue it from expiring.
+        var arrival = receipts.Complete(snapshot.Facts, mode, panels, cancellation);
         var input = _capture.DeriveQuiescent(() =>
         {
           cancellation.ThrowIfCancellationRequested();
           if (_disposed || !ReferenceEquals(snapshot, Volatile.Read(ref _meterSnapshot))) return null;
-          // Retry invalidated inputs rather than treating their None answer as a verified expired prefix.
-          if (!receipts.InputsCurrent) return null;
+          // A newer eligible receipt must not renew old amounts before pending membership has seen its combat.
+          if (!receipts.InputsCurrent || !calculation.Activity.InputsCurrent
+            || !snapshot.PendingActivity.Covers(arrival.Through, snapshot.Timeline)) return null;
           // An expiry may cut only the receipt prefix we checked; ingest may have appended fresh damage during the scan.
           if (!lifecycle.TrySelect(SessionId, snapshot.AllFights, now, mode, arrival, receipts.Through, out var scope,
-            snapshot.PendingActivity, calculation.Activity.For)) return null;
+            snapshot.PendingActivity, calculation.Activity.For, panels)) return null;
           // Publish before counting: a blocked build cannot hold its prior presentation past this deadline.
           publishExpiry?.Invoke(scope.ExpiresAt);
           return snapshot.DamageIndex.CaptureMeterInput(scope.Rows, snapshot.Facts, scope.FromTime,
             double.PositiveInfinity, scope.FirstOrdinal, scope.WindowSecond);
         });
-        return input is null ? MeterBuildResult.Deferred
-          : MeterBuildResult.Completed(calculation.Update(input, cancellation));
+        if (input is null) return MeterBuildResult.Deferred;
+        var stats = calculation.Update(input, cancellation);
+        return receipts.InputsCurrent ? MeterBuildResult.Completed(stats) : MeterBuildResult.Deferred;
       }, cancellation);
     }
 

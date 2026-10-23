@@ -18,6 +18,11 @@ namespace EQLogParser
     public event EventHandler TankRequested;
     internal event EventHandler ContentSizeChanged;
 
+    // Set by DamageOverlayWindow from its panels choice, never by this window: which tabs exist and which one the operator picked -- which
+    // is also what is drawn, because a meter never moves anybody to another tab.
+    private MeterPanels _availablePanels = MeterPanels.Both;
+    private bool _showingDps = true;
+
     public DamageOverlayToolbarWindow()
     {
       ThemeConfig.SetCurrentTheme(this);
@@ -34,10 +39,54 @@ namespace EQLogParser
       SetShowingDps(true);
     }
 
+    /*
+     * Which tabs the meter has at all. A panel that is switched off loses its tab rather than sitting there greyed: a disabled button
+     * in the title row is a dead hit target that still asks the eye to read it, and the toolbar hugs its content anyway (SizeToContent
+     * plus ContentSizeChanged, which DamageOverlayWindow already follows), so nothing jumps when the pair becomes one.
+     */
+    internal void SetAvailableViews(MeterPanels panels)
+    {
+      _availablePanels = panels;
+      ApplyEnabledState();
+    }
+
     public void SetShowingDps(bool showingDps)
     {
-      dpsButton.Foreground = showingDps ? ActiveBrush : InactiveBrush;
-      tankButton.Foreground = showingDps ? InactiveBrush : ActiveBrush;
+      _showingDps = showingDps;
+      ApplyEnabledState();
+    }
+
+    /*
+     * A quiet nudge for the tab that is NOT on screen while the one that is has nothing to list: it borrows the app's "good" green -- the colour
+     * the title bar's finished-loading message uses -- for a moment, then goes back. `DamageOverlayWindow` owns the rhythm (about one pulse every
+     * five seconds, off the instant the reason disappears) because only it knows what each half holds; this window just paints. The colour is read
+     * by resource key rather than cached so a theme change is followed: a colour travels as a key, never as a Brush.
+     */
+    internal void SetTabAttention(bool on)
+    {
+      if (!on)
+      {
+        ApplyEnabledState();
+        return;
+      }
+
+      (_showingDps ? tankButton : dpsButton).Foreground = AttentionBrush;
+    }
+
+    private static Brush AttentionBrush => Application.Current.Resources["EQGoodForegroundBrush"] as Brush ?? ActiveBrush;
+
+    private void ApplyEnabledState()
+    {
+      var damageEnabled = (_availablePanels & MeterPanels.Damage) != 0;
+      var tankingEnabled = (_availablePanels & MeterPanels.Tanking) != 0;
+      dpsButton.Visibility = damageEnabled ? Visibility.Visible : Visibility.Collapsed;
+      tankButton.Visibility = tankingEnabled ? Visibility.Visible : Visibility.Collapsed;
+
+      // The divider BETWEEN the two tabs is not a divider when only one tab is left.
+      rect2.Visibility = damageEnabled && tankingEnabled ? Visibility.Visible : Visibility.Collapsed;
+
+      dpsButton.Foreground = damageEnabled && _showingDps ? ActiveBrush : InactiveBrush;
+      tankButton.Foreground = tankingEnabled && !_showingDps ? ActiveBrush : InactiveBrush;
     }
 
     public void UpdateFontSize(int fontSize, double headerHeight)

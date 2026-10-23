@@ -30,6 +30,32 @@ public partial class DamageMeterCalculationTest
   }
 
   [TestMethod]
+  [DataRow(false)]
+  [DataRow(true)]
+  public void AHiddenLanesReceiptsCannotKeepThePreviousAccumulationsAmounts(bool incoming)
+  {
+    var log = new Capture();
+    var attacker = incoming ? "a rat" : "Illuminai";
+    var defender = incoming ? "Illuminai" : "a rat";
+    log.Add(attacker, defender, 0, 600, receivedAt: 0);
+    log.Check(0, 3);
+    foreach (var receipt in new[] { 2, 4, 6 })
+      log.Add(defender, attacker, 0, 100, receivedAt: receipt);
+    log.Add(attacker, defender, 0, 200, receivedAt: 8);
+
+    var read = log.Arrivals.BeginRead(log.Timeline);
+    var panels = incoming ? MeterPanels.Tanking : MeterPanels.Damage;
+    var arrival = read.Complete(log.Facts, 3, panels);
+    Assert.IsFalse(log.Lifecycle.TrySelect(1, log.Project(), T0 + 8, 3, arrival, read.Through,
+      out _, activity: log.Calculation.Activity.For, panels: panels));
+    Assert.AreEqual(4, log.Lifecycle.SelectCandidates(1, log.Project(), 3).FirstOrdinal);
+
+    log.Check(8, 3, compareFresh: true);
+    Assert.IsNotNull(log.Last);
+    Assert.AreEqual(200L, (incoming ? log.Last.TankStats : log.Last.DamageStats).RaidStats.Total);
+  }
+
+  [TestMethod]
   public void ANewRunLongerThanTheModeIsNotReslicedFromItsLatestLogTime()
   {
     var log = new Capture();

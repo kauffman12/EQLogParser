@@ -25,13 +25,13 @@ public sealed class MeterArrivalsTest
   public void EnablingNeedsWorkerVerificationBeforeAnUnobservedReceiptCanOpenTheMeter()
   {
     Add(100, LabelTypes.Melee);
-    Assert.IsFalse(DamageOverlayLifecycle.HasRecentActivity(_arrivals.Observed, 105, 10),
+    Assert.IsFalse(DamageOverlayLifecycle.HasRecentActivity(_arrivals.Observed(MeterPanels.Both), 105, 10),
       "a disabled meter may have fresh captured damage but no verified opening cache");
 
     _ = _arrivals.Latest(_facts, _timeline);
-    Assert.IsTrue(DamageOverlayLifecycle.HasRecentActivity(_arrivals.Observed, 105, 10));
-    Assert.AreEqual(new MeterArrival(1, 100), _arrivals.Observed, "verification must keep the ingest timestamp");
-    Assert.IsFalse(DamageOverlayLifecycle.HasRecentActivity(_arrivals.Observed, 111, 10),
+    Assert.IsTrue(DamageOverlayLifecycle.HasRecentActivity(_arrivals.Observed(MeterPanels.Both), 105, 10));
+    Assert.AreEqual(new MeterArrival(1, 100), _arrivals.Observed(MeterPanels.Both), "verification must keep the ingest timestamp");
+    Assert.IsFalse(DamageOverlayLifecycle.HasRecentActivity(_arrivals.Observed(MeterPanels.Both), 111, 10),
       "enabling is not a fresh receipt");
   }
 
@@ -127,7 +127,7 @@ public sealed class MeterArrivalsTest
     Add(101, LabelTypes.Melee);
     var newest = _arrivals.Latest(_facts, _timeline);
     old.Complete(_facts);
-    Assert.AreEqual(newest, _arrivals.Observed);
+    Assert.AreEqual(newest, _arrivals.Observed(MeterPanels.Both));
     Assert.AreEqual(newest, _arrivals.Latest(_facts, _timeline));
   }
 
@@ -139,7 +139,7 @@ public sealed class MeterArrivalsTest
     using var cancelled = new CancellationTokenSource();
     cancelled.Cancel();
     Assert.ThrowsExactly<OperationCanceledException>(() => read.Complete(_facts, cancellation: cancelled.Token));
-    Assert.AreEqual(MeterArrival.None, _arrivals.Observed);
+    Assert.AreEqual(MeterArrival.None, _arrivals.Observed(MeterPanels.Both));
     Assert.AreEqual(new MeterArrival(1, 100), _arrivals.Latest(_facts, _timeline));
   }
 
@@ -150,7 +150,7 @@ public sealed class MeterArrivalsTest
     var read = _arrivals.BeginRead(_timeline);
     Add(200, LabelTypes.Melee);
     Assert.AreEqual(MeterArrival.None, read.Complete(_facts));
-    Assert.AreEqual(MeterArrival.None, _arrivals.Observed);
+    Assert.AreEqual(MeterArrival.None, _arrivals.Observed(MeterPanels.Both));
     Assert.AreEqual(new MeterArrival(2, 200), _arrivals.Latest(_facts, _timeline));
   }
 
@@ -162,7 +162,7 @@ public sealed class MeterArrivalsTest
     _timeline.SetIdentity("Illuminai", IdentityKind.Npc, RuleStrength.Manual, "manual");
     Assert.IsFalse(read.InputsCurrent, "an invalidated scan must be retried before retiring an accumulation");
     Assert.AreEqual(MeterArrival.None, read.Complete(_facts));
-    Assert.AreEqual(MeterArrival.None, _arrivals.Observed);
+    Assert.AreEqual(MeterArrival.None, _arrivals.Observed(MeterPanels.Both));
     Assert.AreEqual(MeterArrival.None, _arrivals.Latest(_facts, _timeline));
     _timeline.SetIdentity("Illuminai", IdentityKind.Player, RuleStrength.Manual, "correction");
     Assert.AreEqual(new MeterArrival(1, 100), _arrivals.Latest(_facts, _timeline));
@@ -176,7 +176,7 @@ public sealed class MeterArrivalsTest
     AppSettings.IsBaneDamageEnabled = true;
     Assert.IsFalse(read.InputsCurrent, "a filter change is not proof that the checked prefix expired");
     Assert.AreEqual(MeterArrival.None, read.Complete(_facts));
-    Assert.AreEqual(MeterArrival.None, _arrivals.Observed);
+    Assert.AreEqual(MeterArrival.None, _arrivals.Observed(MeterPanels.Both));
     Assert.AreEqual(new MeterArrival(1, 100), _arrivals.Latest(_facts, _timeline));
   }
 
@@ -246,16 +246,83 @@ public sealed class MeterArrivalsTest
     var read = _arrivals.BeginRead(_timeline);
     using var cancelled = new CancellationTokenSource();
     cancelled.Cancel();
-    Assert.ThrowsExactly<OperationCanceledException>(() => read.Complete(_facts, 3, cancelled.Token));
+    Assert.ThrowsExactly<OperationCanceledException>(() => read.Complete(_facts, 3, MeterPanels.Both, cancelled.Token));
     var retry = _arrivals.BeginRead(_timeline);
     Assert.HasCount(2, retry.Batches);
     Assert.AreEqual(new MeterArrival(2, 200, 1), retry.Complete(_facts, mode: 3));
+  }
+
+  /*
+   * Which panels the operator displays decides which activity a meter may act on: a Damage-only overlay is deaf to being hit and a
+   * Tanking-only one deaf to the raid's own damage, so a pull that only the hidden lane worked in neither opens the window nor keeps
+   * it up. Both answers come from ONE verified run over the prefix — the choice is read, never rescanned — which is why widening it
+   * shows history at once rather than warming up. docs/DesignNotes.md → "Which panels the meter shows decides what may wake it and
+   * what is worth displaying".
+   */
+  [TestMethod]
+  public void ADamageOnlyMeterIsDeafToBeingHit()
+  {
+    AddIncoming(100, LabelTypes.Melee);
+
+    Assert.AreEqual(MeterArrival.None, _arrivals.Latest(_facts, _timeline, panels: MeterPanels.Damage),
+      "a hit landing on us is not the damage panel's activity");
+    Assert.AreEqual(new MeterArrival(1, 100), _arrivals.Latest(_facts, _timeline, panels: MeterPanels.Tanking));
+    Assert.AreEqual(new MeterArrival(1, 100), _arrivals.Latest(_facts, _timeline, panels: MeterPanels.Both));
+    Assert.IsFalse(DamageOverlayLifecycle.HasRecentActivity(_arrivals.Observed(MeterPanels.Damage), 105, 10),
+      "so neither the opening question nor the keep-alive tick hears it either");
+    Assert.IsTrue(DamageOverlayLifecycle.HasRecentActivity(_arrivals.Observed(MeterPanels.Tanking), 105, 10));
+  }
+
+  [TestMethod]
+  public void ATankingOnlyMeterIsDeafToTheRaidsOwnDamage()
+  {
+    Add(100, LabelTypes.Melee);   // Illuminai hits a rat: outgoing only
+
+    Assert.AreEqual(MeterArrival.None, _arrivals.Latest(_facts, _timeline, panels: MeterPanels.Tanking));
+    Assert.AreEqual(new MeterArrival(1, 100), _arrivals.Latest(_facts, _timeline, panels: MeterPanels.Damage));
+    Assert.IsFalse(DamageOverlayLifecycle.HasRecentActivity(_arrivals.Observed(MeterPanels.Tanking), 105, 10));
+  }
+
+  // The exclusions ask what KIND of damage this is and never who hit whom, so the two lanes cannot share one answer.
+  [TestMethod]
+  public void DamageExclusionsStayOnTheDamageLaneAlone()
+  {
+    AddIncoming(100, LabelTypes.Bane);   // bane damage is excluded in Initialize
+
+    Assert.AreEqual(MeterArrival.None, _arrivals.Latest(_facts, _timeline, panels: MeterPanels.Damage));
+    Assert.AreEqual(new MeterArrival(1, 100), _arrivals.Latest(_facts, _timeline, panels: MeterPanels.Tanking),
+      "incoming stays exempt from the damage exclusions, exactly as it was one yes");
+  }
+
+  /*
+   * Widening the choice is a read: the scan already recorded which panel each receipt earned, so no walk over history is needed
+   * to remember the lane that kept arriving while the meter ignored it. A rescan-on-change would have made switching panels cost a
+   * prefix walk and left the newly shown board empty until the next derive.
+   */
+  [TestMethod]
+  public void OneVerifiedRunAnswersForBothChoicesWithoutARescan()
+  {
+    Add(100, LabelTypes.Melee);
+    Assert.AreEqual(new MeterArrival(1, 100), _arrivals.Latest(_facts, _timeline, panels: MeterPanels.Damage));
+
+    AddIncoming(104, LabelTypes.Melee);        // arriving while the meter was Damage-only
+    Assert.AreEqual(new MeterArrival(2, 104), _arrivals.Latest(_facts, _timeline, panels: MeterPanels.Tanking),
+      "the tanking lane answers for receipts it never displayed, from the same checked prefix");
+    Assert.AreEqual(new MeterArrival(2, 104), _arrivals.Latest(_facts, _timeline, panels: MeterPanels.Both));
   }
 
   private void Add(double receipt, byte type)
   {
     _facts.AddFact(new DamageFact(_facts.FactCount, FixtureTime.BaseL, _facts.InternName("Illuminai"),
       _facts.InternName("a rat"), 600, type, 0, 0, DamageFactTable.NoSubtype));
+    _arrivals.Record(_facts.FactCount, receipt);
+  }
+
+  // The same pair reversed: a rat on Illuminai is incoming, which no damage exclusion can silence.
+  private void AddIncoming(double receipt, byte type)
+  {
+    _facts.AddFact(new DamageFact(_facts.FactCount, FixtureTime.BaseL, _facts.InternName("a rat"),
+      _facts.InternName("Illuminai"), 600, type, 0, 0, DamageFactTable.NoSubtype));
     _arrivals.Record(_facts.FactCount, receipt);
   }
 }

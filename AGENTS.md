@@ -423,6 +423,20 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
   check→mask fold — the ini read and the picker's checkboxes both go through it. **Every column key is `OverlayShow<What>Column`**, every one of them; `OverlayShowingDps` is a
   different switch (which panel is open) and may not be reused for a column. `%`'s shipped `OverlayShowDamagePercent` is NOT read any more — accepted breaking change, the column
   comes back at its default and `ConfigUtil.Save()` retires the line; no compatibility read, no migration.
+- **Which panels the meter has is one key (`OverlayMeterPanels`, Core `MeterPanels`) and it answers two questions**: which tabs exist, and
+  **which activity may open the window or keep it up** — a lane the operator does not watch cannot pop the overlay or hold it on screen.
+  Panels are earned per fact (`MeterActivityIndex.AcceptsPending` shares projection's `CombatAnchor` and `CombatTarget`: `RaidSide` ⇒ Tanking,
+  filter-allowed `AtOwner` ⇒ Damage, `Neither` ⇒ nothing; incoming stays exempt from the exclusions). Not incoming is not proof of output:
+  uncredited charm combat may renew neither receipts nor pending continuity. Panels are intersected **at read time**
+  (`ForMode(mode, panels)`, `MeterArrivals.Observed(panels)`), so widening the choice is a read rather than a rescan. **Never none**:
+  `LoadPanels()` folds junk to Both and no surface offers none. Hiding is display-only for numbers — both
+  directions keep computing, so boards and export are untouched and coming back needs no warm-up; Copy Parse copies the tab you are on, which is
+  the same half that is drawn. **Three questions, three doors**: the TAB PAIR comes from the setting alone, WHAT IS DRAWN is the tab that was picked (`DrawsDamagePanel`) — nothing may move the operator to the
+  other half because it has data — and the WINDOW exists while at least one ENABLED half has a row (`AnyPanelHasEntries`), with a busy hidden
+  half nudging its tab (`SetTabAttention`, ~1 green pulse per 5 s, never a board switch); an entry is any listed row (player, `X +Pets`,
+  mercenary, Reverse DS) counted **before the class filter** (`HasRowEntries` — a lens may not delete the window, only an empty lane does, while
+  the bars and the nudge do obey the filter), and rows cannot time a close — only the
+  receipts can. A meter that opens itself stays transparent until a paint has a row (`RevealOnFirstContent`); one opened from the menu appears at once. See docs/DesignNotes.md → "Which panels the meter shows decides what may wake it and what is worth displaying".
 - **The meter's per-cell tables refuse an unnamed cell**: `MeterColumnLayout`'s width-preset and inset switches name every `MeterSlot` and throw on one they do not,
   while `MeterColumnLayoutTest` pins the drawn block to exactly those cells — a new column arrives with preset, inset, header word and expectations in one change. An
   unreadable **font size** still lays out like the ceiling: a bad ini value reaches players, an unmapped enum member does not.

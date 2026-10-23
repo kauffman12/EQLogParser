@@ -14,10 +14,12 @@ namespace EQLogParser
     private int _through = projectedCount;
     private long _stamp = long.MinValue;
     private double _latest = double.NegativeInfinity;
+    private int _latestSequence = -1;
     private MeterDamageFilter _filter;
     private bool _hasFilter;
 
     internal double Latest => Volatile.Read(ref _latest);
+    internal int LatestSequence => Volatile.Read(ref _latestSequence);
 
     internal void Update(DamageFactTable facts, EntityTimeline timeline, CancellationToken cancellation = default)
     {
@@ -32,6 +34,7 @@ namespace EQLogParser
           _hasFilter = true;
           _through = _projectedCount;
           Volatile.Write(ref _latest, double.NegativeInfinity);
+          Volatile.Write(ref _latestSequence, -1);
           _names.Clear();
         }
 
@@ -43,12 +46,21 @@ namespace EQLogParser
           var fact = facts.At(_through);
           var attacker = facts.NameOf(fact.AtkIdx);
           var defender = facts.NameOf(fact.DefIdx);
-          if (!MeterActivityIndex.AcceptsPending(fact, timeline, attacker, defender, filter)) continue;
+          // Both directions continue a life: this answers data continuity for rows already displayed, not which panel may
+          // open or keep the window up (that question is MeterArrivals.Observed(panels)).
+          if (MeterActivityIndex.AcceptsPending(fact, timeline, attacker, defender, filter) == MeterPanels.None) continue;
           Add(attacker, fact.TimeS);
           Add(defender, fact.TimeS);
           if (fact.TimeS > _latest) Volatile.Write(ref _latest, fact.TimeS);
+          if (fact.Seq > _latestSequence) Volatile.Write(ref _latestSequence, fact.Seq);
         }
       }
+    }
+
+    internal bool Covers(int through, EntityTimeline timeline)
+    {
+      lock (_gate) return _through >= through && _stamp == timeline.StateStamp()
+        && _hasFilter && _filter == MeterDamageFilter.Current;
     }
 
     internal double ContinuedThrough(string name, double last)

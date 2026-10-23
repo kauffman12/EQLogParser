@@ -33,7 +33,14 @@
     - **Tank** shows damage absorbed by players while tanking (compare this to the **Tanking Summary**)
 2. Make sure the correct button is selected based on which summary you are comparing against
     - The active button will be highlighted in orange, while the inactive one remains white
+    - Both buttons are there only if the meter's **Setup → Meter panels** is set to **Both**. Choose **Damage** or **Tanking** there and the meter shows that one panel alone, with no tab to switch, and the other kind of activity can no longer pop the window open for you
 3. If you're comparing to the **DPS Summary**, click the **DPS** button on the Damage Meter toolbar to ensure it is showing damage dealt and not tanking stats
+
+## Why did my Damage Meter disappear, or why does it look empty?
+1. The meter shows itself only while it has something to list: when nothing is left to display, it hides and then closes rather than sitting on screen as an empty box. It comes back on its own the next time there is damage or tanking to show
+2. Which kind of activity counts follows **Setup → Meter panels**. With **Damage** selected, being hit is not enough to open or keep the meter; with **Tanking**, outgoing damage is not
+3. If the board looks empty but combat is clearly happening, check the meter's **class filter** — a filter is only a lens, so the meter stays up showing nothing until you set it back to **All Classes**
+4. With both panels on and the page you are looking at empty while the other one is busy, the other button briefly turns green every few seconds. That is a reminder that the numbers are on the other tab: the meter never switches tabs by itself
 
 ## When using Trigger Log, I would like a quick way to edit the Trigger for the log entry.
 1. When you select a row in the **Trigger Log** it will select the trigger in the **Trigger Manager** as long as you have it open. If so, just switch back to that tab and check

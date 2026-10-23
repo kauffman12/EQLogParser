@@ -14,9 +14,27 @@ namespace EQLogParser
     internal bool StreamerMode;                  // own window style for OBS
     internal int CritRateDisplay;                // 0 off, 1 DoT, 2 nuke, 3 both
     internal int DamageResetMode;                // 0 = on kill, otherwise seconds before zeroing
+
+    // Which panels exist at all — and therefore which kinds of activity may open the window or keep it up. Distinct from
+    // OverlayShowingDps, which only says which of the two a Both meter is currently looking at.
+    internal MeterPanels Panels = MeterPanels.Both;
     internal string SelectedClass = Resource.ANY_CLASS;
     internal string ProgressColor = "#FF1D397E";
     internal string HighlightColor = "Gold";
+
+    /*
+     * The panel choice, stored as the flags value itself (Damage 1, Tanking 2, Both 3) so `None` is unreadable: a missing key, junk, or a
+     * hand-written 0 all land on Both, which is the one thing that keeps a meter from being configured into having no tabs. Its own method
+     * because the derive path asks this every classified pass (the auto-open announcement) and must not build a whole state object to ask
+     * one question; this remains the only place the key is judged.
+     */
+    internal static MeterPanels LoadPanels()
+    {
+      var panels = ConfigUtil.GetSettingAsInteger("OverlayMeterPanels");
+      return panels is (int) MeterPanels.Damage or (int) MeterPanels.Tanking or (int) MeterPanels.Both
+        ? (MeterPanels) panels
+        : MeterPanels.Both;
+    }
 
     // Every guard lives here and nowhere else: out-of-range or unreadable values fall back to what a meter without that key would
     // draw, which is what both the setup window and a freshly opened overlay show.
@@ -44,6 +62,8 @@ namespace EQLogParser
 
       var crit = ConfigUtil.GetSettingAsInteger("OverlayEnableCritRate");
       s.CritRateDisplay = crit is >= 0 and <= 3 ? crit : 0;
+
+      s.Panels = LoadPanels();
 
       s.MiniBars = ConfigUtil.IfSet("OverlayMiniBars");
       s.Columns = MeterColumns.Load();

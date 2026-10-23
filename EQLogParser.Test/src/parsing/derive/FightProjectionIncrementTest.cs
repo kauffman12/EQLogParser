@@ -64,6 +64,7 @@ public class FightProjectionIncrementTest
            $"dmg={r.DamageTotal} hits={r.DamageHits} toOwner={r.DamageToOwner} byOwner={r.DamageByOwner} " +
            $"dmgWin={r.BeginDamageTime}/{r.LastDamageTime} tankWin={r.BeginTankingTime}/{r.LastTankingTime} " +
            $"pet={r.RaidPet} owned={r.CharmedOwned} group={r.GroupId} " +
+           $"death={r.DeathTime}/{r.DeathSequence} lastSeq={r.LastSequence} " +
            $"encounter={(r.EncounterRow is null ? "-" : $"{r.EncounterRow.Name}@{r.EncounterRow.BeginTime}")} " +
            $"rollup=[{Rollup(r)}]";
 
@@ -92,6 +93,37 @@ public class FightProjectionIncrementTest
         var timeline = new EntityTimeline();
         ClassificationRules.Apply(facts, timeline, heals);
         return timeline;
+    }
+
+    [TestMethod]
+    public void AContinuedProjectionKeepsTheSlainSequenceAcrossSameSecondKillingBlows()
+    {
+        var log = new Capture();
+        var timeline = new EntityTimeline();
+        timeline.SetIdentity("Zomm", IdentityKind.Player, RuleStrength.Manual, "manual");
+        timeline.SetIdentity("A bone walker", IdentityKind.Npc, RuleStrength.Manual, "manual");
+        var cache = new FightProjection.FightProjectionCache();
+        log.Hit("Zomm", "A bone walker", 600, 0);
+        cache.Project(log.Facts, timeline);
+        log.Slain("A bone walker", 1);
+        var completed = cache.Project(log.Facts, timeline).Single();
+        Assert.AreEqual(1, completed.DeathSequence);
+        Assert.AreEqual(0, completed.LastSequence);
+
+        log.Hit("Zomm", "A bone walker", 100, 1);
+        completed = cache.Project(log.Facts, timeline).Single();
+        Assert.IsTrue(cache.LastPassContinued);
+        Assert.AreEqual(1, completed.DeathSequence);
+        Assert.AreEqual(2, completed.LastSequence);
+        Assert.AreEqual(700L, completed.DamageTotal);
+        AssertSameRows(FightProjection.Build(log.Facts, timeline), [completed], "same-second continuation");
+
+        log.Hit("Zomm", "A bone walker", 200, 2);
+        var rows = cache.Project(log.Facts, timeline);
+        Assert.HasCount(2, rows);
+        Assert.AreEqual(1, rows[0].DeathSequence, "consuming the queued death preserves its sequence");
+        Assert.AreEqual(-1, rows[1].DeathSequence, "the next life cannot inherit a death marker");
+        AssertSameRows(FightProjection.Build(log.Facts, timeline), rows, "the next life after a same-second blow");
     }
 
     // ---- what may continue, and what has to be rebuilt ----

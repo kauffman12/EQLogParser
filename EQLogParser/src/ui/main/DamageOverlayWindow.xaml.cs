@@ -49,6 +49,11 @@ namespace EQLogParser
     private bool _savedMiniBars;
     private bool _savedStreamerMode;
     private bool _currentShowDps;
+
+    // Which panels this window has at all, and therefore which activity may open it or keep it up. DamageMeterConfigState judged
+    // the key; this is that answer carried for the life of the window, replaced only by a committed Setup change.
+    private MeterPanels _panels = MeterPanels.Both;
+
     private string _currentSelectedClass;
     private string _savedSelectedClass;
     private string _savedProgressColor;
@@ -134,7 +139,12 @@ namespace EQLogParser
       _currentMaxRows = _savedMaxRows;
       _currentStreamerMode = _savedStreamerMode;
 
+      _panels = config.Panels;
+
+      // A remembered tab that is not available yields to the surviving panel without writing a setting.
       _currentShowDps = ConfigUtil.IfSetOrElse("OverlayShowingDps", true);
+      if (_currentShowDps && (config.Panels & MeterPanels.Damage) == 0) _currentShowDps = false;
+      else if (!_currentShowDps && (config.Panels & MeterPanels.Tanking) == 0) _currentShowDps = true;
 
       _updateTimer = UiUtil.CreateTimer(UpdateTimerTick, 1000, false, DispatcherPriority.DataBind);
 
@@ -235,18 +245,20 @@ namespace EQLogParser
 
     // Staged configuration API for DamageMeterSettingsWindow: preview applies a whole state without touching the ini,
     // commit previews then persists (the same keys the inline panel used to write), discard simply ends configure --
-    // MainWindow reopens a live meter that reads the untouched values back off disk, so discarding restores itself.
+    // the next live meter reads the saved values, so discarding needs no undo writes.
     // Geometry is not staged: dragging and resizing the stage is the geometry editor, and commit captures whatever
     // rectangle the stage ended on.
 
     internal void PreviewMeterState(DamageMeterConfigState s)
     {
-      // Only these three move the bottom edge; re-fitting on a color-picker stop would snap back a stage somebody
-      // resized by hand in between.
-      var refit = s.FontSize != _currentFontSize || s.MiniBars != _currentMiniBars || s.MaxRows != _currentMaxRows;
+      // Only content geometry earns a refit; unrelated previews preserve a manually resized stage.
+      var refit = s.FontSize != _currentFontSize || s.MiniBars != _currentMiniBars
+        || s.MaxRows != _currentMaxRows || s.Panels != _panels;
 
       UpdateFontSize(s.FontSize);
       UpdateDamageMode(s.DamageResetMode);
+
+      UpdatePanels(s.Panels);
       UpdateSelectedClass(s.SelectedClass);
       UpdateHideOthers(s.HideOtherPlayers);
       UpdateShowCritRate(s.CritRateDisplay);
@@ -269,9 +281,8 @@ namespace EQLogParser
       }
     }
 
-    // The stage hugs its content while configuring: rows, font size and thin bars all move the bottom edge, so each
-    // preview re-fits the window (dispatched behind layout, so it measures the NEW bar heights). Live meters preserve
-    // the saved row-space budget, with their measured toolbar reserve accounted for separately.
+    // Refit after content geometry changes, behind layout so the newly visible panel has been measured.
+    // Live meters preserve the saved row-space budget, with their toolbar reserve accounted for separately.
     private void AdjustHeight()
     {
       if (!_preview)
@@ -281,7 +292,9 @@ namespace EQLogParser
 
       Dispatcher.InvokeAsync(() =>
       {
-        var needed = damageContent.ActualHeight + 8 + controlPanel.Margin.Bottom;
+        // Whichever panel is on screen decides how tall the stage is: a Tanking-only preview has no visible damage rows to measure.
+        var content = tankContent.Visibility == Visibility.Visible ? tankContent : damageContent;
+        var needed = content.ActualHeight + 8 + controlPanel.Margin.Bottom;
         if (!needed.Equals(Height))
         {
           Height = needed;
@@ -315,6 +328,10 @@ namespace EQLogParser
       ConfigUtil.SetSetting("OverlayEnableCritRate", s.CritRateDisplay);
       _savedShowCritRate = s.CritRateDisplay;
 
+      // Save the preview's surviving tab as well as its panel choice; Cancel writes neither.
+      ConfigUtil.SetSetting("OverlayMeterPanels", (int)s.Panels);
+      ConfigUtil.SetSetting("OverlayShowingDps", _currentShowDps);
+
       ConfigUtil.SetSetting("OverlayMiniBars", s.MiniBars);
       _savedMiniBars = s.MiniBars;
 
@@ -339,7 +356,7 @@ namespace EQLogParser
     internal void DiscardMeterSettings() => MainActions.CloseDamageOverlay(false, this);
 
     private MeterBuildResult BuildMeterUpdate(DeriveEngine session, DamageOverlayLifecycle lifecycle,
-      int damageMode, CancellationToken cancellation, Action<double> publishExpiry)
+      int damageMode, MeterPanels panels, CancellationToken cancellation, Action<double> publishExpiry)
     {
       if (session is null)
       {
@@ -356,7 +373,7 @@ namespace EQLogParser
       try
       {
         var now = MeterArrivals.Now;
-        return session.BuildOverlayStats(lifecycle, _calculation, damageMode, now, cancellation, publishExpiry);
+        return session.BuildOverlayStats(lifecycle, _calculation, damageMode, panels, now, cancellation, publishExpiry);
       }
       catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
       {
@@ -414,10 +431,13 @@ namespace EQLogParser
           }
           var displayVersion = _displayVersion;
           var damageMode = _currentDamageMode;
+
+          // Carried into the worker as plain data, like every other UI-side value a build reads.
+          var panels = _panels;
           var checkpoint = MeterLifecycle.Read(_lifecycleOwner);
           _buildCancellation = new CancellationTokenSource();
           var cancellation = _buildCancellation.Token;
-          var result = await Task.Run(() => BuildMeterUpdate(session, checkpoint.State, damageMode, cancellation,
+          var result = await Task.Run(() => BuildMeterUpdate(session, checkpoint.State, damageMode, panels, cancellation,
             expiry => _presentation.Publish(sessionId, displayVersion, expiry)));
           deferred = result.IsDeferred;
           if (_closed || displayVersion != _displayVersion
@@ -443,6 +463,54 @@ namespace EQLogParser
       } while (!_closed && _refreshGate.Complete(_refreshClock.Elapsed.TotalSeconds, deferred));
       if (_closed || _calculationSession != (DeriveEngine.Active?.SessionId ?? 0)) _calculation.Clear();
     }
+
+    /*
+     * Hand the reveal to the paint: a meter that opens itself (after a load, on resume, on fresh combat) starts transparent and raises its
+     * own opacity on the first paint that actually drew rows, so an empty frame is never what the player sees. An answer with no rows hides
+     * the window rather than leaving it ghost-visible, and this request stays armed, so the meter appears by itself on the next real pull;
+     * a meter the operator opened from the menu is revealed immediately by its caller instead.
+     */
+    internal void RevealOnFirstContent() => _revealOnPaint = true;
+
+    private bool _revealOnPaint;
+
+    /*
+     * The nudge for a tab that is busy while the one on screen is not: ONE timer with TWO intervals -- 5 s of waiting, then 0.7 s of colour --
+     * so it reads as one moment every five seconds rather than a blink machine, and it stops the instant the reason goes away (the visible half
+     * gets rows, the tabs swap, the window hides). The colour itself lives with the toolbar, which owns the tab buttons.
+     */
+    private DispatcherTimer _attentionTimer;
+    private bool _attentionIsOn;
+
+    private void SetTabAttention(bool needed)
+    {
+      if (_preview) return;
+
+      if (!needed)
+      {
+        _attentionTimer?.Stop();
+        if (!_attentionIsOn) return;
+        _attentionIsOn = false;
+        _toolbarWindow?.SetTabAttention(false);
+        return;
+      }
+
+      _attentionTimer ??= UiUtil.CreateTimer((_, _) => AttentionTick(), AttentionWaitMs, false);
+      if (_attentionTimer.IsEnabled) return;
+      _attentionTimer.Start();
+      AttentionTick(); // say it now rather than five seconds after the reason appeared
+    }
+
+    private void AttentionTick()
+    {
+      _attentionIsOn = !_attentionIsOn;
+      _toolbarWindow?.SetTabAttention(_attentionIsOn);
+      if (_attentionTimer is not null)
+        _attentionTimer.Interval = TimeSpan.FromMilliseconds(_attentionIsOn ? AttentionHoldMs : AttentionWaitMs);
+    }
+
+    private const int AttentionWaitMs = 5000;
+    private const int AttentionHoldMs = 700;
 
     private void ApplyMeterUpdate(DamageOverlayStats damageOverlayStats)
     {
@@ -473,51 +541,88 @@ namespace EQLogParser
           _lastTopTicks = currentTicks;
         }
 
-        // A missing half clears its old bars: a slain tanking fight must not remain beside a new damage-only fight.
-        LoadStats(damageContent.Children, damageOverlayStats.DamageStats, damageOverlayStats.DamageRdps);
-        LoadStats(tankContent.Children, damageOverlayStats.TankStats, damageOverlayStats.TankRdps);
+        /*
+         * Three separate things, and none of them moves the operator to another half -- they said plainly that tabs do not auto switch; you
+         * clicked Tanking if you wanted tanking. WHICH TABS EXIST is the setting's business alone. WHAT IS DRAWN is the tab that was picked,
+         * or the single half a one-sided meter has. And the WINDOW exists because at least one half the operator ENABLED has a row to list:
+         * with Both on, an empty board in front of them while the other half is busy is legitimate (the tab is right there and clicking it is
+         * their call, nudged by `SetTabAttention`), but with one half selected and nothing in it there is no reason for a meter at all, so
+         * `HideAndReask` asks the activity receipts whether to close. What each half may show comes from `_panels`, so an activity lane that was
+         * switched off cannot keep the window open either. A listed entry counts even without its own fight-list row. A missing half clears its
+         * old bars: a slain tanking fight must not remain beside a new damage-only fight.
+         */
+        var damageRows = LoadStats(damageContent.Children, damageOverlayStats.DamageStats,
+          damageOverlayStats.DamageRdps) > 0;
+        var tankRows = LoadStats(tankContent.Children, damageOverlayStats.TankStats,
+          damageOverlayStats.TankRdps) > 0;
+
+        if (!AnyPanelHasEntries(HasRowEntries(damageOverlayStats.DamageStats), HasRowEntries(damageOverlayStats.TankStats), _panels))
+        {
+          HideAndReask();
+          return;
+        }
 
         if (Visibility != Visibility.Visible)
         {
           Visibility = Visibility.Visible;
         }
 
-        if (_currentShowDps)
-        {
-          if (tankContent.Visibility != Visibility.Collapsed)
-          {
-            tankContent.Visibility = Visibility.Collapsed;
-          }
+        var drawsDamage = DrawsDamagePanel(_panels, _currentShowDps);
+        damageContent.Visibility = drawsDamage ? Visibility.Visible : Visibility.Collapsed;
+        tankContent.Visibility = drawsDamage ? Visibility.Collapsed : Visibility.Visible;
 
-          if (damageContent.Visibility != Visibility.Visible)
-          {
-            damageContent.Visibility = Visibility.Visible;
-          }
-        }
-        else
-        {
-          if (tankContent.Visibility != Visibility.Visible)
-          {
-            tankContent.Visibility = Visibility.Visible;
-          }
+        // The half NOT on screen lists somebody while the half on screen lists nobody: nudge that tab quietly every few seconds instead of
+        // moving anyone. These counts obey the class filter, which is the whole point -- it is a nudge about what the operator would SEE.
+        var hiddenHalfExists = drawsDamage ? (_panels & MeterPanels.Tanking) != 0 : (_panels & MeterPanels.Damage) != 0;
+        SetTabAttention(!(drawsDamage ? damageRows : tankRows) && hiddenHalfExists && (drawsDamage ? tankRows : damageRows));
 
-          if (damageContent.Visibility != Visibility.Collapsed)
-          {
-            damageContent.Visibility = Visibility.Collapsed;
-          }
+        if (_revealOnPaint)
+        {
+          _revealOnPaint = false;
+          Opacity = 1.0;
         }
+
       }
       else
       {
-        HideMeterPresentation();
-
-        // An explicit Reset can hide a still-active fight; keep polling it for new damage.
-        var stillSomethingToShow = DerivedMeter.HasActivity(_currentDamageMode);
-        if (!stillSomethingToShow)
-        {
-          MainActions.CloseDamageOverlay(false, this);
-        }
+        HideAndReask();
       }
+    }
+
+    /*
+     * The window's right to exist: at least one of the halves the operator ENABLED has a board that lists anyone. An entry is any listed row --
+     * a player, an ``X +Pets`` group, a mercenary, or the source-less Reverse DS bucket; what matters is that something would be listed here, not
+     * that it is a person or that it opened a fight-list row. A half that was switched off earns the meter nothing (that was the ask: a
+     * Damage-only meter is neither popped open nor held up by tanking), and both halves empty means no meter anywhere -- which is where the
+     * receipts get asked (HideAndReask), because rows do not age and only the quiet-period clock can time a close.
+     * docs/DesignNotes.md -> "Which panels the meter shows decides what may wake it and what is worth displaying".
+     */
+    internal static bool AnyPanelHasEntries(bool damageHasEntries, bool tankHasEntries, MeterPanels panels) =>
+      (damageHasEntries && (panels & MeterPanels.Damage) != 0) || (tankHasEntries && (panels & MeterPanels.Tanking) != 0);
+
+    /*
+     * Whether this lane's board lists anyone, read BEFORE the class filter and the row cap. The filter is a lens on the fight, not a fact about
+     * it: filtering to a class that has done nothing yet must leave the meter standing with an empty board (what it did for years) rather than
+     * deleting the window out from under somebody who forgot the lens was on -- and an empty-looking meter they can fix by clearing the filter
+     * tells them something, while no meter at all reads as a broken overlay. The bars and the tab nudge still obey the filter, because those
+     * are about what the operator sees; only EXISTENCE ignores it.
+     */
+    private static bool HasRowEntries(CombinedStats stats) => stats is { StatsList.Count: > 0 };
+
+    /*
+     * Which half is drawn: the operator's pick when both halves exist, otherwise the only half there is. Nothing here ever moves them to the
+     * other tab because that one has data -- `ShowDamage` and `ShowTank` are the only thing that changes what is on screen.
+     */
+    internal static bool DrawsDamagePanel(MeterPanels panels, bool showingDps) =>
+      (panels & MeterPanels.Tanking) == 0 || ((panels & MeterPanels.Damage) != 0 && showingDps);
+
+    // Hide now; whether this window still has a reason to exist is the receipts' answer, asked with THIS window's panels. An explicit
+    // Reset can hide a still-active fight and must keep polling it, which is why this asks rather than closes -- and a lane the operator
+    // switched off must stop holding the window open right then, not after the next derive.
+    private void HideAndReask()
+    {
+      HideMeterPresentation();
+      if (!DerivedMeter.HasActivity(_currentDamageMode, _panels)) MainActions.CloseDamageOverlay(false, this);
     }
 
     private void HideMeterPresentation()
@@ -528,6 +633,7 @@ namespace EQLogParser
       Visibility = Visibility.Collapsed;
       _stats = null;
       _presentation.Clear();
+      SetTabAttention(false);
       damageContent.Visibility = Visibility.Collapsed;
       tankContent.Visibility = Visibility.Collapsed;
       ClearStats(damageContent.Children);
@@ -547,12 +653,14 @@ namespace EQLogParser
      * (pet folding included) and formatted here and nowhere else. The window rides log time end to end, so the UI holds no
      * clock over these numbers: a value stands still while no new lines arrive, exactly like the DPS beside it.
      */
-    private void LoadStats(UIElementCollection children, CombinedStats localStats, MeterDirectionRates rates)
+    // Returns how many PLAYER rows this panel actually lists under the class filter and row cap (the title bar is not one): the
+    // nudge reads this, while whether the window exists at all ignores the lens and asks `HasRowEntries`.
+    private int LoadStats(UIElementCollection children, CombinedStats localStats, MeterDirectionRates rates)
     {
       if (localStats is null)
       {
         ClearStats(children);
-        return;
+        return 0;
       }
 
       rates ??= MeterDirectionRates.None;
@@ -651,14 +759,24 @@ namespace EQLogParser
         controlPanel.Visibility = Visibility.Visible;
         Dispatcher.BeginInvoke(ShowToolbarWindow, DispatcherPriority.Loaded);
       }
+
+      return shown.Count;
     }
 
     private void LoadTestData()
     {
+      FillTestData(damageContent.Children);
+
+      // Seed hidden bars too: changing panels can reveal this pool without rebuilding it.
+      FillTestData(tankContent.Children);
+    }
+
+    private static void FillTestData(UIElementCollection children)
+    {
       var classList = EQDataStore.Instance.GetClassList();
-      for (var i = 0; i < damageContent.Children.Count - 1; i++)
+      for (var i = 0; i < children.Count - 1; i++)
       {
-        if (damageContent.Children[i] is DamageBar { } bar)
+        if (children[i] is DamageBar { } bar)
         {
           if (i == 0)
           {
@@ -673,7 +791,7 @@ namespace EQLogParser
         }
       }
 
-      (damageContent.Children[^1] as DamageBar)?.Update("Example NPC", "", "", "500.2M", "490.5K",
+      (children[^1] as DamageBar)?.Update("Example NPC", "", "", "500.2M", "490.5K",
         rdpsValue: "487.1K", sdpsValue: "465.2K", timeValue: "456", barPercent: 0);
     }
 
@@ -995,20 +1113,48 @@ namespace EQLogParser
       else MainActions.AddAndCopyTankParse(stats, stats.StatsList);
     }
 
-    private void DpsClick(object sender, RoutedEventArgs e)
+    private void DpsClick(object sender, RoutedEventArgs e) => ShowDamage();
+
+    private void TankClick(object sender, RoutedEventArgs e) => ShowTank();
+
+    private void ShowDamage()
     {
       _currentShowDps = true;
       _toolbarWindow?.SetShowingDps(true);
-      ConfigUtil.SetSetting("OverlayShowingDps", _currentShowDps);
+      if (!_preview) ConfigUtil.SetSetting("OverlayShowingDps", _currentShowDps);
       if (_stats is not null) ApplyMeterUpdate(_stats);
     }
 
-    private void TankClick(object sender, RoutedEventArgs e)
+    private void ShowTank()
     {
       _currentShowDps = false;
       _toolbarWindow?.SetShowingDps(false);
-      ConfigUtil.SetSetting("OverlayShowingDps", _currentShowDps);
+      if (!_preview) ConfigUtil.SetSetting("OverlayShowingDps", _currentShowDps);
       if (_stats is not null) ApplyMeterUpdate(_stats);
+    }
+
+    // Narrowing selects the survivor in the staged state; widening keeps that selection.
+    private void UpdatePanels(MeterPanels panels)
+    {
+      _panels = panels;
+      _toolbarWindow?.SetAvailableViews(panels);
+
+      // Never none: if the panel being looked at is the one going away, the survivor takes the selection.
+      if (_currentShowDps && (panels & MeterPanels.Damage) == 0) ShowTank();
+      else if (!_currentShowDps && (panels & MeterPanels.Tanking) == 0) ShowDamage();
+
+      if (_preview)
+      {
+        /*
+         * The configuration stage paints no live board, so it shows its sample rows in whichever panel is on screen; a live meter
+         * gets this pair flipped by ApplyMeterUpdateCore off the real answer.
+         */
+        damageContent.Visibility = _currentShowDps ? Visibility.Visible : Visibility.Collapsed;
+        tankContent.Visibility = _currentShowDps ? Visibility.Collapsed : Visibility.Visible;
+      }
+
+      // PreviewMeterState owns refitting and only asks when the content geometry changed.
+      RequestMeterUpdate(true);
     }
 
     private void FullResetClick(object sender, RoutedEventArgs e)
@@ -1038,6 +1184,7 @@ namespace EQLogParser
       _derivedFrom = null;
 
       _updateTimer?.Stop();
+      _attentionTimer?.Stop();
       damageContent.Children.Clear();
       tankContent.Children.Clear();
 
@@ -1067,6 +1214,7 @@ namespace EQLogParser
       _toolbarWindow.DpsRequested += (_, _) => DpsClick(null, null);
       _toolbarWindow.TankRequested += (_, _) => TankClick(null, null);
 
+      _toolbarWindow.SetAvailableViews(_panels);
       _toolbarWindow.SetShowingDps(_currentShowDps);
       _toolbarWindow.UpdateFontSize(_savedFontSize, controlPanel.Height);
     }

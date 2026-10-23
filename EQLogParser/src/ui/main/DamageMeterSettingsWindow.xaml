@@ -114,6 +114,7 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
               </Grid.RowDefinitions>
 
               <CheckBox x:Name="hideCheck" Grid.Row="0" Grid.ColumnSpan="2" Margin="0,5" Content="hide other players"
@@ -136,9 +137,17 @@
                 <ComboBoxItem>Both Crit%</ComboBoxItem>
               </ComboBox>
 
-              <TextBlock Grid.Row="4" Text="reset" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
+              <TextBlock Grid.Row="4" Text="meter panels" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
+                         ToolTip="Which panels the meter has. A panel you do not show cannot open the window or keep it on screen; the hidden numbers still count underneath, so switching back needs no warm-up" />
+              <ComboBox x:Name="panelsCombo" Grid.Row="4" Grid.Column="1" Margin="0,3" SelectionChanged="PanelsChanged">
+                <ComboBoxItem Tag="1">Damage only</ComboBoxItem>
+                <ComboBoxItem Tag="2">Tanking only</ComboBoxItem>
+                <ComboBoxItem Tag="3">Both</ComboBoxItem>
+              </ComboBox>
+
+              <TextBlock Grid.Row="5" Text="reset" VerticalAlignment="Center" Foreground="{DynamicResource ContentForegroundAlt}"
                          ToolTip="Choose 'on kill' for the meter to reset after NPCs are killed; otherwise it keeps counting until this long after the last hit" />
-              <ComboBox x:Name="resetCombo" Grid.Row="4" Grid.Column="1" Margin="0,3" SelectionChanged="ControlChanged">
+              <ComboBox x:Name="resetCombo" Grid.Row="5" Grid.Column="1" Margin="0,3" SelectionChanged="ControlChanged">
                 <ComboBoxItem Tag="0">on kill</ComboBoxItem>
                 <ComboBoxItem Tag="3">3s</ComboBoxItem>
                 <ComboBoxItem Tag="5">5s</ComboBoxItem>
