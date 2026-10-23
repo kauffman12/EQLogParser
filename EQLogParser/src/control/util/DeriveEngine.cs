@@ -583,11 +583,11 @@ namespace EQLogParser
             // Asked with the displayed panels, because this announcement IS the auto-open path: an unwatched lane must not
             // open a window. Receipts still record both lanes, so widening the choice later needs no rescan.
             var panels = DamageMeterConfigState.LoadPanels();
-            var arrival = _meterArrivals.Latest(_facts, snapshot.Timeline, panels: panels);
+            var mode = ConfigUtil.GetSettingAsInteger("OverlayDamageMode");
+            var arrival = _meterArrivals.Latest(_facts, snapshot.Timeline, mode, panels);
             activityOrdinal = arrival.Through;
             freshDamage = activityOrdinal > _lastAnnouncedActivityOrdinal
-                          && DamageOverlayLifecycle.HasRecentActivity(arrival, MeterArrivals.Now,
-                            ConfigUtil.GetSettingAsInteger("OverlayDamageMode"));
+                          && DamageOverlayLifecycle.HasRecentActivity(arrival, MeterArrivals.Now, mode);
           }
 
           // Swapped before the event: a selection made from the fresh rows materializes against the pass
@@ -843,7 +843,7 @@ namespace EQLogParser
     {
       var snapshot = _snapshot;
       return !_disposed && snapshot is not null && DamageOverlayLifecycle.HasRecentActivity(
-        _meterArrivals.Observed(panels), MeterArrivals.Now, mode);
+        _meterArrivals.Observed(panels, mode), MeterArrivals.Now, mode);
     }
 
     // Select and materialize from ONE snapshot. The lifecycle retains only scalar reset state, never this capture's rows.
@@ -923,7 +923,8 @@ namespace EQLogParser
      * A log without combat damage (login/city logs) still derives — an empty fight list is an honest answer,
      * "capturing forever" is not.
      */
-    private void MeterDamageArrived(int through) => _meterArrivals.Record(through, MeterArrivals.Now);
+    private void MeterDamageArrived(int through, double sourceTime) =>
+      _meterArrivals.Record(through, MeterArrivals.Now, sourceTime, DateUtil.ToDotNetSeconds(DateTime.Now));
 
     private long CapturedTotal =>
       _facts.FactCount + _heals.HealCount + _facts.DeathCount + _facts.TauntCount

@@ -267,12 +267,15 @@ These checks still require Windows for popup/hide behavior. See DesignNotes → 
   continuously for longer than three seconds before reopening. Only the entire new run counts, not the old attack and not just its
   last three seconds. Repeat with Tank and with two receipts sharing a log timestamp. Pause the receipt worker for over 120 seconds:
   continuous eligible arrivals preserve the accumulation; a genuine quiet gap removes only the earlier run. A quiet log adds no backlog.
-- [ ] **Log time and receipt time are independent**: feed identical damage with timestamps behind and ahead of the PC clock.
-  Damage, DPS, RDPS and Sec must agree, without waiting for the clock to reach future-dated hits. With a ten-second reset, a line received
-  eight seconds late must still buy ten seconds from receipt. During silence, filter/rebuild requests must not renew that deadline.
-  Repeat Reset with a new hit in the same log second: only the post-click ordinal counts. Reading a historical file is receipt of data;
-  merely reopening or re-deriving an expired capture is not. On a five-second timed opening, feed A damage at log second 0, B damage at 6,
-  then an A miss at 10, all received together. The first board must already show only B, with unchanged seconds/DPS on subsequent silent
+- [ ] **Historical imports cannot wake the live meter**: enable the meter, open two days of history whose last combat was 14 hours ago.
+  The fight list and summaries populate, but the meter stays hidden. Repeat with On Kill and timed modes, Damage-only and Tanking-only.
+  Then append current combat: it opens normally without reopening the file. Old or future-dated appended damage alone cannot wake or
+  renew it; filter changes, re-derive, enable and mode changes must not turn stale history into a new receipt.
+- [ ] **Source freshness and receipt timeout are separate**: with a ten-second reset, a line received eight seconds late qualifies
+  and still buys ten seconds from receipt; a line already more than ten seconds old cannot activate or renew that mode. Damage, DPS,
+  RDPS and Sec remain log-time calculations, frozen during silence. Filter/rebuild requests must not renew the deadline.
+  Repeat Reset with a new hit in the same log second: only the post-click ordinal counts. On a five-second timed opening, feed A damage
+  at log second 0, B damage at 6, then an A miss at 10, all received together at wall second 10. The first board must already show only B, with unchanged seconds/DPS on subsequent silent
   ticks. Repeat after Reset and timed expiry, and for Tank. Pause a receipt worker after `BeginRead`, append fresh damage, then resume it:
   expiry must not cut away the appended, unchecked receipt. Also pause after the pending scan but before `BeginRead`, then append
   B's miss in A's death second: the newer receipt must trigger a refreshed pending scan, not reopen A's completed amounts.

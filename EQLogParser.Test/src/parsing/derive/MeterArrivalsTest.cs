@@ -79,11 +79,12 @@ public sealed class MeterArrivalsTest
     RecordsStore.Instance.Clear(false);
     PlayerRegistry.Instance.Clear();
     var notifications = 0;
-    var capture = new CombatCapture(_facts, damageArrived: through =>
+    var capture = new CombatCapture(_facts, damageArrived: (through, sourceTime) =>
     {
       Assert.AreEqual(_facts.FactCount, through);
+      Assert.AreEqual(FixtureTime.Base, sourceTime);
       notifications++;
-      _arrivals.Record(through, 100);
+      _arrivals.Record(through, 100, sourceTime, FixtureTime.Base);
     });
     capture.Start();
     try

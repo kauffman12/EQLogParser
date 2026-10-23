@@ -53,7 +53,7 @@ internal sealed class DamageOverlayLifecycle
     var edge = CaptureEdge(rows, activity, out var latestActivity, out var latestSequence);
     if (mode != 0)
     {
-      if (double.IsNaN(_timedStart) && double.IsFinite(edge))
+      if (double.IsNaN(_timedStart) && double.IsFinite(edge) && arrival.Through > _firstOrdinal)
       {
         _timedStart = edge - mode;
         return false;

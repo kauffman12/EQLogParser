@@ -406,13 +406,15 @@ public partial class DamageMeterCalculationTest
     }
 
     internal void Add(string attacker, string defender, int second, long amount,
-      byte type = LabelTypes.Melee, byte flags = 0, double? receivedAt = null)
+      byte type = LabelTypes.Melee, byte flags = 0, double? receivedAt = null, double? wallReceivedAt = null)
     {
       Facts.AddFact(new DamageFact(Facts.FactCount,
         (long)(T0 + second), Facts.InternName(attacker), Facts.InternName(defender), amount, type,
         flags, 0, ushort.MaxValue));
       _lastReceipt = Math.Max(_lastReceipt, T0 + (receivedAt ?? second));
-      Arrivals.Record(Facts.FactCount, _lastReceipt);
+      if (wallReceivedAt is { } wall)
+        Arrivals.Record(Facts.FactCount, _lastReceipt, T0 + second, T0 + wall);
+      else Arrivals.Record(Facts.FactCount, _lastReceipt);
     }
 
     internal IReadOnlyList<DerivedFight> Project()

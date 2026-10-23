@@ -17,7 +17,7 @@ namespace EQLogParser
 
     private readonly ParseLane _lane;
     private readonly IFactTable _facts;
-    private readonly Action<int> _damageArrived;
+    private readonly Action<int, double> _damageArrived;
 
     /*
      * The heal stream, or null when the caller did not ask for one. Own table by choice — see HealFact's
@@ -38,7 +38,7 @@ namespace EQLogParser
     private long _firstSeenTs = -1;
 
     public CombatCapture(IFactTable facts, IHealFactTable heals = null, ParseLane lane = null,
-      Action<int> damageArrived = null)
+      Action<int, double> damageArrived = null)
     {
       _facts = facts ?? throw new ArgumentNullException(nameof(facts));
       _heals = heals;
@@ -274,7 +274,7 @@ namespace EQLogParser
        * and a reader can be at most one derive pass between seeing the fact and seeing its receipt, which is how damage arriving
        * mid-scan already behaves. Docs: "Damage overlay: fight accounting and display retention".
        */
-      _damageArrived?.Invoke(receiptThrough);
+      _damageArrived?.Invoke(receiptThrough, e.BeginTime);
     }
 
     /*

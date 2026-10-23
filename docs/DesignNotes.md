@@ -7142,8 +7142,8 @@ pull at all.
 
 ### Damage overlay: fight accounting and display retention
 
-**Goal:** show a stable account of captured combat, and hide it after a quiet period. Log timestamps determine the numbers;
-elapsed time since receiving eligible damage determines visibility. The meter must not change damage, DPS, duration or RDPS
+**Goal:** show a stable account of current combat, and hide it after a quiet period. Source age first qualifies live activity;
+log timestamps determine the numbers, and elapsed time since receiving qualified damage determines visibility. The meter must not change damage, DPS, duration or RDPS
 merely because the PC clock advances. A timeout can end a timed accumulation, but its next record boundary is a captured
 ordinal, never a PC timestamp.
 
@@ -7192,8 +7192,8 @@ otherwise one post-Reset hit can carry an old death and its `X` back into Copy P
 minimum/maximum log times; the materialized reference takes the bounds from its surviving blocks. The shared special lead-in and death
 tail remain unchanged, and ordinary whole-life queries retain their original spans. `OrdinalCutAnnotationRangesUseOnlyTheRetainedRecords`
 pins Reset and timed expiry, both directions, continued/cold/reference results, and the untouched whole-life query.
-The app passes positive infinity as the upper accounting bound. Future-dated log records count immediately; neither totals nor RDPS
-wait for the PC clock to reach their timestamps.
+The app passes positive infinity as the upper accounting bound. An admitted accounting scope counts future-dated records immediately;
+neither totals nor RDPS waits for the PC clock. Such records cannot independently qualify as live activity.
 
 The initial timed bound must apply to **activity eligibility as well as amounts on the first publication**. `TrySelect` returns
 false when it first establishes that bound; the worker recaptures candidates and refreshes bounded activity before selecting again.
@@ -7202,12 +7202,12 @@ Otherwise an old positive hit followed by a recent miss could admit a life on th
 an accumulation. `TimedInitialBoundIsAppliedBeforeTheFirstPublication` pins first opening, Reset and timed expiry in both directions.
 
 **Receipt is recorded at ingest, not at recount.** `CombatCapture` notifies the host after a damage fact is published. `MeterArrivals`
-records its ordinal range against `Stopwatch` time, grouped into millisecond batches with sub-millisecond truncation. **Unexamined batches
+records its ordinal range against `Stopwatch` time, grouped into millisecond batches with sub-millisecond truncation and the same source-age qualification. **Unexamined batches
 never age out.** A stalled or disabled worker may accumulate metadata only while new damage facts arrive; a quiet log and duplicate notifications
 add nothing. After successful verification, batches older than 120 seconds relative to the newest receipt fold into a compact checkpoint
 before retirement. The recent window exceeds every supported mode (configuration accepts 1–100 seconds); long-backlog list capacity is released too.
 Workers inspect each lane's first and last eligible ordinal in a batch using the same admission predicate as pending combat. `MeterReceiptRuns` keeps the
-latest eligible receipt and one reset cut for each supported quiet period for Damage, Tanking and Both, so changing modes or panels needs no discarded receipt history. A gap must be strictly
+latest source-qualified eligible receipt and one reset cut for each supported quiet period for Damage, Tanking and Both, so changing modes or panels needs no discarded receipt history. A gap must be strictly
 longer than the mode to cut; the cut keeps the first eligible ordinal after that gap, not merely the newest hit. The summaries copy with each read,
 and only a completed, still-current read acknowledges its prefix. Cancellation, failure and input invalidation retire nothing.
 Filters/verdict changes recheck the retained window from the historical checkpoint using original receipt times, not the time of reconsideration.
@@ -7234,11 +7234,21 @@ pin the accounting cutoff with both retained and pruned receipts. This is an ing
 The dispatcher reads the last worker-verified receipt without waiting on a scan. Its existing presentation lease still expires while a
 worker is blocked, and late results must be fresh before painting.
 
-Visibility deadlines are **receipt + mode**, **receipt + 30** for ongoing On Kill, or **receipt + 8** for a completed-only result.
-Eight seconds of ingest lag therefore do not consume eight seconds of a ten-second timeout. Historical timestamps are not rejected as
-stale: reading them now is an arrival, but asking again about a capture whose receipts expired does not open it. This deliberately differs
-from the former log-timestamp-age gate. Heal, cast, taunt, death, filter and re-derive events never manufacture a damage receipt.
-`MeterClockSeparationTest`, `MeterArrivalsTest`, and `PendingMembershipStaysFrozenUntilTheWholeBoardExpires` pin these boundaries.
+**Live qualification is not a quiet clock.** At ingest, compare each damage sentence's log timestamp with local wall time. A future timestamp
+or an age beyond the selected mode (30 seconds for On Kill) cannot activate or renew the live meter. All facts still enter the capture;
+source freshness is neither a parsing filter nor an accounting bound. Each batch retains the ceiling of its source age, and each mode's
+receipt run admits only qualifying batches. Data older than every supported mode and future data advance the captured watermark without
+creating a receipt batch; later live data cannot absorb those skipped ordinals into its receipt. Changing modes, filters, verdicts or waiting
+for a worker never requalifies a timestamp against a later wall clock. The published immutable runs answer both mode and panel without a scan.
+A timed accumulation must not establish its initial log-time bound until a qualified receipt exists: opening over stale history otherwise
+anchors the next live board to that history. `MeterSourceFreshnessTest` pins two days of history ending 14 hours ago, both directions,
+catch-up into live combat, no historical renewal, exact age boundaries, future input, mode-specific gaps, mixed millisecond batches and retirement.
+
+After qualification, visibility deadlines are **receipt + mode**, **receipt + 30** for ongoing On Kill, or **receipt + 8** for a completed-only result.
+Eight seconds of ingest lag therefore do not consume eight seconds of a ten-second timeout. Clock separation removed the source-age gate
+along with the unwanted wall-time accounting bounds, which let historical imports open the live meter; the two decisions must remain separate.
+Heal, cast, taunt, death, filter and re-derive events never manufacture a damage receipt.
+`MeterClockSeparationTest`, `MeterArrivalsTest`, and `PendingMembershipStaysFrozenUntilTheWholeBoardExpires` pin the independent receipt deadlines.
 
 Opening uses receipt freshness. `LiveDamageObserved` advances by the newest eligible received ordinal: two arrivals within one log
 second are distinct, while a death-only republish or a rebuild spends no new receipt. Enabling with an empty/stale verified cache asks

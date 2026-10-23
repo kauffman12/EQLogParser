@@ -44,37 +44,47 @@ internal sealed class MeterReceiptRuns
 
   internal void Add(MeterReceipt receipt)
   {
-    _both.Add(receipt.Both);
-    _damage.Add(receipt.Damage);
-    _tanking.Add(receipt.Tanking);
+    _both.Add(receipt.Both, receipt.MinimumMode);
+    _damage.Add(receipt.Damage, receipt.MinimumMode);
+    _tanking.Add(receipt.Tanking, receipt.MinimumMode);
   }
 
   // A hidden lane must not bridge a quiet gap, even when no worker observed the expiry.
   private sealed class Run
   {
     private readonly int[] _firstOrdinals;
+    private readonly MeterArrival[] _last;
     internal MeterArrival Last { get; private set; } = MeterArrival.None;
 
-    internal Run() => _firstOrdinals = new int[MaxMode + 1];
+    internal Run()
+    {
+      _firstOrdinals = new int[MaxMode + 1];
+      _last = new MeterArrival[MaxMode + 1];
+      Array.Fill(_last, MeterArrival.None);
+    }
 
     private Run(Run source)
     {
       Last = source.Last;
       _firstOrdinals = (int[])source._firstOrdinals.Clone();
+      _last = (MeterArrival[])source._last.Clone();
     }
 
     internal Run Copy() => new(this);
 
-    internal MeterArrival ForMode(int mode) => Last with { FirstOrdinal = _firstOrdinals[mode] };
+    internal MeterArrival ForMode(int mode) => _last[mode] with { FirstOrdinal = _firstOrdinals[mode] };
 
-    internal void Add(MeterArrival receipt)
+    internal void Add(MeterArrival receipt, int minimumMode)
     {
       if (receipt.Through == 0) return;
-      if (Last.Through > 0)
+      // Source age qualifies activity once, at receipt. Each mode keeps its own last qualified arrival and gap.
+      if (minimumMode <= FightProjection.EngagementGapS) _last[0] = receipt;
+      for (var mode = Math.Max(1, minimumMode); mode <= MaxMode; mode++)
       {
-        var gap = receipt.Time - Last.Time;
-        for (var mode = 1; mode <= MaxMode && gap > mode; mode++)
+        var previous = _last[mode];
+        if (previous.Through > 0 && receipt.Time - previous.Time > mode)
           _firstOrdinals[mode] = receipt.FirstOrdinal;
+        _last[mode] = receipt;
       }
       Last = receipt;
     }
@@ -83,11 +93,11 @@ internal sealed class MeterReceiptRuns
 
 // Each lane keeps its own ordinal endpoints; both share the batch's receipt time.
 internal readonly record struct MeterReceipt(double Time, int DamageFirst, int DamageThrough,
-  int TankingFirst, int TankingThrough)
+  int TankingFirst, int TankingThrough, int MinimumMode = 0)
 {
-  internal MeterReceipt(MeterArrival damage, MeterArrival tanking)
+  internal MeterReceipt(MeterArrival damage, MeterArrival tanking, int minimumMode = 0)
     : this(Math.Max(damage.Time, tanking.Time), damage.FirstOrdinal, damage.Through,
-      tanking.FirstOrdinal, tanking.Through) { }
+      tanking.FirstOrdinal, tanking.Through, minimumMode) { }
 
   internal MeterArrival Damage => DamageThrough == 0 ? MeterArrival.None : new(DamageThrough, Time, DamageFirst);
   internal MeterArrival Tanking => TankingThrough == 0 ? MeterArrival.None : new(TankingThrough, Time, TankingFirst);

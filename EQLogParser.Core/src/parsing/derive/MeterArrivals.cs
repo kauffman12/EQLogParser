@@ -10,7 +10,7 @@ internal readonly record struct MeterArrival(int Through, double Time, int First
   internal static readonly MeterArrival None = new(0, double.NegativeInfinity);
 }
 
-// Receipt times decide visibility and quiet-period cuts, never log timestamps or rate denominators.
+// Source age qualifies live activity at ingest; receipt times then decide visibility and quiet-period cuts.
 // Unchecked batches cannot expire. Checked history folds into mode-specific cuts before its metadata is retired.
 internal sealed class MeterArrivals
 {
@@ -28,40 +28,31 @@ internal sealed class MeterArrivals
   private MeterDamageFilter _filter;
   private MeterReceiptRuns _runs = new();
   private MeterReceiptRuns _checkpoint = new();
-  private Published _published = new(MeterArrival.None, MeterArrival.None, MeterArrival.None);
+  private Published _published = new(new MeterReceiptRuns(), false);
 
   /*
-   * Dispatcher readers must never wait for a worker classifying a newly received prefix, so what gets published is the answer per
-   * panel (already retention-gated) rather than the runs object. A window asks for its own panels and reads one volatile reference.
+   * Dispatcher readers must never wait for receipt verification. Published runs are immutable, already retention-gated,
+   * and answer every mode/panel from one volatile reference.
    */
-  internal MeterArrival Observed(MeterPanels panels)
+  internal MeterArrival Observed(MeterPanels panels, int mode = 0)
   {
     var published = Volatile.Read(ref _published);
-    return panels switch
-    {
-      MeterPanels.Damage => published.Damage,
-      MeterPanels.Tanking => published.Tanking,
-      MeterPanels.Both => published.Both,
-      _ => MeterArrival.None
-    };
+    return published.Retained ? published.Runs.ForMode(mode, panels) : MeterArrival.None;
   }
 
   internal static double Now => Stopwatch.GetTimestamp() / (double)Stopwatch.Frequency;
 
-  internal void Record(int through, double now)
+  // Production receipts carry both clocks. Old/future data stays captured, but cannot become live meter activity.
+  internal void Record(int through, double now, double sourceTime, double wallNow)
   {
-    lock (_gate)
-    {
-      if (through <= _through) return;
-
-      // Ordinal ranges chain from the previous Through, even when two arrivals share one millisecond.
-      var time = Math.Floor(now * 1000) / 1000;
-      if (_batches.Count > _head && _batches[^1].Time == time)
-        _batches[^1] = _batches[^1] with { Through = through };
-      else _batches.Add(new Batch(_through, through, time));
-      _through = through;
-    }
+    var age = wallNow - sourceTime;
+    var minimumMode = double.IsFinite(age) && age >= 0 && age <= MeterReceiptRuns.MaxMode
+      ? (int)Math.Ceiling(age) : MeterReceiptRuns.MaxMode + 1;
+    Record(through, now, minimumMode);
   }
+
+  // Prequalified receipts let accounting tests exercise the monotonic clock independently of source freshness.
+  internal void Record(int through, double now) => Record(through, now, 0);
 
   // `panels` answers for one window; the cached run beneath it holds both, so a different choice needs no rescan.
   internal MeterArrival Latest(DamageFactTable facts, EntityTimeline timeline,
@@ -99,6 +90,24 @@ internal sealed class MeterArrivals
     }
   }
 
+  private void Record(int through, double now, int minimumMode)
+  {
+    lock (_gate)
+    {
+      if (through <= _through) return;
+      var from = _through;
+      _through = through;
+      if (minimumMode > MeterReceiptRuns.MaxMode) return;
+
+      // Only adjoining ranges with the same source qualification may share a millisecond batch.
+      var time = Math.Floor(now * 1000) / 1000;
+      if (_batches.Count > _head && _batches[^1].Time == time
+        && _batches[^1].Through == from && _batches[^1].MinimumMode == minimumMode)
+        _batches[^1] = _batches[^1] with { Through = through };
+      else _batches.Add(new Batch(from, through, time, minimumMode));
+    }
+  }
+
   private MeterArrival Publish(Read read, MeterReceiptRuns runs, List<MeterReceipt> recent,
     int mode, MeterPanels panels, CancellationToken cancellation)
   {
@@ -119,18 +128,18 @@ internal sealed class MeterArrivals
       }
       _recent.AddRange(recent);
       RetireCheckedHistory();
-      // Per panel rather than one scalar: two windows may display different choices over one capture.
-      var published = new Published(RetainedAnswer(runs, 0, MeterPanels.Damage),
-        RetainedAnswer(runs, 0, MeterPanels.Tanking), RetainedAnswer(runs, 0, MeterPanels.Both));
-      if (_published != published) Volatile.Write(ref _published, published);
+      // The run is immutable after publication; dispatcher readers can ask any mode/panel without a lock or scan.
+      Volatile.Write(ref _published, new Published(runs, IsRetained(runs)));
       return answer;
     }
   }
 
   // Retention asks whether this run still speaks for the newest batch at all; which panel answered is a separate question.
   private MeterArrival RetainedAnswer(MeterReceiptRuns runs, int mode, MeterPanels panels) =>
-    _batches.Count > _head && runs.Last.Time >= _batches[^1].Time - RetentionSeconds
-      ? runs.ForMode(mode, panels) : MeterArrival.None;
+    IsRetained(runs) ? runs.ForMode(mode, panels) : MeterArrival.None;
+
+  private bool IsRetained(MeterReceiptRuns runs) =>
+    _batches.Count > _head && runs.Last.Time >= _batches[^1].Time - RetentionSeconds;
 
   private void RetireCheckedHistory()
   {
@@ -179,7 +188,7 @@ internal sealed class MeterArrivals
         var first = Math.Max(batch.From, From);
         var receipt = new MeterReceipt(
           LaneReceipt(facts, first, batch, MeterPanels.Damage, cancellation),
-          LaneReceipt(facts, first, batch, MeterPanels.Tanking, cancellation));
+          LaneReceipt(facts, first, batch, MeterPanels.Tanking, cancellation), batch.MinimumMode);
         if (receipt.Through == 0) continue;
         runs.Add(receipt);
         recent.Add(receipt);
@@ -207,7 +216,7 @@ internal sealed class MeterArrivals
     }
   }
 
-  internal readonly record struct Batch(int From, int Through, double Time);
+  internal readonly record struct Batch(int From, int Through, double Time, int MinimumMode = 0);
 
-  private sealed record Published(MeterArrival Damage, MeterArrival Tanking, MeterArrival Both);
+  private sealed record Published(MeterReceiptRuns Runs, bool Retained);
 }
