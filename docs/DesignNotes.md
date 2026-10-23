@@ -3086,8 +3086,8 @@ Configure used to be a form painted on top of the thing it configured: pressing 
 preview instance whose face carried eleven controls, three dropdowns deep, with Save/Cancel/Close buttons that enabled
 themselves only after something moved. The FCT panel had already proved the better shape — the overlay stays nothing
 but numbers while a companion window holds every decision — so the inline panel is gone and `DamageMeterSettingsWindow`
-took its job: two accordion sections that each answer one question — STYLE (thin bars, then the columns dropdown, font size and rows, then bar color
-and highlight) and OPTIONS (hide other players, streamer mode, class filter, crit rate, meter panels, reset) — Save and
+took its job: two accordion sections that each answer one question — STYLE (thin bars, then font size and rows, then bar color
+and highlight) and OPTIONS (hide other players, streamer mode, class filter, columns, crit rate, reset, tabs) — Save and
 Cancel as the entire exit vocabulary, everything previewed live on the sample stage and nothing written to ini until Save.
 
 `DamageMeterConfigState.Load()` is the **one** reader of these settings keys and the only place their ranges are judged: the overlay constructor opens from it
