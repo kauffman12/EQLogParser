@@ -265,7 +265,7 @@ pre code {
   display: block;
   padding-left: 0.75rem;
   font-size: 0.8rem;
-  color: var(--color-muted);
+  color: var(--color-toc-link);
 }
 
 .toc a.sub:hover {

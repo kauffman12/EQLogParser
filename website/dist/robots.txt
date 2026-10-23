@@ -1,4 +1,4 @@
 User-agent: *
-Disallow: /status.html
+Allow: /
 
 Sitemap: https://eqlogparser.kizant.net/sitemap.xml

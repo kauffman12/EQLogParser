@@ -27,51 +27,102 @@
     - Sometimes if the spell is a proc or other effect related to a **DoT** where the player has left the zone it may now create an older style entry in the log file where the spell name is in the position of where the player name usually is and the player name is absent. This case should be fairly rare.
 3. See the [What is Use EMU Server Parsing?](#what-is-use-emu-server-parsing-and-when-should-i-enable-it) FAQ entry below for more information.
 
+## What is the difference between Sec and Busy?
+
+Both columns describe time for that row in the fights you selected, but they answer different questions:
+
+| Column | What it measures | Used to calculate DPS or HPS? |
+|---|---|---|
+| **Sec** | Recorded combat duration for this row, including pauses | Yes |
+| **Busy** | Estimated active time within Sec, excluding pauses over 10 seconds | No |
+
+**Sec is not necessarily the whole fight's duration.** Each row has its own recorded time, and selecting several fights combines its covered periods rather than counting all the time between fights.
+
+**Busy looks at individual activity timestamps.** Timestamps up to 10 seconds apart count as continuous activity. Longer pauses are left out, and no time is added before the first activity or after the last. It only counts inside the periods already covered by Sec, so **Busy never exceeds Sec**.
+
+For example, within one recorded period, activity at seconds **0, 5 and 20** gives **Sec = 21** and **Busy = 7**: seconds 0–5 count as six seconds, plus one second at 20. Each endpoint counts as a second.
+
+Each summary measures its own activity: damage dealt, healing done or incoming attacks. Misses and avoided attacks can count too. An **X +Pets** row combines the owner's and pets' activity without counting the same second twice. Busy estimates logged activity, not button presses or time spent casting.
+
+## What do DPS, RDPS and SDPS mean?
+
+These rates use different amounts of time:
+
+| Column | Calculation | What it tells you |
+|---|---|---|
+| **DPS** | The row's damage divided by its **Sec** | Average damage per second over that row's recorded combat time |
+| **RDPS** | Damage in the latest six logged seconds of the meter's combat, divided by six | Recent damage output; available on the damage meter |
+| **SDPS** | The row's damage divided by the raid's recorded combat time | Damage per second using the same duration for everyone |
+
+For example, 10,000 damage over your own 10 seconds gives **1,000 DPS**. If the raid's recorded duration is 20 seconds, the same damage gives **500 SDPS**.
+
+In the Healing Summary, **HPS** uses the healer's Sec and **SHPS** uses the raid's recorded combat duration. On the meter's Tank panel, the damage rates describe **damage taken**, not damage dealt.
+
+**Busy is not a denominator for any of these rates.** RDPS advances with logged combat, not a wall-clock countdown: if no new combat arrives, the number holds until activity changes or the meter closes. It divides by six even when the encounter has fewer than six logged seconds.
+
+Use **View → Damage Meter → Setup → Columns** to choose which numeric columns the meter displays. Hiding a column changes the display, not the calculations.
+
 ## Why don't the Damage Meter values match what I see when selecting fights in the DPS/Tanking Summary?
-1. The **Damage Meter** has a toolbar with two buttons: **DPS** and **Tank**
-    - **DPS** shows damage dealt by players (compare this to the **DPS Summary**)
-    - **Tank** shows damage absorbed by players while tanking (compare this to the **Tanking Summary**)
-2. Make sure the correct button is selected based on which summary you are comparing against
-    - The active button will be highlighted in orange, while the inactive one remains white
-    - Both buttons are there only if the meter's **Setup → Meter panels** is set to **Both**. Choose **Damage** or **Tanking** there and the meter shows that one panel alone, with no tab to switch, and the other kind of activity can no longer pop the window open for you
-3. If you're comparing to the **DPS Summary**, click the **DPS** button on the Damage Meter toolbar to ensure it is showing damage dealt and not tanking stats
+
+The **summary tables show the fights you selected**. The **damage meter chooses combat automatically** according to its reset mode. Their totals can differ when they cover different fights or different portions of a fight.
+
+To compare them:
+
+1. Compare the same combat and check the meter's [reset mode](#how-do-the-damage-meter-s-reset-modes-work). A manually cleared meter may cover only part of a selected fight.
+2. Compare the same direction:
+    - **DPS** on the meter shows damage dealt; compare it with the **DPS Summary**
+    - **Tank** shows damage taken; compare it with the **Tanking Summary**, including players, pets and mercenaries
+3. Compare the same rate: **DPS**, **RDPS** and **SDPS** use different time periods, as explained above.
+4. Check class filters and how pets are grouped so you are comparing the same rows.
+
+The **DPS** and **Tank** buttons appear together only when **Setup → Meter panels** is **Both**. Choosing **Damage** or **Tanking** shows that panel alone, without tab buttons.
+
+## How do the Damage Meter's reset modes work?
+
+Choose a reset mode under **View → Damage Meter → Setup**:
+
+- **On Kill:** the meter keeps each ongoing encounter's damage. When one opponent dies, its encounter leaves the ongoing total while surviving opponents keep theirs. When no ongoing encounter remains, the meter briefly shows the final result, with a deadline about eight seconds after the last accepted attack. Without a death, a gap of more than 30 logged seconds separates encounters; about 30 seconds without accepted attacks also closes the display.
+- **Timed modes:** the meter keeps an accumulated result until there has been no accepted attack for the configured number of seconds. Kills do not clear it. After that quiet period, the display closes and the next attack starts a new accumulation.
+
+A timed mode is **not a rolling last-N-seconds total**. With a ten-second reset, a fight can accumulate for several minutes as long as there is no pause longer than ten seconds. Accepted misses and avoided attacks can also keep an encounter going.
+
+Use the toolbar's **Clear Parse** button to start counting from that point, even during a fight. **Closing with X does not clear the accumulated result**; its reset rules still apply when you reopen it.
 
 ## Why did my Damage Meter disappear, or why does it look empty?
-1. The meter shows itself only while it has something to list: when nothing is left to display, it hides and then closes rather than sitting on screen as an empty box. It comes back on its own the next time there is damage or tanking to show
-2. Which kind of activity counts follows **Setup → Meter panels**. With **Damage** selected, being hit is not enough to open or keep the meter; with **Tanking**, outgoing damage is not
-3. If the board looks empty but combat is clearly happening, check the meter's **class filter** — a filter is only a lens, so the meter stays up showing nothing until you set it back to **All Classes**
-4. With both panels on and the page you are looking at empty while the other one is busy, the other button briefly turns green every few seconds. That is a reminder that the numbers are on the other tab: the meter never switches tabs by itself
+
+1. Check the [reset mode](#how-do-the-damage-meter-s-reset-modes-work). A quiet period can close the meter even when the last opponent did not die. It returns automatically when there is eligible combat to display, provided **Enable Meter** remains on.
+2. Check **Setup → Meter panels**. With **Damage** selected, incoming attacks alone cannot open or keep the meter up. With **Tanking**, outgoing attacks alone cannot do so. With **Both**, either direction can keep it up.
+3. Check the **class filter**. It hides rows without changing the recorded totals. If it hides everyone, the meter can remain open with no visible player rows; select **All Classes** to show them again.
+4. With **Both** enabled, the tab you selected may be empty while the other has results. The other button briefly turns green every few seconds to draw your attention. The meter never switches tabs for you.
 
 ## When using Trigger Log, I would like a quick way to edit the Trigger for the log entry.
-1. When you select a row in the **Trigger Log** it will select the trigger in the **Trigger Manager** as long as you have it open. If so, just switch back to that tab and check
-2. The second way to quickly find a trigger is to use the **Trigger Search** box above the folder tree where you create triggers. It searches by name and by the pattern fields
-3. You may also find it useful to **drag-and-drop** the **Trigger Log** or **Trigger Manager** tabs around so that you can see both at the same time as shown below:
+1. Open **Trigger Manager**, then select an event in **Trigger Log**. The matching trigger is selected in the manager, ready to edit.
+2. You can also use **Trigger Search** above the folder tree. It searches trigger names and pattern fields.
+3. Drag the **Trigger Log** and **Trigger Manager** tabs into separate panes to see both at once, as shown below:
 
 <a style="margin-left: 30px;" href="img/trigger-selection.gif" target="_blank">
   <img src="img/trigger-selection.gif" alt="Select Trigger from Trigger Log" height="300" loading="lazy">
 </a> 
 
 ## My triggers work in the tester but not in-game (or nothing fires at all)
-1. Check that **EQ Chat Filters** are turned off in EverQuest itself
-    - In EQ go to **Options** → **Chat Settings** and look for filters related to DoT, spell, and combat messages
-    - If these filters are enabled, EQ will silently block those messages from being written to the log file before the parser ever sees them
-2. Make sure your trigger pattern exactly matches the actual in-game log line
-    - A common issue is that EQ uses a backtick character **`** instead of an apostrophe **'** in some messages
-    - Another common issue is that the test string is missing words from the actual log line
-    - Open the **Trigger Log** tab after playing and copy the exact log line to verify your pattern matches
+
+1. Make sure EverQuest logging is on (`/log on`) and EQLogParser is monitoring the correct character's file.
+2. Check both enable settings: the trigger's checkbox in the tree, and the master checkbox in basic mode or the character's checkbox in advanced mode.
+3. Check **Regex** if the pattern uses regex syntax or capture codes such as `{S1}` or `{N}`. Save any changes.
+4. Use **Log Search**, or open the original log file, to find the exact message and copy it into the tester. **Trigger Log** records trigger events, so it may not contain a message that never fired a trigger.
+5. Compare spaces, words and punctuation. EQ sometimes uses a backtick (&#96;) where you might expect an apostrophe ('). Also check the trigger's **Previous Line** and **Match Variables** conditions if you use them.
+6. Check EverQuest's **Options → Chat Settings** for filters affecting the messages your trigger needs.
 
 ## Why are my Overlays not showing or they use the wrong colors?
-1. Specify the Overlay in the Trigger settings or verify that **default** is checked in the Overlay.
-    - The **default** Overlay is the fallback when no other Overlay is specified.
-2. Preview the Overlay and make sure it is displaying as you're expecting. Remember to **save** changes.
-3. Check the **Custom Active Color** and **Custom Font Color** in the trigger you are testing with.
-    - If these colors are specified they will override what the overlay is configured with.
-    - Even if they say **Click to Select Custom Color** try clicking and saving with a color as a test.
-    - Example images will be shown below.
-4. If in advanced mode, check **Overlay Active Color** and **Overlay Font Color** when you modify your character settings.
-    - These options are another way to choose custom colors. Sometimes they get set by accident.
-    - One common issue is that **Transparent** gets selected which makes it look like the timer never displays.
-5. In both cases above, it may help to set a color and see if it does anything. If so go back and reset/clear the value.
+For timer and text overlays:
+
+1. Assign an overlay in the trigger's settings, or mark an overlay as **default** to use it when the trigger has no assignment.
+2. Preview the overlay and **Save** your changes.
+3. Check the trigger's **Custom Active Color** and **Custom Font Color**. These can override the overlay's colors.
+4. In advanced mode, also check **Overlay Active Color** and **Overlay Font Color** in the character's settings. A **Transparent** color can make a timer appear to be missing.
+5. To test a color override, choose a visible color and save. Clear the override afterward if you want to use the overlay's own colors.
+
+For the damage meter, use **View → Damage Meter → Setup** instead.
 
 <a style="margin-left: 30px;" href="img/trigger-colors.png" target="_blank">
   <img src="img/trigger-colors.png" alt="Custom Colors in Trigger Settings" height="200" loading="lazy">
@@ -81,34 +132,36 @@
 </a>
 
 ## How do I get overlays to show in OBS?
-1. Enable **Streamer Mode** in the overlay settings within EQLogParser
-    - Open the overlay configuration and check the **Streamer Mode** checkbox
+1. Enable **Streamer Mode** for the window you want to capture
+    - For timer or text overlays, use that overlay's settings in **Trigger Manager**
+    - For the damage meter, use **View → Damage Meter → Setup**
 2. In OBS, add a **Window Capture** source (not Game Capture)
     - Set the **Capture Method** to **Windows 10 or newer** by right-clicking the source → Properties
 3. Select the correct window from the dropdown in OBS
     - Choose the overlay window itself (e.g. "Damage Meter") and **not** the EverQuest window
-4. If the overlay still does not appear, make sure the trigger has actually fired to create the overlay window first
+4. Make sure the window is visible before selecting it in OBS. For a timer or text overlay, preview it or fire its trigger. For the damage meter, open its **Setup** window to display the preview
 
 ## When using one of the right-click Copy options or sending a Quick Share. Nothing is copied.
-1. Check the error log for the message below. If you see it then your anti-virus software is blocking access. You'll need to figure out how to add an exception for EQLogParser.exe. This seems to be common with ESET and you may want to look for the HIPS settings and see if you can add the exception there.
-    - **ERROR EQLogParser.UiUtil - Failed to set Clipboard Text: OpenClipboard Failed (0x800401D0 (CLIPBRD_E_CANT_OPEN))**
-2. If you do not see an error and it is only happening with Send Parse to EQ. Keep in mind that Everquest has a limit on how many characters you can paste. If you open the Preview Parse window you'll see a count and warning if you copy too much.
+
+1. Try copying again. Another application may be holding the clipboard open.
+2. Open **Tools → View Error Log**. An `OpenClipboard Failed` or `CLIPBRD_E_CANT_OPEN` error means EQLogParser could not access the clipboard; it does not identify the cause. If the problem persists, check clipboard utilities, remote-desktop software and security software. ESET users have reported needing an exception in its HIPS settings.
+3. If only **Send Parse to EQ** fails, check the character count in **Preview Parse**. EverQuest limits how much text you can paste at once.
 
 ## Why does my Charm Pet or Merc not show up correctly in the Summary table?
-1. The main reason for this is naming. The parser is not good at handling names that do not look like player names
-2. Charm pets are extra difficult as there's no way to distinguish the pet from npc if you fight an npc with the same name
-3. The name problem can be improved upon but it is complicated and something will be worked on in the future
+
+EQLogParser uses evidence such as ownership messages, charm events and known mercenary names to identify combatants. A pet and an NPC sharing a name can still make identification difficult.
+
+First check the summary's pet options. Damage can be grouped under an **X +Pets** row; the Tanking Summary has a **Show Pets** checkbox. If the name's identity or owner is wrong, use the **Identity Table** as described below.
 
 ## A monster or boss has a wrong name, or my pet shows up as an NPC
-1. EverQuest does not tell the parser which names are players, pets, or NPCs so it has to guess based on context
-    - This can cause confusion when a pet shares a name with an NPC, or when multiple instances of a mob are present
-2. Check and clean the **Verified Players** and **Verified Pets** lists
-    - Open these windows from the **View** menu → **Windows**
-    - Remove any entries that don't make sense (e.g. boss names in the players list, or your pet in the wrong owner)
-3. After cleaning up the lists, reload the log file so the parser can re-evaluate
-4. If a specific mob is misidentified during a fight, right-click it and select **Assign Unknown as Pet of** or **Set as Verified Player** to correct it
-5. For damage shields, DoTs, and environmental effects showing as monsters in the DPS Summary, try unchecking the **Tanking** checkbox in the **Fight List**
-    - This hides fights that contain only tanking data
+
+Open **View → Windows → Identity Table** and find the name:
+
+1. Check **Type** and **Why** to see how it was identified. Hover over Why for more detail.
+2. Use the pencil in **Type** to choose Player, Pet, Mercenary or NPC. Player rows also have a class pencil; Pet rows have an owner pencil.
+3. To discard saved assignments and reconsider the name using the current log, click the **history-arrow button** beside its name.
+
+Changes update the results without reopening the log. You can also right-click a name in a summary or the Fight List and use **Set … as** to change its type. Assigning a pet owner is a separate choice from identifying it as a pet.
 
 ## How do I import a trigger package (.tgf.gz or .gtp)?
 1. Open the **Trigger Manager** window
@@ -129,17 +182,17 @@
 
 ## What are the TTS Engine options and how do I change them?
 1. If your triggers speak text out loud, the speaking is done by one of three text-to-speech engines:
-    - **Windows** — uses the voices installed with Windows. Nothing to download, so it works out of the box on a Windows machine, but the quality depends on which voices are present. This engine is not available under Linux/Wine because WINE does not provide the Windows speech system
-    - **Piper** — fast and lightweight. Speech starts almost instantly and it uses very few system resources, so it suits older machines and busy raids where your triggers are speaking a lot. The tradeoff is that its voices have the lowest sound quality. The runtime downloads as a ~682 MB pack containing 12 voices
-    - **Kokoro** — the most natural-sounding voices of the three, but also the most demanding. It needs more memory and CPU than older systems can handle. The runtime downloads as a ~228 MB pack
+    - **Windows** — uses installed Windows voices, with no extra download. Voice quality depends on what is installed. Not available under Linux/Wine
+    - **Piper** — fast and lightweight, making it a good starting point for older PCs or frequent spoken alerts. Its voices can sound less natural. Downloads about 682 MB, including 12 voices
+    - **Kokoro** — more natural-sounding voices, but requires more CPU and memory. Downloads about 228 MB
 2. Change the engine from the Trigger Manager window: click the **Tools** dropdown button in the toolbar at the top and select **TTS Engine**
     - Selecting an engine in the dropdown only updates the description below it — nothing changes until you press a button
     - If that engine's runtime is not on this machine yet, the button reads **Download Piper (682 MB)** or similar. When the download finishes, EQLogParser switches to the new engine automatically
     - If the runtime is already installed, the button says **Use** followed by the engine name. The switch is live: the next thing your triggers speak already uses the new engine, no restart needed
 3. Why you might pick one over the other:
     - **Windows** when you want zero setup and are happy with the built-in Windows voices (not an option under Linux/Wine)
-    - **Piper** when speech has to start instantly and the system has limited resources — a good default if your triggers talk a lot during play
-    - **Kokoro** when voice quality matters more than CPU usage, on a machine that can keep up with it
+    - **Piper** for frequent spoken alerts or a less powerful PC
+    - **Kokoro** for more natural speech, if your PC handles it comfortably
 4. Voices belong to the engine that provides them:
     - Pick one from the **voice** dropdown in the Trigger Manager toolbar; in advanced mode each character keeps its own voice
     - Switching engines temporarily shows that engine's default voice until you pick one. A voice saved for one engine (e.g. Piper) comes back when you switch to it again
@@ -149,13 +202,22 @@
 
 # Linux Support
 
-EQLogParser has supported Linux since version 2.2.66 with only minor issues, and it is part of the standard install story rather than a separate product: run the same [installer](download.html) you would use on Windows under **64-bit Wine** (tested on Ubuntu/Debian-based systems). Two things have to be inside the Wine prefix before that installer is worth running: the **.NET 10 Desktop Runtime** and the **Microsoft Visual C++ 2015-2022 redistributable** (`dotnetdesktop10` and `vcredist2022` in Bottles, `dotnetdesktop10` and `vcrun2022` in winetricks). Version 2.4.0 moved from .NET 8 to .NET 10, so a prefix that already runs an older EQLogParser needs the .NET 10 Desktop Runtime added to it; the two runtimes sit side by side, so nothing else about the prefix has to change. The redistributable is new with 2.3.62: the downloadable speech engines run on Microsoft's ONNX runtime and Wine cannot satisfy it on its own.
+Use the standard [Windows installer](download.html) under **64-bit Wine**. This setup has been tested on Ubuntu/Debian-based systems.
 
-Two ways to get there: [with Bottles](#installing-with-bottles) or [with plain Wine](#installing-with-plain-wine).
+Install these dependencies inside the same Wine environment as EQLogParser:
+
+| Dependency | Bottles name | winetricks name |
+|---|---|---|
+| .NET 10 Desktop Runtime | `dotnetdesktop10` | `dotnetdesktop10` |
+| Microsoft Visual C++ 2015-2022 redistributable, needed for Piper and Kokoro speech | `vcredist2022` | `vcrun2022` |
+
+If you are upgrading from a version that used .NET 8, add the .NET 10 Desktop Runtime. Both runtimes can remain installed.
+
+Choose [Bottles](#installing-with-bottles) for a graphical setup, or [plain Wine](#installing-with-plain-wine) to manage the environment yourself.
 
 ## Installing with Bottles
 
-Bottles is a Wine front-end: it keeps one prefix per program (a **bottle**) and installs what that program needs into it, so you never have to run `wine` by hand. Flatpak is the recommended way to get it, and both routes below start from the same install — run these in a terminal:
+Bottles manages separate Wine environments, called **bottles**. Install it through Flatpak with these terminal commands:
 
 ```bash
 # Install Flatpak
@@ -168,13 +230,11 @@ flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.f
 flatpak install flathub com.usebottles.bottles
 ```
 
-From there you can let a recipe this project publishes do the installing for you, or make every choice yourself. Both end with the same two things inside the prefix — **.NET 10 Desktop Runtime** and the **Visual C++ 2015-2022 redistributable** — so neither route is more correct than the other, and both start with the same kind of bottle: **64-bit**, and a plain Wine runner — **Caffe** on current Bottles, or the option simply called **Wine** on older ones. Leave Proton alone, it is meant for games.
-
-The runner choice only appears when the bottle type is **Custom**, which is why both routes below say to pick it.
+Use the project recipe below to install the dependencies automatically, or follow the manual steps. Both routes use a **Custom**, **64-bit** bottle with a **Caffe** runner (called **Wine** on older Bottles versions), rather than Proton. Choose **Custom** to expose the runner selection.
 
 ### The easy way: `PERSONAL_INSTALLERS`
 
-This project publishes a Bottles recipe at `bottles/Games/eqlogparser.yml` in the GitHub repository. It names EQLogParser's dependencies, the installer to download and where the executable lands, but Bottles knows nothing about it until you tell it where to look — that is what `PERSONAL_INSTALLERS` does:
+Launch Bottles with the project's installer recipe enabled:
 
 ```bash
 PERSONAL_INSTALLERS=https://raw.githubusercontent.com/kauffman12/EQLogParser/refs/heads/master/bottles flatpak run com.usebottles.bottles
@@ -182,17 +242,18 @@ PERSONAL_INSTALLERS=https://raw.githubusercontent.com/kauffman12/EQLogParser/ref
 
 Then, once Bottles is open:
 
-1. Click **Create a New Bottle** and name it. The recipe fills in what goes *inside* a bottle — it does not make one, and it cannot choose these for you — so use the same settings as the manual route below: type **Custom**, architecture **64-bit**, **Runner** **Caffe** (**Wine** on older Bottles). The architecture is not cosmetic: an installer declares its own, so a 32-bit bottle will not list EQLogParser at all.
-2. Open the bottle's **Install App** page (newer Bottles label it **Installers**) — **EQLogParser** is now in that list with its own icon, instead of you pointing at a file you downloaded.
-3. Press the installer's download button and Bottles runs the recipe end to end: it installs **vcredist2022**, **dotnetdesktop10** and **allfonts** into that bottle, downloads the installer named in the recipe, runs it, and adds EQLogParser to the bottle's program list so **Run App** launches it. Nothing else to pick.
-    - Run it again whenever you want the version the recipe points at — Bottles never says a recipe changed
-    - The Flatpak build adds no desktop menu entry, so launch EQLogParser from inside Bottles
+1. Click **Create a New Bottle**. Choose type **Custom**, architecture **64-bit**, and runner **Caffe** (**Wine** on older versions). The recipe requires a 64-bit bottle.
+2. Open the bottle's **Install App** page (called **Installers** in newer versions) and select **EQLogParser**.
+3. Press its download button. The recipe installs **vcredist2022**, **dotnetdesktop10** and **allfonts**, then downloads and runs the EQLogParser installer.
+4. Launch EQLogParser from the bottle's program list with **Run App**. The Flatpak build does not add a desktop menu entry.
+
+Run the recipe again to install the version it currently names; Bottles does not notify you when the recipe changes.
 
 > **Tip:** save that command as a shell script or a desktop shortcut. The variable has to be set on the Bottles process itself, so starting Bottles from your usual app menu will not list EQLogParser.
 
 ### The manual way: build the bottle yourself
 
-Start Bottles however you normally do — no variable needed, because you are pointing it at the installer file yourself — and:
+Download the EQLogParser installer, open Bottles normally, and:
 
 1. Click **Create a New Bottle**. When prompted for the type, select **Custom**, make sure the architecture is **64-bit**, and pick **Caffe** as the **Runner** (**Wine** on older Bottles — not Proton), then click **Create** and wait for Bottles to finish setting up the environment.
 2. Open the bottle's **Dependencies** page and install these:
@@ -205,14 +266,14 @@ Either way, on first start nothing speaks until one engine is downloaded: Trigge
 
 ## Installing with plain Wine
 
-No Bottles and no Flatpak — just `wine` and `winetricks`, which is the route to take if you want to see every step or keep prefixes by hand:
+If you prefer to manage a Wine prefix directly, use `wine` and `winetricks`:
 
 1. Create a 64-bit prefix and put both prerequisites in it:
     - `WINEPREFIX=~/eqlogparser WINEARCH=win64 wineboot`
     - `WINEPREFIX=~/eqlogparser winetricks vcrun2022 dotnetdesktop10`
 2. Run the installer in that prefix: `WINEPREFIX=~/eqlogparser wine EQLogParser-install-{version}.exe`
 3. Launch it and download a speech engine the same way as above
-4. Only one Visual C++ package belongs in a prefix: **vcrun2022** covers everything from 2015 through 2022, so there is no reason to add 2015, 2017 or 2019 alongside it
+4. **vcrun2022** covers the Visual C++ 2015-2022 dependency; you do not need to add the older redistributables separately
 
 ## Known Issues with Linux
 1. WPF applications are unstable with WINE so hardware acceleration is disabled 
@@ -223,8 +284,8 @@ No Bottles and no Flatpak — just `wine` and `winetricks`, which is the route t
 2. WINE x64 does not work with any windows text-to-speech engine
     - Use **Piper** or **Kokoro** instead — both work under Wine, and the TTS Engine window in the Trigger Manager downloads one for you. See [What are the TTS Engine options?](#what-are-the-tts-engine-options-and-how-do-i-change-them)
 3. Speech stays silent after a download that reported success, and the error log says `Unable to load DLL 'onnxruntime' … Module not found`
-    - The prefix is missing the Visual C++ 2015-2022 redistributable: add **vcredist2022** in Bottles or run `winetricks vcrun2022`, restart EQLogParser and press **Use** again. No re-download is needed
-    - The pack itself is fine — every file is checksum-verified as it installs, which is why the download succeeds. Only the Microsoft runtime that reads those files was missing
+    - Check that the prefix has the Visual C++ 2015-2022 redistributable: add **vcredist2022** in Bottles or run `WINEPREFIX=~/eqlogparser winetricks vcrun2022` for the prefix created above, then restart EQLogParser and press **Use** again. No re-download is needed for a missing dependency
+    - A successful download verifies the engine files, but does not install this Windows dependency
 4. Each speech engine downloads several hundred MB into the prefix, at `~/.wine/drive_c/users/username/AppData/Local/EQLogParser` (under Bottles that is inside the bottle's own `drive_c`)
     - **Remove Files** in the TTS Engine window gives the space back; you have to switch to another engine first
 

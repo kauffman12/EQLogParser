@@ -25,11 +25,11 @@ SITEMAP_OUT = DIST_DIR / 'sitemap.xml'
 FEED_OUT = DIST_DIR / 'feed.xml'
 FEED_ENTRY_LIMIT = 20
 SITE_BASE_URL = 'https://eqlogparser.kizant.net'
-CSS_VERSION = '17'
+CSS_VERSION = '18'
 GA_MEASUREMENT_ID = "G-8QSZ1NGK54"  # GA4 measurement ID for eqlogparser.kizant.net (public value)
 
 # Pages advertised in sitemap.xml, as (url path, source file whose change date
-# becomes <lastmod>). status.html is excluded because robots.txt disallows it.
+# becomes <lastmod>). status.html stays crawlable but carries noindex and is excluded from the sitemap.
 SITEMAP_PAGES = [
     ('/', Path('index.tmpl')),
     ('/getting-started.html', Path('getting-started.md')),

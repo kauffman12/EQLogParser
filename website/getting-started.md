@@ -6,31 +6,35 @@ This guide will walk you through installing EQLogParser, running your first pars
 
 EQLogParser is a real-time combat analyzer and damage parsing application built specifically for the **EverQuest MMO**. It monitors and processes in-game log files to provide:
 
-- **Damage dealt and received** breakdowns (per player, mob, or encounter)
+- **Damage, healing and tanking** breakdowns by player and encounter
 - **Spell casting counts** and activity timelines
 - **Audio triggers** that play sounds or TTS speech when log patterns match
 - **Visual overlays** (damage meter, timers, text displays) that can show in OBS for streaming
 - **Log search**, automated backups, import/export of trigger packages, and one-click migration from NAG databases
 
-At its core EQLogParser is a **parser** — open a character's log file and the stats take care of themselves. On top of that sits an optional **trigger engine**: audio alerts (sounds or text spoken out loud) and visual overlays that react to anything in the log, which you only need if you want alerts or streaming graphics.
+Open a character's log file and select fights to view their statistics. You can also enable the **damage meter** to follow combat automatically. The optional **trigger engine** provides sounds, spoken alerts, timers and text overlays when a message matches a pattern you choose.
 
 ## 1. Download & Install
 
 1. Visit the [Download page](download.html) and grab the latest installer.
-2. Run `EQLogParser-install-{version}.exe` as Administrator (required for log file access).
+2. Run `EQLogParser-install-{version}.exe` and approve the Windows permission prompt if one appears.
 3. If `.NET 10.0 Desktop Runtime` is not already installed, the installer will prompt you to install it — follow the on-screen instructions.
 4. After installation, launch EQLogParser from the Start menu or desktop shortcut.
 
 ## 2. Open Your First Log
 
-EQLogParser is a parser first — no triggers or configuration required to get value out of it:
+You do not need triggers to use the combat summaries:
 
-1. Find your character's EverQuest log file — named like `eqlog_{Character}_{Server}.txt`, usually in your EverQuest folder.
-2. Choose **File → Open and Monitor Log File** and pick it (recently opened logs appear at the top of that menu).
-3. EQLogParser parses the file and keeps monitoring it in real time while you play:
-    - Damage dealt and received shows up in the **DPS/Healing/Tanking Summary** (View menu)
-    - Spell casts are tracked in **Spell Counts**
-    - Timers show up in the **Timeline** charts
+1. In EverQuest, enter `/log on` to enable logging for your character.
+2. Find `eqlog_{Character}_{Server}.txt` in your EverQuest **Logs** folder.
+3. In EQLogParser, choose **File → Open and Monitor Log File** and select that file. Recently opened files also appear in this menu.
+4. When the **Fight List** fills, select a fight to see its results. Use Ctrl-click to select individual fights or Shift-click to select a range.
+5. Open the tables you want under **View → DPS / Healing / Tanking → Summary Table**. Their results cover the fights you selected.
+6. Right-click a player in the DPS Summary for more detail, including **Spell Counts**, **Spell Cast Order** and **ADPS Timeline**.
+
+The **Sec** column shows recorded combat duration, including pauses. **Busy** estimates active time within that duration, excluding pauses over 10 seconds. Busy does not change DPS or HPS; see [Sec and Busy explained](faq.html#what-is-the-difference-between-sec-and-busy).
+
+For a display that follows combat automatically, enable **View → Damage Meter → Enable Meter**. Use **Setup** in the same menu to choose its appearance, panels and reset mode. See [how the meter compares with the summaries](faq.html#why-don-t-the-damage-meter-values-match-what-i-see-when-selecting-fights-in-the-dps-tanking-summary).
 
 Tip: enable **Options → Auto Monitor Last Log** and EQLogParser will reopen that log and start monitoring automatically every time it launches.
 
@@ -39,10 +43,11 @@ Tip: enable **Options → Auto Monitor Last Log** and EQLogParser will reopen th
 Want your triggers to play sounds, speak text out loud, or show on-screen overlays? Those come from the trigger engine:
 
 1. Open the **Trigger Manager** (View → Triggers → Trigger Manager).
-2. Right-click in the tree → **New Trigger**, set a **Name**, enter a **Pattern** to match (see [Triggers & Regex](documentation.html) for syntax), and configure its display/speak/timer options.
-3. Tick the checkbox next to **Check to Activate Triggers** at the top of the window — that's the master switch for your monitored log.
+2. Right-click the **Triggers** folder → **New Trigger**. Set a **Name**, enter a **Pattern**, and choose what it should display, speak or time. Enable **Regex** if your pattern uses regular expressions or capture codes such as `{S1}`; see [Triggers & Regex](documentation.html).
+3. Click **Save** and check the trigger's box in the tree to enable it.
+4. Turn on the master checkbox at the top of the window to activate triggers for your monitored log.
 
-Overlays (damage meter, timers, text) are set up the same way in the **Overlays** folder; see [getting overlays into OBS](faq.html#how-do-i-get-overlays-to-show-in-obs) if you're streaming.
+Create **timer and text overlays** in the Trigger Manager's **Overlays** folder, then assign them to your triggers. The **damage meter** is separate: configure it under **View → Damage Meter → Setup**. For streaming, see [getting overlays into OBS](faq.html#how-do-i-get-overlays-to-show-in-obs).
 
 ## 4. Have More Than One Character?
 
@@ -73,8 +78,8 @@ If you're coming from NAG, EQLogParser can import your entire NAG database in on
 What you get:
 
 - A new **`NAG Ingest - {date time}`** folder under **Triggers** with your NAG folders replicated. Triggers whose NAG folder was deleted are placed in an **Orphaned Triggers** sub-folder so nothing is lost
-- Your NAG **overlays** are imported alongside the triggers (except FCT overlays, which have no EQLogParser equivalent — the dialog tells you how many were skipped)
-- A summary dialog and an **HTML report** ("Open Report" button) listing every trigger with any features that have no EQLogParser equivalent (e.g. class level filtering, per-phrase action scoping). Check it before enabling triggers
+- Your NAG **overlays** are imported alongside the triggers. NAG's Fight Combat Tracker (FCT) overlays are skipped; the dialog tells you how many
+- A summary dialog and an **HTML report** ("Open Report" button) listing triggers with settings that could not be carried over exactly, such as class-level restrictions or some timer/counter actions tied to specific phrases. Check it before enabling triggers
 - **Audio files are not copied** — NAG stores them separately. Triggers referencing missing audio are listed in the report; copy the `.wav`/`.mp3` files into EQLogParser's Sounds folder as needed (Tools → Open Sounds Folder)
 
 Important:
@@ -99,10 +104,11 @@ If a restore fails partway through, your existing configuration is rolled back a
 - **Game log filters**: Make sure EQ chat filters for DoT, spell, and combat messages are turned off (in-game: Options → Chat Settings). Otherwise, EQLogParser won't see the messages.
 - **Windowed mode**: Overlays work best when EverQuest is in windowed or borderless-windowed mode.
 - **Overlay Taskbar setting**: Set `Overlay Windows Taskbar` to **off** in EQ options for overlays to display correctly.
-- **Character names**: The parser uses naming conventions to distinguish players, pets, and NPCs. Use the **Verified Players** and **Verified Pets** lists (View → Windows) to correct misidentifications.
+- **Incorrect identities**: Open **View → Windows → Identity Table** to correct a name's type, class or pet owner. Changes update the results without reopening the file; see [identity corrections](faq.html#a-monster-or-boss-has-a-wrong-name-or-my-pet-shows-up-as-an-npc).
 
 ## Next Steps
 
+- Read [Sec and Busy explained](faq.html#what-is-the-difference-between-sec-and-busy) and [DPS, RDPS and SDPS explained](faq.html#what-do-dps-rdps-and-sdps-mean)
 - Read the full [Trigger Variables](documentation.html#trigger-variables) reference for pattern matching syntax
 - If your triggers speak text out loud and you're wondering which TTS engine to use, see [the TTS Engine options in the FAQ](faq.html#what-are-the-tts-engine-options-and-how-do-i-change-them)
 - On Linux or Wine? The standard installer works as-is, but the prefix needs the .NET 10 Desktop Runtime and the Visual C++ 2015-2022 redistributable (`vcredist2022`) first — the latter is required for any speech — see the [Linux notes in the FAQ](faq.html#linux-support)

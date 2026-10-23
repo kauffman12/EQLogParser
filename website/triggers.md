@@ -1,5 +1,7 @@
 # Regex 101
 
+With **Regex** off, a trigger searches for the text you entered, ignoring letter case. Turn **Regex** on to use the pattern syntax below or capture codes such as `{S1}` and `{N}`. Patterns match the message without its date/time prefix.
+
 ## 🔹 **Basics**
 
 - **`.`** — Matches **any single character** (except new line)  
@@ -40,7 +42,7 @@
 
 - **`\`** — **Escapes** a special character so it’s treated as normal  
   _Example: `\.` matches a real dot, not "any character"_
-- **Special Character List:** .   ^   $   *   +   ?   (   )   [   ]   {   }   \   |   /
+- **Special Character List:** .   ^   $   *   +   ?   (   )   [   ]   {   }   \   |
 
 ## 🔹 **Counts (Repetition)**
 
@@ -54,16 +56,16 @@
 ## ⚠️ **.NET Regex Syntax**
 
 - **No slashes needed:** Just type your pattern (don’t use `/like this/`)
-- **Case-sensitive by default:** "cat" doesn’t match "Cat"
-- **Spaces and punctuation:** They must match **exactly** as typed
-- **Named groups are supported:** You can name parts with `(?<name>...)`
-- **Don’t use `$1`, `$2`, etc.:** These are not used as Group references
+- **Ignores letter case by default:** `cat` also matches `Cat`
+- **Literal spaces and punctuation must match:** Escape regex symbols when you mean the character itself, such as `\.` for a period
+- **Named groups are supported:** Capture a name with `(?<caster>\w+)`, then use `{caster}` in display or spoken text
+- **Output uses braces, not `$1`:** Use `{s1}` for a `{S1}` capture, or `{caster}` for a group named `caster`
 
 ## 🚀 **Performance Tips**
 
 - **Keep patterns simple and specific** for fastest results.
 - **Avoid `.*` in the middle** of patterns; use only if necessary.
-- **Don’t nest lots of parentheses** or use complex patterns.
+- **Avoid nested repetitions** such as `(.*a.*)*`; these can take a long time to check.
 - **Start with a specific word or phrase** (e.g., `^You take`) instead of wildcards.
 - **Don’t match entire blocks of text** or paragraphs.
 - **Avoid long runs of wildcards and optionals** (like `(.*a.*)*`).
@@ -72,13 +74,22 @@
 
 # Trigger Variables
 
-These are special variables or codes that can be used in trigger `Pattern` fields to capture values so that they can be displayed or spoken.
+Capture codes such as `{S1}` and `{N}` read values from a trigger's **Pattern** so you can use them in messages. Other codes insert information such as your character's name or the time of the match. Each entry below lists where it can be used.
 
-All of these trigger variables are case-insensitive — whether you use `{c}` or `{C}` they will do the same thing. Also, if you define one variable as `{S}` and reference it later as `{s}` it will still work. The x value in `{Sx}` or `{Nx}` is any number from `0` to `9` so you can use more than one of these in the same trigger.
+Code names ignore letter case: `{c}` and `{C}` mean the same thing. A value captured as `{S1}` can be referenced as `{s1}`. The x in `{Sx}` or `{Nx}` is one digit, `0` through `9`, so one pattern can capture several values.
 
-In addition, modifiers may be used with these variables for display purposes. They do not function in any of the `Pattern` fields but will work in the display fields. These modifiers include `.number`, `.capitalize`, `.lower`, `.upper`, `.padleft`, `.padright`, and `.center`. Number will format number values based on region. For example, in the U.S., they will be formatted with commas. The other options are self-explanatory.
+### Formatting Captured Values
 
-Example Usage when using Modifiers: `{S1.capitalize}`  `{n.number}`
+Add a modifier to change how a value appears in output, not what the Pattern matches:
+
+| Modifier | Effect | Example |
+|---|---|---|
+| `.number` | Formats a number with local thousands separators and no decimal places | `{n.number}` |
+| `.capitalize` | Uppercases the first character | `{s1.capitalize}` |
+| `.lower` | Converts text to lowercase | `{s1.lower}` |
+| `.upper` | Converts text to uppercase | `{s1.upper}` |
+
+Padding modifiers are described below.
 
 ### Padding and Centering Modifiers
 
@@ -98,19 +109,24 @@ These are useful for creating aligned columns in display text or when formatting
 
 ## `{C}`
 
-Replaced by your character name. Use it in any `Pattern` field as well as all other fields that display, speak, or share information including timer warnings. Everything.
+Replaced by the character name for the monitored log. Use it in Pattern fields or in display, spoken and shared messages, including timer warnings.
 
 ## `{S}`, `{Sx}`
 
-Acts as a wildcard to capture values in `Pattern` fields. It will capture anything, including multiple words, and allow the value to be used later in any fields that displays, speaks, or shares information. Requires `Regex` to be enabled; internally, the parser replaces `{s1}` with `(?<s1>.+)`.
+Captures one or more characters, including spaces and multiple words, from a **Pattern**. Requires **Regex**. For example, `^{S1} begins casting` captures the text before ` begins casting`; use `{s1}` in your message to display or speak it.
 
 ## `{N}`, `{Nx}`
 
-Like `{S}` but captures numbers (no spaces or multiple numbers are allowed). Also, allows the value to be used later in any fields that displays, speaks, or shares information.
+Captures a whole, non-negative number from a **Pattern**. Requires **Regex**. The capture reads digits only; signs, decimal points and thousands separators are not part of the captured value. Use `{n}` or `{n1}` in your message to display or speak the number.
 
 ## `{N>y}`, `{y<N<z}`
 
-Works like `{N}` but allows additional checks on the range of numbers that will match the trigger. Use operators like `>`, `<`, `>=`, `<=`, or `==`. Use `|` to combine. Example: `{100<=N<200}` to match numbers between `100` and `200`.
+Adds a numeric check to an `{N}` capture. Requires **Regex**. Use `>`, `<`, `>=`, `<=` or `==`, or put a lower and upper bound around N:
+
+- `{N>=100}` matches 100 or more
+- `{100<=N<200}` matches 100 through 199
+
+For more complex checks, capture the number first and use the **Match Variables** field. `|` is not a way to combine checks inside an `{N...}` code.
 
 ## `{L}`
 
@@ -122,11 +138,18 @@ Replaced by the time from the line that triggered the event in the `hh:mm:ss` fo
 
 ## `{REPEATED}`
 
-This variable is replaced with the number of times the trigger has been repeated and has captured the same values that have been used to display or speak information. Available only in `Text to Display`, `Text to Speak`, and `Alternate Timer Name`. Example Text to Display: `{s1} {repeated}`. This will print the count of how many times the trigger is fired with the same value captured by `{s1}`. The count resets after `750ms` and this reset time can be configured by setting the `Repeated Reset Time` of the trigger.
+Counts repeated firings that produce the same message. Available in **Text to Display**, **Text to Speak** and **Alternate Timer Name**. For example, `{s1} {repeated}` counts separately for each captured name used in that message.
+
+**Repeated Reset Time (s)** controls the counting window; the default is 0.75 seconds:
+
+- With **Sliding Reset** off, the window starts with the first firing. A match after that window starts a new count
+- With **Sliding Reset** on, each firing extends the window. The count restarts after a gap longer than the configured time
+
+The same reset settings apply to `{COUNTER}`.
 
 ## `{COUNTER}`
 
-Similar to `{REPEATED}` but it counts the number of times the trigger has fired regardless of the variables captured and used in the display or speak information fields. This variable also uses the `Repeated Reset Time` field to specify the delay used to restart the count.
+Counts trigger firings regardless of the captured values used in the message. It uses the same **Repeated Reset Time** and **Sliding Reset** settings as `{REPEATED}`. This built-in count is separate from custom variables with the **Counter** data type.
 
 ## `{TS}`
 
@@ -142,17 +165,33 @@ Replaced by the `Timer` setting for `Warn With Time Remaining`. This allows your
 
 ## `{EQLP:STOP}`
 
-Not a trigger variable. You send this text as a say, to the group, raid, another player, or custom channel if you want your triggers to reload, overlays to close, and audio to stop. The chat you send needs to start with this code and it's limited to ensure that it came from you.
+A chat command, not a Pattern variable. Start one of your own chat messages with `{EQLP:STOP}` to stop current trigger audio and clear active trigger timers and overlays. It does not reload or disable your triggers; enabled triggers can fire again on later matches.
 
 ## `{EQLP:CLEAR}`
 
-Not a trigger variable. You send this text as a say, to the group, raid, another player, or custom channel if you want to clear all custom variables, counters, and their expiry timers across all active trigger processors. Unlike `{EQLP:STOP}`, this does **not** stop audio or close overlays — it only resets variable state. Use this after zoning, changing zones, or when you want a clean slate for spell/zone tracking without interrupting active triggers.
+A chat command, not a Pattern variable. Start one of your own chat messages with `{EQLP:CLEAR}` to clear custom variables, their custom Counter values and expiry times across all active trigger processors.
+
+It does not stop audio, close overlays or reset the built-in `{COUNTER}` and `{REPEATED}` histories. Use it when you want to clear variable state without interrupting active timers or alerts.
 
 ---
 
 ## Creating Custom Variables (Trigger Variables Tab)
 
-In addition to the built-in variables above, you can create **custom variables** that persist across trigger firings. This lets one trigger capture a value (like a caster name or spell being cast) and other triggers reference it later. To access this feature, open the **Trigger Manager**, select a trigger, and click the **Trigger Variables** tab. Each variable has the following settings:
+Custom variables let triggers remember information and share it with other triggers. For example, one trigger can remember that burn mode is on, and another can check that value before speaking.
+
+These are sometimes called **global trigger variables** because they are shared across triggers for the **same monitored character**, not just the trigger that sets them. Each monitored character has separate values, and the values are not saved across application restarts. The `g` in a name such as `gBurn` is just a naming convention; it does not change how the variable works.
+
+There are three places to use them:
+
+| Where | What you enter | What it does |
+|---|---|---|
+| **Trigger Variables** tab | Variable Name `gBurn`, Action Type **Set Value**, Value `true` | Stores a value when this trigger fires |
+| **Match Variables** under Basic Trigger Options | `{gBurn} = true` | Allows a matching trigger to fire only while that value is true |
+| An output field, such as **Text to Display** | `Burn mode: {gBurn}` | Inserts the stored value into the message |
+
+**Match Variables checks a value; it does not set one.** Use the Trigger Variables tab to set or clear values. See the [worked examples](#example-1-turn-an-alert-on-and-off) below for complete trigger setups.
+
+To add a variable action, open **Trigger Manager**, select a trigger and open its **Trigger Variables** tab. The settings are:
 
 ### Action Type
 
@@ -160,11 +199,13 @@ In addition to the built-in variables above, you can create **custom variables**
 
 ### Variable Name
 
-A unique name for the variable, such as `gCaster` or `gSpellName`. It can be used in conditions and display text. Names beginning with `g` are conventional but not required.
+Enter a name such as `gCaster` or `gSpellName`, **without braces**. Use letters, digits and underscores, with no spaces. Refer to it elsewhere with braces: `{gCaster}`.
+
+Use the same name in every trigger that should share the value. Names ignore letter case, so `gCaster` and `gcaster` refer to the same variable.
 
 ### Data Type
 
-- **Fixed** stores a specific text or numeric value.
+- **Value** stores text or a number, including values captured by a Pattern.
 - **Counter** stores a number that changes each time the trigger fires.
 
 ### Value
@@ -177,7 +218,7 @@ The value to store. This can be:
 
 ### Initial Value
 
-*Counter only.* The starting value when the counter is first created. The default is `0`.
+*Counter only.* The value before the first increment. The default is `0`. Step is added on the first firing too, so the default Initial Value of 0 and Step of 1 produce **1** on the first firing, then 2, 3 and so on.
 
 ### Step
 
@@ -185,7 +226,7 @@ The value to store. This can be:
 
 ### Time To Live
 
-*Optional.* The number of seconds before the variable expires and is automatically cleared. Set this to `0` for no expiration.
+*Optional.* The number of seconds before the stored value expires. Each time an action sets or increments the variable, its lifetime starts again. Set this to `0` for no expiration; you can still remove it with **Clear Value**.
 
 ### Adding and Removing Variables
 
@@ -203,12 +244,11 @@ The value to store. This can be:
 
 ### Clearing Variables
 
-Use **Clear Value** actions to remove a variable when a condition ends. For example:
+Use a **Clear Value** action with the same Variable Name to remove a stored value. Leave the Value field unused for that action.
 
-- Trigger A matches "Player begins casting" → **Set** `gCasting = true`
-- Trigger B matches "Player stops casting" → **Clear** `gCasting`
+For example, one trigger can set `gBurn` to `true` when burn mode starts, and another can clear `gBurn` when it ends. An alert with **Match Variables** set to `{gBurn} = true` passes only while burn mode is on. The complete setup is shown below.
 
-Other triggers can check `{gCasting}` in their Match Variables field to only fire while the player is actively casting.
+Clearing a variable is different from storing the text `false`: a cleared variable is unset (`null`), while a variable containing `false` still has a value.
 
 ### End Clear Variables (Timer Tab)
 
@@ -225,7 +265,7 @@ Variables are cleared **after** the End Text to Display and End Sound/Text to Sp
 
 **Example — Caster name that dies with the buff timer:**
 
-1. Trigger matches "Player begins casting Spirit of Vesagran" → Set `gEpicCaster = {s1}`
+1. Enable **Regex** and use Pattern `^{S1} begins casting Spirit of Vesagran` → Set `gEpicCaster = {s1}`
 2. Enable Timer, Duration: 3:00, End Text to Display: `BRD Epic ({gEpicCaster})`
 3. End Clear Variables: `gEpicCaster`
 
@@ -243,7 +283,7 @@ Uncheck **Dynamic Timer Name** to pin the name instead. The Timer keeps the name
 
 **Example — label a buff with its caster without chasing later casts:**
 
-1. Trigger matches `^(\w+) gains Spirit of Vesagran` with a **Set** action for `gEpicCaster = {s1}`.
+1. Enable **Regex** and use Pattern `^(?<s1>\w+) begins casting Spirit of Vesagran` with a **Set Value** action for `gEpicCaster = {s1}`.
 2. Alternate Timer Name: `Vesagran ({gEpicCaster})`, Duration 3:00.
 3. Uncheck **Dynamic Timer Name**. The variable action still fills the name when this Timer starts, but if another player refreshes the buff halfway through and rewrites `gEpicCaster`, the bar keeps the original caster until it expires.
 
@@ -251,24 +291,106 @@ Uncheck **Dynamic Timer Name** to pin the name instead. The Timer keeps the name
 
 ## Match Variables Field
 
-The **Match Variables** field (found under *Basic Trigger Options*) lets you add an extra gate on top of the Pattern match. Even if the Pattern matches, the trigger will **only fire** if the condition expression evaluates to `true`.
+**Match Pattern asks: “Did this message happen?” Match Variables asks: “Should this trigger fire in the current situation?”**
 
-This is useful for situations like:
+Find **Match Variables** under **Basic Trigger Options**. Leave it blank if the Pattern is the only check you need. Otherwise, enter a check such as `{gBurn} = true` or `{gZone} = "The Plane of Knowledge"`.
 
-- Only fire when a captured HP value is above 50
-- Only fire when a custom variable set by another trigger has a specific value
-- Combine multiple checks with `and` / `or` logic
+A trigger runs in this order:
+
+1. Its **Match Pattern** must match the incoming message, along with **Match Previous Line** if you use it.
+2. **Match Variables** checks the stored values and any values captured by the matching pattern.
+3. If the check passes, the trigger runs its variable actions, messages and timer actions. If it fails, none of those actions run.
+
+**The condition is checked before this trigger sets or increments variables.** It sees their existing values, not the values this firing would write. Changing a variable alone does not fire another trigger: that trigger still needs its own Pattern match.
+
+### Example 1: Turn an Alert On and Off {#example-1-turn-an-alert-on-and-off}
+
+This example uses your own `/say` messages so you can try it without waiting for a particular encounter. Create three triggers for the same monitored character. Keep **Regex off** for all three, save them, and enable both the triggers and that character's trigger monitoring.
+
+| Trigger | Match Pattern | Match Variables | Action |
+|---|---|---|---|
+| Burn on | `You say, 'burn on'` | Leave blank | Set `gBurn` to `true` |
+| Burn check | `You say, 'burn check'` | `{gBurn} = true` | Speak `Burn mode is on` |
+| Burn off | `You say, 'burn off'` | Leave blank | Clear `gBurn` |
+
+For **Burn on**, add a card on the **Trigger Variables** tab:
+
+- **Action Type:** Set Value
+- **Variable Name:** `gBurn` — no braces
+- **Data Type:** Value
+- **Value:** `true` — no quotes
+- **Time To Live:** `0`
+
+For **Burn check**, put `{gBurn} = true` in **Match Variables**, and `Burn mode is on` in **Sound/Text to Speak**. It does not need a variable action.
+
+For **Burn off**, add a variable card with **Action Type = Clear Value** and **Variable Name = gBurn**. It does not need a Value.
+
+Try these commands in EverQuest, in order:
+
+1. `/say burn off`, then `/say burn check` → no alert, because `gBurn` is unset.
+2. `/say burn on`, then `/say burn check` → the check trigger speaks.
+3. `/say burn off`, then `/say burn check` → no alert, because `gBurn` was cleared.
+
+For an encounter, replace these Match Patterns with the messages that start burn mode, need the alert and end burn mode. The variable setup and condition stay the same.
+
+### Example 2: Remember a Zone and Check It Later {#example-2-remember-a-zone-and-check-it-later}
+
+One trigger can capture a value and make it available to other triggers. Create a **Remember zone** trigger:
+
+| Setting | Enter |
+|---|---|
+| **Regex** | On |
+| **Match Pattern** | `^You have entered {S1}\.$` |
+| **Match Variables** | Leave blank |
+| **Variable action** | Set Value, Variable Name `gZone`, Data Type Value, Value `{s1}`, Time To Live `0` |
+
+The message `You have entered The Plane of Knowledge.` stores `The Plane of Knowledge` in `gZone`. Enter `{s1}` in the action's **Value** field, not its Variable Name field.
+
+Then create a **Check zone** trigger:
+
+| Setting | Enter |
+|---|---|
+| **Regex** | Off |
+| **Match Pattern** | `You say, 'zone check'` |
+| **Match Variables** | `{gZone} = "The Plane of Knowledge"` |
+| **Sound/Text to Speak** | `Zone is {gZone}` |
+
+After the zone message, `/say zone check` speaks only if the stored zone matches. Entering a different zone replaces the stored value, so the check no longer passes. Use the full zone name you want to check; quotes keep a name containing spaces together.
+
+To accept several zones, use:
+
+```text
+{gZone} = "The Plane of Knowledge" or {gZone} = "The Plane of Tranquility"
+```
+
+### Example 3: Count Events, Then Check the Count {#example-3-count-events-then-check-the-count}
+
+Use a custom **Counter** when several triggers need the same running total. This example counts `/say add seen` messages, then checks the total on a separate message:
+
+| Trigger | Match Pattern (Regex off) | Match Variables | Action |
+|---|---|---|---|
+| Count an add | `You say, 'add seen'` | Leave blank | Set `gAdds` using Data Type Counter, Initial Value `0`, Step `1`, Time To Live `0` |
+| Check adds | `You say, 'add check'` | `{gAdds} >= 3` | Speak `{gAdds} adds counted` |
+| Reset adds | `You say, 'reset adds'` | Leave blank | Clear `gAdds` |
+
+Use **Set Value** as the Action Type for the counter card. The first `add seen` stores 1, the second stores 2 and the third stores 3. An `add check` message is silent at 1 or 2, and speaks at 3 or more. `reset adds` clears the count so the next `add seen` starts at 1 again.
+
+**Do not put `{gAdds} >= 3` on the counting trigger.** Match Variables runs before the increment; that condition would stop an unset counter from ever reaching 3. Keep counting and checking on separate messages, as above, rather than depending on which trigger handles the same message first.
 
 ### Syntax Overview
 
-A condition expression consists of **variables**, **literals**, **comparison operators**, and **boolean operators**:
+Enter only the condition in **Match Variables**, not a label such as `Match Variables:`. Use braces around variable names and quotes around literal text containing spaces:
 
-```
-{s} = hello
-{hp} > 50
-{name} contains dragon
-({hp} > 50 and {mana} > 10) || {godmode} = true
-```
+| What you want | Match Variables |
+|---|---|
+| Burn mode must be on | `{gBurn} = true` |
+| A stored name must be present | `{gCaster} != null` |
+| A variable must not be set yet | `{gCaster} = null` |
+| The zone must contain a word | `{gZone} contains "Knowledge"` |
+| A counter must be at least 3 | `{gAdds} >= 3` |
+| Burn mode must be on and the counter at least 3 | `{gBurn} = true and {gAdds} >= 3` |
+
+You can also check a capture from the current Pattern without storing it first. For example, with Regex on, Pattern `You say, 'count {N1}'` and Match Variables `{n1} >= 3`, `/say count 2` is rejected and `/say count 3` passes. The capture belongs to that match; store it in a custom variable if other triggers need it later.
 
 ### Variables
 
@@ -278,11 +400,15 @@ Variables are referenced using curly braces and resolve to their current string 
 |---|---|
 | `{s}` / `{s1}` / `{n2}` | Capture group values from the current Pattern match |
 | `${s}` / `${s1}` | Same as above (dollar-sign prefix is optional) |
-| `{hp}` | A custom variable named `hp` (set via the Trigger Variables tab) |
-| `${hp}` | Same as above (dollar-sign prefix is optional) |
-| `{target}` | A named regex capture group or custom variable |
+| `{gZone}` | A custom variable named `gZone` (set via the Trigger Variables tab) |
+| `${gZone}` | Same as above (dollar-sign prefix is optional) |
+| `{caster}` | A named regex capture group or custom variable |
 
-If a variable is **not set** (never assigned a value), it resolves to `null`. In comparisons, `null` behaves as described in the operator table below.
+Names such as `gZone` and `gAdds` are examples you create, not built-in character information. They remain unset until a trigger action stores a value.
+
+If a variable is **not set**, has been cleared or has expired, it resolves to `null`. In comparisons, `null` behaves as described below.
+
+Use different names for stored variables and capture groups, such as `gCaster` and `s1`. In Match Variables, a stored value takes precedence over a capture with the same name.
 
 ### Comparison Operators
 
@@ -290,19 +416,20 @@ All comparison operators are **case-insensitive**.
 
 | Operator | Aliases | Description | Example |
 |---|---|---|---|
-| `=` | `==`, `eq` | Equal to | `{name} = test` |
-| `!=` | `<>`, `neq` | Not equal to | `{class} != druid` |
-| `>` | `gt` | Greater than (numeric) | `{hp} > 50` |
-| `>=` | `ge`, `gte` | Greater than or equal | `{level} >= 20` |
-| `<` | `lt` | Less than (numeric) | `{mana} < 100` |
-| `<=` | `le`, `lte` | Less than or equal | `{damage} <= 999` |
-| `contains` | — | Contains substring (case-insensitive) | `{name} contains dragon` |
+| `=` | `==`, `eq` | Equal to | `{gBurn} = true` |
+| `!=` | `<>`, `neq` | Not equal to | `{gBurn} != true` |
+| `>` | `gt` | Greater than (numeric) | `{n1} > 50` |
+| `>=` | `ge`, `gte` | Greater than or equal | `{gAdds} >= 3` |
+| `<` | `lt` | Less than (numeric) | `{gAdds} < 5` |
+| `<=` | `le`, `lte` | Less than or equal | `{gAdds} <= 10` |
+| `contains` | — | Contains substring (case-insensitive) | `{gZone} contains "Knowledge"` |
 
 **Important notes:**
 
-- Numeric comparisons (`>`, `<`, `>=`, `<=`) attempt to parse both sides as numbers. If either side cannot be parsed as a number, the comparison returns `false`.
-- `contains` is case-insensitive. If the right-hand side resolves to `null` (unset variable), the result is `false`.
-- `=` and `==` treat `null` values correctly: `{unsetVar} = null` is `true`, `{setVar} = null` is `false`.
+- Numeric comparisons (`>`, `<`, `>=`, `<=`) treat an **unset variable as zero**. Non-numeric text makes the comparison return `false`.
+- To require a value before a numeric check, write `{gAdds} != null and {gAdds} < 5`. Without the null check, an unset `gAdds` counts as 0 and passes `< 5`.
+- `contains` is case-insensitive. If the right-hand side is unset, the result is `false`.
+- Check for an unset variable with `{name} = null`, or for a set value with `{name} != null`. Comparing two unset variables to each other does not make them equal.
 
 ### Boolean Operators
 
@@ -339,8 +466,21 @@ A variable by itself (no comparison) is treated as a boolean check:
 - `{enabled}` → `true` if the variable is set and non-empty, `false` otherwise
 - `not {disabled}` → `true` if `disabled` is unset or empty
 
+This checks whether text is present, not what it says: a variable containing `false` or `0` still passes the standalone check. Use `{enabled} = true` when you want to test the stored value.
+
+### Troubleshooting Match Variables
+
+- **The trigger never fires:** temporarily leave Match Variables blank and test its Pattern. If it fires, restore the condition and check the variable name, the stored value and whether the setting trigger ran for this character.
+- **The value never gets set:** the setting trigger must itself be enabled, match a message and pass its own Match Variables check. Adding a variable card does not set its value immediately.
+- **The count never increases:** leave the counting trigger's Match Variables blank unless its existing value is meant to control whether it counts. The increment happens after the condition passes.
+- **A condition passes when the value says `false`:** `{gBurn}` checks whether a value exists, not whether it says true. Use `{gBurn} = true` for an on/off flag.
+- **A variable disappears:** check its Time To Live, Clear Value actions and timer-end cleanup. The trigger tester has its own variable state, separate from monitored characters.
+- **A value is not what you expected:** for a visual check, add a diagnostic trigger with a distinct Pattern such as `You say, 'show burn'`, leave Match Variables blank, and set Text to Display to `Burn value is {gBurn}` in a text overlay. An unset variable remains written as `{gBurn}` instead of being replaced. Remove the diagnostic trigger when finished.
+
 ### Error Handling
 
-If the Match Variables field contains a syntax error (unclosed braces, unknown operators, mismatched parentheses), the condition is treated as **false** — meaning the trigger will **not** fire even if the Pattern matches. A warning is logged to the EQLogParser error log so you can identify and fix the issue.
+Red text in Match Variables indicates a syntax error, such as missing braces, an unknown operator or mismatched parentheses. Fix the expression and save the trigger.
+
+An invalid condition blocks the trigger even if its Pattern matches. A warning is also written to **Tools → View Error Log**. A blank Match Variables field is valid and adds no condition.
 
 

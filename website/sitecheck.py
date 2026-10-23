@@ -8,11 +8,12 @@ import re
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
+from urllib.robotparser import RobotFileParser
 
 from bs4 import BeautifulSoup
 
-# Pages that are not meant to be indexed: status.html is disallowed by robots.txt and
-# 404.html is an error page. Neither belongs in the sitemap.
+# Utility/error pages stay out of search and the sitemap, but must remain crawlable so
+# search engines can read their noindex tags. A robots.txt block cannot prevent indexing.
 NON_INDEXABLE = {'status.html', '404.html'}
 
 # Keep in sync with the client id used by build.py and dist/ads.txt.
@@ -32,8 +33,10 @@ def find_problems(dist_dir: Path) -> list:
     for page in pages:
         soup = BeautifulSoup(page.read_text(encoding='utf-8'), 'html.parser')
         problems += _page_problems(page, soup)
+        problems += _indexing_problems(page, soup)
         problems += _link_problems(page, soup, dist_dir)
 
+    problems += _robots_problems(dist_dir)
     problems += _sitemap_problems(dist_dir)
     problems += _feed_problems(dist_dir)
     problems += _adstxt_problems(dist_dir)
@@ -105,6 +108,35 @@ def _is_external(url: str) -> bool:
     return url.startswith('//') or re.match(r'^[a-zA-Z][a-zA-Z0-9+.-]*:', url) is not None
 
 
+def _indexing_problems(page: Path, soup: BeautifulSoup) -> list:
+    """Public pages may be indexed; utility pages must tell crawlers not to index them."""
+    noindex_agents = set()
+    for tag in soup.find_all('meta', attrs={'name': True}):
+        agent = tag['name'].lower()
+        if agent not in {'robots', 'googlebot', 'bingbot'}:
+            continue
+        directives = set(re.split(r'[,\s]+', tag.get('content', '').lower()))
+        if directives & {'noindex', 'none'}:
+            noindex_agents.add(agent)
+
+    if page.name in NON_INDEXABLE:
+        return [] if 'robots' in noindex_agents else [f'{page.name}: utility page needs a robots noindex tag']
+    return [f'{page.name}: public page has a noindex directive for {agent}' for agent in sorted(noindex_agents)]
+
+
+def _robots_problems(dist_dir: Path) -> list:
+    """Crawlers need access both to public content and to utility pages' noindex tags."""
+    robots = dist_dir / 'robots.txt'
+    if not robots.exists():
+        return ['robots.txt is missing']
+    rules = RobotFileParser()
+    rules.parse(robots.read_text(encoding='utf-8').splitlines())
+    paths = {'/'} | {'/' + page.name for page in dist_dir.glob('*.html')}
+    return [f'robots.txt blocks {agent} from {path}; crawlers must be able to read page indexing directives'
+            for path in sorted(paths) for agent in ('Googlebot', 'Bingbot', '*')
+            if not rules.can_fetch(agent, path)]
+
+
 def _sitemap_problems(dist_dir: Path) -> list:
     sitemap = dist_dir / 'sitemap.xml'
     if not sitemap.exists():
@@ -124,6 +156,8 @@ def _sitemap_problems(dist_dir: Path) -> list:
         relative = loc.split('://', 1)[1].split('/', 1)[1] if '://' in loc else loc
         name = relative or 'index.html'  # the bare site root stands for index.html
         listed.add(name)
+        if name in NON_INDEXABLE:
+            problems.append(f'sitemap.xml lists {name}, which must stay out of search')
         if not (dist_dir / name).exists():
             problems.append(f'sitemap.xml lists {loc}, but that page is not in dist/')
 
