@@ -18064,11 +18064,12 @@ that has
   collapsing it.
 - **Shift+F10 must not buy additive mode.** A keyboard-opened menu carries Shift in its own keystroke, and the Apps key
 arrives just as
-  happily after an abandoned right-press; so `GridPreviewKeyDown` clears `_rightPressAdds` alongside the selection memory,
-  and a menu the
-  keyboard opened is a plain gesture. Capture change clears both (a press from the closed log may not restamp this one), as
-  does any later
-  left press.
+  happily after an abandoned right-press; so `GridPreviewKeyDown` clears `_rightPressAdds` alongside the selection memory
+  on **non-modifier keys**. F10/Apps and navigation invalidate abandoned pointer gestures; Ctrl/Shift key-downs do not.
+  Holding Ctrl before pressing and holding the right button is an ordinary additive gesture: a modifier key-down between
+  press and menu opening must not erase its stamp. The old unconditional key handler could do exactly that; this is a
+  timing window, not a limit on how many groups can be selected. Capture change and a later left press clear both memories.
+  Opening consumes the press's mode after copying it into the menu, so it cannot be reused by another opening.
 - **What may NOT clear it is the menu's close.** `Select Group` reads `_menuAdds`, which `ContextMenuOpening` copies from
 `_rightPressAdds`
   beside the `_menuRow` stamp: a menu item can only be clicked *after* its menu opened, so an item reading what the opening
@@ -18109,13 +18110,12 @@ header would have
 to change while the menu is open to tell the truth about a modifier pressed earlier, and two names for one command is how
 menus drift.
 
-Tests: `GroupSectionSelectTest` (both arms, no double-count on the overlap, identity not name, empty-selection equivalence —
-executable in the
-cross-platform suite); `FightTableGroupGestureTest` keeps the additive sequence over a realized grid, adds the replacing case
-and pins that a
-Ctrl press and an unmodified press reach the two different answers through the real preview-press wiring. Windows-only, as
-always for that
-assembly: a Linux run says nothing about it.
+Tests: `GroupSectionSelectTest` covers both arms, overlap, identity rather than name, and empty-selection equivalence in
+Core. `FightTableGroupGestureTest.HeldModifierKeyDownsKeepAddingGroupsAcrossRepeatedMenus` feeds both Ctrl and Shift sides
+through the modifier seam, routes intervening modifier key-downs, opens the real handler and checks successive unions by
+group id, overlapping groups, both close/click orders and a final plain replacement. The keyboard-abandonment cases retain
+F10/Apps/navigation coverage. These are Windows-only tests: building them on Linux does not execute them, and scripted
+key events do not prove hardware repeat delivery. The physical hold sequence remains in `ReleaseChecklist.md`.
 
 ## Trigger overlay positions are signed desktop coordinates
 

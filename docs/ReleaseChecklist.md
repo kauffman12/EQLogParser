@@ -94,7 +94,9 @@ These checks require a realized grid; the automated pane tests exercise bound da
 - [ ] **Select Group replaces; a modifier on the press makes it add** (2026-10-14): with fights selected in three groups, plain-right-click
   a fight in one group and choose Select Group — **only that group's visible fights stay selected**, everything else is deselected, and the
   boards answer for exactly that pull. Repeat holding **Ctrl** on the right-click, then again holding **Shift**: the group is **added** and the
-  other groups survive. Three traps to walk. Release the modifier before clicking the menu item: it still **adds**, because the PRESS decides
+  other groups survive. Hold Ctrl **before** pressing the right button, keep both held for several seconds, then release the right
+  button and choose Select Group. Repeat across many groups, including already selected ones, without releasing Ctrl: every
+  chosen group joins the set and earlier groups survive. Repeat with right Ctrl and both Shift keys. Three traps to walk. Release the modifier before clicking the menu item: it still **adds**, because the PRESS decides
   and the hand is expected to have moved by the time the item is clicked. Open the menu from the keyboard with a big selection standing (Apps,
   then Shift+F10) — that is plain, and **Shift's own keystroke must not buy additive mode**. Dismiss a Ctrl menu with Esc, then plain-right-click
   and choose Select Group: it must **replace** — an abandoned or finished Ctrl press may not leak into the next menu. Then turn Inactivity or Tanking off so part of the group is hidden: the replacing select keeps only visible fights, and an

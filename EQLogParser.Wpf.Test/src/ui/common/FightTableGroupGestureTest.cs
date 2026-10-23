@@ -154,13 +154,89 @@ public sealed class FightTableGroupGestureTest
       "the keyboard's selection must not be overwritten by the abandoned mouse press");
   }
 
-    /*
-     * Shift+F10 must not buy additive mode. The pane reads the modifier off a POINTER press, and a keyboard-opened menu carries
-     * Shift in its own keystroke — so any key press ends the gesture memory, exactly as it already ends the remembered selection
-     * (AKeyboardGestureInvalidatesAnAbandonedRightPress). Without this, every Shift+F10 menu in the pane would quietly mean "add".
-     */
+  [TestMethod]
+  [DataRow(System.Windows.Input.Key.LeftCtrl, System.Windows.Input.ModifierKeys.Control)]
+  [DataRow(System.Windows.Input.Key.RightCtrl, System.Windows.Input.ModifierKeys.Control)]
+  [DataRow(System.Windows.Input.Key.LeftShift, System.Windows.Input.ModifierKeys.Shift)]
+  [DataRow(System.Windows.Input.Key.RightShift, System.Windows.Input.ModifierKeys.Shift)]
+  public void HeldModifierKeyDownsKeepAddingGroupsAcrossRepeatedMenus(
+    System.Windows.Input.Key key, System.Windows.Input.ModifierKeys modifiers)
+  {
+    var expected = new List<List<string>>();
+    var observed = new List<List<string>>();
+    Sta.Run(() =>
+    {
+      var app = Application.Current ?? new Application();
+      app.Resources["CustomCheckBoxTemplate"] ??= new ControlTemplate(typeof(CheckBox));
+      app.Resources["TemplateToolTip"] ??= new DataTemplate();
+      app.Resources["EQIconStyle"] ??= new Style(typeof(System.Windows.Controls.Image));
+      var table = Paint(Snapshot());
+      var window = new Window { Content = table, Width = 640, Height = 480 };
+      window.Show();
+      try
+      {
+        Flush();
+        var grid = table.fightGrid;
+        var source = KeyboardSource(window);
+        var groups = ((IEnumerable)grid.ItemsSource).Cast<DerivedFightRow>()
+          .Where(row => !row.IsDivider).GroupBy(row => row.Fight.GroupId)
+          .Select(group => group.ToList()).ToList();
+        var keeps = new HashSet<DerivedFightRow>(groups[^1]);
+        foreach (var row in keeps) grid.SelectedItems.Add(row);
+
+        for (var gesture = 0; gesture < Groups * 2; gesture++)
+        {
+          var group = groups[gesture % Groups];
+          grid.CurrentItem = group[0];
+          RememberRightPress(table, modifiers);
+          // A modifier key-down while the right button is held must not turn an additive press into a plain one.
+          for (var repeat = 0; repeat < 3; repeat++)
+          {
+            grid.RaiseEvent(new System.Windows.Input.KeyEventArgs(System.Windows.Input.Keyboard.PrimaryDevice,
+              source, Environment.TickCount, key)
+            { RoutedEvent = System.Windows.Input.Keyboard.PreviewKeyDownEvent, Source = grid });
+          }
+
+          Invoke(table, "GridContextMenuOpening", grid, ContextMenuArgs());
+          // Closing and Click may arrive in either order; neither may change the mode of this menu.
+          if (gesture % 2 == 0) Invoke(table, "GridContextMenuClosing", grid, ContextMenuArgs());
+          Invoke(table, "SelectGroupClick", new object?[] { null, null });
+          if (gesture % 2 != 0) Invoke(table, "GridContextMenuClosing", grid, ContextMenuArgs());
+          keeps.UnionWith(group);
+          expected.Add(keeps.Select(row => row.Name).ToList());
+          observed.Add(SelectedNames(table));
+        }
+
+        // A completed Ctrl/Shift menu must not leak its mode into the next plain mouse gesture.
+        grid.CurrentItem = groups[0][0];
+        RememberRightPress(table, System.Windows.Input.ModifierKeys.None);
+        Invoke(table, "GridContextMenuOpening", grid, ContextMenuArgs());
+        Invoke(table, "SelectGroupClick", new object?[] { null, null });
+        Invoke(table, "GridContextMenuClosing", grid, ContextMenuArgs());
+        expected.Add(groups[0].Select(row => row.Name).ToList());
+        observed.Add(SelectedNames(table));
+      }
+      finally
+      {
+        window.Close();
+      }
+    });
+
+    Assert.HasCount(expected.Count, observed);
+    for (var gesture = 0; gesture < expected.Count; gesture++)
+    {
+      CollectionAssert.AreEquivalent(expected[gesture], observed[gesture],
+        $"gesture {gesture}: holding a modifier must keep earlier groups selected; the final plain gesture replaces them");
+    }
+  }
+
+    // Keyboard navigation and keyboard-opened menus must invalidate any abandoned pointer press.
     [TestMethod]
-    public void AKeyBeforeTheMenuClearsAModifierHeldOnAnEarlierPress()
+    [DataRow(System.Windows.Input.Key.Down)]
+    [DataRow(System.Windows.Input.Key.A)]
+    [DataRow(System.Windows.Input.Key.Apps)]
+    [DataRow(System.Windows.Input.Key.F10)]
+    public void AKeyBeforeTheMenuClearsAModifierHeldOnAnEarlierPress(System.Windows.Input.Key key)
     {
         var after = new List<string>();
         var groupTwo = new List<string>();
@@ -192,7 +268,7 @@ public sealed class FightTableGroupGestureTest
                 // Ctrl rode an earlier press whose menu never opened; then the keyboard takes over and opens one.
                 RememberRightPress(table, System.Windows.Input.ModifierKeys.Control);
                 grid.RaiseEvent(new System.Windows.Input.KeyEventArgs(System.Windows.Input.Keyboard.PrimaryDevice,
-                  KeyboardSource(window), Environment.TickCount, System.Windows.Input.Key.F10)
+                  KeyboardSource(window), Environment.TickCount, key)
                 { RoutedEvent = System.Windows.Input.Keyboard.PreviewKeyDownEvent, Source = grid });
 
                 RightClickOn(table, rows[12]);
@@ -208,7 +284,7 @@ public sealed class FightTableGroupGestureTest
 
         Assert.IsNull(failure, "the gesture must run on a shown grid");
         CollectionAssert.AreEquivalent(groupTwo, after,
-          "Shift+F10 carries Shift without anybody meaning 'add this group'; the menu it opens is a plain gesture");
+          "a keyboard gesture must discard the previous mouse press's additive mode");
     }
 
     // Show/Flush does not guarantee FromVisual can see the HWND on this test STA. The key event needs
@@ -287,6 +363,7 @@ public sealed class FightTableGroupGestureTest
             }
         }
 
+        Sectionizer.StampGroupIds(fights);
         return DerivedFightRows.Build(fights, new EntityTimeline(), 0, new DamageFactTable(8), new FightFactIndex());
     }
 
