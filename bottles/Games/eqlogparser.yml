@@ -1,5 +1,5 @@
 Name: EQLogParser
-Description: EQLogParser v2.4.6
+Description: EQLogParser v2.4.7
 Grade: Gold
 Arch: win64
 
@@ -21,8 +21,8 @@ Executable:
 
 Steps:
 - action: install_exe
-  file_name: EQLogParser-install-2.4.6.exe
-  url: https://github.com/kauffman12/EQLogParser/releases/download/2.4.6/EQLogParser-install-2.4.6.exe
+  file_name: EQLogParser-install-2.4.7.exe
+  url: https://github.com/kauffman12/EQLogParser/releases/download/2.4.7/EQLogParser-install-2.4.7.exe
   file_checksum: False
 
 Checks:
