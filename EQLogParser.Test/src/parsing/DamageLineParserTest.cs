@@ -528,7 +528,6 @@ namespace EQLogParser
     [TestMethod]
     public void TestTaken_YouDamageFromSpellNoBy()
     {
-      // TODO should attacker be spell?
       var record = ParseAction("You have taken 2354 damage from Flashbroil Singe III.");
       Assert.IsNotNull(record);
       Assert.AreEqual("Flashbroil Singe III", record.Attacker);
@@ -536,7 +535,7 @@ namespace EQLogParser
       Assert.AreEqual((uint)2354, record.Total);
       Assert.AreEqual(Labels.OtherDmg, record.Type);
       Assert.AreEqual("Flashbroil Singe III", record.SubType);
-      Assert.IsFalse(record.AttackerIsSpell);
+      Assert.IsTrue(record.AttackerIsSpell);
     }
 
     [TestMethod]

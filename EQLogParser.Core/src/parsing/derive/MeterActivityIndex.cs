@@ -94,8 +94,9 @@ internal sealed class MeterActivityIndex
     if (!FightProjection.TryCombatSides(fact, timeline, attacker, defender, out var atkSide, out var defSide))
       return MeterPanels.None;
 
-    var anchor = FightProjection.CombatAnchor(timeline, attacker, defender, fact.TimeS, atkSide, defSide);
-    var aimedAtAnchor = string.Equals(anchor, defender, StringComparison.Ordinal);
+    var anchor = FightProjection.CombatAnchor(timeline, attacker, defender, fact.TimeS, atkSide, defSide,
+      fact.AttackerIsSpell);
+    var aimedAtAnchor = FightProjection.AimedAtCombatAnchor(anchor, defender, defSide, fact.AttackerIsSpell);
     var target = FightProjection.CombatTarget(timeline, defender, fact.TimeS, defSide, aimedAtAnchor);
     return target switch
     {

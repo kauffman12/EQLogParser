@@ -371,13 +371,15 @@ public class IdentityRulesTest
     }
 
     [TestMethod]
-    public void SelfFeedback_SpellNameAttackerIsNeverClassified()
+    public void SelfFeedback_SpellNameAttackerIsNeverACombatant()
     {
         // R7 negative: "You have taken N damage from X." puts a SPELL NAME in the attacker field.
         // When the spell targets Self in the spell DB - spell feedback such as "Cloudburst Strike
         // Feedback XII" - the damage is the local player hitting themselves. Four instances over
         // three minutes, every defender player-side, must NOT produce an R7-side NPC: without the
-        // guard this exact shape is what would brand the operator's own spell an enemy.
+        // guard this exact shape is what would brand the operator's own spell an enemy. The name does
+        // get explained (R21 types it Spell - SpellEffectIdentityTest pins that and its routing); what
+        // stays refused here is a SIDE, i.e. any graph evidence about a fighter.
         var dir = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "derive-feedback-" + Guid.NewGuid().ToString("N")));
         var log = Path.Combine(dir.FullName, "eqlog_Feedbackone_Eqgate.txt"); // filename seeds ConfigUtil.PlayerName via the harness
         var previousPlayerName = ConfigUtil.PlayerName;
@@ -399,8 +401,8 @@ public class IdentityRulesTest
 
             // the defender must be player-side for the negative to mean anything
             AssertIdentity(timeline, "Feedbackone", IdentityKind.Player, "R0-local");
-            Assert.AreEqual(IdentityKind.Unknown, timeline.IdentityWithSource("Cloudburst Strike Feedback XII", out var spellSrc),
-                $"own spell feedback classified as a combatant (source {spellSrc ?? "none"})");
+            Assert.AreEqual(IdentityKind.Spell, timeline.IdentityWithSource("Cloudburst Strike Feedback XII", out var spellSrc),
+                $"own spell feedback was not explained as an effect (source {spellSrc ?? "none"})");
         }
         finally
         {

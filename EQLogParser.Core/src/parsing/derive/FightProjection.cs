@@ -291,30 +291,17 @@ namespace EQLogParser
       for (var ordinal = state.ThroughOrdinal; ordinal < allFacts.Length; ordinal++)
       {
         var fact = allFacts[ordinal];
-        if (fact.AtkIdx == fact.DefIdx) continue;                    // self damage
+        if (fact.AtkIdx == fact.DefIdx && !fact.AttackerIsSpell) continue; // entity self damage
         var atkName = facts.NameOf(fact.AtkIdx);
 
         var defName = facts.NameOf(fact.DefIdx);
         var t = fact.TimeS;
 
-        /*
-         * Spell feedback, and the ORDER this is asked in matters more than it looks. "You have taken N damage from X."
-         * leaves a SPELL in the attacker field, and when the DB says that spell only hits its caster the fact is nobody
-         * swinging at a mob — side evidence from it would fabricate an NPC out of the operator's own cast, and as a row
-         * it would be a fight against a verb. But the test is on the NAME, and names collide with spells: on
-         * eqlog_Kizant_xegony-03-01-2024.txt every fact of `Darkside` (44,553 hits, 5,644,042,554 damage, the raid's own
-         * registered pet per the seed) vanished here before a single row could be opened, because the spell DB carries a
-         * self-target damaging spell by that name and the name is what got looked up. A meter reading rows would have
-         * dropped that player's whole evening — silently, and identically in the fight list and the summary, so nothing
-         * downstream could see it.
-         *
-         * So the question is asked of the COMBATANT, not just the string: a name that already reads as one of ours at
-         * this second is fighting, and its damage counts. Unknown names (the feedback case, where nothing else ever
-         * claimed the name) stay dropped exactly as before.
-         */
+        // A role belongs to this fact: spell feedback is not a creature's attack, and a similarly named creature
+        // must not lose its ordinary attacks. docs/DesignNotes.md → "Spell identity belongs to the parsed role, not the spelling".
         if (!TryCombatSides(fact, timeline, atkName, defName, out var atkSide, out var defSide)) continue;
 
-        var key = CombatAnchor(timeline, atkName, defName, t, atkSide, defSide);
+        var key = CombatAnchor(timeline, atkName, defName, t, atkSide, defSide, fact.AttackerIsSpell);
         // Only a player-side attacker earns roll-up credit; Unknown remains uncredited.
         var creditAttacker = atkSide == Side.Player;
 
@@ -424,7 +411,7 @@ namespace EQLogParser
         // Reported after the boundary checks and row creation, so every fact is announced exactly
         // once and to the row that really carries it in its totals. The direction is the same comparison
         // DamageToOwner is built from, one expression, so an index filled here cannot disagree with the row.
-        var aimedAtAnchor = string.Equals(key, defName, StringComparison.Ordinal);
+        var aimedAtAnchor = AimedAtCombatAnchor(key, defName, defSide, fact.AttackerIsSpell);
         var target = CombatTarget(timeline, defName, t, defSide, aimedAtAnchor);
 
         row.FactEnd = ordinal + 1;
@@ -450,7 +437,7 @@ namespace EQLogParser
          * branch), and a row that was never hit stays NaN instead of claiming its own birth second as damage.
          * Sectionizer walks LastDamageTime for the non-tanking divider list, so a zero-length window is not
          * cosmetic - it decides where "Fight N" boundaries land for every row of the derived grid. The direction
-         * is the same `aimedAtAnchor` comparison that splits DamageToOwner from DamageByOwner and files the
+         * is the same `aimedAtAnchor` decision that splits DamageToOwner from DamageByOwner and files the
          * index, so no two seams can disagree about which way a fact pointed.
          */
         if (aimedAtAnchor)
@@ -574,10 +561,11 @@ namespace EQLogParser
     }
 
     // For admitted combat only: projection and receipts must choose the same encounter anchor.
-    // A charmed raider owns its NPC-side row; source-less spell damage instead stays on its defender.
+    // An effect hitting an NPC belongs to that NPC; against player-side or unplaced targets it owns the incoming row.
     internal static string CombatAnchor(EntityTimeline timeline, string attacker, string defender, double t,
-      Side attackerSide, Side defenderSide)
+      Side attackerSide, Side defenderSide, bool attackerIsSpell)
     {
+      if (attackerIsSpell) return defenderSide == Side.Npc ? defender : attacker;
       if (attackerSide == Side.Player) return defender;
       if (defenderSide == Side.Player) return attacker;
       if (attackerSide == Side.Npc)
@@ -585,6 +573,10 @@ namespace EQLogParser
       if (defenderSide == Side.Npc) return defender;
       return UnknownCombatTargetsDefender(attacker, defender) ? defender : attacker;
     }
+
+    // An effect and its victim may share a name: their parsed roles, not string equality, decide direction.
+    internal static bool AimedAtCombatAnchor(string anchor, string defender, Side defenderSide, bool attackerIsSpell)
+      => attackerIsSpell ? defenderSide == Side.Npc : string.Equals(anchor, defender, StringComparison.Ordinal);
 
     // Positive person proof precedes the anchor, and the anchor precedes the Unknown-victim fallback.
     // A charmed NPC at the anchor stays output; an off-anchor NPC victim can earn neither board.
@@ -607,14 +599,14 @@ namespace EQLogParser
       out Side attackerSide, out Side defenderSide)
     {
       var t = fact.TimeS;
-      attackerSide = SideAt(timeline, attacker, t);
+      // The flag describes this occurrence, even when a real combatant shares the effect's name.
+      attackerSide = fact.AttackerIsSpell ? Side.Npc : SideAt(timeline, attacker, t);
       defenderSide = SideAt(timeline, defender, t);
+      if (fact.AttackerIsSpell) return !ClassificationRules.IsSelfTargetDamageSpell(attacker);
       if (fact.AtkIdx == fact.DefIdx) return false;
-      if (attackerSide != Side.Player && ClassificationRules.IsSelfTargetDamageSpell(attacker)) return false;
       if (attackerSide == Side.Player && defenderSide == Side.Player)
         return IsFlipped(timeline, defender, t) && !IsFlipped(timeline, attacker, t);
-      return attackerSide != Side.Npc || defenderSide != Side.Npc
-        || IsFlipped(timeline, attacker, t) || fact.AttackerIsSpell;
+      return attackerSide != Side.Npc || defenderSide != Side.Npc || IsFlipped(timeline, attacker, t);
     }
 
     // True when a charm interval has this name on the opposite of its identity side at t.

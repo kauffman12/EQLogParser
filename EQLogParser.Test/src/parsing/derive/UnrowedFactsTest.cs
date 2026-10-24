@@ -74,7 +74,9 @@ public class UnrowedFactsTest
   public void ANameThatIsOnlyASpellStillOpensNoFight()
   {
     Assert.IsTrue(ClassificationRules.IsSelfTargetDamageSpell(SelfSpellName), "The fixture needs the shipped spell.");
-    var facts = BuildFacts((SelfSpellName, "Illuminai", 16_690, 0, LabelTypes.Dd));
+    var facts = new DamageFactTable(16);
+    facts.AddFact(new DamageFact(0, (long)T0, facts.InternName(SelfSpellName), facts.InternName("Illuminai"),
+      16_690, LabelTypes.Dd, DamageFact.FlagAttackerIsSpell, 0, ushort.MaxValue));
     var timeline = new EntityTimeline();
     timeline.SetIdentity("Illuminai", IdentityKind.Player, RuleStrength.Strong, "R3-presence");
     var (rows, _, claimed) = Derive(facts, timeline);

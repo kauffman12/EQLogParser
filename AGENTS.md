@@ -218,8 +218,10 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
   Leap/Warcry). R5 ownership sweeps the name pool (a comma in an owner text claims the pet, not a raid member);
   `X is called to it owner.` names the **summoner** (`R5-companion` → Player), never the summon; R6-npcdb ⇒ NPC — Medium for a
   spaced name, `Listed` (20) for a bare word, which beats remembered and seeded grades but never a line this capture printed;
-  R14 article ⇒ NPC at Medium; R15 needs ≥10 heals from ≥2 Strong casters and any swing back vetoes; R17 drink/eat names a player; R21 spell shapes
-  (`… by .`, seen being cast, known spell name) type as **Spell** with no pencil; R24-petslot: `Target = Pet/Pet2` in the
+  R14 article ⇒ NPC at Medium; R15 needs ≥10 heals from ≥2 Strong casters and any swing back vetoes; R17 drink/eat names a player; R21 types **Spell** only from a parser-recorded effect slot
+  (`… from X by .`, `… damage by X.`, `You have taken … from X.`) at `SpellShape` (25, below Medium), with no pencil — a spells.txt
+  name or another caster's spell operand claims NOTHING, and a name also seen attacking, defending, healing or being healed is a
+  combatant, not an effect; R24-petslot: `Target = Pet/Pet2` in the
   spell data makes the *defender* a Pet (ask `GetSpellByName`; damage lines only; never invents an owner); R25-roster and
   R26-savedpet claim Unknown-only names in their own folder's pool, last, at Strong; **R27-mercdb** (`mercs.txt`, the bot
   table) claims its names **Merc at `MercDatabaseStrength`**, above `TargetedNpcStrength` but below positive player proof,

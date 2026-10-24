@@ -119,6 +119,7 @@ internal class DamageRecord : HitRecord
     set => _defenderId = StringCache.GetId(value);
   }
 
+  // The sentence substituted an effect for an unnamed caster; never inferred from a name/database match.
   public bool AttackerIsSpell { get; set; }
 
   public override bool Equals(object obj)

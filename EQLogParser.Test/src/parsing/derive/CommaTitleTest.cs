@@ -119,11 +119,7 @@ public class CommaTitleTest
         AssertIdentity(timeline, name, IdentityKind.Player, "R1-target");
     }
 
-    /*
-     * Spell names carry commas too (`First Create, Then Destroy`, `Teleport: Doomfire, the Burning Lands`), and a
-     * dot line's attacker field is one of them: reading that as a combatant would hand the graph a friendly target
-     * to score against. Same guard R14 uses — anything the spell DB answers for stays unclassified.
-     */
+    // A comma inside a parser-recorded effect is not a creature's title.
     [TestMethod]
     public void ASpellNameWithACommaIsNotACombatant()
     {
@@ -132,7 +128,7 @@ public class CommaTitleTest
 
         var timeline = Cold(RunDerive(
             "[Mon May 04 18:50:01 2026] Targeted (Player): Healerone",
-            "[Mon May 04 18:50:02 2026] " + name + " hits Healerone for 900 points of damage."));
+            "[Mon May 04 18:50:02 2026] Healerone has taken 900 damage from " + name + " by ."));
 
         timeline.IdentityWithSource(name, out var source);
         Assert.AreNotEqual("R16-comma", source, "the comma rule fired on a spell name");

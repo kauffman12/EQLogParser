@@ -326,10 +326,6 @@ namespace EQLogParser
       // evidence is sparse by design ("common, but not per-hit") and only cast lines the R4/R20 gates accept are kept.
       var castProof = BuildCastProof(damageFacts);
 
-      // What this capture watched people CAST, gathered only when cross-log memory is in play (see AddRow). One walk over the
-      // evidence rows alongside BuildCastProof's; nothing at all when there is no ledger to read.
-      var seenCasts = BuildCastNames(damageFacts, priors);
-
       // How wide a heal-based verdict's crowd was (see Row.HealedByCasters). Asks for nothing until a row reads
       // "R15-healed", so the walk is paid only by captures that actually rest on that rule.
       var healProof = new HealCasterProof(timeline, healFacts);
@@ -343,7 +339,7 @@ namespace EQLogParser
         // index past the arrays is exactly the crash this whole block exists to prevent.
         for (var i = 0; i < count; i++)
         {
-          AddRow(rows, names[i], timeline, overrides, registry, priors, castProof, seenCasts, healProof, damage[i], healing[i],
+          AddRow(rows, names[i], timeline, overrides, registry, priors, castProof, healProof, damage[i], healing[i],
                  events[i], hasFacts: true, hitsOnRaid: onRaid[i], hitsOnNpcs: onMobs[i],
                  hitsOnPets: onPets[i], hitsOnSelf: onSelf[i]);
         }
@@ -359,14 +355,14 @@ namespace EQLogParser
       {
         foreach (var entry in overrides.All())
         {
-          if (!rows.ContainsKey(entry.Key)) AddRow(rows, entry.Key, timeline, overrides, registry, priors, castProof, seenCasts, healProof, 0, 0, 0, hasFacts: false);
+          if (!rows.ContainsKey(entry.Key)) AddRow(rows, entry.Key, timeline, overrides, registry, priors, castProof, healProof, 0, 0, 0, hasFacts: false);
         }
       }
       if (registry is not null)
       {
         foreach (var name in RosterNames(registry))
         {
-          if (!rows.ContainsKey(name)) AddRow(rows, name, timeline, overrides, registry, priors, castProof, seenCasts, healProof, 0, 0, 0, hasFacts: false);
+          if (!rows.ContainsKey(name)) AddRow(rows, name, timeline, overrides, registry, priors, castProof, healProof, 0, 0, 0, hasFacts: false);
         }
       }
 
@@ -382,7 +378,7 @@ namespace EQLogParser
       {
         foreach (var entry in priors.All())
         {
-          if (!rows.ContainsKey(entry.Key)) AddRow(rows, entry.Key, timeline, overrides, registry, priors, castProof, seenCasts, healProof, 0, 0, 0, hasFacts: false);
+          if (!rows.ContainsKey(entry.Key)) AddRow(rows, entry.Key, timeline, overrides, registry, priors, castProof, healProof, 0, 0, 0, hasFacts: false);
         }
       }
 
@@ -399,7 +395,7 @@ namespace EQLogParser
        */
       foreach (var name in TakenBackNames.All())
       {
-        if (!rows.ContainsKey(name)) AddRow(rows, name, timeline, overrides, registry, priors, castProof, seenCasts, healProof, 0, 0, 0, hasFacts: false, withdrawnClaim: true);
+        if (!rows.ContainsKey(name)) AddRow(rows, name, timeline, overrides, registry, priors, castProof, healProof, 0, 0, 0, hasFacts: false, withdrawnClaim: true);
       }
 
       var list = new List<Row>(rows.Values);
@@ -475,27 +471,7 @@ namespace EQLogParser
         => map is not null && map.TryGetValue(name, out var spell) ? spell : null;
     }
 
-    /// <summary>First accepted cast per caster and gate, for Row.ReasonDetail. Empty when the capture has no evidence rows.</summary>
-    /*
-     * The spell names this capture saw being cast (`X begins casting Y.`), read off the same evidence rows BuildCastProof walks.
-     * Returned only when a prior store will actually be consulted, so the ordinary pass pays nothing: with no ledger there is no
-     * remembered verdict for these names to argue with, and the answer would never be displayed.
-     */
-    private static HashSet<string>? BuildCastNames(DamageFactTable? facts, IdentityPriorStore? priors)
-    {
-      if (facts is null || priors is null || priors.Count == 0) return null;
-
-      var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-      var evidence = facts.Evidence;
-      for (var i = 0; i < evidence.Length; i++)
-      {
-        if (evidence[i].Kind != EvidenceFact.EvCast) continue;
-        var spell = facts.AuxOf(evidence[i].AuxIdx);
-        if (!string.IsNullOrEmpty(spell)) seen.Add(spell!);
-      }
-      return seen;
-    }
-
+    /// <summary>First accepted cast per caster and gate, for Row.ReasonDetail.</summary>
     private static CastProof BuildCastProof(DamageFactTable? facts)
     {
       var proof = new CastProof();
@@ -518,7 +494,7 @@ namespace EQLogParser
 
     private static Row AddRow(Dictionary<string, Row> rows, string name, EntityTimeline? timeline,
                               IdentityOverrideStore? overrides, PlayerRegistry? registry, IdentityPriorStore? priors,
-                              CastProof castProof, HashSet<string>? seenCasts, HealCasterProof healProof,
+                              CastProof castProof, HealCasterProof healProof,
                               double damage, double healing, long events, bool hasFacts,
                               int hitsOnRaid = 0, int hitsOnNpcs = 0, int hitsOnPets = 0, int hitsOnSelf = 0,
                               bool withdrawnClaim = false)
@@ -558,29 +534,11 @@ namespace EQLogParser
       if (kind == IdentityKind.Unknown && !isOperator
           && priors is not null && priors.TryGet(name, out var prior))
       {
-        /*
-         * Memory steps aside for what this file watched happen. `X begins casting Y.` is the game itself naming Y as a spell, and
-         * an older build — or a night whose rules were weaker — could remember such a name as a fighter: the report a player
-         * measured listed "Asphyxiating Grasp Rk. III" (a Magian discipline's rank) among the raid's opponents with yesterday's
-         * Player verdict behind it. Borrowing an answer is only right while NOTHING fresher speaks, and this capture saw the cast,
-         * so it says A Spell here rather than re-stating the ledger. Deliberately not a timeline claim: that name has no facts in
-         * this log (which is why memory produced its row in the first place), and an entry for it would move the derive's state
-         * digest — buying a full rebuild every pass over a verdict no board reads. Measured on eqlog_Kizant_xegony-09-20-25.txt:
-         * 1,044 cast tokens, 0 of them named in a combat line; the correction is for the names memory already put on the list.
-         */
-        if (seenCasts is not null && seenCasts.Contains(name))
-        {
-          kind = IdentityKind.Spell;
-          source = "R21-spellcast";
-        }
-        else
-        {
-          kind = prior.Kind;
-          source = $"Prior:{prior.Reason}";
-          isPrior = true;
-          priorSightings = prior.Sightings;
-          priorSeenAt = prior.SeenAtS;
-        }
+        kind = prior.Kind;
+        source = $"Prior:{prior.Reason}";
+        isPrior = true;
+        priorSightings = prior.Sightings;
+        priorSeenAt = prior.SeenAtS;
       }
 
       /*
@@ -741,9 +699,9 @@ namespace EQLogParser
       }
 
       /*
-       * A Spell row also says whether the shipped spell database knows the name — which of the three R21 proofs did it is in
-       * the head line, but "does this build's data contain it" is the question a reader asks next, and a rank newer than this
-       * build looks identical to a name that merely spelled like a spell. Sorts with the other database-grade claims.
+       * A Spell row also says whether the shipped spell database knows the name. The head line says what the capture wrote
+       * (an effect stood where a caster belongs); "is that effect in this build's data" is the question a reader asks next,
+       * and membership decides nothing about the kind. Sorts with the other database-grade claims.
        */
       if (kind == IdentityKind.Spell && !spellListStated)
       {

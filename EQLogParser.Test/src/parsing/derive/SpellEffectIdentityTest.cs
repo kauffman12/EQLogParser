@@ -1,32 +1,7 @@
-using EQLogParser;
-
 namespace EQLogParser;
 
-/*
- * R21: a name that exists only because a SPELL stood in the attacker field is not a fighter, and must never be listed as a
- * person (ClassificationRules.ApplySpellEffects).
- *
- * The report came from the Names window on a real night's capture: a curse listed as "Player | Our side" next to rows for
- * Burning Glob Burst, Spiter Blood and a pile of chants. Two line shapes put a spell where a fighter's name belongs, both of
- * them the client's own way of writing "damage from a spell, no caster named":
- *
- *   Goratoar has taken 18724 damage from Slicing Energy by .          <- 706 lines in eqlog_Kizant_xegony-09-03-26.txt
- *   A gnoll has taken 108790 damage from your Mind Coil Rk. II.      <- 135 lines in the same file
- *
- * The parser turns the first into an attacker field holding the SPELL (DamageLineParser: attacker == "." becomes the spell,
- * AttackerIsSpell set, and CombatCapture carries it onto the fact). Over the first 250 MB of that capture R21 places **49**
- * such names out of a 227-name pool, and **471** of their facts are aimed at MOBS — the raid's own dots landing on its own
- * targets. That last number is the bug: a name that beats on mobs is, as far as the graph is concerned, one of ours, which is
- * how a curse reached the roster column. The other 717 facts hit the raid, where the graph already answered NPC; those rows
- * keep their side and gain the truth about what they are.
- *
- * All 49 names are also in the shipped spells.txt, so on this corpus the DICTIONARY does the work and the fact flag is the
- * guard for data this build does not carry — which is why both proofs are tested below rather than one.
- *
- * The self-target feedback shape stays in here too even though IdentityRulesTest already refuses it in R7: the guard has to
- * hold on BOTH paths, because "You have taken 16690 damage from Cloudburst Strike Feedback XII." is the operator's own spell
- * bouncing back and naming an enemy in that line would be a fabrication of a different kind.
- */
+// An effect substituted for an unnamed caster is not a fighter. Its damage still reaches the correct board.
+// SpellRoleIdentityTest covers collisions with real combatants and the parser's role flags.
 [TestClass]
 public class SpellEffectIdentityTest
 {
@@ -209,21 +184,34 @@ public class SpellEffectIdentityTest
   }
 
   /*
-   * Self-target spell feedback stays UNCLASSIFIED — the one spell shape that gets no verdict at all. Calling it NPC is as
-   * wrong as calling it Player: the damage is the local player's own spell bouncing back and there is no entity behind the
-   * name. R7 refuses those edges (IdentityRulesTest pins that); this pins that R21 does not claim the name either.
+   * Self-target spell feedback is an EFFECT and is named as one — `You have taken 16690 damage from Cloudburst Strike
+   * Feedback XII.` (44 lines on eqlog_Kizant_xegony-2.txt) puts a spell where a caster belongs, so the name reads Spell, never
+   * Unknown and never a side. What self-targeting decides is ROUTING: the sentence has no attacker, so its damage earns no fight
+   * row and no board credit, which is what the two assertions below hold. IdentityRulesTest pins the same shape from the other
+   * side (R7 scores no edge off it).
    */
   [TestMethod]
-  public void SelfTargetFeedbackStillGetsNoVerdict()
+  public void SelfTargetFeedbackIsNamedAnEffectAndFightsNobody()
   {
+    const string feedback = "Cloudburst Strike Feedback XII";
+    Assert.IsTrue(ClassificationRules.IsSelfTargetDamageSpell(feedback),
+                  "the fixture needs a spell the shipped data targets on its own caster");
+
     var run = RunOut(
-      "[Mon May 04 18:50:00 2026] You have taken 16690 damage from Cloudburst Strike Feedback XII.",
-      "[Mon May 04 18:50:20 2026] You have taken 16690 damage from Cloudburst Strike Feedback XII.");
+      "[Mon May 04 18:50:00 2026] You have taken 16690 damage from " + feedback + ".",
+      "[Mon May 04 18:50:20 2026] You have taken 16690 damage from " + feedback + ".");
 
     var timeline = Apply(run, out _);
 
-    Assert.AreEqual(IdentityKind.Unknown, timeline.IdentityWithSource("Cloudburst Strike Feedback XII", out var source),
-                    "the operator's own feedback must not be branded an enemy (source " + (source ?? "none") + ")");
+    Assert.AreEqual(IdentityKind.Spell, timeline.IdentityWithSource(feedback, out var source),
+                    "the operator's own feedback lost its effect word (source " + (source ?? "none") + ")");
+    Assert.AreEqual("R21-spellshape", source);
+
+    var rows = FightProjection.Build(run.Facts, timeline);
+    Assert.HasCount(0, rows, "feedback is not an encounter");
+    var index = new FightFactIndex(timeline);
+    FightProjection.Build(run.Facts, timeline, index.OnFact);
+    Assert.AreEqual(0L, index.DamageFactCount + index.TankingFactCount, "feedback credits no board");
   }
 
   /*
@@ -254,20 +242,7 @@ public class SpellEffectIdentityTest
     }
   }
 
-  /*
-   * The second recognizer: the CAST MESSAGE (`X begins casting Y.`). CastLineParser already resolves every cast/sing/activate
-   * line into a SpellData (calling AddUnknownSpell when spells.txt has no row) and hands the resolved name to the fact table as
-   * the aux of an EvCast evidence row, so the game's own act of naming is what this reads rather than a dictionary this build had
-   * to ship — next expansion's ranks are known the day they print.
-   *
-   * Where it lands: NOT as a timeline verdict for a name no combat line ever used. Rows come from names the capture fought, and
-   * eqlog_Kizant_xegony-09-20-25.txt measures 1,044 cast tokens of which ZERO appear as an attacker or defender — claiming them
-   * anyway would add ~1,000 rows to a window about fighters and move the derive's state digest every time somebody tries a spell
-   * for the first time, buying a full rebuild over verdicts no board reads. What the cast feed does instead is refuse to be
-   * fooled by MEMORY, which is where a spell name actually shows up in a log that never fought it: see
-   * ARememberedFighterThisLogWatchedBeingCastSaysAspell. A token whose name IS in the fact pool still claims the name here,
-   * which is why the recognizer stays a rule and not just a lookup.
-   */
+  // The spell operand of a cast line supplies no identity for an identically named combatant.
   [TestMethod]
   public void ACastTokenWithNoCombatFactBehindItClaimsNothing()
   {
@@ -288,9 +263,7 @@ public class SpellEffectIdentityTest
   [TestMethod]
   public void ANameSomebodyElseClaimedIsNotRelabelledBecauseACastSaidSo()
   {
-    // The collision the silence gate exists for: one string, two roles — a raid member here, a spell token there. The alias is
-    // one word because the pre-line parsers that read "X joined the raid." take a single-token subject; that is a fixture limit,
-    // not the rule's — any claim at any strength from any earlier stage holds the name against this branch.
+    // One string, two roles: a raid member here, somebody else's spell operand there.
     const string bothRoles = "Grimjaw";
 
     var run = RunOut(
@@ -305,20 +278,13 @@ public class SpellEffectIdentityTest
     Assert.IsFalse(IdentityVocabulary.IsSpellEffect(SourceOf(timeline, bothRoles)), "the spell branch took a claimed name");
   }
 
-  /*
-   * The grammar guard on the token feed. A tokenizer trusts its line, and one capture hands it a thousand tokens (measured:
-   * 1,085 on eqlog_Kizant_xegony-09-20-25.txt), so a token wearing a CREATURE's shape claims nothing even when nothing else has
-   * spoken: articles and possessives are how fighters are named in this log, and freezing them out with a Strong spell verdict
-   * arriving first would leave the behaviour rules (R14's article shape, R5's ownership) unable to answer at equal strength.
-   */
+  // A cast operand cannot suppress creature-name rules for a separately observed combatant.
   [TestMethod]
   public void ACastTokenWearingACreatureShapeClaimsNothing()
   {
     const string thing = "A slowly dripping claw";
 
-    // The token AND a fact carry the same article-shaped name: grammar says creature, the cast line says spell, and this log
-    // has both for one name. The article wins because it is the shape EQ gives fighters — R14 places it as NPC at Medium and
-    // keeps its own provenance rather than being frozen out by a Strong spell verdict that got there first.
+    // Both roles occur, but the damage record names an ordinary attacker.
     var run = RunOut(
       $"[Mon May 04 18:50:00 2026] {thing} hits Bithika for 500 points of crushing damage. (Critical)",
       "[Mon May 04 18:50:02 2026] Bithika begins casting " + thing + ".",
@@ -330,15 +296,9 @@ public class SpellEffectIdentityTest
                    $"the spell branch claimed a name whose own spelling says creature ({SourceOf(timeline, thing) ?? "none"})");
   }
 
-  /*
-   * Where a spell name really does turn up in a log that never fought it: the ledger. An older build (or a night whose rules were
-   * weaker) can remember such a name as one of ours, and memory is consulted precisely when this capture says nothing — which is
-   * how a player measured "Asphyxiating Grasp Rk. III" sitting on the list with a remembered Player verdict. Borrowing yesterday's
-   * answer is right only while NOTHING fresher speaks, and this capture watched somebody cast the thing: the report answers
-   * A Spell, says where that came from, and stops calling it somebody's memory.
-   */
+  // The report cannot manufacture a spell identity by joining a cast token to somebody's remembered name.
   [TestMethod]
-  public void ARememberedFighterThisLogWatchedBeingCastSaysAspell()
+  public void ACastTokenCannotRelabelARememberedFighter()
   {
     const string spell = "Gnawing Void Rk. IV";
     var savedDir = ConfigUtil.ConfigDir;
@@ -368,10 +328,9 @@ public class SpellEffectIdentityTest
       var row = report.Find(spell);
 
       Assert.IsNotNull(row, "a remembered name belongs on the list whether or not this log fought it");
-      Assert.AreEqual(IdentityKind.Spell, row!.Kind, "last night's Player beat a cast line printed in this capture");
-      Assert.AreEqual("R21-spellcast", row.Reason);
-      Assert.IsFalse(row.IsPrior, "the answer is this file's, so the pane must not say 'in previous log'");
-      Assert.AreEqual("Spell", IdentityVocabulary.WhyWord(row.Reason));
+      Assert.AreEqual(IdentityKind.Player, row.Kind);
+      Assert.AreEqual("Prior:R7-graph", row.Reason);
+      Assert.IsTrue(row.IsPrior, "the report must disclose that this answer is remembered, not parsed");
     }
     finally
     {
@@ -381,17 +340,9 @@ public class SpellEffectIdentityTest
     }
   }
 
-  /*
-   * The review's reproduction, shaped as its own fixture: a spell that prints FIRST as a cast token and only later reaches
-   * a combat line. The pool gate is a read over the capture's interned names, and the evidence cursor walks each EvCast
-   * row exactly once - so without the parked list, pass one's refusal was permanent: the new fact interns its names
-   * without moving any verdict, StateStamp never moves, no full rebuild ever happens, and the carried pass answered
-   * Unknown while a from-zero replay answered Spell. The fix is the promotion walk in ApplySpellEffects: a parked token is
-   * re-asked every pass, and the pool only grows within one capture, so the verdict lands on the first full pass after the
-   * name's first fact - the same bounded staleness every other carried verdict lives under.
-   */
+  // Interning a matching combatant name later must not turn a cast token into identity evidence.
   [TestMethod]
-  public void ACastTokenThatReachesCombatLaterIsClaimedByACarriedPass()
+  public void ACastTokenThatReachesCombatLaterStillNeedsAParsedSpellRole()
   {
     const string spell = "Slicing Energy";
 
@@ -400,7 +351,7 @@ public class SpellEffectIdentityTest
     var state = new ClassificationState();
     var seq = 0;
 
-    // Pass one: the cast line only. The token is outside the name pool, so the gate parks it.
+    // Pass one: the cast line only. No effect has appeared in an attacker slot.
     facts.AddEvidence(new EvidenceFact(seq++, 1_700_000_000L, facts.InternName("Spelleffect"), EvidenceFact.EvCast, facts.InternAux(spell)));
 
     var first = new EntityTimeline();
@@ -420,16 +371,15 @@ public class SpellEffectIdentityTest
     var carriedOutcome = ClassificationRules.Apply(facts, carried, heals, state);
     Assert.IsTrue(carriedOutcome.FailedRules.Count == 0, "a rule stage threw: " + string.Join(", ", carriedOutcome.FailedRules));
 
-    Assert.AreEqual(IdentityKind.Spell, carried.IdentityAt(spell, double.PositiveInfinity),
-      "the parked token was never re-asked: the carried pass kept the pool-gate refusal from before the name had a row");
-    Assert.AreEqual("R21-spellcast", SourceOf(carried, spell));
+    Assert.AreEqual(IdentityKind.Unknown, carried.IdentityAt(spell, double.PositiveInfinity),
+      "an unflagged combatant cannot become a spell merely because somebody cast the same word");
 
     // And the from-zero reference still agrees - the carried answer is the same verdict on the same source.
     var replay = new EntityTimeline();
     RegistrySeed.Apply(replay, facts, double.NaN, double.NaN);
     var replayOutcome = ClassificationRules.Apply(facts, replay, heals);
     Assert.IsTrue(replayOutcome.FailedRules.Count == 0, "replay stage threw: " + string.Join(", ", replayOutcome.FailedRules));
-    Assert.AreEqual(IdentityKind.Spell, replay.IdentityAt(spell, double.PositiveInfinity));
+    Assert.AreEqual(IdentityKind.Unknown, replay.IdentityAt(spell, double.PositiveInfinity));
   }
 
   private static string? SourceOf(EntityTimeline timeline, string name)

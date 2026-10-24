@@ -602,7 +602,7 @@ namespace EQLogParser
        * never offered.
        */
       if (option.Kind == row.Kind) { RefuseDebug(DoorType, $"{row.Name} already reads {option.Word}"); return; }
-      if (!row.Overrulable) { Refuse(DoorType, $"{row.Name} offers no Type pencil (a summon's spelling or a spell name settles its kind)"); return; }
+      if (!row.Overrulable) { Refuse(DoorType, $"{row.Name} offers no Type pencil (a summon's spelling or an effect's damage line settles its kind)"); return; }
       if (!row.TypeChoices.Contains(option)) { Refuse(DoorType, $"{option.Word} is not in the list this popup was opened with for {row.Name}"); return; }
 
       /*

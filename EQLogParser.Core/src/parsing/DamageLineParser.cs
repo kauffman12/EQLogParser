@@ -621,17 +621,7 @@ namespace EQLogParser
           }
           else
           {
-            /*
-             * The by-slot is the last thing on the line, so its final character is the sentence's period. EVERY reading below
-             * needs it gone, which is why this is not an `else if` arm: the empty-spell path (`You have taken 253713 damage from
-             * by Infected Magic.` — the spell slot blank, the spell's own name in the caster slot) skipped it and minted a
-             * phantom entity. Measured on eqlog_Kizant_xegony-2.txt: three of 262 pool names ended in '.', each a twin of a name
-             * already in the pool — "Infected Magic." alongside "Infected Magic", plus "Burning Glob Burst." and "Arcstone Rock
-             * Fall." — and because R21's third proof is spells.txt, which cannot answer a dotted key (the subtype table is ordinal
-             * too), the clean twin read `Spell` while its dotted shadow sat in the identity list as **Unplaced**. The 6 lines here
-             * are noise; the class of defect (a name that differs from itself by punctuation) is not, and NamePoolTest exists for
-             * exactly this seam.
-             */
+            // The final period belongs to the sentence, including when the spell slot is blank.
             if (!string.IsNullOrEmpty(attacker) && attacker[^1] == '.')
             {
               attacker = attacker[..^1];
@@ -639,9 +629,9 @@ namespace EQLogParser
 
             if (string.IsNullOrEmpty(spell))
             {
-              // The spell slot is blank and the caster slot holds the effect's name. No attackerIsSpell flag: R21 reads
-              // spells.txt for this shape, so the row already answers `Spell` once the period is off.
+              // No separate caster: the by-slot holds the effect, independent of the spell database.
               spell = attacker;
+              attackerIsSpell = true;
             }
           }
         }
@@ -656,6 +646,7 @@ namespace EQLogParser
           spell = split.JoinWords(fromDamage + 2, stop - fromDamage - 1);
           spell = (!string.IsNullOrEmpty(spell) && spell[^1] == '.') ? spell[..^1] : spell;
           attacker = spell;
+          attackerIsSpell = true;
         }
 
         if (AppSettings.IsEmuParsingEnabled)

@@ -55,6 +55,9 @@ public sealed class HealingSummaryVisibilityTest
         LabelTypes.Heal, 0, LineModifiersParser.None, HealFact.NoSpell));
 
     var timeline = new EntityTimeline();
+    // Healing is a combatant role, so an effect-name collision cannot automatically type this healer as Spell.
+    // An explicit operator verdict still can; the board must hide that row without deleting its captured heals.
+    ClassificationRules.ApplyManualOverride(timeline, names[4], IdentityKind.Spell);
     ClassificationRules.Apply(facts, timeline, heals);
     IdentityLookup.LiveVerdict = timeline.IdentityAt;
     for (var i = 0; i < names.Length; i++)

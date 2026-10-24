@@ -5984,7 +5984,78 @@ to the cross-platform assembly on purpose: `IdentityVocabularyTest` (vocabulary 
 echo-unknown law, prior/owner-suffix forms, one-line tooltips and no blank tooltip, `Overrulable`, the dropdown's five entries
 and its one Unknown), `CensusHealProofTest`, `CensusCastProofTest` and `SpellEffectIdentityTest`.
 
+## Spell identity belongs to the parsed role, not the spelling
+
+**Only `DamageFact.AttackerIsSpell` supplies an R21 claim.** Neither a spell-database match nor another caster's spell
+operand identifies a combatant. The report must not make that inference either. Historical `R21-spellcast` and
+`R21-spelleffect` words remain readable, but neither is emitted as a new verdict.
+
+`RuleStrength.SpellShape = 25`: above weak registry seeds and Listed (20), below Medium (30) ownership/behaviour evidence.
+A name also present as an ordinary attacker, damage defender, healer/healed name or cast subject is a combatant, not a spell-only name;
+this refusal says nothing about whether it is a Player, Pet, Merc or NPC. R21 carries both role sets and recomputes claims
+on each fresh timeline, so a later combatant sighting retires an earlier spell claim. R6/R14/R16 do not apply creature-name
+heuristics to an already identified effect; this is a role exclusion, not a strength tie. R7 never uses flagged damage
+as evidence about the combatant sharing its name, and R15/R18 cannot count it as that combatant swinging back at the raid.
+
+The parser sets the flag for `… from Effect by .`, `… from by Effect.`, `You have taken … from Effect.`, and
+`… has taken … damage by Effect.`. Named casters and `from your Effect` are entities, not effects. There is no currently
+supported grammar that substitutes an effect into the defender slot. A database name alone must never manufacture such a
+role. Self-targeting is a ROUTING fact, not a naming one: `You have taken 17741 damage from Cloudburst Strike Feedback XII.`
+(44 lines on `eqlog_Kizant_xegony-2.txt`) still types its name Spell, and only its damage is refused — on flagged occurrences,
+never on an ordinary attack by a similarly named entity. Projection and pending meter activity read the flag before the name's
+identity: an effect cannot borrow a player's damage credit, lose incoming damage as friendly fire, or become self-damage merely
+because its name equals its victim's. `AimedAtCombatAnchor` shares the role-aware direction between projection and pending
+activity: a flagged effect targets its anchor only when the defender is NPC-side, even when both names are equal. This
+keeps same-named player, pet, mercenary, ownership-only and unplaced victims incoming, while an NPC-side victim stays output;
+`SpellRoleIdentityTest.AnEffectMatchingItsVictimKeepsTheVictimsCombatDirection` pins routing, direction windows, pending panels
+and materialized board totals. No THJ/EMU capture in the local corpus produces a flagged fact (0 over Bulron, Ikkydruid
+and Roper — that format names its caster), so the slot swap in `DamageLineParser`'s EMU arm never moves a flag today.
+
+**The Strangle failure:** on `eqlog_Kizant_xegony-strangle.txt`, the original classified run captured 89,598 damage facts
+and 29 fights. `Player@30 / R5-owner` lost to `Spell@60 / R21-spelleffect`. All 371 outgoing hits (471,210,187 damage) were
+refused as NPC-versus-NPC. Boss damage on Strangle was also lost. The line
+`[Fri Oct 23 21:55:59 2026] Strangle has taken 178193 damage from Infected Magic by .` then opened a bogus Strangle fight.
+The diagnostic Player override removed that row (29 → 28), moving projected damage 33,681,532,092 → 34,155,544,926.
+This is not permission to identify all casters or melee attackers as players: it removes a false Spell verdict and lets the
+existing ownership, cast-family, graph and other rules answer. Re-parsing after the fix reproduced that override's exact
+28 fights and 34,155,544,926 total without an override; Strangle's rollup is 471,210,187 and the remaining effect names are
+Infected Magic and Mental Contortion XI.
+
+The dictionary verdict was not merely over-specific on live logs: on the THJ captures it had typed **36 / 42 / 77** names Spell
+whose only claim was spelling, and `Fireball`, `Frost`, `Anarchy` and friends are characters there
+(`Fireball (Magician) has logged in for the first time.`, `Frost says out of character, …`). They now read Unknown, or NPC where
+npcs.txt really lists the word — honest-but-unexplained instead of confidently wrong, with the same numbers either way.
+
+**The corpus sweep** ran every capture under `local/logs/live` and `local/logs/emu` (15 files, both revisions, fresh
+RegistrySeed + full classification, disposable probe) and diffed verdicts, row lists, routed/unrouted counts and totals. Only
+three captures moved any number:
+
+| Capture | Fights before → after | Projected damage before → after | Routed damage/tanking facts |
+|---|---:|---:|---|
+| Kizant xegony-strangle | 29 → 28 | 33,681,532,092 → 34,155,544,926 | 84,677/4,455 → 85,047/4,475 |
+| Incogitable xegony | 4,639 → 4,639 | 587,768,588,644 → 587,777,731,579 | 1,477,397/415,555 → 1,477,603/415,879 |
+| Bulron thj / Roper thj | unchanged | +44 / +546 damage | +2 / +4 damage facts |
+
+Unrouted counts did not move anywhere (0, and 358 on Incogitable), so nothing was dropped to make room. The other twelve
+captures differ only in which word an identity row carries — including all four where flagged feedback names gained their
+Spell verdict, and the EMU captures where 36/42/77 dictionary-only Spell rows went unexplained.
+
+The second capture restores Mojo/Infection as Pet and Vengeance as Player; Penance/Purification/Frost return to NPC-list
+verdicts rather than Spell. Bane and Outer Brood Energy Surge become Unknown, not guesses: the latter has a reversed-slot
+sentence (`You have taken 185265 damage from Herald of the Outer Brood by Outer Brood Energy Surge.`), not one of the
+casterless grammars. Dictionary identity is not a repair for that parse ambiguity. Neither larger capture had a flagged
+effect sharing a Player/Pet/Merc verdict; the fixture tests that collision deliberately. The Unknown-victim routing stays
+incoming under the effect's row, rather than inventing fights named for unplaced victims.
+
+`SpellRoleIdentityTest` pins parser roles, the Strangle reproduction, both combat directions, name collisions, the strength
+ladder and carried-versus-replayed classification. `SpellEffectIdentityTest` pins unattributed damage credit, that self-target
+feedback keeps its effect word while earning no row and no board credit, and the removal of the report's cast-token shortcut. These fixtures are tracked; the diagnostic log and disposable probe are not.
+
 ## A spell is not a fighter: R21, and the two proofs that a name is one
+
+Historical rationale below: the dictionary/cast-token identity feeds, Strong strength and report-time cast override were
+superseded by **“Spell identity belongs to the parsed role, not the spelling”**. Their measurements explain how those
+shortcuts arose; they are not current classification authority. `from your` names the local player, not an effect.
 
 The Names window reported `Curse XVII Rk. III | Player | Our side`, next to rows for Burning Glob Burst, Spiter Blood and a
 pile of chants — names in `spells.txt` standing in the roster column. The mechanism was the parser's own, and correct as far as

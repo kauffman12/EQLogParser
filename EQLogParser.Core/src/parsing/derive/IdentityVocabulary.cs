@@ -306,14 +306,16 @@ internal static class IdentityVocabulary
   }
 
   /// <summary>
-  /// Whether a source is one of R21's three spell verdicts (R21-spellshape / R21-spellcast / R21-spelleffect). One
-  /// recognizer for the whole family, shared by CanOverrule and the report: three codes mean one answer to the operator,
-  /// and a fourth spell code must not quietly grow a pencil because somebody compared against one spelling.
+  /// Whether a source is any member of the R21 spell family (R21-spellshape today; R21-spellcast and R21-spelleffect only in
+  /// verdicts remembered from older captures). One recognizer for the whole family, shared by CanOverrule and the report:
+  /// three codes mean one answer to the operator, and a fourth spell code must not quietly grow a pencil because somebody
+  /// compared against one spelling.
   /// </summary>
   internal static bool IsSpellEffect(string? source) => CodeOf(source).StartsWith("R21-", StringComparison.Ordinal);
 
-  /// <summary>Whether this source is the one R21 proof that IS a spell-database lookup (R21-spelleffect). Its hover clause
-  /// already states membership, so the report does not print a second line saying the same thing.</summary>
+  /// <summary>Whether this source is the retired spell-database verdict (R21-spelleffect), which no rule writes any more. Its
+  /// hover clause already states membership, so a carried row from an older capture does not get a second line saying the same
+  /// thing.</summary>
   internal static bool IsSpellListClaim(string? source) => CodeOf(source) == "R21-spelleffect";
 
   /// <summary>True when this verdict came from an earlier log on this server rather than from the open capture.</summary>
@@ -448,9 +450,13 @@ internal static class IdentityVocabulary
       "R24-petslot" => "Hit by a Pet-Only Spell",
 
       /*
-       * R21's three proofs, phrased so the CELL can carry the plain kind word ("Spell") and the hover carry the
-       * difference. "No Caster in Line" was true of every damage line ever parsed — the informative half is WHICH slot
-       * was empty, so it says where it looked (asked directly: "instead of 'No Caster in Line' be more specific").
+       * Phrased so the CELL can carry the plain kind word ("Spell") and the hover carry the difference. "No Caster in Line"
+       * was true of every damage line ever parsed — the informative half is WHICH slot was empty, so it says where it looked
+       * (asked directly: "instead of 'No Caster in Line' be more specific").
+       *
+       * Only R21-spellshape is written any more: one parser-recorded effect slot decides the kind. The other two words stay
+       * readable because a verdict remembered from an older capture carries its own source string, and a row must never echo
+       * a bare code at the operator.
        */
       "R21-spellshape" => "No Caster in Spell Damage",
       "R21-spellcast" => "Seen Being Cast",
@@ -479,8 +485,9 @@ internal static class IdentityVocabulary
    *   - A POSSESSIVE SUMMON (`Tuona`s ward`). The ownership word IS the evidence — R5 reads it off the name and asserts
    *     Pet at Certain — so the dropdown's Pet/NPC/Player choices are all wrong, and even the take-back only puts the row
    *     back to Pet on the next pass: the line that spells the owner is in THIS capture, and forgetting memory cannot delete it.
-   *   - A SPELL EFFECT (a name that is a damaging spell, or that only ever appears as a spell attacker). It is not a
-   *     creature; typing it as a Player would put it on the roster.
+   *   - A SPELL EFFECT (a damage sentence whose caster slot holds an effect because no caster was named). It is not a
+   *     creature; typing it as a Player would put it on the roster. Membership of the spell list does NOT qualify — names
+   *     collide with spells (`Strangle`, `Mojo`), so only the parsed role takes the pencil away.
    *
    * An operator verdict always counts as overrulable — a wrong click has to stay correctable by another one, and the
    * take-back icon in the Name column is where the verb lives now.
