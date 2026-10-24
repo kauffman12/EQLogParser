@@ -12,6 +12,6 @@ namespace EQLogParser
 
     // No window alive to ask: DamageMeterConfigState is the one reader of every meter key, including this one.
     internal static bool HasActivity() =>
-      HasActivity(ConfigUtil.GetSettingAsInteger("OverlayDamageMode"), DamageMeterConfigState.LoadPanels());
+      HasActivity(DamageMeterConfigState.LoadResetMode(), DamageMeterConfigState.LoadPanels());
   }
 }

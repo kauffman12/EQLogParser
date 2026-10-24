@@ -3,14 +3,9 @@ using System.Collections.Generic;
 
 namespace EQLogParser;
 
-/// <summary>Combines sparse chart series and calculates their rolling rates.</summary>
+/// <summary>Combines sparse chart buckets without adding presentation-only rolling points.</summary>
 internal static class ChartAggregation
 {
-  public static void PopulateRolling(Dictionary<string, List<DataPoint>> data)
-  {
-    foreach (var points in data.Values) PopulateRolling(points);
-  }
-
   public static List<List<DataPoint>> AggregateGroups(Dictionary<string, List<DataPoint>> playerData,
     List<GroupEntry> selectedGroups)
   {
@@ -102,29 +97,6 @@ internal static class ChartAggregation
       merged.Add(point);
     }
     if (merged.Count == 0) return null;
-    PopulateRolling(merged);
     return merged;
-  }
-
-  private static void PopulateRolling(List<DataPoint> points)
-  {
-    if (points.Count == 0) return;
-    var left = 0;
-    var windowTotal = 0L;
-    for (var right = 0; right < points.Count; right++)
-    {
-      var point = points[right];
-      windowTotal += point.TotalPerSecond;
-      while (left < right
-        && Math.Floor(point.CurrentTime) - Math.Floor(points[left].CurrentTime) > RollingWindow.Seconds - 1)
-      {
-        windowTotal -= points[left].TotalPerSecond;
-        left++;
-      }
-
-      // Include idle labels and divide by the full window even at the first hit, matching meter RDPS.
-      point.RollingTotal = windowTotal;
-      point.RollingDps = StatsUtil.RateOverWholeSeconds(windowTotal, RollingWindow.Seconds);
-    }
   }
 }

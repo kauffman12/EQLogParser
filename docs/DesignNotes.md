@@ -7213,7 +7213,11 @@ and only a completed, still-current read acknowledges its prefix. Cancellation, 
 Filters/verdict changes recheck the retained window from the historical checkpoint using original receipt times, not the time of reconsideration.
 Already-retired history keeps its verified boundaries; it cannot be retrospectively reclassified from discarded receipt metadata. Polling,
 rebuilding, and reopening never restamp receipt. NPC-only noise and excluded outgoing damage do not renew it; incoming damage and accepted avoidance
-remain eligible.
+remain eligible. The derive pass's auto-open verification is optional: `DeriveEngine.VerifyMeterArrival` returns no activity on a
+scan failure without withholding snapshot publication or entering the derive retry ladder. It logs once per exception kind through
+`RepeatCap`; the next pass can retry the same unacknowledged prefix. `DamageMeterConfigState.LoadResetMode` is the shared 0–100
+validator for the window, derive auto-open and windowless activity query; invalid values read as On Kill without rewriting the setting.
+`MeterReceiptVerificationTest` in the Windows-only assembly pins the shared reader and scan failure/recovery boundary.
 `BeginRead` copies only unchecked receipt-batch metadata under the receipt lock; `Read.Complete` decodes and checks a fixed
 ordinal prefix outside both that lock and the capture gate, with cancellation checks between bounded batches. Ingest can extend even
 the copied read's last millisecond batch without changing its question. Completion acknowledges only that prefix; an older read cannot
@@ -18828,7 +18832,7 @@ its runtime checks and the live Save/reopen checks remain owed on Windows in `do
 **Goal:** the rolling chart and meter use the same six-second arithmetic, and a quiet interval must not disappear between
 chart samples. At log second t, sum amounts in t−5 through t inclusive and divide by **six from the first hit**. Missing
 seconds contribute zero. Whole-second labels, integer amounts and sum-before-division match the meter; no PC clock enters
-either calculation. `RollingWindow.Seconds` is the shared window definition for meter buckets, chart aggregation and rolling transitions;
+either calculation. `RollingWindow.Seconds` is the shared window definition for meter buckets and chart rolling transitions;
 chart gap-marker spacing has its own `GapMarkerOffsetSeconds` because it is presentation, not the rate window.
 Both lanes divide through `StatsUtil.RateOverWholeSeconds`, never an in-place `/ 6`: a window sum may exceed
 2^53, where rounding through a double would drop units the amounts still carry. Damage, tanking and healing share the chart implementation.
@@ -18838,8 +18842,9 @@ startup denominator. That could conceal a real zero: two six-million bursts at s
 RDPS, but seconds 106–109 answer zero. Connecting just the two occupied points drew a million-DPS bridge across that trough.
 A large nonzero low point is not itself wrong; no magnitude threshold or forced-zero rule is involved.
 
-`ChartAggregation` annotates source buckets with the fixed-denominator rate. For rolling modes only, `ChartRollingSeries`
-merges arrivals and their six-second expirations, sums simultaneous changes, and emits value changes plus the preceding
+`ChartAggregation` merges source amounts and cumulative counts without computing rolling fields. `ChartRollingSeries` is the
+only chart rolling-rate calculation, invoked for rolling modes only: it merges arrivals and their six-second expirations,
+sums simultaneous changes, and emits value changes plus the preceding
 second's held value. Long empty stretches need only endpoints, not one point per second. Every integer log second agrees
 with the six-bucket calculation; the line between adjacent seconds remains ordinary linear interpolation.
 
@@ -18854,8 +18859,8 @@ merge. Aggregate and instantaneous modes retain their original source buckets. C
 quiet transitions. There is no extra timer or historical record walk; the added work is linear in the selected series' bucket
 counts, not the length of silence. Vendor rendering cost still needs Windows validation.
 
-`ChartRollingTest` pins the fixed denominator and bucket arithmetic. `ChartRollingSeriesTest` checks the missing trough,
-legitimate nonzero lows, shared data-edge tails, simultaneous arrival/expiry, fractional labels, wide amounts, group sums,
+`ChartRollingSeriesTest` pins the fixed denominator and five/six-second boundary, and checks the missing trough,
+legitimate nonzero lows, shared data-edge tails, simultaneous arrival/expiry, fractional labels, wide amounts, staggered group sums,
 source immutability and a seeded comparison against `MeterRecentWindow` at every integer second. The Windows-only
 `LineChartSelectionTest` checks rolling-mode wiring and that switching back preserves aggregate buckets; rendering remains
 in `docs/ReleaseChecklist.md`, and that test compiles here without executing.

@@ -1156,9 +1156,6 @@ namespace EQLogParser
         damageContent.Visibility = _currentShowDps ? Visibility.Visible : Visibility.Collapsed;
         tankContent.Visibility = _currentShowDps ? Visibility.Collapsed : Visibility.Visible;
       }
-
-      // PreviewMeterState owns refitting and only asks when the content geometry changed.
-      RequestMeterUpdate(true);
     }
 
     private void FullResetClick(object sender, RoutedEventArgs e)

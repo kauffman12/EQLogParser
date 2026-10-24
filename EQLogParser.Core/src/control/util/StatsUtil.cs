@@ -201,8 +201,8 @@ namespace EQLogParser
     /*
      * A rate over a WHOLE-NUMBER window — the six logged seconds behind meter RDPS and the charts' rolling lane — divides as integers,
      * deliberately. Such a sum can sit past 2^53, where a double holds not every integer and rounding through one would drop units the
-     * amounts themselves still carry (ChartRollingSeriesTest.WideAmountsAreNeverRoundedThroughFloatingPoint,
-     * ChartRollingTest.WideBucketTotalsKeepIntegerPrecision). Truncation is part of that law rather than an oversight: the quotient stays
+     * amounts themselves still carry (ChartRollingSeriesTest.WideAmountsAreNeverRoundedThroughFloatingPoint).
+     * Truncation is part of that law rather than an oversight: the quotient stays
      * exact, and a window holding less than one damage per logged second prints 0, which is what the RDPS section of DesignNotes requires.
      * Nothing writes `/ 6` in place.
      */

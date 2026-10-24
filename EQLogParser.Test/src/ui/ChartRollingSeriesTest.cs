@@ -57,8 +57,6 @@ public sealed class ChartRollingSeriesTest
   public void FractionalTimesShareTheMetersWholeSecondLabels()
   {
     var source = Points((100.1, 600), (100.9, 600), (105.9, 600));
-    ChartAggregation.PopulateRolling(new() { ["Player"] = source });
-    Assert.AreEqual(300, source[^1].RollingDps);
     var result = ChartRollingSeries.Build(source, 106.9);
     Assert.AreEqual(200, result[0].RollingDps);
     Assert.AreEqual(300, result.Single(p => p.CurrentTime == 105).RollingDps);
@@ -103,6 +101,30 @@ public sealed class ChartRollingSeriesTest
     Assert.AreEqual(10, result[0].RollingTotal);
     Assert.AreEqual(1, result[0].RollingDps);
     Assert.AreEqual(0, result[^1].RollingDps);
+  }
+
+  [TestMethod]
+  public void GroupRollingIncludesAMemberWithoutABucketAtTheOtherMembersArrival()
+  {
+    var merged = ChartAggregation.MergeSeries("Group", [Points((100, 600), (106, 0)), Points((105, 600))]);
+    Assert.IsNotNull(merged);
+    Assert.IsTrue(merged.All(p => p.RollingTotal == 0 && p.RollingDps == 0),
+      "group aggregation keeps source buckets; only plotting computes rolling rates");
+    var plotted = ChartRollingSeries.Build(merged, 111);
+    Assert.AreEqual(1200, plotted.Single(p => p.CurrentTime == 105).RollingTotal);
+    Assert.AreEqual(200, plotted.Single(p => p.CurrentTime == 105).RollingDps);
+    Assert.AreEqual(600, plotted.Single(p => p.CurrentTime == 106).RollingTotal);
+    Assert.AreEqual(0, plotted[^1].RollingTotal);
+  }
+
+  [TestMethod]
+  public void FifthSecondIncludesTheFirstHitAndSixthSecondExpiresIt()
+  {
+    var plotted = ChartRollingSeries.Build(Points((100, 100), (105, 200), (106, 300)), 106);
+    Assert.AreEqual(16, plotted[0].RollingDps, "even a single hit divides by the full six seconds");
+    Assert.AreEqual(300, plotted.Single(p => p.CurrentTime == 105).RollingTotal);
+    Assert.AreEqual(500, plotted.Single(p => p.CurrentTime == 106).RollingTotal);
+    Assert.AreEqual(83, plotted[^1].RollingDps);
   }
 
   [TestMethod]

@@ -583,8 +583,8 @@ namespace EQLogParser
             // Asked with the displayed panels, because this announcement IS the auto-open path: an unwatched lane must not
             // open a window. Receipts still record both lanes, so widening the choice later needs no rescan.
             var panels = DamageMeterConfigState.LoadPanels();
-            var mode = ConfigUtil.GetSettingAsInteger("OverlayDamageMode");
-            var arrival = _meterArrivals.Latest(_facts, snapshot.Timeline, mode, panels);
+            var mode = DamageMeterConfigState.LoadResetMode();
+            var arrival = VerifyMeterArrival(snapshot.Timeline, mode, panels);
             activityOrdinal = arrival.Through;
             freshDamage = activityOrdinal > _lastAnnouncedActivityOrdinal
                           && DamageOverlayLifecycle.HasRecentActivity(arrival, MeterArrivals.Now, mode);
@@ -835,6 +835,30 @@ namespace EQLogParser
       }
 
       return FightSummarySource.Build(overlapping, snapshot.DamageIndex, snapshot.Facts).Fights.ToList();
+    }
+
+    // Auto-open is optional: a receipt scan must not withhold the snapshot or enter the derive failure ladder.
+    internal MeterArrival VerifyMeterArrival(EntityTimeline timeline, int mode, MeterPanels panels)
+    {
+      try
+      {
+        return _meterArrivals.Latest(_facts, timeline, mode, panels);
+      }
+      catch (Exception ex)
+      {
+        try
+        {
+          if (RepeatCap.SpeaksOnce($"derive meter receipts {ex.GetType().FullName}"))
+          {
+            Log.Error("Could not verify damage meter receipts; auto-open skipped, derived boards are unaffected", ex);
+          }
+        }
+        catch (Exception reporting)
+        {
+          ThreadBoundary.TraceFailure("Could not report damage meter receipt failure", reporting);
+        }
+        return MeterArrival.None;
+      }
     }
 
     // The panels this window displays: activity on a lane it does not show answers None, which is what closes or keeps shut a

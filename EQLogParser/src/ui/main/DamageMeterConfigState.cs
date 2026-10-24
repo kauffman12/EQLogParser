@@ -36,6 +36,13 @@ namespace EQLogParser
         : MeterPanels.Both;
     }
 
+    // Auto-open and the live window must accept the same modes; receipt runs refuse values outside this domain.
+    internal static int LoadResetMode()
+    {
+      var mode = ConfigUtil.GetSettingAsInteger("OverlayDamageMode");
+      return mode is >= 0 and <= MeterReceiptRuns.MaxMode ? mode : 0;
+    }
+
     // Every guard lives here and nowhere else: out-of-range or unreadable values fall back to what a meter without that key would
     // draw, which is what both the setup window and a freshly opened overlay show.
     internal static DamageMeterConfigState Load()
@@ -54,11 +61,7 @@ namespace EQLogParser
         s.MaxRows = r;
       }
 
-      var mode = ConfigUtil.GetSettingAsInteger("OverlayDamageMode");
-      if (mode >= 0 && mode <= 100)
-      {
-        s.DamageResetMode = mode;
-      }
+      s.DamageResetMode = LoadResetMode();
 
       var crit = ConfigUtil.GetSettingAsInteger("OverlayEnableCritRate");
       s.CritRateDisplay = crit is >= 0 and <= 3 ? crit : 0;

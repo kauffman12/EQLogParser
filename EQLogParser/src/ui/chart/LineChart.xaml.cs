@@ -280,11 +280,6 @@ namespace EQLogParser
       FinishSeries(playerData, _playerValues);
       FinishSeries(petData, _petValues);
 
-      ChartAggregation.PopulateRolling(_raidValues);
-      ChartAggregation.PopulateRolling(_playerPetValues);
-      ChartAggregation.PopulateRolling(_playerValues);
-      ChartAggregation.PopulateRolling(_petValues);
-
       Plot(selected);
     }
 

@@ -244,7 +244,6 @@ public sealed class ChartSeriesBuilderTest
         seconds += times[i] - times[i - 1] > 30 ? 1 : times[i] - times[i - 1];
       var total = prefix.Sum(r => r.Amount);
       var hits = prefix.Count(r => r.Hit);
-      var rolling = prefix.Where(r => r.Time >= point.CurrentTime - 5).Sum(r => r.Amount);
       Assert.AreEqual(total, point.Total);
       Assert.AreEqual(total, point.FightTotal);
       Assert.AreEqual((uint)hits, point.FightHits);
@@ -254,8 +253,8 @@ public sealed class ChartSeriesBuilderTest
       Assert.AreEqual(hits == 0 ? 0 : Math.Round(100d * prefix.Count(r => r.Twin) / hits, 2), point.TcRate);
       Assert.AreEqual(bucket.Sum(r => r.Amount), point.TotalPerSecond);
       Assert.AreEqual((long)bucket.Count, point.AttemptsPerSecond);
-      Assert.AreEqual(rolling, point.RollingTotal);
-      Assert.AreEqual(rolling / 6, point.RollingDps);
+      Assert.AreEqual(0L, point.RollingTotal, "merging must not precompute presentation-only rolling fields");
+      Assert.AreEqual(0L, point.RollingDps);
     }
   }
 
