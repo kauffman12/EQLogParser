@@ -1,4 +1,4 @@
-# 2.4.7 | 10/23/26
+# 2.4.7 | 10/24/26
 1. New **Damage Meter** settings. Show or hide the DPS or Tanking tabs. Added SDPS and RDPS (rolling DPS) columns which can be shown/hidden.
 2. Added **Busy** column to summary tables to represent active player time.
 3. Fixes for the rolling DPS Line Chart.
