@@ -28,6 +28,7 @@ namespace EQLogParser
             int maxDegreeOfParallelism = 2, CancellationToken token = default)
     {
       var nextToPost = 0;
+      var publicationFailed = false;
       var indexedResults = new SearchResult<T>[_filePaths.Count];
       var resultsStatus = new bool[_filePaths.Count];
       var semaphore = new SemaphoreSlim(maxDegreeOfParallelism);
@@ -55,13 +56,24 @@ namespace EQLogParser
 
           lock (_postLock)
           {
+            if (publicationFailed) return;
             resultsStatus[index] = true;
             while (nextToPost < resultsStatus.Length && resultsStatus[nextToPost])
             {
               var result = indexedResults[nextToPost];
               if (result?.Lines != null && result.Lines.Count > 0)
               {
-                ResultsReady?.Invoke(result.Lines, result.Positions);
+                try
+                {
+                  ResultsReady?.Invoke(result.Lines, result.Positions);
+                }
+                catch
+                {
+                  // A subscriber may have inserted rows before failing. Never replay that batch or publish another after it.
+                  publicationFailed = true;
+                  throw;
+                }
+
                 indexedResults[nextToPost] = null;
               }
 
@@ -81,47 +93,41 @@ namespace EQLogParser
       var lastPercent = 0;
       var results = new SearchResult<T>();
 
-      try
+      // Missing files keep their quiet skip; read, processor and progress faults must reach the caller after all workers drain.
+      if (!string.IsNullOrEmpty(filePath) && File.Exists(filePath))
       {
-        if (!string.IsNullOrEmpty(filePath) && File.Exists(filePath))
+        using var f = File.OpenRead(filePath);
+        using var reader = FileUtil.GetStreamReader(f);
+
+        string line = null;
+        while ((line = await reader.ReadLineAsync(CancellationToken.None)) != null)
         {
-          using var f = File.OpenRead(filePath);
-          using var reader = FileUtil.GetStreamReader(f);
-
-          string line = null;
-          while ((line = await reader.ReadLineAsync(CancellationToken.None)) != null)
+          if (token.IsCancellationRequested)
           {
-            if (token.IsCancellationRequested)
-            {
-              break;
-            }
+            break;
+          }
 
-            var percent = Math.Min(Convert.ToInt32((double)f.Position / f.Length * 100), 100);
-            if (percent > 0 && percent % 5 == 0 && percent != lastPercent)
-            {
-              UpdateProgress(5);
-              lastPercent = percent;
-            }
+          var percent = Math.Min(Convert.ToInt32((double)f.Position / f.Length * 100), 100);
+          if (percent > 0 && percent % 5 == 0 && percent != lastPercent)
+          {
+            UpdateProgress(5);
+            lastPercent = percent;
+          }
 
-            if (TimeRange.TimeCheck(line, start, maxRange, out var exceeds))
+          if (TimeRange.TimeCheck(line, start, maxRange, out var exceeds))
+          {
+            if (processor(line) is { } found)
             {
-              if (processor(line) is { } found)
-              {
-                results.Positions.Add(new LinePosition { File = filePath, Position = f.Position });
-                results.Lines.Add(found);
-              }
-            }
-
-            if (exceeds)
-            {
-              break;
+              results.Positions.Add(new LinePosition { File = filePath, Position = f.Position });
+              results.Lines.Add(found);
             }
           }
+
+          if (exceeds)
+          {
+            break;
+          }
         }
-      }
-      catch (Exception)
-      {
-        // ignore
       }
 
       var remaining = Math.Max(0, 100 - lastPercent);

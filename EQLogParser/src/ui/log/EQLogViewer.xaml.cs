@@ -159,7 +159,10 @@ namespace EQLogParser
       }
     }
 
-    private async Task UpdateUiAsync()
+    // Rebuild the position map and displayed text in one dispatcher turn; do not yield between them.
+    // Scroll waits belong in UpdateUiAsync, outside publication.
+    // docs/DesignNotes.md → "Log search retains a paired prefix, not the first deliveries".
+    private void RepaintResults()
     {
       if (_ready && logBox?.Lines != null)
       {
@@ -176,16 +179,15 @@ namespace EQLogParser
         var types = (lineTypes.ItemsSource as List<ComboBoxItemDetails>)!.Where(item => item.IsChecked).ToDictionary(item => item.Value, _ => true);
         UiElementUtil.SetComboBoxTitle(lineTypes, Resource.LINE_TYPES_SELECTED);
 
-        if (logFilter.FontStyle == FontStyles.Italic && types.Count == _lineTypeCount)
+        // Placeholder or empty text disables filtering. The search boxes' two-character minimum does not apply here.
+        var filterText = logFilter.FontStyle == FontStyles.Italic ? string.Empty : logFilter.Text;
+        var hasTextFilter = filterText.Length > 0;
+        if (!hasTextFilter && types.Count == _lineTypeCount)
         {
           logBox.Text = string.Join(Environment.NewLine, _unFiltered);
           UpdateStatusCount(_unFiltered.Count);
-          if (logBox.Lines.Count > 0)
-          {
-            await GoToLine(logBox, logBox.Lines.Count);
-          }
         }
-        else if ((logFilter.FontStyle != FontStyles.Italic && logFilter.Text.Length > 1) || types.Count < _lineTypeCount)
+        else
         {
           var filtered = new List<string>();
           var lineCount = -1;
@@ -260,9 +262,9 @@ namespace EQLogParser
               }
             }
 
-            if (logFilter.FontStyle == FontStyles.Italic ||
-              (logFilterModifier.SelectedIndex == 0 && line.IndexOf(logFilter.Text, StringComparison.OrdinalIgnoreCase) > -1) ||
-               (logFilterModifier.SelectedIndex == 1 && line.IndexOf(logFilter.Text, StringComparison.OrdinalIgnoreCase) < 0))
+            if (!hasTextFilter ||
+              (logFilterModifier.SelectedIndex == 0 && line.IndexOf(filterText, StringComparison.OrdinalIgnoreCase) > -1) ||
+               (logFilterModifier.SelectedIndex == 1 && line.IndexOf(filterText, StringComparison.OrdinalIgnoreCase) < 0))
             {
               filtered.Add(line);
               _filteredLinePositions.Add(_linePositions[lineCount]);
@@ -271,15 +273,22 @@ namespace EQLogParser
 
           logBox.Text = string.Join(Environment.NewLine, filtered);
           UpdateStatusCount(filtered.Count);
-          if (logBox.Lines is { Count: > 0 })
-          {
-            await GoToLine(logBox, logBox.Lines.Count);
-          }
         }
 
         logFilter.IsEnabled = true;
         lineTypes.IsEnabled = true;
         logFilterModifier.IsEnabled = true;
+      }
+    }
+
+    // Gestures and search completion follow the tail; deliveries repaint without paying the layout delay.
+    private async Task UpdateUiAsync()
+    {
+      RepaintResults();
+
+      if (_ready && logBox?.Lines is { Count: > 0 })
+      {
+        await GoToLine(logBox, logBox.Lines.Count);
       }
     }
 
@@ -532,35 +541,28 @@ namespace EQLogParser
           {
             Dispatcher.Invoke(() =>
             {
-              progress.Content = $"Searching ({percent}% Complete)";
+              if (!_disposedValue) progress.Content = $"Searching ({percent}% Complete)";
             }, DispatcherPriority.Background);
           };
 
           searcher.ResultsReady += (lines, positions) =>
           {
-            _unFiltered.InsertRange(0, lines);
-            _linePositions.InsertRange(0, positions);
-
-            if (_unFiltered.Count >= MaxRows)
+            // Finish paired publication on the dispatcher before another batch arrives, without waiting for a scroll.
+            // docs/DesignNotes.md → "Log search retains a paired prefix, not the first deliveries".
+            Dispatcher.Invoke(() =>
             {
-              // Keep the current list prefix and its paired positions, including after a late post-cancel delivery.
-              // Batches prepend above, so archive results can displace previously retained current-log results.
-              SearchResultCap.TrimToCap(_unFiltered, _linePositions, MaxRows);
-              _cts?.Cancel();
-            }
+              if (_disposedValue) return;
+              _unFiltered.InsertRange(0, lines);
+              _linePositions.InsertRange(0, positions);
 
-            Dispatcher.InvokeAsync(async () =>
-            {
-              if (_unFiltered.Count > 0)
+              if (_unFiltered.Count >= MaxRows)
               {
-                logBox.Text = string.Join(Environment.NewLine, _unFiltered);
-
-                UpdateStatusCount(_unFiltered.Count);
-                if (logBox.Lines is { Count: > 0 })
-                {
-                  await GoToLine(logBox, logBox.Lines.Count);
-                }
+                // Late archive batches may displace the current prefix even after cancellation.
+                SearchResultCap.TrimToCap(_unFiltered, _linePositions, MaxRows);
+                _cts?.Cancel();
               }
+
+              RepaintResults();
             }, DispatcherPriority.Background);
           };
 
@@ -608,9 +610,13 @@ namespace EQLogParser
               return null;
             }, 2, _cts.Token);
           }
-          catch (Exception)
+          catch (OperationCanceledException)
           {
-            // user cancel or error
+            // Stop clicked, or the cap stopped the read. The drain below still runs; a cancellation is not a fault.
+          }
+          catch (Exception ex)
+          {
+            Log.Warn("log search stopped early", ex);
           }
           finally
           {
@@ -618,10 +624,13 @@ namespace EQLogParser
             _cts = null;
           }
 
-          // reset filter
-          tabControl.SelectedItem = resultsTab;
-          UiElementUtil.RestoreWatermark(logFilter, Resource.LOG_FILTER_TEXT);
-          selectedContext.IsEnabled = true;
+          if (!_disposedValue)
+          {
+            // reset filter
+            tabControl.SelectedItem = resultsTab;
+            UiElementUtil.RestoreWatermark(logFilter, Resource.LOG_FILTER_TEXT);
+            selectedContext.IsEnabled = true;
+          }
         }
         else
         {
@@ -629,19 +638,19 @@ namespace EQLogParser
           await Task.Delay(500);
         }
 
+        _running = false;
+        _complete = true;
+        if (_disposedValue) return;
         searchIcon.IsEnabled = true;
         searchIcon.Icon = EFontAwesomeIcon.Solid_Search;
         searchIcon.Foreground = Application.Current.Resources["EQGoodForegroundBrush"] as SolidColorBrush;
         progress.Visibility = Visibility.Hidden;
-        _running = false;
-        _complete = true;
         await UpdateUiAsync();
       }
       else
       {
+        // Cancellation still owes the current search's drain; a replacement must not share its accumulators.
         searchIcon.IsEnabled = false;
-        _running = false;
-        _complete = true;
         _cts?.Cancel();
       }
     }
@@ -869,6 +878,7 @@ namespace EQLogParser
     {
       if (!_disposedValue)
       {
+        _cts?.Cancel();
         _config = null;
         ThemeConfig.EventsThemeChanged -= EventsThemeChanged;
         TriggerStateDB.Instance.TriggerConfigUpdateEvent -= TriggerConfigUpdateEvent;

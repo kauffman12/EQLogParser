@@ -786,6 +786,30 @@ both kinds of trigger overlay (DesignNotes → "Trigger overlay positions are si
   geometry without enabling Save/Cancel on an otherwise clean pane. If other edits were already pending, those buttons
   must stay enabled and the pending values must survive.
 
+## Log search publication and census close checks on Windows
+
+These require the app's realized editor and dispatcher. Headless cap tests pin retention and pairing, not control rendering.
+
+- [ ] **Cap and archives:** search a log with more than 500,000 matches, including archives. Results remain nonempty and
+  unfiltered status says Maximum Reached. Late archive batches may displace current-log results: retention is the current
+  prepended prefix, not a promise to keep the newest matches or the first deliveries. Final results never exceed the cap.
+- [ ] **Filtering during delivery:** change text and line-type filters while multiple files finish. Each repaint honors
+  the active filter; empty text or the placeholder shows the type-filtered results, including in Exclude mode. A single typed
+  character applies the selected Include/Exclude filter normally. After completion, filter again and use Show Context For Row on several
+  matches: each context names the displayed line's file. Repeat after the cap is reached and after cancellation. Check for no
+  collection-modified or source-index exceptions.
+- [ ] **Delivery repaints without an explicit tail scroll:** check multi-file delivery remains responsive; completion and filter gestures
+  still follow the last displayed line. Record any viewport movement caused by replacing editor text; this does not promise scroll preservation.
+- [ ] **Search faults are reported:** include a corrupt `.gz` archive and verify `eqlogparser.log` carries `log search stopped early` with
+  exception details. The search drains, resets its busy controls, and permits a subsequent valid search. Missing files remain a quiet skip.
+- [ ] **Cancellation drains before replacement:** cancel a multi-file search and immediately try Enter to start another.
+  The original search must finish draining before a replacement begins. Once the search icon resets, search again: no late
+  batch or progress callback from the cancelled search may alter the replacement. Closing the viewer during delivery must
+  cancel without touching disposed editors; reopening can search normally.
+- [ ] **Census close remains nonblocking:** open the Identity Table on a large capture, then switch logs or Clear All during
+  refresh. No old census appears in the replacement capture and close does not wait for the census gate.
+  Run `NameCensusDisposalTest` on Windows; a Linux build does not execute it.
+
 ## Detailed .xlsx export checks on Windows
 
 File ▸ Save ▸ **Selected Fight to E_xcel** writes ECMA-376 SpreadsheetML by hand (`EQLogParser.Core/src/export/`,

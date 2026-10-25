@@ -11,9 +11,9 @@ namespace EQLogParserTest;
  * reachable on a real capture, where one common word matches 814,082 of 3,573,153 lines and an unwatermarked "Any Time"
  * search returns every line in range.
  *
- * What is pinned here is therefore both halves of the promise: the retained set is the FIRST maxRows results (not zero,
- * not the tail), and the two lists stay index-paired because the filter pass reads `_linePositions[lineCount]` beside
- * the line it matched.
+ * The retained set is the first maxRows entries of the CURRENT accumulator, not the first deliveries: prepended archive
+ * batches can displace current-log results. The two lists stay index-paired because the filter pass reads
+ * `_linePositions[lineCount]` beside the line it matched.
  */
 [TestClass]
 public class SearchResultCapTest

@@ -128,6 +128,69 @@ namespace EQLogParser
     }
 
     [TestMethod]
+    public async Task SearchLogs_FailedPublicationIsNeverReplayedAndWorkersDrain()
+    {
+      var files = Enumerable.Range(0, 3).Select(i => WriteFile($"{i}.txt", LogLines(1, $"file{i}"))).ToList();
+      var searcher = new FileSearcher<string>(files);
+      var failure = new InvalidOperationException("publication failed after inserting rows");
+      List<string> inserted = [];
+      var processed = 0;
+      searcher.ResultsReady += (lines, _) =>
+      {
+        inserted.AddRange(lines);
+        throw failure;
+      };
+
+      var caught = await Assert.ThrowsExactlyAsync<InvalidOperationException>(() =>
+        searcher.SearchLogsAsync(0, null, line =>
+        {
+          Interlocked.Increment(ref processed);
+          return line;
+        }, maxDegreeOfParallelism: 1));
+
+      Assert.AreSame(failure, caught);
+      Assert.AreEqual(1, inserted.Count);
+      Assert.AreEqual(3, processed);
+    }
+
+    [TestMethod]
+    public async Task SearchLogs_CorruptArchiveReportsFailureAfterWorkersDrain()
+    {
+      var corrupt = WriteFile("broken.gz", "This is not a gzip stream.");
+      var good = WriteFile("good.txt", LogLines(1, "good"));
+      var searcher = new FileSearcher<string>([corrupt, good]);
+      var processed = 0;
+      var posted = 0;
+      searcher.ResultsReady += (_, _) => posted++;
+
+      await Assert.ThrowsExactlyAsync<InvalidDataException>(() =>
+        searcher.SearchLogsAsync(0, null, line =>
+        {
+          Interlocked.Increment(ref processed);
+          return line;
+        }, maxDegreeOfParallelism: 1));
+
+      Assert.AreEqual(1, processed);
+      Assert.AreEqual(0, posted); // Never skip the failed file to publish a misleading later prefix.
+    }
+
+    [TestMethod]
+    public async Task SearchLogs_ProcessorFailureIsNotReportedAsAnEmptySuccess()
+    {
+      var file = WriteFile("processor.txt", LogLines(1, "bad"));
+      var searcher = new FileSearcher<string>([file]);
+      var failure = new InvalidOperationException("processor failed");
+      var posted = false;
+      searcher.ResultsReady += (_, _) => posted = true;
+
+      var caught = await Assert.ThrowsExactlyAsync<InvalidOperationException>(() =>
+        searcher.SearchLogsAsync(0, null, _ => throw failure));
+
+      Assert.AreSame(failure, caught);
+      Assert.IsFalse(posted);
+    }
+
+    [TestMethod]
     public async Task SearchLogs_NoMatches_CompletesWithoutPosting()
     {
       // 40 lines so every 5% boundary lands on a line end and progress reaches 100

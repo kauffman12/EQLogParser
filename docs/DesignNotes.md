@@ -17966,7 +17966,23 @@ realized-grid checklist item; a Linux build is not their result.
 batch can displace previously retained current-log results, even after cancellation. This preserves the existing prepend/prefix policy;
 it is not a promise to retain the first results delivered or the newest matches by log time. `SearchResultCapTest` pins the surviving
 lines, source files and offsets through multiple late prepends, as well as cap boundaries. The former clear-then-enumerate cap erased
-all matches; trimming must never return to that shape. Producer-side whole-file buffering and UI publication costs are separate work.
+all matches; trimming must never return to that shape.
+
+The dispatcher owns the accumulators, filtering and displayed projection. `ResultsReady` uses blocking `Dispatcher.Invoke` to finish
+prepend, paired trimming and `RepaintResults` before the next publication. The position map and displayed text are rebuilt without yielding
+between them. `UpdateUiAsync` adds the delayed tail scroll for gestures and search completion; deliveries do not pay that delay. Replacing
+editor text may still move its viewport: omitting an explicit scroll is not a viewport-preservation contract.
+
+Placeholder or empty filter text disables text filtering; a single character filters normally. The two-character minimum belongs to the
+search boxes only. Cancellation keeps the search busy until all workers drain, preventing a replacement from sharing accumulators or a
+cancellation source with old deliveries. Closing cancels production; publication and progress callbacks decline after disposal.
+
+A subscriber may mutate its destination before throwing. `FileSearcher` therefore latches publication failure under `_postLock`: it never
+retries that batch or publishes another afterward. Read and processor faults propagate rather than returning a successful partial file;
+ordered publication cannot advance past that failed file. Workers drain before the caller observes the fault and warns
+`log search stopped early` with the exception. Missing files retain their existing quiet skip. `FileSearcherTest` pins no replay after a
+subscriber fault, worker drain, corrupt-archive and processor failure propagation, and missing-file behavior.
+Producer-side whole-file buffering and large-document repaint costs are unchanged. Real-control checks live in `docs/ReleaseChecklist.md`.
 
 ## A chat range is whole days, and an untouched end dial rides the clock
 
