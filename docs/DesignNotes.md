@@ -18411,6 +18411,11 @@ is taken. Later capture growth, class edits or capture replacement cannot alter 
 `FightProjection.SideAt`: charm puts an NPC on the player side but flips a Player/Pet/Mercenary onto the enemy side during
 that interval. The export must not treat every charm as friendly ownership.
 
+Callers that supply no frozen evidence use one published `Evidence` span and bound their copy by that span's own length, never by a
+second live `EvidenceCount`. Supplied evidence, including an empty array, stays authoritative and ignores the fallback limit.
+`CaptureExportShapeTest` pins prefix limits, supplied-snapshot precedence and appends during writing; the app supplies its frozen rows
+from `PrepareExport`, so the fallback is not its live-export path.
+
 Saved ownership fallbacks reject `Labels.IsUnassignedOwner`, not just the current display word: persisted pairs can carry
 `Unknown Pet Owner` as well as `No Owner`, in either case. Neither marker may populate Owner/Player or create a phantom
 actor on Players. `CaptureExportShapeTest.SavedNoOwnerMarkersNeverBecomeExportActors` checks all four spellings through

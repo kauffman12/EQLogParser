@@ -595,6 +595,50 @@ public sealed class CaptureExportShapeTest : IDisposable
   }
 
   [TestMethod]
+  [DataRow(0, 0)]
+  [DataRow(1, 1)]
+  [DataRow(2, 1)]
+  [DataRow(3, 2)]
+  [DataRow(4, 3)]
+  [DataRow(int.MaxValue, 3)]
+  public void FallbackEvidenceRespectsThePublishedPrefixLimit(int limit, int expectedCasts)
+  {
+    var path = Target("evidence-prefix.xlsx");
+    var summary = CaptureExport.Write(path, _facts, _heals, new CaptureExport.Options
+    {
+      EvidenceLimit = limit,
+      Lens = Lens
+    });
+
+    Assert.AreEqual((long)expectedCasts, summary.CastRows);
+    using var zip = ZipFile.OpenRead(path);
+    Assert.AreEqual(expectedCasts, Rows(zip, "Spells cast").Count - 1);
+  }
+
+  [TestMethod]
+  [DataRow(false)]
+  [DataRow(true)]
+  public void SuppliedEvidenceWinsOverTheLiveStoreAndFallbackLimit(bool empty)
+  {
+    var frozen = _facts.Evidence[..(empty ? 0 : 1)].ToArray();
+    _facts.AddEvidence(new EvidenceFact(90, T0 + 2, _facts.InternName("Kizant"),
+      EvidenceFact.EvCast, _facts.InternAux("Late cast")));
+    var path = Target("frozen-evidence.xlsx");
+    var summary = CaptureExport.Write(path, _facts, _heals, new CaptureExport.Options
+    {
+      EvidenceRows = frozen,
+      EvidenceLimit = 0,
+      Lens = Lens
+    });
+
+    Assert.AreEqual(empty ? 0L : 1L, summary.CastRows);
+    using var zip = ZipFile.OpenRead(path);
+    var casts = Rows(zip, "Spells cast").Skip(1).Select(CellTexts).ToArray();
+    Assert.AreEqual(empty ? 0 : 1, casts.Length);
+    if (!empty) Assert.AreEqual("Heal VIII", casts[0][8]);
+  }
+
+  [TestMethod]
   public void AppendsDuringTheFirstPassCannotChangeAnyLaterSheetOrTotal()
   {
     var appended = false;

@@ -64,13 +64,19 @@ internal static class CaptureExport
 
   internal static Summary Write(string path, DamageFactTable facts, HealFactTable heals, Options options)
   {
+    var evidenceRows = options.EvidenceRows;
+    if (evidenceRows is null)
+    {
+      var evidence = facts.Evidence;
+      evidenceRows = evidence[..Math.Min(options.EvidenceLimit, evidence.Length)].ToArray();
+    }
+
     // Every pass reads the same prefixes, including when a live capture appends inside the selected last second.
     options = options with
     {
       ToOrdinal = Math.Min(options.ToOrdinal, facts.FactCount),
       HealLimit = Math.Min(options.HealLimit, heals?.HealCount ?? 0),
-      EvidenceRows = options.EvidenceRows
-        ?? facts.Evidence[..Math.Min(options.EvidenceLimit, facts.EvidenceCount)].ToArray(),
+      EvidenceRows = evidenceRows,
       Windows = options.Windows is null ? null : Merge(options.Windows),
       DamageOrdinals = CopyOrdinals(options.DamageOrdinals)
     };
