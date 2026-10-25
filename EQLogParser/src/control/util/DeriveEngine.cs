@@ -100,6 +100,11 @@ namespace EQLogParser
     // Published under the capture gate so meter headers cannot be read between a projection and its publication.
     private DerivedSnapshot _meterSnapshot;
 
+    // Builds serialize the mutable carry; disposal detaches it without waiting for the worker holding the gate.
+    // docs/DesignNotes.md → "A census carries what it already counted; only the healer crowd asks a stamp".
+    private CensusCarry? _nameCensusCarry = new();
+    private readonly object _nameCensusGate = new();
+
     // Reused row objects for THIS capture only (DerivedRowCarry); nulled on Dispose so a closed log's fights are not kept alive by them.
     private DerivedRowCarry _rowCarry = new();
 
@@ -220,7 +225,7 @@ namespace EQLogParser
     // is otherwise invisible in a log that carries a million fact lines - either MainWindow's session-started
     // line or this one is missing, and that says which half of the chain died.
     private bool _firstDeriveLogged;
-    private bool _disposed;
+    private volatile bool _disposed;
 
     /*
      * captureBytes: how many bytes of log this session expects to append facts from, used ONLY to size the row
@@ -355,33 +360,30 @@ namespace EQLogParser
     public ClassificationReport? BuildNameCensus()
     {
       if (_disposed) return null;
-      using var damageRead = _facts.RetainDecoded();
-      using var healRead = _heals.RetainDecoded();
-
       try
       {
-        /*
-         * An operator's verdict written since that pass is NOT replayed into the carried instance (mutating a published timeline would
-         * move its state stamp and buy a full rebuild, with readers in the middle). It does not need to be: ClassificationReport asks the
-         * override store itself, and an override outranks a rule verdict there - so the window is current on the operator's own writes
-         * and stale only on what no one but the rules could know, which is exactly one expensive cadence (docs/DesignNotes.md →
-         * "A derive pass continues where the last one stopped").
-         */
-        var timeline = _carriedTimeline;
-        if (timeline is null)
+        lock (_nameCensusGate)
         {
-          /*
-           * No expensive pass has finished yet - the window was opened in the moment between the log opening and its first full
-           * derive. Run the rule book here rather than show a list of Unknowns; this is the one case where that work is not a duplicate.
-           */
-          timeline = new EntityTimeline();
-          RegistrySeed.Apply(timeline, _facts, _capture.FirstEventTime, _capture.LastEventTime);
-          ClassificationRules.Apply(_facts, timeline, _heals);
-          IdentityOverrideStore.Instance.Apply(timeline);
-        }
+          // A queued request must re-check ownership after waiting; never turn a detached carry into a fresh build.
+          if (_disposed || Volatile.Read(ref _nameCensusCarry) is not { } carry) return null;
+          using var damageRead = _facts.RetainDecoded();
+          using var healRead = _heals.RetainDecoded();
 
-        return ClassificationReport.Build(timeline, _facts, _heals, IdentityOverrideStore.Instance,
-                                         PlayerRegistry.Instance, IdentityPriorStore.Instance);
+          // The published timeline stays frozen; ClassificationReport reads newer operator writes from the live store.
+          var timeline = _carriedTimeline;
+          if (timeline is null)
+          {
+            // Before the first full pass, classify once here rather than display an unclassified seed.
+            timeline = new EntityTimeline();
+            RegistrySeed.Apply(timeline, _facts, _capture.FirstEventTime, _capture.LastEventTime);
+            ClassificationRules.Apply(_facts, timeline, _heals);
+            IdentityOverrideStore.Instance.Apply(timeline);
+          }
+
+          var report = ClassificationReport.Build(timeline, _facts, _heals, IdentityOverrideStore.Instance,
+                                                  PlayerRegistry.Instance, IdentityPriorStore.Instance, carry);
+          return _disposed ? null : report;
+        }
       }
       catch (Exception ex)
       {
@@ -710,6 +712,8 @@ namespace EQLogParser
     {
       if (_disposed) return;
       _disposed = true;
+      // A running worker owns its local carry until it finishes; closing the log must not wait for its census.
+      Interlocked.Exchange(ref _nameCensusCarry, null);
       _quietTimer.Stop();
       _capture.Stop();
 

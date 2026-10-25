@@ -617,8 +617,16 @@ namespace EQLogParser
     public ReadOnlySpan<IdentityEvent> IdentityEvents => _identities.AsSpan(0, _identityCount);
     public ReadOnlySpan<TauntFact> Taunts => _taunts.AsSpan(0, _tauntCount);
 
-    public int EvidenceCount => _evidenceCount;
-    public ReadOnlySpan<EvidenceFact> Evidence => _evidences.AsSpan(0, _evidenceCount);
+    public int EvidenceCount => Volatile.Read(ref _evidenceCount);
+    public ReadOnlySpan<EvidenceFact> Evidence
+    {
+      get
+      {
+        // Acquire the completed prefix BEFORE its backing: a concurrent grow must not pair a new bound with an old array.
+        var count = EvidenceCount;
+        return Volatile.Read(ref _evidences).AsSpan(0, count);
+      }
+    }
 
     /*
      * One entity, one id, whatever spelling arrived — and one DISPLAY form derived from the name itself.
@@ -721,8 +729,11 @@ namespace EQLogParser
 
     public void AddEvidence(EvidenceFact evidence)
     {
-      if (_evidenceCount == _evidences.Length) Array.Resize(ref _evidences, _evidences.Length * 2);
-      _evidences[_evidenceCount++] = evidence;
+      var ordinal = _evidenceCount;
+      if (ordinal == _evidences.Length) Array.Resize(ref _evidences, _evidences.Length * 2);
+      _evidences[ordinal] = evidence;
+      // A census watermark may pass this row as soon as the count is visible; publish only after every field is written.
+      Volatile.Write(ref _evidenceCount, ordinal + 1);
     }
 
     /*

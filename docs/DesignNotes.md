@@ -5559,9 +5559,11 @@ Four decisions, each because the obvious version was wrong:
   the override; there is simply nothing to apply it to. (Both stores that could put such a name on the list are read
   back into the row set: `identity-overrides.txt` and the roster. A rejection used to be a third source.)
 - **Totals are summed from the facts, never taken from a summary board.** The census answers "how busy was this name"
-  for the whole capture; a board number carries the current fight selection into an audit list. Cost: one pass per
-  stream writing into arrays indexed by name id (no hashing, no per-fact allocation), then ~6k timeless
-  `IdentityWithSource` calls — tens of milliseconds on a 7.98 M fact capture, and nothing re-parsed or re-derived.
+  for the whole capture; a board number carries the current fight selection into an audit list. Cost: one fold per stream
+  writing into arrays indexed by name id (no hashing, no per-fact allocation), then a timeless `IdentityWithSource` per row,
+  and nothing re-parsed or re-derived. The fold carries what it already counted so a window open all night does not walk the
+  whole capture per ask — see "A census carries what it already counted; only the healer crowd asks a stamp" for the measured
+  cost both ways.
 - **A disagreement is `players.txt` says raider AND the classifier says NPC. Absence is not a contradiction.** Unknown
   means "this capture has no opinion", which is what every guild alt who sat this log out reads, alongside the 12–42 %
   of facts whose names legacy never verified; flagging absence would paint the list red and bury the real rows. Pets and
@@ -5646,6 +5648,63 @@ Manual and the report's fallback had nothing to do with it. The helper takes `ap
 is built
 explicitly. A fixture that reconstructs the production precondition without being asked to cannot fail when the precondition
 is missing.
+
+### A census carries what it already counted; only the healer crowd asks a stamp
+
+**The cost this removes.** With the Identity Table visible the pane asks for a census on every derive pass (floor 2 s), and each ask
+walked BOTH fact streams from ordinal nought. Measured on the app's own call path — each census taking its own decode holds, which is what
+`ClassificationReport.Build` does — that was 286-329 ms per ask on `eqlog_Incogitable_xegony.txt` (1,901,078 facts / 432,224 heals / 2,785
+names) and 966-1,046 ms on `eqlog_Kizant_xegony-09-03-26.txt` (4,832,106 facts / 3,286,553 heals / 412 names). The walk itself is not the
+cost: with every chunk already decoded the same two passes take 14 ms and 32 ms. What the window paid was the cold store — every superseded
+chunk decoded again, then released, so the next ask decoded it once more (Kizant: 708 ms cold against 210 ms warm). The earlier "tens of
+milliseconds" note in this section described a warm, small capture and did not survive measurement on a night-sized one.
+
+**`CensusCarry` (Core, `src/parsing/derive/`) holds the fold**: per-name damage, healing and line counts, plus the shape of the damage as
+attacker/defender pair counts, plus the two hover-text proof tables. A census folds only the rows after its watermarks; new rows are hot, so
+the same asks cost 3-6 ms (Incogitable) and 0-1 ms (Kizant), including a census after 20,000 fresh facts. Exact agreement with the
+whole-capture walk on every row of both captures was checked while measuring, and `CensusCarryTest` pins the same equality headlessly by
+comparing a carried census against a carry-free one phase by phase.
+
+**Verdicts may not be folded into the totals, so they are not.** `Damaged Players / Pets / Mobs` bucket every fact by the defender's FINAL
+verdict, and verdicts move mid-capture. The fold therefore stores the verdict-FREE shape (how often each attacker hit each defender; self-hits
+separate, because a reflect is not "damaging players") and re-buckets that shape under the current verdicts on every census — 6,870 pairs on
+Kizant against 4,832,106 facts, 39,785 on Incogitable. That is why no stamp gates the numbers and why an operator write needs no special path:
+re-bucketing IS the re-read. A carry that froze the four side buckets instead would have been faster and wrong.
+
+**The one stamped thing is `CasterBreadth`**, because its entries depend on the healer's kind AND strength at each heal line's own second.
+It compares BOTH `StateStamp` and `AnswerStamp`: Player/Medium → Player/Strong can leave the board answer unchanged while crossing the crowd's
+threshold; conversely, the same claims inserted in opposite order have the same commutative state stamp but can resolve equal-strength/time
+ties differently. Neither stamp alone suffices. Replacement timelines may continue the fold only when both stamps agree. The state stamp also
+rebuilds for provenance-only changes; that conservative cost is accepted. Board invalidation is unchanged. The crowd uses the same captured
+`healLimit` as healing totals, so rows appended during a census cannot appear in one but not the other.
+An invalidated crowd pays the earlier isolated walk measurements again (~55 ms on Incogitable, ~342 ms on Kizant); unchanged-state idle asks
+keep the carried path. `CensusCarryTest` pins strength changes and replacement timelines with opposite tie winners in both directions.
+
+**Ownership and failure.** One carry belongs to one `DeriveEngine`, hence one capture; a different table instance (a Clear All re-open), fewer
+rows than were folded, or a pool that went backwards under an id already counted resets it. `_scanIncomplete` exists because a watermark changes
+what a skipped row means: the boundary belt may still drop a name id outside the census's snapshot (the next pass counts it), but "the next pass"
+is only true if the carry starts over instead of walking past it. Build serializes on `_nameCensusGate` because the carry is mutable state;
+the fact bound still precedes the pool count, pinned by `CensusGrowingPoolTest`. If `Fold` throws, it resets before rethrowing: arrays may already
+contain a prefix whose watermark never advanced, and retrying onto that prefix doubles its totals. `CensusCarryRecoveryTest` injects a chunk-read
+failure in each stream, restores the store, and checks retries count every row once; it also pins skipped-name recovery without duplicating the
+accepted prefix. No per-slice checkpoint is needed because a failed fold retains nothing.
+
+**Evidence publishes its row before its count.** `DamageFactTable.AddEvidence` releases the completed prefix only after writing the row;
+`Evidence` acquires the count before reading the backing array. A count-first write could let the carry consume a default row and permanently
+skip the real cast. The fold takes its bound from that returned span, not a second live length. `EvidencePublicationTest` checks completed rows
+through concurrent append/growth/compaction and retained-span stability; `CensusCastCarryTest` pins new cast evidence between asks and first
+proof per rule gate. All reader snapshots remain allocation-free.
+
+**Disposal detaches; it never waits for a census.** `Dispose` atomically drops the engine's carry reference without acquiring `_nameCensusGate`
+or resetting state a worker could still be using. An already-running build owns its local carry until it returns, then discards its report if
+the engine was disposed. A queued request checks disposal and the carry again after acquiring the gate, before decode holds, fallback classification
+or folding; it must not turn a null carry into a new throwaway build. The detached carry dies with its worker, not with the UI close handler.
+`NameCensusDisposalTest` (Windows) pins close returning while the build gate remains held and a pre-close queued request returning no census.
+
+**A carry is not a board cache.** It holds no rows and answers no question; it is the same arithmetic with the already-counted part subtracted,
+and any caller that passes no carry (every test, everything outside the engine) folds [0, limit) into an instance nobody keeps — one code path,
+one set of semantics.
+
 
 
 ## The sighting ledger: what this server's older logs concluded
@@ -17898,6 +17957,15 @@ correction lives; the mechanism text above says it straight). Windows execution 
 and the new
 realized-grid checklist item; a Linux build is not their result.
 
+
+## Log search retains a paired prefix, not the first deliveries
+
+`SearchResultCap.TrimToCap` keeps the first `maxRows` entries of the CURRENT accumulator and trims line/position lists together.
+`EQLogViewer` prepends each file batch; `FileSearcher` posts in file-list order, current log before archives. Therefore a late archive
+batch can displace previously retained current-log results, even after cancellation. This preserves the existing prepend/prefix policy;
+it is not a promise to retain the first results delivered or the newest matches by log time. `SearchResultCapTest` pins the surviving
+lines, source files and offsets through multiple late prepends, as well as cap boundaries. The former clear-then-enumerate cap erased
+all matches; trimming must never return to that shape. Producer-side whole-file buffering and UI publication costs are separate work.
 
 ## A chat range is whole days, and an untouched end dial rides the clock
 

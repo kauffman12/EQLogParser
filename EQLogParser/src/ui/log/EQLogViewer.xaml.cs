@@ -543,10 +543,9 @@ namespace EQLogParser
 
             if (_unFiltered.Count >= MaxRows)
             {
-              _unFiltered.Clear();
-              _unFiltered.AddRange(_unFiltered.Take(MaxRows));
-              _linePositions.Clear();
-              _linePositions.AddRange(_linePositions.Take(MaxRows));
+              // Keep the current list prefix and its paired positions, including after a late post-cancel delivery.
+              // Batches prepend above, so archive results can displace previously retained current-log results.
+              SearchResultCap.TrimToCap(_unFiltered, _linePositions, MaxRows);
               _cts?.Cancel();
             }
 
