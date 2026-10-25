@@ -1090,7 +1090,7 @@ namespace EQLogParser
      * Pet/Player/Merc = our side of the board (the projection's own reading; a Friendly interval is a
      * separate question and callers that care ask AffiliationAt themselves).
      *
-     * Internal because the name census counts R15's crowd with THESE gates (ClassificationReport.HealCasterProof):
+     * Internal because the name census counts R15's crowd with THESE gates (CensusCarry.CasterBreadth):
      * a tooltip that counted mob healers alongside raid ones would report a bigger crowd than the rule required.
      */
     internal static bool IsRaidSideKind(IdentityKind kind)

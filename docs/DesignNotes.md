@@ -5660,8 +5660,9 @@ chunk decoded again, then released, so the next ask decoded it once more (Kizant
 milliseconds" note in this section described a warm, small capture and did not survive measurement on a night-sized one.
 
 **`CensusCarry` (Core, `src/parsing/derive/`) holds the fold**: per-name damage, healing and line counts, plus the shape of the damage as
-attacker/defender pair counts, plus the two hover-text proof tables. A census folds only the rows after its watermarks; new rows are hot, so
-the same asks cost 3-6 ms (Incogitable) and 0-1 ms (Kizant), including a census after 20,000 fresh facts. Exact agreement with the
+attacker/defender pair counts, plus the two hover-text proof tables. A census folds only the rows after its watermarks; new rows are hot. Once the carry and its lazy proofs are populated,
+steady-state asks cost 3-6 ms (Incogitable) and 0-1 ms (Kizant), including a census after 20,000 fresh facts. The first ask and
+an invalidated healer crowd can still pay a whole-stream walk; these are not cold-start timings. Exact agreement with the
 whole-capture walk on every row of both captures was checked while measuring, and `CensusCarryTest` pins the same equality headlessly by
 comparing a carried census against a carry-free one phase by phase.
 

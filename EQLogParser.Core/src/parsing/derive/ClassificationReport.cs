@@ -227,10 +227,9 @@ namespace EQLogParser
      * with no heals, before the first derive (no timeline), or with the stores unloaded — an empty column beats
      * refusing to open.
      *
-     * COST, since this runs on whatever thread a window opens on: one pass over each fact stream writing into arrays
-     * indexed by name id (no hashing, no allocation per fact) and one dictionary walk per name. On a 7.98 million
-     * fact capture the passes are tens of milliseconds; the per-name work is ~6,000 IdentityWithSource calls against
-     * lists of one or two claims. Nothing here re-parses or re-derives.
+     * A supplied carry folds only new ordinals and re-buckets hit pairs under current verdicts; without one, the fold starts at zero.
+     * Nothing here re-parses or re-derives. Costs and invalidation: docs/DesignNotes.md →
+     * "A census carries what it already counted; only the healer crowd asks a stamp".
      */
     /*
      * `priors` is optional and only ever FILLS A GAP: a name this capture's rules could not place may borrow what an
