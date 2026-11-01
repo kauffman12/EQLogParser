@@ -12,20 +12,22 @@ namespace EQLogParser
   {
     private const int MaxContentLength = 2000;
 
-    internal string Json => JsonSerializer.Serialize(new
-    {
-      content = Content,
-      embeds = new[]
+    internal string Json => Aggregated || Total > 1
+      ? JsonSerializer.Serialize(new
       {
-        new
+        content = Content,
+        embeds = new[]
         {
-          footer = new
+          new
           {
-            text = $"EQLP1|{BatchId}|{Part}|{Total}|{(Aggregated ? "A" : "N")}|{Digest}"
+            footer = new
+            {
+              text = $"EQLP1|{BatchId}|{Part}|{Total}|{(Aggregated ? "A" : "N")}|{Digest}"
+            }
           }
         }
-      }
-    });
+      })
+      : JsonSerializer.Serialize(new { content = Content });
 
     internal static List<WebhookMessage> Create(string content, bool aggregated, string batchId = null)
     {

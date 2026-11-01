@@ -175,15 +175,18 @@ PropertyGrid/Discord presentation or the processor Stop integration.
 - [ ] **Sibling edits survive:** change only the dropdown, leaving the URL untouched. Save enables;
   Save/reselect/restart retain the choice, while Cancel restores it. Repeat with a nondefault saved
   trigger and after switching characters. Copy/export/import retain aggregation.
-- [ ] **Discord presentation:** ordinary and aggregated sends always show the visible EQLP1 embed footer,
-  both on single messages and on every part of a split batch. Check desktop and mobile rendering. A message
-  burst packs newline-separated lines; long text and Unicode remain intact.
+- [ ] **Discord presentation:** with Aggregation Off, messages fitting one post have no footer, including
+  exactly 2,000 code units; a larger message has the EQLP1 footer on every part. With aggregation enabled,
+  even one short match has a footer, as does every part of a split batch. Check desktop and mobile rendering.
+  A message burst packs newline-separated lines; long text and Unicode remain intact.
 - [ ] **Receiving bot contract:** EQLP1's ID and checksum are separate case-sensitive unpadded Base64url
   fields (22 and 43 characters, no `=`). Verify the bot decodes the ID to 16 canonical/network-order UUID
   bytes and the checksum to 32 SHA-256 bytes, groups interleaved parts by batch ID, orders them by part
-  number and verifies the reconstructed UTF-8 text's checksum. Simulate an accepted request whose
-  response is lost: the retry has identical metadata and the bot must not perform duplicate actions.
-  The footer supplies identity; neither Discord nor EQLogParser performs receiver-side deduplication.
+  number and verifies the reconstructed UTF-8 text's checksum. For a footer-bearing message, simulate an
+  accepted request whose response is lost: the retry has identical metadata and the bot must not perform
+  duplicate actions. Short, nonaggregated posts still retry but have no footer: bots cannot reliably
+  distinguish these retries from legitimate identical matches. Enable aggregation if the bot needs IDs
+  on short messages. Neither Discord nor EQLogParser performs receiver-side deduplication.
 - [ ] **Shared title status:** Cache Update Pending and webhook status occupy the original cache-status
   position in the title row. Neither appearing nor disappearing moves Manage Triggers / Edit Properties.
   With webhook work pending, start a cache update: the cache message takes priority, then the current

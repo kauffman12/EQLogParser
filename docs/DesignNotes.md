@@ -15,7 +15,9 @@ so changing the selection does not resize the field. `AggregateWebhooks` preserv
 stored values: 0 = off, 1–6 = 5–30 seconds; 7 adds 1 second without reinterpreting existing triggers.
 The dropdown binds values, not indices, and notifies the pane's saved-model comparison
 (`WebhookOptionsUnsaved`), not a synthetic URL edit: loading stored choices is not unsaved work
-(`WebhookEditorTest`). Footer metadata is unconditional; it has no setting or editor control.
+(`WebhookEditorTest`). Footer metadata has no separate setting or editor control: it is included when
+aggregation is enabled OR the message needs multiple posts, and omitted only for a single post with
+aggregation off.
 
 `WebhookDispatchQueue` collects independently per processor/character, trigger, URL and interval.
 The first match starts a fixed window; later matches append newline-separated text without
@@ -25,8 +27,12 @@ HTTP request or error. Queue counts describe logical messages/windows, not their
 (`WebhookDispatchQueueTest`).
 
 `WebhookMessage` packs at most 2,000 UTF-16 code units per request, preferring line boundaries and never
-cutting a surrogate pair or CRLF. Oversized lines still split. Every post carries a VISIBLE Discord embed
-footer, including single-part and nonaggregated messages (`WebhookMessageTest`):
+cutting a surrogate pair or CRLF. Oversized lines still split. Aggregation-enabled messages carry a
+VISIBLE Discord embed footer even if only one match was collected. Split messages carry it on EVERY
+part regardless of aggregation. With aggregation off, a message fitting one post (including exactly
+2,000 code units) sends content only, with no embeds property.
+`FooterIsIncludedOnlyForAggregationOrMultipleParts` pins both settings across the size boundary.
+When present, the footer is:
 `EQLP1|<22-character batch ID>|<part>|<total>|<A or N>|<43-character SHA-256>`.
 The two binary fields are encoded separately as **unpadded Base64url (RFC 4648 §5)**, case-sensitive,
 with no `=` padding: the ID encodes the UUID's 16 bytes in canonical/network order
@@ -42,7 +48,10 @@ concatenate without separators and verify the digest. This does not establish ch
 IDs and payloads stay stable across retries (`RetriesPreservePayloadsAndBatchIdentityForEveryPart`), while
 separate matches receive distinct IDs even if their text is identical. An uncertain delivery can be
 repeated: Discord does not deduplicate it, and the footer only ENABLES a receiving bot to deduplicate by
-batch ID and part number. The wire fixtures pin message content and encoded metadata
+batch ID and part number. Retries still apply to footer-free posts, but receivers cannot reliably
+distinguish those retries from legitimate identical matches. This is an accepted presentation trade-off;
+a bot requiring IDs on small messages must enable aggregation (the 1-second option is sufficient).
+The wire fixtures pin message content and encoded metadata
 (`DiscordWebhookSenderTest`).
 
 Sends share an asynchronous per-webhook endpoint gate, including query variants, not one global queue.

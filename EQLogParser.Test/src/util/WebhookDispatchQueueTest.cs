@@ -51,7 +51,7 @@ namespace EQLogParserTest
     }
 
     [TestMethod]
-    public async Task NoAggregationGivesEveryIdenticalLineItsOwnIdentity()
+    public async Task NoAggregationSendsIdenticalShortMatchesSeparatelyWithoutFooters()
     {
       var payloads = new List<string>();
       using var handler = new WebhookTestHandler(async (request, token) =>
@@ -66,12 +66,12 @@ namespace EQLogParserTest
       await queue.EnqueueAsync(source, Url, "Item | Item", 0);
       await queue.EnqueueAsync(source, Url, "Item | Item", 0);
       Assert.HasCount(2, payloads);
-      Assert.AreNotEqual(payloads[0], payloads[1]);
+      Assert.AreEqual(payloads[0], payloads[1]);
       foreach (var json in payloads)
       {
         using var payload = JsonDocument.Parse(json);
         Assert.AreEqual("Item | Item", payload.RootElement.GetProperty("content").GetString());
-        Assert.IsTrue(payload.RootElement.TryGetProperty("embeds", out _));
+        Assert.IsFalse(payload.RootElement.TryGetProperty("embeds", out _));
       }
       Assert.AreEqual(0, queue.Status.Pending);
     }
@@ -102,9 +102,12 @@ namespace EQLogParserTest
     }
 
     [TestMethod]
-    [DataRow(100, 1)]
-    [DataRow(2500, 2)]
-    public async Task RetriesPreservePayloadsAndBatchIdentityForEveryPart(int length, int partCount)
+    [DataRow(100, 1, 0)]
+    [DataRow(2000, 1, 0)]
+    [DataRow(2500, 2, 0)]
+    [DataRow(100, 1, 1)]
+    [DataRow(2500, 2, 1)]
+    public async Task RetriesPreservePayloadsAndBatchIdentityForEveryPart(int length, int partCount, int seconds)
     {
       var clock = new WebhookTestClock();
       var payloads = new ConcurrentQueue<string>();
@@ -117,11 +120,18 @@ namespace EQLogParserTest
           ? HttpStatusCode.TooManyRequests : HttpStatusCode.OK, "{\"retry_after\":5}");
       });
       using var client = new HttpClient(handler);
-      var queue = new WebhookDispatchQueue(new DiscordWebhookSender(client, clock.Now, clock.DelayAsync));
+      var queue = new WebhookDispatchQueue(new DiscordWebhookSender(client, clock.Now, clock.DelayAsync),
+        clock.Now, clock.DelayAsync);
       var source = queue.UpdateSources("owner", "char", [("loot", "Loot")])["loot"];
-      var sending = queue.EnqueueAsync(source, Url, new string('x', length), 0);
+      var sending = queue.EnqueueAsync(source, Url, new string('x', length), seconds);
       try
       {
+        if (seconds > 0)
+        {
+          await WebhookTestClock.UntilAsync(() => queue.Status.Aggregating == 1 && clock.Waiting == 1);
+          await clock.AdvanceAsync(seconds);
+        }
+
         for (var part = 0; part < partCount; part++)
         {
           var expectedAttempts = (part * 2) + 1;
@@ -132,12 +142,21 @@ namespace EQLogParserTest
         var sent = payloads.ToArray();
         Assert.HasCount(partCount * 2, sent);
         var batchIds = new HashSet<string>();
+        var hasFooter = seconds > 0 || partCount > 1;
         var digest = SHA256.HashData(Encoding.UTF8.GetBytes(new string('x', length)));
         for (var part = 0; part < partCount; part++)
         {
           Assert.AreEqual(sent[part * 2], sent[(part * 2) + 1]);
           using var payload = JsonDocument.Parse(sent[part * 2]);
-          var footer = payload.RootElement.GetProperty("embeds")[0].GetProperty("footer").GetProperty("text").GetString();
+          Assert.AreEqual(hasFooter, payload.RootElement.TryGetProperty("embeds", out var embeds));
+          if (!hasFooter)
+          {
+            Assert.AreEqual(1, payload.RootElement.EnumerateObject().Count());
+            Assert.AreEqual(new string('x', length), payload.RootElement.GetProperty("content").GetString());
+            continue;
+          }
+
+          var footer = embeds[0].GetProperty("footer").GetProperty("text").GetString();
           Assert.IsNotNull(footer);
           var fields = footer.Split('|');
           Assert.HasCount(6, fields);
@@ -147,11 +166,11 @@ namespace EQLogParserTest
           batchIds.Add(fields[1]);
           Assert.AreEqual((part + 1).ToString(), fields[2]);
           Assert.AreEqual(partCount.ToString(), fields[3]);
-          Assert.AreEqual("N", fields[4]);
+          Assert.AreEqual(seconds > 0 ? "A" : "N", fields[4]);
           Assert.HasCount(43, fields[5]);
           CollectionAssert.AreEqual(digest, Base64Url.DecodeFromChars(fields[5]));
         }
-        Assert.HasCount(1, batchIds);
+        Assert.HasCount(hasFooter ? 1 : 0, batchIds);
       }
       finally
       {

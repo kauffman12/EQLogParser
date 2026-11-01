@@ -82,7 +82,7 @@ Triggers can send messages to a Discord channel using a webhook. Use this for tr
 3. Enter your message in **Text to Send (Discord)** and paste the URL into **Webhook (Discord)**. The message can use captured values and trigger variables, such as `{s1}` and `{logtime}`.
 4. Choose an aggregation delay from the dropdown beside the URL, then **Save**. Enable the trigger and its monitored character as usual.
 
-A blank webhook URL sends nothing. Every Discord post includes a visible metadata footer; there is no footer or retry checkbox.
+A blank webhook URL sends nothing. A visible metadata footer is included when aggregation is enabled or a message needs multiple posts. Single-post messages with **Aggregation Off** have no footer. There is no separate footer or retry checkbox.
 
 ## Choosing an Aggregation Delay
 
@@ -108,7 +108,7 @@ Discord receives those lines together when they fit in one post. **Repeated text
 
 Messages longer than Discord's 2,000-character content limit are split into multiple posts, with whole lines kept together when possible. A single oversized line is split too. This also applies with **Aggregation Off** selected.
 
-Leave **Aggregation Off** selected if you do not want to combine messages. Automatic retries and the metadata footer still apply.
+Leave **Aggregation Off** selected if you do not want to combine messages. Automatic retries still apply, but the metadata footer is included only if the message needs multiple posts. With aggregation enabled, even a single match gets a footer.
 
 ## Pending Messages, Retries and Stop
 
@@ -120,7 +120,7 @@ Leave **Aggregation Off** selected if you do not want to combine messages. Autom
 
 ## Metadata Footer and Receiving Bots
 
-Each post has a footer in this format, including ordinary single-post messages:
+When aggregation is enabled, every post includes a footer. Messages split across multiple posts also include it on every part, even with **Aggregation Off**. A single-post message with aggregation off has no footer. When present, the format is:
 
 ```text
 EQLP1|<batch ID>|<part>|<total>|<A or N>|<SHA-256>
@@ -132,7 +132,38 @@ For people reading the channel, this is delivery metadata and can be ignored. Fo
 - **Part** and **total** are one-based part numbering and the number of parts in that batch. Group by batch ID, order by part number, then concatenate the content **without adding separators**. Posts from different batches may interleave; batch arrival order is not guaranteed.
 - **A** means aggregation was enabled; **N** means one original trigger firing. The 43-character **SHA-256** field encodes the full checksum of the complete message text encoded as UTF-8, before it was split.
 - **Encoding:** the batch ID and checksum each use **unpadded Base64url (RFC 4648 §5)** over their raw bytes, not their hexadecimal text. Preserve case and decode the fields separately: the ID yields 16 UUID bytes in canonical/network order, and the checksum yields 32 SHA-256 bytes. Verify the decoded checksum against the SHA-256 of the reconstructed UTF-8 text. The prefix remains **EQLP1**.
-- **Retries reuse the same batch ID, part number and payload.** If Discord saves a post but its confirmation is lost, retrying can create another Discord post. A receiving bot should ignore a batch ID/part number it has already processed, rather than performing the same action twice. EQLogParser and Discord do not perform that receiver-side deduplication.
+- **Retries reuse the same payload and, when present, the same batch ID and part number.** If Discord saves a post but its confirmation is lost, retrying can create another Discord post. A receiving bot should ignore a batch ID/part number it has already processed, rather than performing the same action twice. EQLogParser and Discord do not perform that receiver-side deduplication.
+- **Footer-free posts still retry.** Without an identifier, a bot cannot reliably distinguish a retry from a legitimate identical message. If your bot needs identifiers on short messages too, enable **Aggregate: 1s** or a longer delay.
+
+### Parsing the Footer
+
+Read the footer from the Discord message's `embeds[].footer.text`, not from its message content. Missing footer metadata is normal for a single-post message with aggregation off.
+
+1. Split the footer on the literal `|` character. Require exactly six fields: `EQLP1`, batch ID, part number, total parts, `A` or `N`, checksum. Ignore footers with an unknown prefix rather than guessing their format.
+2. Require the batch ID to be 22 characters and the checksum to be 43 characters, using only `A–Z`, `a–z`, `0–9`, `-` and `_`. They are **case-sensitive unpadded Base64url**, not hexadecimal or ordinary padded Base64. Decode each separately and require exactly 16 ID bytes and 32 checksum bytes. Do not lowercase either field.
+3. Parse part and total as positive decimal integers and require `1 <= part <= total`. Require the mode to be exactly `A` or `N`.
+4. Group messages by batch ID. All parts of a batch must agree on total, mode and checksum. Use **batch ID + part number** to recognize duplicate retries; identical message content or checksums alone do not identify duplicates. Reject conflicting content or metadata for an already-seen part.
+5. Once every part from 1 through total has arrived, concatenate their Discord message **content** in part-number order. Do not trim text, normalize line endings or add separators. Compute SHA-256 over the reconstructed text's UTF-8 bytes and compare all 32 bytes with the decoded checksum before processing the batch.
+
+Parts may arrive interleaved with other batches. Process a completed batch only once; retain processed identities across bot restarts if deduplication must survive restarts. A batch ID may be kept as an opaque string—decoding it into a UUID is optional for grouping and deduplication.
+
+For example, the complete message content `abc`, with batch UUID `d084f17f52af4f9f8a3535726caf4b01` and aggregation enabled, produces:
+
+```text
+EQLP1|0ITxf1KvT5-KNTVybK9LAQ|1|1|A|ungWv48Bz-pBQUDeXa4iI7ADYaOWF3qctBD_YfIAFa0
+```
+
+Decoding the ID yields the UUID's 16 bytes in canonical/network order. Decoding the checksum yields the SHA-256 bytes represented in hexadecimal as `ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad`.
+
+Standard-library decoding requires no third-party package:
+
+| Language | Decode an unpadded Base64url field named `value` |
+|---|---|
+| C# (.NET 9+) | `System.Buffers.Text.Base64Url.DecodeFromChars(value)` |
+| Python | `base64.urlsafe_b64decode(value + "=" * (-len(value) % 4))` |
+| Node.js | `Buffer.from(value, "base64url")` |
+
+Validate the alphabet and decoded lengths as described above even if your decoder accepts other forms. Python's expression restores the padding required by that decoder; the transmitted fields themselves have no `=` padding. If converting the ID bytes to a UUID in C#, use `new Guid(idBytes, bigEndian: true)` rather than the default mixed-endian constructor.
 
 
 # Trigger Variables

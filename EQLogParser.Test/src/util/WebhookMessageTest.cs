@@ -10,20 +10,41 @@ namespace EQLogParserTest;
 public class WebhookMessageTest
 {
   [TestMethod]
-  [DataRow(false, "N")]
-  [DataRow(true, "A")]
-  public void SinglePartMessagesAlwaysCarryIdentityAndDigest(bool aggregated, string mode)
+  [DataRow(false, 1, 1, false)]
+  [DataRow(false, 1999, 1, false)]
+  [DataRow(false, 2000, 1, false)]
+  [DataRow(false, 2001, 2, true)]
+  [DataRow(false, 6000, 3, true)]
+  [DataRow(true, 1, 1, true)]
+  [DataRow(true, 1999, 1, true)]
+  [DataRow(true, 2000, 1, true)]
+  [DataRow(true, 2001, 2, true)]
+  [DataRow(true, 6000, 3, true)]
+  public void FooterIsIncludedOnlyForAggregationOrMultipleParts(bool aggregated, int length, int partCount,
+    bool hasFooter)
   {
-    const string content = "loot\nmore loot";
+    var content = new string('x', length);
     var digest = Base64Url.EncodeToString(SHA256.HashData(Encoding.UTF8.GetBytes(content)));
     var parts = WebhookMessage.Create(content, aggregated);
-    Assert.HasCount(1, parts);
-    Assert.HasCount(22, parts[0].BatchId);
-    Assert.HasCount(16, Base64Url.DecodeFromChars(parts[0].BatchId));
-    using var payload = JsonDocument.Parse(parts[0].Json);
-    Assert.AreEqual(content, payload.RootElement.GetProperty("content").GetString());
-    Assert.AreEqual($"EQLP1|{parts[0].BatchId}|1|1|{mode}|{digest}",
-      payload.RootElement.GetProperty("embeds")[0].GetProperty("footer").GetProperty("text").GetString());
+    Assert.HasCount(partCount, parts);
+    Assert.AreEqual(content, string.Concat(parts.Select(part => part.Content)));
+    foreach (var part in parts)
+    {
+      using var payload = JsonDocument.Parse(part.Json);
+      Assert.AreEqual(part.Content, payload.RootElement.GetProperty("content").GetString());
+      Assert.AreEqual(hasFooter, payload.RootElement.TryGetProperty("embeds", out var embeds));
+      if (!hasFooter)
+      {
+        Assert.AreEqual(1, payload.RootElement.EnumerateObject().Count());
+        continue;
+      }
+
+      Assert.HasCount(22, part.BatchId);
+      Assert.HasCount(16, Base64Url.DecodeFromChars(part.BatchId));
+      var mode = aggregated ? "A" : "N";
+      Assert.AreEqual($"EQLP1|{part.BatchId}|{part.Part}|{partCount}|{mode}|{digest}",
+        embeds[0].GetProperty("footer").GetProperty("text").GetString());
+    }
   }
 
   [TestMethod]
@@ -50,10 +71,10 @@ public class WebhookMessageTest
   {
     const string uuid = "d084f17f52af4f9f8a3535726caf4b01";
     const string sha256 = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
-    var part = WebhookMessage.Create("abc", false, uuid).Single();
+    var part = WebhookMessage.Create("abc", true, uuid).Single();
     using var payload = JsonDocument.Parse(part.Json);
     var footer = payload.RootElement.GetProperty("embeds")[0].GetProperty("footer").GetProperty("text").GetString();
-    Assert.AreEqual("EQLP1|0ITxf1KvT5-KNTVybK9LAQ|1|1|N|ungWv48Bz-pBQUDeXa4iI7ADYaOWF3qctBD_YfIAFa0", footer);
+    Assert.AreEqual("EQLP1|0ITxf1KvT5-KNTVybK9LAQ|1|1|A|ungWv48Bz-pBQUDeXa4iI7ADYaOWF3qctBD_YfIAFa0", footer);
     Assert.IsNotNull(footer);
     Assert.HasCount(78, footer);
     Assert.HasCount(22, part.BatchId);

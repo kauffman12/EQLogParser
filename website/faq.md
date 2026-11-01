@@ -121,7 +121,7 @@ In **Trigger Manager → Trigger Properties → Data Sharing**, set **Text to Se
 - Messages from the same trigger and monitored character are combined on separate lines. Repeated messages are kept; long batches split into multiple posts.
 - Rate limits and temporary failures retry automatically, even with **Aggregation Off** selected. **Webhooks Pending** shows the backlog; click its info icon for counts and error details. **Stop** discards pending messages without disabling future matches.
 
-Every post includes a metadata footer. If a bot consumes these messages, it should use the footer to reconstruct split batches and ignore duplicate retries. See [Discord Webhooks](documentation.html#discord-webhooks) for setup, delivery behavior and the bot format.
+A metadata footer is included when aggregation is enabled or a message needs multiple posts. Single-post messages with **Aggregation Off** have no footer. If a bot needs identifiers to ignore duplicate retries even for short messages, choose **Aggregate: 1s** or a longer delay. See [Discord Webhooks](documentation.html#discord-webhooks) for setup, delivery behavior and the bot format.
 
 ## Why are my Overlays not showing or they use the wrong colors?
 For timer and text overlays:
