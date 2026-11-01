@@ -169,7 +169,9 @@ PropertyGrid/Discord presentation or the processor Stop integration.
 
 - [ ] **One row, quiet defaults:** create a trigger and open Data Sharing. The webhook URL and aggregation
   dropdown share one row; there is no footer switch or separate aggregation property row. Aggregation
-  defaults to No. Merely selecting a saved trigger must not enable Save.
+  defaults to Aggregation Off; timed choices read Aggregate: 1s through Aggregate: 30s. Switching options
+  must not resize the dropdown or URL field; check with different application font sizes too.
+  Merely selecting a saved trigger must not enable Save.
 - [ ] **Sibling edits survive:** change only the dropdown, leaving the URL untouched. Save enables;
   Save/reselect/restart retain the choice, while Cancel restores it. Repeat with a nondefault saved
   trigger and after switching characters. Copy/export/import retain aggregation.

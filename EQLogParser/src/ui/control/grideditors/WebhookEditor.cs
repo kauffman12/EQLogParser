@@ -132,9 +132,28 @@ namespace EQLogParser
         BorderThickness = new Thickness(0),
         Margin = new Thickness(6, 0, 0, 0),
         VerticalAlignment = VerticalAlignment.Center,
-        ToolTip = "Combine messages for this long after the first match; No sends each match separately"
+        ToolTip = "Combine matches from this trigger for the selected time after the first match; Aggregation Off sends each match separately"
       };
       _aggregation.SelectionChanged += AggregationChanged;
+      // Reserve every label's width plus arrow space, even while a shorter option is selected.
+      foreach (var option in WebhookAggregation.Options)
+      {
+        var sizingLabel = new TextBlock
+        {
+          Text = option.Text,
+          Visibility = Visibility.Hidden,
+          Margin = new Thickness(6, 0, 30, 0)
+        };
+        foreach (var property in new[] { TextBlock.FontFamilyProperty, TextBlock.FontSizeProperty,
+          TextBlock.FontStyleProperty, TextBlock.FontWeightProperty })
+        {
+          BindingOperations.SetBinding(sizingLabel, property, new Binding(property.Name) { Source = _aggregation });
+        }
+
+        Grid.SetColumn(sizingLabel, 2);
+        _grid.Children.Add(sizingLabel);
+      }
+
       Grid.SetColumn(_error, 1);
       Grid.SetColumn(_aggregation, 2);
       _grid.Children.Add(_text);

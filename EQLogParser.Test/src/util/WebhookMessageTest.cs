@@ -69,15 +69,15 @@ public class WebhookMessageTest
   [TestMethod]
   public void ChoicesKeepTheForksStoredValuesAndOfferOneSecondWithoutChangingTheDefault()
   {
-    Assert.AreEqual("No", WebhookAggregation.Options[0].Text);
-    Assert.AreEqual(0, WebhookAggregation.Options[0].Value);
+    CollectionAssert.AreEqual(new[] { 0, 7, 1, 2, 3, 4, 5, 6 },
+      WebhookAggregation.Options.Select(item => item.Value).ToArray());
     Assert.AreEqual(0, WebhookAggregation.SecondsFor(0));
     for (var value = 1; value <= 6; value++)
     {
       Assert.AreEqual(value * 5, WebhookAggregation.SecondsFor(value));
     }
 
-    Assert.AreEqual(1, WebhookAggregation.SecondsFor(WebhookAggregation.Options.Single(item => item.Text == "1s").Value));
+    Assert.AreEqual(1, WebhookAggregation.SecondsFor(7));
     Assert.AreEqual(0, WebhookAggregation.SecondsFor(-1));
     Assert.AreEqual(0, WebhookAggregation.SecondsFor(int.MaxValue));
   }

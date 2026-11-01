@@ -90,11 +90,11 @@ Aggregation combines several firings of the **same trigger for the same monitore
 
 | Choice | What happens | When to use it |
 |---|---|---|
-| **No** (default) | Each firing sends its own message, without an aggregation delay | Ordinary alerts, or a receiving bot that expects separate messages |
-| **1s** | Collect messages for one second after the first firing | Short bursts of loot announcements |
-| **5s, 10s, 15s, 20s, 25s, 30s** | Collect messages for the selected number of seconds | Longer bursts, when waiting a little longer is acceptable |
+| **Aggregation Off** (default) | Each firing sends its own message, without an aggregation delay | Ordinary alerts, or a receiving bot that expects separate messages |
+| **Aggregate: 1s** | Collect messages for one second after the first firing | Short bursts of loot announcements |
+| **Aggregate: 5s** through **Aggregate: 30s** (5-second steps) | Collect messages for the selected number of seconds | Longer bursts, when waiting a little longer is acceptable |
 
-The **first firing starts a fixed window**. Later firings join it without restarting the countdown. For example, with **5s**, messages arriving at seconds 0, 1 and 3 are sent together at about second 5. A later firing starts a new window. Rate limiting or an outage can delay delivery further.
+The **first firing starts a fixed window**. Later firings join it without restarting the countdown. For example, with **Aggregate: 5s**, messages arriving at seconds 0, 1 and 3 are sent together at about second 5. A later firing starts a new window. Rate limiting or an outage can delay delivery further.
 
 If the trigger produces these messages during one window:
 
@@ -106,9 +106,9 @@ Sprig of Bloom
 
 Discord receives those lines together when they fit in one post. **Repeated text is kept**: two identical loot announcements may mean two items, not an accidental duplicate.
 
-Messages longer than Discord's 2,000-character content limit are split into multiple posts, with whole lines kept together when possible. A single oversized line is split too. This also applies when aggregation is **No**.
+Messages longer than Discord's 2,000-character content limit are split into multiple posts, with whole lines kept together when possible. A single oversized line is split too. This also applies with **Aggregation Off** selected.
 
-Leave aggregation at **No** if you do not want to combine messages. Automatic retries and the metadata footer still apply.
+Leave **Aggregation Off** selected if you do not want to combine messages. Automatic retries and the metadata footer still apply.
 
 ## Pending Messages, Retries and Stop
 

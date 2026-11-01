@@ -9,15 +9,17 @@ quietly reversed. Style rules live in [CodingStandards.md](CodingStandards.md); 
 
 Adapted from [Ewiclip's webhook implementation](https://github.com/Ewiclip/EQLogParser/commit/a9740777d6610fb0f892b56d75430d77b843904d).
 The URL and aggregation dropdown belong in ONE Data Sharing row (`WebhookEditor`). Aggregation defaults
-to **No**, including legacy imports, and survives copy/save/share. `AggregateWebhooks` preserves the fork's
-stored values: 0 = No, 1–6 = 5–30 seconds; 7 adds 1 second without reinterpreting existing triggers.
+to **Aggregation Off**, including legacy imports, and survives copy/save/share. Timed choices read
+**Aggregate: 1s** through **Aggregate: 30s**; the editor reserves all labels' widths using its current font
+so changing the selection does not resize the field. `AggregateWebhooks` preserves the fork's
+stored values: 0 = off, 1–6 = 5–30 seconds; 7 adds 1 second without reinterpreting existing triggers.
 The dropdown binds values, not indices, and notifies the pane's saved-model comparison
 (`WebhookOptionsUnsaved`), not a synthetic URL edit: loading stored choices is not unsaved work
 (`WebhookEditorTest`). Footer metadata is unconditional; it has no setting or editor control.
 
 `WebhookDispatchQueue` collects independently per processor/character, trigger, URL and interval.
 The first match starts a fixed window; later matches append newline-separated text without
-extending it. No sends each match separately; duplicates are data, never deduplicated loot. Missing or
+extending it. Aggregation Off sends each match separately; duplicates are data, never deduplicated loot. Missing or
 whitespace-only URLs mean unconfigured: no queue, HTTP request or error. Queue counts describe logical
 messages/windows, not their lines or HTTP parts (`WebhookDispatchQueueTest`).
 
