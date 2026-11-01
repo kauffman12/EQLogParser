@@ -35,7 +35,7 @@
         <Label x:Name="triggerStatus" Padding="0" Visibility="Collapsed" VerticalAlignment="Center" Content="Cache Update Pending..." Style="{DynamicResource EQStatusStyle}" />
         <StackPanel x:Name="webhookStatus" Orientation="Horizontal" Visibility="Collapsed" VerticalAlignment="Center">
           <Label x:Name="webhookStatusText" Style="{DynamicResource EQStatusStyle}" Padding="0" VerticalAlignment="Center" />
-          <Button x:Name="webhookInfo" Margin="6,0,0,0" Padding="2" Cursor="Hand"
+          <Button x:Name="webhookInfo" Margin="6,1,0,0" Padding="2" Cursor="Hand" Focusable="False" IsTabStop="False"
                   Background="Transparent" BorderThickness="0" VerticalAlignment="Center"
                   ToolTip="Show webhook details" AutomationProperties.Name="Show webhook details" Click="WebhookInfoClick">
             <fa:ImageAwesome Icon="Solid_InfoCircle" Height="{DynamicResource EQContentSize}" Width="{DynamicResource EQContentSize}"

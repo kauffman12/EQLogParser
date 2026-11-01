@@ -12983,7 +12983,7 @@
 23436^Incarceration^255^2^0^0^5^0^1^0^8^0^0^0^0^0^0^0^Markus Jaevins shackles your body.^ is shackled by Markus Jaevins.^The shackles fall from you.
 23437^Governance of Steel^255^0^0^0^5^0^1^0^8^0^0^0^0^0^0^0^Markus Jaevins' blade enters your flesh.^ 's flesh is cut by Markus Jaevins' blade.^
 23438^Traitor's Vengeance^255^0^0^0^4^0^1^0^8^0^0^0^0^0^0^0^You are struck with the power of vengeance.^ is struck with the power of vengeance.^
-23439^Deep Immobilization^255^2^0^0^5^0^1^0^8^0^0^0^0^0^0^0^The traitor's power holds you in place.^ is held in place.^
+23439^Deep Immobilization^255^2^0^0^5^0^1^0^8^0^0^0^0^0^0^1^The traitor's power holds you in place.^ is held in place.^
 23440^Diseased Constriction^255^2^0^0^5^0^1^0^5^0^0^0^0^0^0^0^You feel your head being squeezed.^ 's head is being squeezed.^The pressure leaves your head.
 23441^Blood Explosion^255^2^0^0^4^0^1^0^9^0^0^0^0^0^0^0^Your veins burst open.^ 's veins burst open.^Your veins close.
 23442^Zombie Slash^255^0^0^0^5^0^1^0^8^0^0^0^0^0^0^0^You are slashed by a zombie warrior.^ is slashed by a zombie warrior.^
@@ -15492,10 +15492,10 @@
 26076^Lyssa's Lively Crescendo^90^5^1^0^6^128^0^0^0^0^0^0^1^0^1^0^Gruber's song builds in intensity . . .^^
 26077^Lyssa's Lively Crescendo Rk. II^90^5^1^0^6^128^0^0^0^0^0^0^5^0^1^0^Gruber's song builds in intensity . . .^^
 26078^Lyssa's Lively Crescendo Rk. III^90^5^1^0^6^128^0^0^0^0^0^0^10^0^1^0^Gruber's song builds in intensity . . .^^
-26079^Crescendo Effect^254^0^1^0^41^128^-1^0^0^-1^11^0^1^0^1^0^The musical tones surge into an invigorating crescendo.^^
+26079^Lyssa's Crescendo Effect^254^0^1^0^41^128^-1^0^0^-1^11^0^1^0^1^0^The musical tones surge into an invigorating crescendo.^^
 2608^Purifying Chorus^56^4^1^0^40^128^0^0^0^1^4^0^0^0^1^0^You feel an aura of vigorous protection surrounding you.^^The purifying chorus fades.
-26080^Crescendo Effect II^254^0^1^0^41^128^-1^0^0^-1^11^0^5^0^1^0^The musical tones surge into an invigorating crescendo.^^
-26081^Crescendo Effect III^254^0^1^0^41^128^-1^0^0^-1^11^0^10^0^1^0^The musical tones surge into an invigorating crescendo.^^
+26080^Lyssa's Crescendo Effect II^254^0^1^0^41^128^-1^0^0^-1^11^0^5^0^1^0^The musical tones surge into an invigorating crescendo.^^
+26081^Lyssa's Crescendo Effect III^254^0^1^0^41^128^-1^0^0^-1^11^0^10^0^1^0^The musical tones surge into an invigorating crescendo.^^
 26082^Sotor's Chant of Flame^90^2^0^0^5^128^1^0^2^0^0^0^1^0^1^1^Fiery notes sear your flesh.^ is immolated in burning notes.^The fiery notes fade.
 26083^Sotor's Chant of Flame Rk. II^90^2^0^0^5^128^1^0^2^0^0^0^5^0^1^1^Fiery notes sear your flesh.^ is immolated in burning notes.^The fiery notes fade.
 26084^Sotor's Chant of Flame Rk. III^90^2^0^0^5^128^1^0^2^0^0^0^10^0^1^1^Fiery notes sear your flesh.^ is immolated in burning notes.^The fiery notes fade.
@@ -18708,9 +18708,9 @@
 29174^Kolain's Lively Crescendo^95^5^1^0^6^128^0^0^0^0^0^0^1^0^1^0^Kolain's song builds in intensity . . .^^
 29175^Kolain's Lively Crescendo Rk. II^95^5^1^0^6^128^0^0^0^0^0^0^5^0^1^0^Kolain's song builds in intensity . . .^^
 29176^Kolain's Lively Crescendo Rk. III^95^5^1^0^6^128^0^0^0^0^0^0^10^0^1^0^Kolain's song builds in intensity . . .^^
-29177^Crescendo Effect^254^0^1^0^41^128^-1^0^0^-1^11^0^1^0^1^0^The musical tones surge into an invigorating crescendo.^^
-29178^Crescendo Effect II^254^0^1^0^41^128^-1^0^0^-1^11^0^5^0^1^0^The musical tones surge into an invigorating crescendo.^^
-29179^Crescendo Effect III^254^0^1^0^41^128^-1^0^0^-1^11^0^10^0^1^0^The musical tones surge into an invigorating crescendo.^^
+29177^Kolain's Crescendo Effect^254^0^1^0^41^128^-1^0^0^-1^11^0^1^0^1^0^The musical tones surge into an invigorating crescendo.^^
+29178^Kolain's Crescendo Effect II^254^0^1^0^41^128^-1^0^0^-1^11^0^5^0^1^0^The musical tones surge into an invigorating crescendo.^^
+29179^Kolain's Crescendo Effect III^254^0^1^0^41^128^-1^0^0^-1^11^0^10^0^1^0^The musical tones surge into an invigorating crescendo.^^
 2918^Summon Horse^255^7200^1^0^6^0^0^0^0^0^0^0^0^0^0^0^^^
 29180^Daevan's Chant of Flame^95^2^0^0^5^128^1^0^2^0^0^0^1^0^1^1^Fiery notes sear your flesh.^ is immolated in burning notes.^The fiery notes fade.
 29181^Daevan's Chant of Flame Rk. II^95^2^0^0^5^128^1^0^2^0^0^0^5^0^1^1^Fiery notes sear your flesh.^ is immolated in burning notes.^The fiery notes fade.
@@ -23447,7 +23447,7 @@
 34027^Ridicule^98^0^0^0^5^1^0^1^0^0^0^0^1^0^1^1^You are scorned.^ looks very angry.^
 34028^Ridicule Rk. II^98^0^0^0^5^1^0^1^0^0^0^0^5^0^1^1^You are scorned.^ looks very angry.^
 34029^Ridicule Rk. III^98^0^0^0^5^1^0^1^0^0^0^0^10^0^1^1^You are scorned.^ looks very angry.^
-3403^Aura of Pain^63^0^0^0^5^16^1^0^5^0^0^0^0^0^1^1^Pain stabs at your soul.^ is overcome with pain.^The pain departs.
+3403^Aura of Pain^63^0^0^0^5^16^0^0^5^0^0^0^0^0^1^1^Pain stabs at your soul.^ is overcome with pain.^The pain departs.
 34030^Ridicule Recourse^255^0^1^2^6^1^0^0^0^-1^4^0^1^0^1^0^You brace yourself for an attack.^^
 34031^Ridicule Recourse II^255^0^1^2^6^1^0^0^0^-1^4^0^5^0^1^0^You brace yourself for an attack.^^
 34032^Ridicule Recourse III^255^0^1^2^6^1^0^0^0^-1^4^0^10^0^1^0^You brace yourself for an attack.^^
@@ -24689,9 +24689,9 @@
 35221^Motlak's Lively Crescendo^100^5^1^0^6^128^0^0^0^0^0^0^1^0^1^0^Motlak's song builds in intensity . . .^^
 35222^Motlak's Lively Crescendo Rk. II^100^5^1^0^6^128^0^0^0^0^0^0^5^0^1^0^Motlak's song builds in intensity . . .^^
 35223^Motlak's Lively Crescendo Rk. III^100^5^1^0^6^128^0^0^0^0^0^0^10^0^1^0^Motlak's song builds in intensity . . .^^
-35224^Crescendo Effect^254^0^1^0^41^128^-1^0^0^-1^11^0^1^0^1^0^The musical tones surge into an invigorating crescendo.^^
-35225^Crescendo Effect II^254^0^1^0^41^128^-1^0^0^-1^11^0^5^0^1^0^The musical tones surge into an invigorating crescendo.^^
-35226^Crescendo Effect III^254^0^1^0^41^128^-1^0^0^-1^11^0^10^0^1^0^The musical tones surge into an invigorating crescendo.^^
+35224^Motlak's Crescendo Effect^254^0^1^0^41^128^-1^0^0^-1^11^0^1^0^1^0^The musical tones surge into an invigorating crescendo.^^
+35225^Motlak's Crescendo Effect II^254^0^1^0^41^128^-1^0^0^-1^11^0^5^0^1^0^The musical tones surge into an invigorating crescendo.^^
+35226^Motlak's Crescendo Effect III^254^0^1^0^41^128^-1^0^0^-1^11^0^10^0^1^0^The musical tones surge into an invigorating crescendo.^^
 35227^Gosik's Chant of Flame^100^2^0^0^5^128^1^0^2^0^0^0^1^0^1^1^Fiery notes sear your flesh.^ is immolated in burning notes.^The fiery notes fade.
 35228^Gosik's Chant of Flame Rk. II^100^2^0^0^5^128^1^0^2^0^0^0^5^0^1^1^Fiery notes sear your flesh.^ is immolated in burning notes.^The fiery notes fade.
 35229^Gosik's Chant of Flame Rk. III^100^2^0^0^5^128^1^0^2^0^0^0^10^0^1^1^Fiery notes sear your flesh.^ is immolated in burning notes.^The fiery notes fade.
@@ -32946,9 +32946,9 @@
 44061^Silisia's Lively Crescendo^104^5^1^0^6^128^0^0^0^0^0^0^1^0^1^0^Silisia's song builds in intensity . . .^^
 44062^Silisia's Lively Crescendo Rk. II^104^5^1^0^6^128^0^0^0^0^0^0^5^0^1^0^Silisia's song builds in intensity . . .^^
 44063^Silisia's Lively Crescendo Rk. III^104^5^1^0^6^128^0^0^0^0^0^0^10^0^1^0^Silisia's song builds in intensity . . .^^
-44064^Crescendo Effect^254^0^1^0^41^128^-1^0^0^-1^11^0^1^0^1^0^The musical tones surge into an invigorating crescendo.^^
-44065^Crescendo Effect II^254^0^1^0^41^128^-1^0^0^-1^11^0^5^0^1^0^The musical tones surge into an invigorating crescendo.^^
-44066^Crescendo Effect III^254^0^1^0^41^128^-1^0^0^-1^11^0^10^0^1^0^The musical tones surge into an invigorating crescendo.^^
+44064^Silisia's Crescendo Effect^254^0^1^0^41^128^-1^0^0^-1^11^0^1^0^1^0^The musical tones surge into an invigorating crescendo.^^
+44065^Silisia's Crescendo Effect II^254^0^1^0^41^128^-1^0^0^-1^11^0^5^0^1^0^The musical tones surge into an invigorating crescendo.^^
+44066^Silisia's Crescendo Effect III^254^0^1^0^41^128^-1^0^0^-1^11^0^10^0^1^0^The musical tones surge into an invigorating crescendo.^^
 44067^Fjilnauk's Song of Suffering^104^4^1^3^3^128^0^0^0^-1^2^0^1^0^1^1^Your weapons are tinged with the sound of suffering.^'s weapons are tinged with the sound of suffering.^The suffering fades.
 44068^Fjilnauk's Song of Suffering Rk. II^104^4^1^3^3^128^0^0^0^-1^2^0^5^0^1^1^Your weapons are tinged with the sound of suffering.^'s weapons are tinged with the sound of suffering.^The suffering fades.
 44069^Fjilnauk's Song of Suffering Rk. III^104^4^1^3^3^128^0^0^0^-1^2^0^10^0^1^1^Your weapons are tinged with the sound of suffering.^'s weapons are tinged with the sound of suffering.^The suffering fades.
@@ -62353,9 +62353,9 @@
 74121^Storm of Arrows X^127^0^0^0^45^8^0^0^0^0^0^0^1^0^1^1^many arrows pierce your flesh.^ is struck by many arrows.^
 74122^Storm of Arrows X Rk. II^127^0^0^0^45^8^0^0^0^0^0^0^5^0^1^1^many arrows pierce your flesh.^ is struck by many arrows.^
 74123^Storm of Arrows X Rk. III^127^0^0^0^45^8^0^0^0^0^0^0^10^0^1^1^many arrows pierce your flesh.^ is struck by many arrows.^
-74124^Focused Storm of Arrows X^129^0^0^0^5^8^0^1^0^0^0^0^1^0^1^1^You are cut by many blades.^ is cut by many blades.^
-74125^Focused Storm of Arrows X Rk. II^129^0^0^0^5^8^0^1^0^0^0^0^5^0^1^1^You are cut by many blades.^ is cut by many blades.^
-74126^Focused Storm of Arrows X Rk. III^129^0^0^0^5^8^0^1^0^0^0^0^10^0^1^1^You are cut by many blades.^ is cut by many blades.^
+74124^Focused Storm of Blades VII^129^0^0^0^5^8^0^1^0^0^0^0^1^0^1^1^You are cut by many blades.^ is cut by many blades.^
+74125^Focused Storm of Blades VII Rk. II^129^0^0^0^5^8^0^1^0^0^0^0^5^0^1^1^You are cut by many blades.^ is cut by many blades.^
+74126^Focused Storm of Blades VII Rk. III^129^0^0^0^5^8^0^1^0^0^0^0^10^0^1^1^You are cut by many blades.^ is cut by many blades.^
 74127^Diametric Fusillade^126^0^0^0^5^8^0^0^0^0^0^0^0^0^0^0^^^
 74128^Diametric Fusillade Strike 1^250^0^0^0^5^8^0^0^0^0^0^0^1^0^1^1^Twinned arrows pierce your flesh.^ is pierced by twinned arrows.^
 74129^Diametric Fusillade Strike 2^250^0^0^0^5^8^0^0^0^0^0^0^2^0^1^1^Twinned arrows pierce your flesh.^ is pierced by twinned arrows.^
@@ -62377,9 +62377,9 @@
 74143^Grovestalker's Demeanor^130^4000^1^0^6^8^0^0^0^0^0^0^1^0^1^1^You take on a hunter's demeanor.^ takes on a hunter's demeanor.^
 74144^Grovestalker's Demeanor Rk. II^130^4000^1^0^6^8^0^0^0^0^0^0^5^0^1^1^You take on a hunter's demeanor.^ takes on a hunter's demeanor.^
 74145^Grovestalker's Demeanor Rk. III^130^4000^1^0^6^8^0^0^0^0^0^0^10^0^1^1^You take on a hunter's demeanor.^ takes on a hunter's demeanor.^
-74146^Grovestalker's Demeanor Effect^255^60^1^2^6^0^0^0^0^1^0^0^1^0^1^1^You are enthralled by the hunt.^ is enthralled by the hunt.^The thrill fades.
-74147^Grovestalker's Demeanor Effect II^255^60^1^2^6^0^0^0^0^1^0^0^5^0^1^1^You are enthralled by the hunt.^ is enthralled by the hunt.^The thrill fades.
-74148^Grovestalker's Demeanor Effect III^255^60^1^2^6^0^0^0^0^1^0^0^10^0^1^1^You are enthralled by the hunt.^ is enthralled by the hunt.^The thrill fades.
+74146^Grovestalker's Demeanor Effect^255^10^1^0^6^0^0^0^0^1^3^0^1^0^1^1^You are enthralled by the hunt.^ is enthralled by the hunt.^The thrill fades.
+74147^Grovestalker's Demeanor Effect II^255^10^1^0^6^0^0^0^0^1^3^0^5^0^1^1^You are enthralled by the hunt.^ is enthralled by the hunt.^The thrill fades.
+74148^Grovestalker's Demeanor Effect III^255^10^1^0^6^0^0^0^0^1^3^0^10^0^1^1^You are enthralled by the hunt.^ is enthralled by the hunt.^The thrill fades.
 7415^Fire II^254^0^0^0^5^65407^1^0^2^0^0^0^2^0^1^1^Your skin ignites.^ is consumed in flame.^
 7416^Fire III^254^0^0^0^5^65407^1^0^2^0^0^0^3^0^1^1^Your skin ignites.^ is consumed in flame.^
 74161^Insolent Influence VII^127^20^1^48^6^16^0^1^0^0^4^0^1^0^1^1^You raise your chin in impenitence.^ raises their chin in impenitence.^Your impenitence subsides.
@@ -62549,12 +62549,12 @@
 7432^Frost V^254^0^0^0^5^65407^1^0^3^0^0^0^5^0^1^1^Your skin freezes.^'s skin freezes.^
 74320^Fulmination of Broken Bones VI Beza^255^0^0^0^5^128^1^0^1^0^0^0^5^0^1^1^Sticks and stones break your bones.^'s bones are broken by sticks and stones.^
 74321^Fulmination of Broken Bones VI Caza^255^0^0^0^5^128^1^0^1^0^0^0^10^0^1^1^Sticks and stones break your bones.^'s bones are broken by sticks and stones.^
-74322^Troubadour's Demeanor^126^4000^1^0^6^128^0^0^0^0^0^0^1^0^1^1^You take on a restorative demeanor.^ takes on a restorative demeanor.^
-74323^Troubadour's Demeanor Rk. II^126^4000^1^0^6^128^0^0^0^0^0^0^5^0^1^1^You take on a restorative demeanor.^ takes on a restorative demeanor.^
-74324^Troubadour's Demeanor Rk. III^126^4000^1^0^6^128^0^0^0^0^0^0^10^0^1^1^You take on a restorative demeanor.^ takes on a restorative demeanor.^
-74325^Troubadour's Demeanor Effect^255^60^1^2^6^128^0^0^0^1^3^0^1^0^1^1^You are overcome with restorative power.^ is overcome with restorative power.^The restorative power fades.
-74326^Troubadour's Demeanor Effect II^255^60^1^2^6^128^0^0^0^1^3^0^5^0^1^1^You are overcome with restorative power.^ is overcome with restorative power.^The restorative power fades.
-74327^Troubadour's Demeanor Effect III^255^60^1^2^6^128^0^0^0^1^3^0^10^0^1^1^You are overcome with restorative power.^ is overcome with restorative power.^The restorative power fades.
+74322^Troubadour's Demeanor^126^4000^1^0^6^128^0^0^0^0^3^0^1^0^1^1^You take on a restorative demeanor.^ takes on a restorative demeanor.^
+74323^Troubadour's Demeanor Rk. II^126^4000^1^0^6^128^0^0^0^0^3^0^5^0^1^1^You take on a restorative demeanor.^ takes on a restorative demeanor.^
+74324^Troubadour's Demeanor Rk. III^126^4000^1^0^6^128^0^0^0^0^3^0^10^0^1^1^You take on a restorative demeanor.^ takes on a restorative demeanor.^
+74325^Troubadour's Demeanor Effect^255^10^1^0^6^128^0^0^0^1^2^0^1^0^1^1^You are overcome with restorative power.^ is overcome with restorative power.^The restorative power fades.
+74326^Troubadour's Demeanor Effect II^255^10^1^0^6^128^0^0^0^1^2^0^5^0^1^1^You are overcome with restorative power.^ is overcome with restorative power.^The restorative power fades.
+74327^Troubadour's Demeanor Effect III^255^10^1^0^6^128^0^0^0^1^2^0^10^0^1^1^You are overcome with restorative power.^ is overcome with restorative power.^The restorative power fades.
 74328^Troubadour's Demeanor Trigger^255^0^1^0^41^128^-1^0^0^1^11^0^1^0^1^0^Your body is restored.^^
 74329^Troubadour's Demeanor Trigger II^255^0^1^0^41^128^-1^0^0^1^11^0^5^0^1^0^Your body is restored.^^
 7433^Frost VI^254^0^0^0^5^65407^1^0^3^0^0^0^6^0^1^1^Your skin freezes.^'s skin freezes.^
@@ -62822,9 +62822,9 @@
 74607^Apostetrios' Demeanor^129^4000^1^0^6^16384^0^0^0^0^0^0^1^0^1^1^You take on a remorseful demeanor.^ takes on a remorseful demeanor.^
 74608^Apostetrios' Demeanor Rk. II^129^4000^1^0^6^16384^0^0^0^0^0^0^5^0^1^1^You take on a remorseful demeanor.^ takes on a remorseful demeanor.^
 74609^Apostetrios' Demeanor Rk. III^129^4000^1^0^6^16384^0^0^0^0^0^0^10^0^1^1^You take on a remorseful demeanor.^ takes on a remorseful demeanor.^
-74610^Apostetrios' Demeanor Effect^255^60^1^2^6^0^0^0^0^1^1^0^1^0^1^1^You are overcome with remorse for the fallen.^ is overcome with remorse for the fallen.^The remorsefulness fades.
-74611^Apostetrios' Demeanor Effect II^255^60^1^2^6^0^0^0^0^1^1^0^5^0^1^1^You are overcome with remorse for the fallen.^ is overcome with remorse for the fallen.^The remorsefulness fades.
-74612^Apostetrios' Demeanor Effect III^255^60^1^2^6^0^0^0^0^1^1^0^10^0^1^1^You are overcome with remorse for the fallen.^ is overcome with remorse for the fallen.^The remorsefulness fades.
+74610^Apostetrios' Demeanor Effect^255^10^1^0^6^0^0^0^0^1^3^0^1^0^1^1^You are overcome with remorse for the fallen.^ is overcome with remorse for the fallen.^The remorsefulness fades.
+74611^Apostetrios' Demeanor Effect II^255^10^1^0^6^0^0^0^0^1^3^0^5^0^1^1^You are overcome with remorse for the fallen.^ is overcome with remorse for the fallen.^The remorsefulness fades.
+74612^Apostetrios' Demeanor Effect III^255^10^1^0^6^0^0^0^0^1^3^0^10^0^1^1^You are overcome with remorse for the fallen.^ is overcome with remorse for the fallen.^The remorsefulness fades.
 74613^Arcblade VII^129^0^0^0^42^32768^0^1^0^0^0^0^1^0^1^1^A blade slices into your body.^ is sliced by a blade.^
 74614^Arcblade VII Rk. II^129^0^0^0^42^32768^0^1^0^0^0^0^5^0^1^1^A blade slices into your body.^ is sliced by a blade.^
 74615^Arcblade VII Rk. III^129^0^0^0^42^32768^0^1^0^0^0^0^10^0^1^1^A blade slices into your body.^ is sliced by a blade.^
@@ -63068,32 +63068,32 @@
 75^Sicken^4^14^0^0^5^16896^1^0^5^0^0^0^0^0^1^1^You feel feverish.^ sweats and shivers, looking feverish.^Your fever has broken.
 750^Solon's Bewitching Bravura^39^10^0^0^5^128^0^0^1^0^0^0^0^1^0^1^You are captivated by the bewitching tune.^'s eyes glaze over.^You are no longer captivated.
 7500^Frost of the Ancients V^254^10^0^0^5^65407^1^0^3^0^0^0^5^0^1^1^Your body begins to freeze.^'s body begins to freeze.^Your body begins to thaw.
-75000^Discordant Text^255^0^0^0^2^0^1^0^1^0^0^0^0^0^0^0^Discordant energy reverberates through you.^^
-75001^Thousand Slashes^255^0^0^0^2^0^1^0^1^0^0^0^0^0^0^0^Thousands of razor-thin pages draw blood.^^
+75000^Discordant Text^255^0^0^0^2^0^1^0^1^0^0^0^0^0^0^0^Discordant energy reverberates through you.^ is rattled by discordant energy.^
+75001^Thousand Slashes^255^0^0^0^2^0^1^0^1^0^0^0^0^0^0^0^Thousands of razor-thin pages draw blood.^'s body is cut up by thousands of razor-thin pages.^
 75002^Bolstering Writ^255^0^1^0^2^0^0^0^0^0^0^0^0^0^0^0^^^
 75003^Power of the Synarcana^255^0^0^0^4^0^1^0^1^0^0^0^0^0^0^0^^^
 75004^Lethal Lifetap^255^0^0^0^13^0^1^0^1^0^0^0^0^0^1^1^You feel a tugging at your soul.^ staggers.^
-75005^Spreading Evil^255^3^0^0^5^0^1^0^1^0^0^0^0^0^1^0^Evil swarms over you and seethes in the air around you^^
+75005^Spreading Evil^255^3^0^0^5^0^1^0^1^0^0^0^0^0^1^0^Evil swarms over you and seethes in the air around you^ is swarmed by evil.^The evil surrounding you fades.
 75006^Hulking Bodyguard^255^400^1^48^6^4096^0^0^0^0^4^0^0^0^1^1^You call on an earthen bodyguard.^ calls on an earthen bodyguard.^The bodyguard no longer serves you.
 75007^Splart^255^20^0^0^5^1024^-1^0^1^0^0^0^0^0^1^1^Your body begins to splurt.^'s body begins to splurt.^Your body stops splurting.
 75008^Hypnotic Stare^255^9^0^0^45^8192^0^0^1^0^0^0^0^0^1^1^You are caught in the gaze of a hypnotic stare.^ is caught in the gaze of a hypnotic stare.^You wake up.
-75009^Self-Immolation^255^0^0^0^4^2048^1^0^2^0^0^0^0^0^1^1^You have been burnt by a wizard's blast of self-immolation.^ has been burnt by a wizard's blast of self-immolation.^
+75009^Self-Immolation^255^0^0^0^4^2048^1^0^2^0^0^0^0^0^1^1^You have been burnt by a wizard's blast of self-immolation.^ has been burnt by a wizard's blast of self-immolation.^Your burning flesh simmers.
 7501^Frost of the Ancients VI^254^10^0^0^5^65407^1^0^3^0^0^0^6^0^1^1^Your body begins to freeze.^'s body begins to freeze.^Your body begins to thaw.
-75010^Self-Immolation Effect^255^2^0^0^6^2048^1^0^0^0^0^0^0^0^1^1^You have ignited yourself with your self-immolation spell!^ has been ignited by a self-immolation spell.^
+75010^Self-Immolation Effect^255^2^0^0^6^2048^1^0^0^0^0^0^0^0^1^1^You have ignited yourself with your self-immolation spell!^ has been ignited by a self-immolation spell.^The immolation fades.
 75011^Sturdy Stance^255^600^1^0^6^0^0^0^6^0^6^0^0^0^0^1^^'s muscles become more defined and powerful.^
 75012^Wild Arc^255^0^0^0^4^0^1^0^8^0^0^0^0^0^1^1^You are cut by a wildly swinging weapon.^ is cut by a wildly swinging weapon.^
 75013^Minotaur Gore^255^0^0^0^4^0^1^0^1^0^0^0^0^0^1^1^Sharpened horns gore your flesh.^ is gored by sharpened horns.^
 75014^Decapitating Chop^255^0^0^0^5^0^2^0^1^0^0^0^0^0^1^1^You are slain by a mighty cleave.^ is slain by a mighty cleave.^
-75015^Spite of Meldrath^255^5^0^0^5^0^0^0^0^0^0^0^0^0^1^1^You feel Meldrath's hatred course through you.^ shivers as the curse takes hold.^
+75015^Spite of Meldrath^255^5^0^0^5^0^0^0^0^0^0^0^0^0^1^1^You feel Meldrath's hatred course through you.^ shivers as the curse takes hold.^The curse fades away.
 75016^Spite of Meldrath Effect^255^0^0^0^8^0^1^0^1^0^0^0^0^0^1^1^You are caught in an explosion of pure spite.^ is caught in an explosion of pure spite.^
 75017^Tick-Tock Explosion I^255^0^0^0^4^0^1^0^2^0^0^0^0^0^1^1^You are caught in the explosion.^ is caught in the explosion.^
 75018^Tick-Tock Explosion II^255^0^0^0^4^0^1^0^2^0^0^0^0^0^1^1^You are caught in the explosion.^ is caught in the explosion.^
 75019^Tick-Tock Explosion III^255^0^0^0^4^0^1^0^2^0^0^0^0^0^1^1^You are caught in the explosion.^ is caught in the explosion.^
 7502^Frost of the Ancients VII^254^10^0^0^5^65407^1^0^3^0^0^0^7^0^1^1^Your body begins to freeze.^'s body begins to freeze.^Your body begins to thaw.
-75020^Ikaav's Venom^255^20^0^0^4^0^1^0^1^0^0^0^0^0^1^1^Your body is coated with a slimy liquid.^ is covered by Ikaav's Venom.^
+75020^Ikaav's Venom^255^20^0^0^4^0^1^0^1^0^0^0^0^0^1^1^Your body is coated with a slimy liquid.^ is covered by Ikaav's Venom.^The venom runs its course.
 75021^Immobilizing Spikes^255^12^0^0^5^0^1^0^0^0^0^0^0^0^1^1^You are rendered immobile by jutting metal spikes.^ is immobilized by jutting metal spikes.^The spikes recede.
 75022^ShieldSP^255^0^1^0^5^0^-1^0^0^0^0^0^0^0^0^0^^^
-75023^Wave of Rage^255^5^0^0^4^0^1^0^7^0^0^0^0^0^1^1^Your spirit is overcome by a wave of rage.^ succumbs to the temptation of rage.^
+75023^Wave of Rage^255^5^0^0^4^0^1^0^7^0^0^0^0^0^1^1^Your spirit is overcome by a wave of rage.^ succumbs to the temptation of rage.^The rage fades.
 75024^Spirit Cleaver^255^36^0^0^5^0^1^0^7^0^0^0^0^0^1^1^An invisible force of rage splits your soul in two.^'s soul splits in two.^You feel whole again.
 75025^Discord's Rebuke^255^0^0^0^4^0^1^0^6^0^0^0^0^0^1^1^Chaos fills your mind and pains your soul.^ jerks and spasms in pain.^
 75026^Haste of the Tunat`Muram^255^300^0^0^6^0^0^0^0^0^2^0^0^0^0^0^^^
@@ -63101,249 +63101,249 @@
 75028^Gaze of the Tunat`Muram^255^10^0^0^8^0^1^0^7^0^0^0^0^0^1^1^Your head pulses as your mind is assaulted.^ staggers in pain.^You are no longer in the sight of Tunat`Muram.
 75029^Bellow of Tunat`Muram^255^0^0^0^33^0^1^0^6^0^0^0^0^0^1^1^Your eardrums shatter.^'s eardrums shatter.^You can hear again.
 7503^Frost of the Ancients VIII^254^10^0^0^5^65407^1^0^3^0^0^0^8^0^1^1^Your body begins to freeze.^'s body begins to freeze.^Your body begins to thaw.
-75030^Claustro Vitoris^255^0^0^0^5^0^1^0^6^0^0^0^0^0^1^0^You are shocked!^^
-75031^Vita Tardius^255^5^0^0^4^0^1^0^1^0^0^0^0^0^1^0^Your body convulses as electricity runs through you.^^
-75032^Repenta Vitoris^255^3^0^0^5^0^1^0^1^0^0^0^0^0^1^0^A ball of electricity gathers around you.^^
-75033^Vis Percussio^255^8^1^0^6^0^0^0^0^0^2^0^0^0^0^0^^^
-75034^Vita Anuimis^255^8^1^0^6^0^0^0^0^0^2^0^0^0^0^0^^^
-75035^Claustro Vitoris^255^0^0^0^5^0^1^0^6^0^0^0^0^0^1^0^You are shocked!^^
-75036^Claustro Facultis^255^0^0^0^5^0^1^0^1^0^0^0^0^0^1^0^Magic drains painfully from your body.^^
-75037^Ignas Maxio^255^3^0^0^8^0^1^0^2^0^0^0^0^0^1^0^Flames engulf you.^^
-75038^Humas Maxio^255^0^0^0^8^0^1^0^1^0^0^0^0^0^1^0^You are engulfed in grinding earth.^^
-75039^Vita Tardius^255^5^0^0^4^0^1^0^1^0^0^0^0^0^1^0^Your body convulses as electricity runs through you.^^
+75030^Claustro Vitoris^255^0^0^0^5^0^1^0^6^0^0^0^0^0^1^0^You are shocked!^'s core is slammed by a resonating pulse.^
+75031^Vita Tardius^255^5^0^0^4^0^1^0^1^0^0^0^0^0^1^0^Your body convulses as electricity runs through you.^ is hit by a powerful resonation.^
+75032^Repenta Vitoris^255^3^0^0^5^0^1^0^1^0^0^0^0^0^1^1^A ball of electricity gathers around you.^ is shocked.^
+75033^Vis Percussio^255^8^1^0^6^0^0^0^0^0^2^0^0^0^0^1^^ convulses as electricity bounces across their skin.^Your body no longer convulses.
+75034^Vita Anuimis^255^8^1^0^6^0^0^0^0^0^2^0^0^0^0^0^^ starts to be pulled apart by the very earth.^The earth crumbles.
+75035^Claustro Vitoris^255^0^0^0^5^0^1^0^6^0^0^0^0^0^1^1^You are shocked!^ convulses as electricity bounces across their skin.^Your body no longer convulses.
+75036^Claustro Facultis^255^0^0^0^5^0^1^0^1^0^0^0^0^0^1^0^Magic drains painfully from your body.^ is surrounded by a ball of electricity.^The ball of electricity fizzles.
+75037^Ignas Maxio^255^3^0^0^8^0^1^0^2^0^0^0^0^0^1^0^Flames engulf you.^ is engulfed in grinding earth.^
+75038^Humas Maxio^255^0^0^0^8^0^1^0^1^0^0^0^0^0^1^1^You are engulfed in grinding earth.^ is engulfed in flames.^The flames burn out.
+75039^Vita Tardius^255^5^0^0^4^0^1^0^1^0^0^0^0^0^1^0^Your body convulses as electricity runs through you.^'s body is drained of magic.^
 7504^Frost of the Ancients IX^254^10^0^0^5^65407^1^0^3^0^0^0^9^0^1^1^Your body begins to freeze.^'s body begins to freeze.^Your body begins to thaw.
 75040^Gravitas Maxio^255^0^0^0^5^0^1^0^1^0^0^0^0^0^1^0^You feel the very earth pulling you apart.^^
 75041^Curse of the First Creation^255^5^0^0^5^0^0^0^0^0^0^0^0^0^1^1^You are cursed by the touch of The First Creation.^ shivers in anticipation.^You feel the doom of The First Creation.
 75042^Repulsion of The First Creation^255^0^0^0^4^0^1^0^6^0^0^0^0^0^1^1^You are repulsed.^ is repulsed.^
-75043^Lava Elemental Protection^255^0^1^0^6^0^0^0^2^0^0^0^0^0^0^0^^^
-75044^Lava Elemental Protection^255^0^1^0^6^0^0^0^2^0^0^0^0^0^0^0^^^
-75045^Lava Elemental Protection^255^0^1^0^6^0^0^0^2^0^0^0^0^0^0^0^^^
-75046^Lava Elemental Protection^255^0^1^0^6^0^0^0^2^0^0^0^0^0^0^0^^^
-75047^Lava Elemental Protection^255^0^1^0^6^0^0^0^2^0^0^0^0^0^0^0^^^
-75048^Lava Elemental Protection^255^0^1^0^6^0^0^0^2^0^0^0^0^0^0^0^^^
-75049^Lava Elemental Protection^255^0^1^0^6^0^0^0^2^0^0^0^0^0^0^0^^^
+75043^Lava Elemental Protection^255^0^1^0^6^0^0^0^2^0^0^0^0^0^0^1^^ is coated in a protective layer.^The final layer of protection falls away.
+75044^Lava Elemental Protection^255^0^1^0^6^0^0^0^2^0^0^0^0^0^0^1^^ is coated in a protective layer.^A layer of protection falls away.
+75045^Lava Elemental Protection^255^0^1^0^6^0^0^0^2^0^0^0^0^0^0^1^^ is coated in a protective layer.^A layer of protection falls away.
+75046^Lava Elemental Protection^255^0^1^0^6^0^0^0^2^0^0^0^0^0^0^1^^ is coated in a protective layer.^A layer of protection falls away.
+75047^Lava Elemental Protection^255^0^1^0^6^0^0^0^2^0^0^0^0^0^0^1^^ is coated in a protective layer.^A layer of protection falls away.
+75048^Lava Elemental Protection^255^0^1^0^6^0^0^0^2^0^0^0^0^0^0^1^^ is coated in a protective layer.^A layer of protection falls away.
+75049^Lava Elemental Protection^255^0^1^0^6^0^0^0^2^0^0^0^0^0^0^1^^ is coated in a protective layer.^A layer of protection falls away.
 7505^Frost of the Ancients X^254^10^0^0^5^65407^1^0^3^0^0^0^10^0^1^1^Your body begins to freeze.^'s body begins to freeze.^Your body begins to thaw.
-75050^Lava Elemental Protection^255^0^1^0^6^0^0^0^2^0^0^0^0^0^0^0^^^
-75051^Lava Elemental Protection^255^0^1^0^6^0^0^0^2^0^0^0^0^0^0^0^^^
-75052^Lava Elemental Protection^255^0^1^0^6^0^0^0^2^0^0^0^0^0^0^0^^^
+75050^Lava Elemental Protection^255^0^1^0^6^0^0^0^2^0^0^0^0^0^0^1^^ is coated in a protective layer.^A layer of protection falls away.
+75051^Lava Elemental Protection^255^0^1^0^6^0^0^0^2^0^0^0^0^0^0^1^^ is coated in a protective layer.^A layer of protection falls away.
+75052^Lava Elemental Protection^255^0^1^0^6^0^0^0^2^0^0^0^0^0^0^1^^ is coated in a protective layer.^A layer of protection falls away.
 75053^Retribution of The First Creation^255^0^0^0^4^0^1^0^6^0^0^0^0^0^1^1^You are struck by the retribution of The First Creation.^ is struck by the retribution of The First Creation.^
-75054^Meldrath's Malaise^255^3^0^0^4^0^1^0^5^0^0^0^0^0^1^0^You feel despondent.^^You recover from Meldrath's Malaise.
+75054^Meldrath's Malaise^255^3^0^0^4^0^1^0^5^0^0^0^0^0^1^0^You feel despondent.^ looks despondent.^You recover from Meldrath's Malaise.
 75055^Terror of Shadow^255^0^0^0^5^0^0^0^9^0^0^0^0^0^1^1^You hear a word of terror.^ is terrified.^Your terror passes.
 75056^Soul Consumption^255^0^0^0^5^0^1^0^7^0^0^0^0^0^1^1^An invisible force tugs at your soul.^ staggers for a moment.^
 75057^Spear of Discord^255^0^0^0^5^0^1^0^0^0^0^0^0^0^1^1^Your body is pierced by the spear of discord.^ is pierced by the spear of discord.^
-75058^Resonating Beam^255^0^0^0^44^0^1^0^1^0^0^0^0^0^1^0^You are hit by a powerful resonation.^^
+75058^Resonating Beam^255^0^0^0^44^0^1^0^1^0^0^0^0^0^1^1^You are hit by a powerful resonation.^ is shocked.^
 75059^Resonating Pulse^255^0^0^0^4^0^1^0^1^0^0^0^0^0^1^0^A pulse resonates within your very core.^^
 7506^Cure Poison I^254^0^1^0^5^65407^0^0^0^0^0^0^1^0^1^1^Your blood is cleansed of poisons.^'s body is cleansed of poisons.^
 75060^Cyclone Detonation^255^0^0^0^2^0^0^0^1^0^0^0^0^0^0^0^^^
 75061^Stinking Miasma^255^3^0^0^5^0^1^0^4^0^0^0^0^0^1^1^You are engulfed in the miasma.^ is caught in the miasma.^Your lungs clear.
 75062^Summon Bodyguard^255^0^0^0^5^0^0^0^0^0^0^0^1^0^1^0^A hulking bodyguard appears.^^
-75063^Roll the Dice: Befuddle^255^5^0^0^5^0^0^0^1^0^0^0^0^0^0^0^Your mind and muscles feel sluggish and are slow to respond.^^Your body and mind start responding again.
-75064^Roll the Dice: Fear^255^3^0^0^5^0^0^0^1^0^0^0^0^0^1^0^You are overwhelmed with fear.^^You regain control of your senses.
-75065^Roll the Dice: Resource Burn^255^0^0^0^5^0^0^0^1^0^0^0^0^0^1^0^The magic flowing through your body ignites, burning you.^^
-75066^Roll the Dice: Wallop^255^0^0^0^5^0^1^0^1^0^0^0^0^0^1^0^You are slammed by a wave of immense magic pressure.^^
-75067^Heads Up: Fumble^255^0^0^0^2^0^1^0^1^0^0^0^0^0^0^0^The coin's impact showers you with splinters of stone.^^
-75068^Heads Up: Impact^255^0^0^0^2^0^1^0^1^0^0^0^0^0^1^0^The coin crushes you.^^
-75069^Wagered Burst^255^0^0^0^2^0^1^0^1^0^0^0^0^0^1^0^A burst of magic energy batters you.^^
+75063^Roll the Dice: Befuddle^255^5^0^0^5^0^0^0^1^0^0^0^0^0^0^0^Your mind and muscles feel sluggish and are slow to respond.^ looks sluggish and slow.^Your body and mind start responding again.
+75064^Roll the Dice: Fear^255^3^0^0^5^0^0^0^1^0^0^0^0^0^1^1^You are overwhelmed with fear.^ is overwhelmed with fear.^You regain control of your senses.
+75065^Roll the Dice: Resource Burn^255^0^0^0^5^0^0^0^1^0^0^0^0^0^1^1^The magic flowing through your body ignites, burning you.^'s body burns.^
+75066^Roll the Dice: Wallop^255^0^0^0^5^0^1^0^1^0^0^0^0^0^1^1^You are slammed by a wave of immense magic pressure.^ is slammed by a wave of immense magic pressure.^
+75067^Heads Up: Fumble^255^0^0^0^2^0^1^0^1^0^0^0^0^0^0^1^The coin's impact showers you with splinters of stone.^ is showered with splinters of stone.^
+75068^Heads Up: Impact^255^0^0^0^2^0^1^0^1^0^0^0^0^0^1^1^The coin crushes you.^ is crushed by a coin.^
+75069^Wagered Burst^255^0^0^0^2^0^1^0^1^0^0^0^0^0^1^1^A burst of magic energy batters you.^ is battered by a burst of magic.^
 7507^Cure Poison II^254^0^1^0^5^65407^0^0^0^0^0^0^2^0^1^1^Your blood is cleansed of poisons.^'s body is cleansed of poisons.^
 75070^Wager Insurance^255^0^0^0^6^0^0^0^0^0^0^0^0^0^0^0^^^
-75071^Broker's Service: Asset Protection^255^5^1^0^5^0^0^0^0^0^4^0^0^0^0^0^Your spirit and will feel bolstered.^^You no longer feel bolstered.
-75072^Broker's Service: Gains^255^5^1^0^5^0^0^0^0^0^9^0^0^0^0^0^A rush of magic energy fills you.^^
-75073^Stick Around^255^5^1^0^5^0^0^0^1^0^0^0^0^0^0^0^Xev's grip holds you in place.^^Xev releases his hold on you.
-75074^Jackpot^255^3^1^0^2^0^0^0^0^0^11^0^0^0^1^0^Fate can give and take; this time it gave.^^Fate's gift fades.
-75075^Wrong Place Wrong Time^255^0^0^0^8^0^1^0^1^0^0^0^0^0^1^0^You are battered and thrown by the twist of fate.^^
-75076^Wrong Place Really Wrong Time^255^0^0^0^8^0^1^0^1^0^0^0^0^0^1^0^You are battered and thrown by the twist of fate.^^
+75071^Broker's Service: Asset Protection^255^5^1^0^8^0^0^0^0^0^4^0^0^0^0^0^Your spirit and will feel bolstered.^ appears bolstered.^You no longer feel bolstered.
+75072^Broker's Service: Gains^255^5^1^0^5^0^0^0^0^0^9^0^0^0^0^0^A rush of magic energy fills you.^'s body is filled with a rush of magic.^
+75073^Stick Around^255^3^0^0^5^0^0^0^1^0^0^0^0^0^0^1^Xev's grip holds you in place.^ is held in place.^Xev releases his hold on you.
+75074^Jackpot^255^3^1^0^2^0^0^0^0^0^11^0^0^0^1^1^Fate can give and take; this time it gave.^'s fate takes something away.^Fate's gift fades.
+75075^Wrong Place Wrong Time^255^0^0^0^8^0^1^0^1^0^0^0^0^0^1^1^You are battered and thrown by the twist of fate.^ is battered and thrown.^
+75076^Wrong Place Really Wrong Time^255^0^0^0^8^0^1^0^1^0^0^0^0^0^1^1^You are battered and thrown by the twist of fate.^ is battered and thrown.^
 75077^Forced Transfer^255^2^0^0^5^0^0^0^0^0^0^0^0^0^0^0^^^
-75078^Calling Your Debt^255^0^0^0^5^0^2^0^1^0^0^0^0^0^1^0^Your debts have been called due.^^
-75079^Debt Collateral^255^0^0^0^32^0^1^0^1^0^0^0^0^0^0^0^Your ally's debts made manifest detonate and impact you.^^
+75078^Calling Your Debt^255^0^0^0^5^0^2^0^1^0^0^0^0^0^1^1^Your debts have been called due.^'s debts have been called due.^
+75079^Debt Collateral^255^0^0^0^32^0^1^0^1^0^0^0^0^0^0^1^Your ally's debts made manifest detonate and impact you.^'s is battered by the manifestation of their ally's debts.^
 7508^Cure Poison III^254^0^1^0^5^65407^0^0^0^0^0^0^3^0^1^1^Your blood is cleansed of poisons.^'s body is cleansed of poisons.^
 75080^Lucksworn Empower^255^2^0^0^5^0^0^0^0^0^0^0^0^0^0^0^^^
-75081^Strangling Grasp^255^3^0^0^5^0^1^0^1^0^0^0^0^0^1^0^The threads of fate twist around you.^^The threads loosen.
-75082^Crushing Laxity^255^3^0^0^42^0^1^0^9^0^0^0^0^0^0^0^The weight of your misstep crushes you.^^
-75083^Lucky Boon^255^12^1^0^2^0^0^0^1^0^4^0^0^0^1^0^You feel the boon of luck.^^
-75084^Unlucky Hindrance^255^0^0^0^2^0^1^0^1^0^0^0^0^0^1^0^You feel the ire of luck.^^
-75085^Choking Reprisal^255^4^0^0^2^0^1^0^1^0^0^0^0^0^0^0^Your throat grows tight, making it hard to speak and breath.^^You can speak and breath again.
-75086^Unfavorable Probability I^255^50^0^0^2^0^0^0^1^0^0^0^0^0^1^0^You feel your health being drained away.^^You feel whole once again.
-75087^Unfavorable Probability II^255^50^0^0^2^0^0^0^1^0^0^0^0^0^1^0^You feel your health being drained away.^^You feel whole once again.
-75088^Unfavorable Probability III^255^50^0^0^2^0^0^0^1^0^0^0^0^0^1^0^You feel your health being drained away.^^You feel whole once again.
-75089^Unfavorable Probability IV^255^50^0^0^2^0^0^0^1^0^0^0^0^0^1^0^You feel your health being drained away.^^You feel whole once again.
+75081^Strangling Grasp^255^3^0^0^5^0^1^0^1^0^0^0^0^0^1^1^The threads of fate twist around you.^ is twisted up in the threads of fate.^The threads loosen.
+75082^Crushing Laxity^255^3^0^0^42^0^1^0^9^0^0^0^0^0^0^0^The weight of your misstep crushes you.^ is crushed by their misstep.^
+75083^Lucky Boon^255^12^1^0^5^0^0^0^1^0^4^0^0^0^1^1^You feel the boon of luck.^ feels the boon of luck.^
+75084^Unlucky Hindrance^255^0^0^0^5^0^1^0^1^0^0^0^0^0^1^1^You feel the ire of luck.^ feels the ire of luck.^
+75085^Choking Reprisal^255^4^0^0^2^0^1^0^1^0^0^0^0^0^0^0^Your throat grows tight, making it hard to speak and breath.^ grabs at their throat unable to speak.^You can speak and breath again.
+75086^Unfavorable Probability I^255^50^0^0^2^0^0^0^1^0^0^0^0^0^1^1^You feel your health being drained away.^'s health is drained away.^You feel whole once again.
+75087^Unfavorable Probability II^255^50^0^0^2^0^0^0^1^0^0^0^0^0^1^1^You feel your health being drained away.^'s health is drained away.^You feel whole once again.
+75088^Unfavorable Probability III^255^50^0^0^2^0^0^0^1^0^0^0^0^0^1^1^You feel your health being drained away.^'s health is drained away.^You feel whole once again.
+75089^Unfavorable Probability IV^255^50^0^0^2^0^0^0^1^0^0^0^0^0^1^1^You feel your health being drained away.^'s health is drained away.^You feel whole once again.
 7509^Cure Poison IV^254^0^1^0^5^65407^0^0^0^0^0^0^4^0^1^1^Your blood is cleansed of poisons.^'s body is cleansed of poisons.^
-75090^Unfavorable Probability V^255^50^0^0^2^0^0^0^1^0^0^0^0^0^1^0^You feel your health being drained away.^^You feel whole once again.
-75091^Transfer In Progress^255^0^0^0^5^0^0^0^1^0^0^0^0^0^0^0^^^
-75092^Maddening Influence^255^10^0^0^5^0^1^0^9^0^2^0^0^0^0^0^Whispers of dark thoughts intrude your mind.^^The whispers dissipate.
-75093^Corrupting Pulse^255^0^0^0^2^0^1^0^9^0^0^0^0^0^0^0^Your senses darken as corrupting energy washes over you.^^
-75094^Ensorcel Psyche^255^4^0^0^5^0^0^0^9^0^0^0^0^1^0^0^The whispers drive you to madness.^^You regain control of your senses.
-75095^Creeping Madness I^255^20^0^0^5^0^1^0^9^0^0^0^0^0^0^0^The maddening influence of the realm seeps in.^^Your mind clears
-75096^Creeping Madness II^255^20^0^0^5^0^1^0^9^0^0^0^0^0^0^0^The maddening influence of the realm tickles your mind.^^Your mind clears
-75097^Creeping Madness III^255^20^0^0^5^0^1^0^9^0^0^0^0^0^0^0^The maddening influence of the realm clouds your senses.^^Your mind clears
-75098^Creeping Madness IV^255^20^0^0^5^0^1^0^9^0^0^0^0^0^0^0^The maddening influence of the realm whispers in your ear.^^Your mind clears
-75099^Creeping Madness V^255^4^0^0^5^0^1^0^9^0^0^0^0^1^0^0^The maddening influence of the realm overwhelms you.^^Your mind clears
+75090^Unfavorable Probability V^255^50^0^0^2^0^0^0^1^0^0^0^0^0^1^1^You feel your health being drained away.^'s health is drained away.^You feel whole once again.
+75091^Transfer In Progress^255^0^1^0^5^0^0^0^1^0^0^0^0^0^0^0^^^
+75092^Maddening Influence^255^10^0^0^5^0^1^0^9^0^2^0^0^0^0^0^Whispers of dark thoughts intrude your mind.^'s mind is clouded with dark thoughts.^The whispers dissipate.
+75093^Corrupting Pulse^255^0^0^0^8^0^1^0^9^0^0^0^0^0^0^0^Your senses darken as corrupting energy washes over you.^ is covered in corrupting energy.^
+75094^Ensorcel Psyche^255^4^0^0^5^0^0^0^9^0^0^0^0^1^0^0^The whispers drive you to madness.^ is driven mad by whispers.^You regain control of your senses.
+75095^Creeping Madness I^255^20^0^0^5^0^1^0^9^0^0^0^0^0^0^0^The maddening influence of the realm seeps in.^ feels the maddening influence.^Your mind clears
+75096^Creeping Madness II^255^20^0^0^5^0^1^0^9^0^0^0^0^0^0^0^The maddening influence of the realm tickles your mind.^ feels the maddening influence tickle their mind.^Your mind clears
+75097^Creeping Madness III^255^20^0^0^5^0^1^0^9^0^0^0^0^0^0^0^The maddening influence of the realm clouds your senses.^ feels the maddening influence cloud their senses.^Your mind clears
+75098^Creeping Madness IV^255^20^0^0^5^0^1^0^9^0^0^0^0^0^0^0^The maddening influence of the realm whispers in your ear.^ feels the maddening influence whisper in their ear.^Your mind clears
+75099^Creeping Madness V^255^4^0^0^5^0^1^0^9^0^0^0^0^1^0^0^The maddening influence of the realm overwhelms you.^ is overwhelmed by maddening influence.^Your mind clears
 751^Ikaav's Venom^255^20^0^0^4^0^1^0^1^0^0^0^0^0^1^1^Your body is coated with a slimy liquid.^ is covered by Ikaav's Venom.^
 7510^Cure Disease I^254^0^1^0^5^65407^0^0^0^0^0^0^1^0^1^1^The disease has been weakened.^'s body is cleansed of disease.^
-75100^Fractured Psyche^255^0^0^0^2^0^1^0^1^0^0^0^0^0^0^0^Your mind fractures and all you feel is agony.^^
-75101^Silencing Mist^255^2^0^0^5^0^0^0^1^0^0^0^0^0^0^0^The mist clings to your throat, preventing you from speaking.^^The mist clears, you can speak again.
-75102^Grasping Mist^255^5^0^0^5^0^0^0^1^0^0^0^0^0^0^0^The mist grips your feet, holding you in place.^^The mist clears, you can move again.
-75103^Psychic Shriek^255^4^0^0^42^0^1^0^1^0^0^0^0^0^0^0^A piercing shriek rattles your mind.^^Your mind clears
-75104^Psychic Blast^255^0^0^0^5^0^1^0^1^0^0^0^0^0^0^0^Psychic energy rends your mind.^^
-75105^Psychic Blast^255^10^0^0^5^0^0^0^1^0^0^0^0^0^0^0^Psychic energy shatters your spirit.^^You pull yourself together.
-75106^Shattered Madness^255^0^0^0^2^0^1^0^1^0^0^0^0^0^0^0^An echo of madness fractures your psyche.^^
-75107^Dread Judgement^255^0^0^0^2^0^1^0^8^0^0^0^0^0^1^0^You have been judged and found wanting.^^
-75108^Dread Judgement^255^10^0^0^5^0^0^0^8^0^0^0^0^0^0^0^Vazaelle's judgement makes it difficult to defend yourself.^^You can defend yourself again.
-75109^Dread Judgement^255^0^0^0^42^0^1^0^8^0^0^0^0^0^1^0^You have been judged and found wanting.^^
+75100^Fractured Psyche^255^0^0^0^2^0^1^0^1^0^0^0^0^0^0^0^Your mind fractures and all you feel is agony.^ is wracked in agony.^
+75101^Silencing Mist^255^2^0^0^5^0^0^0^1^0^0^0^0^0^0^1^The mist clings to your throat, preventing you from speaking.^ is unable to speak.^The mist clears, you can speak again.
+75102^Grasping Mist^255^5^0^0^5^0^0^0^1^0^0^0^0^0^0^1^The mist grips your feet, holding you in place.^ is held in place.^The mist clears, you can move again.
+75103^Psychic Shriek^255^4^0^0^42^0^1^0^1^0^0^0^0^0^0^0^A piercing shriek rattles your mind.^'s mind is rattled by a piercing shriek.^Your mind clears
+75104^Psychic Blast^255^0^0^0^5^0^1^0^1^0^0^0^0^0^0^0^Psychic energy rends your mind.^ is hit by psychic energy.^
+75105^Psychic Blast^255^10^0^0^5^0^0^0^1^0^0^0^0^0^0^0^Psychic energy shatters your spirit.^'s spirit is shattered.^You pull yourself together.
+75106^Shattered Madness^255^0^0^0^2^0^1^0^1^0^0^0^0^0^0^0^An echo of madness fractures your psyche.^'s psyche is fractured.^
+75107^Dread Judgement^255^0^0^0^2^0^1^0^8^0^0^0^0^0^1^1^You have been judged and found wanting.^ has been judged.^
+75108^Dread Judgement^255^10^0^0^5^0^0^0^8^0^0^0^0^0^0^0^Vazaelle's judgement makes it difficult to defend yourself.^'s defenses are weakened.^You can defend yourself again.
+75109^Dread Judgement^255^0^0^0^42^0^1^0^8^0^0^0^0^0^1^1^You have been judged and found wanting.^ has been judged.^
 7511^Cure Disease II^254^0^1^0^5^65407^0^0^0^0^0^0^2^0^1^1^The disease has been weakened.^'s body is cleansed of disease.^
-75110^Tainted Affliction^255^5^0^0^5^0^1^0^9^0^0^0^0^0^0^0^Corrupting influence breaks your mind and body.^^The corrupting influence fades.
-75111^Arcing Slash^255^10^0^0^42^0^1^0^8^0^0^0^0^0^0^0^A quick slash causes you to bleed.^^The bleeding stops.
-75112^Exsanguinating Slash^255^0^0^0^5^0^2^0^8^0^0^0^0^0^0^0^A devastating blow causes you to bleed out.^^
-75113^Wither^255^5^0^0^8^0^1^0^9^0^0^0^0^0^0^0^Corruption drains your life essence.^^The corruption dissipates
-75114^Decay^255^0^0^0^2^0^1^0^9^0^0^0^0^0^0^0^A wave of corruption consumes a fragment of your life.^^
-75115^Not on the List^255^0^0^0^5^0^1^0^8^0^0^0^0^0^0^0^Taurlton's horns pierce through your defenses, drawing blood.^^
-75116^Sucking Wound I^255^12^0^0^5^0^1^0^8^0^0^0^0^0^1^0^Your open wounds bleed heavily as you move.^^Your wounds are no longing bleeding.
-75117^Sucking Wound II^255^12^0^0^5^0^1^0^8^0^0^0^0^0^1^0^Your open wounds bleed heavily as you move.^^Your wounds are no longing bleeding.
-75118^Sucking Wound III^255^12^0^0^5^0^1^0^8^0^0^0^0^0^1^0^Your open wounds bleed heavily as you move.^^Your wounds are no longing bleeding.
-75119^Bleed Out^255^0^0^0^5^0^2^0^8^0^0^0^0^0^0^0^Your wounds were too much for your body to handle.^^
+75110^Tainted Affliction^255^5^0^0^5^0^1^0^9^0^0^0^0^0^0^1^Corrupting influence breaks your mind and body.^ is corrupted.^The corrupting influence fades.
+75111^Arcing Slash^255^10^0^0^42^0^1^0^8^0^0^0^0^0^0^1^A quick slash causes you to bleed.^ is bleeding.^The bleeding stops.
+75112^Exsanguinating Slash^255^0^0^0^5^0^2^0^8^0^0^0^0^0^0^0^A devastating blow causes you to bleed out.^ bleeds out.^
+75113^Wither^255^5^0^0^8^0^1^0^9^0^0^0^0^0^0^0^Corruption drains your life essence.^'s life essence is drained.^The corruption dissipates
+75114^Decay^255^0^0^0^2^0^1^0^9^0^0^0^0^0^0^0^A wave of corruption consumes a fragment of your life.^ corruption consumes a fragment of their life.^
+75115^Not on the List^255^0^0^0^5^0^1^0^8^0^0^0^0^0^0^0^Taurlton's horns pierce through your defenses, drawing blood.^ is pierced by Taurlton's horns, drawing blood.^
+75116^Sucking Wound I^255^12^0^0^5^0^1^0^8^0^0^0^0^0^1^1^Your open wounds bleed heavily as you move.^ is bleeding heavily from open wounds.^Your wounds are no longing bleeding.
+75117^Sucking Wound II^255^12^0^0^5^0^1^0^8^0^0^0^0^0^1^1^Your open wounds bleed heavily as you move.^ is bleeding heavily from open wounds.^Your wounds are no longing bleeding.
+75118^Sucking Wound III^255^12^0^0^5^0^1^0^8^0^0^0^0^0^1^1^Your open wounds bleed heavily as you move.^ is bleeding heavily from open wounds.^Your wounds are no longing bleeding.
+75119^Bleed Out^255^0^0^0^5^0^2^0^8^0^0^0^0^0^0^0^Your wounds were too much for your body to handle.^'s wounds were too much for them to handle.^
 7512^Cure Disease III^254^0^1^0^5^65407^0^0^0^0^0^0^3^0^1^1^The disease has been weakened.^'s body is cleansed of disease.^
-75120^Piercing Toss^255^0^0^0^42^0^1^0^8^0^0^0^0^0^1^0^Chunks of sharp rocks cuts deep into you.^^
-75121^Piercing Detonation^255^0^0^0^2^0^1^0^8^0^0^0^0^0^1^0^An explosion of sharp rocks cuts deep into you.^^
-75122^Falling Debris^255^0^0^0^2^0^1^0^8^0^0^0^0^0^1^0^Debris, thrown from outside the arena, pummels you.^^
-75123^Hold Fast^255^3^0^0^2^0^1^0^1^0^0^0^0^0^0^0^Thick sand grips your feet.^^The sand solidifies and loosens its grip.
-75124^Single Out Impact^255^0^0^0^8^0^1^0^8^0^0^0^0^0^1^0^The impact from the bruiser sends shockwaves through your body.^^
+75120^Piercing Toss^255^0^0^0^42^0^1^0^8^0^0^0^0^0^1^1^Chunks of sharp rocks cuts deep into you.^ is cut by chunks of rocks.^
+75121^Piercing Detonation^255^0^0^0^2^0^1^0^8^0^0^0^0^0^1^1^An explosion of sharp rocks cuts deep into you.^ is caught in an explosion of sharp rocks.^
+75122^Falling Debris^255^0^0^0^2^0^1^0^8^0^0^0^0^0^1^1^Debris, thrown from outside the arena, pummels you.^ is pummeled by falling debris.^
+75123^Hold Fast^255^1^0^0^5^0^1^0^1^0^0^0^0^0^0^0^Thick sand grips your feet.^'s legs are gripped by sand.^The sand solidifies and loosens its grip.
+75124^Single Out Impact^255^0^0^0^8^0^1^0^8^0^0^0^0^0^1^1^The impact from the bruiser sends shockwaves through your body.^'s body is rocked by the bruiser's impact.^
 75125^Emboldened^255^3^1^0^5^0^0^0^1^0^2^0^0^0^0^1^^ is emoldened by its allies.^
-75126^Black Listed^255^4^0^0^5^0^1^0^1^0^0^0^0^0^1^0^Taurlton's gaze rests uneasily on you.^^Taurlton's gaze is broken by the falling debris.
-75127^Black Listed^255^0^0^0^5^0^1^0^1^0^0^0^0^0^1^0^A shockwave of debris cuts into you.^^
-75128^Black Listed^255^0^0^0^5^0^2^0^1^0^0^0^0^0^0^0^Taurlton's gaze shatters your body.^^
-75129^Back of the Line^255^0^0^0^5^0^1^0^8^0^0^0^0^0^0^0^A shockwave attempts to throw you, but you hold firm.^^
+75126^Black Listed^255^4^0^0^5^0^1^0^1^0^0^0^0^0^1^1^Taurlton's gaze rests uneasily on you.^ looks uneasy as Taurlton's gaze falls on them.^Taurlton's gaze is broken by the falling debris.
+75127^Black Listed^255^0^0^0^2^0^1^0^1^0^0^0^0^0^1^1^A shockwave of debris cuts into you.^ is struck by a shockwave of debris.^
+75128^Black Listed^255^0^0^0^5^0^2^0^1^0^0^0^0^0^0^0^Taurlton's gaze shatters your body.^'s body is shattered by Taurlton's gaze.^
+75129^Back of the Line^255^0^0^0^5^0^1^0^8^0^0^0^0^0^0^0^A shockwave attempts to throw you, but you hold firm.^ holds firm as the shockwave washes over them.^
 7513^Cure Disease IV^254^0^1^0^5^65407^0^0^0^0^0^0^4^0^1^1^The disease has been weakened.^'s body is cleansed of disease.^
-75130^Back of the Line^255^0^0^0^5^0^1^0^8^0^0^0^0^0^0^0^A shockwave of pressure crushes your bones and throws you.^^
+75130^Back of the Line^255^0^0^0^5^0^1^0^8^0^0^0^0^0^0^0^A shockwave of pressure crushes your bones and throws you.^'s bones are crushed as they are thrown by the shockwave.^
 75131^Queasy^255^0^0^0^6^0^0^0^4^0^0^0^0^0^0^0^^^Sorshkah has shaken off the sickness.
-75132^Feral Toxin^255^4^0^0^5^0^1^0^4^0^0^0^0^0^0^0^You inhale a potent toxin that burns your lungs.^^The poison runs its course.
-75133^Manticore Barb Shot^255^0^0^0^42^0^1^0^8^0^0^0^0^0^0^0^Sharp barbs dig deep into you draining your strength.^^The barbs fall loose, allowing you to recover.
-75134^Rake^255^2^0^0^42^16384^1^0^8^0^0^0^0^0^1^0^The manticore's claws rake across your flesh.^^
-75135^Rake^255^2^0^0^42^16384^1^0^8^0^0^0^0^0^1^0^The manticore's claws rake across your flesh.^^
-75136^Sickening Glob^255^3^0^0^2^0^1^0^4^0^0^0^0^0^0^0^Putrid phlegm burns your skin and invades your senses. ^^Fresh air, finally!
-75137^Lockjaw Trap^255^5^0^0^5^0^1^0^8^0^0^0^0^0^0^0^The razor sharp jaws of the trap cut into your leg.^^Your wounds close.
-75138^Slow Your Roll^255^4^0^0^42^0^1^0^1^0^0^0^0^0^0^0^Moruuk's blow rattles you, slowing your reactions.^^You shake off the attack.
-75139^Sick 'Em^255^0^0^0^5^0^1^0^8^0^0^0^0^0^0^0^Sorshkah slashes and mangles you with tooth and claw.^^
+75132^Feral Toxin^255^4^0^0^5^0^1^0^4^0^0^0^0^0^0^0^You inhale a potent toxin that burns your lungs.^ inhales a potent toxin.^The poison runs its course.
+75133^Manticore Barb Shot^255^6^0^0^42^0^1^0^8^0^0^0^0^0^0^0^Sharp barbs dig deep into you, draining your strength.^ is pierced by sharp barbs.^The barbs fall loose, allowing you to recover.
+75134^Rake^255^2^0^0^42^16384^1^0^8^0^0^0^0^0^1^1^The manticore's claws rake across your flesh.^'s flesh is raked by sharp claws.^Your wounds stop bleeding.
+75135^Rake^255^2^0^0^42^16384^1^0^8^0^0^0^0^0^1^1^The manticore's claws rake across your flesh.^'s flesh is raked by sharp claws.^Your wounds stop bleeding.
+75136^Sickening Glob^255^3^0^0^2^0^1^0^4^0^0^0^0^0^0^0^Putrid phlegm burns your skin and invades your senses. ^'s flesh is burned by putrid phlegm.^Fresh air, finally!
+75137^Lockjaw Trap^255^5^0^0^5^0^1^0^8^0^0^0^0^0^0^0^The razor sharp jaws of the trap cut into your leg.^'s legs are cut by razor sharp jaws.^Your wounds close.
+75138^Slow Your Roll^255^4^0^0^42^0^1^0^1^0^0^0^0^0^0^0^Moruuk's blow rattles you, slowing your reactions.^ is slowed by Moruuk's blow.^You shake off the attack.
+75139^Sick 'Em^255^0^0^0^5^0^1^0^8^0^0^0^0^0^0^0^Sorshkah slashes and mangles you with tooth and claw.^ is mangled by tooth and claw.^
 7514^Remove Curse I^254^0^1^0^5^65407^0^0^0^0^0^0^1^0^1^1^Your curses have been weakened.^'s curses are weakened.^
-75140^Taking Your Stuff^255^0^0^0^2^0^0^0^1^0^0^0^0^0^1^0^You feel drained.^^
-75141^Stronger Together^255^2^1^0^5^0^0^0^1^0^2^0^0^0^0^0^^'s attacks become faster and more aggressive.^
-75142^Damage Mitigation I^255^0^1^0^6^0^0^0^1^0^4^0^0^0^0^0^^^The final layer of magic shielding falls away.
-75143^Damage Mitigation II^255^0^1^0^6^0^0^0^1^0^4^0^0^0^0^0^^^A layer of magic shielding falls away.
-75144^Damage Mitigation III^255^0^1^0^6^0^0^0^1^0^4^0^0^0^0^0^^^A layer of magic shielding falls away.
-75145^Damage Mitigation IV^255^0^1^0^6^0^0^0^1^0^4^0^0^0^0^0^^^A layer of magic shielding falls away.
-75146^Damage Mitigation V^255^0^1^0^6^0^0^0^1^0^4^0^0^0^0^0^^^A layer of magic shielding falls away.
-75147^Aura of Greed^255^200^0^0^5^0^0^0^1^0^0^0^0^0^0^0^The weight of your poverty takes its toll.^^
-75148^Aura of Poverty^255^200^0^0^5^0^0^0^1^0^0^0^0^0^0^0^The weight of your greed takes its toll.^^
-75149^Swirling Dust Cloud^255^200^0^0^2^0^0^0^1^0^0^0^0^0^0^0^The cloud of swirling dust reduces your vision.^^
+75140^Taking Your Stuff^255^0^0^0^2^0^0^0^1^0^0^0^0^0^1^1^You feel drained.^ looks drained.^
+75141^Stronger Together^255^2^1^0^5^0^0^0^1^0^2^0^0^0^0^0^^'s attacks become faster and more aggressive.^Attacks are no longer more aggressive.
+75142^Damage Mitigation I^255^0^1^0^6^0^0^0^1^0^4^0^0^0^0^0^^ is protected by a final shield layer.^The final layer of magic shielding falls away.
+75143^Damage Mitigation II^255^0^1^0^6^0^0^0^1^0^4^0^0^0^0^1^^ is protected by a shield layer.^A layer of magic shielding falls away.
+75144^Damage Mitigation III^255^0^1^0^6^0^0^0^1^0^4^0^0^0^0^1^^ is protected by a shield layer.^A layer of magic shielding falls away.
+75145^Damage Mitigation IV^255^0^1^0^6^0^0^0^1^0^4^0^0^0^0^1^^ is protected by a shield layer.^A layer of magic shielding falls away.
+75146^Damage Mitigation V^255^0^1^0^6^0^0^0^1^0^4^0^0^0^0^1^^ is protected by a shield layer.^A layer of magic shielding falls away.
+75147^Aura of Greed^255^50^0^0^5^0^0^0^1^0^0^0^0^0^0^0^The weight of your poverty takes its toll.^ feels the weight of their poverty.^
+75148^Aura of Poverty^255^50^0^0^5^0^0^0^1^0^0^0^0^0^0^0^The weight of your greed takes its toll.^ feels the weight of their greed.^
+75149^Swirling Dust Cloud^255^50^0^0^2^0^0^0^1^0^0^0^0^0^0^0^The cloud of swirling dust reduces your vision.^'s vision is reduced by swirling dust.^
 7515^Remove Curse II^254^0^1^0^5^65407^0^0^0^0^0^0^2^0^1^1^Your curses have been weakened.^'s curses are weakened.^
-75150^Take Down^255^0^0^0^5^0^2^0^1^0^0^0^0^0^0^0^You were seperated from the pack.^was separated from the pack.^
-75151^Rake^255^0^0^0^42^16384^0^0^8^0^0^0^0^0^1^0^The manticore's claws strike throws you back.^^
-75152^Rake^255^0^0^0^42^16384^0^0^8^0^0^0^0^0^1^0^The manticore's claws strike throws you back.^^
-75153^Piercing Shot^255^0^0^0^42^0^1^0^8^0^0^0^0^0^0^0^A powerful arrow punches through you.^^
-75154^Shatter Shot^255^0^0^0^2^0^1^0^8^0^0^0^0^0^0^0^A rain of arrows pierce your flesh.^^
-75155^Shattered Fragment^255^0^0^0^42^0^1^0^8^0^0^0^0^0^0^0^Shrapnel cuts into you, drawing blood.^^
+75150^Takedown^255^0^0^0^5^0^2^0^1^0^0^0^0^0^0^0^You were separated from the pack.^ was separated from the pack.^
+75151^Rake^255^0^0^0^42^16384^0^0^8^0^0^0^0^0^1^1^The manticore's claw strike throws you back.^ is thrown back by the manticore's claws.^
+75152^Rake^255^0^0^0^42^16384^0^0^8^0^0^0^0^0^1^1^The manticore's claw strike throws you back.^ is thrown back by the manticore's claws.^
+75153^Piercing Shot^255^0^0^0^42^0^1^0^8^0^0^0^0^0^0^0^A powerful arrow punches through you.^ is struck with a powerful arrow.^
+75154^Shatter Shot^255^0^0^0^2^0^1^0^8^0^0^0^0^0^0^0^A rain of arrows pierces your flesh.^ is pierced with a rain of arrows.^
+75155^Shattered Fragment^255^0^0^0^42^0^1^0^8^0^0^0^0^0^0^0^Shrapnel cuts into you, drawing blood.^ is cut by shrapnel.^
 75156^Scornful Touch^255^0^1^0^5^0^0^0^1^0^2^0^0^0^0^0^^ is filled with scorn.^
-75157^Curse of the Broken Heart^255^5^0^0^5^0^1^0^9^0^0^0^0^0^0^0^A painful weight settles in on your chest.^^The weight lifts.
-75158^Unrequited Love^255^10^0^0^2^0^1^0^9^0^0^0^0^0^0^0^You are filled with deep sadness.^^
-75159^Devastation^255^0^0^0^2^0^1^0^9^0^0^0^0^0^0^0^A wave of scornful energy washes over you.^^
+75157^Curse of the Broken Heart^255^5^0^0^5^0^1^0^9^0^0^0^0^0^0^0^A painful weight settles in on your chest.^ is cursed with a broken heart.^The weight lifts.
+75158^Unrequited Love^255^10^0^0^5^0^1^0^9^0^0^0^0^0^0^0^You are filled with deep sadness.^ is filled with a deep sadness.^The cloud of sadness fades away.
+75159^Devastation^255^0^0^0^2^0^1^0^9^0^0^0^0^0^0^0^A wave of scornful energy washes over you.^ is struck by a wave of scornful energy.^
 7516^Remove Curse III^254^0^1^0^5^65407^0^0^0^0^0^0^3^0^1^1^Your curses have been weakened.^'s curses are weakened.^
-75160^Soothing Ballad^255^1^1^0^5^0^0^0^1^0^0^0^0^0^0^0^A soothing song envelops you.^^You no longer feel the soothing song.
-75161^Shrill Chorus I^255^0^0^0^2^0^1^0^1^0^0^0^1^0^1^0^A shrill song rattles you to the core.^^
-75162^Shrill Chorus II^255^0^0^0^2^0^1^0^1^0^0^0^2^0^1^0^A shrill song rattles you to the core.^^
-75163^Shrill Chorus III^255^0^0^0^2^0^1^0^1^0^0^0^3^0^1^0^A shrill song rattles you to the core.^^
-75164^Shrill Chorus IV^255^3^0^0^2^0^1^0^1^0^0^0^4^0^0^0^A shrill song rattles you to the core and takes your voice.^^Your voice returns.
-75165^Lingering Hymn^255^2^0^0^5^0^1^0^1^0^0^0^5^0^0^0^Your throat tightens, making it impossible to speak.^^Your throat loosens.
-75166^Empowering Rhetoric^255^1^1^0^5^0^0^0^3^0^0^0^0^0^0^0^Words of power course through you.^^You no longer feel empowered.
-75167^Cutting Verse I^255^0^0^0^2^0^1^0^3^0^0^0^1^0^1^0^The words cut deep.^^
-75168^Cutting Verse II^255^0^0^0^2^0^1^0^3^0^0^0^2^0^1^0^The words cut deep.^^
-75169^Cutting Verse III^255^0^0^0^2^0^1^0^3^0^0^0^3^0^1^0^The words cut deep.^^
+75160^Soothing Ballad^255^1^1^0^5^0^0^0^1^0^0^0^0^0^0^0^A soothing song envelops you.^ is enveloped by a soothing song.^You no longer feel the soothing song.
+75161^Shrill Chorus I^255^0^0^0^2^0^1^0^1^0^0^0^1^0^1^1^A shrill song rattles you to the core.^ is rattled by a shrill song.^
+75162^Shrill Chorus II^255^0^0^0^2^0^1^0^1^0^0^0^2^0^1^1^A shrill song rattles you to the core.^ is rattled by a shrill song.^
+75163^Shrill Chorus III^255^0^0^0^2^0^1^0^1^0^0^0^3^0^1^1^A shrill song rattles you to the core.^ is rattled by a shrill song.^
+75164^Shrill Chorus IV^255^3^0^0^2^0^1^0^1^0^0^0^4^0^0^0^A shrill song rattles you to the core and takes your voice.^'s voice is stolen as they are rattled to the core.^Your voice returns.
+75165^Lingering Hymn^255^2^0^0^5^0^1^0^1^0^0^0^5^0^0^0^Your throat tightens, making it impossible to speak.^'s throat tightens, making it impossible to speak.^Your throat loosens.
+75166^Empowering Rhetoric^255^1^1^0^5^0^0^0^3^0^0^0^0^0^0^0^Words of power course through you.^ is empowered by inspiring words.^You no longer feel empowered.
+75167^Cutting Verse I^255^0^0^0^2^0^1^0^3^0^0^0^1^0^1^1^The words cut deep.^ is wounded by cutting words.^
+75168^Cutting Verse II^255^0^0^0^2^0^1^0^3^0^0^0^2^0^1^1^The words cut deep.^ is wounded by cutting words.^
+75169^Cutting Verse III^255^0^0^0^2^0^1^0^3^0^0^0^3^0^1^1^The words cut deep.^ is wounded by cutting words.^
 7517^Remove Curse IV^254^0^1^0^5^65407^0^0^0^0^0^0^4^0^1^1^Your curses have been weakened.^'s curses are weakened.^
-75170^Cutting Verse IV^255^0^0^0^2^0^1^0^3^0^0^0^4^0^0^0^The words cut deep and your body stops responding.^^Your body begins to respond.
-75171^Biting Sonnet^255^0^0^0^5^0^1^0^3^0^0^0^5^0^0^0^Your body tightens and freezes in place.^^Your muscles loosen and respond.
-75172^Tranquil Rhythm^255^1^1^0^5^0^0^0^2^0^0^0^0^0^0^0^A gentle melody uplifts you.^^You no longer feel uplifted.
-75173^Discordant Melody I^255^0^0^0^2^0^1^0^2^0^0^0^1^0^1^0^A cacophonous burst crushes you.^^
-75174^Discordant Melody II^255^0^0^0^2^0^1^0^2^0^0^0^2^0^1^0^A cacophonous burst crushes you.^^
-75175^Discordant Melody III^255^0^0^0^2^0^1^0^2^0^0^0^3^0^1^0^A cacophonous burst crushes you.^^
-75176^Discordant Melody IV^255^5^0^0^2^0^1^0^2^0^0^0^4^0^0^0^A cacophonous burst crushes you, slowing your movement.^^Your movement is no longer slowed.
-75177^Cacophonous Note^255^3^0^0^5^0^1^0^2^0^0^0^5^0^0^0^An immense weight slows your movement^^The weight lifts.
-75178^Rapid Fire^255^0^0^0^5^65407^1^0^8^0^0^0^0^0^1^0^A barbed arrow pierces you.^^
-75179^Rapid Fire Burst^255^0^0^0^8^0^1^0^8^0^0^0^0^0^1^0^An eruption of barbs draws blood.^^
+75170^Cutting Verse IV^255^0^0^0^2^0^1^0^3^0^0^0^4^0^0^0^The words cut deep and your body stops responding.^'s body stops responding from cutting words.^Your body begins to respond.
+75171^Biting Sonnet^255^0^0^0^5^0^1^0^3^0^0^0^5^0^0^0^Your body tightens and freezes in place.^'s body freezes in place.^Your muscles loosen and respond.
+75172^Tranquil Rhythm^255^1^1^0^5^0^0^0^2^0^0^0^0^0^0^0^A gentle melody uplifts you.^ is uplifted by a gentle melody.^You no longer feel uplifted.
+75173^Discordant Melody I^255^0^0^0^2^0^1^0^2^0^0^0^1^0^1^1^A cacophonous burst crushes you.^ is crushed by a cacophonous burst.^
+75174^Discordant Melody II^255^0^0^0^2^0^1^0^2^0^0^0^2^0^1^1^A cacophonous burst crushes you.^ is crushed by a cacophonous burst.^
+75175^Discordant Melody III^255^0^0^0^2^0^1^0^2^0^0^0^3^0^1^1^A cacophonous burst crushes you.^ is crushed by a cacophonous burst.^
+75176^Discordant Melody IV^255^5^0^0^2^0^1^0^2^0^0^0^4^0^0^0^A cacophonous burst crushes you, slowing your movement.^ is slowed by a crushing cacophonous burst.^Your movement is no longer slowed.
+75177^Cacophonous Note^255^3^0^0^5^0^1^0^2^0^0^0^5^0^0^0^An immense weight slows your movement.^ is slowed by an immense weight.^The weight lifts.
+75178^Rapid Fire^255^0^0^0^5^65407^1^0^8^0^0^0^0^0^1^1^A barbed arrow pierces you.^ is pierced by a barbed arrow.^
+75179^Rapid Fire Burst^255^0^0^0^8^0^1^0^8^0^0^0^0^0^1^1^An eruption of barbs draws blood.^ was struck by an eruption of barbs.^
 7518^Play Dead I^254^0^1^0^6^65407^0^1^0^0^0^0^1^0^1^1^You slump to the ground and play dead.^ slumps to the ground, dead.^
-75180^Thorn Bindings^255^50^0^0^5^0^1^0^1^0^0^0^0^0^0^1^^is rooted in place by thick barbed vines.^
+75180^Thorn Bindings^255^50^0^0^5^0^1^0^1^0^0^0^0^0^0^1^^ is rooted in place by thick barbed vines.^
 75181^Limerence^255^1^0^0^5^0^0^0^1^0^0^0^0^0^0^0^^^
-75182^Protective Embrace^255^4^1^0^5^0^0^0^1^0^4^0^0^0^1^0^A protective barrier covers you.^^The protective barrier fades.
-75183^Gift of Giving^255^4^1^0^5^0^0^0^1^0^12^0^0^0^0^0^A soothing energy fills you.^^The soothing energy fades.
-75184^Invigorating Essence^255^4^1^0^5^0^0^0^1^0^0^0^0^0^1^0^You draw energy from the surrounding area.^^You no longer feel empowered.
-75185^Quickened Reflexes^255^4^1^0^5^0^0^0^1^0^11^0^0^0^0^0^Your attacks seem faster.^^Your attacks return to normal.
-75186^Draining Touch^255^4^0^0^5^0^0^0^1^0^0^0^0^0^0^0^Your attacks and spells feel weaker.^^You feel invigorated again. 
-75187^Sapping Buds^255^4^0^0^5^0^0^0^1^0^0^0^0^0^0^0^Flowering buds spring from your skin.^^The flowers bloom and fall away.
-75188^Languorous Runes^255^4^0^0^5^0^0^0^1^0^0^0^0^0^0^0^Sapping runes cover your body.^^The runes disappear.
-75189^Briar Shackles^255^4^0^0^5^0^0^0^1^0^0^0^0^0^1^0^Thorned shackles wrap around your legs.^^The shackles shrivel and break.
+75182^Protective Embrace^255^4^1^0^5^0^0^0^1^0^4^0^0^0^1^1^A protective barrier covers you.^ is protected by a barrier.^The protective barrier fades.
+75183^Gift of Giving^255^4^1^0^5^0^0^0^1^0^12^0^0^0^0^0^A soothing energy fills you.^ is filled with soothing energy.^The soothing energy fades.
+75184^Invigorating Essence^255^4^1^0^5^0^0^0^1^0^0^0^0^0^1^1^You draw energy from the surrounding area.^ draws energy from the surrounding area.^You no longer feel empowered.
+75185^Quickened Reflexes^255^4^1^0^5^0^0^0^1^0^11^0^0^0^0^0^Your attacks seem faster.^'s attacks seem faster.^Your attacks return to normal.
+75186^Draining Touch^255^4^0^0^5^0^0^0^1^0^0^0^0^0^0^1^Your attacks and spells feel weaker.^ looks weaker.^You feel invigorated again. 
+75187^Sapping Buds^255^4^0^0^5^0^0^0^1^0^0^0^0^0^0^0^Flowering buds spring from your skin.^ is covered in flowering buds.^The flowers bloom and fall away.
+75188^Languorous Runes^255^4^0^0^5^0^0^0^1^0^0^0^0^0^0^0^Sapping runes cover your body.^ is covered in sapping runes.^The runes disappear.
+75189^Briar Shackles^255^4^0^0^5^0^0^0^1^0^0^0^0^0^1^1^Thorned shackles wrap around your legs.^ is wrapped up by thorns.^The shackles shrivel and break.
 7519^Play Dead II^254^0^1^0^6^65407^0^1^0^0^0^0^2^0^1^1^You slump to the ground and play dead.^ slumps to the ground, dead.^
-75190^Stolen Words^255^1^0^0^5^0^0^0^1^0^0^0^0^0^1^0^You find it impossible to form words.^^
-75191^Draining Affection^255^3^0^0^5^0^0^0^1^0^4^0^0^0^0^0^^is cursed, preventing their wounds from healing.^
-75192^Bramble Shield^255^0^0^0^5^0^0^0^1^0^0^0^0^0^0^0^^wraps herself in sharp barbs.^The barbs fall away.
-75193^Lucky in Love^255^3^1^0^5^0^0^0^1^0^3^0^0^0^1^0^A flicker of warmth sparks inside of you. ^^The warmth fades.
-75194^Twisted Fate^255^5^0^0^5^0^1^0^1^0^0^0^0^0^1^0^Your mind is wracked with pain.^^The pain subsides.
-75195^Lucky in Life^255^4^1^0^5^0^0^0^1^0^3^0^0^0^1^0^Your inner fire grows to an inferno.^^Your inner fire dims.
-75196^Unlucky in Love^255^3^0^0^5^0^0^0^1^0^0^0^0^0^1^0^Your heart feels heavy.^^You shake off the feeling.
-75197^Unlucky in Life^255^5^0^0^5^0^0^0^1^0^0^0^0^0^1^0^Your spirit is crushed.^^You refocus on the fight.
-75198^Love's Scorn^255^0^0^0^2^0^1^0^1^0^0^0^0^0^1^0^A wave of malice overwhelms your body.^^
-75199^Envenomed Touch^255^5^0^0^5^0^1^0^1^0^0^0^0^1^1^0^A corrupting venom clouds your mind.^^Your mind clears.
+75190^Stolen Words^255^1^0^0^5^0^0^0^1^0^0^0^0^0^1^1^You find it impossible to form words.^'s throat closes, making it impossible to form words.^Your throat clears.
+75191^Draining Affection^255^3^0^0^5^0^0^0^1^0^4^0^0^0^0^0^^ is cursed, preventing their wounds from healing.^The cursed markings fade.
+75192^Bramble Shield^255^0^0^0^5^0^0^0^1^0^0^0^0^0^0^0^^ wraps herself in sharp barbs.^The barbs fall away.
+75193^Lucky in Love^255^3^1^0^5^0^0^0^1^0^3^0^0^0^1^1^A flicker of warmth sparks inside of you. ^ is filled with warmth.^The warmth fades.
+75194^Twisted Fate^255^5^0^0^5^0^1^0^1^0^0^0^0^0^1^1^Your mind is wracked with pain.^ grabs their head with a grimace.^The pain subsides.
+75195^Lucky in Life^255^4^1^0^5^0^0^0^1^0^3^0^0^0^1^1^Your inner fire grows to an inferno.^'s eyes light up with an inner fire.^Your inner fire dims.
+75196^Unlucky in Love^255^3^0^0^5^0^0^0^1^0^0^0^0^0^1^1^Your heart feels heavy.^ clutches at their chest.^You shake off the feeling.
+75197^Unlucky in Life^255^5^0^0^5^0^0^0^1^0^0^0^0^0^1^1^Your spirit is crushed.^ hangs their head low.^You refocus on the fight.
+75198^Love's Scorn^255^0^0^0^2^0^1^0^1^0^0^0^0^0^1^1^A wave of malice overwhelms your body.^ is struck with a wave of malice.^
+75199^Envenomed Touch^255^5^0^0^5^0^1^0^1^0^0^0^0^1^1^1^A corrupting venom clouds your mind.^'s mind is clouded by corrupting venom.^Your mind clears.
 752^Concussion^37^0^0^0^5^2048^0^0^1^0^0^0^0^0^1^1^You stagger from a blow to the head.^ staggers from a blow to the head.^
 7520^Play Dead III^254^0^1^0^6^65407^0^1^0^0^0^0^3^0^1^1^You slump to the ground and play dead.^ slumps to the ground, dead.^
-75200^Coerced Loyalty^255^3^0^0^8^0^0^0^1^0^0^0^1^1^1^0^Your body moves on its own.^^You regain control of your body.
-75201^Stolen Words^255^1^0^0^5^0^1^0^1^0^0^0^0^0^0^1^^is unable to form words of encouragement.^
-75202^Swift Shot^255^0^0^0^5^0^1^0^8^0^0^0^0^0^1^0^A barbed arrow pierces you.^^
-75203^Swift Shot Burst^255^0^0^0^8^0^1^0^8^0^0^0^0^0^1^0^An eruption of barbs draws blood.^^
-75204^Constricting Thorns^255^50^0^0^5^0^1^0^1^0^0^0^0^0^0^1^^is rooted in place by thick barbed vines.^
-75205^Defending Embrace^255^4^1^0^5^0^0^0^1^0^4^0^0^0^1^0^A protective barrier covers you.^^The protective barrier fades.
-75206^Vitalizing Essence^255^4^1^0^5^0^0^0^1^0^0^0^0^0^1^0^You draw energy from the surrounding area.^^You no longer feel empowered.
-75207^Briar Chains^255^4^0^0^5^0^0^0^1^0^0^0^0^0^1^0^Thorned shackles wrap around your legs.^^The shackles shrivel and break.
-75208^Tightened Throat^255^1^0^0^5^0^0^0^1^0^0^0^0^0^1^0^You find it impossible to form words.^^
-75209^Tightened Throat^255^1^0^0^5^0^1^0^1^0^0^0^0^0^0^1^^is unable to form words of encouragement.^
+75200^Coerced Loyalty^255^3^0^0^8^0^0^0^1^0^0^0^1^1^1^1^Your body moves on its own.^ body moves on its own.^You regain control of your body.
+75201^Stolen Words^255^1^0^0^5^0^1^0^1^0^0^0^0^0^0^1^^ is unable to form words of encouragement.^
+75202^Swift Shot^255^0^0^0^5^0^1^0^8^0^0^0^0^0^1^1^A barbed arrow pierces you.^ is pierced by a barbed arrow.^
+75203^Swift Shot Burst^255^0^0^0^8^0^1^0^8^0^0^0^0^0^1^1^An eruption of barbs draws blood.^ was struck by an eruption of barbs.^
+75204^Constricting Thorns^255^50^0^0^5^0^1^0^1^0^0^0^0^0^0^1^^ is rooted in place by thick barbed vines.^
+75205^Defending Embrace^255^4^1^0^5^0^0^0^1^0^4^0^0^0^1^1^A protective barrier covers you.^ is protected by a barrier.^The protective barrier fades.
+75206^Vitalizing Essence^255^4^1^0^5^0^0^0^1^0^0^0^0^0^1^1^You draw energy from the surrounding area.^ draws energy from the surrounding area.^You no longer feel empowered.
+75207^Briar Chains^255^4^0^0^5^0^0^0^1^0^0^0^0^0^1^1^Thorned shackles wrap around your legs.^ is wrapped up by thorns.^The shackles shrivel and break.
+75208^Tightened Throat^255^1^0^0^5^0^0^0^1^0^0^0^0^0^1^1^You find it impossible to form words.^'s throat closes, making it impossible to form words.^Your throat clears.
+75209^Tightened Throat^255^1^0^0^5^0^1^0^1^0^0^0^0^0^0^1^^ is unable to form words of encouragement.^
 7521^Play Dead IV^254^0^1^0^6^65407^0^1^0^0^0^0^4^0^1^1^You slump to the ground and play dead.^ slumps to the ground, dead.^
-75210^Happy in Love^255^3^1^0^5^0^0^0^1^0^3^0^0^0^1^0^A flicker of warmth sparks inside of you. ^^The warmth fades.
-75211^Distorted Fate^255^5^0^0^5^0^1^0^1^0^0^0^0^0^1^0^Your mind is wracked with pain.^^The pain subsides.
-75212^Happy in Life^255^4^1^0^5^0^0^0^1^0^3^0^0^0^1^0^Your inner fire grows to an inferno.^^Your inner fire dims.
-75213^Unhappy in Love^255^3^0^0^5^0^0^0^1^0^0^0^0^0^1^0^Your heart feels heavy.^^You shake off the feeling.
-75214^Unhappy in Life^255^5^0^0^5^0^0^0^1^0^0^0^0^0^1^0^Your spirit is crushed.^^You refocus on the fight.
-75215^Love's Disdain^255^0^0^0^2^0^1^0^1^0^0^0^0^0^1^0^A wave of malice overwhelms your body.^^
-75216^Poisoned Touch^255^5^0^0^5^0^1^0^1^0^0^0^0^1^1^0^A corrupting venom clouds your mind.^^Your mind clears.
-75217^Unwilling Loyalty^255^3^0^0^8^0^0^0^1^0^0^0^0^1^1^0^Your body moves on its own.^^You regain control of your body.
-75218^Deep Wound I^255^12^0^0^5^0^1^0^8^0^0^0^0^0^1^0^Your open wounds bleed heavily as you move.^^Your wounds are no longing bleeding.
-75219^Deep Wound II^255^12^0^0^5^0^1^0^8^0^0^0^0^0^1^0^Your open wounds bleed heavily as you move.^^Your wounds are no longing bleeding.
+75210^Happy in Love^255^3^1^0^5^0^0^0^1^0^3^0^0^0^1^1^A flicker of warmth sparks inside of you. ^ is filled with warmth.^The warmth fades.
+75211^Distorted Fate^255^5^0^0^5^0^1^0^1^0^0^0^0^0^1^1^Your mind is wracked with pain.^ grabs their head with a grimace.^The pain subsides.
+75212^Happy in Life^255^4^1^0^5^0^0^0^1^0^3^0^0^0^1^1^Your inner fire grows to an inferno.^'s eyes light up with an inner fire.^Your inner fire dims.
+75213^Unhappy in Love^255^3^0^0^5^0^0^0^1^0^0^0^0^0^1^1^Your heart feels heavy.^ clutches at their chest.^You shake off the feeling.
+75214^Unhappy in Life^255^5^0^0^5^0^0^0^1^0^0^0^0^0^1^1^Your spirit is crushed.^ hangs their head low.^You refocus on the fight.
+75215^Love's Disdain^255^0^0^0^2^0^1^0^1^0^0^0^0^0^1^1^A wave of malice overwhelms your body.^ is struck with a wave of malice.^
+75216^Poisoned Touch^255^5^0^0^5^0^1^0^1^0^0^0^0^1^1^1^A corrupting venom clouds your mind.^'s mind is clouded by corrupting venom.^Your mind clears.
+75217^Unwilling Loyalty^255^3^0^0^8^0^0^0^1^0^0^0^0^1^1^1^Your body moves on its own.^ body moves on its own.^You regain control of your body.
+75218^Deep Wound I^255^12^0^0^5^0^1^0^8^0^0^0^0^0^1^1^Your open wounds bleed heavily as you move.^ is bleeding heavily from open wounds.^Your wounds are no longing bleeding.
+75219^Deep Wound II^255^12^0^0^5^0^1^0^8^0^0^0^0^0^1^1^Your open wounds bleed heavily as you move.^ is bleeding heavily from open wounds.^Your wounds are no longing bleeding.
 7522^Gore I^254^0^0^0^5^65407^1^0^1^0^0^0^1^0^1^1^You stagger back, stunned.^ staggers back, stunned.^
-75220^Deep Wound III^255^12^0^0^5^0^1^0^8^0^0^0^0^0^1^0^Your open wounds bleed heavily as you move.^^Your wounds are no longing bleeding.
-75221^Lancing Toss^255^0^0^0^42^0^1^0^8^0^0^0^0^0^1^0^Chunks of sharp rocks cuts deep into you.^^
-75222^Lancing Detonation^255^0^0^0^2^0^1^0^8^0^0^0^0^0^1^0^An explosion of sharp rocks cuts deep into you.^^
-75223^Falling Rubble^255^0^0^0^2^0^1^0^8^0^0^0^0^0^1^0^Debris, thrown from outside the arena, pummels you.^^
-75224^Heavy Impact^255^0^0^0^8^0^1^0^8^0^0^0^0^0^1^0^The impact from the bruiser sends shockwaves through your body.^^
+75220^Deep Wound III^255^12^0^0^5^0^1^0^8^0^0^0^0^0^1^1^Your open wounds bleed heavily as you move.^ is bleeding heavily from open wounds.^Your wounds are no longing bleeding.
+75221^Lancing Toss^255^0^0^0^42^0^1^0^8^0^0^0^0^0^1^1^Chunks of sharp rocks cuts deep into you.^ is cut by chunks of rocks.^
+75222^Lancing Detonation^255^0^0^0^2^0^1^0^8^0^0^0^0^0^1^1^An explosion of sharp rocks cuts deep into you.^ is caught in an explosion of sharp rocks.^
+75223^Falling Rubble^255^0^0^0^2^0^1^0^8^0^0^0^0^0^1^1^Debris, thrown from outside the arena, pummels you.^ is pummeled by falling debris.^
+75224^Heavy Impact^255^0^0^0^8^0^1^0^8^0^0^0^0^0^1^1^The impact from the bruiser sends shockwaves through your body.^'s body is rocked by the bruiser's impact.^
 75225^Encouraging Presence^255^3^1^0^5^0^0^0^1^0^2^0^0^0^0^1^^ is emoldened by its allies.^
-75226^Banned^255^4^0^0^5^0^1^0^1^0^0^0^0^0^1^0^Taurlton's gaze rests uneasily on you.^^Taurlton's gaze is broken by the falling debris.
-75227^Banned^255^0^0^0^5^0^1^0^1^0^0^0^0^0^1^0^A shockwave of debris cuts into you.^^
-75228^Roll the Dice: Panic^255^2^0^0^5^0^0^0^1^0^0^0^0^0^1^0^You are overwhelmed with fear.^^You regain control of your senses.
-75229^Roll the Dice: Resource Drain^255^0^0^0^5^0^0^0^1^0^0^0^0^0^1^0^The magic flowing through your body ignites, burning you.^^
+75226^Banned^255^4^0^0^5^0^1^0^1^0^0^0^0^0^1^1^Taurlton's gaze rests uneasily on you.^ looks uneasy as Taurlton's gaze falls on them.^Taurlton's gaze is broken by the falling debris.
+75227^Banned^255^0^0^0^5^0^1^0^1^0^0^0^0^0^1^1^A shockwave of debris cuts into you.^ is struck by a shockwave of debris.^
+75228^Roll the Dice: Panic^255^2^0^0^5^0^0^0^1^0^0^0^0^0^1^1^You are overwhelmed with fear.^ is overwhelmed with fear.^You regain control of your senses.
+75229^Roll the Dice: Resource Drain^255^0^0^0^5^0^0^0^1^0^0^0^0^0^1^1^The magic flowing through your body ignites, burning you.^'s body burns.^
 7523^Gore II^254^0^0^0^5^65407^1^0^1^0^0^0^2^0^1^1^You stagger back, stunned.^ staggers back, stunned.^
-75230^Roll the Dice: Thud^255^0^0^0^5^0^1^0^1^0^0^0^0^0^1^0^You are slammed by a wave of immense magic pressure.^^
-75231^Roll the Dice: Outburst^255^0^0^0^2^0^1^0^1^0^0^0^0^0^0^0^A burst of misfortune hits you.^^
-75232^Heads Up: Blunder^255^0^0^0^2^0^1^0^1^0^0^0^0^0^0^0^The coin`s impact showers you with splinters of stone.^^
-75233^Heads Up: Thump^255^0^0^0^2^0^1^0^1^0^0^0^0^0^1^0^The coin crushes you.^^
-75234^Wagered Detonation^255^0^0^0^2^0^1^0^1^0^0^0^0^0^1^0^A burst of magic energy batters you.^^
-75235^Hang Around^255^5^1^0^5^0^0^0^1^0^0^0^0^0^0^0^Xev`s grip holds you in place.^^Xev releases his hold on you.
-75236^Windfall^255^3^1^0^2^0^0^0^0^0^11^0^0^0^1^0^Fate can give and take; this time it gave.^^Fate's gift fades.
-75237^Wrong Side of Luck^255^0^0^0^8^0^1^0^1^0^0^0^0^0^1^0^You are battered and thrown by the twist of fate.^^
-75238^Really Wrong Side of Luck^255^0^0^0^8^0^1^0^1^0^0^0^0^0^1^0^You are battered and thrown by the twist of fate.^^
+75230^Roll the Dice: Thud^255^0^0^0^5^0^1^0^1^0^0^0^0^0^1^1^You are slammed by a wave of immense magic pressure.^ is slammed by a wave of immense magic pressure.^
+75231^Roll the Dice: Outburst^255^0^0^0^2^0^1^0^1^0^0^0^0^0^0^0^A burst of misfortune hits you.^ is hit with a burst of misfortune.^
+75232^Heads Up: Blunder^255^0^0^0^2^0^1^0^1^0^0^0^0^0^0^1^The coin`s impact showers you with splinters of stone.^ is showered with splinters of stone.^
+75233^Heads Up: Thump^255^0^0^0^2^0^1^0^1^0^0^0^0^0^1^1^The coin crushes you.^ is crushed by a coin.^
+75234^Wagered Detonation^255^0^0^0^2^0^1^0^1^0^0^0^0^0^1^1^A burst of magic energy batters you.^ is battered by a burst of magic.^
+75235^Hang Around^255^5^1^0^5^0^0^0^1^0^0^0^0^0^0^1^Xev`s grip holds you in place.^ is held in place.^Xev releases his hold on you.
+75236^Windfall^255^3^1^0^2^0^0^0^0^0^11^0^0^0^1^1^Fate can give and take; this time it gave.^'s fate takes something away.^Fate's gift fades.
+75237^Wrong Side of Luck^255^0^0^0^8^0^1^0^1^0^0^0^0^0^1^1^You are battered and thrown by the twist of fate.^ is battered and thrown.^
+75238^Really Wrong Side of Luck^255^0^0^0^8^0^1^0^1^0^0^0^0^0^1^1^You are battered and thrown by the twist of fate.^ is battered and thrown.^
 75239^Coerced Procurement^255^2^0^0^5^0^0^0^0^0^0^0^0^0^0^0^^^
 7524^Gore III^254^0^0^0^5^65407^1^0^1^0^0^0^3^0^1^1^You stagger back, stunned.^ staggers back, stunned.^
-75240^Debt is Due^255^0^0^0^5^0^2^0^1^0^0^0^0^0^1^0^Your debts have been called due.^^
-75241^Caught in the Crossfire^255^0^0^0^32^0^1^0^1^0^0^0^0^0^0^0^Your ally`s debts made manifest detonate and impact you.^^
+75240^Debt is Due^255^0^0^0^5^0^2^0^1^0^0^0^0^0^1^1^Your debts have been called due.^'s debts have been called due.^
+75241^Caught in the Crossfire^255^0^0^0^32^0^1^0^1^0^0^0^0^0^0^1^Your ally`s debts made manifest detonate and impact you.^'s is battered by the manifestation of their ally's debts.^
 75242^Lucksworn Boost^255^2^0^0^5^0^0^0^0^0^0^0^0^0^0^0^^^
-75243^Stifling Grip^255^3^0^0^5^0^1^0^1^0^0^0^0^0^1^0^The threads of fate twist around you.^^The threads loosen.
-75244^Lucky Blessings^255^12^1^0^2^0^0^0^1^0^4^0^0^0^1^0^You feel the boon of luck.^^
-75245^Unlucky Interference^255^0^0^0^2^0^1^0^1^0^0^0^0^0^1^0^You feel the ire of luck.^^
+75243^Stifling Grip^255^3^0^0^5^0^1^0^1^0^0^0^0^0^1^1^The threads of fate twist around you.^ is twisted up in the threads of fate.^The threads loosen.
+75244^Lucky Blessings^255^12^1^0^2^0^0^0^1^0^4^0^0^0^1^1^You feel the boon of luck.^ feels the boon of luck.^
+75245^Unlucky Interference^255^0^0^0^2^0^1^0^1^0^0^0^0^0^1^1^You feel the ire of luck.^ feels the ire of luck.^
 75246^Transfer In Progress^255^0^0^0^5^0^0^0^1^0^0^0^0^0^0^0^^^
 7525^Gore IV^254^0^0^0^5^65407^1^0^1^0^0^0^4^0^1^1^You stagger back, stunned.^ staggers back, stunned.^
 7526^Gore V^254^0^0^0^5^65407^1^0^1^0^0^0^5^0^1^1^You stagger back, stunned.^ staggers back, stunned.^
-75267^Love's Mark^255^2^1^1^5^0^0^0^1^0^0^0^0^0^0^0^Love's mark wards you.^^The mark falls away.
+75267^Love's Mark^255^2^1^1^5^0^0^0^1^0^0^0^0^0^0^0^Love's mark wards you.^ is warded by love's mark.^The mark falls away.
 75268^Artist's Fury I^255^50^0^0^5^0^0^0^2^0^0^0^0^0^0^0^^'s fury is calm.^
 75269^Artist's Fury II^255^50^0^0^5^0^0^0^2^0^0^0^0^0^0^1^^'s fury builds.^
 7527^Gore VI^254^0^0^0^5^65407^1^0^1^0^0^0^6^0^1^1^You stagger back, stunned.^ staggers back, stunned.^
@@ -63411,6 +63411,9 @@
 75325^Weave of Reclamation^255^5^1^0^6^0^0^0^0^0^9^0^0^0^1^1^You construct a weave of recovery.^ constructs a weave of recovery.^Your weave unravels.
 75326^Weave of Reclamation^255^5^1^0^6^0^0^0^0^0^9^0^0^0^1^1^You construct a weave of recovery.^ constructs a weave of recovery.^Your weave unravels.
 7533^Sleep III^254^5^0^0^5^65407^0^0^1^0^0^0^3^0^1^1^You fall asleep.^'s head nods.^You no longer feel sleepy.
+75331^Summoning Sickness: Blaze^255^0^0^0^6^0^0^0^2^0^0^0^0^0^0^0^^^
+75332^Summoning Sickness: Frozen^255^0^0^0^6^0^0^0^3^0^0^0^0^0^0^0^^^
+75333^Summoning Sickness: Sickly^255^0^0^0^6^0^0^0^5^0^0^0^0^0^0^0^^^
 7534^Sleep IV^254^5^0^0^5^65407^0^0^1^0^0^0^4^0^1^1^You fall asleep.^'s head nods.^You no longer feel sleepy.
 7535^Sleep V^254^5^0^0^5^65407^0^0^1^0^0^0^5^0^1^1^You fall asleep.^'s head nods.^You no longer feel sleepy.
 7536^Lethargy I^254^20^0^0^5^65407^0^0^1^0^0^0^1^0^1^1^You feel drowsy.^ yawns.^You feel less drowsy.
