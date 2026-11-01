@@ -176,11 +176,11 @@ PropertyGrid/Discord presentation or the processor Stop integration.
   Save/reselect/restart retain the choice, while Cancel restores it. Repeat with a nondefault saved
   trigger and after switching characters. Copy/export/import retain aggregation.
 - [ ] **Discord presentation:** ordinary and aggregated sends always show the visible EQLP1 embed footer,
-  both on single messages and on every part of a split batch. Check desktop and mobile rendering. A loot
+  both on single messages and on every part of a split batch. Check desktop and mobile rendering. A message
   burst packs newline-separated lines; long text and Unicode remain intact.
 - [ ] **Receiving bot contract:** verify the actual bot groups interleaved parts by batch ID, orders them
   by part number and verifies the reconstructed text's checksum. Simulate an accepted request whose
-  response is lost: the retry has identical metadata and the bot must not start duplicate auctions.
+  response is lost: the retry has identical metadata and the bot must not perform duplicate actions.
   The footer supplies identity; neither Discord nor EQLogParser performs receiver-side deduplication.
 - [ ] **Pending and cancellation:** use a controlled endpoint to return 429/temporary failures. Status
   shows pending/retrying work; it drains on recovery. Stop, disable Trigger Manager, disable a trigger

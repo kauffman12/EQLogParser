@@ -113,12 +113,12 @@ Use the toolbar's **Clear Parse** button to start counting from that point, even
 5. Compare spaces, words and punctuation. EQ sometimes uses a backtick (&#96;) where you might expect an apostrophe ('). Also check the trigger's **Previous Line** and **Match Variables** conditions if you use them.
 6. Check EverQuest's **Options → Chat Settings** for filters affecting the messages your trigger needs.
 
-## How do I combine loot announcements sent to Discord?
+## How do I combine trigger messages sent to Discord?
 
 In **Trigger Manager → Trigger Properties → Data Sharing**, set **Text to Send (Discord)** and **Webhook (Discord)**, then choose a delay from the dropdown beside the URL and **Save**.
 
-- **Aggregation Off** is the default and sends each firing separately. Try **Aggregate: 1s** for a short burst, or **Aggregate: 5s** if the announcements span several seconds.
-- Messages from the same trigger and monitored character are combined on separate lines. Repeated item names are kept; long batches split into multiple posts.
+- **Aggregation Off** is the default and sends each firing separately. Try **Aggregate: 1s** for a short burst, or **Aggregate: 5s** if the messages span several seconds.
+- Messages from the same trigger and monitored character are combined on separate lines. Repeated messages are kept; long batches split into multiple posts.
 - Rate limits and temporary failures retry automatically, even with **Aggregation Off** selected. **Webhooks Pending** shows the backlog; **Stop** discards it without disabling future matches.
 
 Every post includes a metadata footer. If a bot consumes these messages, it should use the footer to reconstruct split batches and ignore duplicate retries. See [Discord Webhooks](documentation.html#discord-webhooks) for setup, delivery behavior and the bot format.

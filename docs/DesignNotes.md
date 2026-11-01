@@ -19,9 +19,10 @@ The dropdown binds values, not indices, and notifies the pane's saved-model comp
 
 `WebhookDispatchQueue` collects independently per processor/character, trigger, URL and interval.
 The first match starts a fixed window; later matches append newline-separated text without
-extending it. Aggregation Off sends each match separately; duplicates are data, never deduplicated loot. Missing or
-whitespace-only URLs mean unconfigured: no queue, HTTP request or error. Queue counts describe logical
-messages/windows, not their lines or HTTP parts (`WebhookDispatchQueueTest`).
+extending it. Aggregation Off sends each match separately; repeated text is preserved because separate
+matches can produce identical messages. Missing or whitespace-only URLs mean unconfigured: no queue,
+HTTP request or error. Queue counts describe logical messages/windows, not their lines or HTTP parts
+(`WebhookDispatchQueueTest`).
 
 `WebhookMessage` packs at most 2,000 UTF-16 code units per request, preferring line boundaries and never
 cutting a surrogate pair or CRLF. Oversized lines still split. Every post carries a VISIBLE Discord embed
@@ -34,7 +35,7 @@ concatenate without separators and verify the digest. This does not establish ch
 IDs and payloads stay stable across retries (`RetriesPreservePayloadsAndBatchIdentityForEveryPart`), while
 separate matches receive distinct IDs even if their text is identical. An uncertain delivery can be
 repeated: Discord does not deduplicate it, and the footer only ENABLES a receiving bot to deduplicate by
-batch ID and part number. The original loot/wire fixtures pin protocol compatibility
+batch ID and part number. The original wire fixtures pin protocol compatibility
 (`DiscordWebhookSenderTest`).
 
 Sends share an asynchronous per-webhook endpoint gate, including query variants, not one global queue.
@@ -65,7 +66,7 @@ Stop, disposal during the wait, multi-character cancellation and cleanup failure
 with a mock `IAudioManager` and a no-op store, not an uninitialized processor. The default dependencies remain
 the production singletons. Stop leaves sources usable for future matches; processor disposal retires them. An already accepted
 Discord request cannot be retracted. Closing EQLogParser discards the in-memory queue. **No queue cap or persistent outbox**
-is deliberate for low-volume loot use: retries reuse a message, but new matches during an outage can grow
+is deliberate for low-volume trigger messaging: retries reuse a message, but new matches during an outage can grow
 the backlog without bound. Do not silently drop messages to impose a cap without a new decision.
 
 References: [Discord rate limits](https://docs.discord.com/developers/topics/rate-limits) and

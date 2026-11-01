@@ -73,7 +73,7 @@ With **Regex** off, a trigger searches for the text you entered, ignoring letter
 
 # Discord Webhooks
 
-Triggers can send messages to a Discord channel using a webhook. Use this for loot announcements or other alerts you want to share outside EverQuest.
+Triggers can send messages to a Discord channel using a webhook. Use this for trigger messages or alerts you want to share outside EverQuest.
 
 ## Setting Up a Webhook
 
@@ -91,7 +91,7 @@ Aggregation combines several firings of the **same trigger for the same monitore
 | Choice | What happens | When to use it |
 |---|---|---|
 | **Aggregation Off** (default) | Each firing sends its own message, without an aggregation delay | Ordinary alerts, or a receiving bot that expects separate messages |
-| **Aggregate: 1s** | Collect messages for one second after the first firing | Short bursts of loot announcements |
+| **Aggregate: 1s** | Collect messages for one second after the first firing | Short bursts of messages |
 | **Aggregate: 5s** through **Aggregate: 30s** (5-second steps) | Collect messages for the selected number of seconds | Longer bursts, when waiting a little longer is acceptable |
 
 The **first firing starts a fixed window**. Later firings join it without restarting the countdown. For example, with **Aggregate: 5s**, messages arriving at seconds 0, 1 and 3 are sent together at about second 5. A later firing starts a new window. Rate limiting or an outage can delay delivery further.
@@ -99,12 +99,12 @@ The **first firing starts a fixed window**. Later firings join it without restar
 If the trigger produces these messages during one window:
 
 ```text
-Sprig of Bloom
-Spiralthorn Mace
-Sprig of Bloom
+Alert: Event A detected
+Alert: Event B detected
+Alert: Event A detected
 ```
 
-Discord receives those lines together when they fit in one post. **Repeated text is kept**: two identical loot announcements may mean two items, not an accidental duplicate.
+Discord receives those lines together when they fit in one post. **Repeated text is kept**: identical messages can represent separate trigger matches, not accidental duplicates.
 
 Messages longer than Discord's 2,000-character content limit are split into multiple posts, with whole lines kept together when possible. A single oversized line is split too. This also applies with **Aggregation Off** selected.
 
@@ -131,7 +131,7 @@ For people reading the channel, this is delivery metadata and can be ignored. Fo
 - **Batch ID** identifies one original message or aggregation window. Separate messages get different IDs, even when their text is identical.
 - **Part** and **total** are one-based part numbering and the number of parts in that batch. Group by batch ID, order by part number, then concatenate the content **without adding separators**. Posts from different batches may interleave; batch arrival order is not guaranteed.
 - **A** means aggregation was enabled; **N** means one original trigger firing. The lowercase **SHA-256** digest covers the complete message text encoded as UTF-8, before it was split.
-- **Retries reuse the same batch ID, part number and payload.** If Discord saves a post but its confirmation is lost, retrying can create another Discord post. A receiving bot should ignore a batch ID/part number it has already processed, rather than creating a second auction or other action. EQLogParser and Discord do not perform that receiver-side deduplication.
+- **Retries reuse the same batch ID, part number and payload.** If Discord saves a post but its confirmation is lost, retrying can create another Discord post. A receiving bot should ignore a batch ID/part number it has already processed, rather than performing the same action twice. EQLogParser and Discord do not perform that receiver-side deduplication.
 
 
 # Trigger Variables
