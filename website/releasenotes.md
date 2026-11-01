@@ -1,11 +1,11 @@
 # 2.4.8 | 11/01/26
 1. Added option to aggregate **Webhook** messages into one call to Discord based on time interval. Code provided by **ewiclip@github**
 2. Added support for sending large messages (over 2000 characters) via **Webhook** by breaking the message up into multiple calls and including a footer to help put the messages back together. Code provided by **ewiclip@github**
-3. Fix issue with **Log Search** that turn very large results.
+3. Fixed **Log Search** losing very large result sets.
 4. Latest spells from beta.
 
 # 2.4.7 | 10/24/26
-1. Added an option to combine Discord **webhook** messages sent within a selected time window into a single post.
+1. New **Damage Meter** settings. Show or hide the DPS or Tanking tabs. Added SDPS and RDPS (rolling DPS) columns which can be shown/hidden.
 2. Added **Busy** column to summary tables to represent active player time.
 3. Fixes for the rolling DPS Line Chart.
 
