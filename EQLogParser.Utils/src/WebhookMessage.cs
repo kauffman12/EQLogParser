@@ -1,4 +1,5 @@
 using System;
+using System.Buffers.Text;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
@@ -29,8 +30,10 @@ namespace EQLogParser
     internal static List<WebhookMessage> Create(string content, bool aggregated, string batchId = null)
     {
       ArgumentException.ThrowIfNullOrEmpty(content);
-      batchId ??= Guid.NewGuid().ToString("N");
-      var digest = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(content))).ToLowerInvariant();
+      var id = batchId == null ? Guid.NewGuid() : Guid.ParseExact(batchId, "N");
+      // Canonical UUID byte order matches its hexadecimal representation, not Guid's default mixed-endian bytes.
+      var encodedBatchId = Base64Url.EncodeToString(id.ToByteArray(bigEndian: true));
+      var digest = Base64Url.EncodeToString(SHA256.HashData(Encoding.UTF8.GetBytes(content)));
 
       var chunks = new List<string>();
       for (var offset = 0; offset < content.Length;)
@@ -58,7 +61,7 @@ namespace EQLogParser
       var result = new List<WebhookMessage>();
       for (var index = 0; index < chunks.Count; index++)
       {
-        result.Add(new(batchId, index + 1, chunks.Count, aggregated, digest, chunks[index]));
+        result.Add(new(encodedBatchId, index + 1, chunks.Count, aggregated, digest, chunks[index]));
       }
 
       return result;

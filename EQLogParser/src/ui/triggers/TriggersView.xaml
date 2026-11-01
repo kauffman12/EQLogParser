@@ -21,7 +21,6 @@
   <Grid>
     <Grid.RowDefinitions>
       <RowDefinition Height="{DynamicResource EQGridTitleHeight}"></RowDefinition>
-      <RowDefinition Height="Auto"></RowDefinition>
       <RowDefinition Height="300*"></RowDefinition>
     </Grid.RowDefinitions>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
@@ -32,6 +31,18 @@
           <ScaleTransform ScaleX="{DynamicResource EQCheckBoxScale}" ScaleY="{DynamicResource EQCheckBoxScale}"/>
         </fa:ImageAwesome.LayoutTransform>
       </fa:ImageAwesome>
+      <Grid Margin="40,0,0,2" VerticalAlignment="Center">
+        <Label x:Name="triggerStatus" Padding="0" Visibility="Collapsed" VerticalAlignment="Center" Content="Cache Update Pending..." Style="{DynamicResource EQStatusStyle}" />
+        <StackPanel x:Name="webhookStatus" Orientation="Horizontal" Visibility="Collapsed" VerticalAlignment="Center">
+          <Label x:Name="webhookStatusText" Style="{DynamicResource EQStatusStyle}" Padding="0" VerticalAlignment="Center" />
+          <Button x:Name="webhookInfo" Margin="6,0,0,0" Padding="2" Cursor="Hand"
+                  Background="Transparent" BorderThickness="0" VerticalAlignment="Center"
+                  ToolTip="Show webhook details" AutomationProperties.Name="Show webhook details" Click="WebhookInfoClick">
+            <fa:ImageAwesome Icon="Solid_InfoCircle" Height="{DynamicResource EQContentSize}" Width="{DynamicResource EQContentSize}"
+                             Foreground="{Binding Foreground, ElementName=webhookStatusText}" />
+          </Button>
+        </StackPanel>
+      </Grid>
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
       <Grid Margin="0,0,12,8" PreviewMouseLeftButtonDown="ToggleAdvancedPreviewMouseDown">
@@ -72,20 +83,7 @@
         </syncfusion:DropDownMenuGroup>
       </syncfusion:DropDownButtonAdv>
     </StackPanel>
-    <WrapPanel Grid.Row="1">
-      <Label x:Name="triggerStatus" Margin="4,0,0,2" Padding="0" Visibility="Collapsed" VerticalAlignment="Center" Content="Cache Update Pending..." Style="{DynamicResource EQStatusStyle}" />
-      <Button x:Name="webhookStatus" Margin="12,0,0,2" Padding="0" Visibility="Collapsed" VerticalAlignment="Center"
-              Background="Transparent" BorderThickness="0" Foreground="{DynamicResource ContentForeground}"
-              Click="WebhookStatusClick">
-        <StackPanel Orientation="Horizontal">
-          <fa:ImageAwesome x:Name="webhookErrorIcon" Icon="Solid_ExclamationTriangle" Visibility="Collapsed"
-                          Height="{DynamicResource EQContentSize}" Width="{DynamicResource EQContentSize}"
-                          Foreground="{DynamicResource EQStopForegroundBrush}" Margin="0,0,6,0" />
-          <Label x:Name="webhookStatusText" Style="{DynamicResource EQStatusStyle}" Padding="0" />
-        </StackPanel>
-      </Button>
-    </WrapPanel>
-    <Grid x:Name="mainGrid" Grid.Row="2">
+    <Grid x:Name="mainGrid" Grid.Row="1">
       <Grid.ColumnDefinitions>
         <ColumnDefinition Width="{DynamicResource EQTriggerCharacterList}"></ColumnDefinition>
         <ColumnDefinition Width="3"></ColumnDefinition>

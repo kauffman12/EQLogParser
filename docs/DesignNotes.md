@@ -27,15 +27,22 @@ HTTP request or error. Queue counts describe logical messages/windows, not their
 `WebhookMessage` packs at most 2,000 UTF-16 code units per request, preferring line boundaries and never
 cutting a surrogate pair or CRLF. Oversized lines still split. Every post carries a VISIBLE Discord embed
 footer, including single-part and nonaggregated messages (`WebhookMessageTest`):
-`EQLP1|<32-character batch ID>|<part>|<total>|<A or N>|<SHA-256>`.
-Parts are one-based; A means aggregated, N one original match. The lowercase digest covers the complete
-UTF-8 text. Parts from different batches may interleave, and batch arrival order is not guaranteed; the
-endpoint gate serializes requests, not whole batches. Receivers group by batch ID, order by part number,
+`EQLP1|<22-character batch ID>|<part>|<total>|<A or N>|<43-character SHA-256>`.
+The two binary fields are encoded separately as **unpadded Base64url (RFC 4648 §5)**, case-sensitive,
+with no `=` padding: the ID encodes the UUID's 16 bytes in canonical/network order
+(`Guid.ToByteArray(bigEndian: true)`), and the digest encodes all 32 raw SHA-256 bytes. Never encode
+the hexadecimal text, use Guid's default mixed-endian byte array, lowercase the output, or combine the fields.
+`EQLP1` deliberately stays unchanged for this pre-adoption format adjustment; there is no hex compatibility output.
+`FooterEncodesRawUuidAndSha256SeparatelyAsUnpaddedBase64Url` pins byte order, a known digest, round-trip
+bytes and the 78-character footer for single-digit part counts (31 fewer than hex).
+Parts are one-based; A means aggregated, N one original match. The digest covers the complete UTF-8 text.
+Parts from different batches may interleave, and batch arrival order is not guaranteed; the endpoint gate
+serializes requests, not whole batches. Receivers group by batch ID, order by part number,
 concatenate without separators and verify the digest. This does not establish chronology between batches.
 IDs and payloads stay stable across retries (`RetriesPreservePayloadsAndBatchIdentityForEveryPart`), while
 separate matches receive distinct IDs even if their text is identical. An uncertain delivery can be
 repeated: Discord does not deduplicate it, and the footer only ENABLES a receiving bot to deduplicate by
-batch ID and part number. The original wire fixtures pin protocol compatibility
+batch ID and part number. The wire fixtures pin message content and encoded metadata
 (`DiscordWebhookSenderTest`).
 
 Sends share an asynchronous per-webhook endpoint gate, including query variants, not one global queue.
@@ -45,12 +52,18 @@ next request. Malformed bodies fall back to headers or one second. HTTP 408/5xx,
 timeouts retry at 5, 10, 20, 40, then 60 seconds indefinitely (`DiscordWebhookSenderTest`). Retries are
 normal work, not Error Log entries; the status shows pending/retrying work.
 
+The title row has one shared status slot: **Cache Update Pending** takes priority while a cache update
+runs, then the current webhook status returns if work or errors remain. Neither status adds a row or
+moves Manage Triggers / Edit Properties. The webhook status has a clickable info icon that opens a
+standard context menu with pending/collecting/retrying counts and error details; selecting an error
+opens its trigger. Details do not depend on hovering over status text, and hiding the pane closes the menu.
+
 Permanent failures discard that message and unsent parts, flag the URL field and offer navigation from
-the status beside Cache Update Pending. Log only the first failure per endpoint and distinct cause
+the info menu. Log only the first failure per endpoint and distinct cause
 (exception type + HTTP status) until success; two triggers sharing an endpoint share that episode.
 Each endpoint episode retains every affected source, not just its latest reporter. Retirement or delivery
 at a corrected URL removes only that character/trigger's attribution; surviving affected sources keep the
-error and its already-reported causes, and status navigation moves to a survivor. The last source retiring
+error and its already-reported causes, and the info menu offers a surviving source. The last source retiring
 or a success at the endpoint clears the episode. Editing alone clears nothing. Diagnostics name the trigger
 and safe cause/status, never raw network exception messages or URLs/tokens. Attribution changes publish even
 when no work remains (`WebhookFailureEpisodeTest`).

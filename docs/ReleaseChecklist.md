@@ -178,12 +178,22 @@ PropertyGrid/Discord presentation or the processor Stop integration.
 - [ ] **Discord presentation:** ordinary and aggregated sends always show the visible EQLP1 embed footer,
   both on single messages and on every part of a split batch. Check desktop and mobile rendering. A message
   burst packs newline-separated lines; long text and Unicode remain intact.
-- [ ] **Receiving bot contract:** verify the actual bot groups interleaved parts by batch ID, orders them
-  by part number and verifies the reconstructed text's checksum. Simulate an accepted request whose
+- [ ] **Receiving bot contract:** EQLP1's ID and checksum are separate case-sensitive unpadded Base64url
+  fields (22 and 43 characters, no `=`). Verify the bot decodes the ID to 16 canonical/network-order UUID
+  bytes and the checksum to 32 SHA-256 bytes, groups interleaved parts by batch ID, orders them by part
+  number and verifies the reconstructed UTF-8 text's checksum. Simulate an accepted request whose
   response is lost: the retry has identical metadata and the bot must not perform duplicate actions.
   The footer supplies identity; neither Discord nor EQLogParser performs receiver-side deduplication.
+- [ ] **Shared title status:** Cache Update Pending and webhook status occupy the original cache-status
+  position in the title row. Neither appearing nor disappearing moves Manage Triggers / Edit Properties.
+  With webhook work pending, start a cache update: the cache message takes priority, then the current
+  webhook message returns only if work or errors remain. Queue changes during the cache update must not
+  cover its message. Check Basic/Advanced mode and different application font sizes.
+- [ ] **Clickable details:** the webhook info icon opens pending/collecting/retrying counts and readable
+  error details without hovering. Select an error to open its trigger's webhook field, including an error
+  for another character. Keyboard activation works; the menu dismisses normally and closes on pane hide.
 - [ ] **Pending and cancellation:** use a controlled endpoint to return 429/temporary failures. Status
-  shows pending/retrying work; it drains on recovery. Stop, disable Trigger Manager, disable a trigger
+  shows pending work; its info menu shows collecting/retrying counts. It drains on recovery. Stop, disable Trigger Manager, disable a trigger
   or its parent, then delete a trigger: affected pending sends stop, with another character unaffected.
   Also press Stop during a trigger's timer/text action before it queues its webhook; no pending work
   from that action should survive Stop. Repeat with multiple characters: a busy first character must
@@ -192,8 +202,8 @@ PropertyGrid/Discord presentation or the processor Stop integration.
   the URL) produce one Error Log entry per cause, with trigger name/status and no URL/token. Success
   resets the episode; a later failure is reported again. Correcting text alone does not clear the UI
   error; successful delivery does. With two affected triggers sharing a broken endpoint, disable/delete
-  the latest reporter or correct only its URL: the remaining trigger stays flagged and status navigation
-  moves to it, without another log report for the same cause. Retiring the last affected trigger clears it.
+  the latest reporter or correct only its URL: the remaining trigger stays flagged and the info menu
+  offers it, without another log report for the same cause. Retiring the last affected trigger clears it.
 
 ## Big-file load checks on Windows
 

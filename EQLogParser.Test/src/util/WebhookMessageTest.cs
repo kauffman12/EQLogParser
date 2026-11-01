@@ -1,4 +1,5 @@
 using EQLogParser;
+using System.Buffers.Text;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -14,10 +15,11 @@ public class WebhookMessageTest
   public void SinglePartMessagesAlwaysCarryIdentityAndDigest(bool aggregated, string mode)
   {
     const string content = "loot\nmore loot";
-    var digest = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(content))).ToLowerInvariant();
+    var digest = Base64Url.EncodeToString(SHA256.HashData(Encoding.UTF8.GetBytes(content)));
     var parts = WebhookMessage.Create(content, aggregated);
     Assert.HasCount(1, parts);
-    Assert.HasCount(32, parts[0].BatchId);
+    Assert.HasCount(22, parts[0].BatchId);
+    Assert.HasCount(16, Base64Url.DecodeFromChars(parts[0].BatchId));
     using var payload = JsonDocument.Parse(parts[0].Json);
     Assert.AreEqual(content, payload.RootElement.GetProperty("content").GetString());
     Assert.AreEqual($"EQLP1|{parts[0].BatchId}|1|1|{mode}|{digest}",
@@ -30,10 +32,10 @@ public class WebhookMessageTest
   public void EveryPartCarriesTheCompleteBatchIdentityAndDigest(bool aggregated, string mode)
   {
     var content = new string('a', 1400) + "\n" + new string('b', 1400);
-    var digest = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(content))).ToLowerInvariant();
+    var digest = Base64Url.EncodeToString(SHA256.HashData(Encoding.UTF8.GetBytes(content)));
     var parts = WebhookMessage.Create(content, aggregated);
     Assert.HasCount(2, parts);
-    Assert.HasCount(32, parts[0].BatchId);
+    Assert.HasCount(22, parts[0].BatchId);
     Assert.AreEqual(content, string.Concat(parts.Select(part => part.Content)));
     for (var i = 0; i < parts.Count; i++)
     {
@@ -41,6 +43,23 @@ public class WebhookMessageTest
       Assert.AreEqual($"EQLP1|{parts[0].BatchId}|{i + 1}|2|{mode}|{digest}",
         payload.RootElement.GetProperty("embeds")[0].GetProperty("footer").GetProperty("text").GetString());
     }
+  }
+
+  [TestMethod]
+  public void FooterEncodesRawUuidAndSha256SeparatelyAsUnpaddedBase64Url()
+  {
+    const string uuid = "d084f17f52af4f9f8a3535726caf4b01";
+    const string sha256 = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
+    var part = WebhookMessage.Create("abc", false, uuid).Single();
+    using var payload = JsonDocument.Parse(part.Json);
+    var footer = payload.RootElement.GetProperty("embeds")[0].GetProperty("footer").GetProperty("text").GetString();
+    Assert.AreEqual("EQLP1|0ITxf1KvT5-KNTVybK9LAQ|1|1|N|ungWv48Bz-pBQUDeXa4iI7ADYaOWF3qctBD_YfIAFa0", footer);
+    Assert.IsNotNull(footer);
+    Assert.HasCount(78, footer);
+    Assert.HasCount(22, part.BatchId);
+    Assert.HasCount(43, part.Digest);
+    CollectionAssert.AreEqual(Convert.FromHexString(uuid), Base64Url.DecodeFromChars(part.BatchId));
+    CollectionAssert.AreEqual(Convert.FromHexString(sha256), Base64Url.DecodeFromChars(part.Digest));
   }
 
   [TestMethod]

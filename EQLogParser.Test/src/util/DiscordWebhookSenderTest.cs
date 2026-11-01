@@ -140,7 +140,7 @@ namespace EQLogParserTest
     }
 
     [TestMethod]
-    public void LinePackedPartsPreserveTheLegacyWireFixturesLootAndMetadata()
+    public void LinePackedPartsPreserveTheWireFixturesContentAndMetadata()
     {
       var data = Path.Combine(AppContext.BaseDirectory, "mini-data");
       var lines = JsonSerializer.Deserialize<string[]>(File.ReadAllText(Path.Combine(data, "discord-webhook-burst.json")));

@@ -1,6 +1,9 @@
 using EQLogParser;
+using System.Buffers.Text;
 using System.Collections.Concurrent;
 using System.Net;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using static EQLogParserTest.WebhookTestHandler;
 
@@ -129,6 +132,7 @@ namespace EQLogParserTest
         var sent = payloads.ToArray();
         Assert.HasCount(partCount * 2, sent);
         var batchIds = new HashSet<string>();
+        var digest = SHA256.HashData(Encoding.UTF8.GetBytes(new string('x', length)));
         for (var part = 0; part < partCount; part++)
         {
           Assert.AreEqual(sent[part * 2], sent[(part * 2) + 1]);
@@ -136,10 +140,16 @@ namespace EQLogParserTest
           var footer = payload.RootElement.GetProperty("embeds")[0].GetProperty("footer").GetProperty("text").GetString();
           Assert.IsNotNull(footer);
           var fields = footer.Split('|');
+          Assert.HasCount(6, fields);
           Assert.AreEqual("EQLP1", fields[0]);
+          Assert.HasCount(22, fields[1]);
+          Assert.HasCount(16, Base64Url.DecodeFromChars(fields[1]));
           batchIds.Add(fields[1]);
           Assert.AreEqual((part + 1).ToString(), fields[2]);
           Assert.AreEqual(partCount.ToString(), fields[3]);
+          Assert.AreEqual("N", fields[4]);
+          Assert.HasCount(43, fields[5]);
+          CollectionAssert.AreEqual(digest, Base64Url.DecodeFromChars(fields[5]));
         }
         Assert.HasCount(1, batchIds);
       }

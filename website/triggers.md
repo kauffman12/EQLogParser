@@ -113,7 +113,7 @@ Leave **Aggregation Off** selected if you do not want to combine messages. Autom
 ## Pending Messages, Retries and Stop
 
 - **Retries are automatic.** Discord rate limits wait for Discord's retry deadline. Network failures, timeouts and temporary server errors also retry, with increasing waits up to one minute, until delivery or cancellation. You do not need to enable a setting.
-- **Check Trigger Manager's status.** **Webhooks Pending** counts waiting or sending messages/batches, not individual lines or split parts. Hover for collecting/retrying counts. Permanent failures show an error indicator; click it to open an affected trigger, and click again to visit another error. Check **Tools → View Error Log** for diagnostics.
+- **Check Trigger Manager's title status.** **Webhooks Pending** counts waiting or sending messages/batches, not individual lines or split parts. Click the info icon beside it for collecting/retrying counts and error details; select an error to open its trigger. **Cache Update Pending** temporarily takes the same spot during cache updates, without moving the panes below. Check **Tools → View Error Log** for diagnostics.
 - **Fix permanent errors before sending again.** Malformed URLs and permanent Discord rejections are not retried: that message and its remaining parts are discarded. Correct the configuration and Save; editing alone does not clear the error, but successful delivery does.
 - **Stop discards pending work.** The Stop button or `{EQLP:STOP}` cancels waiting webhook sends along with trigger audio, timers and overlays. It does not disable triggers: later matches can send again. Disabling or deleting a trigger also cancels its pending sends; disabling its parent folder, character or trigger monitoring cancels the affected work too.
 - **The queue is not saved.** Closing EQLogParser discards pending messages. During an outage, new matches can continue to build a backlog; use Stop if you want to discard it rather than send older alerts later. A post Discord has already accepted cannot be retracted by Stop.
@@ -128,9 +128,10 @@ EQLP1|<batch ID>|<part>|<total>|<A or N>|<SHA-256>
 
 For people reading the channel, this is delivery metadata and can be ignored. For bot authors:
 
-- **Batch ID** identifies one original message or aggregation window. Separate messages get different IDs, even when their text is identical.
+- **Batch ID** identifies one original message or aggregation window. It is a 22-character encoding of the full UUID. Separate messages get different IDs, even when their text is identical.
 - **Part** and **total** are one-based part numbering and the number of parts in that batch. Group by batch ID, order by part number, then concatenate the content **without adding separators**. Posts from different batches may interleave; batch arrival order is not guaranteed.
-- **A** means aggregation was enabled; **N** means one original trigger firing. The lowercase **SHA-256** digest covers the complete message text encoded as UTF-8, before it was split.
+- **A** means aggregation was enabled; **N** means one original trigger firing. The 43-character **SHA-256** field encodes the full checksum of the complete message text encoded as UTF-8, before it was split.
+- **Encoding:** the batch ID and checksum each use **unpadded Base64url (RFC 4648 §5)** over their raw bytes, not their hexadecimal text. Preserve case and decode the fields separately: the ID yields 16 UUID bytes in canonical/network order, and the checksum yields 32 SHA-256 bytes. Verify the decoded checksum against the SHA-256 of the reconstructed UTF-8 text. The prefix remains **EQLP1**.
 - **Retries reuse the same batch ID, part number and payload.** If Discord saves a post but its confirmation is lost, retrying can create another Discord post. A receiving bot should ignore a batch ID/part number it has already processed, rather than performing the same action twice. EQLogParser and Discord do not perform that receiver-side deduplication.
 
 

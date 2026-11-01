@@ -119,7 +119,7 @@ In **Trigger Manager → Trigger Properties → Data Sharing**, set **Text to Se
 
 - **Aggregation Off** is the default and sends each firing separately. Try **Aggregate: 1s** for a short burst, or **Aggregate: 5s** if the messages span several seconds.
 - Messages from the same trigger and monitored character are combined on separate lines. Repeated messages are kept; long batches split into multiple posts.
-- Rate limits and temporary failures retry automatically, even with **Aggregation Off** selected. **Webhooks Pending** shows the backlog; **Stop** discards it without disabling future matches.
+- Rate limits and temporary failures retry automatically, even with **Aggregation Off** selected. **Webhooks Pending** shows the backlog; click its info icon for counts and error details. **Stop** discards pending messages without disabling future matches.
 
 Every post includes a metadata footer. If a bot consumes these messages, it should use the footer to reconstruct split batches and ignore duplicate retries. See [Discord Webhooks](documentation.html#discord-webhooks) for setup, delivery behavior and the bot format.
 
