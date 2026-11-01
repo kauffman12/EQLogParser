@@ -25,6 +25,9 @@ namespace EQLogParser
     public const string TimerWarnTimeCode = "{timer-warn-time-value}";
     public readonly string CurrentCharacterId;
     public readonly string CurrentProcessorName;
+    private readonly string _webhookOwner = Guid.NewGuid().ToString("N");
+    private readonly IAudioManager _audioManager;
+    private readonly TriggerStateDB _triggerStore;
     private const int TRIGGER_LOG_DELAY = 750;
     private const int TRIGGER_LOG_BUFFER_SIZE = 25;
     private static readonly Regex TokenRegex = MatchesTokenRegex();
@@ -36,14 +39,6 @@ namespace EQLogParser
     private readonly Dictionary<string, ConcurrentDictionary<string, RepeatedData>> _repeatedSpeakTimes = [];
     private readonly ConcurrentDictionary<string, bool> _requiredOverlays = [];
 
-    /*
-     * Cooldown stamps for the "send-to-chat text but no usable webhook" warning. This sits on the per-match path: a trigger that fires every few
-     * seconds with the box ticked and the URL empty used to print a line each time, which is a config state wearing an alarm. Once per trigger per
-     * few minutes instead — the same shape `TriggerOverlayManager.ShouldWarnNow` gives the missing-overlay warnings, because a misconfiguration can
-     * be fixed mid-session and the next sighting should be news again.
-     */
-    private static readonly ConcurrentDictionary<string, long> _webhookWarnStamps = [];
-    private static readonly long WebhookWarnCooldownTicks = MonoTime.SecondsToTicks(300);
     private readonly ConcurrentDictionary<string, List<TimerData>> _timerLists = [];
     private readonly BlockingCollection<TriggerLogItem> _triggerLogCollection = [];
     private readonly BlockingCollection<LineData> _chatCollection = [];
@@ -78,8 +73,11 @@ namespace EQLogParser
     private bool _isTesting;
 
     internal TriggerProcessor(string id, string name, string playerName, string voice, int voiceRate,
-      int playerVolume, string activeColor, string idleColor, string resetColor, string fontColor)
+      int playerVolume, string activeColor, string idleColor, string resetColor, string fontColor,
+      IAudioManager audioManager = null, TriggerStateDB triggerStore = null)
     {
+      _audioManager = audioManager ?? AudioManager.Instance;
+      _triggerStore = triggerStore ?? TriggerStateDB.Instance;
       CurrentCharacterId = id;
       CurrentProcessorName = name;
       _currentPlayer = playerName;
@@ -89,9 +87,9 @@ namespace EQLogParser
       _characterFontColor = fontColor;
       _voiceRate = voiceRate;
       _playerVolume = playerVolume;
-      AudioManager.Instance.Add(CurrentCharacterId, voice);
-      TriggerStateDB.Instance.LexiconUpdateEvent += LexiconUpdateEvent;
-      TriggerStateDB.Instance.TrustedPlayersUpdateEvent += TrustedPlayersUpdateEvent;
+      _audioManager.Add(CurrentCharacterId, voice);
+      _triggerStore.LexiconUpdateEvent += LexiconUpdateEvent;
+      _triggerStore.TrustedPlayersUpdateEvent += TrustedPlayersUpdateEvent;
     }
 
     internal long GetActivityLastTicks() => Interlocked.Read(ref _activityLastTicks);
@@ -101,7 +99,7 @@ namespace EQLogParser
     internal void SetResetColor(string color) => _characterResetColor = color;
     internal void SetFontColor(string color) => _characterFontColor = color;
     internal void SetPlayerVolume(int volume) => _playerVolume = volume;
-    internal void SetVoice(string voice) => AudioManager.Instance.SetVoice(CurrentCharacterId, voice);
+    internal void SetVoice(string voice) => _audioManager.SetVoice(CurrentCharacterId, voice);
     internal void SetVoiceRate(int rate) => _voiceRate = rate;
     internal void SetTesting(bool testing) => _isTesting = testing;
 
@@ -111,8 +109,8 @@ namespace EQLogParser
       TriggerLogManager.Instance.EnsureCollection(CurrentProcessorName);
 
       await GetActiveTriggersAsync();
-      _lexicon = TriggerUtil.ToLexiconDictionary(await TriggerStateDB.Instance.GetLexicon());
-      _trustedPlayers = [.. await TriggerStateDB.Instance.GetTrustedPlayers()];
+      _lexicon = TriggerUtil.ToLexiconDictionary(await _triggerStore.GetLexicon());
+      _trustedPlayers = [.. await _triggerStore.GetTrustedPlayers()];
     }
 
     internal async Task<List<string>> GetEnabledTriggersAsync()
@@ -129,14 +127,21 @@ namespace EQLogParser
       }
     }
 
+    internal void CancelPendingWebhooks(bool removeSources = false) =>
+      MainActions.DiscordWebhooks.ClearOwner(_webhookOwner, removeSources);
+
     internal async Task StopTriggersAsync(bool remove = false)
     {
+      CancelPendingWebhooks(remove);
       if (_isDisposed) return;
       await _activeTriggerSemaphore.WaitAsync();
 
       try
       {
-        AudioManager.Instance.StopAudio(CurrentCharacterId, remove);
+        // A trigger already executing may have enqueued after the immediate clear, before releasing this gate.
+        CancelPendingWebhooks(remove);
+        if (_isDisposed) return;
+        _audioManager.StopAudio(CurrentCharacterId, remove);
 
         foreach (var kv in _timerLists)
         {
@@ -174,7 +179,7 @@ namespace EQLogParser
     public void LinkTo(BlockingCollection<LogReaderItem[]> collection)
     {
       // delay start until log is ready
-      AudioManager.Instance.StartAudio(CurrentCharacterId);
+      _audioManager.StartAudio(CurrentCharacterId);
 
       _chatTask = Task.Run(() =>
       {
@@ -833,24 +838,12 @@ namespace EQLogParser
 
       if (ProcessDisplayText(wrapper.ModifiedSendToChat, lineData.Action, matches, null, previousMatches, vars) is { } updatedSendToChatText)
       {
-        var url = wrapper.TriggerData.ChatWebhook;
-        if (string.IsNullOrEmpty(url) || !url.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+        if (wrapper.HasLogTimeSendToChat)
         {
-          url ??= "Not Set";
-          if (TriggerOverlayManager.ShouldWarnNow(_webhookWarnStamps, $"chat:{wrapper.TriggerData?.Pattern}",
-                MonoTime.NowStamp(), WebhookWarnCooldownTicks))
-          {
-            Log.Warn($"Can not send to chat, invalid webhook: {url} (trigger '{wrapper.Name}')");
-          }
+          updatedSendToChatText = updatedSendToChatText.Replace(LogTimeCode, DateUtil.FormatDotNetTimeSeconds(lineData.BeginTime), StringComparison.OrdinalIgnoreCase);
         }
-        else
-        {
-          if (wrapper.HasLogTimeSendToChat)
-          {
-            updatedSendToChatText = updatedSendToChatText.Replace(LogTimeCode, DateUtil.FormatDotNetTimeSeconds(lineData.BeginTime), StringComparison.OrdinalIgnoreCase);
-          }
-          _ = MainActions.SendDiscordMessage(updatedSendToChatText, wrapper.TriggerData.ChatWebhook);
-        }
+        _ = MainActions.SendDiscordMessage(wrapper.WebhookSource, updatedSendToChatText, wrapper.TriggerData.ChatWebhook,
+          wrapper.TriggerData.AggregateWebhooks);
       }
 
       if (!_isDisposed && !_triggerLogCollection.IsCompleted)
@@ -1248,7 +1241,7 @@ namespace EQLogParser
         if (speak.IsSound)
         {
           var theFile = TriggerUtil.ResolveSoundPath(speak.TtsOrSound);
-          AudioManager.Instance.SpeakFileAsync(CurrentCharacterId, theFile, data.Priority, _playerVolume, data.Volume);
+          _audioManager.SpeakFileAsync(CurrentCharacterId, theFile, data.Priority, _playerVolume, data.Volume);
         }
         else
         {
@@ -1283,7 +1276,7 @@ namespace EQLogParser
               tts = ReplaceBadCharsRegex().Replace(tts, string.Empty);
               // trigger voice rate uses 0 for system setting. 1 for default rate, etc
               var rate = data.VoiceRate > 0 ? data.VoiceRate - 1 : _voiceRate;
-              AudioManager.Instance.SpeakTtsAsync(CurrentCharacterId, tts, data.Priority, rate, _playerVolume, data.Volume);
+              _audioManager.SpeakTtsAsync(CurrentCharacterId, tts, data.Priority, rate, _playerVolume, data.Volume);
             }
           }
         }
@@ -1313,7 +1306,7 @@ namespace EQLogParser
 
       var requiredOverlayIds = new HashSet<string>(StringComparer.Ordinal);
       var activeTriggersById = new Dictionary<string, TriggerWrapper>();
-      var enabledTriggers = await TriggerStateDB.Instance.GetEnabledTriggers(CurrentCharacterId);
+      var enabledTriggers = await _triggerStore.GetEnabledTriggers(CurrentCharacterId);
       long triggerCount = 0;
 
       foreach (var enabled in enabledTriggers)
@@ -1971,6 +1964,12 @@ namespace EQLogParser
       }
       finally
       {
+        var sources = MainActions.DiscordWebhooks.UpdateSources(_webhookOwner, CurrentCharacterId,
+          _isDisposed ? [] : activeTriggersById.Values
+            .Where(wrapper => !string.IsNullOrEmpty(wrapper.ModifiedSendToChat))
+            .Select(wrapper => (wrapper.Id, wrapper.Name)));
+        foreach (var wrapper in activeTriggersById.Values)
+          wrapper.WebhookSource = sources.GetValueOrDefault(wrapper.Id);
         _activeTriggersById.Clear();
 
         foreach (var kv in activeTriggersById)
@@ -2002,8 +2001,8 @@ namespace EQLogParser
 
       await StopTriggersAsync(true).ConfigureAwait(false);
 
-      TriggerStateDB.Instance.LexiconUpdateEvent -= LexiconUpdateEvent;
-      TriggerStateDB.Instance.TrustedPlayersUpdateEvent -= TrustedPlayersUpdateEvent;
+      _triggerStore.LexiconUpdateEvent -= LexiconUpdateEvent;
+      _triggerStore.TrustedPlayersUpdateEvent -= TrustedPlayersUpdateEvent;
       _triggerLogCollection.CompleteAdding();
       _chatCollection.CompleteAdding();
       _speakCollection.CompleteAdding();

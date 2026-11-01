@@ -517,5 +517,6 @@ namespace EQLogParser
     public string PreviousStartText { get; set; }
     public long LockedOutTicks { get; set; }
     public ConditionNode ConditionAst { get; set; }
+    internal WebhookSource WebhookSource { get; set; }
   }
 }

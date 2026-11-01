@@ -55,6 +55,7 @@ namespace EQLogParser.Wpf.Test
         WarningSoundToPlay = "warning-sound.wav",
         EndTimerClearVariables = "var1,var2,var3",
         ChatWebhook = "https://example.com/webhook",
+        AggregateWebhooks = 6,
         TextToSendToChat = "chat text",
         TextToShare = "share text",
         TimesToLoop = 5,
@@ -125,6 +126,7 @@ namespace EQLogParser.Wpf.Test
       Assert.AreEqual(source.LockoutTime, dest.LockoutTime);
       Assert.AreEqual(source.VoiceRate, dest.VoiceRate);
       Assert.AreEqual(source.Volume, dest.Volume);
+      Assert.AreEqual(source.AggregateWebhooks, dest.AggregateWebhooks);
       Assert.AreEqual(source.RepeatedResetTime, dest.RepeatedResetTime);
       Assert.IsTrue(dest.RepeatedResetSlides, "a copied trigger that counted on idle must still count on idle - the anchor policy travels with the window");
       Assert.AreEqual(source.EndEarlyRepeatedCount, dest.EndEarlyRepeatedCount);

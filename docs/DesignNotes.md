@@ -5,6 +5,70 @@ Read the relevant section before changing import, sharing or migration code so d
 quietly reversed. Style rules live in [CodingStandards.md](CodingStandards.md); this file answers
 *"why is it like this?"* and *"what must not change without a decision?"*.
 
+## Discord webhook delivery
+
+Adapted from [Ewiclip's webhook implementation](https://github.com/Ewiclip/EQLogParser/commit/a9740777d6610fb0f892b56d75430d77b843904d).
+The URL and aggregation dropdown belong in ONE Data Sharing row (`WebhookEditor`). Aggregation defaults
+to **No**, including legacy imports, and survives copy/save/share. `AggregateWebhooks` preserves the fork's
+stored values: 0 = No, 1–6 = 5–30 seconds; 7 adds 1 second without reinterpreting existing triggers.
+The dropdown binds values, not indices, and notifies the pane's saved-model comparison
+(`WebhookOptionsUnsaved`), not a synthetic URL edit: loading stored choices is not unsaved work
+(`WebhookEditorTest`). Footer metadata is unconditional; it has no setting or editor control.
+
+`WebhookDispatchQueue` collects independently per processor/character, trigger, URL and interval.
+The first match starts a fixed window; later matches append newline-separated text without
+extending it. No sends each match separately; duplicates are data, never deduplicated loot. Missing or
+whitespace-only URLs mean unconfigured: no queue, HTTP request or error. Queue counts describe logical
+messages/windows, not their lines or HTTP parts (`WebhookDispatchQueueTest`).
+
+`WebhookMessage` packs at most 2,000 UTF-16 code units per request, preferring line boundaries and never
+cutting a surrogate pair or CRLF. Oversized lines still split. Every post carries a VISIBLE Discord embed
+footer, including single-part and nonaggregated messages (`WebhookMessageTest`):
+`EQLP1|<32-character batch ID>|<part>|<total>|<A or N>|<SHA-256>`.
+Parts are one-based; A means aggregated, N one original match. The lowercase digest covers the complete
+UTF-8 text. Parts from different batches may interleave, and batch arrival order is not guaranteed; the
+endpoint gate serializes requests, not whole batches. Receivers group by batch ID, order by part number,
+concatenate without separators and verify the digest. This does not establish chronology between batches.
+IDs and payloads stay stable across retries (`RetriesPreservePayloadsAndBatchIdentityForEveryPart`), while
+separate matches receive distinct IDs even if their text is identical. An uncertain delivery can be
+repeated: Discord does not deduplicate it, and the footer only ENABLES a receiving bot to deduplicate by
+batch ID and part number. The original loot/wire fixtures pin protocol compatibility
+(`DiscordWebhookSenderTest`).
+
+Sends share an asynchronous per-webhook endpoint gate, including query variants, not one global queue.
+Requests use `wait=true` for confirmation. Rate limits honor the longest `retry_after`, `Retry-After` or
+reset deadline, including fractional seconds and global limits; successful exhausted buckets delay the
+next request. Malformed bodies fall back to headers or one second. HTTP 408/5xx, network failures and
+timeouts retry at 5, 10, 20, 40, then 60 seconds indefinitely (`DiscordWebhookSenderTest`). Retries are
+normal work, not Error Log entries; the status shows pending/retrying work.
+
+Permanent failures discard that message and unsent parts, flag the URL field and offer navigation from
+the status beside Cache Update Pending. Log only the first failure per endpoint and distinct cause
+(exception type + HTTP status) until success; two triggers sharing an endpoint share that episode.
+Each endpoint episode retains every affected source, not just its latest reporter. Retirement or delivery
+at a corrected URL removes only that character/trigger's attribution; surviving affected sources keep the
+error and its already-reported causes, and status navigation moves to a survivor. The last source retiring
+or a success at the endpoint clears the episode. Editing alone clears nothing. Diagnostics name the trigger
+and safe cause/status, never raw network exception messages or URLs/tokens. Attribution changes publish even
+when no work remains (`WebhookFailureEpisodeTest`).
+Queue/store event fan-out is guarded per subscriber, so a cosmetic failure cannot strand a send.
+
+Disabling a trigger or parent cancels collecting windows, queued sends and retry waits before the normal
+cache refresh; deletion, state copies and imports notify through the store too (`WebhookSettingsTest`).
+Source identity rejects stale wrappers after disable/re-enable without cancelling another character's
+work. Manager Stop first cancels every processor's pending sends before awaiting ANY character's cleanup
+(`TriggerManager.StopProcessorsAsync`). Each processor clears again after acquiring its active-trigger
+semaphore: an executing trigger can enqueue while Stop waits. `TriggerWebhookStopTest` (Windows) pins normal
+Stop, disposal during the wait, multi-character cancellation and cleanup failure using initialized processors
+with a mock `IAudioManager` and a no-op store, not an uninitialized processor. The default dependencies remain
+the production singletons. Stop leaves sources usable for future matches; processor disposal retires them. An already accepted
+Discord request cannot be retracted. Closing EQLogParser discards the in-memory queue. **No queue cap or persistent outbox**
+is deliberate for low-volume loot use: retries reuse a message, but new matches during an outage can grow
+the backlog without bound. Do not silently drop messages to impose a cap without a new decision.
+
+References: [Discord rate limits](https://docs.discord.com/developers/topics/rate-limits) and
+[webhook execution](https://docs.discord.com/developers/resources/webhook#execute-webhook).
+
 ## The parsing direction: what we are building and why
 
 *Orientation chapter — the shape of the work before its details. Every law summarized here has a full section in this
@@ -10407,9 +10471,8 @@ get two lines — and every later sighting only raises `SightingsOf`/`Silenced`.
 all night; the episode
   trick belongs to overlap (which does go quiet) and the cooldown form belongs to `TriggerOverlayManager.ShouldWarnNow`,
   where the condition is a
-  config state an operator can fix mid-session (missing overlay window, trigger with "send to chat" ticked and no webhook —
-  now throttled through
-  that same helper rather than per match).
+  config state an operator can fix mid-session, such as a missing overlay window. Webhooks have their own
+  failure episodes (see "Discord webhook delivery"); a blank webhook URL is unconfigured and silent.
 - **A capped message has to carry its evidence the one time.** So the parser sites stopped logging a bare exception and gained
   `RepeatCap.Clip(lineData.Action)` — the offending text, newlines folded, length cut. Silence is counted (`Silenced`), never
   invented: nothing here

@@ -141,6 +141,7 @@ namespace EQLogParser
     public string WarningSoundToPlay { get; set; }
     public string EndTimerClearVariables { get; set; }
     public string ChatWebhook { get; set; }
+    public int AggregateWebhooks { get; set; }
     public string TextToSendToChat { get; set; }
     public string TextToShare { get; set; }
     public long TimesToLoop { get; set; }

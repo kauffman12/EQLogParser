@@ -21,6 +21,7 @@
   <Grid>
     <Grid.RowDefinitions>
       <RowDefinition Height="{DynamicResource EQGridTitleHeight}"></RowDefinition>
+      <RowDefinition Height="Auto"></RowDefinition>
       <RowDefinition Height="300*"></RowDefinition>
     </Grid.RowDefinitions>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Left">
@@ -31,7 +32,6 @@
           <ScaleTransform ScaleX="{DynamicResource EQCheckBoxScale}" ScaleY="{DynamicResource EQCheckBoxScale}"/>
         </fa:ImageAwesome.LayoutTransform>
       </fa:ImageAwesome>
-      <Label x:Name="triggerStatus" Margin="40,0,0,2" Padding="0" Visibility="Collapsed" VerticalAlignment="Center" Content="Cache Update Pending..." Style="{DynamicResource EQStatusStyle}" />
     </StackPanel>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
       <Grid Margin="0,0,12,8" PreviewMouseLeftButtonDown="ToggleAdvancedPreviewMouseDown">
@@ -72,7 +72,20 @@
         </syncfusion:DropDownMenuGroup>
       </syncfusion:DropDownButtonAdv>
     </StackPanel>
-    <Grid x:Name="mainGrid" Grid.Row="1">
+    <WrapPanel Grid.Row="1">
+      <Label x:Name="triggerStatus" Margin="4,0,0,2" Padding="0" Visibility="Collapsed" VerticalAlignment="Center" Content="Cache Update Pending..." Style="{DynamicResource EQStatusStyle}" />
+      <Button x:Name="webhookStatus" Margin="12,0,0,2" Padding="0" Visibility="Collapsed" VerticalAlignment="Center"
+              Background="Transparent" BorderThickness="0" Foreground="{DynamicResource ContentForeground}"
+              Click="WebhookStatusClick">
+        <StackPanel Orientation="Horizontal">
+          <fa:ImageAwesome x:Name="webhookErrorIcon" Icon="Solid_ExclamationTriangle" Visibility="Collapsed"
+                          Height="{DynamicResource EQContentSize}" Width="{DynamicResource EQContentSize}"
+                          Foreground="{DynamicResource EQStopForegroundBrush}" Margin="0,0,6,0" />
+          <Label x:Name="webhookStatusText" Style="{DynamicResource EQStatusStyle}" Padding="0" />
+        </StackPanel>
+      </Button>
+    </WrapPanel>
+    <Grid x:Name="mainGrid" Grid.Row="2">
       <Grid.ColumnDefinitions>
         <ColumnDefinition Width="{DynamicResource EQTriggerCharacterList}"></ColumnDefinition>
         <ColumnDefinition Width="3"></ColumnDefinition>
@@ -148,7 +161,7 @@
                 <syncfusion:PropertyGridItem CategoryName="Basic Trigger Options" x:Name="triggerVolumeItem" PropertyName="Volume" DisplayName="Volume" Description="Modifies the Volume used for this Trigger. Note that the increase can not go above the max 100% volume level. For this to be useful your Default Volume needs to be below 100% or above 0%."/>
                 <syncfusion:PropertyGridItem CategoryName="Data Sharing" x:Name="triggerTextToShareItem" PropertyName="TextToShare" DisplayName="Text to Copy" Description="The Text to Copy is copied to the Clipboard when the trigger pattern is matched. See the documentation on Using Trigger Variables for additional information."/>
                 <syncfusion:PropertyGridItem CategoryName="Data Sharing" PropertyName="TextToSendToChat" DisplayName="Text to Send (Discord)" Description="The Text to Send is sent to the configured Chat service when the trigger pattern is matched. Configured via the Webhook Primary Trigger Options setting. See the documentation on Using Trigger Variables for additional information."/>
-                <syncfusion:PropertyGridItem CategoryName="Data Sharing" PropertyName="ChatWebhook" DisplayName="Webhook (Discord)" Description="Webhook/URL for sending messages to a Chat service. Discord is the only supported API at this time."/>
+                <syncfusion:PropertyGridItem CategoryName="Data Sharing" PropertyName="ChatWebhook" DisplayName="Webhook (Discord)" Description="Discord webhook URL. Select an aggregation delay to combine messages, or No to send each match separately. Every message includes a visible footer identifying its batch and part number for receiving bots. Temporary failures retry until delivery or cancellation; retries can duplicate messages, so receiving bots must use the footer to deduplicate."/>
                 <syncfusion:PropertyGridItem CategoryName="Overlay Customization" PropertyName="SelectedTextOverlays" DisplayName="Assigned Text Overlays" Visibility="Collapsed" Description="Overlays used to display spoken Text associated with this Trigger."/>
                 <syncfusion:PropertyGridItem CategoryName="Overlay Customization" x:Name="assignedOverlaysItem" PropertyName="SelectedTimerOverlays" DisplayName="Assigned Timer Overlays" Visibility="Collapsed" Description="Overlays used to display Timers."/>
                 <syncfusion:PropertyGridItem CategoryName="Overlay Customization" x:Name="triggerActiveBrushItem" PropertyName="TriggerActiveBrush" DisplayName="Custom Active Color" Visibility="Collapsed" Description="Choose a custom Active Color to use as an override for the Active Color specified in Overlays that display this Trigger."/>

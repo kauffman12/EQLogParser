@@ -71,6 +71,68 @@ With **Regex** off, a trigger searches for the text you entered, ignoring letter
 - **Avoid long runs of wildcards and optionals** (like `(.*a.*)*`).
 
 
+# Discord Webhooks
+
+Triggers can send messages to a Discord channel using a webhook. Use this for loot announcements or other alerts you want to share outside EverQuest.
+
+## Setting Up a Webhook
+
+1. Create a webhook for the destination channel in Discord and copy its URL. Keep the URL private: anyone with it can post through that webhook.
+2. Open **Trigger Manager**, select your trigger and expand **Data Sharing** on the **Trigger Properties** tab.
+3. Enter your message in **Text to Send (Discord)** and paste the URL into **Webhook (Discord)**. The message can use captured values and trigger variables, such as `{s1}` and `{logtime}`.
+4. Choose an aggregation delay from the dropdown beside the URL, then **Save**. Enable the trigger and its monitored character as usual.
+
+A blank webhook URL sends nothing. Every Discord post includes a visible metadata footer; there is no footer or retry checkbox.
+
+## Choosing an Aggregation Delay
+
+Aggregation combines several firings of the **same trigger for the same monitored character** into newline-separated text before sending it to the configured webhook. Different triggers and characters collect separately, even if they use the same URL.
+
+| Choice | What happens | When to use it |
+|---|---|---|
+| **No** (default) | Each firing sends its own message, without an aggregation delay | Ordinary alerts, or a receiving bot that expects separate messages |
+| **1s** | Collect messages for one second after the first firing | Short bursts of loot announcements |
+| **5s, 10s, 15s, 20s, 25s, 30s** | Collect messages for the selected number of seconds | Longer bursts, when waiting a little longer is acceptable |
+
+The **first firing starts a fixed window**. Later firings join it without restarting the countdown. For example, with **5s**, messages arriving at seconds 0, 1 and 3 are sent together at about second 5. A later firing starts a new window. Rate limiting or an outage can delay delivery further.
+
+If the trigger produces these messages during one window:
+
+```text
+Sprig of Bloom
+Spiralthorn Mace
+Sprig of Bloom
+```
+
+Discord receives those lines together when they fit in one post. **Repeated text is kept**: two identical loot announcements may mean two items, not an accidental duplicate.
+
+Messages longer than Discord's 2,000-character content limit are split into multiple posts, with whole lines kept together when possible. A single oversized line is split too. This also applies when aggregation is **No**.
+
+Leave aggregation at **No** if you do not want to combine messages. Automatic retries and the metadata footer still apply.
+
+## Pending Messages, Retries and Stop
+
+- **Retries are automatic.** Discord rate limits wait for Discord's retry deadline. Network failures, timeouts and temporary server errors also retry, with increasing waits up to one minute, until delivery or cancellation. You do not need to enable a setting.
+- **Check Trigger Manager's status.** **Webhooks Pending** counts waiting or sending messages/batches, not individual lines or split parts. Hover for collecting/retrying counts. Permanent failures show an error indicator; click it to open an affected trigger, and click again to visit another error. Check **Tools → View Error Log** for diagnostics.
+- **Fix permanent errors before sending again.** Malformed URLs and permanent Discord rejections are not retried: that message and its remaining parts are discarded. Correct the configuration and Save; editing alone does not clear the error, but successful delivery does.
+- **Stop discards pending work.** The Stop button or `{EQLP:STOP}` cancels waiting webhook sends along with trigger audio, timers and overlays. It does not disable triggers: later matches can send again. Disabling or deleting a trigger also cancels its pending sends; disabling its parent folder, character or trigger monitoring cancels the affected work too.
+- **The queue is not saved.** Closing EQLogParser discards pending messages. During an outage, new matches can continue to build a backlog; use Stop if you want to discard it rather than send older alerts later. A post Discord has already accepted cannot be retracted by Stop.
+
+## Metadata Footer and Receiving Bots
+
+Each post has a footer in this format, including ordinary single-post messages:
+
+```text
+EQLP1|<batch ID>|<part>|<total>|<A or N>|<SHA-256>
+```
+
+For people reading the channel, this is delivery metadata and can be ignored. For bot authors:
+
+- **Batch ID** identifies one original message or aggregation window. Separate messages get different IDs, even when their text is identical.
+- **Part** and **total** are one-based part numbering and the number of parts in that batch. Group by batch ID, order by part number, then concatenate the content **without adding separators**. Posts from different batches may interleave; batch arrival order is not guaranteed.
+- **A** means aggregation was enabled; **N** means one original trigger firing. The lowercase **SHA-256** digest covers the complete message text encoded as UTF-8, before it was split.
+- **Retries reuse the same batch ID, part number and payload.** If Discord saves a post but its confirmation is lost, retrying can create another Discord post. A receiving bot should ignore a batch ID/part number it has already processed, rather than creating a second auction or other action. EQLogParser and Discord do not perform that receiver-side deduplication.
+
 
 # Trigger Variables
 
@@ -165,7 +227,7 @@ Replaced by the `Timer` setting for `Warn With Time Remaining`. This allows your
 
 ## `{EQLP:STOP}`
 
-A chat command, not a Pattern variable. Start one of your own chat messages with `{EQLP:STOP}` to stop current trigger audio and clear active trigger timers and overlays. It does not reload or disable your triggers; enabled triggers can fire again on later matches.
+A chat command, not a Pattern variable. Start one of your own chat messages with `{EQLP:STOP}` to stop current trigger audio, clear active trigger timers and overlays, and discard pending [Discord webhook sends](#pending-messages-retries-and-stop). It does not reload or disable your triggers; enabled triggers can fire again on later matches.
 
 ## `{EQLP:CLEAR}`
 

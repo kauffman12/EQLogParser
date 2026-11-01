@@ -31,6 +31,9 @@ namespace EQLogParser
     private readonly PatternEditor _endEarlyPattern2Editor;
     private readonly PatternEditor _endEarlyPattern3Editor;
     private readonly ConditionEditor _conditionEditor;
+    private readonly WebhookEditor _webhookEditor;
+    private int _webhookErrorIndex;
+    private Task _characterSelectionTask = Task.CompletedTask;
     private readonly RangeEditor _topEditor;
     private readonly RangeEditor _leftEditor;
     private readonly RangeEditor _heightEditor;
@@ -123,7 +126,11 @@ namespace EQLogParser
       AddEditor<TriggerListsEditor>("TriggerAgainOption", "FontSize", "FontFamily", "FontWeight", "SortBy", "TimerMode",
         "TimerType", "HorizontalAlignment", "VerticalAlignment", "VoiceRate", "Volume");
       AddEditor<WrapTextEditor>("EndEarlyTextToDisplay", "EndTextToDisplay", "TextToDisplay", "TextToShare",
-        "WarningTextToDisplay", "Comments", "OverlayComments", "TextToSendToChat", "ChatWebhook");
+        "WarningTextToDisplay", "Comments", "OverlayComments", "TextToSendToChat");
+      _webhookEditor = (WebhookEditor)AddEditorInstance(new WebhookEditor(MainActions.DiscordWebhooks,
+        () => (_currentCharacterId, generalPropertyGrid.SelectedObject is TriggerPropertyModel model ? model.Node.Id : null),
+        OnEditorSiblingChanged),
+        "ChatWebhook");
       AddEditorInstance(new RangeEditor(typeof(double), 0.2, 2.0), "DurationSeconds");
       AddEditorInstance(new TextSoundEditor(fileList), "SoundOrText");
       AddEditorInstance(new TextSoundEditor(fileList), "EndEarlySoundOrText");
@@ -288,6 +295,51 @@ namespace EQLogParser
       });
     }
 
+    private void WebhookQueueChanged()
+    {
+      Dispatcher.InvokeAsync(() =>
+      {
+        var status = MainActions.DiscordWebhooks.Status;
+        var errors = status.Errors.Length;
+        webhookStatus.Visibility = status.Pending > 0 || errors > 0 ? Visibility.Visible : Visibility.Collapsed;
+        webhookStatusText.Content = $"Webhooks Pending: {status.Pending}"
+          + (errors > 0 ? $" • Errors: {errors}" : "");
+        webhookErrorIcon.Visibility = errors > 0 ? Visibility.Visible : Visibility.Collapsed;
+        webhookStatus.Cursor = errors > 0 ? Cursors.Hand : Cursors.Arrow;
+        webhookStatusText.SetResourceReference(Control.ForegroundProperty,
+          errors > 0 ? "EQStopForegroundBrush" : "ContentForeground");
+        webhookStatus.ToolTip = $"Collecting: {status.Aggregating}\nRetrying: {status.Retrying}\n"
+          + (errors > 0
+          ? string.Join("\n", status.Errors.Select(error => $"{error.Source.Name}: {error.Message}"))
+            + "\nClick to open an affected webhook. Click again to visit the next error."
+          : "Temporary failures retry automatically. Disabling a trigger clears its pending messages.");
+      });
+    }
+
+    private async void WebhookStatusClick(object sender, RoutedEventArgs e)
+    {
+      var errors = MainActions.DiscordWebhooks.Status.Errors;
+      if (errors.Length == 0) return;
+      var error = errors[_webhookErrorIndex++ % errors.Length];
+      if (characterView.Visibility == Visibility.Visible) characterView.SelectCharacter(error.Source.CharacterId);
+      try
+      {
+        await _characterSelectionTask;
+        await theTreeView.SelectNode(error.Source.TriggerId);
+        if (generalPropertyGrid.SelectedObject is not TriggerPropertyModel model || model.Node.Id != error.Source.TriggerId)
+          return;
+        propertyTabControl.SelectedItem = generalPropertyGridTab;
+        generalPropertyGrid.ExpandCategory("Data Sharing");
+        generalPropertyGrid.SelectedPropertyItem = generalPropertyGrid.Properties
+          .OfType<PropertyItem>().FirstOrDefault(item => item.Name == "ChatWebhook");
+        await Dispatcher.InvokeAsync(_webhookEditor.FocusWebhook, DispatcherPriority.ContextIdle);
+      }
+      catch (Exception ex)
+      {
+        Log.Error("Problem selecting webhook trigger", ex);
+      }
+    }
+
     internal bool IsCancelSelection()
     {
       var model = generalPropertyGrid?.SelectedObject ?? secondaryPropertyGrid?.SelectedObject;
@@ -343,6 +395,19 @@ namespace EQLogParser
     }
 
     private async void CharacterSelectedCharacterEvent(List<TriggerCharacter> characters)
+    {
+      _characterSelectionTask = ApplyCharacterSelectionAsync(characters);
+      try
+      {
+        await _characterSelectionTask;
+      }
+      catch (Exception ex)
+      {
+        Log.Error("Problem selecting trigger character", ex);
+      }
+    }
+
+    private async Task ApplyCharacterSelectionAsync(List<TriggerCharacter> characters)
     {
       if (characters == null)
       {
@@ -645,7 +710,8 @@ namespace EQLogParser
      */
     private void OnEditorSiblingChanged()
     {
-      if (generalPropertyGrid.SelectedObject is not TriggerPropertyModel trigger || !SlidingResetUnsaved(trigger))
+      if (generalPropertyGrid.SelectedObject is not TriggerPropertyModel trigger
+        || (!SlidingResetUnsaved(trigger) && !WebhookOptionsUnsaved(trigger)))
       {
         return;
       }
@@ -664,6 +730,9 @@ namespace EQLogParser
      */
     internal static bool SlidingResetUnsaved(TriggerPropertyModel trigger) =>
       trigger.RepeatedResetSlides != trigger.Node.TriggerData.RepeatedResetSlides;
+
+    internal static bool WebhookOptionsUnsaved(TriggerPropertyModel trigger) =>
+      trigger.AggregateWebhooks != trigger.Node.TriggerData.AggregateWebhooks;
 
     private void ValueChanged(object sender, ValueChangedEventArgs args)
     {
@@ -1188,6 +1257,9 @@ namespace EQLogParser
         TriggerStateDB.Instance.TriggerConfigUpdateEvent += TriggerConfigUpdateEvent;
         TriggerManager.Instance.EventsSelectTrigger += EventsSelectTrigger;
         TriggerManager.Instance.EventsUpdatingTriggers += EventsUpdatingTriggers;
+        MainActions.DiscordWebhooks.EventsStatusChanged += WebhookQueueChanged;
+        _webhookEditor.SetActive(true);
+        WebhookQueueChanged();
         characterView.SelectedCharacterEvent += CharacterSelectedCharacterEvent;
         theTreeView.TreeSelectionChangedEvent += TreeSelectionChangedEvent;
         theTreeView.ClosePreviewOverlaysEvent += ClosePreviewOverlaysEvent;
@@ -1204,6 +1276,8 @@ namespace EQLogParser
       TriggerStateDB.Instance.TriggerConfigUpdateEvent -= TriggerConfigUpdateEvent;
       TriggerManager.Instance.EventsSelectTrigger -= EventsSelectTrigger;
       TriggerManager.Instance.EventsUpdatingTriggers -= EventsUpdatingTriggers;
+      MainActions.DiscordWebhooks.EventsStatusChanged -= WebhookQueueChanged;
+      _webhookEditor.SetActive(false);
       characterView.SelectedCharacterEvent -= CharacterSelectedCharacterEvent;
       theTreeView.TreeSelectionChangedEvent -= TreeSelectionChangedEvent;
       theTreeView.ClosePreviewOverlaysEvent -= ClosePreviewOverlaysEvent;

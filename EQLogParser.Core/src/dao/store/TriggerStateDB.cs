@@ -14,6 +14,7 @@ namespace EQLogParser
     internal event Action<string> DeleteEvent;
     internal event Action<bool> OverlayImportEvent;
     internal event Action<TriggerNode> TriggerUpdateEvent;
+    internal event Action<string, string, bool> EventsTriggerStateChanged;
     internal event Action<TriggerConfig> TriggerConfigUpdateEvent;
     internal event Action<bool> TriggerImportEvent;
     internal event Action<List<LexiconItem>> LexiconUpdateEvent;
@@ -426,6 +427,7 @@ namespace EQLogParser
               var needUpdate = false;
               foreach (var removedId in removed)
               {
+                PublishTriggerState(state.Id, removedId, false);
                 if (state.Enabled.Remove(removedId))
                 {
                   needUpdate = true;
@@ -1148,6 +1150,14 @@ namespace EQLogParser
       }
     }
 
+    private void PublishTriggerState(string characterId, string triggerId, bool enabled)
+    {
+      foreach (Action<string, string, bool> subscriber in EventsTriggerStateChanged?.GetInvocationList() ?? [])
+      {
+        ThreadBoundary.Guard("trigger state subscriber", () => subscriber(characterId, triggerId, enabled));
+      }
+    }
+
     private void CopyState(TriggerNode node, TriggerState fromState, TriggerState toState)
     {
       if (node?.Id == null) return;
@@ -1161,6 +1171,7 @@ namespace EQLogParser
         toState.Enabled.Remove(node.Id);
       }
 
+      PublishTriggerState(toState.Id, node.Id, value == true);
       if (GetCol<TriggerNode>(TreeCol) is { } tree)
       {
         foreach (var child in tree.Query().Where(n => n.Parent == node.Id).ToArray())
@@ -1526,6 +1537,7 @@ namespace EQLogParser
             foreach (var state in characterStates)
             {
               state.Enabled[enableId] = true;
+              PublishTriggerState(state.Id, enableId, true);
               dirtyStates.Add(state);
             }
           }
@@ -1597,12 +1609,13 @@ namespace EQLogParser
     /* Applies isEnabled to the node and all its descendants. The caller loads the subtree once
      * (LoadSubtree — one query per folder level) so this walk is pure in-memory; the old version
      * issued one LiteDB query per node, leaves included. */
-    private static void UpdateChildState(TriggerState state, string nodeId, bool? isEnabled,
+    private void UpdateChildState(TriggerState state, string nodeId, bool? isEnabled,
       Dictionary<string, List<TriggerNode>> childrenByParent)
     {
       if (string.IsNullOrEmpty(nodeId)) return;
 
       state.Enabled[nodeId] = isEnabled;
+      PublishTriggerState(state.Id, nodeId, isEnabled == true);
       if (!childrenByParent.TryGetValue(nodeId, out var children)) return;
 
       foreach (var child in children)

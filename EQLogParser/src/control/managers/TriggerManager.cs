@@ -52,6 +52,7 @@ namespace EQLogParser
       TriggerStateDB.Instance.OverlayImportEvent += OverlayImportEvent;
       TriggerStateDB.Instance.TriggerConfigUpdateEvent += TriggerConfigUpdateEvent;
       TriggerStateDB.Instance.TriggerUpdateEvent += TriggerUpdateEvent;
+      TriggerStateDB.Instance.EventsTriggerStateChanged += MainActions.DiscordWebhooks.SetEnabled;
       TriggerStateDB.Instance.TriggerImportEvent += TriggerImportEvent;
       MainActions.EventsLogLoadingComplete += TriggerManagerEventsLogLoadingComplete;
       TriggerConfigUpdateEvent(null);
@@ -59,13 +60,15 @@ namespace EQLogParser
 
     internal async Task StopTriggersAsync()
     {
-      var processors = await GetProcessorsAsync();
-      foreach (var processor in processors)
-      {
-        await processor.StopTriggersAsync();
-      }
-
+      await StopProcessorsAsync(await GetProcessorsAsync());
       TriggerOverlayManager.Instance.StopOverlays();
+    }
+
+    internal static async Task StopProcessorsAsync(IReadOnlyList<TriggerProcessor> processors)
+    {
+      // Cancel every character before any one character's active trigger or timer cleanup can hold up Stop.
+      foreach (var processor in processors) processor.CancelPendingWebhooks();
+      foreach (var processor in processors) await processor.StopTriggersAsync();
     }
 
     /// <summary>
@@ -437,6 +440,7 @@ namespace EQLogParser
       TriggerStateDB.Instance.OverlayImportEvent -= OverlayImportEvent;
       TriggerStateDB.Instance.TriggerConfigUpdateEvent -= TriggerConfigUpdateEvent;
       TriggerStateDB.Instance.TriggerUpdateEvent -= TriggerUpdateEvent;
+      TriggerStateDB.Instance.EventsTriggerStateChanged -= MainActions.DiscordWebhooks.SetEnabled;
       TriggerStateDB.Instance.TriggerImportEvent -= TriggerImportEvent;
       MainActions.EventsLogLoadingComplete -= TriggerManagerEventsLogLoadingComplete;
       await _logReadersSemaphore.WaitAsync();

@@ -113,6 +113,16 @@ Use the toolbar's **Clear Parse** button to start counting from that point, even
 5. Compare spaces, words and punctuation. EQ sometimes uses a backtick (&#96;) where you might expect an apostrophe ('). Also check the trigger's **Previous Line** and **Match Variables** conditions if you use them.
 6. Check EverQuest's **Options → Chat Settings** for filters affecting the messages your trigger needs.
 
+## How do I combine loot announcements sent to Discord?
+
+In **Trigger Manager → Trigger Properties → Data Sharing**, set **Text to Send (Discord)** and **Webhook (Discord)**, then choose a delay from the dropdown beside the URL and **Save**.
+
+- **No** is the default and sends each firing separately. Try **1s** for a short burst, or **5s** if the announcements span several seconds.
+- Messages from the same trigger and monitored character are combined on separate lines. Repeated item names are kept; long batches split into multiple posts.
+- Rate limits and temporary failures retry automatically, even with **No** selected. **Webhooks Pending** shows the backlog; **Stop** discards it without disabling future matches.
+
+Every post includes a metadata footer. If a bot consumes these messages, it should use the footer to reconstruct split batches and ignore duplicate retries. See [Discord Webhooks](documentation.html#discord-webhooks) for setup, delivery behavior and the bot format.
+
 ## Why are my Overlays not showing or they use the wrong colors?
 For timer and text overlays:
 

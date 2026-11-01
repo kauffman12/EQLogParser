@@ -161,6 +161,38 @@ These checks require a realized grid; the automated pane tests exercise bound da
   Scrolling a search result into view still works — that is a gesture, not a follow. A new fight appearing mid-pull must not move the list at
   all (no jump to the top when a row lands), and with a column sorted a pass must keep the reading position too.
 
+## Discord webhook checks on Windows
+
+Run `WebhookEditorTest`, `TriggerUtilCopyTest` and `TriggerWebhookStopTest` in `EQLogParser.Wpf.Test` on
+Windows. Headless transport, queue, persistence and failure-episode tests do not establish the real
+PropertyGrid/Discord presentation or the processor Stop integration.
+
+- [ ] **One row, quiet defaults:** create a trigger and open Data Sharing. The webhook URL and aggregation
+  dropdown share one row; there is no footer switch or separate aggregation property row. Aggregation
+  defaults to No. Merely selecting a saved trigger must not enable Save.
+- [ ] **Sibling edits survive:** change only the dropdown, leaving the URL untouched. Save enables;
+  Save/reselect/restart retain the choice, while Cancel restores it. Repeat with a nondefault saved
+  trigger and after switching characters. Copy/export/import retain aggregation.
+- [ ] **Discord presentation:** ordinary and aggregated sends always show the visible EQLP1 embed footer,
+  both on single messages and on every part of a split batch. Check desktop and mobile rendering. A loot
+  burst packs newline-separated lines; long text and Unicode remain intact.
+- [ ] **Receiving bot contract:** verify the actual bot groups interleaved parts by batch ID, orders them
+  by part number and verifies the reconstructed text's checksum. Simulate an accepted request whose
+  response is lost: the retry has identical metadata and the bot must not start duplicate auctions.
+  The footer supplies identity; neither Discord nor EQLogParser performs receiver-side deduplication.
+- [ ] **Pending and cancellation:** use a controlled endpoint to return 429/temporary failures. Status
+  shows pending/retrying work; it drains on recovery. Stop, disable Trigger Manager, disable a trigger
+  or its parent, then delete a trigger: affected pending sends stop, with another character unaffected.
+  Also press Stop during a trigger's timer/text action before it queues its webhook; no pending work
+  from that action should survive Stop. Repeat with multiple characters: a busy first character must
+  not leave other characters' already-pending webhooks sending or retrying. New matches after Stop still work.
+- [ ] **A broken endpoint speaks once:** repeated permanent failures (including two triggers sharing
+  the URL) produce one Error Log entry per cause, with trigger name/status and no URL/token. Success
+  resets the episode; a later failure is reported again. Correcting text alone does not clear the UI
+  error; successful delivery does. With two affected triggers sharing a broken endpoint, disable/delete
+  the latest reporter or correct only its URL: the remaining trigger stays flagged and status navigation
+  moves to it, without another log report for the same cause. Retiring the last affected trigger clears it.
+
 ## Big-file load checks on Windows
 
 A whole-file open reads **one stream in file order** — one reader, one capture, no cut in the middle (LogReader /

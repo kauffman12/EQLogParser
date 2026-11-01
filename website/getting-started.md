@@ -110,6 +110,7 @@ If a restore fails partway through, your existing configuration is rolled back a
 
 - Read [Sec and Busy explained](faq.html#what-is-the-difference-between-sec-and-busy) and [DPS, RDPS and SDPS explained](faq.html#what-do-dps-rdps-and-sdps-mean)
 - Read the full [Trigger Variables](documentation.html#trigger-variables) reference for pattern matching syntax
+- Send loot announcements or alerts to Discord with [webhooks and optional message aggregation](documentation.html#discord-webhooks)
 - If your triggers speak text out loud and you're wondering which TTS engine to use, see [the TTS Engine options in the FAQ](faq.html#what-are-the-tts-engine-options-and-how-do-i-change-them)
 - On Linux or Wine? The standard installer works as-is, but the prefix needs the .NET 10 Desktop Runtime and the Visual C++ 2015-2022 redistributable (`vcredist2022`) first — the latter is required for any speech — see the [Linux notes in the FAQ](faq.html#linux-support)
 - Browse the [F.A.Q.](faq.html#f-a-q) for troubleshooting tips

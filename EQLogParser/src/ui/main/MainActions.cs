@@ -13,12 +13,9 @@ using System.Net.Http;
 using System.Reflection;
 using System.Security;
 using System.Text;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
 using System.Windows.Threading;
 
 namespace EQLogParser
@@ -35,6 +32,7 @@ namespace EQLogParser
     internal static event Action<PlayerStatsSelectionChangedEventArgs> EventsHealingSelectionChanged;
     internal static event Action<PlayerStatsSelectionChangedEventArgs> EventsTankingSelectionChanged;
     internal static readonly HttpClient TheHttpClient = new();
+    internal static readonly WebhookDispatchQueue DiscordWebhooks = new(new DiscordWebhookSender(TheHttpClient));
 
     /*
      * The class list every class dropdown offers — here, in the Identity Table's cell editor, and in the summary panes' menus.
@@ -44,9 +42,14 @@ namespace EQLogParser
      */
     public static readonly List<string> ClassList = [];
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
-    private static readonly JsonSerializerOptions DiscordSerializationOptions = new() { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
     private static bool _isDone;
     private static MainWindow _mainWindow;
+
+    static MainActions()
+    {
+      DiscordWebhooks.EventsSendFailed += error =>
+        Log.Error($"Discord webhook failed for trigger '{error.Source.Name}': {error.Message}");
+    }
 
     internal static void AddAndCopyDamageParse(CombinedStats combined, List<PlayerStats> selected) => _mainWindow?.AddAndCopyDamageParse(combined, selected);
     internal static void AddAndCopyTankParse(CombinedStats combined, List<PlayerStats> selected) => _mainWindow?.AddAndCopyTankParse(combined, selected);
@@ -117,21 +120,17 @@ namespace EQLogParser
       SyncFusionUtil.AddDocument(dockSite, typeof(DamageSummary), "damageSummaryWindow", "DPS Summary", true);
     }
 
-    internal static async Task SendDiscordMessage(string content, string webhookUrl)
+    internal static async Task SendDiscordMessage(WebhookSource source, string content, string webhookUrl,
+      int aggregate)
     {
       try
       {
-        var payload = new { content };
-        var json = JsonSerializer.Serialize(payload, DiscordSerializationOptions);
-        using var body = new StringContent(json, Encoding.UTF8, "application/json");
-
-        // Reuses the same HttpClient instance & its connection pool
-        var request = await TheHttpClient.PostAsync(webhookUrl, body);
-        request.EnsureSuccessStatusCode();
+        await DiscordWebhooks.EnqueueAsync(source, webhookUrl, content, WebhookAggregation.SecondsFor(aggregate))
+          .ConfigureAwait(false);
       }
       catch (Exception ex)
       {
-        Log.Error("Problem Sending to Discord", ex);
+        ThreadBoundary.Note("webhook enqueue", ex);
       }
     }
 
