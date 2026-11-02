@@ -5882,6 +5882,56 @@ Incogitable with 303,554 attack edges while the raid healed it 47,752 times from
 `Speedbump`, `Cutie`, `Funky` behave the same way); 0.4–18.8 % of a capture's facts sit on the enemy column through this
 shape. `Player` from R15 therefore reads "raid-side, never verified", and owner attribution still needs the registry.
 
+### Pet allegiance precedes the fight graph without feeding itself
+
+**R7 reads combat allegiance at each hit, not identity alone.** `Targeted (NPC)` means not a player; an owned NPC
+or one temporarily charmed onto the raid's side is not hostile opposition. A pet's ownership tail and charm boundaries
+must therefore affect graph edges just as they affect projection. Genuine opposite-side opposition remains a veto;
+no majority threshold or name-shape guess replaces it.
+
+R18's heal-based allegiance must be available before the final graph. Moving R18 ahead of its swing-back veto is not
+safe: a hostile that attacks graph-only players would then look like a pet. The ordering is bounded and one-way:
+
+1. Copy the pre-graph timeline and run a **private safety graph** on it.
+2. Evaluate R18 against that copy, retaining the existing strong-healer, breadth, charm and swing-back gates. Write
+   only the resulting ownership intervals to the real timeline. Graph-only player verdicts may veto allegiance,
+   never supply the strong healer proof that supports it.
+3. Run the final graph over the original upstream identities plus those intervals. No safety-graph identity escapes
+   its copy, and final graph verdicts feed neither their own edges nor R18. There is no fixed-point loop.
+
+The two graph walks keep separate cursors, aggregates and boundary stamps in `ClassificationState`; both reset with the
+capture. Extending or retracting a pet interval invalidates the final graph's carry, including its cursor.
+
+**The full-log failure:** `eqlog_Kizant_beta.txt` contains `Targeted (NPC): Plimpy` at 19:12:35, absent from the selected
+Xev fights. Plimpy already qualifies for raid-side allegiance, but the old graph ran before that interval existed.
+Xev Bristlebane's 34 attacks on Plimpy and Lucksworn control's eight counted as hostile opposition, vetoing both NPC
+verdicts. Their caster-less Curse ticks then became incoming spell fights. Removing only that frame from a temporary
+full-log copy restored both NPC verdicts. This is an allegiance-ordering defect, not permission to classify pets from
+player-like spelling or infer a caster from a spell name. Caster-less damage against a placed hostile still belongs to
+that target with `Labels.Unk` attribution; unknown victims are not globally redefined as hostile.
+
+**Corpus comparison:** all 24 local live/EMU captures, 57,049,645 damage facts and 19,728,525 heals, parsed in file order
+with the EMU switch scoped to EMU files. Twenty-two captures have identical identity/source, per-defender routed counts
+and amounts, projected totals, rows, pet lists and charm counts. The only identity changes are eleven Unknown → NPC
+verdicts; no placed Player/Pet/Merc/Spell moves. Pet lists, charm counts and unrouted counts are unchanged everywhere.
+
+| Capture | Fight rows before → after | Damage-to-target change | Incoming change |
+|---|---:|---:|---:|
+| Kizant beta (full) | 678 → 505 | +54,159,403 | −55,111,165 |
+| Kizant xegony-9-18-22 | 1,143 → 1,141 | +151,575 | −151,575 |
+
+The full beta's four Curse rows vanish. All 21 Curse ticks on Xev/Lucksworn control, **932,982 damage**, materialize under
+those NPCs with attacker **Unknown**. The 951,762 difference between its outgoing/incoming changes is 42 ordinary
+NPC-on-NPC records now correctly refused: Harasser → Axe (12 / 314,956), Harasser → Encanter (13 / 290,308),
+Bruiser → Encanter (17 / 346,498). The older capture restores Kaas Thox Xi Ha Ra Dat Zov as NPC and routes six
+Throttling Grip/Mind Vortex ticks to it instead of two spell fights. Full-beta carried, idle and fresh classification
+stamps agree. The disposable corpus/record probes were removed; no real-log dependency enters the fixture suite.
+
+`GraphAllegianceTest` pins the framed/unframed pet reproduction, unattributed damage and meter direction, ownership
+expiry, genuine opposing evidence, charm-side reversal, the graph-only-player veto, no safety-claim leakage, and
+carried/idle/reset equivalence as allegiance is established and retracted. `OurPetTest` retains the hostile, crumb-heal,
+charm and friendly-fire refusals.
+
 ### An eye never acts, so hitting one proves the striker (R19)
 
 `Eye of Zamul` is the magian summon, and it is not a combatant: **0** hostile lines across eight captures, **348** damage

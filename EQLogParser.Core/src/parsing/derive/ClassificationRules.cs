@@ -255,16 +255,20 @@ namespace EQLogParser
                });
       outcome.Charms.AddRange(charms);
 
-      RunStage("R7 graph", outcome,
-               () => ApplyGraphInference(facts, timeline, [.. charms.Select(w => (w.Name, w.T0, w.T1))], state));
-
-      // Last, because it reads everything above: which NPC-verdict names are actually ours. It has to run
-      // after the charm pass to know which names a window already explains, and after the graph because a
-      // name R7 could classify as an attacker is not one the raid owns.
+      var friendlyWindows = charms.Select(w => (w.Name, w.T0, w.T1)).ToList();
+      // The private graph can veto pet allegiance, never support it. Its claims cannot feed the final graph.
+      // docs/DesignNotes.md → "Pet allegiance precedes the fight graph without feeding itself".
       if (heals is not null)
-        RunStage("R18 healed-pet intervals", outcome,
-                 () => outcome.OurPets.AddRange(ApplyHealedPetIntervals(facts, heals, timeline,
-                                                                        [.. charms.Select(w => w.Name)], state)));
+        RunStage("R18 healed-pet intervals", outcome, () =>
+        {
+          var safety = timeline.Copy();
+          ApplyGraphInference(facts, safety, friendlyWindows, state.PetSafetyGraph);
+          outcome.OurPets.AddRange(ApplyHealedPetIntervals(facts, heals, safety,
+            [.. charms.Select(w => w.Name)], state, timeline));
+        });
+
+      RunStage("R7 graph", outcome,
+               () => ApplyGraphInference(facts, timeline, friendlyWindows, state.Graph));
 
       /*
        * R25 LAST, after the graph and after R18, and that position IS the rule: this application's own saved roster must not feed
@@ -1154,7 +1158,7 @@ namespace EQLogParser
      */
     private static List<string> ApplyHealedPetIntervals(IFactTable facts, IHealFactTable heals, EntityTimeline timeline,
                                                         IReadOnlyCollection<string> charmExplained,
-                                                        ClassificationState state)
+                                                        ClassificationState state, EntityTimeline destination)
     {
       var minted = new List<string>();
 
@@ -1220,8 +1224,8 @@ namespace EQLogParser
         if (vetos.TryGetValue(name, out var veto) && veto.Edges > 0 &&
             (double)veto.RaidSideEdges / veto.Edges > OurPetMaxRaidAttackShare) continue;
 
-        timeline.AddAffiliation(AffiliationKind.PetOfPlayer, name, double.NegativeInfinity, agg.LastS + OurPetTailS,
-                               RuleStrength.Strong, "R18-healedpet");
+        destination.AddAffiliation(AffiliationKind.PetOfPlayer, name, double.NegativeInfinity,
+          agg.LastS + OurPetTailS, RuleStrength.Strong, "R18-healedpet");
         minted.Add(name);
       }
       return minted;
@@ -1356,33 +1360,21 @@ namespace EQLogParser
     internal static bool SpellNamed(string? name)
       => !string.IsNullOrEmpty(name) && EQDataStore.Instance.GetDamagingSpellByName(name) is not null;
 
-    // R7: fight-graph inference for names nothing else could classify (melee mains with no joins,
-    // chat or spire casts; named custom pets like `Useless` that never show an owner line).
-    // Snapshot semantics: subjects must be Unknown and the defenders they face must already be
-    // classified ONE side by everything prior (including R6/R14/R15). Opposition from the other side
-    // is still an absolute veto - that is the guard keeping a charmed-player raid from inventing NPCs
-    // out of players. Unclassified defenders are allowed up to MaxUnknownEdgeShare of the attacker's
-    // edges: a handful of unnamed trash in a night of named ones used to be enough to leave a real
-    // mercenary unclassified for the whole capture.
-    /*
-     * Incremental form: gated on this stage's boundary digest. The store at this point holds seed + prior
-     * stages ONLY - a fresh timeline per pass means R7's walk never colours edges with its OWN earlier
-     * verdicts (that would let the vote bootstrap itself), exactly as before; what it now skips is re-walking
-     * edges whose endpoints' verdicts provably have not moved, since any upstream change IS the digest.
-     * Evaluation runs over every carried attacker each pass, which is what the from-zero dict rebuild did.
-     */
+    // R7 claims Unknown subjects from a frozen upstream identity snapshot and time-scoped defender allegiance.
+    // Opposing-side evidence vetoes; each graph lane invalidates its aggregate AND cursor when its boundary moves.
+    // docs/DesignNotes.md → "Pet allegiance precedes the fight graph without feeding itself".
     private static void ApplyGraphInference(IFactTable facts, EntityTimeline timeline,
                                             List<(string Name, double T0, double T1)> friendlyWindows,
-                                            ClassificationState state)
+                                            ClassificationState.GraphCarry state)
     {
       var boundary = timeline.StateStamp();
-      var frozen = state.DigestR7 == boundary;
-      state.DigestR7 = boundary;
+      var frozen = state.Digest == boundary;
+      state.Digest = boundary;
       if (!frozen)
       {
         // Same law as R15/R18: a rebuilt aggregate must be rebuilt over EVERY edge, cursor included.
-        state.GraphAggs.Clear();
-        state.R7FactCursor = 0;
+        state.Aggregates.Clear();
+        state.FactCursor = 0;
       }
 
       var kinds = new Dictionary<string, IdentityKind>(StringComparer.Ordinal);
@@ -1398,8 +1390,8 @@ namespace EQLogParser
         list.Add((t0, t1));
       }
 
-      var aggByAttacker = state.GraphAggs;
-      foreach (var slice in FactRowWalk.Damage(facts, state.R7FactCursor))
+      var aggByAttacker = state.Aggregates;
+      foreach (var slice in FactRowWalk.Damage(facts, state.FactCursor))
       {
         for (var i = 0; i < slice.Length; i++)
         {
@@ -1433,18 +1425,20 @@ namespace EQLogParser
           if (ParserUtil.IsUnattributedName(def)) { agg.UnknownEdges++; continue; }
 
           var dk = kinds[def];
-          switch (dk)
+          if (dk == IdentityKind.Unknown)
           {
-            case IdentityKind.Npc: agg.AddNpc(def, f.TimeS); break;
-            // The NPC arm on purpose: `default` below means Player/Pet/Merc, so a Spell defender falling through would count as
-            // player-side opposition and could get its ATTACKER named an enemy ("R7-side") merely for hitting a spell effect.
-            case IdentityKind.Spell: agg.AddNpc(def, f.TimeS); break;
-            case IdentityKind.Unknown: agg.UnknownEdges++; break;
-            default: agg.AddPlayerSide(def, f.TimeS); break;  // Player/Pet/Merc
+            agg.UnknownEdges++;
+            continue;
           }
+
+          var hostile = dk is IdentityKind.Npc or IdentityKind.Spell;
+          if (timeline.IsCharmedAt(def, f.TimeS)) hostile = !hostile;
+          else if (hostile && timeline.IsOurPetAt(def, f.TimeS)) hostile = false;
+          if (hostile) agg.AddNpc(def, f.TimeS);
+          else agg.AddPlayerSide(def, f.TimeS);
         }
       }
-      state.R7FactCursor = facts.FactCount;
+      state.FactCursor = facts.FactCount;
 
       foreach (var (atk, agg) in aggByAttacker)
       {

@@ -69,7 +69,6 @@ namespace EQLogParser
     internal int R5FactCursor;                   // ownership sweep over FlagOwnerInLine facts
     internal int R15HealCursor;                  // R15 heal walk
     internal int R15VetoCursor;                  // R15 swing-back veto over facts.Facts
-    internal int R7FactCursor;                   // R7 edge walk
     internal int R21FactCursor;                  // R21 line-shape flag walk over facts.Facts
     internal int R21EvidenceCursor;              // R21 caster-subject walk over facts.Evidence
     internal int R21HealCursor;                  // R21 healing combatant roles
@@ -83,7 +82,6 @@ namespace EQLogParser
      */
     internal long DigestR15 = long.MinValue;
     internal long DigestR9 = long.MinValue;
-    internal long DigestR7 = long.MinValue;
     internal long DigestR18 = long.MinValue;
 
     // ---- line evidence: replayable direct asserts + the target-frame sets the ladder runs over ----
@@ -108,7 +106,7 @@ namespace EQLogParser
     // ---- R15/R18: heal-side candidates and the swing-back veto counted over ALL attackers (a name can
     // become a candidate long after its attacks streamed past the cursor, and a from-zero walk counts
     // those older swings — so the veto cannot be keyed on candidates). The two rules keep SEPARATE
-    // structures: each reads verdicts at its own point of the stage order (R18 after R9/R7), and sharing
+    // structures: R18 reads a private safety graph after R9, never the published graph's conclusions, and sharing
     // one feed would silently re-date those readings. ----
 
     internal readonly Dictionary<string, ClassificationRules.HealEdgeAgg> R15Candidates = new(StringComparer.Ordinal);
@@ -120,9 +118,9 @@ namespace EQLogParser
     internal readonly HashSet<string> SpellLineNames = new(StringComparer.OrdinalIgnoreCase);
     internal readonly HashSet<string> CombatantNames = new(StringComparer.OrdinalIgnoreCase);
 
-    // ---- R7: per-attacker side evidence; the eval loop runs over the carry every pass like today ----
-
-    internal readonly Dictionary<string, ClassificationRules.SideAgg> GraphAggs = new(StringComparer.Ordinal);
+    // The safety graph supplies R18's swing-back veto; only the final graph sees R18's allegiance.
+    internal readonly GraphCarry PetSafetyGraph = new();
+    internal readonly GraphCarry Graph = new();
 
     // ---- R9: charm event tables + window counters, interpreted only by CharmWindowPolicy (see CharmCarry) ----
 
@@ -137,7 +135,6 @@ namespace EQLogParser
       R5FactCursor = 0;
       R15HealCursor = 0;
       R15VetoCursor = 0;
-      R7FactCursor = 0;
       R21FactCursor = 0;
       R21EvidenceCursor = 0;
       R21HealCursor = 0;
@@ -146,7 +143,6 @@ namespace EQLogParser
 
       DigestR15 = long.MinValue;
       DigestR9 = long.MinValue;
-      DigestR7 = long.MinValue;
       DigestR18 = long.MinValue;
 
       EvidenceClaims.Clear();
@@ -163,8 +159,23 @@ namespace EQLogParser
       R18Vetos.Clear();
       SpellLineNames.Clear();
       CombatantNames.Clear();
-      GraphAggs.Clear();
+      PetSafetyGraph.Reset();
+      Graph.Reset();
       Charms = null;
+    }
+
+    internal sealed class GraphCarry
+    {
+      internal int FactCursor;
+      internal long Digest = long.MinValue;
+      internal readonly Dictionary<string, ClassificationRules.SideAgg> Aggregates = new(StringComparer.Ordinal);
+
+      internal void Reset()
+      {
+        FactCursor = 0;
+        Digest = long.MinValue;
+        Aggregates.Clear();
+      }
     }
 
     // Swing-back counters for one attacker name, read by the R15/R18 share gates.
