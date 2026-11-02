@@ -5,7 +5,7 @@ namespace EQLogParser;
 public class GraphAllegianceTest
 {
   private const long Start = FixtureTime.BaseL;
-  private const string Boss = "Xev Bristlebane";
+  private const string Boss = "Unlisted raid adversary";
   private const string Pet = "Plimpy";
   private const string Effect = "Curse XVII Rk. III";
   private int _seq;
@@ -14,6 +14,7 @@ public class GraphAllegianceTest
   public void Setup()
   {
     PipelineHarness.EnsureDataStore();
+    Assert.IsFalse(EQDataStore.Instance.IsKnownNpc(Boss), "this fixture must exercise inference, not the NPC list");
     PlayerRegistry.Instance.Clear();
     ClassificationRules.ResetRuleHealth();
     _seq = 0;

@@ -2,8 +2,7 @@ namespace EQLogParser
 {
   /*
    * How a row stopped being an engagement. `Dead` stays the flag every consumer already reads — the list
-   * styles it, the overlay counts encounters — and this says WHY, because two of these four are kills and
-   * one of them is not:
+   * styles it, the overlay counts encounters — and this distinguishes a kill, a capture and a release:
    *
    *   Slain    the name died to the raid.
    *   Charmed  "<name> has been charmed." The raid stopped fighting this mob by making it theirs, which is
@@ -18,6 +17,7 @@ namespace EQLogParser
     Gap = 1,       // inactivity past FightProjection.EngagementGapS
     Slain = 2,     // the name died to the raid
     Charmed = 3,   // charmed away: counted as this NPC's death, see above
+    Released = 4,  // allegiance ended; the next hostile fact belongs to a fresh visible row, not a kill
   }
 
   // Per-name roll-up inside a derived fight (Phase 1: damage/hits; Phase 2 adds by-type).

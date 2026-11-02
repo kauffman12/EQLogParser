@@ -157,6 +157,19 @@ public sealed class NpcDatabaseTierTest
         Assert.IsTrue(EQDataStore.Instance.IsKnownNpc("era`mi"), "inner case is free too, not just the first letter");
     }
 
+    [TestMethod]
+    [DataRow("Spear")]
+    [DataRow("Knuckle")]
+    [DataRow("Surgeon")]
+    [DataRow("Xev Bristlebane")]
+    public void BetaRaidNamesNeedNoCombatHistory(string name)
+    {
+        var timeline = Cold(RunDerive(
+            $"[Mon May 04 19:00:05 2026] {name} hits Betebeatz for 300 points of damage."));
+
+        AssertIdentity(timeline, name, IdentityKind.Npc, "R6-npcdb");
+    }
+
     // ---- helpers ----
 
     private static int[] Ladder() => [RuleStrength.Weak, RuleStrength.Listed, RuleStrength.Medium];

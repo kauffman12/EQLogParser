@@ -125,12 +125,8 @@ namespace EQLogParser
     private const string EyePrefix = "Eye of ";
     private static readonly string[] CountableEyes = ["Veeshan", "Despair", "Mother"];
 
-    // R7 tunables (increment 3): opponent breadth counts INSTANCES, not distinct names — raid
-    // pulls reuse names constantly ("a skeleton" dies, the next "a skeleton" is a new instance,
-    // separated by a combat-gap). Charmed-player raids are why inference only ever fires for
-    // names with NO other identity evidence and requires every defender already classified on
-    // one side: a charmed raider attacking allies is never ambiguous because the allies carry
-    // their own Certain/Strong assignments.
+    // R7 only places Unknown names. Reused opponent names count as separate instances across combat gaps;
+    // accepting contradictory NPC evidence additionally requires distinct raid-side opponents.
     private const int OpponentInstances = 3;   // three waves of "a skeleton" count as three
     private const double BurstGapS = 30;       // gap that splits one name into separate instances
     private const double MinSpanS = 60;        // evidence must spread over a real engagement
@@ -146,6 +142,10 @@ namespace EQLogParser
      * 0.0-2 % and their raid-side opposition is friendly fire (cleave), not combat.
      */
     private const double MaxUnknownEdgeShare = 0.02;
+
+    // NPC inference alone tolerates isolated opposing hits; sustained or broad opposition still vetoes.
+    // Player inference stays unanimous. docs/DesignNotes.md → "Isolated opposition is not a whole night's identity".
+    private const double MaxNpcOppositionShare = 0.02;
 
     /*
      * R15 (healed by our side) tunables. A raid AoE heal waters the mob stack too - "Yokii healed an
@@ -1361,7 +1361,7 @@ namespace EQLogParser
       => !string.IsNullOrEmpty(name) && EQDataStore.Instance.GetDamagingSpellByName(name) is not null;
 
     // R7 claims Unknown subjects from a frozen upstream identity snapshot and time-scoped defender allegiance.
-    // Opposing-side evidence vetoes; each graph lane invalidates its aggregate AND cursor when its boundary moves.
+    // Each graph lane invalidates its aggregate AND cursor when its boundary moves.
     // docs/DesignNotes.md → "Pet allegiance precedes the fight graph without feeding itself".
     private static void ApplyGraphInference(IFactTable facts, EntityTimeline timeline,
                                             List<(string Name, double T0, double T1)> friendlyWindows,
@@ -1449,7 +1449,10 @@ namespace EQLogParser
           timeline.SetIdentity(atk, IdentityKind.Player, RuleStrength.Medium, "R7-graph");
           continue;
         }
-        if (agg.PlayerInstances >= OpponentInstances && agg.PlayerSpan >= MinSpanS && !agg.SawNpc)
+        if (agg.PlayerInstances >= OpponentInstances && agg.PlayerSpan >= MinSpanS
+          && (!agg.SawNpc || (agg.PlayerOpponents >= OpponentInstances
+            && agg.NpcShare <= MaxNpcOppositionShare
+            && agg.NpcInstances < OpponentInstances && agg.NpcSpan < MinSpanS)))
         {
           timeline.SetIdentity(atk, IdentityKind.Npc, RuleStrength.Medium, "R7-side");
         }
@@ -1461,6 +1464,9 @@ namespace EQLogParser
       // Unclassified defenders, counted rather than flagged: see MaxUnknownEdgeShare.
       public int UnknownEdges;
       public int KnownEdges { get; set; }
+      public int NpcEdges { get; private set; }
+      public double NpcShare => KnownEdges == 0 ? 1 : (double)NpcEdges / KnownEdges;
+      public int PlayerOpponents => _playerTimes.Count;
       public double UnknownShare => UnknownEdges + KnownEdges == 0 ? 1 : (double)UnknownEdges / (UnknownEdges + KnownEdges);
       public bool SawNpc => _npcTimes.Count > 0;
       public bool SawPlayer => _playerTimes.Count > 0;
@@ -1475,7 +1481,7 @@ namespace EQLogParser
       public double NpcSpan => Span(_npcTimes);
       public double PlayerSpan => Span(_playerTimes);
 
-      public void AddNpc(string def, long timeS) { KnownEdges++; AddTime(_npcTimes, def, timeS); }
+      public void AddNpc(string def, long timeS) { KnownEdges++; NpcEdges++; AddTime(_npcTimes, def, timeS); }
       public void AddPlayerSide(string def, long timeS) { KnownEdges++; AddTime(_playerTimes, def, timeS); }
 
       private static int CountInstances(Dictionary<string, List<long>> times)

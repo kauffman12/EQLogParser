@@ -178,7 +178,8 @@ internal sealed class DamageOverlayLifecycle
   private static MeterLifeActivity Activity(DerivedFight row, Func<DerivedFight, MeterLifeActivity> activity) =>
     activity is null ? new MeterLifeActivity(row.DamageTotal > 0, row.LastTime, row.LastSequence) : activity(row);
 
-  private static bool IsCompleted(DerivedFight row) => row.EndReason is DerivedFightEnd.Slain or DerivedFightEnd.Charmed;
+  private static bool IsCompleted(DerivedFight row)
+    => row.EndReason is DerivedFightEnd.Slain or DerivedFightEnd.Charmed or DerivedFightEnd.Released;
   private static double CompletedAt(DerivedFight row) => double.IsNaN(row.DeathTime) ? row.LastTime : row.DeathTime;
 }
 

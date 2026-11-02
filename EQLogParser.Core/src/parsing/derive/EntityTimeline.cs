@@ -572,6 +572,21 @@ namespace EQLogParser
       return Mix(hash, _affiliation.Count);
     }
 
+    // First actual release after a row's last fact; touching/overlapping charm intervals do not end custody.
+    internal double CharmEndAfter(string name, double afterS)
+    {
+      if (!_affiliation.TryGetValue(name, out var list)) return double.NaN;
+      var end = double.PositiveInfinity;
+      foreach (var iv in list)
+      {
+        if (iv.Kind != AffiliationKind.Friendly || iv.Source is null
+          || !iv.Source.StartsWith("R9-charm", StringComparison.Ordinal)
+          || iv.T1 <= afterS || iv.T1 >= end || IsCharmedAt(name, iv.T1)) continue;
+        end = iv.T1;
+      }
+      return double.IsPositiveInfinity(end) ? double.NaN : end;
+    }
+
     /// <summary>An independent read snapshot; later classification cannot change its answers.</summary>
     internal EntityTimeline Copy()
     {

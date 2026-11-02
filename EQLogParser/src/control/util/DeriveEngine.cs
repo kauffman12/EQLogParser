@@ -766,10 +766,8 @@ namespace EQLogParser
         return new SummaryInput([], new TimeRange()) { Heals = [] };
       }
 
-      // The grid hides a charmed mob's own rows (CharmPetRows: that is a pet, and pets have no fight row), so a
-      // selection can never contain them. Put back the ones whose span overlaps what was clicked — otherwise the
-      // hiding would take the charmer's +Pets damage, and the raid's own stray swings on their pet, out of every
-      // board built from a selection.
+      // Restore only custody rows explicitly paired with a selected encounter. Time overlap cannot make
+      // an unrelated pet part of a spell fight; ordinary pet output already belongs to its target's row.
       var input = FightSummarySource.Build(CharmPetRows.WithHiddenPets(selected, snapshot.AllFights),
         snapshot.DamageIndex, snapshot.Facts);
 

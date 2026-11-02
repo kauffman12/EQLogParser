@@ -284,10 +284,9 @@ public class CharmRowProjectionTest
     }
 
     [TestMethod]
-    public void WithHiddenPetsAddsPairedOrOverlappingRowsOnly()
+    public void WithHiddenPetsAddsOnlyExplicitlyPairedRows()
     {
-        // Two ways a hidden pet row belongs to a click, and one way it does not. Synthetic rows because this is
-        // arithmetic on links and spans rather than parsing.
+        // An overlap is not encounter membership, even when both rows are combat rather than effects.
         static DerivedFight RowAt(string name, double from, double to, bool pet)
             => new() { Name = name, BeginTime = from, LastTime = to, RaidPet = pet };
 
@@ -300,7 +299,7 @@ public class CharmRowProjectionTest
 
         var back = CharmPetRows.WithHiddenPets([encounter], all);
         Assert.IsTrue(back.Contains(itsOwnPet), "the clicked encounter lost its own pet half");
-        Assert.IsTrue(back.Contains(insideWindow), "the pet inside the clicked window did not come back");
+        Assert.IsFalse(back.Contains(insideWindow), "an overlapping pet contaminated the selected encounter");
         Assert.IsFalse(back.Contains(elsewhere), "a pet row from another pull was dragged in");
 
         // Asking again adds nothing: every row once, still in engagement order.
@@ -311,7 +310,7 @@ public class CharmRowProjectionTest
         // And the link is what makes the pair work — strip it and the same rows say no.
         itsOwnPet.EncounterRow = null;
         Assert.IsFalse(CharmPetRows.WithHiddenPets([encounter], all).Contains(itsOwnPet),
-                       "a pet row came back with neither a link nor an overlap");
+                       "a pet row came back without an encounter link");
     }
 
     [TestMethod]

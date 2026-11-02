@@ -5368,7 +5368,17 @@ players answer to — keeps its verdict wherever a line says something about her
 (`Era`mi`, `Sorshkah`) cannot be character names at all — `'` is not legal in one — so they settle the shape question
 but never the collision question.
 
-### The beta batch: 36 rows from one capture
+### Beta raid names
+
+The later Xev/echo capture contributes 32 additional combat names: nine article-shaped adds, nine `Echo of …` names,
+nine bare-word adds, four Lucksworn aspects and Xev Bristlebane. The bare words include Spear, Knuckle and Surgeon;
+a short capture should not need sustained combat evidence to place these NPCs. Entries are lowercase and ordinal-sorted,
+with case-insensitive duplicate checks. Plimpy, corpse names, aura/trap sources, bankers and event helpers are excluded.
+`NpcDatabaseTierTest.BetaRaidNamesNeedNoCombatHistory` pins sparse-capture placement through R6, while the graph tests
+use explicitly unlisted subjects so these data additions cannot bypass their inference assertions. On the beta replay,
+25 names switch their reason to R6 and seven retain stronger target/charm evidence; no identity kind changes. Ten more
+custody rows are correctly hidden as pets now that they have independent NPC evidence, while the exact selected damage
+and tanking fact memberships and their totals remain unchanged.
 
 39 distinct name fields from `eqlog_Kizant_beta.txt` (344 MB, Oct 11) went through the shipped file and the rule book.
 **3 were already in it** (`Scorn`, `A wailing banshee`, `A forsaken banshee`), so **36 rows were added**: the
@@ -5886,8 +5896,8 @@ shape. `Player` from R15 therefore reads "raid-side, never verified", and owner 
 
 **R7 reads combat allegiance at each hit, not identity alone.** `Targeted (NPC)` means not a player; an owned NPC
 or one temporarily charmed onto the raid's side is not hostile opposition. A pet's ownership tail and charm boundaries
-must therefore affect graph edges just as they affect projection. Genuine opposite-side opposition remains a veto;
-no majority threshold or name-shape guess replaces it.
+must therefore affect graph edges just as they affect projection. Player inference still requires no opposite-side
+opposition; NPC inference's narrowly bounded exception is specified in "Isolated opposition is not a whole night's identity".
 
 R18's heal-based allegiance must be available before the final graph. Moving R18 ahead of its swing-back veto is not
 safe: a hostile that attacks graph-only players would then look like a pet. The ordering is bounded and one-way:
@@ -5931,6 +5941,34 @@ stamps agree. The disposable corpus/record probes were removed; no real-log depe
 expiry, genuine opposing evidence, charm-side reversal, the graph-only-player veto, no safety-claim leakage, and
 carried/idle/reset equivalence as allegiance is established and retracted. `OurPetTest` retains the hostile, crumb-heal,
 charm and friendly-fire refusals.
+
+### Isolated opposition is not a whole night's identity
+
+**Only the NPC arm of R7 tolerates isolated contradictory attacks.** The subject must still be Unknown, with at least
+three raid-side opponent instances and a 60-second span. When any hostile opposition exists, it additionally needs
+three distinct raid-side opponents; hostile edges may be at most 2% of known edges, occupy fewer than three opponent
+instances, and span less than 60 seconds. The existing 2% unknown-edge ceiling also applies. This is not a damage-weighted
+vote: a single large proc carries no more identity evidence than a small hit. Player inference remains unanimous among
+known opponents; explicit identity evidence is never overwritten, and attacks during the subject's own charm windows supply no proof.
+
+The beta's Spear had 616 raid-side edges and one hit on Harasser outside its inferred charm window; Knuckle had 809
+raid-side edges and one on Bruiser outside its window. Those single contradictions vetoed their identities for the
+whole log, routing lingering Bite of the Asp and Blood of Lherre ticks as incoming spell fights. The threshold is
+bounded by contrary breadth and duration, not just a permissive percentage: a long capture must not drown out a real
+second combat role. No spell name or database class guesses who cast a source-less tick; after the target is placed,
+the standing routing law assigns it to that NPC with Unknown credit.
+
+`GraphOppositionTest` pins both reported spell shapes, the share boundary, contradictory breadth and duration,
+insufficient distinct raid opponents, the unchanged player-side veto, and retraction during incremental classification.
+
+**Corpus check:** 17 live and six emulator captures, 56,655,749 damage facts and 19,456,003 heals. Only three identities
+changed: Spear, Knuckle and Surgeon, all Unknown→NPC on the beta; Surgeon had 3,580 raid-side edges and one opposing hit.
+Every remaining incoming spell row retained its count and damage. The beta lost 12 false rows across ten effect names;
+Bite of the Asp and Blood of Lherre's 13 ticks, 447,907 damage, were materialized on Spear/Knuckle with Unknown credit.
+Exact selected fact membership was compared by ordinal in both directions, not just by total: the beta moved 207 facts
+from incoming to outgoing, excluded 78 incoming and seven outgoing NPC-versus-NPC facts, and duplicated none. Net board
+input change was +2,491,021 outgoing and −7,256,855 incoming. Captured fact/heal counts, charm-window counts and pet sets were unchanged.
+The current beta file fits entirely inside its last-24-hour window; that filtered replay gave the same result.
 
 ### An eye never acts, so hitting one proves the striker (R19)
 
@@ -6644,17 +6682,38 @@ with the split leaves rows reading "still going" after their mob became the raid
 rows off the grid (same rule that keeps ``Ziggy`s pet`` out of the legacy table) while the encounter row the charm closed stays
 listed as `dead, charmed`. Hiding is display-only: `DerivedSnapshot.AllFights` keeps every row and
 `DeriveEngine.BuildSummaryInput` hands the hidden ones back through `CharmPetRows.WithHiddenPets`, because a board is built
-from whatever was clicked and **6** hidden rows on Incogitable carry up to **90,646,488** damage between them. A pet row's span
-begins *after* its encounter closes, so overlap alone can never reach it — that is what `DerivedFight.EncounterRow` (the row the
-charm closed, chained across a pull's reopening) exists for; rows whose mob was charmed without ever being fought have no link
-(**3 of Incogitable's 6**) and come back on span overlap alone. Census: visible **4,076 of 4,082** and **1,037 of 1,041**, every
-hidden row an article-shaped mob.
+from whatever was clicked. `DerivedFight.EncounterRow` is explicit membership: only custody paired with a selected
+encounter comes back. A time overlap, even across the same raid pull, supplies no membership. Unpaired custody remains
+captured but is not silently attached to unrelated selections; ordinary pet output is unaffected because projection
+already puts it under the hostile target it hit.
+
+**A release is a row boundary, not a kill.** Once a charm or pet allegiance ends, the next admitted hostile fact opens a
+fresh visible row. The custody row ends `Released`, keeps only its own facts, and cannot lend its encounter link to a later
+charm separated by a release. Touching charm intervals remain one custody. The overlay treats release as completed
+accounting, not a kill; a charmed player's released encounter can no longer keep counting. The index, row totals and
+selection all use the same split, so clipping materialized records is unnecessary: custody facts cannot cross the boundary.
+
+The beta reproduction selected Blood of Lherre at 20:54:17–20:54:53. Its own row held seven ticks on Knuckle, 195,027 damage,
+with no outgoing records. The overlap fallback added two Bruiser rows containing 317,377,139 outgoing damage and dozens
+of raiders. Those rows had also retained hostile damage after charm expiry. Removing just the fake spell row would mask
+both bugs; `CharmSelectionBoundaryTest` deliberately keeps an incoming spell row and verifies its selection stays isolated,
+while the explicitly paired NPC selection retains its custody and the hostile post-release row retains its own records.
+
+Across the 23-capture graph-inference replay, hidden rows had incorrectly retained 6,754 post-release facts carrying
+1,484,229,140 damage on four captures. After the split, no hidden row retained post-release facts; hostile combat has
+visible rows again, with NPC-versus-NPC exclusions accounted for separately above.
+Exact full-selection board membership stayed unchanged on 21 captures: the beta's graph changes are listed above;
+Incogitable additionally stopped importing 11 unpaired Dire Seizure ticks, 86,427 damage, on a candlefolk flame worshipper.
+That is an intentional selection correction, not lost capture data or ordinary pet output. The much larger raw row totals
+excluded by removing overlap included non-board combat, so row totals alone would overstate the board change.
+The disposable corpus probe was removed; the permanent boundary tests cover release without a later same-name hit,
+re-charm after a gap, touching windows, incremental replay, charmed-player release and meter accounting.
 
 **`RaidPet` is not `CharmedOwned`.** A charmed raid member carries `CharmedOwned`, stays on the list and reads `charmed`. The
 reason is identity, not display: `"X has been charmed."` registers X as an NPC at R9-charm's *Strong* strength, so the winning
 verdict says NPC for her too — which makes the projection's real question "does this name have an NPC reason that is NOT the
 charm line?" (`EntityTimeline.HasIndependentIdentity`). Pinned by `CharmRowProjectionTest` (`APetRowIsNotOnTheFightList`,
-`HidingAPetRowDoesNotDeleteItsDamage`, `WithHiddenPetsAddsPairedOrOverlappingRowsOnly`, `ACharmedRaidMemberStaysOnTheList`).
+`HidingAPetRowDoesNotDeleteItsDamage`, `WithHiddenPetsAddsOnlyExplicitlyPairedRows`, `ACharmedRaidMemberStaysOnTheList`).
 
 **A close that lands past the ceiling settles the window at the cap and is dropped.** The merge walk closes on the earliest of
 the three signals (hit-our-side, death, wear-off) — but only while that signal is *inside* `MaxWindowS` of the latest sighting.

@@ -396,6 +396,7 @@ namespace EQLogParser
       => fight.EndReason switch
       {
         DerivedFightEnd.Charmed => "dead, charmed",
+        DerivedFightEnd.Released => "released",
         _ => fight.Dead ? "dead" : fight.CharmedOwned && !fight.RaidPet ? "charmed" : string.Empty,
       };
   }

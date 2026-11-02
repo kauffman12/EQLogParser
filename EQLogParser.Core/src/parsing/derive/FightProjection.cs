@@ -307,6 +307,18 @@ namespace EQLogParser
 
         open.TryGetValue(key, out var row);
 
+        // Custody ending is a row boundary, even when another charm starts before the next hit.
+        // A hidden row must never retain hostile combat after its affiliation expires.
+        if (row is not null && ((row.CharmedOwned && timeline.CharmEndAfter(key, row.LastTime) <= t)
+          || (row.RaidPet && !IsFlipped(timeline, key, t) && !timeline.IsOurPetAt(key, t))))
+        {
+          row.EndReason = DerivedFightEnd.Released;
+          rows.Add(row);
+          open.Remove(key);
+          lastClosed[key] = row;
+          row = null;
+        }
+
         // A slain line ends the engagement only once a STRICTLY LATER timestamp arrives - the
         // same boundary the legacy engine's deferred slain flush drew (currentTime > _slainTime), so
         // same-second damage (the killing blow and "was slain" share a second-resolution stamp,
@@ -317,7 +329,7 @@ namespace EQLogParser
         // A charm sighting closes this name's NPC engagement the way a slain line does — as a death, with
         // the reason kept so the list can say "charmed" instead of implying a killing blow. Checked before
         // the death boundary on purpose: when both happened, the charm came first.
-        if (row is not null && ClosesForCharm(timeline, key, row.LastTime, t))
+        if (row is not null && !row.CharmedOwned && ClosesForCharm(timeline, key, row.LastTime, t))
         {
           row.Dead = true;
           row.EndReason = DerivedFightEnd.Charmed;
@@ -395,7 +407,7 @@ namespace EQLogParser
             {
               // Chain forward: a second pet row of the same pull (the raid stopped swinging at it for ten minutes
               // and it reopened) belongs to the same encounter as the first, not to itself.
-              row.EncounterRow = prev.RaidPet ? prev.EncounterRow
+              row.EncounterRow = prev.RaidPet && prev.EndReason != DerivedFightEnd.Released ? prev.EncounterRow
                                  : prev.EndReason == DerivedFightEnd.Charmed ? prev
                                  : null;
             }
@@ -403,9 +415,8 @@ namespace EQLogParser
         }
 
         // A row keyed on one of OUR pets (the raid's stray swings landed on it) is not an encounter: same
-        // display rule as a charmed mob's half-row - off the list, its damage still reachable by the stats
-        // builds it belongs to (CharmPetRows.WithHiddenPets brings these back on span overlap; they have no
-        // EncounterRow because there was never an encounter to pair with).
+        // display rule as a charmed mob's half-row. With no encounter link, it cannot join an unrelated
+        // selection merely because their times overlap.
         else if (timeline.IsOurPetAt(key, t)) row.RaidPet = true;
 
         // Reported after the boundary checks and row creation, so every fact is announced exactly
@@ -477,11 +488,16 @@ namespace EQLogParser
 
       var published = new List<DerivedFight>(rows.Count + open.Count);
       published.AddRange(rows);
+      var throughTime = allFacts.Length > 0 ? allFacts[allFacts.Length - 1].TimeS : double.NegativeInfinity;
       foreach (var row in open.Values)
       {
-        // Deaths after the last exchange still mark the engagement they follow.
-        // A slain line lands shortly after the final exchange - inside one engagement's tail.
-        if (!row.Dead && DeathWithinTail(deathsByName, row, out var death))
+        // A release still ends custody when this name never fights again. Do not predict a future cap.
+        if (row.CharmedOwned && timeline.CharmEndAfter(row.Name, row.LastTime) <= throughTime)
+          row.EndReason = DerivedFightEnd.Released;
+
+        // Deaths after the last exchange still mark the engagement they follow, but not custody already released.
+        if (!row.Dead && row.EndReason != DerivedFightEnd.Released
+          && DeathWithinTail(deathsByName, row, out var death))
         {
           row.Dead = true;
           row.DeathTime = death.TimeS;
@@ -491,7 +507,8 @@ namespace EQLogParser
 
         // The usual fate of a charmed mob's row: the raid charms it and never swings again, so there is no
         // later fact to notice the boundary in. Same rule as the in-loop check, at the end of the list.
-        if (!row.Dead && ClosesForCharm(timeline, row.Name, row.LastTime, double.PositiveInfinity))
+        if (!row.Dead && !row.CharmedOwned
+          && ClosesForCharm(timeline, row.Name, row.LastTime, double.PositiveInfinity))
         {
           row.Dead = true;
           row.EndReason = DerivedFightEnd.Charmed;

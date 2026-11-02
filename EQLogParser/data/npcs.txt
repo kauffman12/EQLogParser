@@ -716,6 +716,7 @@ a bloodthirsty gnawer
 a bloodthirsty leech
 a bloodthirsty lightcrawler
 a bloodthirsty moss warlord
+a bloodthirsty orc
 a bloodthirsty pirate
 a bloodthirsty raven
 a bloodthirsty shiverback
@@ -8007,6 +8008,7 @@ a lucid arachnae
 a lucid beggar
 a lucid bouncer
 a lucid vision
+a lucksworn sentinel
 a lucky scavenger
 a luclin pup
 a luclin scavenger
@@ -8638,6 +8640,7 @@ a monarch fae drake
 a monitor drake
 a monolith of purity
 a monstrosity
+a monstrous crocodile
 a monstrous earthwalker
 a monstrous mound
 a monstrous mudwalker
@@ -9301,6 +9304,7 @@ a perturbed chirurgeon
 a perturbed cleaner
 a perturbed machinist
 a pest
+a pestering book
 a pestilence elder
 a pestilence priest
 a pestilence pusling
@@ -12437,6 +12441,7 @@ a sluggish sunflower
 a sluggish treant
 a slumbering basilisk
 a slumbering beast
+a sly goblin
 a sly gypsy
 a sly kly imprecator
 a small alligator
@@ -12996,6 +13001,7 @@ a steamwork mechanic
 a steamwork mender
 a steamwork miner
 a steamwork musician
+a steamwork obliterator
 a steamwork reaver
 a steamwork reclaimer
 a steamwork repairer
@@ -13025,6 +13031,7 @@ a steamwork spy mk-vii
 a steamwork striker
 a steamwork sweeper
 a steamwork technician
+a steamwork terminator
 a steamwork tinker
 a steamwork trooper
 a steamwork worker
@@ -13412,6 +13419,7 @@ a supercilious doctor
 a supercilious worker
 a superintendent
 a superior anglerfish
+a superior wagerling
 a supplier
 a supply chest
 a supply crate
@@ -14797,6 +14805,7 @@ a vrodak firewalker
 a vrodak mystic
 a vrodak mystic pet
 a wafting firesurger
+a wagerling
 a wailing banshee
 a wailing centi
 a wailing nightmare
@@ -19405,6 +19414,7 @@ aviak rook
 avir sterbla
 avisiris
 axa stormshield
+axe
 axe broadsmith
 axebeak
 axeweaver
@@ -22212,6 +22222,7 @@ daesorak steelknuckle
 daevyd londayl
 dagarn the destroyer
 dagda icefury
+dagger
 dagmar midcap
 dagnor buthcerblock
 dagron stonecutter
@@ -23500,12 +23511,21 @@ ebon strongbear
 ebondraw
 eboneyes
 ebontail
+echo of adria
 echo of chardok
+echo of hatchet the torturer
+echo of lucia
+echo of meldrath the malignant
 echo of miragul
+echo of miragul reformed
 echo of nortlav
 echo of ryken
 echo of sebilis
 echo of skylance
+echo of tatio
+echo of the first creation
+echo of tunat`muram cuu vauax
+echo of ursus
 ecstatic kor zealot
 edgar steelmor
 edgar the infected
@@ -23803,6 +23823,7 @@ emterizad
 emylie steelclaws
 enasni the demented
 encan v`dal
+encanter
 enchanted ice form
 enchanted ice guardian
 enchanted ice mass
@@ -27022,6 +27043,7 @@ hamari nedu
 hamed grarr
 hamer
 hamisi lerato
+hammer
 hammer tearing strike
 hammerfist the champion
 hammerstock
@@ -27065,6 +27087,7 @@ happ dremblenod pet
 happ findlefinn
 happ findlefinn pet
 har`lak the ancient
+harasser
 harban ranflash
 harbin gernawl
 harbinger dronik
@@ -29131,6 +29154,7 @@ knight patrol member
 knight-captain varlman
 knower of death
 knowledge is power
+knuckle
 koada`dal forge
 koajin
 koarus the vigilant
@@ -29814,6 +29838,7 @@ linola, an eager spirit
 lippy slicks
 liquid magma
 liquid shadow
+liquidator
 lirah
 lirah the bridgekeeper
 lirit t`prakk
@@ -30034,6 +30059,10 @@ lucian
 lucid spirit of abrams
 lucinda`s remains
 lucius
+lucksworn control
+lucksworn doubt
+lucksworn greed
+lucksworn hope
 lucky the beggar
 luclin
 lugnah the arcane
@@ -34670,6 +34699,7 @@ sparkling summoning
 sparks diggleknob
 sparlus penfold
 speaker grayleaf
+spear
 spear sundering ivory
 speckles
 specter of barxt
@@ -35101,6 +35131,7 @@ supply archon tergat
 supply runner
 supplykeeper proxipid
 supplymaster kibrek
+surgeon
 surgeon unusual
 surging tower of the tides
 surmo
@@ -38134,6 +38165,7 @@ xerkus gigglegibber
 xeroan xi`geruonask
 xerskel gerodnsal
 xeture demiagar
+xev bristlebane
 xevo
 xeximoz
 xhut adan
