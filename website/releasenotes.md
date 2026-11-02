@@ -1,3 +1,6 @@
+# 2.4.9 | 11/02/26
+1. Updates to classification system.
+
 # 2.4.8 | 11/01/26
 1. Added option to aggregate **Webhook** messages into one call to Discord based on a selected time interval. Code provided by **ewiclip@github**
 2. Added support for sending large messages (over 2000 characters) via **Webhook** by breaking the message up into multiple calls and including a footer to help put the messages back together. Code provided by **ewiclip@github**
