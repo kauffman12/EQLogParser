@@ -3,6 +3,7 @@ using System;
 namespace EQLogParser;
 
 internal readonly record struct BarChartAxis(long Maximum, long Step);
+internal readonly record struct BarChartNavigation(double Position, double Maximum, double PageSize);
 internal readonly record struct BarChartRange(int First, int End)
 {
   internal int Count => End - First;
@@ -51,6 +52,18 @@ internal static class BarChartLayout
     var end = (int)Math.Min(count, Math.Ceiling((offset + viewport) / stride) + buffer);
     return new(first, end);
   }
+
+  internal static BarChartNavigation Navigation(int count, double stride, double offset, double viewport)
+  {
+    if (count <= 0 || !double.IsFinite(stride) || stride <= 0 || NonNegative(viewport) == 0) return new(0, 0, 1);
+    var extent = Extent(count, stride);
+    var maximum = ClampOffset(double.PositiveInfinity, extent, viewport) / stride;
+    return new(ClampOffset(offset, extent, viewport) / stride, maximum,
+      Math.Max(1, Math.Min(count, Math.Floor(viewport / stride))));
+  }
+
+  internal static double PositionOffset(double position, int count, double stride, double viewport)
+    => ClampOffset(position * NonNegative(stride), Extent(count, stride), viewport);
 
   internal static double PreservePosition(double offset, double oldStride, double newStride,
     double extent, double viewport)

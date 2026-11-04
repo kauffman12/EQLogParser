@@ -16,6 +16,7 @@ public partial class HitFreqChart : UserControl, IDisposable
   private List<HitFrequencyBar> _columns = [];
   private bool _paneReady;
   private bool _updatingSelectors;
+  private bool _syncingPosition;
   private bool _disposedValue;
   private int _sessionId;
 
@@ -27,7 +28,9 @@ public partial class HitFreqChart : UserControl, IDisposable
     _sessionId = DeriveEngine.Active?.SessionId ?? 0;
     DeriveEngine.ActiveChanged += CaptureChanged;
     CombatEvents.ActiveDataCleared += ActiveDataCleared;
+    chartView.ViewportChanged += SyncPosition;
     _paneReady = true;
+    SyncPosition();
   }
 
   public void Dispose()
@@ -50,6 +53,7 @@ public partial class HitFreqChart : UserControl, IDisposable
     _disposedValue = true;
     DeriveEngine.ActiveChanged -= CaptureChanged;
     CombatEvents.ActiveDataCleared -= ActiveDataCleared;
+    chartView.ViewportChanged -= SyncPosition;
     chartView.Deactivate();
     _playerData.Clear();
     _columns.Clear();
@@ -96,6 +100,32 @@ public partial class HitFreqChart : UserControl, IDisposable
     => await UiElementUtil.CreateImage(Dispatcher, chartView);
 
   private void ListSelectionChanged(object sender, SelectionChangedEventArgs e) => UserSelectionChanged();
+
+  private void PageSliderValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+  {
+    if (!_paneReady || _syncingPosition || _disposedValue) return;
+    chartView.ScrollToPosition(e.NewValue);
+  }
+
+  private void SyncPosition()
+  {
+    if (!_paneReady || _disposedValue) return;
+    _syncingPosition = true;
+    try
+    {
+      var navigation = chartView.Navigation;
+      pageSlider.Minimum = 0;
+      pageSlider.Maximum = navigation.Maximum;
+      pageSlider.LargeChange = navigation.PageSize;
+      // Native scrolling is queued: do not pull a dragged thumb back to the last painted offset.
+      if (!pageSlider.IsMouseCaptureWithin) pageSlider.Value = navigation.Position;
+      pageSlider.IsEnabled = navigation.Maximum > 0;
+    }
+    finally
+    {
+      _syncingPosition = false;
+    }
+  }
 
   private void CopyCsvClick(object sender, RoutedEventArgs e)
   {

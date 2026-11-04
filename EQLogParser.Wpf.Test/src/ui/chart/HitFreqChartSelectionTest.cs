@@ -2,6 +2,7 @@ using System.Collections;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using EQLogParser;
 
@@ -127,11 +128,63 @@ public sealed class HitFreqChartSelectionTest
     });
   }
 
+  [TestMethod]
+  public void TopSliderAndNativeScrollStayInSyncThroughDraggingWheelResizeAndEmptyResults()
+  {
+    var synchronized = false;
+    Sta.Run(() =>
+    {
+      using var chart = CreateChart();
+      var window = new Window { Content = chart, Width = 1400, Height = 650 };
+      try
+      {
+        var player = new PlayerStats { Name = "Caster" };
+        var row = player.SubStatOf("Spell", Labels.Dd);
+        for (var amount = 1; amount <= 200; amount++) row.RecordHitTotal(amount, false);
+        chart.Update(player, null);
+        window.Show();
+        BarChartViewTest.Layout(chart);
+        var enabled = chart.pageSlider.IsEnabled && chart.pageSlider.Maximum > 0;
+        var maximum = chart.pageSlider.Maximum;
+        chart.pageSlider.Value = maximum;
+        BarChartViewTest.Layout(chart);
+        var lastReached = Math.Abs(chart.chartView.scroll.HorizontalOffset + chart.chartView.scroll.ViewportWidth
+          - chart.chartView.scroll.ExtentWidth) < 1;
+
+        chart.chartView.scroll.ScrollToHorizontalOffset(4.5 * chart.chartView.ColumnStride);
+        BarChartViewTest.Layout(chart);
+        var bottomUpdatesTop = Math.Abs(chart.pageSlider.Value - 4.5) < 0.01;
+        chart.chartView.scroll.RaiseEvent(new MouseWheelEventArgs(Mouse.PrimaryDevice, Environment.TickCount, -120)
+        { RoutedEvent = Mouse.MouseWheelEvent });
+        BarChartViewTest.Layout(chart);
+        var wheelUpdatesTop = Math.Abs(chart.pageSlider.Value - chart.chartView.Navigation.Position) < 0.01;
+
+        window.Width = 1000;
+        BarChartViewTest.Layout(chart);
+        var resizeUpdatesRange = chart.pageSlider.Maximum > maximum
+          && Math.Abs(chart.pageSlider.Maximum - chart.chartView.Navigation.Maximum) < 0.01;
+        var fullClipboardSource = Columns(chart).Length == 200;
+        chart.minFreqList.SelectedIndex = 1;
+        BarChartViewTest.Layout(chart);
+        synchronized = enabled && lastReached && bottomUpdatesTop && wheelUpdatesTop && resizeUpdatesRange
+          && fullClipboardSource && !chart.pageSlider.IsEnabled && chart.pageSlider.Value == 0
+          && chart.pageSlider.Maximum == 0;
+      }
+      finally
+      {
+        window.Close();
+      }
+    });
+    Assert.IsTrue(synchronized);
+  }
+
   private static HitFreqChart CreateChart()
   {
     var app = Application.Current ?? new Application();
     app.Resources["EQIconStyle"] ??= new Style(typeof(Image));
     app.Resources["ContentForeground"] ??= Brushes.White;
+    app.Resources["EQMenuIconBrush"] ??= Brushes.CornflowerBlue;
+    app.Resources["EQGridTitleHeight"] ??= 36d;
     return new HitFreqChart();
   }
 

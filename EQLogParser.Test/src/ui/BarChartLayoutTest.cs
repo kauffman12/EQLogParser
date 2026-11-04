@@ -100,6 +100,25 @@ public sealed class BarChartLayoutTest
   }
 
   [TestMethod]
+  public void TopSliderPositionsMatchNativeOffsetsIncludingTheFractionalLastPosition()
+  {
+    var navigation = BarChartLayout.Navigation(50_000, 120, 0, 960);
+    Assert.AreEqual(new BarChartNavigation(0, 49_992, 8), navigation);
+    var last = BarChartLayout.PositionOffset(navigation.Maximum, 50_000, 120, 960);
+    Assert.AreEqual(5_999_040d, last);
+    Assert.AreEqual(navigation.Maximum, BarChartLayout.Navigation(50_000, 120, last, 960).Position);
+
+    var fractional = BarChartLayout.Navigation(10, 100, 250, 250);
+    Assert.AreEqual(new BarChartNavigation(2.5, 7.5, 2), fractional);
+    Assert.AreEqual(750d, BarChartLayout.PositionOffset(fractional.Maximum, 10, 100, 250));
+    Assert.AreEqual(0d, BarChartLayout.PositionOffset(-1, 10, 100, 250));
+    Assert.AreEqual(750d, BarChartLayout.PositionOffset(1000, 10, 100, 250));
+    Assert.AreEqual(new BarChartNavigation(0, 0, 1), BarChartLayout.Navigation(0, 100, 0, 250));
+    Assert.AreEqual(new BarChartNavigation(0, 0, 1), BarChartLayout.Navigation(10, 100, 0, 0));
+    Assert.AreEqual(0d, BarChartLayout.Navigation(1, 100, 0, 250).Maximum);
+  }
+
+  [TestMethod]
   public void WheelRespectsSystemLinesPageModeFractionalDeltasAndBoundaries()
   {
     Assert.AreEqual(425d, BarChartLayout.WheelOffset(500, 30, 3, 100, 400, 6000));

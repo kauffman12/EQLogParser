@@ -15407,25 +15407,32 @@ clipboard source remains every filtered row, not just the viewport, with **Hit V
 `HitFreqChartSelectionTest` pins selector wiring, critical/player/pet switches and empty-result clearing; its execution needs
 Windows. An empty answer clears both the host's clipboard source and the view's columns, hover targets and logical extent.
 
-## Shared bar charts: fixed scales and bounded visuals
+## Shared bar charts: viewport scales and bounded visuals
 
 `HitFreqChart` and both `ColumnChart` benchmarks compose `BarChartView`. Hosts own selection, statistics subscriptions,
 calculation and clipboard rows; the surface accepts only `BarChartData` snapshots with primitive values, strings and color
 resource keys. It never holds an engine, a board row or a statistics subscription. Exact hit amounts remain categories,
-not proportional distances; there is no bucketing, sampling or zoom. Hit Frequency has no vendor chart or page slider.
+not proportional distances; there is no bucketing, sampling or zoom. Hit Frequency has no vendor chart. Its top slider
+remains a large drag target, synchronized with native horizontal scrolling rather than selecting a separately rendered page.
 
 `BarChartLayout` owns integer frequency ticks, the fixed 0–100 percent scale, plot/label bands, extents, clamping and the
-visible range. A frequency maximum is taken from the **entire filtered question**, never the viewport. Rounded axis bounds
-are `long`, since an `int` frequency can round above `int.MaxValue`. `BarChartLayoutTest` pins those boundaries and bounds
-visible-range length independently of distribution size, including first/last reachability and zero viewports.
+visible range. The drawn frequency maximum follows the **visible columns**, excluding the realization buffer: a distant
+peak must not flatten the values being read. The benchmark stays at 0–100 percent. The whole-question frequency maximum
+budgets axis-label width only, so changing the drawn maximum cannot move the viewport. Rounded axis bounds are `long`,
+since an `int` frequency can round above `int.MaxValue`. `BarChartLayoutTest` and `BarChartDataTest` pin these boundaries,
+visible-range bounds and slider/index-to-offset mapping, including the fractional final scroll position.
 
 The native horizontal scroll viewer sees a full-width canvas; only the viewport plus two slots on either side has column
 visuals. A bounded pool rebinds on index/data changes. No scroll or resize asks a histogram getter, sorts data, scans the
-series, changes the Y-scale or formats labels outside that bounded pool. Data/font changes compute a stable label budget, with full exact
-amounts in footers and tooltips; font changes retain logical scroll position. Class annotations clip to the plot band.
-Native wheel behavior is explicitly horizontal, honors system line/page preferences and fractional deltas, consumes only
-movement and never takes focus. `BarChartViewTest` checks realization, empty replacement, resizing/fonts, scale stability,
-last-column reachability and wheel boundaries; real Windows execution remains required, not implied by a Linux build.
+whole series or formats labels outside that pool; frequency scaling reads only the visible rows. Data/font changes compute
+a stable label budget, with exact amounts in footers and tooltips; font changes retain logical scroll position. Class
+annotations clip to the plot band. Frequency fills use `EQMenuIconBrush`, which `ThemeConfig` publishes in both themes;
+tests must not invent a `PrimaryColor` brush to stand in for that palette. `BarChartViewTest` checks painted pixels as well
+as realized controls, and pins viewport scaling, empty replacement, resizing/fonts and last-column reachability.
+Native wheel behavior is horizontal, honors system line/page preferences and fractional deltas, consumes only movement
+and never takes focus. The top slider follows scroll/wheel/resize events, drives the same native offset, and is guarded
+against selection feedback and queued scroll updates pulling back a dragged thumb (`HitFreqChartSelectionTest`).
+Real Windows execution remains required, not implied by a Linux build.
 
 Benchmark preparation remains feature-owned in `BenchmarkSeries`: same identity inclusion, class ordering and leader
 normalization, integer-truncated percentages, totals, names and +Pets. The class lens changes only the shared view's input;

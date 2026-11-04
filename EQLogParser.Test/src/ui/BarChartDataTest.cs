@@ -6,7 +6,7 @@ namespace EQLogParser;
 public sealed class BarChartDataTest
 {
   [TestMethod]
-  public void FrequencyScaleUsesTheEntireQuestionAndWideLabelsAndTooltipsRemainExact()
+  public void FrequencyLabelBudgetUsesTheWholeQuestionAndWideValuesRemainExact()
   {
     var bars = new[] { new HitFrequencyBar(100, 37, 0), new HitFrequencyBar(TextUtils.MaxAmount, 1, TextUtils.MaxAmount - 100) };
     var data = BarChartData.Frequency(bars);
@@ -16,10 +16,26 @@ public sealed class BarChartDataTest
     Assert.AreEqual(TextUtils.MaxAmount.ToString("N0", CultureInfo.CurrentCulture), data.Column(1).Primary);
     Assert.AreEqual("+" + (TextUtils.MaxAmount - 100).ToString("N0", CultureInfo.CurrentCulture), data.Column(1).Secondary);
     StringAssert.Contains(data.Column(1).Tooltip, "before filtering");
-    Assert.AreEqual(new BarChartAxis(40, 10), data.Axis, "asking for another column cannot rescale the axis");
+    Assert.AreEqual(new BarChartAxis(40, 10), data.Axis, "the whole-question label budget does not change while scrolling");
+    Assert.AreEqual("EQMenuIconBrush", data.Column(0).ColorKey, "use the brush ThemeConfig actually publishes");
     bars[0] = new HitFrequencyBar(100, 99, 0);
     Assert.AreEqual(37d, data.Column(0).Value, "the renderer owns a snapshot, not the host's mutable list");
     Assert.IsTrue(data.WidthSamples().Count() <= 2, "large distributions use a stable numeric label budget");
+  }
+
+  [TestMethod]
+  public void FrequencyScaleFollowsVisibleBarsNotTheWholeQuestionOrOverscan()
+  {
+    var data = BarChartData.Frequency([
+      new HitFrequencyBar(100, 11, 0), new HitFrequencyBar(120, 3, 20),
+      new HitFrequencyBar(150, 80, 30), new HitFrequencyBar(170, 5, 20)]);
+    var visible = BarChartLayout.Visible(data.Count, 100, 0, 200, 0);
+    Assert.AreEqual(new BarChartAxis(15, 5), data.AxisFor(visible));
+    Assert.AreEqual(new BarChartAxis(80, 20), data.Axis, "the fixed label budget includes the off-screen peak");
+    Assert.AreEqual(new BarChartAxis(80, 20), data.AxisFor(BarChartLayout.Visible(data.Count, 100, 100, 200, 0)));
+    Assert.AreEqual(new BarChartAxis(5, 1), data.AxisFor(new BarChartRange(3, 4)));
+    Assert.AreEqual(new BarChartAxis(1, 1), data.AxisFor(new BarChartRange(0, 0)));
+    Assert.AreEqual(80d, data.Column(2).Value, "viewport scaling must not alter the captured values");
   }
 
   [TestMethod]
@@ -28,6 +44,8 @@ public sealed class BarChartDataTest
     var data = BarChartData.Benchmark([new BenchmarkBar(67, "Owner", "10.2M", "Wizard", true, true)]);
     var column = data.Column(0);
     Assert.AreEqual(new BarChartAxis(100, 10), data.Axis);
+    Assert.AreEqual(new BarChartAxis(100, 10), data.AxisFor(new BarChartRange(0, 1)));
+    Assert.AreEqual(new BarChartAxis(100, 10), data.AxisFor(new BarChartRange(0, 0)));
     Assert.AreEqual(67d, column.Value);
     Assert.AreEqual("67% (10.2M)", column.Above);
     Assert.AreEqual("Owner", column.Primary);

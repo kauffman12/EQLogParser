@@ -79,7 +79,7 @@ public sealed class ColumnChartMigrationTest
     var app = Application.Current ?? new Application();
     app.Resources["EQTitleStyle"] ??= new Style(typeof(Label));
     app.Resources["EQIconStyle"] ??= new Style(typeof(Image));
-    app.Resources["PrimaryColor"] ??= Brushes.CornflowerBlue;
+    app.Resources["EQMenuIconBrush"] ??= Brushes.CornflowerBlue;
   }
 
   private static T Field<T>(ColumnChart pane, string name)

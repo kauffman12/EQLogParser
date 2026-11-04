@@ -8,13 +8,14 @@ using System.Windows.Shapes;
 
 namespace EQLogParser;
 
-/// <summary>A fixed axis and native scrolling extent with only viewport-sized column visuals.</summary>
+/// <summary>A stationary Y-axis and native scrolling extent with only viewport-sized column visuals.</summary>
 public partial class BarChartView : UserControl
 {
   private readonly List<BarChartColumnVisual> _columns = [];
   private readonly Rectangle _baseline = new() { Height = 1 };
   private BarChartData _data = BarChartData.Frequency([]);
   private BarChartBounds _bounds;
+  private BarChartAxis _displayedAxis = BarChartLayout.FrequencyAxis(0);
   private double _stride = 100;
   private double _pendingOffset = double.NaN;
   private bool _ready;
@@ -32,9 +33,17 @@ public partial class BarChartView : UserControl
     RefreshPresentation();
   }
 
+  internal event Action ViewportChanged;
+
   internal BarChartData Data => _data;
+  internal BarChartAxis DisplayedAxis => _displayedAxis;
   internal int RealizedColumnCount => _columns.Count;
   internal double ColumnStride => _stride;
+  internal BarChartNavigation Navigation => BarChartLayout.Navigation(_data.Count, _stride,
+    scroll.HorizontalOffset, scroll.ViewportWidth);
+
+  internal void ScrollToPosition(double position)
+    => scroll.SetPresentationOffset(BarChartLayout.PositionOffset(position, _data.Count, _stride, scroll.ViewportWidth));
 
   internal void SetData(BarChartData data, bool resetOffset = true)
   {
@@ -115,9 +124,12 @@ public partial class BarChartView : UserControl
       var height = Math.Max(0, scroll.ViewportHeight);
       strip.Height = height;
       var bounds = BarChartLayout.Bounds(height, FontSize, _data.HasSecondary);
-      if (_axisDirty || bounds != _bounds)
+      var visible = BarChartLayout.Visible(_data.Count, _stride, scroll.HorizontalOffset, scroll.ViewportWidth, 0);
+      var displayedAxis = _data.AxisFor(visible);
+      if (_axisDirty || bounds != _bounds || displayedAxis != _displayedAxis)
       {
         _bounds = bounds;
+        _displayedAxis = displayedAxis;
         DrawAxis();
         _axisDirty = false;
       }
@@ -152,8 +164,9 @@ public partial class BarChartView : UserControl
         var column = _columns[i];
         var index = range.First + i;
         if (column.Index != index || column.Version != _version) column.Bind(index, _version, _data.Column(index));
-        column.Arrange(_stride, height, FontSize, FontFamily, bounds, _data.Axis.Maximum);
+        column.Arrange(_stride, height, FontSize, FontFamily, bounds, _displayedAxis.Maximum);
       }
+      ViewportChanged?.Invoke();
     }
     finally
     {
@@ -171,9 +184,9 @@ public partial class BarChartView : UserControl
     Canvas.SetLeft(spine, width - 1);
     Canvas.SetTop(spine, _bounds.Top);
     axis.Children.Add(spine);
-    for (var value = 0L; value <= _data.Axis.Maximum; value += _data.Axis.Step)
+    for (var value = 0L; value <= _displayedAxis.Maximum; value += _displayedAxis.Step)
     {
-      var top = _bounds.Bottom - BarChartLayout.BarHeight(value, _data.Axis.Maximum, _bounds.Height);
+      var top = _bounds.Bottom - BarChartLayout.BarHeight(value, _displayedAxis.Maximum, _bounds.Height);
       var label = new TextBlock
       {
         Text = value.ToString("N0", CultureInfo.CurrentCulture), Width = Math.Max(0, width - 10),

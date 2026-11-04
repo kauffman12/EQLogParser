@@ -18,6 +18,7 @@ internal sealed class BarChartData
   private readonly bool _percent;
 
   internal int Count => _percent ? _benchmark.Length : _frequency.Length;
+  // The whole-question label budget stays fixed while the drawn frequency axis follows the visible range.
   internal BarChartAxis Axis { get; }
   internal bool HasSecondary { get; }
   internal string Title => _percent ? "Percent" : "Frequency";
@@ -42,6 +43,16 @@ internal sealed class BarChartData
   internal static BarChartData Benchmark(IReadOnlyList<BenchmarkBar> bars) => new(bars);
   internal static string ClassColorKey(string name) => "ColumnChartClass" + name + "Brush";
 
+  internal BarChartAxis AxisFor(BarChartRange visible)
+  {
+    if (_percent) return Axis;
+    var maximum = 0;
+    var first = Math.Clamp(visible.First, 0, Count);
+    var end = Math.Clamp(visible.End, first, Count);
+    for (var index = first; index < end; index++) maximum = Math.Max(maximum, _frequency[index].Frequency);
+    return BarChartLayout.FrequencyAxis(maximum);
+  }
+
   internal BarChartColumn Column(int index)
   {
     if (_percent)
@@ -56,7 +67,7 @@ internal sealed class BarChartData
     var amount = hit.Amount.ToString("N0", CultureInfo.CurrentCulture);
     var frequency = hit.Frequency.ToString("N0", CultureInfo.CurrentCulture);
     var difference = hit.Difference == 0 ? "" : "+" + hit.Difference.ToString("N0", CultureInfo.CurrentCulture);
-    return new(hit.Frequency, frequency, amount, difference, "", "PrimaryColor",
+    return new(hit.Frequency, frequency, amount, difference, "", "EQMenuIconBrush",
       $"Hit Value: {amount}\nFrequency: {frequency}\nDifference: {hit.Difference.ToString("N0", CultureInfo.CurrentCulture)}"
       + "\nDifference from the preceding distinct hit value, before filtering");
   }

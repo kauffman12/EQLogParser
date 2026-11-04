@@ -717,17 +717,22 @@ These are outstanding Windows checks, not results inferred from the Linux build.
 `HitFreqChartSelectionTest` and `ColumnChartMigrationTest` on Windows before accepting the renderer migration.
 
 - [ ] Open Damage and Tanking Hit Frequency from their summary toolbars, and DPS and Healing Player Benchmark from View.
-  All four must use the shared fixed-axis chart, preserve their window/tab identities and keep selectors usable.
-  Hit Frequency must have ordinary horizontal scrolling, no range slider and no implicit zoom.
+  All four must use the shared stationary-axis chart, preserve window/tab identities and keep selectors usable.
+  Confirm that bars actually paint with a nontransparent fill, not just value/name labels. Hit Frequency must retain its
+  large top slider as well as native horizontal scrolling, with neither control introducing zoom.
 - [ ] Choose identical spell names appearing under Direct Damage and DoT Tick: labels must distinguish them, each choice
   must show its own distribution, and switching Critical/Non-Critical must keep the breakdown when that lane exists.
   Switch player/pet choices, including critical-only and noncritical-only rows; no previous choice's bars may remain.
 - [ ] Raise the frequency threshold until nothing survives, then lower it. Empty answers must clear bars, labels, tooltips,
   axis and scroll extent and show an empty-state message. Repeat by updating an open chart to a row with no distributions,
   by hiding every benchmark class, and by clearing/replacing the capture.
-- [ ] Prototype a 50,000-distinct-value series early: drag the scrollbar thumb from first to last, resize near the end,
-  and check that the final value is reachable, columns clip correctly and the Y-scale stays fixed. The WPF test pins
-  bounded column realization, not rendering speed. Observe responsiveness on a real large distribution as well.
+- [ ] Drag both the top slider and scrollbar from first to last on a 50,000-distinct-value series, and resize near the end.
+  Both controls must stay synchronized and reach the final value, including a partially visible final slot. Empty results
+  reset/disable the top slider; wheel movement and resizing must update its position/range without fighting an active drag.
+  The WPF test pins bounded column realization, not rendering speed; observe a real large distribution as well.
+- [ ] The frequency scale must follow the visible columns, not an off-screen peak or the realization buffer: a view topping
+  out at 11 must not stay on an 80 scale solely because 80 appears later. Drag to the larger peak and back and check that
+  bar heights and tick labels rescale together without the axis width/column positions moving. Benchmarks stay at 0–100%.
 - [ ] Check small/large fonts, light/dark themes, narrow and large windows, docked/floating charts, mixed-DPI monitor moves,
   and multiple charts open together. Long exact amounts must be readable without labels clipping at the maximum bar or
   overlapping the scrollbar. Benchmarks must retain class colors, rotated class annotations, ordering and +Pets labels.
