@@ -282,6 +282,9 @@
   <data name="TRIGGER_CHARACTER_DELETE" xml:space="preserve">
     <value>Delete Character Settings</value>
   </data>
+  <data name="TRIGGER_LOG_FILTER_TEXT" xml:space="preserve">
+    <value>Name | Line Filter</value>
+  </data>
   <data name="TRIGGER_SEARCH_TEXT" xml:space="preserve">
     <value>Trigger Search</value>
   </data>

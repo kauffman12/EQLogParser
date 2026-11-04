@@ -727,6 +727,15 @@ namespace EQLogParser {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Name | Line Filter.
+        /// </summary>
+        public static string TRIGGER_LOG_FILTER_TEXT {
+            get {
+                return ResourceManager.GetString("TRIGGER_LOG_FILTER_TEXT", resourceCulture);
+            }
+        }
+
+        /// <summary>
         ///   Looks up a localized string similar to Trigger Search.
         /// </summary>
         public static string TRIGGER_SEARCH_TEXT {

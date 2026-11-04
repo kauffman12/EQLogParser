@@ -18,6 +18,10 @@
       <ComboBox x:Name="logList" SelectionChanged="SelectionChanged" />
       <Button x:Name="clearButton" Margin="8,0,0,1" Height="{DynamicResource EQButtonHeight}" Padding="12,0,12,0" Click="ClearClick">Clear Logs</Button>
     </StackPanel>
+    <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
+      <!-- The "Name | Line Filter" watermark is wired in code (UiElementUtil.SetWatermark), like every filter box. -->
+      <TextBox x:Name="filterBox" Margin="0,0,8,2" Width="170" PreviewKeyDown="FilterKeyDown" TextChanged="FilterTextChanged" />
+    </StackPanel>
     <syncfusion:SfDataGrid x:Name="dataGrid"
                            AllowResizingColumns="True"
                            AllowSorting="True"
@@ -30,6 +34,7 @@
                            GridLinesVisibility="Horizontal"
                            HeaderRowHeight="{DynamicResource EQTableHeaderRowHeight}"
                            IsReadOnly="True"
+                           ItemsSourceChanged="ItemsSourceChanged"
                            PreviewMouseLeftButtonDown="PreviewMouseLeftButtonDown"
                            RowHeaderWidth="{DynamicResource EQTableRowHeaderWidth}"
                            RowHeight="{DynamicResource EQTableRowHeight}"

@@ -16,6 +16,8 @@ namespace EQLogParser
   {
 
     private readonly DelayedAction _batchRefresh;
+    private readonly DispatcherTimer _filterTimer;
+    private string _currentFilterText = string.Empty;
     private bool _ready;
     private ObservableCollection<TriggerLogEntry> _currentCollection;
 
@@ -25,6 +27,13 @@ namespace EQLogParser
 
       InitializeComponent();
       SyncFusionUtil.ConfigureFrozenCellAnimations(dataGrid);
+      _filterTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
+      _filterTimer.Tick += (_, _) =>
+      {
+        _filterTimer.Stop();
+        ApplyFilter();
+      };
+      UiElementUtil.SetWatermark(filterBox, Resource.TRIGGER_LOG_FILTER_TEXT);
 
       // default these columns to descending
       var desc = new[] { "Eval", "BeginTime", "LogTime" };
@@ -41,6 +50,7 @@ namespace EQLogParser
         TriggerManager.Instance.EventsProcessorsUpdated += EventsProcessorsUpdated;
         ThemeConfig.EventsThemeChanged += EventsThemeChanged;
         _ready = true;
+        ApplyFilter();
         EventsProcessorsUpdated();
       }
     }
@@ -77,6 +87,48 @@ namespace EQLogParser
           }
         }
       });
+    }
+
+    private void ItemsSourceChanged(object sender, GridItemsSourceChangedEventArgs e)
+    {
+      if (dataGrid?.View == null) return;
+      dataGrid.View.Filter = item =>
+      {
+        var entry = (TriggerLogEntry)item;
+        return string.IsNullOrEmpty(_currentFilterText)
+          || (entry.Name?.Contains(_currentFilterText, StringComparison.OrdinalIgnoreCase) == true)
+          || (entry.Line?.Contains(_currentFilterText, StringComparison.OrdinalIgnoreCase) == true);
+      };
+      dataGrid.View.RefreshFilter();
+    }
+
+    private void ApplyFilter()
+    {
+      if (dataGrid == null) return;
+      var query = filterBox.Text == Resource.TRIGGER_LOG_FILTER_TEXT ? string.Empty : filterBox.Text;
+      if (_currentFilterText == query) return;
+      _currentFilterText = query;
+      dataGrid.SelectedItems.Clear();
+      dataGrid.View?.RefreshFilter();
+    }
+
+    private void FilterTextChanged(object sender, TextChangedEventArgs e)
+    {
+      // XAML can raise TextChanged before the constructor has wired the timer.
+      _filterTimer?.Stop();
+      _filterTimer?.Start();
+    }
+
+    private void FilterKeyDown(object sender, KeyEventArgs e)
+    {
+      if (dataGrid != null && e.Key == Key.Escape)
+      {
+        e.Handled = true;
+        UiElementUtil.RestoreWatermark(filterBox, Resource.TRIGGER_LOG_FILTER_TEXT);
+        _filterTimer.Stop();
+        ApplyFilter();
+        dataGrid.Focus();
+      }
     }
 
     private void SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
@@ -163,6 +215,7 @@ namespace EQLogParser
 
     public void HideContent()
     {
+      _filterTimer.Stop();
       TriggerManager.Instance.EventsProcessorsUpdated -= EventsProcessorsUpdated;
       ThemeConfig.EventsThemeChanged -= EventsThemeChanged;
 
