@@ -128,12 +128,7 @@ public partial class HitFreqChart : UserControl, IDisposable
   }
 
   private void CopyCsvClick(object sender, RoutedEventArgs e)
-  {
-    var header = new List<string> { "Hit Value", "Frequency", "Difference" };
-    var rows = new List<List<object>>();
-    foreach (var column in _columns) rows.Add([column.Amount, column.Frequency, column.Difference]);
-    UiUtil.SetClipboardText(TextUtils.BuildTsv(header, rows));
-  }
+    => UiUtil.SetClipboardText(chartView.Data.FrequencyTsv());
 
   private void UserSelectionChanged()
   {

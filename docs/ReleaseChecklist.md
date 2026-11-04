@@ -749,9 +749,13 @@ These are outstanding Windows checks, not results inferred from the Linux build.
   Switch Critical/Non-Critical: each lane must use its own supported ladder, even if the other lane is empty or noisy.
   Filter away an internal level: later levels must retain their numbers, including after scrolling. Switch to a spell,
   a mixed/noisy melee series or an insufficient sample: DI labels must disappear without leaving a blank extra band.
-  Copy Image must include the DI footer; Copy CSV must retain its original three exact-data columns.
+  Combine a strongly supported ladder with a rare off-ladder amount: matching bars keep DI labels; the outlier stays
+  visible, has no DI label, and its tooltip says **Outside Estimated DI Ladder**. Tooltip support must include the outlier
+  in its denominator. The Keyce four-fight example should show **68,377 × 288 → DI20**, **52,674 × 1 → no DI**, support 718/719.
+  Copy Image must include the DI footer. Copy CSV appends numeric **DI**, blank on unmatched/unfitted rows, without dropping
+  an outlier or changing any original amount/count/difference.
 - [ ] Copy CSV while scrolled: Hit Frequency must include **every filtered row** with exact **Hit Value / Frequency /
-  Difference**; benchmarks must keep **Class / Percent / Name**, +Pets and their existing inclusion of hidden classes.
+  Difference / DI**; benchmarks must keep **Class / Percent / Name**, +Pets and their existing inclusion of hidden classes.
   Copy Image on a high-DPI display: include the fixed axis, current viewport and labels, never an enormous full-distribution
   bitmap. Verify the pasted image's bounds and legibility, not just that the clipboard call succeeded.
 - [ ] Close/hide during resize and during a benchmark stats build, then reopen; change captures while preparation is pending.

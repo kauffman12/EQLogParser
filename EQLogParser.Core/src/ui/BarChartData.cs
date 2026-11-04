@@ -82,12 +82,26 @@ internal sealed class BarChartData
     var tooltip = $"Hit Value: {amount}\nFrequency: {frequency}"
       + $"\nDifference: {hit.Difference.ToString("N0", CultureInfo.CurrentCulture)}"
       + "\nDifference from the preceding distinct hit value, before filtering";
-    if (level > 0 && _diFit is { } fit)
+    if (_diFit is { } fit)
     {
-      tooltip += $"\nEstimated DI {level}\nLevels Observed: {fit.ObservedLevels}/{MeleeDiEstimator.LevelCount}"
+      tooltip += level > 0 ? $"\nEstimated DI {level}" : "\nOutside Estimated DI Ladder";
+      tooltip += $"\nLevels Observed: {fit.ObservedLevels}/{MeleeDiEstimator.LevelCount}"
+        + $"\nFit Support: {fit.HitCount:N0}/{fit.TotalHitCount:N0} Hits"
         + $"\nEffective Interval: {fit.Interval:0.###}\nMaximum Fit Error: {fit.MaximumResidual:0.###}";
     }
     return new(hit.Frequency, frequency, amount, difference, "", "EQMenuIconBrush", tooltip, diLabel);
+  }
+
+  internal string FrequencyTsv()
+  {
+    if (_percent) throw new InvalidOperationException("A benchmark has no hit-frequency export");
+    var rows = new List<List<object>>(_frequency.Length);
+    foreach (var hit in _frequency)
+    {
+      var level = _diFit?.LevelFor(hit.Amount) ?? 0;
+      rows.Add([hit.Amount, hit.Frequency, hit.Difference, level > 0 ? level : ""]);
+    }
+    return TextUtils.BuildTsv(["Hit Value", "Frequency", "Difference", "DI"], rows);
   }
 
   // A stable budget for this whole data question. Geometry/scrolling never formats off-screen columns.

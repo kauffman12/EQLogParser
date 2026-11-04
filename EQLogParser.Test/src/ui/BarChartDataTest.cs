@@ -118,6 +118,50 @@ public sealed class BarChartDataTest
   }
 
   [TestMethod]
+  public void CombinedCritExportKeepsEveryRowAndLeavesOnlyTheOutlierDiBlank()
+  {
+    var player = new PlayerStats { Name = "Keyce`s pet" };
+    var row = player.SubStatOf("Slashes", Labels.Melee);
+    foreach (var bar in HitFrequencyFixtures.CombinedKeyceCriticals())
+      for (var hit = 0; hit < bar.Frequency; hit++) row.RecordHitTotal(bar.Amount, true);
+    var choice = HitFrequencySeries.ForPlayers(player, null)[player.Name].Single();
+    var fit = choice.DiFor(true);
+    Assert.IsNotNull(fit);
+    var data = BarChartData.Frequency(choice.Critical, fit);
+    var rows = TextUtils.ReadTsv(data.FrequencyTsv());
+    CollectionAssert.AreEqual(new[] { "Hit Value", "Frequency", "Difference", "DI" }, rows[0]);
+    Assert.AreEqual(22, rows.Count, "all 21 amounts survive, including the outlier");
+    CollectionAssert.AreEqual(new[] { "68377", "288", "3216", "20" }, rows[^1]);
+    CollectionAssert.AreEqual(new[] { "52674", "1", "364", "" }, rows[16]);
+    CollectionAssert.AreEqual(new[] { "55520", "35", "2846", "16" }, rows[17]);
+    Assert.AreEqual(719, rows.Skip(1).Sum(fields => int.Parse(fields[1], CultureInfo.CurrentCulture)));
+    Assert.AreEqual("DI 20", data.Column(20).DiLabel);
+    Assert.AreEqual("", data.Column(15).DiLabel);
+    StringAssert.Contains(data.Column(15).Tooltip, "Outside Estimated DI Ladder");
+    StringAssert.Contains(data.Column(20).Tooltip, "718/719");
+    // Asking for a narrow viewport cannot turn the export into a visible-page export.
+    data.AxisFor(new BarChartRange(0, 2));
+    Assert.AreEqual(22, TextUtils.ReadTsv(data.FrequencyTsv()).Count);
+    var filtered = BarChartData.Frequency(HitFrequencySeries.Filter(choice.Critical, 1), fit);
+    var filteredRows = TextUtils.ReadTsv(filtered.FrequencyTsv());
+    Assert.AreEqual(21, filteredRows.Count);
+    Assert.IsFalse(filteredRows.Skip(1).Any(fields => fields[0] == "52674"));
+    CollectionAssert.AreEqual(new[] { "55520", "35", "2846", "16" }, filteredRows[16]);
+  }
+
+  [TestMethod]
+  public void FrequencyExportWithoutAFitKeepsWideNumbersAndABlankDiColumn()
+  {
+    var bars = new[] { new HitFrequencyBar(TextUtils.MaxAmount, 3, TextUtils.MaxAmount - 1) };
+    var rows = TextUtils.ReadTsv(BarChartData.Frequency(bars).FrequencyTsv());
+    CollectionAssert.AreEqual(new[] { "Hit Value", "Frequency", "Difference", "DI" }, rows[0]);
+    CollectionAssert.AreEqual(new[] { TextUtils.MaxAmount.ToString(CultureInfo.CurrentCulture), "3",
+      (TextUtils.MaxAmount - 1).ToString(CultureInfo.CurrentCulture), "" }, rows[1]);
+    Assert.AreEqual(1, TextUtils.ReadTsv(BarChartData.Frequency([]).FrequencyTsv()).Count);
+    Assert.ThrowsExactly<InvalidOperationException>(() => BarChartData.Benchmark([]).FrequencyTsv());
+  }
+
+  [TestMethod]
   public void EmptyPresentationsHaveNoColumnsAndUsableAxes()
   {
     foreach (var empty in new[] { BarChartData.Frequency([]), BarChartData.Benchmark([]) })

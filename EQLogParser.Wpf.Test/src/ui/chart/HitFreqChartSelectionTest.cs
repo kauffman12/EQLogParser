@@ -182,6 +182,45 @@ public sealed class HitFreqChartSelectionTest
   }
 
   [TestMethod]
+  public void DominantDiExportFollowsFilteringAndCannotLeakIntoTheNextChoice()
+  {
+    var correct = false;
+    Sta.Run(() =>
+    {
+      using var chart = CreateChart();
+      var player = new PlayerStats { Name = "Attacker" };
+      var melee = player.SubStatOf("Hits", Labels.Melee);
+      var spell = player.SubStatOf("Spell Pattern", Labels.Dd);
+      for (var level = 1; level <= 20; level++)
+      {
+        for (var hit = 0; hit < 3; hit++)
+        {
+          melee.RecordHitTotal(7050 + (450 * level), false);
+          spell.RecordHitTotal(7050 + (450 * level), false);
+        }
+      }
+      melee.RecordHitTotal(7600, false);
+      chart.Update(player, null);
+      chart.hitTypeList.SelectedItem = chart.hitTypeList.Items.Cast<HitFrequencyChoice>()
+        .Single(choice => choice.Key == melee.Key);
+      var all = TextUtils.ReadTsv(chart.chartView.Data.FrequencyTsv());
+      var dominant = chart.chartView.Data.HasDiLabels && Columns(chart).Length == 21
+        && all.Count == 22 && all[2][0] == "7600" && all[2][3] == "" && all[^1][3] == "20";
+      chart.minFreqList.SelectedIndex = 1;
+      var filtered = TextUtils.ReadTsv(chart.chartView.Data.FrequencyTsv());
+      var numbering = filtered.Count == 21 && filtered[2][0] == "7950" && filtered[2][2] == "350"
+        && filtered[2][3] == "2";
+      chart.hitTypeList.SelectedItem = chart.hitTypeList.Items.Cast<HitFrequencyChoice>()
+        .Single(choice => choice.Key == spell.Key);
+      var noSpell = TextUtils.ReadTsv(chart.chartView.Data.FrequencyTsv()).Skip(1).All(fields => fields[3] == "");
+      chart.Update(new PlayerStats { Name = "Empty" }, null);
+      correct = dominant && numbering && noSpell && !chart.chartView.Data.HasDiLabels
+        && TextUtils.ReadTsv(chart.chartView.Data.FrequencyTsv()).Count == 1;
+    });
+    Assert.IsTrue(correct);
+  }
+
+  [TestMethod]
   public void TopSliderAndNativeScrollStayInSyncThroughDraggingWheelResizeAndEmptyResults()
   {
     var synchronized = false;

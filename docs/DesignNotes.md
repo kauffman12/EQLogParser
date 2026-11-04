@@ -15403,7 +15403,8 @@ folded non-DD/DoT pairs; the chart must not invent a different type/subtype grou
 
 Amounts and differences remain exact `long` values. Sort numerically, compute differences against the preceding distinct
 amount **before** applying the strict `frequency > threshold` filter, and retain those differences while scrolling. The
-clipboard source remains every filtered row, not just the viewport, with **Hit Value / Frequency / Difference**.
+clipboard source remains every filtered row, not just the viewport, with **Hit Value / Frequency / Difference / DI**;
+DI is numeric for matched amounts and blank otherwise (see "DI inference: measured melee ladders, not automatic numbering").
 `HitFreqChartSelectionTest` pins selector wiring, critical/player/pet switches and empty-result clearing; its execution needs
 Windows. An empty answer clears both the host's clipboard source and the view's columns, hover targets and logical extent.
 
@@ -15457,20 +15458,29 @@ no combining counts, borrowing a fit from the other lane or assuming the same da
 get no DI metadata. Frequency filtering and scrolling retain the selected lane's cached fit; normal board builds do not
 ask for histograms or fit anything (`HitFrequencySeriesTest`, `HitFrequencyLazinessTest`).
 
-The conservative policy is **at least 50 hits and 16–20 distinct amounts**, sorted, positive and within the 48-bit domain.
-A 20-slot affine ladder must explain **every** amount: no outlier deletion, bucketing or rebasing to the first visible bar.
-Both endpoints must be supported (19 intervals); any valid shorter-span explanation is rejected rather than assuming its
-offset. Intervals must be at least one damage point and effective bonuses nonnegative. Worst residual is capped at
-**one damage point for noncriticals, three for criticals**, and always at a quarter interval if smaller. The critical budget
-admits observed amplified rounding, not mixed modifier ladders; every amount must still fit. Centered **decimal** regression
-preserves that tolerance at wide magnitudes. `MeleeDiEstimatorTest` pins exact/rounded fits, missing internal levels, endpoint
-ambiguity, low support, contamination, small intervals and maximum-width amounts in both lanes.
+Require **at least 50 matching hits and 16 distinct observed DI levels**, with support at both ends (19 intervals).
+An exact whole-distribution fit is the fast path; otherwise a dominant ladder must explain **98% of hits and 90% of distinct
+amounts**. Coverage is relaxed, **not precision**: unmatched bars remain in the data and get no DI. Candidate seeds may omit
+one or two bins from sources with at most 22 bins; their predictions are then checked against **all** original amounts.
+Reject strong candidates that disagree on any shared amount's DI label, and reject shorter-span/offset-ambiguous seeds.
+A larger or genuinely mixed distribution stays unlabeled rather than paying for an unbounded hypothesis search.
 
-`MeleeDiFit` maps only observed exact amounts to levels. Accepted fits add a separate **DI n** footer; the tooltip says
-**Estimated DI** and gives observed-level support, effective interval and worst error. Counts, amounts, differences and CSV
-columns remain verbatim. Missing/filtered levels never renumber later labels. Unmatched/ambiguous selections show nothing,
-not a guessed DI1. The optional third footer reserves its own band and clears on selection changes (`BarChartDataTest`,
-`HitFreqChartSelectionTest`, `BarChartViewTest`; WPF execution requires Windows).
+Amounts must be sorted, positive and within the 48-bit domain, intervals at least one damage point and effective bonuses
+nonnegative. Worst matching residual remains **one damage point for noncriticals, three for criticals**, and always at a
+quarter interval if smaller. Centered **decimal** regression preserves that tolerance at wide magnitudes. Several matching
+amounts may represent one level; `ObservedLevels` counts distinct levels, not bins. `MeleeDiEstimatorTest` pins dominant
+support, competing offsets, endpoint ambiguity, low support, contamination, small intervals and maximum-width amounts.
+
+`MeleeDiFit` maps only observed matching amounts to levels. Accepted fits add a separate **DI n** footer; tooltips show
+**Estimated DI**, matched/total hit support, effective interval and worst error. An unmatched bar says **Outside Estimated DI
+Ladder**, never a guessed level. Missing/filtered levels never renumber later labels. The optional third footer reserves its
+own band and clears on selection changes (`HitFreqChartSelectionTest`, `BarChartViewTest`; WPF execution requires Windows).
+
+**Copy CSV appends a numeric `DI` column** to the original exact **Hit Value / Frequency / Difference** fields. Unmatched or
+unfitted amounts have a blank DI cell. `BarChartData.FrequencyTsv()` exports the same immutable question and fit the chart
+paints, all filtered rows (not only visible rows), without fitting again or formatting every column's tooltip. No bar is
+dropped from the chart/export to help inference; the original differences survive filtering. `BarChartDataTest` pins the four-field schema,
+wide amounts, empty/unfitted answers, filtered gaps and the combined critical example below.
 
 The measured foundation used a disposable `PipelineHarness.RunFileDerived` runner: one full file-order stream, live parsing,
 then `ClassificationRules.Apply` before identity questions. It grouped positive basic melee by attacker/defender/subtype,
@@ -15499,6 +15509,13 @@ normal precision or discarding any values. `MeleeDiEstimatorTest` keeps the 235-
 choice through label projection. A disposable full-stream check asserted accepted critical projections and was removed.
 Most other complete critical distributions inspected in these captures remain mixed or insufficiently supported; enabling
 criticals does not promise every crit sample can be labeled.
+
+**Dominant combined example:** add a crazed flesh horror to the animated-flamespout/unyielding-edifice/frigid-mage selection:
+**719 crits / 21 amounts**, of which **718** support the same 20-level ladder. One critical slash at 10:56:12 for **52,674**
+is off-ladder; rejecting every label because of it is too conservative. The dominant fit labels **68,377 × 288 as DI20**,
+leaves **52,674 × 1** unlabeled, and retains all 21 rows in chart/export. Target count is not a gate. The ordinary fixture
+`HitFrequencyFixtures.CombinedKeyceCriticals` reaches the export through the chart-choice seam; a disposable full-file
+pipeline check independently asserted the 718/719 support and four-column export, then was removed.
 
 **Human-player caution:** guild-chat-corroborated Beorun → Combat Dummy Azia, Slashes, in `eqlog_Incogitable_xegony.txt`
 (11:06:41–11:14:54) has **229 ordinary hits / 53 amounts**: not one clean ladder. Some clean named actors read Player but

@@ -146,14 +146,14 @@ public sealed class MeleeDiEstimatorTest
   }
 
   [TestMethod]
-  public void OutliersAndMultipleLaddersAreNotSilentlyRemovedToMakeAFit()
+  public void FrequentOutliersAndMultipleLaddersDoNotHaveDominantSupport()
   {
     var bars = Ladder();
     bars[9] = bars[9] with { Amount = bars[9].Amount + 5 };
     Assert.IsNull(MeleeDiEstimator.TryFit(bars));
     var mixed = Ladder().Concat(Ladder(first: 7600)).OrderBy(bar => bar.Amount).ToArray();
     Assert.IsNull(MeleeDiEstimator.TryFit(mixed));
-    Assert.IsNull(MeleeDiEstimator.TryFit(Ladder().Append(new HitFrequencyBar(50000, 1, 0)).ToArray()));
+    Assert.IsNull(MeleeDiEstimator.TryFit(Ladder().Append(new HitFrequencyBar(50000, 2, 0)).ToArray()));
   }
 
   [TestMethod]
@@ -189,6 +189,96 @@ public sealed class MeleeDiEstimatorTest
     bars = Ladder(TextUtils.MaxAmount - (19 * 450L));
     bars[^1] = bars[^1] with { Amount = TextUtils.MaxAmount + 1 };
     Assert.IsNull(MeleeDiEstimator.TryFit(bars));
+  }
+
+  [TestMethod]
+  public void TheCombinedCriticalExampleLabelsTheDominantLadderWithoutDeletingTheOddHit()
+  {
+    var bars = HitFrequencyFixtures.CombinedKeyceCriticals();
+    var before = bars.ToArray();
+    var fit = MeleeDiEstimator.TryFit(bars, critical: true);
+    Assert.IsNotNull(fit);
+    Assert.AreEqual(718L, fit.HitCount);
+    Assert.AreEqual(719L, fit.TotalHitCount);
+    Assert.AreEqual(20, fit.ObservedLevels);
+    Assert.AreEqual(20, fit.MatchedAmounts);
+    Assert.AreEqual(20, fit.LevelFor(68377));
+    Assert.AreEqual(0, fit.LevelFor(52674));
+    Assert.AreEqual(16, fit.LevelFor(55520));
+    Assert.IsTrue(fit.MaximumResidual <= 3m);
+    CollectionAssert.AreEqual(before, bars);
+  }
+
+  [TestMethod]
+  [DataRow(false)]
+  [DataRow(true)]
+  public void RareOutliersInsideAndOutsideTheAmountRangeStayUnlabeled(bool critical)
+  {
+    foreach (var outlier in new[] { 100L, 7600L, 50000L })
+    {
+      var bars = Ladder().Append(new HitFrequencyBar(outlier, 1, 0)).OrderBy(bar => bar.Amount).ToArray();
+      var fit = MeleeDiEstimator.TryFit(bars, critical);
+      Assert.IsNotNull(fit);
+      Assert.AreEqual(60L, fit.HitCount);
+      Assert.AreEqual(61L, fit.TotalHitCount);
+      Assert.AreEqual(0, fit.LevelFor(outlier));
+      Assert.AreEqual(20, fit.LevelFor(16050));
+    }
+  }
+
+  [TestMethod]
+  public void TwoRareOutlierBinsCanBeOmittedFromTheSeedButNotFromTheData()
+  {
+    var bars = Ladder(frequency: 5).Concat(new[]
+    {
+      new HitFrequencyBar(100, 1, 0), new HitFrequencyBar(50000, 1, 0)
+    }).OrderBy(bar => bar.Amount).ToArray();
+    var fit = MeleeDiEstimator.TryFit(bars);
+    Assert.IsNotNull(fit);
+    Assert.AreEqual(100L, fit.HitCount);
+    Assert.AreEqual(102L, fit.TotalHitCount);
+    Assert.AreEqual(0, fit.LevelFor(100));
+    Assert.AreEqual(0, fit.LevelFor(50000));
+    Assert.AreEqual(22, bars.Length);
+  }
+
+  [TestMethod]
+  public void CoverageRequiresBothEnoughHitsAndEnoughDistinctAmounts()
+  {
+    var clean = Ladder(frequency: 5);
+    Assert.IsNotNull(MeleeDiEstimator.TryFit(clean.Append(new HitFrequencyBar(50000, 2, 0)).ToArray()));
+    Assert.IsNull(MeleeDiEstimator.TryFit(clean.Append(new HitFrequencyBar(50000, 3, 0)).ToArray()));
+    var manyRareAmounts = Ladder(frequency: 1000).Concat(new[]
+    {
+      new HitFrequencyBar(50000, 1, 0), new HitFrequencyBar(60000, 1, 0), new HitFrequencyBar(70000, 1, 0)
+    }).ToArray();
+    Assert.IsNull(MeleeDiEstimator.TryFit(manyRareAmounts), "hit coverage cannot hide poor amount coverage");
+    var tooFewMatched = Ladder(frequency: 2).Where((_, index) => index != 14).ToArray();
+    tooFewMatched[0] = tooFewMatched[0] with { Frequency = 13 };
+    Assert.IsNull(MeleeDiEstimator.TryFit(tooFewMatched.Append(new HitFrequencyBar(50000, 1, 0)).ToArray()),
+      "49 matching hits plus one outlier does not meet the 50-hit support floor");
+  }
+
+  [TestMethod]
+  public void TwoDominantButOffsetConflictingLaddersAreStillAmbiguous()
+  {
+    var bars = Ladder(frequency: 100);
+    bars[0] = bars[0] with { Frequency = 1 };
+    var ambiguous = bars.Append(new HitFrequencyBar(16500, 1, 450)).ToArray();
+    Assert.IsNull(MeleeDiEstimator.TryFit(ambiguous), "dropping either rare endpoint changes every interior DI label");
+  }
+
+  [TestMethod]
+  public void MultipleObservedAmountsAtOneLevelDoNotInventAnExtraDiLevel()
+  {
+    var bars = Ladder().Append(new HitFrequencyBar(7501, 1, 1)).OrderBy(bar => bar.Amount).ToArray();
+    var fit = MeleeDiEstimator.TryFit(bars);
+    Assert.IsNotNull(fit);
+    Assert.AreEqual(61L, fit.HitCount);
+    Assert.AreEqual(21, fit.MatchedAmounts);
+    Assert.AreEqual(20, fit.ObservedLevels);
+    Assert.AreEqual(1, fit.LevelFor(7500));
+    Assert.AreEqual(1, fit.LevelFor(7501));
   }
 
   private static HitFrequencyBar[] Ladder(long first = 7500, long interval = 450, int frequency = 3)
