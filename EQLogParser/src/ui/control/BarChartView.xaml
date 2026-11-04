@@ -1,0 +1,27 @@
+<UserControl x:Class="EQLogParser.BarChartView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:EQLogParser"
+             Loaded="ViewLoaded" Unloaded="ViewUnloaded" SizeChanged="ViewSizeChanged">
+  <Grid Background="{DynamicResource ContentBackground}" ClipToBounds="True">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="*" />
+    </Grid.RowDefinitions>
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition x:Name="axisColumn" Width="60" />
+      <ColumnDefinition Width="*" />
+    </Grid.ColumnDefinitions>
+    <TextBlock x:Name="axisTitle" Margin="4,2,4,4" Grid.ColumnSpan="2"
+               Foreground="{DynamicResource ContentForeground}" />
+    <Canvas x:Name="axis" Grid.Row="1" ClipToBounds="True" IsHitTestVisible="False" />
+    <local:BarChartScrollViewer x:Name="scroll" Grid.Row="1" Grid.Column="1"
+                              HorizontalScrollBarVisibility="Visible" VerticalScrollBarVisibility="Disabled"
+                              CanContentScroll="False" ScrollChanged="ScrollChanged">
+      <Canvas x:Name="strip" ClipToBounds="True" />
+    </local:BarChartScrollViewer>
+    <TextBlock x:Name="emptyMessage" Grid.Row="1" Grid.Column="1" TextAlignment="Center"
+               VerticalAlignment="Center" Margin="8" TextWrapping="Wrap"
+               Foreground="{DynamicResource ContentForeground}" IsHitTestVisible="False" />
+  </Grid>
+</UserControl>

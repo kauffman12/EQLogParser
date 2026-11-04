@@ -1,418 +1,185 @@
-using log4net;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Media;
-using System.Windows.Shapes;
-using System.Windows.Threading;
 
-namespace EQLogParser
+namespace EQLogParser;
+
+public partial class ColumnChart : IDocumentContent
 {
-  public partial class ColumnChart : IDocumentContent
+  private readonly List<BenchmarkBar> _columns = [];
+  private readonly List<string> _selectedClasses = [];
+  private readonly DeferredBusyState _busyState = new();
+  private bool _ready;
+  private int _publication;
+  private int _sessionId;
+
+  public ColumnChart()
   {
-    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
+    InitializeComponent();
+    titleLabel.Content = Labels.NoData;
+    SharedControls.PopulateClassesList(classesList, _selectedClasses);
+    Loaded += ContentLoaded;
+    ShowColumns();
+  }
 
-    private readonly List<ColumnData> _columns = [];
-    private readonly List<string> _selectedClasses = [];
-    private readonly DispatcherTimer _refresh;
+  public void HideContent()
+  {
+    _ready = false;
+    _publication++;
+    _busyState.Cancel();
+    ThemeConfig.EventsThemeChanged -= EventsThemeChanged;
+    CombatEvents.ActiveDataCleared -= EventsClearedActiveData;
+    DeriveEngine.ActiveChanged -= CaptureChanged;
+    StatsManager.EventsGenerationStatus -= EventsGenerationStatus;
+    chartView.Deactivate();
+    ClearColumns();
+  }
 
-    /*
-     * "Loading..." and an emptied chart, shown only if the build is still running when a short delay expires -- see DeferredBusyState. The chart
-     * is the slowest of these surfaces to redraw (a select-all walks four million records), so it is also the one where a stale chart staying up
-     * for the first 150 ms reads as normal rather than as broken.
-     */
-    private readonly DeferredBusyState _busyState = new();
-    private bool _ready;
+  protected virtual IStatsBuilder StatsManager => DamageStatsManagerAdapter.Instance;
+  protected virtual string ChartTitle => "Players vs Top Performer (Percent of Total Damage)";
 
-    // ✅ Derived types override these:
-    protected virtual IStatsBuilder StatsManager => DamageStatsManagerAdapter.Instance;
+  private async void CreateImageClick(object sender, RoutedEventArgs e)
+    => await UiElementUtil.CreateImage(Dispatcher, chartView, titleLabel);
 
-    protected virtual string ChartTitle => "Players vs Top Performer (Percent of Total Damage)";
+  private void ClassPreviewMouseDown(object sender, EventArgs e)
+    => SharedControls.ClassPreviewMouseDown(classesList, sender);
 
-    public ColumnChart()
+  private void ClassSelectionChanged(object sender, EventArgs e)
+  {
+    if (chartView != null && SharedControls.ClassesListSelectedChanged(classesList, _selectedClasses)) ShowColumns();
+  }
+
+  private void EventsThemeChanged(string _) => PublishClassBrushes();
+
+  private void CaptureChanged() => Dispatcher.InvokeAsync(() =>
+  {
+    if (_ready && _sessionId != (DeriveEngine.Active?.SessionId ?? 0)) Reset();
+  });
+
+  private void EventsClearedActiveData(bool _)
+  {
+    var owner = DeriveEngine.Active?.SessionId ?? 0;
+    Dispatcher.InvokeAsync(() =>
     {
-      InitializeComponent();
-      titleLabel.Content = Labels.NoData;
+      if (_ready && _sessionId == owner) Reset();
+    });
+  }
 
-      // classes combo
-      SharedControls.PopulateClassesList(classesList, _selectedClasses);
+  private void Reset()
+  {
+    _sessionId = DeriveEngine.Active?.SessionId ?? 0;
+    _publication++;
+    _busyState.Cancel();
+    titleLabel.Content = Labels.NoData;
+    ClearColumns();
+  }
 
-      Loaded += ContentLoaded;
-      _refresh = UiUtil.CreateTimer(RefreshTimerTick, 250, false);
-      UpdateYAxisMargin();
-      DisplayPage();
-    }
+  private void ClearColumns()
+  {
+    _columns.Clear();
+    ShowColumns();
+  }
 
-    private void RefreshTimerTick(object sender, EventArgs e) => DisplayPage();
-    private void EventsClearedActiveData(bool cleared)
+  private void EventsGenerationStatus(StatsGenerationEvent status)
+    => Dispatcher.InvokeAsync(() => ApplyGenerationStatus(status));
+
+  private async void ApplyGenerationStatus(StatsGenerationEvent status)
+  {
+    try
     {
-      _busyState.Cancel();   // a cleared capture has no build left to announce
-      Reset();
-    }
-    private async void CreateImageClick(object sender, RoutedEventArgs e) => await UiElementUtil.CreateImage(Dispatcher, mainGrid, titleLabel);
-    private void ClassPreviewMouseDown(object sender, EventArgs e) => SharedControls.ClassPreviewMouseDown(classesList, sender);
-
-    private void EventsThemeChanged(string _)
-    {
-      UpdateYAxisMargin();
-      DisplayPage();
-    }
-
-    private void ContentSizeChanged(object sender, SizeChangedEventArgs e)
-    {
-      if (_columns.Count > 0)
+      if (!_ready || status.SessionId != (DeriveEngine.Active?.SessionId ?? 0)) return;
+      _sessionId = status.SessionId;
+      var publication = ++_publication;
+      _busyState.Cancel();
+      switch (status.State)
       {
-        _refresh?.Stop();
-        _refresh?.Start();
-      }
-    }
-
-    private async void ClassSelectionChanged(object sender, EventArgs e)
-    {
-      if (SharedControls.ClassesListSelectedChanged(classesList, _selectedClasses))
-      {
-        await Dispatcher.InvokeAsync(() => DisplayPage());
-      }
-    }
-
-    private void EventsGenerationStatus(StatsGenerationEvent e)
-    {
-      Dispatcher.InvokeAsync(async () =>
-      {
-        // Any state of a build ends the promise made by the one before it; STARTED makes a new one, on its own delay.
-        _busyState.Cancel();
-
-        switch (e.State)
-        {
-          case "COMPLETED":
-            if (e.CombinedStats != null)
-            {
-              await LoadDataAsync(e.CombinedStats.StatsList);
-              titleLabel.Content = ChartTitle;
-            }
-            else
-            {
-              titleLabel.Content = Labels.NoData;
-            }
-            break;
-          case "STARTED":
-            _busyState.Arm(() =>
-            {
-              titleLabel.Content = "Loading...";
-              Reset();
-            }, "chart");
-            break;
-          case "NONPC":
-          case "NODATA":
+        case "COMPLETED":
+          if (status.CombinedStats == null)
+          {
             titleLabel.Content = Labels.NoData;
-            Reset();
-            break;
-        }
-      });
-    }
-
-    private void Reset()
-    {
-      if (_columns.Count > 0)
-      {
-        _columns.Clear();
-        DisplayPage();
+            ClearColumns();
+            return;
+          }
+          var players = status.CombinedStats.StatsList.ToArray();
+          // Only plain data enters the worker; colors, resources and every control read stay on the dispatcher.
+          var columns = await Task.Run(() => BenchmarkSeries.Prepare(players, IdentityLookup.IsOneOfUs));
+          if (!_ready || publication != _publication || status.SessionId != (DeriveEngine.Active?.SessionId ?? 0)) return;
+          _columns.Clear();
+          _columns.AddRange(columns);
+          ShowColumns();
+          titleLabel.Content = ChartTitle;
+          break;
+        case "STARTED":
+          _busyState.Arm(() =>
+          {
+            titleLabel.Content = "Loading...";
+            ClearColumns();
+          }, "chart");
+          break;
+        case "NONPC":
+        case "NODATA":
+          titleLabel.Content = Labels.NoData;
+          ClearColumns();
+          break;
       }
     }
-
-    private async Task LoadDataAsync(List<PlayerStats> playerList)
+    catch (Exception ex)
     {
-      await Task.Run(async () =>
-      {
-        long baseTotal = 0;
-        string theClass = null;
-        List<ColumnData> columns = [];
-        foreach (var stats in playerList.OrderBy(stats => stats.ClassName, StringComparer.OrdinalIgnoreCase).ThenByDescending(stats => stats.Total))
-        {
-          var isFirst = false;
-          var name = stats.OrigName;
-
-          /*
-           * The chart bars a class group per player, so this is the plain question — "is this one of ours" — through the
-           * seam (docs/DesignNotes.md → "The one seam that answers"). Two things worth noting about the site itself: it
-           * runs inside Task.Run, which is why the seam's live hop takes EntityTimeline.SyncRoot and hands back a plain
-           * IdentityKind rather than a live collection (docs/DesignNotes.md → "The seam's live hop locks; its internal
-           * reads do not"); and no merc pair is asked here, so a mercenary stays out of the class bars exactly as it did
-           * when the roster answered alone.
-           */
-          if (!IdentityLookup.IsOneOfUs(name)) continue;
-
-          if (string.IsNullOrEmpty(theClass) || stats.ClassName != theClass)
-          {
-            isFirst = true;
-            baseTotal = stats.Total;
-            theClass = string.IsNullOrEmpty(stats.ClassName) ? "Unknown" : stats.ClassName;
-          }
-
-          if (baseTotal > 0)
-          {
-            columns.Add(new ColumnData
-            {
-              Y = (int)(stats.Total / (double)baseTotal * 100),
-              X = name,
-              TotalString = StatsUtil.FormatTotals(stats.Total, 1),
-              ClassName = theClass,
-              ColorBrush = UiUtil.GetBrush(EQDataStore.Instance.GetClassColor(theClass)),
-              IsFirst = isFirst,
-              HasPets = stats.Name.Contains(" +Pets")
-            });
-          }
-        }
-
-        await Dispatcher.InvokeAsync(() =>
-         {
-           _columns.Clear();
-           _columns.AddRange(columns);
-           DisplayPage();
-         });
-      });
+      ThreadBoundary.Note("benchmark chart build", ex);
     }
+  }
 
-    /* Hand-made WPF elements - a Rectangle, labels and a tooltip per column - rebuilt every time the page changes, on a timer while the
-       window is open. It is a UI-thread cost by construction, which is why the page is only rebuilt when something moved. */
-    private void DisplayPage() => ShowColumns();
+  private void ShowColumns()
+  {
+    PublishClassBrushes();
+    var visible = _columns.Where(column => _selectedClasses.Contains(column.ClassName)).ToArray();
+    chartView.SetData(BarChartData.Benchmark(visible), false);
+  }
 
-    private void ShowColumns()
+  private void PublishClassBrushes()
+  {
+    foreach (var name in _columns.Select(column => column.ClassName).Distinct(StringComparer.Ordinal))
+      Application.Current.Resources[BarChartData.ClassColorKey(name)] = UiUtil.GetBrush(EQDataStore.Instance.GetClassColor(name));
+  }
+
+  private void CopyCsvClick(object sender, RoutedEventArgs e)
+  {
+    try
     {
-      _refresh.Stop();
-
-      // add elements all at once
-      List<UIElement> elements = [];
-
-      // add back x axis
-      var xAxis = new Rectangle
-      {
-        Margin = new Thickness(0, 0, 0, 0),
-        VerticalAlignment = VerticalAlignment.Top,
-        HorizontalAlignment = HorizontalAlignment.Stretch,
-        Height = 1
-      };
-
-      xAxis.SetResourceReference(Rectangle.FillProperty, "ContentForeground");
-      Grid.SetRow(xAxis, 2);
-      elements.Add(xAxis);
-
-      var fontSize = ThemeConfig.CurrentFontSize;
-      var largeFontSize = ThemeConfig.CurrentFontSize + 10;
-      var columnWidth = 50.0 + ((ThemeConfig.CurrentFontSize - 10) * 5);
-      var columnSpacing = 20 + ((ThemeConfig.CurrentFontSize - 10) * 1);
-      var yOffset = ThemeConfig.CurrentFontSize - 12;
-      // markers are placed center within each row so subtract half the top row height
-      var halfRowHeight = yAxisGrid.RowDefinitions[0].ActualHeight / 2;
-      var yAxisHeight = yAxisRectangle.ActualHeight - halfRowHeight;
-      var startX = 10.0;
+      var header = new List<string> { "Class", "Percent", "Name" };
+      var rows = new List<List<object>>();
       foreach (var column in _columns)
-      {
-        if (!_selectedClasses.Contains(column.ClassName)) continue;
-
-        var columnHeight = yAxisHeight * (column.Y / 100.0);
-
-        // column
-        var rect = new Rectangle
-        {
-          Fill = column.ColorBrush,
-          Width = columnWidth,
-          Height = columnHeight,
-          Margin = new Thickness(startX, 0, 0, 0),
-          VerticalAlignment = VerticalAlignment.Bottom,
-          HorizontalAlignment = HorizontalAlignment.Left
-        };
-
-        Grid.SetRow(rect, 0);
-        elements.Add(rect);
-
-        // value label
-        var labelBlock = new TextBlock
-        {
-          Text = $"{column.Y}% ({column.TotalString})",
-          FontSize = fontSize,
-          HorizontalAlignment = HorizontalAlignment.Left,
-          VerticalAlignment = VerticalAlignment.Top,
-        };
-
-        var lWidth = UiElementUtil.CalculateTextBlockWidth(labelBlock);
-        var lOffset = (lWidth - columnWidth) / 2;
-        labelBlock.Margin = new Thickness(startX - lOffset, yAxisHeight - columnHeight + halfRowHeight - yOffset, 0, 0);
-        Grid.SetRow(labelBlock, 0);
-        elements.Add(labelBlock);
-
-        if (column.IsFirst)
-        {
-          // class label
-          var classBlock = new TextBlock
-          {
-            Text = column.ClassName,
-            FontSize = largeFontSize,
-            FontWeight = FontWeights.Bold,
-            LayoutTransform = new RotateTransform(-90),
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            VerticalAlignment = VerticalAlignment.Center
-          };
-
-          var cWidth = UiElementUtil.CalculateTextBlockHeight(classBlock);
-          var cOffset = (cWidth - columnWidth) / 2;
-          classBlock.Margin = new Thickness(startX - cOffset - 4, yAxisHeight - columnHeight + 20, 0, 0);
-          Grid.SetRow(classBlock, 0);
-          elements.Add(classBlock);
-        }
-
-        // name
-        var nameBlock = new TextBlock
-        {
-          Text = column.X,
-          FontSize = fontSize,
-          HorizontalAlignment = HorizontalAlignment.Left
-        };
-
-        var nWidth = UiElementUtil.CalculateTextBlockWidth(nameBlock);
-        var nOffset = (nWidth - columnWidth) / 2;
-        nameBlock.Margin = new Thickness(startX - nOffset, 5, 0, 0);
-        Grid.SetRow(nameBlock, 2);
-        elements.Add(nameBlock);
-
-        if (column.HasPets)
-        {
-          var petBlock = new TextBlock
-          {
-            Text = "+Pets",
-            FontSize = fontSize,
-            HorizontalAlignment = HorizontalAlignment.Left,
-            Margin = new Thickness(startX - nOffset, 25, 0, 0)
-          };
-
-          Grid.SetRow(petBlock, 2);
-          elements.Add(petBlock);
-        }
-
-        startX += columnWidth + columnSpacing;
-      }
-
-      // spacer at the end
-      var spacer = new Rectangle
-      {
-        Width = 10,
-        Height = 0,
-        Margin = new Thickness(startX - 25, 0, 0, 0),
-        VerticalAlignment = VerticalAlignment.Bottom,
-        HorizontalAlignment = HorizontalAlignment.Left
-      };
-
-      Grid.SetRow(spacer, 0);
-      elements.Add(spacer);
-
-      using (Dispatcher.CurrentDispatcher.DisableProcessing())
-      {
-        content.Children.Clear();
-
-        foreach (var element in elements)
-        {
-          content.Children.Add(element);
-        }
-      }
+        rows.Add([column.ClassName, column.Percent, column.HasPets ? $"{column.Name} +Pets" : column.Name]);
+      Clipboard.SetDataObject(titleLabel.Content is string title
+        ? TextUtils.BuildTsv(header, rows, title) : TextUtils.BuildTsv(header, rows));
     }
-
-    private void UpdateYAxisMargin()
+    catch (ExternalException ex)
     {
-      foreach (var child in yAxisGrid.Children)
-      {
-        if (child is TextBlock textBlock)
-        {
-          if (Grid.GetRow(textBlock) == 0)
-          {
-            var right = 8 + ((ThemeConfig.CurrentFontSize - 10) * 2);
-            textBlock.Margin = new Thickness(0, -2, right, 0);
-          }
-          else
-          {
-            var right = 8 + (ThemeConfig.CurrentFontSize - 10);
-            textBlock.Margin = new Thickness(0, -1, right, 0);
-          }
-        }
-      }
+      ThreadBoundary.Note("benchmark clipboard", ex);
     }
+  }
 
-    private void CopyCsvClick(object sender, RoutedEventArgs e)
+  private void ContentLoaded(object sender, RoutedEventArgs e)
+  {
+    if (VisualParent == null || _ready) return;
+    _ready = true;
+    chartView.Activate();
+    _sessionId = DeriveEngine.Active?.SessionId ?? 0;
+    ThemeConfig.EventsThemeChanged += EventsThemeChanged;
+    CombatEvents.ActiveDataCleared += EventsClearedActiveData;
+    DeriveEngine.ActiveChanged += CaptureChanged;
+    StatsManager.EventsGenerationStatus += EventsGenerationStatus;
+    if (StatsManager.GetLastStats() is { } stats && stats.SessionId == _sessionId)
     {
-      try
-      {
-        var header = new List<string> { "Class", "Percent", "Name" };
-
-        var data = new List<List<object>>();
-        foreach (var column in CollectionsMarshal.AsSpan(_columns))
-        {
-          var name = column.HasPets ? $"{column.X} +Pets" : column.X;
-          data.Add([column.ClassName, column.Y, name]);
-        }
-
-        if (titleLabel.Content is string title)
-        {
-          Clipboard.SetDataObject(TextUtils.BuildTsv(header, data, title));
-        }
-        else
-        {
-          Clipboard.SetDataObject(TextUtils.BuildTsv(header, data));
-        }
-      }
-      catch (ExternalException ex)
-      {
-        Log.Error(ex);
-      }
+      EventsGenerationStatus(stats);
     }
-
-    private void ContentLoaded(object sender, System.Windows.RoutedEventArgs e)
+    else
     {
-      if (VisualParent != null && !_ready)
-      {
-        SizeChanged += ContentSizeChanged;
-        ThemeConfig.EventsThemeChanged += EventsThemeChanged;
-        CombatEvents.ActiveDataCleared += EventsClearedActiveData;
-        StatsManager.EventsGenerationStatus += EventsGenerationStatus;
-
-        // use existing or generate data
-        if (StatsManager.GetLastStats() is { } stats)
-        {
-          EventsGenerationStatus(stats);
-        }
-        else
-        {
-          // This pane's own door into the damage builder; it names itself for StatsBuildTrace because every board can be
-          // asked for by more than one place, and only the fight list's door goes through the single-flight gate.
-          Task.Run(() => StatsManager.RebuildTotalStats(new GenerateStatsOptions { Source = "chart opened, no prior build" }));
-        }
-
-        _ready = true;
-      }
-    }
-
-    public void HideContent()
-    {
-      _busyState.Cancel();   // a hidden chart must not wake to "Loading..." on nobody's screen
-      SizeChanged -= ContentSizeChanged;
-      ThemeConfig.EventsThemeChanged -= EventsThemeChanged;
-      CombatEvents.ActiveDataCleared -= EventsClearedActiveData;
-      StatsManager.EventsGenerationStatus -= EventsGenerationStatus;
-      _ready = false;
-    }
-
-    private class ColumnData
-    {
-      public string X { get; set; }
-      public int Y { get; init; }
-      public string TotalString { get; init; }
-      public string ClassName { get; init; }
-      public Brush ColorBrush { get; init; }
-      public bool IsFirst { get; init; }
-      public bool HasPets { get; init; }
+      Task.Run(() => ThreadBoundary.Guard("benchmark initial stats request", () =>
+        StatsManager.RebuildTotalStats(new GenerateStatsOptions { Source = "chart opened, no prior build" })));
     }
   }
 }

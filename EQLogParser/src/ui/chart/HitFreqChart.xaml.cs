@@ -1,366 +1,177 @@
-using log4net;
-using Syncfusion.UI.Xaml.Charts;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
-using System.Windows.Media;
 
-namespace EQLogParser
+namespace EQLogParser;
+
+public partial class HitFreqChart : UserControl, IDisposable
 {
-  public partial class HitFreqChart : UserControl, IDisposable
+  private const string CritHittype = "Critical";
+  private const string NonCritHittype = "Non-Critical";
+  private Dictionary<string, List<HitFrequencyChoice>> _playerData = [];
+  private readonly List<string> _minFreqs =
+    ["Any Frequency", "Frequency > 1", "Frequency > 2", "Frequency > 3", "Frequency > 4", "Frequency > 5"];
+  private List<HitFrequencyBar> _columns = [];
+  private bool _paneReady;
+  private bool _updatingSelectors;
+  private bool _disposedValue;
+  private int _sessionId;
+
+  public HitFreqChart()
   {
-    private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
-    private const string CritHittype = "Critical";
-    private const string NonCritHittype = "Non-Critical";
-    private Dictionary<string, List<HitFreqChartData>> _playerData;
-    private readonly List<string> _minFreqs = ["Any Frequency", "Frequency > 1", "Frequency > 2", "Frequency > 3", "Frequency > 4", "Frequency > 5"];
-    private readonly ChartAdornmentInfo _adornment;
-    private int _pageSize = 9;
-    private readonly List<ColumnData> _columns = [];
+    InitializeComponent();
+    minFreqList.ItemsSource = _minFreqs;
+    minFreqList.SelectedIndex = 0;
+    _sessionId = DeriveEngine.Active?.SessionId ?? 0;
+    DeriveEngine.ActiveChanged += CaptureChanged;
+    CombatEvents.ActiveDataCleared += ActiveDataCleared;
+    _paneReady = true;
+  }
 
-    public HitFreqChart()
+  public void Dispose()
+  {
+    Dispose(true);
+    GC.SuppressFinalize(this);
+  }
+
+  internal void Update(PlayerStats playerStats, CombinedStats combined)
+  {
+    if (_disposedValue) return;
+    _sessionId = DeriveEngine.Active?.SessionId ?? 0;
+    _playerData = HitFrequencySeries.ForPlayers(playerStats, combined);
+    PublishPlayers();
+  }
+
+  protected virtual void Dispose(bool disposing)
+  {
+    if (_disposedValue) return;
+    _disposedValue = true;
+    DeriveEngine.ActiveChanged -= CaptureChanged;
+    CombatEvents.ActiveDataCleared -= ActiveDataCleared;
+    chartView.Deactivate();
+    _playerData.Clear();
+    _columns.Clear();
+    chartView.SetData(BarChartData.Frequency([]));
+  }
+
+  private void CaptureChanged() => Dispatcher.InvokeAsync(() =>
+  {
+    if (!_disposedValue && _sessionId != (DeriveEngine.Active?.SessionId ?? 0)) Clear();
+  });
+
+  private void ActiveDataCleared(bool _)
+  {
+    var owner = DeriveEngine.Active?.SessionId ?? 0;
+    Dispatcher.InvokeAsync(() =>
     {
-      InitializeComponent();
-      minFreqList.ItemsSource = _minFreqs;
-      minFreqList.SelectedIndex = 0;
+      if (!_disposedValue && _sessionId == owner) Clear();
+    });
+  }
 
-      _adornment = new ChartAdornmentInfo
-      {
-        ShowLabel = true,
-        ShowMarker = false,
-        LabelPosition = AdornmentsLabelPosition.Outer,
-        FontSize = ThemeConfig.CurrentFontSize + 4,
-        Foreground = Application.Current.Resources["ContentForeground"] as SolidColorBrush,
-        Background = UiUtil.GetBrush(Colors.Transparent)
-      };
+  private void Clear()
+  {
+    _sessionId = DeriveEngine.Active?.SessionId ?? 0;
+    _playerData = [];
+    PublishPlayers();
+  }
 
-      ThemeConfig.EventsThemeChanged += EventsThemeChanged;
+  private void PublishPlayers()
+  {
+    _updatingSelectors = true;
+    try
+    {
+      playerList.ItemsSource = _playerData.Keys.ToList();
+      playerList.SelectedIndex = playerList.Items.Count > 0 ? 0 : -1;
     }
-
-    internal void Update(PlayerStats playerStats, CombinedStats combined)
+    finally
     {
-      _playerData = GetHitFreqValues(playerStats, combined);
-      var players = _playerData.Keys.ToList();
-      playerList.ItemsSource = players;
-      playerList.SelectedIndex = 0; // triggers event
+      _updatingSelectors = false;
     }
+    UpdatePlayerChoices();
+  }
 
-    private async void CreateImageClick(object sender, RoutedEventArgs e) => await UiElementUtil.CreateImage(Dispatcher, sfChart);
-    private void ListSelectionChanged(object sender, SelectionChangedEventArgs e) => UserSelectionChanged();
-    private void PageSliderValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) => DisplayPage();
+  private async void CreateImageClick(object sender, RoutedEventArgs e)
+    => await UiElementUtil.CreateImage(Dispatcher, chartView);
 
-    private void CopyCsvClick(object sender, RoutedEventArgs e)
+  private void ListSelectionChanged(object sender, SelectionChangedEventArgs e) => UserSelectionChanged();
+
+  private void CopyCsvClick(object sender, RoutedEventArgs e)
+  {
+    var header = new List<string> { "Hit Value", "Frequency", "Difference" };
+    var rows = new List<List<object>>();
+    foreach (var column in _columns) rows.Add([column.Amount, column.Frequency, column.Difference]);
+    UiUtil.SetClipboardText(TextUtils.BuildTsv(header, rows));
+  }
+
+  private void UserSelectionChanged()
+  {
+    if (!_paneReady || _updatingSelectors || _disposedValue) return;
+    _columns = [];
+    if (playerList.SelectedItem is string player && _playerData.TryGetValue(player, out var data)
+      && hitTypeList.SelectedItem is HitFrequencyChoice choice && data.Contains(choice)
+      && critTypeList.SelectedItem is string critType)
     {
-      var header = new List<string> { "Hit Value", "Frequency", "Difference" };
+      _columns = HitFrequencySeries.Filter(choice.Values(critType == CritHittype), Math.Max(0, minFreqList.SelectedIndex));
+    }
+    chartView.SetData(BarChartData.Frequency(_columns));
+  }
 
-      var data = new List<List<object>>();
-      for (var i = 0; i < _columns.Count; i++)
+  private void CritTypeListSelectionChanged(object sender, SelectionChangedEventArgs e)
+  {
+    if (!_paneReady || _updatingSelectors) return;
+    _updatingSelectors = true;
+    try
+    {
+      UpdateSelectedHitTypes(critTypeList.SelectedItem is string type && type == NonCritHittype);
+    }
+    finally
+    {
+      _updatingSelectors = false;
+    }
+    UserSelectionChanged();
+  }
+
+  private void PlayerListSelectionChanged(object sender, SelectionChangedEventArgs e)
+  {
+    if (!_paneReady || _updatingSelectors) return;
+    UpdatePlayerChoices();
+  }
+
+  private void UpdatePlayerChoices()
+  {
+    _updatingSelectors = true;
+    try
+    {
+      var critTypes = new List<string>();
+      if (playerList.SelectedItem is string player && _playerData.TryGetValue(player, out var data))
       {
-        var column = _columns[i];
-        data.Add([column.XLongValue, column.Y, column.Diff]);
+        if (data.Any(choice => choice.Critical.Count > 0)) critTypes.Add(CritHittype);
+        if (data.Any(choice => choice.NonCritical.Count > 0)) critTypes.Add(NonCritHittype);
       }
-
-      UiUtil.SetClipboardText(TextUtils.BuildTsv(header, data));
+      critTypeList.ItemsSource = critTypes;
+      critTypeList.SelectedIndex = critTypes.Count > 0 ? critTypes.Count - 1 : -1;
+      UpdateSelectedHitTypes(critTypeList.SelectedItem is string type && type == NonCritHittype);
     }
-
-    private void EventsThemeChanged(string _)
+    finally
     {
-      if (sfChart?.Series is { Count: > 0 } collection)
-      {
-        if (collection[0] is FastColumnBitmapSeries series)
-        {
-          // this object doesn't have setResource
-          series.AdornmentsInfo.FontSize = ThemeConfig.CurrentFontSize + 4;
-          series.AdornmentsInfo.Foreground = Application.Current.Resources["ContentForeground"] as SolidColorBrush;
-        }
-
-        // not sure why dynamic resource wasnt working in xaml
-        catLabel.FontSize = ThemeConfig.CurrentFontSize;
-        numLabel.FontSize = ThemeConfig.CurrentFontSize;
-      }
+      _updatingSelectors = false;
     }
+    UserSelectionChanged();
+  }
 
-    private void UserSelectionChanged()
+  private void UpdateSelectedHitTypes(bool useNonCrit)
+  {
+    var selected = hitTypeList.SelectedItem is HitFrequencyChoice current ? current : null;
+    var choices = new List<HitFrequencyChoice>();
+    if (playerList.SelectedItem is string player && _playerData.TryGetValue(player, out var data))
     {
-      try
-      {
-        if (playerList.SelectedItem is string player && hitTypeList.SelectedItem is string type &&
-        critTypeList.SelectedItem is string critType && player.Length > 0 && type.Length > 0 && critType.Length > 0)
-        {
-          var data = _playerData[player];
-          var minFreq = minFreqList.SelectedIndex > -1 ? minFreqList.SelectedIndex : 0;
-          var first = data.Find(d => d.HitType == type);
-          _columns.Clear();
-
-          if (critType == CritHittype)
-          {
-            for (var i = 0; i < first.CritYValues.Count; i++)
-            {
-              if (first.CritYValues[i] > minFreq)
-              {
-                var diff = (i > 0) ? (first.CritXValues[i] - first.CritXValues[i - 1]) : 0;
-                var diffString = (diff == 0) ? "" : "+" + diff;
-                _columns.Add(new ColumnData
-                {
-                  Diff = diff,
-                  Y = first.CritYValues[i],
-                  XLongValue = first.CritXValues[i],
-                  X = first.CritXValues[i] + "\n" + diffString
-                });
-              }
-            }
-          }
-          else
-          {
-            for (var i = 0; i < first.NonCritYValues.Count; i++)
-            {
-              if (first.NonCritYValues[i] > minFreq)
-              {
-                var diff = (i > 0) ? (first.NonCritXValues[i] - first.NonCritXValues[i - 1]) : 0;
-                var diffString = (diff == 0) ? "" : "+" + diff;
-                _columns.Add(new ColumnData
-                {
-                  Diff = diff,
-                  Y = first.NonCritYValues[i],
-                  XLongValue = first.NonCritXValues[i],
-                  X = first.NonCritXValues[i] + "\n" + diffString
-                });
-              }
-            }
-          }
-        }
-
-        pageSlider.Value = 0;
-        UpdatePageSize();
-        DisplayPage();
-      }
-      catch (ArgumentNullException ex)
-      {
-        Log.Error(ex);
-      }
-      catch (InvalidOperationException ioe)
-      {
-        Log.Error(ioe);
-      }
+      choices = data.Where(choice => choice.Values(!useNonCrit).Count > 0)
+        .OrderBy(choice => choice.Label).ToList();
     }
-
-    private void DisplayPage()
-    {
-      if (_columns.Count > 0)
-      {
-        var page = (int)pageSlider.Value;
-        var onePage = new List<ColumnData>();
-        for (var i = page; i < page + _pageSize && i < _columns.Count; i++)
-        {
-          onePage.Add(_columns[i]);
-        }
-
-        var collection = new ChartSeriesCollection();
-        var series = new FastColumnBitmapSeries
-        {
-          XBindingPath = "X",
-          YBindingPath = "Y",
-          ItemsSource = onePage
-        };
-
-        catLabel.FontSize = ThemeConfig.CurrentFontSize;
-        numLabel.FontSize = ThemeConfig.CurrentFontSize;
-        series.AdornmentsInfo = _adornment;
-        ChartSeriesBase.SetSpacing(series, 0.5);
-        collection.Add(series);
-        sfChart.Series = collection;
-      }
-    }
-
-    private void UpdatePageSize()
-    {
-      if (_columns.Count > 0)
-      {
-        _pageSize = (int)Math.Round(sfChart.ActualWidth / 60);
-        pageSlider.Minimum = 0;
-        var max = _columns.Count <= _pageSize ? 0 : _columns.Count - _pageSize;
-        // happens after resize
-        if (pageSlider.Value > max)
-        {
-          pageSlider.Value = max;
-        }
-        pageSlider.Maximum = max;
-        pageSlider.IsEnabled = pageSlider.Maximum > 0;
-        if (pageSlider.IsEnabled)
-        {
-          pageSlider.Focus();
-        }
-      }
-    }
-
-    private void CritTypeListSelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-      if (critTypeList.SelectedItem is string selectedCritType)
-      {
-        UpdateSelectedHitTypes(selectedCritType == NonCritHittype);
-        UserSelectionChanged();
-      }
-    }
-
-    private void PlayerListSelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-      if (playerList?.SelectedItem is string player)
-      {
-        if (_playerData.TryGetValue(player, out var data))
-        {
-          var canUseCrit = false;
-          var playerCritTypes = new List<string>();
-          if (data.Any(d => d.CritYValues.Count > 0))
-          {
-            playerCritTypes.Add(CritHittype);
-            canUseCrit = true;
-          }
-
-          if (data.Any(d => d.NonCritYValues.Count > 0))
-          {
-            playerCritTypes.Add(NonCritHittype);
-          }
-
-          critTypeList.ItemsSource = playerCritTypes;
-          critTypeList.SelectedIndex = playerCritTypes.Count == 1 ? 0 : canUseCrit ? 1 : 0;
-          UpdateSelectedHitTypes(critTypeList?.SelectedItem is string critType && critType == NonCritHittype);
-          UserSelectionChanged();
-        }
-      }
-    }
-
-    private void UpdateSelectedHitTypes(bool useNonCrit)
-    {
-      var player = playerList?.SelectedItem as string ?? "";
-      if (!string.IsNullOrEmpty(player) && _playerData.TryGetValue(player, out var data))
-      {
-        List<string> hitTypes;
-
-        if (useNonCrit)
-        {
-          hitTypes = data.Where(d => d.NonCritYValues.Count > 0).Select(d => d.HitType).OrderBy(hitType => hitType).ToList();
-        }
-        else
-        {
-          hitTypes = data.Where(d => d.CritYValues.Count > 0).Select(d => d.HitType).OrderBy(hitType => hitType).ToList();
-        }
-
-        hitTypeList.ItemsSource = hitTypes;
-        if (hitTypeList?.SelectedItem is string selectedHitType && hitTypes.Contains(selectedHitType))
-        {
-          hitTypeList.SelectedItem = selectedHitType;
-        }
-        else if (hitTypes.Count > 0 && hitTypeList != null)
-        {
-          hitTypeList.SelectedItem = hitTypes.First();
-        }
-      }
-    }
-
-    private void ChartSizeChanged(object sender, SizeChangedEventArgs e)
-    {
-      UpdatePageSize();
-      DisplayPage();
-    }
-
-    private void ChartPreviewMouseWheel(object sender, MouseWheelEventArgs e)
-    {
-      if (e.Delta < 0 && pageSlider.Value < pageSlider.Maximum)
-      {
-        pageSlider.Value++;
-      }
-      else if (e.Delta > 0 && pageSlider.Value > 0)
-      {
-        pageSlider.Value--;
-      }
-    }
-
-    private static Dictionary<string, List<HitFreqChartData>> GetHitFreqValues(PlayerStats selected, CombinedStats damageStats)
-    {
-      var results = new Dictionary<string, List<HitFreqChartData>>();
-
-      // get chart data for player and pets if available
-      if (damageStats?.Children.ContainsKey(selected.Name) == true)
-      {
-        damageStats.Children[selected.Name].ForEach(AddStats);
-      }
-      else
-      {
-        AddStats(selected);
-      }
-
-      return results;
-
-      void AddStats(PlayerStats stats)
-      {
-        results[stats.Name] = [];
-        foreach (var subStat in CollectionsMarshal.AsSpan(stats.SubStats))
-        {
-          var chartData = new HitFreqChartData { HitType = subStat.Name };
-
-          // add crits
-          chartData.CritXValues.AddRange(subStat.CritFreqValues.Keys.OrderBy(key => key));
-          foreach (var damage in CollectionsMarshal.AsSpan(chartData.CritXValues))
-          {
-            chartData.CritYValues.Add(subStat.CritFreqValues[damage]);
-          }
-
-          // add non crits
-          chartData.NonCritXValues.AddRange(subStat.NonCritFreqValues.Keys.OrderBy(key => key));
-          foreach (var damage in CollectionsMarshal.AsSpan(chartData.NonCritXValues))
-          {
-            chartData.NonCritYValues.Add(subStat.NonCritFreqValues[damage]);
-          }
-
-          results[stats.Name].Add(chartData);
-        }
-      }
-    }
-
-    #region IDisposable Support
-    private bool _disposedValue; // To detect redundant calls
-
-    protected virtual void Dispose(bool disposing)
-    {
-      if (!_disposedValue)
-      {
-        ThemeConfig.EventsThemeChanged -= EventsThemeChanged;
-        sfChart?.Dispose();
-        _disposedValue = true;
-      }
-    }
-
-    // This code added to correctly implement the disposable pattern.
-    public void Dispose()
-    {
-      // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
-      Dispose(true);
-      // TODO: uncomment the following line if the finalizer is overridden above.
-      GC.SuppressFinalize(this);
-    }
-    #endregion
-
-    private class ColumnData
-    {
-      public string X { get; set; }
-      public int Y { get; init; }
-      public long Diff { get; init; }
-      public long XLongValue { get; init; }
-    }
-
-    private class HitFreqChartData
-    {
-      public string HitType { get; init; }
-      public List<int> CritYValues { get; } = [];
-      public List<long> CritXValues { get; } = [];
-      public List<int> NonCritYValues { get; } = [];
-      public List<long> NonCritXValues { get; } = [];
-    }
-
+    hitTypeList.ItemsSource = choices;
+    hitTypeList.SelectedItem = (selected is not null ? choices.Find(choice => choice.Key == selected.Key) : null)
+      ?? choices.FirstOrDefault();
   }
 }

@@ -15389,6 +15389,54 @@ histograms build
 section, "stop computing what the
 surface on screen does not use", and it was taken up on the spot: see "A histogram nobody asked for" below.
 
+## Hit Frequency: exact series and breakdown selection
+
+`HitFrequencySeries` prepares chart-owned snapshots from the selected player's existing `SubStats`, or from the same
+`CombinedStats.Children` player/pet rows the chart already uses. It changes no board grouping and runs only when the chart
+asks: normal board builds still leave histograms lazy (`HitFrequencyLazinessTest`). Preparation remains synchronous; no
+scroll, page, resize or frequency-threshold change rereads the histogram getters.
+
+A `HitFrequencyChoice` carries the board's existing `Key` and its own critical/noncritical series. The selector binds the
+choice object, never resolves by display name, and preserves a selection by key. Duplicate names gain a type suffix;
+unique names keep their label. `HitFrequencySeriesTest` pins distinct Direct Damage/DoT choices and the board's intentionally
+folded non-DD/DoT pairs; the chart must not invent a different type/subtype grouping.
+
+Amounts and differences remain exact `long` values. Sort numerically, compute differences against the preceding distinct
+amount **before** applying the strict `frequency > threshold` filter, and retain those differences while scrolling. The
+clipboard source remains every filtered row, not just the viewport, with **Hit Value / Frequency / Difference**.
+`HitFreqChartSelectionTest` pins selector wiring, critical/player/pet switches and empty-result clearing; its execution needs
+Windows. An empty answer clears both the host's clipboard source and the view's columns, hover targets and logical extent.
+
+## Shared bar charts: fixed scales and bounded visuals
+
+`HitFreqChart` and both `ColumnChart` benchmarks compose `BarChartView`. Hosts own selection, statistics subscriptions,
+calculation and clipboard rows; the surface accepts only `BarChartData` snapshots with primitive values, strings and color
+resource keys. It never holds an engine, a board row or a statistics subscription. Exact hit amounts remain categories,
+not proportional distances; there is no bucketing, sampling or zoom. Hit Frequency has no vendor chart or page slider.
+
+`BarChartLayout` owns integer frequency ticks, the fixed 0–100 percent scale, plot/label bands, extents, clamping and the
+visible range. A frequency maximum is taken from the **entire filtered question**, never the viewport. Rounded axis bounds
+are `long`, since an `int` frequency can round above `int.MaxValue`. `BarChartLayoutTest` pins those boundaries and bounds
+visible-range length independently of distribution size, including first/last reachability and zero viewports.
+
+The native horizontal scroll viewer sees a full-width canvas; only the viewport plus two slots on either side has column
+visuals. A bounded pool rebinds on index/data changes. No scroll or resize asks a histogram getter, sorts data, scans the
+series, changes the Y-scale or formats labels outside that bounded pool. Data/font changes compute a stable label budget, with full exact
+amounts in footers and tooltips; font changes retain logical scroll position. Class annotations clip to the plot band.
+Native wheel behavior is explicitly horizontal, honors system line/page preferences and fractional deltas, consumes only
+movement and never takes focus. `BarChartViewTest` checks realization, empty replacement, resizing/fonts, scale stability,
+last-column reachability and wheel boundaries; real Windows execution remains required, not implied by a Linux build.
+
+Benchmark preparation remains feature-owned in `BenchmarkSeries`: same identity inclusion, class ordering and leader
+normalization, integer-truncated percentages, totals, names and +Pets. The class lens changes only the shared view's input;
+**all** benchmark rows still export, including hidden classes. `BenchmarkSeriesTest`, `BarChartDataTest` and
+`ColumnChartMigrationTest` pin those contracts. Class colors are application resources under `ColumnChartClass…Brush`,
+published on the dispatcher; workers handle plain data only. A session/publication check rejects delayed benchmark answers
+after newer work, clearing, hiding or capture replacement. The shared view attaches theme events on Loaded and detaches on
+Unloaded; hosts also deactivate it explicitly when hiding/disposing. Image export targets the bounded view (fixed axis,
+visible columns and labels), never its logical-width canvas.
+Windows DPI, large-extent rendering, clipboard and lifecycle acceptance checks live in `docs/ReleaseChecklist.md`.
+
 ## A histogram nobody asked for
 
 The candidate above measured bigger than expected. Measured twice over the operator's capture — once as shipped, once with the

@@ -711,6 +711,38 @@ Two behaviours depend on state a headless test cannot build; both have shipped b
   windows have no line (different door, `SyncFusionUtil.OpenWindow`). If one still opens wrong, record WHICH window and whether
   **Reset Window State** (drops `dockSite.xml`) changes it — that separates the code path from a saved layout.
 
+## Shared bar-chart checks on Windows
+
+These are outstanding Windows checks, not results inferred from the Linux build. Run `BarChartViewTest`,
+`HitFreqChartSelectionTest` and `ColumnChartMigrationTest` on Windows before accepting the renderer migration.
+
+- [ ] Open Damage and Tanking Hit Frequency from their summary toolbars, and DPS and Healing Player Benchmark from View.
+  All four must use the shared fixed-axis chart, preserve their window/tab identities and keep selectors usable.
+  Hit Frequency must have ordinary horizontal scrolling, no range slider and no implicit zoom.
+- [ ] Choose identical spell names appearing under Direct Damage and DoT Tick: labels must distinguish them, each choice
+  must show its own distribution, and switching Critical/Non-Critical must keep the breakdown when that lane exists.
+  Switch player/pet choices, including critical-only and noncritical-only rows; no previous choice's bars may remain.
+- [ ] Raise the frequency threshold until nothing survives, then lower it. Empty answers must clear bars, labels, tooltips,
+  axis and scroll extent and show an empty-state message. Repeat by updating an open chart to a row with no distributions,
+  by hiding every benchmark class, and by clearing/replacing the capture.
+- [ ] Prototype a 50,000-distinct-value series early: drag the scrollbar thumb from first to last, resize near the end,
+  and check that the final value is reachable, columns clip correctly and the Y-scale stays fixed. The WPF test pins
+  bounded column realization, not rendering speed. Observe responsiveness on a real large distribution as well.
+- [ ] Check small/large fonts, light/dark themes, narrow and large windows, docked/floating charts, mixed-DPI monitor moves,
+  and multiple charts open together. Long exact amounts must be readable without labels clipping at the maximum bar or
+  overlapping the scrollbar. Benchmarks must retain class colors, rotated class annotations, ordering and +Pets labels.
+- [ ] Exercise wheel, high-resolution trackpad, keyboard arrows and scrollbar thumb. Honor system line/page wheel settings;
+  at either edge the wheel must bubble rather than being consumed, with no focus stolen from a selector and no zoom.
+- [ ] Check amounts above `uint.MaxValue`, including `281474976710655`. For `100 → 5, 120 → 1, 150 → 3`, **Frequency > 1**
+  must retain 100 and 150 with differences 0 and 30, including when 150 is the first visible column. Its tooltip must explain
+  that Difference uses the preceding distinct amount before filtering.
+- [ ] Copy CSV while scrolled: Hit Frequency must include **every filtered row** with exact **Hit Value / Frequency /
+  Difference**; benchmarks must keep **Class / Percent / Name**, +Pets and their existing inclusion of hidden classes.
+  Copy Image on a high-DPI display: include the fixed axis, current viewport and labels, never an enormous full-distribution
+  bitmap. Verify the pasted image's bounds and legibility, not just that the clipboard call succeeded.
+- [ ] Close/hide during resize and during a benchmark stats build, then reopen; change captures while preparation is pending.
+  No delayed answer may repaint a hidden/replacement capture, retain an old distribution or leave theme subscriptions alive.
+
 ## Line-chart calculation checks on Windows
 
 - [ ] Run `LineChartSelectionTest`: opening DPS Trends with group rows selected must immediately show their group lines,

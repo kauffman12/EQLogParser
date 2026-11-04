@@ -1,63 +1,39 @@
-﻿<UserControl xmlns:syncfusion="http://schemas.syncfusion.com/wpf"  x:Class="EQLogParser.HitFreqChart"
+<UserControl x:Class="EQLogParser.HitFreqChart"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:fa="http://schemas.fontawesome.com/icons/"
-             mc:Ignorable="d" 
-             d:DesignHeight="450" d:DesignWidth="800">
+             xmlns:local="clr-namespace:EQLogParser">
   <Grid>
     <Grid.RowDefinitions>
-      <RowDefinition Height="{DynamicResource EQGridTitleHeight}"></RowDefinition>
-      <RowDefinition Height="300*"></RowDefinition>
+      <RowDefinition Height="{DynamicResource EQGridTitleHeight}" />
+      <RowDefinition Height="*" />
     </Grid.RowDefinitions>
     <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Right">
-      <syncfusion:SfRangeSlider x:Name="pageSlider" Margin="0,2,20,0" Width="250" ThumbToolTipPlacement="None" HorizontalAlignment="Center" ShowValueLabels="False"
-                                FocusVisualStyle="{x:Null}" ValueChanged="PageSliderValueChanged" SmallChange="1" LargeChange="10" ToolTip="Scroll through data">
-        <syncfusion:SfRangeSlider.LayoutTransform>
-          <ScaleTransform ScaleX="{DynamicResource EQCheckBoxScale}" ScaleY="{DynamicResource EQCheckBoxScale}"/>
-        </syncfusion:SfRangeSlider.LayoutTransform>
-      </syncfusion:SfRangeSlider>
       <ComboBox Margin="0,0,8,2" x:Name="playerList" SelectionChanged="PlayerListSelectionChanged" />
       <ComboBox Margin="0,0,8,2" x:Name="critTypeList" SelectionChanged="CritTypeListSelectionChanged" />
-      <ComboBox Margin="0,0,8,2" x:Name="hitTypeList" SelectionChanged="ListSelectionChanged" />
+      <ComboBox Margin="0,0,8,2" x:Name="hitTypeList" DisplayMemberPath="Label" SelectionChanged="ListSelectionChanged" />
       <ComboBox Margin="0,0,8,2" x:Name="minFreqList" SelectionChanged="ListSelectionChanged" />
     </StackPanel>
-    <syncfusion:SfChart Grid.Row="1" x:Name="sfChart" Margin="0,-2,0,0" AreaBorderThickness="2" BorderThickness="0" PreviewMouseWheel="ChartPreviewMouseWheel" SizeChanged="ChartSizeChanged">
-      <syncfusion:SfChart.ContextMenu>
+    <local:BarChartView x:Name="chartView" Grid.Row="1">
+      <local:BarChartView.ContextMenu>
         <ContextMenu>
-          <MenuItem IsEnabled="True" x:Name="copyOptions" Header="Copy As">
+          <MenuItem Header="Copy As">
             <MenuItem.Icon>
               <fa:ImageAwesome Icon="Solid_Copy" Style="{StaticResource EQIconStyle}" />
             </MenuItem.Icon>
-            <MenuItem IsEnabled="True" x:Name="copyCsvClick" Header="CSV" Click="CopyCsvClick">
+            <MenuItem Header="CSV" Click="CopyCsvClick">
               <MenuItem.Icon>
                 <fa:ImageAwesome Icon="Solid_Table" Style="{StaticResource EQIconStyle}" />
               </MenuItem.Icon>
             </MenuItem>
-            <MenuItem IsEnabled="True" x:Name="createImageClick" Header="Image" Click="CreateImageClick">
+            <MenuItem Header="Image" Click="CreateImageClick">
               <MenuItem.Icon>
                 <fa:ImageAwesome Icon="Solid_Image" Style="{StaticResource EQIconStyle}" />
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>
         </ContextMenu>
-      </syncfusion:SfChart.ContextMenu>
-      <syncfusion:SfChart.PrimaryAxis>
-        <syncfusion:CategoryAxis ShowGridLines="False" EnableAutoIntervalOnZooming="False" ShowLabelBorder="False" 
-          LabelPlacement="BetweenTicks" EnableScrollBar="False" IsManipulationEnabled="False">
-          <syncfusion:CategoryAxis.LabelStyle>
-            <syncfusion:LabelStyle x:Name="catLabel" />
-          </syncfusion:CategoryAxis.LabelStyle>
-        </syncfusion:CategoryAxis>
-      </syncfusion:SfChart.PrimaryAxis>
-      <syncfusion:SfChart.SecondaryAxis>
-        <syncfusion:NumericalAxis Header="Frequency" FontSize="{DynamicResource EQTitleSize}" RangePadding="Normal" Interval="2" StartRangeFromZero="True">
-          <syncfusion:NumericalAxis.LabelStyle>
-            <syncfusion:LabelStyle x:Name="numLabel" />
-          </syncfusion:NumericalAxis.LabelStyle>
-        </syncfusion:NumericalAxis>
-      </syncfusion:SfChart.SecondaryAxis>
-    </syncfusion:SfChart>
+      </local:BarChartView.ContextMenu>
+    </local:BarChartView>
   </Grid>
 </UserControl>
