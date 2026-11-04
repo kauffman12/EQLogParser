@@ -2,25 +2,40 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
+// Annotations only, no null-flow analysis: a melee distribution may have no defensible DI fit.
+#nullable enable annotations
+
 namespace EQLogParser;
 
 internal readonly record struct HitFrequencyBar(long Amount, int Frequency, long Difference);
 
 /// <summary>A board breakdown's identity and exact distributions, independent of its selector label.</summary>
-internal sealed class HitFrequencyChoice(PlayerSubStats source, string label)
+internal sealed class HitFrequencyChoice
 {
-  public string Label { get; } = label;
-  internal string Key { get; } = source.Key;
-  internal IReadOnlyList<HitFrequencyBar> Critical { get; } = HitFrequencySeries.Prepare(source.CritFreqValues);
-  internal IReadOnlyList<HitFrequencyBar> NonCritical { get; } = HitFrequencySeries.Prepare(source.NonCritFreqValues);
+  private readonly MeleeDiFit? _diFit;
+
+  public string? Label { get; }
+  internal string? Key { get; }
+  internal IReadOnlyList<HitFrequencyBar> Critical { get; }
+  internal IReadOnlyList<HitFrequencyBar> NonCritical { get; }
+
+  internal HitFrequencyChoice(PlayerSubStats source, string? label)
+  {
+    Label = label;
+    Key = source.Key;
+    Critical = HitFrequencySeries.Prepare(source.CritFreqValues);
+    NonCritical = HitFrequencySeries.Prepare(source.NonCritFreqValues);
+    if (source.Type == Labels.Melee) _diFit = MeleeDiEstimator.TryFit(NonCritical);
+  }
 
   internal IReadOnlyList<HitFrequencyBar> Values(bool critical) => critical ? Critical : NonCritical;
+  internal MeleeDiFit? DiFor(bool critical) => critical ? null : _diFit;
 }
 
 /// <summary>Prepares chart-owned exact amounts without changing board grouping or histogram ownership.</summary>
 internal static class HitFrequencySeries
 {
-  internal static Dictionary<string, List<HitFrequencyChoice>> ForPlayers(PlayerStats selected, CombinedStats combined)
+  internal static Dictionary<string, List<HitFrequencyChoice>> ForPlayers(PlayerStats selected, CombinedStats? combined)
   {
     var results = new Dictionary<string, List<HitFrequencyChoice>>();
     if (combined?.Children.TryGetValue(selected.Name, out var children) == true)

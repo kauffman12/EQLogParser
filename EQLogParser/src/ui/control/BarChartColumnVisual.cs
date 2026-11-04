@@ -13,6 +13,7 @@ internal sealed class BarChartColumnVisual
   private readonly TextBlock _above = Text();
   private readonly TextBlock _primary = Text();
   private readonly TextBlock _secondary = Text();
+  private readonly TextBlock _di = Text();
   private readonly TextBlock _group = Text();
   private readonly Canvas _groupBand = new() { ClipToBounds = true, IsHitTestVisible = false };
   private readonly ToolTip _tooltip = new();
@@ -29,6 +30,7 @@ internal sealed class BarChartColumnVisual
     Root.Children.Add(_above);
     Root.Children.Add(_primary);
     Root.Children.Add(_secondary);
+    Root.Children.Add(_di);
     Root.Children.Add(_groupBand);
     _groupBand.Children.Add(_group);
     _group.LayoutTransform = new RotateTransform(-90);
@@ -44,6 +46,8 @@ internal sealed class BarChartColumnVisual
     _above.Text = column.Above;
     _primary.Text = column.Primary;
     _secondary.Text = column.Secondary;
+    _di.Text = column.DiLabel;
+    _di.Visibility = string.IsNullOrEmpty(column.DiLabel) ? Visibility.Collapsed : Visibility.Visible;
     _group.Text = column.Group;
     _tooltip.Content = column.Tooltip;
     _bar.SetResourceReference(Shape.FillProperty, column.ColorKey);
@@ -63,6 +67,7 @@ internal sealed class BarChartColumnVisual
     PlaceText(_above, Math.Max(0, bounds.Bottom - barHeight - bounds.LineHeight), bounds.LineHeight);
     PlaceText(_primary, bounds.PrimaryTop, bounds.LineHeight);
     PlaceText(_secondary, bounds.SecondaryTop, bounds.LineHeight);
+    PlaceText(_di, bounds.DiTop, bounds.LineHeight);
     _group.FontFamily = family;
     _group.FontSize = fontSize + 10;
     _group.Visibility = string.IsNullOrEmpty(_group.Text) || bounds.Height == 0

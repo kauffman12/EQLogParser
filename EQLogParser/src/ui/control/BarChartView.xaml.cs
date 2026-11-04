@@ -123,7 +123,7 @@ public partial class BarChartView : UserControl
       strip.Width = extent;
       var height = Math.Max(0, scroll.ViewportHeight);
       strip.Height = height;
-      var bounds = BarChartLayout.Bounds(height, FontSize, _data.HasSecondary);
+      var bounds = BarChartLayout.Bounds(height, FontSize, _data.HasSecondary, _data.HasDiLabels);
       var visible = BarChartLayout.Visible(_data.Count, _stride, scroll.HorizontalOffset, scroll.ViewportWidth, 0);
       var displayedAxis = _data.AxisFor(visible);
       if (_axisDirty || bounds != _bounds || displayedAxis != _displayedAxis)

@@ -123,6 +123,21 @@ public sealed class BarChartLayoutTest
   }
 
   [TestMethod]
+  public void DiFooterGetsItsOwnBandWithoutStealingTheAmountOrDifferenceBands()
+  {
+    var normal = BarChartLayout.Bounds(600, 12, true);
+    var di = BarChartLayout.Bounds(600, 12, true, true);
+    Assert.AreEqual(normal.Height - normal.LineHeight, di.Height);
+    Assert.IsTrue(di.SecondaryTop >= di.PrimaryTop + di.LineHeight);
+    Assert.IsTrue(di.DiTop >= di.SecondaryTop + di.LineHeight);
+    Assert.IsTrue(di.DiTop + di.LineHeight <= 600);
+    Assert.AreEqual(normal.Top, di.Top);
+    var tiny = BarChartLayout.Bounds(1, 30, true, true);
+    Assert.AreEqual(0d, tiny.Height);
+    Assert.IsTrue(tiny.DiTop <= 1);
+  }
+
+  [TestMethod]
   public void TopSliderPositionsMatchNativeOffsetsIncludingTheFractionalLastPosition()
   {
     var navigation = BarChartLayout.Navigation(50_000, 120, 0, 960);

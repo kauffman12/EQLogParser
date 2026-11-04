@@ -81,6 +81,43 @@ public sealed class BarChartDataTest
   }
 
   [TestMethod]
+  public void DiLabelsAreAnExtraEstimatedFooterAndDoNotReplaceExactValuesOrDifferences()
+  {
+    var bars = Enumerable.Range(1, 20).Select(level =>
+      new HitFrequencyBar(7050 + (450 * level), level == 15 ? 1 : 3, level == 1 ? 0 : 450)).ToArray();
+    var fit = MeleeDiEstimator.TryFit(bars);
+    Assert.IsNotNull(fit);
+    var filtered = HitFrequencySeries.Filter(bars, 1);
+    var data = BarChartData.Frequency(filtered, fit);
+    var column = data.Column(14);
+    Assert.IsTrue(data.HasDiLabels);
+    Assert.AreEqual("DI 16", column.DiLabel);
+    Assert.AreEqual(14250L.ToString("N0", CultureInfo.CurrentCulture), column.Primary);
+    Assert.AreEqual("+" + 450.ToString("N0", CultureInfo.CurrentCulture), column.Secondary);
+    Assert.AreEqual(3d, column.Value);
+    StringAssert.Contains(column.Tooltip, "Estimated DI 16");
+    StringAssert.Contains(column.Tooltip, "20/20");
+    Assert.IsTrue(data.WidthSamples().Contains("DI 20"));
+    Assert.AreEqual(20, fit.ObservedLevels);
+  }
+
+  [TestMethod]
+  public void NoFitUnknownAmountsAndEmptyDataCannotCarryStaleDiLabels()
+  {
+    var bars = Enumerable.Range(1, 20).Select(level => new HitFrequencyBar(7050 + (450 * level), 3, 450)).ToArray();
+    var fit = MeleeDiEstimator.TryFit(bars);
+    Assert.IsNotNull(fit);
+    var noFit = BarChartData.Frequency(bars);
+    Assert.IsFalse(noFit.HasDiLabels);
+    Assert.AreEqual("", noFit.Column(0).DiLabel);
+    var unknown = BarChartData.Frequency([new HitFrequencyBar(7499, 3, 0)], fit);
+    Assert.IsFalse(unknown.HasDiLabels);
+    Assert.AreEqual("", unknown.Column(0).DiLabel);
+    Assert.IsFalse(BarChartData.Frequency([], fit).HasDiLabels);
+    Assert.IsFalse(BarChartData.Benchmark([new BenchmarkBar(100, "Caster", "1M", "Wizard", true, false)]).HasDiLabels);
+  }
+
+  [TestMethod]
   public void EmptyPresentationsHaveNoColumnsAndUsableAxes()
   {
     foreach (var empty in new[] { BarChartData.Frequency([]), BarChartData.Benchmark([]) })

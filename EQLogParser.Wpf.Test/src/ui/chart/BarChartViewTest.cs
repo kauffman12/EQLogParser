@@ -50,6 +50,34 @@ public sealed class BarChartViewTest
   }
 
   [TestMethod]
+  public void DiLabelsOccupyTheirOwnFooterAndDisappearWhenTheNextQuestionHasNoFit()
+  {
+    var shown = false;
+    var cleared = false;
+    WithView(view =>
+    {
+      var bars = Enumerable.Range(1, 20).Select(level => new HitFrequencyBar(7050 + (450 * level), 3,
+        level == 1 ? 0 : 450)).ToArray();
+      var fit = MeleeDiEstimator.TryFit(bars);
+      view.SetData(BarChartData.Frequency(bars, fit));
+      Layout(view);
+      var root = view.strip.Children.OfType<Canvas>().First();
+      var label = root.Children.OfType<TextBlock>().Single(text => text.Text == "DI 1");
+      var bounds = BarChartLayout.Bounds(view.scroll.ViewportHeight, view.FontSize, true, true);
+      shown = view.Data.HasDiLabels && label.IsVisible && label.ActualHeight > 0
+        && Math.Abs(Canvas.GetTop(label) - bounds.DiTop) < 0.1
+        && Canvas.GetTop(label) + label.ActualHeight <= view.scroll.ViewportHeight;
+      view.SetData(BarChartData.Frequency(bars));
+      Layout(view);
+      cleared = !view.Data.HasDiLabels && view.strip.Children.OfType<Canvas>()
+        .SelectMany(column => column.Children.OfType<TextBlock>())
+        .All(text => !text.Text.StartsWith("DI ", StringComparison.Ordinal));
+    });
+    Assert.IsTrue(shown);
+    Assert.IsTrue(cleared);
+  }
+
+  [TestMethod]
   public void AnExactTickPeakLeavesOneTickOfVisibleHeadroom()
   {
     var headroom = false;

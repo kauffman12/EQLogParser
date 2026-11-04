@@ -189,6 +189,47 @@ public sealed class HitFrequencySeriesTest
   }
 
   [TestMethod]
+  [DataRow(Labels.Melee, true)]
+  [DataRow(Labels.Dd, false)]
+  [DataRow(Labels.Dot, false)]
+  [DataRow(Labels.Ds, false)]
+  [DataRow(Labels.Proc, false)]
+  public void OnlyNoncriticalMeleeChoicesReceiveADiFit(string type, bool expected)
+  {
+    var player = new PlayerStats { Name = "Attacker" };
+    var row = player.SubStatOf("Hits", type);
+    for (var level = 1; level <= 20; level++)
+    {
+      for (var hit = 0; hit < 3; hit++)
+      {
+        row.RecordHitTotal(7050 + (450 * level), false);
+        row.RecordHitTotal(14100 + (900 * level), true);
+      }
+    }
+    var choice = HitFrequencySeries.ForPlayers(player, null)[player.Name].Single();
+    Assert.AreEqual(expected, choice.DiFor(false) is not null);
+    Assert.IsNull(choice.DiFor(true), "a critical distribution is not the regular melee model");
+  }
+
+  [TestMethod]
+  public void DiMetadataIsCachedBeforeFilteringAndCannotFollowLaterHistogramMutations()
+  {
+    var player = new PlayerStats { Name = "Attacker" };
+    var row = player.SubStatOf("Hits", Labels.Melee);
+    for (var level = 1; level <= 20; level++)
+      for (var hit = 0; hit < (level == 15 ? 1 : 3); hit++) row.RecordHitTotal(7050 + (450 * level), false);
+    var choice = HitFrequencySeries.ForPlayers(player, null)[player.Name].Single();
+    var fit = choice.DiFor(false);
+    Assert.IsNotNull(fit);
+    row.NonCritFreqValues.Clear();
+    var filtered = HitFrequencySeries.Filter(choice.NonCritical, 1);
+    Assert.AreSame(fit, choice.DiFor(false));
+    Assert.AreEqual(19, filtered.Count);
+    Assert.AreEqual(16, fit.LevelFor(filtered[14].Amount), "filtering DI15 out must not relabel DI16");
+    Assert.AreEqual(20, fit.ObservedLevels, "support comes from the complete original question");
+  }
+
+  [TestMethod]
   public void PreparationOwnsASnapshotAndRefilteringDoesNotReadTheHistogramAgain()
   {
     var player = new PlayerStats { Name = "Caster" };

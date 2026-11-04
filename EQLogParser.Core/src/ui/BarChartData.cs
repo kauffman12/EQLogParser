@@ -3,12 +3,15 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 
+// Annotations only, no null-flow analysis: DI metadata is optional and never changes the histogram.
+#nullable enable annotations
+
 namespace EQLogParser;
 
 internal readonly record struct BenchmarkBar(int Percent, string Name, string Total, string ClassName,
   bool IsFirst, bool HasPets);
 internal readonly record struct BarChartColumn(double Value, string Above, string Primary, string Secondary,
-  string Group, string ColorKey, string Tooltip);
+  string Group, string ColorKey, string Tooltip, string DiLabel = "");
 
 /// <summary>The two supported presentations; strings are formatted only for realized columns.</summary>
 internal sealed class BarChartData
@@ -16,17 +19,21 @@ internal sealed class BarChartData
   private readonly HitFrequencyBar[] _frequency = [];
   private readonly BenchmarkBar[] _benchmark = [];
   private readonly bool _percent;
+  private readonly MeleeDiFit? _diFit;
 
   internal int Count => _percent ? _benchmark.Length : _frequency.Length;
   // The whole-question label budget stays fixed while the drawn frequency axis follows the visible range.
   internal BarChartAxis Axis { get; }
   internal bool HasSecondary { get; }
+  internal bool HasDiLabels { get; }
   internal string Title => _percent ? "Percent" : "Frequency";
   internal string EmptyText => _percent ? "No players match these filters" : "No hits match these filters";
 
-  private BarChartData(IReadOnlyList<HitFrequencyBar> bars)
+  private BarChartData(IReadOnlyList<HitFrequencyBar> bars, MeleeDiFit? diFit)
   {
     _frequency = bars.ToArray();
+    _diFit = diFit;
+    HasDiLabels = diFit is not null && _frequency.Any(bar => diFit.LevelFor(bar.Amount) > 0);
     Axis = BarChartLayout.FrequencyAxis(_frequency.Length == 0 ? 0 : _frequency.Max(bar => bar.Frequency));
     HasSecondary = true;
   }
@@ -39,7 +46,8 @@ internal sealed class BarChartData
     HasSecondary = _benchmark.Any(bar => bar.HasPets);
   }
 
-  internal static BarChartData Frequency(IReadOnlyList<HitFrequencyBar> bars) => new(bars);
+  internal static BarChartData Frequency(IReadOnlyList<HitFrequencyBar> bars, MeleeDiFit? diFit = null)
+    => new(bars, diFit);
   internal static BarChartData Benchmark(IReadOnlyList<BenchmarkBar> bars) => new(bars);
   internal static string ClassColorKey(string name) => "ColumnChartClass" + name + "Brush";
 
@@ -69,9 +77,17 @@ internal sealed class BarChartData
     var amount = hit.Amount.ToString("N0", CultureInfo.CurrentCulture);
     var frequency = hit.Frequency.ToString("N0", CultureInfo.CurrentCulture);
     var difference = hit.Difference == 0 ? "" : "+" + hit.Difference.ToString("N0", CultureInfo.CurrentCulture);
-    return new(hit.Frequency, frequency, amount, difference, "", "EQMenuIconBrush",
-      $"Hit Value: {amount}\nFrequency: {frequency}\nDifference: {hit.Difference.ToString("N0", CultureInfo.CurrentCulture)}"
-      + "\nDifference from the preceding distinct hit value, before filtering");
+    var level = _diFit?.LevelFor(hit.Amount) ?? 0;
+    var diLabel = level > 0 ? $"DI {level}" : "";
+    var tooltip = $"Hit Value: {amount}\nFrequency: {frequency}"
+      + $"\nDifference: {hit.Difference.ToString("N0", CultureInfo.CurrentCulture)}"
+      + "\nDifference from the preceding distinct hit value, before filtering";
+    if (level > 0 && _diFit is { } fit)
+    {
+      tooltip += $"\nEstimated DI {level}\nLevels Observed: {fit.ObservedLevels}/{MeleeDiEstimator.LevelCount}"
+        + $"\nEffective Interval: {fit.Interval:0.###}\nMaximum Fit Error: {fit.MaximumResidual:0.###}";
+    }
+    return new(hit.Frequency, frequency, amount, difference, "", "EQMenuIconBrush", tooltip, diLabel);
   }
 
   // A stable budget for this whole data question. Geometry/scrolling never formats off-screen columns.
@@ -93,6 +109,7 @@ internal sealed class BarChartData
       // Use a wide digit for every position, not whichever digits happened to make the maximum amount.
       yield return "+" + new string(sample.Select(character => char.IsDigit(character) ? '8' : character).ToArray());
       yield return Axis.Maximum.ToString("N0", CultureInfo.CurrentCulture);
+      if (HasDiLabels) yield return $"DI {MeleeDiEstimator.LevelCount}";
     }
   }
 }

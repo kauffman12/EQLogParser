@@ -15449,6 +15449,51 @@ Unloaded; hosts also deactivate it explicitly when hiding/disposing. Image expor
 visible columns and labels), never its logical-width canvas.
 Windows DPI, large-extent rendering, clipboard and lifecycle acceptance checks live in `docs/ReleaseChecklist.md`.
 
+## DI inference: measured melee ladders, not automatic numbering
+
+`HitFrequencyChoice` tries `MeleeDiEstimator` once on the **full noncritical snapshot**, only for `Type = Melee` and in either
+chart direction. Criticals, spells, procs and shields get no DI metadata. Frequency filtering and scrolling retain the same
+fit; normal board builds do not ask for histograms or fit anything (`HitFrequencySeriesTest`, `HitFrequencyLazinessTest`).
+
+The conservative policy is **at least 50 hits and 16–20 distinct amounts**, sorted, positive and within the 48-bit domain.
+A 20-slot affine ladder must explain **every** amount: no outlier deletion, bucketing or rebasing to the first visible bar.
+Both endpoints must be supported (19 intervals); any valid shorter-span explanation is rejected rather than assuming its
+offset. Intervals must be at least one damage point, effective bonuses nonnegative, and worst residual no more
+than one damage point or a quarter interval, whichever is smaller. Centered **decimal** regression preserves that tolerance
+at wide magnitudes. `MeleeDiEstimatorTest` pins exact/rounded fits, missing internal levels, endpoint ambiguity, low support,
+contamination, small intervals and maximum-width amounts.
+
+`MeleeDiFit` maps only observed exact amounts to levels. Accepted fits add a separate **DI n** footer; the tooltip says
+**Estimated DI** and gives observed-level support, effective interval and worst error. Counts, amounts, differences and CSV
+columns remain verbatim. Missing/filtered levels never renumber later labels. Unmatched/ambiguous selections show nothing,
+not a guessed DI1. The optional third footer reserves its own band and clears on selection changes (`BarChartDataTest`,
+`HitFreqChartSelectionTest`, `BarChartViewTest`; WPF execution requires Windows).
+
+The measured foundation used a disposable `PipelineHarness.RunFileDerived` runner: one full file-order stream, live parsing,
+then `ClassificationRules.Apply` before identity questions. It grouped positive basic melee by attacker/defender/subtype,
+excluding critical/lucky and assassinate/headshot/finishing/slay flags. The runner was removed; the distributions below now
+supply ordinary deterministic estimator fixtures, not a retained print gate.
+
+**Outgoing examples**, under `local/logs/live/`:
+- `eqlog_Kizant_xegony-tunky.txt`: Illuminai's pet → Tallongast, The Egg, Hits, 15:13:49–15:14:52: **410 hits / 20 amounts**,
+  7,500–16,050; `amount = 7050 + 450 × level`, zero residual. The same pair/subtype in `eqlog_Kizant_xegony-strangle.txt` has
+  **75 hits / 19 amounts**, the identical ladder with **DI15 absent**. Both actual parsed distributions pass the estimator.
+- `eqlog_Rrowzing_rathe.txt`: Rrowzing's pet → an austere steward of Luclin, Slashes: **518 hits / 20 amounts**,
+  1,100–3,000; `amount = 1000 + 100 × level`.
+
+**Incoming rounding example:** that steward → Alaran-spirit mercenary, Hits: **92 ordinary hits / 19 amounts**, 8,993–36,833,
+DI19 absent. Effective interval **1465.235746**, fitted first level **8993.023771**, worst residual **0.912 damage**.
+The complete chart-compatible noncritical row has **93 hits**: one lucky-only Riposte/Strikethrough at 30,971 also belongs
+there. No record is removed; its existing amount leaves the fit unchanged (`MeleeDiEstimatorTest`). A disposable live-parse
+check asserted the 410-, 75- and 93-hit chart projections and was removed. A minimum-gap integer rule loses rounded ladders.
+
+**Human-player caution:** guild-chat-corroborated Beorun → Combat Dummy Azia, Slashes, in `eqlog_Incogitable_xegony.txt`
+(11:06:41–11:14:54) has **229 ordinary hits / 53 amounts**: not one clean ladder. Some clean named actors read Player but
+lacked independent human-player evidence; they are not proof that every player's weapon distribution follows this model.
+
+These fits describe observed, modifier-dependent ladders, not proof of unmodified NPC stats or a universal player-damage
+formula. A failed fit stays unlabeled; the annotation never changes a board total, ownership decision or captured amount.
+
 ## A histogram nobody asked for
 
 The candidate above measured bigger than expected. Measured twice over the operator's capture — once as shipped, once with the

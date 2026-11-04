@@ -9,7 +9,7 @@ internal readonly record struct BarChartRange(int First, int End)
   internal int Count => End - First;
 }
 internal readonly record struct BarChartBounds(double Top, double Height, double PrimaryTop,
-  double SecondaryTop, double LineHeight)
+  double SecondaryTop, double LineHeight, double DiTop = 0)
 {
   internal double Bottom => Top + Height;
 }
@@ -75,15 +75,17 @@ internal static class BarChartLayout
     double extent, double viewport)
     => ClampOffset(oldStride > 0 ? offset / oldStride * newStride : 0, extent, viewport);
 
-  internal static BarChartBounds Bounds(double height, double fontSize, bool secondary)
+  internal static BarChartBounds Bounds(double height, double fontSize, bool secondary, bool diLabels = false)
   {
     height = NonNegative(height);
     var line = (double.IsFinite(fontSize) && fontSize > 0 ? fontSize : 12) * 1.5;
     if (!double.IsFinite(line)) line = 18;
     var top = Math.Min(height, line + 6);
-    var plot = Math.Max(0, height - top - ((secondary ? 2 : 1) * line) - 8);
+    var footerLines = 1 + (secondary ? 1 : 0) + (diLabels ? 1 : 0);
+    var plot = Math.Max(0, height - top - (footerLines * line) - 8);
     var primary = Math.Min(height, top + plot + 4);
-    return new(top, plot, primary, Math.Min(height, primary + line), line);
+    return new(top, plot, primary, Math.Min(height, primary + line), line,
+      Math.Min(height, primary + ((secondary ? 2 : 1) * line)));
   }
 
   internal static double BarHeight(double value, long maximum, double plotHeight)

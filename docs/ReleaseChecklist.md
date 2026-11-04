@@ -744,6 +744,11 @@ These are outstanding Windows checks, not results inferred from the Linux build.
 - [ ] Check amounts above `uint.MaxValue`, including `281474976710655`. For `100 → 5, 120 → 1, 150 → 3`, **Frequency > 1**
   must retain 100 and 150 with differences 0 and 30, including when 150 is the first visible column. Its tooltip must explain
   that Difference uses the preceding distinct amount before filtering.
+- [ ] Open a clean noncritical melee ladder in either Hit Frequency direction (measured cases: DesignNotes → DI inference).
+  Confirm a separate **DI n** footer and **Estimated DI** tooltip, with exact amounts/differences still readable at all fonts.
+  Filter away an internal level: later levels must retain their numbers, including after scrolling. Switch to Critical,
+  a spell, a mixed/noisy melee series or an insufficient sample: DI labels must disappear without leaving a blank extra band.
+  Copy Image must include the DI footer; Copy CSV must retain its original three exact-data columns.
 - [ ] Copy CSV while scrolled: Hit Frequency must include **every filtered row** with exact **Hit Value / Frequency /
   Difference**; benchmarks must keep **Class / Percent / Name**, +Pets and their existing inclusion of hidden classes.
   Copy Image on a high-DPI display: include the fixed axis, current viewport and labels, never an enormous full-distribution

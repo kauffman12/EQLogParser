@@ -129,6 +129,50 @@ public sealed class HitFreqChartSelectionTest
   }
 
   [TestMethod]
+  public void MeleeDiLabelsSurviveFrequencyFilteringButNotCritSpellOrAmbiguousSelections()
+  {
+    var correct = false;
+    Sta.Run(() =>
+    {
+      using var chart = CreateChart();
+      var player = new PlayerStats { Name = "Attacker" };
+      var melee = player.SubStatOf("Hits", Labels.Melee);
+      var spell = player.SubStatOf("Spell Pattern", Labels.Dd);
+      for (var level = 1; level <= 20; level++)
+      {
+        for (var hit = 0; hit < (level == 15 ? 1 : 3); hit++) melee.RecordHitTotal(7050 + (450 * level), false);
+        for (var hit = 0; hit < 3; hit++)
+        {
+          // Identical numeric ladders in each lane must not bypass the critical/spell eligibility gates.
+          melee.RecordHitTotal(7050 + (450 * level), true);
+          spell.RecordHitTotal(7050 + (450 * level), false);
+        }
+      }
+      chart.Update(player, null);
+      chart.hitTypeList.SelectedItem = chart.hitTypeList.Items.Cast<HitFrequencyChoice>()
+        .Single(choice => choice.Key == melee.Key);
+      var regular = chart.chartView.Data.HasDiLabels && chart.chartView.Data.Column(0).DiLabel == "DI 1";
+      chart.minFreqList.SelectedIndex = 1;
+      var filtered = chart.chartView.Data.Count == 19 && chart.chartView.Data.Column(14).DiLabel == "DI 16"
+        && Columns(chart)[14] == new HitFrequencyBar(14250, 3, 450);
+      chart.critTypeList.SelectedItem = "Critical";
+      var noCrit = !chart.chartView.Data.HasDiLabels && chart.chartView.Data.Column(0).DiLabel.Length == 0;
+      chart.critTypeList.SelectedItem = "Non-Critical";
+      var restored = chart.chartView.Data.HasDiLabels;
+      chart.hitTypeList.SelectedItem = chart.hitTypeList.Items.Cast<HitFrequencyChoice>()
+        .Single(choice => choice.Key == spell.Key);
+      var noSpell = !chart.chartView.Data.HasDiLabels;
+      var ambiguous = new PlayerStats { Name = "Another" };
+      var sparse = ambiguous.SubStatOf("Hits", Labels.Melee);
+      for (var hit = 0; hit < 3; hit++) sparse.RecordHitTotal(7500, false);
+      chart.Update(ambiguous, null);
+      correct = regular && filtered && noCrit && restored && noSpell && !chart.chartView.Data.HasDiLabels
+        && chart.chartView.Data.Count == 1 && chart.chartView.Data.Column(0).DiLabel.Length == 0;
+    });
+    Assert.IsTrue(correct);
+  }
+
+  [TestMethod]
   public void TopSliderAndNativeScrollStayInSyncThroughDraggingWheelResizeAndEmptyResults()
   {
     var synchronized = false;
