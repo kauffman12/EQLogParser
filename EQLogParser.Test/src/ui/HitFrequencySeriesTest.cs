@@ -194,7 +194,7 @@ public sealed class HitFrequencySeriesTest
   [DataRow(Labels.Dot, false)]
   [DataRow(Labels.Ds, false)]
   [DataRow(Labels.Proc, false)]
-  public void OnlyNoncriticalMeleeChoicesReceiveADiFit(string type, bool expected)
+  public void OnlyMeleeChoicesReceiveIndependentDiFitsForEachLane(string type, bool expected)
   {
     var player = new PlayerStats { Name = "Attacker" };
     var row = player.SubStatOf("Hits", type);
@@ -208,25 +208,62 @@ public sealed class HitFrequencySeriesTest
     }
     var choice = HitFrequencySeries.ForPlayers(player, null)[player.Name].Single();
     Assert.AreEqual(expected, choice.DiFor(false) is not null);
-    Assert.IsNull(choice.DiFor(true), "a critical distribution is not the regular melee model");
+    Assert.AreEqual(expected, choice.DiFor(true) is not null);
+    if (expected)
+    {
+      var regular = choice.DiFor(false);
+      var critical = choice.DiFor(true);
+      Assert.IsNotNull(regular);
+      Assert.IsNotNull(critical);
+      Assert.AreNotSame(regular, critical);
+      Assert.AreEqual(450m, regular.Interval);
+      Assert.AreEqual(900m, critical.Interval);
+      Assert.AreEqual(20, regular.LevelFor(16050));
+      Assert.AreEqual(20, critical.LevelFor(32100));
+      Assert.AreEqual(0, critical.LevelFor(7500), "the critical fit must not borrow noncritical amounts");
+    }
   }
 
   [TestMethod]
-  public void DiMetadataIsCachedBeforeFilteringAndCannotFollowLaterHistogramMutations()
+  [DataRow(false)]
+  [DataRow(true)]
+  public void DiMetadataIsCachedBeforeFilteringAndCannotFollowLaterHistogramMutations(bool critical)
   {
     var player = new PlayerStats { Name = "Attacker" };
     var row = player.SubStatOf("Hits", Labels.Melee);
     for (var level = 1; level <= 20; level++)
-      for (var hit = 0; hit < (level == 15 ? 1 : 3); hit++) row.RecordHitTotal(7050 + (450 * level), false);
+      for (var hit = 0; hit < (level == 15 ? 1 : 3); hit++) row.RecordHitTotal(7050 + (450 * level), critical);
     var choice = HitFrequencySeries.ForPlayers(player, null)[player.Name].Single();
-    var fit = choice.DiFor(false);
+    var fit = choice.DiFor(critical);
     Assert.IsNotNull(fit);
-    row.NonCritFreqValues.Clear();
-    var filtered = HitFrequencySeries.Filter(choice.NonCritical, 1);
-    Assert.AreSame(fit, choice.DiFor(false));
+    (critical ? row.CritFreqValues : row.NonCritFreqValues).Clear();
+    var filtered = HitFrequencySeries.Filter(choice.Values(critical), 1);
+    Assert.AreSame(fit, choice.DiFor(critical));
+    Assert.IsNull(choice.DiFor(!critical), "an empty lane cannot inherit the other lane's fit");
     Assert.AreEqual(19, filtered.Count);
     Assert.AreEqual(16, fit.LevelFor(filtered[14].Amount), "filtering DI15 out must not relabel DI16");
     Assert.AreEqual(20, fit.ObservedLevels, "support comes from the complete original question");
+  }
+
+  [TestMethod]
+  [DataRow(false)]
+  [DataRow(true)]
+  public void ANoisyLaneDoesNotBorrowOrInvalidateTheOtherLanesFit(bool cleanCritical)
+  {
+    var player = new PlayerStats { Name = "Attacker" };
+    var row = player.SubStatOf("Hits", Labels.Melee);
+    for (var level = 1; level <= 21; level++)
+    {
+      for (var hit = 0; hit < 3; hit++)
+      {
+        if (level <= 20) row.RecordHitTotal(7050 + (450 * level), cleanCritical);
+        row.RecordHitTotal(14100 + (900 * level), !cleanCritical);
+      }
+    }
+    var choice = HitFrequencySeries.ForPlayers(player, null)[player.Name].Single();
+    Assert.IsNotNull(choice.DiFor(cleanCritical));
+    Assert.IsNull(choice.DiFor(!cleanCritical),
+      "mixed critical modifiers must not inherit a clean regular fit, or vice versa");
   }
 
   [TestMethod]

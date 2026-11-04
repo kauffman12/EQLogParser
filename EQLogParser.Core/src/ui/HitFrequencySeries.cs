@@ -12,7 +12,8 @@ internal readonly record struct HitFrequencyBar(long Amount, int Frequency, long
 /// <summary>A board breakdown's identity and exact distributions, independent of its selector label.</summary>
 internal sealed class HitFrequencyChoice
 {
-  private readonly MeleeDiFit? _diFit;
+  private readonly MeleeDiFit? _criticalDiFit;
+  private readonly MeleeDiFit? _nonCriticalDiFit;
 
   public string? Label { get; }
   internal string? Key { get; }
@@ -25,11 +26,15 @@ internal sealed class HitFrequencyChoice
     Key = source.Key;
     Critical = HitFrequencySeries.Prepare(source.CritFreqValues);
     NonCritical = HitFrequencySeries.Prepare(source.NonCritFreqValues);
-    if (source.Type == Labels.Melee) _diFit = MeleeDiEstimator.TryFit(NonCritical);
+    if (source.Type == Labels.Melee)
+    {
+      _criticalDiFit = MeleeDiEstimator.TryFit(Critical, critical: true);
+      _nonCriticalDiFit = MeleeDiEstimator.TryFit(NonCritical);
+    }
   }
 
   internal IReadOnlyList<HitFrequencyBar> Values(bool critical) => critical ? Critical : NonCritical;
-  internal MeleeDiFit? DiFor(bool critical) => critical ? null : _diFit;
+  internal MeleeDiFit? DiFor(bool critical) => critical ? _criticalDiFit : _nonCriticalDiFit;
 }
 
 /// <summary>Prepares chart-owned exact amounts without changing board grouping or histogram ownership.</summary>

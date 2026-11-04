@@ -15451,17 +15451,20 @@ Windows DPI, large-extent rendering, clipboard and lifecycle acceptance checks l
 
 ## DI inference: measured melee ladders, not automatic numbering
 
-`HitFrequencyChoice` tries `MeleeDiEstimator` once on the **full noncritical snapshot**, only for `Type = Melee` and in either
-chart direction. Criticals, spells, procs and shields get no DI metadata. Frequency filtering and scrolling retain the same
-fit; normal board builds do not ask for histograms or fit anything (`HitFrequencySeriesTest`, `HitFrequencyLazinessTest`).
+`HitFrequencyChoice` tries `MeleeDiEstimator` separately on the **full critical and noncritical snapshots**, only for
+`Type = Melee` and in either chart direction. Each lane keeps its own fit, interval, support and observed-amount map:
+no combining counts, borrowing a fit from the other lane or assuming the same damage multiplier. Spells, procs and shields
+get no DI metadata. Frequency filtering and scrolling retain the selected lane's cached fit; normal board builds do not
+ask for histograms or fit anything (`HitFrequencySeriesTest`, `HitFrequencyLazinessTest`).
 
 The conservative policy is **at least 50 hits and 16–20 distinct amounts**, sorted, positive and within the 48-bit domain.
 A 20-slot affine ladder must explain **every** amount: no outlier deletion, bucketing or rebasing to the first visible bar.
 Both endpoints must be supported (19 intervals); any valid shorter-span explanation is rejected rather than assuming its
-offset. Intervals must be at least one damage point, effective bonuses nonnegative, and worst residual no more
-than one damage point or a quarter interval, whichever is smaller. Centered **decimal** regression preserves that tolerance
-at wide magnitudes. `MeleeDiEstimatorTest` pins exact/rounded fits, missing internal levels, endpoint ambiguity, low support,
-contamination, small intervals and maximum-width amounts.
+offset. Intervals must be at least one damage point and effective bonuses nonnegative. Worst residual is capped at
+**one damage point for noncriticals, three for criticals**, and always at a quarter interval if smaller. The critical budget
+admits observed amplified rounding, not mixed modifier ladders; every amount must still fit. Centered **decimal** regression
+preserves that tolerance at wide magnitudes. `MeleeDiEstimatorTest` pins exact/rounded fits, missing internal levels, endpoint
+ambiguity, low support, contamination, small intervals and maximum-width amounts in both lanes.
 
 `MeleeDiFit` maps only observed exact amounts to levels. Accepted fits add a separate **DI n** footer; the tooltip says
 **Estimated DI** and gives observed-level support, effective interval and worst error. Counts, amounts, differences and CSV
@@ -15486,6 +15489,16 @@ DI19 absent. Effective interval **1465.235746**, fitted first level **8993.02377
 The complete chart-compatible noncritical row has **93 hits**: one lucky-only Riposte/Strikethrough at 30,971 also belongs
 there. No record is removed; its existing amount leaves the fit unchanged (`MeleeDiEstimatorTest`). A disposable live-parse
 check asserted the 410-, 75- and 93-hit chart projections and was removed. A minimum-gap integer rule loses rounded ladders.
+
+**Critical rounding example:** in `eqlog_Incogitable_xegony.txt`, Keyce's pet → an unyielding edifice, Slashes,
+10:56:51–10:57:34: **235 critical hits / 20 amounts**, 7,313–68,377. Effective interval **3213.943609**, fitted first level
+**7312.085714**, worst residual **2.703759 damage**. The same complete ladder appears against an animated flamespout
+(**185 crits**), and a frigid mage gives **164 crits / 19 amounts** with DI2 absent and worst residual **2.721895**.
+The one-point ordinary allowance wrongly declines these clean critical ladders; three points admits them without changing
+normal precision or discarding any values. `MeleeDiEstimatorTest` keeps the 235-hit histogram and exercises its critical-only
+choice through label projection. A disposable full-stream check asserted accepted critical projections and was removed.
+Most other complete critical distributions inspected in these captures remain mixed or insufficiently supported; enabling
+criticals does not promise every crit sample can be labeled.
 
 **Human-player caution:** guild-chat-corroborated Beorun → Combat Dummy Azia, Slashes, in `eqlog_Incogitable_xegony.txt`
 (11:06:41–11:14:54) has **229 ordinary hits / 53 amounts**: not one clean ladder. Some clean named actors read Player but

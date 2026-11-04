@@ -62,25 +62,62 @@ public sealed class MeleeDiEstimatorTest
   }
 
   [TestMethod]
-  public void WideAmountsKeepOnePointResidualsMeaningfulAtThe48BitCeiling()
+  public void TheMeasuredCriticalLadderAllowsAmplifiedRoundingButNotAnOffLadderAmount()
+  {
+    long[] amounts = [7313, 10524, 13739, 16955, 20170, 23380, 26596, 29812, 33022, 36237,
+      39453, 42663, 45879, 49094, 52310, 55520, 58735, 61951, 65161, 68377];
+    int[] counts = [12, 5, 1, 3, 7, 9, 4, 7, 6, 8, 9, 11, 11, 7, 12, 8, 5, 8, 7, 95];
+    var bars = HitFrequencySeries.Prepare(amounts.Select((amount, index) => (amount, count: counts[index]))
+      .ToDictionary(pair => pair.amount, pair => pair.count));
+    Assert.IsNull(MeleeDiEstimator.TryFit(bars), "noncritical rounding remains limited to one damage point");
+    var player = new PlayerStats { Name = "Keyce`s pet" };
+    var row = player.SubStatOf("Slashes", Labels.Melee);
+    foreach (var bar in bars)
+      for (var hit = 0; hit < bar.Frequency; hit++) row.RecordHitTotal(bar.Amount, true);
+    var choice = HitFrequencySeries.ForPlayers(player, null)[player.Name].Single();
+    var fit = choice.DiFor(true);
+    Assert.IsNotNull(fit);
+    Assert.IsNull(choice.DiFor(false), "the example has no noncritical support to borrow");
+    Assert.AreEqual(235L, fit.HitCount);
+    Assert.AreEqual(20, fit.ObservedLevels);
+    Assert.IsTrue(Math.Abs(fit.Interval - 3213.943609m) < 0.000001m);
+    Assert.IsTrue(fit.MaximumResidual > 2.7m && fit.MaximumResidual <= 3m);
+    Assert.AreEqual(1, fit.LevelFor(7313));
+    Assert.AreEqual(20, fit.LevelFor(68377));
+    var data = BarChartData.Frequency(choice.Critical, fit);
+    Assert.IsTrue(data.HasDiLabels);
+    Assert.AreEqual("DI 1", data.Column(0).DiLabel);
+    Assert.AreEqual("DI 20", data.Column(data.Count - 1).DiLabel);
+    bars[10] = bars[10] with { Amount = bars[10].Amount + 50 };
+    Assert.IsNull(MeleeDiEstimator.TryFit(bars, critical: true));
+  }
+
+  [TestMethod]
+  [DataRow(false)]
+  [DataRow(true)]
+  public void WideAmountsKeepSmallResidualsMeaningfulAtThe48BitCeiling(bool critical)
   {
     var first = TextUtils.MaxAmount - (19 * 450L);
     var bars = Ladder(first);
-    var fit = MeleeDiEstimator.TryFit(bars);
+    var fit = MeleeDiEstimator.TryFit(bars, critical);
     Assert.IsNotNull(fit);
     Assert.AreEqual((decimal)first, fit.FirstAmount);
     Assert.AreEqual(450m, fit.Interval);
     Assert.AreEqual(0m, fit.MaximumResidual);
     Assert.AreEqual(20, fit.LevelFor(TextUtils.MaxAmount));
     bars[8] = bars[8] with { Amount = bars[8].Amount + 5 };
-    Assert.IsNull(MeleeDiEstimator.TryFit(bars), "large magnitudes must not swallow a five-point outlier");
+    Assert.IsNull(MeleeDiEstimator.TryFit(bars, critical),
+      "large magnitudes must not swallow a five-point outlier in either lane");
   }
 
   [TestMethod]
-  public void MissingAnEndpointLeavesTheAbsoluteOffsetUnknown()
+  [DataRow(false)]
+  [DataRow(true)]
+  public void MissingAnEndpointLeavesTheAbsoluteOffsetUnknown(bool critical)
   {
-    Assert.IsNull(MeleeDiEstimator.TryFit(Ladder().Skip(1).ToArray()), "these could be DI1–19 or DI2–20");
-    Assert.IsNull(MeleeDiEstimator.TryFit(Ladder().SkipLast(1).ToArray()));
+    Assert.IsNull(MeleeDiEstimator.TryFit(Ladder().Skip(1).ToArray(), critical),
+      "these could be DI1–19 or DI2–20");
+    Assert.IsNull(MeleeDiEstimator.TryFit(Ladder().SkipLast(1).ToArray(), critical));
   }
 
   [TestMethod]
@@ -96,14 +133,16 @@ public sealed class MeleeDiEstimatorTest
   }
 
   [TestMethod]
-  public void LowSupportDoesNotBecomeConfidenceJustBecauseAmountsAreEvenlySpaced()
+  [DataRow(false)]
+  [DataRow(true)]
+  public void LowSupportDoesNotBecomeConfidenceJustBecauseAmountsAreEvenlySpaced(bool critical)
   {
-    Assert.IsNull(MeleeDiEstimator.TryFit(Ladder(frequency: 1)));
+    Assert.IsNull(MeleeDiEstimator.TryFit(Ladder(frequency: 1), critical));
     var boundary = Ladder(frequency: 2);
     boundary[0] = boundary[0] with { Frequency = 12 };
-    Assert.IsNotNull(MeleeDiEstimator.TryFit(boundary), "50 hits across 20 levels is the support floor");
+    Assert.IsNotNull(MeleeDiEstimator.TryFit(boundary, critical), "50 hits across 20 levels is the support floor");
     boundary[0] = boundary[0] with { Frequency = 11 };
-    Assert.IsNull(MeleeDiEstimator.TryFit(boundary));
+    Assert.IsNull(MeleeDiEstimator.TryFit(boundary, critical));
   }
 
   [TestMethod]
@@ -118,13 +157,18 @@ public sealed class MeleeDiEstimatorTest
   }
 
   [TestMethod]
-  public void SmallIntervalsCannotUseTheRoundingToleranceToInventExtraLevels()
+  [DataRow(false)]
+  [DataRow(true)]
+  public void SmallIntervalsCannotUseTheRoundingToleranceToInventExtraLevels(bool critical)
   {
-    var fit = MeleeDiEstimator.TryFit(Ladder(first: 1, interval: 1));
+    var fit = MeleeDiEstimator.TryFit(Ladder(first: 1, interval: 1), critical);
     Assert.IsNotNull(fit);
     Assert.AreEqual(20, fit.LevelFor(20));
     Assert.AreEqual(0m, fit.DamageBonus);
-    Assert.IsNull(MeleeDiEstimator.TryFit(Ladder(first: 1, interval: 1).SkipLast(1).ToArray()));
+    Assert.IsNull(MeleeDiEstimator.TryFit(Ladder(first: 1, interval: 1).SkipLast(1).ToArray(), critical));
+    var noisy = Ladder(first: 100, interval: 6);
+    noisy[8] = noisy[8] with { Amount = noisy[8].Amount + 2 };
+    Assert.IsNull(MeleeDiEstimator.TryFit(noisy, critical), "the quarter-interval cap also applies to criticals");
   }
 
   [TestMethod]

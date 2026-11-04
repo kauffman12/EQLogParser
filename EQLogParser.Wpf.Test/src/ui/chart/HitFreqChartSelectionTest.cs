@@ -129,7 +129,7 @@ public sealed class HitFreqChartSelectionTest
   }
 
   [TestMethod]
-  public void MeleeDiLabelsSurviveFrequencyFilteringButNotCritSpellOrAmbiguousSelections()
+  public void MeleeDiLabelsSwitchIndependentLanesButNotSpellOrAmbiguousSelections()
   {
     var correct = false;
     Sta.Run(() =>
@@ -141,11 +141,12 @@ public sealed class HitFreqChartSelectionTest
       for (var level = 1; level <= 20; level++)
       {
         for (var hit = 0; hit < (level == 15 ? 1 : 3); hit++) melee.RecordHitTotal(7050 + (450 * level), false);
+        for (var hit = 0; hit < (level == 10 ? 1 : 3); hit++) melee.RecordHitTotal(14100 + (900 * level), true);
         for (var hit = 0; hit < 3; hit++)
         {
-          // Identical numeric ladders in each lane must not bypass the critical/spell eligibility gates.
-          melee.RecordHitTotal(7050 + (450 * level), true);
+          // A spell's identical numeric ladder must not acquire melee DI metadata in either lane.
           spell.RecordHitTotal(7050 + (450 * level), false);
+          spell.RecordHitTotal(14100 + (900 * level), true);
         }
       }
       chart.Update(player, null);
@@ -156,7 +157,14 @@ public sealed class HitFreqChartSelectionTest
       var filtered = chart.chartView.Data.Count == 19 && chart.chartView.Data.Column(14).DiLabel == "DI 16"
         && Columns(chart)[14] == new HitFrequencyBar(14250, 3, 450);
       chart.critTypeList.SelectedItem = "Critical";
-      var noCrit = !chart.chartView.Data.HasDiLabels && chart.chartView.Data.Column(0).DiLabel.Length == 0;
+      var critical = chart.chartView.Data.HasDiLabels && chart.chartView.Data.Count == 19
+        && chart.chartView.Data.Column(9).DiLabel == "DI 11" && Columns(chart)[0].Amount == 15000
+        && Columns(chart)[9] == new HitFrequencyBar(24000, 3, 900);
+      chart.hitTypeList.SelectedItem = chart.hitTypeList.Items.Cast<HitFrequencyChoice>()
+        .Single(choice => choice.Key == spell.Key);
+      var noCriticalSpell = !chart.chartView.Data.HasDiLabels;
+      chart.hitTypeList.SelectedItem = chart.hitTypeList.Items.Cast<HitFrequencyChoice>()
+        .Single(choice => choice.Key == melee.Key);
       chart.critTypeList.SelectedItem = "Non-Critical";
       var restored = chart.chartView.Data.HasDiLabels;
       chart.hitTypeList.SelectedItem = chart.hitTypeList.Items.Cast<HitFrequencyChoice>()
@@ -166,7 +174,8 @@ public sealed class HitFreqChartSelectionTest
       var sparse = ambiguous.SubStatOf("Hits", Labels.Melee);
       for (var hit = 0; hit < 3; hit++) sparse.RecordHitTotal(7500, false);
       chart.Update(ambiguous, null);
-      correct = regular && filtered && noCrit && restored && noSpell && !chart.chartView.Data.HasDiLabels
+      correct = regular && filtered && critical && noCriticalSpell && restored && noSpell
+        && !chart.chartView.Data.HasDiLabels
         && chart.chartView.Data.Count == 1 && chart.chartView.Data.Column(0).DiLabel.Length == 0;
     });
     Assert.IsTrue(correct);

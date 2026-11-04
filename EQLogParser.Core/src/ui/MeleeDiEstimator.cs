@@ -40,7 +40,7 @@ internal static class MeleeDiEstimator
 
   // Fit the complete prepared series, never a viewport or a minimum-frequency subset.
   // Policy and measured examples: docs/DesignNotes.md → "DI inference: measured melee ladders, not automatic numbering".
-  internal static MeleeDiFit? TryFit(IReadOnlyList<HitFrequencyBar> bars)
+  internal static MeleeDiFit? TryFit(IReadOnlyList<HitFrequencyBar> bars, bool critical = false)
   {
     if (bars.Count < MinimumObservedLevels || bars.Count > LevelCount) return null;
     var hits = 0L;
@@ -54,9 +54,14 @@ internal static class MeleeDiEstimator
     if (hits < MinimumHits) return null;
 
     var indices = new int[bars.Count];
+    // Critical multipliers amplify integer rounding; the quarter-interval cap still separates adjacent levels.
+    var roundingTolerance = critical ? 3m : 1m;
     for (var span = bars.Count - 1; span < LevelCount; span++)
     {
-      if (!TryCandidate(bars, span, indices, out var first, out var interval, out var residual)) continue;
+      if (!TryCandidate(bars, span, indices, roundingTolerance, out var first, out var interval, out var residual))
+      {
+        continue;
+      }
       // Require observed ends; do not assign an absolute DI offset from a shorter supported ladder.
       if (span != LevelCount - 1) return null;
       var levels = new Dictionary<long, int>(bars.Count);
@@ -67,7 +72,7 @@ internal static class MeleeDiEstimator
   }
 
   private static bool TryCandidate(IReadOnlyList<HitFrequencyBar> bars, int span, int[] indices,
-    out decimal first, out decimal interval, out decimal residual)
+    decimal roundingTolerance, out decimal first, out decimal interval, out decimal residual)
   {
     first = interval = residual = 0;
     var origin = bars[0].Amount;
@@ -95,7 +100,7 @@ internal static class MeleeDiEstimator
     interval = ((bars.Count * sumXY) - (sumX * sumY)) / ((bars.Count * sumXX) - (sumX * sumX));
     first = origin + ((sumY - (interval * sumX)) / bars.Count);
     if (interval < 1 || first - interval < 0) return false;
-    var tolerance = Math.Min(1m, interval / 4);
+    var tolerance = Math.Min(roundingTolerance, interval / 4);
     for (var i = 0; i < bars.Count; i++)
     {
       residual = Math.Max(residual, Math.Abs(bars[i].Amount - (first + (indices[i] * interval))));
