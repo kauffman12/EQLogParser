@@ -31,11 +31,21 @@ public sealed class BarChartDataTest
       new HitFrequencyBar(150, 80, 30), new HitFrequencyBar(170, 5, 20)]);
     var visible = BarChartLayout.Visible(data.Count, 100, 0, 200, 0);
     Assert.AreEqual(new BarChartAxis(15, 5), data.AxisFor(visible));
-    Assert.AreEqual(new BarChartAxis(80, 20), data.Axis, "the fixed label budget includes the off-screen peak");
-    Assert.AreEqual(new BarChartAxis(80, 20), data.AxisFor(BarChartLayout.Visible(data.Count, 100, 100, 200, 0)));
-    Assert.AreEqual(new BarChartAxis(5, 1), data.AxisFor(new BarChartRange(3, 4)));
+    Assert.AreEqual(new BarChartAxis(100, 20), data.Axis, "the fixed label budget includes peak headroom");
+    Assert.AreEqual(new BarChartAxis(100, 20), data.AxisFor(BarChartLayout.Visible(data.Count, 100, 100, 200, 0)));
+    Assert.AreEqual(new BarChartAxis(6, 1), data.AxisFor(new BarChartRange(3, 4)));
     Assert.AreEqual(new BarChartAxis(1, 1), data.AxisFor(new BarChartRange(0, 0)));
     Assert.AreEqual(80d, data.Column(2).Value, "viewport scaling must not alter the captured values");
+  }
+
+  [TestMethod]
+  public void VisiblePeakAtATickCeilingGetsOneMoreTickWithoutChangingTheCount()
+  {
+    var data = BarChartData.Frequency([new HitFrequencyBar(100, 20, 0), new HitFrequencyBar(120, 46, 20)]);
+    Assert.AreEqual(new BarChartAxis(25, 5), data.AxisFor(new BarChartRange(0, 1)));
+    Assert.AreEqual(new BarChartAxis(50, 10), data.AxisFor(new BarChartRange(1, 2)));
+    Assert.AreEqual(20d, data.Column(0).Value);
+    Assert.AreEqual(46d, data.Column(1).Value);
   }
 
   [TestMethod]
@@ -57,6 +67,17 @@ public sealed class BarChartDataTest
     Assert.AreEqual("", follower.Column(0).Group);
     Assert.AreEqual("", follower.Column(0).Secondary);
     Assert.IsFalse(follower.HasSecondary);
+  }
+
+  [TestMethod]
+  public void OnlyFrequencyUsesTheCompactSlotPreset()
+  {
+    var frequency = BarChartData.Frequency([new HitFrequencyBar(100, 20, 0)]);
+    var benchmark = BarChartData.Benchmark([new BenchmarkBar(100, "Caster", "1M", "Wizard", true, false)]);
+    Assert.AreEqual(52d, frequency.ColumnStride(40));
+    Assert.AreEqual(84d, benchmark.ColumnStride(40));
+    Assert.AreEqual(212d, frequency.ColumnStride(200), "wide exact labels still expand the slot");
+    Assert.AreEqual(224d, benchmark.ColumnStride(200));
   }
 
   [TestMethod]

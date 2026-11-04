@@ -732,10 +732,13 @@ These are outstanding Windows checks, not results inferred from the Linux build.
   The WPF test pins bounded column realization, not rendering speed; observe a real large distribution as well.
 - [ ] The frequency scale must follow the visible columns, not an off-screen peak or the realization buffer: a view topping
   out at 11 must not stay on an 80 scale solely because 80 appears later. Drag to the larger peak and back and check that
-  bar heights and tick labels rescale together without the axis width/column positions moving. Benchmarks stay at 0–100%.
+  bar heights and tick labels rescale together without the axis width/column positions moving. An exact peak of 20 with
+  five-point ticks must leave a ceiling of 25; 46 must keep its existing ceiling of 50. Benchmarks stay at 0–100%.
 - [ ] Check small/large fonts, light/dark themes, narrow and large windows, docked/floating charts, mixed-DPI monitor moves,
   and multiple charts open together. Long exact amounts must be readable without labels clipping at the maximum bar or
-  overlapping the scrollbar. Benchmarks must retain class colors, rotated class annotations, ordering and +Pets labels.
+  overlapping the scrollbar. Frequency slots should be more compact for ordinary labels, expand for wide amounts, and
+  never change width while scrolling. Benchmark spacing, class colors, rotated annotations, ordering and +Pets must remain
+  unchanged.
 - [ ] Exercise wheel, high-resolution trackpad, keyboard arrows and scrollbar thumb. Honor system line/page wheel settings;
   at either edge the wheel must bubble rather than being consumed, with no focus stolen from a selector and no zoom.
 - [ ] Check amounts above `uint.MaxValue`, including `281474976710655`. For `100 → 5, 120 → 1, 150 → 3`, **Frequency > 1**

@@ -36,9 +36,9 @@ public sealed class BarChartViewTest
       atEnd = Math.Abs(view.scroll.HorizontalOffset + view.scroll.ViewportWidth - view.scroll.ExtentWidth) < 1;
       lastRealized = view.strip.Children.OfType<Canvas>().Any(column =>
         Math.Abs(Canvas.GetLeft(column) - ((bars.Length - 1) * view.ColumnStride)) < 1);
-      scaleFollowsViewport = maximum == 40 && view.DisplayedAxis.Maximum == 1
+      scaleFollowsViewport = maximum == 40 && view.DisplayedAxis.Maximum == 2
         && view.axisColumn.Width.Value == axisWidth
-        && view.axis.Children.OfType<TextBlock>().Select(label => label.Text).SequenceEqual(new[] { "0", "1" });
+        && view.axis.Children.OfType<TextBlock>().Select(label => label.Text).SequenceEqual(new[] { "0", "1", "2" });
       poolReused = roots.Take(Math.Min(firstCount, lastCount)).All(root => view.strip.Children.Contains(root));
     });
     Assert.IsTrue(firstCount > 0 && firstCount <= limit);
@@ -47,6 +47,23 @@ public sealed class BarChartViewTest
     Assert.IsTrue(lastRealized);
     Assert.IsTrue(scaleFollowsViewport);
     Assert.IsTrue(poolReused);
+  }
+
+  [TestMethod]
+  public void AnExactTickPeakLeavesOneTickOfVisibleHeadroom()
+  {
+    var headroom = false;
+    WithView(view =>
+    {
+      view.SetData(BarChartData.Frequency([new HitFrequencyBar(100, 20, 0)]));
+      Layout(view);
+      var bar = view.strip.Children.OfType<Canvas>().Single().Children.OfType<System.Windows.Shapes.Rectangle>().Single();
+      var bounds = BarChartLayout.Bounds(view.scroll.ViewportHeight, view.FontSize, true);
+      headroom = view.DisplayedAxis == new BarChartAxis(25, 5) && Canvas.GetTop(bar) > bounds.Top
+        && bar.Height < bounds.Height
+        && view.axis.Children.OfType<TextBlock>().Last().Text == "25";
+    });
+    Assert.IsTrue(headroom);
   }
 
   [TestMethod]

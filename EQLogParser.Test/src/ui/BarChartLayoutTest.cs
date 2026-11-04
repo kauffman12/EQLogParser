@@ -5,18 +5,41 @@ public sealed class BarChartLayoutTest
 {
   [TestMethod]
   [DataRow(0, 1L, 1L)]
-  [DataRow(1, 1L, 1L)]
-  [DataRow(2, 2L, 1L)]
+  [DataRow(1, 2L, 1L)]
+  [DataRow(2, 3L, 1L)]
+  [DataRow(5, 6L, 1L)]
   [DataRow(7, 8L, 2L)]
+  [DataRow(10, 12L, 2L)]
+  [DataRow(20, 25L, 5L)]
+  [DataRow(25, 30L, 5L)]
   [DataRow(37, 40L, 10L)]
+  [DataRow(46, 50L, 10L)]
+  [DataRow(100, 120L, 20L)]
+  [DataRow(2_000_000_000, 2_500_000_000L, 500_000_000L)]
   [DataRow(int.MaxValue, 2_500_000_000L, 500_000_000L)]
-  public void FrequencyTicksAreIntegerNiceStepsWithWideRounding(int maximum, long upper, long step)
+  public void FrequencyTicksKeepNiceStepsAndHeadroomWithWideRounding(int maximum, long upper, long step)
   {
     var axis = BarChartLayout.FrequencyAxis(maximum);
     Assert.AreEqual(upper, axis.Maximum);
     Assert.AreEqual(step, axis.Step);
-    Assert.IsTrue(axis.Maximum >= maximum);
-    Assert.IsTrue(axis.Maximum / axis.Step <= 5);
+    Assert.IsTrue(axis.Maximum > maximum, "the tallest bar must stay below the axis ceiling");
+    Assert.IsTrue(axis.Maximum / axis.Step <= 6);
+  }
+
+  [TestMethod]
+  [DataRow(0d, false, 52d)]
+  [DataRow(40d, false, 52d)]
+  [DataRow(80d, false, 92d)]
+  [DataRow(0d, true, 84d)]
+  [DataRow(80d, true, 104d)]
+  [DataRow(double.NaN, false, 52d)]
+  public void FrequencySlotsAreCompactButKeepTheLabelBudgetAndBenchmarkSpacing(double labelWidth, bool percent,
+    double expected)
+  {
+    var stride = BarChartLayout.ColumnStride(labelWidth, percent);
+    Assert.AreEqual(expected, stride);
+    if (double.IsFinite(labelWidth))
+      Assert.IsTrue(stride - 8 >= labelWidth, "the column's text area must still fit the complete measured label");
   }
 
   [TestMethod]

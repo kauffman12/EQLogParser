@@ -64,9 +64,9 @@ public partial class BarChartView : UserControl
       ? ThemeConfig.CurrentFontSize : 12;
     FontFamily = new FontFamily(string.IsNullOrEmpty(ThemeConfig.CurrentFontFamily)
       ? "Segoe UI" : ThemeConfig.CurrentFontFamily);
-    var width = 60.0;
+    var width = 0.0;
     foreach (var sample in _data.WidthSamples()) width = Math.Max(width, Measure(sample));
-    _stride = width + 24;
+    _stride = _data.ColumnStride(width);
     scroll.ColumnStride = _stride;
     axisColumn.Width = new GridLength(Measure(_data.Axis.Maximum.ToString("N0", CultureInfo.CurrentCulture)) + 20);
     axisTitle.Text = _data.Title;

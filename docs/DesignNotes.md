@@ -15417,16 +15417,21 @@ remains a large drag target, synchronized with native horizontal scrolling rathe
 
 `BarChartLayout` owns integer frequency ticks, the fixed 0–100 percent scale, plot/label bands, extents, clamping and the
 visible range. The drawn frequency maximum follows the **visible columns**, excluding the realization buffer: a distant
-peak must not flatten the values being read. The benchmark stays at 0–100 percent. The whole-question frequency maximum
-budgets axis-label width only, so changing the drawn maximum cannot move the viewport. Rounded axis bounds are `long`,
+peak must not flatten the values being read. A positive peak exactly on the rounded ceiling gets one extra tick of
+headroom (20 → 25 with five-point ticks); existing headroom stays unchanged (46 → 50). The benchmark stays at 0–100 percent.
+The whole-question frequency maximum budgets axis-label width only, so changing the drawn maximum cannot move the viewport.
+Rounded axis bounds are `long`,
 since an `int` frequency can round above `int.MaxValue`. `BarChartLayoutTest` and `BarChartDataTest` pin these boundaries,
 visible-range bounds and slider/index-to-offset mapping, including the fractional final scroll position.
 
 The native horizontal scroll viewer sees a full-width canvas; only the viewport plus two slots on either side has column
 visuals. A bounded pool rebinds on index/data changes. No scroll or resize asks a histogram getter, sorts data, scans the
 whole series or formats labels outside that pool; frequency scaling reads only the visible rows. Data/font changes compute
-a stable label budget, with exact amounts in footers and tooltips; font changes retain logical scroll position. Class
-annotations clip to the plot band. Frequency fills use `EQMenuIconBrush`, which `ThemeConfig` publishes in both themes;
+a stable label budget, with exact amounts in footers and tooltips; font changes retain logical scroll position. Frequency
+slots use `max(40, measured label budget) + 12` DIPs; benchmarks retain `max(60, budget) + 24`. Bars take 55% of a slot,
+leaving 45% between bar edges. The compact frequency floor is 52 DIPs rather than 84, but wide labels still expand every
+slot equally; neither clipping nor scroll-dependent widths buys density. `BarChartLayoutTest` pins the label fit and the
+unchanged benchmark preset. Class annotations clip to the plot band. Frequency fills use `EQMenuIconBrush`, which `ThemeConfig` publishes in both themes;
 tests must not invent a `PrimaryColor` brush to stand in for that palette. `BarChartViewTest` checks painted pixels as well
 as realized controls, and pins viewport scaling, empty replacement, resizing/fonts and last-column reachability.
 Native wheel behavior is horizontal, honors system line/page preferences and fractional deltas, consumes only movement

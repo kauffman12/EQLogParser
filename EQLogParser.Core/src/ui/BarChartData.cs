@@ -43,6 +43,8 @@ internal sealed class BarChartData
   internal static BarChartData Benchmark(IReadOnlyList<BenchmarkBar> bars) => new(bars);
   internal static string ClassColorKey(string name) => "ColumnChartClass" + name + "Brush";
 
+  internal double ColumnStride(double labelWidth) => BarChartLayout.ColumnStride(labelWidth, _percent);
+
   internal BarChartAxis AxisFor(BarChartRange visible)
   {
     if (_percent) return Axis;

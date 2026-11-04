@@ -26,8 +26,14 @@ internal static class BarChartLayout
     while (power * 10 < target) power *= 10;
     var step = target <= power ? power : target <= 2 * power ? 2 * power
       : target <= 5 * power ? 5 * power : 10 * power;
-    return new BarChartAxis(Math.Max(step, (((long)Math.Max(0, maximum) + step - 1) / step) * step), step);
+    var upper = Math.Max(step, (((long)Math.Max(0, maximum) + step - 1) / step) * step);
+    // An exact tick ceiling needs one more interval; existing rounded headroom stays as it is.
+    if (maximum > 0 && upper == maximum) upper += step;
+    return new BarChartAxis(upper, step);
   }
+
+  internal static double ColumnStride(double labelWidth, bool percent)
+    => Math.Max(percent ? 60 : 40, NonNegative(labelWidth)) + (percent ? 24 : 12);
 
   internal static double Extent(int count, double stride)
   {
