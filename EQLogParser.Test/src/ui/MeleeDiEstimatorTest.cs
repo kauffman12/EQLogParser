@@ -89,7 +89,10 @@ public sealed class MeleeDiEstimatorTest
     Assert.AreEqual("DI 1", data.Column(0).DiLabel);
     Assert.AreEqual("DI 20", data.Column(data.Count - 1).DiLabel);
     bars[10] = bars[10] with { Amount = bars[10].Amount + 50 };
-    Assert.IsNull(MeleeDiEstimator.TryFit(bars, critical: true));
+    var partial = MeleeDiEstimator.TryFit(bars, critical: true);
+    Assert.IsNotNull(partial);
+    Assert.AreEqual(0, partial.LevelFor(bars[10].Amount), "a wider component policy must not relabel an off-ladder hit");
+    Assert.AreEqual(226L, partial.HitCount);
   }
 
   [TestMethod]

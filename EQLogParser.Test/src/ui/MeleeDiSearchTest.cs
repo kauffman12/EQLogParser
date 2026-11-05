@@ -88,15 +88,17 @@ public sealed class MeleeDiSearchTest
   public void SeveralRoundedAmountsPerLevelDoNotBecomeSeveralDiLevels(bool critical, int tolerance)
   {
     var frequencies = new Dictionary<long, int>();
-    for (var level = 1; level <= 20; level++)
-      for (var error = -tolerance; error <= tolerance; error++) frequencies[7050 + (450 * level) + error] = 10;
+    var first = critical ? 30000L : 7500L;
+    var interval = critical ? 2000L : 450L;
+    for (var level = 0; level < 20; level++)
+      for (var error = -tolerance; error <= tolerance; error++) frequencies[first + (interval * level) + error] = 10;
     var fit = MeleeDiEstimator.TryFit(HitFrequencySeries.Prepare(frequencies), critical);
     Assert.IsNotNull(fit);
     Assert.AreEqual(20, fit.ObservedLevels);
     Assert.AreEqual(frequencies.Count, fit.MatchedAmounts);
     Assert.AreEqual(frequencies.Count * 10L, fit.HitCount);
-    Assert.AreEqual(20, fit.LevelFor(16050 - tolerance));
-    Assert.AreEqual(20, fit.LevelFor(16050 + tolerance));
+    Assert.AreEqual(20, fit.LevelFor(first + (19 * interval) - tolerance));
+    Assert.AreEqual(20, fit.LevelFor(first + (19 * interval) + tolerance));
   }
 
   [TestMethod]

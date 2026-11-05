@@ -221,6 +221,96 @@ public sealed class HitFreqChartSelectionTest
   }
 
   [TestMethod]
+  public void PartialCriticalLabelsAndExportDoNotLeakIntoTheStricterOrdinaryLane()
+  {
+    var correct = false;
+    Sta.Run(() =>
+    {
+      using var chart = CreateChart();
+      var player = new PlayerStats { Name = "Pet" };
+      var row = player.SubStatOf("Hits", Labels.Melee);
+      for (var level = 1; level <= 20; level++)
+      {
+        var amount = 3000 + (4267 * level) + (level == 10 ? 5 : 0);
+        for (var hit = 0; hit < (level == 20 ? 60 : 3); hit++)
+        {
+          row.RecordHitTotal(amount, true);
+          row.RecordHitTotal(amount, false);
+        }
+      }
+      for (var value = 100000; value < 100100; value++)
+      {
+        row.RecordHitTotal(value, true);
+        row.RecordHitTotal(value, false);
+      }
+      chart.Update(player, null);
+      var ordinary = !chart.chartView.Data.HasDiLabels;
+      chart.critTypeList.SelectedItem = "Critical";
+      var export = TextUtils.ReadTsv(chart.chartView.Data.FrequencyTsv());
+      var critical = chart.chartView.Data.HasDiLabels && chart.chartView.Data.Column(9).DiLabel == "DI 10"
+        && chart.chartView.Data.Column(19).DiLabel == "DI 20" && chart.chartView.Data.Column(20).DiLabel == ""
+        && export.Count == 121 && export[20][3] == "20" && export[21][3] == "";
+      chart.critTypeList.SelectedItem = "Non-Critical";
+      correct = ordinary && critical && !chart.chartView.Data.HasDiLabels
+        && TextUtils.ReadTsv(chart.chartView.Data.FrequencyTsv()).Skip(1).All(fields => fields[3] == "");
+    });
+    Assert.IsTrue(correct);
+  }
+
+  [TestMethod]
+  public void EstimateDiCheckboxControlsAnnotationsAndCsvWithoutResettingTheViewport()
+  {
+    var correct = false;
+    Sta.Run(() =>
+    {
+      using var chart = CreateChart();
+      var window = new Window { Content = chart, Width = 700, Height = 600 };
+      try
+      {
+        var player = new PlayerStats { Name = "Pet" };
+        var row = player.SubStatOf("Hits", Labels.Melee);
+        for (var level = 1; level <= 20; level++)
+        {
+          for (var hit = 0; hit < 3; hit++)
+          {
+            row.RecordHitTotal(7050 + (450 * level), false);
+            row.RecordHitTotal(14100 + (900 * level), true);
+          }
+        }
+        chart.Update(player, null);
+        window.Show();
+        BarChartViewTest.Layout(chart);
+        var enabled = chart.estimateDiValues.IsChecked == true && chart.chartView.Data.HasDiLabels;
+        var position = Math.Min(3, chart.chartView.Navigation.Maximum / 2);
+        chart.chartView.ScrollToPosition(position);
+        BarChartViewTest.Layout(chart);
+        var columns = Columns(chart);
+        chart.estimateDiValues.IsChecked = false;
+        BarChartViewTest.Layout(chart);
+        var disabled = !chart.chartView.Data.HasDiLabels && chart.chartView.Data.Column(0).DiLabel == ""
+          && !chart.chartView.Data.Column(0).Tooltip.Contains("Estimated DI", StringComparison.Ordinal)
+          && TextUtils.ReadTsv(chart.chartView.Data.FrequencyTsv()).Skip(1).All(fields => fields[3] == "")
+          && columns.SequenceEqual(Columns(chart))
+          && Math.Abs(chart.chartView.Navigation.Position - position) < 0.01;
+        chart.critTypeList.SelectedItem = "Critical";
+        var stillDisabled = !chart.chartView.Data.HasDiLabels;
+        chart.estimateDiValues.IsChecked = true;
+        var restored = chart.chartView.Data.HasDiLabels && chart.chartView.Data.Column(0).DiLabel == "DI 1"
+          && TextUtils.ReadTsv(chart.chartView.Data.FrequencyTsv())[1][3] == "1";
+        chart.estimateDiValues.IsChecked = false;
+        chart.Update(new PlayerStats { Name = "Empty" }, null);
+        correct = enabled && disabled && stillDisabled && restored && !chart.chartView.Data.HasDiLabels
+          && chart.estimateDiValues.IsChecked == false && chart.chartView.Data.Count == 0;
+      }
+      finally
+      {
+        window.Close();
+      }
+    });
+    Assert.IsTrue(correct);
+  }
+
+  [TestMethod]
   public void TopSliderAndNativeScrollStayInSyncThroughDraggingWheelResizeAndEmptyResults()
   {
     var synchronized = false;

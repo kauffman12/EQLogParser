@@ -12,17 +12,19 @@ internal sealed class MeleeDiFit
   internal decimal Interval { get; }
   internal decimal DamageBonus => FirstAmount - Interval;
   internal decimal MaximumResidual { get; }
+  internal decimal AllowedResidual { get; }
   internal int ObservedLevels { get; }
   internal int MatchedAmounts => _levels.Count;
   internal long HitCount { get; }
   internal long TotalHitCount { get; }
 
   internal MeleeDiFit(decimal firstAmount, decimal interval, decimal maximumResidual, long hitCount,
-    long totalHitCount, Dictionary<long, int> levels)
+    long totalHitCount, decimal allowedResidual, Dictionary<long, int> levels)
   {
     FirstAmount = firstAmount;
     Interval = interval;
     MaximumResidual = maximumResidual;
+    AllowedResidual = allowedResidual;
     HitCount = hitCount;
     TotalHitCount = totalHitCount;
     _levels = levels;

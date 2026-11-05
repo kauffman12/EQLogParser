@@ -28,18 +28,17 @@ internal static class MeleeDiEstimator
     }
     if (hits < MinimumHits) return null;
 
-    // Critical multipliers amplify integer rounding; the quarter-interval cap still separates adjacent levels.
-    var roundingTolerance = critical ? 3m : 1m;
-    return TryExact(bars, hits, roundingTolerance) ?? MeleeDiSearch.TryFit(bars, hits, roundingTolerance);
+    var policy = new MeleeDiPolicy(critical);
+    return TryExact(bars, hits, policy) ?? MeleeDiSearch.TryFit(bars, hits, policy);
   }
 
-  internal static MeleeDiFit? TryExact(IReadOnlyList<HitFrequencyBar> bars, long hits, decimal roundingTolerance)
+  internal static MeleeDiFit? TryExact(IReadOnlyList<HitFrequencyBar> bars, long hits, MeleeDiPolicy policy)
   {
     if (bars.Count < MinimumObservedLevels || bars.Count > LevelCount) return null;
     var indices = new int[bars.Count];
     for (var span = bars.Count - 1; span < LevelCount; span++)
     {
-      if (!TryCandidate(bars, span, indices, roundingTolerance, out var first, out var interval, out var residual))
+      if (!TryCandidate(bars, span, indices, policy, out var first, out var interval, out var residual))
       {
         continue;
       }
@@ -47,13 +46,13 @@ internal static class MeleeDiEstimator
       if (span != LevelCount - 1) return null;
       var levels = new Dictionary<long, int>(bars.Count);
       for (var i = 0; i < bars.Count; i++) levels.Add(bars[i].Amount, indices[i] + 1);
-      return new MeleeDiFit(first, interval, residual, hits, hits, levels);
+      return new MeleeDiFit(first, interval, residual, hits, hits, policy.Tolerance(interval), levels);
     }
     return null;
   }
 
   private static bool TryCandidate(IReadOnlyList<HitFrequencyBar> bars, int span, int[] indices,
-    decimal roundingTolerance, out decimal first, out decimal interval, out decimal residual)
+    MeleeDiPolicy policy, out decimal first, out decimal interval, out decimal residual)
   {
     first = interval = residual = 0;
     var origin = bars[0].Amount;
@@ -81,7 +80,7 @@ internal static class MeleeDiEstimator
     interval = ((bars.Count * sumXY) - (sumX * sumY)) / ((bars.Count * sumXX) - (sumX * sumX));
     first = origin + ((sumY - (interval * sumX)) / bars.Count);
     if (interval < 1 || first - interval < 0) return false;
-    var tolerance = Math.Min(roundingTolerance, interval / 4);
+    var tolerance = policy.Tolerance(interval);
     for (var i = 0; i < bars.Count; i++)
     {
       residual = Math.Max(residual, Math.Abs(bars[i].Amount - (first + (indices[i] * interval))));

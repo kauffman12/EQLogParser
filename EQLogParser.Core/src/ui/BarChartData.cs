@@ -87,7 +87,8 @@ internal sealed class BarChartData
       tooltip += level > 0 ? $"\nEstimated DI {level}" : "\nOutside Estimated DI Ladder";
       tooltip += $"\nLevels Observed: {fit.ObservedLevels}/{MeleeDiEstimator.LevelCount}"
         + $"\nFit Support: {fit.HitCount:N0}/{fit.TotalHitCount:N0} Hits"
-        + $"\nEffective Interval: {fit.Interval:0.###}\nMaximum Fit Error: {fit.MaximumResidual:0.###}";
+        + $"\nEffective Interval: {fit.Interval:0.###}\nMaximum Fit Error: {fit.MaximumResidual:0.###}"
+        + $"\nFit Allowance: {fit.AllowedResidual:0.###}";
     }
     return new(hit.Frequency, frequency, amount, difference, "", "EQMenuIconBrush", tooltip, diLabel);
   }

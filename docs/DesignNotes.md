@@ -15459,31 +15459,41 @@ get no DI metadata. Frequency filtering and scrolling retain the selected lane's
 ask for histograms or fit anything (`HitFrequencySeriesTest`, `HitFrequencyLazinessTest`).
 
 Require **at least 50 matching hits and 16 distinct observed DI levels**, with support at both ends (19 intervals).
-An exact whole-distribution fit is the fast path; otherwise a dominant ladder must explain **98% of hits**. There is **no
-maximum distinct-amount count, no distinct-amount coverage requirement and no two-outlier limit**. Unmatched bars remain
-in the data and get no DI. Reject strong candidates that disagree on any shared amount's DI label, and reject
-shorter-span/offset-ambiguous seeds. This is still one dominant ladder, not an attempt to label every minority pattern.
+`MeleeDiPolicy` keeps **noncritical coverage at 98%**. Criticals first prefer a whole-population explanation (98%); failing
+that, one component may explain **40%** of hits, provided **16 levels each contain a repeated amount** (frequency >=2) and
+its **DI20 spike repeats >=5 times and supplies >=10% of component hits**. This guards against using singletons from a dense
+modifier band as invented rungs/endpoints. It is a confidence heuristic, not proof that the spike is a server-side DI20.
+There is **no maximum distinct-amount count, no distinct-amount coverage requirement and no two-outlier limit**. Unmatched
+bars remain in the data and get no DI. Conflicting assignments within the same support tier reject that tier; weak partial
+conflicts cannot erase a whole-population fit. Shorter-span/offset-ambiguous seeds are rejected. Only the best compatible
+component is drawn, not every minority pattern (`MeleeDiCriticalPolicyTest`).
 
-`MeleeDiSearch` scans the whole histogram for its strongest bins. A 20-level ladder with +/-1 or +/-3 tolerance can contain
-at most 60 or 140 integer amounts: if even that many strongest bins cannot cover 98% of hits, no supported fit is possible.
-This is a **hit-support upper bound**, not a source-size cutoff. Take enough strongest anchors to exceed the allowed unmatched
-hit budget; any acceptable fit must contain at least one. Every observed amount is then tried as a distant endpoint (10–19
-steps from an anchor). A loose proposal-error check only prunes; modal and cluster-center representatives feed the precise
-decimal regression. Final support comes from binary-searched windows over **all** original bins, using the original narrow
-tolerance. Multiple rounded amounts can map to one level, but they do not count as extra levels. Input scan and endpoint
-proposals scale with histogram length, not all possible pairs or subsets. `MeleeDiSearchTest` pins 50,000-amount detection,
-rare endpoints, rounded clusters, conflicting offsets, wide values and broad unsupported data.
+`MeleeDiSearch` scans the whole histogram for strongest bins. For whole-population fits, a tolerance-window support bound
+(not an input-size cutoff) prunes impossible coverage. Enough strongest anchors exceed the unmatched-hit budget; every
+observed amount is tried as a distant endpoint (10–19 steps). Partial critical proposals instead use repeated high-end
+spikes and every earlier observed amount, so their anchor count is bounded by hit support rather than histogram size.
+`MeleeDiCandidates` checks modal and cluster-center representatives with decimal regression, then matches binary-searched
+windows over **all** original bins. Loose proposal windows never grant a label or enlarge final precision. Several rounded
+amounts can map to one level, but do not count as extra levels. `MeleeDiSearchTest` pins 50,000-amount detection, rare
+endpoints, rounded clusters, conflicting offsets, wide values and broad unsupported data.
 
 Amounts must be sorted, positive and within the 48-bit domain, intervals at least one damage point and effective bonuses
-nonnegative. Worst matching residual remains **one damage point for noncriticals, three for criticals**, and always at a
-quarter interval if smaller. Centered **decimal** regression preserves that tolerance at wide magnitudes. Several matching
-amounts may represent one level; `ObservedLevels` counts distinct levels, not bins. `MeleeDiEstimatorTest` pins dominant
-support, competing offsets, endpoint ambiguity, low support, contamination, small intervals and maximum-width amounts.
+nonnegative. Noncritical allowance stays **one damage point**. Critical allowance is **max(1, fitted span / 10,000)**, where
+span is `19 × interval`: **0.01% of the fitted ladder's damage spread**, not the largest outlier or a large constant bonus.
+Both lanes cap allowance at a quarter interval. Thus halving the damage scale halves critical allowance above the one-point
+floor. Centered **decimal** regression preserves small errors at wide magnitudes. `MeleeDiEstimatorTest` pins ordinary
+precision, endpoint ambiguity, low support and maximum-width amounts; `MeleeDiCriticalPolicyTest` pins scale and components.
 
 `MeleeDiFit` maps only observed matching amounts to levels. Accepted fits add a separate **DI n** footer; tooltips show
-**Estimated DI**, matched/total hit support, effective interval and worst error. An unmatched bar says **Outside Estimated DI
+**Estimated DI**, matched/total hit support, effective interval, worst error and the actual **Fit Allowance**. An unmatched bar says **Outside Estimated DI
 Ladder**, never a guessed level. Missing/filtered levels never renumber later labels. The optional third footer reserves its
 own band and clears on selection changes (`HitFreqChartSelectionTest`, `BarChartViewTest`; WPF execution requires Windows).
+
+The title row's left-side **Est DI Values** checkbox starts checked and is local to that chart instance. Unchecking removes
+DI labels/tooltips and the extra footer band, and leaves CSV DI cells blank (the four-column schema stays stable). It changes
+no hit/count/difference or selector, and reuses cached fits on re-enable rather than fitting again. Only this display gesture
+preserves the logical viewport; selecting a different data question keeps its existing reset behavior. The handler is
+pane-ready/disposal guarded because XAML can fire it during construction (`HitFreqChartSelectionTest`).
 
 **Copy CSV appends a numeric `DI` column** to the original exact **Hit Value / Frequency / Difference** fields. Unmatched or
 unfitted amounts have a blank DI cell. `BarChartData.FrequencyTsv()` exports the same immutable question and fit the chart
@@ -15513,8 +15523,8 @@ check asserted the 410-, 75- and 93-hit chart projections and was removed. A min
 10:56:51–10:57:34: **235 critical hits / 20 amounts**, 7,313–68,377. Effective interval **3213.943609**, fitted first level
 **7312.085714**, worst residual **2.703759 damage**. The same complete ladder appears against an animated flamespout
 (**185 crits**), and a frigid mage gives **164 crits / 19 amounts** with DI2 absent and worst residual **2.721895**.
-The one-point ordinary allowance wrongly declines these clean critical ladders; three points admits them without changing
-normal precision or discarding any values. `MeleeDiEstimatorTest` keeps the 235-hit histogram and exercises its critical-only
+The one-point ordinary allowance declines these clean critical ladders; their dynamic critical allowance is about
+**6.106493**, without changing ordinary precision or discarding any values. `MeleeDiEstimatorTest` keeps the 235-hit histogram and exercises its critical-only
 choice through label projection. A disposable full-stream check asserted accepted critical projections and was removed.
 Most other complete critical distributions inspected in these captures remain mixed or insufficiently supported; enabling
 criticals does not promise every crit sample can be labeled.
@@ -15538,12 +15548,23 @@ Amounts **1557, 1840, 3115, 3398, 3540** account for the other 11 hits and stay 
 (**414/422 hits, 24 amounts**) and Broddy's pet → a scalewrought minion in Incogitable (**346/350 hits, 23 amounts**).
 The disposable runner asserted Hazysongs's support and all 25 exported rows and was removed.
 
+**Critical component and scale:** the operator's expanded CSV has **831 hits / 322 amounts**. Its 20 repeated modal amounts
+carry **452** hits, fitted interval **4266.687218**, worst error **5.507519**, allowance **8.106706**. Labels include
+**7223 → DI1**, **20024 → DI4**, **88289 → DI20**; the 92,000-range population stays unlabeled. `CriticalVarianceFixture`
+retains every supplied row, not only peaks. Halving integer amounts merges bins but retains all 831 hits: **301 amounts**,
+452 supporting hits, error **2.797744**, allowance **4.053344**. `MeleeDiCriticalPolicyTest` exercises both scales through
+choice and CSV, and pins rejection under the unchanged ordinary policy.
+
+A full-stream classified Incogitable check also verified **Useless (Pet) → a scalewrought handler (NPC), Critical Crushes**:
+**591/1221 hits**, 527 amounts, all 20 levels; **42435 × 123 → DI20**, interval **2014.815789**, error **2.963158**, allowance
+**3.828150**. Complete chart/export membership was asserted. The disposable runner was removed.
+
 These fits describe observed, modifier-dependent ladders, not proof of unmodified NPC stats or a universal player-damage
 formula. [Brogett's combat discussion](https://forums.everquest.com/index.php?threads/how-does-combat-really-work.224274/#post-3282218)
 describes an additional player damage-table roll: even one stable weapon can produce many amounts, and different DI/multiplier
 pairs can produce the same damage. That historical community model is a warning against guessing, not a verified current-Live
 specification. This search does **not** invert an unknown player damage table or resolve overlapping multipliers; broad mixed
-player distributions may still fail the 98% support rule. A failed fit stays unlabeled; the annotation never changes a board
+player distributions may still fail the applicable support/ambiguity rules. A failed fit stays unlabeled; the annotation never changes a board
 total, ownership decision or captured amount.
 
 ## A histogram nobody asked for

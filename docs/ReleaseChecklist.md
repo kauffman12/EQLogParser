@@ -745,6 +745,10 @@ These are outstanding Windows checks, not results inferred from the Linux build.
   must retain 100 and 150 with differences 0 and 30, including when 150 is the first visible column. Its tooltip must explain
   that Difference uses the preceding distinct amount before filtering.
 - [ ] Open clean critical and noncritical melee ladders in either Hit Frequency direction (DesignNotes → DI inference).
+  The title row has **Est DI Values** on the left, checked by default. Toggle it while scrolled: estimates/tooltips/footer
+  disappear and return without moving the viewport or changing hit values/counts/differences. Off leaves CSV DI cells blank;
+  on restores supported values. Switch crit/player/type choices while off, clear/reload, and check narrow windows/themes/fonts
+  for checkbox/selector overlap. The checkbox is local to each chart, not a saved preference.
   Confirm a separate **DI n** footer and **Estimated DI** tooltip, with exact amounts/differences still readable at all fonts.
   Switch Critical/Non-Critical: each lane must use its own supported ladder, even if the other lane is empty or noisy.
   Filter away an internal level: later levels must retain their numbers, including after scrolling. Switch to a spell,
@@ -755,6 +759,10 @@ These are outstanding Windows checks, not results inferred from the Linux build.
   Also check a selection above 22 distinct amounts: in the strangle capture, Hazysongs's pet → Tallongast, noncritical Hits,
   21:55:52–21:57:17 has 25 amounts, support 929/940, **1320 → DI1**, **3600 → DI20**, and five unlabeled outlier amounts.
   Large distributions must not freeze selectors or relabel a weak/mixed population just because a pattern can be drawn.
+  Check a partial critical component: support may be below 98%, but repeated rungs and a repeated high-end spike must be
+  present. Tooltips show **Fit Allowance**, scaled to the fitted ladder, and retain matched/total support. The operator's
+  expanded sample should read **7223 → DI1**, **88289 → DI20**, support 452/831, allowance about 8.11. Half-scale allowance
+  is about 4.05. Switching to Non-Critical must restore strict coverage/one-point precision, with no stale DI metadata.
   Copy Image must include the DI footer. Copy CSV appends numeric **DI**, blank on unmatched/unfitted rows, without dropping
   an outlier or changing any original amount/count/difference.
 - [ ] Copy CSV while scrolled: Hit Frequency must include **every filtered row** with exact **Hit Value / Frequency /
