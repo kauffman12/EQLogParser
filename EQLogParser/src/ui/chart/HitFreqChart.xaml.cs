@@ -101,8 +101,6 @@ public partial class HitFreqChart : UserControl, IDisposable
 
   private void ListSelectionChanged(object sender, SelectionChangedEventArgs e) => UserSelectionChanged();
 
-  private void EstimateDiChanged(object sender, RoutedEventArgs e) => UserSelectionChanged(resetOffset: false);
-
   private void PageSliderValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
   {
     if (!_paneReady || _syncingPosition || _disposedValue) return;
@@ -132,7 +130,7 @@ public partial class HitFreqChart : UserControl, IDisposable
   private void CopyCsvClick(object sender, RoutedEventArgs e)
     => UiUtil.SetClipboardText(chartView.Data.FrequencyTsv());
 
-  private void UserSelectionChanged(bool resetOffset = true)
+  private void UserSelectionChanged()
   {
     if (!_paneReady || _updatingSelectors || _disposedValue) return;
     _columns = [];
@@ -143,9 +141,10 @@ public partial class HitFreqChart : UserControl, IDisposable
     {
       var critical = critType == CritHittype;
       _columns = HitFrequencySeries.Filter(choice.Values(critical), Math.Max(0, minFreqList.SelectedIndex));
-      if (estimateDiValues.IsChecked == true) diFit = choice.DiFor(critical);
+      // Estimated DI values were not reliable enough for critical or noncritical hits.
+      // diFit = choice.DiFor(critical);
     }
-    chartView.SetData(BarChartData.Frequency(_columns, diFit), resetOffset);
+    chartView.SetData(BarChartData.Frequency(_columns, diFit));
   }
 
   private void CritTypeListSelectionChanged(object sender, SelectionChangedEventArgs e)

@@ -742,29 +742,12 @@ These are outstanding Windows checks, not results inferred from the Linux build.
 - [ ] Exercise wheel, high-resolution trackpad, keyboard arrows and scrollbar thumb. Honor system line/page wheel settings;
   at either edge the wheel must bubble rather than being consumed, with no focus stolen from a selector and no zoom.
 - [ ] Check amounts above `uint.MaxValue`, including `281474976710655`. For `100 → 5, 120 → 1, 150 → 3`, **Frequency > 1**
-  must retain 100 and 150 with differences 0 and 30, including when 150 is the first visible column. Its tooltip must explain
-  that Difference uses the preceding distinct amount before filtering.
-- [ ] Open clean critical and noncritical melee ladders in either Hit Frequency direction (DesignNotes → DI inference).
-  The title row has **Est DI Values** on the left, checked by default. Toggle it while scrolled: estimates/tooltips/footer
-  disappear and return without moving the viewport or changing hit values/counts/differences. Off leaves CSV DI cells blank;
-  on restores supported values. Switch crit/player/type choices while off, clear/reload, and check narrow windows/themes/fonts
-  for checkbox/selector overlap. The checkbox is local to each chart, not a saved preference.
-  Confirm a separate **DI n** footer and **Estimated DI** tooltip, with exact amounts/differences still readable at all fonts.
-  Switch Critical/Non-Critical: each lane must use its own supported ladder, even if the other lane is empty or noisy.
-  Filter away an internal level: later levels must retain their numbers, including after scrolling. Switch to a spell,
-  a mixed/noisy melee series or an insufficient sample: DI labels must disappear without leaving a blank extra band.
-  Combine a strongly supported ladder with a rare off-ladder amount: matching bars keep DI labels; the outlier stays
-  visible, has no DI label, and its tooltip says **Outside Estimated DI Ladder**. Tooltip support must include the outlier
-  in its denominator. The Keyce four-fight example should show **68,377 × 288 → DI20**, **52,674 × 1 → no DI**, support 718/719.
-  Also check a selection above 22 distinct amounts: in the strangle capture, Hazysongs's pet → Tallongast, noncritical Hits,
-  21:55:52–21:57:17 has 25 amounts, support 929/940, **1320 → DI1**, **3600 → DI20**, and five unlabeled outlier amounts.
-  Large distributions must not freeze selectors or relabel a weak/mixed population just because a pattern can be drawn.
-  Check a partial critical component: support may be below 98%, but repeated rungs and a repeated high-end spike must be
-  present. Tooltips show **Fit Allowance**, scaled to the fitted ladder, and retain matched/total support. The operator's
-  expanded sample should read **7223 → DI1**, **88289 → DI20**, support 452/831, allowance about 8.11. Half-scale allowance
-  is about 4.05. Switching to Non-Critical must restore strict coverage/one-point precision, with no stale DI metadata.
-  Copy Image must include the DI footer. Copy CSV appends numeric **DI**, blank on unmatched/unfitted rows, without dropping
-  an outlier or changing any original amount/count/difference.
+  must retain 100 and 150 with differences 0 and 30, including when 150 is the first visible column. The tooltip's
+  **Diff from preceding value** must show the same difference.
+- [ ] DI annotations are disabled as unreliable. Open Damage and Tanking Hit Frequency with clean critical/noncritical
+  melee examples: there must be no DI checkbox, labels, fit tooltips or extra footer band. Switch lane/player/type,
+  filter, scroll and reopen: no estimates may return. CSV keeps its fourth **DI** column blank on every row, without
+  dropping amounts or changing the original hit values/counts/differences. Copy Image must show only the ordinary labels.
 - [ ] Copy CSV while scrolled: Hit Frequency must include **every filtered row** with exact **Hit Value / Frequency /
   Difference / DI**; benchmarks must keep **Class / Percent / Name**, +Pets and their existing inclusion of hidden classes.
   Copy Image on a high-DPI display: include the fixed axis, current viewport and labels, never an enormous full-distribution

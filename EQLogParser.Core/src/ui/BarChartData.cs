@@ -80,8 +80,7 @@ internal sealed class BarChartData
     var level = _diFit?.LevelFor(hit.Amount) ?? 0;
     var diLabel = level > 0 ? $"DI {level}" : "";
     var tooltip = $"Hit Value: {amount}\nFrequency: {frequency}"
-      + $"\nDifference: {hit.Difference.ToString("N0", CultureInfo.CurrentCulture)}"
-      + "\nDifference from the preceding distinct hit value, before filtering";
+      + $"\nDiff from preceding value: {hit.Difference.ToString("N0", CultureInfo.CurrentCulture)}";
     if (_diFit is { } fit)
     {
       tooltip += level > 0 ? $"\nEstimated DI {level}" : "\nOutside Estimated DI Ladder";

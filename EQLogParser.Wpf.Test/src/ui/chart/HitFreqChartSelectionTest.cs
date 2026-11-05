@@ -129,7 +129,7 @@ public sealed class HitFreqChartSelectionTest
   }
 
   [TestMethod]
-  public void MeleeDiLabelsSwitchIndependentLanesButNotSpellOrAmbiguousSelections()
+  public void DiLabelsStayDisabledAcrossLanesFilteringAndBreakdownChanges()
   {
     var correct = false;
     Sta.Run(() =>
@@ -152,13 +152,13 @@ public sealed class HitFreqChartSelectionTest
       chart.Update(player, null);
       chart.hitTypeList.SelectedItem = chart.hitTypeList.Items.Cast<HitFrequencyChoice>()
         .Single(choice => choice.Key == melee.Key);
-      var regular = chart.chartView.Data.HasDiLabels && chart.chartView.Data.Column(0).DiLabel == "DI 1";
+      var regular = !chart.chartView.Data.HasDiLabels && chart.chartView.Data.Column(0).DiLabel == "";
       chart.minFreqList.SelectedIndex = 1;
-      var filtered = chart.chartView.Data.Count == 19 && chart.chartView.Data.Column(14).DiLabel == "DI 16"
+      var filtered = chart.chartView.Data.Count == 19 && chart.chartView.Data.Column(14).DiLabel == ""
         && Columns(chart)[14] == new HitFrequencyBar(14250, 3, 450);
       chart.critTypeList.SelectedItem = "Critical";
-      var critical = chart.chartView.Data.HasDiLabels && chart.chartView.Data.Count == 19
-        && chart.chartView.Data.Column(9).DiLabel == "DI 11" && Columns(chart)[0].Amount == 15000
+      var critical = !chart.chartView.Data.HasDiLabels && chart.chartView.Data.Count == 19
+        && chart.chartView.Data.Column(9).DiLabel == "" && Columns(chart)[0].Amount == 15000
         && Columns(chart)[9] == new HitFrequencyBar(24000, 3, 900);
       chart.hitTypeList.SelectedItem = chart.hitTypeList.Items.Cast<HitFrequencyChoice>()
         .Single(choice => choice.Key == spell.Key);
@@ -166,7 +166,7 @@ public sealed class HitFreqChartSelectionTest
       chart.hitTypeList.SelectedItem = chart.hitTypeList.Items.Cast<HitFrequencyChoice>()
         .Single(choice => choice.Key == melee.Key);
       chart.critTypeList.SelectedItem = "Non-Critical";
-      var restored = chart.chartView.Data.HasDiLabels;
+      var restored = !chart.chartView.Data.HasDiLabels;
       chart.hitTypeList.SelectedItem = chart.hitTypeList.Items.Cast<HitFrequencyChoice>()
         .Single(choice => choice.Key == spell.Key);
       var noSpell = !chart.chartView.Data.HasDiLabels;
@@ -182,7 +182,7 @@ public sealed class HitFreqChartSelectionTest
   }
 
   [TestMethod]
-  public void DominantDiExportFollowsFilteringAndCannotLeakIntoTheNextChoice()
+  public void DisabledDiExportRetainsEveryAmountAndItsOriginalDifference()
   {
     var correct = false;
     Sta.Run(() =>
@@ -204,12 +204,12 @@ public sealed class HitFreqChartSelectionTest
       chart.hitTypeList.SelectedItem = chart.hitTypeList.Items.Cast<HitFrequencyChoice>()
         .Single(choice => choice.Key == melee.Key);
       var all = TextUtils.ReadTsv(chart.chartView.Data.FrequencyTsv());
-      var dominant = chart.chartView.Data.HasDiLabels && Columns(chart).Length == 21
-        && all.Count == 22 && all[2][0] == "7600" && all[2][3] == "" && all[^1][3] == "20";
+      var dominant = !chart.chartView.Data.HasDiLabels && Columns(chart).Length == 21
+        && all.Count == 22 && all[2][0] == "7600" && all.Skip(1).All(fields => fields[3] == "");
       chart.minFreqList.SelectedIndex = 1;
       var filtered = TextUtils.ReadTsv(chart.chartView.Data.FrequencyTsv());
       var numbering = filtered.Count == 21 && filtered[2][0] == "7950" && filtered[2][2] == "350"
-        && filtered[2][3] == "2";
+        && filtered[2][3] == "";
       chart.hitTypeList.SelectedItem = chart.hitTypeList.Items.Cast<HitFrequencyChoice>()
         .Single(choice => choice.Key == spell.Key);
       var noSpell = TextUtils.ReadTsv(chart.chartView.Data.FrequencyTsv()).Skip(1).All(fields => fields[3] == "");
@@ -221,7 +221,7 @@ public sealed class HitFreqChartSelectionTest
   }
 
   [TestMethod]
-  public void PartialCriticalLabelsAndExportDoNotLeakIntoTheStricterOrdinaryLane()
+  public void BothCriticalAndOrdinaryComponentsRemainUnannotated()
   {
     var correct = false;
     Sta.Run(() =>
@@ -247,65 +247,13 @@ public sealed class HitFreqChartSelectionTest
       var ordinary = !chart.chartView.Data.HasDiLabels;
       chart.critTypeList.SelectedItem = "Critical";
       var export = TextUtils.ReadTsv(chart.chartView.Data.FrequencyTsv());
-      var critical = chart.chartView.Data.HasDiLabels && chart.chartView.Data.Column(9).DiLabel == "DI 10"
-        && chart.chartView.Data.Column(19).DiLabel == "DI 20" && chart.chartView.Data.Column(20).DiLabel == ""
-        && export.Count == 121 && export[20][3] == "20" && export[21][3] == "";
+      var critical = !chart.chartView.Data.HasDiLabels && chart.chartView.Data.Column(9).DiLabel == ""
+        && chart.chartView.Data.Column(19).DiLabel == "" && chart.chartView.Data.Column(20).DiLabel == ""
+        && export.Count == 121 && export.Skip(1).All(fields => fields[3] == "")
+        && !chart.chartView.Data.Column(19).Tooltip.Contains("Estimated DI", StringComparison.Ordinal);
       chart.critTypeList.SelectedItem = "Non-Critical";
       correct = ordinary && critical && !chart.chartView.Data.HasDiLabels
         && TextUtils.ReadTsv(chart.chartView.Data.FrequencyTsv()).Skip(1).All(fields => fields[3] == "");
-    });
-    Assert.IsTrue(correct);
-  }
-
-  [TestMethod]
-  public void EstimateDiCheckboxControlsAnnotationsAndCsvWithoutResettingTheViewport()
-  {
-    var correct = false;
-    Sta.Run(() =>
-    {
-      using var chart = CreateChart();
-      var window = new Window { Content = chart, Width = 700, Height = 600 };
-      try
-      {
-        var player = new PlayerStats { Name = "Pet" };
-        var row = player.SubStatOf("Hits", Labels.Melee);
-        for (var level = 1; level <= 20; level++)
-        {
-          for (var hit = 0; hit < 3; hit++)
-          {
-            row.RecordHitTotal(7050 + (450 * level), false);
-            row.RecordHitTotal(14100 + (900 * level), true);
-          }
-        }
-        chart.Update(player, null);
-        window.Show();
-        BarChartViewTest.Layout(chart);
-        var enabled = chart.estimateDiValues.IsChecked == true && chart.chartView.Data.HasDiLabels;
-        var position = Math.Min(3, chart.chartView.Navigation.Maximum / 2);
-        chart.chartView.ScrollToPosition(position);
-        BarChartViewTest.Layout(chart);
-        var columns = Columns(chart);
-        chart.estimateDiValues.IsChecked = false;
-        BarChartViewTest.Layout(chart);
-        var disabled = !chart.chartView.Data.HasDiLabels && chart.chartView.Data.Column(0).DiLabel == ""
-          && !chart.chartView.Data.Column(0).Tooltip.Contains("Estimated DI", StringComparison.Ordinal)
-          && TextUtils.ReadTsv(chart.chartView.Data.FrequencyTsv()).Skip(1).All(fields => fields[3] == "")
-          && columns.SequenceEqual(Columns(chart))
-          && Math.Abs(chart.chartView.Navigation.Position - position) < 0.01;
-        chart.critTypeList.SelectedItem = "Critical";
-        var stillDisabled = !chart.chartView.Data.HasDiLabels;
-        chart.estimateDiValues.IsChecked = true;
-        var restored = chart.chartView.Data.HasDiLabels && chart.chartView.Data.Column(0).DiLabel == "DI 1"
-          && TextUtils.ReadTsv(chart.chartView.Data.FrequencyTsv())[1][3] == "1";
-        chart.estimateDiValues.IsChecked = false;
-        chart.Update(new PlayerStats { Name = "Empty" }, null);
-        correct = enabled && disabled && stillDisabled && restored && !chart.chartView.Data.HasDiLabels
-          && chart.estimateDiValues.IsChecked == false && chart.chartView.Data.Count == 0;
-      }
-      finally
-      {
-        window.Close();
-      }
     });
     Assert.IsTrue(correct);
   }

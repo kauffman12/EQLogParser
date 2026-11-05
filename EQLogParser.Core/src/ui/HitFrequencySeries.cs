@@ -12,8 +12,11 @@ internal readonly record struct HitFrequencyBar(long Amount, int Frequency, long
 /// <summary>A board breakdown's identity and exact distributions, independent of its selector label.</summary>
 internal sealed class HitFrequencyChoice
 {
-  private readonly MeleeDiFit? _criticalDiFit;
-  private readonly MeleeDiFit? _nonCriticalDiFit;
+  private readonly bool _isMelee;
+  private MeleeDiFit? _criticalDiFit;
+  private MeleeDiFit? _nonCriticalDiFit;
+  private bool _criticalDiComputed;
+  private bool _nonCriticalDiComputed;
 
   public string? Label { get; }
   internal string? Key { get; }
@@ -26,15 +29,30 @@ internal sealed class HitFrequencyChoice
     Key = source.Key;
     Critical = HitFrequencySeries.Prepare(source.CritFreqValues);
     NonCritical = HitFrequencySeries.Prepare(source.NonCritFreqValues);
-    if (source.Type == Labels.Melee)
-    {
-      _criticalDiFit = MeleeDiEstimator.TryFit(Critical, critical: true);
-      _nonCriticalDiFit = MeleeDiEstimator.TryFit(NonCritical);
-    }
+    _isMelee = source.Type == Labels.Melee;
   }
 
   internal IReadOnlyList<HitFrequencyBar> Values(bool critical) => critical ? Critical : NonCritical;
-  internal MeleeDiFit? DiFor(bool critical) => critical ? _criticalDiFit : _nonCriticalDiFit;
+  // Explicit analysis only; opening a chart must not run the disabled DI estimator.
+  internal MeleeDiFit? DiFor(bool critical)
+  {
+    if (!_isMelee) return null;
+    if (critical)
+    {
+      if (!_criticalDiComputed)
+      {
+        _criticalDiFit = MeleeDiEstimator.TryFit(Critical, critical: true);
+        _criticalDiComputed = true;
+      }
+      return _criticalDiFit;
+    }
+    if (!_nonCriticalDiComputed)
+    {
+      _nonCriticalDiFit = MeleeDiEstimator.TryFit(NonCritical);
+      _nonCriticalDiComputed = true;
+    }
+    return _nonCriticalDiFit;
+  }
 }
 
 /// <summary>Prepares chart-owned exact amounts without changing board grouping or histogram ownership.</summary>

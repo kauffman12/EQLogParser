@@ -15404,7 +15404,7 @@ folded non-DD/DoT pairs; the chart must not invent a different type/subtype grou
 Amounts and differences remain exact `long` values. Sort numerically, compute differences against the preceding distinct
 amount **before** applying the strict `frequency > threshold` filter, and retain those differences while scrolling. The
 clipboard source remains every filtered row, not just the viewport, with **Hit Value / Frequency / Difference / DI**;
-DI is numeric for matched amounts and blank otherwise (see "DI inference: measured melee ladders, not automatic numbering").
+DI is currently blank because annotations are disabled (see "DI inference: measured melee ladders, not automatic numbering").
 `HitFreqChartSelectionTest` pins selector wiring, critical/player/pet switches and empty-result clearing; its execution needs
 Windows. An empty answer clears both the host's clipboard source and the view's columns, hover targets and logical extent.
 
@@ -15452,11 +15452,15 @@ Windows DPI, large-extent rendering, clipboard and lifecycle acceptance checks l
 
 ## DI inference: measured melee ladders, not automatic numbering
 
-`HitFrequencyChoice` tries `MeleeDiEstimator` separately on the **full critical and noncritical snapshots**, only for
-`Type = Melee` and in either chart direction. Each lane keeps its own fit, interval, support and observed-amount map:
-no combining counts, borrowing a fit from the other lane or assuming the same damage multiplier. Spells, procs and shields
-get no DI metadata. Frequency filtering and scrolling retain the selected lane's cached fit; normal board builds do not
-ask for histograms or fit anything (`HitFrequencySeriesTest`, `HitFrequencyLazinessTest`).
+**DI annotations are disabled for both critical and noncritical Hit Frequency charts.** The estimates were not reliable
+enough: matching a numeric ladder does not prove the underlying roll, and a nearby singleton can be a differently modified
+hit rather than the inferred DI. `HitFreqChart.UserSelectionChanged` keeps the assignment commented out with that reason.
+There is no checkbox, no DI footer/tooltip, and the retained CSV DI column is blank. Exact amounts/counts/differences and
+selection/filtering behavior are unchanged (`HitFreqChartSelectionTest`; Windows execution required).
+
+**Retained experiment, not active UI behavior.** `HitFrequencyChoice.DiFor` runs only on an explicit request and caches each
+lane over its complete prepared snapshot. Merely opening/updating a chart does not run the estimator. The helpers and
+mathematical tests remain for analysis; they are not evidence that these numbers identify actual server-side DI levels.
 
 Require **at least 50 matching hits and 16 distinct observed DI levels**, with support at both ends (19 intervals).
 `MeleeDiPolicy` keeps **noncritical coverage at 98%**. Criticals first prefer a whole-population explanation (98%); failing
@@ -15484,19 +15488,12 @@ Both lanes cap allowance at a quarter interval. Thus halving the damage scale ha
 floor. Centered **decimal** regression preserves small errors at wide magnitudes. `MeleeDiEstimatorTest` pins ordinary
 precision, endpoint ambiguity, low support and maximum-width amounts; `MeleeDiCriticalPolicyTest` pins scale and components.
 
-`MeleeDiFit` maps only observed matching amounts to levels. Accepted fits add a separate **DI n** footer; tooltips show
-**Estimated DI**, matched/total hit support, effective interval, worst error and the actual **Fit Allowance**. An unmatched bar says **Outside Estimated DI
-Ladder**, never a guessed level. Missing/filtered levels never renumber later labels. The optional third footer reserves its
-own band and clears on selection changes (`HitFreqChartSelectionTest`, `BarChartViewTest`; WPF execution requires Windows).
+`MeleeDiFit` maps only observed matching amounts to levels. Retained renderer tests can explicitly supply a fit to exercise
+DI footers/tooltips, support and allowance display; **the application supplies no fit**. Missing/filtered levels never
+renumber labels in those experiments (`BarChartDataTest`, `BarChartViewTest`).
 
-The title row's left-side **Est DI Values** checkbox starts checked and is local to that chart instance. Unchecking removes
-DI labels/tooltips and the extra footer band, and leaves CSV DI cells blank (the four-column schema stays stable). It changes
-no hit/count/difference or selector, and reuses cached fits on re-enable rather than fitting again. Only this display gesture
-preserves the logical viewport; selecting a different data question keeps its existing reset behavior. The handler is
-pane-ready/disposal guarded because XAML can fire it during construction (`HitFreqChartSelectionTest`).
-
-**Copy CSV appends a numeric `DI` column** to the original exact **Hit Value / Frequency / Difference** fields. Unmatched or
-unfitted amounts have a blank DI cell. `BarChartData.FrequencyTsv()` exports the same immutable question and fit the chart
+**Copy CSV keeps its fourth `DI` column for schema stability**, blank for every application-exported row. Explicit analysis
+tests can still supply a fit and exercise numeric values; unmatched or unfitted amounts have a blank DI cell. `BarChartData.FrequencyTsv()` exports the same immutable question and fit the chart
 paints, all filtered rows (not only visible rows), without fitting again or formatting every column's tooltip. No bar is
 dropped from the chart/export to help inference; the original differences survive filtering. `BarChartDataTest` pins the four-field schema,
 wide amounts, empty/unfitted answers, filtered gaps and the combined critical example below.

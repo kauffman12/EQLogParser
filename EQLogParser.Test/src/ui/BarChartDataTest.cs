@@ -15,7 +15,8 @@ public sealed class BarChartDataTest
     Assert.AreEqual(1d, data.Column(1).Value);
     Assert.AreEqual(TextUtils.MaxAmount.ToString("N0", CultureInfo.CurrentCulture), data.Column(1).Primary);
     Assert.AreEqual("+" + (TextUtils.MaxAmount - 100).ToString("N0", CultureInfo.CurrentCulture), data.Column(1).Secondary);
-    StringAssert.Contains(data.Column(1).Tooltip, "before filtering");
+    StringAssert.Contains(data.Column(1).Tooltip,
+      "Diff from preceding value: " + (TextUtils.MaxAmount - 100).ToString("N0", CultureInfo.CurrentCulture));
     Assert.AreEqual(new BarChartAxis(40, 10), data.Axis, "the whole-question label budget does not change while scrolling");
     Assert.AreEqual("EQMenuIconBrush", data.Column(0).ColorKey, "use the brush ThemeConfig actually publishes");
     bars[0] = new HitFrequencyBar(100, 99, 0);
