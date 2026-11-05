@@ -243,7 +243,7 @@ public sealed class MeleeDiEstimatorTest
   }
 
   [TestMethod]
-  public void CoverageRequiresBothEnoughHitsAndEnoughDistinctAmounts()
+  public void CoverageRequiresEnoughMatchingHitsButNotMostDistinctAmounts()
   {
     var clean = Ladder(frequency: 5);
     Assert.IsNotNull(MeleeDiEstimator.TryFit(clean.Append(new HitFrequencyBar(50000, 2, 0)).ToArray()));
@@ -252,7 +252,11 @@ public sealed class MeleeDiEstimatorTest
     {
       new HitFrequencyBar(50000, 1, 0), new HitFrequencyBar(60000, 1, 0), new HitFrequencyBar(70000, 1, 0)
     }).ToArray();
-    Assert.IsNull(MeleeDiEstimator.TryFit(manyRareAmounts), "hit coverage cannot hide poor amount coverage");
+    var fit = MeleeDiEstimator.TryFit(manyRareAmounts);
+    Assert.IsNotNull(fit, "rare distinct amounts do not erase a dominant ladder");
+    Assert.AreEqual(20000L, fit.HitCount);
+    Assert.AreEqual(20003L, fit.TotalHitCount);
+    Assert.AreEqual(0, fit.LevelFor(50000));
     var tooFewMatched = Ladder(frequency: 2).Where((_, index) => index != 14).ToArray();
     tooFewMatched[0] = tooFewMatched[0] with { Frequency = 13 };
     Assert.IsNull(MeleeDiEstimator.TryFit(tooFewMatched.Append(new HitFrequencyBar(50000, 1, 0)).ToArray()),

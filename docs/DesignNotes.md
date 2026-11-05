@@ -15459,11 +15459,20 @@ get no DI metadata. Frequency filtering and scrolling retain the selected lane's
 ask for histograms or fit anything (`HitFrequencySeriesTest`, `HitFrequencyLazinessTest`).
 
 Require **at least 50 matching hits and 16 distinct observed DI levels**, with support at both ends (19 intervals).
-An exact whole-distribution fit is the fast path; otherwise a dominant ladder must explain **98% of hits and 90% of distinct
-amounts**. Coverage is relaxed, **not precision**: unmatched bars remain in the data and get no DI. Candidate seeds may omit
-one or two bins from sources with at most 22 bins; their predictions are then checked against **all** original amounts.
-Reject strong candidates that disagree on any shared amount's DI label, and reject shorter-span/offset-ambiguous seeds.
-A larger or genuinely mixed distribution stays unlabeled rather than paying for an unbounded hypothesis search.
+An exact whole-distribution fit is the fast path; otherwise a dominant ladder must explain **98% of hits**. There is **no
+maximum distinct-amount count, no distinct-amount coverage requirement and no two-outlier limit**. Unmatched bars remain
+in the data and get no DI. Reject strong candidates that disagree on any shared amount's DI label, and reject
+shorter-span/offset-ambiguous seeds. This is still one dominant ladder, not an attempt to label every minority pattern.
+
+`MeleeDiSearch` scans the whole histogram for its strongest bins. A 20-level ladder with +/-1 or +/-3 tolerance can contain
+at most 60 or 140 integer amounts: if even that many strongest bins cannot cover 98% of hits, no supported fit is possible.
+This is a **hit-support upper bound**, not a source-size cutoff. Take enough strongest anchors to exceed the allowed unmatched
+hit budget; any acceptable fit must contain at least one. Every observed amount is then tried as a distant endpoint (10–19
+steps from an anchor). A loose proposal-error check only prunes; modal and cluster-center representatives feed the precise
+decimal regression. Final support comes from binary-searched windows over **all** original bins, using the original narrow
+tolerance. Multiple rounded amounts can map to one level, but they do not count as extra levels. Input scan and endpoint
+proposals scale with histogram length, not all possible pairs or subsets. `MeleeDiSearchTest` pins 50,000-amount detection,
+rare endpoints, rounded clusters, conflicting offsets, wide values and broad unsupported data.
 
 Amounts must be sorted, positive and within the 48-bit domain, intervals at least one damage point and effective bonuses
 nonnegative. Worst matching residual remains **one damage point for noncriticals, three for criticals**, and always at a
@@ -15521,8 +15530,21 @@ pipeline check independently asserted the 718/719 support and four-column export
 (11:06:41–11:14:54) has **229 ordinary hits / 53 amounts**: not one clean ladder. Some clean named actors read Player but
 lacked independent human-player evidence; they are not proof that every player's weapon distribution follows this model.
 
+**Larger real histogram:** in `eqlog_Kizant_xegony-strangle.txt`, Hazysongs's pet → Tallongast, The Egg, noncritical Hits,
+21:55:52–21:57:17: **940 hits / 25 amounts**, **929** supporting `1200 + 120 × DI`, all 20 levels with zero residual.
+Amounts **1557, 1840, 3115, 3398, 3540** account for the other 11 hits and stay unlabeled. **1320 → DI1; 3600 → DI20**.
+`HitFrequencyFixtures.HazysongsPetHits` pins the complete histogram through choice, labels, filtering and CSV in
+`MeleeDiSearchTest`. Full-stream classified live runs also found Nniki's pet → Tallongast in the tunky capture
+(**414/422 hits, 24 amounts**) and Broddy's pet → a scalewrought minion in Incogitable (**346/350 hits, 23 amounts**).
+The disposable runner asserted Hazysongs's support and all 25 exported rows and was removed.
+
 These fits describe observed, modifier-dependent ladders, not proof of unmodified NPC stats or a universal player-damage
-formula. A failed fit stays unlabeled; the annotation never changes a board total, ownership decision or captured amount.
+formula. [Brogett's combat discussion](https://forums.everquest.com/index.php?threads/how-does-combat-really-work.224274/#post-3282218)
+describes an additional player damage-table roll: even one stable weapon can produce many amounts, and different DI/multiplier
+pairs can produce the same damage. That historical community model is a warning against guessing, not a verified current-Live
+specification. This search does **not** invert an unknown player damage table or resolve overlapping multipliers; broad mixed
+player distributions may still fail the 98% support rule. A failed fit stays unlabeled; the annotation never changes a board
+total, ownership decision or captured amount.
 
 ## A histogram nobody asked for
 

@@ -752,6 +752,9 @@ These are outstanding Windows checks, not results inferred from the Linux build.
   Combine a strongly supported ladder with a rare off-ladder amount: matching bars keep DI labels; the outlier stays
   visible, has no DI label, and its tooltip says **Outside Estimated DI Ladder**. Tooltip support must include the outlier
   in its denominator. The Keyce four-fight example should show **68,377 × 288 → DI20**, **52,674 × 1 → no DI**, support 718/719.
+  Also check a selection above 22 distinct amounts: in the strangle capture, Hazysongs's pet → Tallongast, noncritical Hits,
+  21:55:52–21:57:17 has 25 amounts, support 929/940, **1320 → DI1**, **3600 → DI20**, and five unlabeled outlier amounts.
+  Large distributions must not freeze selectors or relabel a weak/mixed population just because a pattern can be drawn.
   Copy Image must include the DI footer. Copy CSV appends numeric **DI**, blank on unmatched/unfitted rows, without dropping
   an outlier or changing any original amount/count/difference.
 - [ ] Copy CSV while scrolled: Hit Frequency must include **every filtered row** with exact **Hit Value / Frequency /

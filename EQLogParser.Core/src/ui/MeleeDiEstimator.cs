@@ -10,17 +10,14 @@ namespace EQLogParser;
 internal static class MeleeDiEstimator
 {
   internal const int LevelCount = 20;
-  private const int MinimumObservedLevels = 16;
-  private const long MinimumHits = 50;
-  private const int MinimumHitCoveragePercent = 98;
-  private const int MinimumAmountCoveragePercent = 90;
-  private const int MaximumAmounts = LevelCount * 100 / MinimumAmountCoveragePercent;
+  internal const int MinimumObservedLevels = 16;
+  internal const long MinimumHits = 50;
 
   // Fit the complete prepared series, never a viewport or a minimum-frequency subset.
   // Policy and measured examples: docs/DesignNotes.md → "DI inference: measured melee ladders, not automatic numbering".
   internal static MeleeDiFit? TryFit(IReadOnlyList<HitFrequencyBar> bars, bool critical = false)
   {
-    if (bars.Count < MinimumObservedLevels || bars.Count > MaximumAmounts) return null;
+    if (bars.Count < MinimumObservedLevels) return null;
     var hits = 0L;
     var previous = 0L;
     foreach (var bar in bars)
@@ -33,11 +30,12 @@ internal static class MeleeDiEstimator
 
     // Critical multipliers amplify integer rounding; the quarter-interval cap still separates adjacent levels.
     var roundingTolerance = critical ? 3m : 1m;
-    return TryExact(bars, hits, roundingTolerance) ?? TryDominant(bars, hits, roundingTolerance);
+    return TryExact(bars, hits, roundingTolerance) ?? MeleeDiSearch.TryFit(bars, hits, roundingTolerance);
   }
 
-  private static MeleeDiFit? TryExact(IReadOnlyList<HitFrequencyBar> bars, long hits, decimal roundingTolerance)
+  internal static MeleeDiFit? TryExact(IReadOnlyList<HitFrequencyBar> bars, long hits, decimal roundingTolerance)
   {
+    if (bars.Count < MinimumObservedLevels || bars.Count > LevelCount) return null;
     var indices = new int[bars.Count];
     for (var span = bars.Count - 1; span < LevelCount; span++)
     {
@@ -52,72 +50,6 @@ internal static class MeleeDiEstimator
       return new MeleeDiFit(first, interval, residual, hits, hits, levels);
     }
     return null;
-  }
-
-  private static MeleeDiFit? TryDominant(IReadOnlyList<HitFrequencyBar> bars, long hits, decimal roundingTolerance)
-  {
-    MeleeDiFit? best = null;
-    var agreed = new Dictionary<long, int>();
-    // The amount-coverage floor bounds the search to at most 22 bins and two seed omissions.
-    for (var first = 0; first < bars.Count; first++)
-    {
-      for (var second = first; second < bars.Count; second++)
-      {
-        var kept = bars.Count - (first == second ? 1 : 2);
-        if (kept < MinimumObservedLevels || kept > LevelCount
-          || kept * 100 < bars.Count * MinimumAmountCoveragePercent) continue;
-        var subset = new HitFrequencyBar[kept];
-        var index = 0;
-        var seedHits = 0L;
-        for (var i = 0; i < bars.Count; i++)
-        {
-          if (i == first || i == second) continue;
-          subset[index++] = bars[i];
-          seedHits += bars[i].Frequency;
-        }
-        if (TryExact(subset, seedHits, roundingTolerance) is not { } seed) continue;
-        var fit = MatchAll(bars, seed, hits, roundingTolerance);
-        if (fit is null) continue;
-        if (!RegisterLabels(bars, agreed, fit)) return null;
-        if (best is null || fit.HitCount > best.HitCount
-          || (fit.HitCount == best.HitCount && fit.MaximumResidual < best.MaximumResidual)) best = fit;
-      }
-    }
-    return best;
-  }
-
-  private static MeleeDiFit? MatchAll(IReadOnlyList<HitFrequencyBar> bars, MeleeDiFit seed, long totalHits,
-    decimal roundingTolerance)
-  {
-    var levels = new Dictionary<long, int>();
-    var hits = 0L;
-    var residual = 0m;
-    var tolerance = Math.Min(roundingTolerance, seed.Interval / 4);
-    foreach (var bar in bars)
-    {
-      var index = decimal.Round((bar.Amount - seed.FirstAmount) / seed.Interval, 0, MidpointRounding.AwayFromZero);
-      if (index < 0 || index >= LevelCount) continue;
-      var error = Math.Abs(bar.Amount - (seed.FirstAmount + (index * seed.Interval)));
-      if (error > tolerance) continue;
-      levels.Add(bar.Amount, (int)index + 1);
-      hits += bar.Frequency;
-      residual = Math.Max(residual, error);
-    }
-    if (hits < MinimumHits || hits * 100 < totalHits * MinimumHitCoveragePercent
-      || levels.Count * 100 < bars.Count * MinimumAmountCoveragePercent) return null;
-    return new MeleeDiFit(seed.FirstAmount, seed.Interval, residual, hits, totalHits, levels);
-  }
-
-  private static bool RegisterLabels(IReadOnlyList<HitFrequencyBar> bars, Dictionary<long, int> agreed, MeleeDiFit fit)
-  {
-    foreach (var bar in bars)
-    {
-      var level = fit.LevelFor(bar.Amount);
-      if (level == 0) continue;
-      if (agreed.TryGetValue(bar.Amount, out var previous) && previous != level) return false;
-      agreed[bar.Amount] = level;
-    }
-    return true;
   }
 
   private static bool TryCandidate(IReadOnlyList<HitFrequencyBar> bars, int span, int[] indices,
