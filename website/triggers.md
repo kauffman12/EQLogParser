@@ -392,7 +392,7 @@ Uncheck **Dynamic Timer Name** to pin the name instead. The Timer keeps the name
 - **The same message variables.** Both reset messages support captures, previous-line captures, formatting modifiers, `{C}`, `{L}`, and `{TIMER-WARN-TIME-VALUE}`. `{COUNTER}` and `{REPEATED}` use the originating Timer's counts (repeats are grouped by its name); `{LOGTIME}` uses its starting log line. Reaching the reset point does not increment either count. Sound-file paths remain literal, just like other sound actions.
 - **Once per run, read when it fires.** Each run of the Timer announces once. Captures come from the line that started it; custom variables are read after Time To Live expiry at the reset point. Speech and display use the same snapshot, so another Trigger changing a variable while speech waits to play cannot change those queued words.
 - **Needs a Duration greater than zero.** A Trigger with no Timer has no start to count from. Reset points up to 24 hours out are supported; nothing announces after the application closes.
-- `{NULL}` in either field says nothing at all, as elsewhere.
+- Leave either reset message field blank to disable that action. Neither falls back to a Timer Ending message.
 
 **Example — a 15 minute cooldown behind a 6 second cast:**
 

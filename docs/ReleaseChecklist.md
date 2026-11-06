@@ -198,7 +198,7 @@ on Windows; these build but cannot execute on Linux. Check actual audio and over
   its 5-second countdown has finished, then fire it again before the 20-second reset. Only the SECOND firing's reset announces. Repeat while
   the original countdown is still active. `Restart Timer If Same Name` cancels only that name; `Do Nothing` leaves existing resets untouched.
 - [ ] **Nothing configured, nothing pending:** with Reset Duration set and both reset fields blank, the Triggers Log gains no *Timer Reset* line.
-  `{null}` in either field says nothing at all.
+  Leave only one field blank: that action stays silent while the configured action runs, with no fallback to Timer Ending.
 - [ ] **It survives an early end and does not survive the trigger being turned off:** end the Timer early with an End Early Pattern, then wait —
   the reset announcement still arrives at its own stamp. After the countdown has completed, Stop, disable the trigger, or close the log instead:
   the pending announcement must not arrive.
