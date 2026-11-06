@@ -314,7 +314,7 @@ public sealed class HitFreqChartSelectionTest
     app.Resources["EQIconStyle"] ??= new Style(typeof(Image));
     app.Resources["ContentForeground"] ??= Brushes.White;
     app.Resources["EQMenuIconBrush"] ??= Brushes.CornflowerBlue;
-    app.Resources["EQGridTitleHeight"] ??= 36d;
+    app.Resources["EQGridTitleHeight"] ??= new GridLength(36);
     return new HitFreqChart();
   }
 

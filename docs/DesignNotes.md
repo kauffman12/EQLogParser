@@ -8509,6 +8509,24 @@ SfDataGrid) per test, well past the vendor's five-construction counter; if `IsLi
 which is what a clean run looks like for it: `Sta`'s live-thread list is exercised only by a real wedge, so that filter stays
 measured-by-construction until the next Windows hang.
 
+## WPF test windows share a resource host, not a shutdown boundary
+
+`Sta.Run` supplies the process-wide `Application` with `ShutdownMode.OnExplicitShutdown` before a test body runs. Each body
+still has its own STA; this is a resource host, not a substitute for the control's dispatcher. Closing a fixture window must
+not shut down that shared Application: WPF's `Window.ShowHelper` silently returns while `Application.IsShuttingDown`, leaving
+later charts with zero viewports and grids with no Loaded lifecycle. `StaLifecycleTest` pins showing a second window after
+closing the first. Keep the licensing guard in `AssemblyLifecycle`: the host's original dispatcher is still disposable.
+
+A Normal-priority no-op is not a layout barrier: it can run before queued Render/Loaded work. `Sta.FlushDispatcher` pumps a
+bounded frame with a Normal-priority timer; the chart layout helper brackets that pump with `UpdateLayout`. Gesture tests
+require a shown window and a loaded pane, and take the actual presentation source rather than manufacturing an HWND with
+`EnsureHandle` for an unshown window. Assertions on additive selection and modifier ownership remain in force.
+
+Resources are process-wide, so a test must publish the production TYPE, not just a convertible-looking value: `EQGridTitleHeight`
+is a `GridLength`, never a double. A DynamicResource does not perform the string-to-GridLength conversion a XAML literal does.
+After disposal, assert cancellation through retained tokens and pending-action state; never inspect `BlockingCollection.Count`
+on a queue whose owner has disposed it. These fixture contracts build everywhere; their execution still requires Windows.
+
 ## A test host is unlicensed, and Syncfusion says so at construction
 
 Two Windows runs in a row: the second one lost two `Sta.Run` bodies — `TheFirstSnapshotTakesTheBandDownForGood` and

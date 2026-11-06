@@ -5,6 +5,8 @@ using System.Linq;
 using System.Runtime.ExceptionServices;
 using System.Text;
 using System.Threading;
+using System.Windows;
+using System.Windows.Threading;
 
 namespace EQLogParser
 {
@@ -49,6 +51,17 @@ namespace EQLogParser
     private static readonly ConcurrentDictionary<int, Wedge> _wedged = new();
     private static int _nextId;
 
+    // Let Render/Loaded and queued grid work run too; an immediate Normal-priority Invoke can overtake them.
+    internal static void FlushDispatcher()
+    {
+      var frame = new DispatcherFrame();
+      var timer = new DispatcherTimer(DispatcherPriority.Normal) { Interval = TimeSpan.FromMilliseconds(20) };
+      timer.Tick += (_, _) => { timer.Stop(); frame.Continue = false; };
+      timer.Start();
+      Dispatcher.PushFrame(frame);
+      Dispatcher.CurrentDispatcher.Invoke(() => { }, DispatcherPriority.Normal);
+    }
+
     internal static void Run(Action body)
     {
       Exception? failure = null;
@@ -58,6 +71,8 @@ namespace EQLogParser
       {
         try
         {
+          // One process-wide resource host. Closing a test window must not make later Window.Show calls silently do nothing.
+          _ = Application.Current ?? new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
           body();
         }
         catch (Exception ex)

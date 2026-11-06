@@ -4,7 +4,6 @@ using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
-using System.Windows.Threading;
 
 #nullable enable annotations
 
@@ -188,6 +187,8 @@ public sealed class FightTableGroupGestureTest
         {
           var group = groups[gesture % Groups];
           grid.CurrentItem = group[0];
+          CollectionAssert.AreEquivalent(keeps.Select(row => row.Name).ToList(), SelectedNames(table),
+            $"gesture {gesture}: naming the target must not edit the selection");
           RememberRightPress(table, modifiers);
           // A modifier key-down while the right button is held must not turn an additive press into a plain one.
           for (var repeat = 0; repeat < 3; repeat++)
@@ -197,7 +198,13 @@ public sealed class FightTableGroupGestureTest
             { RoutedEvent = System.Windows.Input.Keyboard.PreviewKeyDownEvent, Source = grid });
           }
 
+          Assert.IsTrue(Field<bool>(table, "_rightPressAdds"),
+            $"gesture {gesture}: modifier key-downs must preserve the press's additive mode");
+          CollectionAssert.AreEquivalent(keeps.Select(row => row.Name).ToList(), SelectedNames(table),
+            $"gesture {gesture}: modifier key-downs must not edit the selection");
           Invoke(table, "GridContextMenuOpening", grid, ContextMenuArgs());
+          Assert.IsTrue(Field<bool>(table, "_menuAdds"),
+            $"gesture {gesture}: opening must carry the press's additive mode into the menu");
           // Closing and Click may arrive in either order; neither may change the mode of this menu.
           if (gesture % 2 == 0) Invoke(table, "GridContextMenuClosing", grid, ContextMenuArgs());
           Invoke(table, "SelectGroupClick", new object?[] { null, null });
@@ -287,11 +294,14 @@ public sealed class FightTableGroupGestureTest
           "a keyboard gesture must discard the previous mouse press's additive mode");
     }
 
-    // Show/Flush does not guarantee FromVisual can see the HWND on this test STA. The key event needs
-    // the window's input source even though the routed event itself is raised directly on the grid.
-    private static HwndSource KeyboardSource(Window window) =>
-      HwndSource.FromHwnd(new WindowInteropHelper(window).EnsureHandle())
-      ?? throw new InvalidOperationException("The test window could not create an input source");
+    // An HWND created by EnsureHandle is not proof the window showed or the grid loaded.
+    private static HwndSource KeyboardSource(Window window)
+    {
+      Assert.IsTrue(window.IsVisible && window.Content is FrameworkElement { IsLoaded: true },
+        "The gesture requires a shown window and a loaded grid.");
+      return PresentationSource.FromVisual(window) as HwndSource
+        ?? throw new InvalidOperationException("The shown test window has no input source");
+    }
 
     // ContextMenuEventArgs has NO reachable constructor (not even non-public), so it is allocated without running
     // one. That is safe here because the opening handler reads exactly one thing off it - OriginalSource, a plain
@@ -324,6 +334,10 @@ public sealed class FightTableGroupGestureTest
         Flush();
     }
 
+    private static T Field<T>(FightTable table, string name) =>
+      typeof(FightTable).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)?.GetValue(table) is T value
+        ? value : throw new InvalidOperationException($"Missing fight-table field {name}");
+
     private static void Invoke(FightTable table, string method, params object?[] args)
     {
         typeof(FightTable).GetMethod(method, BindingFlags.Instance | BindingFlags.NonPublic)!
@@ -338,7 +352,7 @@ public sealed class FightTableGroupGestureTest
         .Where(r => !r.IsDivider && r.Fight is not null)
         .Select(r => r.Name).OrderBy(n => n, StringComparer.Ordinal).ToList();
 
-    private static void Flush() => Dispatcher.CurrentDispatcher.Invoke(new Action(() => { }), DispatcherPriority.Normal);
+    private static void Flush() => Sta.FlushDispatcher();
 
     // Five groups of ten: two-second gaps inside a group, a half-hour gap between groups (the divider threshold is 120 s).
     private static DerivedSnapshot Snapshot()

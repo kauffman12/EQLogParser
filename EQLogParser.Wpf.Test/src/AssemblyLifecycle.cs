@@ -30,7 +30,7 @@ namespace EQLogParser
       // such a run the FIRST SfDataGrid construction in the process (SfDataGrid.ctor -> LicenseHelper.ValidateLicense,
       // decompiled from Syncfusion.Shared.WPF 34.2.8) builds the "Syncfusion(R) License" message and calls
       // LicenseMessage.DisplayMessage, which does a SYNCHRONOUS Application.Current.Dispatcher.Invoke. The test-host's
-      // Application is created by EnsureAppResources on a disposable STA thread that dies without pumping, so that
+      // Application is created by Sta.Run on a disposable STA thread that dies without pumping, so that
       // Invoke never returns: the body wedges inside SfDataGrid.ctor for the full 60 s Sta budget, and at the sixth
       // construction (a process counter past five) the over-limit shouldQuit branch re-enters the same display
       // (measured: exactly those two shapes hung). The flag's own meaning is "the host showed/handles the message

@@ -2,7 +2,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Threading;
 using EQLogParser;
 
 namespace EQLogParser.Wpf.Test;
@@ -228,12 +227,7 @@ public sealed class BarChartViewTest
   internal static void Layout(FrameworkElement view)
   {
     view.UpdateLayout();
-    var frame = new DispatcherFrame();
-    var timer = new DispatcherTimer(DispatcherPriority.Normal) { Interval = TimeSpan.FromMilliseconds(20) };
-    timer.Tick += (_, _) => { timer.Stop(); frame.Continue = false; };
-    timer.Start();
-    Dispatcher.PushFrame(frame);
-    Dispatcher.CurrentDispatcher.Invoke(() => { }, DispatcherPriority.Normal);
+    Sta.FlushDispatcher();
     view.UpdateLayout();
   }
 
@@ -254,6 +248,10 @@ public sealed class BarChartViewTest
         window.Content = view;
         window.Show();
         Layout(view);
+        Assert.IsTrue(window.IsVisible && PresentationSource.FromVisual(view) != null,
+          "The chart must be connected to a shown window before testing its viewport.");
+        Assert.IsTrue(view.scroll.ViewportWidth > 0 && view.scroll.ViewportHeight > 0,
+          $"The shown chart has no viewport: {view.scroll.ViewportWidth} x {view.scroll.ViewportHeight}.");
         body(view);
       }
       finally

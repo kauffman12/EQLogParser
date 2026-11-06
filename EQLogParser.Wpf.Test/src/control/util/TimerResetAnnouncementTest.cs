@@ -81,7 +81,8 @@ public partial class TimerResetAnnouncementTest
 
     Assert.IsTrue(token.IsCancellationRequested);
     Assert.AreEqual(0, fixture.PendingCount);
-    Assert.AreEqual(0, fixture.Speech.Count);
+    // Disposal owns and closes the queue; the cancellation contract above remains inspectable afterwards, its Count does not.
+    if (action != "dispose") Assert.AreEqual(0, fixture.Speech.Count);
   }
 
   [TestMethod]
