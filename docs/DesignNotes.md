@@ -19539,8 +19539,13 @@ cooldown bar. The worker asks `TimerLifecycle.RemainingDelayMs` when it actually
 an overdue action runs without another delay. No arriving log line is required.
 
 `TriggerProcessor.TimerReset.cs` delivers through the existing speech collection and text overlays and logs `Timer Reset`. Captures belong to
-the starting line; custom variables are read live, after TTL expiry. The actions require a positive Reset Duration and at least one nonempty
-reset field. Timer Reset rows retain the Reset Duration visibility rule: Countdown and Progress only.
+the starting line. After TTL expiry, one case-insensitive reset-time variable snapshot feeds both display and queued speech: later changes or
+expiry cannot rewrite speech waiting in the audio lane. Both use the existing capture/line/custom-variable resolvers and formatting modifiers;
+character and warning-time codes use normal wrapper preprocessing. `{counter}` and `{repeated}` take the originating timer's counts (repeats
+are keyed by the pre-variable timer-name template); `{logtime}` uses its starting log line. Reset-only counter/repeated references enable the
+ordinary firing-time counting paths; the callback never increments those counts. Sound-file references stay literal, like other sound actions.
+The actions require a positive Reset Duration and at least one nonempty reset field. Timer Reset rows retain the Reset Duration visibility
+rule: Countdown and Progress only.
 
 **Pending resets have their own list and cancellation source, independent of `_timerLists`.** Normal and early countdown completion remove
 the countdown row but leave the reset armed. Keeping only its token on that removed row loses the cancellation door. `PrepareTimerStartAsync`
@@ -19558,5 +19563,7 @@ announcement. Existing timer-start eligibility is unchanged: a positive configur
 
 `TimerLifecycleTest` pins remaining-delay arithmetic headlessly. Windows-only `TimerResetAnnouncementTest` drives the processor's scheduler,
 restart preparation, Stop, disable and disposal after countdown retirement at the record seam; it covers re-arming, name scoping, nonrestart
-options, overdue delivery and a due action queued behind Stop. `TriggerUtilCopyTest` pins the stored fields and sound/text editor fold.
+options, overdue delivery and a due action queued behind Stop. Its `TimerResetVariablesTest.cs` partial drives queued speech through the real
+audio handler and the display-preparation seam, including captures/modifiers, preprocessing, snapshot isolation, TTL expiry, start-time codes,
+reset-only counting, literal sounds and null/unset handling. `TriggerUtilCopyTest` pins the stored fields and sound/text editor fold.
 Actual speech/text-overlay presentation remains a Windows check in `docs/ReleaseChecklist.md`.

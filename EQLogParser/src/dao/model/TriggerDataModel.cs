@@ -25,6 +25,8 @@ namespace EQLogParser
   internal class Speak
   {
     public bool IsPrimary { get; init; }
+    public bool IsTimerReset { get; init; }
+    public long RepeatedCount { get; init; } = -1;
     public TriggerWrapper Wrapper { get; init; }
     public string TtsOrSound { get; init; }
     public bool IsSound { get; init; }

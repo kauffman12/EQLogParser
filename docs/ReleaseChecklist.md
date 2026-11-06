@@ -191,8 +191,10 @@ on Windows; these build but cannot execute on Linux. Check actual audio and over
   *Timer Reset → Sound/Text to Speak* and a line in *Text to Display*. At 5 seconds the Timer ends (overlay row goes, *Timer End* in the Triggers
   Log); nothing is announced. At 20 seconds the phrase is spoken, the text lands on the trigger's Text Overlay, and the Triggers Log gains one
   *Timer Reset* line — from a Timer that is no longer anywhere on screen.
-- [ ] **Variables read at the reset point:** with `{s1}` and a `{variable}` in the reset text, the capture from the line that started the Timer
-  still substitutes, and a variable another Trigger rewrote in the meantime reads its new value.
+- [ ] **Variables read at the reset point:** put captures (including previous-line captures), `{C}`, `{L}`, formatting modifiers and custom
+  variables in BOTH reset messages. Starting-line captures still substitute, variables changed before reset read their new values, and expired
+  variables do not resurrect. Speech queued behind other audio retains the same reset-time values as the display. Check `{COUNTER}` and
+  `{REPEATED}` when used only in reset fields, and `{LOGTIME}`: counts and log time belong to the timer's start, not a later trigger firing.
 - [ ] **Restart takes it back even after countdown completion:** same trigger with **If Triggered Again** = `Restart Timer`. Fire it, wait until
   its 5-second countdown has finished, then fire it again before the 20-second reset. Only the SECOND firing's reset announces. Repeat while
   the original countdown is still active. `Restart Timer If Same Name` cancels only that name; `Do Nothing` leaves existing resets untouched.

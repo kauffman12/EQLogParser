@@ -747,7 +747,8 @@ namespace EQLogParser
       // GINA {counter} that is based on trigger firing regardless of whether the
       // speak, text, or timer names are unique
       var counterCount = -1L;
-      if (wrapper.HasCounterSpeak || wrapper.HasCounterText || wrapper.HasCounterTimer)
+      if (wrapper.HasCounterSpeak || wrapper.HasCounterText || wrapper.HasCounterTimer
+        || UsesResetCode(wrapper, CounterCode))
       {
         counterCount = UpdateRepeatedTimes(_counterTimes, wrapper, "trigger-count", beginTicks);
       }
@@ -766,7 +767,7 @@ namespace EQLogParser
       {
         altTimerName = ProcessMatchesText(altTimerName, previousMatches);
         altTimerName = ProcessLineCode(altTimerName, lineData.Action);
-        if (wrapper.HasRepeatedTimer)
+        if (wrapper.HasRepeatedTimer || UsesResetCode(wrapper, RepeatedCode))
         {
           UpdateRepeatedTimes(_repeatedTimerTimes, wrapper, altTimerName, beginTicks);
         }
@@ -976,12 +977,13 @@ namespace EQLogParser
         : 0;
       newTimerData.ResetDurationTicks = newTimerData.ResetTicks - beginTicks;
 
-      if (wrapper.HasRepeatedTimer)
+      if (wrapper.HasRepeatedTimer || UsesResetCode(wrapper, RepeatedCode))
       {
-        newTimerData.RepeatedCount = GetRepeatedCount(_repeatedTimerTimes, wrapper, displayName);
+        // The repeat store is keyed before custom variables are substituted into the timer name.
+        newTimerData.RepeatedCount = GetRepeatedCount(_repeatedTimerTimes, wrapper, timerNameTemplate ?? displayName);
       }
 
-      if (wrapper.HasCounterTimer)
+      if (wrapper.HasCounterTimer || UsesResetCode(wrapper, CounterCode))
       {
         newTimerData.CounterCount = GetRepeatedCount(_counterTimes, wrapper, "trigger-count");
       }
@@ -1277,6 +1279,11 @@ namespace EQLogParser
             {
               tts = tts.Replace(LogTimeCode, DateUtil.FormatDotNetTimeSeconds(speak.BeginTime), StringComparison.OrdinalIgnoreCase);
             }
+          }
+
+          if (speak.IsTimerReset)
+          {
+            tts = ProcessTimerCodes(tts, speak.CounterCount, speak.RepeatedCount, speak.BeginTime);
           }
 
           if (!string.IsNullOrEmpty(tts) && lexicon != null)

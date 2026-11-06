@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -47,6 +48,28 @@ namespace EQLogParser
       _ = Task.Run(() => RunTimerResetAsync(wrapper, data, lineData, matches, token));
     }
 
+    private static bool UsesResetCode(TriggerWrapper wrapper, string code) =>
+      wrapper.TriggerData.ResetDurationSeconds > 0
+      && (wrapper.ModifiedResetSpeak?.Contains(code, StringComparison.OrdinalIgnoreCase) == true
+        || wrapper.ModifiedResetDisplay?.Contains(code, StringComparison.OrdinalIgnoreCase) == true);
+
+    private static string ProcessTimerCodes(string text, long counter, long repeated, double beginTime)
+    {
+      if (counter >= 0)
+        text = text.Replace(CounterCode, counter.ToString(CultureInfo.InvariantCulture), StringComparison.OrdinalIgnoreCase);
+      if (repeated >= 0)
+        text = text.Replace(RepeatedCode, repeated.ToString(CultureInfo.InvariantCulture), StringComparison.OrdinalIgnoreCase);
+      if (beginTime > 0)
+        text = text.Replace(LogTimeCode, DateUtil.FormatDotNetTimeSeconds(beginTime), StringComparison.OrdinalIgnoreCase);
+      return text;
+    }
+
+    private static string PrepareTimerResetDisplay(TriggerWrapper wrapper, TimerData data, LineData lineData,
+      Dictionary<string, string> matches, IReadOnlyDictionary<string, string> variables) =>
+      ProcessDisplayText(wrapper.ModifiedResetDisplay, lineData.Action, matches,
+        data.OriginalMatches, data.PreviousMatches, variables) is { } text
+        ? ProcessTimerCodes(text, data.CounterCount, data.RepeatedCount, lineData.BeginTime) : null;
+
     private async Task RunTimerResetAsync(TriggerWrapper wrapper, TimerData data, LineData lineData,
       Dictionary<string, string> matches, CancellationToken token)
     {
@@ -63,6 +86,10 @@ namespace EQLogParser
             data.ResetNotified = true;
           }
 
+          // One reset-time snapshot for display and queued speech; later TTL expiry or another trigger cannot change its words.
+          ExpireVariablesIfNeeded();
+          var variables = new Dictionary<string, string>(_variables, StringComparer.OrdinalIgnoreCase);
+
           // Serialize delivery with restart/Stop/disable, not just the delayed wake-up.
           var trigger = wrapper.TriggerData;
           var tts = TriggerUtil.GetFromDecodedSoundOrText(trigger.ResetSoundToPlay, wrapper.ModifiedResetSpeak, out var isSound);
@@ -73,13 +100,18 @@ namespace EQLogParser
             {
               _speakCollection.Add(new Speak
               {
+                IsTimerReset = true,
                 Wrapper = wrapper,
                 TtsOrSound = tts,
                 IsSound = isSound,
                 Matches = matches,
                 Previous = data.PreviousMatches,
                 Original = data.OriginalMatches,
-                Action = lineData.Action
+                Action = lineData.Action,
+                Variables = isSound ? null : variables,
+                CounterCount = data.CounterCount,
+                RepeatedCount = data.RepeatedCount,
+                BeginTime = lineData.BeginTime
               });
             }
             catch (InvalidOperationException)
@@ -88,9 +120,7 @@ namespace EQLogParser
             }
           }
 
-          ExpireVariablesIfNeeded();
-          if (!_isDisposed && ProcessDisplayText(wrapper.ModifiedResetDisplay, lineData.Action, matches,
-            data.OriginalMatches, data.PreviousMatches, _variables) is { } text)
+          if (!_isDisposed && PrepareTimerResetDisplay(wrapper, data, lineData, matches, variables) is { } text)
           {
             await AddTextAsync(trigger, text);
           }

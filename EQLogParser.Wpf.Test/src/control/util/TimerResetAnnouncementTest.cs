@@ -7,7 +7,7 @@ using System.Reflection;
 namespace EQLogParser.Wpf.Test;
 
 [TestClass]
-public class TimerResetAnnouncementTest
+public partial class TimerResetAnnouncementTest
 {
   // Exercise the processor's scheduling, restart and stop paths with the completed row absent from _timerLists.
   // Countdown retirement is performed at its record seam so these tests need neither a dispatcher nor overlay windows.
@@ -150,6 +150,7 @@ public class TimerResetAnnouncementTest
   private sealed class ProcessorFixture : IAsyncDisposable
   {
     internal readonly TriggerProcessor Processor;
+    internal readonly Mock<IAudioManager> Audio = new();
     internal TriggerWrapper Wrapper;
     internal readonly SemaphoreSlim Gate;
     internal readonly BlockingCollection<Speak> Speech;
@@ -162,7 +163,7 @@ public class TimerResetAnnouncementTest
     {
       var id = Guid.NewGuid().ToString("N");
       Processor = new(id, id, id, "", 0, 0, null, null, null, null,
-        new Mock<IAudioManager>().Object, _store);
+        Audio.Object, _store);
       Wrapper = new TriggerWrapper
       {
         Id = "trigger",
@@ -182,18 +183,24 @@ public class TimerResetAnnouncementTest
       get { lock (_pending) return _pending.Count; }
     }
 
-    internal TimerData StartAndFinishCountdown(string action, double resetSeconds, long? begin = null)
+    internal TimerData StartAndFinishCountdown(string action, double resetSeconds, long? begin = null,
+      Dictionary<string, string>? matches = null, Dictionary<string, string>? previous = null,
+      Dictionary<string, string>? original = null, LineData? line = null, long counter = -1, long repeated = -1)
     {
       Wrapper.TriggerData.ResetDurationSeconds = resetSeconds;
       var data = new TimerData
       {
         TriggerId = Wrapper.Id,
         DisplayName = "timer",
+        OriginalMatches = original ?? matches,
+        PreviousMatches = previous,
+        CounterCount = counter,
+        RepeatedCount = repeated,
         ResetTicks = TimerLifecycle.ResetTicks(begin ?? DateTime.UtcNow.Ticks, resetSeconds),
         CancelSource = new CancellationTokenSource()
       };
       lock (_countdowns) _countdowns.Add(data);
-      Invoke(Processor, "ScheduleTimerReset", Wrapper, data, new LineData { Action = action }, null);
+      Invoke(Processor, "ScheduleTimerReset", Wrapper, data, line ?? new LineData { Action = action }, matches);
       lock (_countdowns)
       {
         TimerDataUtil.CleanupTimerData(data);
