@@ -166,18 +166,17 @@ These checks require a realized grid; the automated pane tests exercise bound da
 Section order, section membership and the three shortened labels need a real PropertyGrid on Windows.
 DesignNotes → "Trigger property section ordering".
 
-- [ ] **Numbered order is the order:** select a trigger with a `Countdown` or `Progress` timer. The Timer tab's headers read, top to bottom,
-  *1. Basic Timer Options*, *2. Timer Ending*, *3. Timer Ending Early*, *4. Timer Warning*, *5. Timer Reset*.
-  Trigger Properties reads *1. Basic Trigger Options*, *2. Data Sharing*, *3. Overlay Customization*. Overlay-only categories do not appear
-  among these headers; editing an overlay shows flat property lists without category headers.
+- [ ] **Alphabetical categories without numbers:** select a trigger with a `Countdown` or `Progress` timer. The Timer tab's headers read,
+  top to bottom, *Basic Timer Options*, *Timer Ending*, *Timer Ending Early*, *Timer Reset*, *Timer Warning*.
+  Trigger Properties reads *Basic Trigger Options*, *Data Sharing*, *Overlay Customization*. Overlay-only categories do not appear among
+  these headers; editing an overlay shows flat property lists without category headers.
 - [ ] **Rows stayed put when the sections moved:** Sound/Text to Speak, Text to Display and Clear Variables sit under *Timer Ending* with no
   "End" on their labels, and each still edits the value it always did (speak at Timer end, display text at Timer end, cleared variables).
-  *Timer Reset* holds Reset Duration (hh:mm:ss), Sound/Text to Speak and Text to Display, last.
+  *Timer Reset* holds Reset Duration (hh:mm:ss), Sound/Text to Speak and Text to Display.
 - [ ] **Show/hide is what it was:** a `No Timer` trigger shows none of the timer sections; `Fast Countdown` shows Duration (0.2s -> 2.0s) and not
   Duration (hh:mm:ss); `Looping` shows Times to Loop; all three *Timer Reset* rows appear for `Countdown` and `Progress` only, and disappear
-  together. Editing an overlay shows no
-  *Timer Ending* rows at all. Sections hidden for a timer type leave no empty header and keep their assigned numbers; `Fast Countdown`
-  therefore shows sections 1 and 2, and `Looping` shows sections 1 through 4.
+  together. Editing an overlay shows no *Timer Ending* rows at all. Hidden sections leave no empty header; `Fast Countdown` shows only
+  *Basic Timer Options* and *Timer Ending*, while `Looping` also shows *Timer Ending Early* and *Timer Warning*.
 - [ ] **The webhook jump still lands:** trigger a webhook failure, open its error. The trigger's properties come up on the Data Sharing section,
   expanded, with the webhook field selected.
 

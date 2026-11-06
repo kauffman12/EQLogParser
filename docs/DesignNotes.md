@@ -19519,9 +19519,8 @@ on Windows in `docs/ReleaseChecklist.md`.
 ## Trigger property section ordering
 
 `TriggersView` uses hand-declared property grids with `SortDirection=Ascending`: grouped headers sort by category text, while rows within a
-section retain declaration order. Trigger sections carry numeric prefixes, restarting at 1 on each tab. Overlay-only categories remain
-unnumbered: editing an overlay disables grouping, so those categories never consume a visible trigger section number. Timer types may hide
-sections without renumbering the survivors. Prefixes sort as text, not integers; reaching ten sections would require a consistent padded format.
+section retain declaration order. Category labels have no numeric prefixes; their alphabetical order is the display order. Editing an overlay
+disables grouping. Timer types may hide sections; a category with no visible rows has no header.
 
 `CategoryName` is presentation; `PropertyName` remains the binding/editor key and must not change for a label cleanup. Keep every row's category
 text consistent, derive `ExpandCategory` arguments from an item, and update descriptions and `website/triggers.md` when a section is renamed.

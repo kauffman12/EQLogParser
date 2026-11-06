@@ -89,8 +89,7 @@ namespace EQLogParser
         if (!_ready || generalPropertyGrid.SelectedObject is not TriggerPropertyModel model
           || model.Node.Id != error.Source.TriggerId) return;
         propertyTabControl.SelectedItem = generalPropertyGridTab;
-        // Numbered category names are the display order (the control sorts sections alphabetically),
-        // so ask an item in the section for its name rather than hard-coding the number here.
+        // Follow the item's category so a label change cannot break this jump.
         generalPropertyGrid.ExpandCategory(triggerTextToShareItem.CategoryName);
         generalPropertyGrid.SelectedPropertyItem = generalPropertyGrid.Properties
           .OfType<PropertyItem>().FirstOrDefault(item => item.Name == "ChatWebhook");

@@ -249,7 +249,7 @@ namespace EQLogParser.Wpf.Test
     }
 
     /*
-     * The Sound/Text to Speak row under "5. Timer Reset" is ONE field on screen over TWO stored fields (a .wav name or a spoken phrase),
+     * The Sound/Text to Speak row under "Timer Reset" is ONE field on screen over TWO stored fields (a .wav name or a spoken phrase),
      * folded by the same helpers as the Timer End and Warning rows. Saving has to fold the editor's string back into that pair, or the row
      * silently erases what it displayed: an editor that reads one shape and writes another loses the sound choice the first time the trigger
      * is saved for any other reason.
