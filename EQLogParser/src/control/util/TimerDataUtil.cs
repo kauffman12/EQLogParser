@@ -51,6 +51,16 @@ namespace EQLogParser
       timerData.Warned = true;
     }
 
+    // Caller owns the processor's pending-reset lock. Normal/early countdown completion must leave this source alone.
+    // docs/DesignNotes.md → "A Timer's reset point: what the bar paints and what speaks at it".
+    internal static void CancelTimerReset(TimerData timerData)
+    {
+      timerData.ResetNotified = true;
+      timerData.ResetSource?.Cancel();
+      timerData.ResetSource?.Dispose();
+      timerData.ResetSource = null;
+    }
+
     // make sure each call is from within lock of TimerList
     internal static async Task CleanupTimersAsync(List<TimerData> timerList, Trigger trigger)
     {

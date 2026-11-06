@@ -1600,6 +1600,7 @@ namespace EQLogParser
         if (!string.IsNullOrEmpty(storedNode.TriggerData.EndSoundToPlay) && !TriggerStorePlatform.SoundExists(storedNode.TriggerData.EndSoundToPlay)) return true;
         if (!string.IsNullOrEmpty(storedNode.TriggerData.EndEarlySoundToPlay) && !TriggerStorePlatform.SoundExists(storedNode.TriggerData.EndEarlySoundToPlay)) return true;
         if (!string.IsNullOrEmpty(storedNode.TriggerData.WarningSoundToPlay) && !TriggerStorePlatform.SoundExists(storedNode.TriggerData.WarningSoundToPlay)) return true;
+        if (!string.IsNullOrEmpty(storedNode.TriggerData.ResetSoundToPlay) && !TriggerStorePlatform.SoundExists(storedNode.TriggerData.ResetSoundToPlay)) return true;
         return false;
       }
 

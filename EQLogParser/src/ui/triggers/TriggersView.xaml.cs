@@ -125,7 +125,7 @@ namespace EQLogParser
       AddEditor<TriggerListsEditor>("TriggerAgainOption", "FontSize", "FontFamily", "FontWeight", "SortBy", "TimerMode",
         "TimerType", "HorizontalAlignment", "VerticalAlignment", "VoiceRate", "Volume");
       AddEditor<WrapTextEditor>("EndEarlyTextToDisplay", "EndTextToDisplay", "TextToDisplay", "TextToShare",
-        "WarningTextToDisplay", "Comments", "OverlayComments", "TextToSendToChat");
+        "WarningTextToDisplay", "ResetTextToDisplay", "Comments", "OverlayComments", "TextToSendToChat");
       _webhookEditor = (WebhookEditor)AddEditorInstance(new WebhookEditor(MainActions.DiscordWebhooks,
         () => (_currentCharacterId, generalPropertyGrid.SelectedObject is TriggerPropertyModel model ? model.Node.Id : null),
         OnEditorSiblingChanged),
@@ -135,6 +135,7 @@ namespace EQLogParser
       AddEditorInstance(new TextSoundEditor(fileList), "EndEarlySoundOrText");
       AddEditorInstance(new TextSoundEditor(fileList), "EndSoundOrText");
       AddEditorInstance(new TextSoundEditor(fileList), "WarningSoundOrText");
+      AddEditorInstance(new TextSoundEditor(fileList), "ResetSoundOrText");
       AddEditorInstance(new RangeEditor(typeof(long), 1, 5), "Priority");
       AddEditorInstance(new RangeEditor(typeof(long), 0, 99999), "EndEarlyRepeatedCount");
       AddEditorInstance(new RangeEditor(typeof(long), 0, 99999), "WarningSeconds");
@@ -613,7 +614,11 @@ namespace EQLogParser
         new { Name = idleBrushItem.CategoryName, IsEnabled = isTimerOverlay && cooldownTimer }
       ]);
 
-      resetDurationItem.Visibility = (timerType > 0 && timerType != 2 && timerType != 4) ? Visibility.Visible : Visibility.Collapsed;
+      // The reset point and everything announced at it stand or fall together: no reset point, nothing to announce at one.
+      var showReset = timerType > 0 && timerType != 2 && timerType != 4;
+      resetDurationItem.Visibility = showReset ? Visibility.Visible : Visibility.Collapsed;
+      resetSoundItem.Visibility = showReset ? Visibility.Visible : Visibility.Collapsed;
+      resetDisplayItem.Visibility = showReset ? Visibility.Visible : Visibility.Collapsed;
       timerDurationItem.Visibility = (timerType > 0 && timerType != 2) ? Visibility.Visible : Visibility.Collapsed;
       timerShortDurationItem.Visibility = timerType == 2 ? Visibility.Visible : Visibility.Collapsed;
       loopingTimerItem.Visibility = timerType == 4 ? Visibility.Visible : Visibility.Collapsed;

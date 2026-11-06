@@ -50,8 +50,12 @@ namespace EQLogParser
     public string CharacterId { get; init; }
     public CancellationTokenSource CancelSource { get; set; }
     public CancellationTokenSource WarningSource { get; set; }
+    // Owned by the processor's pending-reset list, not the countdown list: ending the countdown leaves its reset armed.
+    public CancellationTokenSource ResetSource { get; set; }
     public bool Canceled { get; set; }
     public bool Warned { get; set; }
+    // Accessed under the processor's pending-reset lock.
+    public bool ResetNotified { get; set; }
     public string DisplayName { get; set; }
     public string DisplayNameTemplate { get; set; }
     // When false (a frozen name) the overlay ignores DisplayNameTemplate and keeps the DisplayName
@@ -436,6 +440,7 @@ namespace EQLogParser
     public string EndEarlySoundOrText { get; set; }
     public string EndSoundOrText { get; set; }
     public string WarningSoundOrText { get; set; }
+    public string ResetSoundOrText { get; set; }
     public TriggerNode Node { get; set; }
     public DependencyObject DataContext { get; set; }
   }
@@ -491,6 +496,8 @@ namespace EQLogParser
     public string ModifiedEndDisplay { get; init; }
     public string ModifiedEndEarlyDisplay { get; init; }
     public string ModifiedWarningDisplay { get; init; }
+    public string ModifiedResetSpeak { get; init; }
+    public string ModifiedResetDisplay { get; init; }
     public string ModifiedTimerName { get; init; }
     public bool HasCounterTimer { get; init; }
     public bool HasCounterText { get; init; }

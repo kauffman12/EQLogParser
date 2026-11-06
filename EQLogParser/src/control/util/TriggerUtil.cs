@@ -333,6 +333,9 @@ namespace EQLogParser
         toTrigger.AggregateWebhooks = fromTrigger.AggregateWebhooks;
         toTrigger.TextToSendToChat = TextUtils.Trim(fromTrigger.TextToSendToChat);
         toTrigger.WarningTextToDisplay = TextUtils.Trim(fromTrigger.WarningTextToDisplay);
+        toTrigger.ResetTextToDisplay = TextUtils.Trim(fromTrigger.ResetTextToDisplay);
+        toTrigger.ResetTextToSpeak = TextUtils.Trim(fromTrigger.ResetTextToSpeak);
+        toTrigger.ResetSoundToPlay = TextUtils.Trim(fromTrigger.ResetSoundToPlay);
         toTrigger.EndTextToSpeak = TextUtils.Trim(fromTrigger.EndTextToSpeak);
         toTrigger.EndEarlyTextToSpeak = TextUtils.Trim(fromTrigger.EndEarlyTextToSpeak);
         toTrigger.TextToSpeak = TextUtils.Trim(fromTrigger.TextToSpeak);
@@ -373,6 +376,7 @@ namespace EQLogParser
           toModel.EndEarlySoundOrText = GetFromCodedSoundOrText(toModel.EndEarlySoundToPlay, toModel.EndEarlyTextToSpeak, out _);
           toModel.EndSoundOrText = GetFromCodedSoundOrText(toModel.EndSoundToPlay, toModel.EndTextToSpeak, out _);
           toModel.WarningSoundOrText = GetFromCodedSoundOrText(toModel.WarningSoundToPlay, toModel.WarningTextToSpeak, out _);
+          toModel.ResetSoundOrText = GetFromCodedSoundOrText(toModel.ResetSoundToPlay, toModel.ResetTextToSpeak, out _);
 
           if (fromTrigger.EnableTimer && fromTrigger.TimerType == 0)
           {
@@ -413,6 +417,9 @@ namespace EQLogParser
           MatchSoundFile(fromModel.WarningSoundOrText, out soundFile, out text);
           toTrigger.WarningSoundToPlay = soundFile;
           toTrigger.WarningTextToSpeak = text;
+          MatchSoundFile(fromModel.ResetSoundOrText, out soundFile, out text);
+          toTrigger.ResetSoundToPlay = soundFile;
+          toTrigger.ResetTextToSpeak = text;
           toTrigger.EnableTimer = fromModel.TimerType > 0;
 
           if (fromModel.TimerType > 0 && fromModel.TimerType != 2)

@@ -381,6 +381,25 @@ Uncheck **Dynamic Timer Name** to pin the name instead. The Timer keeps the name
 2. Alternate Timer Name: `Vesagran ({gEpicCaster})`, Duration 3:00.
 3. Uncheck **Dynamic Timer Name**. The variable action still fills the name when this Timer starts, but if another player refreshes the buff halfway through and rewrites `gEpicCaster`, the bar keeps the original caster until it expires.
 
+### Timer Reset: Speak or Display at the Reset Point (Timer Tab)
+
+**Reset Duration** is the total time from when the Timer *starts* until its reset point, Duration included. The two fields beside it — **Sound/Text to Speak** and **Text to Display** — fire at that moment rather than when the countdown ends, so a long cooldown behind a short Timer announces itself when it is actually back.
+
+- **Counted from the start.** Reset Duration `15:00` with Duration `0:10` speaks 15 minutes after the cast, which is 14 minutes 50 seconds after the Timer bar went away.
+- **Independent of the Timer bar.** It announces whether or not the countdown has finished and whether or not any Timer overlay is open. Text goes to the Text Overlays assigned to the Trigger, exactly like *Timer Ending → Text to Display*.
+- **Restarting re-arms it.** With **If Triggered Again** set to `Restart Timer`, the pending announcement is taken back even if the original countdown has already ended. The new run holds one for its own Reset Duration, measured from the new start. `Restart Timer If Same Name` takes back only that name's pending announcements. The `Do Nothing` options leave existing announcements alone.
+- **Stop and disable cancel it.** Stop, disabling/removing the Trigger, or closing the log cancels pending announcements even after their countdown bars have gone.
+- **Once per run, read when it fires.** Each run of the Timer announces once. Captures like `{s1}` come from the line that started it; custom variables are read at the moment of the announcement, so a value another Trigger changed in the meantime reads as its new value.
+- **Needs a Duration greater than zero.** A Trigger with no Timer has no start to count from. Reset points up to 24 hours out are supported; nothing announces after the application closes.
+- `{NULL}` in either field says nothing at all, as elsewhere.
+
+**Example — a 15 minute cooldown behind a 6 second cast:**
+
+1. Pattern `^You begin casting Reaffirm`, Timer type **Countdown**, Duration `0:06`.
+2. *Timer Reset* → Reset Duration: `15:00`, Sound/Text to Speak: `Reaffirm is ready`, Text to Display: `Reaffirm ready`.
+
+The bar counts the 6 second cast, the Triggers Log records *Timer End* at 6 seconds, and the announcement arrives at 15 minutes — from a Timer that is long gone off the screen.
+
 ---
 
 ## Match Variables Field

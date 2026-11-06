@@ -40,6 +40,7 @@ namespace EQLogParser
     private readonly ConcurrentDictionary<string, bool> _requiredOverlays = [];
 
     private readonly ConcurrentDictionary<string, List<TimerData>> _timerLists = [];
+    private readonly List<TimerData> _pendingTimerResets = [];
     private readonly BlockingCollection<TriggerLogItem> _triggerLogCollection = [];
     private readonly BlockingCollection<LineData> _chatCollection = [];
     private readonly BlockingCollection<Speak> _speakCollection = [];
@@ -141,6 +142,7 @@ namespace EQLogParser
         // A trigger already executing may have enqueued after the immediate clear, before releasing this gate.
         CancelPendingWebhooks(remove);
         if (_isDisposed) return;
+        CancelTimerResets();
         _audioManager.StopAudio(CurrentCharacterId, remove);
 
         foreach (var kv in _timerLists)
@@ -859,23 +861,23 @@ namespace EQLogParser
       }
     }
 
-    private async Task StartTimerAsync(TriggerWrapper wrapper, string displayName, long beginTicks, double dynamicDuration, LineData lineData,
-      Dictionary<string, string> matches, Dictionary<string, string> previousMatches, int loopCount = 0, string timerNameTemplate = null)
+    private async Task<bool> PrepareTimerStartAsync(TriggerWrapper wrapper, string displayName)
     {
       var trigger = wrapper.TriggerData;
       var timerList = GetTimerList(wrapper);
-
       switch (trigger.TriggerAgainOption)
       {
         // Restart Timer Option so clear out everything
         case 1:
           {
+            CancelTimerResets(wrapper.Id);
             await TimerDataUtil.CleanupTimersAsync(timerList, wrapper.TriggerData);
           }
           break;
         // Restart Timer only if it is already running
         case 2:
           {
+            CancelTimerResets(wrapper.Id, displayName);
             TimerData removed = null;
             lock (timerList)
             {
@@ -901,7 +903,7 @@ namespace EQLogParser
             {
               if (timerList.Count != 0)
               {
-                return;
+                return false;
               }
             }
           }
@@ -913,13 +915,22 @@ namespace EQLogParser
             {
               if (TimerDataUtil.FindTimerDataByDisplayName(timerList, displayName) > -1)
               {
-                return;
+                return false;
               }
             }
           }
           break;
       }
 
+      return true;
+    }
+
+    private async Task StartTimerAsync(TriggerWrapper wrapper, string displayName, long beginTicks, double dynamicDuration, LineData lineData,
+      Dictionary<string, string> matches, Dictionary<string, string> previousMatches, int loopCount = 0, string timerNameTemplate = null)
+    {
+      if (!await PrepareTimerStartAsync(wrapper, displayName)) return;
+      var trigger = wrapper.TriggerData;
+      var timerList = GetTimerList(wrapper);
       var newTimerData = new TimerData
       {
         ActiveColor = _characterActiveColor ?? trigger.ActiveColor,
@@ -1112,6 +1123,7 @@ namespace EQLogParser
       {
         timerList.Add(newTimerData);
       }
+      ScheduleTimerReset(wrapper, newTimerData, lineData, matches);
 
       /*
        * Ask an overlay to show a countdown only when there is one. A row with no length cannot be drawn as "nothing" — FormatTicks answers 00:00 for zero as it
@@ -1340,6 +1352,8 @@ namespace EQLogParser
               ModifiedShare = PreProcessCodes(trigger.TextToShare, trigger),
               ModifiedSendToChat = modifiedSendToChat,
               ModifiedWarningDisplay = PreProcessCodes(trigger.WarningTextToDisplay, trigger),
+              ModifiedResetSpeak = PreProcessCodes(trigger.ResetTextToSpeak, trigger),
+              ModifiedResetDisplay = PreProcessCodes(trigger.ResetTextToDisplay, trigger),
               ModifiedEndDisplay = PreProcessCodes(trigger.EndTextToDisplay, trigger),
               ModifiedEndEarlyDisplay = PreProcessCodes(trigger.EndEarlyTextToDisplay, trigger),
               ModifiedTimerName = string.IsNullOrEmpty(modifiedTimerName) ? "" : modifiedTimerName,
@@ -1945,11 +1959,15 @@ namespace EQLogParser
       {
         foreach (var old in _activeTriggersById.Values)
         {
-          // if timerlist exists and the trigger is no longer active then cleanup
-          if (old.Id != null && _timerLists.TryGetValue(old.Id, out var timerList) && !activeTriggersById.ContainsKey(old.Id))
+          // A disabled trigger may still owe resets after every countdown has finished.
+          if (old.Id != null && !activeTriggersById.ContainsKey(old.Id))
           {
-            await TimerDataUtil.CleanupTimersAsync(timerList, old.TriggerData);
-            _timerLists.TryRemove(old.Id, out _);
+            CancelTimerResets(old.Id);
+            if (_timerLists.TryGetValue(old.Id, out var timerList))
+            {
+              await TimerDataUtil.CleanupTimersAsync(timerList, old.TriggerData);
+              _timerLists.TryRemove(old.Id, out _);
+            }
 
             // purge repeated counters for this trigger id
             lock (_repeatedLock)
@@ -1998,6 +2016,7 @@ namespace EQLogParser
       if (_isDisposed) return;
       _isDisposed = true;
       _ready = false;
+      CancelTimerResets();
 
       await StopTriggersAsync(true).ConfigureAwait(false);
 

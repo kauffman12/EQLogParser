@@ -172,13 +172,35 @@ DesignNotes → "Trigger property section ordering".
   among these headers; editing an overlay shows flat property lists without category headers.
 - [ ] **Rows stayed put when the sections moved:** Sound/Text to Speak, Text to Display and Clear Variables sit under *Timer Ending* with no
   "End" on their labels, and each still edits the value it always did (speak at Timer end, display text at Timer end, cleared variables).
-  Reset Duration sits alone under *Timer Reset*, last.
+  *Timer Reset* holds Reset Duration (hh:mm:ss), Sound/Text to Speak and Text to Display, last.
 - [ ] **Show/hide is what it was:** a `No Timer` trigger shows none of the timer sections; `Fast Countdown` shows Duration (0.2s -> 2.0s) and not
-  Duration (hh:mm:ss); `Looping` shows Times to Loop; *Reset Duration* appears for `Countdown` and `Progress` only. Editing an overlay shows no
+  Duration (hh:mm:ss); `Looping` shows Times to Loop; all three *Timer Reset* rows appear for `Countdown` and `Progress` only, and disappear
+  together. Editing an overlay shows no
   *Timer Ending* rows at all. Sections hidden for a timer type leave no empty header and keep their assigned numbers; `Fast Countdown`
   therefore shows sections 1 and 2, and `Looping` shows sections 1 through 4.
 - [ ] **The webhook jump still lands:** trigger a webhook failure, open its error. The trigger's properties come up on the Data Sharing section,
   expanded, with the webhook field selected.
+
+## Timer reset announcements on Windows
+
+DesignNotes → "A Timer's reset point: what the bar paints and what speaks at it". Run `TimerResetAnnouncementTest` and `TriggerUtilCopyTest`
+on Windows; these build but cannot execute on Linux. Check actual audio and overlay presentation live using a short Reset Duration
+(say 00:00:20) rather than a real cooldown.
+
+- [ ] **It speaks at the reset point, not at the end of the Timer:** a `Countdown` Timer with Duration 0:0:5, Reset Duration 0:0:20, a phrase in
+  *Timer Reset → Sound/Text to Speak* and a line in *Text to Display*. At 5 seconds the Timer ends (overlay row goes, *Timer End* in the Triggers
+  Log); nothing is announced. At 20 seconds the phrase is spoken, the text lands on the trigger's Text Overlay, and the Triggers Log gains one
+  *Timer Reset* line — from a Timer that is no longer anywhere on screen.
+- [ ] **Variables read at the reset point:** with `{s1}` and a `{variable}` in the reset text, the capture from the line that started the Timer
+  still substitutes, and a variable another Trigger rewrote in the meantime reads its new value.
+- [ ] **Restart takes it back even after countdown completion:** same trigger with **If Triggered Again** = `Restart Timer`. Fire it, wait until
+  its 5-second countdown has finished, then fire it again before the 20-second reset. Only the SECOND firing's reset announces. Repeat while
+  the original countdown is still active. `Restart Timer If Same Name` cancels only that name; `Do Nothing` leaves existing resets untouched.
+- [ ] **Nothing configured, nothing pending:** with Reset Duration set and both reset fields blank, the Triggers Log gains no *Timer Reset* line.
+  `{null}` in either field says nothing at all.
+- [ ] **It survives an early end and does not survive the trigger being turned off:** end the Timer early with an End Early Pattern, then wait —
+  the reset announcement still arrives at its own stamp. After the countdown has completed, Stop, disable the trigger, or close the log instead:
+  the pending announcement must not arrive.
 
 ## Discord webhook checks on Windows
 

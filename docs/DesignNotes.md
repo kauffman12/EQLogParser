@@ -19527,7 +19527,36 @@ sections without renumbering the survivors. Prefixes sort as text, not integers;
 text consistent, derive `ExpandCategory` arguments from an item, and update descriptions and `website/triggers.md` when a section is renamed.
 `PropertyGridUtil.EnableCategories` sets every row in a matched category; an unmatched category is left untouched. A moved row therefore needs
 its new category covered by that gate or explicit per-row visibility. Timer Ending shares Basic Timer Options' trigger-with-timer condition;
-Reset Duration retains its per-row timer-type condition. A category with no visible rows has no header.
+the three Timer Reset rows share one per-row timer-type condition (`showReset` in `EnableCategories`). A category with no visible rows has no header.
 
-The Triggers Log's event labels (`Initial Trigger`, `Timer End`, `Timer Warning`, `Timer End Early`) describe events, not property categories.
-They need not mirror section names. These are Triggers Log entries, not Error Log messages. Release notes likewise retain historical UI words.
+The Triggers Log's event labels (`Initial Trigger`, `Timer End`, `Timer Warning`, `Timer End Early`, `Timer Reset`) describe events, not property
+categories. They need not mirror section names. These are Triggers Log entries, not Error Log messages. Release notes likewise retain historical UI words.
+
+## A Timer's reset point: what the bar paints and what speaks at it
+
+`ResetDurationSeconds` counts from the Timer's start, Duration included. Reset actions use the same `TimerData.ResetTicks` deadline as the
+cooldown bar. The worker asks `TimerLifecycle.RemainingDelayMs` when it actually starts, so queue/setup time is not added to the cooldown;
+an overdue action runs without another delay. No arriving log line is required.
+
+`TriggerProcessor.TimerReset.cs` delivers through the existing speech collection and text overlays and logs `Timer Reset`. Captures belong to
+the starting line; custom variables are read live, after TTL expiry. The actions require a positive Reset Duration and at least one nonempty
+reset field. Timer Reset rows retain the Reset Duration visibility rule: Countdown and Progress only.
+
+**Pending resets have their own list and cancellation source, independent of `_timerLists`.** Normal and early countdown completion remove
+the countdown row but leave the reset armed. Keeping only its token on that removed row loses the cancellation door. `PrepareTimerStartAsync`
+cancels pending resets for the trigger on Restart Timer, or for the matching name on Restart Timer If Same Name, even after the countdown
+ended; a new timer schedules its own deadline. Additional Timer and Do Nothing options leave existing reset actions alone. Pending resets do
+not count as active countdowns for those options.
+
+Stop, trigger disable/removal and disposal cancel pending resets independently of countdown membership. Delivery takes the active-trigger
+semaphore, shared with restart/Stop/disable, before claiming the action under the pending-reset lock. Disposal cancels directly under that
+lock rather than waiting for the semaphore. `ResetNotified` guards the wake-up; completion, cancellation and failure all release the source
+and remove the pending entry. Never cancel the reset source from `CleanupTimerData`, which also runs at normal countdown completion.
+
+The reset ceiling is `TimerLifecycle.MaxDurationSeconds` (one day), matching the bar. Closing the session cancels, never persists, a pending
+announcement. Existing timer-start eligibility is unchanged: a positive configured Duration or a supported `{TS}` capture is needed.
+
+`TimerLifecycleTest` pins remaining-delay arithmetic headlessly. Windows-only `TimerResetAnnouncementTest` drives the processor's scheduler,
+restart preparation, Stop, disable and disposal after countdown retirement at the record seam; it covers re-arming, name scoping, nonrestart
+options, overdue delivery and a due action queued behind Stop. `TriggerUtilCopyTest` pins the stored fields and sound/text editor fold.
+Actual speech/text-overlay presentation remains a Windows check in `docs/ReleaseChecklist.md`.

@@ -127,6 +127,12 @@ namespace EQLogParser
     public List<string> SelectedOverlays { get; set; } = [];
     public double ResetDurationSeconds { get; set; }
     public long WarningSeconds { get; set; }
+    // Spoken and displayed when ResetDurationSeconds elapses, which counts from the moment the Timer started rather than from its
+    // end. That reset point normally lands well after the countdown is over, which is why these are their own fields rather than
+    // more End* rows: see the reset announcement in TriggerProcessor.StartTimerAsync.
+    public string ResetTextToDisplay { get; set; }
+    public string ResetTextToSpeak { get; set; }
+    public string ResetSoundToPlay { get; set; }
     public string EndEarlyTextToDisplay { get; set; }
     public string EndTextToDisplay { get; set; }
     public string TextToDisplay { get; set; }

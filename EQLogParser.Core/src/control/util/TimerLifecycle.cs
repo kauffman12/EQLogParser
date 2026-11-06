@@ -84,6 +84,10 @@ namespace EQLogParser
       return ms <= 0 ? 0 : ms >= int.MaxValue ? int.MaxValue : (int)ms;
     }
 
+    // Use the existing deadline, including time already spent queuing the worker. An overdue reset fires without another wait.
+    internal static int RemainingDelayMs(long deadlineTicks, long nowTicks) =>
+      deadlineTicks <= nowTicks ? 0 : DelayMs((deadlineTicks - nowTicks) / (double)TimeSpan.TicksPerSecond);
+
     /*
      * Should the overlay still be holding this counting-down row? The owner is supposed to stop its own timers, so a row in the live list past its end plus the
      * grace has an owner that never came — and keeping it is what sticks: the render loop only stops when the list is empty, and the row stopped producing anything

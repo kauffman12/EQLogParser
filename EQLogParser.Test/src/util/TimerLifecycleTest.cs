@@ -104,6 +104,16 @@ namespace EQLogParser
     }
 
     [TestMethod]
+    public void ResetDelayUsesTheOriginalDeadlineEvenWhenTheWorkerStartsLate()
+    {
+      var deadline = TimerLifecycle.ResetTicks(Begin, 15 * 60);
+      Assert.AreEqual(900_000, TimerLifecycle.RemainingDelayMs(deadline, Begin));
+      Assert.AreEqual(840_000, TimerLifecycle.RemainingDelayMs(deadline, Begin + TimeSpan.TicksPerMinute));
+      Assert.AreEqual(0, TimerLifecycle.RemainingDelayMs(deadline, deadline));
+      Assert.AreEqual(0, TimerLifecycle.RemainingDelayMs(deadline, deadline + TimeSpan.TicksPerSecond));
+    }
+
+    [TestMethod]
     public async Task DelayMsOfNothingFiresImmediately()
     {
       // A zero-length timer must be removed at once. Task.Delay(-1) would never return and a negative cast would throw

@@ -45,6 +45,9 @@ namespace EQLogParser.Wpf.Test
         EndTextToDisplay = "end display",
         TextToDisplay = "main display",
         WarningTextToDisplay = "warning display",
+        ResetTextToDisplay = "  reset display  ", // padded on purpose: the copy trims, and an untrimmed clone reads as saved text
+        ResetTextToSpeak = "reset speak",
+        ResetSoundToPlay = "reset-sound.wav",
         EndEarlyTextToSpeak = "end early speak",
         EndTextToSpeak = "end speak",
         TextToSpeak = "main speak",
@@ -93,6 +96,9 @@ namespace EQLogParser.Wpf.Test
       Assert.AreEqual(source.WarningTextToDisplay, dest.WarningTextToDisplay);
       Assert.AreEqual(source.EndTextToDisplay, dest.EndTextToDisplay);
       Assert.AreEqual(source.EndEarlyTextToDisplay, dest.EndEarlyTextToDisplay);
+      Assert.AreEqual("reset display", dest.ResetTextToDisplay, "the reset point's display text is trimmed on the way in, like every other phrase");
+      Assert.AreEqual(source.ResetTextToSpeak, dest.ResetTextToSpeak);
+      Assert.AreEqual(source.ResetSoundToPlay, dest.ResetSoundToPlay);
       Assert.AreEqual(source.TextToSpeak, dest.TextToSpeak);
       Assert.AreEqual(source.WarningTextToSpeak, dest.WarningTextToSpeak);
       Assert.AreEqual(source.EndTextToSpeak, dest.EndTextToSpeak);
@@ -240,6 +246,51 @@ namespace EQLogParser.Wpf.Test
       dest = new Trigger();
       await TriggerUtil.Copy(dest, source);
       Assert.IsFalse(dest.EnableTimer);
+    }
+
+    /*
+     * The Sound/Text to Speak row under "5. Timer Reset" is ONE field on screen over TWO stored fields (a .wav name or a spoken phrase),
+     * folded by the same helpers as the Timer End and Warning rows. Saving has to fold the editor's string back into that pair, or the row
+     * silently erases what it displayed: an editor that reads one shape and writes another loses the sound choice the first time the trigger
+     * is saved for any other reason.
+     */
+    [TestMethod]
+    public async Task Copy_FoldsResetSoundOrTextIntoItsStoredPair()
+    {
+      var saved = new Trigger();
+      await TriggerUtil.Copy(saved, new TriggerPropertyModel
+      {
+        ResetSoundOrText = "<<alarm.wav>>",
+        ResetTextToSpeak = "stale phrase left behind by an older choice",
+        SelectedTextOverlays = [],
+        SelectedTimerOverlays = []
+      });
+
+      Assert.AreEqual("alarm.wav", saved.ResetSoundToPlay);
+      Assert.IsTrue(string.IsNullOrEmpty(saved.ResetTextToSpeak), "a sound was chosen, so no phrase is stored beside it");
+
+      saved = new Trigger();
+      await TriggerUtil.Copy(saved, new TriggerPropertyModel
+      {
+        ResetSoundOrText = "Vex is back",
+        SelectedTextOverlays = [],
+        SelectedTimerOverlays = []
+      });
+
+      Assert.AreEqual("Vex is back", saved.ResetTextToSpeak);
+      Assert.IsTrue(string.IsNullOrEmpty(saved.ResetSoundToPlay), "a phrase is not a sound file");
+    }
+
+    /* The other half of the same pair: what a stored sound unfolds to in the row, and back. No database on this path. */
+    [TestMethod]
+    public void ResetSoundOrTextUnfoldsAndFoldsBackToTheSamePair()
+    {
+      var row = TriggerUtil.GetFromCodedSoundOrText("alarm.wav", null, out var isSound);
+
+      Assert.IsTrue(isSound, "a .wav name is read as a sound, not as a phrase to speak");
+      Assert.IsTrue(TriggerUtil.MatchSoundFile(row, out var file, out var text), "the row's text folds back into a sound");
+      Assert.AreEqual("alarm.wav", file);
+      Assert.IsNull(text);
     }
   }
 }
