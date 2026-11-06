@@ -606,6 +606,7 @@ namespace EQLogParser
       [
         // Trigger timer categories
         new { Name = timerDurationItem.CategoryName, IsEnabled = trigger && timerType > 0 },
+        new { Name = endSoundItem.CategoryName, IsEnabled = trigger && timerType > 0 },
         new { Name = endEarlyPatternItem.CategoryName, IsEnabled = trigger && timerType > 0 && timerType != 2 },
         new { Name = warningSecondsItem.CategoryName, IsEnabled = trigger && timerType > 0 && timerType != 2 },
         // Overlay categories

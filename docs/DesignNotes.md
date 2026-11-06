@@ -19515,3 +19515,19 @@ children under a joining aggregate that still cannot exceed its coverage, marks 
 heals, the damage-type dial, one name answering differently per lane, narrowing and widening, `Busy == Sec` across fight gaps of 5/6/7/10 seconds,
 unstamped rows at 0, scratch released with `Busy <= Sec` asserted on every published row, and the empty-answer path intact). Grid behaviour is owed
 on Windows in `docs/ReleaseChecklist.md`.
+
+## Trigger property section ordering
+
+`TriggersView` uses hand-declared property grids with `SortDirection=Ascending`: grouped headers sort by category text, while rows within a
+section retain declaration order. Trigger sections carry numeric prefixes, restarting at 1 on each tab. Overlay-only categories remain
+unnumbered: editing an overlay disables grouping, so those categories never consume a visible trigger section number. Timer types may hide
+sections without renumbering the survivors. Prefixes sort as text, not integers; reaching ten sections would require a consistent padded format.
+
+`CategoryName` is presentation; `PropertyName` remains the binding/editor key and must not change for a label cleanup. Keep every row's category
+text consistent, derive `ExpandCategory` arguments from an item, and update descriptions and `website/triggers.md` when a section is renamed.
+`PropertyGridUtil.EnableCategories` sets every row in a matched category; an unmatched category is left untouched. A moved row therefore needs
+its new category covered by that gate or explicit per-row visibility. Timer Ending shares Basic Timer Options' trigger-with-timer condition;
+Reset Duration retains its per-row timer-type condition. A category with no visible rows has no header.
+
+The Triggers Log's event labels (`Initial Trigger`, `Timer End`, `Timer Warning`, `Timer End Early`) describe events, not property categories.
+They need not mirror section names. These are Triggers Log entries, not Error Log messages. Release notes likewise retain historical UI words.

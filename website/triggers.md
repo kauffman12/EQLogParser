@@ -251,7 +251,7 @@ Like `{S}` but used to capture a timestamp in the format `hh:mm:ss` or any numbe
 
 ## `{NULL}`
 
-Used in any field that displays, speaks, or shares information to suppress the message entirely. Useful when overriding `Timer End Early` behavior. If `{NULL}` is set then nothing will be displayed or spoken.
+Used in any field that displays, speaks, or shares information to suppress the message entirely. Useful when overriding `Timer Ending Early` behavior. If `{NULL}` is set then nothing will be displayed or spoken.
 
 ## `{TIMER-WARN-TIME-VALUE}`
 
@@ -344,9 +344,9 @@ For example, one trigger can set `gBurn` to `true` when burn mode starts, and an
 
 Clearing a variable is different from storing the text `false`: a cleared variable is unset (`null`), while a variable containing `false` still has a value.
 
-### End Clear Variables (Timer Tab)
+### Clear Variables (Timer Tab)
 
-The **End Clear Variables** field (found under *Basic Timer Options* on the Timer tab) lets you specify a list of custom variables to clear automatically when a Timer ends — whether it expires normally or ends early via an End Early Pattern. This is useful for cleaning up temporary variables that were only needed while the timer was active.
+The **Clear Variables** field (found under *Timer Ending* on the Timer tab) lets you specify a list of custom variables to clear automatically when a Timer ends — whether it expires normally or ends early via an End Early Pattern. This is useful for cleaning up temporary variables that were only needed while the timer was active.
 
 Enter variable names separated by commas, spaces, or semicolons. The following formats are all accepted and resolve to the same variable name:
 
@@ -355,13 +355,13 @@ Enter variable names separated by commas, spaces, or semicolons. The following f
 - `${gCaster}` — dollar-brace
 - `gCaster, gSpellName; gZone` — multiple names with mixed separators
 
-Variables are cleared **after** the End Text to Display and End Sound/Text to Speak are processed, so end display text can still reference the variable values. The cleanup happens once all timer-end side effects (display, speak, log) are complete.
+Variables are cleared **after** Text to Display and Sound/Text to Speak are processed, so end display text can still reference the variable values. The cleanup happens once all timer-end side effects (display, speak, log) are complete.
 
 **Example — Caster name that dies with the buff timer:**
 
 1. Enable **Regex** and use Pattern `^{S1} begins casting Spirit of Vesagran` → Set `gEpicCaster = {s1}`
-2. Enable Timer, Duration: 3:00, End Text to Display: `BRD Epic ({gEpicCaster})`
-3. End Clear Variables: `gEpicCaster`
+2. Enable Timer, Duration: 3:00, Text to Display: `BRD Epic ({gEpicCaster})`
+3. Clear Variables: `gEpicCaster`
 
 When the 3-minute buff timer ends, the display shows the caster name and the variable is cleared.
 
