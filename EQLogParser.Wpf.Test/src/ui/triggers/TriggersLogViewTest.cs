@@ -9,6 +9,28 @@ namespace EQLogParser.Wpf.Test;
 [TestClass]
 public sealed class TriggersLogViewTest
 {
+  private (string? Family, double Size, double DateWidth, double NameWidth, double MediumWidth) _savedTheme;
+
+  [TestInitialize]
+  public void Setup()
+  {
+    _savedTheme = (ThemeConfig.CurrentFontFamily, ThemeConfig.CurrentFontSize, ThemeConfig.CurrentDateTimeWidth,
+      ThemeConfig.CurrentNameWidth, ThemeConfig.CurrentMediumWidth);
+    // The test host does not run App startup; column generation still needs the normal font and width inputs.
+    ThemeConfig.CurrentFontFamily = "Segoe UI";
+    ThemeConfig.CurrentFontSize = 12;
+    ThemeConfig.CurrentDateTimeWidth = (10 * ThemeConfig.CurrentFontSize) - 10;
+    ThemeConfig.CurrentNameWidth = (10 * ThemeConfig.CurrentFontSize) + 25;
+    ThemeConfig.CurrentMediumWidth = 6.5 * ThemeConfig.CurrentFontSize;
+  }
+
+  [TestCleanup]
+  public void Cleanup()
+  {
+    (ThemeConfig.CurrentFontFamily, ThemeConfig.CurrentFontSize, ThemeConfig.CurrentDateTimeWidth,
+      ThemeConfig.CurrentNameWidth, ThemeConfig.CurrentMediumWidth) = _savedTheme;
+  }
+
   [TestMethod]
   public void SettingTheInitialWatermarkDoesNotThrow()
   {

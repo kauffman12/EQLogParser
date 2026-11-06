@@ -8524,6 +8524,9 @@ require a shown window and a loaded pane, and take the actual presentation sourc
 
 Resources are process-wide, so a test must publish the production TYPE, not just a convertible-looking value: `EQGridTitleHeight`
 is a `GridLength`, never a double. A DynamicResource does not perform the string-to-GridLength conversion a XAML literal does.
+The resource-host Application does not run `App` theme startup. A fixture that generates grid columns must also supply the plain
+`ThemeConfig` font and width inputs, saving and restoring them per test. `TriggersLogViewTest` supplies a real font family, positive
+font size and the widths its column generator reads; otherwise header measurement constructs `Typeface(null)` before filtering is reached.
 After disposal, assert cancellation through retained tokens and pending-action state; never inspect `BlockingCollection.Count`
 on a queue whose owner has disposed it. These fixture contracts build everywhere; their execution still requires Windows.
 
