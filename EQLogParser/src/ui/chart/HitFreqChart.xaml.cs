@@ -134,17 +134,14 @@ public partial class HitFreqChart : UserControl, IDisposable
   {
     if (!_paneReady || _updatingSelectors || _disposedValue) return;
     _columns = [];
-    MeleeDiFit diFit = null;
     if (playerList.SelectedItem is string player && _playerData.TryGetValue(player, out var data)
       && hitTypeList.SelectedItem is HitFrequencyChoice choice && data.Contains(choice)
       && critTypeList.SelectedItem is string critType)
     {
       var critical = critType == CritHittype;
       _columns = HitFrequencySeries.Filter(choice.Values(critical), Math.Max(0, minFreqList.SelectedIndex));
-      // Estimated DI values were not reliable enough for critical or noncritical hits.
-      // diFit = choice.DiFor(critical);
     }
-    chartView.SetData(BarChartData.Frequency(_columns, diFit));
+    chartView.SetData(BarChartData.Frequency(_columns));
   }
 
   private void CritTypeListSelectionChanged(object sender, SelectionChangedEventArgs e)

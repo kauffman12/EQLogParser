@@ -119,7 +119,7 @@ public sealed class BarChartDataTest
   }
 
   [TestMethod]
-  public void CombinedCritExportKeepsEveryRowAndLeavesOnlyTheOutlierDiBlank()
+  public void CombinedCriticalExportKeepsEveryRowAndItsOriginalDifference()
   {
     var player = new PlayerStats { Name = "Keyce`s pet" };
     var row = player.SubStatOf("Slashes", Labels.Melee);
@@ -130,11 +130,11 @@ public sealed class BarChartDataTest
     Assert.IsNotNull(fit);
     var data = BarChartData.Frequency(choice.Critical, fit);
     var rows = TextUtils.ReadTsv(data.FrequencyTsv());
-    CollectionAssert.AreEqual(new[] { "Hit Value", "Frequency", "Difference", "DI" }, rows[0]);
+    CollectionAssert.AreEqual(new[] { "Hit Value", "Frequency", "Difference" }, rows[0]);
     Assert.AreEqual(22, rows.Count, "all 21 amounts survive, including the outlier");
-    CollectionAssert.AreEqual(new[] { "68377", "288", "3216", "20" }, rows[^1]);
-    CollectionAssert.AreEqual(new[] { "52674", "1", "364", "" }, rows[16]);
-    CollectionAssert.AreEqual(new[] { "55520", "35", "2846", "16" }, rows[17]);
+    CollectionAssert.AreEqual(new[] { "68377", "288", "3216" }, rows[^1]);
+    CollectionAssert.AreEqual(new[] { "52674", "1", "364" }, rows[16]);
+    CollectionAssert.AreEqual(new[] { "55520", "35", "2846" }, rows[17]);
     Assert.AreEqual(719, rows.Skip(1).Sum(fields => int.Parse(fields[1], CultureInfo.CurrentCulture)));
     Assert.AreEqual("DI 20", data.Column(20).DiLabel);
     Assert.AreEqual("", data.Column(15).DiLabel);
@@ -147,17 +147,17 @@ public sealed class BarChartDataTest
     var filteredRows = TextUtils.ReadTsv(filtered.FrequencyTsv());
     Assert.AreEqual(21, filteredRows.Count);
     Assert.IsFalse(filteredRows.Skip(1).Any(fields => fields[0] == "52674"));
-    CollectionAssert.AreEqual(new[] { "55520", "35", "2846", "16" }, filteredRows[16]);
+    CollectionAssert.AreEqual(new[] { "55520", "35", "2846" }, filteredRows[16]);
   }
 
   [TestMethod]
-  public void FrequencyExportWithoutAFitKeepsWideNumbersAndABlankDiColumn()
+  public void FrequencyExportKeepsWideNumbersWithoutExtraColumns()
   {
     var bars = new[] { new HitFrequencyBar(TextUtils.MaxAmount, 3, TextUtils.MaxAmount - 1) };
     var rows = TextUtils.ReadTsv(BarChartData.Frequency(bars).FrequencyTsv());
-    CollectionAssert.AreEqual(new[] { "Hit Value", "Frequency", "Difference", "DI" }, rows[0]);
+    CollectionAssert.AreEqual(new[] { "Hit Value", "Frequency", "Difference" }, rows[0]);
     CollectionAssert.AreEqual(new[] { TextUtils.MaxAmount.ToString(CultureInfo.CurrentCulture), "3",
-      (TextUtils.MaxAmount - 1).ToString(CultureInfo.CurrentCulture), "" }, rows[1]);
+      (TextUtils.MaxAmount - 1).ToString(CultureInfo.CurrentCulture) }, rows[1]);
     Assert.AreEqual(1, TextUtils.ReadTsv(BarChartData.Frequency([]).FrequencyTsv()).Count);
     Assert.ThrowsExactly<InvalidOperationException>(() => BarChartData.Benchmark([]).FrequencyTsv());
   }

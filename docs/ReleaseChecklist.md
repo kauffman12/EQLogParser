@@ -788,10 +788,10 @@ These are outstanding Windows checks, not results inferred from the Linux build.
   **Diff from preceding value** must show the same difference.
 - [ ] DI annotations are disabled as unreliable. Open Damage and Tanking Hit Frequency with clean critical/noncritical
   melee examples: there must be no DI checkbox, labels, fit tooltips or extra footer band. Switch lane/player/type,
-  filter, scroll and reopen: no estimates may return. CSV keeps its fourth **DI** column blank on every row, without
-  dropping amounts or changing the original hit values/counts/differences. Copy Image must show only the ordinary labels.
+  filter, scroll and reopen: no estimates may return. CSV contains only **Hit Value / Frequency / Difference**, without
+  a reserved DI column, dropped amounts, or changed hit values/counts/differences. Copy Image must show only the ordinary labels.
 - [ ] Copy CSV while scrolled: Hit Frequency must include **every filtered row** with exact **Hit Value / Frequency /
-  Difference / DI**; benchmarks must keep **Class / Percent / Name**, +Pets and their existing inclusion of hidden classes.
+  Difference**; benchmarks must keep **Class / Percent / Name**, +Pets and their existing inclusion of hidden classes.
   Copy Image on a high-DPI display: include the fixed axis, current viewport and labels, never an enormous full-distribution
   bitmap. Verify the pasted image's bounds and legibility, not just that the clipboard call succeeded.
 - [ ] Close/hide during resize and during a benchmark stats build, then reopen; change captures while preparation is pending.

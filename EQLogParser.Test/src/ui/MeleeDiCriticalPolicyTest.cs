@@ -30,11 +30,9 @@ public sealed class MeleeDiCriticalPolicyTest
     Assert.IsTrue(fit.MaximumResidual <= fit.AllowedResidual);
     var export = TextUtils.ReadTsv(BarChartData.Frequency(bars, fit).FrequencyTsv());
     Assert.AreEqual(bars.Length + 1, export.Count);
-    Assert.AreEqual("20", export.Single(fields => fields[0] == (88289 / divisor).ToString())[3]);
-    Assert.AreEqual("", export.Single(fields => fields[0] == (92859 / divisor).ToString())[3]);
-    var filtered = BarChartData.Frequency(HitFrequencySeries.Filter(choice.Critical, 1), fit);
-    Assert.AreEqual("20", TextUtils.ReadTsv(filtered.FrequencyTsv())
-      .Single(fields => fields[0] == (88289 / divisor).ToString())[3]);
+    Assert.AreEqual(3, export[0].Length);
+    Assert.AreEqual((88289 / divisor).ToString(), export.Single(fields => fields[0] == (88289 / divisor).ToString())[0]);
+    Assert.AreEqual((92859 / divisor).ToString(), export.Single(fields => fields[0] == (92859 / divisor).ToString())[0]);
   }
 
   [TestMethod]

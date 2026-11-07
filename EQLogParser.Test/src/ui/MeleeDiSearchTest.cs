@@ -24,8 +24,8 @@ public sealed class MeleeDiSearchTest
     Assert.AreEqual("DI 20", data.Column(16049).DiLabel);
     var export = TextUtils.ReadTsv(data.FrequencyTsv());
     Assert.AreEqual(50001, export.Count);
-    Assert.AreEqual("20", export[16050][3]);
-    Assert.AreEqual("", export[8000][3]);
+    Assert.AreEqual("16050", export[16050][0]);
+    Assert.AreEqual("8000", export[8000][0]);
   }
 
   [TestMethod]
@@ -52,12 +52,11 @@ public sealed class MeleeDiSearchTest
     var data = BarChartData.Frequency(choice.NonCritical, fit);
     var export = TextUtils.ReadTsv(data.FrequencyTsv());
     Assert.AreEqual(26, export.Count);
-    Assert.AreEqual(5, export.Skip(1).Count(fields => fields[3] == ""));
     Assert.AreEqual("DI 20", data.Column(24).DiLabel);
-    CollectionAssert.AreEqual(new[] { "3600", "8", "60", "20" }, export[^1]);
+    CollectionAssert.AreEqual(new[] { "3600", "8", "60" }, export[^1]);
     var filtered = BarChartData.Frequency(HitFrequencySeries.Filter(choice.NonCritical, 5), fit);
     var filteredExport = TextUtils.ReadTsv(filtered.FrequencyTsv());
-    CollectionAssert.AreEqual(new[] { "3600", "8", "60", "20" }, filteredExport[^1]);
+    CollectionAssert.AreEqual(new[] { "3600", "8", "60" }, filteredExport[^1]);
   }
 
   [TestMethod]

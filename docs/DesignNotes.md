@@ -15431,8 +15431,8 @@ folded non-DD/DoT pairs; the chart must not invent a different type/subtype grou
 
 Amounts and differences remain exact `long` values. Sort numerically, compute differences against the preceding distinct
 amount **before** applying the strict `frequency > threshold` filter, and retain those differences while scrolling. The
-clipboard source remains every filtered row, not just the viewport, with **Hit Value / Frequency / Difference / DI**;
-DI is currently blank because annotations are disabled (see "DI inference: measured melee ladders, not automatic numbering").
+clipboard source remains every filtered row, not just the viewport, with **Hit Value / Frequency / Difference**;
+DI annotations are disabled and do not reserve a CSV column (see "DI inference: measured melee ladders, not automatic numbering").
 `HitFreqChartSelectionTest` pins selector wiring, critical/player/pet switches and empty-result clearing; its execution needs
 Windows. An empty answer clears both the host's clipboard source and the view's columns, hover targets and logical extent.
 
@@ -15482,8 +15482,8 @@ Windows DPI, large-extent rendering, clipboard and lifecycle acceptance checks l
 
 **DI annotations are disabled for both critical and noncritical Hit Frequency charts.** The estimates were not reliable
 enough: matching a numeric ladder does not prove the underlying roll, and a nearby singleton can be a differently modified
-hit rather than the inferred DI. `HitFreqChart.UserSelectionChanged` keeps the assignment commented out with that reason.
-There is no checkbox, no DI footer/tooltip, and the retained CSV DI column is blank. Exact amounts/counts/differences and
+hit rather than the inferred DI. `HitFreqChart.UserSelectionChanged` never requests a fit. There is no checkbox, no DI
+footer/tooltip, and Copy CSV contains no DI column. Exact amounts/counts/differences and
 selection/filtering behavior are unchanged (`HitFreqChartSelectionTest`; Windows execution required).
 
 **Retained experiment, not active UI behavior.** `HitFrequencyChoice.DiFor` runs only on an explicit request and caches each
@@ -15520,11 +15520,10 @@ precision, endpoint ambiguity, low support and maximum-width amounts; `MeleeDiCr
 DI footers/tooltips, support and allowance display; **the application supplies no fit**. Missing/filtered levels never
 renumber labels in those experiments (`BarChartDataTest`, `BarChartViewTest`).
 
-**Copy CSV keeps its fourth `DI` column for schema stability**, blank for every application-exported row. Explicit analysis
-tests can still supply a fit and exercise numeric values; unmatched or unfitted amounts have a blank DI cell. `BarChartData.FrequencyTsv()` exports the same immutable question and fit the chart
-paints, all filtered rows (not only visible rows), without fitting again or formatting every column's tooltip. No bar is
-dropped from the chart/export to help inference; the original differences survive filtering. `BarChartDataTest` pins the four-field schema,
-wide amounts, empty/unfitted answers, filtered gaps and the combined critical example below.
+**Copy CSV exports exactly `Hit Value`, `Frequency` and `Difference`.** `BarChartData.FrequencyTsv()` exports the same
+immutable question the chart paints, all filtered rows (not only visible rows), without fitting again or formatting every
+column's tooltip. No bar is dropped from the chart/export to help inference; the original differences survive filtering.
+`BarChartDataTest` pins the three-field schema, wide amounts, empty answers, filtered gaps and the combined critical example below.
 
 The measured foundation used a disposable `PipelineHarness.RunFileDerived` runner: one full file-order stream, live parsing,
 then `ClassificationRules.Apply` before identity questions. It grouped positive basic melee by attacker/defender/subtype,

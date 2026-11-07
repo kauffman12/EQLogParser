@@ -205,14 +205,14 @@ public sealed class HitFreqChartSelectionTest
         .Single(choice => choice.Key == melee.Key);
       var all = TextUtils.ReadTsv(chart.chartView.Data.FrequencyTsv());
       var dominant = !chart.chartView.Data.HasDiLabels && Columns(chart).Length == 21
-        && all.Count == 22 && all[2][0] == "7600" && all.Skip(1).All(fields => fields[3] == "");
+        && all.Count == 22 && all[2][0] == "7600" && all.All(fields => fields.Length == 3);
       chart.minFreqList.SelectedIndex = 1;
       var filtered = TextUtils.ReadTsv(chart.chartView.Data.FrequencyTsv());
       var numbering = filtered.Count == 21 && filtered[2][0] == "7950" && filtered[2][2] == "350"
-        && filtered[2][3] == "";
+        && filtered.All(fields => fields.Length == 3);
       chart.hitTypeList.SelectedItem = chart.hitTypeList.Items.Cast<HitFrequencyChoice>()
         .Single(choice => choice.Key == spell.Key);
-      var noSpell = TextUtils.ReadTsv(chart.chartView.Data.FrequencyTsv()).Skip(1).All(fields => fields[3] == "");
+      var noSpell = TextUtils.ReadTsv(chart.chartView.Data.FrequencyTsv()).All(fields => fields.Length == 3);
       chart.Update(new PlayerStats { Name = "Empty" }, null);
       correct = dominant && numbering && noSpell && !chart.chartView.Data.HasDiLabels
         && TextUtils.ReadTsv(chart.chartView.Data.FrequencyTsv()).Count == 1;
@@ -249,11 +249,11 @@ public sealed class HitFreqChartSelectionTest
       var export = TextUtils.ReadTsv(chart.chartView.Data.FrequencyTsv());
       var critical = !chart.chartView.Data.HasDiLabels && chart.chartView.Data.Column(9).DiLabel == ""
         && chart.chartView.Data.Column(19).DiLabel == "" && chart.chartView.Data.Column(20).DiLabel == ""
-        && export.Count == 121 && export.Skip(1).All(fields => fields[3] == "")
+        && export.Count == 121 && export.All(fields => fields.Length == 3)
         && !chart.chartView.Data.Column(19).Tooltip.Contains("Estimated DI", StringComparison.Ordinal);
       chart.critTypeList.SelectedItem = "Non-Critical";
       correct = ordinary && critical && !chart.chartView.Data.HasDiLabels
-        && TextUtils.ReadTsv(chart.chartView.Data.FrequencyTsv()).Skip(1).All(fields => fields[3] == "");
+        && TextUtils.ReadTsv(chart.chartView.Data.FrequencyTsv()).All(fields => fields.Length == 3);
     });
     Assert.IsTrue(correct);
   }

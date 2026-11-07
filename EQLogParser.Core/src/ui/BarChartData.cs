@@ -97,11 +97,8 @@ internal sealed class BarChartData
     if (_percent) throw new InvalidOperationException("A benchmark has no hit-frequency export");
     var rows = new List<List<object>>(_frequency.Length);
     foreach (var hit in _frequency)
-    {
-      var level = _diFit?.LevelFor(hit.Amount) ?? 0;
-      rows.Add([hit.Amount, hit.Frequency, hit.Difference, level > 0 ? level : ""]);
-    }
-    return TextUtils.BuildTsv(["Hit Value", "Frequency", "Difference", "DI"], rows);
+      rows.Add([hit.Amount, hit.Frequency, hit.Difference]);
+    return TextUtils.BuildTsv(["Hit Value", "Frequency", "Difference"], rows);
   }
 
   // A stable budget for this whole data question. Geometry/scrolling never formats off-screen columns.
