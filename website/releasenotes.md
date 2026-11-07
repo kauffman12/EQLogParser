@@ -1,6 +1,6 @@
 # 2.4.10 | 11/07/26
 1. Updated **Hit Frequency** chart implementation to closer follow the benchmark charts. It should scale and perform a little better.
-2. Added **Reset Text To Display** and **Rest Text to Speak/Sound to Play** properties to the Timer configuration.
+2. Added **Reset Text To Display** and **Reset Text to Speak/Sound to Play** properties to the Timer configuration.
 3. Cleaned up the Timer **Categories** in the UI.
 4. Latest spells from beta.
 
