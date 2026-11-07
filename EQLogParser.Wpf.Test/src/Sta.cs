@@ -1,12 +1,9 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System;
 using System.Collections.Concurrent;
-using System.Linq;
 using System.Runtime.ExceptionServices;
 using System.Text;
-using System.Threading;
-using System.Windows;
 using System.Windows.Threading;
+
+#nullable enable annotations
 
 namespace EQLogParser
 {
@@ -62,8 +59,13 @@ namespace EQLogParser
       Dispatcher.CurrentDispatcher.Invoke(() => { }, DispatcherPriority.Normal);
     }
 
+    // Lifetime checks must close the Application's own windows, not windows belonging to a disposable test STA.
+    internal static void RunOnApplication(Action body) =>
+      Run(() => StaApplication.Dispatcher.Invoke(body, DispatcherPriority.Normal));
+
     internal static void Run(Action body)
     {
+      _ = StaApplication.Dispatcher;
       Exception? failure = null;
       var id = Interlocked.Increment(ref _nextId);
 
@@ -71,8 +73,6 @@ namespace EQLogParser
       {
         try
         {
-          // One process-wide resource host. Closing a test window must not make later Window.Show calls silently do nothing.
-          _ = Application.Current ?? new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
           body();
         }
         catch (Exception ex)

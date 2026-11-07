@@ -1247,7 +1247,9 @@ namespace EQLogParser
 
     private void HandleSpeech(Speak speak)
     {
-      if (!_ready) return;
+      // A queued reset already owns its wrapper, captures and variables; rebuilding the match catalog cannot invalidate it.
+      // Keep the disposal door, but do not spend an already-fired reset just because a reload temporarily cleared _ready.
+      if (_isDisposed || (!_ready && !speak.IsTimerReset)) return;
 
       if (!string.IsNullOrEmpty(speak.TtsOrSound))
       {

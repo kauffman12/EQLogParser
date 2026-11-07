@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using EQLogParser;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Syncfusion.Licensing;
 
 namespace EQLogParser
@@ -25,17 +21,9 @@ namespace EQLogParser
       // below is what protects a keyless machine.
       SyncFusionUtil.LoadLicense();
 
-      // Guard for every unlicensed state - the committed empty key, or a real key that fails to validate on this
-      // machine (machine-side validation can flip with no code change; that is how the hang appeared overnight). On
-      // such a run the FIRST SfDataGrid construction in the process (SfDataGrid.ctor -> LicenseHelper.ValidateLicense,
-      // decompiled from Syncfusion.Shared.WPF 34.2.8) builds the "Syncfusion(R) License" message and calls
-      // LicenseMessage.DisplayMessage, which does a SYNCHRONOUS Application.Current.Dispatcher.Invoke. The test-host's
-      // Application is created by Sta.Run on a disposable STA thread that dies without pumping, so that
-      // Invoke never returns: the body wedges inside SfDataGrid.ctor for the full 60 s Sta budget, and at the sixth
-      // construction (a process counter past five) the over-limit shouldQuit branch re-enters the same display
-      // (measured: exactly those two shapes hung). The flag's own meaning is "the host showed/handles the message
-      // itself"; set BEFORE any control constructs and every later GetLicenseType reads null instead of a message, so
-      // nothing ever displays. A valid key makes this line redundant but harmless - it never expires, so it stays.
+      // Set before any control constructs: a keyless or invalid-key run must never enter the vendor's modal notice.
+      // The shared Application pumps its dispatcher, so a queued license dialog would really display and block the suite.
+      // docs/DesignNotes.md → "A test host is unlicensed, and Syncfusion says so at construction".
       SyncfusionLicenseProvider.IsLicenseExceptionShown = true;
 
       /*

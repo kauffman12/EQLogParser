@@ -8511,11 +8511,18 @@ measured-by-construction until the next Windows hang.
 
 ## WPF test windows share a resource host, not a shutdown boundary
 
-`Sta.Run` supplies the process-wide `Application` with `ShutdownMode.OnExplicitShutdown` before a test body runs. Each body
-still has its own STA; this is a resource host, not a substitute for the control's dispatcher. Closing a fixture window must
-not shut down that shared Application: WPF's `Window.ShowHelper` silently returns while `Application.IsShuttingDown`, leaving
-later charts with zero viewports and grids with no Loaded lifecycle. `StaLifecycleTest` pins showing a second window after
-closing the first. Keep the licensing guard in `AssemblyLifecycle`: the host's original dispatcher is still disposable.
+`Sta.Run` ensures `StaApplication` supplies the process-wide `Application` with `ShutdownMode.OnExplicitShutdown` before a test
+body runs. Its dedicated background STA keeps pumping for the process lifetime; ordinary test bodies still get independent,
+disposable STAs, not the resource host's dispatcher. Closing a fixture window must not shut down that shared Application:
+WPF's `Window.ShowHelper` silently returns while `Application.IsShuttingDown`, leaving later charts with zero viewports and
+grids with no Loaded lifecycle.
+
+`StaLifecycleTest` uses `Sta.RunOnApplication` to close the Application-owning thread's actual last window, checks the registered
+window count drops to zero, and only then constructs/shows the replacement. Constructing both windows before closing the first
+would leave a registered window and miss the shutdown path; running on a disposable STA would instead exercise WPF's separate
+non-Application-window path. The live host dispatcher makes the correct path reachable regardless of test order, without
+sharing per-thread control state between ordinary test bodies. Keep the licensing guard in `AssemblyLifecycle`: pumping is not
+permission to show a vendor modal dialog.
 
 A Normal-priority no-op is not a layout barrier: it can run before queued Render/Loaded work. `Sta.FlushDispatcher` pumps a
 bounded frame with a Normal-priority timer; the chart layout helper brackets that pump with `UpdateLayout`. Gesture tests
@@ -8576,7 +8583,7 @@ start, `GetLicenseType` never builds the message text, and every later read retu
 display and the `shouldQuit` re-entry die on an empty string. Set after the fact, the text already exists and the
 `shouldQuit` branch would still display. A valid key makes the flag redundant but harmless — it never expires, so it stays.
 
-The refused alternative: keeping `EnsureAppResources`' Application alive with a pumping thread would make the queued
+A pumping Application dispatcher is not a substitute for this guard: the live `StaApplication` host would let the queued
 `ShowDialog` *actually run* — a modal window inside a test body is the next hang with a worse stack. Nothing here is pinned
 by a unit test (vendor internals); the pin is that Wpf.Test builds themed Syncfusion panes on Windows and passes, and a
 regression reads as a body wedged in `SfDataGrid.ctor` with `LicenseHelper` under it — where `Sta.Run`'s probe now says so
@@ -19567,6 +19574,11 @@ ordinary firing-time counting paths; the callback never increments those counts.
 The actions require a positive Reset Duration and at least one nonempty reset field. Timer Reset rows retain the Reset Duration visibility
 rule: Countdown and Progress only.
 
+Queued reset audio is already a dispatched action, not a request to search the current match catalog. `HandleSpeech` accepts it
+while a reload temporarily clears `_ready`, whether that reload began before its deadline or after enqueueing; speech and sound
+files must not be silently discarded by the consumer. Disposal still refuses audio. Ordinary speech keeps its readiness guard.
+This does not defer/retry delivery or alter the cancellation door for resets that have not yet been claimed.
+
 **Pending resets have their own list and cancellation source, independent of `_timerLists`.** Normal and early countdown completion remove
 the countdown row but leave the reset armed. Keeping only its token on that removed row loses the cancellation door. `PrepareTimerStartAsync`
 cancels pending resets for the trigger on Restart Timer, or for the matching name on Restart Timer If Same Name, even after the countdown
@@ -19585,5 +19597,7 @@ announcement. Existing timer-start eligibility is unchanged: a positive configur
 restart preparation, Stop, disable and disposal after countdown retirement at the record seam; it covers re-arming, name scoping, nonrestart
 options, overdue delivery and a due action queued behind Stop. Its `TimerResetVariablesTest.cs` partial drives queued speech through the real
 audio handler and the display-preparation seam, including captures/modifiers, preprocessing, snapshot isolation, TTL expiry, start-time codes,
-reset-only counting, literal sounds and null/unset handling. `TriggerUtilCopyTest` pins the stored fields and sound/text editor fold.
+reset-only counting, literal sounds and null/unset handling. `TimerResetReloadTest.cs` holds reload readiness false across the reset
+deadline or starts that state after enqueueing, then drives the real audio handler for TTS and sound; it also pins disposal refusal
+and the ordinary-speech readiness guard. `TriggerUtilCopyTest` pins the stored fields and sound/text editor fold.
 Actual speech/text-overlay presentation remains a Windows check in `docs/ReleaseChecklist.md`.
