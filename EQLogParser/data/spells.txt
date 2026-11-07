@@ -16894,13 +16894,13 @@
 27462^Exuberant Health^255^0^1^0^5^0^0^0^0^1^0^0^0^0^0^0^^^
 27463^Ebullient Health^255^0^1^0^5^0^0^0^0^1^0^0^0^0^0^0^^^
 27464^Incendiary Explosive^255^0^0^0^4^0^1^0^2^0^0^0^0^0^1^1^The explosive blast burns your skin.^ is enveloped in a blast of fire.^
-27465^Small Modulating Shard^254^0^1^0^2^4096^0^0^0^0^0^0^1^0^0^0^^^
-27466^Medium Modulating Shard^254^0^1^0^2^4096^0^0^0^0^0^0^2^0^0^0^^^
-27467^Large Modulating Shard^254^0^1^0^2^4096^0^0^0^0^0^0^3^0^0^0^^^
-27468^Small Modulation Effect^255^0^1^0^6^0^1^0^0^0^9^0^1^0^0^0^You experience a small elemental modulation.^ experiences a small elemental modulation.^
-27469^Medium Modulation Effect^255^0^1^0^6^0^1^0^0^0^9^0^2^0^0^0^You experience a moderate elemental modulation.^ experiences a moderate elemental modulation.^
+27465^Modulation Shard I^254^0^1^0^2^4096^0^0^0^0^0^0^1^0^0^0^^^
+27466^Modulation Shard II^254^0^1^0^2^4096^0^0^0^0^0^0^2^0^1^1^You experience elemental modulation.^ experiences elemental modulation.^
+27467^Modulation Shard III^254^0^1^0^2^4096^0^0^0^0^0^0^3^0^1^1^You experience elemental modulation.^ experiences elemental modulation.^
+27468^Modulation Shard Effect I^255^0^1^0^6^0^1^0^0^0^9^0^1^0^1^1^You experience elemental modulation.^ experiences elemental modulation.^
+27469^Modulation Shard Effect II^255^0^1^0^6^0^1^0^0^0^9^0^2^0^1^1^You experience elemental modulation.^ experiences elemental modulation.^
 2747^Growth^255^0^1^0^6^0^0^0^0^0^0^0^0^0^1^1^You feel bigger.^ grows taller.^You return to normal height.
-27470^Large Modulation Effect^255^0^1^0^6^0^1^0^0^0^9^0^3^0^0^0^You experience a large elemental modulation.^ experiences a large elemental modulation.^
+27470^Modulation Shard Effect III^255^0^1^0^6^0^1^0^0^0^9^0^3^0^1^1^You experience elemental modulation.^ experiences elemental modulation.^
 27471^Shield of the Elements I^254^20^1^0^6^4096^0^0^0^-1^0^0^1^0^1^1^The elements form a barrier around you.^ is shielded by the elements.^Your elemental shield fades away.
 27472^Shield of the Elements II^254^20^1^0^6^4096^0^0^0^-1^0^0^2^0^1^1^The elements form a barrier around you.^ is shielded by the elements.^Your elemental shield fades away.
 27473^Shield of the Elements III^254^20^1^0^6^4096^0^0^0^-1^0^0^3^0^1^1^The elements form a barrier around you.^ is shielded by the elements.^Your elemental shield fades away.
@@ -35875,7 +35875,7 @@
 47035^Elemental Flames II^254^10^2^1^41^4096^0^0^0^1^1^0^2^0^1^0^Elemental flames dance over your hands.^^The dancing flames fade away.
 47036^Elemental Earth II^254^10^2^0^41^4096^0^0^0^1^4^0^2^0^1^0^You feel the protection of earth surround you.^^The protection of earth fades.
 47037^Infusion of Elemental Light III^254^0^0^0^5^4096^1^0^0^0^0^0^3^0^0^1^^ explodes in a burst of elemental light.^
-47038^Giant Modulation Effect^255^0^1^0^6^0^1^0^0^0^9^0^4^0^1^1^You experience a giant elemental modulation.^ experiences a giant elemental modulation.^
+47038^Modulation Shard Effect IV^255^0^1^0^6^0^1^0^0^0^9^0^4^0^1^1^You experience elemental modulation.^ experiences elemental modulation.^
 47039^Veil of Mindshadow XXVIII^254^720^1^0^6^8192^0^0^0^0^4^0^28^0^1^1^You cover yourself in a veil of mindshadow.^ seeks protection behind a veil of mindshadow.^The veil of mindshadow falls away.
 4704^Blood Scream^255^0^0^0^5^0^0^0^0^0^0^0^0^0^0^0^You stagger as the blood is burned away.^ screams as the blood is burned away.^
 47040^Beguiler's Banishment V^254^1^0^0^42^8192^0^0^6^0^0^0^5^0^1^1^A wave of enchantment blasts you backward.^ is thrown backwards by a great force.^Your head clears from the enchantment.
@@ -37723,7 +37723,7 @@
 48993^Host of the Elements XIX^254^0^0^0^5^4096^0^0^0^0^0^0^19^0^0^0^^^
 48994^Host of the Elements XX^254^0^0^0^5^4096^0^0^0^0^0^0^20^0^0^0^^^
 48995^Heart of Skyfire XXVI^254^60^1^0^6^4096^0^0^0^0^1^0^26^0^1^1^You become an embodiment of burning skies.^ becomes an embodiment of burning skies.^The elemental spirit leaves your body.
-48996^Giant Modulating Shard^254^0^1^0^2^4096^0^0^0^0^0^0^4^0^0^0^^^
+48996^Modulation Shard IV^254^0^1^0^2^4096^0^0^0^0^0^0^4^0^1^1^You experience elemental modulation.^ experiences elemental modulation.^
 48997^Heart of Froststone XX^254^60^1^0^6^4096^0^0^0^0^4^0^20^0^1^1^You become an embodiment of icy earth.^ becomes an embodiment of icy earth.^The elemental spirit leaves your body.
 48998^Heart of Froststone XXI^254^60^1^0^6^4096^0^0^0^0^4^0^21^0^1^1^You become an embodiment of icy earth.^ becomes an embodiment of icy earth.^The elemental spirit leaves your body.
 48999^Shield of the Elements IX^254^20^1^0^6^4096^-1^0^0^1^4^0^9^0^1^1^The elements form a barrier around you.^ is shielded by the elements.^Your elemental shield fades away.
@@ -40397,8 +40397,8 @@
 51570^Heart of Skyfire XXVIII^254^60^1^0^6^4096^0^0^0^0^1^0^28^0^1^1^You become an embodiment of burning skies.^ becomes an embodiment of burning skies.^The elemental spirit leaves your body.
 51571^Heart of Froststone XXII^254^60^1^0^6^4096^0^0^0^0^4^0^22^0^1^1^You become an embodiment of icy earth.^ becomes an embodiment of icy earth.^The elemental spirit leaves your body.
 51572^Heart of Froststone XXIII^254^60^1^0^6^4096^0^0^0^0^4^0^23^0^1^1^You become an embodiment of icy earth.^ becomes an embodiment of icy earth.^The elemental spirit leaves your body.
-51573^Glowing Modulation Effect^255^0^1^0^6^0^1^0^0^0^9^0^5^0^1^1^You experience a giant elemental modulation.^ experiences a giant elemental modulation.^
-51574^Glowing Modulating Shard^254^0^1^0^2^4096^0^0^0^0^0^0^5^0^0^0^^^
+51573^Modulation Shard Effect V^255^0^1^0^6^0^1^0^0^0^9^0^5^0^1^1^You experience elemental modulation.^ experiences elemental modulation.^
+51574^Modulation Shard V^254^0^1^0^2^4096^0^0^0^0^0^0^5^0^1^1^You experience elemental modulation.^ experiences elemental modulation.^
 51575^Thaumaturge's Focus XIV^254^30^1^0^6^4096^0^0^0^0^1^0^14^0^1^1^You become an embodiment of mystical force.^ becomes an embodiment of mystical force.^The mystical force leaves your body.
 51576^Thaumaturge's Focus XV^254^30^1^0^6^4096^0^0^0^0^1^0^15^0^1^1^You become an embodiment of mystical force.^ becomes an embodiment of mystical force.^The mystical force leaves your body.
 51577^Thaumaturge's Focus XVI^254^30^1^0^6^4096^0^0^0^0^1^0^16^0^1^1^You become an embodiment of mystical force.^ becomes an embodiment of mystical force.^The mystical force leaves your body.
@@ -42494,8 +42494,8 @@
 53543^Frenzied Axe XIII^254^0^0^0^5^32768^0^0^0^0^0^0^13^0^1^1^You are struck by a frenzied throwing axe.^ is struck by a frenzied throwing axe.^
 53544^Rest the Dead IX^254^60^1^0^10^1040^0^0^1^0^0^0^9^0^0^1^^ looks ambivalent.^
 53545^Elemental Conversion V^254^0^1^0^38^4096^0^0^0^0^0^0^5^0^0^1^^ acquiesces its energy.^
-53546^Dazzling Modulation Effect^255^0^1^0^6^0^1^0^0^0^9^0^7^0^1^1^You experience a giant elemental modulation.^ experiences a giant elemental modulation.^
-53547^Dazzling Modulating Shard^254^0^1^0^2^4096^0^0^0^0^0^0^7^0^0^0^^^
+53546^Modulation Shard Effect VII^255^0^1^0^6^0^1^0^0^0^9^0^7^0^1^1^You experience elemental modulation.^ experiences elemental modulation.^
+53547^Modulation Shard VII^254^0^1^0^2^4096^0^0^0^0^0^0^7^0^1^1^You experience elemental modulation.^ experiences elemental modulation.^
 53548^Theft of Essence XIII^254^0^1^0^14^4096^0^0^0^0^3^0^13^0^0^1^^ is filled with stolen energies!^
 53549^Theft of Essence Effect XIII^254^0^1^0^5^4096^-1^0^0^0^6^0^13^0^0^0^^^
 5355^Chlorotrope^68^0^1^0^5^32^-1^0^0^0^0^0^0^0^1^1^Your wounds close.^'s wounds close.^
@@ -53895,8 +53895,8 @@
 65778^Servant of Ro Bolt XXIII^255^0^0^0^5^0^1^0^2^0^0^0^23^0^1^1^A stream of fire washes over you.^ is bathed in fire.^
 65779^Elemental Conversion VI^254^0^1^0^38^4096^0^0^0^0^0^0^6^0^0^1^^ acquiesces its energy.^
 6578^Mass Illusion: Imp^255^720^1^0^36^0^0^0^0^0^0^0^0^0^1^1^You feel different.^'s image shimmers.^Your illusion fades.
-65780^Modulating Shard VIII^254^0^1^0^2^4096^0^0^0^0^0^0^8^0^0^0^^^
-65781^Modulation Effect VIII^255^0^1^0^6^0^1^0^0^0^9^0^8^0^1^1^You experience a giant elemental modulation.^ experiences a giant elemental modulation.^
+65780^Modulation Shard VIII^254^0^1^0^2^4096^0^0^0^0^0^0^8^0^1^1^You experience elemental modulation.^ experiences elemental modulation.^
+65781^Modulation Effect VIII^255^0^1^0^6^0^1^0^0^0^9^0^8^0^1^1^You experience elemental modulation.^ experiences elemental modulation.^
 65782^Thaumaturge's Unity XI^254^0^1^0^6^4096^0^0^0^0^0^0^11^0^0^0^^^
 65783^Flames of Power VIII Azia^254^0^1^0^6^4096^0^0^0^0^0^0^8^0^0^0^^^
 65784^Flames of Power VIII Beza^254^0^1^0^6^4096^0^0^0^0^0^0^8^0^0^0^^^
@@ -61641,8 +61641,8 @@
 7347^Elemental Winds^255^0^0^0^5^0^1^0^1^0^0^0^0^0^1^1^You are stunned by a blast of gusting winds.^ is stunned by gusting winds.^You are no longer stunned.
 73470^Servant of Ro Bolt XXIV^255^0^0^0^5^0^1^0^2^0^0^0^24^0^1^1^A stream of fire washes over you.^ is bathed in fire.^
 73471^Elemental Conversion VII^254^0^1^0^38^4096^0^0^0^0^0^0^7^0^0^1^^ acquiesces its energy.^
-73472^Modulating Shard IX^254^0^1^0^2^4096^0^0^0^0^0^0^9^0^0^0^^^
-73473^Modulation Effect IX^255^0^1^0^6^0^1^0^0^0^9^0^9^0^1^1^You experience a giant elemental modulation.^ experiences a giant elemental modulation.^
+73472^Modulation Shard IX^254^0^1^0^2^4096^0^0^0^0^0^0^9^0^1^1^You experience elemental modulation.^ experiences elemental modulation.^
+73473^Modulation Effect IX^255^0^1^0^6^0^1^0^0^0^9^0^9^0^1^1^You experience elemental modulation.^ experiences elemental modulation.^
 73474^Thaumaturge's Unity XII^254^0^1^0^6^4096^0^0^0^0^0^0^12^0^0^0^^^
 73475^Flames of Power Azia X^254^0^1^0^6^4096^0^0^0^0^0^0^10^0^0^0^^^
 73476^Flames of Power Beza X^254^0^1^0^6^4096^0^0^0^0^0^0^10^0^0^0^^^
@@ -62819,12 +62819,12 @@
 74604^Al`ele's Vindictiveness VI Azia^255^0^0^0^5^0^1^0^1^0^0^0^0^0^1^1^You are wracked with vindication.^ is wracked with vindication.^
 74605^Al`ele's Vindictiveness VI Beza^255^0^0^0^5^0^1^0^1^0^0^0^0^0^1^1^You are wracked with vindication.^ is wracked with vindication.^
 74606^Al`ele's Vindictiveness VI Caza^255^0^0^0^5^0^1^0^1^0^0^0^0^0^1^1^You are wracked with vindication.^ is wracked with vindication.^
-74607^Apostetrios' Demeanor^129^4000^1^0^6^16384^0^0^0^0^0^0^1^0^1^1^You take on a remorseful demeanor.^ takes on a remorseful demeanor.^
-74608^Apostetrios' Demeanor Rk. II^129^4000^1^0^6^16384^0^0^0^0^0^0^5^0^1^1^You take on a remorseful demeanor.^ takes on a remorseful demeanor.^
-74609^Apostetrios' Demeanor Rk. III^129^4000^1^0^6^16384^0^0^0^0^0^0^10^0^1^1^You take on a remorseful demeanor.^ takes on a remorseful demeanor.^
-74610^Apostetrios' Demeanor Effect^255^10^1^0^6^0^0^0^0^1^3^0^1^0^1^1^You are overcome with remorse for the fallen.^ is overcome with remorse for the fallen.^The remorsefulness fades.
-74611^Apostetrios' Demeanor Effect II^255^10^1^0^6^0^0^0^0^1^3^0^5^0^1^1^You are overcome with remorse for the fallen.^ is overcome with remorse for the fallen.^The remorsefulness fades.
-74612^Apostetrios' Demeanor Effect III^255^10^1^0^6^0^0^0^0^1^3^0^10^0^1^1^You are overcome with remorse for the fallen.^ is overcome with remorse for the fallen.^The remorsefulness fades.
+74607^Apostetrios' Demeanor^129^4000^1^0^6^16384^0^0^0^0^2^0^1^0^1^1^You take on a feralist's demeanor.^ takes on a feralist's demeanor.^
+74608^Apostetrios' Demeanor Rk. II^129^4000^1^0^6^16384^0^0^0^0^2^0^5^0^1^1^You take on a feralist's demeanor.^ takes on a feralist's demeanor.^
+74609^Apostetrios' Demeanor Rk. III^129^4000^1^0^6^16384^0^0^0^0^2^0^10^0^1^1^You take on a feralist's demeanor.^ takes on a feralist's demeanor.^
+74610^Apostetrios' Demeanor Effect^255^10^1^0^6^0^-1^0^0^1^3^0^1^0^1^1^You enter a feral fury.^ enters a feral fury.^The feral fury fades.
+74611^Apostetrios' Demeanor Effect II^255^10^1^0^6^0^-1^0^0^1^3^0^5^0^1^1^You enter a feral fury.^ enters a feral fury.^The feral fury fades.
+74612^Apostetrios' Demeanor Effect III^255^10^1^0^6^0^-1^0^0^1^3^0^10^0^1^1^You enter a feral fury.^ enters a feral fury.^The feral fury fades.
 74613^Arcblade VII^129^0^0^0^42^32768^0^1^0^0^0^0^1^0^1^1^A blade slices into your body.^ is sliced by a blade.^
 74614^Arcblade VII Rk. II^129^0^0^0^42^32768^0^1^0^0^0^0^5^0^1^1^A blade slices into your body.^ is sliced by a blade.^
 74615^Arcblade VII Rk. III^129^0^0^0^42^32768^0^1^0^0^0^0^10^0^1^1^A blade slices into your body.^ is sliced by a blade.^
@@ -63063,6 +63063,14 @@
 74969^Drowning of Conflict^255^4^0^0^5^0^0^0^0^0^0^0^0^0^1^1^A drowning surge grips you, smothering the speed of your blows.^ is suffocated.^You breathe easier.
 7497^Frost of the Ancients II^254^10^0^0^5^65407^1^0^3^0^0^0^2^0^1^1^Your body begins to freeze.^'s body begins to freeze.^Your body begins to thaw.
 74970^Knock Down^255^0^0^0^5^0^0^0^0^0^0^0^0^0^1^1^You are smashed off your feet by a crushing blow.^ is knocked down.^
+74971^Modulation Spark I^254^0^1^0^2^4096^0^0^0^0^0^0^1^0^0^0^^^
+74972^Modulation Spark Effect I^255^0^1^0^6^0^1^0^0^0^9^0^1^0^1^1^You experience elemental modulation.^ experiences elemental modulation.^
+74973^Modulation Spark II^254^0^1^0^2^4096^0^0^0^0^0^0^2^0^1^1^You experience elemental modulation.^ experiences elemental modulation.^
+74974^Modulation Spark Effect II^255^0^1^0^6^0^1^0^0^0^9^0^2^0^1^1^You experience elemental modulation.^ experiences elemental modulation.^
+74975^Modulation Spark III^254^0^1^0^2^4096^0^0^0^0^0^0^3^0^1^1^You experience elemental modulation.^ experiences elemental modulation.^
+74976^Modulation Spark Effect III^255^0^1^0^6^0^1^0^0^0^9^0^3^0^1^1^You experience elemental modulation.^ experiences elemental modulation.^
+74977^Modulation Spark IV^254^0^1^0^2^4096^0^0^0^0^0^0^4^0^1^1^You experience elemental modulation.^ experiences elemental modulation.^
+74978^Modulation Spark Effect IV^255^0^1^0^6^0^1^0^0^0^9^0^4^0^1^1^You experience elemental modulation.^ experiences elemental modulation.^
 7498^Frost of the Ancients III^254^10^0^0^5^65407^1^0^3^0^0^0^3^0^1^1^Your body begins to freeze.^'s body begins to freeze.^Your body begins to thaw.
 7499^Frost of the Ancients IV^254^10^0^0^5^65407^1^0^3^0^0^0^4^0^1^1^Your body begins to freeze.^'s body begins to freeze.^Your body begins to thaw.
 75^Sicken^4^14^0^0^5^16896^1^0^5^0^0^0^0^0^1^1^You feel feverish.^ sweats and shivers, looking feverish.^Your fever has broken.
@@ -63149,19 +63157,19 @@
 75071^Broker's Service: Asset Protection^255^5^1^0^8^0^0^0^0^0^4^0^0^0^0^0^Your spirit and will feel bolstered.^ appears bolstered.^You no longer feel bolstered.
 75072^Broker's Service: Gains^255^5^1^0^5^0^0^0^0^0^9^0^0^0^0^0^A rush of magic energy fills you.^'s body is filled with a rush of magic.^
 75073^Stick Around^255^3^0^0^5^0^0^0^1^0^0^0^0^0^0^1^Xev's grip holds you in place.^ is held in place.^Xev releases his hold on you.
-75074^Jackpot^255^3^1^0^2^0^0^0^0^0^11^0^0^0^1^1^Fate can give and take; this time it gave.^'s fate takes something away.^Fate's gift fades.
+75074^Jackpot^255^3^1^0^2^0^0^0^0^0^11^0^0^0^1^0^Fate can give and take; this time it gave.^'s fate gives something away.^Fate's gift fades.
 75075^Wrong Place Wrong Time^255^0^0^0^8^0^1^0^1^0^0^0^0^0^1^1^You are battered and thrown by the twist of fate.^ is battered and thrown.^
 75076^Wrong Place Really Wrong Time^255^0^0^0^8^0^1^0^1^0^0^0^0^0^1^1^You are battered and thrown by the twist of fate.^ is battered and thrown.^
 75077^Forced Transfer^255^2^0^0^5^0^0^0^0^0^0^0^0^0^0^0^^^
 75078^Calling Your Debt^255^0^0^0^5^0^2^0^1^0^0^0^0^0^1^1^Your debts have been called due.^'s debts have been called due.^
-75079^Debt Collateral^255^0^0^0^32^0^1^0^1^0^0^0^0^0^0^1^Your ally's debts made manifest detonate and impact you.^'s is battered by the manifestation of their ally's debts.^
+75079^Debt Collateral^255^0^0^0^32^0^1^0^1^0^0^0^0^0^0^0^Your ally's debts made manifest detonate and impact you.^ is battered by the manifestation of their ally's debts.^
 7508^Cure Poison III^254^0^1^0^5^65407^0^0^0^0^0^0^3^0^1^1^Your blood is cleansed of poisons.^'s body is cleansed of poisons.^
 75080^Lucksworn Empower^255^2^0^0^5^0^0^0^0^0^0^0^0^0^0^0^^^
 75081^Strangling Grasp^255^3^0^0^5^0^1^0^1^0^0^0^0^0^1^1^The threads of fate twist around you.^ is twisted up in the threads of fate.^The threads loosen.
 75082^Crushing Laxity^255^3^0^0^42^0^1^0^9^0^0^0^0^0^0^0^The weight of your misstep crushes you.^ is crushed by their misstep.^
 75083^Lucky Boon^255^12^1^0^5^0^0^0^1^0^4^0^0^0^1^1^You feel the boon of luck.^ feels the boon of luck.^
 75084^Unlucky Hindrance^255^0^0^0^5^0^1^0^1^0^0^0^0^0^1^1^You feel the ire of luck.^ feels the ire of luck.^
-75085^Choking Reprisal^255^4^0^0^2^0^1^0^1^0^0^0^0^0^0^0^Your throat grows tight, making it hard to speak and breath.^ grabs at their throat unable to speak.^You can speak and breath again.
+75085^Choking Reprisal^255^4^0^0^2^0^1^0^1^0^0^0^0^0^0^0^Your throat grows tight, making it hard to speak and breathe.^ grabs at their throat unable to speak.^You can speak and breathe again.
 75086^Unfavorable Probability I^255^50^0^0^2^0^0^0^1^0^0^0^0^0^1^1^You feel your health being drained away.^'s health is drained away.^You feel whole once again.
 75087^Unfavorable Probability II^255^50^0^0^2^0^0^0^1^0^0^0^0^0^1^1^You feel your health being drained away.^'s health is drained away.^You feel whole once again.
 75088^Unfavorable Probability III^255^50^0^0^2^0^0^0^1^0^0^0^0^0^1^1^You feel your health being drained away.^'s health is drained away.^You feel whole once again.
@@ -63170,46 +63178,46 @@
 75090^Unfavorable Probability V^255^50^0^0^2^0^0^0^1^0^0^0^0^0^1^1^You feel your health being drained away.^'s health is drained away.^You feel whole once again.
 75091^Transfer In Progress^255^0^1^0^5^0^0^0^1^0^0^0^0^0^0^0^^^
 75092^Maddening Influence^255^10^0^0^5^0^1^0^9^0^2^0^0^0^0^0^Whispers of dark thoughts intrude your mind.^'s mind is clouded with dark thoughts.^The whispers dissipate.
-75093^Corrupting Pulse^255^0^0^0^8^0^1^0^9^0^0^0^0^0^0^0^Your senses darken as corrupting energy washes over you.^ is covered in corrupting energy.^
+75093^Corrupting Pulse^255^0^0^0^2^0^1^0^9^0^0^0^0^0^0^0^Your senses darken as corrupting energy washes over you.^ is covered in corrupting energy.^
 75094^Ensorcel Psyche^255^4^0^0^5^0^0^0^9^0^0^0^0^1^0^0^The whispers drive you to madness.^ is driven mad by whispers.^You regain control of your senses.
-75095^Creeping Madness I^255^20^0^0^5^0^1^0^9^0^0^0^0^0^0^0^The maddening influence of the realm seeps in.^ feels the maddening influence.^Your mind clears
-75096^Creeping Madness II^255^20^0^0^5^0^1^0^9^0^0^0^0^0^0^0^The maddening influence of the realm tickles your mind.^ feels the maddening influence tickle their mind.^Your mind clears
-75097^Creeping Madness III^255^20^0^0^5^0^1^0^9^0^0^0^0^0^0^0^The maddening influence of the realm clouds your senses.^ feels the maddening influence cloud their senses.^Your mind clears
-75098^Creeping Madness IV^255^20^0^0^5^0^1^0^9^0^0^0^0^0^0^0^The maddening influence of the realm whispers in your ear.^ feels the maddening influence whisper in their ear.^Your mind clears
-75099^Creeping Madness V^255^4^0^0^5^0^1^0^9^0^0^0^0^1^0^0^The maddening influence of the realm overwhelms you.^ is overwhelmed by maddening influence.^Your mind clears
+75095^Creeping Madness I^255^20^0^0^5^0^1^0^9^0^0^0^0^0^0^0^The maddening influence of the realm seeps in.^ feels the maddening influence.^Your mind clears.
+75096^Creeping Madness II^255^20^0^0^5^0^1^0^9^0^0^0^0^0^0^0^The maddening influence of the realm tickles your mind.^ feels the maddening influence tickle their mind.^Your mind clears.
+75097^Creeping Madness III^255^20^0^0^5^0^1^0^9^0^0^0^0^0^0^0^The maddening influence of the realm clouds your senses.^ feels the maddening influence cloud their senses.^Your mind clears.
+75098^Creeping Madness IV^255^20^0^0^5^0^1^0^9^0^0^0^0^0^0^0^The maddening influence of the realm whispers in your ear.^ feels the maddening influence whisper in their ear.^Your mind clears.
+75099^Creeping Madness V^255^4^0^0^5^0^1^0^9^0^0^0^0^1^0^0^The maddening influence of the realm overwhelms you.^ is overwhelmed by maddening influence.^Your mind clears.
 751^Ikaav's Venom^255^20^0^0^4^0^1^0^1^0^0^0^0^0^1^1^Your body is coated with a slimy liquid.^ is covered by Ikaav's Venom.^
 7510^Cure Disease I^254^0^1^0^5^65407^0^0^0^0^0^0^1^0^1^1^The disease has been weakened.^'s body is cleansed of disease.^
 75100^Fractured Psyche^255^0^0^0^2^0^1^0^1^0^0^0^0^0^0^0^Your mind fractures and all you feel is agony.^ is wracked in agony.^
 75101^Silencing Mist^255^2^0^0^5^0^0^0^1^0^0^0^0^0^0^1^The mist clings to your throat, preventing you from speaking.^ is unable to speak.^The mist clears, you can speak again.
-75102^Grasping Mist^255^5^0^0^5^0^0^0^1^0^0^0^0^0^0^1^The mist grips your feet, holding you in place.^ is held in place.^The mist clears, you can move again.
-75103^Psychic Shriek^255^4^0^0^42^0^1^0^1^0^0^0^0^0^0^0^A piercing shriek rattles your mind.^'s mind is rattled by a piercing shriek.^Your mind clears
+75102^Grasping Mist^255^2^0^0^5^0^0^0^1^0^0^0^0^0^0^1^The mist grips your feet, holding you in place.^ is held in place.^The mist clears, you can move again.
+75103^Psychic Shriek^255^4^0^0^42^0^1^0^1^0^0^0^0^0^0^0^A piercing shriek rattles your mind.^'s mind is rattled by a piercing shriek.^Your mind clears.
 75104^Psychic Blast^255^0^0^0^5^0^1^0^1^0^0^0^0^0^0^0^Psychic energy rends your mind.^ is hit by psychic energy.^
 75105^Psychic Blast^255^10^0^0^5^0^0^0^1^0^0^0^0^0^0^0^Psychic energy shatters your spirit.^'s spirit is shattered.^You pull yourself together.
 75106^Shattered Madness^255^0^0^0^2^0^1^0^1^0^0^0^0^0^0^0^An echo of madness fractures your psyche.^'s psyche is fractured.^
-75107^Dread Judgement^255^0^0^0^2^0^1^0^8^0^0^0^0^0^1^1^You have been judged and found wanting.^ has been judged.^
-75108^Dread Judgement^255^10^0^0^5^0^0^0^8^0^0^0^0^0^0^0^Vazaelle's judgement makes it difficult to defend yourself.^'s defenses are weakened.^You can defend yourself again.
-75109^Dread Judgement^255^0^0^0^42^0^1^0^8^0^0^0^0^0^1^1^You have been judged and found wanting.^ has been judged.^
+75107^Dread Judgment^255^0^0^0^2^0^1^0^8^0^0^0^0^0^1^1^You have been judged and found wanting.^ has been judged.^
+75108^Dread Judgment^255^10^0^0^5^0^0^0^8^0^0^0^0^0^0^0^Vazaelle's judgment makes it difficult to defend yourself.^'s defenses are weakened.^You can defend yourself again.
+75109^Dread Judgment^255^0^0^0^42^0^1^0^8^0^0^0^0^0^1^1^You have been judged and found wanting.^ has been judged.^
 7511^Cure Disease II^254^0^1^0^5^65407^0^0^0^0^0^0^2^0^1^1^The disease has been weakened.^'s body is cleansed of disease.^
-75110^Tainted Affliction^255^5^0^0^5^0^1^0^9^0^0^0^0^0^0^1^Corrupting influence breaks your mind and body.^ is corrupted.^The corrupting influence fades.
+75110^Tainted Affliction^255^3^0^0^5^0^1^0^9^0^0^0^0^0^0^1^Corrupting influence breaks your mind and body.^ is corrupted.^The corrupting influence fades.
 75111^Arcing Slash^255^10^0^0^42^0^1^0^8^0^0^0^0^0^0^1^A quick slash causes you to bleed.^ is bleeding.^The bleeding stops.
 75112^Exsanguinating Slash^255^0^0^0^5^0^2^0^8^0^0^0^0^0^0^0^A devastating blow causes you to bleed out.^ bleeds out.^
-75113^Wither^255^5^0^0^8^0^1^0^9^0^0^0^0^0^0^0^Corruption drains your life essence.^'s life essence is drained.^The corruption dissipates
-75114^Decay^255^0^0^0^2^0^1^0^9^0^0^0^0^0^0^0^A wave of corruption consumes a fragment of your life.^ corruption consumes a fragment of their life.^
+75113^Wither^255^5^0^0^8^0^1^0^9^0^0^0^0^0^0^0^Corruption drains your life essence.^'s life essence is drained.^The corruption dissipates.
+75114^Decay^255^0^0^0^2^0^1^0^9^0^0^0^0^0^0^0^A wave of corruption consumes a fragment of your life.^'s life force is consumed by corruption.^
 75115^Not on the List^255^0^0^0^5^0^1^0^8^0^0^0^0^0^0^0^Taurlton's horns pierce through your defenses, drawing blood.^ is pierced by Taurlton's horns, drawing blood.^
-75116^Sucking Wound I^255^12^0^0^5^0^1^0^8^0^0^0^0^0^1^1^Your open wounds bleed heavily as you move.^ is bleeding heavily from open wounds.^Your wounds are no longing bleeding.
-75117^Sucking Wound II^255^12^0^0^5^0^1^0^8^0^0^0^0^0^1^1^Your open wounds bleed heavily as you move.^ is bleeding heavily from open wounds.^Your wounds are no longing bleeding.
-75118^Sucking Wound III^255^12^0^0^5^0^1^0^8^0^0^0^0^0^1^1^Your open wounds bleed heavily as you move.^ is bleeding heavily from open wounds.^Your wounds are no longing bleeding.
+75116^Sucking Wound I^255^12^0^0^5^0^1^0^8^0^0^0^0^0^1^1^Your open wounds bleed heavily as you move.^ is bleeding heavily from open wounds.^Your wounds are no longer bleeding.
+75117^Sucking Wound II^255^12^0^0^5^0^1^0^8^0^0^0^0^0^1^1^Your open wounds bleed heavily as you move.^ is bleeding heavily from open wounds.^Your wounds are no longer bleeding.
+75118^Sucking Wound III^255^12^0^0^5^0^1^0^8^0^0^0^0^0^1^1^Your open wounds bleed heavily as you move.^ is bleeding heavily from open wounds.^Your wounds are no longer bleeding.
 75119^Bleed Out^255^0^0^0^5^0^2^0^8^0^0^0^0^0^0^0^Your wounds were too much for your body to handle.^'s wounds were too much for them to handle.^
 7512^Cure Disease III^254^0^1^0^5^65407^0^0^0^0^0^0^3^0^1^1^The disease has been weakened.^'s body is cleansed of disease.^
-75120^Piercing Toss^255^0^0^0^42^0^1^0^8^0^0^0^0^0^1^1^Chunks of sharp rocks cuts deep into you.^ is cut by chunks of rocks.^
+75120^Piercing Toss^255^0^0^0^42^0^1^0^8^0^0^0^0^0^0^1^Chunks of sharp rocks cut deep into you.^ is cut by chunks of rocks.^
 75121^Piercing Detonation^255^0^0^0^2^0^1^0^8^0^0^0^0^0^1^1^An explosion of sharp rocks cuts deep into you.^ is caught in an explosion of sharp rocks.^
-75122^Falling Debris^255^0^0^0^2^0^1^0^8^0^0^0^0^0^1^1^Debris, thrown from outside the arena, pummels you.^ is pummeled by falling debris.^
-75123^Hold Fast^255^1^0^0^5^0^1^0^1^0^0^0^0^0^0^0^Thick sand grips your feet.^'s legs are gripped by sand.^The sand solidifies and loosens its grip.
+75122^Falling Debris^255^0^0^0^5^0^1^0^8^0^0^0^0^0^1^1^Debris, thrown from outside the arena, pummels you.^ is pummeled by falling debris.^
+75123^Hold Fast^255^2^0^0^5^0^1^0^1^0^0^0^0^0^0^0^Thick sand grips your feet.^'s legs are gripped by sand.^The sand solidifies and loosens its grip.
 75124^Single Out Impact^255^0^0^0^8^0^1^0^8^0^0^0^0^0^1^1^The impact from the bruiser sends shockwaves through your body.^'s body is rocked by the bruiser's impact.^
-75125^Emboldened^255^3^1^0^5^0^0^0^1^0^2^0^0^0^0^1^^ is emoldened by its allies.^
-75126^Black Listed^255^4^0^0^5^0^1^0^1^0^0^0^0^0^1^1^Taurlton's gaze rests uneasily on you.^ looks uneasy as Taurlton's gaze falls on them.^Taurlton's gaze is broken by the falling debris.
-75127^Black Listed^255^0^0^0^2^0^1^0^1^0^0^0^0^0^1^1^A shockwave of debris cuts into you.^ is struck by a shockwave of debris.^
-75128^Black Listed^255^0^0^0^5^0^2^0^1^0^0^0^0^0^0^0^Taurlton's gaze shatters your body.^'s body is shattered by Taurlton's gaze.^
+75125^Emboldened^255^3^1^0^5^0^0^0^1^0^2^0^0^0^0^1^^ is emboldened by its allies.^
+75126^Blacklisted^255^4^0^0^5^0^1^0^1^0^0^0^0^0^1^1^Taurlton's gaze rests uneasily on you.^ looks uneasy as Taurlton's gaze falls on them.^Taurlton's gaze is broken by the falling debris.
+75127^Blacklisted^255^0^0^0^2^0^1^0^1^0^0^0^0^0^1^1^A shockwave of debris cuts into you.^ is struck by a shockwave of debris.^
+75128^Blacklisted^255^0^0^0^5^0^2^0^1^0^0^0^0^0^0^0^Taurlton's gaze shatters your body.^'s body is shattered by Taurlton's gaze.^
 75129^Back of the Line^255^0^0^0^5^0^1^0^8^0^0^0^0^0^0^0^A shockwave attempts to throw you, but you hold firm.^ holds firm as the shockwave washes over them.^
 7513^Cure Disease IV^254^0^1^0^5^65407^0^0^0^0^0^0^4^0^1^1^The disease has been weakened.^'s body is cleansed of disease.^
 75130^Back of the Line^255^0^0^0^5^0^1^0^8^0^0^0^0^0^0^0^A shockwave of pressure crushes your bones and throws you.^'s bones are crushed as they are thrown by the shockwave.^
@@ -63281,7 +63289,7 @@
 75190^Stolen Words^255^1^0^0^5^0^0^0^1^0^0^0^0^0^1^1^You find it impossible to form words.^'s throat closes, making it impossible to form words.^Your throat clears.
 75191^Draining Affection^255^3^0^0^5^0^0^0^1^0^4^0^0^0^0^0^^ is cursed, preventing their wounds from healing.^The cursed markings fade.
 75192^Bramble Shield^255^0^0^0^5^0^0^0^1^0^0^0^0^0^0^0^^ wraps herself in sharp barbs.^The barbs fall away.
-75193^Lucky in Love^255^3^1^0^5^0^0^0^1^0^3^0^0^0^1^1^A flicker of warmth sparks inside of you. ^ is filled with warmth.^The warmth fades.
+75193^Lucky in Love^255^3^1^0^5^0^0^0^1^0^3^0^0^0^1^1^A flicker of warmth sparks inside of you.^ is filled with warmth.^The warmth fades.
 75194^Twisted Fate^255^5^0^0^5^0^1^0^1^0^0^0^0^0^1^1^Your mind is wracked with pain.^ grabs their head with a grimace.^The pain subsides.
 75195^Lucky in Life^255^4^1^0^5^0^0^0^1^0^3^0^0^0^1^1^Your inner fire grows to an inferno.^'s eyes light up with an inner fire.^Your inner fire dims.
 75196^Unlucky in Love^255^3^0^0^5^0^0^0^1^0^0^0^0^0^1^1^Your heart feels heavy.^ clutches at their chest.^You shake off the feeling.
@@ -63301,7 +63309,7 @@
 75208^Tightened Throat^255^1^0^0^5^0^0^0^1^0^0^0^0^0^1^1^You find it impossible to form words.^'s throat closes, making it impossible to form words.^Your throat clears.
 75209^Tightened Throat^255^1^0^0^5^0^1^0^1^0^0^0^0^0^0^1^^ is unable to form words of encouragement.^
 7521^Play Dead IV^254^0^1^0^6^65407^0^1^0^0^0^0^4^0^1^1^You slump to the ground and play dead.^ slumps to the ground, dead.^
-75210^Happy in Love^255^3^1^0^5^0^0^0^1^0^3^0^0^0^1^1^A flicker of warmth sparks inside of you. ^ is filled with warmth.^The warmth fades.
+75210^Happy in Love^255^3^1^0^5^0^0^0^1^0^3^0^0^0^1^1^A flicker of warmth sparks inside of you.^ is filled with warmth.^The warmth fades.
 75211^Distorted Fate^255^5^0^0^5^0^1^0^1^0^0^0^0^0^1^1^Your mind is wracked with pain.^ grabs their head with a grimace.^The pain subsides.
 75212^Happy in Life^255^4^1^0^5^0^0^0^1^0^3^0^0^0^1^1^Your inner fire grows to an inferno.^'s eyes light up with an inner fire.^Your inner fire dims.
 75213^Unhappy in Love^255^3^0^0^5^0^0^0^1^0^0^0^0^0^1^1^Your heart feels heavy.^ clutches at their chest.^You shake off the feeling.
@@ -63309,15 +63317,15 @@
 75215^Love's Disdain^255^0^0^0^2^0^1^0^1^0^0^0^0^0^1^1^A wave of malice overwhelms your body.^ is struck with a wave of malice.^
 75216^Poisoned Touch^255^5^0^0^5^0^1^0^1^0^0^0^0^1^1^1^A corrupting venom clouds your mind.^'s mind is clouded by corrupting venom.^Your mind clears.
 75217^Unwilling Loyalty^255^3^0^0^8^0^0^0^1^0^0^0^0^1^1^1^Your body moves on its own.^ body moves on its own.^You regain control of your body.
-75218^Deep Wound I^255^12^0^0^5^0^1^0^8^0^0^0^0^0^1^1^Your open wounds bleed heavily as you move.^ is bleeding heavily from open wounds.^Your wounds are no longing bleeding.
-75219^Deep Wound II^255^12^0^0^5^0^1^0^8^0^0^0^0^0^1^1^Your open wounds bleed heavily as you move.^ is bleeding heavily from open wounds.^Your wounds are no longing bleeding.
+75218^Deep Wound I^255^12^0^0^5^0^1^0^8^0^0^0^0^0^1^1^Your open wounds bleed heavily as you move.^ is bleeding heavily from open wounds.^Your wounds are no longer bleeding.
+75219^Deep Wound II^255^12^0^0^5^0^1^0^8^0^0^0^0^0^1^1^Your open wounds bleed heavily as you move.^ is bleeding heavily from open wounds.^Your wounds are no longer bleeding.
 7522^Gore I^254^0^0^0^5^65407^1^0^1^0^0^0^1^0^1^1^You stagger back, stunned.^ staggers back, stunned.^
-75220^Deep Wound III^255^12^0^0^5^0^1^0^8^0^0^0^0^0^1^1^Your open wounds bleed heavily as you move.^ is bleeding heavily from open wounds.^Your wounds are no longing bleeding.
-75221^Lancing Toss^255^0^0^0^42^0^1^0^8^0^0^0^0^0^1^1^Chunks of sharp rocks cuts deep into you.^ is cut by chunks of rocks.^
+75220^Deep Wound III^255^12^0^0^5^0^1^0^8^0^0^0^0^0^1^1^Your open wounds bleed heavily as you move.^ is bleeding heavily from open wounds.^Your wounds are no longer bleeding.
+75221^Lancing Toss^255^0^0^0^42^0^1^0^8^0^0^0^0^0^0^1^Chunks of sharp rocks cuts deep into you.^ is cut by chunks of rocks.^
 75222^Lancing Detonation^255^0^0^0^2^0^1^0^8^0^0^0^0^0^1^1^An explosion of sharp rocks cuts deep into you.^ is caught in an explosion of sharp rocks.^
 75223^Falling Rubble^255^0^0^0^2^0^1^0^8^0^0^0^0^0^1^1^Debris, thrown from outside the arena, pummels you.^ is pummeled by falling debris.^
 75224^Heavy Impact^255^0^0^0^8^0^1^0^8^0^0^0^0^0^1^1^The impact from the bruiser sends shockwaves through your body.^'s body is rocked by the bruiser's impact.^
-75225^Encouraging Presence^255^3^1^0^5^0^0^0^1^0^2^0^0^0^0^1^^ is emoldened by its allies.^
+75225^Encouraging Presence^255^3^1^0^5^0^0^0^1^0^2^0^0^0^0^1^^ is emboldened by its allies.^
 75226^Banned^255^4^0^0^5^0^1^0^1^0^0^0^0^0^1^1^Taurlton's gaze rests uneasily on you.^ looks uneasy as Taurlton's gaze falls on them.^Taurlton's gaze is broken by the falling debris.
 75227^Banned^255^0^0^0^5^0^1^0^1^0^0^0^0^0^1^1^A shockwave of debris cuts into you.^ is struck by a shockwave of debris.^
 75228^Roll the Dice: Panic^255^2^0^0^5^0^0^0^1^0^0^0^0^0^1^1^You are overwhelmed with fear.^ is overwhelmed with fear.^You regain control of your senses.
@@ -63329,13 +63337,13 @@
 75233^Heads Up: Thump^255^0^0^0^2^0^1^0^1^0^0^0^0^0^1^1^The coin crushes you.^ is crushed by a coin.^
 75234^Wagered Detonation^255^0^0^0^2^0^1^0^1^0^0^0^0^0^1^1^A burst of magic energy batters you.^ is battered by a burst of magic.^
 75235^Hang Around^255^5^1^0^5^0^0^0^1^0^0^0^0^0^0^1^Xev`s grip holds you in place.^ is held in place.^Xev releases his hold on you.
-75236^Windfall^255^3^1^0^2^0^0^0^0^0^11^0^0^0^1^1^Fate can give and take; this time it gave.^'s fate takes something away.^Fate's gift fades.
+75236^Windfall^255^3^1^0^2^0^0^0^0^0^11^0^0^0^1^0^Fate can give and take; this time it gave.^'s fate takes something away.^Fate's gift fades.
 75237^Wrong Side of Luck^255^0^0^0^8^0^1^0^1^0^0^0^0^0^1^1^You are battered and thrown by the twist of fate.^ is battered and thrown.^
 75238^Really Wrong Side of Luck^255^0^0^0^8^0^1^0^1^0^0^0^0^0^1^1^You are battered and thrown by the twist of fate.^ is battered and thrown.^
 75239^Coerced Procurement^255^2^0^0^5^0^0^0^0^0^0^0^0^0^0^0^^^
 7524^Gore III^254^0^0^0^5^65407^1^0^1^0^0^0^3^0^1^1^You stagger back, stunned.^ staggers back, stunned.^
 75240^Debt is Due^255^0^0^0^5^0^2^0^1^0^0^0^0^0^1^1^Your debts have been called due.^'s debts have been called due.^
-75241^Caught in the Crossfire^255^0^0^0^32^0^1^0^1^0^0^0^0^0^0^1^Your ally`s debts made manifest detonate and impact you.^'s is battered by the manifestation of their ally's debts.^
+75241^Caught in the Crossfire^255^0^0^0^32^0^1^0^1^0^0^0^0^0^0^0^Your ally`s debts made manifest detonate and impact you.^'s is battered by the manifestation of their ally's debts.^
 75242^Lucksworn Boost^255^2^0^0^5^0^0^0^0^0^0^0^0^0^0^0^^^
 75243^Stifling Grip^255^3^0^0^5^0^1^0^1^0^0^0^0^0^1^1^The threads of fate twist around you.^ is twisted up in the threads of fate.^The threads loosen.
 75244^Lucky Blessings^255^12^1^0^2^0^0^0^1^0^4^0^0^0^1^1^You feel the boon of luck.^ feels the boon of luck.^
@@ -64018,7 +64026,7 @@
 8121^Retch Spore^255^10^0^0^4^0^1^0^5^0^0^0^0^0^1^1^You choke on a cloud of retch spores.^ coughs violently.^
 8122^Retch Spore^255^10^0^0^4^0^1^0^5^0^0^0^0^0^1^1^You choke on a cloud of retch spores.^ coughs violently.^
 8123^Hammer Time^255^0^0^0^5^0^1^0^8^0^0^0^0^0^0^0^You see stars.^ goes flying. KAPOW!^
-8124^Radiant Modulating Shard^254^0^1^0^2^4096^0^0^0^0^0^0^6^0^0^0^^^
+8124^Modulation Shard VI^254^0^1^0^2^4096^0^0^0^0^0^0^6^0^1^1^You experience elemental modulation.^ experiences elemental modulation.^
 8125^Ward of Purity I^254^0^1^0^6^2^0^0^0^0^0^0^1^0^0^1^^ commands a divine purity.^
 8126^Ward of Purity II^254^0^1^0^6^2^0^0^0^0^0^0^2^0^0^1^^ commands a divine purity.^
 8127^Ward of Purity III^254^0^1^0^6^2^0^0^0^0^0^0^3^0^0^1^^ commands a divine purity.^
@@ -64035,7 +64043,7 @@
 8139^Zeixshi`Kar's Freezing Strike Doom^255^0^0^0^5^0^1^0^0^0^0^0^0^0^0^0^You have frozen to death.^ has frozen to death.^
 814^Guide Vision^255^4080^1^0^6^0^0^0^0^0^0^0^0^0^1^0^Your eyes tingle.^^Your eyes stop tingling.
 8140^Blast of Flame^255^0^0^0^5^0^1^0^2^0^0^0^0^0^0^0^You are hit by a blast of flame.^ has been hit by a blast of flame.^
-8141^Radiant Modulation Effect^255^0^1^0^6^0^1^0^0^0^9^0^6^0^1^1^You experience a giant elemental modulation.^ experiences a giant elemental modulation.^
+8141^Modulation Shard Effect VI^255^0^1^0^6^0^1^0^0^0^9^0^6^0^1^1^You experience elemental modulation.^ experiences elemental modulation.^
 8142^Sanguine Mind Crystal VI^254^0^1^0^6^8192^0^0^0^0^0^0^6^0^0^0^^^
 8143^Steamfist^255^720^1^0^6^0^0^0^0^0^0^0^0^0^0^0^A jet of steam propels you forward!^ is propelled forward by a jet of steam.^You slow down.
 8145^Clinging Net^255^15^0^0^5^0^0^0^6^0^0^0^0^0^1^1^The earth comes alive and grabs at you feet.^ is ensnared in the embrace of earth.^The earth falls away.
