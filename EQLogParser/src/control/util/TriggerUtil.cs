@@ -1157,7 +1157,7 @@ namespace EQLogParser
 
           await UiUtil.InvokeAsync(() =>
           {
-            new MessageWindow($"Unable to Import. Key Expired.", Resource.RECEIVED_SHARE).ShowDialog();
+            new MessageWindow($"Unable to Import. Key Expired.", Resource.RECEIVED_SHARE, floatAboveOtherApps: true).ShowDialog();
             NextQuickShareTask(quickShareKey);
           });
         }
@@ -1168,7 +1168,7 @@ namespace EQLogParser
         {
           await UiUtil.InvokeAsync(() =>
           {
-            new MessageWindow("Unable to Import. Blocked by Firewall?", Resource.SHARE_ERROR).ShowDialog();
+            new MessageWindow("Unable to Import. Blocked by Firewall?", Resource.SHARE_ERROR, floatAboveOtherApps: true).ShowDialog();
             Log.Error("Error Downloading Quick Share", ex);
             NextQuickShareTask(quickShareKey);
           });
@@ -1184,7 +1184,8 @@ namespace EQLogParser
 
           await UiUtil.InvokeAsync(() =>
           {
-            new MessageWindow("Unable to Import. May be Expired.\nCheck Error Log for Details.", Resource.SHARE_ERROR).ShowDialog();
+            new MessageWindow("Unable to Import. May be Expired.\nCheck Error Log for Details.", Resource.SHARE_ERROR,
+              floatAboveOtherApps: true).ShowDialog();
           });
 
           Log.Error("Error Downloading Quick Share", ex);
@@ -1212,7 +1213,7 @@ namespace EQLogParser
             }
 
             badMessage += " but no supported Triggers or Overlays found.";
-            new MessageWindow(badMessage, Resource.RECEIVED_SHARE).ShowDialog();
+            new MessageWindow(badMessage, Resource.RECEIVED_SHARE, floatAboveOtherApps: true).ShowDialog();
           }
           else
           {
@@ -1238,7 +1239,7 @@ namespace EQLogParser
                 }
 
                 var msgDialog = new MessageWindow(message, Resource.RECEIVED_SHARE, MessageWindow.IconType.Question,
-                  "New Folder", "Merge", characterIds.Count > 0);
+                  "New Folder", "Merge", characterIds.Count > 0, floatAboveOtherApps: true);
                 msgDialog.ShowDialog();
 
                 var mergeIds = msgDialog.MergeOption ? characterIds : null;
@@ -1261,7 +1262,8 @@ namespace EQLogParser
                   message = $"Import Overlays from {player}?\r\n";
                 }
 
-                var msgDialog = new MessageWindow(message, Resource.RECEIVED_SHARE, MessageWindow.IconType.Question, "Import");
+                var msgDialog = new MessageWindow(message, Resource.RECEIVED_SHARE, MessageWindow.IconType.Question, "Import",
+                  floatAboveOtherApps: true);
                 msgDialog.ShowDialog();
 
                 if (msgDialog.IsYes1Clicked)

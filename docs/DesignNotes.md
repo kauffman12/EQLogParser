@@ -458,6 +458,33 @@ Recorded so they are not mistaken for open bugs — each was reviewed and left a
 - Logging overlay id collisions, re-imports, or other expected outcomes of normal sharing.
 - Adding folder-merge semantics to overlay import without a product decision.
 
+### The incoming share prompt floats, and never takes the keyboard
+
+A Quick Share arrives while the operator is IN the game, so the merge/import prompt and its failure notices have to be
+visible without becoming the foreground window. `MessageWindow`'s `floatAboveOtherApps` is opt-in and is set only by the
+share path in `TriggerUtil` (the received-share prompts and the download-failure prompts): `Topmost`,
+`ShowActivated = false`, `CenterScreen`, and `WS_EX_NOACTIVATE` applied at `SourceInitialized` instead of only at `Loaded`. The other
+several dozen `MessageWindow` callers keep exactly the window they always had.
+
+- Z-order and focus are two different Windows questions and both must be answered: the topmost band makes the window
+  visible over a borderless EQ, and the no-activate bit keeps EQ's keyboard — it also makes a mouse-down answer
+  `MA_NOACTIVATE`, so the buttons still take their clicks.
+- `Loaded` is too late to prevent initial activation: WPF's show path has already run. Closing an active modal dialog
+  can restore a previously active EQLP window, so the prompt must remain non-activating throughout show, clicks and close.
+  The `Loaded` handler stays for every caller and re-asserts the style bit for this one.
+- Ownership keeps a window above its owner, not necessarily directly above it, and gives no guarantee of appearing above
+  other applications. Hiding the owner does not remove ownership. The operator observed the prompt over EQ with EQLP
+  hidden to the tray (`HideWindowOnMinimize`), but sometimes under EQ with EQLP visible behind the game. That observation
+  does not establish the native cause; use topmost rather than relying on either owner state.
+- Nothing on the merge path may raise EQLP: no `Activate()`/`Show()` on the main window is reachable from
+  `ImportTriggers`/`ImportOverlays`. That is part of the contract — a future "bring the window forward after import"
+  would undo this.
+- Borderless and windowed EQ are the supported display modes for this behavior; topmost is not a guarantee of visibility
+  over an exclusive-fullscreen game.
+- The prompt is modal and `NextQuickShareTask` runs only after it closes, so an ignored prompt still stalls the share
+  queue until the `QuickShareCache.Count > 5` guard starts dropping later ones. Floating makes a prompt seen; it does
+  not make it answered.
+
 ## Speech synthesis and TTS engines
 
 The audio subsystem can speak trigger callouts with one of three engines: the Windows speech API, Piper, or

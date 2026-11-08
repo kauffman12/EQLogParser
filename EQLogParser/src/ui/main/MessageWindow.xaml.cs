@@ -1,9 +1,9 @@
 using FontAwesome5;
 using System;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Interop;
 
 namespace EQLogParser
 {
@@ -15,6 +15,7 @@ namespace EQLogParser
     public enum IconType { Question, Save, Warn, Info }
     private readonly string _copyData;
     private readonly Func<Task> _yes1Callback;
+    private readonly bool _floatsAboveOtherApps;
 
     public MessageWindow(string text, string caption, string copyData, string yes1, Func<Task> yes1Callback) : this(text, caption, IconType.Info, yes1)
     {
@@ -26,11 +27,21 @@ namespace EQLogParser
     }
 
     public MessageWindow(string text, string caption, IconType type = IconType.Warn, string yes1 = null, string yes2 = null,
-      bool extra = false, bool noButtons = false)
+      bool extra = false, bool noButtons = false, bool floatAboveOtherApps = false)
     {
       ThemeConfig.SetCurrentTheme(this);
       InitializeComponent();
       Owner = MainActions.GetOwner();
+      _floatsAboveOtherApps = floatAboveOtherApps;
+      if (_floatsAboveOtherApps)
+      {
+        // Incoming shares must float without activating EQLP, including when a button closes the prompt.
+        // docs/DesignNotes.md → "The incoming share prompt floats, and never takes the keyboard".
+        Topmost = true;
+        ShowActivated = false;
+        WindowStartupLocation = WindowStartupLocation.CenterScreen;
+      }
+
       textBox.Text = text;
       Title = caption;
 
@@ -88,6 +99,16 @@ namespace EQLogParser
       iconImage.Icon = image;
     }
 
+    // Floating prompts need the no-activate style before first show; Loaded is too late to prevent initial activation.
+    protected override void OnSourceInitialized(EventArgs e)
+    {
+      base.OnSourceInitialized(e);
+      if (_floatsAboveOtherApps)
+      {
+        SetWindowNoActivate();
+      }
+    }
+
     private void ButtonCancelClick(object sender, RoutedEventArgs e) => Close();
 
     private async void CopyLinkPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -122,22 +143,16 @@ namespace EQLogParser
       Close();
     }
 
-    private const int GwlExstyle = -20;
-    private const int WsExNoactivate = 0x08000000;
-
-    [DllImport("user32.dll")]
-    public static extern int GetWindowLong(IntPtr hWnd, int nIndex);
-
-    [DllImport("user32.dll")]
-    public static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
-
+    // Shared native helpers report a refused style write without throwing out of window setup.
     private void SetWindowNoActivate()
     {
-      var helper = new System.Windows.Interop.WindowInteropHelper(this);
-      var exStyle = GetWindowLong(helper.Handle, GwlExstyle);
-      _ = SetWindowLong(helper.Handle, GwlExstyle, exStyle | WsExNoactivate);
+      var handle = new WindowInteropHelper(this).Handle;
+      var exStyle = NativeMethods.GetWindowLongPtr(handle, (int)NativeMethods.GetWindowLongFields.GwlExstyle);
+      _ = NativeMethods.SetWindowLong(handle, (int)NativeMethods.GetWindowLongFields.GwlExstyle,
+        new IntPtr(exStyle.ToInt64() | (int)NativeMethods.ExtendedWindowStyles.WsExNoActive));
     }
 
+    // Preserve other callers' Loaded-time behavior and reassert the floating prompt's style after chrome setup.
     private void MessageWindowLoaded(object sender, RoutedEventArgs e)
     {
       SetWindowNoActivate();

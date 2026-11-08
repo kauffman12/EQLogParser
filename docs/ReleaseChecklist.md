@@ -992,3 +992,24 @@ Excel can answer is whether it opens and behaves. No new dll ships with this fea
 - [ ] **Failed exports release their files**: induce a write failure (for example a full test volume). The old target stays
   intact, the message directs the operator to Error Log, and the exception appears there. The temporary file is not held
   open by the app; saving again must work after recovery.
+
+## Quick Share prompt over the game, checked on Windows
+
+An incoming share prompts while the operator is in EQ, so that prompt has to be visible without taking the keyboard
+(docs/DesignNotes.md → "The incoming share prompt floats, and never takes the keyboard"). `MessageWindowFloatTest` pins the declared
+window state only; everything below needs a real desktop, and each case is run twice — EQLP hidden to the tray, and EQLP visible but
+behind the game.
+
+- [ ] **The prompt appears over EQ in both window states.** Have a guildmate send a share key (a Tell always prompts; a Group/Guild/Raid
+  line from a name that is not trusted prompts too) and touch nothing after the key lands. The prompt must sit over a borderless EQ
+  whether EQLP is hidden to the tray or behind the game — the behind case is the one that used to be invisible.
+- [ ] **EQ keeps the keyboard while it is up.** Keep moving / typing in EQ's chat box with the prompt on screen: the game keeps every
+  keystroke and no EQLP window comes forward.
+- [ ] **A button answers without raising EQLP.** With three separate shares press **Merge**, **New Folder**, and **Cancel**. The triggers
+  land (or the new folder appears in the tree) and EQLP stays in the background every time — the buttons that close the dialog are the
+  ones to watch, since closing an active modal dialog can reactivate a previously active EQLP window.
+- [ ] **Trusted still means silent.** Add the sender to **Trusted Players** and have them share again: it merges with no window at all.
+- [ ] **A failure is as visible as a success.** Use an expired key (and block the share host if you can): the error prompt has to float
+  over EQ the same way — that path shares the flag and is otherwise the one nobody ever sees.
+- [ ] **Every other dialog is untouched.** Open any menu-driven Save/Confirm prompt: it still activates and still centres on EQLP. Only
+  the share path floats.
