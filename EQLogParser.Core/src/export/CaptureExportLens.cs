@@ -17,6 +17,7 @@ internal static class CaptureExportLens
 
     var classes = PlayerRegistry.Instance.CaptureClassLookup(
       allNames.Concat(owners.Values).Distinct(StringComparer.OrdinalIgnoreCase));
+    var spellNames = EQDataStore.Instance;
     return new CaptureExport.Lens((name, time) =>
     {
       var kind = timeline.IdentityAt(name, time);
@@ -26,6 +27,6 @@ internal static class CaptureExportLens
         owner = ClassificationRules.OwnerInName(name) ?? owners.GetValueOrDefault(name);
       return new CaptureExport.Identity(side, owner ?? string.Empty, classes(name, time),
         IdentityVocabulary.TypeWord(kind));
-    }, spell => EQDataStore.Instance.AbbreviateSpellName(spell));
+    }, spellNames.SplitSpellName);
   }
 }

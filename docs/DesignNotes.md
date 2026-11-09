@@ -18944,9 +18944,11 @@ numbers are the point, because each one passed every check that existed.
    verbatim. Boards keep reading `GetPlayerClass(name, t)`.
 
 **Added because the thread asked in words:** `Spell`/`Skill` and **`Rank` are separate columns** ("the clean spell name in
-Spell, and rank in a separate column"). The clean name arrives through the lens as `EQDataStore.AbbreviateSpellName`, so
-the export prints the tail that rule strips and grows no rank grammar of its own — which also means the store's own
-behaviour shows up honestly (`Reciprocal Roar Strike 6` → rank `6`). `Direction Cast|Receive` was NOT built: `EvCast` is
+Spell, and rank in a separate column"). The lens supplies `SpellNameParts` from `EQDataStore.SplitSpellName`: the name
+and rank are parsed answers, never a prefix subtraction. Numbered spell names remain intact when explicit rank notation
+establishes their boundary (`Ethereal Fire XIII Rk. III` → name `Ethereal Fire XIII`, rank `III`); legacy numeric ranks
+remain separate (`Reciprocal Roar Strike 6` → rank `6`). See "Spell names and ranks are separate questions".
+`Direction Cast|Receive` was NOT built: `EvCast` is
 the only cast evidence in the table, so "Receive" would be rows already on the damage/heal sheets, and a column blank on
 most rows is worse than none; their stated need behind it (attendance at 0 DPS) is met by the scoped Players tab.
 
@@ -19098,6 +19100,58 @@ the log carries **563 damage lines / 129,134,558 damage** and ~10,900 cast lines
 row (Tunky, 2,457,899 — 1.9 % of that damage) and 331 cast rows. Our export: 596 rows (the 563 plus 33 amount-less ones)
 and **129,134,558** — exact to the log — with the casts alongside them. **Match the log** is the standard;
 matching an incomplete sample is not. The whole-capture comparison stands at ±0.01 % against 560k lines.
+
+## Spell names and ranks are separate questions
+
+**The number in a spell's name is not necessarily its rank.** Spell Counts and the ADPS timeline must group
+`Ethereal Fire XIII`, `Ethereal Fire XIII Rk. II`, and `Ethereal Fire XIII Rk. III` under **Ethereal Fire XIII**, not
+Ethereal Fire. Export needs the same name and a separately parsed rank (`II` / `III`), with the original string retained
+in its Full column. An unmarked first rank has no printed rank text: do not invent `I` from metadata.
+
+**Remove exactly ONE rank identifier: the rightmost. Earlier rank-like text belongs to the spell name.** The identifiers
+are explicit `Rk.` / `Mk.` notation (case-insensitive, compact or spaced), a bare trailing Roman/decimal numeral, or a word
+from Azia/Beza/Caza/Dena/Ena/Geza/Kala/Ozah/Vena (also in parentheses). `Rk. III` is one identifier, not two tokens to
+strip independently. A word rank or explicit rank can precede a qualifier: `Shield Reflect Rk. III Effect` → name
+`Shield Reflect Effect`, rank `III`. Never return a compound rank or an empty name. Third/Fifth/Octave are musical
+intervals, not ranks: the three Aeolian songs remain distinct.
+
+| Original | Name | Rank |
+|---|---|---|
+| Adrenaline Surge Effect XII Caza | Adrenaline Surge Effect XII | Caza |
+| Blood Magic VIII (Caza) | Blood Magic VIII | Caza |
+| Companion's Blessing (Azia) XL | Companion's Blessing (Azia) | XL |
+| Flames of Power Dena IX | Flames of Power Dena | IX |
+
+`SpellNameRules` builds an immutable base-name set by removing one identifier from each shipped name **before** parsing
+any row. A complete base established by a ranked sibling is protected from further stripping. This includes both
+`Ethereal Fire XIII` and `Adrenaline Surge Effect XII`; looking up a published name again must not erase the numeral.
+Multiple numbered bases can coexist: `Burnout VI` and `Burnout VII` retain their own names and group only their own
+ranks. Neither file order nor which rank was cast first may decide a label. An unknown log-only name also loses at most
+one identifier; without sibling evidence an unmarked unknown name cannot be distinguished from a ranked name by its
+suffix alone. Export consumes the two parsed fields, never a string-prefix subtraction.
+
+**The data rank field is ordering metadata, not a universal display-rank decoder.** The raw spell data stores
+Ethereal Fire XIII's three ranks as **1 / 5 / 10**, Gather Mana VIII as **8**, Blood Magic VIII (Caza) as **3**, and
+Shield Reflect Rk. III Effect as **0**. Rank 1 alone cannot say where a name ends; rank 0 does not veto printed notation.
+The existing data format is unchanged and the index is built from shipped `data/spells.txt`.
+
+**What the rule costs, measured.** Swept over all 60,085 distinct shipped names: no compound rank, and against the
+previous greedy trailing-strip loop the name changes for **2,882** names (that loop took two or more identifiers from
+1,426 of them, which is what this section forbids). Restricted to the **4,086** spell names actually printed by current
+captures, every rank-word family collapses as intended: `Arcane Aria Strike XII Azia|Beza|Caza` → one name (404,021
+lines), `Blood Magic XI (Azia…Ena)` → one name, `Companion's Blessing (Azia) XLI…XLVII` → one name. A family whose
+notation the game itself wrote both ways inside one rank range (`Dark Lord's Unity`, 119 lines) still splits, and no
+positional rule can settle it — the rank field says the numeral is the rank there while answering `0` for the two
+families above. No class-cache filter predicate changed. Bare parameter-like numbers and unrecognized refinement words
+remain review candidates; a syntactically single rank is not proof that a numeric suffix denotes rank.
+
+`EQDataStore.AbbreviateSpellName` returns only the parsed name for existing grouping consumers; `SplitSpellName` returns
+both fields for export. Results are cached once per original string. Landing-message ambiguity still compares the
+name, so ranks collapse but different numbered spells do not become interchangeable. Damage classification retains
+its abbreviation-key lookup; the same normalization builds and queries that index. `SpellNameRulesTest` pins hard-coded
+syntax and non-rank cases; `SpellNameDataTest` checks real data, metadata counterexamples, single-rank output,
+idempotence, three-rank grouping, and landing-message ambiguity. `CaptureExportShapeTest.NumberedSpellNamesAndActualRanksStaySeparateOnAllThreeRecordSheets` pins the workbook
+columns for damage, casts, heals, and an internal rank marker with a retained qualifier.
 
 ## A summon's own sentence about its master
 

@@ -206,7 +206,7 @@ namespace EQLogParser
     // label exists (Warrior OR Berserker), so GetSpellClass stays null and nothing writes one.
     private readonly ConcurrentDictionary<string, byte> _classAmbiguousFamilyRanks = new();
 
-    private readonly ConcurrentDictionary<string, string> _spellAbbrvCache = new();
+    private readonly SpellNameRules _spellNames;
     private readonly ConcurrentDictionary<string, List<SpellData>> _spellsNameDb = new();
     private readonly ConcurrentDictionary<string, SpellData> _unknownSpellDb = new();
     private readonly ConcurrentDictionary<string, string> _classColors = new();
@@ -215,9 +215,7 @@ namespace EQLogParser
     private readonly List<string> _sortedClassList = [];
     private readonly int _classListCount;
 
-    // rank abbreviation
-    private readonly HashSet<string> RankWords;
-    // Roman rank suffix ("Rk. IV") -> source generated so the pattern is not JIT compiled on first use
+    // Class-safe family suffixes must be complete Roman numerals.
     [GeneratedRegex(@"^M{0,3}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex RomanRegex();
 
@@ -226,11 +224,6 @@ namespace EQLogParser
       var spellList = new List<SpellData>();
       var charmMessages = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
       LifecycleManager.Register(this);
-
-      RankWords = new(StringComparer.OrdinalIgnoreCase)
-      {
-        "Azia", "Beza", "Caza", "Third", "Fifth", "Octave"
-      };
 
       // populate ClassNames from SpellClass enum and resource table
       foreach (var item in Enum.GetValues<SpellClass>())
@@ -280,7 +273,11 @@ namespace EQLogParser
         procCache[$"New {line}"] = true;
       }
 
-      foreach (ref var line in CollectionsMarshal.AsSpan(ConfigUtil.ReadList(@"data\spells.txt")))
+      var spellLines = ConfigUtil.ReadList(@"data\spells.txt");
+      _spellNames = new SpellNameRules(spellLines.Select(line => line.Split('^', 3))
+        .Where(fields => fields.Length == 3).Select(fields => fields[1]));
+
+      foreach (ref var line in CollectionsMarshal.AsSpan(spellLines))
       {
         try
         {
@@ -490,6 +487,8 @@ namespace EQLogParser
     }
 
     public bool IsOldSpell(string name) => !string.IsNullOrEmpty(name) && _oldSpellNamesDb.ContainsKey(name);
+    public string AbbreviateSpellName(string spell) => SplitSpellName(spell).Name;
+
     internal bool IsKnownNpc(string npc) => !string.IsNullOrEmpty(npc) && _allNpcs.ContainsKey(StringCache.GetOrAdd(npc));
     internal bool IsKnownMerc(string merc) => !string.IsNullOrEmpty(merc) && _allMercs.ContainsKey(StringCache.GetOrAdd(merc));
     internal bool IsPlayerSpell(string name) => GetSpellByName(name)?.ClassMask > 0;
@@ -524,67 +523,7 @@ namespace EQLogParser
     internal int GetClassListCount() => _classListCount;
     internal bool IsValidClassName(string className) => !string.IsNullOrEmpty(className) && _classesByName.ContainsKey(className);
 
-    public string AbbreviateSpellName(string spell)
-    {
-      if (_spellAbbrvCache.TryGetValue(spell, out var cached))
-        return cached;
-
-      // Split once into tokens
-      var parts = spell.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-      var count = parts.Length;
-
-      // --- Handle "<name> Rk. I|II|III|..."
-      if (count >= 3 &&
-          parts[count - 2].Equals("Rk.", StringComparison.OrdinalIgnoreCase) &&
-          IsRoman(parts[count - 1]))
-      {
-        count -= 2;
-      }
-
-      // --- Strip other trailing rank indicators
-      while (count > 0)
-      {
-        var last = parts[count - 1];
-
-        if (RankWords.Contains(last))
-        {
-          count--;
-          continue;
-        }
-
-        if (IsRoman(last))
-        {
-          count--;
-          continue;
-        }
-
-        if (int.TryParse(last, out _))
-        {
-          count--;
-          continue;
-        }
-
-        break; // reached base name
-      }
-
-      // If nothing removed → return original
-      if (count == parts.Length)
-      {
-        var unchanged = StringCache.GetOrAddExact(spell);
-        _spellAbbrvCache[spell] = unchanged;
-        return unchanged;
-      }
-
-      // Rebuild abbreviated name
-      var result = string.Join(" ", parts, 0, count);
-
-      var abbreviated = StringCache.GetOrAddExact(result);
-      _spellAbbrvCache[spell] = abbreviated;
-      return abbreviated;
-
-      bool IsRoman(string s) => RomanRegex().IsMatch(s);
-    }
-
+    internal SpellNameParts SplitSpellName(string spell) => _spellNames.Split(spell);
 
     /*
      * How many spell names this process has been told about but holds no data for — the size of R21's second feed (a cast

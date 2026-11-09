@@ -1,6 +1,5 @@
 # Used to generate the spell data included with the parser
 
-import re
 import os.path
 
 DBSpellsFile = 'spells_us.txt'
@@ -21,15 +20,6 @@ ADPS_B1_MAX = { 182: 0, 197: 0, 467: 0 }
 ADPS_BEN_DET = [ 399 ]
 IGNORE = [ 'Test Shield', 'SKU', 'SummonTest', ' Test', 'test atk', 'PvPS', 'BetaTestSpell', 'AA_SPELL_PH', 'test speed', ' test', 'Beta ', 'GM ', 'BetaAcrylia', 'NA ', 'MRC -', '- RESERVED', 'N/A', 'SKU27', 'Placeholder', 'Type3', 'Type 3', 'AVCReserved', ' ID Focus ', 'Use Ability', 'Beta Fish' ]
 IS_TARGETRING = [ 'Issuance' ]
-
-ROMAN_REGEX = re.compile(r"""
-    ^M{0,3}              # thousands
-    (CM|CD|D?C{0,3})     # hundreds
-    (XC|XL|L?X{0,3})     # tens
-    (IX|IV|V?I{0,3})$    # ones
-""", re.VERBOSE | re.IGNORECASE)
-
-RANK_WORDS = {"Azia", "Beza", "Caza", "Third", "Fifth", "Octave"}
 
 ADPS_EXT_DUR = dict()
 DBSTRINGS = dict()
@@ -77,32 +67,6 @@ MAX_HITS[100030230] = 9       # Enduring Reproval
 MAX_HITS[100050180] = 80      # Extended Decrepit Skin
 MAX_HITS[100030180] = 70      # Extended Preservation of Marr
 
-def is_roman(word):
-    return bool(ROMAN_REGEX.match(word))
-
-def abbreviate(name):
-    parts = name.split()
-
-    # Handle "Rk. II"
-    if len(parts) >= 3 and parts[-2].lower() == "Rk." and is_roman(parts[-1]):
-        parts = parts[:-2]
-
-    # strip other trailing rank indicators
-    while parts:
-        last = parts[-1]
-
-        if last in RANK_WORDS:
-            parts.pop()
-            continue
-        if is_roman(last):
-            parts.pop()
-            continue
-        if last.isdigit():
-            parts.pop()
-            continue
-        break
-    return " ".join(parts)
-
 def getAdpsValueFromSpa(current, spa, requireDet):
   if current == ADPS_ALL_VALUE:
     return current
@@ -137,13 +101,6 @@ def isTargetRing(name):
       return True
   return False
   
-def intToRoman(number):
-  result = ''
-  for (arabic, roman) in ROMAN:
-    (factor, number) = divmod(number, arabic)
-    result += roman * factor
-  return result
-
 def isSingleClass(n: int):
   return n > 0 and n <= 32768 and (n & (n - 1)) == 0
 
@@ -372,8 +329,6 @@ if os.path.isfile(DBSpellsFile):
     if charm and adps != 0:
       adps = 0
 
-    abbrv = abbreviate(name)
-    info['abbrv'] = abbrv
     info['adps'] = adps
     info['castTime'] = castTime
     info['damaging'] = damaging

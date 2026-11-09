@@ -19,14 +19,15 @@ internal static class CaptureExport
 
   internal readonly record struct Identity(bool Side, string Owner, string Class, string Kind);
 
-  internal sealed record Lens(Func<string, long, Identity> At, Func<string, string> CleanSpell)
+  internal sealed record Lens(Func<string, long, Identity> At, Func<string, SpellNameParts> SplitSpell)
   {
     internal Lens(Func<string, bool> side, Func<string, string> owner, Func<string, string> playerClass,
-      Func<string, string> kind, Func<string, string> cleanSpell)
+      Func<string, string> kind, Func<string, SpellNameParts> splitSpell)
       : this((name, _) => new Identity(side(name), owner(name) ?? string.Empty,
-        playerClass(name) ?? string.Empty, kind(name) ?? Labels.Unk), cleanSpell) { }
+        playerClass(name) ?? string.Empty, kind(name) ?? Labels.Unk), splitSpell) { }
 
-    internal static readonly Lens Blind = new((_, _) => new Identity(false, "", "", Labels.Unk), s => s);
+    internal static readonly Lens Blind = new((_, _) => new Identity(false, "", "", Labels.Unk),
+      s => new SpellNameParts(s, string.Empty));
   }
 
   internal readonly record struct Span(long From, long To);
@@ -172,8 +173,9 @@ internal static class CaptureExport
       row.Text(facts.NameOf(f.DefIdx));
       var category = LabelTypes.LabelOf(f.TypeId) ?? Labels.Unk;
       row.Text(f.TypeId == LabelTypes.Melee && skill.Length > 0 ? skill : category);
-      row.Text(CleanSpell(skill, options.Lens));
-      row.Text(RankOf(skill, options.Lens));
+      var skillName = options.Lens.SplitSpell(skill);
+      row.Text(skillName.Name);
+      row.Text(skillName.Rank);
       row.Number(f.Total);
       row.Text(DefenseWord(f.TypeId));
       row.Text(LineModifiersParser.Words(f.ModMask));
@@ -202,8 +204,9 @@ internal static class CaptureExport
       row.Number(RelativeTime(e.TimeS, window.AnchorS));
       row.Text(IsoTime(e.TimeS));
       row.Text(name);
-      row.Text(CleanSpell(spell, options.Lens));
-      row.Text(RankOf(spell, options.Lens));
+      var spellName = options.Lens.SplitSpell(spell);
+      row.Text(spellName.Name);
+      row.Text(spellName.Rank);
       row.Text("Cast");
       row.Text(options.Lens.At(name, e.TimeS).Class);
       row.Text(spell);
@@ -247,8 +250,9 @@ internal static class CaptureExport
         row.Text(healed);
         row.Number(h.Total);
         row.Number(h.Overheal);
-        row.Text(CleanSpell(spell, options.Lens));
-        row.Text(RankOf(spell, options.Lens));
+        var spellName = options.Lens.SplitSpell(spell);
+        row.Text(spellName.Name);
+        row.Text(spellName.Rank);
         row.Text(LineModifiersParser.Words(h.ModMask));
         row.Text(LabelTypes.LabelOf(h.TypeId));
         row.Number(h.OverTotal);
@@ -345,7 +349,7 @@ internal static class CaptureExport
     Line("Lookup Scope", "names seen in this window, widened for casts and heals; "
       + "separate rows for observed class/owner changes");
     Line("Time Column", "seconds from fight start: 1 = the anchor's second, -1 = one second before it (no zero)");
-    Line("Rank Column", "rank tail removed from Spell/Skill; the original text is preserved in Spell Full/Skill Full");
+    Line("Rank Column", "parsed rank notation; numbered spell names are preserved, with original text in Spell Full/Skill Full");
     Line("Player Column", "owner for an owned attacker; attacker for a player-side name without a resolved owner");
     Line("Class Columns", "class observed at the record's log time, saved class as fallback; "
       + "damage Class follows Player");
@@ -416,14 +420,6 @@ internal static class CaptureExport
     anchor == 0 ? 0 : time >= anchor ? time - anchor + 1 : time - anchor;
   private static string IsoTime(long time) => time <= 0 ? string.Empty :
     DateUtil.FromDotNetSeconds(time).ToString("yyyy-MM-ddTHH:mm:ss", CultureInfo.InvariantCulture);
-  private static string CleanSpell(string full, Lens lens) =>
-    string.IsNullOrEmpty(full) ? string.Empty : lens.CleanSpell(full) ?? full;
-  private static string RankOf(string full, Lens lens)
-  {
-    var clean = CleanSpell(full, lens);
-    return clean.Length > 0 && clean.Length < full.Length && full.StartsWith(clean, StringComparison.Ordinal)
-      ? full[clean.Length..].Trim() : string.Empty;
-  }
   private static string DefenseWord(byte type) => type switch
   {
     LabelTypes.Miss => Labels.Miss, LabelTypes.Dodge => Labels.Dodge, LabelTypes.Parry => Labels.Parry,

@@ -1,5 +1,4 @@
 using System.IO.Compression;
-using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
 namespace EQLogParser;
@@ -68,7 +67,7 @@ public sealed class CaptureExportShapeTest : IDisposable
     _facts.AddFact(new DamageFact(4, T0 + 6, kizant, npc, 1200, LabelTypes.Dd, 0, LineModifiersParser.None, frostBite));
 
     // One cast five seconds before the pull (the lead-in), one an hour before it (not this fight's), one inside, and
-    // a pet skill whose arabic tail is a level, not a rank — the shape that separates a real rank grammar from a regex.
+    // a pet skill with an arabic rank tail.
     _facts.AddEvidence(new EvidenceFact(0, T0 - 5, kizant, EvidenceFact.EvCast, _facts.InternAux("Heal VIII")));
     _facts.AddEvidence(new EvidenceFact(0, T0 - 3600, kizant, EvidenceFact.EvCast, _facts.InternAux("Portal: Nexus")));
     _facts.AddEvidence(new EvidenceFact(0, T0 + 5, bulgar, EvidenceFact.EvCast, _facts.InternAux("Cure")));
@@ -93,26 +92,7 @@ public sealed class CaptureExportShapeTest : IDisposable
       _ => null
     },
     name => string.Equals(name, "Bulgar`s pet", StringComparison.Ordinal) ? "Pet" : RaidNames.Contains(name, StringComparer.OrdinalIgnoreCase) ? "Player" : "NPC",
-    // The app wires EQDataStore.AbbreviateSpellName; this mirrors its rule ("Rk. <roman>", then trailing roman/number)
-    // so the fixture tests the COLUMN plumbing and not a second rank grammar invented here.
-    CleanSpell);
-
-  private static string CleanSpell(string spell)
-  {
-    var parts = spell.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-    var count = parts.Length;
-
-    if (count >= 3 && parts[count - 2].Equals("Rk.", StringComparison.OrdinalIgnoreCase) && IsRoman(parts[count - 1]))
-      count -= 2;
-
-    while (count > 0 && (IsRoman(parts[count - 1]) || int.TryParse(parts[count - 1], out _))) count--;
-
-    return count == parts.Length ? spell : string.Join(" ", parts, 0, count);
-  }
-
-  private static bool IsRoman(string token) =>
-    Regex.IsMatch(token, @"^M{0,3}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$",
-      RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+    PipelineHarness.SharedDataStore().SplitSpellName);
 
   private CaptureExport.Summary Write(string file = "fight.xlsx") =>
     CaptureExport.Write(Target(file), _facts, _heals, new CaptureExport.Options
@@ -301,7 +281,55 @@ public sealed class CaptureExportShapeTest : IDisposable
     Assert.AreEqual("Bulgar`s pet", petSkill[3]);
     Assert.AreEqual("Reciprocal Roar Strike", petSkill[4]);
     Assert.AreEqual("Reciprocal Roar Strike 6", petSkill[8], "the original text remains available");
-    Assert.AreEqual("6", petSkill[5], "the spell data reads an arabic tail as a level; the export prints what it strips");
+    Assert.AreEqual("6", petSkill[5], "legacy numeric ranks remain available separately");
+  }
+
+  [TestMethod]
+  public void NumberedSpellNamesAndActualRanksStaySeparateOnAllThreeRecordSheets()
+  {
+    var caster = _facts.InternName("Kizant");
+    var target = _facts.InternName("A crypt broker");
+    const string fire = "Ethereal Fire XIII Rk. III";
+    const string heal = "Holy Remedy XIV Rk. II";
+    const string effect = "Shield Reflect Rk. III Effect";
+    _facts.AddFact(new DamageFact(30, T0 + 1, caster, target, 100, LabelTypes.Dd, 0,
+      LineModifiersParser.None, _facts.InternSubtype(fire)));
+    _facts.AddEvidence(new EvidenceFact(31, T0 + 1, caster, EvidenceFact.EvCast, _facts.InternAux(fire)));
+    _facts.AddEvidence(new EvidenceFact(32, T0 + 1, caster, EvidenceFact.EvCast, _facts.InternAux(effect)));
+    _heals.AddHeal(new HealFact(33, T0 + 1, caster, caster, 100, 100, LabelTypes.Heal, 0,
+      LineModifiersParser.None, _heals.InternSpell(heal)));
+    Write();
+
+    using var zip = ZipFile.OpenRead(Target("fight.xlsx"));
+    var damage = Rows(zip, "Player DPS").Skip(1).Select(CellTexts).Single(row => row[15] == fire);
+    Assert.AreEqual("Ethereal Fire XIII", damage[7]);
+    Assert.AreEqual("III", damage[8]);
+    var cast = Rows(zip, "Spells cast").Skip(1).Select(CellTexts).Single(row => row[8] == fire);
+    Assert.AreEqual("Ethereal Fire XIII", cast[4]);
+    Assert.AreEqual("III", cast[5]);
+    var qualified = Rows(zip, "Spells cast").Skip(1).Select(CellTexts).Single(row => row[8] == effect);
+    Assert.AreEqual("Shield Reflect Effect", qualified[4]);
+    Assert.AreEqual("III", qualified[5], "rank need not sit at the end; prefix subtraction cannot extract this");
+    var healed = Rows(zip, "All heals").Skip(1).Select(CellTexts).Single(row => row[12] == heal);
+    Assert.AreEqual("Holy Remedy XIV", healed[7]);
+    Assert.AreEqual("II", healed[8]);
+  }
+
+  [TestMethod]
+  [DataRow("Adrenaline Surge Effect XII Caza", "Adrenaline Surge Effect XII", "Caza")]
+  [DataRow("Blood Magic VIII (Caza)", "Blood Magic VIII", "Caza")]
+  [DataRow("Companion's Blessing (Azia) XL", "Companion's Blessing (Azia)", "XL")]
+  [DataRow("Flames of Power Dena IX", "Flames of Power Dena", "IX")]
+  public void TheCastSheetExtractsOnlyTheRightmostRankIdentifier(string full, string name, string rank)
+  {
+    _facts.AddEvidence(new EvidenceFact(40, T0 + 1, _facts.InternName("Kizant"),
+      EvidenceFact.EvCast, _facts.InternAux(full)));
+    Write();
+
+    using var zip = ZipFile.OpenRead(Target("fight.xlsx"));
+    var cast = Rows(zip, "Spells cast").Skip(1).Select(CellTexts).Single(row => row[8] == full);
+    Assert.AreEqual(name, cast[4]);
+    Assert.AreEqual(rank, cast[5]);
   }
 
   [TestMethod]
@@ -321,7 +349,7 @@ public sealed class CaptureExportShapeTest : IDisposable
     Assert.AreEqual("200", by[6], "the healing the target did NOT need — OverTotal - Total, never the gross (1000)");
     Assert.AreEqual("Heal", by[7]);
     Assert.AreEqual("Heal Rk. II", by[12]);
-    Assert.AreEqual("Rk. II", by[8], "the rank tail, verbatim");
+    Assert.AreEqual("II", by[8], "the parsed rank, without the notation prefix");
 
     var to = CellTexts(Rows(zip, "Heals to you")[1]);
     Assert.AreEqual("Bulgar", to[3]);
@@ -482,7 +510,7 @@ public sealed class CaptureExportShapeTest : IDisposable
       LineModifiersParser.None, HealFact.NoSpell));
     var original = Lens;
     var lens = new CaptureExport.Lens((name, time) => name == "Quietowner`s pet"
-      ? new CaptureExport.Identity(true, "Quietowner", "", "Pet") : original.At(name, time), original.CleanSpell);
+      ? new CaptureExport.Identity(true, "Quietowner", "", "Pet") : original.At(name, time), original.SplitSpell);
     var summary = CaptureExport.Write(Target("heal-census.xlsx"), _facts, _heals,
       new CaptureExport.Options { Lens = lens, LocalPlayer = "Kizant" });
     Assert.AreEqual(3, summary.HealRows);
@@ -545,7 +573,7 @@ public sealed class CaptureExportShapeTest : IDisposable
         Array.Fill(membership, 2);
       }
       return original.At(name, time);
-    }, original.CleanSpell);
+    }, original.SplitSpell);
     var summary = CaptureExport.Write(Target("membership.xlsx"), _facts, _heals,
       new CaptureExport.Options { Lens = lens, DamageOrdinals = membership });
     Assert.IsTrue(changed);
@@ -657,7 +685,7 @@ public sealed class CaptureExportShapeTest : IDisposable
         _facts.AddEvidence(new EvidenceFact(92, T0 + 2, local, EvidenceFact.EvCast, _facts.InternAux("Cure")));
       }
       return original.At(name, time);
-    }, original.CleanSpell);
+    }, original.SplitSpell);
     var summary = CaptureExport.Write(Target("live.xlsx"), _facts, _heals, new CaptureExport.Options { Lens = lens });
     Assert.IsTrue(appended);
     Assert.AreEqual(1950, summary.Damage);
@@ -680,7 +708,7 @@ public sealed class CaptureExportShapeTest : IDisposable
     {
       var identity = original.At(name, time);
       return name == "Kizant" ? identity with { Class = time < T0 + 3 ? "Cleric" : "Bard" } : identity;
-    }, original.CleanSpell);
+    }, original.SplitSpell);
     CaptureExport.Write(Target("personas.xlsx"), _facts, _heals, new CaptureExport.Options { Lens = temporal });
     using var zip = ZipFile.OpenRead(Target("personas.xlsx"));
     var classes = Rows(zip, "Players").Skip(1).Select(CellTexts).Where(row => row[0] == "Kizant")
