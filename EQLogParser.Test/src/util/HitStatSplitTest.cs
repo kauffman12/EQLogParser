@@ -85,14 +85,7 @@ namespace EQLogParserTest
       Assert.AreEqual(0L, stats.TotalCrit);
     }
 
-    /*
-     * One swing can be two lines: the defender's outcome sentence and then the blow that struck through it. The
-     * parser marks the number line (AttemptCountedEarlier / ModifiersCountedEarlier) and THIS layer decides what it
-     * still owes — the row pays one attempt and one Strikethrough, while the damage, the hit and the swing's own
-     * Rampage bit all score. Pinned beside the Absorb and miss guards because that is where the pattern lives; the
-     * parse layer keeps both records either way, and a semantic pinned only one layer above where it is consumed is
-     * not pinned at all. See StruckThroughSwingTest for the parse half.
-     */
+    // A board-walk credit removes the repeated attempt and tag, not the landed damage or its own modifiers.
     [TestMethod]
     public void Damage_StruckSwingsNumberLineScoresTheBlowNotASecondAttempt()
     {
@@ -101,12 +94,11 @@ namespace EQLogParserTest
       StatsUtil.UpdateDamageStats(stats, Damage(Labels.Riposte, "Ripostes", 0, Mask("Strikethrough")));
 
       var landed = Damage(Labels.Melee, "Gores", 132465, Mask("Riposte Strikethrough Rampage"));
-      landed.AttemptCountedEarlier = true;
-      landed.ModifiersCountedEarlier = LineModifiersParser.Strikethrough;
-      StatsUtil.UpdateDamageStats(stats, landed);
+      StatsUtil.UpdateDamageStats(stats, landed,
+        swing: new DamageSwingCredit(true, LineModifiersParser.Strikethrough));
 
       Assert.AreEqual(1u, stats.MeleeAttempts, "the sentence opened the attempt; the number line is the same swing");
-      Assert.AreEqual(1u, stats.RiposteHits);
+      Assert.AreEqual(0u, stats.RiposteHits, "a struck-through defense did not stop the swing");
       Assert.AreEqual(1u, stats.StrikethroughHits, "the tag is on both lines and belongs to the swing once");
       Assert.AreEqual(1u, stats.MeleeHits);
       Assert.AreEqual(132465L, stats.Total);

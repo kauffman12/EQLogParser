@@ -122,30 +122,18 @@ internal class DamageRecord : HitRecord
   // The sentence substituted an effect for an unnamed caster; never inferred from a name/database match.
   public bool AttackerIsSpell { get; set; }
 
-  /*
-   * Set on the number line of a swing whose outcome sentence was already recorded — EQ prints both for one blow when
-   * a defense is struck through, and one blow is one attempt. `ModifiersCountedEarlier` carries the tags the sentence
-   * scored so they are not scored twice; both are written by DamageLineParser.PairStruckSwing and read by nobody
-   * else, and the record keeps saying what its own line said (the mask, the type and the amount are untouched, so
-   * the hit log and the export still show the tags as printed). A bool and a short land in padding this object
-   * already had: a damage record is still 48 bytes.
-   */
-  public bool AttemptCountedEarlier { get; set; }
-  public short ModifiersCountedEarlier { get; set; }
-
   public override bool Equals(object obj)
   {
     return obj is DamageRecord other && _attackerId == other._attackerId && _attackerOwnerId == other._attackerOwnerId
       && _defenderId == other._defenderId && AttackerIsSpell == other.AttackerIsSpell && Total == other.Total
-      && Label == other.Label && SubTypeId == other.SubTypeId && ModifiersMask == other.ModifiersMask
-      && AttemptCountedEarlier == other.AttemptCountedEarlier && ModifiersCountedEarlier == other.ModifiersCountedEarlier;
+      && Label == other.Label && SubTypeId == other.SubTypeId && ModifiersMask == other.ModifiersMask;
   }
 
   public override int GetHashCode()
   {
     var hash1 = HashCode.Combine(_attackerId, _attackerOwnerId, _defenderId);
     var hash2 = HashCode.Combine(AttackerIsSpell, Total, Label);
-    return HashCode.Combine(hash1, hash2, SubTypeId, ModifiersMask, AttemptCountedEarlier, ModifiersCountedEarlier);
+    return HashCode.Combine(hash1, hash2, SubTypeId, ModifiersMask);
   }
 
   /*

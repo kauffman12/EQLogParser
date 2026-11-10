@@ -367,16 +367,12 @@ namespace EQLogParser
     internal static bool CountsAsDamageHit(string type) => type is not (Labels.Absorb or Labels.Block
       or Labels.Dodge or Labels.Miss or Labels.Parry or Labels.Riposte or Labels.Invulnerable);
 
-    /*
-     * The words a defender's own sentence prints, every one of which opens a melee attempt on the row of the name
-     * the blow came at. DamageLineParser registers a struck-through one of these against the number line that
-     * answers it (docs/DesignNotes.md → "One swing, two lines: the outcome sentence and the number line"), and the
-     * two halves must not both charge an attempt.
-     */
+    // These sentences open attempts even when their defense was struck through.
     internal static bool IsDefensiveOutcome(string type) => type is Labels.Absorb or Labels.Block
       or Labels.Dodge or Labels.Miss or Labels.Parry or Labels.Riposte or Labels.Invulnerable;
 
-    internal static void UpdateDamageStats(PlayerSubStats stats, DamageRecord record, bool newFrame = false, bool isPet = false)
+    internal static void UpdateDamageStats(PlayerSubStats stats, DamageRecord record, bool newFrame = false,
+      bool isPet = false, DamageSwingCredit swing = default, bool incoming = false)
     {
       var newMeleeHit = false;
       var parseModifiers = true;
@@ -408,8 +404,8 @@ namespace EQLogParser
           stats.Parries++;
           stats.MeleeAttempts++;
           break;
-        case Labels.Riposte:  // defensive riposte
-          stats.RiposteHits++;
+        case Labels.Riposte:  // Only a defense that stopped the blow counts as a defensive riposte.
+          if (!LineModifiersParser.IsStrikethrough(record.ModifiersMask)) stats.RiposteHits++;
           stats.MeleeAttempts++;
           break;
         case Labels.Invulnerable:
@@ -426,7 +422,7 @@ namespace EQLogParser
           break;
         default:
           // The number line of a swing whose outcome sentence is already on the row does not open a second attempt.
-          if (!record.AttemptCountedEarlier) stats.MeleeAttempts++;
+          if (!swing.AttemptCountedEarlier) stats.MeleeAttempts++;
           newMeleeHit = true;
           break;
       }
@@ -468,15 +464,11 @@ namespace EQLogParser
       // nothing is ever asked for beyond what lands: damage carries no OverTotal (HealRecord does)
       stats.MaxPotentialHit = Math.Max(record.Total, stats.MaxPotentialHit);
 
-      /*
-       * A miss can arrive with a mask on it (a riposte line reads as a miss), and its attacker did not do those
-       * things; and a struck swing's number line owes only what its own outcome sentence left uncounted, which is
-       * what LineModifiersParser.Unspent folds out of the pair.
-       */
+      // Misses spend no modifiers. A paired hit spends only the tags not already counted in this selected walk.
       if (parseModifiers && record.Type != Labels.Miss)
       {
-        LineModifiersParser.UpdateStats(LineModifiersParser.Unspent(record.ModifiersMask, record.ModifiersCountedEarlier),
-          record.Total, stats);
+        LineModifiersParser.UpdateStats(LineModifiersParser.Unspent(record.ModifiersMask, swing.ModifiersCountedEarlier),
+          record.Total, stats, countRiposteHits: !incoming);
       }
     }
 
@@ -733,25 +725,14 @@ namespace EQLogParser
         {
           stats.MeleeHitRate = (float)Math.Round((float)stats.MeleeHits / stats.MeleeAttempts * 100, 2);
 
-          /*
-           * Accuracy asks how many swings got past the defenses, so the defended ones leave the denominator — and a
-           * row defended on every swing leaves it EMPTY, which used to divide by zero and print NaN (or a negative
-           * percentage, when a row's defenses outnumber its attempts). No denominator, no answer: the rate stays at
-           * the zero every unset rate reads as.
-           */
-          if (stats.MeleeAttempts - stats.Parries - stats.Dodges - stats.Blocks - stats.Invulnerable - stats.Absorbs > 0)
-          {
-            stats.MeleeAccRate = (float)Math.Round((float)stats.MeleeHits / (stats.MeleeAttempts - stats.Parries - stats.Dodges - stats.Blocks - stats.Invulnerable - stats.Absorbs) * 100, 2);
-          }
+          // Widen before subtraction: defensive outcomes can exhaust the denominator, which must not wrap as uint.
+          var accuracyAttempts = (long)stats.MeleeAttempts - stats.Parries - stats.Dodges - stats.Blocks
+            - stats.Invulnerable - stats.Absorbs;
+          stats.MeleeAccRate = accuracyAttempts > 0
+            ? (float)Math.Round((double)stats.MeleeHits / accuracyAttempts * 100, 2) : 0;
         }
 
-        /*
-         * Undefended asks how many landed blows got past the defenses. A struck-through defense can print without a
-         * number line — `A killer moth tries to gore Shmid, but Shmid ripostes! (Strikethrough)` four times in a row,
-         * none of them followed by damage, is a real shape in these logs — so the tag can outnumber the hits, and on
-         * two unsigned counters that used to wrap a tank's row to 4,294,967,1xx. Zero is the honest floor of a count
-         * of landed, undefended blows; the mismatch is visible in the two columns it comes from.
-         */
+        // A struck-through sentence need not have a number line; tags can outnumber landed hits.
         stats.MeleeUndefended = stats.MeleeHits > stats.StrikethroughHits ? stats.MeleeHits - stats.StrikethroughHits : 0u;
 
         if (stats.SpellHits > 0)

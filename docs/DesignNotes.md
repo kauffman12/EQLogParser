@@ -11182,83 +11182,87 @@ facts.
 
 ## One swing, two lines: the outcome sentence and the number line
 
-A defense that gets struck through is printed twice — the defender's outcome sentence, and then the blow that got past it:
+**Law: retain both lines, count the swing once in the selected board scope, and count a defensive riposte only when it stopped
+the incoming blow.** EQ can print a failed defense and its landed damage separately, with unrelated events between them:
 
 ```
-[Fri Oct 23 21:54:35 2026] A silk moth tries to gore Ryft, but Ryft ripostes! (Strikethrough)
-[Fri Oct 23 21:54:35 2026] Ryft begins casting Crippling Snare.
-[Fri Oct 23 21:54:35 2026] A silk moth is tormented by Ryft's frost for 111948 points of non-melee damage.
-[Fri Oct 23 21:54:35 2026] A silk moth gores Ryft for 132465 points of damage. (Riposte Strikethrough)
+A silk moth tries to gore Ryft, but Ryft ripostes! (Strikethrough)
+Ryft begins casting Crippling Snare.
+A silk moth is tormented by Ryft's frost for 111948 points of non-melee damage.
+A silk moth gores Ryft for 132465 points of damage. (Riposte Strikethrough)
 ```
 
-Both records stay — "A riposte tagged `(Strikethrough)` was not in the capture at all" is worth the 16,076 facts it added, and the
-blow that got through is not un-happened either. What that change did not settle was who **pays** for the swing, so the boards
-charged it twice, and no counter was measured when it went in (`c5de973b`). An operator counted one fight by hand and reported
-`# Attempts` reading 258 against 185 swings: the mechanic reading was right, the arithmetic was right, and the doubling was ours.
-`# Strikethrough` doubled the same way, which `MeleeUndefended = MeleeHits - StrikethroughHits` then quietly ate.
+The tank's row owes **1 attempt, 0 protected ripostes, 1 strikethrough, 1 hit, 132465 damage**. The frost tick targets the moth,
+not the tank. An untagged `but Ryft ripostes!` instead owes one attempt and one defensive riposte, even if no return damage is
+printed. Two return blows are two outgoing riposte hits, not two defensive ripostes. Conversely, an incoming `(Riposte)` hit is
+**the NPC's** return blow: the tanking builder excludes its modifier-based RiposteHits credit, but retains its damage category and
+TotalRiposte. DamageStatsBuilder keeps counting outgoing return hits and their damage. The tank breakdown tooltip states the
+protected-defense meaning; the record's Type and ModifiersMask remain literal on every surface.
 
-**Law: the number line knows it is the second line of a swing it did not open, and says so on itself** —
-`DamageRecord.AttemptCountedEarlier` and `ModifiersCountedEarlier`, written by `DamageLineParser` from `PendingStruckSwings` and
-read by `StatsUtil` and nobody else. Two records, one event. The carry is a **name pair plus a second**, and the three ways it
-could have been built are all wrong:
+**Accounting belongs to the builders, not ingest or fact storage.** DamageSwingAccounting is local to each selected fight's
+accepted walk, separately for outgoing and incoming blocks. Its DamageSwingCredit goes to StatsUtil for the row, any owner
+aggregate, and its substats. Neither published records nor facts are annotated or mutated. This is essential when a cached fight
+is reused in a smaller time window: a hit whose sentence is outside that window owes its own attempt and tag. Pairing after the
+builder's filters also prevents an excluded record from paying a selected record's credit.
 
-- **Not adjacency.** Between the two lines sit whatever the tank did in between: `begins casting`, the tick of a DoT the swing
-  itself landed, a heal. Three of the four cases in the 40 sampled shapes each carried one unrelated line; the reported shape
-  carries two.
-- **Not direction-agnostic.** A riposte that *succeeds* prints the reverse pair — `Foob slashes Spitetangle for N damage!
-  (Riposte)` — and those landed lines are tagged `Strikethrough` too, in numbers that dwarf the pairs: 12,802 of them on
-  `eqlog_Kizant_xegony-2.txt` with no sentence behind them. Pairing regardless of direction would delete a real event off a real
-  row, which is the same mistake as folding a heal's `OverTotal` onto a hit because the shape looked alike.
-- **Not a lookahead merge.** A third of the tagged sentences on the 467 MB capture (12% on the 663 MB) never get a number line at
-  all — `A killer moth tries to gore Shmid,
-  but Shmid ripostes! (Strikethrough)` four times in a row, none of them followed by damage, is in the file. A merge that waits
-  for the second line loses the first line's event whenever the second never comes, which is the failure mode the parallel loader
-  was backed out for.
+What must not break:
 
-So: `(Attacker, Defender)` within **one second**, newest sentence wins, the entry is consumed when answered, registered at
-`Process` (the ingest door) and never at `ParseLine(string)`, which is a preview that runs on lines nothing ingests. One second is
-where the pairs live: of 15,527 paired swings on the 663 MB capture, 15,454 are in the same log second and 73 within one, **zero**
-beyond; on the 467 MB capture, 13,256 same-second and 109 within one, again zero beyond. A mob's next swing at the same tank
-seconds later is its own attempt and must not lose it to an older sentence.
+- Match both names without case, in the **same direction**, within **0–1 log seconds**. Both sentence and hit must carry
+  Strikethrough. A riposte sentence requires Riposte on the hit too; another defensive outcome requires a non-Riposte hit.
+  An ordinary block followed by a hit in the same second is two swings, never a pair.
+- Newest sentence wins. Consume one entry for one hit. Another melee hit or defensive outcome of that pair retires the old
+  entry even when incompatible; an unrelated cast, spell tick, or different pair does not. Expire by time, not a fixed number
+  of slots: eight active pairs is not a correctness limit.
+- No lookahead and no discarded sentences. An unmatched pierced defense still opens its attempt and contributes whatever
+  modifiers that outcome normally scores, but contributes no protected-riposte count. Auto-parry and the moth sequences with
+  several tagged sentences and no damage are real shapes. A tag is not proof that a damage number was printed.
+- Only the repeated Strikethrough is shared. Absorb and Miss spend no modifier mask, so their paired hit still owes its tag.
+  LineModifiersParser.Unspent removes Riposte **with** a spent Strikethrough; otherwise a bare Riposte bit invents successful
+  return damage from the incoming blow. Critical, Rampage, and other hit-specific bits stay.
+- Facts, codecs, spool formats, damage amounts, and landed-hit counts do not change. Do not reuse retired flag bits or add a
+  registry opinion to facts to solve a board accounting question.
+- MeleeUndefended floors at zero: unmatched sentences can make tag counts exceed hits. Accuracy widens to signed arithmetic
+  before subtracting defenses and returns zero for an exhausted denominator. Neither unsigned wrap nor division by zero is a rate.
 
-What it costs, measured by replaying whole captures through the real parser and the real counters (the harness printed this and
-was deleted; `StruckThroughSwingTest` plus `HitStatSplitTest` keep the rules):
+The one-second rule is conservative association, not a game-issued swing id. Identical named creatures and multiple matching
+swings in one logged second cannot be distinguished perfectly from this text. Do not claim a hand-counted fight's exact result
+without its log, or infer that no later matches exist merely because a matcher stops searching after one second. Do not impose
+`attempts = defenses + strikethroughs + undefended`: these legacy counters are not a closed partition. This repair changes the
+riposte interpretation, not every block/parry/dodge/absorb/invulnerability counter's meaning.
 
-| capture | records | tagged defensive sentences | paired | `# Attempts` removed | `# Strikethrough` removed |
-|---|---|---|---|---|---|
-| `eqlog_Kizant_xegony-2.txt` (467 MB) | 2,286,371 | 19,678 | 13,365 | 13,365 of 2,137,262 | 13,365 of 158,295 |
-| `eqlog_Kizant_xegony-09-20-25.txt` (663 MB) | 4,034,297 | 17,790 | 15,527 | 15,527 of 3,787,205 | 15,527 of 297,806 |
+**Why the first repair was insufficient.** Removing the parser's old Strikethrough guard (`c5de973b`) recovered the tagged
+riposte lines but doubled attempts and tags when a number followed. `07641e5d` attached pairing credit to parser records;
+CombatCapture did not store it, and FightSummarySource.RecordFrom rebuilt records without it. Its raw-event measurements were
+not board measurements. A reproduced pair still reached the real derived tanking builder as **2 attempts / 1 riposte /
+2 strikethroughs**. Builder-local accounting repairs that boundary and avoids persisting a selection-dependent answer.
 
-What a tank's row looks like after it — `Foob` on the 663 MB capture: **11,295 → 8,413 attempts, 7,594 → 4,728 `# Strikethrough`,
-accuracy 43.4% → 60.0%**, with `# Riposte` (4,284) and `# Hits` (4,504) untouched, which is the check that nothing was un-counted that
-should have been. Across the rows this moves on that capture, 34 had more struck-through credits than landed hits before the pairing
-and 3 after; the clamp still carries those three, and they are the swings whose number line never printed.
+Whole-capture validation below runs classification, projection, fact rematerialization, and the real tanking builder. The baseline
+counts the same routed tank records with the pre-repair per-line counters; these are **tanking rows**, not every record in the
+capture. Each row's damage and melee-hit total was asserted unchanged. The disposable measurement was removed after recording:
 
-Of the sentences that opened a marker and did not pair, 5,913 (467 MB) and 2,028 (663 MB) were overwritten by a fresher sentence of
-the same pair — which is why newest-wins costs nothing and FIFO would have mislabelled them — and the rest printed no number line.
+| live capture | damage facts | tank attempts, before → after | tank ripostes, before → after | tank strikethroughs, before → after |
+|---|---:|---:|---:|---:|
+| `eqlog_Kizant_xegony-strangle.txt` | 89,598 | 3,815 → 3,092 | 1,602 → 304 | 2,017 → 1,296 |
+| `eqlog_Kizant_xegony-2.txt` | 2,286,371 | 68,044 → 54,882 | 26,035 → 5,165 | 38,005 → 24,886 |
+| `eqlog_Kizant_xegony-09-20-25.txt` | 4,034,297 | 70,067 → 54,635 | 29,571 → 5,748 | 38,142 → 22,734 |
 
-Three things the numbers forced:
+For example, Foob on the last capture: attempts **11,295 → 8,422**, defensive ripostes **4,284 → 1,061**, strikethroughs
+**7,594 → 4,729**, with **4,504 hits / 463,327,192 damage** unchanged. Stricter tag compatibility and selected-fight boundaries
+are why these numbers are not the earlier raw-event pairing numbers. Attempts and tag reductions need not be identical: Absorb
+and Miss never spent a first tag.
 
-- **The fold is `LineModifiersParser.Unspent(mask, countedEarlier)`, and it takes the `Riposte` bit with the `Strikethrough` bit it
-  rides with.** Subtracting only the tag leaves a bare `Riposte` bit on a record whose damage is the mob's, `IsRiposte()` reads true,
-  and the row scores a *protected* riposte with the mob's damage in `TotalRiposte`. The swing's own bits (`Rampage`, `Critical`)
-  stay, because the outcome sentence never carried them.
-- **`MeleeUndefended` is clamped at zero.** The moth shape makes the tags outnumber landed hits, both counters are `uint`, and the
-  column used to print 4,294,967,1xx for a tank. Zero is the honest floor of a count of landed, undefended blows; the mismatch is
-  readable in the two columns it comes from, and no amount of a hit is being invented.
-- **`MeleeAccRate` asks for nothing when its denominator is gone** (`attempts − parries − dodges − blocks − invulnerable − absorbs`,
-  all of which the pairing shrinks). No row on these three captures reaches zero, so that one is a pinned guard rather than an
-  observed fix; it costs one compare and the denominator it protects is now smaller than it used to be.
+A tank-specific audit of Foob in that capture independently counted **4,284 riposte sentences: 3,223 tagged and 1,061 untagged**;
+the real tanking board's protected-riposte count is exactly the latter. It paired 2,873 incoming swings, with 2,865 repeated tags
+removed, and no incoming NPC return-hit modifiers contributed to this particular row. Selecting High Priest Yaran alone gives
+**6,090 → 4,535 attempts** (1,555 pairs), **604 protected ripostes**, **2,580 strikethroughs**, **2,422 landed melee hits**, and
+**276,749,218 incoming damage**. These are a tank's own incoming records and selected encounter board, not the capture's outgoing
+DPS or a sum over everyone present. The file labelled `-tunky` was not useful for this question: Tunky himself had only 30 incoming
+melee records and no riposte sentences there. A filename's subject is not evidence that it contains a tanking sample.
 
-What did **not** move: the fact rows and their byte widths, damage totals, hits, identity evidence, and `RiposteHits` — 16,076 tagged
-ripostes are still 16,076 ripostes, which is what the earlier section bought. What did move is a reader's expectation, so the two
-tank tooltips now say what their columns do — *Melee swings at the Player, counted once each (a struck-through defense prints two lines
-for one swing)* and *Melee Hits that were not struck through* — because the report that opened all this was a column called
-"# Attempts" being read as "the mob swung", by someone counting correctly.
-
-Open with the reporter, still unanswered: the fight they counted by hand (185 attempts) is a labelled sample these captures do not
-have, and a `# Riposte` column that counts struck-through ripostes may still read "wrong" to a tank who expects only the protected
-ones. The discriminator (`IsRiposte`) already exists; making the column mean it is a wording decision, not a counting bug.
+StruckThroughBoardTest pins the actual boundary, both reporter examples, incoming NPC return damage, time-slider and materialized
+window slices, repeated cached builds, unmatched lines, and outgoing totals. StruckThroughSwingTest pins time, names, direction,
+compatibility, intervening swings, capacity, and modifier credit; HitStatSplitTest pins consumption in StatsUtil. A parser-only
+counter test is not sufficient evidence that a displayed board was repaired.
 
 ## The identity words were swept: one style, casters named, and the Type column pays for its longest word
 

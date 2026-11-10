@@ -426,6 +426,7 @@ namespace EQLogParser
 
             foreach (var group in CollectionsMarshal.AsSpan(_damageGroups))
             {
+              var swings = new DamageSwingAccounting();
               foreach (var block in CollectionsMarshal.AsSpan(group))
               {
                 foreach (var action in block.Actions)
@@ -460,7 +461,8 @@ namespace EQLogParser
                       var isNewFrame = StatsUtil.CheckNewFrame(prevPlayerTimes, stats, block.BeginTime);
 
                       _raidTotals.Total += record.Total;
-                      StatsUtil.UpdateDamageStats(stats, record, isNewFrame, isAttackerPet);
+                      var swing = swings.Observe(record, block.BeginTime);
+                      StatsUtil.UpdateDamageStats(stats, record, isNewFrame, isAttackerPet, swing);
                       BusyTimePolicy.Note(stats, block.BeginTime);
 
                       if ((player is null && !_playerPets.ContainsKey(record.Attacker)) || Labels.IsUnassignedOwner(player))
@@ -474,7 +476,7 @@ namespace EQLogParser
                         var aggregateName = PetRowName(origName);
                         var aggregatePlayerStats = GetRow(aggregateName, original: origName);
                         isNewFrame = StatsUtil.CheckNewFrame(prevPlayerTimes, aggregatePlayerStats, block.BeginTime);
-                        StatsUtil.UpdateDamageStats(aggregatePlayerStats, record, isNewFrame, isAttackerPet);
+                        StatsUtil.UpdateDamageStats(aggregatePlayerStats, record, isNewFrame, isAttackerPet, swing);
                         BusyTimePolicy.Note(aggregatePlayerStats, block.BeginTime);
                         topLevelStats[aggregateName] = aggregatePlayerStats;
 
@@ -492,7 +494,7 @@ namespace EQLogParser
 
                       var subStats = stats.SubStatOf(record.SubType, record.Type);
                       var critHits = subStats.CritHits;
-                      StatsUtil.UpdateDamageStats(subStats, record, false, isAttackerPet);
+                      StatsUtil.UpdateDamageStats(subStats, record, false, isAttackerPet, swing);
 
                       // don't count misses/dodges or where no damage was done; and a scoped build (options.CollectHitTotals) has
                       // no chart that could ever ask these rows, so it keeps no amounts at all (see GenerateStatsOptions).

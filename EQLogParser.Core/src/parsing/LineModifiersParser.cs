@@ -14,10 +14,7 @@ namespace EQLogParser
     private const short Twincast = 1;
     private const short Lucky = 4;
     private const short Rampage = 8;
-    /*
-     * The two bits a defender's own sentence and the blow that answers it share, so the fold in Unspent and the
-     * tests that pin it name the same constants the parser writes.
-     */
+    // The compound tag shared by a pierced defensive sentence and its landed hit.
     internal const short Strikethrough = 16;
     internal const short Riposte = 32;
     private const short Assassinate = 64;
@@ -46,16 +43,8 @@ namespace EQLogParser
     internal static bool IsRiposte(int mask) => mask > -1 && (mask & Riposte) != 0 && (mask & Strikethrough) == 0;
     internal static bool IsStrikethrough(int mask) => mask > -1 && (mask & Strikethrough) != 0;
 
-    /*
-     * What the number line of a swing still owes the tallies, given what its own outcome sentence scored.
-     *
-     * `(Riposte Strikethrough)` on a landed line is one compound statement — the attacker struck through the
-     * defender's riposte — and `but Foob ripostes! (Strikethrough)` is the same statement from the other side of
-     * it, so the Riposte bit leaves together with the Strikethrough bit it rides with. Dropping only the
-     * Strikethrough bit would hand the landed line a bare Riposte bit, which IsRiposte() reads as TRUE: a pierced
-     * riposte scored as a protected one, with the mob's damage added to TotalRiposte. Every other bit on the line
-     * (Rampage, Crush, Headshake, …) belongs to the swing itself and stays.
-     */
+    // Remove Riposte with the repeated Strikethrough: a bare Riposte bit would miscredit the attacker's damage
+    // as successful return damage. Other modifiers belong to the landed hit and stay untouched.
     internal static short Unspent(short mask, short alreadyCounted)
     {
       if (alreadyCounted == 0 || mask <= 0) return mask;
@@ -120,7 +109,8 @@ namespace EQLogParser
      * Callers holding a miss must not call this: whoever counts a riposte line as a miss decides its attacker
      * gets nothing.
      */
-    internal static void UpdateStats(short modifiersMask, long total, Attempt playerStats, Attempt theHit = null)
+    internal static void UpdateStats(short modifiersMask, long total, Attempt playerStats, Attempt theHit = null,
+      bool countRiposteHits = true)
     {
       if (modifiersMask > -1)
       {
@@ -204,10 +194,11 @@ namespace EQLogParser
         // A Strikethrough Riposte is the attacker attacking through a riposte from the defender
         if (IsRiposte(modifiersMask))
         {
-          playerStats.RiposteHits++;
+          // Incoming return damage belongs to the attacker; it is not the defender successfully riposting.
+          if (countRiposteHits) playerStats.RiposteHits++;
           playerStats.TotalRiposte += total;
 
-          if (theHit is not null)
+          if (countRiposteHits && theHit is not null)
           {
             theHit.RiposteHits++;
           }

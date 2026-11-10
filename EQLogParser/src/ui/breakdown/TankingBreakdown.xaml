@@ -117,7 +117,7 @@
         <syncfusion:TreeGridNumericColumn MappingName="Misses" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Missed" />
         <syncfusion:TreeGridNumericColumn MappingName="Parries" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Parried" />
         <syncfusion:TreeGridNumericColumn MappingName="StrikethroughHits" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Strikethrough" />
-        <syncfusion:TreeGridNumericColumn MappingName="RiposteHits" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Riposte" />
+        <syncfusion:TreeGridNumericColumn MappingName="RiposteHits" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderDefensiveRiposteTemplateToolTip}" TextAlignment="Right" HeaderText="# Riposte" />
         <syncfusion:TreeGridTextColumn MappingName="RampageRate" DisplayBinding="{Binding Path=RampageRate, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderRampageTemplateToolTip}" TextAlignment="Right" HeaderText="% Rampage" />
       </syncfusion:SfTreeGrid.Columns>
     </syncfusion:SfTreeGrid>

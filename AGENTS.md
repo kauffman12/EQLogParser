@@ -92,14 +92,13 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
 - **An outcome word decides; a tag never un-happens it.** Riposte/block/parry/dodge lines always produce a record;
   sub-setting happens off `record.ModifiersMask` (`LineModifiersParser.IsRiposte` = Riposte without Strikethrough), never by
   dropping the line. A name never keeps the sentence's period (`from <blank> by Y.` spell names).
-- **One swing can be two lines.** A struck-through defense prints its outcome sentence and then the blow that got past it: both
-  records stay, `PendingStruckSwings` pairs them by `(attacker, defender)` within one second (newest wins, consumed on answer,
-  registered at `Process` and never at the `ParseLine(string)` preview), and a record carrying `AttemptCountedEarlier` opens no
-  second `MeleeAttempts` and scores no second `Strikethrough` — the fold is `LineModifiersParser.Unspent`, which takes the Riposte
-  bit with the Strikethrough bit it rides with. Never pair by adjacency, never ignore direction (a successful riposte's return blow
-  is the reverse pair), never merge with lookahead (a third of these sentences print no number line at all). `MeleeUndefended` is
-  clamped at zero because tags can outnumber hits. See docs/DesignNotes.md →
-  "One swing, two lines: the outcome sentence and the number line".
+- **One swing can be two lines; its credit belongs to the selected board walk.** Both records/facts stay. Each builder uses
+  `DamageSwingAccounting` after selection and filtering, per fight/direction: same names, compatible Strikethrough tags, within
+  one second, newest wins, consumed once. Never annotate captured records, pair untagged defenses, ignore direction, or discard
+  unmatched sentences. `DamageSwingCredit` removes the repeated attempt/tag; `Unspent` takes Riposte with Strikethrough.
+  Tanking `RiposteHits` counts protected defensive sentences only, not pierced defenses or the NPC's return-hit modifiers;
+  outgoing riposte hits/damage remain counted. `MeleeUndefended` floors at zero. Pin the fact-to-board round-trip, not just
+  parser events. See docs/DesignNotes.md → "One swing, two lines: the outcome sentence and the number line".
 - **A heal's healer is the subject of its own sentence.** A pet's `Mark of the Righteous` tick belongs to ``X`s pet`` —
   the owner cast nothing at that moment and the raid's cleric cast the shield minutes earlier — with the owner riding
   beside it as `HealFact.FlagOwnerInLine`; an item `` `s ward`` folds to the player who dropped it (parse-time, so no

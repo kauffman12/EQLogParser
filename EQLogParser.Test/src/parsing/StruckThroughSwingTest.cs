@@ -1,247 +1,203 @@
 namespace EQLogParser;
 
-/*
- * One swing can be two lines, and the boards must charge it once.
- *
- * When a defense is struck through EQ prints the defender's outcome sentence AND the blow that got through it:
- *
- *   [Fri Oct 23 21:54:35 2026] A silk moth tries to gore Ryft, but Ryft ripostes! (Strikethrough)
- *   [Fri Oct 23 21:54:35 2026] Ryft begins casting Crippling Snare.
- *   [Fri Oct 23 21:54:35 2026] A silk moth is tormented by Ryft's frost for 111948 points of non-melee damage.
- *   [Fri Oct 23 21:54:35 2026] A silk moth gores Ryft for 132465 points of damage. (Riposte Strikethrough)
- *
- * Both records stay — an outcome word decides, a tag never un-happens it — but they are one swing at one defender,
- * so the number line says so on itself (DamageRecord.AttemptCountedEarlier / ModifiersCountedEarlier) and the
- * counting layer opens no second attempt and scores no second Strikethrough. Before that, a tank's `# Attempts`
- * counted the swing twice and `# Strikethrough` did too, which `MeleeUndefended = MeleeHits - StrikethroughHits`
- * then ate. Reported by an operator who counted one fight by hand; the measurement and the trade:
- * docs/DesignNotes.md → "One swing, two lines: the outcome sentence and the number line".
- *
- * What this file pins:
- *   1. The pair has to match in BOTH names and in DIRECTION. A successful riposte's return blow is the reverse pair
- *      and is a separate event on a different board — it may not claim its own sentence.
- *   2. The window is one second, because that is where every paired line in these captures sits, and a plain hit
- *      from the same mob seconds later is its own swing.
- *   3. A sentence whose number line never arrives still stands on its own (the moth shape: four pierced ripostes in
- *      a row, none of them followed by damage).
- *   4. Subtracting the already-scored tag takes the Riposte bit with the Strikethrough bit, or the number line reads
- *      as IsRiposte() and scores a PROTECTED riposte — plus the mob's damage into TotalRiposte.
- *   5. Absorb scores no modifiers, so it leaves its number line owing all of them.
- *   6. The preview door (DamageLineParser.ParseLine(string)) is not a sighting: it may not touch the carry.
- */
 [TestClass]
-[DoNotParallelize]
 public class StruckThroughSwingTest
 {
-  private readonly List<DamageRecord> _seen = [];
-
-  [TestInitialize]
-  public void Setup()
-  {
-    Environment.CurrentDirectory = AppDomain.CurrentDomain.BaseDirectory;
-    ConfigUtil.PlayerName = "Kizant";
-    RecordsStore.Instance.Clear(false);
-    PlayerRegistry.Instance.Clear();
-    DamageLineParser.ResetProcessState();
-    DamageLineParser.EventsDamageProcessed += OnDamage;
-  }
-
-  [TestCleanup]
-  public void Cleanup()
-  {
-    DamageLineParser.EventsDamageProcessed -= OnDamage;
-    DamageLineParser.ResetProcessState();
-    RecordsStore.Instance.Clear(false);
-    PlayerRegistry.Instance.Clear();
-    ConfigUtil.PlayerName = "";
-  }
-
-  // ---- the shape the operator reported ------------------------------------------------------
+  private const short Strike = LineModifiersParser.Strikethrough;
+  private const short Riposte = LineModifiersParser.Riposte;
 
   [TestMethod]
   public void APiercedRiposteAndItsNumberLineAreOneSwing()
   {
-    Feed("A silk moth tries to gore Ryft, but Ryft ripostes! (Strikethrough)", 100);
-    Feed("Ryft begins casting Crippling Snare.", 100);
-    Feed("A silk moth is tormented by Ryft's frost for 111948 points of non-melee damage.", 100);
-    Feed("A silk moth gores Ryft for 132465 points of damage. (Riposte Strikethrough)", 100);
-
-    var sentence = Single(Labels.Riposte);
-    var landed = Single(Labels.Melee);
-    Assert.AreEqual(3, _seen.Count, "the cast line makes no record; the sentence, the DoT and the blow do");
-    Assert.IsFalse(sentence.AttemptCountedEarlier, "the sentence is the swing's first line");
-    Assert.AreEqual((short)0, sentence.ModifiersCountedEarlier);
-    Assert.IsTrue(landed.AttemptCountedEarlier, "the number line is the same swing as the sentence three lines back");
-    Assert.AreEqual(LineModifiersParser.Strikethrough, landed.ModifiersCountedEarlier);
-
-    // What the tank's row pays for those four log lines.
-    var row = RowAt(_seen, "Ryft");
-    Assert.AreEqual(1u, row.MeleeAttempts, "one swing, one attempt");
-    Assert.AreEqual(1u, row.RiposteHits, "the player DID riposte — the tag says the mob struck through it, not that it never happened");
-    Assert.AreEqual(1u, row.StrikethroughHits, "the swing was struck through once, not once per line");
-    Assert.AreEqual(1u, row.MeleeHits);
-    Assert.AreEqual(132465L, row.Total);
-    Assert.AreEqual(0u, row.MeleeUndefended, "a struck-through blow is not an undefended one");
-    Assert.AreEqual(0L, row.TotalRiposte, "the mob's damage may not land in the riposte total");
-  }
-
-  [TestMethod]
-  public void ASecondPiercedRiposteOfTheSamePairAnswersTheNewerSentence()
-  {
-    Feed("A killer moth tries to gore Shmid, but Shmid ripostes! (Strikethrough)", 100);
-    Feed("A killer moth tries to gore Shmid, but Shmid ripostes! (Strikethrough)", 100);
-    Feed("A killer moth gores Shmid for 5000 points of damage. (Riposte Strikethrough)", 100);
-
-    Assert.IsTrue(Single(Labels.Melee).AttemptCountedEarlier, "the newer sentence is the one this number line answers");
-
-    // Three lines, two swings: each sentence opened an attempt and only one number line folded into one.
-    var row = RowAt(_seen, "Shmid");
-    Assert.AreEqual(2u, row.MeleeAttempts);
-    Assert.AreEqual(2u, row.RiposteHits);
-    Assert.AreEqual(2u, row.StrikethroughHits);
-    Assert.AreEqual(1u, row.MeleeHits);
-  }
-
-  [TestMethod]
-  public void ASentenceWhoseNumberLineNeverArrivesStillScoresItsOwnSwing()
-  {
-    // The moth shape, straight out of eqlog_Kizant_xegony-strangle.txt: pierced ripostes with no damage line at all.
-    Feed("A killer moth tries to gore Shmid, but Shmid ripostes! (Strikethrough)", 100);
-    Feed("A killer moth tries to gore Shmid, but misses!", 100);
-
-    var row = RowAt(_seen, "Shmid");
-    Assert.AreEqual(2u, row.MeleeAttempts, "two swings, two attempts, no number line anywhere");
-    Assert.AreEqual(1u, row.RiposteHits);
+    var swings = new DamageSwingAccounting();
+    var row = new PlayerSubStats();
+    Count(swings, row, Defense(), 100);
+    Count(swings, row, Record(Labels.Dot, 111948, 0, "Ryft", "A silk moth"), 100);
+    var credit = Count(swings, row, Hit(), 100);
+    Assert.IsTrue(credit.AttemptCountedEarlier);
+    Assert.AreEqual(Strike, credit.ModifiersCountedEarlier);
+    Assert.AreEqual(1u, row.MeleeAttempts);
+    Assert.AreEqual(0u, row.RiposteHits, "a pierced defense did not protect the tank");
     Assert.AreEqual(1u, row.StrikethroughHits);
+    Assert.AreEqual(1u, row.MeleeHits);
+    Assert.AreEqual(0L, row.TotalRiposte, "the attacker's damage is not a successful riposte");
+  }
+
+  [TestMethod]
+  public void ASentenceWithNoNumberLineStillCountsAnAttemptNotAProtectedRiposte()
+  {
+    var swings = new DamageSwingAccounting();
+    var row = new PlayerSubStats();
+    Count(swings, row, Defense(), 100);
+    Count(swings, row, Defense(), 100);
+    Assert.AreEqual(2u, row.MeleeAttempts);
+    Assert.AreEqual(0u, row.RiposteHits);
+    Assert.AreEqual(2u, row.StrikethroughHits);
     Assert.AreEqual(0u, row.MeleeHits);
-    Assert.AreEqual(0u, row.MeleeUndefended, "tags with no hits take the subtraction below zero; on unsigned counters that used to read 4,294,967,1xx");
-  }
-
-  // ---- what may NOT claim a sentence --------------------------------------------------------
-
-  [TestMethod]
-  public void ASuccessfulRipostesReturnBlowIsItsOwnSwingOnItsOwnRow()
-  {
-    Feed("A silk moth tries to gore Ryft, but Ryft ripostes!", 100);
-    Feed("Ryft slashes A silk moth for 40000 points of damage. (Riposte)", 100);
-
-    Assert.AreEqual(Labels.Riposte, Single(Labels.Riposte).Type);
-    Assert.IsFalse(Single(Labels.Melee).AttemptCountedEarlier,
-      "the return blow is the REVERSE pair — the mob's swing at Ryft and Ryft's blow at the mob are two events the boards count on two rows");
-
-    // The riposte's own damage is still a riposte hit on the row of the one who landed it.
-    var row = new PlayerSubStats { Name = "Ryft" };
-    StatsUtil.UpdateDamageStats(row, Single(Labels.Melee));
-    Assert.AreEqual(1u, row.RiposteHits, "IsRiposte() still reads the bare Riposte bit on an unpaired line");
-    Assert.AreEqual(40000L, row.TotalRiposte);
+    StatsUtil.CalculateRates(row, new PlayerStats(), null);
+    Assert.AreEqual(0u, row.MeleeUndefended);
   }
 
   [TestMethod]
-  public void ANumberLineSecondsAfterTheSentenceIsItsOwnSwing()
+  public void AHitConsumesOnlyOneOfTwoSentencesAndOnlyOnce()
   {
-    Feed("A silk moth tries to gore Ryft, but Ryft ripostes! (Strikethrough)", 100);
-    Feed("A silk moth gores Ryft for 9000 points of damage. (Riposte Strikethrough)", 105);
-
-    Assert.IsFalse(Single(Labels.Melee).AttemptCountedEarlier,
-      "the window is one second: every paired line in these captures sits inside it, and a later swing of the same mob must not lose its attempt to an older sentence");
+    var swings = new DamageSwingAccounting();
+    var row = new PlayerSubStats();
+    Count(swings, row, Defense(), 100);
+    Count(swings, row, Defense(), 100);
+    Assert.IsTrue(Count(swings, row, Hit(), 100).AttemptCountedEarlier);
+    Assert.IsFalse(Count(swings, row, Hit(), 100).AttemptCountedEarlier);
+    Assert.AreEqual(3u, row.MeleeAttempts);
+    Assert.AreEqual(3u, row.StrikethroughHits);
+    Assert.AreEqual(2u, row.MeleeHits);
   }
 
   [TestMethod]
-  public void AnotherDefenderDoesNotClaimTheSentence()
+  public void AProtectedRiposteAndTwoReturnBlowsKeepTheirDifferentMeanings()
   {
-    Feed("A silk moth tries to gore Ryft, but Ryft ripostes! (Strikethrough)", 100);
-    Feed("A silk moth gores Shmid for 9000 points of damage.", 100);
-
-    Assert.IsFalse(Single(Labels.Melee).AttemptCountedEarlier, "the pair has to match in both names");
+    var swings = new DamageSwingAccounting();
+    var tank = new PlayerSubStats();
+    var damage = new PlayerSubStats();
+    Count(swings, tank, Defense(LineModifiersParser.None), 100);
+    var first = Record(Labels.Melee, 25159, Riposte, "Ryft", "A silk moth");
+    var second = Record(Labels.Melee, 329802, Riposte, "Ryft", "A silk moth");
+    Assert.IsFalse(Count(swings, damage, first, 100).AttemptCountedEarlier);
+    Assert.IsFalse(Count(swings, damage, second, 100).AttemptCountedEarlier);
+    Assert.AreEqual(1u, tank.MeleeAttempts);
+    Assert.AreEqual(1u, tank.RiposteHits, "one defense stopped the incoming swing");
+    Assert.AreEqual(2u, damage.MeleeHits);
+    Assert.AreEqual(2u, damage.RiposteHits, "two outgoing hits were delivered as riposte damage");
+    Assert.AreEqual(354961L, damage.TotalRiposte);
   }
 
   [TestMethod]
-  public void ThePreviewDoorLeavesTheCarryAlone()
+  [DataRow(100d, true)]
+  [DataRow(101d, true)]
+  [DataRow(102d, false)]
+  [DataRow(99d, false)]
+  public void TheWindowIsForwardAndAtMostOneSecond(double hitTime, bool paired)
   {
-    // ParseLine(string) asks what a line WOULD make without ingesting it, so it may not register a swing that the
-    // next ingested line then answers.
-    var preview = DamageLineParser.ParseLine("A silk moth tries to gore Ryft, but Ryft ripostes! (Strikethrough)");
-    Assert.IsNotNull(preview);
-    Assert.AreEqual(Labels.Riposte, preview.Type);
-
-    Feed("A silk moth gores Ryft for 9000 points of damage. (Riposte Strikethrough)", 100);
-    Assert.IsFalse(Single(Labels.Melee).AttemptCountedEarlier, "a preview parse is not a sighting");
+    var swings = new DamageSwingAccounting();
+    swings.Observe(Defense(), 100);
+    Assert.AreEqual(paired, swings.Observe(Hit(), hitTime).AttemptCountedEarlier);
   }
 
   [TestMethod]
-  public void AnAbsorbSentenceSuppressesTheAttemptButScoresNoModifiers()
+  public void AnotherDefenderOrDirectionCannotClaimTheSentence()
   {
-    Feed("A failed reclaimer tries to punch YOU, but YOUR magical skin absorbs the blow! (Strikethrough)", 100);
-    Feed("A failed reclaimer punches Kizant for 1200 points of damage. (Strikethrough)", 100);
+    var swings = new DamageSwingAccounting();
+    swings.Observe(Defense(), 100);
+    Assert.IsFalse(swings.Observe(Record(Labels.Melee, 1, Strike | Riposte, "A silk moth", "Shmid"), 100)
+      .AttemptCountedEarlier);
+    Assert.IsFalse(swings.Observe(Record(Labels.Melee, 1, Strike | Riposte, "Ryft", "A silk moth"), 100)
+      .AttemptCountedEarlier);
+    Assert.IsTrue(swings.Observe(Hit(), 100).AttemptCountedEarlier);
+  }
 
-    Assert.AreEqual(2, _seen.Count, "both lines are records: the outcome and the blow");
-    var landed = Single(Labels.Melee);
-    Assert.IsTrue(landed.AttemptCountedEarlier);
-    Assert.AreEqual((short)0, landed.ModifiersCountedEarlier,
-      "the absorb arm reads no modifiers, so the number line still owes its Strikethrough");
+  [TestMethod]
+  [DataRow((short)0)]
+  [DataRow((short)16)]
+  [DataRow((short)32)]
+  public void AnIncompatibleHitStartsANewSwingAndRetiresTheOldSentence(short mask)
+  {
+    var swings = new DamageSwingAccounting();
+    swings.Observe(Defense(), 100);
+    Assert.IsFalse(swings.Observe(Hit(mask), 100).AttemptCountedEarlier);
+    Assert.IsFalse(swings.Observe(Hit(), 100).AttemptCountedEarlier);
+  }
 
-    var row = RowAt(_seen, "Kizant");
+  [TestMethod]
+  public void AnOrdinaryBlockAndALaterHitAreTwoSwingsEvenInTheSameSecond()
+  {
+    var swings = new DamageSwingAccounting();
+    var row = new PlayerSubStats();
+    Count(swings, row, Record(Labels.Block, 0, LineModifiersParser.None), 100);
+    Assert.IsFalse(Count(swings, row, Hit(), 100).AttemptCountedEarlier);
+    Assert.AreEqual(2u, row.MeleeAttempts);
+    Assert.AreEqual(1u, row.Blocks);
+  }
+
+  [TestMethod]
+  public void AnInterveningDefenseOfTheSamePairRetiresTheOldSentence()
+  {
+    var swings = new DamageSwingAccounting();
+    swings.Observe(Defense(), 100);
+    swings.Observe(Record(Labels.Miss, 0, LineModifiersParser.None), 100);
+    Assert.IsFalse(swings.Observe(Hit(), 100).AttemptCountedEarlier);
+  }
+
+  [TestMethod]
+  public void AnAbsorbLeavesItsNumberLineOwingTheStrikethroughCredit()
+  {
+    var swings = new DamageSwingAccounting();
+    var row = new PlayerSubStats();
+    Count(swings, row, Record(Labels.Absorb, 0, Strike), 100);
+    var credit = Count(swings, row, Hit(Strike), 100);
+    Assert.IsTrue(credit.AttemptCountedEarlier);
+    Assert.AreEqual((short)0, credit.ModifiersCountedEarlier);
     Assert.AreEqual(1u, row.MeleeAttempts);
     Assert.AreEqual(1u, row.Absorbs);
     Assert.AreEqual(1u, row.StrikethroughHits);
   }
 
-  // ---- the mask fold ----------------------------------------------------------------------
-
   [TestMethod]
-  public void UnspentTakesTheRiposteBitWithTheStrikethroughBitItRidesWith()
+  public void MoreThanEightPendingPairsDoNotEvictAValidSentence()
   {
-    const int strike = LineModifiersParser.Strikethrough;
-    const int riposte = LineModifiersParser.Riposte;
-    const short rampage = 8;
-
-    Assert.AreEqual((short)48, LineModifiersParser.Unspent(48, 0), "nothing counted earlier leaves the mask alone");
-    Assert.AreEqual((short)0, LineModifiersParser.Unspent((short)strike, (short)strike));
-    Assert.AreEqual((short)0, LineModifiersParser.Unspent((short)(riposte | strike), (short)strike),
-      "leaving a bare Riposte bit would read as IsRiposte(): a pierced riposte scored as a protected one, with the mob's damage in TotalRiposte");
-    Assert.AreEqual(rampage, LineModifiersParser.Unspent((short)(riposte | strike | rampage), (short)strike),
-      "Rampage belongs to the swing itself and stays");
-    Assert.AreEqual(LineModifiersParser.None, LineModifiersParser.Unspent(LineModifiersParser.None, (short)strike),
-      "a line with no suffix has nothing to spend");
+    var swings = new DamageSwingAccounting();
+    for (var i = 0; i < 12; i++) swings.Observe(Record(Labels.Riposte, 0, Strike, $"Mob{i}", "Ryft"), 100);
+    for (var i = 0; i < 12; i++)
+      Assert.IsTrue(swings.Observe(Record(Labels.Melee, 1, Strike | Riposte, $"Mob{i}", "Ryft"), 100)
+        .AttemptCountedEarlier);
   }
 
-  // ---- the rates that divide ----------------------------------------------------------------
+  [TestMethod]
+  public void NamesMatchWithoutCaseAndWalksOwnTheirState()
+  {
+    var swings = new DamageSwingAccounting();
+    var hit = Hit();
+    swings.Observe(Record(Labels.Riposte, 0, Strike, "a silk moth", "RYFT"), 100);
+    Assert.IsTrue(swings.Observe(hit, 100).AttemptCountedEarlier);
+    Assert.IsFalse(new DamageSwingAccounting().Observe(hit, 100).AttemptCountedEarlier,
+      "reusing a published record in a narrower selection must not inherit another build's credit");
+    Assert.AreEqual((short)(Strike | Riposte), hit.ModifiersMask);
+  }
 
   [TestMethod]
-  public void ARowWithNothingLeftInTheAccuracyDenominatorAsksNothing()
+  public void UnspentTakesTheCompoundRiposteBitButLeavesTheSwingsOwnModifiers()
   {
-    var row = new PlayerSubStats { Name = "Ryft" };
-    StatsUtil.UpdateDamageStats(row, new DamageRecord { Attacker = "A moth", Defender = "Ryft", Type = Labels.Parry, SubType = "Parries", ModifiersMask = LineModifiersParser.None });
-    StatsUtil.UpdateDamageStats(row, new DamageRecord { Attacker = "A moth", Defender = "Ryft", Type = Labels.Block, SubType = "Blocks", ModifiersMask = LineModifiersParser.None });
-    Assert.AreEqual(2u, row.MeleeAttempts);
+    Assert.AreEqual((short)0, LineModifiersParser.Unspent(Strike | Riposte, Strike));
+    Assert.AreEqual((short)8, LineModifiersParser.Unspent(Strike | Riposte | 8, Strike));
+    Assert.AreEqual((short)(Strike | Riposte), LineModifiersParser.Unspent(Strike | Riposte, 0));
+    Assert.AreEqual(LineModifiersParser.None, LineModifiersParser.Unspent(LineModifiersParser.None, Strike));
+  }
 
+  [TestMethod]
+  public void AccuracyDoesNotDivideByZeroOrAnUnsignedUnderflow()
+  {
+    var row = new PlayerSubStats { Hits = 1, MeleeAttempts = 2, Blocks = 1, Parries = 1 };
     StatsUtil.CalculateRates(row, new PlayerStats(), null);
-
-    Assert.AreEqual(0f, row.MeleeAccRate, "attempts minus defenses is zero here; 0/0 used to print NaN on the board");
-    Assert.IsTrue(float.IsFinite(row.MeleeAccRate));
+    Assert.AreEqual(0f, row.MeleeAccRate);
+    row.Blocks = 3;
+    row.MeleeHits = 1;
+    row.MeleeAccRate = 99;
+    StatsUtil.CalculateRates(row, new PlayerStats(), null);
+    Assert.AreEqual(0f, row.MeleeAccRate);
   }
 
-  // ---- helpers ------------------------------------------------------------------------------
+  private static DamageRecord Defense(short mask = Strike) => Record(Labels.Riposte, 0, mask);
+  private static DamageRecord Hit(short mask = Strike | Riposte) => Record(Labels.Melee, 132465, mask);
 
-  private void Feed(string action, double beginTime) =>
-    DamageLineParser.Process(new LineData { Action = action, BeginTime = beginTime });
-
-  private void OnDamage(DamageProcessedEvent e) => _seen.Add(e.Record);
-
-  private DamageRecord Single(string type) => _seen.Single(r => r.Type == type);
-
-  /*
-   * One name's tanking row, counted the way TankingStatsBuilder counts it: every record whose blow came AT that
-   * name. The frost DoT in the reported shape is damage to the moth, so it belongs to the moth's row, not Ryft's.
-   */
-  private static PlayerSubStats RowAt(IEnumerable<DamageRecord> records, string name)
+  private static DamageRecord Record(string type, long total, short mask,
+    string attacker = "A silk moth", string defender = "Ryft") => new()
   {
-    var row = new PlayerSubStats { Name = name };
-    foreach (var record in records.Where(r => string.Equals(r.Defender, name, StringComparison.OrdinalIgnoreCase)))
-    {
-      StatsUtil.UpdateDamageStats(row, record);
-    }
+    Attacker = attacker, Defender = defender, Total = total, Type = type, SubType = type, ModifiersMask = mask
+  };
 
-    return row;
+  private static DamageSwingCredit Count(DamageSwingAccounting swings, PlayerSubStats row,
+    DamageRecord record, double time)
+  {
+    var credit = swings.Observe(record, time);
+    StatsUtil.UpdateDamageStats(row, record, swing: credit);
+    return credit;
   }
 }

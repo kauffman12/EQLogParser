@@ -285,6 +285,7 @@ namespace EQLogParser
             var prevPlayerTimes = new Dictionary<string, double>();
             foreach (var group in CollectionsMarshal.AsSpan(_tankingGroups))
             {
+              var swings = new DamageSwingAccounting();
               foreach (var block in CollectionsMarshal.AsSpan(group))
               {
                 foreach (var action in block.Actions)
@@ -296,12 +297,13 @@ namespace EQLogParser
                       _raidTotals.Total += record.Total;
                       var stats = StatsUtil.CreatePlayerStats(individualStats, record.Defender);
                       var isNewFrame = StatsUtil.CheckNewFrame(prevPlayerTimes, stats.Name, block.BeginTime);
-                      StatsUtil.UpdateDamageStats(stats, record, isNewFrame);
+                      var swing = swings.Observe(record, block.BeginTime);
+                      StatsUtil.UpdateDamageStats(stats, record, isNewFrame, swing: swing, incoming: true);
                       BusyTimePolicy.Note(stats, block.BeginTime);
                       var subStats = stats.SubStatOf(record.SubType, record.Type);
 
                       var critHits = subStats.CritHits;
-                      StatsUtil.UpdateDamageStats(subStats, record, false);
+                      StatsUtil.UpdateDamageStats(subStats, record, false, swing: swing, incoming: true);
 
                       // don't count misses/dodges or where no damage was done; scoped builds keep no amounts (GenerateStatsOptions.CollectHitTotals).
                       if (record.Total > 0 && options.CollectHitTotals)

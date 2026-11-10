@@ -84,9 +84,6 @@ namespace EQLogParser
     /// <summary>Old-format crit pairing: the swing whose spell type the next line may name.</summary>
     internal DamageLineParser.OldCritData LastCrit;
 
-    /// <summary>Defensive sentences struck through, waiting for the number line of the same swing (see PendingStruckSwings).</summary>
-    internal readonly PendingStruckSwings StruckSwings = new();
-
     /*
      * Spell name → damage class, memoised from immutable spell data. One table per asking kind because an unplaced name's answer
      * IS the kind that asked; a shared table would need the kind in its key. Plain Dictionary is safe: only this lane's consumer
