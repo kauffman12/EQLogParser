@@ -1,3 +1,11 @@
+# 2.4.11 | 11/10/26
+1. Changed how the **Quick Share** dialogs are displayed so they should more reliably show up while playing.
+2. Updated spell abbreviations to better handle names like **Fire VII Rk. II**
+3. Filtering options added to the **Trigger Log** table.
+4. Updated how Strikethrough and defensive Riposte message are counted.
+5. Allow **EQLP:STOP** to work for tells to yourself.
+6. Misc fixes and log file updates.
+
 # 2.4.10 | 11/07/26
 1. Updated **Hit Frequency** chart implementation to closer follow the benchmark charts. It should scale and perform a little better.
 2. Added **Reset Text To Display** and **Reset Text to Speak/Sound to Play** properties to the Timer configuration.
