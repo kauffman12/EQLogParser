@@ -6,6 +6,11 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
 - **Standards**: read `docs/CodingStandards.md` and follow it.
 - **Structure**: prefer small files and atomic commits.
 - **Git**: detailed commit messages, **never push** — pushing is the user's call.
+- **A feature is one commit.** A correction to an unpushed change belongs to that change: amend it, or squash with
+  `git reset --soft <base>` and one message for the whole, rather than stack a follow-up reading "fix the last commit". A commit
+  in history should be one decision that builds, passes and reads on its own. *Atomic* means one logical change, not one editing
+  session: findings on the same feature group together, docs edit explaining them included. Only history the user has not
+  pushed is ours to rewrite.
 - **Docs in git are exactly four**: `docs/DesignNotes.md`, `docs/CodingStandards.md`, `docs/ReleaseChecklist.md`,
   `docs/TtsPacks.md` (the `.gitignore` whitelist). Anything else under `docs/` is a local working note: never `git add`
   it, never assume it exists in a fresh clone, delete it once its durable half is in `DesignNotes.md`.
