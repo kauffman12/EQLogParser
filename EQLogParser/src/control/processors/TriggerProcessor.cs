@@ -1312,12 +1312,15 @@ namespace EQLogParser
       var chatType = ChatLineParser.ParseChatType(lineData.Action);
       if (chatType != null)
       {
+        // All three decide "is this line ours?" for THIS processor's character, not the main window's player.
         // Look for Stop and Clear commands (async void, fire-and-forget in Task.Run context)
-        TriggerUtil.CheckCommands(chatType, lineData.Action);
+        TriggerUtil.CheckCommands(chatType, lineData.Action, _currentPlayer);
 
         // Look for Quick Share entries
-        TriggerUtil.CheckQuickShare(chatType, lineData.Action, lineData.BeginTime, true, CurrentCharacterId, CurrentProcessorName, _trustedPlayers);
-        GinaUtil.CheckGina(_trustedPlayers, chatType, lineData.Action, lineData.BeginTime, CurrentCharacterId, CurrentProcessorName);
+        TriggerUtil.CheckQuickShare(chatType, lineData.Action, lineData.BeginTime, true, CurrentCharacterId, _currentPlayer,
+          CurrentProcessorName, _trustedPlayers);
+        GinaUtil.CheckGina(_trustedPlayers, chatType, lineData.Action, lineData.BeginTime, CurrentCharacterId, CurrentProcessorName,
+          _currentPlayer);
       }
     }
 

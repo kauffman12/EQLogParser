@@ -19,7 +19,7 @@ namespace EQLogParser
       var key = Guid.NewGuid().ToString("N");
       var chatType = new ChatType(ChatChannels.Group, "Somesender", 0) { SenderIsYou = false };
 
-      GinaUtil.CheckGina([new TrustedPlayer { Name = "somesender" }], chatType, $"hello {{GINA:{key}}}", 1234.0, "P1", "MyChar");
+      GinaUtil.CheckGina([new TrustedPlayer { Name = "somesender" }], chatType, $"hello {{GINA:{key}}}", 1234.0, "P1", "MyChar", "Mychar");
 
       var record = FindRecord($"{{GINA:{key}}}") ?? throw new InvalidOperationException("expected a quick-share record in the shared state");
       Assert.AreEqual("Somesender", record.From);
@@ -34,7 +34,7 @@ namespace EQLogParser
       var key = Guid.NewGuid().ToString("N");
       var chatType = new ChatType(ChatChannels.Tell, "Friend", 0) { SenderIsYou = false };
 
-      GinaUtil.CheckGina([], chatType, $"{{GINA:{key}}}", 1234.0, "P1", "MyChar");
+      GinaUtil.CheckGina([], chatType, $"{{GINA:{key}}}", 1234.0, "P1", "MyChar", "Mychar");
 
       // Tell channel: To is the receiving character (processorName) when not importing to the default user.
       var record = FindRecord($"{{GINA:{key}}}") ?? throw new InvalidOperationException("expected a quick-share record");
@@ -47,7 +47,7 @@ namespace EQLogParser
       var key = Guid.NewGuid().ToString("N");
       var chatType = new ChatType(ChatChannels.Tell, "You", 0) { SenderIsYou = true };
 
-      GinaUtil.CheckGina([], chatType, $"{{GINA:{key}}}", 1234.0, "P1", null);
+      GinaUtil.CheckGina([], chatType, $"{{GINA:{key}}}", 1234.0, "P1", null, "Mychar");
 
       // Your own shares are recorded (marked IsMine) but never auto-processed.
       var record = FindRecord($"{{GINA:{key}}}") ?? throw new InvalidOperationException("expected a quick-share record");
@@ -61,12 +61,38 @@ namespace EQLogParser
       var key = Guid.NewGuid().ToString("N");
       var chatType = new ChatType(ChatChannels.Say, "Somesender", 0) { SenderIsYou = false };
 
-      GinaUtil.CheckGina([], chatType, $"{{GINA:{key}}}", 1234.0, "P1", null);
+      GinaUtil.CheckGina([], chatType, $"{{GINA:{key}}}", 1234.0, "P1", null, "Mychar");
 
       // Every GINA chat lands in history (channel names capitalized); only group/guild/raid/tell
       // are eligible for auto-import.
       var record = FindRecord($"{{GINA:{key}}}") ?? throw new InvalidOperationException("expected a quick-share record");
       Assert.AreEqual("Say", record.To);
+    }
+
+    // The leak this pins: ownership used to come from ChatType.SenderIsYou, which compares the sender against the
+    // player the main window has open, so an alt's own share read as a stranger's to its own processor (and another
+    // character's share read as mine).
+    [TestMethod]
+    public void CheckGina_MonitoredCharacterOwnsItsShare_WhileMainWindowShowsAnotherPlayer()
+    {
+      var savedPlayerName = ConfigUtil.PlayerName;
+      ConfigUtil.PlayerName = "Someonelse";
+
+      try
+      {
+        var key = Guid.NewGuid().ToString("N");
+        var chatType = new ChatType(ChatChannels.Tell, "Soandso", 0);
+        Assert.IsFalse(chatType.SenderIsYou, "the shared flag still answers for the main window");
+
+        GinaUtil.CheckGina([], chatType, $"{{GINA:{key}}}", 1234.0, "P2", "SoandsoAlt", "soandso");
+
+        var record = FindRecord($"{{GINA:{key}}}") ?? throw new InvalidOperationException("expected a quick-share record");
+        Assert.IsTrue(record.IsMine, "the monitored character's own share must be recorded as mine");
+      }
+      finally
+      {
+        ConfigUtil.PlayerName = savedPlayerName;
+      }
     }
 
     [TestMethod]

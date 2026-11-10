@@ -408,6 +408,33 @@ wrapper matching a same-named trigger would reach the overwrite branch with null
   `TriggerStorePlatform`) that marshal to the UI thread; `App.xaml.cs` wires them at startup. The Core
   defaults are no-ops / fail-open so a host that forgets a hook degrades instead of throwing — which
   means **a new hook must be wired in `App.xaml.cs` in the same change**, or it silently does nothing.
+- `UiUtil.InvokeAsync(Func<Task>)` waits for the entire asynchronous body, not just the dispatcher post:
+  `Dispatcher.InvokeAsync` returns a nested task, so its `.Task` must be unwrapped. The caller observes
+  completion, faults and cancellation identically whether it started on the dispatcher or a worker.
+  `UiUtilAsyncTest` pins both entry paths, including faults before and after the first yield.
+
+### Quick Share imports have one worker per transport
+
+`QuickShareImportQueue` owns scheduling for EQLP shares and GINA shares (one queue for each transport). Enqueue returns
+work only when the queue was idle; completion returns the next FIFO item only to the worker that owns the active item.
+No caller starts a worker from a dictionary count or by inspecting pending keys. A key stays pending through download,
+retry, prompt and import, so repeated manual clicks or observations from several characters join the same work. A stale
+completion cannot retire a replacement import of the same key. Once completed, the key may be explicitly imported again.
+
+The first request retains its sender, trigger/overlay kind and auto-merge decision. Later observations add character IDs;
+imports take a locked snapshot after the prompt so late readers are included without enumerating a changing set. Those
+IDs enable triggers in the one shared database, not separate database imports. Automatic new keys are bounded by
+`MaxAutomaticPending` (including active work); duplicates can still join at capacity, and explicit manual imports bypass
+that limit. History collection, session ownership, trusted-player/tell rules and manual ownership bypass are separate and
+unchanged. No ownership is persisted across restarts.
+
+`QuickShareImportQueueTest` pins repeated manual imports, distinct queued keys, character joins, first-request policy,
+capacity, snapshots, repeated/stale completion, later re-import and concurrent enqueue/completion handoff. Download and
+prompt adapters retain their existing transport and retry behavior and complete the same work on final failure or after
+the import choice has been handled. EQLP's worker owns both attempts in one awaited loop and releases the work in one
+outer `finally`, after the import or terminal notice finishes. The import callback never releases the queue itself:
+its asynchronous fault must reach the worker's retry policy. A failed terminal notice is logged and still releases the
+queue; a retry retains the same work and never hands off to the next key.
 
 ### Media validation, badges and fixups during import
 
@@ -481,9 +508,9 @@ several dozen `MessageWindow` callers keep exactly the window they always had.
   would undo this.
 - Borderless and windowed EQ are the supported display modes for this behavior; topmost is not a guarantee of visibility
   over an exclusive-fullscreen game.
-- The prompt is modal and `NextQuickShareTask` runs only after it closes, so an ignored prompt still stalls the share
-  queue until the `QuickShareCache.Count > 5` guard starts dropping later ones. Floating makes a prompt seen; it does
-  not make it answered.
+- The prompt is modal and `NextQuickShareTask` runs only after it closes, so an ignored prompt still stalls that
+  transport's queue until `QuickShareImportQueue.MaxAutomaticPending` limits new automatic keys. Floating makes a prompt
+  seen; it does not make it answered.
 
 ## Speech synthesis and TTS engines
 
@@ -19772,3 +19799,35 @@ reset-only counting, literal sounds and null/unset handling. `TimerResetReloadTe
 deadline or starts that state after enqueueing, then drives the real audio handler for TTS and sound; it also pins disposal refusal
 and the ordinary-speech readiness guard. `TriggerUtilCopyTest` pins the stored fields and sound/text editor fold.
 Actual speech/text-overlay presentation remains a Windows check in `docs/ReleaseChecklist.md`.
+
+## Chat lanes ask their own character, not the main window
+
+`ChatType.IsFrom(currentPlayer)` is the per-lane ownership question: a literal `You` sender, or a sender matching the
+player the caller speaks for, ordinally without case. Four decisions ask it, each supplied by the lane reading the log —
+`TriggerProcessor` passes `_currentPlayer` (the same value `{c}` substitutes) and `TriggerHookAdapter` passes
+`ConfigUtil.PlayerName`, because that sink reads the file the main window shows:
+
+- `{EQLP:STOP}` and `{EQLP:CLEAR}` (`EqlpCommandParser.Match`);
+- the quick-share auto-import gate (`TriggerUtil.CheckQuickShare`) and GINA's (`GinaUtil.CheckGina`);
+- `QuickShareRecord.IsMine`, which `QuickShareState.IsMine` consults before auto-merging a key.
+
+`ChatType.SenderIsYou` keeps the old rule — sender equals `You` or equals `ConfigUtil.PlayerName`, ordinal — because
+`ChatDB` and `ChatFilter` archive and display the main log, where the global name is the question being asked. It is
+baked in at parse time from a process-global, so a processor watching a different character's log must not ask it: it
+refuses that character's incoming self-tell and accepts another character's message, silently in both directions.
+`ChatLineParser` reduces `Server.Player tells you` and `Server.Player told you` to the player after the dot before
+ownership is checked; server-qualified self-tells are supported, not a separate ownership exception.
+
+Commands still start at the parsed message's first character, match tokens without case, and
+permit trailing text; leading whitespace, embedded commands and spaces inside the token remain refused. `TextStart` still
+includes the 27-character timestamp, which the matcher subtracts for the timestamp-stripped action. The matcher is pure
+Core code; `TriggerUtil.CheckCommands` retains execution through the existing manager calls. Stop scope, Clear scope,
+readiness and stale-line guards are unchanged.
+
+`ChatTypeOwnershipTest` pins `IsFrom`, including the two answers deliberately disagreeing.
+`EqlpCommandParserTest` drives the real chat parser into the matcher: outgoing tells and existing self-channel forms,
+incoming self-tells (including server-qualified senders) with name-case differences and a different or unset global player,
+rejection of other senders
+(including the globally selected player), Clear, exact syntax and invalid offsets. `GinaQuickShareTest` pins that the
+monitored character's own share is recorded as mine while the main window shows another player. These pin recognition and
+record contents, not Windows overlay presentation.

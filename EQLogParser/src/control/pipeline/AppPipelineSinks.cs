@@ -19,6 +19,7 @@ internal sealed class TriggerHookAdapter : ITriggerHook
 {
   public void CheckQuickShare(ChatType chat, string action, double beginTime)
   {
-    TriggerUtil.CheckQuickShare(chat, action, beginTime, false, TriggerStateDB.DefaultUser);
+    // This sink reads the log the main window shows, so the global player IS the character being asked about.
+    TriggerUtil.CheckQuickShare(chat, action, beginTime, false, TriggerStateDB.DefaultUser, ConfigUtil.PlayerName);
   }
 }

@@ -40,6 +40,17 @@ namespace EQLogParser
     public int TextStart { get; set; }
     public int KeywordStart { get; set; }
     public double BeginTime { get; set; }
+
+    /*
+     * "Did the character this caller speaks for send this line?" — the per-lane question. Ask SenderIsYou instead and a
+     * processor reading another character's log gets the main window's answer.
+     * docs/DesignNotes.md → "Chat lanes ask their own character, not the main window".
+     */
+    internal bool IsFrom(string currentPlayer)
+    {
+      return Sender == You || (!string.IsNullOrEmpty(currentPlayer)
+        && string.Equals(Sender, currentPlayer, StringComparison.OrdinalIgnoreCase));
+    }
   }
 
   public static class ChatLineParser

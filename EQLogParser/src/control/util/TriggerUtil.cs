@@ -2,7 +2,6 @@ using EQLogParser.Audio;
 using log4net;
 using log4net.Appender;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
@@ -246,7 +245,7 @@ namespace EQLogParser
     private const double OriginalTop = 550; // Hard-coded original top position
     private const double OriginalLeft = 650; // Hard-coded original left position
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
-    private static readonly ConcurrentDictionary<string, CharacterData> QuickShareCache = new();
+    private static readonly QuickShareImportQueue QuickShareCache = new();
     private static readonly JsonSerializerOptions SerializationOptions = new JsonSerializerOptions { IncludeFields = true };
     private static readonly Size OriginalResolution = new(1920, 1080); // Hard-coded original screen resolution
 
@@ -894,32 +893,23 @@ namespace EQLogParser
       }
     }
 
-    /// <summary>Check for embedded EQLP commands ({EQLP:STOP}, {EQLP:CLEAR}) and execute them.</summary>
+    /// <summary>Execute a leading EQLP command from the monitored character's own chat.</summary>
     /// <remarks>Called fire-and-forget from the chat processing loop (Task.Run context). Uses async void intentionally.</remarks>
-    internal static async void CheckCommands(ChatType chatType, string action)
+    internal static async void CheckCommands(ChatType chatType, string action, string currentPlayer)
     {
-      if (chatType?.Sender == null || action == null || !chatType.SenderIsYou)
-        return;
-
-      // TextStart is an absolute position in the full log line (includes 27-char timestamp prefix).
-      // Since 'action' has the timestamp stripped, subtract 27 to get the correct offset.
-      var offset = chatType.TextStart - 27;
-      if (offset > 0 && action.Length > offset)
+      switch (EqlpCommandParser.Match(chatType, action, currentPlayer))
       {
-        var tail = action[offset..];
-        if (tail.StartsWith("{EQLP:STOP}", StringComparison.OrdinalIgnoreCase))
-        {
+        case EqlpCommand.Stop:
           await TriggerManager.Instance.StopTriggersAsync();
-        }
-        else if (tail.StartsWith("{EQLP:CLEAR}", StringComparison.OrdinalIgnoreCase))
-        {
+          break;
+        case EqlpCommand.Clear:
           await TriggerManager.Instance.ClearVariablesAsync();
-        }
+          break;
       }
     }
 
     internal static void CheckQuickShare(ChatType chatType, string action, double dateTime, bool doImport, string characterId,
-      string processorName = null, List<TrustedPlayer> trust = null)
+      string currentPlayer, string processorName = null, List<TrustedPlayer> trust = null)
     {
       if (chatType.Sender == null || action == null)
       {
@@ -934,35 +924,22 @@ namespace EQLogParser
       var type = match.Groups[1].Value.Trim();
       var quickShareKey = match.Groups[2].Value.Trim();
       var fullKey = $"{{{type}:{quickShareKey}}}";
-      var record = QuickShareRecord.FromChat(chatType, type, fullKey, dateTime, characterId, processorName);
+      var record = QuickShareRecord.FromChat(chatType, type, fullKey, dateTime, characterId, processorName, currentPlayer);
 
       QuickShareManager.Instance.Add(record);
 
       if (doImport)
       {
         // don't handle immediately unless enabled
-        if (characterId != null && !chatType.SenderIsYou && (chatType.Channel is ChatChannels.Group or ChatChannels.Guild or
+        if (characterId != null && !chatType.IsFrom(currentPlayer) && (chatType.Channel is ChatChannels.Group or ChatChannels.Guild or
               ChatChannels.Raid or ChatChannels.Tell) && ConfigUtil.IfSet("TriggersWatchForQuickShare") && !QuickShareManager.Instance.IsMine(fullKey))
         {
-          // ignore if we're still processing a bunch
-          if (QuickShareCache.Count > 5)
+          var autoMerge = chatType.Channel != ChatChannels.Tell && trust?.Any(tp =>
+            tp.Name.Equals(chatType.Sender, StringComparison.OrdinalIgnoreCase)) is true;
+          if (QuickShareCache.Enqueue(quickShareKey, chatType.Sender, autoMerge, type == ShareTrigger, characterId)
+              is { } work)
           {
-            return;
-          }
-
-          lock (QuickShareCache)
-          {
-            if (!QuickShareCache.TryGetValue(quickShareKey, out var value))
-            {
-              var autoMerge = chatType.Channel != ChatChannels.Tell && trust?.Any(tp => tp.Name.Equals(chatType.Sender, StringComparison.OrdinalIgnoreCase)) is true;
-              QuickShareCache[quickShareKey] = new CharacterData { Sender = chatType.Sender, AutoMerge = autoMerge, IsTrigger = type == ShareTrigger };
-              QuickShareCache[quickShareKey].CharacterIds.Add(characterId);
-              _ = RunQuickShareTaskAsync(quickShareKey, autoMerge);
-            }
-            else
-            {
-              value.CharacterIds.Add(characterId);
-            }
+            _ = RunQuickShareTaskAsync(work);
           }
         }
       }
@@ -977,10 +954,9 @@ namespace EQLogParser
 
       var type = match.Groups[1].Value.Trim();
       var quickShareKey = match.Groups[2].Value.Trim();
-      QuickShareCache.TryAdd(quickShareKey, new CharacterData { Sender = from, IsTrigger = type == ShareTrigger });
-      if (QuickShareCache.Count == 1)
+      if (QuickShareCache.Enqueue(quickShareKey, from, isTrigger: type == ShareTrigger, manual: true) is { } work)
       {
-        _ = RunQuickShareTaskAsync(quickShareKey, false);
+        _ = RunQuickShareTaskAsync(work);
       }
     }
 
@@ -1119,164 +1095,163 @@ namespace EQLogParser
       return null;
     }
 
-    private static void NextQuickShareTask(string quickShareKey)
+    private static void NextQuickShareTask(QuickShareImport work)
     {
-      QuickShareCache.TryRemove(quickShareKey, out _);
-
-      if (!QuickShareCache.IsEmpty)
+      if (QuickShareCache.Complete(work) is { } next)
       {
-        var nextKey = QuickShareCache.Keys.First();
-        _ = RunQuickShareTaskAsync(nextKey, QuickShareCache[nextKey].AutoMerge);
+        _ = RunQuickShareTaskAsync(next);
       }
     }
 
-    private static async Task RunQuickShareTaskAsync(string quickShareKey, bool autoMerge, int tries = 0)
+    private static async Task RunQuickShareTaskAsync(QuickShareImport work)
     {
-      await Task.Delay(1000);
-
       try
       {
-        var url = $"http://share.kizant.net:8080/download/{quickShareKey}";
-        var response = await MainActions.TheHttpClient.GetAsync(url);
-        if (response.IsSuccessStatusCode)
+        for (var tries = 0; tries < 2; tries++)
         {
-          await using var decompressionStream = new GZipStream(await response.Content.ReadAsStreamAsync(), CompressionMode.Decompress);
-          using var ms = new MemoryStream();
-          await decompressionStream.CopyToAsync(ms);
-          ms.Position = 0;
-          await ImportFromQuickShareAsync(Encoding.UTF8.GetString(ms.ToArray()), quickShareKey, autoMerge);
-        }
-        else
-        {
-          if (tries == 0)
+          await Task.Delay(1000).ConfigureAwait(false);
+          string message;
+          var caption = Resource.SHARE_ERROR;
+
+          try
           {
-            // try a 2nd time
-            _ = RunQuickShareTaskAsync(quickShareKey, autoMerge, 1);
-            return;
+            var url = $"http://share.kizant.net:8080/download/{work.Key}";
+            using var response = await MainActions.TheHttpClient.GetAsync(url);
+            if (response.IsSuccessStatusCode)
+            {
+              await using var decompressionStream = new GZipStream(await response.Content.ReadAsStreamAsync(), CompressionMode.Decompress);
+              using var ms = new MemoryStream();
+              await decompressionStream.CopyToAsync(ms);
+              await ImportFromQuickShareAsync(Encoding.UTF8.GetString(ms.ToArray()), work);
+              return;
+            }
+
+            if (tries == 0)
+            {
+              continue;
+            }
+
+            message = "Unable to Import. Key Expired.";
+            caption = Resource.RECEIVED_SHARE;
+          }
+          catch (Exception ex)
+          {
+            if (ex.Message.Contains("An attempt was made to access a socket in a way forbidden by its access permissions"))
+            {
+              message = "Unable to Import. Blocked by Firewall?";
+            }
+            else
+            {
+              if (tries == 0)
+              {
+                continue;
+              }
+
+              message = "Unable to Import. May be Expired.\nCheck Error Log for Details.";
+            }
+
+            Log.Error("Error Downloading Quick Share", ex);
           }
 
           await UiUtil.InvokeAsync(() =>
           {
-            new MessageWindow($"Unable to Import. Key Expired.", Resource.RECEIVED_SHARE, floatAboveOtherApps: true).ShowDialog();
-            NextQuickShareTask(quickShareKey);
+            new MessageWindow(message, caption, floatAboveOtherApps: true).ShowDialog();
           });
+          return;
         }
+      }
+      catch (OperationCanceledException)
+      {
+        Log.Debug("Quick Share import cancelled.");
       }
       catch (Exception ex)
       {
-        if (ex.Message.Contains("An attempt was made to access a socket in a way forbidden by its access permissions"))
-        {
-          await UiUtil.InvokeAsync(() =>
-          {
-            new MessageWindow("Unable to Import. Blocked by Firewall?", Resource.SHARE_ERROR, floatAboveOtherApps: true).ShowDialog();
-            Log.Error("Error Downloading Quick Share", ex);
-            NextQuickShareTask(quickShareKey);
-          });
-        }
-        else
-        {
-          if (tries == 0)
-          {
-            // try a 2nd time
-            _ = RunQuickShareTaskAsync(quickShareKey, autoMerge, 1);
-            return;
-          }
-
-          await UiUtil.InvokeAsync(() =>
-          {
-            new MessageWindow("Unable to Import. May be Expired.\nCheck Error Log for Details.", Resource.SHARE_ERROR,
-              floatAboveOtherApps: true).ShowDialog();
-          });
-
-          Log.Error("Error Downloading Quick Share", ex);
-          NextQuickShareTask(quickShareKey);
-        }
+        // A failed failure notice must not strand the transport or fault a fire-and-forget worker.
+        Log.Error("Error handling Quick Share import", ex);
+      }
+      finally
+      {
+        NextQuickShareTask(work);
       }
     }
 
-    private static async Task ImportFromQuickShareAsync(string data, string quickShareKey, bool autoMerge)
+    private static async Task ImportFromQuickShareAsync(string data, QuickShareImport work)
     {
-      if (QuickShareCache.TryGetValue(quickShareKey, out var quickShareData))
+      var player = work.Sender;
+
+      await UiUtil.InvokeAsync(async () =>
       {
-        var player = quickShareData.Sender;
-        var characterIds = quickShareData.CharacterIds;
-
-        await UiUtil.InvokeAsync(async () =>
+        var nodes = JsonSerializer.Deserialize<List<ExportTriggerNode>>(data, SerializationOptions);
+        if (nodes.Count > 0 && nodes[0].Nodes.Count == 0)
         {
-          var nodes = JsonSerializer.Deserialize<List<ExportTriggerNode>>(data, SerializationOptions);
-          if (nodes.Count > 0 && nodes[0].Nodes.Count == 0)
+          var badMessage = "Quick Share Received";
+          if (!string.IsNullOrEmpty(player))
           {
-            var badMessage = "Quick Share Received";
-            if (!string.IsNullOrEmpty(player))
-            {
-              badMessage += " from " + player;
-            }
+            badMessage += " from " + player;
+          }
 
-            badMessage += " but no supported Triggers or Overlays found.";
-            new MessageWindow(badMessage, Resource.RECEIVED_SHARE, floatAboveOtherApps: true).ShowDialog();
+          badMessage += " but no supported Triggers or Overlays found.";
+          new MessageWindow(badMessage, Resource.RECEIVED_SHARE, floatAboveOtherApps: true).ShowDialog();
+        }
+        else
+        {
+          if (work.AutoMerge)
+          {
+            if (work.IsTrigger)
+            {
+              await TriggerStateDB.Instance.ImportTriggers("", nodes, work.GetCharacterIds());
+            }
+            else
+            {
+              await TriggerStateDB.Instance.ImportOverlays(nodes);
+            }
           }
           else
           {
-            if (autoMerge)
+            if (work.IsTrigger)
             {
-              if (quickShareData.IsTrigger)
+              var message = "Merge Triggers or Import to New Folder?\r\n";
+              if (!string.IsNullOrEmpty(player))
               {
-                await TriggerStateDB.Instance.ImportTriggers("", nodes, characterIds);
+                message = $"Merge Triggers from {player} or Import to New Folder?\r\n";
               }
-              else
+
+              var msgDialog = new MessageWindow(message, Resource.RECEIVED_SHARE, MessageWindow.IconType.Question,
+                "New Folder", "Merge", work.GetCharacterIds().Count > 0, floatAboveOtherApps: true);
+              msgDialog.ShowDialog();
+
+              var mergeIds = msgDialog.MergeOption ? work.GetCharacterIds() : null;
+              if (msgDialog.IsYes2Clicked)
               {
-                await TriggerStateDB.Instance.ImportOverlays(nodes);
+                await TriggerStateDB.Instance.ImportTriggers("", nodes, mergeIds);
+              }
+              if (msgDialog.IsYes1Clicked)
+              {
+                var folderName = (player == null) ? "New Folder" : "From " + player;
+                folderName += " (" + DateUtil.FormatDotNetDateSeconds(DateUtil.ToDotNetSeconds(DateTime.Now)) + ")";
+                await TriggerStateDB.Instance.ImportTriggers(folderName, nodes, mergeIds);
               }
             }
             else
             {
-              if (quickShareData.IsTrigger)
+              var message = "Import Overlays?\r\n";
+              if (!string.IsNullOrEmpty(player))
               {
-                var message = "Merge Triggers or Import to New Folder?\r\n";
-                if (!string.IsNullOrEmpty(player))
-                {
-                  message = $"Merge Triggers from {player} or Import to New Folder?\r\n";
-                }
-
-                var msgDialog = new MessageWindow(message, Resource.RECEIVED_SHARE, MessageWindow.IconType.Question,
-                  "New Folder", "Merge", characterIds.Count > 0, floatAboveOtherApps: true);
-                msgDialog.ShowDialog();
-
-                var mergeIds = msgDialog.MergeOption ? characterIds : null;
-                if (msgDialog.IsYes2Clicked)
-                {
-                  await TriggerStateDB.Instance.ImportTriggers("", nodes, mergeIds);
-                }
-                if (msgDialog.IsYes1Clicked)
-                {
-                  var folderName = (player == null) ? "New Folder" : "From " + player;
-                  folderName += " (" + DateUtil.FormatDotNetDateSeconds(DateUtil.ToDotNetSeconds(DateTime.Now)) + ")";
-                  await TriggerStateDB.Instance.ImportTriggers(folderName, nodes, mergeIds);
-                }
+                message = $"Import Overlays from {player}?\r\n";
               }
-              else
+
+              var msgDialog = new MessageWindow(message, Resource.RECEIVED_SHARE, MessageWindow.IconType.Question, "Import",
+                floatAboveOtherApps: true);
+              msgDialog.ShowDialog();
+
+              if (msgDialog.IsYes1Clicked)
               {
-                var message = "Import Overlays?\r\n";
-                if (!string.IsNullOrEmpty(player))
-                {
-                  message = $"Import Overlays from {player}?\r\n";
-                }
-
-                var msgDialog = new MessageWindow(message, Resource.RECEIVED_SHARE, MessageWindow.IconType.Question, "Import",
-                  floatAboveOtherApps: true);
-                msgDialog.ShowDialog();
-
-                if (msgDialog.IsYes1Clicked)
-                {
-                  await TriggerStateDB.Instance.ImportOverlays(nodes);
-                }
+                await TriggerStateDB.Instance.ImportOverlays(nodes);
               }
             }
           }
-
-          NextQuickShareTask(quickShareKey);
-        });
-      }
+        }
+      });
     }
 
     private static List<ExportTriggerNode> BuildExportList(IEnumerable<TriggerTreeViewNode> viewNodes, bool hidePrivateTriggers)

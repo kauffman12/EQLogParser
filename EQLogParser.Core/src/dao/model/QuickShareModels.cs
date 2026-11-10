@@ -20,7 +20,7 @@ namespace EQLogParser
      * share flow — applied the same ownership and "To" rules from two verbatim copies of this block;
      * one copy means the history cannot drift between them (GINA passes Type = "GINA"). */
     public static QuickShareRecord FromChat(ChatType chatType, string type, string key, double beginTime,
-      string characterId, string processorName)
+      string characterId, string processorName, string currentPlayer)
     {
       var to = chatType.Channel == ChatChannels.Tell ? "You" : chatType.Channel;
 
@@ -32,21 +32,9 @@ namespace EQLogParser
         To = to == "You" && processorName != null && characterId != TriggerStateDB.DefaultUser
           ? processorName
           : TextUtils.CapitalizeFirst(to),
-        IsMine = chatType.SenderIsYou,
+        IsMine = chatType.IsFrom(currentPlayer),
         Type = type
       };
     }
-  }
-
-  // Per-quick-share context accumulated as characters see the same share key in chat.
-  internal class CharacterData
-  {
-    public string Sender { get; set; }
-
-    public HashSet<string> CharacterIds { get; set; } = [];
-
-    public bool AutoMerge { get; set; }
-
-    public bool IsTrigger { get; set; }
   }
 }

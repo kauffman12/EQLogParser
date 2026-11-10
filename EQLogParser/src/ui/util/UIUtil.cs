@@ -179,11 +179,8 @@ namespace EQLogParser
         return asyncAction();
       }
 
-      // Hop to UI to *start* the async action, then unwrap/await it
-      return dispatcher.InvokeAsync(async () =>
-      {
-        await asyncAction().ConfigureAwait(false);
-      }, priority, ct).Task;
+      // The dispatcher finishes when the delegate returns its Task, not when that Task finishes.
+      return dispatcher.InvokeAsync(asyncAction, priority, ct).Task.Unwrap();
     }
 
     /* Fire-and-forget post that cannot lose a failure: the callback's exception, plus a fault or a
