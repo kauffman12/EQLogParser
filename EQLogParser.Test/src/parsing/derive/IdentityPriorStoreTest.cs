@@ -1,5 +1,3 @@
-using EQLogParser;
-
 namespace EQLogParser;
 
 /*
@@ -148,6 +146,48 @@ public class IdentityPriorStoreTest
     {
       Assert.AreNotEqual("Manual", remembered.Reason, "an override was recorded as if a line had said it");
     }
+  }
+
+  [TestMethod]
+  public void PostPassRecordingKeepsTheClassifiedNamesAndClockWhileIngestContinues()
+  {
+    var facts = new DamageFactTable(4);
+    var capture = new CombatCapture(facts);
+    var endS = NowS();
+    capture.HandleChat(new ChatType(ChatChannels.Guild, "Firstseen", 0) { BeginTime = endS - 1 });
+    capture.HandleChat(new ChatType(ChatChannels.Guild, "Secondseen", 0) { BeginTime = endS });
+    var timeline = new EntityTimeline();
+    foreach (var name in new[] { "Firstseen", "Secondseen", "Late0", "Late1" })
+    {
+      timeline.SetIdentity(name, IdentityKind.Player, RuleStrength.Strong, "R3-chat");
+    }
+    timeline.Freeze();
+
+    var input = capture.DeriveQuiescent(capture.SnapshotIdentityPriorInput);
+    var seen = 0;
+    foreach (var name in input.Names)
+    {
+      Assert.IsFalse(name.StartsWith("Late", StringComparison.Ordinal));
+      // A live List enumerator throws on the next MoveNext; no timing race is needed to reproduce that failure.
+      capture.HandleChat(new ChatType(ChatChannels.Guild, $"Late{seen}", 0) { BeginTime = endS + seen + 1 });
+      seen++;
+    }
+
+    var store = IdentityPriorStore.Instance;
+    store.Record(timeline, input.Names, input.EndS);
+    Assert.AreEqual(2, seen);
+    Assert.AreEqual(4, facts.InternedNames.Count, "Ingest must remain free to extend the live pool after the snapshot.");
+    Assert.AreEqual(2, store.Count);
+    Assert.IsFalse(store.TryGet("Late0", out _));
+    Assert.IsFalse(store.TryGet("Late1", out _));
+    Assert.IsTrue(store.TryGet("Firstseen", out var first));
+    Assert.AreEqual(endS, first.SeenAtS, "Post-pass recording must not borrow a timestamp from unclassified arrivals.");
+
+    var next = capture.DeriveQuiescent(capture.SnapshotIdentityPriorInput);
+    store.Record(timeline, next.Names, next.EndS);
+    Assert.AreEqual(4, store.Count, "The next completed pass can remember the appended names.");
+    Assert.IsTrue(store.TryGet("Late1", out var late));
+    Assert.AreEqual(endS + 2, late.SeenAtS);
   }
 
   [TestMethod]

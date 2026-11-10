@@ -185,6 +185,15 @@ namespace EQLogParser
         Emit(EvidenceFact.EvPetLeader, chat.Sender, chat.BeginTime, owner);
     }
 
+    // Take inside the classifying pass's quiescent gate; only these detached inputs may reach post-pass file IO.
+    internal (string[] Names, long EndS) SnapshotIdentityPriorInput()
+    {
+      lock (_gate)
+      {
+        return (_facts.InternedNames.ToArray(), (long)LastEventTime);
+      }
+    }
+
     private void OnPreLineEvidence(string name, double time, byte kind) => Emit(kind, name, time);
 
     private void OnWhoRoster(string name, string cls, double time) => Emit(EvidenceFact.EvWhoRoster, name, time, cls);

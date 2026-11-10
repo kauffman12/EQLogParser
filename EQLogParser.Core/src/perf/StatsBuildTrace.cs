@@ -8,45 +8,10 @@ using log4net;
 namespace EQLogParser;
 
 /*
- * Every stats build in the application, from every door, on one line of its own — and a warning whenever two overlap.
- *
- * This exists because "select all built the stats three times" is unfixable while the doors are anonymous. A board can be
- * produced from at least four places: MainWindow's derived selection (materialize facts, then feed three builders), each summary
- * pane's own options door (`min/max time`, a damage-type change, a pane being shown for the first time, a pane being hidden),
- * and an open chart. Only the first goes through SummaryBuildGate; the others each spawn their own task, so "three times" is a
- * sentence about doors, not about one door failing three times. The line says which:
- *
- *     stats build #7 damage   full    3410 ms | from derived selection [SettleTick] stamp 8123 fights 4521 | npcs=4521
- *     stats build #8 healing  rebuild 2210 ms | from healing pane shown | window -1..-1 (record store)
- *
- * Three rules:
- *
- *   1. **A door names itself or is shouted at.** `GenerateStatsOptions.Source` carries who asked; null prints UNLABELLED and
- *      warns, because an anonymous second pass over two million records is exactly the thing that gets defended as "probably
- *      necessary" until it has a name. A label may be composed with whatever identifies the request (stamp, fight count).
- *   2. **Overlap is a warning, not a footnote — ONE warning per episode.** `Begin` counts what is already inside; a build started
- *      while another runs means two doors did not talk to each other, and the reader sees seconds of duplicated work rather than
- *      an error. The count and the other build's identity go on the finished line so a triple reads as a triple in the log.
- *
- *      One episode runs from the first colliding start until every board is quiet again, and it speaks twice at most: the collision
- *      that opened it (naming what it collided with), and a closing line saying how many more collisions were counted behind that
- *      one. Every collision still raises `OverlapBuilds` and still marks its own finished Debug line. Why coalesced: during a live
- *      pull with the boards open, several doors ask independently — the pass-driven selection, a pane's own dial, a chart — so
- *      overlap is a STEADY STATE there, and per-build warnings printed a line per build for hours (2.4.x operators' logs: thousands
- *      of identical WARN lines saying "the raid is fighting") while the one fact worth knowing is WHICH doors, and that is a Debug-line
- *      question. Silence after the first warning costs nothing an operator could not get from the counter.
- *
- *      Siblings in one GROUP are not an overlap either — the parallel sibling of "nesting on one thread is not overlap". One request
- *      that builds its three boards AT ONCE (the fan-out in MainWindow.BuildBoards) is one door wearing
- *      three hats: it issues ONE id from `NextGroupId` and puts it on all three builds' options, so none of them counts the other two.
- *      A caller that passes no group is issued its own fresh one, which keeps every existing door foreign to every other exactly as
- *      before: with no fan-out in play WHICH builds collide is decided bit-for-bit as it always was (the episode coalescing above sits on
- *      top of that decision and changes only how often it is spoken), and a pane's own dial rebuild landing under a
- *      fanned-out selection still warns — that collision is the defect this warning exists for.
- *   3. **Cost reaches this line, and only this line.** The heartbeat/perf-counter layer this used to also feed is gone, so a build's
- *      milliseconds and bytes exist in exactly one place: the Debug line below (and `LastFinishedLineOf` for a caller that wants to
- *      report it). A stopwatch and `GC.GetTotalAllocatedBytes` are the whole measurement — nothing else in the application times a
- *      board build.
+ * 1. Every caller names itself; an unlabelled caller still warns.
+ * 2. Same-thread nesting and same-request siblings are not overlaps.
+ * 3. Costs and overlap episodes are Debug diagnostics; counters stay active at every level.
+ * Independent meter/summary work may legitimately overlap. docs/DesignNotes.md → "Name every door: which build was which".
  */
 internal static class StatsBuildTrace
 {
@@ -97,7 +62,7 @@ internal static class StatsBuildTrace
 
   /*
    * Collisions since the boards were last completely quiet, guarded by `_sync` alongside the list they describe. Zero means "the
-   * next one gets the warning"; the closing line reports what was counted behind that first warning and resets it.
+   * next one opens the Debug episode"; the closing line reports the accumulated count and resets it.
    */
   private static int _overlapsInEpisode;
 
@@ -117,7 +82,7 @@ internal static class StatsBuildTrace
   /// <summary>How many of them started while another build was still running.</summary>
   internal static long OverlapBuilds => Interlocked.Read(ref _overlapBuilds);
 
-  /// <summary>Collisions counted in the current warning episode (0 when the boards are quiet and nothing is held back).</summary>
+  /// <summary>Collisions counted in the current diagnostic episode (0 when the boards are quiet).</summary>
   internal static int OverlapsInCurrentEpisode { get { lock (_sync) return _overlapsInEpisode; } }
 
   /// <summary>How many came through a door that did not set GenerateStatsOptions.Source.</summary>
@@ -173,15 +138,15 @@ internal static class StatsBuildTrace
       {
         opensEpisode = _overlapsInEpisode++ == 0;
         // Only the FOREIGN ones are named: blaming a sibling for a collision it did not cause would send the reader to the wrong door.
-        if (opensEpisode)
+        if (opensEpisode && Log.IsDebugEnabled)
           others = string.Join(", ", _inside.Where(e => e.Seq != seq && e.Group != groupId).Select(e => $"#{e.Seq} {e.What}"));
       }
 
-      // One warning per episode: the collision that opens it says what collided, everything behind it is counted (see rule 2).
-      if (opensEpisode)
+      // Coalesce diagnostic starts, but count every overlap even with Debug disabled.
+      if (opensEpisode && Log.IsDebugEnabled)
       {
-        Log.Warn($"stats build #{seq} {builder} {kind} started while {overlappedWith} other stats build(s) were running: {others}"
-                 + " - further overlapping starts are counted, not logged until the boards go quiet");
+        Log.Debug($"stats build #{seq} {builder} {kind} started while {overlappedWith} other stats build(s) were running: {others}"
+                  + " - further overlapping starts are counted until the boards go quiet");
       }
     }
 
@@ -207,10 +172,10 @@ internal static class StatsBuildTrace
       if (_inside.Count == 0) _overlapsInEpisode = 0;
     }
 
-    if (heldBack > 1)
+    if (heldBack > 1 && Log.IsDebugEnabled)
     {
-      Log.Warn($"stats builds overlapped {heldBack} times since the boards were last quiet - "
-               + "run with Debug=True and read the \"from <door>\" of each build line to see who did not talk to whom");
+      Log.Debug($"stats builds overlapped {heldBack} times since the boards were last quiet - "
+                + "read the \"from <door>\" of each build line to identify the concurrent callers");
     }
 
     var totalAlloc = GC.GetTotalAllocatedBytes() - handle.StartAlloc;

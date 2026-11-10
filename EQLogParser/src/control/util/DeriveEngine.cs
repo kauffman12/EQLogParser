@@ -469,6 +469,8 @@ namespace EQLogParser
           // instead of inside it: Record() writes a file, and nothing that writes belongs between the rules and the
           // snapshot the grid is waiting on.
           EntityTimeline? classified = null;
+          string[]? priorNames = null;
+          long priorEndS = 0;
           var snapshot = _capture.DeriveQuiescent(() =>
           {
             using var damageRead = _facts.RetainDecoded();
@@ -478,7 +480,11 @@ namespace EQLogParser
              * no rule book runs between the two folds. If no expensive pass has ever finished there is nothing to carry, and this
              * pass becomes the expensive one whatever the cadence asked for — a first board cannot be built out of no verdicts.
              */
-            if (kind == DeriveKind.Full || _carriedTimeline is null) classified = Classify();
+            if (kind == DeriveKind.Full || _carriedTimeline is null)
+            {
+              classified = Classify();
+              (priorNames, priorEndS) = _capture.SnapshotIdentityPriorInput();
+            }
             var timeline = classified ?? _carriedTimeline!;
 
             /*
@@ -545,7 +551,7 @@ namespace EQLogParser
                */
               try
               {
-                IdentityPriorStore.Instance.Record(classified, _facts.InternedNames, (long)_capture.LastEventTime);
+                IdentityPriorStore.Instance.Record(classified, priorNames, priorEndS);
               }
               catch (Exception ex)
               {

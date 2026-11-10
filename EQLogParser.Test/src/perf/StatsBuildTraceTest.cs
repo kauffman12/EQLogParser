@@ -1,17 +1,7 @@
-using EQLogParser;
-
 namespace EQLogParser;
 
-/*
- * The doors into the summary boards, made countable (EQLogParser.Core/src/perf/StatsBuildTrace.cs).
- *
- * Reported from the field: load a large capture, select all immediately, and the damage grid fills THREE times; do the same click
- * a minute later and it fills once. That is a sentence about doors, not about one door — the fight list's selection goes through
- * MainWindow's single-flight gate, while each summary pane rebuilds from its own triggers (a dial, the pane being shown, the hourglass
- * timer that finishes after the saved time-window values move the dependency properties at load). A trace that only printed durations
- * could not tell those apart, so it prints who asked and warns when two builds run over each other; this test pins the two properties
- * the log lines depend on, because a trace that lies is worse than no trace: the reader follows it into the wrong file.
- */
+// Build identity, grouping and overlap counters stay available even when diagnostic logging is off.
+// Emitted levels are pinned separately by StatsBuildTraceLoggingTest.
 [TestClass]
 public sealed class StatsBuildTraceTest
 {
@@ -92,14 +82,9 @@ public sealed class StatsBuildTraceTest
   }
 
   [TestMethod]
-  public void OverlappingStartsAreCountedOnceWarnedUntilTheBoardsGoQuiet()
+  public void OverlappingStartsAreCountedUntilTheBoardsGoQuiet()
   {
-    /*
-     * The warning exists to say "two doors did not talk", but on a live pull with the boards open several doors ask independently all
-     * night, and a per-build WARN turned an operator's log into thousands of lines restating "a raid is happening". So: every collision
-     * counts forever, and only the one that opens an episode speaks. Pinned here by the counters, since the test assemblies do not carry
-     * a log appender — `OverlapsInCurrentEpisode` is exactly "how many collisions are held behind the warning already printed".
-     */
+    // Separate starts share one diagnostic episode until every build is quiet; changing the log level must not reset counts.
     var first = StatsBuildTrace.Begin("damage", "derived selection");
     Assert.AreEqual(0, StatsBuildTrace.OverlapsInCurrentEpisode, "a lone build opens no episode");
 
@@ -117,7 +102,7 @@ public sealed class StatsBuildTraceTest
     }
 
     Assert.AreEqual(2, StatsBuildTrace.OverlapsInCurrentEpisode,
-      "both collisions are counted behind the one warning, while the episode is open");
+      "both collisions are counted while the episode is open, regardless of logging");
 
     StatsBuildTrace.End(first);
     Assert.AreEqual(0, StatsBuildTrace.ActiveBuilds);
@@ -127,11 +112,7 @@ public sealed class StatsBuildTraceTest
   [TestMethod]
   public void ANestedBuildOnTheSameThreadIsOneDoorRatherThanAnOverlap()
   {
-    /*
-     * HealingStatsBuilder.RebuildTotalStats calls BuildTotalStats on the calling thread while holding its lock. If nesting counted as
-     * overlap, every healing rebuild from a pane dial would warn, and a warning that fires on ordinary work is a warning nobody reads —
-     * the one that matters ("two doors really did collide") would be lost in it.
-     */
+    // Healing's rebuild calls a full build on the same thread; nesting must not inflate the overlap metric.
     var before = StatsBuildTrace.OverlapBuilds;
 
     var outer = StatsBuildTrace.Begin("healing", "healing pane options [time window]", "rebuild");
@@ -166,9 +147,8 @@ public sealed class StatsBuildTraceTest
   /*
    * The group law behind the board fan-out (MainWindow.BuildBoards; docs/DesignNotes → "Three boards, three
    * workers"): ONE request that builds
-   * damage, tanking and healing at once is one door wearing three hats, so its three builds must not warn about each other — while
-   * a genuinely foreign build under them still does. Pinned in both directions on purpose: silence for the siblings is easy to get,
-   * and so is silencing everything, which is the failure that costs the reader the one warning this class exists to print.
+   * damage, tanking and healing at once is one request, so siblings do not count as overlap. A foreign build still counts;
+   * demoting its diagnostic must not hide the metric.
    */
   [TestMethod]
   public void TheThreeBoardsOfOneRequestAreSiblingsRatherThanAnOverlap()
@@ -193,18 +173,15 @@ public sealed class StatsBuildTraceTest
     others.Start();
     others.Join(TimeSpan.FromSeconds(5));
 
-    Assert.AreEqual(before, StatsBuildTrace.OverlapBuilds, "three siblings cost zero overlap warnings");
+    Assert.AreEqual(before, StatsBuildTrace.OverlapBuilds, "three siblings count as zero overlaps");
     StatsBuildTrace.End(damage);
     Assert.AreEqual(0, StatsBuildTrace.ActiveBuilds);
   }
 
   [TestMethod]
-  public void AForeignBuildUnderAFannedOutRequestStillWarns()
+  public void AForeignBuildUnderAFannedOutRequestStillCountsAsOverlap()
   {
-    /*
-     * The half that must NOT be silenced: a pane's own dial rebuild (its own door, its own task, no group in common) landing under a
-     * fanned-out selection is two doors that did not talk to each other, and the whole reason this trace exists is to say so.
-     */
+    // A foreign caller still contributes to the counter, even though its diagnostic is now Debug-only.
     var before = StatsBuildTrace.OverlapBuilds;
     var group = StatsBuildTrace.NextGroupId();
 
@@ -223,7 +200,7 @@ public sealed class StatsBuildTraceTest
     foreign.Start();
     foreign.Join(TimeSpan.FromSeconds(5));
 
-    Assert.AreEqual(before + 1, StatsBuildTrace.OverlapBuilds, "one foreign arrival, one warning — the group did not eat it");
+    Assert.AreEqual(before + 1, StatsBuildTrace.OverlapBuilds, "one foreign arrival, one overlap — the group did not eat it");
     StatsBuildTrace.End(tanking);
     StatsBuildTrace.End(damage);
     Assert.AreEqual(0, StatsBuildTrace.ActiveBuilds);
@@ -251,7 +228,7 @@ public sealed class StatsBuildTraceTest
   public void GroupingDoesNotUndoNestingOnTheSameThread()
   {
     // The two rules are independent: a nested same-thread build is one door whether or not its group matches, and a group never
-    // makes a DIFFERENT thread's foreign build disappear (pinned by AForeignBuildUnderAFannedOutRequestStillWarns).
+    // makes a DIFFERENT thread's foreign build disappear (pinned by AForeignBuildUnderAFannedOutRequestStillCountsAsOverlap).
     var before = StatsBuildTrace.OverlapBuilds;
     var group = StatsBuildTrace.NextGroupId();
 
@@ -265,11 +242,4 @@ public sealed class StatsBuildTraceTest
     StatsBuildTrace.End(outer);
   }
 
-  /*
-   * Where the lines go is not tested here, because nothing in this suite captures logs (the app's own pattern: levels are
-   * decided once from settings.txt in App.SetLoggingLevel and read, never intercepted). The law - every build's line is a
-   * Debug line, and the only things of this class that reach an ordinary log are the two anomaly Warns pinned by their
-   * counters above - lives in the StatsBuildTrace header and docs/DesignNotes -> "Name every door". A line drifting back to
-   * Info is found by grepping a normal session's EQLogParser.log, which is also how the original flood was found.
-   */
 }

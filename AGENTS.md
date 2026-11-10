@@ -382,10 +382,10 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
   nesting on one thread is not overlap (builders wrap bodies in try/finally traced wrappers).
 - **Log levels**: the per-build/per-ask trace class is Debug (a player's log carries none of it without `Debug=True`); Info is
   for a thing a person did or something broke, including deliberate identity-kind and ownership writes. Class picks stay quiet.
-- **A steady-state anomaly warns once per EPISODE, not per occurrence** (overlap is the case): an episode runs from the first colliding
-  build until every board is quiet, opens with one WARN naming what collided, closes with one WARN carrying the count it swallowed —
-  while the counters (`StatsBuildTrace.OverlapBuilds`) and each build's own Debug line rise per occurrence as before. A WARN that fires
-  twice a second during a raid is a metric wearing an alarm; coalesce it to the change, never delete the counter.
+- **Build overlap is Debug telemetry, not a warning**: independent meter/summary work may legitimately run together. An episode runs
+  from the first colliding start until every board is quiet; its opening and aggregate closing reports are Debug-only. Counters
+  (`StatsBuildTrace.OverlapBuilds`) still rise with Debug off, and each build keeps its diagnostic detail. An unlabelled caller still
+  warns; real failures remain Error. Never serialize legitimate parallel work merely to silence a trace.
 - **A per-line `catch` caps its own voice** (`RepeatCap.SpeaksOnce`, keyed on site + exception type): the first sighting prints with the evidence
   that makes it fixable — `RepeatCap.Clip(lineData.Action)` — and repeats only raise `Silenced`. No cooldown on this one (a parse fault has no quiet
   moment); a fixable-mid-session config state uses the cooldown form `TriggerOverlayManager.ShouldWarnNow` instead.

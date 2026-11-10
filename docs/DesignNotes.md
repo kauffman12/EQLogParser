@@ -5865,7 +5865,7 @@ fallback and nothing else**: `ClassificationReport.Build(..., priors)` borrows a
 nothing, and `FightProjection`/the board never see the file. Graduating it into the derive is possible but has to arrive
 with derived-vs-legacy parity tests, not as a convenience.
 
-Four properties make it safe, all pinned (`IdentityPriorStoreTest`, 9 tests):
+These properties make it safe, pinned by `IdentityPriorStoreTest`:
 
 - **Only what a later log might not answer again is recorded** (`IdentityPriorStore.WorthRemembering`), with the rule
   code stored beside it. The gate is an **allowlist of event-shaped rules** — `R1-`, `R2-`, `R3-`, `R4-`, `R5-companion`,
@@ -5885,14 +5885,22 @@ Four properties make it safe, all pinned (`IdentityPriorStoreTest`, 9 tests):
   reason stays the strongest thing any log actually saw, and no sighting is spent saying nothing new.
 - **The file self-cleans on load.** Rows written before the gate existed (e.g. `Npc|R6-npcdb|…`) are not read back, and
   the load rewrites what is left rather than dropping them invisibly forever (`OldRowsThatRestOnTheDatabaseAreNotLoadedBack`).
-  `Init` logs one INFO line — `Identity priors for <Server>: N remembered verdicts[, M rows refused as restatements…]` —
-  because "did the memory load?" is otherwise unanswerable from a player's log file.
+  `Init` logs its load counts at Debug — `Identity priors for <Server>: N remembered verdicts[, M rows refused…]` —
+  so an ordinary session does not print a memory report on each open.
 - **Agreement is idempotent per capture.** Derivation re-runs whenever a filter or override changes, so sighting time
   is the LOG's last event (not the clock) and the counter advances only on a strictly newer capture — five derives of one
   evening report one sighting, not five.
 - **A changed verdict restarts the count**, so nothing advertises forty confirmations of a belief held for one.
 - **It expires** against the newest entry (90 days) plus a 25k cap, keeping the most recently seen — using the newest
   entry rather than `DateTimeOffset.UtcNow` means replaying last season's backups does not nuke the ledger.
+
+**Post-pass writes own a snapshot of their inputs.** A full derive takes the name array and capture-end timestamp
+through `CombatCapture.SnapshotIdentityPriorInput` while still inside the classifying pass's quiescent gate. The timeline
+is frozen. Only those detached names and that timestamp may reach `IdentityPriorStore.Record` after ingest resumes;
+`IReadOnlyList` alone does not make the capture's live name pool immutable. File IO stays outside the ingest gate.
+`IdentityPriorStoreTest.PostPassRecordingKeepsTheClassifiedNamesAndClockWhileIngestContinues` appends names while
+walking the saved input, checks the old timestamp and excludes new names until the next snapshot. A recording failure
+remains Error and does not discard the already-derived boards.
 
 Census rows carry `IsPrior` with `Reason = "Prior:<code>"`, `PriorSightings`, `PriorSeenAtS`; an operator verdict beats a
 prior, a line read in this capture beats it — and taking a roster row away silences nothing, since an eviction is not a
@@ -10586,12 +10594,9 @@ which is now possible because every door names itself:
   warns, so an anonymous pass over two million records cannot be defended as "probably necessary".
 - `StatsBuildTrace` numbers every build process-wide, times it, prints `stats build #7 damage full 3410 ms | from derived
 [SelectCommand] …`
-  (every line at Debug - see the levels law below), and **warns when a build starts while another is inside** — naming the
-  other one, once per
-  overlap episode (see the 2.4.3 amendment directly below). Nesting on the same thread does not count: healing's
-  `RebuildTotalStats` calls `BuildTotalStats` under its own lock, and calling that an overlap would put a warning on ordinary
-  work, which is
-  how a real one stops being read (`StatsBuildTraceTest` pins both directions).
+  (every line at Debug - see the levels law below), and counts overlapping builds while reporting their episodes only at
+  Debug. Independent meter/summary work may legitimately run concurrently. Same-thread nesting and siblings of one
+  fanned-out request do not count as overlap (`StatsBuildTraceTest` pins both exclusions).
 - The pane says why it announced, through `BoardRequest.Reason` — `SelectCommand`, `MenuClose`, `SettleTick`, `SnapshotSwap`,
 `RowEdited`,
   `ContentMoved`, `Settings`, `Manual` — and `FightTable` logs a deduped announce at Debug rather than swallowing it, because
@@ -10621,31 +10626,20 @@ is the door into all of it (`stats build #N …`, `board ask [reason] … -> out
 thinned a stream
 that no longer reaches an ordinary log, which is dead weight pinned by tests for a defect that cannot happen. What DOES reach
 a player's log:
-the anomaly **warns** (a door that did not name itself, two builds running over each other - defects, not metrics) — **one
-warning per episode,
-since 2.4.3**.
+a **Warn for an unlabelled caller**, and genuine failures at Error. Merely overlapping another build is not a failure
+and must not reach an ordinary log.
 
-**Overlap was never rare, so it stopped being per-build (after an operator's 2.4.3 log).** The claim above — "rare
-enough that seeing one
-is the point" — is what a build counted in hours disproves: `stats build #5528` at 19:30 and `#12896` at 20:29 is ~2
-builds/second of steady
-board work over a live capture, and the collisions arrive in bursts (three boards of one request landing on top of a
-stranger's build, then a
-fourth landing on all three). Per-build WARN lines therefore restated "a raid is fighting" thousands of times a night while
-saying nothing the
-Debug lines do not say better, since the actionable half of an overlap is *which two doors* — a `from <door>` question. An
-**episode** now runs from
-the first colliding start until every board is quiet again and speaks at most twice: the collision that opened it (naming
-what it collided with, plus
-"further overlapping starts are counted, not logged"), and one closing line giving the count it swallowed and pointing at
-Debug. Nothing about the
-measurement narrowed — `OverlapBuilds` still rises per collision, and every colliding build's own Debug line still ends with
-`started over N other build(s)`; `OverlapsInCurrentEpisode` is "how many are held behind the warning already printed", pinned by
-`StatsBuildTraceTest.OverlappingStartsAreCountedOnceWarnedUntilTheBoardsGoQuiet`. The lesson is the same one the levels law
-learned twice: **a
-warning that fires in steady state is a metric wearing an alarm**, and the fix is to coalesce it to the *change* (episode
-opens, episode closes),
-never to delete the counter.
+**Overlap is Debug telemetry, even when coalesced.** An operator's 2.4.3 log ran from `stats build #5528` at 19:30
+to `#12896` at 20:29 — roughly two builds/second — and per-build warnings flooded it. Episode coalescing reduced that
+volume but did not fix the severity: a live meter can legitimately update while three summary workers run, and quiet
+intervals re-arm the next episode within seconds. Do not serialize those workers merely to silence this diagnostic.
+
+An episode runs from the first colliding start until every board is quiet. Its opening report and, for multiple
+collisions, aggregate closing report are **Debug-only**. Counters remain active with Debug off: `OverlapBuilds` rises
+per collision, `OverlapsInCurrentEpisode` resets only at quiet, and a colliding build's own Debug line still includes
+`started over N other build(s)`. Build-group siblings and same-thread nesting remain excluded, not hidden by the level
+change. `StatsBuildTraceLoggingTest` captures real log events at Info and Debug, pins silence versus episode reports,
+and verifies that an unlabelled caller still warns. `StatsBuildTraceTest` pins the grouping and counter semantics.
 
 **Say it once, then count: `RepeatCap` (from the same audit).** The overlap warning was the visible symptom;
 auditing every remaining
