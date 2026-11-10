@@ -22,7 +22,7 @@ it belongs — roam what the user made, download what we ship.
 ## The packer
 
 `scripts/Build-TtsPack.ps1` lives here so it is reviewed with the code, and gets copied into the TTS repo, where it
-expects its data two directories over:
+expects the two engine directories alongside it (or under an explicit `-DataRoot`):
 
 ```
 Build-TtsPack.ps1
@@ -40,7 +40,7 @@ out\            zips and sidecars (generated)
 dotnet build EQLogParser.sln -c Release
 sign.cmd
 
-# 2. in the TTS repo: look, pull the signed binaries in, pack
+# 2. in the TTS repo: stage/sign Piper's own DLLs there; -Sync copies only Kokoro build outputs
 powershell -ExecutionPolicy Bypass -File Build-TtsPack.ps1 -Inventory
 powershell -ExecutionPolicy Bypass -File Build-TtsPack.ps1 -Sync -AppRelease C:\src\EQLogParser\EQLogParser\bin\Release\net10.0-windows10.0.17763.0
 powershell -ExecutionPolicy Bypass -File Build-TtsPack.ps1
@@ -51,8 +51,8 @@ powershell -ExecutionPolicy Bypass -File Build-TtsPack.ps1 -Verify out\piper-1.0
 
 Each zip carries `manifest.json` — every file with size and SHA-256, lowercase hex — plus `THIRD-PARTY-NOTICES.txt`.
 The app verifies every entry before loading anything, so an incomplete or tampered pack never reaches an engine. The
-`.sha256` sidecar covers the zip itself and matches the digest GitHub displays for the asset, which is what makes
-`-Verify` meaningful on a downloaded copy.
+`.sha256` sidecar covers the zip itself; compare it with the digest GitHub displays for the asset when checking a
+downloaded copy. `-Verify` checks the sidecar and manifest, while the app trusts its compiled archive pin.
 
 Three failure modes the script treats as errors rather than warnings, because each one becomes silence on a user's
 machine: a required binary missing from a data dir, `voices.json` naming a model or config that is not in the pack, and
@@ -221,7 +221,7 @@ pack. Those are gone. The app installs none of them, every pack since `piper-1.0
 unique ones exist only as build outputs of the Piper fork (upstream: <https://github.com/rhasspy/piper>), and 13 MB held
 in git to seed a workflow that runs when a binary bumps is the wrong side of that trade.
 
-So a Piper binary bump now starts in this repo's staging tree: put the new DLLs there — extracted from the published pack,
+So a Piper binary bump now starts in the TTS repo's staging tree: put the new DLLs there — extracted from the published pack,
 or built from the fork — sign them in place, then `-Sync`-independent pack as usual. `-Inventory` lists anything missing
 and names that provenance, and an unsigned `piperApi.dll` in the staged tree earns a warning while packing — pass
 `-Strict` and it becomes a refusal. Kokoro is unchanged:

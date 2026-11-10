@@ -166,9 +166,11 @@ To maintain a consistent tone and professional feel, all messages in `MessageWin
     - Instead of "Failed to save...", use `"Problem saving [Component]. Check Error Log for details."`
 
 ### Logging
-Logging exists to explain failures and identify a session, not to narrate normal operation. It is reserved for:
+Logging exists to explain failures and identify a session or deliberate operator change, not to narrate normal operation. It is reserved for:
 - **Exceptions**: every caught exception, via `Log.Error(ex)` (see **Logging** under Implementation Patterns).
 - **Session milestones**: a handful of `Log.Info` lines that make a bug report interpretable — version, OS, render mode, and database migrations/repairs that change stored data.
+- **Deliberate identity-kind and ownership writes**: Info records the operator's change; class picks are deliberately silent on success.
+  Per-build/per-ask diagnostics remain Debug, as specified in AGENTS.md and DesignNotes.
 
 Do **not** log:
 - **Expected behaviour**: re-imports that match existing data, cache hits, "already up to date", items skipped because they are valid, or a fallback taken because a feature has no equivalent. These occur on every ordinary run and bury the entries that matter.
@@ -256,7 +258,8 @@ Settings and setup windows (`FctSettingsWindow`, `DamageMeterSettingsWindow`) fo
 - Use `ReadOnlySpan<char>` for high-performance string slicing and parsing to reduce memory allocations.
 - Use `CollectionsMarshal.AsSpan()` when iterating over `List<T>` in performance-critical loops to avoid overhead and enable better compiler optimizations.
 - Use `StringComparison.OrdinalIgnoreCase` for case-insensitive comparisons to avoid culture-related performance overhead.
-- Use `string.Intern()` for strings that are repeated frequently across many objects (e.g., spell names, NPC names) to reduce memory footprint and allow for faster reference equality checks.
+- Use `StringCache.GetOrAdd` for canonicalized entity names and `GetOrAddExact` when spelling must be preserved (e.g., spell text).
+  Do not introduce `string.Intern()` calls: the shared cache replaces the CLR intern pool and its global lock.
 
 ### Threading and Responsiveness
 - **The Golden Rule**: Perform heavy processing (log parsing, file I/O) on a background thread to keep the UI responsive.
@@ -287,7 +290,10 @@ Settings and setup windows (`FctSettingsWindow`, `DamageMeterSettingsWindow`) fo
   `--no-incremental` solution build on Linux reported **0** for the file whose MSTEST0017 the Windows IDE flagged twice — so treat the analyzer class
   of diagnostics as needing the Windows build (or the IDE) to be seen at all. When the two disagree, the IDE is not being fussy.
   Match diagnostics, not the words: MSBuild's own summary ends with `0 Warning(s)` / `0 Error(s)`, so a grep for "warning" is never silent and teaches nobody to read the number.
-- **Fix the cause; never suppress.** No `#pragma warning disable` and no `<NoWarn>` in any project today — a suppressed warning is a rule somebody read as a fact later. If a warning is genuinely wrong for this codebase, the fix lands in a project property with a comment saying why, not in a pragma at the call site.
+- **Fix the cause; never suppress to pass the gate.** Do not add `#pragma warning disable`, `<NoWarn>` or suppression attributes to hide a new diagnostic.
+  Existing narrow exceptions include Windows voice enumeration's culture-sensitive SAPI calls (`CA1304`), the nullable-oblivious class-label hook
+  in `PipelineHarness` (`CS8603`), and `RecordsStore`'s lifecycle-owned timer (`CA1001`). These are documented compatibility/lifetime exceptions,
+  not permission to silence unrelated warnings. A genuinely incorrect diagnostic needs an explicit, documented decision.
 - A new warning is fixed in the commit that introduced it, not queued: warnings arrive in fleets (one annotating file produced nine identical ones), so the count only stays readable if each one dies immediately.
 
 ### Nullable Reference Types
@@ -422,7 +428,5 @@ foreach (var action in block.Actions.OfType<DamageRecord>())
 
 - Release/signing/installer work (sign.cmd, EQLogParserInstall) follows `docs/ReleaseChecklist.md`
 - **Design rationale belongs in `docs/DesignNotes.md`, not in long code comments.** A comment states the constraint in a line or two and points at the note (`// See docs/DesignNotes.md → Trigger and Overlay Import.`); the reasoning, the alternatives we rejected and the accepted warts go in the note. When a decision changes, update the entry — and delete it when it no longer applies.
-- Summary tags are used to describe purpose
-- Param tags document method parameters
-- Returns tags document return values
-- Inline comments for complex logic
+- XML `<summary>` is a one-line contract, following **Code Organization** above. Add `<param>` or `<returns>` only where it clarifies the API.
+- Inline comments state a live constraint or trap, following the comment budget above; they do not duplicate the design narrative.

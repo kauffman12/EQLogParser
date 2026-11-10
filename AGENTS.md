@@ -11,7 +11,7 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
   in history should be one decision that builds, passes and reads on its own. *Atomic* means one logical change, not one editing
   session: findings on the same feature group together, docs edit explaining them included. Only history the user has not
   pushed is ours to rewrite.
-- **Docs in git are exactly four**: `docs/DesignNotes.md`, `docs/CodingStandards.md`, `docs/ReleaseChecklist.md`,
+- **Tracked files under `docs/` are exactly four**: `docs/DesignNotes.md`, `docs/CodingStandards.md`, `docs/ReleaseChecklist.md`,
   `docs/TtsPacks.md` (the `.gitignore` whitelist). Anything else under `docs/` is a local working note: never `git add`
   it, never assume it exists in a fresh clone, delete it once its durable half is in `DesignNotes.md`.
 - **A comment may not cite what a fresh clone cannot read**: no non-whitelisted `docs/<note>.md`, and no type or UI verb
@@ -27,11 +27,12 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
 - Full solution: `dotnet build EQLogParser.sln -p:EnableWindowsTargeting=true`.
 - **Zero warnings, counted not hoped for**:
   `dotnet build EQLogParser.sln -p:EnableWindowsTargeting=true --no-incremental --nologo 2>&1 | grep -cE ": (warning|error) [A-Z]+[0-9]+"`
-  prints `0` before a commit. `--no-incremental` is load-bearing (MSBuild only reports for projects it rebuilds). Nothing
-  in this repo suppresses a warning; fix the cause. One pragma fixes a whole class (`#nullable enable annotations`).
+  prints `0` before a commit. `--no-incremental` is load-bearing (MSBuild only reports for projects it rebuilds). Fix causes,
+  not the count: never introduce warning suppression to make the gate pass. Existing exceptions are listed in CodingStandards.
+  Use `#nullable enable annotations` when a nullable-oblivious file needs annotations.
 
 ## Testing
-- `dotnet test EQLogParser.Test/EQLogParser.Test.csproj` is the headless suite (~2,000 tests, plain `net10.0`).
+- `dotnet test EQLogParser.Test/EQLogParser.Test.csproj` is the headless suite (plain `net10.0`).
   `EQLogParser.Wpf.Test` targets `net10.0-windows`: it **builds everywhere and runs only on Windows**, so a Linux run says
   nothing about it — never claim a WPF test passes from here. A `[TestMethod]` grep is not an executed count.
 - **Real logs are gitignored**: `local/logs/live/` (live format) and `local/logs/emu/` (THJ/TSS/Heroes Forge shapes).
@@ -380,7 +381,7 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
   **UNLABELLED** and warns), `StatsBuildTrace` numbers each build process-wide and reports per-stage ms + allocated bytes, and
   nesting on one thread is not overlap (builders wrap bodies in try/finally traced wrappers).
 - **Log levels**: the per-build/per-ask trace class is Debug (a player's log carries none of it without `Debug=True`); Info is
-  for a thing a person did or something broke, including one line per deliberate identity write.
+  for a thing a person did or something broke, including deliberate identity-kind and ownership writes. Class picks stay quiet.
 - **A steady-state anomaly warns once per EPISODE, not per occurrence** (overlap is the case): an episode runs from the first colliding
   build until every board is quiet, opens with one WARN naming what collided, closes with one WARN carrying the count it swallowed —
   while the counters (`StatsBuildTrace.OverlapBuilds`) and each build's own Debug line rise per occurrence as before. A WARN that fires

@@ -97,7 +97,7 @@ References: [Discord rate limits](https://docs.discord.com/developers/topics/rat
 ## The parsing direction: what we are building and why
 
 *Orientation chapter — the shape of the work before its details. Every law summarized here has a full section in this
-file (dates in headings), a short form in `AGENTS.md`, and tests; nothing new is decided on this page. It exists so
+file, a short form in `AGENTS.md`, and tests; nothing new is decided on this page. It exists so
 that the next session — human or machine — starts from where the design actually is.*
 
 ### The one-sentence version
@@ -105,9 +105,8 @@ that the next session — human or machine — starts from where the design actu
 The app no longer tells the story of a raid *while parsing it*. Lines are parsed cheaply into **facts** (damage,
 healing, outcomes) held in append-only tables; a background **derivation** folds facts plus an identity rule book into
 **rows** and boards on a cadence; every surface — fight list, all three boards, the overlay meter — reads that derived
-side behind one dial (`EnableCombatMirror`). The legacy per-line accumulation (`FightManager`, parse-time `StatsUtil`)
-still runs, but it now feeds nothing the user sees except its own retired table, and its deletion is an ordered work
-queue, not an experiment.
+side. The legacy `FightManager`, its table, parse-time accumulation and the `EnableCombatMirror` switch are deleted.
+There is one production path, not a derived/legacy mode choice.
 
 ### Why parse-time accumulation was replaced
 
@@ -125,15 +124,15 @@ queue, not an experiment.
 
 ```
 lines ──parsers──▶ CombatCapture
-                    ├─ DamageFactTable (32 B/fact: names, spell, label mask, direction flags)
+                    ├─ DamageFactTable (28 B/fact: names, spell, modifier mask, line-derived flags)
                     └─ HealFactTable   (32 B/fact: asks/landed/over; one shared name pool,
                                         ONE sequence across both tables)
                           │
              DeriveCadence.Decide ── None | ProjectionOnly | Full
                           │                     (quiet 1 s ⇒ Full; ≥25k facts/s ⇒ park both)
              ClassificationRules.Apply (Full only)
-                    ├─ R0–R20 rule book → EntityTimeline (kind + strength + reason per name)
-                    ├─ overrides (user law, persisted) and the prior ledger beat inference
+                    ├─ R0–R27 rule catalog → EntityTimeline (kind + strength + reason per name)
+                    ├─ manual overrides beat inference; saved priors remain weaker than live proof
                     └─ per-rule aggregates carried between passes (ClassificationState); a
                        stage whose boundary digest is unchanged replays in microseconds
                           │
@@ -158,9 +157,9 @@ comparison that fills the index, so a materialized block cannot drift from the r
 §"Derived damage summary from captured facts", §"A row is one life", §"Damage taken…", and the `AGENTS.md` bullets they
 generated.
 
-### The identity rule book (R0–R20) in one breath
+### The identity rule book in one breath
 
-Evidence has a **strength ladder** (Certain > Merc Database > NPC Target Frame > Strong > Medium), every claim names its
+Evidence has a **strength ladder** (Manual > Certain > Merc Database / Pet Leader > NPC Target Frame > Strong > Medium), every claim names its
 reason, and the Names window
 shows the ledger — an identity on the board is traceable to the lines that earned it. Sketch: R0 the log's own "You",
 R1 raid-targeting, R2/R3 who-was-who chat and presence, R4 the spell DB, R5 ownership (five possessive words — `` `s
@@ -169,8 +168,11 @@ graph (opposition is an absolute veto; unknown defenders a 2 % allowance), R9 ch
 owner-folded damage, no fight row), R10 manual overrides, R13 mercenaries, R14 the article test (`A bone walker` — the
 game's own "this is a thing" marker), R15 our side keeps healing it (≥10 lines from ≥2 Strong casters; caster BREADTH,
 never volume — bosses get raid AoE too), R16 comma titles, R17 drink/eat lines name a player, R18 healed pets, R19 eyes
-of X (an eye is not a combatant; hitting yours proves you exist), R20 the pet's own Snare claims Pet. The vocabularies
-are **closed and asserted at their size** (`OwnerSuffixes`, `HitLabels`' sixteen words in one byte, the three countable
+of X (an eye is not a combatant; striking an owned eye claims the striker), R20 the pet's own Snare claims Pet.
+R21 recognizes parser-recorded spell-effect roles; R22 guildmate achievements and R23 loot provide player evidence;
+R24 pet-target spells claim the defender as Pet; R25/R26 restore saved roster/owner evidence only for otherwise
+unplaced names in this capture; R27 types the shipped bot names as Mercenary before the NPC database runs.
+The vocabularies are **closed and asserted at their size** (`OwnerSuffixes`, `HitLabels`' sixteen words in one byte, the three countable
 eyes) — a new word arrives with a census over several eras, settings text if user-visible, and tests; nothing is
 inferred into them.
 
@@ -207,8 +209,8 @@ only a row that was alive when it happened, and a row with no death inside it ho
 The derived list wears legacy's face: **Initial Hit Time | HP | Name**, inactivity dividers in legacy's warning color,
 tooltips, selection restored across every re-derive by name+begin (`FightKey`, since projection renumbers). What it no
 longer says, on purpose (from live feedback): no reading-progress duplication inside the dock — the
-application-wide status line owns percent-and-seconds; the band's one phrase is "Building derived fight list…" (default
-color, indeterminate bar, captured-fact count under it). Who clicked is not part of that decision: for as long as the open
+application-wide status line owns percent-and-seconds; the band says "Building the Fight List…" during the derive
+and "Cleaning up.." only while the post-load collector runs (indeterminate bar, captured-fact count under it). Who clicked is not part of that decision: for as long as the open
 session has shown no rows AND has handed lines to the parser, the panel says its list is being built. An earlier rule made the
 band legal only on the startup auto-monitor open ("a chosen open is already counted by the status line"), and that reasoning
 survives only for the percent — an empty grid with nothing said about why reads as a broken feature, which is what the
@@ -244,23 +246,19 @@ hand-built fixtures stay usable while production, which always stamps, cannot.
 
 ### Lifecycle signals belong to PATHS, not stores
 
-`CombatEvents.ActiveDataCleared` — what blanks seven grids/charts when a log closes or opens — is raised by the two
-CLEAR PATHS (`LifecycleManager.Clear` after its fan-out; the fight list's Clear All), never from inside
-`FightManager.Clear`. A signal that lives in a store scheduled for deletion silently stops firing the day it goes, and
-a board frozen on last night's raid is worse than an empty one. Pinned by `LifecycleManagerTest` both ways: the path
-raises with its payload; a bare store reset raises nothing.
+`CombatEvents.ActiveDataCleared` is raised only by `LifecycleManager.Clear`, after its store fan-out. Clear All
+reopens the monitored file at EOF and reaches that same path; it is not a second event raiser and does not delete
+facts out of a live projection. `LifecycleManagerTest` pins that the path raises with its payload while a bare store
+reset raises nothing. Capture-owned publication guards prevent a closing session from repainting the new one.
 
 ### The measurement culture (how we know any of this)
 
-Parity runs the REAL builders twice over one capture and compares **boards, not just rows** (`EQLP_DERIVE_BOARDS=…`,
-per-person column pairs; healing exact at 403k heals/373 healers; damage's +0.54 % and tanking's people-vs-NPC split
-are documented in those runs, not smoothed over). Identity questions are asked only against a **classified** timeline
-(`ClassificationRules.Apply`) — the same census on a seeded one lied by ×350 and spawned two wrong documents before it
-was caught. Real-log tests report what they find instead of asserting constants that match accidents; absolute counts
-go before equalities; findings need **several captures** before any of them becomes a rule. The suites run
-`DoNotParallelize`; on Linux the plain suite (**1,933 passed / 15 env-gated skips** as of `9b8069bf`) runs everything except
-WPF/Skia
-surfaces — Windows is the only place `EQLogParser.Wpf.Test` executes, so its laws must also be readable from code.
+Compare **boards, not just rows**, through the real parser, classification, projection and builders. The legacy parity
+runner and its environment switches are retired; their measurements live under "The legacy engine is deleted: final
+parity numbers, kept on paper". Identity questions need a **classified** timeline (`ClassificationRules.Apply`), not
+only a registry seed. Findings need several captures before becoming a rule; retain deterministic fixtures or gated
+assertions where they defend behavior, not print-only harnesses. Both test assemblies use `DoNotParallelize`.
+The plain `EQLogParser.Test` suite runs on Linux; `EQLogParser.Wpf.Test` builds here but executes only on Windows.
 
 ### What the legacy queue became, and what is actually left
 
@@ -276,17 +274,12 @@ and `UpdateHealStats` are now called only from the three builders (`DamageStatsB
 `HealingStatsBuilder`), never from a
 parse seam. The identity panes went the same way on 2026-10-09 (`9b8069bf`), including their per-sighting event pumps.
 
-So there is one structural item left, and it is a reader problem rather than an engine problem:
-
-1. **The line viewers still read `RecordsStore`'s per-event records** (`HitLogViewer`, the damage/tank/heal grids opened from
-a summary, per-name
-   lifetimes). The fact tables already hold those rows; what they lack is readers, plus per-name lifetime materialization.
-   This is backlog **B2** —
-   keeping two copies of what happened is the largest retained item on a big capture (~656 MB heap − ~183 MB row arrays ≈ 472
-   MB, printed by `heap:` /
-   `row arrays est=`), and it is retired door by door with the heap ledger read between steps, never in one commit. Healing's
-   sixth map is the one
-   duplicate that measured **not** free → "A duplicate store that is NOT a free delete".
+The remaining materialization cost is a builder/reader question, not a second ingest engine. Damage/tanking builders
+receive records materialized from selected fact ordinals; healing reads through `HealRecordSource` and
+`HealSummarySource`. `RecordsStore` retains ancillary events and bounded cast-resolution history, not a second heal
+record lane. Do not revive the old "migrate RecordsStore heals" backlog: that migration is complete. Fact-backed board
+walks remain an architectural candidate, while healing's distinct current/snapshot time-range maps still need their
+lifetime contract preserved ("A duplicate store that is NOT a free delete").
 
 Open costs, stated honestly so nobody inherits them as surprises: classification keeps a ~250 ms floor *when a rule finds
 something* (R9 charm 83 ms,
@@ -770,9 +763,9 @@ There is no fallback to a copy beside the executable, and there deliberately is 
 was complete --which earlier releases did, so that upgrading did not cost a re-download --meant an engine could be
 running off files the dialog cannot update, cannot remove, and cannot match against a pinned digest, and worse: those
 files are still sitting in old build outputs, so development runs reported a working Piper nobody had downloaded. One
-location per engine, `%LOCALAPPDATA%\EQLogParser\<engine>`, owned end to end by `TtsPackManager`. `[InstallDelete]` now
-deletes what installs before packs left under `{app}`; the files are inert whether or not they are removed, so that entry
-is about reclaiming space, not about behavior.
+location per engine — the `kokoro` and `piper-tts` folders under `%LOCALAPPDATA%\EQLogParser` — owned end to end by
+`TtsPackManager`. `[InstallDelete]` deliberately leaves pre-pack Piper files under `{app}` alone because users may have
+added voices there. They are inert; uninstall, not upgrade, clears `{app}`. See `ReleaseChecklist.md` and `TtsPacks.md`.
 
 ### Downloading a pack, and getting out of one
 
@@ -899,13 +892,10 @@ of it (`bottles/Games/eqlogparser.yml` keeps it until someone runs one).
 
 ## Floating Combat Text
 
-`View → Floating Combat Text` shows the player's own combat numbers from live log records. The rendering choice is settled
-and recorded in
-the local working doc `docs/NagFctReference.md` (untracked; SkiaSharp beat a WPF vector path roughly 100 fps to 30 at ×10
-raid scale), and the loser has since been deleted rather
-than kept as a reference - see "Shared policy, one renderer" below. This section covers why the *plumbing* is shaped the way
-it is, because that is
-the part a later change is most likely to undo by accident.
+`View → Floating Combat Text` shows the player's own combat numbers from live log records. "Shared policy, one renderer"
+below records the rendering decision: SkiaSharp beat a WPF vector path roughly 100 fps to 30 at ×10 raid scale, and the
+vector renderer was deleted rather than kept as a second implementation. This section covers the plumbing and the
+constraints a later change must preserve.
 
 ### One queue, drained on the render tick
 
@@ -3337,7 +3327,7 @@ startup; whoever builds the real feed takes it from there.
 
 ## Instrumenting the UI thread (and why it is gone)
 
-> **Status: deleted 2026-11, executed in one pass.** Everything this chapter describes — `UiBeatMonitor` and its thread probe,
+> **Status: historical instrumentation, deleted.** Everything this chapter describes — `UiBeatMonitor` and its thread probe,
 > `PerfCounters`, `PerfGc`, `PerfGap`, `PerfBreakdown`, `HeapLedger`, the ~50 `Register` sites in frame and parse paths — is
 out of the tree.
 > It answered its questions (the numbers below are those answers) and then spent a field session printing a heartbeat that
@@ -3352,7 +3342,8 @@ bytes —
 over a session run with
 > `Debug=True` is the whole workflow (the words are `stats build #N`, `board ask [reason]`, `chart.update skipped`, `load:
 read loop`, `derive: first pass`,
-> `gc.tidy`). `PerfJournal.Enabled` survives as the gate on that residual perf chatter (`PerfReport=True`, or `Debug`).
+> `gc.tidy`). `PerfJournal` and its `PerfReport`/`PerfEnabled` switches are deleted too; current diagnostics use the ordinary
+> logger with `Debug=True`.
 > The laws that outlived the instruments are in AGENTS.md — notably that **`GetPlayerClass` reads inside its per-name lock
 without allocating**, and
 > that its measured cost (~20k reads/s at microseconds) is why **flat name→id indexing does not start**. Read the rest of
@@ -3916,8 +3907,8 @@ and the closing
 line carries the tally with the CPU actually burned:
 
 ```
-UI STALL closed: beat ran 46031 ms late (first seen at 1000 ms) | open fct+triglog | in progress nothing | ui thread: blocked
 UI STALL closed: beat ran 46031 ms late (first seen at 1000 ms) | open fct+triglog | in progress nothing | ui thread: blocked 229/230 samples waiting (UserRequest), cpu 40 ms
+```
 
 Blocked with almost no CPU is a wait, and the hunt is a lock or a call into something outside us; running with wall-matching
 CPU is work,
@@ -3977,7 +3968,7 @@ behind a `chart.update` of **1,250 ms** and a garbage collection, paints stale r
 won their frame, which is why this read as flaky instead of broken.
 
 The fix is not to chase the paint. `DeferredBusyState` (src/ui/util) makes the busy state something a build *earns*: on
-STARTED the pane arms a one-shot timer (`ShowAfterMs`, which IS `PerfJournal.SlowPassMs` — 150 ms — so "this took long enough to
+STARTED the pane arms a one-shot timer (`DeferredBusyState.ShowAfterMs` — 150 ms, formerly shared with `PerfJournal` — so "this took long enough to
 be worth telling somebody" is answered once, by a constant a log line and an interface cannot drift apart on) and touches
 nothing
 else; only a build still running when it expires
@@ -4609,11 +4600,11 @@ bool:
 ```
 as shipped (27 B payload)           48.00 B
 label id as a BYTE  (24)            40.00 B
-as shipped (27 B payload)           48.00 B
-label id as a BYTE  (24)            40.00 B
 label id as USHORT  (25)            48.00 B     the win, lost to one extra byte
 enum : byte         (24)            40.00 B
 enum, default int   (27)            48.00 B     an enum nobody gave a backing type
+```
+
 Sixteen values fit in a byte with 240 slots to spare, so the ceiling argument is not about the count — it is about *which*
 number is stored. A truncated
 `StringCache` id would need the ceiling conversation (a long session interns hundreds of thousands of strings), and that is
@@ -4682,10 +4673,10 @@ One real line, every twenty seconds while an instrumented window is open, taken 
 ```
 UI perf 20 s | open fct+tmr:CooldownOverlay-413c | beat delay max 0 ms, stalls 3 worst 2297 ms | render:auto |
 gc0 1 gc1 0 gc2 0 stopped 5 ms | heap 202 MB ws 554 MB alloc 0.6 MB/s paused 0.32% since start |
-UI perf 20 s | open fct+tmr:CooldownOverlay-413c | beat delay max 0 ms, stalls 3 worst 2297 ms | render:auto |
-gc0 1 gc1 0 gc2 0 stopped 5 ms | heap 202 MB ws 554 MB alloc 0.6 MB/s paused 0.32% since start |
 trig.timerTick n=220 avg 0.1 max 0.4 ms, trig.timerBar n=45 avg 0.1 max 0.1 ms, fct.feed n=1492 avg 0 max 0 ms,
 ui.fightTable n=20 avg 0 max 0 ms, trig.logBatch×1, trig.logEntry×1, fct.queue=0, fct.drop=567, fct.hits=0, trig.timerBars=11
+```
+
 Wrapped here for the page; it is one line in the log, and the surface name carries a window hash. Everything up to
 `render:auto` is the watchdog: which
 windows were open, how late the last beat's callback actually was, how many stalls the process has ever detected, and whether
@@ -4923,7 +4914,7 @@ external removal in the tree:
 ```csharp
 oldGroup.TimeSegments.RemoveAll(t => player.Ranges.TimeSegments.Contains(t));   // gone
 ```
-oldGroup.TimeSegments.RemoveAll(t => player.Ranges.TimeSegments.Contains(t));   // gone
+
 That line was a hand-patched cache update, needed only because moving a player between groups takes an incremental path that
 skips
 `InitializeGroupTracking`. It depended on `List.Contains`, which for `TimeSegment` is **reference** equality - the class
@@ -4984,11 +4975,11 @@ class, and an independent model computed from the added spans themselves:
 
 ```
   totals disagreed with old      : 0            (and the same counter covers the independent model: all three always agree)
-  live list != old's post-read   : 0            <-the shape the rule-at-insert produces is exactly the shape a bridging read
-  totals disagreed with old      : 0            (and the same counter covers the independent model: all three always agree)
   live list != old's post-read   : 0            <-the shape the rule-at-insert produces is exactly the shape a bridging read produced
   invariant broken in live       : 0            <-sorted, disjoint, every pair more than a tick apart
   live list != old's UNREAD list : 120,708      (74.3% of steps - the intended change: silences are welded from the start)
+```
+
 The consequence nobody can see in those numbers is the good one. `StatsUtil.UpdateMinMaxTimes` buys "the last N seconds" by
 walking spans and spending their
 lengths, and it was spending *raw* lengths while `TotalSeconds` reported *bridged* ones - the two definitions of a second
@@ -5054,9 +5045,8 @@ window, because every one was found by measuring an arithmetic result:
 dotnet test EQLogParser.Test/EQLogParser.Test.csproj --filter TimerLifecycle     # cross-platform, no STA, no window
 ```
 
-dotnet test EQLogParser.Test/EQLogParser.Test.csproj --filter TimerLifecycle     # cross-platform, no STA, no window
-`DateUtil.SimpleTimeToSeconds`, which answers in **uint**
-  seconds; the only test on the whole path was `> 0`. A capture of `999999999` makes the removal delay `(int)(seconds *
+The old duration path used `DateUtil.SimpleTimeToSeconds`, which answers in **uint**
+seconds; the only test on the whole path was `> 0`. A capture of `999999999` makes the removal delay `(int)(seconds *
   1000)` **saturate** to `int.MaxValue`
   without throwing, so the task whose entire job is deleting the bar sleeps 24.8 days and the row sits at `0:00` for the
   session — keeping the render loop (which
@@ -5331,8 +5321,8 @@ the `int`, the four two-byte fields, the two bytes — the same ten fields with 
 beta's 3.43 M before capacity is counted). Nothing was narrowed to get there: no time range, amount, participant index
 or modifier lost width, and the values round-trip verbatim (`HealFactCaptureTest`). Two things worth keeping in mind
 before this is called free. The CLR may reorder fields, so a struct size is a fact about this build rather than a
-promise — which is exactly why `AFactIsItsMeasuredSizeNotWishes` asserts the measured size (**24** since the packing
-that followed this chapter) and would catch a future field inserted in the middle widening every heal with no reader
+promise — which is exactly why `AFactIsItsMeasuredSizeNotWishes` asserts the current sizes (**28 B damage / 32 B healing**
+after the name-id and amount-width changes) and would catch a future field inserted in the middle widening every heal with no reader
 behaving differently. And the saving **overlaps** any future chunked or compressed storage: compressing a table that is
 already far smaller than the union layout buys less, so the two are not additive.
 
@@ -6544,9 +6534,8 @@ was two lines earlier:
 if (ClassificationRules.IsSelfTargetDamageSpell(atkName)) continue;   // spell feedback
 ```
 
-That question is asked of the **string**, before anything asks whether the string is a combatant. `Darkside` is also a
-if (ClassificationRules.IsSelfTargetDamageSpell(atkName)) continue;   // spell feedback
-row could open — a raider's whole evening missing from the fight list, every board, and (once it reads rows) the damage
+That question was asked of the **string**, before anything asked whether the string was a combatant. `Darkside` is also a
+spell name, so this guard discarded its pet damage before a fight row could open — a raider's whole evening missing from the fight list, every board, and (once it reads rows) the damage
 meter, silently and identically on all three, which is exactly why "meter ≡ list" would never have caught it.
 
 Fix: compute sides first and drop feedback only when the attacker isn't already one of ours at that second
@@ -6574,6 +6563,10 @@ mistake, and it is the next thing to measure rather than widen the exemption for
 should move toward legacy on the captures where a seed pet shared a spell name.
 
 ## Re-review of the legacy-replacement workstream (requirements vs what shipped)
+
+**Historical migration review.** The legacy engine, overlay builder and mode switches discussed below were subsequently
+deleted. Current architecture is summarized under "The parsing direction: what we are building and why"; final comparison
+numbers remain under "The legacy engine is deleted: final parity numbers, kept on paper".
 
 Reviewed against what the operator actually asked for across this workstream, with the evidence that answers each. Two
 things were found wrong by measuring after claiming — both corrected below rather than quietly — and one requirement is
@@ -6996,14 +6989,13 @@ LEGACY   18:34:08 → 18:34:53   46s   5.74B / 12,773 hits      "Time Alive: 46s
 LEGACY   18:37:08 → 18:39:50  163s  25.50B / 57,651 hits      "Time Alive: 163s"
 LEGACY   18:39:52 → 18:40:16   25s   corpse DoT on raiders, no damage dealt
 
-LEGACY   18:34:08 → 18:34:53   46s   5.74B / 12,773 hits      "Time Alive: 46s"
-LEGACY   18:37:08 → 18:39:50  163s  25.50B / 57,651 hits      "Time Alive: 163s"
-LEGACY   18:39:52 → 18:40:16   25s   corpse DoT on raiders, no damage dealt
-
 BEFORE   18:34:08 → 18:39:50  342s  31.70B / 85,831 hits      Dur = "5 minutes"   dmgwin = 0
 AFTER    18:34:08 → 18:34:53   45s   5.81B / 15,190 hits      Dur = "00:45"       end = Gap
 AFTER    18:37:08 → 18:39:50  162s  25.89B / 70,641 hits      Dur = "02:42"       end = Slain
-fades for 135 s while its adds are beaten dies in the same row as its own respawn. Legacy expires a name at
+```
+
+These AFTER durations predate the inclusive-second correction below. A mob that
+fades for 135 s while its adds are beaten must not share one row with its own return. Legacy expires a name at
 `FightManager.FightTimeout` (30 s), or 60 s for a fight that had never landed boss-directed damage — and only one of
 those two numbers is kept here. A row that has not hurt anybody for half a minute is over either way, and a threshold
 that depends on which side the first hit went makes a row's boundaries a function of damage direction rather than of
@@ -7095,9 +7087,8 @@ not the number this product calls "how long it lasted". The convention lives in 
 public double Total => EndTime - BeginTime + 1;   // EQLogParser.Utils/src/TimeRange.cs
 ```
 
-That expression is not cosmetic — it is the **denominator of every DPS number on the damage board** (`TimeRange
-public double Total => EndTime - BeginTime + 1;   // EQLogParser.Utils/src/TimeRange.cs
-tooltip (`var ttl = fight.LastTime - fight.BeginTime + 1;` → `Time Alive: 46s`), which `FightSummarySource` reproduces
+That expression is not cosmetic — it is the **denominator of every DPS number on the damage board** (`TimeRange`). The
+legacy tooltip (`var ttl = fight.LastTime - fight.BeginTime + 1;` → `Time Alive: 46s`), which `FightSummarySource` reproduces
 word for word for a derived row. Subtract instead of count and the grid argues with the surface one click away from it,
 worst on the rows that are already hard to read: `A corrupted egg` at 18:52:46 took 36,588,567 damage with both bounds
 inside one second, so an exclusive column printed `00:00` above a summary saying "Time Alive: 1s" and dividing by one
@@ -7122,6 +7113,10 @@ Pinned by `DerivedFightTest` — `AFightInsideASingleSecondLivedOneSecond`,
 
 ## How often derivation re-runs
 
+The measurements below record the first cadence repair. The current two-lane rule is summarized under
+"Cadence and cost: when derivation runs, and what it carries": quiet time is a duration, bulk growth is **facts per second**,
+and a cheap projection does not restart the full-pass clock.
+
 Symptom reported from live use: a derived damage meter had to be coaxed open with **Re-derive**, and then sat showing
 the same numbers for the whole encounter, moving only when Re-derive was clicked again. The fight list had the same
 disease and the summaries inherited it — they all read one `DerivedSnapshot`, and no new snapshot was arriving.
@@ -7133,9 +7128,7 @@ if (count == _lastTickCount && count != _lastDerivedCount) RederiveAsync();   //
 else _lastTickCount = count;
 ```
 
-if (count == _lastTickCount && count != _lastDerivedCount) RederiveAsync();   // two equal ticks, 1 s apart
-else _lastTickCount = count;
-faithively declined to derive for the entire fight. Quiescence is a completion detector; it was being used as a refresh
+A live fight kept changing the count, so this rule declined to derive for the entire fight. Quiescence is a completion detector; it was being used as a refresh
 clock.
 
 **What one pass costs,** measured on the largest capture on file (`eqlog_Kizant_xegony.txt`, 2,931,939 facts including
@@ -7151,7 +7144,7 @@ a test harness) and keeps both triggers:
 |---|---|
 | count held still between two ticks | derive — end of load, still the fast path |
 | nothing new since the last pass | never — an idle log must cost zero |
-| growth ≥ 25,000 facts in a tick | **not yet** — that is a file being read; quiescence catches its end |
+| growth rate ≥ 25,000 facts/s | **not yet** — that is a file being read; quiescence catches its end |
 | small growth (a live tail) | derive once `sinceLastPass ≥ clamp(4 × lastPassSeconds, 3 s, 15 s)` |
 
 The bulk-load guard is what keeps the fix from slowing the one moment throughput matters: reading a file through the
@@ -7187,10 +7180,8 @@ first pass at the end of a load and the passes with no operator action anywhere 
 14:34:43,692  Derive starting over 6,917,650 captured facts
 14:34:43,764  Derive done: 511 fights, 70 ms (continued)
 ```
-14:34:43,692  Derive done: 511 fights, 940 ms (rebuilt)
-14:34:43,692  Derive starting over 6,917,650 captured facts
-14:34:43,764  Derive done: 511 fights, 70 ms (continued)
-not a cheap lane sneaking in either: `DeriveCadence` cannot ask for a pass whose watermarks are already current, and no
+
+This was not a cheap lane sneaking in either: `DeriveCadence` cannot ask for a pass whose watermarks are already current, and no
 operator click sat
 in front of the load-end pair. The producer was the request ledger.
 
@@ -7409,9 +7400,8 @@ as its own output and was announced to nobody. Both halves of that branch were w
 a crazed flesh horror hits Worthless for 900 (damage)
 ```
 
-`Worthless` spends 322 swings on `A cunning scrykin` and `A flesh horror` (so she fights what beats her), the log gives her
-a crazed flesh horror hits Worthless for 900 (damage)
-the bucket holds 1,003 facts / 14.06 M and its top names are `Batvar`, `Worthless`, `Rector of the Spire`, `Boner`,
+`Worthless` spends 322 swings on `A cunning scrykin` and `A flesh horror` (so she fights what beats her), yet her incoming
+hits were being dropped. Across the affected defenders, the bucket holds 1,003 facts / 14.06 M and its top names are `Batvar`, `Worthless`, `Rector of the Spire`, `Boner`,
 `Morris`. **Ddread** was the sharpest case because she IS in the roster: her registry verification replays from mid-log
 evidence, so 80 of her 85 incoming facts sit before her own identity begins and the derived board reported 12,275 of the
 181,670 legacy shows.
@@ -8124,6 +8114,8 @@ comparisons for every lifecycle case; it does not wait for a count.
 
 ### One dial for both surfaces (burn-in)
 
+**Historical burn-in policy.** Both switches described here are retired; all production surfaces now read the derived engine.
+
 *(Names in the notes above predate 2026-11: the engine was "the combat mirror" then - `MirrorMeter` is now
 `DerivedMeter`, and the operator's file was to be `mirror-overrides.txt` before it ever reached an installed build; it
 ships as `identity-overrides.txt`. Same objects, older words, nothing to migrate.)*
@@ -8249,13 +8241,9 @@ per second of fighting" is gone; `TheAnnouncementMeansNewerDamage_NotANewFight`
 pins the new one, including the dead-row and stale-activity refusals, and `AClosedMeterReopensOntoTheSecondsItLeft` pins the
 four combinations of stored start, quiet length and dial.
 
-```
-EQLP_DERIVE_LIVE=local/eqlog_Kizant_xegony.txt dotnet test EQLogParser.Test/EQLogParser.Test.csproj \
-  --filter LiveFights_RealLog --logger "console;verbosity=detailed"     # prints [live] coverage, starts, restarts, reopen
-  ceiling
-```
-EQLP_DERIVE_LIVE=local/eqlog_Kizant_xegony.txt dotnet test EQLogParser.Test/EQLogParser.Test.csproj \
-  --filter LiveFights_RealLog --logger "console;verbosity=detailed"     # prints [live] coverage, starts, restarts, reopen ceiling
+The disposable real-log runner for these measurements is retired. Current meter behavior is governed by
+"Damage overlay: fight accounting and display retention" and "Damage meter presentation expiry and ownership".
+
 ## How long a meter update takes, measured end to end
 
 Asked: can the meter update faster? Before changing anything the seconds were attributed, because "the meter is slow" has at
@@ -8781,10 +8769,6 @@ answer it. In
 [Sun Sep 14 18:33:28 2025] Romance begins casting Summon Companion II.
 [Sun Sep 14 18:33:28 2025] Romance is called to it owner.
 ```
-
-[Sun Sep 14 18:33:28 2025] Hazysongs begins casting Summon Familiar: Scalewrought Flyer.
-[Sun Sep 14 18:33:28 2025] Romance begins casting Summon Companion II.
-[Sun Sep 14 18:33:28 2025] Romance is called to it owner.
 
 | Capture | `called to it owner.` lines | directly preceded by that name's own summon cast |
 |---|---:|---:|
@@ -10166,10 +10150,7 @@ The operator's log (`local/logs/EQLogParser.log`, Debug on) settled the open "do
 12:10:04  board ask [ContentMoved]   708 -> Started              → builds #5 #6 #7   boards.build 5,233 ms
 ```
 
-12:09:47  derive: first pass - 8,014,197 facts, 741 rows     fight list: 741 row(s) painted
-12:09:55  board ask [SelectCommand] select all: 708 -> Started   → builds #2 #3 #4   boards.build 5,548 ms
-12:10:04  board ask [ContentMoved]   708 -> Started              → builds #5 #6 #7   boards.build 5,233 ms
-**2,647,774** heals both times). The identity term of `SelectionStamp` moved while nothing a board reads did, and 5.2 seconds
+The two builds read the same selection and **2,647,774** heals both times. The identity term of `SelectionStamp` moved while nothing a board reads did, and 5.2 seconds
 plus a
 UI thread ~3.7 s late bought nothing. A minute later the same select-all built once, because by then the ledger was settled.
 
@@ -10307,11 +10288,7 @@ tanking     35 ms = groups   5 + window 0 + walk  28 + totals 2
 healing 1,380 ms = WINDOW 750 + walk 630 + totals 8          (2,647,774 heal records)
 materialize    ~1,150 ms full, ~550 ms with the per-row cache warm
 ```
-damage   2,580 ms = groups 210 + window 0 + WALK 2,370 + totals 3 + present 0
-tanking     35 ms = groups   5 + window 0 + walk  28 + totals 2
-healing 1,380 ms = WINDOW 750 + walk 630 + totals 8          (2,647,774 heal records)
-materialize    ~1,150 ms full, ~550 ms with the per-row cache warm
-players — is free (3 ms and 0 ms).
+Finalization over players was cheap in this run (3 ms and 0 ms).
 Inside the walk each damage record pays `damageValidator.IsValid`, a name lookup, `CheckNewFrame`, the pet-answer cache,
 `SubStatOf` (a dictionary keyed by
 subtype), **two to three** full `StatsUtil.UpdateDamageStats` passes (row stats, the `X +Pets` aggregate when there is one,
@@ -10810,9 +10787,8 @@ Bastion of Divinity Rk. II healed Xxuro over time for 6670 hit points by Bastion
 ```
 
 The client glues two sentences onto one log line, and `HealingLineParser.HandleHealed` finds the actor for
-such a line by taking the word after a `.` or `!` that sits just before `" healed "` -
-Bastion of Divinity Rk. II healed Xxuro over time for 6670 hit points by Bastion of Divinity Effect II.
-names are single tokens, so "the word after the punctuation" has always been a healer. A spell's **rank
+such a line by taking the word after a `.` or `!` that sits just before `" healed "`. It assumed healer
+names were single tokens, so it treated "the word after the punctuation" as a healer. A spell's **rank
 formulation** puts a period two characters before the last word, and the branch read `Rk.`'s period as a sentence
 end, took what followed it, and stored `"II"` as the healer. Two names, eight lines.
 
@@ -10830,13 +10806,16 @@ Bastion of Divinity healed Xxuro over time for 6670 hit points by Bastion of Div
 ```
 
 Measured cost on that capture: heals 1,247,992 → **1,247,984**, i.e. the eight rank-subject lines and nothing else;
-the pool holds no roman-numeral name afterwards (`HealFactTable`/`LineParsersTest` pin both halves). Refusing the
-Bastion of Divinity healed Xxuro over time for 6670 hit points by Bastion of Divinity Effect.   (never stored)
-the healing board, and *that* is its own decision (see "A spell type" below). What this commit refuses is inventing
+the pool holds no roman-numeral name afterwards (`HealFactTable`/`LineParsersTest` pin both halves). Refusing a
+spell-subject heal also removes it from the healing board; that is separate from typing spell-effect attackers
+(see "The Spell kind: a name the client puts in a fighter's slot"). What this commit refuses is inventing
 a fighter out of a roman numeral. **The general law: a name comes from a subject span or the line is not stored -
 no branch may take a name from "the token after some punctuation".**
 
 ### The same capture's spells, and the Spell type question
+
+**Historical proposal, since implemented.** Spell identity is now a closed kind; the final role-based law is under
+"Spell identity belongs to the parsed role, not the spelling". The earlier census below explains the question, not an open feature request.
 
 34 rank-shaped names carry damage in that capture, and their identity reads `Npc / A Spell` for **all 34** (R21's
 line-shape feed). Where their damage lands answers the operator's question - *"You have to look at who is taking
@@ -10878,10 +10857,9 @@ A scalewrought assailant -> Npc/R6-npcdb      An astral barnacle -> Npc/R1-targe
 A Woeful oracle          -> Npc/R14-shape
 ```
 
-So the finding closes as *provenance, not correctness*. The residual decision is a consistency one: the ledger
-A scalewrought assailant -> Npc/R6-npcdb      An astral barnacle -> Npc/R1-target
-A Woeful oracle          -> Npc/R14-shape
-over 77 of 2,752 names on Incogitable - not free, and only a word-quality win today.
+So this measurement closed the finding as *provenance, not correctness*: memory replaced live-evidence reasons for
+77 of 2,752 names on Incogitable without changing their kinds. Current memory replay and precedence are specified
+under "Memory: one import, three files, one wall clock" and "The roster lane: membership is not a verdict".
 
 ### R21's pool gate staleness: parked, re-asked, bounded
 
@@ -11127,9 +11105,9 @@ answer I had already given from a truncated grep. All numbers below are from `eq
 ```
 
 `DamageLineParser`'s outcome switch had `&& "(Strikethrough)" != split[^1]` on the `riposte!`/`ripostes!` arm only, so this line
-returned **no record** — and with no record it reached nothing: `StatsUtil` counts `RiposteHits` and `MeleeAttempts` from the
-[Sun Oct 04 19:39:01 2026] Spitetangle tries to bite Foob, but Foob ripostes! (Strikethrough)
-**21,277 riposte lines, 16,076 of them (75%) ending in that tag**. The same shape for blocks, parries and dodges
+returned **no record**, so neither the capture nor the board could count the sentence. The capture contained
+**21,277 riposte lines, 16,076 of them (75%) ending in that tag**. Current accounting retains both lines but excludes
+pierced defenses from protected `RiposteHits`; see "One swing, two lines" below. The same shape for blocks, parries and dodges
 (`… but Ashenback blocks! (Strikethrough)`, 52,443 name-restated attempt lines overall) was always kept; the guard singled
 out the
 one outcome whose real-world lines almost always carry the tag — and the branch's own comment block eight lines above lists
@@ -11159,10 +11137,8 @@ counters charged the event twice from the day the guard came off, and no counter
 ```
 
 The spell slot is blank and the effect's own name sits in the caster slot. That arm (`else if (string.IsNullOrEmpty(spell))`)
-took the "not sure when this happens" shortcut **before** the trailing-period fix that the sibling arm applied, so the attacker
-[Sun Oct 04 18:58:53 2026] You have taken 253713 damage from  by Infected Magic.
-twin of
-a name already in the pool (`Infected Magic.`/`Infected Magic`, `Burning Glob Burst.`, `Arcstone Rock Fall.`), and because R21's
+took the "not sure when this happens" shortcut **before** the trailing-period fix that the sibling arm applied, leaving
+the sentence's period on the attacker. That created a dotted twin of a name already in the pool (`Infected Magic.`/`Infected Magic`, `Burning Glob Burst.`, `Arcstone Rock Fall.`), and because R21's
 third proof is `spells.txt` — which cannot answer a dotted key, exactly like the ordinal subtype table it also poisoned — the
 clean
 twin read **Spell** while its dotted shadow sat in the identity list as **Unplaced**. Six lines on this capture; the class of
@@ -11419,10 +11395,8 @@ between "by" and a trailing `'s` as the attacker:
   → fact: attacker "Piemastaj", defender "Waxwork Abolishion", total 154597
 ```
 
-credited straight to the raid member whose name the possessive carries, which is what a meter wants (no `+Pets` detour, no owned
-[Sun Nov 23 18:43:49 2025] Waxwork Abolishion is pierced by Piemastaj's thorns for 154597 points of non-melee damage.
-  → fact: attacker "Piemastaj", defender "Waxwork Abolishion", total 154597
-the boss that owns the thorns.
+credited straight to the raid member whose name the possessive carries, with no `+Pets` detour. The line names
+Piemastaj as attacker and Waxwork Abolishion as defender; the boss does not own that damage.
 
 **Victims are named in groups, and self is a group.** The same capture made the identity hover say two wrong things. A
 raider's row
@@ -11499,19 +11473,16 @@ public const byte LineDerivedFlagMask = FlagAttackerIsSpell | FlagOwnerInLine;  
 public const byte LineDerivedFlagMask = FlagOwnerInLine;                        // heal
 ```
 
-**Reachability of what remains, measured on `eqlog_Kizant_xegony-2.txt`** (467 MB): `OwnerInLine` on **546,376** of
-public const byte LineDerivedFlagMask = FlagAttackerIsSpell | FlagOwnerInLine;   // damage
-public const byte LineDerivedFlagMask = FlagOwnerInLine;                        // heal
-by .`
-shape); and the heal side's owner bit on **0 of 1,243,469** — because `HealingLineParser` refuses a healer name that isn't
-player-shaped, so `"Reisil`s pet healed itself for 15750 hit points by Venom Claw XVI."` produces no record at all. That
-bit is left in place, unpurchased: it rides padding, and "no line writes it today" is one capture's measurement rather than
-a proof — `FactFlagLawTest.APossessivePetHealLineReachesNoFactAtAll` names the shape so whoever changes the heal parser
-comes back and re-measures. (The opposite lesson is `OverTotal`: a field no damage line could write, carried for years.)
+**Historical reachability census**, `eqlog_Kizant_xegony-2.txt` (467 MB): **546,376 damage facts** carried
+`OwnerInLine`, while **0 of 1,243,469 heals** carried it because the old healer grammar rejected possessive pet names.
+That zero is no longer the rule: `Reisil`s pet healed itself …` now records the pet as healer and sets the owner-in-line
+bit. `FactFlagLawTest.APossessivePetHealLineReachesAFactUnderThePetsOwnName` pins this, and "Every dropped heal line,
+named, and who its credit belongs to" records the remeasurement. An item ward folds to its owner at parse time instead;
+`HealCreditLawTest` keeps the two subjects distinct.
 
 **Pinned by** `EQLogParser.Test/src/parsing/derive/FactFlagLawTest.cs` — verified players produce a fact with *no* flags;
 a registry-known pet named plainly carries none while the same creature written as `X`s pet` does; the caster-less spell
-substitution is still flagged; a possessive-pet heal line reaches no fact; a mixed sweep asserts **nothing outside
+substitution is still flagged; a possessive-pet heal line keeps the pet's name and owner-in-line bit; a mixed sweep asserts **nothing outside
 `LineDerivedFlagMask`** ever appears on either stream; and the live values are pinned against the retired ones. Proven
 load-bearing by stamping `flags |= 4` from `IsPetOrPlayerOrMerc` back into the tap: three of those tests fail, and go green
 on revert. The parser callbacks' own law (a registry opinion is a *verdict*, so it reaches the identity channel only) is in
@@ -11522,9 +11493,9 @@ on revert. The parser callbacks' own law (a registry opinion is a *verdict*, so 
 that is not an oversight. `CombatCapture` writes `AttackerOwner` from the line and never substitutes it into `Attacker`, so a
 pet is its own name in the store; only a rollup folds (`FightSummarySource` keys the per-person column on `OwnerOf` while
 `GroupTotal`/`RaidTotal` stay sums over unmodified facts, which is why those two still agree to the last fact). Damage done to
-**another player's** pet is not damage done to that player either: meter and raid/raid-by-npc modes drop defender-side pets by
-design. Crediting a raider with her pet's swings is a product choice the boards already make; inventing credit for beating on
-someone else's pet would be padding.
+**another player's** pet is not damage done to that player either: attacking the raid's own pets earns no outgoing raid
+credit. An NPC hitting that pet still reaches the pet's own tanking row, never the owner's. Crediting a raider with her
+pet's outgoing swings is a separate board rollup, not permission to credit friendly fire.
 
 **And legacy folds far less than anyone assumed.** Measured over `tank-fight.txt`: the derived board lists 20 `+Pets` rows
 (575,999 facts) where legacy lists one row with 730, because `DamageStatsBuilder` folds only pairs its registry had *learned* —
@@ -12568,9 +12539,8 @@ load: 43% | queue 100000/100000 | read 612,480 lines/s | gen +91/2/0 | allocated
 ```
 
 `queue 100000/100000` = the parse lane is the bottleneck and the reader is parked in `Add`; a queue near zero with the same
-elapsed time means the *reader* is the slow half (a disk problem, not a parser one). The generation deltas say whether
-load: 43% | queue 100000/100000 | read 612,480 lines/s | gen +91/2/0 | allocated 5,204 MB
-not where the time goes — if this line ever says otherwise, that is a new finding. `read` here is read rate, not parsed
+elapsed time means the *reader* is the slow half (a disk problem, not a parser one). Generation deltas count collections,
+not their duration or where time went. These are historical progress diagnostics; the perf journal has since been removed. `read` here is read rate, not parsed
 rate: by design the reader stays ahead of the consumer.
 
 **The property is pinned, not asserted in prose:** `EQLogParser.Wpf.Test/src/control/util/LogReaderThreadTest.cs` installs a
@@ -12712,6 +12682,10 @@ deltas with pause ms, facts/heals rows vs slots vs slack, name pool, FCT live hi
 what grew and whether their stalls coincide with gen2. Neither is assumed; the ledger is what would decide them here.
 
 ## A fact row is 24 bytes: the clock, the vocabulary, and what a byte of mask needed
+
+**Historical width decisions, not the current row sizes.** Damage facts are now **28 B** and heal facts **32 B**:
+name ids widened to `int`, then healing's two amounts widened to 48 bits. `HealFactCaptureTest.AFactIsItsMeasuredSizeNotWishes`
+pins the current sizes; see "Amount widths measured across 44 million hits: 48-bit damage and healing" for the final amount tradeoff.
 
 Asked as "can we retain smaller facts — if there are only ~30 possible values, store them in a short". Half of that was
 already true and half of it was aimed at the wrong field, which is worth writing down because the answer changed what got
@@ -12869,9 +12843,8 @@ pet, so when one of them lands, the name in the defender slot is somebody's summ
 ```
 
 Fred is a shaman's wolf with a custom name. No line in that capture ever writes ``Wanabe`s pet``, so R5's possessive
-sweep cannot reach him; the target frame prints NPC for him. What settles it is the spell data: every rank of
-[Sat Jan 04 16:25:05 2025] Wanabe hit Fred for 176000 points of unresistable damage by Elemental Conversion VI.
-Gift** (14) — the game's own statement of what that damage can land on.
+sweep cannot reach him; the target frame prints NPC for him. What settles it is the spell data: Elemental Conversion's
+target is **Pet (14)** — the game's own statement of what that damage can land on.
 
 **The trap in the lookup.** `IsPetSlotSpell` asks `GetSpellByName`, *not* the `GetDamagingSpellByName` the spell-feedback rule uses: Elemental Conversion's `Damaging` column is **0** in this build's spells.txt while the client
 wrote 176,000 points of damage for it. Only the target slot can be trusted at this seam. A rank this build does not
@@ -13169,10 +13142,7 @@ if (!rightClickMenu.IsOpen) { …; MainActions.FireFightSelectionChanged(selecte
 else { _needSelectionChange = true; }              // and ContextMenuClosing announces it, once
 ```
 
-// legacy FightTable.xaml.cs (bf9318fb^), inside the selection timer's Tick
-if (!rightClickMenu.IsOpen) { …; MainActions.FireFightSelectionChanged(selected); }
-else { _needSelectionChange = true; }              // and ContextMenuClosing announces it, once
-while the operator is still reading the menu; choosing *Select All* then announces the whole list. Two announcements, two
+Without this guard, the press could announce a selection while the operator was still reading the menu; choosing *Select All* then announces the whole list. Two announcements, two
 materializations, and a whole-capture selection is the multi-second kind (docs → "What makes a board go one pass stale"),
 which is exactly what "two selections" looks like from the outside. Legacy's flag was not decoration: **a context menu is
 part of the gesture**, so its selection change belongs to the end of the menu rather than to its own clock.
@@ -13511,10 +13481,7 @@ if (Interlocked.Exchange(ref _refreshInFlight, 1) == 1) return;   // doc comment
 ```
 
 Not harmless. On a finished log nothing asks again, so the store held the operator's verdict while the grid went on showing
-what *used to be*
-if (Interlocked.Exchange(ref _refreshInFlight, 1) == 1) return;   // doc comment: "harmless while one is running"
-request is silence is
-the same defect `DeriveRequests` was written for on the derive lane ("the operator set a name as Pet while a pass happened to
+the old answer. Treating a busy repaint request as silence is the same defect `DeriveRequests` was written for on the derive lane ("the operator set a name as Pet while a pass happened to
 be running"),
 so this is its sibling, not a new idea: **an ask that arrives while one is running is delayed into exactly one follow-up**,
 which is what makes
@@ -13716,10 +13683,8 @@ stats build #31 damage full : 2052 ms | from damage meter overlay |
     groups 1196 ms  window 0 ms  walk 822 ms  present 34 ms | npcs=4452
 ```
 
-Three facts fall out of that line. **(1) The copying is bigger than the counting.** `groups` — `BuildTotalStatsCore`
-stats build #31 damage full : 2052 ms | from damage meter overlay |
-    groups 1196 ms  window 0 ms  walk 822 ms  present 34 ms | npcs=4452
-for pet mapping) — costs **1.2 s against the walk's 0.8 s**, on top of the 0.7 s materialization that produced those
+Three facts fall out of that line. **(1) The copying is bigger than the counting.** `groups` — the grouping pass in
+`BuildTotalStatsCore`, including pet mapping — costs **1.2 s against the walk's 0.8 s**, on top of the 0.7 s materialization that produced those
 same blocks in the first place. Three passes over the same references where one could do, and this is the "filtering we
 want to undo": the retained pool should BE the materialized blocks, not a copy of them. **(2) `present` is 34 ms.** The
 arithmetic over surviving rows — totals, rates, ranks, children, %, the combined object — is already milliseconds,
@@ -13783,9 +13748,7 @@ stats build #33 damage full : 914 ms | groups 106 ms  window 0 ms  walk 777 ms  
 whole board: 3,800 ms → ~2,700 ms on the same capture and the same three windows
 ```
 
-`groups` went **1196 ms → ~105 ms** (11×) and the board with it (-29 %), with the golden byte-identical. Three things
-stats build #33 damage full : 914 ms | groups 106 ms  window 0 ms  walk 777 ms  present 32 ms
-whole board: 3,800 ms → ~2,700 ms on the same capture and the same three windows
+`groups` went **1196 ms → ~105 ms** (11×) and the board with it (-29 %), with the golden byte-identical. Three constraints:
 - **Nothing mutates a finished group's `Actions`.** The healing builder builds its own `ActionGroup`s; the timeline chart
   and the validators only read. So a block belonging to a `Fight` row and a block inside `_damageGroups` are the same
   object with one writer, not two writers and a race.
@@ -13971,11 +13934,8 @@ tanking     52 ms = groups  14 + window 1 + walk    35 + totals  2
 healing 1,442 ms = WINDOW 954 + walk 475 + totals 12   (2,647,774 heals)
 ```
 
-damage   1,884 ms = groups 280 + window 2 + WALK 1,579 + totals 21 + present 2
-tanking     52 ms = groups  14 + window 1 + walk    35 + totals  2
-healing 1,442 ms = WINDOW 954 + walk 475 + totals 12   (2,647,774 heals)
-(walk ~85 %
-of damage, window the biggest single heal term), so no machine-specific effect explains it and micro-optimizing the inside of
+The walk is ~85 %
+of damage and windowing is the biggest single heal term, so no machine-specific effect explains it and micro-optimizing the inside of
 those loops
 is not on the table: the phase boundary is "count less", and counting less needs one of the two structural moves above first.
 
@@ -14001,13 +13961,10 @@ raid    eqlog_Kizant_xegony-09-03-26.txt  4,832,103 facts / 323 rows
  30s window   tail 25,919        → 134 rows touched (41.5%) → walks 3,902,576 = 80.8%  saved ≈ 19%
 group eqlog_Roper_thj.txt                4,356,144 facts / 1,739 rows
   5s window   tail     61 facts →  12 rows touched ( 0.7%) → walks 2,768,973 = 63.6%  saved ≈ 36%
-raid    eqlog_Kizant_xegony-09-03-26.txt  4,832,103 facts / 323 rows
-  5s window   tail  4,817 facts → 128 rows touched (39.6%) → walks 3,870,510 = 80.1%  saved ≈ 20%
- 30s window   tail 25,919        → 134 rows touched (41.5%) → walks 3,902,576 = 80.8%  saved ≈ 19%
-group eqlog_Roper_thj.txt                4,356,144 facts / 1,739 rows
-  5s window   tail     61 facts →  12 rows touched ( 0.7%) → walks 2,768,973 = 63.6%  saved ≈ 36%
  30s window   tail    115        →  16 rows touched ( 0.9%) → walks 2,838,132 = 65.2%  saved ≈ 35%
-rebuilding
+```
+
+Rebuilding
 "only what changed" rebuilds most of the bytes, and it does it in *both* content shapes — the group case looks good by row
 count (0.7 % of
 rows touched!) and still walks two thirds of the records. The saving that is actually available on a live refresh is ~99 %
@@ -14405,11 +14362,8 @@ Its measurements remain here; fixture prefix/full equivalence and ordinal-extens
 [carry] pass 2: facts 2,285,746 rows 247 | growth rebuilt 506 ms | settle over 234 re-remembered names: continued 0 ms
 ```
 
-The **growth** pass rebuilds, and that is correct — new facts bring genuinely new verdicts. The **settle** pass (facts idle,
-[carry] pass 1: facts 1,165,998 rows 182 | growth rebuilt 257 ms | settle over 190 re-remembered names: continued 0 ms
-[carry] pass 2: facts 2,285,746 rows 247 | growth rebuilt 506 ms | settle over 234 re-remembered names: continued 0 ms
-old gate paid a full
-re-walk. Both paths are then compared to a from-zero `FightProjection.Build` over the same facts and timeline, **row for row
+The **growth** pass rebuilds, and that is correct — new facts bring genuinely new verdicts. The **settle** pass has
+idle facts and unchanged answers, so it continues in 0 ms where the old gate paid for a full re-walk. Both paths are then compared to a from-zero `FightProjection.Build` over the same facts and timeline, **row for row
 and field by field**
 (totals both directions, hit counts, both direction windows, dead/end-reason, pet/owned, group id), because "the carry is
 probably equivalent"
@@ -14791,18 +14745,15 @@ eqlog_Incogitable_xegony.txt   1,890,049 facts, 4,713 visible rows at the end of
   a stamp-only pass (no new fact):     cold 535 ms / 215.1 MB   warm   3 ms /  0.2 MB    ×178 time
   all passes:                          cold 2,579 ms / 949.5 MB warm 756 ms / 308.7 MB   ×3.41 time, -67.5 % bytes
                                        (605,596 blocks and 7,466,484 records identical between arms)
-eqlog_Incogitable_xegony.txt   1,890,049 facts, 4,713 visible rows at the end of the replay
-  last growth pass (≈290k new facts):  cold 565 ms / 215.1 MB   warm 210 ms / 75.2 MB    ×2.7 time, -65 % bytes
-  a stamp-only pass (no new fact):     cold 535 ms / 215.1 MB   warm   3 ms /  0.2 MB    ×178 time
-  all passes:                          cold 2,579 ms / 949.5 MB warm 756 ms / 308.7 MB   ×3.41 time, -67.5 % bytes
-                                       (605,596 blocks and 7,466,484 records identical between arms)
 
 eqlog_Kizant_xegony-2.txt      2,285,746 facts, only 274 rows — few huge rows, the worst shape for re-walking
   last growth pass:                    cold 730 ms / 221.0 MB   warm 109 ms / 51.4 MB    ×6.7 time, -77 % bytes
   a stamp-only pass:                   cold 529 ms               warm   1 ms
   all passes:                          cold 2,504 ms / 895.0 MB warm 569 ms / 248.6 MB   ×4.40 time, -72.2 % bytes
                                        (74,597 blocks and 9,136,936 records identical between arms)
-target — "re-present a row" wants to be a pointer swap plus one tail, not a copy of its block list and segment maps. Quote
+```
+
+That is the target — "re-present a row" wants to be a pointer swap plus one tail, not a copy of its block list and segment maps. Quote
 the two
 captures as the pair, never one: the difference between them is *rows per capture*, which is the variable that decides how much
 re-walking there was to avoid. What this does **not** touch: `groups`/`walk`/`present` in the phase table (the boards' own
@@ -14841,13 +14792,9 @@ raid   Kizant-09-03-26    4,832,103        708 / 2,129 ms      2,849,439 records
 farm   Kizant_xegony-2    2,286,368        251 / 1,021 ms      1,541,924 records          339 ms -> 1.49 (2.13)      99.6 %
 group  Roper_thj (EMU)    4,356,144     42,410 / 1,411 ms      1,174,935 records          214 ms -> 0.08 (1.73)     100.0 %
 refer. Incogitable_xegony 1,901,078      4,646 /   629 ms        (same shape throughout)                              >= 99 %
-capture                      facts       fight rows / walk     @50% W=5s: measured R      recount -> fold (+hist)     saving
-raid   Kizant-09-03-26    4,832,103        708 / 2,129 ms      2,849,439 records          641 ms -> 1.64 (3.93)      99.7 %
-farm   Kizant_xegony-2    2,286,368        251 / 1,021 ms      1,541,924 records          339 ms -> 1.49 (2.13)      99.6 %
-group  Roper_thj (EMU)    4,356,144     42,410 / 1,411 ms      1,174,935 records          214 ms -> 0.08 (1.73)     100.0 %
-refer. Incogitable_xegony 1,901,078      4,646 /   629 ms        (same shape throughout)                              >= 99 %
-reuse saves
-~20 % in raid content, ~35 % in group), the fold takes 99 %+ everywhere. It clears, in every shape sampled.
+```
+
+Whole-row reuse saves ~20 % in raid content and ~35 % in group; the experimental fold takes 99 %+ everywhere. It clears, in every shape sampled.
 
 **Publish is O(keys + segments), and those are small.** Per-row publish cost ran **1-146 us**, the 146 us being a row holding
 2,592
@@ -14916,10 +14863,8 @@ eqlog_Incogitable_xegony.txt   reused 1,463,646 of 1,477,200 actions (99.1 %)
 eqlog_gromm_bertox.txt         reused 62.4 %;  21 ms -> 1 ms
 ```
 
-eqlog_Incogitable_xegony.txt   reused 1,463,646 of 1,477,200 actions (99.1 %)
-                               damage build 1,460 ms -> 180 ms;  walk 627 -> 57 ms;  ~4 MB held per capture
-eqlog_gromm_bertox.txt         reused 62.4 %;  21 ms -> 1 ms
-  group of fights for raid event 1 → select event 2 → ... eight times → open spell counts for a few players → open the
+The cache was nevertheless reverted because it missed the operator's workflow:
+* **Each new selection starts cold:** select a group of fights for raid event 1 → select event 2 → ... eight times → open spell counts for a few players → open the
   damage breakdown for a few players. Each selection starts a cold carry by construction; a memo keyed on the question
   fails the same way, and it only ever helps revisits.
 * **The drill-downs already cost nothing.** `SpellCountTable.Init(selectedStats, currentStats)` and
@@ -15046,9 +14991,7 @@ var player = !string.IsNullOrEmpty(record.AttackerOwner) ? record.AttackerOwner
 ```
 
 The record's **own** ownership word wins whenever it exists; the learned map is only the fallback for records the capture
-never attributed. On the
-var player = !string.IsNullOrEmpty(record.AttackerOwner) ? record.AttackerOwner
-  : _petToPlayer.TryGetValue(record.Attacker, out var mapped) ? mapped : null;
+never attributed. Two cases follow:
 
 1. **Records that carry their owner word are order-free.** Their row key is a function of the record alone, so cells built
 from them may be carried
@@ -15142,11 +15085,8 @@ heap: ws=586.9 MB heap=358.3 MB pause 0.0 ms | gc 0/0/0 | facts rows=0 slack=127
       | names=0 | row arrays est=196.1 MB | over 0s
 ```
 
-**Zero facts captured, 196 MB of row slots reserved.** The heap ledger (**B11**) existed for exactly one day at that point and
-this is the bug it was built to make visible: nothing about it could have been found by reading the code, because the code
-heap: ws=586.9 MB heap=358.3 MB pause 0.0 ms | gc 0/0/0 | facts rows=0 slack=127.0 MB heals rows=0 slack=69.1 MB
-      | names=0 | row arrays est=196.1 MB | over 0s
-`MainWindow.OpenLogFile` sized a session's fact arrays with `lastMins > 0 ? 0 : LogReader.FileSizeOrZero(theFile)`, and its own
+**Zero facts captured, 196 MB of row slots reserved.** The historical heap ledger exposed a capacity hint being applied
+to a monitor that would read no history. `MainWindow.OpenLogFile` sized a session's fact arrays with `lastMins > 0 ? 0 : LogReader.FileSizeOrZero(theFile)`, and its own
 comment explained that a "last N minutes" open reads an unknown slice so it gets no hint. The comment is right about
 `FactCapacity`
 and wrong about the world: `LogReader`'s `minBack` has **three** states, and the value falling into the hinted branch was the
@@ -15185,10 +15125,8 @@ heap: ws=1242.7 MB heap=655.8 MB pause 4278.4 ms | gc 1376/365/12 | facts rows=4
       heals rows=2,670,809 slack=0.0 MB | names=410 | row arrays est=183.4 MB | over 30s
 ```
 
-- **`slack=0.0` on both streams** — the trim ran at EOF, as designed (`gc.tidy log loaded` had just taken heap 1,218.8 →
-655.8 MB,
-heap: ws=1242.7 MB heap=655.8 MB pause 4278.4 ms | gc 1376/365/12 | facts rows=4,832,103 slack=0.0 MB
-      heals rows=2,670,809 slack=0.0 MB | names=410 | row arrays est=183.4 MB | over 30s
+- **`slack=0.0` on both streams** — the trim ran at EOF in this historical implementation; `gc.tidy log loaded` had
+  taken heap **1,218.8 → 655.8 MB**. The current cleanup timing is under "Garbage collection after loading a log".
 - **Rows are 183 MB of a 656 MB heap.** §"The Windows field run" wrote "~330 MB is not rows" as an inference from a gcdump;
 on this
   (bigger) capture the gap is ~472 MB, and a subtraction still is not an answer. So `RecordsStore` grew two counters and the
@@ -15250,9 +15188,8 @@ load: read loop #2 on thread 8, sync context = none | eqlog_Kizant_xegony-09-03-
 
 `from open` is the *default*, which means the construction is not `MainWindow.OpenLogFile` at all. It is
 **`TriggerManager`**: the
-trigger lane keeps readers of its own — one per enabled character over that character's log file in advanced mode, or one over
-load: read loop #2 on thread 8, sync context = none | eqlog_Kizant_xegony-09-03-26.txt | follow-end from open
-defaulting to 0, hence `follow-end`). Nothing is double-counted: the derive engine taps only the main window's
+trigger lane keeps readers of its own — one per enabled character over that character's log file in advanced mode, or
+one over the main log in basic mode. Those monitor from EOF (`minBack=0`, hence `follow-end`). Nothing is double-counted: the derive engine taps only the main window's
 `LogProcessor`, which
 is why facts were identical across runs (8,014,197 in both). But it is a real cost worth stating plainly — **a live tail
 reads and
@@ -15273,11 +15210,8 @@ heap: ws=591.2 MB heap=168.8 MB … facts rows=0 slack=2.3 MB heals rows=0 slack
       | row arrays est=2.7 MB | kept casts=0 timed records=0 | over 0s
 ```
 
-- **`row arrays est=` went 196.1 MB → 2.7 MB on an idle monitor**, and managed heap at that moment is **168.8 MB** (it was
-capture: started (eqlog_Kizant_xegony-09-03-26.txt) follow-end from startup auto-monitor | sized-from=0 MB
-heap: ws=591.2 MB heap=168.8 MB … facts rows=0 slack=2.3 MB heals rows=0 slack=0.4 MB | names=0
-      | row arrays est=2.7 MB | kept casts=0 timed records=0 | over 0s
-it did not remove the optimization.
+- **`row arrays est=` went 196.1 MB → 2.7 MB on an idle monitor**, with managed heap **168.8 MB**. The correction
+  removed the whole-file capacity hint from follow-end opens; whole-file opens retain their hint.
 - `ws=591.2 MB` beside `heap=168.8 MB` is the other half of that lesson: a *fresh* process, nothing captured, still shows
 ~420 MB of
   working set over its managed heap (Skia/Syncfusion/native plus pages the collector has not returned). Any working-set
@@ -15365,9 +15299,8 @@ stats build #1 damage full : 2657 ms | … | groups 223 ms/53.7 MB window 2 ms w
 ```
 
 `GC.GetTotalAllocatedBytes` is asked once per stage boundary — a handful of times per build — and stages under half a
-megabyte keep no term,
-stats build #1 damage full : 2657 ms | … | groups 223 ms/53.7 MB window 2 ms walk 2430 ms/345.8 MB totals 9 ms/0.8 MB present 1 ms
-operations, the second wants fewer objects, and only the second explains why a UI-thread pause outlives the pass that caused
+megabyte omit the byte term. Time and allocation answer different questions: one asks for fewer operations, the other
+for fewer objects. The second can explain why a UI-thread pause outlives the pass that caused
 it (this is the
 same gen0-on-the-painting-thread effect the field runs measured as `pause … ms/30 s`).
 
@@ -15456,13 +15389,8 @@ chart.update 1107 ms | DamageChart UPDATE | walked 4660915 records -> 5 lines, 3
    walk 1078 ms (97 %)
 ```
 
-Two passes over 4,660,915 records drawing the **identical** answer — same lines, same points — with **no stats build between
-chart.update 1589 ms | DamageChart UPDATE | walked 4660915 records -> 5 lines, 36163 points | plots 17
-   walk 1540 ms (97 %) ...
-chart.update 1107 ms | DamageChart UPDATE | walked 4660915 records -> 5 lines, 36163 points | plots 14
-   walk 1078 ms (97 %)
-`"UPDATE"` when rows
-are selected or a view option moves). The panes say *UPDATE*, which means "re-aggregate every record", when what they mean is
+Two passes over 4,660,915 records drew the **identical** answer — same lines, same points — with **no stats build between
+them**. Selection and view-option changes both requested `"UPDATE"`. The panes say *UPDATE*, which means "re-aggregate every record", when what they mean is
 "the drawing
 may need this selection". Legacy had the same shape and the same cost; nobody had counted it because nothing printed `walked
 N records` before.
@@ -15703,7 +15631,8 @@ criticals does not promise every crit sample can be labeled.
 is off-ladder; rejecting every label because of it is too conservative. The dominant fit labels **68,377 × 288 as DI20**,
 leaves **52,674 × 1** unlabeled, and retains all 21 rows in chart/export. Target count is not a gate. The ordinary fixture
 `HitFrequencyFixtures.CombinedKeyceCriticals` reaches the export through the chart-choice seam; a disposable full-file
-pipeline check independently asserted the 718/719 support and four-column export, then was removed.
+pipeline check independently asserted the 718/719 support and the then-four-column experimental export, then was removed.
+The shipped CSV schema is the three-field schema above; no DI column remains.
 
 **Human-player caution:** guild-chat-corroborated Beorun → Combat Dummy Azia, Slashes, in `eqlog_Incogitable_xegony.txt`
 (11:06:41–11:14:54) has **229 ordinary hits / 53 amounts**: not one clean ladder. Some clean named actors read Player but
@@ -15812,11 +15741,9 @@ StatsUtil.UpdateTimeSegments(null, healerHealedSpellTimeSegments,    spellNameKe
 _healerHealedSpellTimeRanges
 ```
 
-Both end up keyed composite → spell, so the two persistent stores hold the same content. Measured cost of one of them (same
-StatsUtil.UpdateTimeSegments(null, healedByHealerSpellsTimeSegments, spellNameKey, healerHealedKey, healTime);   // → _healedByHealerSpellTimeRanges
-StatsUtil.UpdateTimeSegments(null, healerHealedSpellTimeSegments,    spellNameKey, healerHealedKey, healTime);   // → _healerHealedSpellTimeRanges
+Both stores use composite → spell keys, but identical contents in one build do not prove interchangeable lifetimes.
 
-It is *not* implemented, for a reason worth writing down: the two stores have **different lifetimes**, and only one of them
+Merging them is *not* implemented, for a reason worth writing down: the two stores have **different lifetimes**, and only one of them
 is aliased into a
 snapshot. `_healedByHealerSpellTimeRanges` is cleared by `Reset()` on every build; `_allHealedByHealerSpellTimeRanges` is
 pointed at it **only on the
@@ -15924,11 +15851,9 @@ grep -E "UI perf" EQLogParser.log | tail -3   # read chart.rendergap, chart.upda
 
 One thing the tail answered for free: memory grew "at a decent rate but better than it used to", with `heap 760–770 MB / ws
 ~1.58 GB`
-and ~120 MB/s allocation while replaying at many times live speed, GC paused ~6 %. FCT and the meter were fine (`fct.paint
-avg 1.3–1.5 ms`,
-grep -oE "board ask \[[A-Za-z]+\]" EQLogParser.log | sort | uniq -c
-grep -E "chart\.rendergap|UI STALL" EQLogParser.log | tail -40
-grep -E "UI perf" EQLogParser.log | tail -3   # read chart.rendergap, chart.update, stats.damage, stalls, heap/ws/alloc
+and ~120 MB/s allocation while replaying at many times live speed, GC paused ~6 %. FCT paint averaged **1.3–1.5 ms**.
+The perf-journal commands above describe the historical run; that instrumentation is retired. Current per-build diagnostics
+are the Debug `board ask` / `stats build` lines.
 
 ## Snapshot unless a name changed what it is
 
@@ -16064,14 +15989,8 @@ System.InvalidOperationException: The calling thread cannot access this object b
    at EQLogParser.MainWindow.BuildBoards(...) :line 919
 ```
 
-Line 919 was the watch capture written hours earlier: `if (npcWindow?.Content is FightTable watchPane)`, sitting two lines
-under a
-board ask [SettleTick]: 1 fight(s), stamp 3849286386084577965, tank type 0 -> Started
-ERROR MainWindow - Derived damage summary error
-System.InvalidOperationException: The calling thread cannot access this object because a different thread owns it.
-   at System.Windows.Controls.ContentControl.get_Content()
-   at EQLogParser.MainWindow.BuildBoards(...) :line 919
-exists to keep the gate idle swallowed it into one ERROR line. The failure was total because the ordering was wrong as well
+The watch capture `if (npcWindow?.Content is FightTable watchPane)` ran on the board worker, so even its guard read a
+DependencyObject owned by the UI thread. The build's catch logged the exception and left every board empty. The failure was total because the ordering was wrong as well
 as the
 thread: an optimization for a *later* announce stood in front of the *current* board.
 
@@ -16651,15 +16570,13 @@ zero-second window meaning
 
 ## Where we stand: performance, and the refresh nobody asked for
 
-An orientation chapter on purpose, and deliberately short. Every figure quoted here belongs to a section named at the end of
-its paragraph; `docs/perf-memory-status.md` (ids **B**/**C**) and `docs/incremental-summary-refresh.md` (**Phase B**) remain the
-working backlog, with the measurements behind them. This page exists so a fresh session can tell **done** from **open** from
-**decided against** without re-deriving all three — the most expensive kind of work in this repository has been re-measuring a
-thing that was already measured and refused.
+The maintained backlog lives here, not in disposable local notes. Baseline measurements below describe the revisions
+that produced them, not current timings; re-baseline before ranking new work. Current dispositions are under "Open, in
+the order the measurements put them" and "Decided against" below. Later sections retain the experiments that settled them.
 
 ### What a board build costs, and what came off the bill
 
-A/B over one binary per revision on `eqlog_Kizant_xegony-09-03-26.txt` (998 MB, 708 rows, **4,580,865** outcomes, 2,670,809 heal
+Historical A/B over one binary per revision on `eqlog_Kizant_xegony-09-03-26.txt` (998 MB, 708 rows, **4,580,865** outcomes, 2,670,809 heal
 facts — the honest shape; Incogitable's 414 players flattered work that removes per-row-per-player copying): **select-all
 11,481 → 9,760 ms**, the single largest encounter 956 → 807 ms, healing **−27 %** over a night (one cursor for the window
 instead
@@ -16687,15 +16604,14 @@ cheap
 lane folds over the timeline instance the last full pass produced: projection of a live increment **0–5 ms**, classification
 of a
 full pass **186–261 ms**, and a carried quiet classification **~2 ms** against ~380 ms from zero.
-→ "Quiescence is a completion detector" (AGENTS), "A derive pass that starts where the last one stopped", "The projection
-carry asks
-the same weaker question".
+→ "How often derivation re-runs", "A derive pass that starts where the last one stopped", and
+"The projection carry asks the same weaker question".
 
 **One board build in flight, newest question wins, identical inputs dropped** (`SummaryBuildGate`), behind a selection that
-announces
-**once per gesture** (`SelectionSettle`, 600 ms, menu-open and button-held states) and a staleness stamp of *facts + answers*
-(`ContentStamp` = fact total folded with `EntityTimeline.AnswerStamp()` — "same rows" is not "same answer"). Every build numbers
-itself and says who asked (`stats build #7 damage full 3410 ms/147.4 MB | from derived [SelectCommand] …`).
+announces **once per gesture** (`SelectionSettle`, 600 ms, menu-open and button-held states). Arriving damage elsewhere in
+the capture is not a reason to rebuild a displayed board: selection membership/content and classification answers are
+separate questions, and `IdentityWatch` scopes automatic classification refreshes to the names actually on the board.
+See "Snapshot unless a name changed what it is". Every build numbers itself and names its caller through `Source`.
 
 **The cost gate on passes nobody asked for** (`UnaskedRefresh`): a hand's gesture builds at any size — that is the law, and
 it keeps
@@ -16721,188 +16637,62 @@ and `BuildTotalStats`, which is where the cost actually sits. That is backlog **
 
 ### Open, in the order the measurements put them
 
-1. **The cell cache (Phase B 1c)** — the only known way to make a live refresh cost less than a whole recount. The primitive is
-   proven (`StatsUtil.MergeStatsRecursive`, `RecursiveFoldEquivalenceTest`), the three preconditions are executable
-   (`CellFoldPreconditionsTest`), and the ownership question is measured: cells carry the **selection's** pet↔owner maps because
-   learning is a pre-pass, not per-record state. The bar it must clear is written down: **whole-row reuse saved only ~20 % on
-   a raid
-   refresh**, because the rows that change are the heavy ones — a proposal that still walks most of the records is not a win.
-   Its
-   memory law is just as binding, and visible now: a cache that raises `ws=` faster than it shortens a build has failed.
-   → "How B gets built", "The three preconditions behind the cell cache", "What a cached walk is allowed to carry".
-2. **Phases 2–3 (a mergeable accumulator) need a structural decision, not code**: the accumulator *is* the display model today
-   (`PlayerStats : PlayerSubStats : Attempt`, bound live by the grid, with child forests and finalize-only scalars). Either
-   every
-   future column exists twice, or every board changes. That is its own design pass against the goldens.
-   → "What a damage row's state actually is, which is why the delta phase does not start with `Merge`".
-3. **B2 — stop keeping two copies of what happened** (`RecordsStore`'s per-event records vs the fact tables): the largest
-retained
-   item on a big capture (~656 MB heap − ~183 MB row arrays ≈ **472 MB**, printed rather than inferred by `heap:` / `row
-   arrays est=`).
-   Doors are migrated one at a time, measuring `ws=` against `row arrays est=` between steps. Healing's sixth map is the one
-   duplicate
-   that is **not** free — it is measured and deliberately left alone. → "What 951 MB actually retains", "A duplicate store
-   that is NOT a free delete".
-4. **Cost items with a named number and no fix yet**: the chart's second full pass (1,885 ms against its own 300 ms budget on a
-   select-all); voice-pack init on the UI thread (**1,028 ms of every launch**, `app.voices`); a stall line that cannot
-   report its
-   closed children and a beat cadence fixed at 20 s; four diagnostics lines per derive where one would do; the overlay's
-   remaining
-   ~543 B per number; parser tokenization (spans over `Split`, allocation *traffic*, unproven speed); the trigger lane
-   reading the file
-   a second time; chunked storage + compression (**A1**, demoted by the field runs — rows are ~85 MB of a 419 MB heap);
-   bounding the
-   materialized-summary cache (**B1**). All of them, with their catches: `docs/perf-memory-status.md` §3.
-5. **One symptom still unnamed**: select-all immediately after a load fills the grids three times; the same click a minute
-later fills
-   once. The doors are now individually named in the log, which is what makes it answerable; the cause is a hypothesis, not a
-   measurement. → "Name every door: which build was which".
+1. **Materialize-before-accumulate peaks and per-record row-key probes.** Large summary builds still materialize selected
+   records before counting them. A direct fact-backed board walk or a separate accumulator needs its own design decision
+   and equivalence against the board goldens; it is not a small cleanup. → "What a damage row's state actually is" and
+   "What board builds create, and where that stops".
+2. **Superseded summary builds still finish.** `SummaryBuildGate` coalesces pending questions, but does not abort the
+   running build or release its materialized records early. Cancellation must cover materialization and builders, not
+   merely discard publication. → "A board belongs to the capture that asked" and
+   "Snapshot unless a name changed what it is".
+3. **Long-session Windows behavior remains a release gate.** Linux measurements do not establish native rendering,
+   peak working set or overnight retention. Use the concrete checks in `ReleaseChecklist.md`; classify a new field run
+   by its named `board ask` / `stats build` traces before proposing another cache or status surface.
+
+Already closed, not backlog: cold fact compression, span-based parsing, the duplicate heal record lane, asynchronous
+voice initialization, duplicate chart questions and machine-written Info spam. The per-name counted-cell cache was
+built, measured and reverted — "Carried counted cells were built, measured and reverted" is its disposition, not an
+implementation plan. Historical probe names below do not imply that those probes remain in the suite.
 
 ### Decided against — bring a new measurement, not a re-argument
 
-GC tuning / compact-after-load (collection never reaches gen2 at raid rates); bigger read buffers (more pinned memory, not
-less work);
-naive parallel parsing of one file; a timestamp *parser* rewrite (storage was the change); narrowing per-line fields to fight
-short-term
-pressure; a refresh toast, banner or progress state; bucketing or rounding hit amounts (laziness may move **when** work
-happens, never
-**what** the answer is); whole-row caching as "the" win; the 75 ms tail poll (cut and given back — with folding on a 0.5 s
-floor it bought
-nothing). → "Non-goals" in `docs/perf-memory-status.md`, "A histogram nobody asked for", "How much a whole-row cache would
-actually save".
+Do not reintroduce GC latency-mode tuning, parallel range parsing of one log, the measured-and-reverted counted-cell
+cache, a summary-refresh toast, or rounded/bucketed stored hit amounts as performance fixes. The two labelled cleanup
+moments are an accepted exception to the no-forced-GC default, not an invitation to collect during parsing or every
+board build. Current GC policy is under "Garbage collection after loading a log"; loader and cache decisions are under
+"Parallel loading: measured, shipped, and backed out", "A histogram nobody asked for", and
+"Carried counted cells were built, measured and reverted".
 
 ### Clear claim forgets everything — which is what makes it the repair
 
-> **Renamed to "Reset" on 2026-11.** The heading stays: this section records the decision, and tests cite it by these words.
-The label
-> changed because an operator read "clear my claim" as "erase what this window thinks this name is", and reported a dead
-button when the
-> row answered `Pet` again ("reseting my claim did nothing"). Nothing about the verb changed, and that is exactly the trap:
-`ApplyVerdict(name,
-> IdentityKind.Unknown)` clears **memory** — the operator's row, the players.txt-lineage claims (`ForgetName`: verified
-player, verified pet, pet
-> map, mercenary, generated name, action flag), this server's older-log verdict together with the roster bit and class riding
-on the same ledger
-> row, and any saved summon-owner pair — and then the rule book replays over **this capture**, which no forgetting reaches.
-So a memory-fed row
-> visibly moves (to *Not Placed*, or off the list), while a name the log itself identifies (`npcs.txt`, a ``X`s pet``
-spelling, an `R24-petslot`
-> defender, R15's heal crowd, R7's graph) returns with its kind and its Why word intact: deleting a conclusion does not
-delete the line that
-> produced it. **Reset can only ever move a memory-fed row** — which is what the one-syllable label says and the old two-word
-one hid. The gesture
-> for disagreeing with the capture is the *kind*, at `RuleStrength.Manual` (1000), above `Certain` (100) and above what the
-rules learn later.
-> Every cell door in that pane now prints its write or its refusal (`identity cell: …` in `eqlogparser.log`), because both
-take-backs —
-> `ApplyVerdict(…, Unknown)` and `PlayerRegistry.ForgetPetMapping` — were silent, which left "the click never arrived"
-indistinguishable from
-> "it arrived, and the capture answered the same way again".
+The heading records the retired dropdown wording; neither **Clear claim** nor **Reset** is a Type-menu entry now.
+The current gesture is the Name-column history icon, `ClassificationCommands.Recalculate`. Its complete UI contract
+lives under "The take-back icon takes everything back" and "A take-back keeps its row, reading what it did".
 
-Two Windows-only tests went red long after the commit that changed the behaviour, which is itself the lesson: `d5344014`
-("a manual verdict forgets everything this app believed about the name, then asserts the operator's word") rewrote what a
-verdict *is*, and only an `EQLogParser.Wpf.Test` assertion that had been written against the old semantics noticed weeks later.
-Reproduced headlessly (`ClassificationReport` and `PlayerRegistry` are Core, so the state is observable without WPF):
+The underlying law remains **forget before asserting**. `ApplyVerdict` replaces stored identity claims and owner memory,
+then writes the chosen kind at Manual strength, or removes the override for Unknown. An identical existing override is
+a no-op. This does not edit captured facts, and a kind verdict does not clear either class lane. `Recalculate` additionally
+forgets the saved/default class, preserves this capture's class windows, and records the name in `TakenBackNames` so a
+memory-only subject stays visible as **Unknown / Taken Back**, not a vanished row. Class picks stay quiet on success.
 
-```
-after add:            roster=Ghosty          (AddVerifiedPlayer)
-after npc verdict:    roster=                (ApplyVerdict → Forget → ForgetName evicts it)
-row after npc:        kind=Npc opVerdict=True legacy=False
-row after take-back:  NULL                   (no override, no ledger row, no registry claim → nothing to list)
-verdict-then-roster:  legacy=False disagree=False
-roster-then-verdict:  legacy=True  disagree=True
-```
+The roster import guard is still `IdentityPriorStore.HasRosterRows`: while any roster row survives, reopening does not
+refill a forgotten name from `players.txt`. Removing the last roster row reopens that import door on the next load;
+restoring the file while other roster rows survive does not. See "The one-time roster import" and "players.txt is a feed now".
 
-**The law, as it now stands.** Every write through `ClassificationCommands.ApplyVerdict` — *every kind, including the Unknown
-after add:            roster=Ghosty          (AddVerifiedPlayer)
-after npc verdict:    roster=                (ApplyVerdict → Forget → ForgetName evicts it)
-row after npc:        kind=Npc opVerdict=True legacy=False
-row after take-back:  NULL                   (no override, no ledger row, no registry claim → nothing to list)
-verdict-then-roster:  legacy=False disagree=False
-roster-then-verdict:  legacy=True  disagree=True
-**Why that erasure is a feature and not a hole.** `players.txt` has no writer since `05439925`, and the importer
-(`LegacyPlayerImport.ImportPlayersFileOnce`) returns early whenever `IdentityPriorStore.HasRosterRows` — *"does this server
-folder have
-any row with `Ours=true`?"*. So a curated file cannot refill a name the operator just disowned: **Clear claim is the one door
-that
-repairs a name legacy got wrong**, and it works precisely because nothing re-imports behind it. A name comes back only by being
-watched — raid joins, casts, heals — or by hand-editing `identity-priors.txt`. Two consequences of the gate are worth knowing
-because neither was designed: forget 1 of 209 roster names and the file stays shut (no resurrection), but forget the folder's
-**last** roster row and `HasRosterRows` flips false, so the next log open re-imports players.txt wholesale. And hand-restoring
-the file does nothing while any roster row survives — exactly when someone would try it.
-
-**What the pane may therefore say.** A take-back on a name whose only claim was memory takes it **off the list** (this is the
-same
-rule `MergeRows` already implements for a census that lost a name: leave, don't ghost it). The selection restore tolerates it —
-`FindRow` answers null and the grid simply has nothing selected. What stays on the list because it *has* facts reads Unknown and
-hovers as exactly `Nothing Identified It`, with no rider of any kind: no "claim taken back", no "not in this log", no filename.
-
-The third failure mode this exposes is structural: an assertion about identity semantics that lives **only** in the
-Windows assembly goes red invisibly, because `dotnet test` on the cross-platform project says nothing about it and a
-cross-compile cannot evaluate it either. New laws about what a verdict *does* belong in `EQLogParser.Test`
-(ClassificationReport,
-PlayerRegistry and IdentityVocabulary are all Core — reachable without WPF); the Windows pair here is deliberately about cell
-words, column order and tooltip lines. The probe that produced the block above was exactly such a headless test; it answered the
-question and was deleted per "a gated real-log test is disposable", and the two Windows assertions now carry the shipped law.
-
-**Two honest edges.** `Row.IsDisagreement` (`LegacySaysPlayer && Kind is Npc or Spell`) can no longer be produced by a single
-click — the verdict deletes the roster claim that would have been contradicted. It lights when memory refills *after* the
-verdict,
-which is the case actually worth knowing (a raider you called NPC last week whom tonight's capture re-verifies), so that
-ordering
-is now how the test builds it — asserted in both directions, since the negative half IS the new law. And `ForgetName`
-deliberately does **not** clear `_defaultPlayerClass` / `_activePlayerClass`: the
-Class column can still show a class for the rest of the session after the durable row (class included) is gone. Evicting the
-learned class windows would blank the class of a raider whose cast lines are still in the open capture — a different harm
-than the
-one the operator asked for, and cheaper to live with than to "fix".
-
-The two field reports that started this ("changed a player to an NPC and it refreshed and they were removed, but then i
-reselected
-fights and they came back as if they were a player"; "tried changing one of the players to be someone's pet … they stayed
-listed as a
-player") are answered by the forget-then-assert order above: the stale claim that reappeared was the registry answer a later
-seam still
-read. `TempOverrideProbeTest` walked that seam before/after a write on real captures; with the law pinned here and in AGENTS
-it was deleted
-rather than left as an uncited gate (docs/CodingStandards.md → DesignNotes pointers; AGENTS → "A gated real-log test is
-disposable").
-
-Tests: `TakingAClaimBackTakesTheLegacyMemoryWithIt` (eviction + departure from the list), `AnUnplacedNameHoversAsTheBareAbsence`
-(the absence wording reaches the pane unadorned; Type reads `Unknown`, Why reads `Not Placed` — the absence word lives in the
-Why
-column, not the Type cell), `AContradictedRosterIsKnownOnTheRowAndSaidNowhere` (both orderings). Vocabulary and words stay in
-Core:
-`IdentityVocabularyTest`.
+A roster disagreement can appear only when roster memory arrives after a conflicting manual verdict: the verdict itself
+forgets the old roster claim. Core tests pin the identity semantics (`RecalculateIdentityTest`, `IdentityVocabularyTest`);
+Windows pane tests cover cell words and editor behavior. A Linux build cannot establish the latter.
 
 ### The working documents under `docs/`, and what each still owes
 
-Only `DesignNotes.md`, `CodingStandards.md`, `ReleaseChecklist.md` and `TtsPacks.md` are in git. A local working document
-earns its keep
-by holding something this file cannot yet carry — an open decision, a backlog with ids, or knowledge about the world outside
-this
-repository. When its durable half has moved here, it is deleted rather than archived: a stale plan is worse than no plan,
-because the
-next reader cannot tell a closed question from an unasked one. **Five were deleted on 2026-10-09** under that rule —
-`ClassificationReview.md`
-(a review of a branch state, findings all closed, and it cited a summary file that had itself been deleted), `legacy-replacement-map.md` (a map of the
-engine deleted in `5d45d866`), `batch-parsing-plan.md` (a two-pass pipeline that was never built; its successor is the
-shipped one),
-`combat-text-overlay-design.md` (the original FCT brief, whose recommended presets were later removed) and
-`incremental-summary-refresh-review1.md` (its findings now carried, with dispositions, in `docs/incremental-summary-refresh.md` §0).
-**Four more were retired on 2026-11**, each once this file carried its whole durable half — see "Four closed working docs
-retire" for what they built
-and where their sentences live now: `counter-variable-issue.md`, `combat-mirror-design.md`, `improve-stat-building.md` and
-`summary-refresh-notification.md`. (`NagFctReference.md`, listed here before, is gone from disk too; if those GINA/FCT notes
-are ever needed again they
-must be re-derived from the local decompile rather than mourned.) Current dispositions:
+Only four files **under `docs/`** are tracked: `DesignNotes.md`, `CodingStandards.md`, `ReleaseChecklist.md` and
+`TtsPacks.md`. The whitelist does not prohibit README files, website pages or project instructions elsewhere in the repo.
 
-| document | state | why |
-|---|---|---|
-| `perf-memory-status.md` | **live** | the B/C backlog with measured opportunity and the catch on each row; nothing here duplicates it |
-| `incremental-summary-refresh.md` | **live** | Phase B's entry point, the row-granularity bar, the structural blocker |
-| `roster-import-plan.md` | **live (mostly landed)** | identity-memory work remaining: class reads through `IdentityLookup`, the write-site twin census, the `"You"` audit, the invariant test |
-| `continue-notes.md` | **live** | the next perf targets with their numbers, the still-open clear-on-empty question, and the OpenCellPopup handler stack |
+Other files under this directory are disposable local notes, never dependencies of a maintained comment or document.
+They may hold an open decision or temporary measurement, but a fresh clone must not need them to understand a rule,
+backlog disposition or release gate. Move durable conclusions here, then delete the local note rather than maintaining
+a second source of truth. Do not keep a table claiming particular untracked notes are present or current.
+"Four closed working docs retire: what they built" records the decisions that survived those notes.
 
 ## The ledger counts dotnet seconds, so a stale row is a run-order question
 
@@ -16970,14 +16760,14 @@ while the wide take-back lived one column over — two controls both reading "re
    sits above this capture's own evidence, i.e. a suppression, and there is no such word in the identity vocabulary. Pinned by
    `IdentityVocabularyTest.NoDropdownEntryWritesUnknownTheTakeBackIsAClick` (was `ResetIsTheUnknownKindRatherThanASixthType`)
    and `ARowOffersOnlyTheKindsItsNameAllows`.
-2. **The take-back is one click, on a calculator icon in the Name column**, wired to
+2. **The take-back is one click, on the history icon (`Solid_History`) in the Name column**, wired to
    `ClassificationCommands.Recalculate(name)` = `Forget` + `ApplyVerdict(name, Unknown)` + the new
    `PlayerRegistry.ForgetDefaultClass`.
    The class half follows the split the operator stated: **kind is a static verdict that does not change inside a log; class is
    dynamic per-second evidence** (cast-learned windows read against the fact clock by `GetPlayerClass(name, t)`, and it changes
    often in the same log file) **with the set-default class as fallback only** — the word a read lands on when no window
    answers.
-   So the calculator takes back the FALLBACK lane (the players.txt row, the pencil-typed default: memory that would shadow what
+   So the take-back removes the FALLBACK lane (the players.txt row, the pencil-typed default: memory that would shadow what
    this log says), and it is the ONLY thing that does; the capture's own windows survive even it, because they ARE "what the
    current
    log thinks" and retire with the capture on their own. A kind verdict (`Set as …`) overrides every *identity* belief — that
@@ -17017,12 +16807,9 @@ Pinned by `RecalcOverlayTest` (floor / pass / cap / monotonicity over plain long
 removed during consolidation; `NamesTableTest` retains the invariant that temporary presentation leaves the name/sort key
 unchanged, and the visible notice is a Windows checklist item.
 
-**What did not change.** The verb is still forget-then-the-capture-answers, so the memory-vs-evidence table from when `Reset`
-was renamed stands word for word — a name whose only claim was memory leaves the list, and a name this capture places comes
-back.
-That is no longer surprising, because the control now says *recalculate* rather than sitting in a column of answers: the
-operator
-sees the click happen, waits for the word to come down, and knows which case they got.
+**What did not change.** The verb is still forget-then-the-capture-answers: deleting memory cannot delete the log's evidence,
+so a name this capture places comes back with that rule. **What did change:** a memory-only subject now keeps its row as
+Unknown / Taken Back through the display-only marker below. The former disappearance is not the current UI contract.
 
 **Honesty note.** The Wpf assembly builds here (zero warnings, `--no-incremental`) but its tests run only on Windows; the
 NamesTable wiring — the icon, the label lifecycle, the blank-open owner list — is pinned in `EQLogParser.Wpf.Test` and needs a
@@ -17590,9 +17377,9 @@ The write was landing. What was wrong is that **the cell was reading the other l
 `Row.Class` from
 `GetLastKnownPlayerClass`, which prefers the capture's cast-learned windows and treats the saved word as a *fallback only*.
 And the class
-pencil appears exactly on rows whose windows are full — a Player row that cast something is what teaches a window. So an
-identity cell: class of Farzi -> Berserker
-identity cell: class of Farzi -> Monk
+pencil appears exactly on rows whose windows are full — a Player row that cast something is what teaches a window.
+The accepted saved pick was hidden behind that capture-first display order. These log lines are historical evidence;
+successful class picks are now deliberately quiet.
 
 **Two lanes, two questions, and only the pane's order changes:**
 
@@ -18248,9 +18035,7 @@ table, `DamageOverlayStatsBuilder` and the whole parity scaffolding were deleted
 so "which engine is this surface reading?" has exactly one answer. Final parity figures are transcribed at "The legacy engine is
 deleted: final parity numbers, kept on paper"; the rule-catalog arguments live in the identity sections of this file and in
 AGENTS.
-Retired vocabulary — `CombatMirror`, `MirrorSession`, the `EQLogParser.Mirror` namespace, "mirror" itself; what an operator
-sees is
-*Derived Fight List* / *Capturing…*.
+Retired vocabulary — `CombatMirror`, `MirrorSession`, the `EQLogParser.Mirror` namespace, "mirror" itself; what an operator sees is *Fight List*, with *Building the Fight List…* during its build and *Cleaning up..* during the collector pause.
 
 **The `{counter}` window (2026-10-09).** Decided as the per-trigger **Sliding Reset** checkbox (`RepeatedWindowRule` in Core;
 NAG

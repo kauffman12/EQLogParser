@@ -4,7 +4,7 @@
 
 `sign.cmd` and `EQLogParserInstall/EQLogParserInstall.iss` are **curated minimum sets**, not "everything in bin". We only install/sign the files the app actually needs to run — the list was built by trimming until it broke, so extra files in `bin\Release` that are missing from these lists are usually intentional.
 
-However: **whenever a new project or NuGet package reference is added, its output dll must be checked into both files.** A missing runtime-critical dll (e.g. a project reference like `EQLogParser.Core.dll`) will not fail the build — the app just crashes at runtime with `FileNotFoundException` on user machines.
+However: **whenever a project or NuGet package reference changes, audit its runtime outputs against both lists.** Add each assembly the installed app needs; test-only dependencies and files supplied by the shared framework or optional packs do not automatically belong in the installer. A missing runtime-critical dll (e.g. `EQLogParser.Core.dll`) will not fail the build — the app crashes at runtime with `FileNotFoundException`.
 
 ## When to update sign.cmd / EQLogParserInstall.iss
 
@@ -56,11 +56,11 @@ Nothing else holds a version: the `<Version>` entries in the `.csproj` files are
 2. Run the static + empirical checks above; reconcile any delta against `sign.cmd` and `.iss`. For the empirical check, run `MeasureLoadedAssemblies.ps1` **twice** — once for `EQLogParser.exe`, once with `-ExePath` pointing at BackupUtil — and union the two reports. Skipping the BackupUtil run is the classic way a needed dll ends up missing from the installer (it loads `EQLogParser.dll` reflectively, so nothing in its own build references it).
 3. `sign.cmd` — signs all release dlls, BackupUtil, and `EQLogParserMSI\bin\Release\EQLogParser*.msi` (signtool + Sectigo timestamp). It also signs the TTS runtime pack files (listed in its own section) and skips files that already carry a vendor signature rather than overwriting them.
 4. Build the Inno Setup installer from `EQLogParserInstall/EQLogParserInstall.iss` (check the `MyReleaseDir`/`BackupUtilDir` paths at the top of the script — adjust per machine)
-5. TTS runtime packs (Kokoro / Piper) are **not** in the installer; they are downloaded into `%LOCALAPPDATA%\EQLogParser\<engine>-<version>` — `piper-1.0`, `kokoro-1.0` — when a user enables an engine. When a pack needs changing, build it with `scripts\Build-TtsPack.ps1` — see `docs/TtsPacks.md` (a local working document, deliberately not in the repo) for the sign → manifest → publish order and for adding voices. Check that step 2's `MeasureLoadedAssemblies` report is explained by this: with Kokoro speaking it lists `MisakiSharp.dll`, `NumSharp.dll`, OpenTK and `onnxruntime.dll` as loaded even though they are absent from `{app}`; they come from the pack. Uninstalling removes them (`CurUninstallStepChanged` deletes `%LOCALAPPDATA%\EQLogParser`, which is packs-only: engine folders, `_download`, and any `.staging`/`.retired`/`*.removing` leftovers) because none of it is user-authored and all of it re-downloads on the next enable — if that ever stops being true, that delete has to become a prompt.
+5. TTS runtime packs (Kokoro / Piper) are **not** in the installer; enabling an engine downloads it into `%LOCALAPPDATA%\EQLogParser\kokoro\` or `%LOCALAPPDATA%\EQLogParser\piper-tts\`. Versioned names such as `kokoro-1.0` and `piper-1.0` identify release tags/assets, not install directories. When a pack needs changing, build it with `scripts\Build-TtsPack.ps1` — see the tracked `docs/TtsPacks.md` for the sign → manifest → publish order and for adding voices. Check that step 2's `MeasureLoadedAssemblies` report is explained by this: with Kokoro speaking it lists `MisakiSharp.dll`, `NumSharp.dll`, OpenTK and `onnxruntime.dll` as loaded even though they are absent from `{app}`; they come from the pack. Uninstalling removes them (`CurUninstallStepChanged` deletes `%LOCALAPPDATA%\EQLogParser`, which is packs-only: engine folders, `_download`, and any `.staging`/`.retired`/`*.removing` leftovers) because none of it is user-authored and all of it re-downloads on the next enable — if that ever stops being true, that delete has to become a prompt.
 
    A fresh install therefore ships Windows voices only; Piper and Kokoro appear in the TTS Engine dialog as a download.
-   Nothing reads a speech runtime under `{app}` any more — `%LOCALAPPDATA%\EQLogParser\<engine>-<version>` is the only
-   place the engines look — but `[InstallDelete]` deliberately does **not** clean up what used to live there.
+   Nothing reads a speech runtime under `{app}` any more — the `kokoro` and `piper-tts` folders under `%LOCALAPPDATA%\EQLogParser`
+   are the only places the engines look — but `[InstallDelete]` deliberately does **not** clean up what used to live there.
 
    The exception in `[Files]` is the app-local MSVC runtime (`{app}\msvcp140*.dll`, `vcruntime140*.dll`, taken from
    `EQLogParser\redist`). Expect those four in the report loaded **from `{app}`** even on a machine that has the
@@ -262,7 +262,7 @@ operator checks with `Debug=True`, on a capture of several hundred MB or more:
   never inside the read (see "The load's cleanup pause sits behind the band" under Fight list checks). A tidy line during the bulk
   read means someone moved the pause back into the reader; docs/DesignNotes → "Parallel loading: measured, shipped, and backed out".
 - The fight list shows its band while lines are arriving and hands over rows without clearing them; an empty snapshot
-  mid-read must not settle it (`FightTableLoadBandTest` covers this headless for the WPF side).
+  mid-read must not settle it (`FightTableLoadBandTest` exercises the pane callbacks in the Windows-only WPF suite).
 - Spot-check what a cross-line carry produces, since these are the fields a mid-file cut used to corrupt: a fight with
   critical hits reports a non-zero crit split (and the overlay marks crits), deaths show their last sentence where the
   log has one, and a Magic Die roll in the log appears on the boards exactly once.
@@ -546,7 +546,7 @@ elapsed seconds always draw. The table, the defaults and the zero-width law are 
 - [ ] **A long name still clears the numbers at the lowered floor**: hiding columns lowers what you can drag the window to (141 DIP at 12 pt with
   only `Sec` left), so at that narrowest width check the longest name you can produce (masked hidden-player rows, the `[DoT +n]` crit-rate suffix) —
   names are not ellipsised, and nothing may sit *under* the remaining digits. If it collides, the fix is the name allowance, not a new switch.
-- [ ] **Tank reads the same words**: switch DPS → Tank with any subset of columns hidden. Headers stay `Damage / DPS / RDPS / Sec` (operator decision: tanking DPS is DPS
+- [ ] **Tank reads the same words**: switch DPS → Tank with any subset of columns hidden. The enabled headers use `% / Damage / DPS / RDPS / SDPS / Sec` (operator decision: tanking DPS is DPS
   done to you, it did not earn new terms), and hiding a column hides it in both panels at once — the two pools share one layout.
 - [ ] **Nothing but pixels moved**: during one fight, toggle every column on and off. Totals, DPS, RDPS, `Sec`, ranking, bar lengths, percentages, the copied parse, the
   selected life and the meter's quiet deadline must all be unmoved; the meter must not rebuild its rows, jump vertically, or re-derive anything. Hiding every hideable column
@@ -738,9 +738,10 @@ more than 1,000 names and a capture that is still growing. A Linux build does no
 
 Two behaviours depend on state a headless test cannot build; both have shipped broken once.
 
-- [ ] **Show a pane that is hidden behind another tab.** Click the Pet Owners menu item while Player/NPC Identity is the visible
-  tab of the right-hand strip: it must PEEK in the strip, not move into the middle of the layout, and pressing the item again hides
-  it where it was. (`ToggleWindow` shows rather than relocates; a floated pane cannot share a tab strip at all.)
+- [ ] **Show an auto-hidden pane without relocating it.** Open **View → Windows → Identity Table** with its tab hidden in
+  the right-hand strip. It must show in that strip, not move into the middle of the layout; toggling the item again hides it
+  where it was. Repeat with another pane selected in the same saved tab group. Pet Owners and Player/NPC Identity are retired,
+  not menu choices (`ToggleWindow` shows rather than relocates).
 - [ ] **Restart with an OLD `dockSite.xml`.** Launch on a layout saved by a previous build: the window state must survive. The
   retired Verified Players / Verified Pets windows are empty hidden shells for exactly this reason — `LoadDockState` throws on a
   name it cannot resolve and the catch calls `ResetState()`, which wipes every pane, size and position.
@@ -964,8 +965,10 @@ Excel can answer is whether it opens and behaves. No new dll ships with this fea
 - [ ] **The Players tab reflects this event's personas.** Capture-time class wins over saved/latest class, with the saved
   class as fallback when this log has no evidence. A multi-persona selection keeps separate class rows with first/last seen
   times. Pet names appear in Pets and Pet Of; a caster with no DPS is still listed.
-- [ ] **Spell names group across ranks.** Spell/Skill is clean, Rank is separate, and Full preserves the original text.
-  Damage Type carries the melee verb where available; Category retains the broader damage classification.
+- [ ] **Spell names group only their own ranks.** `Ethereal Fire XIII Rk. III` exports name `Ethereal Fire XIII` and rank `III`,
+  not name `Ethereal Fire`; a different numbered spell keeps a different name. `Shield Reflect Rk. III Effect` retains
+  `Shield Reflect Effect` with rank `III`. Full preserves the original text. Damage Type carries the melee verb where available;
+  Category retains the broader damage classification.
 - [ ] **The over-heal column is the healing that was not needed.** On a `for 3461 (60581)` line the sheet says Heal 3461,
   Over Heal 57120. The gross asked-for number under that header is the bug this check exists for.
 - [ ] **The menu itself opens.** File ▸ Save shows the Excel entry with its glyph and MainWindow loads: an icon name that
@@ -1008,8 +1011,12 @@ behind the game.
 - [ ] **A button answers without raising EQLP.** With three separate shares press **Merge**, **New Folder**, and **Cancel**. The triggers
   land (or the new folder appears in the tree) and EQLP stays in the background every time — the buttons that close the dialog are the
   ones to watch, since closing an active modal dialog can reactivate a previously active EQLP window.
-- [ ] **Trusted still means silent.** Add the sender to **Trusted Players** and have them share again: it merges with no window at all.
+- [ ] **Trusted group channels still mean silent.** Add the sender to **Trusted Players** and have them share through Group,
+  Guild or Raid: it merges with no window. A Tell from that same trusted sender must still prompt; trust never auto-merges a Tell.
 - [ ] **A failure is as visible as a success.** Use an expired key (and block the share host if you can): the error prompt has to float
   over EQ the same way — that path shares the flag and is otherwise the one nobody ever sees.
 - [ ] **Every other dialog is untouched.** Open any menu-driven Save/Confirm prompt: it still activates and still centres on EQLP. Only
-  the share path floats.
+  the EQLP share path opts into this floating policy.
+- [ ] **The async queue drains only after import ends.** Run `UiUtilAsyncTest` on Windows, then queue distinct EQLP keys and repeat
+  a manual import while the first is open. Only one prompt/import may be active; the next begins after completion or final failure.
+  Use a controlled import failure to exercise the retry: the same key retains ownership through both attempts, then queued work continues.
