@@ -88,6 +88,7 @@ namespace EQLogParser
       PreviousAction = null;
       DelayCritRecord = null;
       LastCrit = null;
+      ParseLane.Current.StruckSwings.Clear();
     }
 
     public static bool Process(LineData lineData)
@@ -1056,6 +1057,12 @@ namespace EQLogParser
           DelayCritRecord = null;
         }
 
+        // One swing can be two lines — the defender's outcome sentence and then the number line of the same blow.
+        if (!checkLineType)
+        {
+          PairStruckSwing(record, lineData.BeginTime);
+        }
+
         /*
          * The one fact worth keeping off an ignored eye, reported before the eye is dropped below: when the striker
          * IS the name inside the eye (`Shennron hits Eye of Shennron`), that name owns a summon, and only a player
@@ -1121,6 +1128,46 @@ namespace EQLogParser
       }
 
       return record;
+    }
+
+    /*
+     * Say whether this record is the second half of a swing the lane has already seen, or the first.
+     *
+     * `(Strikethrough)` on a defender's outcome sentence means the defense failed and the blow landed, and EQ then
+     * prints the blow:
+     *
+     *   A mob tries to slash Foob, but Foob ripostes! (Strikethrough)
+     *   A mob slashes Foob for 56110 damage! (Riposte Strikethrough)
+     *
+     * Both records stay — an outcome word decides, a tag never un-happens it — but they are ONE swing, so the
+     * number line says so on itself and the counting layer opens no second attempt and re-scores no second tag.
+     * Which sentences register, why the pair must match in both names and direction, and the measured window:
+     * PendingStruckSwings, and docs/DesignNotes.md → "One swing, two lines: the outcome sentence and the number line".
+     */
+    private static void PairStruckSwing(DamageRecord record, double time)
+    {
+      var pending = ParseLane.Current.StruckSwings;
+
+      if (record.Type == Labels.Melee)
+      {
+        if (pending.TryClaim(record.Attacker, record.Defender, time, out var spentEarlier))
+        {
+          record.AttemptCountedEarlier = true;
+          record.ModifiersCountedEarlier = spentEarlier;
+        }
+
+        return;
+      }
+
+      if (!StatsUtil.IsDefensiveOutcome(record.Type) || !LineModifiersParser.IsStrikethrough(record.ModifiersMask)) return;
+
+      /*
+       * Absorb and Miss score no modifiers at all (UpdateDamageStats declines to read them), so they leave the
+       * number line owing everything; every other defensive word spends its own mask and the number line owes what
+       * is left of it.
+       */
+      pending.Note(record.Attacker, record.Defender,
+        record.Type is Labels.Absorb or Labels.Miss ? (short)0 : record.ModifiersMask, time);
     }
 
     private static bool ParseNpcName(LineWords parts, int length, out string output)

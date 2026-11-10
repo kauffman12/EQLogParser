@@ -11121,6 +11121,10 @@ Strikethrough)` → Miss) was already correct and is untouched.
 the line. Any `missType` arm that returns nothing for a shape its own comments list as supported is a bug to measure, not a
 behaviour to preserve.
 
+What that law did *not* settle is who pays for the swing when the struck-through defense also prints its number line — the
+counters charged the event twice from the day the guard came off, and no counter was measured. That is
+"One swing, two lines: the outcome sentence and the number line".
+
 ### The sentence's period became part of an entity name
 
 ```
@@ -11175,6 +11179,86 @@ when a
 name also hit others… or shown, since "hits itself" is a fact a reader can check. Wording plus tests, no new pass over the
 facts.
 
+
+## One swing, two lines: the outcome sentence and the number line
+
+A defense that gets struck through is printed twice — the defender's outcome sentence, and then the blow that got past it:
+
+```
+[Fri Oct 23 21:54:35 2026] A silk moth tries to gore Ryft, but Ryft ripostes! (Strikethrough)
+[Fri Oct 23 21:54:35 2026] Ryft begins casting Crippling Snare.
+[Fri Oct 23 21:54:35 2026] A silk moth is tormented by Ryft's frost for 111948 points of non-melee damage.
+[Fri Oct 23 21:54:35 2026] A silk moth gores Ryft for 132465 points of damage. (Riposte Strikethrough)
+```
+
+Both records stay — "A riposte tagged `(Strikethrough)` was not in the capture at all" is worth the 16,076 facts it added, and the
+blow that got through is not un-happened either. What that change did not settle was who **pays** for the swing, so the boards
+charged it twice, and no counter was measured when it went in (`c5de973b`). An operator counted one fight by hand and reported
+`# Attempts` reading 258 against 185 swings: the mechanic reading was right, the arithmetic was right, and the doubling was ours.
+`# Strikethrough` doubled the same way, which `MeleeUndefended = MeleeHits - StrikethroughHits` then quietly ate.
+
+**Law: the number line knows it is the second line of a swing it did not open, and says so on itself** —
+`DamageRecord.AttemptCountedEarlier` and `ModifiersCountedEarlier`, written by `DamageLineParser` from `PendingStruckSwings` and
+read by `StatsUtil` and nobody else. Two records, one event. The carry is a **name pair plus a second**, and the three ways it
+could have been built are all wrong:
+
+- **Not adjacency.** Between the two lines sit whatever the tank did in between: `begins casting`, the tick of a DoT the swing
+  itself landed, a heal. Three of the four cases in the 40 sampled shapes each carried one unrelated line; the reported shape
+  carries two.
+- **Not direction-agnostic.** A riposte that *succeeds* prints the reverse pair — `Foob slashes Spitetangle for N damage!
+  (Riposte)` — and those landed lines are tagged `Strikethrough` too, in numbers that dwarf the pairs: 12,802 of them on
+  `eqlog_Kizant_xegony-2.txt` with no sentence behind them. Pairing regardless of direction would delete a real event off a real
+  row, which is the same mistake as folding a heal's `OverTotal` onto a hit because the shape looked alike.
+- **Not a lookahead merge.** A third of the tagged sentences on the 467 MB capture (12% on the 663 MB) never get a number line at
+  all — `A killer moth tries to gore Shmid,
+  but Shmid ripostes! (Strikethrough)` four times in a row, none of them followed by damage, is in the file. A merge that waits
+  for the second line loses the first line's event whenever the second never comes, which is the failure mode the parallel loader
+  was backed out for.
+
+So: `(Attacker, Defender)` within **one second**, newest sentence wins, the entry is consumed when answered, registered at
+`Process` (the ingest door) and never at `ParseLine(string)`, which is a preview that runs on lines nothing ingests. One second is
+where the pairs live: of 15,527 paired swings on the 663 MB capture, 15,454 are in the same log second and 73 within one, **zero**
+beyond; on the 467 MB capture, 13,256 same-second and 109 within one, again zero beyond. A mob's next swing at the same tank
+seconds later is its own attempt and must not lose it to an older sentence.
+
+What it costs, measured by replaying whole captures through the real parser and the real counters (the harness printed this and
+was deleted; `StruckThroughSwingTest` plus `HitStatSplitTest` keep the rules):
+
+| capture | records | tagged defensive sentences | paired | `# Attempts` removed | `# Strikethrough` removed |
+|---|---|---|---|---|---|
+| `eqlog_Kizant_xegony-2.txt` (467 MB) | 2,286,371 | 19,678 | 13,365 | 13,365 of 2,137,262 | 13,365 of 158,295 |
+| `eqlog_Kizant_xegony-09-20-25.txt` (663 MB) | 4,034,297 | 17,790 | 15,527 | 15,527 of 3,787,205 | 15,527 of 297,806 |
+
+What a tank's row looks like after it — `Foob` on the 663 MB capture: **11,295 → 8,413 attempts, 7,594 → 4,728 `# Strikethrough`,
+accuracy 43.4% → 60.0%**, with `# Riposte` (4,284) and `# Hits` (4,504) untouched, which is the check that nothing was un-counted that
+should have been. Across the rows this moves on that capture, 34 had more struck-through credits than landed hits before the pairing
+and 3 after; the clamp still carries those three, and they are the swings whose number line never printed.
+
+Of the sentences that opened a marker and did not pair, 5,913 (467 MB) and 2,028 (663 MB) were overwritten by a fresher sentence of
+the same pair — which is why newest-wins costs nothing and FIFO would have mislabelled them — and the rest printed no number line.
+
+Three things the numbers forced:
+
+- **The fold is `LineModifiersParser.Unspent(mask, countedEarlier)`, and it takes the `Riposte` bit with the `Strikethrough` bit it
+  rides with.** Subtracting only the tag leaves a bare `Riposte` bit on a record whose damage is the mob's, `IsRiposte()` reads true,
+  and the row scores a *protected* riposte with the mob's damage in `TotalRiposte`. The swing's own bits (`Rampage`, `Critical`)
+  stay, because the outcome sentence never carried them.
+- **`MeleeUndefended` is clamped at zero.** The moth shape makes the tags outnumber landed hits, both counters are `uint`, and the
+  column used to print 4,294,967,1xx for a tank. Zero is the honest floor of a count of landed, undefended blows; the mismatch is
+  readable in the two columns it comes from, and no amount of a hit is being invented.
+- **`MeleeAccRate` asks for nothing when its denominator is gone** (`attempts − parries − dodges − blocks − invulnerable − absorbs`,
+  all of which the pairing shrinks). No row on these three captures reaches zero, so that one is a pinned guard rather than an
+  observed fix; it costs one compare and the denominator it protects is now smaller than it used to be.
+
+What did **not** move: the fact rows and their byte widths, damage totals, hits, identity evidence, and `RiposteHits` — 16,076 tagged
+ripostes are still 16,076 ripostes, which is what the earlier section bought. What did move is a reader's expectation, so the two
+tank tooltips now say what their columns do — *Melee swings at the Player, counted once each (a struck-through defense prints two lines
+for one swing)* and *Melee Hits that were not struck through* — because the report that opened all this was a column called
+"# Attempts" being read as "the mob swung", by someone counting correctly.
+
+Open with the reporter, still unanswered: the fight they counted by hand (185 attempts) is a labelled sample these captures do not
+have, and a `# Riposte` column that counts struck-through ripostes may still read "wrong" to a tank who expects only the protected
+ones. The discriminator (`IsRiposte`) already exists; making the column mean it is a wording decision, not a counting bug.
 
 ## The identity words were swept: one style, casters named, and the Type column pays for its longest word
 

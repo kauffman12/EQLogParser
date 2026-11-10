@@ -14,8 +14,12 @@ namespace EQLogParser
     private const short Twincast = 1;
     private const short Lucky = 4;
     private const short Rampage = 8;
-    private const short Strikethrough = 16;
-    private const short Riposte = 32;
+    /*
+     * The two bits a defender's own sentence and the blow that answers it share, so the fold in Unspent and the
+     * tests that pin it name the same constants the parser writes.
+     */
+    internal const short Strikethrough = 16;
+    internal const short Riposte = 32;
     private const short Assassinate = 64;
     private const short Headshot = 128;
     private const short Slay = 256;
@@ -41,6 +45,22 @@ namespace EQLogParser
     internal static bool IsRampage(int mask) => mask > -1 && (mask & Rampage) != 0;
     internal static bool IsRiposte(int mask) => mask > -1 && (mask & Riposte) != 0 && (mask & Strikethrough) == 0;
     internal static bool IsStrikethrough(int mask) => mask > -1 && (mask & Strikethrough) != 0;
+
+    /*
+     * What the number line of a swing still owes the tallies, given what its own outcome sentence scored.
+     *
+     * `(Riposte Strikethrough)` on a landed line is one compound statement — the attacker struck through the
+     * defender's riposte — and `but Foob ripostes! (Strikethrough)` is the same statement from the other side of
+     * it, so the Riposte bit leaves together with the Strikethrough bit it rides with. Dropping only the
+     * Strikethrough bit would hand the landed line a bare Riposte bit, which IsRiposte() reads as TRUE: a pierced
+     * riposte scored as a protected one, with the mob's damage added to TotalRiposte. Every other bit on the line
+     * (Rampage, Crush, Headshake, …) belongs to the swing itself and stays.
+     */
+    internal static short Unspent(short mask, short alreadyCounted)
+    {
+      if (alreadyCounted == 0 || mask <= 0) return mask;
+      return (short)(mask & ~(IsStrikethrough(alreadyCounted) ? alreadyCounted | Riposte : alreadyCounted));
+    }
 
     /*
      * Every bit the mask carries, spelled out - for a row-level export (docs/DesignNotes -> issue #191) and any debug

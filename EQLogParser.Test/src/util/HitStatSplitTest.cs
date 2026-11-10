@@ -85,6 +85,36 @@ namespace EQLogParserTest
       Assert.AreEqual(0L, stats.TotalCrit);
     }
 
+    /*
+     * One swing can be two lines: the defender's outcome sentence and then the blow that struck through it. The
+     * parser marks the number line (AttemptCountedEarlier / ModifiersCountedEarlier) and THIS layer decides what it
+     * still owes — the row pays one attempt and one Strikethrough, while the damage, the hit and the swing's own
+     * Rampage bit all score. Pinned beside the Absorb and miss guards because that is where the pattern lives; the
+     * parse layer keeps both records either way, and a semantic pinned only one layer above where it is consumed is
+     * not pinned at all. See StruckThroughSwingTest for the parse half.
+     */
+    [TestMethod]
+    public void Damage_StruckSwingsNumberLineScoresTheBlowNotASecondAttempt()
+    {
+      var stats = new PlayerSubStats { Name = "Ryft" };
+
+      StatsUtil.UpdateDamageStats(stats, Damage(Labels.Riposte, "Ripostes", 0, Mask("Strikethrough")));
+
+      var landed = Damage(Labels.Melee, "Gores", 132465, Mask("Riposte Strikethrough Rampage"));
+      landed.AttemptCountedEarlier = true;
+      landed.ModifiersCountedEarlier = LineModifiersParser.Strikethrough;
+      StatsUtil.UpdateDamageStats(stats, landed);
+
+      Assert.AreEqual(1u, stats.MeleeAttempts, "the sentence opened the attempt; the number line is the same swing");
+      Assert.AreEqual(1u, stats.RiposteHits);
+      Assert.AreEqual(1u, stats.StrikethroughHits, "the tag is on both lines and belongs to the swing once");
+      Assert.AreEqual(1u, stats.MeleeHits);
+      Assert.AreEqual(132465L, stats.Total);
+      Assert.AreEqual(1u, stats.RampageHits, "a bit the sentence never carried still scores");
+      Assert.AreEqual(0L, stats.TotalRiposte,
+        "the fold takes the Riposte bit WITH the Strikethrough bit: a bare Riposte bit would read as IsRiposte() and put the mob's damage in the riposte total");
+    }
+
     [TestMethod]
     public void Heal_CountsASpellHitAndChargesTheAskToExtra()
     {

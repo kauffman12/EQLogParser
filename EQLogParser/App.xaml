@@ -380,10 +380,10 @@
       <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Percent of Hits that were not Blocked, Dodged, Misses, or Parried" />
     </DataTemplate>
     <DataTemplate x:Key="HeaderMeleeAttemptsTemplateToolTip">
-      <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Number of Melee Attempts to Hit the Player" />
+      <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Melee swings at the Player, counted once each (a struck-through defense prints two lines for one swing)" />
     </DataTemplate>
     <DataTemplate x:Key="HeaderMeleeUndefendedTemplateToolTip">
-      <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Number of Melee Hits minus Strikethrough " />
+      <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Melee Hits that were not struck through" />
     </DataTemplate>
     <DataTemplate x:Key="HeaderOverHealPercentTemplateToolTip">
       <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Percent of Healing in Excess of what could be Healed" />
