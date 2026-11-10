@@ -54,8 +54,8 @@ internal sealed class DamageSwingAccounting
 
     if (!melee && struck && !string.IsNullOrEmpty(record.Attacker) && !string.IsNullOrEmpty(record.Defender))
     {
-      // Absorb and Miss do not spend modifiers in StatsUtil. Only the repeated Strikethrough is shared by the pair.
-      var spent = record.Type is Labels.Absorb or Labels.Miss ? (short)0 : LineModifiersParser.Strikethrough;
+      // The pair shares whatever the sentence spent in StatsUtil: its whole mask, or nothing for Absorb and Miss.
+      var spent = record.Type is Labels.Absorb or Labels.Miss ? (short)0 : record.ModifiersMask;
       _pending.Add(new PendingSwing(record.Attacker, record.Defender, time, record.Type == Labels.Riposte, spent));
     }
 

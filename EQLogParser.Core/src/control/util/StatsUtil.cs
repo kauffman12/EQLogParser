@@ -367,9 +367,8 @@ namespace EQLogParser
     internal static bool CountsAsDamageHit(string type) => type is not (Labels.Absorb or Labels.Block
       or Labels.Dodge or Labels.Miss or Labels.Parry or Labels.Riposte or Labels.Invulnerable);
 
-    // These sentences open attempts even when their defense was struck through.
-    internal static bool IsDefensiveOutcome(string type) => type is Labels.Absorb or Labels.Block
-      or Labels.Dodge or Labels.Miss or Labels.Parry or Labels.Riposte or Labels.Invulnerable;
+    // These sentences open attempts even when their defense was struck through. One list: every outcome word that is not a hit.
+    internal static bool IsDefensiveOutcome(string type) => !CountsAsDamageHit(type);
 
     internal static void UpdateDamageStats(PlayerSubStats stats, DamageRecord record, bool newFrame = false,
       bool isPet = false, DamageSwingCredit swing = default, bool incoming = false)
@@ -445,6 +444,7 @@ namespace EQLogParser
         }
 
         stats.MeleeHits++;
+        if (!LineModifiersParser.IsStrikethrough(record.ModifiersMask)) stats.MeleeUndefended++;
       }
 
       if (record.Total > 0)
@@ -523,6 +523,7 @@ namespace EQLogParser
         to.Invulnerable += from.Invulnerable;
         to.MeleeAttempts += from.MeleeAttempts;
         to.MeleeHits += from.MeleeHits;
+        to.MeleeUndefended += from.MeleeUndefended;
         to.Total += from.Total;
         to.TotalAss += from.TotalAss;
         to.TotalCrit += from.TotalCrit;
@@ -731,9 +732,6 @@ namespace EQLogParser
           stats.MeleeAccRate = accuracyAttempts > 0
             ? (float)Math.Round((double)stats.MeleeHits / accuracyAttempts * 100, 2) : 0;
         }
-
-        // A struck-through sentence need not have a number line; tags can outnumber landed hits.
-        stats.MeleeUndefended = stats.MeleeHits > stats.StrikethroughHits ? stats.MeleeHits - stats.StrikethroughHits : 0u;
 
         if (stats.SpellHits > 0)
         {
@@ -1072,6 +1070,7 @@ namespace EQLogParser
       stats.Invulnerable = 0;
       stats.MeleeAttempts = 0;
       stats.MeleeHits = 0;
+      stats.MeleeUndefended = 0;
       stats.SpellHits = 0;
       stats.Resists = 0;
       stats.Extra = 0;

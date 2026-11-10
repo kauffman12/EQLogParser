@@ -46,6 +46,17 @@ public class StruckThroughBoardTest
   }
 
   [TestMethod]
+  public void ATagTheSentenceAlreadySpentIsNotCountedAgainOnItsNumberLine()
+  {
+    var (run, rows, index) = Parse(
+      (18, "A Solusek knight tries to slash Testtank, but Testtank ripostes! (Strikethrough Flurry)"),
+      (18, "A Solusek knight slashes Testtank for 56110 points of damage. (Riposte Strikethrough Flurry)"));
+    var tank = Build(run, rows, index).TankStats!.StatsList.Single(s => s.Name == Tank);
+    AssertRow(tank, 1, 0, 1, 1, 56110);
+    Assert.AreEqual(1u, tank.FlurryHits, "one swing carries one Flurry");
+  }
+
+  [TestMethod]
   public void AnUnmatchedPiercedSentenceKeepsItsAttemptButNotASuccessfulDefense()
   {
     var (run, rows, index) = Parse((18, Pierced), (18, Pierced));
@@ -120,6 +131,19 @@ public class StruckThroughBoardTest
     builder.BuildTotalStats(options);
     Assert.IsNotNull(result);
     AssertRow(result.StatsList.Single(s => s.Name == Tank), 1, 0, 1, 1, 56110);
+  }
+
+  [TestMethod]
+  public void UndefendedCountsUnstruckHitsEvenWhenUnmatchedSentencesOutnumberThem()
+  {
+    // Two pierced sentences with no number line, one plain hit, one struck hit: 3 strikethroughs against 2 hits, which a
+    // hits-minus-strikethroughs subtraction floors to zero. The plain hit is still one undefended hit.
+    var (run, rows, index) = Parse((18, Pierced), (18, Pierced),
+      (18, "A Solusek knight slashes Testtank for 1000 points of damage."), (19, Landed));
+    var tank = Build(run, rows, index).TankStats!.StatsList.Single(s => s.Name == Tank);
+    AssertRow(tank, 4, 0, 3, 2, 57110);
+    Assert.AreEqual(1u, tank.MeleeUndefended);
+    Assert.AreEqual(1L, tank.SubStats.Sum(s => (long)s.MeleeUndefended), "the breakdown's child rows add up to the row");
   }
 
   [TestMethod]

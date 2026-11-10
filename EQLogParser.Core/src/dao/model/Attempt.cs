@@ -30,6 +30,8 @@ internal class Attempt
   public uint LuckyHits { get; set; }
   public uint MeleeAttempts { get; set; }
   public uint MeleeHits { get; set; }
+  // Landed melee hits whose own line carries no Strikethrough: counted, never derived from two counters.
+  public uint MeleeUndefended { get; set; }
   public uint NonTwincastCritHits { get; set; }
   public uint NonTwincastLuckyHits { get; set; }
   public uint SpellHits { get; set; }

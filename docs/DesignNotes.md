@@ -11216,13 +11216,16 @@ What must not break:
 - No lookahead and no discarded sentences. An unmatched pierced defense still opens its attempt and contributes whatever
   modifiers that outcome normally scores, but contributes no protected-riposte count. Auto-parry and the moth sequences with
   several tagged sentences and no damage are real shapes. A tag is not proof that a damage number was printed.
-- Only the repeated Strikethrough is shared. Absorb and Miss spend no modifier mask, so their paired hit still owes its tag.
-  LineModifiersParser.Unspent removes Riposte **with** a spent Strikethrough; otherwise a bare Riposte bit invents successful
-  return damage from the incoming blow. Critical, Rampage, and other hit-specific bits stay.
+- The pair shares what the sentence spent: its whole mask, so a `(Strikethrough Flurry)` sentence and its number line score one
+  Flurry, not two (`ATagTheSentenceAlreadySpentIsNotCountedAgainOnItsNumberLine`). Absorb and Miss spend no modifier mask, so their
+  paired hit still owes its tag. LineModifiersParser.Unspent removes Riposte **with** a spent Strikethrough; otherwise a bare Riposte
+  bit invents successful return damage from the incoming blow. Bits only the number line carries (Critical, Rampage) stay.
 - Facts, codecs, spool formats, damage amounts, and landed-hit counts do not change. Do not reuse retired flag bits or add a
   registry opinion to facts to solve a board accounting question.
-- MeleeUndefended floors at zero: unmatched sentences can make tag counts exceed hits. Accuracy widens to signed arithmetic
-  before subtracting defenses and returns zero for an exhausted denominator. Neither unsigned wrap nor division by zero is a rate.
+- MeleeUndefended is **counted**, never derived: one per landed melee hit whose own line carries no Strikethrough. It used to be
+  `MeleeHits − StrikethroughHits`, but unmatched pierced sentences add Strikethrough with no hit, so a hard-hit tank's cell floored
+  at zero (`UndefendedCountsUnstruckHitsEvenWhenUnmatchedSentencesOutnumberThem`). Accuracy widens to signed arithmetic before
+  subtracting defenses and returns zero for an exhausted denominator. Neither unsigned wrap nor division by zero is a rate.
 
 The one-second rule is conservative association, not a game-issued swing id. Identical named creatures and multiple matching
 swings in one logged second cannot be distinguished perfectly from this text. Do not claim a hand-counted fight's exact result

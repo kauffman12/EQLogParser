@@ -97,7 +97,7 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
   one second, newest wins, consumed once. Never annotate captured records, pair untagged defenses, ignore direction, or discard
   unmatched sentences. `DamageSwingCredit` removes the repeated attempt/tag; `Unspent` takes Riposte with Strikethrough.
   Tanking `RiposteHits` counts protected defensive sentences only, not pierced defenses or the NPC's return-hit modifiers;
-  outgoing riposte hits/damage remain counted. `MeleeUndefended` floors at zero. Pin the fact-to-board round-trip, not just
+  outgoing riposte hits/damage remain counted. `MeleeUndefended` is counted per unstruck landed hit, never subtracted. Pin the fact-to-board round-trip, not just
   parser events. See docs/DesignNotes.md → "One swing, two lines: the outcome sentence and the number line".
 - **A heal's healer is the subject of its own sentence.** A pet's `Mark of the Righteous` tick belongs to ``X`s pet`` —
   the owner cast nothing at that moment and the raid's cleric cast the shield minutes earlier — with the owner riding
