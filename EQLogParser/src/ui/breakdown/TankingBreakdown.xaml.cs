@@ -1,3 +1,4 @@
+using Syncfusion.UI.Xaml.TreeGrid;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -8,6 +9,8 @@ namespace EQLogParser
   /// </summary>
   public partial class TankingBreakdown
   {
+    private DamageBreakdownGroups _groups;
+
     public TankingBreakdown()
     {
       InitializeComponent();
@@ -19,16 +22,25 @@ namespace EQLogParser
 
     internal void Init(CombinedStats currentStats, List<PlayerStats> selectedStats)
     {
+      if (currentStats is null) return;
+
       Task.Delay(100).ContinueWith(_ =>
       {
+        var groups = new DamageBreakdownGroups(currentStats.RaidStats, selectedStats);
         Dispatcher.InvokeAsync(() =>
         {
-          titleLabel.Content = currentStats?.ShortTitle;
-          dataGrid.ItemsSource = selectedStats;
+          _groups = groups;
+          titleLabel.Content = currentStats.ShortTitle;
+          dataGrid.ItemsSource = groups.Players;
           dataGrid.IsEnabled = true;
           UiElementUtil.SetEnabled(controlPanel.Children, true);
         });
       });
+    }
+
+    private void RequestTreeItems(object sender, TreeGridRequestTreeItemsEventArgs e)
+    {
+      e.ChildItems = _groups?.ChildrenOf(e.ParentItem) ?? [];
     }
   }
 }

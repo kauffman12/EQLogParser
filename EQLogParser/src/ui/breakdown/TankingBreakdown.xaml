@@ -33,7 +33,7 @@
                            AutoExpandMode="AllNodesExpanded"
                            AutoGenerateColumns="False"
                            ColumnSizer="Auto"
-                           ChildPropertyName="SubStats"
+                           RequestTreeItems="RequestTreeItems"
                            CurrentCellBorderThickness="0"
                            ExpanderCellStyle="{DynamicResource EQExpanderCellStyle}"
                            FrozenColumnCount="1"
