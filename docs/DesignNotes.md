@@ -3314,6 +3314,27 @@ geometry path; this repairs the live-toolbar regression without forcing all rows
 changed baselines, reopening, an external resize and invalid measurements. The UI handler and WPF assembly build on Linux,
 but actual toolbar, footer, font and mixed-DPI rendering remain Windows release checks—not a claimed rendered test pass.
 
+## Death messages keep the subject, not the auxiliary
+
+`DamageLineParser.Process` accepts both `Name died.` and `Name has/have died.` without a log-version switch.
+The subject ends before the entire verb phrase: only an adjacent, whole-word `has` or `have` is excluded;
+other words inside the name stay. An empty subject publishes nothing. Existing `was slain by`, `has been slain by`,
+`You have been slain by` and `You have slain` forms retain their own grammar. Player replacement, ignored subjects,
+source message and previous-line carry still pass through the same death-record door.
+
+Keeping `has` in the subject minted names such as ``Tooke`s pet has`` in both the Events view and the fact name pool,
+where the trailing word also defeated R5's summon suffix. Replaying all 24 available captures (18 live, six emulator,
+with emulator parsing enabled only for those six) checked 88,399 stored deaths against their source sentences and
+captured fact names: 218 `has died.` records across seven captures, 796 bare `died.` records, and the existing slain
+forms all kept the expected subjects. The selected beta capture accounts for 28 of the corrected auxiliary forms;
+no capture supplies a `have died.` death. Fact names compare without case because the shared name pool preserves
+its first spelling; repeated spaces in an older emulator subject normalize to a single space.
+
+`DeathLineParserTest` pins both grammars through records, events and captured facts, including R5's Pet/owner-name
+recognition, first-person replacement and ignored/empty subjects. The disposable real-log assertions were removed
+after answering their questions. This is an ingest correction: reopening the log rebuilds its captured deaths;
+it does not rewrite saved identity priors.
+
 ## Combat event emitters
 
 The damage meter briefly carried an event ribbon under its target row; the UI was withdrawn (a feed wants its own

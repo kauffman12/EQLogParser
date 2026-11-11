@@ -101,11 +101,11 @@ namespace EQLogParser
         {
           var stop = split.FindStop();
 
-          // see if it's a died message right away
-          if (split.Length > 1 && stop >= 1 && split[stop] == "died." && split.JoinWords(0, stop) is { } test
-            && !string.IsNullOrEmpty(test))
+          // Both "Name died." and "Name has/have died." end the subject before the verb phrase.
+          if (stop >= 1 && split[stop] == "died.")
           {
-            UpdateSlain(test, "", lineData);
+            var nameEnd = split[stop - 1] == "has" || split[stop - 1] == "have" ? stop - 1 : stop;
+            UpdateSlain(split.JoinWords(0, nameEnd), "", lineData);
             processed = true;
           }
           else
