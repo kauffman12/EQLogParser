@@ -328,6 +328,11 @@
       <TextBlock FontSize="{DynamicResource EQContentSize}" Text="{Binding TooltipText}" />
     </DataTemplate>
 
+    <DataTemplate x:Key="NpcCombatStatsHpToolTip">
+      <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}"
+                 Text="Estimated starting HP averaged across completed same-name pools, after subtracting observed healing. Blank means no complete pool could be estimated. Overkill and unlogged damage or healing can affect the estimate."
+                 TextWrapping="Wrap" MaxWidth="320" />
+    </DataTemplate>
     <DataTemplate x:Key="HeaderImprovedTauntToolTip">
       <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Improved Taunts can not Fail" />
     </DataTemplate>

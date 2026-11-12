@@ -244,6 +244,11 @@
             <MenuItem.Icon>
               <fa:ImageAwesome x:Name="statsViewIcon" Style="{StaticResource EQIconStyle}" Icon="Solid_Calculator" />
             </MenuItem.Icon>
+            <MenuItem x:Name="npcCombatStatsMenuItem" Header="_NPC Statistics" Click="MenuItemWindowClick">
+              <MenuItem.Icon>
+                <fa:ImageAwesome x:Name="npcCombatStatsIcon" Tag="npcCombatStatsWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
+              </MenuItem.Icon>
+            </MenuItem>
             <MenuItem x:Name="spellDamageStatsMenuItem" Header="Spell _Damage" Click="MenuItemWindowClick">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="npcSpellDamageIcon" Tag="spellDamageStatsWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
@@ -257,11 +262,6 @@
             <MenuItem x:Name="tauntStatsMenuItem" Header="_Taunt Usage" Click="MenuItemWindowClick">
               <MenuItem.Icon>
                 <fa:ImageAwesome x:Name="tauntStatsIcon" Tag="tauntStatsWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
-              </MenuItem.Icon>
-            </MenuItem>
-            <MenuItem x:Name="npcCombatStatsMenuItem" Header="_NPC Statistics" Click="MenuItemWindowClick">
-              <MenuItem.Icon>
-                <fa:ImageAwesome x:Name="npcCombatStatsIcon" Tag="npcCombatStatsWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Paw" />
               </MenuItem.Icon>
             </MenuItem>
           </MenuItem>

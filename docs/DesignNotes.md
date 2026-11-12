@@ -19744,8 +19744,9 @@ lives the raid finished. These laws keep the estimate about one creature:
   this much", and averaging those drags the number toward the pull's length. Rows not ended `Slain` are excluded — and so is
   any run containing one, because its pool total includes damage on a creature still standing at the end. A name with no
   killed life gets no row: an empty table over a night of wipes is the true answer. A row with kills but no priceable pool
-  keeps its Deaths and melee measurements and leaves Avg HP **blank**, not zero. `AvgHp` stays nullable through the bound
-  row and numeric column; its header tooltip identifies the estimate and explains the blank. A nonpositive net-health
+  keeps its Deaths and melee measurements and leaves Est HP **blank**, not zero. `AvgHp` stays nullable through the bound
+  row and numeric column; its displayed header is **Est HP** because this is an estimate, not measured health. Its header
+  tooltip identifies the estimate and explains the blank. A nonpositive net-health
   estimate is also unknown, never a fabricated zero or negative HP.
 - **Healing is not starting health.** A healed mob takes more damage than it started with, so healing landing on the name
   inside the run's span is **subtracted** from captured damage. For 1,500 damage and 250 observed healing, starting HP is
@@ -19789,8 +19790,11 @@ prefix under the index gate; later appends cannot enter it. The original `Derive
 no worker reads its changing fields. A continued pass mutates old rows, so preparation refuses any snapshot other than
 the engine's latest published projection: an old list can omit a new same-name life while its existing member has already
 acquired a death. A refused question stays owed until the replacement is applied, or asks immediately if FightTable has
-already applied it; there is no retry loop against the obsolete list. The header tooltips name the direction:
-Avg/Max Melee measure damage **dealt by** the NPC to players, pets or mercenaries, not damage received by it.
+already applied it; there is no retry loop against the obsolete list. Avg/Max Melee measure damage **dealt by** the NPC
+to players, pets or mercenaries, not damage received by it. Only Est HP has a column tooltip; it uses the same application
+resource template pattern, dynamic `EQContentSize` and `PrimaryForeground` as the other tables. The Statistics submenu
+lists NPC Statistics before Spell Damage, Spell Resists and Taunt Usage, with the same `Solid_Check` visibility icon,
+`WindowIconLoaded` and menu toggle path as those peers — no permanent identifying glyph.
 
 Count selected kills per zone name/NPC before sorting pools or copying melee ordinals; a group with none cannot produce
 a row. Each visit still keeps every life for pool context, and an eligible zone/NPC keeps every selected life's melee,

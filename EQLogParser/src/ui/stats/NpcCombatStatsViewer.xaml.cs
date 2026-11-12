@@ -307,7 +307,7 @@ namespace EQLogParser
         HeaderText = mapping switch
         {
           "Deaths" => "Deaths",
-          "AvgHp" => "Avg HP",
+          "AvgHp" => "Est HP",
           "AvgMelee" => "Avg Melee",
           "MaxMelee" => "Max Melee",
           _ => e.Column.HeaderText
@@ -319,13 +319,7 @@ namespace EQLogParser
         column.AllowNullValue = true;
         column.NullText = "";
         column.ShowHeaderToolTip = true;
-        column.HeaderToolTipTemplate = (DataTemplate)FindResource("NpcCombatStatsHpToolTip");
-      }
-      else if (mapping is "AvgMelee" or "MaxMelee")
-      {
-        column.ShowHeaderToolTip = true;
-        column.HeaderToolTipTemplate = (DataTemplate)FindResource(mapping == "AvgMelee"
-          ? "NpcCombatStatsAvgMeleeToolTip" : "NpcCombatStatsMaxMeleeToolTip");
+        column.HeaderToolTipTemplate = (DataTemplate)Application.Current.Resources["NpcCombatStatsHpToolTip"];
       }
 
       column.Width = DataGridUtil.CalculateMinGridHeaderWidth(column.HeaderText);

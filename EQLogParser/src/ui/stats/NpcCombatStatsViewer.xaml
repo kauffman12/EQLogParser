@@ -9,20 +9,6 @@
              mc:Ignorable="d"
              Loaded="ContentLoaded"
              d:DesignHeight="450" d:DesignWidth="800">
-  <UserControl.Resources>
-    <DataTemplate x:Key="NpcCombatStatsHpToolTip">
-      <TextBlock Text="Estimated starting HP from priceable killed lives, after subtracting observed healing. Same-name lives share a pooled estimate. Blank means no closed pool could be priced; overkill and unlogged damage or healing can affect the estimate."
-                 TextWrapping="Wrap" MaxWidth="320" />
-    </DataTemplate>
-    <DataTemplate x:Key="NpcCombatStatsAvgMeleeToolTip">
-      <TextBlock Text="Average landed melee damage dealt by this NPC to players, pets or mercenaries."
-                 TextWrapping="Wrap" MaxWidth="320" />
-    </DataTemplate>
-    <DataTemplate x:Key="NpcCombatStatsMaxMeleeToolTip">
-      <TextBlock Text="Highest landed melee damage dealt by this NPC to a player, pet or mercenary."
-                 TextWrapping="Wrap" MaxWidth="320" />
-    </DataTemplate>
-  </UserControl.Resources>
   <Grid>
     <Grid.RowDefinitions>
       <RowDefinition Height="{DynamicResource EQGridTitleHeight}" />
