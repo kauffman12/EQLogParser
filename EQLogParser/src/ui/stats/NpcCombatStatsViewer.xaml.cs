@@ -14,16 +14,13 @@ namespace EQLogParser
   public partial class NpcCombatStatsViewer : IDocumentContent
   {
     private const string AllZones = "All Zones";
-    private const string AllNames = "All NPCs";
 
     private readonly ObservableCollection<string> _zones = [];
-    private readonly ObservableCollection<string> _names = [];
     private readonly NpcStatsRefresh _refresh = new();
     private readonly SummaryBuildGate _buildGate = new(static work =>
       Task.Run(() => ThreadBoundary.Guard("npc stats worker", work)));
     public ObservableCollection<NpcCombatRow> NpcStatsData { get; set; }
     private string _currentZone;
-    private string _currentNpc;
     private bool _ready;
 
     private long _refreshGeneration;
@@ -34,7 +31,6 @@ namespace EQLogParser
       SyncFusionUtil.ConfigureFrozenCellAnimations(dataGrid);
       NpcStatsData = [];
       zoneList.ItemsSource = _zones;
-      npcList.ItemsSource = _names;
       DataContext = this;
 
       // default these columns to descending
@@ -165,7 +161,7 @@ namespace EQLogParser
         return Dispatcher.Invoke(() =>
         {
           if (!CanPublish(snapshot, key)) return false;
-          Publish(built, zoneList.SelectedItem as string, npcList.SelectedItem as string);
+          Publish(built, zoneList.SelectedItem as string);
           return _refresh.Complete(key, snapshot.FactCount);
         });
       }
@@ -190,12 +186,10 @@ namespace EQLogParser
     private bool CanPublish(DerivedSnapshot snapshot, long key)
       => _ready && snapshot.FromLiveSession && _refresh.CanPublish(key, snapshot.FactCount);
 
-    private void Publish(List<NpcCombatStatsRow> stats, string selectedZone, string selectedName)
+    private void Publish(List<NpcCombatStatsRow> stats, string selectedZone)
     {
       _zones.Clear();
       _zones.Add(AllZones);
-      _names.Clear();
-      _names.Add(AllNames);
 
       var list = new List<NpcCombatRow>(stats.Count);
       foreach (var stat in stats)
@@ -212,18 +206,15 @@ namespace EQLogParser
       }
 
       AddSorted(_zones, stats.Select(s => s.Zone));
-      AddSorted(_names, stats.Select(s => s.Npc));
 
       // Keep the reader's filter across a Refresh when the value still exists; otherwise fall back to showing everything.
       zoneList.SelectedIndex = _zones.IndexOf(selectedZone) is var z and > 0 ? z : 0;
-      npcList.SelectedIndex = _names.IndexOf(selectedName) is var n and > 0 ? n : 0;
       UiUtil.UpdateObservable(list, NpcStatsData);
 
       if (dataGrid.View != null)
       {
         dataGrid.View.Filter = item => item is not NpcCombatRow row
-          || (_currentZone == null || _currentZone.Equals(row.Zone))
-          && (_currentNpc == null || _currentNpc.Equals(row.Npc));
+          || _currentZone == null || _currentZone.Equals(row.Zone);
         dataGrid.View.Refresh();
       }
 
@@ -249,7 +240,6 @@ namespace EQLogParser
       if (dataGrid is { View: not null })
       {
         _currentZone = zoneList.SelectedIndex > 0 && zoneList.SelectedItem is string zone ? zone : null;
-        _currentNpc = npcList.SelectedIndex > 0 && npcList.SelectedItem is string name ? name : null;
 
         if (ReferenceEquals(sender, fightOption))
         {
@@ -280,7 +270,6 @@ namespace EQLogParser
       _refresh.Invalidate();
       NpcStatsData.Clear();
       _zones.Clear();
-      _names.Clear();
       UpdateTitle();
     }
 

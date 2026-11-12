@@ -21,7 +21,7 @@ public class NpcCombatStatsMarkupTest
   }
 
   [TestMethod]
-  public void ThePaneOpensOnAllFightsAndCarriesBothFilterDropdowns()
+  public void ThePaneOpensOnAllFightsAndOffersOnlyScopeAndZoneDropdowns()
   {
     XNamespace ui = "http://schemas.microsoft.com/winfx/2006/xaml/presentation";
     XNamespace xaml = "http://schemas.microsoft.com/winfx/2006/xaml";
@@ -35,8 +35,8 @@ public class NpcCombatStatsMarkupTest
     Assert.AreEqual("Selected Fights", items[1]);
 
     var names = root.Descendants(ui + "ComboBox").Select(e => e.Attribute(xaml + "Name")?.Value).ToList();
-    CollectionAssert.AreEquivalent(new[] { "fightOption", "zoneList", "npcList" }, names,
-      "zone and name are the two filters the table offers");
+    CollectionAssert.AreEquivalent(new[] { "fightOption", "zoneList" }, names,
+      "scope and zone are the only dropdowns; there is no NPC-name filter");
   }
 
   private static string RepoRoot()

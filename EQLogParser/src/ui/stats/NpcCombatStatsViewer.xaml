@@ -24,7 +24,6 @@
         <ComboBoxItem>Selected Fights</ComboBoxItem>
       </ComboBox>
       <ComboBox Margin="0,0,8,2" x:Name="zoneList" IsEnabled="True" MinWidth="120" SelectionChanged="OptionsChanged" />
-      <ComboBox Margin="0,0,8,2" x:Name="npcList" IsEnabled="True" MinWidth="140" SelectionChanged="OptionsChanged" />
       <Button Margin="0,0,8,1" Height="{DynamicResource EQButtonHeight}" Padding="16,0,16,0" Click="RefreshClick">Refresh</Button>
     </StackPanel>
     <syncfusion:SfDataGrid x:Name="dataGrid"

@@ -19790,8 +19790,10 @@ publication, never average rounded visit averages — visits feed one reading po
 unpriceable visit contributes deaths and observed melee but no reading; it cannot veto a separate visit's price. Selected
 Fights preserves the same pool context while limiting counts and melee to selected lives.
 A zone/NPC needs a selected kill to appear; once eligible, its selected unfinished visits contribute melee too. There is
-no First Seen column. Zone uses `CurrentSpellWidth`, the next wider theme preset above `CurrentNpcWidth`, on initial
-column generation and theme refresh.
+no First Seen column. The pane offers All Fights/Selected Fights and a zone filter, but no NPC-name dropdown: the table
+already has one row per zone/NPC, so a name filter usually reduces it to a single row. Refresh preserves the zone filter
+while that zone remains available. Zone uses `CurrentSpellWidth`, the next wider theme preset above `CurrentNpcWidth`, on
+initial column generation and theme refresh.
 
 The estimator requires a timeline; a missing one must fail rather than silently admit raid people as NPCs.
 The melee columns read `FightFactIndex`'s tanking ordinals, which are `FactTarget.RaidSide` by construction — a player, a
