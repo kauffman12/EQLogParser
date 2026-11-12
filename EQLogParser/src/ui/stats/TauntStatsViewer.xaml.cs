@@ -39,7 +39,7 @@ namespace EQLogParser
     private void RefreshClick(object sender, RoutedEventArgs e) => Load();
     private void EventsThemeChanged(string _) => DataGridUtil.RefreshTableColumns(dataGrid);
 
-    private void SelectionChange(List<Fight> _)
+    private void SelectionChange()
     {
       if (_ready && fightOption.SelectedIndex == 1)
       {
@@ -131,17 +131,17 @@ namespace EQLogParser
     {
       if (VisualParent != null && !_ready)
       {
-        MainActions.EventsLogLoadingComplete += LogLoadingComplete;
-        MainActions.EventsFightSelectionChanged += SelectionChange;
-        Load();
         _ready = true;
+        MainActions.EventsLogLoadingComplete += LogLoadingComplete;
+        MainActions.EventsFightSelectionSettled += SelectionChange;
+        Load();
       }
     }
 
     public void HideContent()
     {
       MainActions.EventsLogLoadingComplete -= LogLoadingComplete;
-      MainActions.EventsFightSelectionChanged -= SelectionChange;
+      MainActions.EventsFightSelectionSettled -= SelectionChange;
       TauntData.Clear();
       _ready = false;
     }

@@ -19810,8 +19810,8 @@ wholesale paths, and announces null after capture clear. A waiting pane refreshe
 ordinary live growth owes no full-capture scan. The title tooltip identifies the result as a snapshot and points to
 Refresh for later combat. Selected Fights also follows `EventsFightSelectionSettled`, emitted at
 `AnnounceSelection` after its settle/deduplication gates, including deselection. Every subscriber is guarded separately.
-This plain notification does not materialize legacy `Fight` records or revive the old `EventsFightSelectionChanged`
-subscriptions in Spell Damage and Taunt Usage.
+The notification carries no materialized `Fight` records. NPC Statistics reads facts; Spell Damage and Taunt Usage
+subscribe to the same settled-selection event and materialize their own scope only when needed (below).
 
 The pane uses its own `SummaryBuildGate`: one worker, only the newest waiting question, and identical questions collapsed.
 Its key includes session, snapshot content/identity stamp, live damage/heal prefixes, zone-boundary count, scope and
@@ -19835,3 +19835,13 @@ reset. `NpcStatsBuildKeyTest` pins key inputs and invalidations; `SummaryBuildGa
 pins the applied-snapshot notification on both publish paths and capture clear, plus settled selection/deselection and
 subscriber isolation (Windows-only). No test reaches the pane's actual opening/Refresh subscription wiring or the realized
 statistics grid: copying results, dropdown filtering, blank numeric rendering, sorting and CSV copy remain unexercised.
+
+## Spell Damage and Taunt Usage follow settled fight selections
+
+Both panes subscribe to `EventsFightSelectionSettled` while open, reload only in Selected Fights mode, and detach on Hide.
+Deselection is an empty answer, not permission to retain the previous selection's statistics. All Fights retains its
+existing opening/loading/Refresh behaviour. The unused record-carrying selection event has no replacement publisher:
+the existing `MainActions.GetFights` door materializes the current scope on demand, including spell dictionaries and taunt
+blocks, and returns an empty list when no host exists. No new worker, cache or per-selection eager materialization is added.
+`FightStatsSelectionTest` exercises both panes' actual Loaded/Hide subscriptions, repeated Loaded events, selected-scope
+clearing and All Fights isolation (Windows-only). It does not exercise nonempty fight materialization or realized grids.

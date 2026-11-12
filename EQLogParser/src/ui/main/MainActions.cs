@@ -23,7 +23,6 @@ namespace EQLogParser
   internal static partial class MainActions
   {
     internal static event Action<string, bool> EventsLogLoadingComplete;
-    internal static event Action<List<Fight>> EventsFightSelectionChanged;
     internal static event Action EventsFightSelectionSettled;
     internal static event Action<DerivedSnapshot> EventsFightSnapshotChanged;
     internal static event Action<string> EventsChartOpened;
@@ -60,7 +59,7 @@ namespace EQLogParser
     internal static void CloseDamageOverlay(bool reopen, DamageOverlayWindow expected = null) =>
       _mainWindow?.CloseDamageOverlay(reopen, expected);
     internal static void DamageOverlayClosed(DamageOverlayWindow window) => _mainWindow?.DamageOverlayClosed(window);
-    internal static List<Fight> GetFights(bool selected) => _mainWindow?.GetFights(selected);
+    internal static List<Fight> GetFights(bool selected) => _mainWindow?.GetFights(selected) ?? [];
 
     // The scoped variant the death viewer wants - see MainWindow.GetFightsOverlapping for the rule.
     internal static List<Fight> GetFightsOverlapping(double fromT, double toT) =>
@@ -75,7 +74,6 @@ namespace EQLogParser
     internal static void FireHealingSelectionChanged(PlayerStatsSelectionChangedEventArgs args) => EventsHealingSelectionChanged?.Invoke(args);
     internal static void FireWindowStateChanged(WindowState state) => EventsWindowStateChanged?.Invoke(state);
     internal static void FireLogLoadingEvent(string log, bool open) => EventsLogLoadingComplete?.Invoke(log, open);
-    internal static void FireFightSelectionChanged(List<Fight> fights) => EventsFightSelectionChanged?.Invoke(fights);
 
     // Plain notification for fact-backed panes; do not materialize legacy Fight records merely to announce a selection.
     internal static void FireFightSelectionSettled()

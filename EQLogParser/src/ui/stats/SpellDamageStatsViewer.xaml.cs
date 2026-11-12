@@ -49,9 +49,9 @@ namespace EQLogParser
     private void EventsThemeChanged(string _) => DataGridUtil.RefreshTableColumns(dataGrid);
     private void UpdateTitle() => titleLabel.Content = SpellDamageData.Count == 0 ? "No Spell Data Found" : SpellDamageData.Count + " Spell Entries Found";
 
-    private void SelectionChange(List<Fight> _)
+    private void SelectionChange()
     {
-      if (fightOption?.SelectedIndex != 0)
+      if (_ready && fightOption.SelectedIndex == 1)
       {
         Load();
       }
@@ -236,16 +236,16 @@ namespace EQLogParser
     {
       if (VisualParent != null && !_ready)
       {
-        MainActions.EventsFightSelectionChanged += SelectionChange;
+        _ready = true;
+        MainActions.EventsFightSelectionSettled += SelectionChange;
         MainActions.EventsLogLoadingComplete += LogLoadingComplete;
         Load();
-        _ready = true;
       }
     }
 
     public void HideContent()
     {
-      MainActions.EventsFightSelectionChanged -= SelectionChange;
+      MainActions.EventsFightSelectionSettled -= SelectionChange;
       MainActions.EventsLogLoadingComplete -= LogLoadingComplete;
       SpellDamageData.Clear();
       _ready = false;
