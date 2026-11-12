@@ -71,7 +71,6 @@ namespace EQLogParser
   {
     public string Zone { get; init; }
     public string Npc { get; init; }
-    public double FirstSeen { get; init; }
     public int Deaths { get; init; }
     public long? AvgHp { get; init; }
     public long AvgMelee { get; init; }
@@ -135,16 +134,20 @@ namespace EQLogParser
       using var damageRead = facts.RetainDecoded();
       foreach (var group in groups.Values)
       {
+        var zoneTotals = new Dictionary<string, Totals>(StringComparer.OrdinalIgnoreCase);
         foreach (var (visit, lives) in group.Visits)
         {
           var deaths = SelectedKills(lives);
           if (deaths == 0) continue;
 
-          var hpSum = 0m;
-          var pricedLives = 0;
-          var meleeHits = 0L;
-          var meleeTotal = 0m;
-          var meleeMax = 0L;
+          var zone = zones.ZoneOf(visit);
+          if (!zoneTotals.TryGetValue(zone, out var totals)) zoneTotals[zone] = totals = new Totals();
+          totals.Deaths += deaths;
+        }
+
+        foreach (var (visit, lives) in group.Visits)
+        {
+          if (!zoneTotals.TryGetValue(zones.ZoneOf(visit), out var totals)) continue;
 
           lives.Sort(static (a, b) => a.BeginTime.CompareTo(b.BeginTime));
           var run = new List<Life>();
@@ -152,7 +155,7 @@ namespace EQLogParser
           {
             if (run.Count > 0 && life.BeginTime - run[^1].LastTime > FightProjection.EngagementGapS)
             {
-              PriceSelectedRun(run, group.Name, healTotals, ref hpSum, ref pricedLives);
+              PriceSelectedRun(run, group.Name, healTotals, ref totals.HpSum, ref totals.PricedLives);
               run.Clear();
             }
             run.Add(life);
@@ -163,24 +166,26 @@ namespace EQLogParser
             {
               ref readonly var fact = ref facts.RefAt(ordinals[i]);
               if (fact.TypeId != LabelTypes.Melee) continue;
-              meleeHits++;
-              meleeTotal += fact.Total;
-              if (fact.Total > meleeMax) meleeMax = fact.Total;
+              totals.MeleeHits++;
+              totals.MeleeTotal += fact.Total;
+              if (fact.Total > totals.MeleeMax) totals.MeleeMax = fact.Total;
             }
           }
 
           if (run.Count > 0)
-            PriceSelectedRun(run, group.Name, healTotals, ref hpSum, ref pricedLives);
+            PriceSelectedRun(run, group.Name, healTotals, ref totals.HpSum, ref totals.PricedLives);
+        }
 
+        foreach (var (zone, totals) in zoneTotals)
+        {
           result.Add(new NpcCombatStatsRow
           {
-            Zone = zones.ZoneOf(visit),
+            Zone = zone,
             Npc = group.Name,
-            FirstSeen = lives[0].BeginTime,
-            Deaths = deaths,
-            AvgHp = pricedLives > 0 ? (long)(hpSum / pricedLives) : null,
-            AvgMelee = meleeHits > 0 ? (long)(meleeTotal / meleeHits) : 0,
-            MaxMelee = meleeMax
+            Deaths = totals.Deaths,
+            AvgHp = totals.PricedLives > 0 ? (long)(totals.HpSum / totals.PricedLives) : null,
+            AvgMelee = totals.MeleeHits > 0 ? (long)(totals.MeleeTotal / totals.MeleeHits) : 0,
+            MaxMelee = totals.MeleeMax
           });
         }
       }
@@ -296,6 +301,16 @@ namespace EQLogParser
       var total = 0m;
       for (var i = lo; i < healed.Count && healed[i].Time <= to; i++) total += healed[i].Total;
       return total;
+    }
+
+    private sealed class Totals
+    {
+      public int Deaths;
+      public decimal HpSum;
+      public int PricedLives;
+      public long MeleeHits;
+      public decimal MeleeTotal;
+      public long MeleeMax;
     }
 
     private sealed class Group(string name)

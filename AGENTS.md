@@ -423,8 +423,8 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
 - **An NPC's health is estimated, never stated**: `NpcCombatStats` subtracts observed healing from received damage,
   POOLS concurrent same-name lives and weights the mean by killed lives, never by pools. Selection keeps the full pool
   context; an unfinished member invalidates its pool even when unselected. Unknown HP stays nullable and displays blank,
-  never zero. Zone is a `ZoneRecord` interval grouped by visit index (`NpcZoneTimeline`), including literal unnamed-area
-  boundaries. Melee reads the index's tanking ordinals rather than re-asking side. A completed read owes a refresh until
+  never zero. Zone comes from `ZoneRecord` intervals (`NpcZoneTimeline`), including literal unnamed-area
+  boundaries. Display one row per zone name + NPC across visits; keep visit boundaries only for HP pool pricing. Melee reads the index's tanking ordinals rather than re-asking side. A completed read owes a refresh until
   a current answer covering its fact watermark is published (`NpcStatsRefresh`), even in All Fights mode. Selected Fights
   follows settled selection announcements; builds are single-flight and newest-question-wins. See
   docs/DesignNotes.md → "NPC health is estimated from killed lives, and concurrent names pool".

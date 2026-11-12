@@ -19763,12 +19763,19 @@ instance-to-instance variance, and correcting it would stack a guess on an estim
 Zone is an interval, not a capture property (`NpcZoneTimeline`). The only zone truth a log carries is the local player's
 own `You have entered <zone>.` line, which `CastLineParser` files as a `ZoneRecord`: 767 of them on the Incogitable
 capture, zero on a 34 MB one, so the stretch before the first line reads *Unknown* rather than a guessed zone. Group on the
-visit **index**, not the name — one night re-entered a single zone 122 times, and two visits are two populations of the
-same mob. A zone line that names nothing (`an area not on the map`) is still a boundary: it splits visits and reads Unknown
-inside. The parser stores that literal sentence fragment, not null; normalize the parser's `an area` prefix at the zone
-interval door. Equal-second entries preserve file order so the last line wins. **First Seen** carries the earliest life
-begin in each name/visit's complete pool context, even under selection, so re-entered zones do not look like duplicate rows.
-The grid formats that log clock as a date/time but sorts its numeric value.
+visit **index** for HP pricing — one night re-entered a single zone 122 times, and two visits are separate populations
+whose HP pools must not join. A zone line that names nothing (`an area not on the map`) is still a boundary: it splits
+visits and reads Unknown inside. The parser stores that literal sentence fragment, not null; normalize the parser's
+`an area` prefix at the zone interval door. Equal-second entries preserve file order so the last line wins.
+
+**The displayed census is one row per zone name + NPC, not per visit.** Re-entering Plane of Guile and killing Knuckle
+three times produces one Knuckle row with three deaths. Across visits, sum deaths, unrounded HP contributions and priced
+life counts, melee totals and hit counts; take the largest melee hit. Divide only at final publication, never average
+rounded visit averages. An unpriceable visit contributes deaths and observed melee but no HP weight; it cannot veto a
+separate visit's price. Selected Fights preserves the same pool context while limiting counts and melee to selected lives.
+A zone/NPC needs a selected kill to appear; once eligible, its selected unfinished visits contribute melee too. There is
+no First Seen column. Zone uses `CurrentSpellWidth`, the next wider theme preset above `CurrentNpcWidth`, on initial
+column generation and theme refresh.
 
 The estimator requires a timeline; a missing one must fail rather than silently admit raid people as NPCs.
 The melee columns read `FightFactIndex`'s tanking ordinals, which are `FactTarget.RaidSide` by construction — a player, a
@@ -19785,9 +19792,9 @@ acquired a death. A refused question stays owed until the replacement is applied
 already applied it; there is no retry loop against the obsolete list. The header tooltips name the direction:
 Avg/Max Melee measure damage **dealt by** the NPC to players, pets or mercenaries, not damage received by it.
 
-Count selected kills per name/visit before sorting pools or copying melee ordinals; a group with none cannot produce a
-row. An eligible group still keeps every life for pool context and every selected life's melee, including unfinished
-lives. The grouped melee walk holds a damage `RetainDecoded` lease so revisiting a cold chunk for another name or visit
+Count selected kills per zone name/NPC before sorting pools or copying melee ordinals; a group with none cannot produce
+a row. Each visit still keeps every life for pool context, and an eligible zone/NPC keeps every selected life's melee,
+including unfinished lives. The grouped melee walk holds a damage `RetainDecoded` lease so revisiting a cold chunk for another name or visit
 does not decode it again. Healing scans only names/visit envelopes with selected kills, retaining complete pool context
 and the quiet gaps between pooled lives. Ordered tables enter at the first relevant time, bounded by the frozen heal
 prefix, and stop after the last envelope; unordered tables fall back to the complete captured prefix. Matching heals are
@@ -19825,7 +19832,8 @@ melee and healing prefixes), the single-life price, pool vs arrival-order split,
 rounding, selection retaining complete pool context, unselected unfinished lives vetoing a price, selected unfinished
 lives contributing melee only to groups with selected kills, unknown HP remaining null, healing subtracted inside the
 span only (ordered and unordered, including quiet gaps within a pool), the real parser's unnamed-zone output,
-distinguishable visits, wide melee accumulation, timeline refusal and a charmed raider getting no row.
+zone-name aggregation across visits with separate HP pools, death/hit-weighted final averages without intermediate
+rounding, wide melee accumulation, timeline refusal and a charmed raider getting no row.
 `HealWindowWalkTest` pins bounded searches against an appended tail. `NpcStatsRefreshTest` pins missing and mid-read
 snapshots, publication-only debt payment, retry after failure, newest-question ownership, covering-answer reuse and capture
 reset. `NpcStatsBuildKeyTest` pins key inputs and invalidations; `SummaryBuildGateTest` pins single-flight and recovery.

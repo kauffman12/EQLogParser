@@ -88,10 +88,8 @@ public class NpcCombatStatsTest
   }
 
   [TestMethod]
-  public void ANameSeenInTwoZoneVisitsIsTwoRowsOfTheSameZone()
+  public void ANameSeenInTwoZoneVisitsIsOneRowWithBothDeaths()
   {
-    // Re-entering an instance is a fresh population of the mob, so two kills 100 s apart in the same zone name - with a
-    // visit to the guild hall between them - are two rows, not one row of "2 deaths, 1000 hp".
     var facts = BuildFacts(
       ("Raidman", "a tomb rat", 400, 10, LabelTypes.Melee),
       ("Raidman", "a tomb rat", 600, 510, LabelTypes.Melee));
@@ -106,13 +104,103 @@ public class NpcCombatStatsTest
     });
 
     var rows = Stats(facts, Raid(), zones: zones);
-    Assert.AreEqual(2, rows.Count);
-    Assert.AreEqual(400, rows.Min(r => r.AvgHp));
-    Assert.AreEqual(600, rows.Max(r => r.AvgHp));
-    Assert.AreEqual(2, rows.Count(r => r.Zone == "Ruined Relic"));
-    Assert.IsTrue(rows.All(r => r.Deaths == 1));
-    CollectionAssert.AreEquivalent(new[] { T0 + 10, T0 + 510 }, rows.Select(r => r.FirstSeen).ToArray(),
-      "same-name visits must carry distinct observation times through to the grid");
+    var row = rows.Single();
+    Assert.AreEqual("Ruined Relic", row.Zone);
+    Assert.AreEqual(2, row.Deaths);
+    Assert.AreEqual(500, row.AvgHp);
+  }
+
+  [TestMethod]
+  public void KnuckleAcrossThreeVisitsHasOneZoneRowWithThreeDeaths()
+  {
+    var facts = BuildFacts(
+      ("Raidman", "Knuckle", 3_555_782_170, 0, LabelTypes.Melee),
+      ("Knuckle", "Raidman", 100, 0, LabelTypes.Melee),
+      ("Raidman", "Knuckle", 3_556_074_685, 100, LabelTypes.Melee),
+      ("Knuckle", "Raidman", 200, 100, LabelTypes.Melee),
+      ("Knuckle", "Raidman", 300, 100, LabelTypes.Melee),
+      ("Raidman", "Knuckle", 3_556_288_416, 200, LabelTypes.Melee),
+      ("Knuckle", "Raidman", 900, 200, LabelTypes.Melee));
+    Kill(facts, "Knuckle", 0, 7);
+    Kill(facts, "Knuckle", 100, 8);
+    Kill(facts, "Knuckle", 200, 9);
+    var zones = new NpcZoneTimeline(new[]
+    {
+      (T0, "Plane of Guile: Cunning Gambit"),
+      (T0 + 50, "Guild Lobby"),
+      (T0 + 100, "Plane of Guile: Cunning Gambit"),
+      (T0 + 150, "Guild Lobby"),
+      (T0 + 200, "Plane of Guile: Cunning Gambit")
+    });
+
+    var row = Stats(facts, Raid(), zones: zones).Single();
+    Assert.AreEqual("Knuckle", row.Npc);
+    Assert.AreEqual("Plane of Guile: Cunning Gambit", row.Zone);
+    Assert.AreEqual(3, row.Deaths);
+    Assert.AreEqual(3_556_048_423, row.AvgHp);
+    Assert.AreEqual(375, row.AvgMelee, "combine hit totals/counts, not rounded visit averages");
+    Assert.AreEqual(900, row.MaxMelee);
+  }
+
+  [TestMethod]
+  public void VisitsKeepSeparatePoolsButCombineUnroundedDeathWeightedPrices()
+  {
+    var facts = BuildFacts(
+      ("Raidman", "a rat", 900, 0, LabelTypes.Melee),
+      ("Raidman", "a rat", 100, 10, LabelTypes.Melee),
+      ("Raidman", "a rat", 100, 11, LabelTypes.Melee),
+      ("Raidman", "a rat", 100, 12, LabelTypes.Melee),
+      ("Raidman", "a rat", 8000, 20, LabelTypes.Melee),
+      ("a rat", "Raidman", 900, 20, LabelTypes.Melee),
+      ("Raidman", "a rat", 700, 100, LabelTypes.Melee));
+    Kill(facts, "a rat", 0, 7);
+    Kill(facts, "a rat", 10, 8);
+    Kill(facts, "a rat", 11, 9);
+    Kill(facts, "a rat", 12, 10);
+    Kill(facts, "a rat", 100, 11);
+    var zones = new NpcZoneTimeline(new[]
+    {
+      (T0, "First Zone"), (T0 + 10, "First Zone"), (T0 + 20, "First Zone"), (T0 + 100, "Other Zone")
+    });
+    var timeline = Raid();
+    var index = new FightFactIndex(timeline);
+    var lives = FightProjection.Build(facts, timeline, index.OnFact);
+    var rows = NpcCombatStats.Build(lives, facts, index, timeline, null, zones);
+
+    Assert.AreEqual(2, rows.Count, "different zone names remain separate");
+    var first = rows.Single(r => r.Zone == "First Zone");
+    Assert.AreEqual(4, first.Deaths);
+    Assert.AreEqual(300, first.AvgHp,
+      "visits separate pools even within the engagement gap; an unfinished later visit cannot veto earlier kills");
+    Assert.AreEqual(900, first.AvgMelee, "selected unfinished visits still contribute observed melee to the zone row");
+    Assert.AreEqual(900, first.MaxMelee);
+    Assert.AreEqual(700, rows.Single(r => r.Zone == "Other Zone").AvgHp);
+
+    var selected = lives.Where(life => life.BeginTime == T0 || life.BeginTime == T0 + 10).ToList();
+    var slice = NpcCombatStats.Build(lives, facts, index, timeline, null, zones, selected).Single();
+    Assert.AreEqual(2, slice.Deaths);
+    Assert.AreEqual(500, slice.AvgHp, "selection keeps each visit's full pool context");
+    Assert.AreEqual(0, slice.MaxMelee, "unselected lives contribute no melee");
+  }
+
+  [TestMethod]
+  public void FractionsAndUnknownHpSurviveCombiningVisits()
+  {
+    var facts = BuildFacts(
+      ("Raidman", "a rat", 1, 0, LabelTypes.Melee),
+      ("Raidman", "a rat", 2, 1, LabelTypes.Melee),
+      ("Raidman", "a rat", 3, 100, LabelTypes.Melee),
+      ("Raidman", "a rat", 100, 200, LabelTypes.Melee),
+      ("Raidman", "a rat", 8000, 201, LabelTypes.Melee));
+    Kill(facts, "a rat", 0, 5);
+    Kill(facts, "a rat", 1, 6);
+    Kill(facts, "a rat", 100, 7);
+    Kill(facts, "a rat", 200, 8);
+    var zones = new NpcZoneTimeline(new[] { (T0, "Zone"), (T0 + 100, "Zone"), (T0 + 200, "Zone") });
+
+    var row = Stats(facts, Raid(), zones: zones).Single();
+    Assert.AreEqual(4, row.Deaths);
+    Assert.AreEqual(2, row.AvgHp, "combine 1.5 HP for two lives and 3 for one, excluding the unpriceable visit");
   }
 
   [TestMethod]

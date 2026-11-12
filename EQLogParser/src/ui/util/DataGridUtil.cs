@@ -641,7 +641,7 @@ namespace EQLogParser
         return ThemeConfig.CurrentNameWidth;
       }
 
-      if (mappingName is "Spell" or "Key" or "Action")
+      if (mappingName is "Spell" or "Key" or "Action" or "Zone")
       {
         return ThemeConfig.CurrentSpellWidth;
       }

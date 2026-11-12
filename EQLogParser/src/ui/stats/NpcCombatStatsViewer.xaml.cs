@@ -1,4 +1,3 @@
-using Syncfusion.Data;
 using Syncfusion.UI.Xaml.Grid;
 using System;
 using System.Collections.Generic;
@@ -7,7 +6,6 @@ using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Data;
 
 namespace EQLogParser
 {
@@ -206,7 +204,6 @@ namespace EQLogParser
         {
           Zone = stat.Zone,
           Npc = stat.Npc,
-          FirstSeen = stat.FirstSeen,
           Deaths = stat.Deaths,
           AvgHp = stat.AvgHp,
           AvgMelee = stat.AvgMelee,
@@ -290,19 +287,9 @@ namespace EQLogParser
     private void AutoGeneratingColumn(object sender, AutoGeneratingColumnArgs e)
     {
       var mapping = e.Column.MappingName;
-      if (mapping == "FirstSeen")
-      {
-        e.Column.SortMode = DataReflectionMode.Value;
-        e.Column.DisplayBinding = new Binding(mapping) { Converter = new DateTimeConverter() };
-        e.Column.Width = ThemeConfig.CurrentDateTimeWidth;
-        e.Column.HeaderText = "First Seen";
-        return;
-      }
-
       if (mapping is "Zone" or "Npc")
       {
-        // The same theme-scaled width the Events table gives its name column: zone strings are as long as names.
-        e.Column.Width = ThemeConfig.CurrentNpcWidth;
+        e.Column.Width = mapping == "Zone" ? ThemeConfig.CurrentSpellWidth : ThemeConfig.CurrentNpcWidth;
         if (mapping == "Npc")
         {
           e.Column.HeaderText = "NPC";
@@ -351,7 +338,6 @@ namespace EQLogParser
   {
     public string Zone { get; set; }
     public string Npc { get; set; }
-    public double FirstSeen { get; set; }
     public int Deaths { get; set; }
     public long? AvgHp { get; set; }
     public long AvgMelee { get; set; }
