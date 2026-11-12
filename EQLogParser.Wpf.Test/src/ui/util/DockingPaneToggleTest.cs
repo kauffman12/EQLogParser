@@ -85,9 +85,9 @@ public class DockingPaneToggleTest
    * `DockingManager.GetSideInDockedMode`, i.e. the getter does not return what was set, so every one of those assertions measured
    * the vendor's property coercion rather than the app's decision — a test that can only ever confirm the assumption it was
    * written from. The middle-window shape is now covered by what is actually checkable: `EQLogParser.Test/src/ui/DockingMarkupTest.cs`
-   * pins what MainWindow DECLARES (the identity strip's Right/AutoHidden, the retired panes' Hidden), and docs/ReleaseChecklist.md
-   * carries the two states that need a live layout — showing a pane hidden behind another tab, and restarting with a dockSite.xml
-   * saved by an older build. `APaneOnAnEdgeComesBackAutoHidden` above stays: it is the shipped bug ("it stopped working after I
+   * pins what MainWindow DECLARES (the identity strip's Right/AutoHidden, the retired panes' Hidden). The two states that need
+   * a live layout — showing a pane hidden behind another tab, and restarting with a dockSite.xml
+   * saved by an older build — are untested. `APaneOnAnEdgeComesBackAutoHidden` above stays: it is the shipped bug ("it stopped working after I
    * restart"), it is green on real vendor values, and ShowStateFor's edge branch is what prevents the relocation.
    */
 

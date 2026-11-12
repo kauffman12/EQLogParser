@@ -241,7 +241,8 @@ Settings and setup windows (`FctSettingsWindow`, `DamageMeterSettingsWindow`) fo
 - **When a UI rule really is logic, test the layer we own it in** — the function that decides (`ShowStateFor`'s edge branch) or the markup
   declaration that states it (`SideInDockedMode="Right"`, `State="AutoHidden"` in `MainWindow.xaml`) — and never the pixel, the vendor's
   property round-trip, or a control's internals. `EQLogParser.Test/src/ui/DockingMarkupTest.cs` is the shape: pin what we declare. What needs
-  a live window is a checklist line in `docs/ReleaseChecklist.md`, not a unit test that asserts its own inputs.
+  a live window is left untested, with the constraint stated in `docs/DesignNotes.md` — not a unit test that asserts its own
+  inputs, and not a line in a manual checklist either. `docs/ReleaseChecklist.md` is the release process.
 - **A test that only ever confirms the assumption it was written from gets deleted, not re-lettered.** `AWindowInTheMiddleKeepsItsOwnShape`
   asserted docking states for panes the test itself configured; on Windows the vendor getter returned something other than what was set and the
   assertion measured coercion instead of behaviour (2026-11). Missing coverage leaves a note where it will be looked for.
@@ -426,7 +427,8 @@ foreach (var action in block.Actions.OfType<DamageRecord>())
 
 ## Documentation
 
-- Release/signing/installer work (sign.cmd, EQLogParserInstall) follows `docs/ReleaseChecklist.md`
+- Release/signing/installer work (sign.cmd, EQLogParserInstall) follows `docs/ReleaseChecklist.md`. That file is only the
+  release path: per-feature manual test steps are not added to it (see **Testing** in `AGENTS.md`).
 - **Design rationale belongs in `docs/DesignNotes.md`, not in long code comments.** A comment states the constraint in a line or two and points at the note (`// See docs/DesignNotes.md → Trigger and Overlay Import.`); the reasoning, the alternatives we rejected and the accepted warts go in the note. When a decision changes, update the entry — and delete it when it no longer applies.
 - XML `<summary>` is a one-line contract, following **Code Organization** above. Add `<param>` or `<returns>` only where it clarifies the API.
 - Inline comments state a live constraint or trap, following the comment budget above; they do not duplicate the design narrative.

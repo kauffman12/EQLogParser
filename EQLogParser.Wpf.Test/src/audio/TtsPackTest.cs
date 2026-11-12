@@ -11,7 +11,7 @@ namespace EQLogParser.Wpf.Test
    *
    * Nothing here downloads, unpacks, or touches a real pack directory. Doing that would mean either a network or the
    * developer's own %LOCALAPPDATA%, and in both cases the test would fail for reasons that have nothing to do with the
-   * code; the install paths are covered by the manual pass in docs/ReleaseChecklist.md instead.
+   * code; the install paths belong to the release process (`docs/ReleaseChecklist.md`), not to a test.
    */
   [TestClass]
   public class TtsPackTest

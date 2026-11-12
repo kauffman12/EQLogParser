@@ -67,6 +67,11 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
   `RegisterLicense` directly — both go through `SyncFusionUtil.LoadLicense()`.
 - **Identical input gives identical output in one process** (`CaptureReproducibilityTest`); do not remove resets from the
   harness or re-isolate what measurement already ruled out.
+- **No manual test-step checklists, anywhere.** A Windows-only behaviour is decided, not deferred: its rule goes in
+  `docs/DesignNotes.md` as what must not break, with a plain "no test reaches this" where that is the truth. Do not write
+  "verified on Windows", do not park the question in a list of manual steps, and do not cite a checklist as the reason
+  coverage is missing. `docs/ReleaseChecklist.md` is the release process — installer contents, signing, the version bump,
+  the update and download links — and a feature change does not add a section to it.
 
 ## Parsing, records, facts
 - **Reading a log is ONE stream in file order** — one reader, one capture, no cut in the middle. This is not a
@@ -343,7 +348,7 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
   instances (`ShownRows`). `View.Filter` stays empty. `GroupSectionSelect.VisibleMembers` finds boundaries BEFORE filtering, then takes visible
   fights only. Range selects index `_rows` only while unsorted; search walks the grid's sorted view and resolves the matched object when scrolling.
   Restore selection by row instance (sorted too), and ask as `BoardReason.DialChange` on a toggle. See `docs/DesignNotes.md` →
-  "The fight list dials filter our rows, not the grid". Real-grid checks belong in `docs/ReleaseChecklist.md`.
+  "The fight list dials filter our rows, not the grid".
 - **The fight list moves its own viewport once**: one reveal per capture, owed when the capture opens and paid after the initial read and parser drain
   (`FightListReveal`: `Arm` per capture, `ReadFinished` from `EventsLogLoadingComplete`, `TryPay` asked by both doors) — not at the first snapshot,
   because a big file hands over rows mid-read. **No attention tests**: the pointer and the pane's visibility are not conditions (a list behind another
@@ -482,7 +487,8 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
   `Handled`/`SetObserved` **before** reporting and send a reporting failure to Trace. A cosmetic native refusal (`SetWindowTopMost`, `SetWindowLong`) keeps the
   window as it was with one Warn per error code instead of throwing into a handler. See docs/DesignNotes.md →
   "Nothing escapes a thread that has no net, and a fault speaks once".
-- **Releases**: when touching `sign.cmd` or `EQLogParserInstall/*.iss`, read `docs/ReleaseChecklist.md`.
+- **Releases**: when touching `sign.cmd` or `EQLogParserInstall/*.iss`, read `docs/ReleaseChecklist.md`. That file is the
+  release path only — it holds no per-feature test steps and must not start again.
 
 ## Post-Implementation Checklist
 - Zero-warning solution build command above prints `0`; nothing was suppressed; any file annotating with `string?`/`T?` opens

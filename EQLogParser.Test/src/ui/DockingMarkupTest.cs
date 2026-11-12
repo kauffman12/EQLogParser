@@ -16,8 +16,8 @@ namespace EQLogParser;
  * relocates it" — begins in XAML (`SideInDockedMode="Right"` + `State="AutoHidden"`); the retired Verified Players / Verified
  * Pets shells stay `Hidden`, and the shells themselves exist only so an old `dockSite.xml` still resolves instead of tripping
  * MainWindow's catch, which calls ResetState() and wipes every pane for every user. A markup edit that breaks any of this is a
- * real defect and fails here on any platform; what genuinely needs a human (opening a pane hidden behind another tab, and
- * restarting with a layout saved by an older build) lives in docs/ReleaseChecklist.md.
+ * real defect and fails here on any platform. What needs a live layout — opening a pane hidden behind another tab, and
+ * restarting with a layout saved by an older build — is untested, and nothing here claims it.
  */
 [TestClass]
 public class DockingMarkupTest

@@ -7,7 +7,7 @@ namespace EQLogParser.Wpf.Test;
 /*
  * Pin the opt-in window policy before the native show path runs; default callers must retain their existing policy.
  * These Windows-only tests do not show a window or prove focus behavior. Native styles and button-click activation
- * need the desktop checks in docs/ReleaseChecklist.md → "Quick Share prompt over the game, checked on Windows".
+ * need a live desktop and are untested.
  */
 [TestClass]
 public class MessageWindowFloatTest

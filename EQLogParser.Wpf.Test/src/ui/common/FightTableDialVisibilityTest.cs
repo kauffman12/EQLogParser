@@ -7,7 +7,7 @@ using EQLogParser;
 namespace EQLogParser.Wpf.Test;
 
 // These tests exercise the pane's bound data without loading a windowless grid.
-// Actual highlight/click/scroll checks belong in docs/ReleaseChecklist.md, not always-inconclusive tests.
+// Actual highlight/click/scroll behaviour needs a live window and is untested, rather than pinned by an always-inconclusive test.
 [TestClass]
 public sealed class FightTableDialVisibilityTest
 {

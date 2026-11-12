@@ -7,7 +7,7 @@ namespace EQLogParser;
  * window up. Both halves need a pin, and this assembly is where the settings fold and the tab strip live — `DamageMeterConfigState.Load()`
  * is the ONE reader of `OverlayMeterPanels`, and `MeterPanels.None` must be unreachable through it, because a meter with no tabs has
  * nothing left to configure and nothing that could ever wake it. The interlock itself (a lane you do not watch cannot pop the overlay)
- * is Core and pinned in MeterArrivalsTest; a real window on a real fight stays a gate in docs/ReleaseChecklist.md.
+ * is Core and pinned in MeterArrivalsTest; a real window on a real fight is untested.
  * See docs/DesignNotes.md → "Which panels the meter shows decides what may wake it and what is worth displaying".
  */
 [TestClass]
@@ -124,8 +124,7 @@ public class MeterPanelChoiceTest
    * busy hidden half keeps the meter up (the tab is right there; nudging it is `SetTabAttention`'s quiet answer), while both empty means no meter
    * anywhere -- and a lane that was switched off neither opens the window nor holds it open. WHAT counts as "lists anyone" is decided one level
    * below this function, by `HasRowEntries`, which reads the board BEFORE the class filter: a lens may not delete the window, only an empty lane
-   * can. That predicate is private to the window (it needs the stats model), so feeding these flags against a real filtered board is a gate in
-   * docs/ReleaseChecklist.md.
+   * can. That predicate is private to the window (it needs the stats model), so feeding these flags against a real filtered board is untested.
    */
   [TestMethod]
   public void TheWindowSurvivesWhileAnEnabledHalfHasRows()

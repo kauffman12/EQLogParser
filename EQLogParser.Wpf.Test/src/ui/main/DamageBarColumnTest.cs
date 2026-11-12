@@ -10,8 +10,8 @@ namespace EQLogParser.Wpf.Test;
  * ColumnDefinitions, TextBlocks and margins — which is where a forgotten assignment or a leftover per-column margin would live, and a
  * control that reports zero while still reserving a cell is exactly the bug the column switches were built to kill.
  *
- * Nothing here judges pixels across fonts: alignment of header words over digits, DPI and thin-bar sight stay Windows gates under
- * "Damage meter column switches, checked on Windows" in docs/ReleaseChecklist.md. This assembly compiles everywhere and runs only there.
+ * Nothing here judges pixels across fonts: alignment of header words over digits, DPI and thin-bar sight need a live window and are
+ * untested. This assembly compiles everywhere and runs only there.
  */
 [TestClass]
 public sealed class DamageBarColumnTest

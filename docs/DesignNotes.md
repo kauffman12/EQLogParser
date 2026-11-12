@@ -3228,8 +3228,8 @@ exactly as the setup window does, so a meter and its configure panel cannot disa
 used to parse each key twice, and the copy in the constructor read `OverlayEnableCritRate` with no 0..3 clamp while the staged copy clamped it, which is how a
 foreign settings file put the panel and the live meter out of step. The one value the window re-checks is the selected class, because "is that class still in
 the game" needs `EQDataStore`, which the staged object deliberately does not touch: a name no longer offered reads as ANY_CLASS on both surfaces and on the
-next Save. No headless test reaches these guards (app assembly, `ColorConverter`), so "a hostile settings.txt is answered the same way twice" is a Windows gate
-in `docs/ReleaseChecklist.md`. The overlay grew three internal verbs — `PreviewMeterState` (apply without
+next Save. No headless test reaches these guards (app assembly, `ColorConverter`), so "a hostile settings.txt is answered the same way twice" has no
+automated coverage. The overlay grew three internal verbs — `PreviewMeterState` (apply without
 persisting), `CommitMeterState` (apply, persist the same ini keys the old panel wrote, hand back to the game) and
 `DiscardMeterSettings` (just end: the next live meter reads the untouched saved values, so
 discarding needs no undo writes). The `_current*` fields stopped being half-state/half-control —
@@ -3252,7 +3252,7 @@ actually changes — measured while wiring: previewing every color-picker stop t
 reseeded every `DamageBar` on each intermediate stop, which is a flicker the player never asked for.
 `PreviewMeterState` also owns the height-refit decision: font, thin bars, row count or panel choice can change the content geometry;
 class, colour and other unrelated previews preserve a manually resized stage. `UpdatePanels` never independently requests a refit.
-The Save/Cancel and manual-height sequences are Windows gates in `ReleaseChecklist.md`.
+The Save/Cancel and manual-height sequences need a live window and no test covers them.
 
 The live toolbar sizes to its content in both axes. The operator's screenshot exposed two separate layout problems:
 DPS/Tank and the left controls sat below Damage/DPS/Sec, and the header-to-first-player gap was much larger than the
@@ -6854,7 +6854,7 @@ were changed deliberately to the new conservative rule.
 name Incogitable, but neither contains captured outgoing damage, so neither manufactures a zero-damage child.
 Full-reference and compact-meter results agreed in the replay. The disposable real-log assertion was deleted after
 verification; the data-driven fixtures remain. The six-second lookback boundary is asserted with a cast at exactly
-six seconds accepted and one at seven rejected. Windows UI interaction stays a gate in `docs/ReleaseChecklist.md`.
+six seconds accepted and one at seven rejected. The UI interaction itself needs a live window and is untested.
 
 **SPA-flag replay checks** (live grammar unless marked EMU):
 
@@ -7649,7 +7649,7 @@ hides the board rather than retaining old stats indefinitely, and a missing dama
 `DamageOverlayLifecycleTest` covers kills, overlapping lives, gaps, repeated names, one-shots, Reset, capture swaps and reopen.
 Its timed-mode example selects five killed mobs over several minutes with every quiet gap shorter than 60 seconds: a fresh
 60-second meter must match selecting those five fight-list rows in total damage, combat seconds and DPS. Polling cannot add
-idle wall time to the denominator. Windows popup/hide verification remains in ReleaseChecklist → "Damage overlay checks on Windows".
+idle wall time to the denominator. Popup and hide behaviour needs a live window and is untested.
 
 Short timed resets keep their legacy duration: the operator confirmed in 2.4.1 that three seconds without an attack hides and
 resets the meter. There is no extra timed display grace. **A quiet gap resets even if no poll saw it.** Receipt at 100 followed by 110
@@ -7835,8 +7835,7 @@ same-second Reset, filter reconsideration and rebuilds. Zero still prints as `0`
 **Pinned by** `MeterRecentWindowTest` (bucket boundaries, collisions, log-time aging), `DamageMeterRdpsTest`
 (incremental/reference encounter equivalence and cold-rebuild rates: lag, frozen silence, wide amounts, owner/pet and
 cross-life sums, Tank attribution, life removal, filter changes), and `MeterClockSeparationTest` plus `MeterArrivalsTest`
-(accounting versus receipt deadlines). Rendering, delayed-worker behavior and header alignment remain Windows gates in
-`docs/ReleaseChecklist.md`.
+(accounting versus receipt deadlines). Rendering, delayed-worker behavior and header alignment need a live window and are untested.
 
 ### Which panels the meter shows decides what may wake it and what is worth displaying
 
@@ -7903,8 +7902,8 @@ enabled hidden half does. Hide and switching to the populated tab clear it immed
 board answer paints (normally the one-second refresh plus build time, longer while builds defer). Not a board switch or a standing highlight.
 The toolbar retains the current phase across repaints and reselecting the same tab; changing tabs clears that phase before repainting.
 A toolbar created after the first board paint inherits the meter's current phase, so its deferred creation cannot swallow the first pulse.
-`NeedsTabAttention` owns the full panel/selection/lane mapping, pinned by `MeterPanelChoiceTest`; actual colour and rhythm remain Windows gates
-in `ReleaseChecklist.md`. If the theme's green reads too dim against the meter background, report it rather than inventing a second green.
+`NeedsTabAttention` owns the full panel/selection/lane mapping, pinned by `MeterPanelChoiceTest`; actual colour and rhythm need a live
+window and are untested. If the theme's green reads too dim against the meter background, report it rather than inventing a second green.
 
 **A meter that opens itself is not visible until an enabled, unfiltered board has a row.** `MainWindow.OpenDamageOverlayIfEnabled` shows such a window at
 opacity 0 and calls `RevealOnFirstContent()`; the window raises its own opacity on the first `ApplyMeterUpdateCore` that answers
@@ -7924,7 +7923,7 @@ Reset still keeps polling a still-active fight rather than closing on its own ze
 displayed, so boards, healing and export are untouched and widening the choice needs no receipt rescan. Explicit Reset and already-applied
 timed cuts remain forward-only: changing panels does not resurrect a retired accumulation. Copy Parse copies the selected tab, which is
 the same half that is drawn — the two could only part company while the app was allowed to move the board out from under the selection. Tab
-layout, the nudge and the preview's sample rows are Windows gates in `docs/ReleaseChecklist.md`; nothing in the WPF assembly is run from
+layout, the nudge and the preview's sample rows need a live window and are untested; nothing in the WPF assembly is run from
 Linux.
 
 ### Damage meter column switches: hiding one reserves no width
@@ -8004,7 +8003,7 @@ and the header words by operator decision: `DPS` on the tank board is DPS done *
 Pinned headless by `MeterColumnLayoutTest` (every column mask × every font, defaults, fallback, keys, cell order, words, the single check→mask fold and toolbar separation) and
 `MeterPanelPlacementTest` (growth, narrowing, left docking, secondary/negative work areas and pixel scaling). `DamageBarColumnTest` (Windows-only assembly)
 puts a real row through measure/arrange. Live toolbar/header separation, mini-bar margins, mixed-DPI docking/following, Save/Cancel and the upgrade sight remain
-Windows gates under "Damage meter column switches, checked on Windows" in docs/ReleaseChecklist.md.
+untested: they need a live window on a real theme.
 
 ### Three rates, three denominators
 
@@ -8115,7 +8114,7 @@ therefore are not constant in participant/life/block count, and a relevant histo
 cold walk. The proposed 100 ms steady-worker target has not been established as a percentile and the whole-history
 THJ append sample exceeded it. The measured win is removing repeated historical damage reconstruction/counting,
 not proving that every possible long session is free. Windows execution, end-to-end/GC/UI interference, high-add-count
-soak, and peak-retention measurement remain release gates in `ReleaseChecklist`.
+soak, and peak-retention measurement are measured by nobody but whoever runs them locally.
 
 A compact answer that disagrees with a full one fails in `DamageOverlayLifecycleTest`, which carries the compact/full
 comparisons for every lifecycle case; it does not wait for a count.
@@ -8548,7 +8547,7 @@ theme fan-out.
 **Verification boundary.** The former time-column test checked an explicitly called setter, not either lifecycle hook,
 and was removed during test consolidation. Raising `FrameworkElement.LoadedEvent` on an unrealized `SfDataGrid` can wedge
 inside vendor load handling; firing a whole-app theme change also requires MainWindow. Startup visibility, re-docking and
-font-scale changes therefore belong to the Windows checks in `docs/ReleaseChecklist.md`, not to a vendor property round-trip.
+font-scale changes therefore need a live window; they are neither a test here nor a vendor property round-trip.
 
 **Windows run afterwards: green, 1,698 passed / 8 gated skips across both assemblies** (1,545 cross-platform + 153 in
 `Wpf.Test`). That counts for two things beyond the new class passing. First, 6440d845's
@@ -10025,7 +10024,7 @@ Those tests and their production-only test wrappers were removed. The remaining 
 identity without loading a
 windowless grid; they compile on Linux but run only on Windows. Actual clicks, highlights, sorted search and selection
 preservation are explicit
-unchecked items in `docs/ReleaseChecklist.md`, not claimed as automated coverage.
+gaps: they need a live window, and nothing claims them as coverage.
 
 Re-announcement is conditional too — see the next section. The search mark survives a pass as long as its row stays visible.
 
@@ -10099,7 +10098,7 @@ asserts it headlessly (six cases: both orders of rows-vs-read, the empty answer 
 re-arming on a new load, a
 paid debt staying paid), and what a unit test cannot show — the realized grid moving once at the end of a read and then
 holding through a pull — is an
-unchecked item in `docs/ReleaseChecklist.md`.
+untested gap that needs a live window.
 
 ### What makes a board go one pass stale
 
@@ -15615,7 +15614,7 @@ published on the dispatcher; workers handle plain data only. A session/publicati
 after newer work, clearing, hiding or capture replacement. The shared view attaches theme events on Loaded and detaches on
 Unloaded; hosts also deactivate it explicitly when hiding/disposing. Image export targets the bounded view (fixed axis,
 visible columns and labels), never its logical-width canvas.
-Windows DPI, large-extent rendering, clipboard and lifecycle acceptance checks live in `docs/ReleaseChecklist.md`.
+Windows DPI, large-extent rendering, clipboard and lifecycle behaviour need a live window and are untested.
 
 ## DI inference: measured melee ladders, not automatic numbering
 
@@ -16711,8 +16710,8 @@ and `BuildTotalStats`, which is where the cost actually sits. That is backlog **
    running build or release its materialized records early. Cancellation must cover materialization and builders, not
    merely discard publication. → "A board belongs to the capture that asked" and
    "Snapshot unless a name changed what it is".
-3. **Long-session Windows behavior remains a release gate.** Linux measurements do not establish native rendering,
-   peak working set or overnight retention. Use the concrete checks in `ReleaseChecklist.md`; classify a new field run
+3. **Long-session Windows behavior stays unproven.** Linux measurements do not establish native rendering,
+   peak working set or overnight retention, and no list of manual steps stands in for them; classify a new field run
    by its named `board ask` / `stats build` traces before proposing another cache or status surface.
 
 Already closed, not backlog: cold fact compression, span-based parsing, the duplicate heal record lane, asynchronous
@@ -17235,12 +17234,12 @@ build/publish
 logic inline (no unpumped Task.Run assertions) and cover filter recovery, filtered census replacement and stale/held results.
 A Linux build is API validation, not a Windows paging test. Realized-grid, cache, header, editor, viewport and large-capture
 checks
-live in ReleaseChecklist. No responsiveness or memory improvement is claimed from unexecuted Windows measurements. If the vendor
+are unexecuted. No responsiveness or memory improvement is claimed from unexecuted Windows measurements. If the vendor
 on-demand behavior fails that gate, the fallback is fresh-list binding plus EnableDataVirtualization, with whole-list search and
 its unbounded per-census grid cost; this remains a fallback, not a second shipped mode.
 
-Built is not run: what the pager says, what the strip says, and where the pager stands on a realized grid stay ReleaseChecklist
-items, and the Windows test assembly compiles here without executing. One caveat recorded while this work landed: the
+Built is not run: what the pager says, what the strip says, and where the pager stands on a realized grid stay unverified
+here, and the Windows test assembly compiles without executing. One caveat recorded while this work landed: the
 page-number work is unrelated to the pre-existing timestamp-boundary flake in `ImportingTheSameMapTwiceChangesNothing` (the two
 imports cross a wall-clock second), so a red there is not evidence about paging.
 
@@ -17762,7 +17761,7 @@ template load/unload, and give the cells a nonzero height. The first state still
 second container is created after the host is already running. Every state transition checks GoToState's return value
 rather than turning a missing state into an opaque timeout. No production matcher, animation duration or expected outcome
 was relaxed. These fixture changes require a fresh Windows run; a Linux build is not that verification. Real Syncfusion-grid
-checks remain in ReleaseChecklist. The temporary runtime inspection used to verify the fix has been removed.
+checks need a live window. The temporary runtime inspection used to verify the fix has been removed.
 
 ## Character-status GIFs start paused until effectively visible
 
@@ -17930,7 +17929,7 @@ count, not one release — and
   predicate.
   `PostLoadCleanupOwnershipTest` exercises the actual handoff with deterministic callback interleavings, including collection
   failure,
-  without invoking GC. Real-window checks remain in ReleaseChecklist.
+  without invoking GC. Real-window behaviour is untested.
 - **lesson kept from the interim design** (`2026-11` review): while the load tick awaited its collector, the early return for
 "the capture closed during
   the pause" had to clear `_isStarting` on its way out, because a stuck true silences `SaveTimerTick` — closing a log mid-cleanup with no replacement open
@@ -18377,7 +18376,7 @@ retries that batch or publishes another afterward. Read and processor faults pro
 ordered publication cannot advance past that failed file. Workers drain before the caller observes the fault and warns
 `log search stopped early` with the exception. Missing files retain their existing quiet skip. `FileSearcherTest` pins no replay after a
 subscriber fault, worker drain, corrupt-archive and processor failure propagation, and missing-file behavior.
-Producer-side whole-file buffering and large-document repaint costs are unchanged. Real-control checks live in `docs/ReleaseChecklist.md`.
+Producer-side whole-file buffering and large-document repaint costs are unchanged. Real-control behaviour is untested.
 
 ## A chat range is whole days, and an untouched end dial rides the clock
 
@@ -18673,7 +18672,7 @@ Core. `FightTableGroupGestureTest.HeldModifierKeyDownsKeepAddingGroupsAcrossRepe
 through the modifier seam, routes intervening modifier key-downs, opens the real handler and checks successive unions by
 group id, overlapping groups, both close/click orders and a final plain replacement. The keyboard-abandonment cases retain
 F10/Apps/navigation coverage. These are Windows-only tests: building them on Linux does not execute them, and scripted
-key events do not prove hardware repeat delivery. The physical hold sequence remains in `ReleaseChecklist.md`.
+key events do not prove hardware repeat delivery. The physical hold sequence is untested.
 
 ## Trigger overlay positions are signed desktop coordinates
 
@@ -18701,7 +18700,7 @@ changes nothing in the selected overlay.
 `OverlayGeometrySyncTest` checks the editor range, signed geometry copying, selection isolation, and preservation of
 non-geometry edits. `OverlayPositionPersistenceTest` saves and reopens both kinds of overlay with negative Left, negative
 Top, both negative, and Left beyond the former upper bound. These tests run headlessly; actual preview dragging,
-property-grid coercion and live-window placement remain Windows checks in `ReleaseChecklist.md`.
+property-grid coercion and live-window placement are untested.
 
 ## Charm lookup, codec scratch, and meter answer-lock experiments
 
@@ -18856,8 +18855,8 @@ source positions or unsupported aggregate tables are fabricated.
 
 Not taken, and left deliberately: no `.xlsx` reader, no CSV/JSON sibling writer, and no change to the clipboard exports.
 Structural validity (parts, relationship graph, cell typing, per-part filter ranges) is asserted headless in
-`SpreadsheetExportTest`/`CaptureExportShapeTest`; "it opens in Excel" is a Windows check in
-`docs/ReleaseChecklist.md → Detailed .xlsx export checks on Windows`. Zero new dependencies, so `sign.cmd` and the
+`SpreadsheetExportTest`/`CaptureExportShapeTest`; "it opens in Excel" is asserted by no test and is
+checked by whoever opens the file. Zero new dependencies, so `sign.cmd` and the
 installer list are unchanged (`FontAwesome5` is referenced by the headless test assembly only, and ships nothing).
 
 ## The detailed export, reviewed against issue #191
@@ -19286,7 +19285,7 @@ The storage impact is modest rather than a blanket widening of every retained va
 On a 1.3 GB capture with 7.47 million damage facts and 3.45 million heals, compressed backing grew by just **2,705 bytes
 for damage and 40 bytes for healing**. The settled heal-table estimate increased about **640 KiB**, mainly its five warm
 chunks. Full decoding costs about **13.2 MiB** extra heal-row payload on that capture, plus wider materialized records;
-process peaks varied, so this is not a claim of zero additional memory. Windows/live checks remain in `ReleaseChecklist.md`.
+process peaks varied, so this is not a claim of zero additional memory. Windows/live behaviour is untested.
 
 Validation recovered **eight missing hits totaling 40,856,041,344**, credited exactly to tanking; outgoing damage and healing
 were unchanged. Regression tests cover wide parsing, cold storage, boards, histograms, meter totals and Excel numeric cells.
@@ -19378,7 +19377,7 @@ it does not prove the operator's particular Windows Test Explorer cache was the 
 
 Separately, Kizant live passes the cold-storage, same-process reproducibility and retained incremental-classification gates,
 and Roper THJ passes cold storage with `EQLP_EMU=1`. Startup/theme sizing, column order, take-back presentation and frozen-grid visuals
-remain Windows checks in `docs/ReleaseChecklist.md`.
+are untested and need a live window.
 
 ## Plain decimal input uses one invariant parser
 
@@ -19410,7 +19409,7 @@ its 30-second dispatcher ticks call `SaveTimerTick`, which flushes pending setti
 Power suspend stops the timer and flushes settings; resume restarts it; window close flushes and stops it. Other timer callers request
 `false` and start on their own lifecycle paths. Ignoring the flag silently disables ordinary autosave until a power resume, leaving settings
 changes exposed to a crash or forced exit until another explicit save. This is periodic persistence, not a guarantee against losing the
-last unsaved interval. `UiUtilTimerTest` pins both start modes in the Windows-only assembly; the disk/relaunch check is in `ReleaseChecklist.md`.
+last unsaved interval. `UiUtilTimerTest` pins both start modes in the Windows-only assembly; the disk/relaunch path is untested.
 
 ## Log Management saves the displayed settings
 
@@ -19435,7 +19434,7 @@ and retry support, not a new transactional or atomic-file persistence protocol.
 `LogManagementSettingsTest` exercises every offered field value through the actual settings writer and a disk reload,
 both Any thresholds together, root/UNC/equals-containing paths, refusal, and failed-write rollback/retry.
 `LogManagementWindowTest` covers the checkbox/revert handlers and combo-to-setting wiring, but only built on Linux;
-its runtime checks and the live Save/reopen checks remain owed on Windows in `docs/ReleaseChecklist.md`.
+its runtime behaviour and the live Save/reopen path are untested here.
 
 ## Line-chart rolling rates count seconds, not samples
 
@@ -19472,8 +19471,8 @@ counts, not the length of silence. Vendor rendering cost still needs Windows val
 `ChartRollingSeriesTest` pins the fixed denominator and five/six-second boundary, and checks the missing trough,
 legitimate nonzero lows, shared data-edge tails, simultaneous arrival/expiry, fractional labels, wide amounts, staggered group sums,
 source immutability and a seeded comparison against `MeterRecentWindow` at every integer second. The Windows-only
-`LineChartSelectionTest` checks rolling-mode wiring and that switching back preserves aggregate buckets; rendering remains
-in `docs/ReleaseChecklist.md`, and that test compiles here without executing.
+`LineChartSelectionTest` checks rolling-mode wiring and that switching back preserves aggregate buckets; rendering is untested,
+and that test compiles here without executing.
 
 ### Sparse chart buckets: cumulative correctness and calculation cost
 
@@ -19590,8 +19589,8 @@ coverage measuring nothing, a welded total never outgrowing its span — union-v
 scratch, an unmarked row at zero) and `BusyTimeTest` (the three builder seams: own accepted marks, misses counted and excluded damage not, strict
 children under a joining aggregate that still cannot exceed its coverage, marks following per-record ownership, healer-not-recipient, zero-landed
 heals, the damage-type dial, one name answering differently per lane, narrowing and widening, `Busy == Sec` across fight gaps of 5/6/7/10 seconds,
-unstamped rows at 0, scratch released with `Busy <= Sec` asserted on every published row, and the empty-answer path intact). Grid behaviour is owed
-on Windows in `docs/ReleaseChecklist.md`.
+unstamped rows at 0, scratch released with `Busy <= Sec` asserted on every published row, and the empty-answer path intact). Grid behaviour is untested
+here.
 
 ## Trigger property section ordering
 
@@ -19649,7 +19648,7 @@ audio handler and the display-preparation seam, including captures/modifiers, pr
 reset-only counting, literal sounds and null/unset handling. `TimerResetReloadTest.cs` holds reload readiness false across the reset
 deadline or starts that state after enqueueing, then drives the real audio handler for TTS and sound; it also pins disposal refusal
 and the ordinary-speech readiness guard. `TriggerUtilCopyTest` pins the stored fields and sound/text editor fold.
-Actual speech/text-overlay presentation remains a Windows check in `docs/ReleaseChecklist.md`.
+Actual speech/text-overlay presentation is untested.
 
 ## Chat lanes ask their own character, not the main window
 
