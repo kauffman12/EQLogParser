@@ -30,7 +30,7 @@
                            AllowResizingColumns="True"
                            AllowSelectionOnPointerPressed="True"
                            AllowSorting="True"
-                           AutoExpandMode="AllNodesExpanded"
+                           AutoExpandMode="RootNodesExpanded"
                            AutoGenerateColumns="False"
                            ColumnSizer="Auto"
                            RequestTreeItems="RequestTreeItems"

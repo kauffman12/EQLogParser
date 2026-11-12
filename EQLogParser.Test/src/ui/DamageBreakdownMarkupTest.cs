@@ -24,5 +24,7 @@ public class DamageBreakdownMarkupTest
 
     Assert.AreEqual("RequestTreeItems", grid.Attribute("RequestTreeItems")?.Value);
     Assert.IsNull(grid.Attribute("ChildPropertyName"), "binding directly to SubStats bypasses the spell categories");
+    Assert.AreEqual("RootNodesExpanded", grid.Attribute("AutoExpandMode")?.Value,
+      "players open initially, but spell categories stay collapsed until requested");
   }
 }

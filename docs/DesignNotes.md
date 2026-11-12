@@ -15582,6 +15582,8 @@ surface on screen does not use", and it was taken up on the spot: see "A histogr
 rows, DoT Tick contains DoTs, and Proc contains procs. Melee, defensive outcomes, damage shields and other damage
 remain individual rows. Category totals must be positive to show, matching the outgoing breakdown; a visible category
 still keeps its zero-damage children. Rows default to descending total, with Direct Damage, DoT Tick, Proc tie order.
+Both panes start with player roots expanded and spell categories collapsed (`AutoExpandMode="RootNodesExpanded"`);
+individual spell rows appear only when their category is opened or Expand All is requested.
 
 Only category rows are new. `StatsUtil.MergeStats` folds their counters/extrema and `CalculateRates` applies the existing
 outgoing rules: category seconds are the maximum child span, percentages use the player's total, and SDPS uses the
@@ -15591,7 +15593,7 @@ on the dispatcher before assigning their roots, and both grids request children 
 
 `DamageBreakdownGroupsTest` pins categorization, Bane folding, ordering, totals/rates, original child references,
 zero-damage defenses, wide amounts and repeated builds without mutation. `DamageBreakdownMarkupTest` pins both grids'
-request-driven hierarchy. Expansion and sorting must preserve the category/spell hierarchy; chart selection and copy/export
+request-driven hierarchy and root-only initial expansion. Expansion and sorting must preserve the category/spell hierarchy; chart selection and copy/export
 must not double-count rows or retain categories from a previous selection. Damage Breakdown keeps player/pet selection
 deduplication and Show Pets visibility. No test reaches these realized-tree behaviours; they need a live Windows window.
 
