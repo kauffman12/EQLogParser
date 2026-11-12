@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 
 // Annotations only, no null-flow analysis: the project builds with Nullable=disable, and this API speaks in
 // optional rows/fights because a scope legitimately has nothing to show.
@@ -199,6 +200,15 @@ namespace EQLogParser
     internal int TankingOrdinalCount(DerivedFight fight)
     {
       lock (_gate) return _tankingOrdinals.TryGetValue(fight, out var ordinals) ? ordinals.Count : 0;
+    }
+
+    // Copy only the prefix frozen with the row metadata; a later pass may already have appended more ordinals.
+    // Copy one row at a time rather than retaining another capture-sized ordinal array.
+    internal int[] SnapshotTankingOrdinals(DerivedFight fight, int count)
+    {
+      lock (_gate) return count > 0 && _tankingOrdinals.TryGetValue(fight, out var ordinals)
+        ? CollectionsMarshal.AsSpan(ordinals)[..count].ToArray()
+        : [];
     }
 
     // The ordinals behind a row, in table order — for the tests that hold this index to its contract, so

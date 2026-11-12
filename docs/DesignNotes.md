@@ -5621,7 +5621,7 @@ The audit did find separate post-classification reads still using legacy assumpt
 - `DamageBreakdown` uses letters-only name shape plus registry pet membership for Show Pets, so an article-shaped merc
   is treated as a pet by that filter even though the summary knows it is Merc.
 - `EventViewer` still asks registry membership for death participants and lets the NPC data file preempt the classified
-  answer. `NpcStatsViewer` excludes friendly names using registry membership only. A database-only Merc has no registry
+  answer. `SpellResistStatsViewer` excludes friendly names using registry membership only. A database-only Merc has no registry
   sighting, so those surfaces can disagree with its verdict.
 
 These display/build reads are different from ingest-time grammar checks, chat-speaker validation, the explicit swarm-pet
@@ -7487,7 +7487,7 @@ Incogitable (`Blizzak`) and one derived-only name on two captures, plus per-colu
 (`Inconsistent` −3 hits / −125 k). Damage remains "renamed more than lost" for the reason already documented (pet folding),
 and the raid total sits inside +0.6 % everywhere. Legacy's removal is still gated on the surfaces that read `FightManager`
 rather than on parity: the overlay's show/reset path, the main grid's `ComputeStats`, and the line viewers (damage/heal/tank
-tables, `NpcStatsViewer`, `Timeline`), which are a separate workstream because the fact tables capture none of what they show.
+tables, `SpellResistStatsViewer`, `Timeline`), which are a separate workstream because the fact tables capture none of what they show.
 
 ## A fight that is still going: porting the meter's show/reset rule
 
@@ -17416,7 +17416,7 @@ order, and the further down a live capture's list you scrolled the worse it read
 docs — there is no `syncfusion-wpf` folder in a fresh clone, so the claim below is made
 from the code and the shipped assembly only).** Every other sortable grid in the
 application hands its grid a *fresh list* whenever it has rows to show —
-`NpcStatsViewer`, `SpellDamageStatsViewer`, `TauntStatsViewer`, `LootViewer`,
+`SpellResistStatsViewer`, `SpellDamageStatsViewer`, `TauntStatsViewer`, `LootViewer`,
 `HitLogViewer.xaml.cs:333` (`dataGrid.ItemsSource = CollectionViewSource.GetDefaultView(list)`)
 and the three breakdown panes. For those, sorting is applied to a snapshot every build and
 nothing has to be remembered; two of them also hook `ItemsSourceChanged`. `AllowSorting="True"`
@@ -19723,3 +19723,115 @@ rejection of other senders
 (including the globally selected player), Clear, exact syntax and invalid offsets. `GinaQuickShareTest` pins that the
 monitored character's own share is recorded as mine while the main window shows another player. These pin recognition and
 record contents, not Windows overlay presentation.
+
+## NPC health is estimated from killed lives, and concurrent names pool
+
+`NpcCombatStats` answers "how tough was this NPC" for the NPC Statistics pane. The log never states an NPC's health — no
+combat line carries remaining hit points and `data/npcs.txt` is a name per line — so every number is an estimate over the
+lives the raid finished. These laws keep the estimate about one creature:
+
+- **A life is the projection's row.** `DerivedFight.DamageToOwner` is the damage the row's owner *received*, and the
+  projection already splits a name at each death and at `EngagementGapS` of silence. Re-cutting lives inside the estimator
+  is a second copy of that rule, and the second copy is what drifts.
+- **Concurrent same-name lives pool; they never split.** Nothing in a log distinguishes two mobs answering to one name, so
+  arrival order decides which row a hit lands in and every row is wrong. Measured on the Incogitable capture, a name with
+  two lives in one continuous stream split 687M/145M across its rows where the pool said 416M each; another split
+  2.53B/279M. A run of death-separated rows (no silence past the gap between them) gives each killed life the same estimate:
+  **(pool damage − observed healing) ÷ killed lives in the pool**. The final average is weighted by killed lives, never by
+  the number of pools. One kill taking 900 and three kills taking 300 total average 300, not the equally weighted
+  average-of-pools 500. Keep fractional pool estimates until the final integer display.
+- **An unfinished life is a lower bound, never an observation.** A wipe, a leash or a log that ends mid-pull says "at least
+  this much", and averaging those drags the number toward the pull's length. Rows not ended `Slain` are excluded — and so is
+  any run containing one, because its pool total includes damage on a creature still standing at the end. A name with no
+  killed life gets no row: an empty table over a night of wipes is the true answer. A row with kills but no priceable pool
+  keeps its Deaths and melee measurements and leaves Avg HP **blank**, not zero. `AvgHp` stays nullable through the bound
+  row and numeric column; its header tooltip identifies the estimate and explains the blank. A nonpositive net-health
+  estimate is also unknown, never a fabricated zero or negative HP.
+- **Healing is not starting health.** A healed mob takes more damage than it started with, so healing landing on the name
+  inside the run's span is **subtracted** from captured damage. For 1,500 damage and 250 observed healing, starting HP is
+  approximately 1,250, not 1,750. `HealFact.Total` is landed healing; overheal is not subtracted. Outside the run's span a
+  heal belongs to no priced life. Unlogged regeneration, damage and healing remain uncertainty, not guessed corrections.
+- **Selection does not identify an instance.** Build pools from the snapshot's complete `AllFights`, even for Selected
+  Fights. Each selected killed life receives its complete pool's per-life estimate, weighted by selected killed lives in
+  the final average. Only selected rows contribute Deaths and melee. An unselected unfinished life still makes its pool
+  unpriceable. Null selection means the whole capture; an empty selection means none.
+
+Accepted bias: the killing blow overshoots remaining health by part of a hit, so the estimate reads slightly HIGH.
+Measured across 646 killed lives, that blow is ~0.9% of the life's damage at the median — smaller than
+instance-to-instance variance, and correcting it would stack a guess on an estimate.
+
+Zone is an interval, not a capture property (`NpcZoneTimeline`). The only zone truth a log carries is the local player's
+own `You have entered <zone>.` line, which `CastLineParser` files as a `ZoneRecord`: 767 of them on the Incogitable
+capture, zero on a 34 MB one, so the stretch before the first line reads *Unknown* rather than a guessed zone. Group on the
+visit **index**, not the name — one night re-entered a single zone 122 times, and two visits are two populations of the
+same mob. A zone line that names nothing (`an area not on the map`) is still a boundary: it splits visits and reads Unknown
+inside. The parser stores that literal sentence fragment, not null; normalize the parser's `an area` prefix at the zone
+interval door. Equal-second entries preserve file order so the last line wins. **First Seen** carries the earliest life
+begin in each name/visit's complete pool context, even under selection, so re-entered zones do not look like duplicate rows.
+The grid formats that log clock as a date/time but sorts its numeric value.
+
+The estimator requires a timeline; a missing one must fail rather than silently admit raid people as NPCs.
+The melee columns read `FightFactIndex`'s tanking ordinals, which are `FactTarget.RaidSide` by construction — a player, a
+pet or a mercenary took this — filtered to `TypeId == Melee`. No side question is re-derived here. Melee totals accumulate
+in decimal before the final integer average: individually valid 48-bit hits can sum beyond long. Absorbed blows carry no
+amount and no melee label, so they are absent, which is what "a rune-eaten blow connects but did not hit" has to mean for a
+health estimate. `PrepareNpcStats` follows the export handoff: under `CombatCapture.DeriveQuiescent`, copy the complete
+projection's life metadata, selection membership, per-life tanking counts and heal-stream limit. The expensive scan runs
+after releasing the gate, against immutable facts and frozen metadata. `SnapshotTankingOrdinals` copies only the captured
+prefix under the index gate; later appends cannot enter it. The original `DerivedFight` reference is an index key only —
+no worker reads its changing fields. A continued pass mutates old rows, so preparation refuses any snapshot other than
+the engine's latest published projection: an old list can omit a new same-name life while its existing member has already
+acquired a death. A refused question stays owed until the replacement is applied, or asks immediately if FightTable has
+already applied it; there is no retry loop against the obsolete list. The header tooltips name the direction:
+Avg/Max Melee measure damage **dealt by** the NPC to players, pets or mercenaries, not damage received by it.
+
+Count selected kills per name/visit before sorting pools or copying melee ordinals; a group with none cannot produce a
+row. An eligible group still keeps every life for pool context and every selected life's melee, including unfinished
+lives. The grouped melee walk holds a damage `RetainDecoded` lease so revisiting a cold chunk for another name or visit
+does not decode it again. Healing scans only names/visit envelopes with selected kills, retaining complete pool context
+and the quiet gaps between pooled lives. Ordered tables enter at the first relevant time, bounded by the frozen heal
+prefix, and stop after the last envelope; unordered tables fall back to the complete captured prefix. Matching heals are
+kept time-sorted per name, so each run binary-searches its start rather than rescanning all that name's heals. Envelopes
+are conservative, not a second copy of pool pricing: they may retain heals from an unpriceable run or between runs, but
+only each priceable run's exact inclusive bounds subtract healing. The sequential scan needs no decode lease.
+
+Loading completion is not snapshot availability. The pane records the capture's completed-read fact watermark in
+`NpcStatsRefresh` and waits until an applied snapshot covers it; a late-finishing mid-read pass cannot pay that debt.
+Opening/reopening and explicit Refresh enter the same covering-snapshot door as loading completion. A pane opened after
+the completion event must still wait for the final projection instead of keeping the last mid-read answer indefinitely.
+Starting a build spends nothing: only publication of the current, covering answer pays. Failed or superseded work leaves
+it owed for the next applied snapshot or Refresh, without a self-retrying loop. A read-complete event arriving just after
+an identical covering answer was published can reuse it. An empty selection or projection publishes an empty answer and
+pays too. Hide/close/capture change invalidate in-flight answers and clear the old refresh debt; an obsolete worker may
+neither publish nor change the replacement's debt. The pane subscribes only while open and keeps no engine reference.
+
+`FightTable` announces `EventsFightSnapshotChanged` after applying rows and restoring selection on **both** patch and
+wholesale paths, and announces null after capture clear. A waiting pane refreshes on that event even in All Fights mode;
+ordinary live growth owes no full-capture scan. The title tooltip identifies the result as a snapshot and points to
+Refresh for later combat. Selected Fights also follows `EventsFightSelectionSettled`, emitted at
+`AnnounceSelection` after its settle/deduplication gates, including deselection. Every subscriber is guarded separately.
+This plain notification does not materialize legacy `Fight` records or revive the old `EventsFightSelectionChanged`
+subscriptions in Spell Damage and Taunt Usage.
+
+The pane uses its own `SummaryBuildGate`: one worker, only the newest waiting question, and identical questions collapsed.
+Its key includes session, snapshot content/identity stamp, live damage/heal prefixes, zone-boundary count, scope and
+selected ids. Clearing the displayed answer advances a generation so a hidden/reopened pane cannot reuse a cleared grid;
+a deliberate Refresh advances its own generation to request fresh work. The worker checks ownership on the dispatcher
+before walking and again before publishing; no widget or refresh-state read belongs on the worker. A failed replacement
+also invalidates reuse of the previous answer, because a publication failure could have touched part of the grid.
+
+`NpcCombatStatsTest` pins detached questions across real projection continuation (death, pool membership, selection,
+melee and healing prefixes), the single-life price, pool vs arrival-order split, death-weighted averaging and deferred
+rounding, selection retaining complete pool context, unselected unfinished lives vetoing a price, selected unfinished
+lives contributing melee only to groups with selected kills, unknown HP remaining null, healing subtracted inside the
+span only (ordered and unordered, including quiet gaps within a pool), the real parser's unnamed-zone output,
+distinguishable visits, wide melee accumulation, timeline refusal and a charmed raider getting no row.
+`HealWindowWalkTest` pins bounded searches against an appended tail. `NpcStatsRefreshTest` pins missing and mid-read
+snapshots, publication-only debt payment, retry after failure, newest-question ownership, covering-answer reuse and capture
+reset. `NpcStatsBuildKeyTest` pins key inputs and invalidations; `SummaryBuildGateTest` pins single-flight and recovery.
+`NpcStatsPreparationTest` pins rejection of superseded and wrong-session projections at the engine handoff (Windows-only).
+`NpcCombatStatsMarkupTest` pins only menu/dock registration and scope declarations, not C# method bodies.
+`NpcCombatRowContractTest` checks estimator/bound-row property names and types (Windows-only). `FightTableSessionSwitchTest`
+pins the applied-snapshot notification on both publish paths and capture clear, plus settled selection/deselection and
+subscriber isolation (Windows-only). No test reaches the pane's actual opening/Refresh subscription wiring or the realized
+statistics grid: copying results, dropdown filtering, blank numeric rendering, sorting and CSV copy remain unexercised.

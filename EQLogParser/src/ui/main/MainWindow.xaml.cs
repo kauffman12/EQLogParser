@@ -360,6 +360,12 @@ namespace EQLogParser
         ? fightTable.GetFightsOverlapping(fromT, toT)
         : [];
 
+    // Rows plus the snapshot they belong to, for the tables that read facts (NPC Statistics). See FightTable.GetStatRows.
+    internal (DerivedSnapshot Snapshot, IReadOnlyList<DerivedFight> Rows) GetNpcStatRows(bool selected)
+      => npcWindow?.Content is FightTable fightTable && fightTable.SessionActive
+        ? fightTable.GetStatRows(selected)
+        : (null, []);
+
     internal void AddAndCopyDamageParse(CombinedStats combined, List<PlayerStats> selected)
     {
       Dispatcher.InvokeAsync(() =>

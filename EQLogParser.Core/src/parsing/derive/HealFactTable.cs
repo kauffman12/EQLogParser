@@ -416,10 +416,13 @@ namespace EQLogParser
      * asks it). Returns HealCount when every row is older, which is the honest "start past the end" rather than a clamp:
      * a window to the right of the capture materializes nothing either way.
      */
-    public int FirstIndexAtOrAfter(double time)
+    public int FirstIndexAtOrAfter(double time) => FirstIndexAtOrAfter(time, _healCount);
+
+    // A detached question may search only its captured prefix, even while later rows are appended.
+    internal int FirstIndexAtOrAfter(double time, int count)
     {
       var low = 0;
-      var high = _healCount - 1;
+      var high = Math.Min(_healCount, count) - 1;
 
       while (low <= high)
       {

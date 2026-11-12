@@ -24,6 +24,8 @@ namespace EQLogParser
   {
     internal static event Action<string, bool> EventsLogLoadingComplete;
     internal static event Action<List<Fight>> EventsFightSelectionChanged;
+    internal static event Action EventsFightSelectionSettled;
+    internal static event Action<DerivedSnapshot> EventsFightSnapshotChanged;
     internal static event Action<string> EventsChartOpened;
     internal static event Action<string> EventsDamageSummaryOptionsChanged;
     internal static event Action<string> EventsHealingSummaryOptionsChanged;
@@ -63,6 +65,10 @@ namespace EQLogParser
     // The scoped variant the death viewer wants - see MainWindow.GetFightsOverlapping for the rule.
     internal static List<Fight> GetFightsOverlapping(double fromT, double toT) =>
       _mainWindow?.GetFightsOverlapping(fromT, toT) ?? [];
+
+    // Rows and the snapshot that owns their fact table, for the tables built from facts (see FightTable.GetStatRows).
+    internal static (DerivedSnapshot Snapshot, IReadOnlyList<DerivedFight> Rows) GetNpcStatRows(bool selected) =>
+      _mainWindow?.GetNpcStatRows(selected) ?? (null, []);
     internal static void FireChartOpened(string name) => EventsChartOpened?.Invoke(name);
     internal static void FireDamageSelectionChanged(PlayerStatsSelectionChangedEventArgs args) => EventsDamageSelectionChanged?.Invoke(args);
     internal static void FireTankingSelectionChanged(PlayerStatsSelectionChangedEventArgs args) => EventsTankingSelectionChanged?.Invoke(args);
@@ -70,6 +76,27 @@ namespace EQLogParser
     internal static void FireWindowStateChanged(WindowState state) => EventsWindowStateChanged?.Invoke(state);
     internal static void FireLogLoadingEvent(string log, bool open) => EventsLogLoadingComplete?.Invoke(log, open);
     internal static void FireFightSelectionChanged(List<Fight> fights) => EventsFightSelectionChanged?.Invoke(fights);
+
+    // Plain notification for fact-backed panes; do not materialize legacy Fight records merely to announce a selection.
+    internal static void FireFightSelectionSettled()
+    {
+      if (EventsFightSelectionSettled is not { } handlers) return;
+      foreach (Action handler in handlers.GetInvocationList())
+      {
+        ThreadBoundary.Guard("fight selection subscriber", handler);
+      }
+    }
+
+    // Raised on the dispatcher AFTER FightTable has applied both rows and selection; null clears the capture.
+    internal static void FireFightSnapshotChanged(DerivedSnapshot snapshot)
+    {
+      if (EventsFightSnapshotChanged is not { } handlers) return;
+      foreach (Action<DerivedSnapshot> handler in handlers.GetInvocationList())
+      {
+        ThreadBoundary.Guard("fight snapshot subscriber", () => handler(snapshot));
+      }
+    }
+
     internal static void ShowTriggersEnabled(bool show) => _mainWindow?.ShowTriggersEnabled(show);
     internal static DockingManager GetDockSite() => _mainWindow.dockSite;
     internal static Window GetOwner() => _mainWindow;
@@ -114,9 +141,12 @@ namespace EQLogParser
       SyncFusionUtil.AddDocument(dockSite, typeof(RandomViewer), "randomsWindow", "Random Rolls");
       SyncFusionUtil.AddDocument(dockSite, typeof(LootViewer), "lootWindow", "Looted Items");
       SyncFusionUtil.AddDocument(dockSite, typeof(TriggersView), "triggersWindow", "Trigger Manager");
-      SyncFusionUtil.AddDocument(dockSite, typeof(NpcStatsViewer), "spellResistsWindow", "Spell Resists");
+      // The class is SpellResistStatsViewer; the dock name stays "spellResistsWindow" because that string is what a
+      // saved dockSite.xml keys the operator's arrangement on. Renaming it would lose their layout, so only the type moved.
+      SyncFusionUtil.AddDocument(dockSite, typeof(SpellResistStatsViewer), "spellResistsWindow", "Spell Resists");
       SyncFusionUtil.AddDocument(dockSite, typeof(SpellDamageStatsViewer), "spellDamageStatsWindow", "Spell Damage");
       SyncFusionUtil.AddDocument(dockSite, typeof(TauntStatsViewer), "tauntStatsWindow", "Taunt Usage");
+      SyncFusionUtil.AddDocument(dockSite, typeof(NpcCombatStatsViewer), "npcCombatStatsWindow", "NPC Statistics");
       SyncFusionUtil.AddDocument(dockSite, typeof(DamageSummary), "damageSummaryWindow", "DPS Summary", true);
     }
 

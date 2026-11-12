@@ -147,6 +147,16 @@ public sealed class HealWindowWalkTest
   }
 
   [TestMethod]
+  public void ADetachedPrefixSearchDoesNotReadTheAppendedTail()
+  {
+    var heals = Table(8, Base + 100, Base + 200, Base + 10, Base + 20, Base + 30, Base + 40);
+    Assert.IsFalse(heals.AscendingTime, "later appends may be unordered even when the captured prefix was ordered");
+    Assert.AreEqual(1, heals.FirstIndexAtOrAfter(Base + 150, 2));
+    Assert.AreEqual(2, heals.FirstIndexAtOrAfter(Base + 201, 2), "past the prefix returns its count, not the live count");
+    Assert.AreEqual(0, heals.FirstIndexAtOrAfter(Base, 0));
+  }
+
+  [TestMethod]
   public void NoWindowIsTheWholeCaptureAndAnEmptyWindowIsNothing()
   {
     var heals = Table(4, Base, Base + 60, Base + 120);

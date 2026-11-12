@@ -94,6 +94,11 @@ namespace EQLogParser
 
     internal int MeterCapturedCount => _facts.FactCount;
 
+    // Completed-read watermark for deferred panes; a snapshot must cover every captured stream before it pays.
+    internal long CapturedTotal =>
+      _facts.FactCount + _heals.HealCount + _facts.DeathCount + _facts.TauntCount
+      + _facts.IdentityEventCount + _facts.EvidenceCount;
+
     // The snapshot currently on screen (see DerivedSnapshot.Facts): a selection is materialized against
     // the pass that produced the rows, so it has to be reachable from the UI without re-deriving.
     private DerivedSnapshot _snapshot;
@@ -309,6 +314,19 @@ namespace EQLogParser
 
       lock (timeline.SyncRoot)
         return timeline.OwnerOf(name, double.PositiveInfinity);
+    }
+
+    // Same handoff as export: freeze under the derive gate, then do the expensive walk outside it.
+    internal NpcCombatStats.Input? PrepareNpcStats(DerivedSnapshot snapshot, NpcZoneTimeline zones,
+      IReadOnlyList<DerivedFight>? selected)
+    {
+      return _capture.DeriveQuiescent(() =>
+      {
+        // Continued passes mutate the old rows. Their old list is no longer complete pool context.
+        if (_disposed || snapshot.SessionId != SessionId || !ReferenceEquals(snapshot, _meterSnapshot)) return null;
+        return NpcCombatStats.Capture(snapshot.AllFights, snapshot.Facts, snapshot.DamageIndex,
+          snapshot.Timeline, snapshot.Heals, zones, selected);
+      });
     }
 
     /// <summary>Freezes selection, prefixes and identity before the export worker starts.</summary>
@@ -957,10 +975,6 @@ namespace EQLogParser
      */
     private void MeterDamageArrived(int through, double sourceTime) =>
       _meterArrivals.Record(through, MeterArrivals.Now, sourceTime, DateUtil.ToDotNetSeconds(DateTime.Now));
-
-    private long CapturedTotal =>
-      _facts.FactCount + _heals.HealCount + _facts.DeathCount + _facts.TauntCount
-      + _facts.IdentityEventCount + _facts.EvidenceCount;
 
     /*
      * The trigger, decided by DeriveCadence (where the rule and its measurements live). This method only feeds it the counters

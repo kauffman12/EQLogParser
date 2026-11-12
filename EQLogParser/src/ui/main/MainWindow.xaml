@@ -259,6 +259,11 @@
                 <fa:ImageAwesome x:Name="tauntStatsIcon" Tag="tauntStatsWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Check" />
               </MenuItem.Icon>
             </MenuItem>
+            <MenuItem x:Name="npcCombatStatsMenuItem" Header="_NPC Statistics" Click="MenuItemWindowClick">
+              <MenuItem.Icon>
+                <fa:ImageAwesome x:Name="npcCombatStatsIcon" Tag="npcCombatStatsWindow" Loaded="WindowIconLoaded" Style="{StaticResource EQIconStyle}" Visibility="Hidden" Icon="Solid_Paw" />
+              </MenuItem.Icon>
+            </MenuItem>
           </MenuItem>
           <Separator />
           <MenuItem x:Name="windowList" Header="_Windows">

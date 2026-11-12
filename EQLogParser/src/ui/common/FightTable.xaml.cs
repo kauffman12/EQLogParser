@@ -523,6 +523,7 @@ namespace EQLogParser
       _reveal.Arm();
       _sessionPainted = false;
       _capturedFacts = 0;
+      MainActions.FireFightSnapshotChanged(null);
     }
 
     /*
@@ -635,6 +636,7 @@ namespace EQLogParser
           if (touched) AnnounceSelection(removedSelected ? BoardReason.RowEdited : BoardReason.ContentMoved, force: true);
 
           RevealNewestRowIfOwed();
+          MainActions.FireFightSnapshotChanged(snapshot);
           return;
         }
 
@@ -693,6 +695,7 @@ namespace EQLogParser
         AnnounceSelection(BoardReason.SnapshotSwap);
 
         RevealNewestRowIfOwed();
+        MainActions.FireFightSnapshotChanged(snapshot);
       });
     }
 
@@ -868,6 +871,10 @@ namespace EQLogParser
     internal (DerivedSnapshot Snapshot, IReadOnlyList<DerivedFight> Fights) GetExportSelection()
       => (_currentSnapshot, GetSelectedFights());
 
+    // Scope and snapshot travel together. The estimator also reads Snapshot.AllFights for unselected pool context.
+    internal (DerivedSnapshot Snapshot, IReadOnlyList<DerivedFight> Rows) GetStatRows(bool selected)
+      => (_currentSnapshot, selected ? GetSelectedFights() : _currentSnapshot?.AllFights ?? []);
+
     internal List<Fight> GetFights(bool selected)
         => DeriveEngine.MaterializeFights(_currentSnapshot, selected ? GetSelectedFights() : null);
 
@@ -994,6 +1001,7 @@ namespace EQLogParser
       }
       Log.Debug($"announce [{reason}]{(detail is null ? string.Empty : $" {detail}")}: {ids.Count} row(s), stamp {_currentStamp}"
                 + (force ? " (forced)" : string.Empty));
+      MainActions.FireFightSelectionSettled();
       DerivedSelectionChanged?.Invoke(new BoardRequest(selected, _currentStamp, reason, detail), _currentSnapshot);
     }
 

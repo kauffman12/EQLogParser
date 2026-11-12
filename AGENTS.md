@@ -420,6 +420,14 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
   timeline and class histories. Ownership and class are asked at each record's log time, never at positive infinity or from
   the latest persona. All heals is the authoritative captured-heal sheet; local-player tabs are views. Seq is not a source
   line number. The contract and reconciliation live in docs/DesignNotes.md → "The detailed export is an Excel workbook, written by hand".
+- **An NPC's health is estimated, never stated**: `NpcCombatStats` subtracts observed healing from received damage,
+  POOLS concurrent same-name lives and weights the mean by killed lives, never by pools. Selection keeps the full pool
+  context; an unfinished member invalidates its pool even when unselected. Unknown HP stays nullable and displays blank,
+  never zero. Zone is a `ZoneRecord` interval grouped by visit index (`NpcZoneTimeline`), including literal unnamed-area
+  boundaries. Melee reads the index's tanking ordinals rather than re-asking side. A completed read owes a refresh until
+  a current answer covering its fact watermark is published (`NpcStatsRefresh`), even in All Fights mode. Selected Fights
+  follows settled selection announcements; builds are single-flight and newest-question-wins. See
+  docs/DesignNotes.md → "NPC health is estimated from killed lives, and concurrent names pool".
 - **The heal board's door is a record seam**: `GenerateStatsOptions.Heals` from `HealSummarySource.Materialize`, with
   `null` = whole capture (read through `HealRecordSource`) and an empty list = "there was none"; the list must be time-ascending
   and `OverTotal` verbatim.

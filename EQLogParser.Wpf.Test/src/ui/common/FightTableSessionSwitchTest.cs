@@ -1,8 +1,9 @@
+#nullable enable annotations
+using EQLogParser;
+using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
-
-using EQLogParser;
 
 namespace EQLogParser.Wpf.Test;
 
@@ -162,6 +163,107 @@ public sealed class FightTableSessionSwitchTest
       Flush();
       Assert.AreEqual(1, asked.Count, "announcing once is what keeps a live capture from re-running the boards every pass");
     });
+  }
+
+  [TestMethod]
+  public void SnapshotListenersSeeTheAppliedProjectionOnSwapPatchAndCaptureClear()
+  {
+    var published = new List<DerivedSnapshot?>();
+    var coherent = true;
+    Sta.Run(() =>
+    {
+      var table = new FightTable();
+      void Applied(DerivedSnapshot snapshot)
+      {
+        var current = table.GetStatRows(false);
+        coherent &= ReferenceEquals(snapshot, current.Snapshot);
+        coherent &= snapshot is null ? current.Rows.Count == 0 : ReferenceEquals(snapshot.AllFights, current.Rows);
+        published.Add(snapshot);
+      }
+
+      MainActions.EventsFightSnapshotChanged += Applied;
+      try
+      {
+        table.OnDerived(Snapshot());
+        Flush();
+        table.OnDerived(Snapshot());
+        Flush();
+        table.ClearForNewCapture();
+        Flush();
+      }
+      finally
+      {
+        MainActions.EventsFightSnapshotChanged -= Applied;
+      }
+    });
+    Assert.IsTrue(coherent, "deferred statistics must never read rows from before the announced snapshot was applied");
+    Assert.AreEqual(3, published.Count, "both publication paths and the clear must notify a waiting statistics pane");
+    Assert.IsNotNull(published[0]);
+    Assert.IsNotNull(published[1]);
+    Assert.IsNull(published[2]);
+  }
+
+  [TestMethod]
+  public void FactStatisticsSeeSettledSelectionAndDeselectionWithoutDuplicateAnnouncements()
+  {
+    var counts = new List<int>();
+    var snapshotMatched = true;
+    Sta.Run(() =>
+    {
+      var table = new FightTable();
+      var snapshot = Snapshot();
+      void Settled()
+      {
+        var current = table.GetStatRows(true);
+        snapshotMatched &= ReferenceEquals(snapshot, current.Snapshot);
+        counts.Add(current.Rows.Count);
+      }
+
+      var announce = typeof(FightTable).GetMethod("AnnounceSelection", BindingFlags.Instance | BindingFlags.NonPublic)
+        ?? throw new InvalidOperationException("the settled-selection door was not found");
+      void Settle() => announce.Invoke(table, [BoardReason.SettleTick, null, false]);
+
+      MainActions.EventsFightSelectionSettled += Settled;
+      try
+      {
+        table.OnDerived(snapshot);
+        Flush();
+        var row = ((IEnumerable<DerivedFightRow>)table.fightGrid.ItemsSource).First(r => !r.IsDivider);
+        table.fightGrid.SelectedItems.Add(row);
+        Settle();
+        Settle();
+        table.fightGrid.SelectedItems.Clear();
+        Settle();
+        table.ClearForNewCapture();
+      }
+      finally
+      {
+        MainActions.EventsFightSelectionSettled -= Settled;
+      }
+    });
+    Assert.IsTrue(snapshotMatched, "a selection notification must read the snapshot already on screen");
+    CollectionAssert.AreEqual(new[] { 0, 1, 0 }, counts,
+      "the initial answer, settled selection and deselection each announce once; a duplicate does not rescan statistics");
+  }
+
+  [TestMethod]
+  public void AFailingFactSelectionSubscriberDoesNotStarveTheNextOne()
+  {
+    var heard = false;
+    static void Broken() => throw new InvalidOperationException("selection subscriber test");
+    void Healthy() => heard = true;
+    MainActions.EventsFightSelectionSettled += Broken;
+    MainActions.EventsFightSelectionSettled += Healthy;
+    try
+    {
+      MainActions.FireFightSelectionSettled();
+    }
+    finally
+    {
+      MainActions.EventsFightSelectionSettled -= Broken;
+      MainActions.EventsFightSelectionSettled -= Healthy;
+    }
+    Assert.IsTrue(heard);
   }
 
   [TestMethod]

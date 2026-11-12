@@ -10,17 +10,17 @@ using System.Windows;
 
 namespace EQLogParser
 {
-  public partial class NpcStatsViewer : IDocumentContent
+  public partial class SpellResistStatsViewer : IDocumentContent
   {
-    public ObservableCollection<NpcStatsRow> NpcStatsData { get; set; }
+    public ObservableCollection<SpellResistRow> SpellResistData { get; set; }
     private const string Nodata = "No Spell Resist Data Found";
     private bool _ready;
 
-    public NpcStatsViewer()
+    public SpellResistStatsViewer()
     {
       InitializeComponent();
       SyncFusionUtil.ConfigureFrozenCellAnimations(dataGrid);
-      NpcStatsData = [];
+      SpellResistData = [];
       DataContext = this;
 
       // default these columns to descending
@@ -35,7 +35,7 @@ namespace EQLogParser
         dataGrid.SortComparers.Add(new SortComparer
         {
           PropertyName = d,
-          Comparer = new ResistComparer<NpcStatsRow>(d[..^4])
+          Comparer = new ResistComparer<SpellResistRow>(d[..^4])
         });
       }
 
@@ -44,7 +44,7 @@ namespace EQLogParser
 
     private void Load()
     {
-      var npcStatsRows = new Dictionary<string, NpcStatsRow>();
+      var resistRows = new Dictionary<string, SpellResistRow>();
       foreach (var stats in RecordsStore.Instance.GetAllNpcResistStats())
       {
         var upperNpc = TextUtils.CapitalizeFirst(stats.Npc);
@@ -52,7 +52,7 @@ namespace EQLogParser
         {
           var count = 0u;
           var reflectedCount = 0u;
-          var row = new NpcStatsRow { Npc = upperNpc };
+          var row = new SpellResistRow { Npc = upperNpc };
           foreach (var resists in stats.ByResist)
           {
             if (resists.Key == SpellResist.Reflected)
@@ -122,13 +122,13 @@ namespace EQLogParser
             row.ReflectedTotal = count;
           }
 
-          npcStatsRows[upperNpc] = row;
+          resistRows[upperNpc] = row;
         }
       }
 
-      UiUtil.UpdateObservable(npcStatsRows.Values.AsEnumerable(), NpcStatsData);
+      UiUtil.UpdateObservable(resistRows.Values.AsEnumerable(), SpellResistData);
       dataGrid.View?.Refresh();
-      titleLabel.Content = npcStatsRows.Values.Count == 0 ? Nodata : "Spell Resists vs " + npcStatsRows.Count + " Unique NPCs";
+      titleLabel.Content = resistRows.Values.Count == 0 ? Nodata : "Spell Resists vs " + resistRows.Count + " Unique NPCs";
       return;
 
       static Tuple<double, string> GetRate(uint landed, uint notLanded)
@@ -181,7 +181,7 @@ namespace EQLogParser
     public void HideContent()
     {
       MainActions.EventsLogLoadingComplete -= EventsLogLoadingComplete;
-      NpcStatsData.Clear();
+      SpellResistData.Clear();
       _ready = false;
     }
 
@@ -218,7 +218,7 @@ namespace EQLogParser
 
       public int Compare(object x, object y)
       {
-        if (_propertyInfo == null || x is not NpcStatsRow || y is not NpcStatsRow r2)
+        if (_propertyInfo == null || x is not SpellResistRow || y is not SpellResistRow r2)
           return 0;
 
         var valueX = _propertyInfo.GetValue(x);
@@ -250,7 +250,7 @@ namespace EQLogParser
     }
   }
 
-  public class NpcStatsRow
+  public class SpellResistRow
   {
     public string Npc { get; set; }
     public double Average { get; set; } = -1.0;
