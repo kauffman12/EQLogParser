@@ -1,0 +1,50 @@
+[Sun Feb 13 21:34:29 2022] Keltakun, Last Word is pierced by YOUR thorns for 19959 points of non-melee damage.
+[Sun Feb 13 21:34:29 2022] Keltakun, Last Word hits YOU for 54864 points of damage. (Strikethrough)
+[Sun Feb 13 21:34:29 2022] Keltakun, Last Word is pierced by YOUR thorns for 19959 points of non-melee damage.
+[Sun Feb 13 21:34:29 2022] Keltakun, Last Word hits YOU for 43697 points of damage. (Strikethrough)
+[Sun Feb 13 21:34:29 2022] Keltakun, Last Word tries to hit YOU, but YOU riposte!
+[Sun Feb 13 21:34:29 2022] You bash Keltakun, Last Word for 19725 points of damage. (Riposte Critical)
+[Sun Feb 13 21:34:29 2022] You slash Keltakun, Last Word for 66100 points of damage. (Riposte Critical)
+[Sun Feb 13 21:34:29 2022] Keltakun, Last Word tries to hit YOU, but YOU riposte! (Strikethrough)
+[Sun Feb 13 21:34:29 2022] Keltakun, Last Word is pierced by YOUR thorns for 19959 points of non-melee damage.
+[Sun Feb 13 21:34:29 2022] Keltakun, Last Word hits YOU for 25281 points of damage. (Riposte Strikethrough)
+[Sun Feb 13 21:34:29 2022] Keltakun, Last Word tries to bash YOU, but YOU riposte!
+[Sun Feb 13 21:34:29 2022] You slash Keltakun, Last Word for 66100 points of damage. (Riposte Critical)
+[Sun Feb 13 21:34:31 2022] Keltakun, Last Word tries to hit YOU, but YOU parry!
+[Sun Feb 13 21:34:31 2022] Keltakun, Last Word tries to hit YOU, but misses!
+[Sun Feb 13 21:34:31 2022] Keltakun, Last Word tries to hit YOU, but YOU riposte! (Strikethrough)
+[Sun Feb 13 21:34:31 2022] Keltakun, Last Word is pierced by YOUR thorns for 14028 points of non-melee damage.
+[Sun Feb 13 21:34:31 2022] Keltakun, Last Word tries to hit YOU, but YOUR magical skin absorbs the blow! (Riposte Strikethrough)
+[Sun Feb 13 21:34:31 2022] Keltakun, Last Word tries to hit YOU, but YOU riposte! (Strikethrough)
+[Sun Feb 13 21:34:31 2022] Keltakun, Last Word is pierced by YOUR thorns for 14028 points of non-melee damage.
+[Sun Feb 13 21:34:31 2022] Keltakun, Last Word hits YOU for 4752 points of damage. (Riposte Strikethrough)
+[Sun Feb 13 21:34:32 2022] Keltakun, Last Word tries to hit YOU, but YOU riposte! (Strikethrough)
+[Sun Feb 13 21:34:32 2022] Keltakun, Last Word is pierced by YOUR thorns for 14028 points of non-melee damage.
+[Sun Feb 13 21:34:32 2022] Keltakun, Last Word hits YOU for 4254 points of damage. (Riposte Strikethrough)
+[Sun Feb 13 21:34:32 2022] Keltakun, Last Word tries to hit YOU, but YOU riposte! (Strikethrough)
+[Sun Feb 13 21:34:32 2022] Keltakun, Last Word is pierced by YOUR thorns for 14028 points of non-melee damage.
+[Sun Feb 13 21:34:32 2022] Keltakun, Last Word hits YOU for 57185 points of damage. (Riposte Strikethrough)
+[Sun Feb 13 21:34:32 2022] Keltakun, Last Word is pierced by YOUR thorns for 14028 points of non-melee damage.
+[Sun Feb 13 21:34:32 2022] Keltakun, Last Word hits YOU for 11322 points of damage. (Strikethrough)
+[Sun Feb 13 21:34:34 2022] Keltakun, Last Word is pierced by YOUR thorns for 14028 points of non-melee damage.
+[Sun Feb 13 21:34:34 2022] Keltakun, Last Word hits YOU for 47614 points of damage. (Strikethrough)
+[Sun Feb 13 21:34:34 2022] Keltakun, Last Word tries to hit YOU, but YOU riposte!
+[Sun Feb 13 21:34:34 2022] You bash Keltakun, Last Word for 20250 points of damage. (Riposte Lucky Critical)
+[Sun Feb 13 21:34:34 2022] You slash Keltakun, Last Word for 23820 points of damage. (Riposte)
+[Sun Feb 13 21:34:34 2022] You slash Keltakun, Last Word for 60427 points of damage. (Riposte)
+[Sun Feb 13 21:34:34 2022] Keltakun, Last Word tries to hit YOU, but YOU riposte! (Strikethrough)
+[Sun Feb 13 21:34:34 2022] Keltakun, Last Word is pierced by YOUR thorns for 14028 points of non-melee damage.
+[Sun Feb 13 21:34:34 2022] Keltakun, Last Word hits YOU for 64364 points of damage. (Riposte Strikethrough)
+[Sun Feb 13 21:34:36 2022] Keltakun, Last Word tries to hit YOU, but YOU riposte! (Strikethrough)
+[Sun Feb 13 21:34:36 2022] You begin casting Crippling Snare.
+[Sun Feb 13 21:34:36 2022] Keltakun, Last Word resisted your Crippling Snare!
+[Sun Feb 13 21:34:36 2022] Keltakun, Last Word is pierced by YOUR thorns for 14028 points of non-melee damage.
+[Sun Feb 13 21:34:36 2022] Keltakun, Last Word hits YOU for 28936 points of damage. (Riposte Strikethrough)
+[Sun Feb 13 21:34:36 2022] Keltakun, Last Word tries to hit YOU, but YOU riposte! (Strikethrough)
+[Sun Feb 13 21:34:36 2022] Keltakun, Last Word is pierced by YOUR thorns for 14028 points of non-melee damage.
+[Sun Feb 13 21:34:36 2022] Keltakun, Last Word hits YOU for 51269 points of damage. (Riposte Strikethrough)
+[Sun Feb 13 21:34:36 2022] Keltakun, Last Word is pierced by YOUR thorns for 14028 points of non-melee damage.
+[Sun Feb 13 21:34:36 2022] Keltakun, Last Word hits YOU for 51269 points of damage. (Strikethrough)
+[Sun Feb 13 21:34:36 2022] Keltakun, Last Word tries to hit YOU, but YOU riposte! (Strikethrough)
+[Sun Feb 13 21:34:36 2022] Keltakun, Last Word is pierced by YOUR thorns for 14028 points of non-melee damage.
+[Sun Feb 13 21:34:36 2022] Keltakun, Last Word hits YOU for 11322 points of damage. (Riposte Strikethrough)

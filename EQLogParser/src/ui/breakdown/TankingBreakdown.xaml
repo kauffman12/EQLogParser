@@ -102,7 +102,7 @@
         <syncfusion:TreeGridNumericColumn MappingName="Dps" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderDPSTemplateToolTip}" TextAlignment="Right" HeaderText="DPS" />
         <syncfusion:TreeGridNumericColumn MappingName="Sdps" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderSDPSTemplateToolTip}" TextAlignment="Right" HeaderText="SDPS" />
         <syncfusion:TreeGridNumericColumn MaximumWidth="65" MappingName="TotalSeconds" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Sec" />
-        <syncfusion:TreeGridNumericColumn MaximumWidth="70" MappingName="Hits" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Hits" />
+        <syncfusion:TreeGridNumericColumn MaximumWidth="70" MappingName="Hits" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderDamageHitsTemplateToolTip}" TextAlignment="Right" HeaderText="# Hits" />
         <syncfusion:TreeGridNumericColumn MappingName="Min" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Min Hit" />
         <syncfusion:TreeGridNumericColumn MaximumWidth="90" MappingName="Max" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Max Hit" />
         <syncfusion:TreeGridNumericColumn MappingName="Avg" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="Av Hit" />
@@ -110,7 +110,7 @@
         <syncfusion:TreeGridTextColumn MaximumWidth="70" MappingName="MeleeHitRate" DisplayBinding="{Binding Path=MeleeHitRate, Converter={StaticResource ZeroConverter}}" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderMeleeHitRateTemplateToolTip}" TextAlignment="Right" HeaderText="% Hit" />
         <syncfusion:TreeGridNumericColumn MappingName="MeleeAttempts" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderMeleeAttemptsTemplateToolTip}" TextAlignment="Right" HeaderText="# Attempts" />
         <syncfusion:TreeGridNumericColumn MappingName="MeleeUndefended" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderMeleeUndefendedTemplateToolTip}" TextAlignment="Right" HeaderText="# Undefended" />
-        <syncfusion:TreeGridNumericColumn MappingName="Absorbs" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Absorbs" />
+        <syncfusion:TreeGridNumericColumn MappingName="Absorbs" NumberDecimalDigits="0" NumberGroupSizes="3" ShowHeaderToolTip="True" HeaderToolTipTemplate="{StaticResource HeaderMeleeAbsorbsTemplateToolTip}" TextAlignment="Right" HeaderText="# Absorbs" />
         <syncfusion:TreeGridNumericColumn MappingName="Blocks" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Blocked" />
         <syncfusion:TreeGridNumericColumn MappingName="Dodges" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Dodged" />
         <syncfusion:TreeGridNumericColumn MappingName="Invulnerable" NumberDecimalDigits="0" NumberGroupSizes="3" TextAlignment="Right" HeaderText="# Invulnerable" />

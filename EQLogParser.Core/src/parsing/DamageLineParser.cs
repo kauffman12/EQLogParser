@@ -769,7 +769,7 @@ namespace EQLogParser
         attacker = attacker[..^2];
         attacker = ParserUtil.UpdateAttacker(attacker, ConfigUtil.PlayerName, subType);
         defender = ParserUtil.UpdateDefender(defender, attacker);
-        record = CreateDamageRecord(lineData, split, stop, attacker, defender, 0, Labels.Absorb, "Hits");
+        record = CreateDamageRecord(lineData, split, stop, attacker, defender, 0, Labels.DamageAbsorb, Labels.Ds);
       }
       // EMU specific stuff
       // Old (eqemu direct damage) [Sat Jan 15 21:08:54 2022] Jaun hit Pixtt Invi Mal for 150 points of non-melee damage.
@@ -823,7 +823,8 @@ namespace EQLogParser
       else if (AppSettings.IsEmuParsingEnabled && emuAbsorbedIndex > -1 && pointsOfIndex > emuAbsorbedIndex && split[stop] == "damage")
       {
         defender = ConfigUtil.PlayerName;
-        record = CreateDamageRecord(lineData, split, stop, Labels.Unk, defender, 0, Labels.Absorb, "Hits");
+        record = CreateDamageRecord(lineData, split, stop, Labels.Unk, defender, 0,
+          Labels.DamageAbsorb, Labels.DamageAbsorb);
       }
       // Old (eqemu) aura damage? [Fri Mar 04 21:28:19 2022] You are immolated by raging energy.  You have taken 179 points of damage.
       else if (AppSettings.IsEmuParsingEnabled && haveIndex > -1 && haveIndex == takenIndex && pointsOfIndex == takenIndex + 3 && split[haveIndex - 1] == "You")
@@ -853,7 +854,8 @@ namespace EQLogParser
         }
 
         defender = ParserUtil.UpdateDefender(defender, Labels.Unk);
-        record = CreateDamageRecord(lineData, split, stop, Labels.Unk, defender, 0, Labels.Absorb, "Hits");
+        record = CreateDamageRecord(lineData, split, stop, Labels.Unk, defender, 0,
+          Labels.DamageAbsorb, Labels.DamageAbsorb);
       }
       // [Thu Jan 23 21:36:37 2025] Vorgash scores a critical hit! (780)
       // [Thu Jan 23 21:37:44 2025] Arilyn lands a Crippling Blow!(244)

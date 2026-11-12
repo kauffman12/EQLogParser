@@ -121,6 +121,18 @@ namespace EQLogParser
     }
 
     [TestMethod]
+    public void DamageAbsorptionUsesTheExistingAbsorbWordWithoutConjugatingItsSource()
+    {
+      FireDamage("OtherGuy", 100, defender: "TestPlayer", total: 0,
+        type: Labels.DamageAbsorb, subType: "Crown of Stars");
+      FctManager.Instance.DrainTo(_drained);
+      Assert.AreEqual(1, _drained.Count);
+      Assert.AreEqual(FctLane.Defensive, _drained[0].Lane);
+      Assert.AreEqual(Labels.Absorb, _drained[0].ValueText);
+      Assert.AreEqual("Crown of Stars", _drained[0].Source);
+    }
+
+    [TestMethod]
     public void ZeroDamageWithoutALabelIsDropped()
     {
       FireDamage("OtherGuy", 100, defender: "TestPlayer", total: 0, type: Labels.Dd);

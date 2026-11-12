@@ -127,17 +127,19 @@ public class StruckThroughSwingTest
   }
 
   [TestMethod]
-  public void AnAbsorbLeavesItsNumberLineOwingTheStrikethroughCredit()
+  public void AnAbsorbIsATerminalOutcomeNotAPendingDefense()
   {
     var swings = new DamageSwingAccounting();
     var row = new PlayerSubStats();
     Count(swings, row, Record(Labels.Absorb, 0, Strike), 100);
     var credit = Count(swings, row, Hit(Strike), 100);
-    Assert.IsTrue(credit.AttemptCountedEarlier);
+    Assert.IsFalse(credit.AttemptCountedEarlier);
     Assert.AreEqual((short)0, credit.ModifiersCountedEarlier);
-    Assert.AreEqual(1u, row.MeleeAttempts);
+    Assert.AreEqual(2u, row.MeleeAttempts);
     Assert.AreEqual(1u, row.Absorbs);
-    Assert.AreEqual(1u, row.StrikethroughHits);
+    Assert.AreEqual(2u, row.StrikethroughHits);
+    StatsUtil.CalculateRates(row, new PlayerStats(), null);
+    Assert.AreEqual(100f, row.MeleeHitRate);
   }
 
   [TestMethod]
@@ -182,6 +184,76 @@ public class StruckThroughSwingTest
     row.MeleeAccRate = 99;
     StatsUtil.CalculateRates(row, new PlayerStats(), null);
     Assert.AreEqual(0f, row.MeleeAccRate);
+  }
+
+  [TestMethod]
+  [DataRow(100d, true)]
+  [DataRow(101d, true)]
+  [DataRow(102d, false)]
+  [DataRow(99d, false)]
+  public void ATaggedAbsorbCanFinishAPiercedRiposte(double time, bool paired)
+  {
+    var swings = new DamageSwingAccounting();
+    var row = new PlayerSubStats();
+    Count(swings, row, Defense(), 100);
+    Count(swings, row, Record(Labels.DamageAbsorb, 0, 0), 100);
+    var credit = Count(swings, row, Record(Labels.Absorb, 0, Strike | Riposte), time);
+    Assert.AreEqual(paired, credit.AttemptCountedEarlier);
+    Assert.AreEqual(paired ? 1u : 2u, row.MeleeAttempts);
+    Assert.AreEqual(paired ? 1u : 2u, row.StrikethroughHits);
+    Assert.AreEqual(0u, row.RiposteHits);
+    Assert.AreEqual(1u, row.Absorbs);
+    Assert.AreEqual(1u, row.DamageAbsorbs);
+    Assert.IsFalse(swings.Observe(Hit(), time).AttemptCountedEarlier, "the absorb consumed the sentence");
+  }
+
+  [TestMethod]
+  [DataRow((short)0)]
+  [DataRow(Strike)]
+  public void AnUntaggedOrIncompatibleAbsorbCannotFinishAPiercedRiposte(short mask)
+  {
+    var swings = new DamageSwingAccounting();
+    swings.Observe(Defense(), 100);
+    Assert.IsFalse(swings.Observe(Record(Labels.Absorb, 0, mask), 100).AttemptCountedEarlier);
+    Assert.IsFalse(swings.Observe(Hit(), 100).AttemptCountedEarlier);
+  }
+
+  [TestMethod]
+  public void AnAbsorbCannotUseAnotherPairsSentence()
+  {
+    var swings = new DamageSwingAccounting();
+    swings.Observe(Defense(), 100);
+    Assert.IsFalse(swings.Observe(Record(Labels.Absorb, 0, Strike | Riposte, "A silk moth", "Shmid"), 100)
+      .AttemptCountedEarlier);
+    Assert.IsFalse(swings.Observe(Record(Labels.Absorb, 0, Strike | Riposte, "Ryft", "A silk moth"), 100)
+      .AttemptCountedEarlier);
+    Assert.IsTrue(swings.Observe(Record(Labels.Absorb, 0, Strike | Riposte), 100).AttemptCountedEarlier);
+  }
+
+  [TestMethod]
+  [DataRow(Labels.Parry, 100d, true)]
+  [DataRow(Labels.Block, 101d, true)]
+  [DataRow(Labels.Dodge, 100d, true)]
+  [DataRow(Labels.Invulnerable, 100d, true)]
+  [DataRow(Labels.Miss, 100d, true)]
+  [DataRow(Labels.Riposte, 100d, true)]
+  [DataRow(Labels.Parry, 102d, false)]
+  [DataRow(Labels.Parry, 99d, false)]
+  public void OnlyAPairedExcludedDefenseOverlapsAnAbsorbsAccuracyExclusion(string type, double time, bool paired)
+  {
+    var swings = new DamageSwingAccounting();
+    var row = new PlayerSubStats();
+    Count(swings, row, Record(type, 0, Strike), 100);
+    var mask = type == Labels.Riposte ? (short)(Strike | Riposte) : Strike;
+    var credit = Count(swings, row, Record(Labels.Absorb, 0, mask), time);
+    var overlaps = paired && type is not (Labels.Miss or Labels.Riposte);
+    Assert.AreEqual(paired, credit.AttemptCountedEarlier);
+    Assert.AreEqual(overlaps, credit.AccuracyExclusionCountedEarlier);
+    Assert.AreEqual(overlaps ? 1u : 0u, row.AbsorbExclusionOverlaps);
+    Assert.AreEqual(paired ? 1u : 2u, row.MeleeAttempts);
+    Assert.IsFalse(Count(swings, row, Hit(Strike), time).AccuracyExclusionCountedEarlier,
+      "the absorb consumed the credit; it cannot exclude a later swing");
+    Assert.AreEqual(overlaps ? 1u : 0u, row.AbsorbExclusionOverlaps);
   }
 
   private static DamageRecord Defense(short mask = Strike) => Record(Labels.Riposte, 0, mask);

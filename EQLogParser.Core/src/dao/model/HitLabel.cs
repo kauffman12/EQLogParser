@@ -6,16 +6,8 @@ namespace EQLogParser
   /*
    * The label a hit record carries, as one byte instead of a string reference.
    *
-   * HitRecord.Type used to be an interned string: 8 bytes of pointer per record to say which of sixteen words it
-   * was — fourteen for damage (Melee, Direct Damage, DoT Tick, Proc, Bane Damage, Damage Shield, Other Damage,
-   * Absorb, Block, Dodge, Miss, Parry, Riposte, Invulnerable) and two for heals (Direct Heal, HoT Tick).
-   * The vocabulary is closed by construction: every CreateDamageRecord call passes a Labels constant or a variable
-   * one of them was assigned to, GetTypeFromSpell only ever rewrites one into Bane Damage or Proc, the miss branch
-   * maps its seven outcomes onto the last six words, and HealingLineParser picks Heal or HoT — no line text reaches
-   * a record's label. (Reverse DS is a name the parser gives an *attacker*, never a label.) So the word can live in
-   * a byte and be read back as the same string instance
-   * it always was (Labels' constants are compile-time literals, therefore interned), which keeps every
-   * `record.Type == Labels.Melee` comparison — including the reference-equality ones — exactly as it behaved.
+   * Parsers choose a Labels constant, never arbitrary line text. Readback returns the same interned string instance,
+   * including for reference-equality comparisons. Reverse DS names an attacker, not a record kind.
    *
    * Two rules, both measured rather than assumed:
    *
@@ -49,6 +41,7 @@ namespace EQLogParser
     Invulnerable,
     Heal,
     Hot,
+    DamageAbsorb,
   }
 
   internal static class HitLabels
@@ -72,10 +65,11 @@ namespace EQLogParser
       (HitLabel.Invulnerable, Labels.Invulnerable),
       (HitLabel.Heal, Labels.Heal),
       (HitLabel.Hot, Labels.Hot),
+      (HitLabel.DamageAbsorb, Labels.DamageAbsorb),
     ];
 
     // Indexed by the enum's byte value, so index 0 stays null for the records that carry no label.
-    private static readonly string[] _text = new string[(byte)HitLabel.Hot + 1];
+    private static readonly string[] _text = new string[(byte)HitLabel.DamageAbsorb + 1];
     private static readonly Dictionary<string, HitLabel> _label = new(StringComparer.Ordinal);
 
     // How many non-null words could not be mapped. Diagnostics only: it should never leave zero.

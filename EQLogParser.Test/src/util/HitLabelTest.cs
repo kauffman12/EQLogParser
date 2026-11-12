@@ -6,7 +6,7 @@ namespace EQLogParserTest
 {
   /*
    * A damage or heal record states its kind as one byte instead of a string pointer, because there are only ever
-   * sixteen words it can be (fourteen damage, two heal) and the parser picks them from constants rather than from
+   * a closed set of words (damage outcomes and two heal kinds) and the parser picks them from constants rather than from
    * line text. That trade has three failure modes worth pinning: the backing type drifting back to int (which puts
    * the record over the size step it came down — 48 bytes instead of 40, for nothing), a word being missing from
    * the table (the record would read as unlabeled and its amount would vanish from every view built on the label),
@@ -36,6 +36,7 @@ namespace EQLogParserTest
       (HitLabel.Invulnerable, Labels.Invulnerable),
       (HitLabel.Heal, Labels.Heal),
       (HitLabel.Hot, Labels.Hot),
+      (HitLabel.DamageAbsorb, Labels.DamageAbsorb),
     ];
 
     [TestMethod]
@@ -61,7 +62,7 @@ namespace EQLogParserTest
     {
       var labels = (HitLabel[])Enum.GetValues(typeof(HitLabel));
 
-      // None plus the sixteen. A word added to the enum without the pairing in HitLabels reads back as null, which
+      // None plus the closed vocabulary. A word added to the enum without the pairing in HitLabels reads back as null, which
       // is why adding one is a deliberate act rather than an extra line in a file nobody re-reads.
       Assert.AreEqual(Expected.Length + 1, labels.Length);
 
@@ -154,12 +155,25 @@ namespace EQLogParserTest
       Assert.IsTrue(new DamageRecord { Attacker = "Zomk", Total = 5 }.Equals(new DamageRecord { Attacker = "Zomk", Total = 5, Type = "nonsense" }));
     }
     [TestMethod]
+    public void DamageAbsorbAppendsWithoutRenumberingStoredFactKinds()
+    {
+      string[] words = [Labels.Melee, Labels.Dd, Labels.Dot, Labels.Proc, Labels.Ds, Labels.Rs, Labels.Bane,
+        Labels.OtherDmg, Labels.Absorb, Labels.Miss, Labels.Dodge, Labels.Parry, Labels.Block,
+        Labels.Invulnerable, Labels.Riposte, Labels.Heal, Labels.Hot, Labels.DamageAbsorb];
+      for (var i = 0; i < words.Length; i++)
+      {
+        Assert.AreEqual((byte)(i + 1), LabelTypes.IdOf(words[i]), words[i]);
+        Assert.AreEqual(words[i], LabelTypes.LabelOf((byte)(i + 1)));
+      }
+      Assert.IsFalse(LabelTypes.IsHit(LabelTypes.DamageAbsorb));
+      Assert.IsFalse(LabelTypes.IsHeal(LabelTypes.DamageAbsorb));
+    }
+
+    [TestMethod]
     public void TheWholeTableIsWordsTheParserCanProduce()
     {
-      // DamageLineParserTest asserts record.Type against Labels for the lines the parser knows (54 of them, covering
-      // eleven of these words), which is the real coverage that the table has no gaps. This holds the other half: the
-      // count is what the parsers' own branches add up to, so a word nobody can produce shows up here.
-      Assert.AreEqual(14, Expected.Length - 2, "fourteen damage labels plus the two heal labels");
+      // Parser tests cover the sentences; this refuses a kind added without accounting for its producer.
+      Assert.AreEqual(15, Expected.Length - 2, "fifteen damage labels plus the two heal labels");
       CollectionAssert.Contains(Expected.Select(e => e.Label).ToList(), HitLabel.Heal);
       CollectionAssert.Contains(Expected.Select(e => e.Label).ToList(), HitLabel.Hot);
     }

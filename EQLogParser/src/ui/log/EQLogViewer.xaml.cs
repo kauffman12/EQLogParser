@@ -215,6 +215,7 @@ namespace EQLogParser
                     ignore = !types.ContainsKey(damageRecord.Type);
                     break;
                   case Labels.Absorb:
+                  case Labels.DamageAbsorb:
                   case Labels.Block:
                   case Labels.Dodge:
                   case Labels.Miss:

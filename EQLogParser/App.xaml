@@ -374,13 +374,19 @@
       <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Scaled Healing/Second based on Total Time (raid time)" />
     </DataTemplate>
     <DataTemplate x:Key="HeaderMeleeAccRateTemplateToolTip">
-      <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Percent of Hits that were not Misses" />
+      <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Melee hit percentage excluding blocks, dodges, parries, invulnerability and absorbs" />
     </DataTemplate>
     <DataTemplate x:Key="HeaderMeleeHitRateTemplateToolTip">
-      <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Percent of Hits that were not Blocked, Dodged, Misses, or Parried" />
+      <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Percent of melee attempts that hit or were fully absorbed" />
+    </DataTemplate>
+    <DataTemplate x:Key="HeaderDamageHitsTemplateToolTip">
+      <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Landed damage hits; fully absorbed blows are counted separately" />
+    </DataTemplate>
+    <DataTemplate x:Key="HeaderMeleeAbsorbsTemplateToolTip">
+      <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Melee blows fully absorbed by a rune; included in % Hit, not # Hits" />
     </DataTemplate>
     <DataTemplate x:Key="HeaderMeleeAttemptsTemplateToolTip">
-      <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Melee swings at the Player, counted once each (a struck-through defense prints two lines for one swing)" />
+      <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Melee swings, counted once each (a struck-through defense prints two lines for one swing)" />
     </DataTemplate>
     <DataTemplate x:Key="HeaderDefensiveRiposteTemplateToolTip">
       <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}" Text="Ripostes that stopped the incoming swing; struck-through ripostes are excluded" />

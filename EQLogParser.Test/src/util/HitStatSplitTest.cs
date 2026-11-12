@@ -6,7 +6,7 @@ namespace EQLogParserTest
    * Damage and healing used to be counted by one routine taking their common base, which is why that base carried
    * fields only one of them could write. It is two routines now — StatsUtil.UpdateDamageStats and
    * UpdateHealStats — so the rules the shared switch used to enforce in one place are pinned here instead,
-   * including the two guards that moved house: an Absorb takes no modifier tallies, and a miss carrying a mask
+   * including two guards: an Absorb takes no damaging-hit modifier tallies, and a miss carrying a mask
    * scores nothing either. That second one read the record's Type inside LineModifiersParser before; it belongs
    * to whoever counts the event, because a riposte line arrives as a miss and its attacker did not do those
    * things. Numbers and reasoning: docs/DesignNotes.md → The eight bytes that were in every damage record for
@@ -54,9 +54,9 @@ namespace EQLogParserTest
       Assert.AreEqual(1234L, stats.TotalNonTwincastCrit);
     }
 
-    /* The absorb branch is the one case in the damage switch that deliberately does not parse modifiers. */
+    // An absorb must not invent a damaging or critical hit.
     [TestMethod]
-    public void Damage_AbsorbCountsAsAnAttemptAndTakesNoModifierTallies()
+    public void Damage_AbsorbCountsAsAnAttemptWithoutCriticalModifiers()
     {
       var stats = new PlayerSubStats { Name = "Zomk" };
 
@@ -66,6 +66,103 @@ namespace EQLogParserTest
       Assert.AreEqual(1u, stats.MeleeAttempts);
       Assert.AreEqual(0u, stats.CritHits);
       Assert.AreEqual(0L, stats.TotalCrit);
+    }
+
+    [TestMethod]
+    public void Damage_AbsorbsConnectWithoutChangingDamageStatisticsOrAccuracyFormula()
+    {
+      var stats = new PlayerStats();
+      StatsUtil.UpdateDamageStats(stats, Damage(Labels.Melee, "Hits", 100, Mask("Critical")));
+      StatsUtil.UpdateDamageStats(stats, Damage(Labels.Absorb, "Hits", 0, Mask("Riposte Strikethrough Critical")));
+      StatsUtil.UpdateDamageStats(stats, Damage(Labels.Miss, "Hits", 0));
+      StatsUtil.UpdateDamageStats(stats, Damage(Labels.DamageAbsorb, Labels.Ds, 0, Mask("Critical")));
+      StatsUtil.CalculateRates(stats, new PlayerStats(), null);
+
+      Assert.AreEqual(3u, stats.MeleeAttempts);
+      Assert.AreEqual(1u, stats.MeleeHits);
+      Assert.AreEqual(1u, stats.Hits);
+      Assert.AreEqual(1u, stats.Absorbs);
+      Assert.AreEqual(1u, stats.DamageAbsorbs);
+      Assert.AreEqual(1u, stats.StrikethroughHits);
+      Assert.AreEqual(0u, stats.RiposteHits);
+      Assert.AreEqual(1u, stats.CritHits);
+      Assert.AreEqual(100L, stats.Total);
+      Assert.AreEqual(100L, stats.Min);
+      Assert.AreEqual(100L, stats.Max);
+      Assert.AreEqual(100L, stats.Avg);
+      Assert.AreEqual(100f, stats.CritRate);
+      Assert.AreEqual(66.67f, stats.MeleeHitRate);
+      Assert.AreEqual(50f, stats.MeleeAccRate, "the existing accuracy formula still excludes absorbs");
+      Assert.AreEqual(0, stats.RawHitTotals, "accounting never inserts histogram samples");
+    }
+
+    [TestMethod]
+    public void Damage_OnlyAbsorbsCanYieldAConnectionRateWithoutADamagingHit()
+    {
+      var stats = new PlayerStats();
+      StatsUtil.UpdateDamageStats(stats, Damage(Labels.Absorb, "Hits", 0));
+      StatsUtil.CalculateRates(stats, new PlayerStats(), null);
+      Assert.AreEqual(100f, stats.MeleeHitRate);
+      Assert.AreEqual(0u, stats.Hits);
+      Assert.AreEqual(0f, stats.MeleeAccRate);
+    }
+
+    [TestMethod]
+    public void Damage_NotificationCountsMergeAndResetWithoutOpeningSwings()
+    {
+      var source = new PlayerStats();
+      StatsUtil.UpdateDamageStats(source, Damage(Labels.DamageAbsorb, Labels.DamageAbsorb, 0));
+      Assert.IsFalse(StatsUtil.IsMelee(Damage(Labels.DamageAbsorb, Labels.DamageAbsorb, 0)));
+      Assert.IsFalse(StatsUtil.IsHitType(Labels.DamageAbsorb));
+      Assert.IsFalse(StatsUtil.IsDefensiveOutcome(Labels.DamageAbsorb));
+      var merged = new PlayerStats();
+      StatsUtil.MergeStats(merged, source);
+      StatsUtil.MergeStats(merged, source);
+      StatsUtil.CalculateRates(merged, new PlayerStats(), null);
+      Assert.AreEqual(2u, merged.DamageAbsorbs);
+      Assert.AreEqual(0u, merged.MeleeAttempts);
+      Assert.AreEqual(0u, merged.Hits);
+      Assert.AreEqual(0f, merged.MeleeHitRate);
+      StatsUtil.ResetPlayerStats(merged);
+      Assert.AreEqual(0u, merged.DamageAbsorbs);
+    }
+
+    [TestMethod]
+    public void Damage_AccuracyExclusionOverlapsSurviveMergeAndResetWithoutClampingRates()
+    {
+      var source = new PlayerStats();
+      var swings = new DamageSwingAccounting();
+      DamageRecord[] records =
+      [
+        Damage(Labels.Parry, "Slashes", 0, Mask("Strikethrough")),
+        Damage(Labels.Absorb, "Slashes", 0, Mask("Strikethrough")),
+        Damage(Labels.Melee, "Slashes", 100),
+        Damage(Labels.Melee, "Slashes", 100),
+        Damage(Labels.Miss, "Slashes", 0),
+        Damage(Labels.Dd, "Starfire S", 100)
+      ];
+      foreach (var record in records)
+        StatsUtil.UpdateDamageStats(source, record, swing: swings.Observe(record, 100));
+      StatsUtil.CalculateRates(source, new PlayerStats(), null);
+      Assert.AreEqual(1u, source.AbsorbExclusionOverlaps);
+      Assert.AreEqual(4u, source.MeleeAttempts);
+      Assert.AreEqual(2u, source.MeleeHits);
+      Assert.AreEqual(3u, source.Hits, "spell hits are not accuracy's numerator");
+      Assert.AreEqual(66.67f, source.MeleeAccRate, "two melee hits / three non-excluded attempts");
+      Assert.AreEqual(75f, source.MeleeHitRate);
+
+      var merged = new PlayerStats();
+      StatsUtil.MergeStats(merged, source);
+      StatsUtil.MergeStats(merged, source);
+      StatsUtil.CalculateRates(merged, new PlayerStats(), null);
+      Assert.AreEqual(2u, merged.AbsorbExclusionOverlaps);
+      Assert.AreEqual(66.67f, merged.MeleeAccRate);
+      Assert.AreEqual(75f, merged.MeleeHitRate);
+      StatsUtil.ResetPlayerStats(merged);
+      Assert.AreEqual(0u, merged.AbsorbExclusionOverlaps);
+      StatsUtil.UpdateDamageStats(merged, Damage(Labels.Melee, "Slashes", 100));
+      StatsUtil.CalculateRates(merged, new PlayerStats(), null);
+      Assert.AreEqual(100f, merged.MeleeAccRate);
     }
 
     /*

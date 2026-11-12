@@ -364,11 +364,12 @@ namespace EQLogParser
      * the pair. Splitting them is what lets HitRecord hold only what both kinds write; the heal half is
      * UpdateHealStats.
      */
-    internal static bool CountsAsDamageHit(string type) => type is not (Labels.Absorb or Labels.Block
-      or Labels.Dodge or Labels.Miss or Labels.Parry or Labels.Riposte or Labels.Invulnerable);
+    internal static bool CountsAsDamageHit(string type) => type is not (Labels.Absorb or Labels.DamageAbsorb
+      or Labels.Block or Labels.Dodge or Labels.Miss or Labels.Parry or Labels.Riposte or Labels.Invulnerable);
 
-    // These sentences open attempts even when their defense was struck through. One list: every outcome word that is not a hit.
-    internal static bool IsDefensiveOutcome(string type) => !CountsAsDamageHit(type);
+    // Only melee outcomes open swings; a damage-absorption notification establishes no new attempt.
+    internal static bool IsDefensiveOutcome(string type) => type is Labels.Absorb or Labels.Block or Labels.Dodge
+      or Labels.Miss or Labels.Parry or Labels.Riposte or Labels.Invulnerable;
 
     internal static void UpdateDamageStats(PlayerSubStats stats, DamageRecord record, bool newFrame = false,
       bool isPet = false, DamageSwingCredit swing = default, bool incoming = false)
@@ -378,10 +379,17 @@ namespace EQLogParser
 
       switch (record.Type)
       {
-        // absorb isn't counted as a hit so don't parse whether it was a strikethrough, etc
+        case Labels.DamageAbsorb:
+          stats.DamageAbsorbs++;
+          parseModifiers = false;
+          break;
         case Labels.Absorb:
           stats.Absorbs++;
-          stats.MeleeAttempts++;
+          if (!swing.AttemptCountedEarlier) stats.MeleeAttempts++;
+          if (swing.AttemptCountedEarlier && swing.AccuracyExclusionCountedEarlier) stats.AbsorbExclusionOverlaps++;
+          // A rune stops damage, not the connection. Only its unspent Strikethrough scores, never hit/crit modifiers.
+          var unspent = LineModifiersParser.Unspent(record.ModifiersMask, swing.ModifiersCountedEarlier);
+          if (LineModifiersParser.IsStrikethrough(unspent)) stats.StrikethroughHits++;
           parseModifiers = false;
           break;
         case Labels.Bane:
@@ -512,6 +520,8 @@ namespace EQLogParser
       {
         to.BestSec = Math.Max(to.BestSec, from.BestSec);
         to.Absorbs += from.Absorbs;
+        to.AbsorbExclusionOverlaps += from.AbsorbExclusionOverlaps;
+        to.DamageAbsorbs += from.DamageAbsorbs;
         to.BaneHits += from.BaneHits;
         to.Blocks += from.Blocks;
         to.BowHits += from.BowHits;
@@ -664,6 +674,10 @@ namespace EQLogParser
 
     internal static void CalculateRates(PlayerSubStats stats, PlayerStats raidStats, PlayerStats subStats)
     {
+      // An all-rune selection still has connections even though no damaging hit exists.
+      stats.MeleeHitRate = stats.MeleeAttempts > 0
+        ? (float)Math.Round(((double)stats.MeleeHits + stats.Absorbs) / stats.MeleeAttempts * 100, 2) : 0;
+
       if (stats.Hits > 0)
       {
         stats.Potential = stats.Total + stats.Extra;
@@ -724,11 +738,9 @@ namespace EQLogParser
 
         if (stats.MeleeAttempts > 0)
         {
-          stats.MeleeHitRate = (float)Math.Round((float)stats.MeleeHits / stats.MeleeAttempts * 100, 2);
-
-          // Widen before subtraction: defensive outcomes can exhaust the denominator, which must not wrap as uint.
+          // Widen before subtraction; paired defense/absorb exclusions overlap, so deduct their swing only once.
           var accuracyAttempts = (long)stats.MeleeAttempts - stats.Parries - stats.Dodges - stats.Blocks
-            - stats.Invulnerable - stats.Absorbs;
+            - stats.Invulnerable - stats.Absorbs + stats.AbsorbExclusionOverlaps;
           stats.MeleeAccRate = accuracyAttempts > 0
             ? (float)Math.Round((double)stats.MeleeHits / accuracyAttempts * 100, 2) : 0;
         }
@@ -1024,6 +1036,7 @@ namespace EQLogParser
         switch (type)
         {
           case Labels.Absorb:
+          case Labels.DamageAbsorb:
           case Labels.Dodge:
           case Labels.Invulnerable:
           case Labels.Miss:
@@ -1063,6 +1076,8 @@ namespace EQLogParser
       stats.NonTwincastCritHits = 0;
       stats.NonTwincastLuckyHits = 0;
       stats.Absorbs = 0;
+      stats.AbsorbExclusionOverlaps = 0;
+      stats.DamageAbsorbs = 0;
       stats.Blocks = 0;
       stats.Dodges = 0;
       stats.Misses = 0;

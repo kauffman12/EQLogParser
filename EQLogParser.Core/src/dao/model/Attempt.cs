@@ -9,6 +9,7 @@ namespace EQLogParser;
 internal class Attempt
 {
   public uint Absorbs { get; set; }
+  public uint DamageAbsorbs { get; set; }
   public uint Blocks { get; set; }
   public uint Dodges { get; set; }
   public uint Misses { get; set; }
@@ -81,6 +82,9 @@ internal class Attempt
   public Dictionary<long, int> CritFreqValues => FreqOf(ref _critFreq, ref _critRaw, ref _critWide);
 
   public Dictionary<long, int> NonCritFreqValues => FreqOf(ref _nonCritFreq, ref _nonCritRaw, ref _nonCritWide);
+
+  // The paired defense and its terminal absorb share one accuracy exclusion. No captured row carries this credit.
+  internal uint AbsorbExclusionOverlaps { get; set; }
 
   /* One damaging record's amount, kept for a histogram nobody has asked for yet. Zero-damage outcomes never reach this (callers check). */
   internal void RecordHitTotal(long total, bool isCrit)

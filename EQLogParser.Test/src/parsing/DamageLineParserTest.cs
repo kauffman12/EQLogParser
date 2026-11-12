@@ -738,8 +738,8 @@ namespace EQLogParser
       Assert.IsNotNull(record);
       Assert.AreEqual("Firethorn", record.Attacker);
       Assert.AreEqual("Fllint", record.Defender);
-      Assert.AreEqual(Labels.Absorb, record.Type);
-      Assert.AreEqual("Hits", record.SubType);
+      Assert.AreEqual(Labels.DamageAbsorb, record.Type);
+      Assert.AreEqual(Labels.Ds, record.SubType);
       Assert.IsFalse(record.AttackerIsSpell);
     }
 
@@ -750,8 +750,8 @@ namespace EQLogParser
       Assert.IsNotNull(record);
       Assert.AreEqual("Herald of the Outer Brood", record.Attacker);
       Assert.AreEqual(ConfigUtil.PlayerName, record.Defender);
-      Assert.AreEqual(Labels.Absorb, record.Type);
-      Assert.AreEqual("Hits", record.SubType);
+      Assert.AreEqual(Labels.DamageAbsorb, record.Type);
+      Assert.AreEqual(Labels.Ds, record.SubType);
       Assert.IsFalse(record.AttackerIsSpell);
     }
 
@@ -764,8 +764,8 @@ namespace EQLogParser
       Assert.AreEqual(Labels.Unk, record.Attacker);
       Assert.AreEqual(ConfigUtil.PlayerName, record.Defender);
       Assert.AreEqual((uint)0, record.Total);
-      Assert.AreEqual(Labels.Absorb, record.Type);
-      Assert.AreEqual("Hits", record.SubType);
+      Assert.AreEqual(Labels.DamageAbsorb, record.Type);
+      Assert.AreEqual(Labels.DamageAbsorb, record.SubType);
       Assert.IsFalse(record.AttackerIsSpell);
     }
 
@@ -777,8 +777,8 @@ namespace EQLogParser
       Assert.AreEqual(Labels.Unk, record.Attacker);
       Assert.AreEqual("Gaber", record.Defender);
       Assert.AreEqual((uint)0, record.Total);
-      Assert.AreEqual(Labels.Absorb, record.Type);
-      Assert.AreEqual("Hits", record.SubType);
+      Assert.AreEqual(Labels.DamageAbsorb, record.Type);
+      Assert.AreEqual(Labels.DamageAbsorb, record.SubType);
       Assert.IsFalse(record.AttackerIsSpell);
     }
 
@@ -790,8 +790,8 @@ namespace EQLogParser
       Assert.AreEqual("Leela", record.Defender);
       Assert.AreEqual(Labels.Unk, record.Attacker);
       Assert.AreEqual((uint)0, record.Total);
-      Assert.AreEqual(Labels.Absorb, record.Type);
-      Assert.AreEqual("Hits", record.SubType);
+      Assert.AreEqual(Labels.DamageAbsorb, record.Type);
+      Assert.AreEqual(Labels.DamageAbsorb, record.SubType);
       Assert.IsFalse(record.AttackerIsSpell);
     }
 

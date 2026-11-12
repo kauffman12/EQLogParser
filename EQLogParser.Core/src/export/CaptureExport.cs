@@ -425,7 +425,7 @@ internal static class CaptureExport
     LabelTypes.Miss => Labels.Miss, LabelTypes.Dodge => Labels.Dodge, LabelTypes.Parry => Labels.Parry,
     LabelTypes.Block => Labels.Block, LabelTypes.Riposte => Labels.Riposte,
     LabelTypes.Invulnerable => Labels.Invulnerable,
-    LabelTypes.Absorb => Labels.Absorb, _ => "Hit"
+    LabelTypes.Absorb => Labels.Absorb, LabelTypes.DamageAbsorb => Labels.DamageAbsorb, _ => "Hit"
   };
 
   private sealed class CensusEntry(Identity identity, long time)

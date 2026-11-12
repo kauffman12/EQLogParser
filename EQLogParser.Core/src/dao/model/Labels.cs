@@ -4,6 +4,7 @@ namespace EQLogParser
   internal static class Labels
   {
     public const string Absorb = "Absorb";
+    public const string DamageAbsorb = "Damage Absorb";
     public const string Dd = "Direct Damage";
     public const string Dot = "DoT Tick";
     public const string Ds = "Damage Shield";

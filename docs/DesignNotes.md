@@ -172,7 +172,7 @@ of X (an eye is not a combatant; striking an owned eye claims the striker), R20 
 R21 recognizes parser-recorded spell-effect roles; R22 guildmate achievements and R23 loot provide player evidence;
 R24 pet-target spells claim the defender as Pet; R25/R26 restore saved roster/owner evidence only for otherwise
 unplaced names in this capture; R27 types the shipped bot names as Mercenary before the NPC database runs.
-The vocabularies are **closed and asserted at their size** (`OwnerSuffixes`, `HitLabels`' sixteen words in one byte, the three countable
+The vocabularies are **closed and asserted at their size** (`OwnerSuffixes`, `HitLabels`' damage/heal words in one byte, the three countable
 eyes) — a new word arrives with a census over several eras, settings text if user-visible, and tests; nothing is
 inferred into them.
 
@@ -11205,7 +11205,8 @@ builder's filters also prevents an excluded record from paying a selected record
 What must not break:
 
 - Match both names without case, in the **same direction**, within **0–1 log seconds**. Both sentence and hit must carry
-  Strikethrough. A riposte sentence requires Riposte on the hit too; another defensive outcome requires a non-Riposte hit.
+  Strikethrough. The terminal outcome may be landed melee damage or `absorbs the blow!`. A riposte sentence requires
+  Riposte on the terminal outcome too; another defensive outcome requires a non-Riposte outcome.
   An ordinary block followed by a hit in the same second is two swings, never a pair.
 - Newest sentence wins. Consume one entry for one hit. Another melee hit or defensive outcome of that pair retires the old
   entry even when incompatible; an unrelated cast, spell tick, or different pair does not. Expire by time, not a fixed number
@@ -11214,11 +11215,13 @@ What must not break:
   modifiers that outcome normally scores, but contributes no protected-riposte count. Auto-parry and the moth sequences with
   several tagged sentences and no damage are real shapes. A tag is not proof that a damage number was printed.
 - The pair shares what the sentence spent: its whole mask, so a `(Strikethrough Flurry)` sentence and its number line score one
-  Flurry, not two (`ATagTheSentenceAlreadySpentIsNotCountedAgainOnItsNumberLine`). Absorb and Miss spend no modifier mask, so their
-  paired hit still owes its tag. LineModifiersParser.Unspent removes Riposte **with** a spent Strikethrough; otherwise a bare Riposte
+  Flurry, not two (`ATagTheSentenceAlreadySpentIsNotCountedAgainOnItsNumberLine`). Miss spends no modifier mask, so its
+  paired hit still owes its tag. A full melee absorb terminates a swing, never holds a pending sentence for a later hit, and
+  scores only an unspent Strikethrough, not damaging-hit modifiers. LineModifiersParser.Unspent removes Riposte **with** a spent Strikethrough; otherwise a bare Riposte
   bit invents successful return damage from the incoming blow. Bits only the number line carries (Critical, Rampage) stay.
-- Facts, codecs, spool formats, damage amounts, and landed-hit counts do not change. Do not reuse retired flag bits or add a
-  registry opinion to facts to solve a board accounting question.
+- Both captured lines, damage amounts, and landed-hit counts stay intact; fact layouts and spool formats do not change.
+  The appended Damage Absorb kind distinguishes damage notifications from melee outcomes (next section). Do not reuse retired
+  flag bits or add a registry opinion to facts to solve a board accounting question.
 - MeleeUndefended is **counted**, never derived: one per landed melee hit whose own line carries no Strikethrough. It used to be
   `MeleeHits − StrikethroughHits`, but unmatched pierced sentences add Strikethrough with no hit, so a hard-hit tank's cell floored
   at zero (`UndefendedCountsUnstruckHitsEvenWhenUnmatchedSentencesOutnumberThem`). Accuracy widens to signed arithmetic before
@@ -11248,8 +11251,8 @@ capture. Each row's damage and melee-hit total was asserted unchanged. The dispo
 
 For example, Foob on the last capture: attempts **11,295 → 8,422**, defensive ripostes **4,284 → 1,061**, strikethroughs
 **7,594 → 4,729**, with **4,504 hits / 463,327,192 damage** unchanged. Stricter tag compatibility and selected-fight boundaries
-are why these numbers are not the earlier raw-event pairing numbers. Attempts and tag reductions need not be identical: Absorb
-and Miss never spent a first tag.
+are why these numbers are not the earlier raw-event pairing numbers. These measurements precede the absorb distinction below;
+at that point Absorb and Miss never spent a first tag, so attempt and tag reductions need not have been identical.
 
 A tank-specific audit of Foob in that capture independently counted **4,284 riposte sentences: 3,223 tagged and 1,061 untagged**;
 the real tanking board's protected-riposte count is exactly the latter. It paired 2,873 incoming swings, with 2,865 repeated tags
@@ -11263,6 +11266,75 @@ StruckThroughBoardTest pins the actual boundary, both reporter examples, incomin
 window slices, repeated cached builds, unmatched lines, and outgoing totals. StruckThroughSwingTest pins time, names, direction,
 compatibility, intervening swings, capacity, and modifier credit; HitStatSplitTest pins consumption in StatsUtil. A parser-only
 counter test is not sufficient evidence that a displayed board was repaired.
+
+## Absorbed blows connect; absorbed damage is not another swing
+
+**A full melee absorb is a connection, not a damaging hit.** `Absorb` is reserved for `tries to …, but … magical skin absorbs
+the blow!`: one melee attempt and one `Absorbs`, no `Hits`/`MeleeHits`, critical tally, damage amount, average-hit sample or
+histogram sample. Both boards calculate **% Hit = (MeleeHits + Absorbs) / MeleeAttempts**, including an all-rune selection with
+no damaging hits. **% Acc keeps its existing exclusion categories**: blocks, dodges, parries, invulnerability and melee
+absorbs. Paired exclusions count only once (below). No new interpretation of accuracy or defense-check probabilities is implied.
+
+**An absorption notification is not proof of another swing.** `… magical skin absorbs the damage of X's thorns` carries
+`Damage Absorb` with subtype `Damage Shield`. Emulator `The Spellshield absorbed N of M …` and `X has shielded itself …`
+carry `Damage Absorb` too: neither establishes a separate, fully absorbed melee blow, and a partial absorb must not become a
+connection beside its damage line. These events increment `DamageAbsorbs`, never attempts or damaging hits. **No board shows
+that counter**: the sentence prints no amount, so a count of notifications is not a number an operator plans around, and its
+reading would flip between a tank's ward and a damage-shield owner's eaten reflect. The lines still reach capture, facts,
+detailed export and non-melee tanking filters, and `HitStatSplitTest` pins the counter so any future surface inherits accounting
+that already holds. FCT retains its existing Absorb word and switch; charts exclude both zero-damage outcomes from hit statistics.
+
+`HitLabel.DamageAbsorb` and fact type **18** are appended; all previous numeric ids stay put, with no new flag, layout or
+codec version. The kind survives cold encoding and fact rematerialization. Old type-9 facts alone cannot distinguish these
+sentences: re-read the original log rather than guessing from an older spool.
+
+**A pierced riposte followed by a tagged absorb is one swing.** The selected walk pairs both just as it pairs a damage number,
+with the same names, direction, compatible tags, one-second window and consumed-once rule. The terminal absorb scores any
+unspent Strikethrough but no successful defensive riposte. It cannot then pay a later damage line's attempt: full absorption
+already ended this swing. Untagged defenses remain separate; no auto-parry attribution or timing-only association is inferred.
+
+**One paired swing cannot be excluded twice from accuracy.** A matched Block/Dodge/Parry/Invulnerable sentence and terminal
+absorb share one attempt but retain both literal counters. `DamageSwingCredit.AccuracyExclusionCountedEarlier` carries the
+sentence's exclusion to the absorb; `AbsorbExclusionOverlaps` adds back that duplicate subtraction in the accuracy denominator.
+This credit is board-local, merges and resets with the stats, and never enters facts. A separately selected absorb owes its own
+attempt and exclusion; Riposte and Miss confer no overlap because accuracy does not subtract those counters. Landed-hit pairing
+and the broader legacy accuracy definition are unchanged; the result is not clamped. The shared rate tooltips name melee hits
+and the actual exclusions, not a fictional Hits/Misses/Ripostes partition.
+
+`StruckThroughBoardTest.ADefenseAndItsAbsorbExcludeOneSwingFromAccuracy` exercises each excluded defense in both directions,
+substats, isolated selection halves and repeated builds. These are synthetic supported sentences, not evidence of which
+combinations EQ prints. `HitStatSplitTest.Damage_AccuracyExclusionOverlapsSurviveMergeAndResetWithoutClampingRates` pins the
+non-100% case, spell hits outside the numerator, merge and reset; `StruckThroughSwingTest` pins credit eligibility and expiry.
+
+The independent reference is Beimeith's [Keltakun hand count](https://forums.everquest.com/index.php?threads/raid-boss-strikethrough-or-not.280822/page-2#post-4104775).
+`data/board/keltakun-swings.txt` preserves the sentences and times, expanding the abbreviated timestamps with the post's date.
+`StruckThroughBoardTest.BeimeithsKeltakunExampleCountsNineteenSwingsOnEitherBoard` classifies, projects, rematerializes and
+builds both directions: **19 attempts, 13 damaging melee hits, 1 melee absorb, 3 successful ripostes, 1 parry, 1 miss**;
+12 raw riposte sentences include 9 pierced ones. The 14 thorns ticks add no melee attempts. Incoming damage stays **456,129**;
+the opposite direction retains **256,422** return damage plus **214,185** thorns. The chosen connection rate is **14/19 = 73.68%**;
+that rate definition is ours, not a percentage Beimeith supplied.
+
+`StruckThroughSwingTest` pins terminal pairing, incompatible tags, names, direction and expiry. `StruckThroughBoardTest`
+also pins isolated selection halves, the summary slider, repeated cached builds, actual histogram contents, and tanking's
+melee/non-melee filters. `HitStatSplitTest` pins the unchanged damaging-hit/crit/average arithmetic, all-rune rate, merge and reset.
+
+A disposable before/after comparison against the pre-change tree classified and projected each full capture and built both
+real summaries with hit distributions enabled. Every row retained identical total damage, Hits, MeleeHits, critical hits,
+minimum, maximum, average, critical rate and histogram sample count; histogram amounts reconciled to each row's damage.
+Fact count, fight count and board row membership also stayed identical:
+
+| capture | damage facts | fights | tank attempts, before → after | tank melee absorbs, before → after |
+|---|---:|---:|---:|---:|
+| `eqlog_Kizant_beta-selected.txt` | 491,673 | 65 | 15,988 → 11,048 | 5,284 → 586 |
+| `eqlog_Kizant_xegony-strangle.txt` | 89,598 | 28 | 3,092 → 3,035 | 148 → 148 |
+| `eqlog_Bulron_thj.txt` (`EQLP_EMU=1`) | 707,860 | 12,807 | 235,462 → 235,462 | 3 → 3 |
+
+On the beta capture, **4,698** routed absorbed-thorns notifications leave the melee tally, and **242** additional repeated
+attempts disappear through terminal-absorb pairing. Funky's tank row keeps 45 damaging melee hits but changes from
+**575 attempts / 512 mixed absorbs / 7.83% Hit** to **67 attempts / 4 melee absorbs / 73.13% Hit**. Fllint becomes
+**1,172 attempts / 66 melee absorbs / 49.06% Hit**, Rune **993 / 77 / 62.24%**. The emulator also excludes shield notifications
+from outgoing melee accounting without changing its damaging-hit or histogram totals. The measurement harness was removed;
+the fixture and assertions above carry the regression, not a local-log print gate.
 
 ## The identity words were swept: one style, casters named, and the Type column pays for its longest word
 
@@ -12683,7 +12755,7 @@ pins the current sizes; see "Amount widths measured across 44 million hits: 48-b
 
 Asked as "can we retain smaller facts — if there are only ~30 possible values, store them in a short". Half of that was
 already true and half of it was aimed at the wrong field, which is worth writing down because the answer changed what got
-built. The vocabularies were packed years ago: `HitLabel` is a byte (the sixteen words), the spell/modifier name is a
+built. The vocabularies were packed years ago: `HitLabel` is a byte (the closed damage/heal vocabulary), the spell/modifier name is a
 ushort pool index, `Flags` is a byte with two live bits. What was actually fat was **the clock**: `TimeS` held the
 dotnet-epoch second itself — ~6.3e10 in the 2020s — and its comment recorded that an `int` cast of it had once overflowed
 silently and corrupted every timestamp. True of the raw value; pointless as a storage choice.

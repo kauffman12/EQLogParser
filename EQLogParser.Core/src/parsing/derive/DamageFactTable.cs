@@ -6,7 +6,8 @@ namespace EQLogParser
 {
   /*
    * Closed vocabulary of record types, one byte wide. Ids 1-15 are the damage words seen on
-   * DamageRecord.Type; 16 and 17 are the two heal words seen on HealRecord.Type. They share one table
+   * DamageRecord.Type; 16 and 17 are the two heal words, and 18 is a damage-absorption notification, not a swing.
+   * Existing ids are stable for stored facts. They share one table
    * because the words come from one source (Labels / HitLabels) and a fact that could carry either word
    * must not need two vocabularies — but no damage line produces a heal word and no heal line produces a
    * damage word (the damage parser cannot emit a heal label, see HitLabelTest), so which ids a given
@@ -33,6 +34,7 @@ namespace EQLogParser
     public const byte Riposte = 15;
     public const byte Heal = 16;
     public const byte Hot = 17;
+    public const byte DamageAbsorb = 18;
 
     private static readonly Dictionary<string, byte> Map = new(StringComparer.Ordinal)
     {
@@ -52,7 +54,8 @@ namespace EQLogParser
       [Labels.Invulnerable] = Invulnerable,
       [Labels.Riposte] = Riposte,
       [Labels.Heal] = Heal,
-      [Labels.Hot] = Hot
+      [Labels.Hot] = Hot,
+      [Labels.DamageAbsorb] = DamageAbsorb
     };
 
     private static readonly string[] LabelsById =
@@ -74,7 +77,8 @@ namespace EQLogParser
       Labels.Invulnerable,
       Labels.Riposte,
       Labels.Heal,
-      Labels.Hot
+      Labels.Hot,
+      Labels.DamageAbsorb
     ];
 
     public static byte IdOf(string type) => Map.TryGetValue(type ?? string.Empty, out var id) ? id : Unknown;
@@ -88,8 +92,8 @@ namespace EQLogParser
      * that sums IsHit facts into DamageTotal must never find itself adding healing because one more
      * stream started sharing this table.
      */
-    public static bool IsHit(byte id) => id != Absorb && id != Dodge && id != Invulnerable && id != Miss
-      && id != Parry && id != Riposte && id != Heal && id != Hot;
+    public static bool IsHit(byte id) => id != Absorb && id != DamageAbsorb && id != Dodge && id != Invulnerable
+      && id != Miss && id != Parry && id != Riposte && id != Heal && id != Hot;
 
     // The two words a heal line writes. Damage facts never answer yes here; the check exists so the
     // heal side does not have to compare strings (or repeat the ids) to know what it is holding.

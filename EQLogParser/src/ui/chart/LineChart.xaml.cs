@@ -17,6 +17,7 @@ namespace EQLogParser
     private static readonly Dictionary<string, bool> MissTypes = new()
     {
       { Labels.Absorb, true },
+      { Labels.DamageAbsorb, true },
       { Labels.Block, true } ,
       { Labels.Dodge, true },
       { Labels.Parry, true },

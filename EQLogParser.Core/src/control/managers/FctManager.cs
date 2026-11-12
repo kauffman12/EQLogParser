@@ -173,7 +173,7 @@ namespace EQLogParser
         {
           Lane = iAmDefender ? FctLane.Defensive : FctLane.Missed,
           Row = FctRow.Word, // the words answer to their own switches, never to a row (FctIngest.WordShown)
-          ValueText = record.Type,
+          ValueText = record.Type == Labels.DamageAbsorb ? Labels.Absorb : record.Type,
           Source = DisplaySource(record),
         });
         return;
@@ -334,7 +334,8 @@ namespace EQLogParser
 
     /* The labels DamageLineParser assigns to zero-damage evade lines. */
     private static bool IsDefensiveLabel(string type) =>
-      type is Labels.Miss or Labels.Dodge or Labels.Block or Labels.Parry or Labels.Riposte or Labels.Absorb or Labels.Invulnerable;
+      type is Labels.Miss or Labels.Dodge or Labels.Block or Labels.Parry or Labels.Riposte
+        or Labels.Absorb or Labels.DamageAbsorb or Labels.Invulnerable;
 
     /*
      * Melee records carry the attack verb in SubType ("Crushes"), and so do the zero-damage evade lines: their verb
@@ -346,7 +347,8 @@ namespace EQLogParser
      */
     private static string DisplaySource(DamageRecord record) =>
       string.IsNullOrEmpty(record.SubType) ? null
-        : record.Type == Labels.Melee || IsDefensiveLabel(record.Type) ? SingularizeVerb(record.SubType)
+        : record.Type != Labels.DamageAbsorb && (record.Type == Labels.Melee || IsDefensiveLabel(record.Type))
+          ? SingularizeVerb(record.SubType)
         : record.SubType;
 
     /* Display-only polish: melee lines capture the third-person verb ("bites", "crushes") and FCT
