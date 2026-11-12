@@ -420,10 +420,11 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
   timeline and class histories. Ownership and class are asked at each record's log time, never at positive infinity or from
   the latest persona. All heals is the authoritative captured-heal sheet; local-player tabs are views. Seq is not a source
   line number. The contract and reconciliation live in docs/DesignNotes.md → "The detailed export is an Excel workbook, written by hand".
-- **An NPC's health is estimated, never stated**: `NpcCombatStats` subtracts observed healing from received damage,
-  POOLS concurrent same-name lives and weights the mean by killed lives, never by pools. Selection keeps the full pool
-  context; an unfinished member invalidates its pool even when unselected. Unknown HP stays nullable and displays blank,
-  never zero. Zone comes from `ZoneRecord` intervals (`NpcZoneTimeline`), including literal unnamed-area
+- **An NPC's health is estimated, never stated**: `NpcCombatStats` subtracts observed healing from received damage and
+  POOLS concurrent same-name lives, then averages readings from the life-weighted **upper median** through its cap.
+  An even split prefers the higher reading (`AnEvenSplitDoesNotRejectTheHigherReadingAsOverkill`); low or high damage
+  alone proves neither a wounded pull nor overkill. Selection keeps the full pool context; an unfinished member invalidates
+  its pool even when unselected. Unknown HP stays nullable and displays blank, never zero. Zone comes from `ZoneRecord` intervals (`NpcZoneTimeline`), including literal unnamed-area
   boundaries. Display one row per zone name + NPC across visits; keep visit boundaries only for HP pool pricing. Melee reads the index's tanking ordinals rather than re-asking side. A completed read owes a refresh until
   a current answer covering its fact watermark is published (`NpcStatsRefresh`), even in All Fights mode. Selected Fights
   follows settled selection announcements; builds are single-flight and newest-question-wins. See

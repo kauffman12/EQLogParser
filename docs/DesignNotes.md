@@ -19736,18 +19736,32 @@ lives the raid finished. These laws keep the estimate about one creature:
 - **Concurrent same-name lives pool; they never split.** Nothing in a log distinguishes two mobs answering to one name, so
   arrival order decides which row a hit lands in and every row is wrong. Measured on the Incogitable capture, a name with
   two lives in one continuous stream split 687M/145M across its rows where the pool said 416M each; another split
-  2.53B/279M. A run of death-separated rows (no silence past the gap between them) gives each killed life the same estimate:
-  **(pool damage − observed healing) ÷ killed lives in the pool**. The final average is weighted by killed lives, never by
-  the number of pools. One kill taking 900 and three kills taking 300 total average 300, not the equally weighted
-  average-of-pools 500. Keep fractional pool estimates until the final integer display.
+  2.53B/279M. A run of death-separated rows (no silence past the gap between them) gives each killed life the same reading:
+  **(pool damage − observed healing) ÷ lives in the pool**, kept fractional until the final integer display. A pool is priced
+  once and its reading joins the name's other readings; nothing is averaged into the answer visit by visit.
+- **The upper cluster is a heuristic, not proof of starting health.** Low readings may reflect wounded pulls or missing
+  observations; high ones may include overkill or misattributed same-name damage. Neither cause is identified by the amount.
+  Anchor on the **life-weighted upper median** (sorted life rank `floor(count / 2) + 1`) and take the life-weighted mean of
+  readings from that anchor through **1.5× the anchor**, inclusive. All readings tied at the anchor count. Weight by selected
+  priced lives, never by pools or damage amount. `TheClusterAnchorFollowsKilledLivesNotPools` pins the weighting.
+  **An even split prefers the higher reading:** 6M and 22M must answer 22M, not anchor on 6M and reject 22M as overkill.
+  `AnEvenSplitDoesNotRejectTheHigherReadingAsOverkill` pins two- and four-life splits in either arrival order; the
+  majority-supported outlier cap remains pinned by `AMajoritySupportedCapExcludesAnUnusuallyHighReading`. With two conflicting
+  readings the log cannot say which is closer to full health; preferring the higher is deliberate. A majority of low readings
+  can still anchor low, mixed variants can bias the result, and one priced life answers with that one reading.
+  Measured on the Incogitable capture: *a jade criminal* has **34 rows, 31 killed lives, and 26 priceable lives in eight pools**.
+  Its mean printed **19,640,802**; the upper cluster prints **21,433,167**. `LowReadingsDoNotDragTheEstimateDown` reproduces the
+  rounded per-life pool readings: 15 of its 26 lives price between 20.98M and 22.28M. The 8.33M and 6.37M kills were checked
+  against the raw damage lines; those totals agree with the parser, but neither the check nor their small size proves wounded
+  pulls rather than lower-health variants. They are examples of low readings, not the two shortest projected lives.
 - **An unfinished life is a lower bound, never an observation.** A wipe, a leash or a log that ends mid-pull says "at least
   this much", and averaging those drags the number toward the pull's length. Rows not ended `Slain` are excluded — and so is
   any run containing one, because its pool total includes damage on a creature still standing at the end. A name with no
   killed life gets no row: an empty table over a night of wipes is the true answer. A row with kills but no priceable pool
-  keeps its Deaths and melee measurements and leaves Est HP **blank**, not zero. `AvgHp` stays nullable through the bound
+  keeps its Deaths and melee measurements and leaves Est HP **blank**, not zero. `EstHp` stays nullable through the bound
   row and numeric column; its displayed header is **Est HP** because this is an estimate, not measured health. Its header
-  tooltip identifies the estimate and explains the blank. A nonpositive net-health
-  estimate is also unknown, never a fabricated zero or negative HP.
+  tooltip identifies the heuristic and explains the blank. A nonpositive net-health estimate is also unknown, never a
+  fabricated zero or negative HP.
 - **Healing is not starting health.** A healed mob takes more damage than it started with, so healing landing on the name
   inside the run's span is **subtracted** from captured damage. For 1,500 damage and 250 observed healing, starting HP is
   approximately 1,250, not 1,750. `HealFact.Total` is landed healing; overheal is not subtracted. Outside the run's span a
@@ -19770,10 +19784,11 @@ visits and reads Unknown inside. The parser stores that literal sentence fragmen
 `an area` prefix at the zone interval door. Equal-second entries preserve file order so the last line wins.
 
 **The displayed census is one row per zone name + NPC, not per visit.** Re-entering Plane of Guile and killing Knuckle
-three times produces one Knuckle row with three deaths. Across visits, sum deaths, unrounded HP contributions and priced
-life counts, melee totals and hit counts; take the largest melee hit. Divide only at final publication, never average
-rounded visit averages. An unpriceable visit contributes deaths and observed melee but no HP weight; it cannot veto a
-separate visit's price. Selected Fights preserves the same pool context while limiting counts and melee to selected lives.
+three times produces one Knuckle row with three deaths. Across visits, sum deaths, collect every pool's reading with the
+lives it priced, and sum melee totals and hit counts; take the largest melee hit. Cluster and divide only at final
+publication, never average rounded visit averages — visits feed one reading pool, they are not rows to average. An
+unpriceable visit contributes deaths and observed melee but no reading; it cannot veto a separate visit's price. Selected
+Fights preserves the same pool context while limiting counts and melee to selected lives.
 A zone/NPC needs a selected kill to appear; once eligible, its selected unfinished visits contribute melee too. There is
 no First Seen column. Zone uses `CurrentSpellWidth`, the next wider theme preset above `CurrentNpcWidth`, on initial
 column generation and theme refresh.

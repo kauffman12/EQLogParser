@@ -55,7 +55,7 @@ public class NpcCombatStatsTest
     Kill(facts, "a cave bear", 1, 3);
 
     var row = Stats(facts, Raid()).Single();
-    Assert.AreEqual(5000, row.AvgHp, "the estimate is the damage the row RECEIVED");
+    Assert.AreEqual(5000, row.EstHp, "the estimate is the damage the row RECEIVED");
     Assert.AreEqual(1, row.Deaths);
     Assert.AreEqual(400, row.MaxMelee);
     Assert.AreEqual(400, row.AvgMelee);
@@ -84,7 +84,7 @@ public class NpcCombatStatsTest
 
     var row = NpcCombatStats.Build(rows, facts, index, timeline, null, null).Single();
     Assert.AreEqual(2, row.Deaths);
-    Assert.AreEqual(550, row.AvgHp, "the 1100 damage pool is shared by two killed lives");
+    Assert.AreEqual(550, row.EstHp, "the 1100 damage pool is shared by two killed lives");
   }
 
   [TestMethod]
@@ -107,7 +107,7 @@ public class NpcCombatStatsTest
     var row = rows.Single();
     Assert.AreEqual("Ruined Relic", row.Zone);
     Assert.AreEqual(2, row.Deaths);
-    Assert.AreEqual(500, row.AvgHp);
+    Assert.AreEqual(600, row.EstHp, "an even split anchors on the higher visit's reading");
   }
 
   [TestMethod]
@@ -137,19 +137,20 @@ public class NpcCombatStatsTest
     Assert.AreEqual("Knuckle", row.Npc);
     Assert.AreEqual("Plane of Guile: Cunning Gambit", row.Zone);
     Assert.AreEqual(3, row.Deaths);
-    Assert.AreEqual(3_556_048_423, row.AvgHp);
+    Assert.AreEqual(3_556_181_550, row.EstHp,
+      "the median visit anchors the cluster and the mean of the upper half answers, not the mean of all three");
     Assert.AreEqual(375, row.AvgMelee, "combine hit totals/counts, not rounded visit averages");
     Assert.AreEqual(900, row.MaxMelee);
   }
 
   [TestMethod]
-  public void VisitsKeepSeparatePoolsButCombineUnroundedDeathWeightedPrices()
+  public void VisitsKeepSeparatePoolsAndContributeReadingsToTheZonesCluster()
   {
     var facts = BuildFacts(
       ("Raidman", "a rat", 900, 0, LabelTypes.Melee),
-      ("Raidman", "a rat", 100, 10, LabelTypes.Melee),
-      ("Raidman", "a rat", 100, 11, LabelTypes.Melee),
-      ("Raidman", "a rat", 100, 12, LabelTypes.Melee),
+      ("Raidman", "a rat", 800, 10, LabelTypes.Melee),
+      ("Raidman", "a rat", 800, 11, LabelTypes.Melee),
+      ("Raidman", "a rat", 800, 12, LabelTypes.Melee),
       ("Raidman", "a rat", 8000, 20, LabelTypes.Melee),
       ("a rat", "Raidman", 900, 20, LabelTypes.Melee),
       ("Raidman", "a rat", 700, 100, LabelTypes.Melee));
@@ -170,37 +171,43 @@ public class NpcCombatStatsTest
     Assert.AreEqual(2, rows.Count, "different zone names remain separate");
     var first = rows.Single(r => r.Zone == "First Zone");
     Assert.AreEqual(4, first.Deaths);
-    Assert.AreEqual(300, first.AvgHp,
-      "visits separate pools even within the engagement gap; an unfinished later visit cannot veto earlier kills");
+    Assert.AreEqual(825, first.EstHp,
+      "the visits price 800 per life (three lives) and 900 (one), and an unfinished later visit cannot veto either");
     Assert.AreEqual(900, first.AvgMelee, "selected unfinished visits still contribute observed melee to the zone row");
     Assert.AreEqual(900, first.MaxMelee);
-    Assert.AreEqual(700, rows.Single(r => r.Zone == "Other Zone").AvgHp);
+    Assert.AreEqual(700, rows.Single(r => r.Zone == "Other Zone").EstHp);
 
     var selected = lives.Where(life => life.BeginTime == T0 || life.BeginTime == T0 + 10).ToList();
     var slice = NpcCombatStats.Build(lives, facts, index, timeline, null, zones, selected).Single();
     Assert.AreEqual(2, slice.Deaths);
-    Assert.AreEqual(500, slice.AvgHp, "selection keeps each visit's full pool context");
+    Assert.AreEqual(900, slice.EstHp, "the two selected lives split evenly, so the higher reading anchors the estimate");
     Assert.AreEqual(0, slice.MaxMelee, "unselected lives contribute no melee");
+
+    var pooledSlice = lives.Where(life => life.BeginTime == T0 + 10).ToList();
+    Assert.AreEqual(800, NpcCombatStats.Build(lives, facts, index, timeline, null, zones, pooledSlice).Single().EstHp,
+      "one selected life still gets the three-life visit's full pool price, not its own row's damage");
   }
 
   [TestMethod]
-  public void FractionsAndUnknownHpSurviveCombiningVisits()
+  public void AnUnpriceableVisitCountsItsDeathsButPricesNothing()
   {
     var facts = BuildFacts(
       ("Raidman", "a rat", 1, 0, LabelTypes.Melee),
       ("Raidman", "a rat", 2, 1, LabelTypes.Melee),
-      ("Raidman", "a rat", 3, 100, LabelTypes.Melee),
+      ("Raidman", "a rat", 1, 100, LabelTypes.Melee),
+      ("Raidman", "a rat", 2, 101, LabelTypes.Melee),
       ("Raidman", "a rat", 100, 200, LabelTypes.Melee),
       ("Raidman", "a rat", 8000, 201, LabelTypes.Melee));
-    Kill(facts, "a rat", 0, 5);
-    Kill(facts, "a rat", 1, 6);
-    Kill(facts, "a rat", 100, 7);
-    Kill(facts, "a rat", 200, 8);
+    Kill(facts, "a rat", 0, 6);
+    Kill(facts, "a rat", 1, 7);
+    Kill(facts, "a rat", 100, 8);
+    Kill(facts, "a rat", 101, 9);
+    Kill(facts, "a rat", 200, 10);
     var zones = new NpcZoneTimeline(new[] { (T0, "Zone"), (T0 + 100, "Zone"), (T0 + 200, "Zone") });
 
     var row = Stats(facts, Raid(), zones: zones).Single();
-    Assert.AreEqual(4, row.Deaths);
-    Assert.AreEqual(2, row.AvgHp, "combine 1.5 HP for two lives and 3 for one, excluding the unpriceable visit");
+    Assert.AreEqual(5, row.Deaths, "the visit that ends mid-pull still died twice before that");
+    Assert.AreEqual(1, row.EstHp, "both priceable visits read 1.5 per life; the answer truncates once, at the end");
   }
 
   [TestMethod]
@@ -225,7 +232,7 @@ public class NpcCombatStatsTest
     Kill(facts, "a wraith", 0, 4);
 
     var row = Stats(facts, Raid()).Single();
-    Assert.IsNull(row.AvgHp, "an unpriceable pool is unknown, not a zero-HP creature");
+    Assert.IsNull(row.EstHp, "an unpriceable pool is unknown, not a zero-HP creature");
     Assert.AreEqual(1, row.Deaths);
     Assert.AreEqual(700, row.AvgMelee, "a reported group keeps melee from its unfinished lives too");
     Assert.AreEqual(900, row.MaxMelee, "what the NPC dealt is measured whether or not it died");
@@ -246,7 +253,7 @@ public class NpcCombatStatsTest
     heals.AddHeal(new HealFact(4, (long)(T0 - 50), boss, boss, 5000, 0, LabelTypes.Heal, 0, -1, HealFact.NoSpell));
 
     var row = Stats(facts, Raid(), heals).Single();
-    Assert.AreEqual(1250, row.AvgHp, "1500 damage includes the 250 HP restored during the life");
+    Assert.AreEqual(1250, row.EstHp, "1500 damage includes the 250 HP restored during the life");
   }
 
   [TestMethod]
@@ -333,10 +340,13 @@ public class NpcCombatStatsTest
     var index = new FightFactIndex(timeline);
     var rows = FightProjection.Build(facts, timeline, index.OnFact);
 
-    Assert.AreEqual(775, NpcCombatStats.Build(rows, facts, index, timeline, heals, null).Single().AvgHp,
+    Assert.AreEqual(850, NpcCombatStats.Build(rows, facts, index, timeline, heals, null).Single().EstHp,
+      "the pools price 700 and 850 per life; the upper median keeps the higher reading");
+    var first = rows.Where(r => r.BeginTime < T0 + 100).ToList();
+    Assert.AreEqual(700, NpcCombatStats.Build(rows, facts, index, timeline, heals, null, first).Single().EstHp,
       "heals at both pool endpoints and between pooled lives count, heals between pools do not");
-    var selected = rows.Where(r => r.BeginTime >= T0 + 100).ToList();
-    Assert.AreEqual(850, NpcCombatStats.Build(rows, facts, index, timeline, heals, null, selected).Single().AvgHp,
+    var second = rows.Where(r => r.BeginTime >= T0 + 100).ToList();
+    Assert.AreEqual(850, NpcCombatStats.Build(rows, facts, index, timeline, heals, null, second).Single().EstHp,
       "narrowing the heal walk may not change a selected pool's estimate");
   }
 
@@ -355,13 +365,13 @@ public class NpcCombatStatsTest
   }
 
   [TestMethod]
-  public void PoolsAreWeightedByKilledLivesAndNotByBrawls()
+  public void TheClusterAnchorFollowsKilledLivesNotPools()
   {
     var facts = BuildFacts(
       ("Raidman", "a rat", 900, 0, LabelTypes.Melee),
-      ("Raidman", "a rat", 100, 100, LabelTypes.Melee),
-      ("Raidman", "a rat", 100, 101, LabelTypes.Melee),
-      ("Raidman", "a rat", 100, 102, LabelTypes.Melee));
+      ("Raidman", "a rat", 1000, 100, LabelTypes.Melee),
+      ("Raidman", "a rat", 1000, 101, LabelTypes.Melee),
+      ("Raidman", "a rat", 1000, 102, LabelTypes.Melee));
     Kill(facts, "a rat", 0, 4);
     Kill(facts, "a rat", 100, 5);
     Kill(facts, "a rat", 101, 6);
@@ -369,21 +379,112 @@ public class NpcCombatStatsTest
 
     var row = Stats(facts, Raid()).Single();
     Assert.AreEqual(4, row.Deaths);
-    Assert.AreEqual(300, row.AvgHp, "1200 over four lives, not (900 + 100) over two pools");
+    Assert.AreEqual(1000, row.EstHp,
+      "three killed lives sharing 3000 read 1000 each and outvote one life at 900; averaging pools would answer 950");
   }
 
   [TestMethod]
   public void PoolFractionsSurviveUntilTheFinalAverage()
   {
     var facts = BuildFacts(
-      ("Raidman", "a rat", 1, 0, LabelTypes.Melee),
-      ("Raidman", "a rat", 2, 1, LabelTypes.Melee),
-      ("Raidman", "a rat", 3, 100, LabelTypes.Melee));
+      ("Raidman", "a rat", 1000, 0, LabelTypes.Melee),
+      ("Raidman", "a rat", 1000, 1, LabelTypes.Melee),
+      ("Raidman", "a rat", 1002, 2, LabelTypes.Melee),
+      ("Raidman", "a rat", 1000, 100, LabelTypes.Melee),
+      ("Raidman", "a rat", 1004, 101, LabelTypes.Melee));
+    Kill(facts, "a rat", 0, 5);
+    Kill(facts, "a rat", 1, 6);
+    Kill(facts, "a rat", 2, 7);
+    Kill(facts, "a rat", 100, 8);
+    Kill(facts, "a rat", 101, 9);
+    var zones = new NpcZoneTimeline(new[] { (T0, "Zone"), (T0 + 100, "Zone") });
+
+    Assert.AreEqual(1001, Stats(facts, Raid(), zones: zones).Single().EstHp,
+      "3002 shared by three lives and 2004 by two average to 1001.2; truncating a pool first would answer 1000");
+  }
+
+  [TestMethod]
+  [DataRow(1, false)]
+  [DataRow(1, true)]
+  [DataRow(2, false)]
+  [DataRow(2, true)]
+  public void AnEvenSplitDoesNotRejectTheHigherReadingAsOverkill(int livesPerPool, bool lowFirst)
+  {
+    var damage = new List<(string Atk, string Def, long Dmg, double T, byte Label)>();
+    for (var pool = 0; pool < 2; pool++)
+    {
+      var amount = (pool == 0) == lowFirst ? 6_000_000 : 22_000_000;
+      for (var i = 0; i < livesPerPool; i++)
+      {
+        damage.Add(("Raidman", "a rat", amount, pool * 100 + i, LabelTypes.Melee));
+      }
+    }
+
+    var facts = BuildFacts(damage.ToArray());
+    var seq = damage.Count;
+    foreach (var row in damage) Kill(facts, "a rat", row.T, seq++);
+    var timeline = Raid();
+    var index = new FightFactIndex(timeline);
+    var lives = FightProjection.Build(facts, timeline, index.OnFact);
+    var higher = lives.Where(life => life.DamageToOwner == 22_000_000).ToList();
+
+    Assert.AreEqual(22_000_000,
+      NpcCombatStats.Build(lives, facts, index, timeline, null, null, higher).Single().EstHp);
+    var all = NpcCombatStats.Build(lives, facts, index, timeline, null, null).Single();
+    Assert.AreEqual(livesPerPool * 2, all.Deaths);
+    Assert.AreEqual(22_000_000, all.EstHp,
+      "including equally many low readings must not replace 22M with 6M by calling the higher half overkill");
+  }
+
+  [TestMethod]
+  public void LowReadingsDoNotDragTheEstimateDown()
+  {
+    // Rounded per-life readings from eight priceable pools of the Incogitable capture's jade criminal.
+    // Low damage alone does not prove a wounded pull; keep those readings without letting them set the estimate.
+    var visits = new (int Lives, long PerLife)[]
+    {
+      (6, 19_749_310), (1, 22_275_910), (2, 21_810_961), (3, 18_656_029),
+      (6, 20_982_076), (6, 21_617_870), (1, 8_333_982), (1, 6_365_428),
+    };
+
+    var facts = new DamageFactTable(64);
+    var seq = 0;
+    var zoneStarts = new List<(double Time, string Zone)>();
+    for (var v = 0; v < visits.Length; v++)
+    {
+      var (lives, perLife) = visits[v];
+      var begin = v * 100;                     // seconds from T0; Kill() adds T0 itself
+      zoneStarts.Add((T0 + begin, "Lair"));
+      for (var i = 0; i < lives; i++)
+      {
+        facts.AddFact(new DamageFact(seq, (long)(T0 + begin + i), facts.InternName("Raidman"),
+          facts.InternName("a jade criminal"), perLife, LabelTypes.Melee, 0, 0, DamageFactTable.NoSubtype));
+        seq++;
+        Kill(facts, "a jade criminal", begin + i, seq);
+        seq++;
+      }
+    }
+
+    var row = Stats(facts, Raid(), zones: new NpcZoneTimeline(zoneStarts)).Single();
+    Assert.AreEqual(26, row.Deaths);
+    Assert.AreEqual(21_433_167, row.EstHp,
+      "the upper readings answer; the 6.4M and 8.3M readings are excluded without guessing their cause");
+  }
+
+  [TestMethod]
+  public void AMajoritySupportedCapExcludesAnUnusuallyHighReading()
+  {
+    var facts = BuildFacts(
+      ("Raidman", "a rat", 1000, 0, LabelTypes.Melee),
+      ("Raidman", "a rat", 1000, 1, LabelTypes.Melee),
+      ("Raidman", "a rat", 5000, 100, LabelTypes.Melee));
     Kill(facts, "a rat", 0, 3);
     Kill(facts, "a rat", 1, 4);
     Kill(facts, "a rat", 100, 5);
+    var zones = new NpcZoneTimeline(new[] { (T0, "Zone"), (T0 + 100, "Zone") });
 
-    Assert.AreEqual(2, Stats(facts, Raid()).Single().AvgHp, "do not truncate the first pool's 1.5 HP per life");
+    Assert.AreEqual(1000, Stats(facts, Raid(), zones: zones).Single().EstHp,
+      "5000 is above 1.5x the majority-supported median and is excluded without identifying the cause");
   }
 
   [TestMethod]
@@ -404,7 +505,7 @@ public class NpcCombatStatsTest
     for (var i = 0; i < lives.Count; i++)
     {
       var row = NpcCombatStats.Build(lives, facts, index, timeline, null, null, [lives[i]]).Single();
-      Assert.AreEqual(550, row.AvgHp, "neither selected slice is an independently identifiable creature");
+      Assert.AreEqual(550, row.EstHp, "neither selected slice is an independently identifiable creature");
       Assert.AreEqual(1, row.Deaths);
       Assert.AreEqual(i == 0 ? 700 : 300, row.AvgMelee);
       Assert.AreEqual(row.AvgMelee, row.MaxMelee);
@@ -442,7 +543,7 @@ public class NpcCombatStatsTest
 
     var row = NpcCombatStats.Build(lives, facts, index, timeline, null, null, [lives[0]]).Single();
     Assert.AreEqual(1, row.Deaths);
-    Assert.IsNull(row.AvgHp);
+    Assert.IsNull(row.EstHp);
   }
 
   [TestMethod]
@@ -457,7 +558,7 @@ public class NpcCombatStatsTest
 
     var row = Stats(facts, Raid()).Single();
     Assert.AreEqual(2, row.Deaths);
-    Assert.AreEqual(500, row.AvgHp, "the second pool has no estimate, not a zero to average into the first");
+    Assert.AreEqual(500, row.EstHp, "the second pool has no estimate, not a zero to average into the first");
   }
 
   [TestMethod]
@@ -469,7 +570,7 @@ public class NpcCombatStatsTest
     var boss = facts.InternName("Useless");
     heals.AddHeal(new HealFact(2, (long)T0, boss, boss, 200, 0, LabelTypes.Heal, 0, -1, HealFact.NoSpell));
 
-    Assert.IsNull(Stats(facts, Raid(), heals).Single().AvgHp, "do not print a negative or fake zero starting HP");
+    Assert.IsNull(Stats(facts, Raid(), heals).Single().EstHp, "do not print a negative or fake zero starting HP");
   }
 
   [TestMethod]
@@ -512,7 +613,7 @@ public class NpcCombatStatsTest
     Assert.AreEqual(2, next.Count);
     Assert.IsTrue(first[0].Dead);
     Assert.HasCount(0, NpcCombatStats.Build(input), "the old question saw no killed life");
-    Assert.AreEqual(550, NpcCombatStats.Build(next, facts, cache.Index, timeline, null, null).Single().AvgHp);
+    Assert.AreEqual(550, NpcCombatStats.Build(next, facts, cache.Index, timeline, null, null).Single().EstHp);
   }
 
   [TestMethod]
@@ -534,7 +635,7 @@ public class NpcCombatStatsTest
 
     var row = NpcCombatStats.Build(input).Single();
     Assert.AreEqual(1, row.Deaths, "selection and deaths belong to the frozen question");
-    Assert.IsNull(row.AvgHp, "the later death cannot turn the old unfinished pool into a priceable one");
+    Assert.IsNull(row.EstHp, "the later death cannot turn the old unfinished pool into a priceable one");
   }
 
   [TestMethod]
@@ -565,7 +666,7 @@ public class NpcCombatStatsTest
     var killed = first.Where(life => life.Dead).ToList();
     var priced = NpcCombatStats.Capture(killed, facts, cache.Index, timeline, heals, null);
     heals.AddHeal(new HealFact(7, (long)T0, rat, rat, 200, 0, LabelTypes.Heal, 0, -1, HealFact.NoSpell));
-    Assert.AreEqual(900, NpcCombatStats.Build(priced).Single().AvgHp);
+    Assert.AreEqual(900, NpcCombatStats.Build(priced).Single().EstHp);
   }
 
   [TestMethod]

@@ -72,13 +72,13 @@ namespace EQLogParser
     public string Zone { get; init; }
     public string Npc { get; init; }
     public int Deaths { get; init; }
-    public long? AvgHp { get; init; }
+    public long? EstHp { get; init; }
     public long AvgMelee { get; init; }
     public long MaxMelee { get; init; }
   }
 
   /*
-   * Estimate starting HP from closed same-name pools, weighted by killed lives, not by pools.
+   * Estimate starting HP from closed same-name pools, then answer with their UPPER CLUSTER rather than their mean.
    * Selection changes the counted lives and melee, never the context needed to price a pool.
    * docs/DesignNotes.md → "NPC health is estimated from killed lives, and concurrent names pool".
    */
@@ -144,7 +144,7 @@ namespace EQLogParser
           if (!zoneTotals.TryGetValue(zone, out var totals)) zoneTotals[zone] = totals = new Totals();
           totals.Deaths += deaths;
         }
-
+        // A zone needs a selected kill to appear; its selected unfinished visits still contribute observed melee.
         foreach (var (visit, lives) in group.Visits)
         {
           if (!zoneTotals.TryGetValue(zones.ZoneOf(visit), out var totals)) continue;
@@ -155,7 +155,7 @@ namespace EQLogParser
           {
             if (run.Count > 0 && life.BeginTime - run[^1].LastTime > FightProjection.EngagementGapS)
             {
-              PriceSelectedRun(run, group.Name, healTotals, ref totals.HpSum, ref totals.PricedLives);
+              AddRunReading(run, group.Name, healTotals, totals);
               run.Clear();
             }
             run.Add(life);
@@ -173,7 +173,7 @@ namespace EQLogParser
           }
 
           if (run.Count > 0)
-            PriceSelectedRun(run, group.Name, healTotals, ref totals.HpSum, ref totals.PricedLives);
+            AddRunReading(run, group.Name, healTotals, totals);
         }
 
         foreach (var (zone, totals) in zoneTotals)
@@ -183,7 +183,7 @@ namespace EQLogParser
             Zone = zone,
             Npc = group.Name,
             Deaths = totals.Deaths,
-            AvgHp = totals.PricedLives > 0 ? (long)(totals.HpSum / totals.PricedLives) : null,
+            EstHp = EstimateHp(totals.Pools),
             AvgMelee = totals.MeleeHits > 0 ? (long)(totals.MeleeTotal / totals.MeleeHits) : 0,
             MaxMelee = totals.MeleeMax
           });
@@ -212,9 +212,9 @@ namespace EQLogParser
       return deaths;
     }
 
-    private static void PriceSelectedRun(List<Life> run, string name,
-      Dictionary<string, List<(double Time, long Total)>> healTotals,
-      ref decimal hpSum, ref int pricedLives)
+    // A priced pool becomes ONE reading of this name's health, weighted by the lives the question counts from it.
+    private static void AddRunReading(List<Life> run, string name,
+      Dictionary<string, List<(double Time, long Total)>> healTotals, Totals totals)
     {
       var damage = 0m;
       var selectedLives = 0;
@@ -232,9 +232,46 @@ namespace EQLogParser
       if (healTotals.TryGetValue(name, out var healed)) damage -= HealedIn(healed, run[0].BeginTime, end);
       if (damage <= 0) return;
 
-      // Keep fractional pool estimates until the final average; round neither a pool nor an individual life first.
-      hpSum += damage * selectedLives / run.Count;
-      pricedLives += selectedLives;
+      // All lives share the pool's per-life estimate; keep it fractional until the final answer.
+      totals.Pools.Add((damage / run.Count, selectedLives));
+    }
+
+    private const decimal CapFactor = 1.5m;
+
+    // Prefer the upper readings without treating a low reading as proof of a wounded pull or a high one as overkill.
+    // docs/DesignNotes.md → "NPC health is estimated from killed lives, and concurrent names pool".
+    private static long? EstimateHp(List<(decimal Price, int Lives)> pools)
+    {
+      if (pools.Count == 0) return null;
+
+      pools.Sort(static (a, b) => a.Price.CompareTo(b.Price));
+
+      var total = 0;
+      foreach (var (_, count) in pools) total += count;
+      var running = 0;
+      var median = pools[pools.Count - 1].Price;
+      foreach (var (price, count) in pools)
+      {
+        running += count;
+        // An even split chooses the upper median, so the lower half cannot cap away the entire higher half.
+        if (running * 2L > total)
+        {
+          median = price;
+          break;
+        }
+      }
+
+      var sum = 0m;
+      var lives = 0;
+      foreach (var (price, count) in pools)
+      {
+        if (price < median || price > median * CapFactor) continue;
+        sum += price * count;
+        lives += count;
+      }
+
+      // The median is itself a reading, so a priced pool always leaves a cluster; nothing priceable was already skipped.
+      return lives == 0 ? null : (long)(sum / lives);
     }
 
     private static Dictionary<string, List<(double Time, long Total)>> CollectHeals(
@@ -306,8 +343,10 @@ namespace EQLogParser
     private sealed class Totals
     {
       public int Deaths;
-      public decimal HpSum;
-      public int PricedLives;
+
+      // One entry per priced pool: (health per life in that pool, lives this question counts from it).
+      public readonly List<(decimal Price, int Lives)> Pools = [];
+
       public long MeleeHits;
       public decimal MeleeTotal;
       public long MeleeMax;

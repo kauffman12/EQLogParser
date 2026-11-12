@@ -38,7 +38,7 @@ namespace EQLogParser
       DataContext = this;
 
       // default these columns to descending
-      var desc = new[] { "AvgHp", "Deaths", "AvgMelee", "MaxMelee" };
+      var desc = new[] { "EstHp", "Deaths", "AvgMelee", "MaxMelee" };
       dataGrid.SortColumnsChanging += (s, e) => DataGridUtil.SortColumnsChanging(s, e, desc);
       dataGrid.SortColumnsChanged += (s, e) => DataGridUtil.SortColumnsChanged(s, e, desc);
     }
@@ -205,7 +205,7 @@ namespace EQLogParser
           Zone = stat.Zone,
           Npc = stat.Npc,
           Deaths = stat.Deaths,
-          AvgHp = stat.AvgHp,
+          EstHp = stat.EstHp,
           AvgMelee = stat.AvgMelee,
           MaxMelee = stat.MaxMelee
         });
@@ -307,14 +307,14 @@ namespace EQLogParser
         HeaderText = mapping switch
         {
           "Deaths" => "Deaths",
-          "AvgHp" => "Est HP",
+          "EstHp" => "Est HP",
           "AvgMelee" => "Avg Melee",
           "MaxMelee" => "Max Melee",
           _ => e.Column.HeaderText
         }
       };
 
-      if (mapping == "AvgHp")
+      if (mapping == "EstHp")
       {
         column.AllowNullValue = true;
         column.NullText = "";
@@ -333,7 +333,7 @@ namespace EQLogParser
     public string Zone { get; set; }
     public string Npc { get; set; }
     public int Deaths { get; set; }
-    public long? AvgHp { get; set; }
+    public long? EstHp { get; set; }
     public long AvgMelee { get; set; }
     public long MaxMelee { get; set; }
   }

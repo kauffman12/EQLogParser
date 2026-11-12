@@ -60,7 +60,7 @@
         </Style>
       </syncfusion:SfDataGrid.Resources>
       <syncfusion:SfDataGrid.SortColumnDescriptions>
-        <syncfusion:SortColumnDescription ColumnName="AvgHp" SortDirection="Descending" />
+        <syncfusion:SortColumnDescription ColumnName="EstHp" SortDirection="Descending" />
       </syncfusion:SfDataGrid.SortColumnDescriptions>
       <syncfusion:SfDataGrid.ContextMenu>
         <ContextMenu>

@@ -330,7 +330,7 @@
 
     <DataTemplate x:Key="NpcCombatStatsHpToolTip">
       <TextBlock FontSize="{DynamicResource EQContentSize}" Foreground="{DynamicResource PrimaryForeground}"
-                 Text="Estimated starting HP averaged across completed same-name pools, after subtracting observed healing. Blank means no complete pool could be estimated. Overkill and unlogged damage or healing can affect the estimate."
+                 Text="Estimated starting HP from complete same-name pools, after subtracting observed healing. Averages readings from the upper median of priced lives up to 1.5 times it. Lower or unusually high readings are excluded, not identified as wounded pulls or overkill. Blank means no complete pool could be priced."
                  TextWrapping="Wrap" MaxWidth="320" />
     </DataTemplate>
     <DataTemplate x:Key="HeaderImprovedTauntToolTip">
