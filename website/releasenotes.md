@@ -1,3 +1,10 @@
+# 2.4.12 | 11/13/26
+1. Added **NPC Statistics** window, starting with basic info.
+2. Updated **Tanking** summary to group DD/DoT damage.
+3. Parsing fixes for pet death messages and event zoning data.
+4. Falling and simple env damage are being ignored again.
+5. More fixes for counting absorbs and calculating Hit%.
+
 # 2.4.11 | 11/10/26
 1. Changed how the **Quick Share** dialogs are displayed so they should more reliably show up while playing.
 2. Updated spell abbreviations to better handle names like **Fire VII Rk. II**
