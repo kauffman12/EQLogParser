@@ -3,7 +3,6 @@ setlocal
 
 set "RELEASE_DIR=EQLogParser\bin\Release\net10.0-windows10.0.17763.0"
 set "BACKUP_DIR=BackupUtil\bin\Release\net10.0-windows10.0.17763.0"
-set "MSI_DIR=EQLogParserMSI\bin\Release"
 
 set "SIGNTOOL=c:\Program Files (x86)\Windows Kits\10\App Certification Kit\signtool"
 set "TIMESTAMP=http://timestamp.sectigo.com"
@@ -111,12 +110,6 @@ for %%F in (
     "%RELEASE_DIR%\redist\vcruntime140_1.dll"
 ) do (
     call :SignPackFile "%%~F" || goto :fail
-)
-
-for %%F in ("%MSI_DIR%\EQLogParser*.msi") do (
-    if exist "%%~fF" (
-        call :SignFile "%%~fF" || goto :fail
-    )
 )
 
 echo Done.
