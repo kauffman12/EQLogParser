@@ -9969,7 +9969,7 @@ the filter from the grid removed that restriction: see the next section.
 
 The Fight List has two row dials — **Inactivity** (show the gaps between pulls) and **Tanking** (hide the rows whose whole
 story is something
-hitting us). Both are one predicate over ONE list. The first version of the derived pane handed that predicate to SfDataGrid
+hitting us). Both filter ONE complete list; with Tanking off, redundant display dividers also collapse as described below. The first version of the derived pane handed that predicate to SfDataGrid
 (`View.Filter` + `RefreshFilter`), and the single choice caused three separate problems, one of them a field report:
 
 - **The patch had to be disabled whenever Tanking was off.** `Fight.DamageToOwner` is a field a patch mutates (a fight starts
@@ -9994,7 +9994,7 @@ capture’s rows, patched in place) and `_rows` (what the dials call visible), a
 supplies the three
 operations: `Project` (the visible subsequence), `Reconcile` (edit the bound collection in place to match it, fewest edits,
 reporting what it
-spent), `Runs` (contiguous select ranges). The load-bearing property is that **the two lists hold the SAME row objects** —
+spent), `Runs` (contiguous select ranges). The load-bearing property is that **the two lists hold the SAME fight-row objects** —
 hiding a fight moves
 a reference, it never copies or rebuilds one. That is what makes the patch legal in both dial states, what lets a selection
 be carried across a
@@ -10028,6 +10028,21 @@ visibility to its members. Both Select Group and Unselect Group use that same se
 checkbox combinations,
 including selections in other groups and an undamaged fight inside the target group. The pane wiring is covered by
 `FightTableDialVisibilityTest`.
+
+**Hidden tanking sections must not leave adjacent inactivity lines.** With Tanking off, `ShownRows.ProjectCollapsedBreaks`
+collapses two or more existing dividers with no visible fight between them into one display-only divider. Its span is the
+running latest end of preceding visible fights through the next visible fight's start, including the time occupied by the
+hidden fights. Overlapping visible fights cannot move that start backwards. Leading/trailing dividers disappear; a single
+interior divider keeps its original instance and label. No boundary is invented when hidden activity bridged a long gap:
+this is presentation cleanup, not independent regrouping of the damage-only list. Tanking on restores the original rows;
+Inactivity off hides all dividers. Select Group, summary group IDs, boards and exports retain their complete-list meaning.
+
+Merged divider objects belong only to the pane, never to the snapshot or its carry. The pane reuses them by gap start while
+visible, updates their labels on live passes, drops unused entries, and clears them on a capture change. Fight rows always
+remain shared references. `CollapsedFightBreaksTest` pins collapse, overlap, edge removal, both dials, hidden bridges and
+unchanged group membership headlessly. `FightTableDialVisibilityTest` additionally covers source-label preservation,
+merged-divider reuse, live visibility changes and capture clearing on Windows. No test reaches actual pointer selection or
+viewport behaviour during these divider changes; those remain governed by the selection and viewport rules above.
 
 The same review found search passing an unsorted source index to a sorted-view resolver; search is back on `View.Records` and
 deferred scrolling

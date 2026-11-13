@@ -344,8 +344,9 @@ You are an expert AI assistant maintaining this C#/WPF/.NET 10 project.
   (`Math.Max(1, Last - Begin + 1)`, matching `TimeSegment.Total`); a death closes only a row that was alive at `dt`; an empty
   window prints nothing rather than a fake zero. A list that never fills is diagnosed by which of `capture: started` /
   `derive: first pass` is missing (both Debug; run with `Debug=True`).
-- **The dials change visibility, never groups**: `_allRows` holds the complete display list; `_rows` is its visible projection, sharing row
-  instances (`ShownRows`). `View.Filter` stays empty. `GroupSectionSelect.VisibleMembers` finds boundaries BEFORE filtering, then takes visible
+- **The dials change visibility, never groups**: `_allRows` holds the complete display list; `_rows` is its visible projection, sharing fight-row
+  instances (`ShownRows`). With Tanking off, adjacent dividers collapse for display only and edge dividers disappear; no new boundary is invented.
+  `View.Filter` stays empty. `GroupSectionSelect.VisibleMembers` finds boundaries BEFORE filtering, then takes visible
   fights only. Range selects index `_rows` only while unsorted; search walks the grid's sorted view and resolves the matched object when scrolling.
   Restore selection by row instance (sorted too), and ask as `BoardReason.DialChange` on a toggle. See `docs/DesignNotes.md` →
   "The fight list dials filter our rows, not the grid".

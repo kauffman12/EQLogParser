@@ -51,15 +51,16 @@ namespace EQLogParser
 
     /*
      * The capture's rows in list order: the truth the patch keeps current, one instance per fight with a `Key` that survives every derive.
-     * What the grid is BOUND to is `_rows`, the projection of this list through the two row dials. A row object is SHARED between the two, so
+     * What the grid is BOUND to is `_rows`, the projection of this list through the two row dials. Fight-row objects are SHARED between the two, so
      * hiding a fight moves a reference rather than copying or rebuilding anything — which is how a selected row survives a live night with either
      * dial off, and why SfDataGrid's index-based selection has no filter left to disagree with it. The whole reason, including what the grid-side
      * filter used to cost: docs/DesignNotes.md → "The fight list dials filter our rows, not the grid".
      */
     private List<DerivedFightRow> _allRows = [];
 
-    // What the grid shows: `_allRows` through the Inactivity and Tanking predicates, same order, same instances. Never a copy of a row.
+    // Fight rows share `_allRows`' instances; collapsed dividers belong only to this presentation.
     private ObservableCollection<DerivedFightRow> _rows = [];
+    private Dictionary<double, DerivedFightRow> _mergedBreaks = [];
     private readonly DispatcherTimer _selectionTimer;
 
     /*
@@ -501,6 +502,7 @@ namespace EQLogParser
       _currentSnapshot = null;
       _allRows.Clear();
       _rows.Clear();
+      _mergedBreaks.Clear();
 
       // Last night's pointer cannot name this capture's rows: the instance is gone, and a menu opened without a pointer
       // (keyboard) must not inherit a row from the log that just closed.
@@ -1291,8 +1293,31 @@ namespace EQLogParser
       ? _currentShowBreaks
       : _currentShowTanking || ShownWhenTankingHidden(row.Fight);
 
-    // The projection the dials currently call for, in list order and by reference (ShownRows).
-    private List<DerivedFightRow> VisibleRows() => ShownRows.Project(_allRows, IsShown);
+    // Only display dividers collapse. Select Group still reads the untouched boundaries in `_allRows`.
+    private List<DerivedFightRow> VisibleRows()
+    {
+      if (_currentShowTanking || !_currentShowBreaks)
+      {
+        _mergedBreaks.Clear();
+        return ShownRows.Project(_allRows, IsShown);
+      }
+
+      var mergedNow = new Dictionary<double, DerivedFightRow>();
+      var visible = ShownRows.ProjectCollapsedBreaks(_allRows, IsShown, static row => row.IsDivider,
+        static row => (row.Fight?.BeginTime ?? double.NaN, row.Fight?.LastTime ?? double.NaN), MergeDivider);
+      // Retain only this projection's dividers: no old capture or hidden section stays cached.
+      _mergedBreaks = mergedNow;
+      return visible;
+
+      DerivedFightRow MergeDivider(double from, double to)
+      {
+        if (!_mergedBreaks.TryGetValue(from, out var row))
+          row = new DerivedFightRow { IsDivider = true, Key = DerivedFightRows.DividerKey(from) };
+        row.Name = "Inactivity > " + DateUtil.FormatGeneralTime(Math.Max(0, to - from));
+        mergedNow.Add(from, row);
+        return row;
+      }
+    }
 
     /*
      * A dial moved: re-point the grid at the new projection. Wholesale rather than reconciled because a toggle moves most of the list at once,

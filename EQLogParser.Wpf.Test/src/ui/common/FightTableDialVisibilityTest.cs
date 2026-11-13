@@ -114,11 +114,100 @@ public sealed class FightTableDialVisibilityTest
       counts.Add(table.RowCount);
       total = table.RowCountAll;
     });
-    CollectionAssert.AreEqual(new[] { 3, 2, 1, 2, 3 }, counts);
+    CollectionAssert.AreEqual(new[] { 3, 2, 1, 1, 3 }, counts);
     CollectionAssert.AreEqual(new[] { "Grul", "Grul", "Grul", "Grul" }, groups,
       "hiding the divider must not make Select Group mean Select All");
     Assert.AreEqual(3, total);
   }
+
+  [TestMethod]
+  public void CollapsedBreaksDoNotRelabelTheSnapshotOrChangeGroups()
+  {
+    var restored = false;
+    var sharedFights = false;
+    var sourceUntouched = false;
+    var groupsUnchanged = false;
+    string[] names = [];
+    Sta.Run(() =>
+    {
+      var snapshot = Snapshot(Fight("First", 0, 90), Fight("Hidden", 300, 0), Fight("Last", 800, 90));
+      var table = Paint(snapshot);
+      var original = BoundRows(table);
+      var originalNames = original.Select(row => row.Name).ToArray();
+      table.fightShowTanking.IsChecked = false;
+      var shown = BoundRows(table);
+      names = shown.Select(row => row.Name).ToArray();
+      sharedFights = ReferenceEquals(original[0], shown[0]) && ReferenceEquals(original[4], shown[2]);
+      sourceUntouched = snapshot.Rows.Select(row => row.Name).SequenceEqual(originalNames)
+        && !snapshot.Rows.Contains(shown[1]);
+      groupsUnchanged = table.SectionRowsOf(shown[0]).SequenceEqual(new[] { shown[0] })
+        && table.SectionRowsOf(shown[2]).SequenceEqual(new[] { shown[2] });
+      table.fightShowTanking.IsChecked = true;
+      restored = BoundRows(table).SequenceEqual(original)
+        && BoundRows(table).Select(row => row.Name).SequenceEqual(originalNames);
+    });
+    CollectionAssert.AreEqual(new[] { "First", GapName(20, 800), "Last" }, names);
+    Assert.IsTrue(sharedFights);
+    Assert.IsTrue(sourceUntouched);
+    Assert.IsTrue(groupsUnchanged);
+    Assert.IsTrue(restored);
+  }
+
+  [TestMethod]
+  public void AMergedDividerIsUpdatedInPlaceAndReplacedWhenItsHiddenFightBecomesVisible()
+  {
+    var dividerKept = false;
+    var fightsKept = false;
+    var boundariesRestored = false;
+    string[] grown = [];
+    string[] hiddenAgain = [];
+    Sta.Run(() =>
+    {
+      var table = Paint(Snapshot(Fight("First", 0, 90), Fight("Middle", 300, 0), Fight("Last", 800, 90)));
+      table.fightShowTanking.IsChecked = false;
+      var before = BoundRows(table);
+      table.OnDerived(Snapshot(Fight("First", 0, 90), Fight("Middle", 300, 0), Fight("Last", 900, 90)));
+      Flush();
+      var after = BoundRows(table);
+      grown = after.Select(row => row.Name).ToArray();
+      dividerKept = ReferenceEquals(before[1], after[1]);
+      fightsKept = ReferenceEquals(before[0], after[0]);
+
+      table.OnDerived(Snapshot(Fight("First", 0, 90), Fight("Middle", 300, 50), Fight("Last", 900, 90)));
+      Flush();
+      var entered = BoundRows(table);
+      boundariesRestored = entered.Count == 5 && entered[1].IsDivider && entered[3].IsDivider
+        && entered[2].Name == "Middle" && ReferenceEquals(after[0], entered[0])
+        && ReferenceEquals(after[2], entered[4]);
+      table.OnDerived(Snapshot(Fight("First", 0, 90), Fight("Middle", 300, 0), Fight("Last", 900, 90)));
+      Flush();
+      hiddenAgain = BoundRows(table).Select(row => row.Name).ToArray();
+    });
+    CollectionAssert.AreEqual(new[] { "First", GapName(20, 900), "Last" }, grown);
+    CollectionAssert.AreEqual(grown, hiddenAgain);
+    Assert.IsTrue(dividerKept);
+    Assert.IsTrue(fightsKept);
+    Assert.IsTrue(boundariesRestored);
+  }
+
+  [TestMethod]
+  public void ClearingTheCaptureRetiresItsMergedDivider()
+  {
+    var retired = false;
+    Sta.Run(() =>
+    {
+      var table = Paint(Snapshot(Fight("First", 0, 90), Fight("Hidden", 300, 0), Fight("Last", 800, 90)));
+      table.fightShowTanking.IsChecked = false;
+      var oldDivider = BoundRows(table)[1];
+      table.ClearForNewCapture();
+      table.OnDerived(Snapshot(Fight("First", 0, 90), Fight("Hidden", 300, 0), Fight("Last", 800, 90)));
+      Flush();
+      retired = !ReferenceEquals(oldDivider, BoundRows(table)[1]);
+    });
+    Assert.IsTrue(retired);
+  }
+
+  private static string GapName(double from, double to) => "Inactivity > " + DateUtil.FormatGeneralTime(to - from);
 
   private static void Flush() => Dispatcher.CurrentDispatcher.Invoke(new Action(() => { }), DispatcherPriority.Normal);
 

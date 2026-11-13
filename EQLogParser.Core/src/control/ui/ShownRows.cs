@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace EQLogParser;
 
-// Visibility moves references, never copies rows. Grid range indices match this list only when unsorted.
+// Visibility moves fight references, never copies them. Grid range indices match this list only when unsorted.
 // See docs/DesignNotes.md → "The fight list dials filter our rows, not the grid".
 internal static class ShownRows
 {
@@ -17,6 +17,50 @@ internal static class ShownRows
     for (var i = 0; i < rows.Count; i++)
     {
       if (shown(rows[i])) visible.Add(rows[i]);
+    }
+
+    return visible;
+  }
+
+  /*
+   * Collapse only boundaries already present in the complete list; hidden activity must not invent a new group.
+   * Fight rows keep their references. A merged divider is presentation-only and must not mutate a source divider.
+   */
+  internal static List<T> ProjectCollapsedBreaks<T>(IReadOnlyList<T> rows, Func<T, bool> shown,
+    Predicate<T> isDivider, Func<T, (double Begin, double Last)> times, Func<double, double, T> mergedDivider)
+    where T : class
+  {
+    var visible = new List<T>(rows.Count);
+    T pending = null;
+    var dividerCount = 0;
+    var lastTime = double.NaN;
+
+    foreach (var row in rows)
+    {
+      if (!shown(row)) continue;
+      if (isDivider(row))
+      {
+        // Wait for another visible fight: leading/trailing gaps have nothing on both sides to separate.
+        if (visible.Count > 0)
+        {
+          pending ??= row;
+          dividerCount++;
+        }
+        continue;
+      }
+
+      var (begin, last) = times(row);
+      if (pending is not null)
+      {
+        visible.Add(dividerCount > 1 && !double.IsNaN(lastTime) && !double.IsNaN(begin)
+          ? mergedDivider(lastTime, begin) : pending);
+        pending = null;
+        dividerCount = 0;
+      }
+
+      visible.Add(row);
+      if (!double.IsNaN(last))
+        lastTime = double.IsNaN(lastTime) ? last : Math.Max(lastTime, last);
     }
 
     return visible;
