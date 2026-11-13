@@ -571,6 +571,38 @@ namespace EQLogParser
       Assert.IsTrue(PreLineParser.NeedProcessing(Line("Kizant wonders.", 5), (_, _) => { }, (_, _) => true, _ => { }));
     }
 
+    // Three status notifications reuse the "You have entered X." shape without naming a zone (levitation/safe/PvP flip
+    // inside the zone already entered). Claiming them keeps CastLineParser from recording a bogus ZoneRecord that would
+    // override the real zone - so deaths in such a zone read the real zone, not Unknown or "a safe area".
+    [TestMethod]
+    public void NeedProcessing_EnteredAreaStatusNotices_AreTakenAtTheDoor()
+    {
+      foreach (var line in new[]
+      {
+        "You have entered an area where levitation effects do not function.",
+        "You have entered a safe area.",
+        "You have entered an Arena (PvP) area.",
+      })
+      {
+        Assert.IsFalse(PreLineParser.NeedProcessing(Line(line, 5), (_, _) => { }, (_, _) => true, _ => { }),
+          $"status notice reached the rest of the pipeline: {line}");
+      }
+
+      // Controls: real zone lines - including the ones a loose "area"/"Arena" match would wrongly swallow - must still
+      // reach CastLineParser. "The Arena" is a zone; "an area not on the map" is a real (unnamed) boundary whose
+      // boundary NpcZoneTimeline keeps and only blanks its name.
+      foreach (var line in new[]
+      {
+        "You have entered The Ruins of Relic: Shar'Drahn.",
+        "You have entered The Arena.",
+        "You have entered an area not on the map.",
+      })
+      {
+        Assert.IsTrue(PreLineParser.NeedProcessing(Line(line, 5), (_, _) => { }, (_, _) => true, _ => { }),
+          $"real zone line was swallowed by the status-notice branch: {line}");
+      }
+    }
+
     [TestMethod]
     public void ATildeLineClaimsNothingAsEvidence()
     {

@@ -51,6 +51,17 @@ namespace EQLogParser
           found = true;
         }
         /*
+         * Three notifications reuse the "You have entered X." shape without naming a zone: a levitation/safe/PvP status
+         * flip inside the zone the player already stands in ("an Arena (PvP) area" even re-fires seconds apart). Each
+         * follows the real zone-in line by seconds, so recording one as a zone overrode the zone actually entered - and
+         * NpcZoneTimeline maps a name starting "an area" to Unknown, so deaths in such a zone read Unknown. Claiming them
+         * here (as the tilde line above is claimed) keeps CastLineParser from storing a bogus ZoneRecord.
+         */
+        else if (IsEnteredAreaStatusNotice(action))
+        {
+          found = true;
+        }
+        /*
          * "Targeted (NPC): <name>" - the client naming whatever the button is pointed at. This parser takes the whole line:
          * no parser downstream has ever consumed it (it was discarded before R1 existed and still is), so letting it walk
          * Damage/Healing/Misc/Cast produced nothing but work. Reported through `ReportEvidence` rather than the event
@@ -246,6 +257,30 @@ namespace EQLogParser
 
       name = action[from..end];
       return name.Length > 0;
+    }
+
+    /*
+     * The status notifications that wear the "You have entered X." shape but name no zone. Matched as prefixes, each
+     * the whole client sentence up to where a zone name would differ. Deliberately enumerated rather than a loose
+     * "area"/"Arena" match: "The Arena." is a real zone and "an area not on the map." is a real (unnamed) boundary
+     * that NpcZoneTimeline keeps, so both must still reach CastLineParser. "an Arena" (lower-case article) is only ever
+     * the PvP status line, never "The Arena".
+     */
+    private static readonly string[] EnteredAreaStatusNotices =
+    [
+      "You have entered an area where levitation",
+      "You have entered a safe area",
+      "You have entered an Arena",
+    ];
+
+    private static bool IsEnteredAreaStatusNotice(string action)
+    {
+      foreach (var notice in EnteredAreaStatusNotices)
+      {
+        if (action.StartsWith(notice, StringComparison.Ordinal)) return true;
+      }
+
+      return false;
     }
 
     internal static int FindPossiblePlayerName(string action, out bool isCrossServer, int startIndex, int stopIndex, char stopChar)
