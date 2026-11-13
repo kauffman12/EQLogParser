@@ -19,6 +19,10 @@ namespace EQLogParser
     private long _processedLines;
     private Task _readTask;
     private volatile bool _isDisposed;
+    private LineData _pendingNonMelee;
+    private LineData _pendingStun;
+    private int _pendingLines;
+    private const int NonMeleeFollowUpWaitMs = 1000;
 
         /*
          * Bound ONCE because converting an instance method group allocates a fresh delegate per call (~610 MB across a 10 M line capture). The neighbours
@@ -46,8 +50,9 @@ namespace EQLogParser
     // (LogReader keeps feeding long after LinkTo).
     internal Task Completion => _readTask;
 
-    // A batch is acknowledged only after its last line has passed through the parser.
-    internal long ProcessedLines => Interlocked.Read(ref _processedLines);
+    // Count a batch only after its loop, less any EMU cause hold (at most two lines).
+    // A hold is acknowledged only when parsed or deliberately discarded, not when taken off the queue.
+    internal long ProcessedLines => Math.Max(0, Interlocked.Read(ref _processedLines) - Volatile.Read(ref _pendingLines));
 
         /*
          * The stream arrives in batches because the thread crossing costs, not the parse (docs/DesignNotes.md → "The reader hands the parser one line at a
@@ -67,8 +72,15 @@ namespace EQLogParser
         _lane.CharmCasts.Clear();
         try
         {
-          foreach (var batch in collection.GetConsumingEnumerable())
+          while (!_isDisposed && !collection.IsCompleted)
           {
+            // Only an EMU bare hit waits for its cause. An idle monitored stream must publish an unconfirmed hit.
+            if (!collection.TryTake(out var batch, _pendingNonMelee is null ? Timeout.Infinite : NonMeleeFollowUpWaitMs))
+            {
+              FlushNonMelee(false);
+              continue;
+            }
+
             // Checked per LINE, inside the batch: a dispose must stop where it lands rather than swallow the
             // rest of whatever bundle the reader happened to hand over (the drain law on Completion).
             foreach (var data in batch)
@@ -102,6 +114,8 @@ namespace EQLogParser
             if (_isDisposed) break;
             Interlocked.Add(ref _processedLines, batch.Length);
           }
+
+          if (!_isDisposed) FlushNonMelee(false);
         }
         catch (Exception ex)
         {
@@ -115,6 +129,23 @@ namespace EQLogParser
       });
     }
 
+    public void Dispose()
+    {
+      if (!_isDisposed)
+      {
+        _isDisposed = true;
+
+        try
+        {
+          _readTask?.Wait(2000);
+        }
+        catch (Exception ex)
+        {
+          Log.Error("Log reading task not completed.", ex);
+        }
+      }
+    }
+
     private void DoPreProcess(string line, double dateTime, bool monitor)
     {
       // IsMonitor rides with the line so downstream consumers (FCT) can drop replay records
@@ -123,6 +154,7 @@ namespace EQLogParser
       // avoid having other things parse chat by accident
       if (ChatLineParser.ParseChatType(lineData.Action) is { } chatType)
       {
+        FlushNonMelee(false);
         chatType.BeginTime = lineData.BeginTime;
         chatType.Text = line; // workaround for now?
         _chatSink.Add(chatType);
@@ -151,25 +183,7 @@ namespace EQLogParser
           }
         }
 
-        if (PreLineParser.NeedProcessing(lineData, (name, time) => PlayerRegistry.Instance.AddVerifiedPlayer(name, time), PlayerRegistry.IsPossiblePlayerName, _addMerc))
-        {
-                    /*
-                     * No eager Split: the word view builds itself on first read by a parser that needs words (LineData.Words). That call used to be ~374 B and
-                     * 29 % of ingest stage time on every recognized line.
-                     */
-          if (!DamageLineParser.Process(lineData))
-          {
-            if (!HealingLineParser.Process(lineData))
-            {
-              if (!MiscLineParser.Process(lineData))
-              {
-                CastLineParser.Process(lineData);
-              }
-            }
-          }
-
-          _lineCount++;
-        }
+        ProcessNonMelee(lineData);
 
         if (doubleLine != null)
         {
@@ -178,20 +192,68 @@ namespace EQLogParser
       }
     }
 
-    public void Dispose()
+    private void ProcessNonMelee(LineData lineData)
     {
-      if (!_isDisposed)
+      if (_pendingNonMelee is { } pending)
       {
-        _isDisposed = true;
+        var sameMoment = lineData.BeginTime >= pending.BeginTime && lineData.BeginTime - pending.BeginTime <= 1;
+        // One observed fall has this harmless message between the amount and the cause. Preserve its order too.
+        if (sameMoment && _pendingStun is null && lineData.Action == "You are no longer stunned.")
+        {
+          _pendingStun = lineData;
+          Volatile.Write(ref _pendingLines, 2);
+          return;
+        }
 
-        try
+        FlushNonMelee(sameMoment && lineData.Action == "YOU were injured by falling.");
+      }
+
+      if (AppSettings.IsEmuParsingEnabled && IsBareNonMelee(lineData.Action))
+      {
+        _pendingNonMelee = lineData;
+        Volatile.Write(ref _pendingLines, 1);
+        return;
+      }
+
+      ProcessAction(lineData);
+    }
+
+    private void FlushNonMelee(bool falling)
+    {
+      if (_pendingNonMelee is null) return;
+      var pending = _pendingNonMelee;
+      var stun = _pendingStun;
+      _pendingNonMelee = null;
+      _pendingStun = null;
+      if (!falling) ProcessAction(pending);
+      if (stun is not null) ProcessAction(stun);
+      Volatile.Write(ref _pendingLines, 0);
+    }
+
+    private static bool IsBareNonMelee(string action)
+    {
+      const string prefix = "You were hit by non-melee for ";
+      if (!action.StartsWith(prefix, StringComparison.Ordinal)) return false;
+      var amount = action.AsSpan(prefix.Length);
+      if (amount.EndsWith(".", StringComparison.Ordinal)) amount = amount[..^1];
+      if (!amount.EndsWith(" damage", StringComparison.Ordinal)) return false;
+      amount = amount[..^7];
+      return !amount.IsEmpty && amount.IndexOfAnyExceptInRange('0', '9') < 0;
+    }
+
+    private void ProcessAction(LineData lineData)
+    {
+      lineData.LineNumber = _lineCount;
+      if (PreLineParser.NeedProcessing(lineData, (name, time) => PlayerRegistry.Instance.AddVerifiedPlayer(name, time),
+        PlayerRegistry.IsPossiblePlayerName, _addMerc))
+      {
+        if (!DamageLineParser.Process(lineData) && !HealingLineParser.Process(lineData)
+          && !MiscLineParser.Process(lineData))
         {
-          _readTask?.Wait(2000);
+          CastLineParser.Process(lineData);
         }
-        catch (Exception ex)
-        {
-          Log.Error("Log reading task not completed.", ex);
-        }
+
+        _lineCount++;
       }
     }
   }

@@ -11438,6 +11438,27 @@ name IS the proof; a new clause that wants more room rewords itself instead of w
 
 `EQLogParser.Wpf.Test` (NamesTableTest's cell/width assertions) still needs its Windows run along with the other pending UI items.
 
+### Bare non-melee hits: live environmental damage and EMU falling
+
+`… was/were hit by non-melee for N damage.` (no **points of**) is discarded in live mode, with the line still claimed.
+It creates no record or fact, so it appears on no fight list, board, meter, hit log or detailed export. The raw log is unchanged.
+The `… for N points of damage.` sibling and named/source-less damage-shield sentences keep their existing parsing.
+
+EMU is deliberately narrower: only `You were hit by non-melee for N damage.` followed by
+`YOU were injured by falling.` is discarded. All other causes, legacy shield flavor, and absent/uncertain follow-ups retain
+exactly the old Unknown-attacker direct-damage record. `LogProcessor` holds only that candidate, plus at most one intervening
+`You are no longer stunned.` sentence observed in the samples. The cause must be no more than one log second later. A different
+line flushes the candidate before that line is parsed; completion or one second of queue inactivity also flushes it. The idle
+fallback intentionally keeps uncertain damage rather than losing an EMU shield hit. The hold belongs to the processor, crosses
+batch boundaries, and is resolved before the read is acknowledged as drained. There is no new damage type or UI filter.
+
+Across the sample files (18 live, six EMU), all 56 live and 1,137 EMU bare `You` hits had an environmental follow-up: live
+44 falling / nine burning / two freezing / one pendulum; EMU 872 falling / 199 burning / 57 freezing / nine crushed. That is
+strong evidence for those files, not a promise about every emulator. The separately preserved **points of damage** form had
+84 live and 475,926 EMU occurrences. `EnvironmentalDamageTest` pins mode separation, shield preservation, fallback order and
+metadata, batch/glued-line pairing, the stun exception, and idle-tail/EOF publication; `DamageLineParserTest` pins live lines
+being claimed without a record and the unchanged standalone EMU parse.
+
 ### Damage the capture never saw, and damage it invented
 
 Two things came out of reading one capture's numbers against another's (`eqlog_Kizant_beta-11-30-25.txt`: 6,957,983 damage facts

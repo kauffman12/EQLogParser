@@ -461,9 +461,20 @@ namespace EQLogParser
     }
 
     [TestMethod]
-    public void TestNonMelee_FallingDamage()
+    public void TestNonMelee_LiveEnvironmentalDamageIsClaimedWithoutARecord()
     {
-      var record = ParseAction("You were hit by non-melee for 16 damage");
+      Assert.IsNull(ParseAction("You were hit by non-melee for 16 damage"));
+      Assert.IsNull(ParseAction("You were hit by non-melee for 16 damage."));
+      Assert.IsTrue(DamageLineParser.Process(new LineData
+      {
+        Action = "You were hit by non-melee for 16 damage.", BeginTime = FixtureTime.Base
+      }));
+    }
+
+    [TestMethod]
+    public void TestNonMelee_EmuUnconfirmedDamageIsUnchanged()
+    {
+      var record = ParseEmuAction("You were hit by non-melee for 16 damage");
       Assert.IsNotNull(record);
       Assert.AreEqual(Labels.Unk, record.Attacker);
       Assert.AreEqual(ConfigUtil.PlayerName, record.Defender);

@@ -110,10 +110,7 @@ namespace EQLogParser
           }
           else
           {
-            if (ParseLine(false, lineData, split, stop) is { } damageRecord)
-            {
-              processed = true;
-            }
+            processed = ParseLine(false, lineData, split, stop, out var ignored) is not null || ignored;
           }
         }
 
@@ -153,7 +150,7 @@ namespace EQLogParser
             // see if it's a died message right away
             if (!(split.Length > 1 && stop >= 1 && split[stop] == "died." && split.JoinWords(0, stop) is { } test && !string.IsNullOrEmpty(test)))
             {
-              record = ParseLine(true, lineData, split, stop);
+              record = ParseLine(true, lineData, split, stop, out _);
             }
           }
         }
@@ -166,8 +163,10 @@ namespace EQLogParser
       return record;
     }
 
-    private static DamageRecord ParseLine(bool checkLineType, LineData lineData, LineWords split, int stop)
+    private static DamageRecord ParseLine(bool checkLineType, LineData lineData, LineWords split, int stop,
+      out bool ignored)
     {
+      ignored = false;
       DamageRecord record = null;
       var resist = SpellResist.Undefined;
       string attacker = null;
@@ -735,9 +734,16 @@ namespace EQLogParser
         defender = ParserUtil.UpdateDefender(defender, attacker);
         record = CreateDamageRecord(lineData, split, stop, attacker, defender, damage, Labels.Dd, Labels.Dd);
       }
-      // falling damage? [Fri Mar 04 21:28:19 2022] You were hit by non-melee for 16 damage
+      // Bare non-melee damage is environmental on live. EMU keeps it unless LogProcessor confirms falling.
+      // The sibling "points of damage" form above and damage-shield sentences remain counted.
       else if (isIndex > -1 && nonMeleeIndex == (isIndex + 3) && split[isIndex + 1] == "hit" && endDamage == stop && pointsOfIndex == -1)
       {
+        if (!AppSettings.IsEmuParsingEnabled)
+        {
+          ignored = true;
+          return null;
+        }
+
         var damage = split.ParseAmount(endDamage - 1);
         attacker = Labels.Unk;
 
