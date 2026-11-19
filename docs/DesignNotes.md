@@ -16990,6 +16990,18 @@ Unknown at all. Pinned by `RecalculateIdentityTest` (`ATakenBackNameStaysOnTheLi
 `TwoTakeBacksBothKeepTheirRows`, `AnExplicitUnknownVerdictIsNotATakeBackAndStampsNothing`) and by the vocabulary coverage in
 `IdentityVocabularyTest`, which now has to know the word or the census test fails.
 
+## Damage Summary reads existing raid rosters when opened
+
+`RaidRosterStore` captures parsed `/who` group rows whether Damage Summary is open or not. Opening or reopening the pane
+subscribes to roster updates **before reading the store**, and entering Group View reads it again before showing the selector.
+The list must not depend on a damage build completing or on replaying a roster notification sent while the pane was hidden.
+The existing dispatcher-marshalled roster notification continues to refresh the open pane as new rosters arrive.
+
+`DamageSummaryRosterTest` (Windows-only) pins first open, reopen and entry into Group View against rosters captured after pane
+construction, without waiting for a board completion or a debounced roster notification. This changes presentation only:
+parsing, identity claims, roster retention and the loaded log time range are unchanged. A `/who` outside that time range
+cannot contribute a roster.
+
 ## A board belongs to the capture that asked
 
 A review of this branch asked which capture a queued board build answers to. The answer used to be "whatever is on screen

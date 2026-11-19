@@ -225,11 +225,13 @@ namespace EQLogParser
 
     private void OnViewOptionChanged(int index)
     {
-      // Show/hide roster selector based on view option
-      rosterSelector.Visibility = _viewOptions.GetSelectedOptionName() == Labels.ByGroupOption
-        ? Visibility.Visible
-        : Visibility.Collapsed;
+      var groupView = _viewOptions.GetSelectedOptionName() == Labels.ByGroupOption;
+      if (groupView)
+      {
+        PopulateRosterSelector();
+      }
 
+      rosterSelector.Visibility = groupView ? Visibility.Visible : Visibility.Collapsed;
       UpdateList();
     }
 
@@ -992,6 +994,8 @@ namespace EQLogParser
         MainActions.EventsChartOpened += EventsChartOpened;
         MainActions.EventsDamageSummaryOptionsChanged += EventsDamageSummaryOptionsChanged;
         RaidRosterStore.EventsRosterUpdated += OnRosterUpdated;
+        // Opening must catch up with rosters captured while hidden, without waiting for a board build.
+        PopulateRosterSelector();
 
         if (DamageStatsBuilder.Instance.GetLastStats() is { } stats)
         {
