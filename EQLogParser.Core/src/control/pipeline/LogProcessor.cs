@@ -15,6 +15,7 @@ namespace EQLogParser
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     private readonly IChatSink _chatSink;
     private readonly ITriggerHook _triggerHook;
+    private readonly long _rosterCaptureVersion;
     private long _lineCount;
     private long _processedLines;
     private Task _readTask;
@@ -41,6 +42,7 @@ namespace EQLogParser
       _chatSink = chatSink ?? throw new ArgumentNullException(nameof(chatSink));
       _triggerHook = triggerHook ?? throw new ArgumentNullException(nameof(triggerHook));
       _lane = lane ?? ParseLane.Main;
+      _rosterCaptureVersion = RaidRosterStore.Instance.CaptureVersion;
       _addMerc = PlayerRegistry.Instance.AddMerc;
     }
 
@@ -248,7 +250,7 @@ namespace EQLogParser
         PlayerRegistry.IsPossiblePlayerName, _addMerc))
       {
         if (!DamageLineParser.Process(lineData) && !HealingLineParser.Process(lineData)
-          && !MiscLineParser.Process(lineData))
+          && !MiscLineParser.Process(lineData, _rosterCaptureVersion))
         {
           CastLineParser.Process(lineData);
         }

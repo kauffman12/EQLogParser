@@ -16990,17 +16990,31 @@ Unknown at all. Pinned by `RecalculateIdentityTest` (`ATakenBackNameStaysOnTheLi
 `TwoTakeBacksBothKeepTheirRows`, `AnExplicitUnknownVerdictIsNotATakeBackAndStampsNothing`) and by the vocabulary coverage in
 `IdentityVocabularyTest`, which now has to know the word or the census test fails.
 
-## Damage Summary reads existing raid rosters when opened
+## Damage Summary follows the newest completed raid roster
 
-`RaidRosterStore` captures parsed `/who` group rows whether Damage Summary is open or not. Opening or reopening the pane
-subscribes to roster updates **before reading the store**, and entering Group View reads it again before showing the selector.
-The list must not depend on a damage build completing or on replaying a roster notification sent while the pane was hidden.
-The existing dispatcher-marshalled roster notification continues to refresh the open pane as new rosters arrive.
+`RaidRosterStore` captures parsed `/who` group rows whether Damage Summary is open or not. The footer `There are N players
+in your raid.` publishes a listing only if its count matches the number of distinct names captured; a read can start inside a
+listing. Rejecting a footer or a gap over two seconds between player rows drops the pending rows. Each reader takes its
+roster capture version when created. Clearing advances the version under the store lock and drops pending rows; old readers
+can neither write rows nor consume a new reader's footer, even if shutdown is still in flight. Completed rosters survive a
+same-server switch. Notifications run outside the lock and the UI ignores a version that closed before its callback ran.
+Player-identity evidence from each who-line is independent and does not wait for the footer.
 
-`DamageSummaryRosterTest` (Windows-only) pins first open, reopen and entry into Group View against rosters captured after pane
-construction, without waiting for a board completion or a debounced roster notification. This changes presentation only:
-parsing, identity claims, roster retention and the loaded log time range are unchanged. A `/who` outside that time range
-cannot contribute a roster.
+Opening or reopening Damage Summary subscribes **before reading the store** and selects the newest completed roster by log
+time. Each completion selects it again, even after an older manual pick or Clear Roster. Entering Group View rereads the list;
+ordinary repaints preserve the roster choice, including Clear Roster, and any manual group edits made on top of it. Choosing
+another roster, clearing, or automatically applying the newest roster starts fresh. A subsequent board gets the selected
+roster and manual edits **before** it is displayed. Both the `Player +Pets` aggregate and the separate player row receive
+the same assignment by original name. Names absent from the roster and without a manual edit become unassigned in the rows
+and the builder's assignment cache. Suppress intermediate dropdown events while replacing its items. A roster
+change rebuilds the grouped list only in Group View; in other views it must not disturb selected players. If the roster
+replaces the groups during a manual edit's render yield, the edit must not repaint those replaced groups; no test reaches
+that interleave.
+
+`RaidRosterStoreTest` pins count-checked publication, notifications, immutable published captures, same-second replacement,
+ordering, abandonment and short-footer guards. `ARetiredProcessorCannotPublishOrConsumeTheNewCapturesListing` exercises
+late rows and a late footer through the real parser. `DamageSummaryRosterTest` (Windows-only) pins first open, reopen,
+Group View entry, automatic switching, matching aggregate/individual assignments and retained player selection.
 
 ## A board belongs to the capture that asked
 

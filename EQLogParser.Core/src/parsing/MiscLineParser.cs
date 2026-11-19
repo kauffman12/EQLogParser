@@ -137,7 +137,7 @@ namespace EQLogParser
       return s;
     }
 
-    public static bool Process(LineData lineData)
+    public static bool Process(LineData lineData, long rosterCaptureVersion = 0)
     {
       var handled = false;
 
@@ -202,7 +202,7 @@ namespace EQLogParser
               // Capture WHO raid roster lines
               if (!string.IsNullOrEmpty(who) && groupId > -1)
               {
-                RaidRosterStore.Instance.CapturePlayer(who, groupId, lineData.BeginTime);
+                RaidRosterStore.Instance.CapturePlayer(rosterCaptureVersion, who, groupId, lineData.BeginTime);
               }
 
               handled = true;
@@ -484,10 +484,10 @@ namespace EQLogParser
               }
               else if (word == "There")
               {
-                if (i == 0 && split.Length >= 5 && split[1] == "are" && split[3] == "players" &&
+                if (i == 0 && split.Length >= 7 && split[1] == "are" && split[3] == "players" &&
                     split[4] == "in" && split[5] == "your" && split[6] == "raid.")
                 {
-                  RaidRosterStore.Instance.FlushCurrentGroup();
+                  RaidRosterStore.Instance.FlushCurrentGroup(rosterCaptureVersion, split.ParseUInt(2));
                   handled = true;
                 }
               }

@@ -5,7 +5,6 @@ using Syncfusion.UI.Xaml.TreeGrid;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -22,7 +21,8 @@ namespace EQLogParser
     private static readonly ILog Log = LogManager.GetLogger(MethodBase.GetCurrentMethod()?.DeclaringType);
     public static readonly List<string> GroupNumbers = ["", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"];
     private static readonly List<string> NoRostersList = ["No Rosters Found"];
-    private readonly ComboBoxItem _selectRosterItem = new() { Content = "Select Roster", Tag = "" };
+    private readonly ComboBoxItem _selectRosterItem = new() { Content = "Select Roster" };
+    private readonly Dictionary<string, int> _manualGroups = new(StringComparer.OrdinalIgnoreCase);
     private readonly DispatcherTimer _selectionTimer;
 
     /*
@@ -34,6 +34,7 @@ namespace EQLogParser
     private int _currentGroupCount;
     private readonly ViewOptionRegistry _viewOptions;
     private bool _ready;
+    private bool _updatingRosterSelector;
 
     // Group view tracking for incremental updates
     private List<GroupEntry> _groupEntries;
@@ -229,118 +230,119 @@ namespace EQLogParser
       if (groupView)
       {
         PopulateRosterSelector();
+        ApplySelectedRoster();
       }
 
       rosterSelector.Visibility = groupView ? Visibility.Visible : Visibility.Collapsed;
       UpdateList();
     }
 
-    private void OnRosterUpdated()
+    private void OnRosterUpdated(long captureVersion)
     {
-      Dispatcher.InvokeAsync(() => PopulateRosterSelector());
+      Dispatcher.InvokeAsync(() =>
+      {
+        if (!_ready || captureVersion != RaidRosterStore.Instance.CaptureVersion) return;
+        PopulateRosterSelector(selectLatest: true);
+        RefreshRosterGrouping();
+      });
     }
 
-    private void PopulateRosterSelector()
+    private void PopulateRosterSelector(bool selectLatest = false)
     {
       var rosters = RaidRosterStore.Instance.GetRosterRecords();
+      var previousRoster = rosterSelector.SelectedItem is ComboBoxItem { Tag: WhoRosterRecord previous }
+        ? previous : null;
 
-      if (rosters.Count == 0)
+      // Replacing ItemsSource raises selection events; apply only the final choice, never the transient empty selection.
+      _updatingRosterSelector = true;
+      try
       {
-        rosterSelector.ItemsSource = NoRostersList;
-        rosterSelector.SelectedIndex = 0;
-        rosterSelector.IsEnabled = false;
-        rosterSelector.FontStyle = FontStyles.Italic;
-        return;
+        if (rosters.Count == 0)
+        {
+          rosterSelector.ItemsSource = NoRostersList;
+          rosterSelector.SelectedIndex = 0;
+          rosterSelector.IsEnabled = false;
+          rosterSelector.FontStyle = FontStyles.Italic;
+          _selectRosterItem.Content = "Select Roster";
+          if (previousRoster != null) _manualGroups.Clear();
+          return;
+        }
+
+        var wasCleared = ReferenceEquals(rosterSelector.SelectedItem, _selectRosterItem);
+        rosterSelector.IsEnabled = true;
+        rosterSelector.FontStyle = FontStyles.Normal;
+        var displayItems = rosters.Select(r => new ComboBoxItem
+        {
+          Content = DateUtil.FormatDotNetDateSeconds(DateUtil.TicksToDotNetSeconds(r.BeginTicks)),
+          Tag = r
+        }).ToList();
+
+        displayItems.Insert(0, _selectRosterItem);
+        rosterSelector.ItemsSource = displayItems;
+        var previousTicks = previousRoster?.BeginTicks;
+        var selectedIndex = selectLatest ? 1 : wasCleared ? 0
+          : displayItems.FindIndex(i => i.Tag is WhoRosterRecord roster && roster.BeginTicks == previousTicks);
+        if (selectedIndex < 0) selectedIndex = 1;
+        rosterSelector.SelectedIndex = selectedIndex;
+        var selectedRoster = displayItems[selectedIndex].Tag;
+        if (selectLatest || !ReferenceEquals(previousRoster, selectedRoster)) _manualGroups.Clear();
+        UpdateRosterActionLabel();
       }
-
-      rosterSelector.IsEnabled = true;
-      rosterSelector.FontStyle = FontStyles.Normal;
-
-      // currently selected
-      var selectedTag = (rosterSelector.SelectedItem is ComboBoxItem { Tag: string val }) ? val : null;
-
-      // Build display items: formatted time string
-      var displayItems = rosters.Select(r => new ComboBoxItem
+      finally
       {
-        Content = DateUtil.FormatDotNetDateSeconds(DateUtil.TicksToDotNetSeconds(r.BeginTicks)),
-        Tag = $"{r.BeginTicks}"
-      }).ToList();
-
-      displayItems.Insert(0, _selectRosterItem);
-      rosterSelector.ItemsSource = displayItems;
-
-      // Restore selection
-      rosterSelector.SelectedIndex = (selectedTag != null) ? displayItems.FindIndex(i => i.Tag?.ToString() == selectedTag) : 0;
+        _updatingRosterSelector = false;
+      }
     }
 
     private void RosterSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-      var changed = false;
-      if (sender is not ComboBox combo || CurrentStats?.StatsList == null || combo.SelectedItem is not ComboBoxItem selectedItem)
-        return;
-
-      if (combo.SelectedIndex == 0)
+      if (!_updatingRosterSelector && rosterSelector?.SelectedItem is ComboBoxItem)
       {
-        _selectRosterItem.Content = "Select Roster";
-        if (e.RemovedItems?.Count > 0)
-        {
-          foreach (var stats in CurrentStats.StatsList)
-          {
-            if (AssignGroup(stats, 0))
-            {
-              changed = true;
-            }
-          }
-
-          if (changed)
-          {
-            UpdateList();
-          }
-        }
-
-        return;
+        _manualGroups.Clear();
+        UpdateRosterActionLabel();
+        RefreshRosterGrouping();
       }
+    }
 
-      _selectRosterItem.Content = "Clear Roster";
+    private void UpdateRosterActionLabel()
+    {
+      _selectRosterItem.Content = rosterSelector.SelectedIndex == 0 ? "Select Roster" : "Clear Roster";
+    }
 
-      if (!long.TryParse(selectedItem.Tag?.ToString(), CultureInfo.InvariantCulture, out var ticks))
-      {
-        Log.Warn($"Roster selected but could not parse time ({selectedItem.Content}).");
-        return;
-      }
-
-      // Get the roster record
-      var rosters = RaidRosterStore.Instance.GetRosterRecords();
-      var roster = rosters.FirstOrDefault(r => r.BeginTicks == ticks);
-      if (roster?.Players == null)
-      {
-        Log.Warn($"Roster selected but could not find roster for time ({ticks}).");
-        return;
-      }
-
-      // Apply roster assignments to players
-      foreach (var stats in CurrentStats.StatsList)
-      {
-        stats.AssignedGroup = 0;
-        if (stats?.OrigName == null)
-          continue;
-
-        if (roster.Players.TryGetValue(stats.OrigName, out var groupId))
-        {
-          if (AssignGroup(stats, groupId))
-          {
-            changed = true;
-          }
-        }
-      }
-
-      // Refresh grid only if changes were made
-      if (changed)
+    private void RefreshRosterGrouping()
+    {
+      // Only Group View needs a new grid list. The normal views keep their selected players.
+      if (ApplySelectedRoster() && _viewOptions?.GetSelectedOptionName() == Labels.ByGroupOption)
       {
         var expandedGroups = CaptureExpandedGroups();
         UpdateList();
         RestoreExpandedGroups(expandedGroups);
       }
+    }
+
+    private bool ApplySelectedRoster()
+    {
+      if (CurrentStats?.StatsList == null) return false;
+
+      var hasRosterChoice = rosterSelector.SelectedItem is ComboBoxItem;
+      var roster = rosterSelector.SelectedItem is ComboBoxItem { Tag: WhoRosterRecord selected } ? selected : null;
+      var changed = false;
+      foreach (var stats in GroupRows())
+      {
+        if (stats?.OrigName == null) continue;
+
+        if (_manualGroups.TryGetValue(stats.OrigName, out var manualGroup))
+        {
+          changed |= AssignGroup(stats, manualGroup);
+        }
+        else if (hasRosterChoice)
+        {
+          var groupId = roster != null && roster.Players.TryGetValue(stats.OrigName, out var group) ? group : 0;
+          changed |= AssignGroup(stats, groupId);
+        }
+      }
+
+      return changed;
     }
 
     private void UpdateList()
@@ -433,6 +435,23 @@ namespace EQLogParser
 
       // Return non-empty groups sorted by aggregate Total descending
       return [.. nonEmptyGroups.OrderBy(g => g.Total).Reverse()];
+    }
+
+    // A player's aggregate and individual rows can be separate objects with the same OrigName.
+    private IEnumerable<PlayerStats> GroupRows() => CurrentStats.StatsList.Concat(CurrentStats.ExpandedStatsList);
+
+    private void SetManualGroup(PlayerStats stats, int groupId)
+    {
+      if (string.IsNullOrEmpty(stats.OrigName)) return;
+
+      _manualGroups[stats.OrigName] = groupId;
+      foreach (var row in GroupRows())
+      {
+        if (string.Equals(row?.OrigName, stats.OrigName, StringComparison.OrdinalIgnoreCase))
+        {
+          AssignGroup(row, groupId);
+        }
+      }
     }
 
     private static bool AssignGroup(PlayerStats stats, int groupId)
@@ -535,32 +554,32 @@ namespace EQLogParser
       if (sender is not ComboBox combo || combo.SelectedIndex == -1)
         return;
 
-      if (_currentEditPlayer is null || _currentEditPlayer.AssignedGroup == combo.SelectedIndex)
+      if (CurrentStats == null || _currentEditPlayer is null || _currentEditPlayer.AssignedGroup == combo.SelectedIndex)
         return;
 
       var oldGroupId = _currentEditPlayer.AssignedGroup;
 
-      // IMMEDIATELY persist the change to player object BEFORE any rebuild
-      _currentEditPlayer.AssignedGroup = combo.SelectedIndex;
-      DamageStatsBuilder.Instance.SetPlayerAssignedGroup(_currentEditPlayer.OrigName, combo.SelectedIndex);
+      SetManualGroup(_currentEditPlayer, combo.SelectedIndex);
 
-      // If we're in Group View, use incremental update with progress indicator
       if (_viewOptions?.GetSelectedOptionName() == Labels.ByGroupOption)
       {
-        // Show progress indicator
+        // Change membership before yielding; a roster update may replace these groups while rendering.
+        var groups = _groupEntries;
+        UpdateGroupMembership(_currentEditPlayer, oldGroupId, combo.SelectedIndex);
         prog.Icon = EFontAwesomeIcon.Solid_HourglassStart;
         prog.Visibility = Visibility.Visible;
         await Dispatcher.Yield(DispatcherPriority.Render);
 
         try
         {
-          var expandedGroups = CaptureExpandedGroups();
-          UpdateGroupMembership(_currentEditPlayer, oldGroupId, combo.SelectedIndex);
-
-          var newList = BuildGroupedPlayers();
-          dataGrid.ItemsSource = null;
-          dataGrid.ItemsSource = UpdateRankGrouped(newList);
-          RestoreExpandedGroups(expandedGroups);
+          if (CurrentStats != null && ReferenceEquals(groups, _groupEntries))
+          {
+            var expandedGroups = CaptureExpandedGroups();
+            var newList = BuildGroupedPlayers();
+            dataGrid.ItemsSource = null;
+            dataGrid.ItemsSource = UpdateRankGrouped(newList);
+            RestoreExpandedGroups(expandedGroups);
+          }
         }
         finally
         {
@@ -657,6 +676,7 @@ namespace EQLogParser
     private void EventsClearedActiveData(bool cleared)
     {
       _busyState.Cancel();   // a cleared capture has no build left to announce
+      if (cleared) _manualGroups.Clear();
 
       if (cleared && _viewOptions?.GetSelectedOptionName() == Labels.ByGroupOption)
       {
@@ -739,6 +759,8 @@ namespace EQLogParser
             CurrentStats = e.CombinedStats;
             CurrentGroups = e.Groups;
             _currentGroupCount = e.UniqueGroupCount;
+            PopulateRosterSelector();
+            ApplySelectedRoster();
 
             if (CurrentStats == null)
             {
@@ -769,7 +791,6 @@ namespace EQLogParser
 
             CreatePetOwnerMenu();
             UpdateDataGridMenuItems();
-            PopulateRosterSelector();
             break;
           case "NONPC":
           case "NODATA":
@@ -995,7 +1016,8 @@ namespace EQLogParser
         MainActions.EventsDamageSummaryOptionsChanged += EventsDamageSummaryOptionsChanged;
         RaidRosterStore.EventsRosterUpdated += OnRosterUpdated;
         // Opening must catch up with rosters captured while hidden, without waiting for a board build.
-        PopulateRosterSelector();
+        PopulateRosterSelector(selectLatest: true);
+        RefreshRosterGrouping();
 
         if (DamageStatsBuilder.Instance.GetLastStats() is { } stats)
         {
