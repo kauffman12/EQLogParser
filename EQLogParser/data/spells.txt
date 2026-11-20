@@ -56461,16 +56461,16 @@
 68211^Axe of the Eviscerator^121^0^1^0^6^32768^0^1^0^0^0^0^0^0^1^0^You forge several axes.^^
 6822^GMHP925k^255^0^1^0^5^0^0^0^0^0^0^0^0^0^1^1^You feel very lucky.^ feels very lucky.^You no longer feel lucky.
 6823^GMHP2m^255^0^1^0^5^0^0^0^0^0^0^0^0^0^1^1^You feel very lucky.^ feels very lucky.^You no longer feel lucky.
-68230^Tactical Wirlwind Slash^255^0^0^0^4^0^1^0^0^0^0^0^0^0^1^1^You are slashed by blades.^ has been slashed by blades.^
-68231^Tactical Wirlwind Slash^255^0^0^0^4^0^1^0^0^0^0^0^0^0^1^1^You are slashed by blades.^ has been slashed by blades.^
-68232^Tactical Wirlwind Slash^255^0^0^0^4^0^1^0^0^0^0^0^0^0^1^1^You are slashed by blades.^ has been slashed by blades.^
-68233^Tactical Wirlwind Slash^255^0^0^0^4^0^1^0^0^0^0^0^0^0^1^1^You are slashed by blades.^ has been slashed by blades.^
-68234^Tactical Wirlwind Slash Immunity^255^2^0^1^5^0^0^0^0^0^0^0^0^0^1^1^You are protected from blades.^ has been protected by blades.^You are no longer protected from blades.
+68230^Tactical Whirlwind Slash^255^0^0^0^4^0^1^0^0^0^0^0^0^0^1^1^You are slashed by blades.^ has been slashed by blades.^
+68231^Tactical Whirlwind Slash^255^0^0^0^4^0^1^0^0^0^0^0^0^0^1^1^You are slashed by blades.^ has been slashed by blades.^
+68232^Tactical Whirlwind Slash^255^0^0^0^4^0^1^0^0^0^0^0^0^0^1^1^You are slashed by blades.^ has been slashed by blades.^
+68233^Tactical Whirlwind Slash^255^0^0^0^4^0^1^0^0^0^0^0^0^0^1^1^You are slashed by blades.^ has been slashed by blades.^
+68234^Tactical Whirlwind Slash Immunity^255^2^0^1^5^0^0^0^0^0^0^0^0^0^1^1^You are protected from blades.^ has been protected by blades.^You are no longer protected from blades.
 68235^Protection of Zek^255^100^1^0^6^0^0^0^0^0^4^0^0^0^0^0^^ is protected by the power of the Zek family.^
 68236^Axe Sweep^255^0^0^0^4^0^1^0^0^0^0^0^0^0^1^1^You are nearly bisected by Eriak Zek's axe.^ is nearly bisected by Eriak Zek's axe.^
 68237^Blacksmith's Corrosion^255^4^0^0^5^0^0^0^0^0^0^0^0^0^1^1^Corrosive energy melts through your protection.^'s protection melts.^The corrosion ends.
-68238^Aggressive Punch^255^0^0^0^5^0^1^0^0^0^0^0^0^0^0^1^A katar?backed punch rips through your guard.^ is punched with a Katar.^
-68239^Eriak's Fortification^255^100^1^0^6^0^0^0^0^0^4^0^0^0^0^0^^ is Fortified.^
+68238^Aggressive Punch^255^0^0^0^5^0^1^0^0^0^0^0^0^0^1^1^A katar-backed punch rips through your guard.^ is punched with a katar.^
+68239^Eriak's Fortification^255^100^1^0^6^0^0^0^0^0^4^0^0^0^0^0^^ is fortified.^
 6824^GMHP3m^255^0^1^0^5^0^0^0^0^0^0^0^0^0^1^1^You feel very lucky.^ feels very lucky.^You no longer feel lucky.
 68240^Confining Bonds^255^3^0^0^5^0^1^0^0^0^0^0^0^0^1^1^Eriak Zek's bonds lock your feet to the ground.^'s feet are bound to the ground.^Eriak Zek's bindings loosen their grip.
 68241^Spear of Zek^255^0^0^0^42^0^1^0^0^0^0^0^0^0^1^1^The Spear of Zek drives straight through you.^ is skewered by the Spear of Zek.^
@@ -56478,14 +56478,14 @@
 68243^Rapid Shanks^255^5^0^0^5^0^1^0^0^0^0^0^0^0^1^1^A blur of flashing blades whirls past--one cuts into you.^ is stabbed.^
 68244^Unimpeded Slam^255^0^0^0^8^0^1^0^0^0^0^0^0^0^1^1^Unrestrained force slams into you with brutal power.^ is slammed with brutal power.^
 68245^Muted Slam^255^0^0^0^8^0^1^0^0^0^0^0^0^0^1^1^A softened surge of force pushes through and strikes you.^ is struck with muted power.^
-68246^Suppressed  Slam^255^0^0^0^8^0^1^0^0^0^0^0^0^0^1^1^A smothered ripple of force slips through and hits you.^ is hit with suppressed power.^
+68246^Suppressed Slam^255^0^0^0^8^0^1^0^0^0^0^0^0^0^1^1^A smothered ripple of force slips through and hits you.^ is hit with suppressed power.^
 68247^Eriak's Doom^255^5^0^1^4^0^0^0^0^0^0^0^0^0^0^0^Eriak's Doom binds you, ruin coming when its time ends.^ is promised ruin and doom.^Eriak's Doom fades.
 68248^Greedy Repercussions^255^8^0^0^4^0^1^0^0^0^0^0^0^0^0^0^A greedy force wraps around you, taxing your every action.^ is wrapped by greed.^
-68249^Sacrifice to Eriak^255^0^0^0^4^0^1^0^0^0^0^0^0^0^1^1^A nearby add detonates violently, blasting you with raw magic.^ is blast with raw sacrificial magic.^
+68249^Sacrifice to Eriak^255^0^0^0^4^0^1^0^0^0^0^0^0^0^1^1^A nearby add detonates violently, blasting you with raw magic.^ is blasted with raw sacrificial magic.^
 6825^Gnomish Awakening Powder^255^0^0^0^6^0^0^0^0^0^0^0^0^0^0^1^The dusty powder sends your mind reeling.^ looks dazed.^
 68250^Harassing Bane^255^8^0^0^5^0^0^0^0^0^0^0^0^0^0^0^A harassing wave strikes you, dulling your offensive edge. ^ is harassed and less effective.^
 68251^Razor Armor^255^100^1^0^6^0^0^0^0^0^4^0^0^0^0^1^^ is protected by sharply reactive armor.^
-68252^Bruised^255^4^0^0^5^0^0^0^0^0^0^0^0^0^1^1^You are struck hard, bruising you and weakening your defenses.^ is bruised, weakning their defenses.^Your skin feels better.
+68252^Bruised^255^4^0^0^5^0^0^0^0^0^0^0^0^0^1^0^You are struck hard, bruising you and weakening your defenses.^ is bruised, weakening their defenses.^Your skin feels better.
 68253^Drowning of Life^255^4^0^0^5^0^0^0^0^0^0^0^0^0^1^1^A drowning force drags your healing power beneath.^ is suffocated.^You breathe easier.
 68254^Drowning of Destruction^255^4^0^0^5^0^0^0^0^0^0^0^0^0^1^1^A drowning tide grips you, draining your destructive magic.^ is suffocated.^You breathe easier.
 68255^Drowning of Conflict^255^4^0^0^5^0^0^0^0^0^0^0^0^0^1^1^A drowning surge grips you, smothering the speed of your blows.^ is suffocated.^You breathe easier.
@@ -56498,7 +56498,7 @@
 68261^Barb of Tallon^255^1^0^0^5^0^0^0^0^0^0^0^0^0^1^1^The barb of Tallon sears your flesh.^ has been poisoned by Tallon's barb.^The poison leaves you.
 68262^Barb of Tallon^255^2^0^0^8^0^1^0^0^0^0^0^0^0^1^1^Tallon's barbs tear through you.^ is struck by a hail of barbs.^You break free of the barbs.
 68263^Sword Storm^255^0^0^0^4^0^1^0^0^0^0^0^0^0^0^0^Whirling blades rip into you as the storm engulfs you.^ is slashed by blades^
-68264^Razor Slash^255^0^0^0^5^0^1^0^0^0^0^0^0^0^0^0^Eriak Zek's Bladed armor lashes out, slicing you as you attack.^ is struck by razors from Eriak Zek's armor.^
+68264^Razor Slash^255^0^0^0^5^0^1^0^0^0^0^0^0^0^0^0^Eriak Zek's bladed armor lashes out, slicing you as you attack.^ is struck by razors from Eriak Zek's armor.^
 68265^Doom of the Blacksmith^255^0^0^0^5^0^2^0^0^0^0^0^0^0^0^0^You have been struck down by the Doom of Eriak.^ is struck by the Doom of Eriak^
 68266^PGURaidPH37^255^0^0^0^0^0^0^0^0^0^0^0^0^0^0^0^^^
 68267^PGURaidPH38^255^0^0^0^0^0^0^0^0^0^0^0^0^0^0^0^^^
@@ -62374,9 +62374,9 @@
 74140^Convergence of Ice VI Azia^255^0^0^0^5^8^1^0^3^0^0^0^1^0^0^0^^^
 74141^Convergence of Ice VI Beza^255^0^0^0^5^8^1^0^3^0^0^0^5^0^0^0^^^
 74142^Convergence of Ice VI Caza^255^0^0^0^5^8^1^0^3^0^0^0^10^0^0^0^^^
-74143^Grovestalker's Demeanor^130^4000^1^0^6^8^0^0^0^0^0^0^1^0^1^1^You take on a hunter's demeanor.^ takes on a hunter's demeanor.^
-74144^Grovestalker's Demeanor Rk. II^130^4000^1^0^6^8^0^0^0^0^0^0^5^0^1^1^You take on a hunter's demeanor.^ takes on a hunter's demeanor.^
-74145^Grovestalker's Demeanor Rk. III^130^4000^1^0^6^8^0^0^0^0^0^0^10^0^1^1^You take on a hunter's demeanor.^ takes on a hunter's demeanor.^
+74143^Grovestalker's Demeanor^130^720^1^0^6^8^0^0^0^0^0^0^1^0^1^1^You take on a hunter's demeanor.^ takes on a hunter's demeanor.^
+74144^Grovestalker's Demeanor Rk. II^130^720^1^0^6^8^0^0^0^0^0^0^5^0^1^1^You take on a hunter's demeanor.^ takes on a hunter's demeanor.^
+74145^Grovestalker's Demeanor Rk. III^130^720^1^0^6^8^0^0^0^0^0^0^10^0^1^1^You take on a hunter's demeanor.^ takes on a hunter's demeanor.^
 74146^Grovestalker's Demeanor Effect^255^10^1^0^6^0^0^0^0^1^3^0^1^0^1^1^You are enthralled by the hunt.^ is enthralled by the hunt.^The thrill fades.
 74147^Grovestalker's Demeanor Effect II^255^10^1^0^6^0^0^0^0^1^3^0^5^0^1^1^You are enthralled by the hunt.^ is enthralled by the hunt.^The thrill fades.
 74148^Grovestalker's Demeanor Effect III^255^10^1^0^6^0^0^0^0^1^3^0^10^0^1^1^You are enthralled by the hunt.^ is enthralled by the hunt.^The thrill fades.
@@ -62549,9 +62549,9 @@
 7432^Frost V^254^0^0^0^5^65407^1^0^3^0^0^0^5^0^1^1^Your skin freezes.^'s skin freezes.^
 74320^Fulmination of Broken Bones VI Beza^255^0^0^0^5^128^1^0^1^0^0^0^5^0^1^1^Sticks and stones break your bones.^'s bones are broken by sticks and stones.^
 74321^Fulmination of Broken Bones VI Caza^255^0^0^0^5^128^1^0^1^0^0^0^10^0^1^1^Sticks and stones break your bones.^'s bones are broken by sticks and stones.^
-74322^Troubadour's Demeanor^126^4000^1^0^6^128^0^0^0^0^3^0^1^0^1^1^You take on a restorative demeanor.^ takes on a restorative demeanor.^
-74323^Troubadour's Demeanor Rk. II^126^4000^1^0^6^128^0^0^0^0^3^0^5^0^1^1^You take on a restorative demeanor.^ takes on a restorative demeanor.^
-74324^Troubadour's Demeanor Rk. III^126^4000^1^0^6^128^0^0^0^0^3^0^10^0^1^1^You take on a restorative demeanor.^ takes on a restorative demeanor.^
+74322^Troubadour's Demeanor^126^360^1^0^6^128^0^2^0^0^3^0^1^0^1^1^You take on a restorative demeanor.^ takes on a restorative demeanor.^
+74323^Troubadour's Demeanor Rk. II^126^360^1^0^6^128^0^2^0^0^3^0^5^0^1^1^You take on a restorative demeanor.^ takes on a restorative demeanor.^
+74324^Troubadour's Demeanor Rk. III^126^360^1^0^6^128^0^2^0^0^3^0^10^0^1^1^You take on a restorative demeanor.^ takes on a restorative demeanor.^
 74325^Troubadour's Demeanor Effect^255^10^1^0^6^128^0^0^0^1^2^0^1^0^1^1^You are overcome with restorative power.^ is overcome with restorative power.^The restorative power fades.
 74326^Troubadour's Demeanor Effect II^255^10^1^0^6^128^0^0^0^1^2^0^5^0^1^1^You are overcome with restorative power.^ is overcome with restorative power.^The restorative power fades.
 74327^Troubadour's Demeanor Effect III^255^10^1^0^6^128^0^0^0^1^2^0^10^0^1^1^You are overcome with restorative power.^ is overcome with restorative power.^The restorative power fades.
@@ -62601,9 +62601,9 @@
 74378^Disassociative Puncture VI Rk. II^129^0^0^0^5^256^0^1^0^0^0^0^5^0^1^1^You are punctured by an unseen attacker.^ is struck by an unseen attacker.^
 74379^Disassociative Puncture VI Rk. III^129^0^0^0^5^256^0^1^0^0^0^0^10^0^1^1^You are punctured by an unseen attacker.^ is struck by an unseen attacker.^
 7438^Frost XI^254^0^0^0^5^65407^1^0^3^0^0^0^11^0^1^1^Your skin freezes.^'s skin freezes.^
-74380^Twisted Chance Discipline II^130^5^1^0^6^256^0^1^0^0^2^0^1^0^1^1^Your attacks flow perfectly together.^'s attacks become perfectly aligned.^Your attacks return to normal.
-74381^Twisted Chance Discipline II Rk. II^130^5^1^0^6^256^0^1^0^0^2^0^5^0^1^1^Your attacks flow perfectly together.^'s attacks become perfectly aligned.^Your attacks return to normal.
-74382^Twisted Chance Discipline II Rk. III^130^5^1^0^6^256^0^1^0^0^2^0^10^0^1^1^Your attacks flow perfectly together.^'s attacks become perfectly aligned.^Your attacks return to normal.
+74380^Twisted Chance Discipline II^126^5^1^0^6^256^0^1^0^0^2^0^1^0^1^1^Your attacks flow perfectly together.^'s attacks become perfectly aligned.^Your attacks return to normal.
+74381^Twisted Chance Discipline II Rk. II^126^5^1^0^6^256^0^1^0^0^2^0^5^0^1^1^Your attacks flow perfectly together.^'s attacks become perfectly aligned.^Your attacks return to normal.
+74382^Twisted Chance Discipline II Rk. III^126^5^1^0^6^256^0^1^0^0^2^0^10^0^1^1^Your attacks flow perfectly together.^'s attacks become perfectly aligned.^Your attacks return to normal.
 74383^Spiritual Surge V^128^0^1^0^8^512^-1^0^0^0^0^0^1^0^1^0^You experience a healing wave.^^
 74384^Spiritual Surge V Rk. II^128^0^1^0^8^512^-1^0^0^0^0^0^5^0^1^0^You experience a healing wave.^^
 74385^Spiritual Surge V Rk. III^128^0^1^0^8^512^-1^0^0^0^0^0^10^0^1^0^You experience a healing wave.^^
@@ -62713,9 +62713,9 @@
 74499^Fossilized Kismet Bolt Rk. III^128^0^0^0^1^4096^1^0^1^0^0^0^10^0^1^1^You are struck by a bolt of iron.^ is struck by a bolt of iron.^
 745^Cassindra's Elegy^44^4^1^0^41^128^0^0^0^1^9^1^0^0^1^0^Your mind sharpens.^^Your insight fades.
 7450^Thunder IX^254^0^0^0^5^65407^1^0^1^0^0^0^9^0^1^1^You are stuck by a bolt of lightning.^ is struck by a bolt of lightning.^
-74500^Summon Cauldron of Xev^130^0^1^0^6^4096^0^0^0^0^0^0^1^0^0^0^^^
-74501^Summon Cauldron of Xev Rk. II^130^0^1^0^6^4096^0^0^0^0^0^0^5^0^0^0^^^
-74502^Summon Cauldron of Xev Rk. III^130^0^1^0^6^4096^0^0^0^0^0^0^10^0^0^0^^^
+74500^Summon Cauldron of Xev^126^0^1^0^6^4096^0^0^0^0^0^0^1^0^0^0^^^
+74501^Summon Cauldron of Xev Rk. II^126^0^1^0^6^4096^0^0^0^0^0^0^5^0^0^0^^^
+74502^Summon Cauldron of Xev Rk. III^126^0^1^0^6^4096^0^0^0^0^0^0^10^0^0^0^^^
 74503^Cauldron Summoning V Azia^255^0^1^0^6^0^0^0^0^0^0^0^0^0^0^0^^^
 74504^Cauldron Summoning V Beza^255^0^1^0^6^0^0^0^0^0^0^0^0^0^0^0^^^
 74505^Cauldron Summoning V Caza^255^0^1^0^6^0^0^0^0^0^0^0^0^0^0^0^^^
@@ -62819,9 +62819,9 @@
 74604^Al`ele's Vindictiveness VI Azia^255^0^0^0^5^0^1^0^1^0^0^0^0^0^1^1^You are wracked with vindication.^ is wracked with vindication.^
 74605^Al`ele's Vindictiveness VI Beza^255^0^0^0^5^0^1^0^1^0^0^0^0^0^1^1^You are wracked with vindication.^ is wracked with vindication.^
 74606^Al`ele's Vindictiveness VI Caza^255^0^0^0^5^0^1^0^1^0^0^0^0^0^1^1^You are wracked with vindication.^ is wracked with vindication.^
-74607^Apostetrios' Demeanor^129^4000^1^0^6^16384^0^0^0^0^2^0^1^0^1^1^You take on a feralist's demeanor.^ takes on a feralist's demeanor.^
-74608^Apostetrios' Demeanor Rk. II^129^4000^1^0^6^16384^0^0^0^0^2^0^5^0^1^1^You take on a feralist's demeanor.^ takes on a feralist's demeanor.^
-74609^Apostetrios' Demeanor Rk. III^129^4000^1^0^6^16384^0^0^0^0^2^0^10^0^1^1^You take on a feralist's demeanor.^ takes on a feralist's demeanor.^
+74607^Apostetrios' Demeanor^129^360^1^0^6^16384^0^2^0^0^2^0^1^0^1^1^You take on a feralist's demeanor.^ takes on a feralist's demeanor.^
+74608^Apostetrios' Demeanor Rk. II^129^360^1^0^6^16384^0^2^0^0^2^0^5^0^1^1^You take on a feralist's demeanor.^ takes on a feralist's demeanor.^
+74609^Apostetrios' Demeanor Rk. III^129^360^1^0^6^16384^0^2^0^0^2^0^10^0^1^1^You take on a feralist's demeanor.^ takes on a feralist's demeanor.^
 74610^Apostetrios' Demeanor Effect^255^10^1^0^6^0^-1^0^0^1^3^0^1^0^1^1^You enter a feral fury.^ enters a feral fury.^The feral fury fades.
 74611^Apostetrios' Demeanor Effect II^255^10^1^0^6^0^-1^0^0^1^3^0^5^0^1^1^You enter a feral fury.^ enters a feral fury.^The feral fury fades.
 74612^Apostetrios' Demeanor Effect III^255^10^1^0^6^0^-1^0^0^1^3^0^10^0^1^1^You enter a feral fury.^ enters a feral fury.^The feral fury fades.
@@ -62934,6 +62934,8 @@
 7485^Lesion III^254^2^0^0^5^65407^1^0^8^0^0^0^3^0^1^1^You begin to bleed.^ begins to bleed.^The bleeding stops.
 74850^Cascade of Life XXXI^254^0^1^0^5^2^-1^0^0^-1^0^0^31^0^0^1^^ is covered in a soft healing light.^
 74851^Cascade of Life XXXII^254^0^1^0^5^2^-1^0^0^-1^0^0^32^0^0^1^^ is covered in a soft healing light.^
+74852^Summon Familiar: Friendly Gumdrop^255^0^1^0^6^0^0^0^0^0^0^0^0^0^1^1^Your familiar joins you.^ is joined by a familiar.^Your familiar bounces off.
+74853^Pet Illusion: Friendly Gumdrop^255^1200^1^0^38^0^0^0^0^0^0^0^0^0^1^0^You alter your pet.^^
 74855^Pry Open the Quellious Heritage Crate^255^0^1^0^6^0^0^0^0^0^0^0^0^0^0^0^^^
 74856^Summon Serene Drifting Cloud^255^7200^1^0^6^0^0^0^0^0^0^0^0^0^0^0^You summon a serene drifting cloud.^ summons a serene drifting cloud.^Your mount drifts off into the distance.
 74857^Nimbus of the Centered Mind^255^720^1^0^6^0^0^0^0^0^0^0^0^0^0^0^A calming aura of Quellious manifests above you.^^
@@ -63038,26 +63040,26 @@
 74946^Metamorph: Clockwork Repair Copter^255^0^1^0^6^0^0^0^0^0^0^0^0^0^0^0^Your copter assembles.^ is joined by a clockwork copter.^Your clockwork copter disassembles.
 74947^Pet Illusion: Clockwork Repair Copter^255^1200^1^0^38^0^0^0^0^0^0^0^0^0^1^0^You alter your pet.^^
 74948^Illusion: Wulthan Inquisitor^1^1200^1^0^6^8192^0^0^0^0^0^0^0^0^1^1^You feel different.^'s image shimmers.^Your illusion fades.
-74949^Tactical Wirlwind Slash^255^0^0^0^4^0^1^0^0^0^0^0^0^0^1^1^You are slashed by blades.^ has been slashed by blades.^
+74949^Tactical Whirlwind Slash^255^0^0^0^4^0^1^0^0^0^0^0^0^0^1^1^You are slashed by blades.^ has been slashed by blades.^
 7495^Feral Rage III^254^0^1^0^6^65407^-1^1^0^0^2^0^3^0^1^1^Your muscles twitch with fury.^'s muscles twitch with fury.^Your fury fades.
-74950^Tactical Wirlwind Slash^255^0^0^0^4^0^1^0^0^0^0^0^0^0^1^1^You are slashed by blades.^ has been slashed by blades.^
-74951^Tactical Wirlwind Slash^255^0^0^0^4^0^1^0^0^0^0^0^0^0^1^1^You are slashed by blades.^ has been slashed by blades.^
-74952^Tactical Wirlwind Slash^255^0^0^0^4^0^1^0^0^0^0^0^0^0^1^1^You are slashed by blades.^ has been slashed by blades.^
-74953^Tactical Wirlwind Slash Immunity^255^2^0^1^5^0^0^0^0^0^0^0^0^0^1^1^You are protected from blades.^ has been protected by blades.^You are no longer protected from blades.
+74950^Tactical Whirlwind Slash^255^0^0^0^4^0^1^0^0^0^0^0^0^0^1^1^You are slashed by blades.^ has been slashed by blades.^
+74951^Tactical Whirlwind Slash^255^0^0^0^4^0^1^0^0^0^0^0^0^0^1^1^You are slashed by blades.^ has been slashed by blades.^
+74952^Tactical Whirlwind Slash^255^0^0^0^4^0^1^0^0^0^0^0^0^0^1^1^You are slashed by blades.^ has been slashed by blades.^
+74953^Tactical Whirlwind Slash Immunity^255^2^0^1^5^0^0^0^0^0^0^0^0^0^1^1^You are protected from blades.^ has been protected by blades.^You are no longer protected from blades.
 74954^Axe Sweep^255^0^0^0^4^0^1^0^0^0^0^0^0^0^1^1^You are nearly bisected by Eriak Zek's axe.^ is nearly bisected by Eriak Zek's axe.^
 74955^Blacksmith's Corrosion^255^4^0^0^5^0^0^0^0^0^0^0^0^0^1^1^Corrosive energy melts through your protection.^'s protection melts.^The corrosion ends.
-74956^Aggressive Punch^255^0^0^0^5^0^1^0^0^0^0^0^0^0^0^1^A katar-backed punch rips through your guard.^ is punched with a Katar.^
+74956^Aggressive Punch^255^0^0^0^5^0^1^0^0^0^0^0^0^0^1^1^A katar-backed punch rips through your guard.^ is punched with a katar.^
 74957^Confining Bonds^255^3^0^0^5^0^1^0^0^0^0^0^0^0^1^1^Eriak Zek's bonds lock your feet to the ground.^'s feet are bound to the ground.^Eriak Zek's bindings loosen their grip.
 74958^Spear of Zek^255^0^0^0^5^0^1^0^0^0^0^0^0^0^1^1^The Spear of Zek drives straight through you.^ is skewered by the Spear of Zek.^
 74959^Assassination of Zek^255^0^0^0^5^0^2^0^0^0^0^0^0^0^1^1^A perfect backstab ends you instantly.^ is killed by a backstab.^
 7496^Frost of the Ancients I^254^10^0^0^5^65407^1^0^3^0^0^0^1^0^1^1^Your body begins to freeze.^'s body begins to freeze.^Your body begins to thaw.
-74960^Rapid Shanks^255^0^0^0^5^0^1^0^0^0^0^0^0^0^1^1^A blur of flashing blades whirls past--one cuts into you.^ is stabbed.^
+74960^Rapid Shanks^255^5^0^0^5^0^1^0^0^0^0^0^0^0^1^1^A blur of flashing blades whirls past--one cuts into you.^ is stabbed.^
 74961^Unimpeded Slam^255^0^0^0^8^0^1^0^0^0^0^0^0^0^1^1^Unrestrained force slams into you with brutal power.^ is slammed with brutal power.^
 74962^Muted Slam^255^0^0^0^8^0^1^0^0^0^0^0^0^0^1^1^A softened surge of force pushes through and strikes you.^ is struck with muted power.^
-74963^Suppressed  Slam^255^0^0^0^8^0^1^0^0^0^0^0^0^0^1^1^A smothered ripple of force slips through and hits you.^ is hit with suppressed power.^
-74964^Sacrifice to Eriak^255^0^0^0^4^0^1^0^0^0^0^0^0^0^1^1^A nearby add detonates violently, blasting you with raw magic.^ is blast with raw sacrificial magic.^
+74963^Suppressed Slam^255^0^0^0^8^0^1^0^0^0^0^0^0^0^1^1^A smothered ripple of force slips through and hits you.^ is hit with suppressed power.^
+74964^Sacrifice to Eriak^255^0^0^0^4^0^1^0^0^0^0^0^0^0^1^1^A nearby add detonates violently, blasting you with raw magic.^ is blasted with raw sacrificial magic.^
 74965^Razor Armor^255^100^1^0^6^0^0^0^0^0^4^0^0^0^0^1^^ is protected by sharply reactive armor.^
-74966^Bruised^255^4^0^0^5^0^0^0^0^0^0^0^0^0^1^1^You are struck hard, bruising you and weakening your defenses.^ is bruised, weakning their defenses.^Your skin feels better.
+74966^Bruised^255^4^0^0^5^0^0^0^0^0^0^0^0^0^1^0^You are struck hard, bruising you and weakening your defenses.^ is bruised, weakning their defenses.^Your skin feels better.
 74967^Drowning of Life^255^4^0^0^5^0^0^0^0^0^0^0^0^0^1^1^A drowning force drags your healing power beneath.^ is suffocated.^You breathe easier.
 74968^Drowning of Destruction^255^4^0^0^5^0^0^0^0^0^0^0^0^0^1^1^A drowning tide grips you, draining your destructive magic.^ is suffocated.^You breathe easier.
 74969^Drowning of Conflict^255^4^0^0^5^0^0^0^0^0^0^0^0^0^1^1^A drowning surge grips you, smothering the speed of your blows.^ is suffocated.^You breathe easier.
@@ -63071,7 +63073,11 @@
 74976^Modulation Spark Effect III^255^0^1^0^6^0^1^0^0^0^9^0^3^0^1^1^You experience elemental modulation.^ experiences elemental modulation.^
 74977^Modulation Spark IV^254^0^1^0^2^4096^0^0^0^0^0^0^4^0^1^1^You experience elemental modulation.^ experiences elemental modulation.^
 74978^Modulation Spark Effect IV^255^0^1^0^6^0^1^0^0^0^9^0^4^0^1^1^You experience elemental modulation.^ experiences elemental modulation.^
+74979^Summon Mount: Sable Goose^255^7200^1^0^6^0^0^0^0^0^0^0^0^0^0^0^You summon a Sable Goose.^ summons a Sable Goose.^Your Sable Goose returns home.
 7498^Frost of the Ancients III^254^10^0^0^5^65407^1^0^3^0^0^0^3^0^1^1^Your body begins to freeze.^'s body begins to freeze.^Your body begins to thaw.
+74980^Summon Familiar: Little Scary Plant^255^0^1^0^6^0^0^0^0^0^0^0^0^0^0^0^You summon a Little Scary Plant.^ summons a Little Scary Plant.^Your Little Scary Plant returns home.
+74981^Familiar: Little Scary Plant^255^0^1^0^6^0^0^0^0^0^15^0^0^0^0^0^^^
+74982^Pet Illusion: Little Scary Plant^255^1200^1^0^38^0^0^0^0^0^0^0^0^0^1^1^You alter your pet.^ alters their pet.^
 7499^Frost of the Ancients IV^254^10^0^0^5^65407^1^0^3^0^0^0^4^0^1^1^Your body begins to freeze.^'s body begins to freeze.^Your body begins to thaw.
 75^Sicken^4^14^0^0^5^16896^1^0^5^0^0^0^0^0^1^1^You feel feverish.^ sweats and shivers, looking feverish.^Your fever has broken.
 750^Solon's Bewitching Bravura^39^10^0^0^5^128^0^0^1^0^0^0^0^1^0^1^You are captivated by the bewitching tune.^'s eyes glaze over.^You are no longer captivated.
@@ -63161,8 +63167,8 @@
 75075^Wrong Place Wrong Time^255^0^0^0^8^0^1^0^1^0^0^0^0^0^1^1^You are battered and thrown by the twist of fate.^ is battered and thrown.^
 75076^Wrong Place Really Wrong Time^255^0^0^0^8^0^1^0^1^0^0^0^0^0^1^1^You are battered and thrown by the twist of fate.^ is battered and thrown.^
 75077^Forced Transfer^255^2^0^0^5^0^0^0^0^0^0^0^0^0^0^0^^^
-75078^Calling Your Debt^255^0^0^0^5^0^2^0^1^0^0^0^0^0^1^1^Your debts have been called due.^'s debts have been called due.^
-75079^Debt Collateral^255^0^0^0^32^0^1^0^1^0^0^0^0^0^0^0^Your ally's debts made manifest detonate and impact you.^ is battered by the manifestation of their ally's debts.^
+75078^Calling Your Debt^255^0^0^0^5^0^2^0^0^0^0^0^0^0^1^1^Your debts have been called due.^'s debts have been called due.^
+75079^Debt Collateral^255^0^0^0^8^0^1^0^1^0^0^0^0^0^0^0^Your ally's debts made manifest detonate and impact you.^ is battered by the manifestation of their ally's debts.^
 7508^Cure Poison III^254^0^1^0^5^65407^0^0^0^0^0^0^3^0^1^1^Your blood is cleansed of poisons.^'s body is cleansed of poisons.^
 75080^Lucksworn Empower^255^2^0^0^5^0^0^0^0^0^0^0^0^0^0^0^^^
 75081^Strangling Grasp^255^3^0^0^5^0^1^0^1^0^0^0^0^0^1^1^The threads of fate twist around you.^ is twisted up in the threads of fate.^The threads loosen.
@@ -63204,10 +63210,10 @@
 75113^Wither^255^5^0^0^8^0^1^0^9^0^0^0^0^0^0^0^Corruption drains your life essence.^'s life essence is drained.^The corruption dissipates.
 75114^Decay^255^0^0^0^2^0^1^0^9^0^0^0^0^0^0^0^A wave of corruption consumes a fragment of your life.^'s life force is consumed by corruption.^
 75115^Not on the List^255^0^0^0^5^0^1^0^8^0^0^0^0^0^0^0^Taurlton's horns pierce through your defenses, drawing blood.^ is pierced by Taurlton's horns, drawing blood.^
-75116^Sucking Wound I^255^12^0^0^5^0^1^0^8^0^0^0^0^0^1^1^Your open wounds bleed heavily as you move.^ is bleeding heavily from open wounds.^Your wounds are no longer bleeding.
-75117^Sucking Wound II^255^12^0^0^5^0^1^0^8^0^0^0^0^0^1^1^Your open wounds bleed heavily as you move.^ is bleeding heavily from open wounds.^Your wounds are no longer bleeding.
-75118^Sucking Wound III^255^12^0^0^5^0^1^0^8^0^0^0^0^0^1^1^Your open wounds bleed heavily as you move.^ is bleeding heavily from open wounds.^Your wounds are no longer bleeding.
-75119^Bleed Out^255^0^0^0^5^0^2^0^8^0^0^0^0^0^0^0^Your wounds were too much for your body to handle.^'s wounds were too much for them to handle.^
+75116^Sucking Wound I^255^12^0^0^5^0^1^0^0^0^0^0^0^0^1^1^Your open wounds bleed heavily as you move.^ is bleeding heavily from open wounds.^Your wounds are no longer bleeding.
+75117^Sucking Wound II^255^12^0^0^5^0^1^0^0^0^0^0^0^0^1^1^Your open wounds bleed heavily as you move.^ is bleeding heavily from open wounds.^Your wounds are no longer bleeding.
+75118^Sucking Wound III^255^12^0^0^5^0^1^0^0^0^0^0^0^0^1^1^Your open wounds bleed heavily as you move.^ is bleeding heavily from open wounds.^Your wounds are no longer bleeding.
+75119^Bleed Out^255^0^0^0^5^0^2^0^0^0^0^0^0^0^0^0^Your wounds were too much for your body to handle.^'s wounds were too much for them to handle.^
 7512^Cure Disease III^254^0^1^0^5^65407^0^0^0^0^0^0^3^0^1^1^The disease has been weakened.^'s body is cleansed of disease.^
 75120^Piercing Toss^255^0^0^0^42^0^1^0^8^0^0^0^0^0^0^1^Chunks of sharp rocks cut deep into you.^ is cut by chunks of rocks.^
 75121^Piercing Detonation^255^0^0^0^2^0^1^0^8^0^0^0^0^0^1^1^An explosion of sharp rocks cuts deep into you.^ is caught in an explosion of sharp rocks.^
@@ -63217,7 +63223,7 @@
 75125^Emboldened^255^3^1^0^5^0^0^0^1^0^2^0^0^0^0^1^^ is emboldened by its allies.^
 75126^Blacklisted^255^4^0^0^5^0^1^0^1^0^0^0^0^0^1^1^Taurlton's gaze rests uneasily on you.^ looks uneasy as Taurlton's gaze falls on them.^Taurlton's gaze is broken by the falling debris.
 75127^Blacklisted^255^0^0^0^2^0^1^0^1^0^0^0^0^0^1^1^A shockwave of debris cuts into you.^ is struck by a shockwave of debris.^
-75128^Blacklisted^255^0^0^0^5^0^2^0^1^0^0^0^0^0^0^0^Taurlton's gaze shatters your body.^'s body is shattered by Taurlton's gaze.^
+75128^Blacklisted^255^0^0^0^5^0^2^0^0^0^0^0^0^0^0^0^Taurlton's gaze shatters your body.^'s body is shattered by Taurlton's gaze.^
 75129^Back of the Line^255^0^0^0^5^0^1^0^8^0^0^0^0^0^0^0^A shockwave attempts to throw you, but you hold firm.^ holds firm as the shockwave washes over them.^
 7513^Cure Disease IV^254^0^1^0^5^65407^0^0^0^0^0^0^4^0^1^1^The disease has been weakened.^'s body is cleansed of disease.^
 75130^Back of the Line^255^0^0^0^5^0^1^0^8^0^0^0^0^0^0^0^A shockwave of pressure crushes your bones and throws you.^'s bones are crushed as they are thrown by the shockwave.^
@@ -63227,7 +63233,7 @@
 75134^Rake^255^2^0^0^42^16384^1^0^8^0^0^0^0^0^1^1^The manticore's claws rake across your flesh.^'s flesh is raked by sharp claws.^Your wounds stop bleeding.
 75135^Rake^255^2^0^0^42^16384^1^0^8^0^0^0^0^0^1^1^The manticore's claws rake across your flesh.^'s flesh is raked by sharp claws.^Your wounds stop bleeding.
 75136^Sickening Glob^255^3^0^0^2^0^1^0^4^0^0^0^0^0^0^0^Putrid phlegm burns your skin and invades your senses. ^'s flesh is burned by putrid phlegm.^Fresh air, finally!
-75137^Lockjaw Trap^255^5^0^0^5^0^1^0^8^0^0^0^0^0^0^0^The razor sharp jaws of the trap cut into your leg.^'s legs are cut by razor sharp jaws.^Your wounds close.
+75137^Lockjaw Trap^255^3^0^0^5^0^1^0^8^0^0^0^0^0^0^0^The razor sharp jaws of the trap cut into your leg.^'s legs are cut by razor sharp jaws.^Your wounds close.
 75138^Slow Your Roll^255^4^0^0^42^0^1^0^1^0^0^0^0^0^0^0^Moruuk's blow rattles you, slowing your reactions.^ is slowed by Moruuk's blow.^You shake off the attack.
 75139^Sick 'Em^255^0^0^0^5^0^1^0^8^0^0^0^0^0^0^0^Sorshkah slashes and mangles you with tooth and claw.^ is mangled by tooth and claw.^
 7514^Remove Curse I^254^0^1^0^5^65407^0^0^0^0^0^0^1^0^1^1^Your curses have been weakened.^'s curses are weakened.^
@@ -63280,7 +63286,7 @@
 75182^Protective Embrace^255^4^1^0^5^0^0^0^1^0^4^0^0^0^1^1^A protective barrier covers you.^ is protected by a barrier.^The protective barrier fades.
 75183^Gift of Giving^255^4^1^0^5^0^0^0^1^0^12^0^0^0^0^0^A soothing energy fills you.^ is filled with soothing energy.^The soothing energy fades.
 75184^Invigorating Essence^255^4^1^0^5^0^0^0^1^0^0^0^0^0^1^1^You draw energy from the surrounding area.^ draws energy from the surrounding area.^You no longer feel empowered.
-75185^Quickened Reflexes^255^4^1^0^5^0^0^0^1^0^11^0^0^0^0^0^Your attacks seem faster.^'s attacks seem faster.^Your attacks return to normal.
+75185^Quickened Reflexes^255^4^1^0^5^0^0^0^1^0^11^0^0^0^0^0^Your attacks seem faster.^'s attacks seem faster.^Your attacks no longer seem faster.
 75186^Draining Touch^255^4^0^0^5^0^0^0^1^0^0^0^0^0^0^1^Your attacks and spells feel weaker.^ looks weaker.^You feel invigorated again. 
 75187^Sapping Buds^255^4^0^0^5^0^0^0^1^0^0^0^0^0^0^0^Flowering buds spring from your skin.^ is covered in flowering buds.^The flowers bloom and fall away.
 75188^Languorous Runes^255^4^0^0^5^0^0^0^1^0^0^0^0^0^0^0^Sapping runes cover your body.^ is covered in sapping runes.^The runes disappear.
@@ -63336,14 +63342,14 @@
 75232^Heads Up: Blunder^255^0^0^0^2^0^1^0^1^0^0^0^0^0^0^1^The coin`s impact showers you with splinters of stone.^ is showered with splinters of stone.^
 75233^Heads Up: Thump^255^0^0^0^2^0^1^0^1^0^0^0^0^0^1^1^The coin crushes you.^ is crushed by a coin.^
 75234^Wagered Detonation^255^0^0^0^2^0^1^0^1^0^0^0^0^0^1^1^A burst of magic energy batters you.^ is battered by a burst of magic.^
-75235^Hang Around^255^5^1^0^5^0^0^0^1^0^0^0^0^0^0^1^Xev`s grip holds you in place.^ is held in place.^Xev releases his hold on you.
+75235^Hang Around^255^3^1^0^5^0^0^0^1^0^0^0^0^0^0^1^Xev`s grip holds you in place.^ is held in place.^Xev releases his hold on you.
 75236^Windfall^255^3^1^0^2^0^0^0^0^0^11^0^0^0^1^0^Fate can give and take; this time it gave.^'s fate takes something away.^Fate's gift fades.
 75237^Wrong Side of Luck^255^0^0^0^8^0^1^0^1^0^0^0^0^0^1^1^You are battered and thrown by the twist of fate.^ is battered and thrown.^
 75238^Really Wrong Side of Luck^255^0^0^0^8^0^1^0^1^0^0^0^0^0^1^1^You are battered and thrown by the twist of fate.^ is battered and thrown.^
 75239^Coerced Procurement^255^2^0^0^5^0^0^0^0^0^0^0^0^0^0^0^^^
 7524^Gore III^254^0^0^0^5^65407^1^0^1^0^0^0^3^0^1^1^You stagger back, stunned.^ staggers back, stunned.^
 75240^Debt is Due^255^0^0^0^5^0^2^0^1^0^0^0^0^0^1^1^Your debts have been called due.^'s debts have been called due.^
-75241^Caught in the Crossfire^255^0^0^0^32^0^1^0^1^0^0^0^0^0^0^0^Your ally`s debts made manifest detonate and impact you.^'s is battered by the manifestation of their ally's debts.^
+75241^Caught in the Crossfire^255^0^0^0^8^0^1^0^1^0^0^0^0^0^0^0^Your ally`s debts made manifest detonate and impact you.^'s is battered by the manifestation of their ally's debts.^
 75242^Lucksworn Boost^255^2^0^0^5^0^0^0^0^0^0^0^0^0^0^0^^^
 75243^Stifling Grip^255^3^0^0^5^0^1^0^1^0^0^0^0^0^1^1^The threads of fate twist around you.^ is twisted up in the threads of fate.^The threads loosen.
 75244^Lucky Blessings^255^12^1^0^2^0^0^0^1^0^4^0^0^0^1^1^You feel the boon of luck.^ feels the boon of luck.^

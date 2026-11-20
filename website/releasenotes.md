@@ -1,3 +1,8 @@
+# 2.4.13 | 11/20/26
+1. Updated roster parsing to auto-load the latest seen in the log.
+2. Fix for HP column in fight list showing too much damage.
+3. Latest spells from beta. 
+
 # 2.4.12 | 11/13/26
 1. Added **NPC Statistics** window, starting with basic info.
 2. Updated **Tanking** summary to group DD/DoT damage.
