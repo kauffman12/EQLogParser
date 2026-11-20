@@ -28,10 +28,10 @@ namespace EQLogParser.Wpf.Test
         Id = 1,
         BeginTime = T0 + beginS,
         LastTime = T0 + lastS,
-        DamageTotal = damage,
+        DamageTotal = damage + 90,
         DamageHits = 3,
-        DamageToOwner = 10,
-        DamageByOwner = damage - 10,
+        DamageToOwner = damage,
+        DamageByOwner = 90,
         EndReason = end,
         Dead = end is DerivedFightEnd.Slain or DerivedFightEnd.Charmed,
       };
@@ -199,7 +199,7 @@ namespace EQLogParser.Wpf.Test
       Pass([Fight("Grul", 0, 20, damage: 500), Fight("MoK", 4_000, 4_030)]);
       Assert.AreEqual(2, live.Count(r => !r.IsDivider), "two fights, plus whatever divider the gap earns");
       Assert.AreSame(grul, live.First(r => !r.IsDivider && r.Name == "Grul"));
-      Assert.AreEqual(500, grul.Damage, "the moved number landed on the object that stayed");
+      Assert.AreEqual(500L, grul.Damage, "the moved number landed on the object that stayed");
 
       Pass([Fight("Grul", 0, 20, damage: 500), Fight("MoK", 4_000, 4_030)]);
       Assert.AreSame(grul, live.First(r => !r.IsDivider && r.Name == "Grul"), "a quiet pass must not disturb anything");

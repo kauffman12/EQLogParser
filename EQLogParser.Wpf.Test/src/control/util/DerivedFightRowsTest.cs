@@ -18,6 +18,20 @@ namespace EQLogParser.Wpf.Test
     }
 
     [TestMethod]
+    [DataRow(94_468_597_757L)]
+    [DataRow(0L)]
+    public void HpCountsOnlyDamageReceivedByTheNpc(long received)
+    {
+      const long dealt = 37_302_911_541L;
+      var row = Row(new DerivedFight
+      {
+        Name = "Grul", Id = 1, BeginTime = 1_000, LastTime = 1_090,
+        DamageToOwner = received, DamageByOwner = dealt, DamageTotal = received + dealt,
+      });
+      Assert.AreEqual(received, row.Damage);
+    }
+
+    [TestMethod]
     public void ARowRetainsItsSourceFightForSelectionAndItsEndReason()
     {
       foreach (var end in new[] { DerivedFightEnd.Open, DerivedFightEnd.Slain, DerivedFightEnd.Charmed, DerivedFightEnd.Gap })

@@ -102,7 +102,7 @@
         DamageTotal, Name in this order for display"). Duration and hits are not columns there and are not
         columns here: they ride the row tooltip, formatted like legacy's ("Time Alive: Ns"). Identity and rule
         source stay on the row object but off the grid — nearly every row is an NPC, and the columns made the
-        list read like a debug view. HP is the rounded damage total, exactly as the legacy header names it.
+        list read like a debug view. HP rounds the damage received by the row's NPC, not the full exchange.
       -->
       <syncfusion:SfDataGrid.Columns>
         <syncfusion:GridTextColumn x:Name="beginColumn" MappingName="Begin" HeaderText="Initial Hit Time"

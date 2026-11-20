@@ -19,11 +19,11 @@ namespace EQLogParser.Wpf.Test
   {
     private const double T0 = 1_000;
 
-    private static DerivedFight Grul(double lastS, uint hits = 4, ulong damage = 5_000)
+    private static DerivedFight Grul(double lastS)
       => new()
       {
         Name = "Grul", Id = 1, BeginTime = T0, LastTime = T0 + lastS,
-        DamageHits = hits, DamageTotal = (long)damage,
+        DamageHits = 4, DamageToOwner = 5_000, DamageByOwner = 90, DamageTotal = 5_090,
       };
 
     [TestMethod]
@@ -41,7 +41,7 @@ namespace EQLogParser.Wpf.Test
 
       // ...and the reused row still says everything it said: reuse may not lose a cell to save an allocation.
       Assert.AreEqual("Grul", second.Name);
-      Assert.AreEqual(5_000, second.Damage);
+      Assert.AreEqual(5_000L, second.Damage);
       Assert.AreEqual("00:31", second.Duration, "inclusive seconds, same as a cold build");
     }
 
@@ -55,15 +55,14 @@ namespace EQLogParser.Wpf.Test
 
       // The live case: the same fight object, bigger numbers. The grid holds `first`, so this must be a NEW row that
       // RowPatch can copy into place — reusing the instance would edit the screen without announcing it.
-      fight.DamageTotal = 9_000;
-      fight.DamageHits = 7;
+      fight.DamageToOwner = 9_000;
+      fight.DamageTotal = fight.DamageToOwner + fight.DamageByOwner;
       var second = DerivedFightRows.Build([fight], new EntityTimeline(), 12, new DamageFactTable(8),
         new FightFactIndex(), carry).Rows[0];
 
       Assert.AreNotSame(first, second, "a row whose printed values moved must not mutate what the grid already holds");
-      Assert.AreEqual(9_000, second.Damage);
-      Assert.AreEqual(7u, second.Hits);
-      Assert.AreEqual(5_000, first.Damage, "the row that was handed out earlier keeps what it was told");
+      Assert.AreEqual(9_000L, second.Damage);
+      Assert.AreEqual(5_000L, first.Damage, "the row that was handed out earlier keeps what it was told");
     }
 
     [TestMethod]
@@ -89,7 +88,8 @@ namespace EQLogParser.Wpf.Test
       var carry = new DerivedRowCarry();
       DerivedFight Fight(string name, int id, double beginS) => new()
       {
-        Name = name, Id = id, BeginTime = T0 + beginS, LastTime = T0 + beginS + 10, DamageTotal = 100, DamageHits = 1,
+        Name = name, Id = id, BeginTime = T0 + beginS, LastTime = T0 + beginS + 10,
+        DamageToOwner = 100, DamageTotal = 100, DamageHits = 1,
       };
 
       DerivedFightRows.Build([Fight("Grul", 1, 0), Fight("MoK", 2, 600), Fight("Hro", 3, 1200)],

@@ -19786,6 +19786,20 @@ rejection of other senders
 monitored character's own share is recorded as mine while the main window shows another player. These pin recognition and
 record contents, not Windows overlay presentation.
 
+## Fight List HP is damage the NPC received
+
+The Fight List's **HP** column shows that life's raw logged damage received (`DamageToOwner`), without the DPS
+Summary's damage exclusions or time window. It is not a max-health estimate; that is the separate NPC Statistics pane's
+job. A tanking-only row has zero damage received and displays a dash. The row carry compares the same directional
+amount so live growth can repaint the cell without replacing the selected row.
+
+The derived list inherited the **HP** header but displayed `DamageTotal`, which includes both directions. On the second
+Eriak Zek life in a beta capture this printed 132B: 94.469B damage received plus 37.303B damage dealt, nearly 36B of it
+from seven Doom of the Blacksmith hits. `DerivedFightRowsTest` pins the directional display, including a tanking-only
+row; `DerivedRowCarryTest` pins refresh when HP changes on the same fight object. In that capture NPC Statistics
+sees two kills and a third same-name life still fighting when the log ends. All three are within one pool, so Est HP is
+blank even with only the second fight selected. Fixing the Fight List cell does not change that decision.
+
 ## NPC health is estimated from killed lives, and concurrent names pool
 
 `NpcCombatStats` answers "how tough was this NPC" for the NPC Statistics pane. The log never states an NPC's health — no

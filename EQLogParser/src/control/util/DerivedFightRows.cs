@@ -234,7 +234,7 @@ namespace EQLogParser
       internal bool Matches(DerivedFight other, IdentityKind identity, string source, int tankHits)
         => ReferenceEquals(Fight, other)
            && Identity == identity && Source == source && TankHits == tankHits
-           && LastTime == other.LastTime && Damage == other.DamageTotal && Hits == other.DamageHits;
+           && LastTime == other.LastTime && Damage == other.DamageToOwner && Hits == other.DamageHits;
     }
 
     // Dividers carry their gap; their only field is the formatted silence inside it.
@@ -359,14 +359,14 @@ namespace EQLogParser
            */
           Duration = DateUtil.FormatTicks(TimeSpan.FromSeconds(fight.DurationSeconds).Ticks,
                                          DateUtil.TimeFormat.HMSCompact),
-          Damage = fight.DamageTotal,
+          Damage = fight.DamageToOwner,
           Hits = fight.DamageHits,
           Status = status,
           TooltipText = tooltip,
           Fight = fight,
         };
         carry?.Put(key, new DerivedRowCarry.Entry(fight, row, identity, source ?? string.Empty, tankHits,
-                                                 fight.LastTime, fight.DamageTotal, fight.DamageHits) { Pass = pass });
+                                                 fight.LastTime, row.Damage, fight.DamageHits) { Pass = pass });
         snapshot.Rows.Add(row);
       }
 
